@@ -1,15 +1,42 @@
 version: '3.8'
 
 services:
+  api:
+    build:
+      context: .
+      dockerfile: ./docker/api/Dockerfile.dev
+    container_name: api
+    hostname: api
+    env_file:
+      - .env.docker
+    ports:
+      - '8000:8000'
+    networks:
+      - backend
+    tty: true
+    depends_on:
+      - db
+    volumes:
+      - ./.secrets/client.crt:/certs/client.crt:ro
+      - ./.secrets/client.key:/certs/client.key:ro
+      - ./.secrets/rootCA.crt:/certs/rootCA.crt:ro
+      - ./src:/home/docker_user/app
+      - ./migrations:/home/docker_user/migrations
+      - ./alembic.ini:/home/docker_user/domain/alembic.ini
+      - ./alembic.ini:/home/docker_user/app/alembic.ini
+
   postgres:
     image: postgres:16.3
-    container_name: postgres
+    container_name: basebackend_postgres
+    restart: unless-stopped
     environment:
-      POSTGRES_DB: backendb
-      POSTGRES_USER: postgres
+      POSTGRES_DB: basebackendb
+      POSTGRES_USER: basebackend_user
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
     ports:
       - "5432:5432"
+    secrets:
+      - postgres_password
     volumes:
       - ./pgdata:/var/lib/postgresql/data
       - ./docker/postgres/config/postgresql.conf:/etc/postgresql/postgresql.conf
@@ -17,12 +44,12 @@ services:
       - ./.secrets/server.crt:/var/lib/postgresql/server.crt:ro
       - ./.secrets/server.key:/var/lib/postgresql/server.key:ro
       - ./.secrets/rootCA.crt:/var/lib/postgresql/rootCA.crt:ro
-    secrets:
-      - postgres_password
-    command: >
-      postgres
-      -c config_file=/etc/postgresql/postgresql.conf
-      -c hba_file=/etc/postgresql/pg_hba.conf
+    command:
+      - postgres
+      - -c
+      - config_file=/postgresql/postgresql.conf
+      - -c
+      - hba_file=/postgresql/pg_hba.conf
 
 secrets:
   postgres_password:
