@@ -22,7 +22,6 @@ services:
       - ./.secrets/rootCA.crt:/certs/rootCA.crt:ro
       - ./src:/home/docker_user/app
       - ./migrations:/home/docker_user/migrations
-      - ./alembic.ini:/home/docker_user/domain/alembic.ini
       - ./alembic.ini:/home/docker_user/app/alembic.ini
 
   postgres:
@@ -47,9 +46,9 @@ services:
     command:
       - postgres
       - -c
-      - config_file=/postgresql/postgresql.conf
+      - config_file=.docker/postgres/config/postgresql.conf
       - -c
-      - hba_file=/postgresql/pg_hba.conf
+      - hba_file=.docker/postgres/config/pg_hba.conf
 
 secrets:
   postgres_password:
