@@ -1,16 +1,47 @@
-version: '3.8'
-
 services:
+  db:
+    image: postgres:16.3
+    container_name: db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: basebackendb
+      POSTGRES_USER: basebackend_user
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    ports:
+      - "5432:5432"
+    networks:
+      - backend
+    secrets:
+      - postgres_password
+    volumes:
+      - ./pgdata:/var/lib/postgresql/data
+      - ./docker/postgres/config/postgresql.conf:/etc/postgresql/postgresql.conf
+      - ./docker/postgres/config/pg_hba.conf:/etc/postgresql/pg_hba.conf
+      - ./.secrets/server.crt:/var/lib/postgresql/server.crt:ro
+      - ./.secrets/server.key:/var/lib/postgresql/server.key:ro
+      - ./.secrets/rootCA.crt:/var/lib/postgresql/rootCA.crt:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U basebackend_user"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    command:
+      - postgres
+      - -c
+      - config_file=/etc/postgresql/postgresql.conf
+      - -c
+      - hba_file=/etc/postgresql/pg_hba.conf
+  
   api:
-    build:
-      context: .
-      dockerfile: ./docker/api/Dockerfile.dev
+    image: robertconstantin02/basebackend_api:dev
     container_name: api
     hostname: api
     env_file:
       - .env.docker
     ports:
       - '8000:8000'
+    secrets:
+      - postgres_password
     networks:
       - backend
     tty: true
@@ -21,35 +52,13 @@ services:
       - ./.secrets/client.key:/certs/client.key:ro
       - ./.secrets/rootCA.crt:/certs/rootCA.crt:ro
       - ./src:/home/docker_user/app
-      - ./migrations:/home/docker_user/migrations
+      - ./migrations:/home/docker_user/app/migrations
       - ./alembic.ini:/home/docker_user/app/alembic.ini
-
-  postgres:
-    image: postgres:16.3
-    container_name: basebackend_postgres
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: basebackendb
-      POSTGRES_USER: basebackend_user
-      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
-    ports:
-      - "5432:5432"
-    secrets:
-      - postgres_password
-    volumes:
-      - ./pgdata:/var/lib/postgresql/data
-      - ./docker/postgres/config/postgresql.conf:/etc/postgresql/postgresql.conf
-      - ./docker/postgres/config/pg_hba.conf:/etc/postgresql/pg_hba.conf
-      - ./.secrets/server.crt:/var/lib/postgresql/server.crt:ro
-      - ./.secrets/server.key:/var/lib/postgresql/server.key:ro
-      - ./.secrets/rootCA.crt:/var/lib/postgresql/rootCA.crt:ro
-    command:
-      - postgres
-      - -c
-      - config_file=.docker/postgres/config/postgresql.conf
-      - -c
-      - hba_file=.docker/postgres/config/pg_hba.conf
 
 secrets:
   postgres_password:
     file: .secrets/postgres_password.txt
+
+networks:
+  backend:
+    driver: overlay

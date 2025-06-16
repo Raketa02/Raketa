@@ -29,6 +29,7 @@ nest-asyncio = "^1.5.6"
 sqlalchemy-stubs = "^0.4"
 sqlalchemy-utils = "^0.41.1"
 bcrypt = "^4.0.1"
+psycopg2-binary = "^2.9.10"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.2.0"
