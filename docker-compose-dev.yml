@@ -1,10 +1,9 @@
 services:
   db:
-    image: postgres:16.3
-    container_name: db
+    image: postgres:17
     restart: unless-stopped
     environment:
-      POSTGRES_DB: basebackendb
+      POSTGRES_DB: postgres
       POSTGRES_USER: basebackend_user
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
     ports:
@@ -20,11 +19,6 @@ services:
       - ./.secrets/server.crt:/var/lib/postgresql/server.crt:ro
       - ./.secrets/server.key:/var/lib/postgresql/server.key:ro
       - ./.secrets/rootCA.crt:/var/lib/postgresql/rootCA.crt:ro
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U basebackend_user"]
-      interval: 5s
-      timeout: 5s
-      retries: 12
     command:
       - postgres
       - -c
@@ -35,7 +29,7 @@ services:
   api:
     image: robertconstantin02/basebackend_api:dev
     container_name: api
-    hostname: api
+    restart: always
     env_file:
       - .env.docker
     ports:
@@ -52,8 +46,16 @@ services:
       - ./.secrets/client.key:/certs/client.key:ro
       - ./.secrets/rootCA.crt:/certs/rootCA.crt:ro
       - ./src:/home/docker_user/app
-      - ./migrations:/home/docker_user/app/migrations
+      - ./migrations:/home/docker_user/migrations
+      - ./alembic.ini:/home/docker_user/domain/alembic.ini
       - ./alembic.ini:/home/docker_user/app/alembic.ini
+
+  redis:
+    image: redis:7.2
+    ports:
+      - '6379:6379'
+    networks:
+      - backend
 
 secrets:
   postgres_password:

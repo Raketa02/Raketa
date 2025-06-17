@@ -43,3 +43,21 @@ logs:
 
 ps:
 	docker stack ps $(STACK_NAME)
+
+
+run-postgres-manual:
+	docker rm -f my-postgres-ssl || true
+	docker run --name my-postgres-ssl \
+		-e POSTGRES_USER=basebackend_user \
+		-e POSTGRES_DB=basebackendb \
+		-e POSTGRES_PASSWORD=mysecretpassword \
+		-v $$(pwd)/.secrets/server.crt:/var/lib/postgresql/server.crt:ro \
+		-v $$(pwd)/.secrets/server.key:/var/lib/postgresql/server.key:ro \
+		-v $$(pwd)/.secrets/rootCA.crt:/var/lib/postgresql/rootCA.crt:ro \
+		-v $$(pwd)/pgdata:/var/lib/postgresql/data \
+		-v $$(pwd)/docker/postgres/config/postgresql.conf:/etc/postgresql/postgresql.conf \
+		-v $$(pwd)/docker/postgres/config/pg_hba.conf:/etc/postgresql/pg_hba.conf \
+		-p 5432:5432 \
+		-d postgres:17 \
+		-c config_file=/etc/postgresql/postgresql.conf \
+		-c hba_file=/etc/postgresql/pg_hba.conf
