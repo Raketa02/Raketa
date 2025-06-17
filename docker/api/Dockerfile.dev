@@ -9,7 +9,7 @@ RUN  --mount=type=cache,target=/root/.cache \
 
 COPY ./pyproject.toml ./poetry.lock* /tmp/
 
-RUN poetry export -f requirements.txt --output requirements.txt --without-hashes
+RUN poetry export -f requirements.txt --with dev --output requirements.txt --without-hashes
 
 # ----------------- build stage
 
