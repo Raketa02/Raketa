@@ -105,7 +105,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: ./
-          file: docker/api/Dockerfile.dev
+          file: Dockerfile.dev
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/fastapi:latest
           cache-from: type=local,src=${{ runner.temp }}/.buildx-cache
