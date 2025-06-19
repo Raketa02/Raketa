@@ -7,8 +7,8 @@ on:
 
 jobs:
   build:
+    runs-on: ubuntu-latest
     name: Lint, Test, Build, Push
-    run-on: ubuntu-latest
 
     services:
       postgres:
@@ -29,7 +29,7 @@ jobs:
       PYTHONUNBUFFERED: 1
       ENV: test
 
-     steps:
+    steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
