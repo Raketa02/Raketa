@@ -1,6 +1,5 @@
 import asyncio
 import ssl
-import os
 import nest_asyncio
 from fastapi import FastAPI, Depends
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
