@@ -106,9 +106,16 @@ jobs:
 
           echo "Files in current directory:"
           ls -alh
-      
+
           echo "Recursive file listing:"
           find . -type f
+      - name: Debug - Check Docker build context
+        run: |
+          echo "Docker context directory: ./"
+          ls -R ./
+      - name: Debug - Check Docker context folder
+        run: |
+          ls -R ./docker/api
 
       - name: Build and push
         id: docker_build
