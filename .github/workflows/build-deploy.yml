@@ -77,6 +77,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   
   docker:
+    environment:
+      name: development  
     needs: build
     runs-on: ubuntu-latest
     steps:
