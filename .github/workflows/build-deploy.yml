@@ -99,6 +99,16 @@ jobs:
           key: ${{ runner.os }}-buildx-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-buildx-
+      - name: Debug - List all files in repo
+        run: |
+          echo "Current working directory:"
+          pwd
+
+          echo "Files in current directory:"
+          ls -alh
+      
+          echo "Recursive file listing:"
+          find . -type f
 
       - name: Build and push
         id: docker_build
