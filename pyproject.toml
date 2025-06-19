@@ -45,6 +45,7 @@ pytest-mock = "^3.11.1"
 pytest-env = "^0.8.2"
 autoflake = "^2.2.0"
 aiosqlite = "^0.21.0"
+ruff = "^0.12.0"
 
 [tool.black]
 line-length = 88
@@ -82,3 +83,10 @@ env = { SQLALCHEMY_SILENCE_UBER_WARNING = "1" }
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+select = ["E", "F", "B"]  # Example: E = pycodestyle, F = pyflakes, B = bugbear
+exclude = ["migrations", ".venv"]
+ignore = ["B008"]
