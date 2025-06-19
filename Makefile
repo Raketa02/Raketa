@@ -49,10 +49,4 @@ ps:
 # Example: make test
 test-container:
 	docker exec -it $$(docker ps --filter "name=_api" --format "{{.Names}}" | head -n 1) python -m pytest /home/docker_user/app/application/$(TEST)
-# Example (file): make test-file FILE=tests/test_user.py
-# Example (function): make test-function TEST=tests/test_user.py::test_create_user
-# Example (funciton in a test class) make test-function TEST=tests/test_user.py::TestUser::test_create_user
-test-file:
-	poetry run pytest $(FILE)
-
 
