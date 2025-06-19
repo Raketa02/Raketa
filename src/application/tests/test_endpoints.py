@@ -1,20 +1,20 @@
 import pytest
-import asyncio
 import pytest_asyncio
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, Integer, String
-from fastapi import FastAPI, Depends
-from fastapi.testclient import TestClient
 from application.server import app as real_app, get_db, User
 
 DATABASE_URL_TEST = "sqlite+aiosqlite:///:memory:"
 
 # Create a separate engine for test DB
 test_engine = create_async_engine(DATABASE_URL_TEST, echo=True)
-TestSessionLocal = sessionmaker(test_engine, class_=AsyncSession, expire_on_commit=False)
+TestSessionLocal = sessionmaker(
+    test_engine, 
+    class_=AsyncSession, 
+    expire_on_commit=False
+)
 Base = declarative_base()
 
 # Override the get_db dependency

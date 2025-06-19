@@ -89,3 +89,4 @@ line-length = 88
 target-version = "py311"
 select = ["E", "F", "B"]  # Example: E = pycodestyle, F = pyflakes, B = bugbear
 exclude = ["migrations", ".venv"]
+ignore = ["B008"]

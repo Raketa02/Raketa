@@ -6,8 +6,6 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import Column, Integer, String
-from sqlalchemy.future import select
-from fastapi import HTTPException
 
 nest_asyncio.apply()
 
@@ -61,7 +59,10 @@ async def create_app() -> FastAPI:
         db.add(user)
         await db.commit()
         await db.refresh(user)
-        return {"message": f"User '{user.name}' inserted successfully", "user_id": user.id}
+        return {
+            "message": f"User '{user.name}' inserted successfully", 
+            "user_id": user.id
+        }
 
     return app
 
