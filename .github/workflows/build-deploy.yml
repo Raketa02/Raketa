@@ -108,8 +108,10 @@ jobs:
           file: Dockerfile.dev
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/fastapi:latest
-          cache-from: type=local,src=${{ runner.temp }}/.buildx-cache
-          cache-to: type=local,dest=${{ runner.temp }}/.buildx-cache-new,mode=max
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+      - name: Image digest
+        run: echo ${{ steps.docker_build.outputs.digest }}
 
       - name: Move cache
         run: |
