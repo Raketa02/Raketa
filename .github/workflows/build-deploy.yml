@@ -71,6 +71,7 @@ jobs:
           config-path: .gitleaks.toml
   
   docker:
+    needs: build
     runs-on: ubuntu-latest
     steps:
       - name: Login to Docker Hub

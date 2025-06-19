@@ -12,8 +12,6 @@ nest_asyncio.apply()
 
 #  ------------------- DB setup
 DATABASE_URL = "postgresql+asyncpg://basebackend_user@db:5432/postgres"
-ssl_context = ssl.create_default_context(cafile="/certs/rootCA.crt")
-ssl_context.load_cert_chain(certfile="/certs/client.crt", keyfile="/certs/client.key")
 
 
 # SQLAlchemy async setup
@@ -30,7 +28,11 @@ class User(Base):
 
 def get_ssl_context():
     ssl_context = ssl.create_default_context(cafile="/certs/rootCA.crt")
-    ssl_context.load_cert_chain(certfile="/certs/client.crt", keyfile="/certs/client.key")
+    ssl_context.load_cert_chain(
+        certfile="/certs/client.crt", 
+        keyfile="/certs/client.key"
+    )
+    
     return ssl_context
 
 def init_db_engine():
