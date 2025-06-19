@@ -37,7 +37,8 @@ def get_ssl_context():
 
 def init_db_engine():
     global engine, AsyncSessionLocal
-    DATABASE_URL = os.getenv("DATABASE_URL")
+    DATABASE_URL = db_url = os.getenv("DATABASE_URL") or "postgresql+asyncpg://basebackend_user@db:5432/postgres"
+
     connect_args = {}
 
     if "sslmode" in DATABASE_URL:
