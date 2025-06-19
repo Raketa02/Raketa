@@ -7,6 +7,8 @@ on:
 
 jobs:
   build:
+    environment:
+      name: development  
     runs-on: ubuntu-latest
     name: Lint, Test, Build, Push
 
