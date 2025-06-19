@@ -4,7 +4,7 @@ from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
-from application.server import app as real_app, get_db, User
+from server import app as real_app, get_db, User
 
 DATABASE_URL_TEST = "sqlite+aiosqlite:///:memory:"
 

@@ -57,7 +57,7 @@ jobs:
         run: poetry run ruff check .
 
       - name: Type check with mypy
-        run: poetry run mypy src/application
+        run: poetry run mypy application
 
       - name: Run unit tests with coverage
         run: |
