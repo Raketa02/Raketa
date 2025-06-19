@@ -51,7 +51,7 @@ jobs:
           poetry install --no-interaction --no-root
 
       - name: Check lock file is up-to-date
-        run: poetry lock --check
+        run: poetry check --lock
 
       - name: Lint with Ruff
         run: poetry run ruff .
