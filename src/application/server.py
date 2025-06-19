@@ -32,7 +32,7 @@ def get_ssl_context():
         certfile="/certs/client.crt", 
         keyfile="/certs/client.key"
     )
-    
+
     return ssl_context
 
 def init_db_engine():
@@ -48,7 +48,11 @@ def init_db_engine():
         echo=True,
         connect_args=connect_args
     )
-    AsyncSessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    AsyncSessionLocal = sessionmaker(
+        engine, 
+        class_=AsyncSession, 
+        expire_on_commit=False
+    )
 
 
 # Dependency to get DB session
