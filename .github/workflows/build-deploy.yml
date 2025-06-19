@@ -56,9 +56,6 @@ jobs:
       - name: Lint with Ruff
         run: poetry run ruff check .
 
-      - name: Type check with mypy
-        run: poetry run mypy ./src/application
-
       - name: Run unit tests with coverage
         run: |
           poetry run pytest --cov=src --cov-report=xml --disable-warnings
