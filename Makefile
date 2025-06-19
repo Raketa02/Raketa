@@ -21,6 +21,7 @@ build:
 	docker build -t $(IMAGE_NAME) -f docker/api/Dockerfile.dev .
 
 push:
+	@echo $$DOCKERHUB_TOKEN | docker login -u $$DOCKERHUB_USERNAME --password-stdin	
 	docker push $(IMAGE_NAME)
 
 init-swarm:
