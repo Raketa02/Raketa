@@ -36,6 +36,7 @@ def get_ssl_context():
     return ssl_context
 
 def init_db_engine():
+    global engine, AsyncSessionLocal
     connect_args = {}
 
     if "sslmode" in DATABASE_URL:
