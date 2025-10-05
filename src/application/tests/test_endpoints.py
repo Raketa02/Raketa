@@ -2,7 +2,6 @@ import pytest
 import pytest_asyncio
 from fastapi import FastAPI
 from httpx import AsyncClient
-
 # ---------- MOCKED APP FIXTURE ----------
 
 @pytest_asyncio.fixture(scope="function")
@@ -21,6 +20,13 @@ async def mock_app_client():
     # Return an AsyncClient with the mock app
     async with AsyncClient(app=app, base_url="http://test") as client:
         yield client
+        
+# @pytest_asyncio.fixture
+# async def real_app_client():
+#     from application.server import create_app
+#     app = await create_app()  # Use real app without nested event loop
+#     async with AsyncClient(app=app, base_url="http://test") as client:
+#         yield client
 
 
 # ---------- MOCKED TESTS ONLY ----------

@@ -25,7 +25,7 @@ engine = create_async_engine(
 
 # SQLAlchemy async setup
 AsyncSessionLocal = sessionmaker(
-    engine, 
+    engine,
     class_=AsyncSession, expire_on_commit=False
 )
 
@@ -55,12 +55,15 @@ async def create_app() -> FastAPI:
         redoc_url="/redoc"
     )
 
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    # DB table init on startup
+    @app.on_event("startup")
+    async def init_db():
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
 
     @app.get("/")
     async def read_root():
-        return {"message": "Dummy ver is!"}
+        return {"message": "Dummy message!"}
     
     @app.post("/test-db")
     async def test_db(name: str, db: AsyncSession = Depends(get_db)):
