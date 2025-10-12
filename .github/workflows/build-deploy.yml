@@ -129,9 +129,9 @@ jobs:
     environment:
       name: production
     steps:
-      - name: Show key exists and content length
-        run: |
-          echo "${{ secrets.EC2_SSH_KEY }}" | wc -c
+      - name: Checkout source code
+        uses: actions/checkout@v3
+
       - name: Copy Docker Compose files to EC2
         uses: appleboy/scp-action@v0.1.6
         with:
@@ -140,6 +140,7 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           source: "docker-compose-prod.yml"
           target: "/home/ubuntu/basebackend"
+          
       - name: Connect and deploy
         uses: appleboy/ssh-action@v1.0.0
         with:
