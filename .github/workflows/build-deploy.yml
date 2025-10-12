@@ -133,36 +133,36 @@ jobs:
       - name: Checkout source code
         uses: actions/checkout@v3
 
-      # 1️⃣ Write your .env.prod file from GitHub Secrets
-      - name: Write .env.prod file from GitHub secret
-        shell: bash
-        run: |
-          echo "${{ secrets.ENV_PROD }}" | tr '\r' '\n' > .env.prod
-          echo ".env.prod created with $(wc -l < .env.prod) lines"
-          head -n 10 .env.prod
+      # # 1️⃣ Write your .env.prod file from GitHub Secrets
+      # - name: Write .env.prod file from GitHub secret
+      #   shell: bash
+      #   run: |
+      #     echo "${{ secrets.ENV_PROD }}" | tr '\r' '\n' > .env.prod
+      #     echo ".env.prod created with $(wc -l < .env.prod) lines"
+      #     head -n 10 .env.prod
 
-      # 2️⃣ Recreate your .secrets directory from GitHub Secrets
-      - name: Recreate `.secrets/` directory with contents
-        run: |
-          mkdir -p .secrets
-          echo "${{ secrets.CLIENT_CERT }}" > .secrets/client.crt
-          echo "${{ secrets.CLIENT_KEY }}" > .secrets/client.key
-          echo "${{ secrets.SERVER_CERT }}" > .secrets/server.crt
-          echo "${{ secrets.SERVER_KEY }}" > .secrets/server.key
-          echo "${{ secrets.ROOT_CERT }}" > .secrets/rootCA.crt
-          echo "${{ secrets.POSTGRES_PASSWORD }}" > .secrets/postgres_password.txt
-          echo "${{ secrets.ROOT_KEY }}" > .secrets/rootCA.key || echo "ROOTCA_KEY not set"
-          chmod 600 .secrets/*.key || true
+      # # 2️⃣ Recreate your .secrets directory from GitHub Secrets
+      # - name: Recreate `.secrets/` directory with contents
+      #   run: |
+      #     mkdir -p .secrets
+      #     echo "${{ secrets.CLIENT_CERT }}" > .secrets/client.crt
+      #     echo "${{ secrets.CLIENT_KEY }}" > .secrets/client.key
+      #     echo "${{ secrets.SERVER_CERT }}" > .secrets/server.crt
+      #     echo "${{ secrets.SERVER_KEY }}" > .secrets/server.key
+      #     echo "${{ secrets.ROOT_CERT }}" > .secrets/rootCA.crt
+      #     echo "${{ secrets.POSTGRES_PASSWORD }}" > .secrets/postgres_password.txt
+      #     echo "${{ secrets.ROOT_KEY }}" > .secrets/rootCA.key || echo "ROOTCA_KEY not set"
+      #     chmod 600 .secrets/*.key || true
 
       # 3️⃣ Optional: Debug what was created before SCP
-      - name: Debug – List files before SCP
-        run: |
-          echo "Listing files in workspace before upload:"
-          ls -lah
-          echo "Listing .secrets directory:"
-          ls -lah .secrets
-          echo "Listing .env.prod:"
-          cat .env.prod | head -n 20
+      # - name: Debug – List files before SCP
+      #   run: |
+      #     echo "Listing files in workspace before upload:"
+      #     ls -lah
+      #     echo "Listing .secrets directory:"
+      #     ls -lah .secrets
+      #     echo "Listing .env.prod:"
+      #     cat .env.prod | head -n 20
 
       # 4️⃣ Copy files to EC2
       - name: Copy Docker Compose files and secrets to EC2
