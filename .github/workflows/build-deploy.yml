@@ -122,72 +122,78 @@ jobs:
           rm -rf ${{ runner.temp }}/.buildx-cache
           mv ${{ runner.temp }}/.buildx-cache-new ${{ runner.temp }}/.buildx-cache
 
-  deploy:
-    name: Deploy to EC2
-    needs: docker
-    runs-on: ubuntu-latest
-    environment:
-      name: production
+deploy:
+  name: Deploy to EC2
+  needs: docker
+  runs-on: ubuntu-latest
+  environment:
+    name: production
 
-    steps:
-      - name: Checkout source code
-        uses: actions/checkout@v3
+  steps:
+    - name: Checkout source code
+      uses: actions/checkout@v3
 
-      # 1️⃣ Write your .env.prod file from GitHub Secrets
-      - name: Write .env.prod file from GitHub secret
-        shell: bash
-        run: |
-          echo "${{ secrets.ENV_PROD }}" | tr '\r' '\n' > .env.prod
-          echo ".env.prod created with $(wc -l < .env.prod) lines"
-          head -n 10 .env.prod
+    # 1️⃣ Write .env.prod from secret
+    - name: Write .env.prod file from GitHub secret
+      shell: bash
+      run: |
+        echo "${{ secrets.ENV_PROD }}" | tr '\r' '\n' > .env.prod
+        echo ".env.prod created with $(wc -l < .env.prod) lines"
+        head -n 10 .env.prod
 
-      # 2️⃣ Recreate your .secrets directory from GitHub Secrets
-      - name: Recreate `.secrets/` directory with contents
-        run: |
-          mkdir -p .secrets
-          echo "${{ secrets.CLIENT_CERT }}" > .secrets/client.crt
-          echo "${{ secrets.CLIENT_KEY }}" > .secrets/client.key
-          echo "${{ secrets.SERVER_CERT }}" > .secrets/server.crt
-          echo "${{ secrets.SERVER_KEY }}" > .secrets/server.key
-          echo "${{ secrets.ROOT_CERT }}" > .secrets/rootCA.crt
-          echo "${{ secrets.POSTGRES_PASSWORD }}" > .secrets/postgres_password.txt
-          echo "${{ secrets.ROOT_KEY }}" > .secrets/rootCA.key || echo "ROOTCA_KEY not set"
+    # 2️⃣ Recreate .secrets directory and make key files world-readable for SCP
+    - name: Recreate `.secrets/` directory with contents
+      run: |
+        mkdir -p .secrets
+        echo "${{ secrets.CLIENT_CERT }}" > .secrets/client.crt
+        echo "${{ secrets.CLIENT_KEY }}" > .secrets/client.key
+        echo "${{ secrets.SERVER_CERT }}" > .secrets/server.crt
+        echo "${{ secrets.SERVER_KEY }}" > .secrets/server.key
+        echo "${{ secrets.ROOT_CERT }}" > .secrets/rootCA.crt
+        echo "${{ secrets.POSTGRES_PASSWORD }}" > .secrets/postgres_password.txt
+        echo "${{ secrets.ROOT_KEY }}" > .secrets/rootCA.key || echo "ROOTCA_KEY not set"
+        chmod 644 .secrets/*.key || true
+
+    # 3️⃣ Optional debug (disabled)
+    # - name: Debug – List files before SCP
+    #   run: |
+    #     echo "Listing files in workspace before upload:"
+    #     ls -lah
+    #     echo "Listing .secrets directory:"
+    #     ls -lah .secrets
+    #     echo "Listing .env.prod:"
+    #     cat .env.prod | head -n 20
+
+    # 4️⃣ Upload files to EC2 (separate paths with commas)
+    - name: Copy Docker Compose files and secrets to EC2
+      uses: appleboy/scp-action@v0.1.7
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USER }}
+        key: ${{ secrets.EC2_SSH_KEY }}
+        source: "./docker-compose-prod.yml,./.env.prod,./.secrets/*"
+        target: "~/basebackend"
+        overwrite: true
+        strip_components: 0
+
+    # 5️⃣ SSH into EC2 and deploy with hardened key permissions
+    - name: Connect and deploy
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USER }}
+        key: ${{ secrets.EC2_SSH_KEY }}
+        script: |
+          echo "Changing into deployment directory"
+          cd ~/basebackend
+
+          echo "Securing private keys..."
           chmod 600 .secrets/*.key || true
 
-      # 3️⃣ Optional: Debug what was created before SCP
-      # - name: Debug – List files before SCP
-      #   run: |
-      #     echo "Listing files in workspace before upload:"
-      #     ls -lah
-      #     echo "Listing .secrets directory:"
-      #     ls -lah .secrets
-      #     echo "Listing .env.prod:"
-      #     cat .env.prod | head -n 20
+          echo "Pulling images..."
+          docker compose -f docker-compose-prod.yml pull
 
-      # 4️⃣ Copy files to EC2
-      - name: Copy Docker Compose files and secrets to EC2
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          source: "./docker-compose-prod.yml,./.env.prod,./.secrets/*"
-          target: "~/basebackend"
-          overwrite: true
-          strip_components: 0
+          echo "Starting containers..."
+          docker compose -f docker-compose-prod.yml up -d
 
-      # 5️⃣ Deploy on EC2
-      - name: Connect and deploy
-        uses: appleboy/ssh-action@v1.0.0
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            echo "Changing into deployment directory"
-            cd ~/basebackend
-            echo "Pulling images..."
-            docker compose -f docker-compose-prod.yml pull
-            echo "Starting containers..."
-            docker compose -f docker-compose-prod.yml up -d
-            echo "Deployment completed successfully!"
+          echo "Deployment completed successfully!"
