@@ -141,7 +141,7 @@ jobs:
           source: |
             docker-compose-prod.yml
             .env.prod
-            .secrets/
+            .secrets/**
           target: "/home/ubuntu/basebackend"
 
       - name: Connect and deploy
