@@ -108,10 +108,10 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: ./
-          file: ./docker/api/Dockerfile
+          file: ./docker/api/Dockerfile.dev
           builder: ${{ steps.buildx.outputs.name }}
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/basebackend_api:prod
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/basebackend_api:latest
           cache-from: type=local,src=${{ runner.temp }}/.buildx-cache
           cache-to: type=local,dest=${{ runner.temp }}/.buildx-cache-new,mode=max
       - name: Image digest
