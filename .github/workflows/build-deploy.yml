@@ -131,7 +131,16 @@ jobs:
     steps:
       - name: Checkout source code
         uses: actions/checkout@v3
-
+  
+      - name: Debug – List files before SCP
+        run: |
+          echo "Listing files in workspace before upload:"
+          ls -lah
+          echo "Listing .secrets directory:"
+          ls -lah .secrets || echo ".secrets not found"
+          echo "Listing .env.prod:"
+          cat .env.prod || echo ".env.prod not found"
+  
       - name: Copy Docker Compose files to EC2
         uses: appleboy/scp-action@v0.1.6
         with:
@@ -143,7 +152,7 @@ jobs:
             .env.prod
             .secrets/**
           target: "/home/ubuntu/basebackend"
-
+  
       - name: Connect and deploy
         uses: appleboy/ssh-action@v1.0.0
         with:
@@ -151,6 +160,10 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
+            echo "Changing into deployment directory"
             cd /home/ubuntu/basebackend
+            echo "Pulling images..."
             docker compose -f docker-compose-prod.yml pull
+            echo "Starting containers..."
             docker compose -f docker-compose-prod.yml up -d
+            echo "Deployment completed."
