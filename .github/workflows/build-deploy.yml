@@ -138,9 +138,8 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          source: "docker-compose-prod.yml"
           target: "/home/ubuntu/basebackend"
-          
+
       - name: Connect and deploy
         uses: appleboy/ssh-action@v1.0.0
         with:
