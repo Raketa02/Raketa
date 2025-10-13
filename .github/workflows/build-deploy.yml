@@ -108,10 +108,10 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: ./
-          file: ./docker/api/Dockerfile.dev
+          file: ./docker/api/Dockerfile.prod
           builder: ${{ steps.buildx.outputs.name }}
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/basebackend_api:latest
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/basebackend_api:prod
           cache-from: type=local,src=${{ runner.temp }}/.buildx-cache
           cache-to: type=local,dest=${{ runner.temp }}/.buildx-cache-new,mode=max
       - name: Image digest
@@ -154,16 +154,6 @@ jobs:
           echo "${{ secrets.ROOT_KEY }}" > .secrets/rootCA.key || echo "ROOTCA_KEY not set"
           chmod 644 .secrets/*.key || true
 
-      # 3️⃣ Optional debug (disabled)
-      # - name: Debug – List files before SCP
-      #   run: |
-      #     echo "Listing files in workspace before upload:"
-      #     ls -lah
-      #     echo "Listing .secrets directory:"
-      #     ls -lah .secrets
-      #     echo "Listing .env.prod:"
-      #     cat .env.prod | head -n 20
-
       # 4️⃣ Upload files to EC2 (separate paths with commas)
       - name: Copy Docker Compose files and secrets to EC2
         uses: appleboy/scp-action@v0.1.7
@@ -197,3 +187,20 @@ jobs:
             docker compose -f docker-compose-prod.yml up -d
 
             echo "Deployment completed successfully!"
+
+
+
+
+
+
+
+
+      # 3️⃣ Optional debug (disabled)
+      # - name: Debug – List files before SCP
+      #   run: |
+      #     echo "Listing files in workspace before upload:"
+      #     ls -lah
+      #     echo "Listing .secrets directory:"
+      #     ls -lah .secrets
+      #     echo "Listing .env.prod:"
+      #     cat .env.prod | head -n 20
