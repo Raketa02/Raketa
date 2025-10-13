@@ -149,9 +149,9 @@ jobs:
           echo "${{ secrets.CLIENT_KEY }}" > .secrets/client.key
           echo "${{ secrets.SERVER_CERT }}" > .secrets/server.crt
           echo "${{ secrets.SERVER_KEY }}" > .secrets/server.key
-          echo "${{ secrets.ROOT_CERT }}" > .secrets/rootCA.crt
+          echo "${{ secrets.ROOT_CA_CERT }}" > .secrets/rootCA.crt
           echo "${{ secrets.POSTGRES_PASSWORD }}" > .secrets/postgres_password.txt
-          echo "${{ secrets.ROOT_KEY }}" > .secrets/rootCA.key || echo "ROOTCA_KEY not set"
+          echo "${{ secrets.ROOT_CA_KEY }}" > .secrets/rootCA.key || echo "ROOTCA_KEY not set"
           chmod 644 .secrets/*.key || true
 
       # 4️⃣ Upload files to EC2 (separate paths with commas)
