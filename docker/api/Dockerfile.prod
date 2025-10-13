@@ -46,7 +46,8 @@ ENV ENV=dev
 ENV PYTHONPATH=/home/${USER_NAME}/app
 
 COPY --chown=${USER_NAME} /docker /home/${USER_NAME}/docker
-RUN chmod +x /home/${USER_NAME}/docker/api/startup.dev.sh
 COPY /src /home/docker_user/app
+
+RUN chmod +x /home/${USER_NAME}/docker/api/startup.prod.sh
 
 ENTRYPOINT ["/home/docker_user/docker/api/startup.prod.sh"]
