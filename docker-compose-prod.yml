@@ -35,9 +35,9 @@ services:
     depends_on:
       - db
     volumes:
-      - ./.secrets/client.crt:/certs/client.crt:ro
-      - ./.secrets/client.key:/certs/client.key:ro
-      - ./.secrets/rootCA.crt:/certs/rootCA.crt:ro
+      - /home/ubuntu/basebackend/.secrets/client.crt:/certs/client.crt:ro
+      - /home/ubuntu/basebackend/.secrets/client.key:/certs/client.key:ro
+      - /home/ubuntu/basebackend/.secrets/rootCA.crt:/certs/rootCA.crt:ro
     networks:
       - backend
 
