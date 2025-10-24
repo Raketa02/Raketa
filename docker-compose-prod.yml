@@ -21,6 +21,7 @@ services:
   #     - config_file=/etc/postgresql/postgresql.conf
   #     - -c
   #     - hba_file=/etc/postgresql/pg_hba.conf
+  # 
 
   api:
     image: robertconstantin02/basebackend_api:prod
