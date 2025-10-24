@@ -1,26 +1,26 @@
 services:
-  db:
-    image: postgres:17
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: postgres
-      POSTGRES_USER: basebackend_user
-      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
-    secrets:
-      - postgres_password
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-      - ./docker/postgres/config/postgresql.conf:/etc/postgresql/postgresql.conf
-      - ./docker/postgres/config/pg_hba.conf:/etc/postgresql/pg_hba.conf
-      - ./.secrets/server.crt:/var/lib/postgresql/server.crt:ro
-      - ./.secrets/server.key:/var/lib/postgresql/server.key:ro
-      - ./.secrets/rootCA.crt:/var/lib/postgresql/rootCA.crt:ro
-    command:
-      - postgres
-      - -c
-      - config_file=/etc/postgresql/postgresql.conf
-      - -c
-      - hba_file=/etc/postgresql/pg_hba.conf
+  # db:
+  #   image: postgres:17
+  #   restart: unless-stopped
+  #   environment:
+  #     POSTGRES_DB: postgres
+  #     POSTGRES_USER: basebackend_user
+  #     POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+  #   secrets:
+  #     - postgres_password
+  #   volumes:
+  #     - pgdata:/var/lib/postgresql/data
+  #     - ./docker/postgres/config/postgresql.conf:/etc/postgresql/postgresql.conf
+  #     - ./docker/postgres/config/pg_hba.conf:/etc/postgresql/pg_hba.conf
+  #     - ./.secrets/server.crt:/var/lib/postgresql/server.crt:ro
+  #     - ./.secrets/server.key:/var/lib/postgresql/server.key:ro
+  #     - ./.secrets/rootCA.crt:/var/lib/postgresql/rootCA.crt:ro
+  #   command:
+  #     - postgres
+  #     - -c
+  #     - config_file=/etc/postgresql/postgresql.conf
+  #     - -c
+  #     - hba_file=/etc/postgresql/pg_hba.conf
 
   api:
     image: robertconstantin02/basebackend_api:prod
