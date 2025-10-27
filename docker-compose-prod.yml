@@ -41,6 +41,9 @@ services:
       - /home/ubuntu/basebackend/.secrets/rootCA.crt:/certs/rootCA.crt:ro
     networks:
       - backend
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
 
   redis:
     image: redis:7.2
