@@ -78,5 +78,5 @@ async def create_app() -> FastAPI:
 
     return app
 
-# Uvicorn expects this to be a global variable
+# Uvicorn expects this to be a global variable  
 app = asyncio.run(create_app())
