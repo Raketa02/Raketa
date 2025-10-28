@@ -63,7 +63,7 @@ async def create_app() -> FastAPI:
 
     @app.get("/")
     async def read_root():
-        return {"message": "Dummy message deploy!"}
+        return {"message": "Dummy message deploy!"} 
     
     @app.post("/test-db")
     async def test_db(name: str, db: AsyncSession = Depends(get_db)):
