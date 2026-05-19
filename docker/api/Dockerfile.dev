@@ -1,55 +1,47 @@
-# ----------------- dependencies stage
-
-FROM python:3.11 AS requirements-stage
-
+# syntax=docker/dockerfile:1.6
+FROM python:3.11-slim-bookworm AS requirements
 WORKDIR /tmp
+RUN pip install --no-cache-dir poetry==1.8.3
+COPY pyproject.toml poetry.lock /tmp/
+RUN poetry export -f requirements.txt --without-hashes --with dev -o /tmp/requirements.txt
 
-RUN  --mount=type=cache,target=/root/.cache \
-    pip install poetry==1.5.1
+FROM python:3.11-slim-bookworm AS builder
+ENV PIP_NO_CACHE_DIR=1
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential libpq-dev curl wget \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=requirements /tmp/requirements.txt /tmp/requirements.txt
+RUN pip install --prefix=/install --no-cache-dir -r /tmp/requirements.txt
 
-COPY ./pyproject.toml ./poetry.lock* /tmp/
-
-RUN poetry export -f requirements.txt --with dev --output requirements.txt --without-hashes
-
-# ----------------- build stage
-
-FROM python:3.11 AS builder
-
-COPY --from=requirements-stage /tmp/requirements.txt /app/requirements.txt
-
-RUN --mount=type=cache,target=/root/.cache \
-    pip install --no-cache-dir --upgrade -r /app/requirements.txt
-
-RUN apt-get update && \
-    apt-get install -y wget tar && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
-
-ENV DOCKERIZE_VERSION=v0.6.1
-RUN wget https://github.com/jwilder/dockerize/releases/download/$DOCKERIZE_VERSION/dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz \
-    && tar -C /usr/local/bin -xzvf dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz \
-    && rm dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz
-    
+# dockerize gives the dev startup script a portable `wait-for-tcp` primitive.
+ENV DOCKERIZE_VERSION=v0.7.0
+RUN wget -qO /tmp/dockerize.tgz \
+        https://github.com/jwilder/dockerize/releases/download/${DOCKERIZE_VERSION}/dockerize-linux-amd64-${DOCKERIZE_VERSION}.tar.gz \
+    && tar -xzf /tmp/dockerize.tgz -C /usr/local/bin \
+    && rm /tmp/dockerize.tgz
 
 FROM python:3.11-slim-bookworm
+ENV PYTHONUNBUFFERED=1 \
+    ENV=dev \
+    APP_HOME=/home/app \
+    PYTHONPATH=/home/app/src
 
-ENV USER_NAME=docker_user
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        libpq5 curl ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --system app && useradd --system --gid app --create-home --home-dir ${APP_HOME} app
 
-RUN useradd --create-home ${USER_NAME}
+COPY --from=builder /install /usr/local
+COPY --from=builder /usr/local/bin/dockerize /usr/local/bin/dockerize
 
-COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
-COPY --from=builder /usr/local/bin /usr/local/bin
+WORKDIR ${APP_HOME}
+COPY --chown=app:app src/ ${APP_HOME}/src/
+COPY --chown=app:app migrations/ ${APP_HOME}/migrations/
+COPY --chown=app:app alembic.ini ${APP_HOME}/alembic.ini
+COPY --chown=app:app docker/api/startup.dev.sh ${APP_HOME}/startup.sh
+RUN chmod +x ${APP_HOME}/startup.sh
 
-USER docker_user
-RUN mkdir /home/${USER_NAME}/app
-WORKDIR /home/${USER_NAME}
+USER app
 
-ENV PYTHONUNBUFFERED=1
-ENV ENV=dev
-ENV PYTHONPATH=/home/${USER_NAME}/app
-
-COPY --chown=${USER_NAME} /docker /home/${USER_NAME}/docker
-RUN chmod +x /home/${USER_NAME}/docker/api/startup.dev.sh
-COPY ./alembic.ini /home/${USER_NAME}/alembic.ini
-
-ENTRYPOINT ["/home/docker_user/docker/api/startup.dev.sh"]
+EXPOSE 8000 5678
+CMD ["./startup.sh"]

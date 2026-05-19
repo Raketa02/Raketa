@@ -1,37 +1,26 @@
+# Optional on-host production compose for non-ECS deployments (legacy EC2 path).
+# The primary production target is AWS ECS/Fargate — see docs/deployment/aws-ecs.md.
+# All secrets are expected to come from the environment, not from this file.
 services:
   api:
-    image: robertconstantin02/basebackend_api:prod
-    container_name: api
-    restart: always
+    image: ${API_IMAGE:-basebackend_api:prod}
+    restart: unless-stopped
     env_file:
       - .env.prod
+    environment:
+      APP_HOST: 0.0.0.0
+      APP_PORT: 8000
     ports:
-      - '8000:8000'
-    secrets:
-      - postgres_password
-    volumes:
-      - /home/ubuntu/basebackend/.secrets/client.crt:/certs/client.crt:ro
-      - /home/ubuntu/basebackend/.secrets/client.key:/certs/client.key:ro
-      - /home/ubuntu/basebackend/.secrets/rootCA.crt:/certs/rootCA.crt:ro
+      - "8000:8000"
     networks:
       - backend
-    dns:
-      - 8.8.8.8
-      - 1.1.1.1
-
-  redis:
-    image: redis:7.2
-    restart: unless-stopped
-    networks:
-      - backend
-
-secrets:
-  postgres_password:
-    file: .secrets/postgres_password.txt
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
 
 networks:
   backend:
     driver: bridge
-
-volumes:
-  pgdata:

@@ -3,65 +3,62 @@ services:
     image: postgres:17
     restart: unless-stopped
     environment:
-      POSTGRES_DB: postgres
+      POSTGRES_DB: basebackendb
       POSTGRES_USER: basebackend_user
-      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      POSTGRES_PASSWORD: basebackend_pwd
     ports:
       - "5432:5432"
     networks:
       - backend
-    secrets:
-      - postgres_password
     volumes:
-      - ./pgdata:/var/lib/postgresql/data
-      - ./docker/postgres/config/postgresql.conf:/etc/postgresql/postgresql.conf
-      - ./docker/postgres/config/pg_hba.conf:/etc/postgresql/pg_hba.conf
-      - ./.secrets/server.crt:/var/lib/postgresql/server.crt:ro
-      - ./.secrets/server.key:/var/lib/postgresql/server.key:ro
-      - ./.secrets/rootCA.crt:/var/lib/postgresql/rootCA.crt:ro
-    command:
-      - postgres
-      - -c
-      - config_file=/etc/postgresql/postgresql.conf
-      - -c
-      - hba_file=/etc/postgresql/pg_hba.conf
-  
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U basebackend_user -d basebackendb"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
   api:
-    image: robertconstantin02/basebackend_api:dev
-    container_name: api
-    restart: always
+    build:
+      context: .
+      dockerfile: docker/api/Dockerfile.dev
+    image: basebackend_api:dev
+    container_name: basebackend_api
+    restart: unless-stopped
     env_file:
       - .env.docker
+    environment:
+      # Compose overrides — keep DB url consistent with the postgres service above.
+      WRITER_DB_URL: postgresql+asyncpg://basebackend_user:basebackend_pwd@db:5432/basebackendb
+      READER_DB_URL: postgresql+asyncpg://basebackend_user:basebackend_pwd@db:5432/basebackendb
+      DB_SSL_MODE: disable
+      APP_HOST: 0.0.0.0
+      APP_PORT: 8000
     ports:
-      - '8000:8000' # uvicorn HTTP server port
-      - '5678:5678' # debugger port
-    secrets:
-      - postgres_password
+      - "8000:8000"
+      - "5678:5678"
     networks:
       - backend
-    tty: true
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     volumes:
-      - ./.secrets/client.crt:/certs/client.crt:ro
-      - ./.secrets/client.key:/certs/client.key:ro
-      - ./.secrets/rootCA.crt:/certs/rootCA.crt:ro
-      - ./src:/home/docker_user/app
-      - ./migrations:/home/docker_user/migrations
-      - ./alembic.ini:/home/docker_user/domain/alembic.ini
-      - ./alembic.ini:/home/docker_user/app/alembic.ini
+      # Hot-reload the source while developing.
+      - ./src:/home/app/src
+      - ./migrations:/home/app/migrations
+      - ./alembic.ini:/home/app/alembic.ini
 
   redis:
     image: redis:7.2
+    restart: unless-stopped
     ports:
-      - '6379:6379'
+      - "6379:6379"
     networks:
       - backend
 
-secrets:
-  postgres_password:
-    file: .secrets/postgres_password.txt
-
 networks:
   backend:
-    driver: overlay
+    driver: bridge
+
+volumes:
+  pgdata:

@@ -1,0 +1,101 @@
+name: CI / Deploy to ECS
+
+on:
+  pull_request:
+  push:
+    branches: [main, release]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write   # required for OIDC -> AWS
+
+env:
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  test:
+    name: Lint & test
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: basebackendb
+          POSTGRES_USER: basebackend_user
+          POSTGRES_PASSWORD: basebackend_pwd
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U basebackend_user -d basebackendb"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Install poetry
+        run: pip install poetry==1.8.3
+      - name: Install deps
+        run: |
+          poetry config virtualenvs.create false
+          poetry install --no-interaction --no-root
+      - name: Lint
+        run: poetry run ruff check .
+      - name: Test
+        env:
+          WRITER_DB_URL: postgresql+asyncpg://basebackend_user:basebackend_pwd@localhost:5432/basebackendb
+          DB_SSL_MODE: disable
+          JWT_SECRET_KEY: ci-secret-do-not-use-in-prod
+        run: poetry run pytest src/application/tests --cov=src --cov-report=xml -q
+
+  build-and-deploy:
+    name: Build, push to ECR, deploy to ECS
+    needs: test
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/release' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_OIDC_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set image tag
+        id: tag
+        run: echo "image=${{ steps.ecr.outputs.registry }}/${{ vars.ECR_REPOSITORY }}:${{ github.sha }}" >> "$GITHUB_OUTPUT"
+
+      - name: Build & push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/api/Dockerfile.prod
+          push: true
+          tags: |
+            ${{ steps.tag.outputs.image }}
+            ${{ steps.ecr.outputs.registry }}/${{ vars.ECR_REPOSITORY }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Render new ECS task definition
+        id: render
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: deploy/ecs/taskdef.json
+          container-name: ${{ vars.ECS_CONTAINER_NAME }}
+          image: ${{ steps.tag.outputs.image }}
+
+      - name: Deploy task definition to ECS service
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.render.outputs.task-definition }}
+          cluster: ${{ vars.ECS_CLUSTER }}
+          service: ${{ vars.ECS_SERVICE }}
+          wait-for-service-stability: true

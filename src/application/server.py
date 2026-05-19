@@ -1,82 +1,55 @@
-import asyncio
-import ssl
-import nest_asyncio
-from fastapi import FastAPI, Depends
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy import Column, Integer, String
+from contextlib import asynccontextmanager
 
-nest_asyncio.apply()
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
-#  ------------------- DB setup
-DATABASE_URL = "postgresql+asyncpg://basebackend_user@db:5432/postgres"
-ssl_context = ssl.create_default_context(cafile="/certs/rootCA.crt")
-ssl_context.load_cert_chain(
-        certfile="/certs/client.crt", 
-        keyfile="/certs/client.key"
-)
-
-engine = create_async_engine(
-    DATABASE_URL,
-    echo=True,
-    connect_args={"ssl": ssl_context}
-)
-
-# SQLAlchemy async setup
-AsyncSessionLocal = sessionmaker(
-    engine,
-    class_=AsyncSession, expire_on_commit=False
-)
-
-Base = declarative_base()
-
-# DB model
-class User(Base):
-    __tablename__ = "users"
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, index=True)
+# Import entities so they register on Base.metadata for Alembic / create_all
+from application.api.v1.routers import auth as auth_router
+from application.api.v1.routers import health as health_router
+from application.api.v1.routers import users as users_router
+from application.core.config import Settings, get_settings
+from application.core.database import init_engine
+from application.core.exceptions import register_exception_handlers
+from application.core.logging import configure_logging
+from application.domain.auth import entities as _auth_entities  # noqa: F401
+from application.domain.user import entities as _user_entities  # noqa: F401
 
 
-# Dependency to get DB session
-async def get_db():
-    async with AsyncSessionLocal() as session:
-        yield session
+def create_app(settings: Settings | None = None) -> FastAPI:
+    settings = settings or get_settings()
+    configure_logging(settings)
+    init_engine(settings)
 
-
-#  ------------------- Fast Api Demo
-async def create_app() -> FastAPI:
+    @asynccontextmanager
+    async def lifespan(_app: FastAPI):
+        # No DB schema bootstrap here — Alembic owns the schema.
+        yield
 
     app = FastAPI(
-        title="Dummy App",
-        description="This is a dummy FastAPI app for container startup testing",
-        version="0.1.0",
-        docs_url="/docs",
-        redoc_url="/redoc"
+        title=settings.TITLE,
+        description=settings.DESCRIPTION,
+        version=settings.VERSION,
+        docs_url="/docs" if not settings.is_production or settings.DEBUG else None,
+        redoc_url="/redoc" if not settings.is_production or settings.DEBUG else None,
+        lifespan=lifespan,
     )
 
-    # DB table init on startup
-    @app.on_event("startup")
-    async def init_db():
-        async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.ALLOW_ORIGINS,
+        allow_credentials=settings.ALLOW_CREDENTIALS,
+        allow_methods=settings.ALLOW_METHODS,
+        allow_headers=settings.ALLOW_HEADERS,
+    )
 
-    @app.get("/")
-    async def read_root():
-        return {"message": "Dummy message deploy!"} 
-    
-    @app.post("/test-db")
-    async def test_db(name: str, db: AsyncSession = Depends(get_db)):
-        user = User(name=name)
-        db.add(user)
-        await db.commit()
-        await db.refresh(user)
-        return {
-            "message": f"User '{user.name}' inserted successfully", 
-            "user_id": user.id
-        }
+    register_exception_handlers(app)
+
+    app.include_router(health_router.router)
+    app.include_router(users_router.router)
+    app.include_router(auth_router.router)
 
     return app
 
-# Uvicorn expects this to be a global variable  
-app = asyncio.run(create_app())
+
+# Module-level app for uvicorn/gunicorn: `application.server:app`
+app = create_app()

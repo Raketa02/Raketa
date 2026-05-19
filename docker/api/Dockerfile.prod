@@ -1,53 +1,50 @@
-FROM python:3.11 AS requirements-stage
-
+# syntax=docker/dockerfile:1.6
+# ---------- requirements export (poetry → pip)
+FROM python:3.11-slim-bookworm AS requirements
 WORKDIR /tmp
+RUN pip install --no-cache-dir poetry==1.8.3
+COPY pyproject.toml poetry.lock /tmp/
+RUN poetry export -f requirements.txt --without-hashes -o /tmp/requirements.txt
 
-RUN  --mount=type=cache,target=/root/.cache \
-    pip install poetry==1.5.1
+# ---------- builder: install deps into a clean prefix we can copy
+FROM python:3.11-slim-bookworm AS builder
+ENV PIP_NO_CACHE_DIR=1 PYTHONDONTWRITEBYTECODE=1
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential libpq-dev curl \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=requirements /tmp/requirements.txt /tmp/requirements.txt
+RUN pip install --prefix=/install --no-cache-dir -r /tmp/requirements.txt
 
-COPY ./pyproject.toml ./poetry.lock* /tmp/
+# ---------- runtime image
+FROM python:3.11-slim-bookworm AS runtime
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    ENV=prod \
+    APP_HOME=/home/app \
+    PYTHONPATH=/home/app/src
 
-RUN poetry export -f requirements.txt --output requirements.txt --without-hashes
+# curl is only here for ECS/Docker HEALTHCHECK — keep image lean otherwise.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        libpq5 curl ca-certificates tini \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --system app && useradd --system --gid app --create-home --home-dir ${APP_HOME} app
 
-# ----------------- build stage
+COPY --from=builder /install /usr/local
 
-FROM python:3.11 AS builder
+WORKDIR ${APP_HOME}
+COPY --chown=app:app src/ ${APP_HOME}/src/
+COPY --chown=app:app migrations/ ${APP_HOME}/migrations/
+COPY --chown=app:app alembic.ini ${APP_HOME}/alembic.ini
+COPY --chown=app:app docker/api/startup.prod.sh ${APP_HOME}/startup.sh
+RUN chmod +x ${APP_HOME}/startup.sh
 
-COPY --from=requirements-stage /tmp/requirements.txt /app/requirements.txt
+USER app
 
-RUN pip install --no-cache-dir --upgrade -r /app/requirements.txt
+EXPOSE 8000
 
-RUN apt-get update && \
-    apt-get install -y wget tar && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+    CMD curl -fsS http://127.0.0.1:${APP_PORT:-8000}/health || exit 1
 
-ENV DOCKERIZE_VERSION v0.6.1
-RUN wget https://github.com/jwilder/dockerize/releases/download/$DOCKERIZE_VERSION/dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz \
-    && tar -C /usr/local/bin -xzvf dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz \
-    && rm dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz
-    
-
-FROM python:3.11-slim-bookworm
-
-ENV USER_NAME=docker_user
-
-RUN useradd --create-home ${USER_NAME}
-
-COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
-COPY --from=builder /usr/local/bin /usr/local/bin
-
-USER docker_user
-RUN mkdir /home/${USER_NAME}/app
-WORKDIR /home/${USER_NAME}
-
-ENV PYTHONUNBUFFERED=1
-ENV ENV=dev
-ENV PYTHONPATH=/home/${USER_NAME}/app
-
-COPY --chown=${USER_NAME} /docker /home/${USER_NAME}/docker
-COPY /src /home/docker_user/app
-
-RUN chmod +x /home/${USER_NAME}/docker/api/startup.prod.sh
-
-ENTRYPOINT ["/home/docker_user/docker/api/startup.prod.sh"]
+ENTRYPOINT ["/usr/bin/tini", "--"]
+CMD ["./startup.sh"]

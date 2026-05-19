@@ -31,6 +31,7 @@ sqlalchemy-utils = "^0.41.1"
 bcrypt = "^4.0.1"
 psycopg2-binary = "^2.9.10"
 debugpy = "^1.8.14"
+email-validator = "^2.0.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.2.0"
@@ -76,7 +77,7 @@ use_shortcuts = true
 [tool.pytest.ini_options]
 addopts = "--tb=short --disable-warnings --cov=src --cov-report=term-missing"
 pythonpath = ["src"]
-testpaths = ["tests"]
+testpaths = ["src/application/tests"]
 asyncio_mode = "auto"
 env = { SQLALCHEMY_SILENCE_UBER_WARNING = "1" }
 
