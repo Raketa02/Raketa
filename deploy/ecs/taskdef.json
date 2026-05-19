@@ -47,8 +47,7 @@
         "options": {
           "awslogs-group": "/ecs/basebackend",
           "awslogs-region": "eu-central-1",
-          "awslogs-stream-prefix": "api",
-          "awslogs-create-group": "true"
+          "awslogs-stream-prefix": "api"
         }
       },
       "readonlyRootFilesystem": false,
