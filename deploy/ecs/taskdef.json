@@ -1,11 +1,11 @@
 {
-  "family": "basebackend-task",
+  "family": "basebackend-task5",
   "networkMode": "awsvpc",
   "requiresCompatibilities": ["FARGATE"],
   "cpu": "512",
   "memory": "1024",
-  "executionRoleArn": "arn:aws:iam::__AWS_ACCOUNT_ID__:role/ecsTaskExecutionRole",
-  "taskRoleArn": "arn:aws:iam::__AWS_ACCOUNT_ID__:role/basebackend-task-role",
+  "executionRoleArn": "arn:aws:iam::422661068054:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::422661068054:role/basebackend-task-role",
   "runtimePlatform": {
     "cpuArchitecture": "X86_64",
     "operatingSystemFamily": "LINUX"
@@ -24,16 +24,16 @@
         { "name": "APP_PORT", "value": "8000" },
         { "name": "LOG_LEVEL", "value": "INFO" },
         { "name": "LOG_JSON", "value": "true" },
-        { "name": "DB_SSL_MODE", "value": "verify-full" },
-        { "name": "DB_SSL_ROOT_CERT_PATH", "value": "/etc/ssl/rds/rds-global-bundle.pem" },
+        { "name": "DB_SSL_MODE", "value": "require" },
         { "name": "JWT_ALGORITHM", "value": "HS256" },
         { "name": "ACCESS_TOKEN_EXPIRE_SECONDS", "value": "900" },
-        { "name": "REFRESH_TOKEN_EXPIRE_SECONDS", "value": "86400" }
+        { "name": "REFRESH_TOKEN_EXPIRE_SECONDS", "value": "86400" },
+        { "name": "RUN_MIGRATIONS_ON_STARTUP", "value": "true" }
       ],
       "secrets": [
-        { "name": "JWT_SECRET_KEY", "valueFrom": "arn:aws:secretsmanager:__AWS_REGION__:__AWS_ACCOUNT_ID__:secret:basebackend/prod:JWT_SECRET_KEY::" },
-        { "name": "WRITER_DB_URL", "valueFrom": "arn:aws:secretsmanager:__AWS_REGION__:__AWS_ACCOUNT_ID__:secret:basebackend/prod:WRITER_DB_URL::" },
-        { "name": "READER_DB_URL", "valueFrom": "arn:aws:secretsmanager:__AWS_REGION__:__AWS_ACCOUNT_ID__:secret:basebackend/prod:READER_DB_URL::" }
+        { "name": "JWT_SECRET_KEY", "valueFrom": "arn:aws:secretsmanager:eu-central-1:422661068054:secret:basebackend/prod-MDnizO:JWT_SECRET_KEY::" },
+        { "name": "WRITER_DB_URL", "valueFrom": "arn:aws:secretsmanager:eu-central-1:422661068054:secret:basebackend/prod-MDnizO:WRITER_DB_URL::" },
+        { "name": "READER_DB_URL", "valueFrom": "arn:aws:secretsmanager:eu-central-1:422661068054:secret:basebackend/prod-MDnizO:READER_DB_URL::" }
       ],
       "healthCheck": {
         "command": ["CMD-SHELL", "curl -fsS http://127.0.0.1:8000/health || exit 1"],
@@ -46,7 +46,7 @@
         "logDriver": "awslogs",
         "options": {
           "awslogs-group": "/ecs/basebackend",
-          "awslogs-region": "__AWS_REGION__",
+          "awslogs-region": "eu-central-1",
           "awslogs-stream-prefix": "api",
           "awslogs-create-group": "true"
         }
