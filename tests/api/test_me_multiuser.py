@@ -13,10 +13,14 @@ async def test_me_returns_distinct_user_per_token(client):
     assert a_signup.status_code == 201 and b_signup.status_code == 201
     assert a_signup.json()["id"] != b_signup.json()["id"]
 
-    a_login = await client.post("/api/v1/auth/login",
-                                json={"email": alice["email"], "password": alice["password1"]})
-    b_login = await client.post("/api/v1/auth/login",
-                                json={"email": bob["email"], "password": bob["password1"]})
+    a_login = await client.post(
+        "/api/v1/auth/login",
+        json={"email": alice["email"], "password": alice["password1"]},
+    )
+    b_login = await client.post(
+        "/api/v1/auth/login",
+        json={"email": bob["email"], "password": bob["password1"]},
+    )
     a_tok = a_login.json()["access_token"]
     b_tok = b_login.json()["access_token"]
     assert a_tok != b_tok

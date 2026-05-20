@@ -88,6 +88,8 @@ build-backend = "poetry.core.masonry.api"
 [tool.ruff]
 line-length = 88
 target-version = "py311"
-select = ["E", "F", "B"]  # Example: E = pycodestyle, F = pyflakes, B = bugbear
 exclude = ["migrations", ".venv", "src"]
+
+[tool.ruff.lint]
+select = ["E", "F", "B"]  # E = pycodestyle, F = pyflakes, B = bugbear
 ignore = ["B008"]
