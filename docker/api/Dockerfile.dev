@@ -24,7 +24,7 @@ FROM python:3.11-slim-bookworm
 ENV PYTHONUNBUFFERED=1 \
     ENV=dev \
     APP_HOME=/home/app \
-    PYTHONPATH=/home/app/src
+    PYTHONPATH=/home/app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         libpq5 curl ca-certificates \
@@ -35,7 +35,7 @@ COPY --from=builder /install /usr/local
 COPY --from=builder /usr/local/bin/dockerize /usr/local/bin/dockerize
 
 WORKDIR ${APP_HOME}
-COPY --chown=app:app src/ ${APP_HOME}/src/
+COPY --chown=app:app app/ ${APP_HOME}/app/
 COPY --chown=app:app migrations/ ${APP_HOME}/migrations/
 COPY --chown=app:app alembic.ini ${APP_HOME}/alembic.ini
 COPY --chown=app:app docker/api/startup.dev.sh ${APP_HOME}/startup.sh

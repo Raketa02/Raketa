@@ -6,17 +6,20 @@ from pathlib import Path
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
-# Make `application.*` importable both when alembic is invoked from the repo
-# root and from inside the container (where `src/` is on PYTHONPATH already).
+# Make `app.*` importable whether alembic runs from the repo root or from the
+# /home/app working directory inside the container.
 _REPO_ROOT = Path(__file__).resolve().parents[1]
-_SRC = _REPO_ROOT / "src"
-if _SRC.exists() and str(_SRC) not in sys.path:
-    sys.path.insert(0, str(_SRC))
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
 
-from application.core.config import get_settings  # noqa: E402
-from application.core.database import Base  # noqa: E402
-from application.domain.auth import entities as _auth  # noqa: E402,F401
-from application.domain.user import entities as _user  # noqa: E402,F401
+from app.core.config import get_settings  # noqa: E402
+from app.infrastructure.database.base import Base  # noqa: E402
+
+# Import ORM models so they register on Base.metadata for autogenerate.
+from app.modules.auth.infrastructure.sqlalchemy_refresh_token_repository import (  # noqa: E402,F401
+    RefreshTokenORM,
+)
+from app.modules.users.infrastructure.sqlalchemy_user_model import UserORM  # noqa: E402,F401
 
 config = context.config
 if config.config_file_name is not None:

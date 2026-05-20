@@ -60,7 +60,7 @@ force_grid_wrap = 0
 
 [tool.mypy]
 ignore_missing_imports = "True"
-mypy_path = "src"
+mypy_path = "."
 #check_untyped_defs = "True"
 #disallow_untyped_defs = "True"
 plugins = ["sqlalchemy.ext.mypy.plugin","sqlmypy","pydantic.mypy"]
@@ -75,9 +75,9 @@ major_version_zero = true
 use_shortcuts = true
 
 [tool.pytest.ini_options]
-addopts = "--tb=short --disable-warnings --cov=src --cov-report=term-missing"
-pythonpath = ["src"]
-testpaths = ["src/application/tests"]
+addopts = "--tb=short --disable-warnings --cov=app --cov-report=term-missing"
+pythonpath = ["."]
+testpaths = ["tests"]
 asyncio_mode = "auto"
 env = { SQLALCHEMY_SILENCE_UBER_WARNING = "1" }
 
@@ -89,5 +89,5 @@ build-backend = "poetry.core.masonry.api"
 line-length = 88
 target-version = "py311"
 select = ["E", "F", "B"]  # Example: E = pycodestyle, F = pyflakes, B = bugbear
-exclude = ["migrations", ".venv"]
+exclude = ["migrations", ".venv", "src"]
 ignore = ["B008"]

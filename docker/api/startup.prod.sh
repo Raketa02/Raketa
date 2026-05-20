@@ -14,7 +14,7 @@ if [[ "${RUN_MIGRATIONS_ON_STARTUP:-false}" == "true" ]]; then
 fi
 
 echo "[startup] launching gunicorn on ${APP_HOST}:${APP_PORT} with ${WORKERS} workers"
-exec gunicorn application.server:app \
+exec gunicorn app.main:app \
     --bind "${APP_HOST}:${APP_PORT}" \
     --workers "${WORKERS}" \
     --worker-class uvicorn.workers.UvicornWorker \

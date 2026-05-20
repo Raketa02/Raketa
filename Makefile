@@ -26,7 +26,7 @@ install:           ## install poetry deps
 	poetry install
 
 test:              ## run pytest
-	poetry run pytest src/application/tests -q
+	poetry run pytest tests -q
 
 lint:              ## ruff check
 	poetry run ruff check .

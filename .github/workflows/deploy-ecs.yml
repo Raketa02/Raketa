@@ -47,7 +47,7 @@ jobs:
           WRITER_DB_URL: postgresql+asyncpg://basebackend_user:basebackend_pwd@localhost:5432/basebackendb
           DB_SSL_MODE: disable
           JWT_SECRET_KEY: ci-secret-do-not-use-in-prod
-        run: poetry run pytest src/application/tests --cov=src --cov-report=xml -q
+        run: poetry run pytest tests --cov=app --cov-report=xml -q
 
   build-and-deploy:
     name: Build, push to ECR, deploy to ECS

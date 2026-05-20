@@ -18,5 +18,5 @@ fi
 
 echo "[dev] launching uvicorn (reload) on 0.0.0.0:${APP_PORT:-8000}"
 exec python -m debugpy --listen 0.0.0.0:5678 ${DEBUGPY_FLAGS} \
-    -m uvicorn application.server:app \
+    -m uvicorn app.main:app \
     --host 0.0.0.0 --port "${APP_PORT:-8000}" --reload

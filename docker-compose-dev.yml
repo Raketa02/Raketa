@@ -44,7 +44,7 @@ services:
         condition: service_healthy
     volumes:
       # Hot-reload the source while developing.
-      - ./src:/home/app/src
+      - ./app:/home/app/app
       - ./migrations:/home/app/migrations
       - ./alembic.ini:/home/app/alembic.ini
 
