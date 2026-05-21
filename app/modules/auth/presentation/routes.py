@@ -1,15 +1,14 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, status
 
-from app.modules.auth.application.login import Login, LoginCommand
-from app.modules.auth.application.logout import Logout, LogoutCommand
+from app.modules.auth.application.login import LoginCommand
+from app.modules.auth.application.logout import LogoutCommand
 from app.modules.auth.application.refresh_token import (
-    RefreshAuthTokens,
     RefreshTokensCommand,
 )
 from app.modules.auth.presentation.dependencies import (
-    get_login_use_case,
-    get_logout_use_case,
-    get_refresh_use_case,
+    LoginUseCaseDep,
+    LogoutUseCaseDep,
+    RefreshUseCaseDep,
 )
 from app.modules.auth.presentation.schemas import (
     LoginRequest,
@@ -30,7 +29,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 )
 async def login(
     payload: LoginRequest,
-    use_case: Login = Depends(get_login_use_case),
+    use_case: LoginUseCaseDep,
 ) -> TokenResponse:
     pair = await use_case.execute(
         LoginCommand(email=payload.email, password=payload.password)
@@ -51,7 +50,7 @@ async def login(
 )
 async def refresh(
     payload: RefreshRequest,
-    use_case: RefreshAuthTokens = Depends(get_refresh_use_case),
+    use_case: RefreshUseCaseDep,
 ) -> TokenResponse:
     pair = await use_case.execute(
         RefreshTokensCommand(presented_token=payload.refresh_token)
@@ -72,7 +71,7 @@ async def refresh(
 )
 async def logout(
     payload: LogoutRequest,
-    use_case: Logout = Depends(get_logout_use_case),
+    use_case: LogoutUseCaseDep,
 ) -> LogoutResponse:
     await use_case.execute(LogoutCommand(presented_token=payload.refresh_token))
     return LogoutResponse()

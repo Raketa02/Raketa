@@ -1,11 +1,9 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, status
 
 from app.modules.users.application.commands import RegisterUserCommand
-from app.modules.users.application.register_user import RegisterUser
-from app.modules.users.domain.user import User
 from app.modules.users.presentation.dependencies import (
-    current_user,
-    get_register_user,
+    CurrentUserDep,
+    RegisterUserDep,
 )
 from app.modules.users.presentation.schemas import UserCreateRequest, UserResponse
 
@@ -20,7 +18,7 @@ router = APIRouter(prefix="/users", tags=["users"])
 )
 async def register_user(
     payload: UserCreateRequest,
-    use_case: RegisterUser = Depends(get_register_user),
+    use_case: RegisterUserDep,
 ) -> UserResponse:
     user = await use_case.execute(
         RegisterUserCommand(
@@ -38,5 +36,5 @@ async def register_user(
     status_code=status.HTTP_200_OK,
     summary="Current authenticated user",
 )
-async def me(user: User = Depends(current_user)) -> UserResponse:
+async def me(user: CurrentUserDep) -> UserResponse:
     return UserResponse.from_domain(user)
