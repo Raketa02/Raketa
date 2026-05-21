@@ -24,7 +24,8 @@ FROM python:3.11-slim-bookworm
 ENV PYTHONUNBUFFERED=1 \
     ENV=dev \
     APP_HOME=/home/app \
-    PYTHONPATH=/home/app
+    PYTHONPATH=/home/app \
+    PYTHONPYCACHEPREFIX=/tmp/pycache
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         libpq5 curl ca-certificates \

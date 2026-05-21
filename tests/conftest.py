@@ -11,9 +11,8 @@ os.environ.setdefault("LOG_JSON", "false")
 
 import pytest
 import pytest_asyncio
-from httpx import AsyncClient
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from sqlalchemy.orm import sessionmaker
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
 from app.core.config import get_settings  # noqa: E402
@@ -41,7 +40,7 @@ async def db_engine():
 
 @pytest_asyncio.fixture
 async def session_factory(db_engine):
-    return sessionmaker(db_engine, class_=AsyncSession, expire_on_commit=False)
+    return async_sessionmaker(db_engine, expire_on_commit=False, class_=AsyncSession)
 
 
 @pytest_asyncio.fixture
@@ -58,7 +57,8 @@ async def client(session_factory):
                 raise
 
     app.dependency_overrides[get_db] = _get_db_override
-    async with AsyncClient(app=app, base_url="http://test") as ac:
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
     app.dependency_overrides.clear()
 

@@ -3,9 +3,11 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 from typing import Optional
+from uuid import UUID
 
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, String, func, select
+from sqlalchemy import Boolean, DateTime, ForeignKey, String, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy_utils.types.uuid import UUIDType
 
 from app.infrastructure.database.base import Base
@@ -15,22 +17,32 @@ from app.modules.auth.domain.refresh_token import RefreshToken
 class RefreshTokenORM(Base):
     __tablename__ = "refresh_tokens"
 
-    id = Column(UUIDType(binary=False), primary_key=True, default=uuid.uuid4)
-    user_id = Column(
+    id: Mapped[UUID] = mapped_column(
+        UUIDType(binary=False), primary_key=True, default=uuid.uuid4
+    )
+    user_id: Mapped[UUID] = mapped_column(
         UUIDType(binary=False),
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
-    token_hash = Column(String(255), nullable=False)
-    jti = Column(String(64), nullable=False, unique=True, index=True)
-    refresh_expires_at = Column(DateTime(timezone=True), nullable=False)
-    is_valid = Column(Boolean, nullable=False, default=True, server_default="true")
-    revoked_at = Column(DateTime(timezone=True), nullable=True)
-    created_at = Column(
+    token_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    jti: Mapped[str] = mapped_column(
+        String(64), nullable=False, unique=True, index=True
+    )
+    refresh_expires_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    is_valid: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default="true"
+    )
+    revoked_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
-    updated_at = Column(
+    updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
         server_default=func.now(),

@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, Field, validator
+from pydantic import BaseModel, EmailStr, Field, ValidationInfo, field_validator
 
 from app.modules.users.domain.user import User
 
@@ -12,12 +12,13 @@ class UserCreateRequest(BaseModel):
     password1: str = Field(..., min_length=8, max_length=128)
     password2: str = Field(..., min_length=8, max_length=128)
     nickname: str = Field(
-        ..., min_length=2, max_length=64, regex=r"^[A-Za-z0-9_.-]+$"
+        ..., min_length=2, max_length=64, pattern=r"^[A-Za-z0-9_.-]+$"
     )
 
-    @validator("password2")
-    def _passwords_match(cls, v: str, values) -> str:
-        if "password1" in values and v != values["password1"]:
+    @field_validator("password2")
+    @classmethod
+    def _passwords_match(cls, v: str, info: ValidationInfo) -> str:
+        if "password1" in info.data and v != info.data["password1"]:
             raise ValueError("passwords do not match")
         return v
 

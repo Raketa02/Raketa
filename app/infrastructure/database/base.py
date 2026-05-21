@@ -3,6 +3,8 @@
 ORM models in `modules/*/infrastructure/` inherit from this so Alembic can
 discover them through `Base.metadata`.
 """
-from sqlalchemy.orm import declarative_base
+from sqlalchemy.orm import DeclarativeBase
 
-Base = declarative_base()
+
+class Base(DeclarativeBase):
+    pass

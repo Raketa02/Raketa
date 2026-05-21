@@ -1,21 +1,20 @@
 from __future__ import annotations
 
-from uuid import UUID
-
-import jwt
 from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exception_handlers import UnauthorizedError
 from app.core.security import bearer_scheme
 from app.infrastructure.database.session import get_db
 from app.infrastructure.database.unit_of_work import AsyncSqlAlchemyUnitOfWork
 from app.modules.auth.infrastructure.password_hasher import BcryptPasswordHasher
-from app.modules.auth.presentation.dependencies import get_token_service
 from app.modules.auth.domain.ports import TokenService
+from app.modules.auth.presentation.dependencies import get_token_service
 from app.modules.users.application.get_current_user import GetCurrentUser
 from app.modules.users.application.register_user import RegisterUser
+from app.modules.users.application.resolve_current_user import (
+    ResolveCurrentUserFromAccessToken,
+)
 from app.modules.users.domain.user import User
 from app.modules.users.infrastructure.sqlalchemy_user_repository import (
     SqlAlchemyUserRepository,
@@ -45,23 +44,21 @@ def get_get_current_user_use_case(
     return GetCurrentUser(users=users)
 
 
-async def current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+def get_resolve_current_user_use_case(
     token_service: TokenService = Depends(get_token_service),
-    use_case: GetCurrentUser = Depends(get_get_current_user_use_case),
+    get_current_user: GetCurrentUser = Depends(get_get_current_user_use_case),
+) -> ResolveCurrentUserFromAccessToken:
+    return ResolveCurrentUserFromAccessToken(
+        token_service=token_service,
+        get_current_user=get_current_user,
+    )
+
+
+async def current_user(
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+    use_case: ResolveCurrentUserFromAccessToken = Depends(
+        get_resolve_current_user_use_case
+    ),
 ) -> User:
-    if credentials is None or not credentials.credentials:
-        raise UnauthorizedError("missing bearer token")
-    try:
-        payload = token_service.decode_access(credentials.credentials)
-    except jwt.ExpiredSignatureError as exc:
-        raise UnauthorizedError("access token expired") from exc
-    except jwt.InvalidTokenError as exc:
-        raise UnauthorizedError("invalid access token") from exc
-
-    try:
-        user_id = UUID(payload["sub"])
-    except (KeyError, ValueError) as exc:
-        raise UnauthorizedError("malformed token subject") from exc
-
-    return await use_case.execute(user_id)
+    token = credentials.credentials if credentials else None
+    return await use_case.execute(token)

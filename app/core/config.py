@@ -1,8 +1,9 @@
 import json
 from functools import lru_cache
-from typing import List, Optional
+from typing import Annotated, List, Optional
 
-from pydantic import BaseSettings, validator
+from pydantic import field_validator
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -40,10 +41,10 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_SECONDS: int = 86400
 
     # --- CORS
-    ALLOW_ORIGINS: List[str] = ["*"]
+    ALLOW_ORIGINS: Annotated[List[str], NoDecode] = ["*"]
     ALLOW_CREDENTIALS: bool = True
-    ALLOW_METHODS: List[str] = ["*"]
-    ALLOW_HEADERS: List[str] = ["*"]
+    ALLOW_METHODS: Annotated[List[str], NoDecode] = ["*"]
+    ALLOW_HEADERS: Annotated[List[str], NoDecode] = ["*"]
 
     # --- external SSL
     EXTERNAL_SSL_ROOT_CA_PATH: Optional[str] = None
@@ -60,32 +61,31 @@ class Settings(BaseSettings):
     # --- migrations
     RUN_MIGRATIONS_ON_STARTUP: bool = False
 
-    @validator("ALLOW_ORIGINS", "ALLOW_METHODS", "ALLOW_HEADERS", pre=True)
+    @field_validator("ALLOW_ORIGINS", "ALLOW_METHODS", "ALLOW_HEADERS", mode="before")
+    @classmethod
     def _split_csv(cls, v):
         if isinstance(v, str):
+            try:
+                return json.loads(v)
+            except json.JSONDecodeError:
+                pass
             return [s.strip() for s in v.split(",") if s.strip()]
         return v
 
-    @validator("READER_DB_URL", always=True)
-    def _default_reader(cls, v, values):
-        return v or values.get("WRITER_DB_URL")
+    @field_validator("READER_DB_URL", mode="before")
+    @classmethod
+    def _default_reader(cls, v):
+        return None if v == "" else v
 
     @property
     def is_production(self) -> bool:
         return self.ENV.lower() in {"prod", "production"}
 
-    class Config:
-        case_sensitive = True
-        env_file = ".env"
+    model_config = SettingsConfigDict(case_sensitive=True, env_file=".env")
 
-        @classmethod
-        def parse_env_var(cls, field_name: str, raw_val: str):
-            if field_name in {"ALLOW_ORIGINS", "ALLOW_METHODS", "ALLOW_HEADERS"}:
-                try:
-                    return json.loads(raw_val)
-                except json.JSONDecodeError:
-                    return [s.strip() for s in raw_val.split(",") if s.strip()]
-            return BaseSettings.Config.parse_env_var(field_name, raw_val)
+    def model_post_init(self, __context) -> None:
+        if self.READER_DB_URL is None:
+            self.READER_DB_URL = self.WRITER_DB_URL
 
 
 @lru_cache(maxsize=1)
