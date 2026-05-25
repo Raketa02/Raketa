@@ -61,6 +61,11 @@ class Settings(BaseSettings):
     # --- migrations
     RUN_MIGRATIONS_ON_STARTUP: bool = False
 
+    # --- domain events
+    OUTBOX_PROCESSOR_ENABLED: bool = True
+    OUTBOX_POLL_INTERVAL_SECONDS: float = 1.0
+    OUTBOX_BATCH_SIZE: int = 100
+
     @field_validator("ALLOW_ORIGINS", "ALLOW_METHODS", "ALLOW_HEADERS", mode="before")
     @classmethod
     def _split_csv(cls, v):

@@ -11,6 +11,7 @@ from app.modules.auth.domain.ports import (
     TokenService,
 )
 from app.shared.clock import Clock
+from app.shared.events import DomainEventPublisher
 
 
 @dataclass(frozen=True)
@@ -32,12 +33,14 @@ class Logout:
         hasher: PasswordHasher,
         uow: UnitOfWork,
         clock: Clock,
+        events: DomainEventPublisher,
     ) -> None:
         self._tokens = tokens
         self._jwt = jwt_service
         self._hasher = hasher
         self._uow = uow
         self._clock = clock
+        self._events = events
 
     async def execute(self, command: LogoutCommand) -> None:
         try:
@@ -49,5 +52,8 @@ class Logout:
             return
         if not self._hasher.verify(command.presented_token, stored.token_hash):
             return
-        await self._tokens.revoke(stored, now=self._clock.now())
+        now = self._clock.now()
+        stored.revoke(now=now, reason="logout")
+        await self._tokens.revoke(stored, now=now)
+        await self._events.publish_many(stored.pull_events())
         await self._uow.commit()

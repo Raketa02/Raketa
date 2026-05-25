@@ -1,16 +1,17 @@
+from app.infrastructure.database.unit_of_work import UnitOfWork
 from app.modules.auth.domain.ports import PasswordHasher
 from app.modules.users.application.commands import RegisterUserCommand
 from app.modules.users.domain.errors import EmailAlreadyRegistered, NicknameAlreadyTaken
 from app.modules.users.domain.ports import UserRepository
 from app.modules.users.domain.user import User
 from app.modules.users.domain.value_objects import (
-    Authority,
     Email,
     HashedPassword,
     Nickname,
     RawPassword,
 )
-from app.infrastructure.database.unit_of_work import UnitOfWork
+from app.shared.clock import Clock
+from app.shared.events import DomainEventPublisher
 from app.shared.ids import new_uuid
 
 
@@ -26,10 +27,14 @@ class RegisterUser:
         users: UserRepository,
         hasher: PasswordHasher,
         uow: UnitOfWork,
+        clock: Clock,
+        events: DomainEventPublisher,
     ) -> None:
         self._users = users
         self._hasher = hasher
         self._uow = uow
+        self._clock = clock
+        self._events = events
 
     async def execute(self, command: RegisterUserCommand) -> User:
         email = Email(command.email)
@@ -41,15 +46,14 @@ class RegisterUser:
         if await self._users.get_by_nickname(nickname.value):
             raise NicknameAlreadyTaken()
 
-        user = User(
-            id=new_uuid(),
+        user = User.register( 
+            user_id=new_uuid(),
             email=email,
             nickname=nickname,
             password_hash=HashedPassword(self._hasher.hash(raw_password.value)),
-            authority=Authority.USER,
-            is_admin=False,
-            is_active=True,
+            occurred_at=self._clock.now(),
         )
-        user = await self._users.add(user)
+        persisted_user = await self._users.add(user)
+        await self._events.publish_many(user.pull_events())
         await self._uow.commit()
-        return user
+        return persisted_user

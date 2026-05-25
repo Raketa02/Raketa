@@ -14,12 +14,7 @@ if str(_REPO_ROOT) not in sys.path:
 
 from app.core.config import get_settings  # noqa: E402
 from app.infrastructure.database.base import Base  # noqa: E402
-
-# Import ORM models so they register on Base.metadata for autogenerate.
-from app.modules.auth.infrastructure.sqlalchemy_refresh_token_repository import (  # noqa: E402,F401
-    RefreshTokenORM,
-)
-from app.modules.users.infrastructure.sqlalchemy_user_model import UserORM  # noqa: E402,F401
+from app.infrastructure.database import models as _models  # noqa: E402,F401
 
 config = context.config
 if config.config_file_name is not None:

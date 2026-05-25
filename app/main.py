@@ -2,17 +2,13 @@ from fastapi import FastAPI
 
 from app.api.v1.router import api_router
 from app.core.config import Settings, get_settings
+from app.core.events import build_event_registry, register_handlers
 from app.core.exception_handlers import register_exception_handlers
 from app.core.lifespan import build_lifespan
 from app.core.logging import configure_logging
 from app.core.middleware import register_middleware
-
-# Side-effect imports: register ORM models on Base.metadata so Alembic + tests
-# can discover them via a single import of `app.main`.
-from app.modules.auth.infrastructure.sqlalchemy_refresh_token_repository import (  # noqa: F401
-    RefreshTokenORM,
-)
-from app.modules.users.infrastructure.sqlalchemy_user_model import UserORM  # noqa: F401
+from app.infrastructure.database import models as _models  # noqa: F401
+from app.shared.events import InProcessEventBus
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -27,6 +23,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         redoc_url="/redoc" if not settings.is_production or settings.DEBUG else None,
         lifespan=build_lifespan(settings),
     )
+
+    # Compose the events subsystem here (not in lifespan) so the registry and
+    # bus exist as soon as `create_app` returns. Tests that drive the ASGI app
+    # without running lifespan still need the registry to serialize outbox
+    # records.
+    app.state.event_registry = build_event_registry()
+    app.state.event_bus = InProcessEventBus()
+    register_handlers(app.state.event_bus)
 
     register_middleware(app, settings)
     register_exception_handlers(app)

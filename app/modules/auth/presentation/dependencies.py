@@ -6,6 +6,7 @@ from fastapi import Depends
 
 from app.api.dependencies import (
     ClockDep,
+    EventPublisherDep,
     PasswordHasherDep,
     RefreshTokenRepositoryDep,
     TokenRotatorDep,
@@ -60,6 +61,7 @@ def get_logout_use_case(
     hasher: PasswordHasherDep,
     uow: UnitOfWorkDep,
     clock: ClockDep,
+    events: EventPublisherDep,
 ) -> Logout:
     return Logout(
         tokens=tokens,
@@ -67,6 +69,7 @@ def get_logout_use_case(
         hasher=hasher,
         uow=uow,
         clock=clock,
+        events=events,
     )
 
 

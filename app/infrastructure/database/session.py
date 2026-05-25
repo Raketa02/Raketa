@@ -21,12 +21,6 @@ def _get_factory() -> async_sessionmaker[AsyncSession]:
     return _session_factory
 
 
-def reset_session_factory() -> None:
-    """Drop the cached factory — used by tests after engine re-init."""
-    global _session_factory
-    _session_factory = None
-
-
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     factory = _get_factory()
     async with factory() as session:

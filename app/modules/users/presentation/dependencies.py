@@ -6,6 +6,8 @@ from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials
 
 from app.api.dependencies import (
+    ClockDep,
+    EventPublisherDep,
     PasswordHasherDep,
     TokenServiceDep,
     UnitOfWorkDep,
@@ -24,11 +26,15 @@ def get_register_user(
     users: UserRepositoryDep,
     hasher: PasswordHasherDep,
     uow: UnitOfWorkDep,
+    clock: ClockDep,
+    events: EventPublisherDep,
 ) -> RegisterUser:
     return RegisterUser(
         users=users,
         hasher=hasher,
         uow=uow,
+        clock=clock,
+        events=events,
     )
 
 
@@ -60,13 +66,13 @@ ResolveCurrentUserUseCaseDep = Annotated[
     ResolveCurrentUserFromAccessToken, Depends(get_resolve_current_user_use_case)
 ]
 
-BearerCredentials = Annotated[
+BearerCredentialsDep = Annotated[
     HTTPAuthorizationCredentials | None, Depends(bearer_scheme)
 ]
 
 
 async def current_user(
-    credentials: BearerCredentials,
+    credentials: BearerCredentialsDep,
     use_case: ResolveCurrentUserUseCaseDep,
 ) -> User:
     token = credentials.credentials if credentials else None
