@@ -9,7 +9,7 @@ from app.core.logging import configure_logging
 from app.core.middleware import register_middleware
 from app.infrastructure.database import models as _models  # noqa: F401
 from app.shared.events import InProcessEventBus
-
+##
 
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or get_settings()
