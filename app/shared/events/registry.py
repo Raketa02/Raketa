@@ -23,9 +23,14 @@ class EventRegistry:
         self._name_to_cls: dict[str, Type[DomainEvent]] = {}
         self._cls_to_name: dict[Type[DomainEvent], str] = {}
 
-    def register(self, event_cls: Type[DomainEvent], *, name: str | None = None) -> None:
+    def register(
+        self, event_cls: Type[DomainEvent], *, name: str | None = None
+    ) -> None:
         canonical = name or event_cls.__name__
-        if canonical in self._name_to_cls and self._name_to_cls[canonical] is not event_cls:
+        if (
+            canonical in self._name_to_cls
+            and self._name_to_cls[canonical] is not event_cls
+        ):
             raise ValueError(f"Event name '{canonical}' is already registered")
         self._name_to_cls[canonical] = event_cls
         self._cls_to_name[event_cls] = canonical
@@ -91,7 +96,9 @@ def _resolve_hints(event_cls: Type[DomainEvent]) -> dict[str, Any]:
         return getattr(event_cls, "__annotations__", {})
 
 
-def _coerce_payload(event_cls: Type[DomainEvent], payload: dict[str, Any]) -> dict[str, Any]:
+def _coerce_payload(
+    event_cls: Type[DomainEvent], payload: dict[str, Any]
+) -> dict[str, Any]:
     """Re-hydrate UUID and datetime fields from their JSON-safe representations."""
     hints = _resolve_hints(event_cls)
     coerced: dict[str, Any] = {}
