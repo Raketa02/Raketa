@@ -34,6 +34,7 @@ services:
       DB_SSL_MODE: disable
       APP_HOST: 0.0.0.0
       APP_PORT: 8000
+      EVENT_DELIVERY_WORKER_ENABLED: "true"
       PYTHONPYCACHEPREFIX: /tmp/pycache
       WATCHFILES_FORCE_POLLING: "true"
     ports:
@@ -49,6 +50,11 @@ services:
       - ./app:/home/app/app
       - ./migrations:/home/app/migrations
       - ./alembic.ini:/home/app/alembic.ini
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
   redis:
     image: redis:7.2

@@ -4,6 +4,7 @@ Revision ID: 0001_initial
 Revises:
 Create Date: 2026-05-16
 """
+
 import sqlalchemy as sa
 from alembic import op
 from sqlalchemy_utils.types.uuid import UUIDType
@@ -21,9 +22,15 @@ def upgrade() -> None:
         sa.Column("email", sa.String(length=320), nullable=False),
         sa.Column("nickname", sa.String(length=64), nullable=False),
         sa.Column("password_hash", sa.String(length=255), nullable=False),
-        sa.Column("authority", sa.String(length=32), nullable=False, server_default="USER"),
-        sa.Column("is_admin", sa.Boolean(), nullable=False, server_default=sa.text("false")),
-        sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.text("true")),
+        sa.Column(
+            "authority", sa.String(length=32), nullable=False, server_default="USER"
+        ),
+        sa.Column(
+            "is_admin", sa.Boolean(), nullable=False, server_default=sa.text("false")
+        ),
+        sa.Column(
+            "is_active", sa.Boolean(), nullable=False, server_default=sa.text("true")
+        ),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
@@ -54,7 +61,9 @@ def upgrade() -> None:
         sa.Column("token_hash", sa.String(length=255), nullable=False),
         sa.Column("jti", sa.String(length=64), nullable=False),
         sa.Column("refresh_expires_at", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("is_valid", sa.Boolean(), nullable=False, server_default=sa.text("true")),
+        sa.Column(
+            "is_valid", sa.Boolean(), nullable=False, server_default=sa.text("true")
+        ),
         sa.Column("revoked_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column(
             "created_at",
@@ -70,7 +79,9 @@ def upgrade() -> None:
         ),
         sa.UniqueConstraint("jti", name="uq_refresh_tokens_jti"),
     )
-    op.create_index("ix_refresh_tokens_user_id", "refresh_tokens", ["user_id"], unique=False)
+    op.create_index(
+        "ix_refresh_tokens_user_id", "refresh_tokens", ["user_id"], unique=False
+    )
     op.create_index("ix_refresh_tokens_jti", "refresh_tokens", ["jti"], unique=False)
 
 

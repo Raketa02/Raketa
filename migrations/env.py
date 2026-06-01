@@ -29,9 +29,9 @@ def _resolve_sync_url() -> str:
     settings = get_settings()
     url = os.environ.get("ALEMBIC_DATABASE_URL") or settings.WRITER_DB_URL
     if url.startswith("postgresql+asyncpg://"):
-        url = "postgresql://" + url[len("postgresql+asyncpg://"):]
+        url = "postgresql://" + url[len("postgresql+asyncpg://") :]
     elif url.startswith("postgres://"):
-        url = "postgresql://" + url[len("postgres://"):]
+        url = "postgresql://" + url[len("postgres://") :]
     return url
 
 

@@ -6,6 +6,7 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.modules.users.domain.events import UserRegistered
 from app.modules.users.domain.user import User
 from app.modules.users.domain.value_objects import (
     Authority,
@@ -42,6 +43,18 @@ def _to_orm(user: User) -> UserORM:
     )
 
 
+def _projection_from_registered(event: UserRegistered) -> UserORM:
+    return UserORM(
+        id=event.user_id,
+        email=event.email,
+        nickname=event.nickname,
+        password_hash=event.password_hash,
+        authority=event.authority,
+        is_admin=event.is_admin,
+        is_active=event.is_active,
+    )
+
+
 class SqlAlchemyUserRepository:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
@@ -69,6 +82,13 @@ class SqlAlchemyUserRepository:
 
     async def add(self, user: User) -> User:
         row = _to_orm(user)
+        self._session.add(row)
+        await self._session.flush()
+        await self._session.refresh(row)
+        return _to_domain(row)
+
+    async def project_registered(self, event: UserRegistered) -> User:
+        row = _projection_from_registered(event)
         self._session.add(row)
         await self._session.flush()
         await self._session.refresh(row)

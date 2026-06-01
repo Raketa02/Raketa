@@ -24,6 +24,7 @@
         { "name": "APP_PORT", "value": "8000" },
         { "name": "LOG_LEVEL", "value": "INFO" },
         { "name": "LOG_JSON", "value": "true" },
+        { "name": "EVENT_DELIVERY_WORKER_ENABLED", "value": "true" },
         { "name": "DB_SSL_MODE", "value": "require" },
         { "name": "JWT_ALGORITHM", "value": "HS256" },
         { "name": "ACCESS_TOKEN_EXPIRE_SECONDS", "value": "900" },

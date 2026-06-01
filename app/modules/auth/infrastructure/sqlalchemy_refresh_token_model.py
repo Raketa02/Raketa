@@ -24,9 +24,7 @@ class RefreshTokenORM(Base):
         index=True,
     )
     token_hash: Mapped[str] = mapped_column(String(255), nullable=False)
-    jti: Mapped[str] = mapped_column(
-        String(64), nullable=False, index=True
-    )
+    jti: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     refresh_expires_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False
     )

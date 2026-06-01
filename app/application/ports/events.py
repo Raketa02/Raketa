@@ -1,0 +1,67 @@
+from __future__ import annotations
+
+from collections.abc import Iterable
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Any, Protocol
+from uuid import UUID
+
+from app.application.events.envelope import SerializedEventEnvelope
+from app.application.events.store import StoredDomainEvent
+from app.shared.domain import DomainEvent
+
+
+@dataclass(frozen=True)
+class EncodedEvent:
+    event_type: str
+    schema_version: int
+    payload: dict[str, Any]
+
+
+class EventDecodingError(ValueError):
+    """A persisted event cannot be reconstituted into its domain-event class."""
+
+
+class DomainEventPublisher(Protocol):
+    """Queues released domain events in the current use-case transaction."""
+
+    async def publish(self, event: DomainEvent) -> None: ...
+
+    async def publish_many(self, events: Iterable[DomainEvent]) -> None: ...
+
+
+class EventCodec(Protocol):
+    def encode(self, event: DomainEvent) -> EncodedEvent: ...
+
+    def decode(self, envelope: SerializedEventEnvelope) -> DomainEvent: ...
+
+
+class OutboxWriter(Protocol):
+    async def add_many(self, records: Iterable[SerializedEventEnvelope]) -> None: ...
+
+
+class DomainEventStore(Protocol):
+    async def append(
+        self,
+        *,
+        aggregate_type: str,
+        aggregate_id: UUID,
+        expected_version: int,
+        events: Iterable[DomainEvent],
+    ) -> list[StoredDomainEvent]: ...
+
+    async def load_stream(
+        self, *, aggregate_type: str, aggregate_id: UUID
+    ) -> list[StoredDomainEvent]: ...
+
+
+class PendingOutbox(Protocol):
+    async def fetch_pending(
+        self, *, batch_size: int
+    ) -> list[SerializedEventEnvelope]: ...
+
+    async def mark_published(self, event_id: UUID, *, at: datetime) -> None: ...
+
+    async def mark_failed(
+        self, event_id: UUID, *, error: str, attempts: int
+    ) -> None: ...

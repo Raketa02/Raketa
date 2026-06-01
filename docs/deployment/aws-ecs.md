@@ -15,6 +15,7 @@ GitHub Actions ──build──▶ ECR (image)
                                        └──update service──▶ ECS Fargate ◀── ALB ◀── Internet
                                                               │
                                                               └──▶ RDS Postgres (TLS, root CA)
+                                                              └──▶ event delivery worker
 ```
 
 ## 1. One-time AWS prep
@@ -84,6 +85,13 @@ GitHub Actions ──build──▶ ECR (image)
      --region $AWS_REGION
    ```
 
+9. **Enable domain-event delivery in the API service**
+   - Set `EVENT_DELIVERY_WORKER_ENABLED=true` on the API task definition.
+   - Each API process hosts a background event delivery worker. The default
+     production command starts one Gunicorn process for one worker.
+   - Multiple API tasks can deliver events concurrently. Delivery remains
+     at-least-once, so event handlers must be idempotent.
+
 ## 2. GitHub Actions secrets / variables
 
 The `.github/workflows/deploy-ecs.yml` workflow expects:
@@ -116,6 +124,13 @@ We do **not** run Alembic from inside the long-running API container by default
   ```
   Add a second job in the workflow that runs RunTask before `amazon-ecs-deploy-task-definition`.
 - **Toggle on startup migrations**: set `RUN_MIGRATIONS_ON_STARTUP=true` in the task def's environment. Simpler but couples deploy + migration.
+
+Migration `0003` intentionally deletes unpublished legacy event rows because
+previous rows use Python class names rather than durable event contract
+identifiers. Schedule this cutover only when discarding those pending deliveries
+is acceptable. Migration
+`0005_rename_event_table_to_delivery_queue` then renames the durable event table
+to `event_delivery_queue`.
 
 ## 4. Local build → push → deploy
 

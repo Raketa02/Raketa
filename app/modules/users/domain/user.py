@@ -1,28 +1,33 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
-from app.modules.users.domain.events import UserRegistered
+from app.modules.users.domain.errors import InactiveUserCannotBePromoted
+from app.modules.users.domain.events import (
+    UserDisabled,
+    UserPromotedToAdmin,
+    UserRegistered,
+)
 from app.modules.users.domain.value_objects import (
     Authority,
     Email,
     HashedPassword,
     Nickname,
 )
-from app.shared.events import DomainEvent, EventRecorder
+from app.shared.domain import DomainEvent, EventRecorder
 
 
 @dataclass
 class User:
-    """Pure domain entity — no SQLAlchemy, no Pydantic, no HTTP.
+    """Event-sourced user aggregate — no SQLAlchemy, no Pydantic, no HTTP.
 
-    Domain events raised during state transitions are collected on the
-    aggregate via a composed `EventRecorder` (not inherited). The
-    application layer drains them with `pull_events()` after a successful
-    write.
+    State changes are represented as domain events. New events are applied
+    immediately and collected until the application layer appends them to the
+    event store.
     """
 
     id: UUID
@@ -34,13 +39,21 @@ class User:
     is_active: bool = True
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
-    
+    version: int = 0
+
     _events: EventRecorder = field(
         default_factory=EventRecorder, init=False, repr=False, compare=False
     )
 
     def pull_events(self) -> list[DomainEvent]:
         return self._events.pull()
+
+    @classmethod
+    def from_history(cls, events: Iterable[DomainEvent]) -> "User":
+        user = cls._empty()
+        for event in events:
+            user._apply(event)
+        return user
 
     @classmethod
     def register(
@@ -52,28 +65,75 @@ class User:
         password_hash: HashedPassword,
         occurred_at: datetime,
     ) -> "User":
-        user = cls(
-            id=user_id,
-            email=email,
-            nickname=nickname,
-            password_hash=password_hash,
-            authority=Authority.USER,
-            is_admin=False,
-            is_active=True,
-        )
-        user._events.record(
+        user = cls._empty()
+        user._record_that(
             UserRegistered(
-                user_id=user.id,
-                email=user.email.value,
-                nickname=user.nickname.value,
+                user_id=user_id,
+                email=email.value,
+                nickname=nickname.value,
+                password_hash=password_hash.value,
+                authority=Authority.USER.value,
+                is_admin=False,
+                is_active=True,
                 occurred_at=occurred_at,
             )
         )
         return user
 
-    def disable(self) -> None:
-        self.is_active = False
+    @classmethod
+    def _empty(cls) -> "User":
+        user = cls.__new__(cls)
+        user._events = EventRecorder()
+        user.version = 0
+        return user
 
-    def promote_to_admin(self) -> None:
-        self.is_admin = True
-        self.authority = Authority.ADMIN
+    def _record_that(self, event: DomainEvent) -> None:
+        self._apply(event)
+        self._events.record(event)
+
+    def _apply(self, event: DomainEvent) -> None:
+        if isinstance(event, UserRegistered):
+            self.id = event.user_id
+            self.email = Email(event.email)
+            self.nickname = Nickname(event.nickname)
+            self.password_hash = HashedPassword(event.password_hash)
+            self.authority = Authority(event.authority)
+            self.is_admin = event.is_admin
+            self.is_active = event.is_active
+            self.created_at = None
+            self.updated_at = None
+            self.version += 1
+            return
+        if isinstance(event, UserDisabled):
+            self.is_active = False
+            self.version += 1
+            return
+        if isinstance(event, UserPromotedToAdmin):
+            self.is_admin = True
+            self.authority = Authority.ADMIN
+            self.version += 1
+            return
+        raise TypeError(f"Unsupported user event {event!r}")
+
+    def _ensure_registered(self) -> None:
+        if not hasattr(self, "id"):
+            raise RuntimeError("user aggregate is not registered")
+
+    def disable(self, *, occurred_at: datetime) -> None:
+        self._ensure_registered()
+        if not self.is_active:
+            return
+        self._record_that(UserDisabled(user_id=self.id, occurred_at=occurred_at))
+
+    def promote_to_admin(self, *, occurred_at: datetime) -> None:
+        self._ensure_registered()
+        if not self.is_active:
+            raise InactiveUserCannotBePromoted()
+        if self.authority == Authority.ADMIN:
+            return
+        self._record_that(
+            UserPromotedToAdmin(
+                user_id=self.id,
+                occurred_at=occurred_at,
+            )
+        )

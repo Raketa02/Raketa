@@ -45,6 +45,7 @@ jobs:
       - name: Test
         env:
           WRITER_DB_URL: postgresql+asyncpg://basebackend_user:basebackend_pwd@localhost:5432/basebackendb
+          EVENT_TEST_DATABASE_URL: postgresql+asyncpg://basebackend_user:basebackend_pwd@localhost:5432/basebackendb
           DB_SSL_MODE: disable
           JWT_SECRET_KEY: ci-secret-do-not-use-in-prod
         run: poetry run pytest tests --cov=app --cov-report=xml -q

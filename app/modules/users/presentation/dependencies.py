@@ -7,6 +7,7 @@ from fastapi.security import HTTPAuthorizationCredentials
 
 from app.api.dependencies import (
     ClockDep,
+    DomainEventStoreDep,
     EventPublisherDep,
     PasswordHasherDep,
     TokenServiceDep,
@@ -24,6 +25,7 @@ from app.modules.users.domain.user import User
 
 def get_register_user(
     users: UserRepositoryDep,
+    event_store: DomainEventStoreDep,
     hasher: PasswordHasherDep,
     uow: UnitOfWorkDep,
     clock: ClockDep,
@@ -31,6 +33,7 @@ def get_register_user(
 ) -> RegisterUser:
     return RegisterUser(
         users=users,
+        event_store=event_store,
         hasher=hasher,
         uow=uow,
         clock=clock,
@@ -47,9 +50,7 @@ def get_current_user_use_case(
     return GetCurrentUser(users=users)
 
 
-GetCurrentUserUseCaseDep = Annotated[
-    GetCurrentUser, Depends(get_current_user_use_case)
-]
+GetCurrentUserUseCaseDep = Annotated[GetCurrentUser, Depends(get_current_user_use_case)]
 
 
 def get_resolve_current_user_use_case(

@@ -1,7 +1,8 @@
-from app.infrastructure.database.unit_of_work import UnitOfWork
+from app.application.ports import DomainEventPublisher, DomainEventStore, UnitOfWork
 from app.modules.auth.domain.ports import PasswordHasher
 from app.modules.users.application.commands import RegisterUserCommand
 from app.modules.users.domain.errors import EmailAlreadyRegistered, NicknameAlreadyTaken
+from app.modules.users.domain.events import UserRegistered
 from app.modules.users.domain.ports import UserRepository
 from app.modules.users.domain.user import User
 from app.modules.users.domain.value_objects import (
@@ -11,7 +12,6 @@ from app.modules.users.domain.value_objects import (
     RawPassword,
 )
 from app.shared.clock import Clock
-from app.shared.events import DomainEventPublisher
 from app.shared.ids import new_uuid
 
 
@@ -25,12 +25,14 @@ class RegisterUser:
     def __init__(
         self,
         users: UserRepository,
+        event_store: DomainEventStore,
         hasher: PasswordHasher,
         uow: UnitOfWork,
         clock: Clock,
         events: DomainEventPublisher,
     ) -> None:
         self._users = users
+        self._event_store = event_store
         self._hasher = hasher
         self._uow = uow
         self._clock = clock
@@ -46,14 +48,27 @@ class RegisterUser:
         if await self._users.get_by_nickname(nickname.value):
             raise NicknameAlreadyTaken()
 
-        user = User.register( 
+        user = User.register(
             user_id=new_uuid(),
             email=email,
             nickname=nickname,
             password_hash=HashedPassword(self._hasher.hash(raw_password.value)),
             occurred_at=self._clock.now(),
         )
-        persisted_user = await self._users.add(user)
-        await self._events.publish_many(user.pull_events())
+        pending_events = user.pull_events()
+        if not pending_events:
+            raise RuntimeError("user registration produced no domain event")
+        registered_event = pending_events[0]
+        if not isinstance(registered_event, UserRegistered):
+            raise RuntimeError("user registration must start with UserRegistered")
+        
+        await self._event_store.append(
+            aggregate_type="user",
+            aggregate_id=user.id,
+            expected_version=0,
+            events=pending_events,
+        )
+        persisted_user = await self._users.project_registered(registered_event)
+        await self._events.publish_many(pending_events)
         await self._uow.commit()
         return persisted_user

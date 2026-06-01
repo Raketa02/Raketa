@@ -4,14 +4,13 @@ from dataclasses import dataclass
 
 import jwt
 
-from app.infrastructure.database.unit_of_work import UnitOfWork
+from app.application.ports import DomainEventPublisher, UnitOfWork
 from app.modules.auth.domain.ports import (
     PasswordHasher,
     RefreshTokenRepository,
     TokenService,
 )
 from app.shared.clock import Clock
-from app.shared.events import DomainEventPublisher
 
 
 @dataclass(frozen=True)

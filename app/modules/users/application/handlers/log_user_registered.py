@@ -2,7 +2,12 @@ from __future__ import annotations
 
 import logging
 
-from app.modules.users.domain.events import UserRegistered
+from app.application.events import DeliveryContext
+from app.modules.users.domain.events import (
+    UserDisabled,
+    UserPromotedToAdmin,
+    UserRegistered,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +21,7 @@ class LogUserRegistered:
     startup. Replace this stub once a real side-effect is wired up.
     """
 
-    async def __call__(self, event: UserRegistered) -> None:
+    async def __call__(self, event: UserRegistered, context: DeliveryContext) -> None:
         logger.info(
             "user.registered",
             extra={
@@ -24,5 +29,35 @@ class LogUserRegistered:
                 "email": event.email,
                 "nickname": event.nickname,
                 "occurred_at": event.occurred_at.isoformat(),
+                "event_id": str(context.event_id),
+                "attempt": context.attempt,
+            },
+        )
+
+
+class LogUserDisabled:
+    async def __call__(self, event: UserDisabled, context: DeliveryContext) -> None:
+        logger.info(
+            "user.disabled",
+            extra={
+                "user_id": str(event.user_id),
+                "occurred_at": event.occurred_at.isoformat(),
+                "event_id": str(context.event_id),
+                "attempt": context.attempt,
+            },
+        )
+
+
+class LogUserPromotedToAdmin:
+    async def __call__(
+        self, event: UserPromotedToAdmin, context: DeliveryContext
+    ) -> None:
+        logger.info(
+            "user.promoted_to_admin",
+            extra={
+                "user_id": str(event.user_id),
+                "occurred_at": event.occurred_at.isoformat(),
+                "event_id": str(context.event_id),
+                "attempt": context.attempt,
             },
         )

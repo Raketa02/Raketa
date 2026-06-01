@@ -14,3 +14,8 @@ class NicknameAlreadyTaken(ConflictError):
 class UserNotEligible(UnauthorizedError):
     def __init__(self) -> None:
         super().__init__("user no longer eligible")
+
+
+class InactiveUserCannotBePromoted(ConflictError):
+    def __init__(self) -> None:
+        super().__init__("inactive user cannot be promoted")

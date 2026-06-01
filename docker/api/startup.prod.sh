@@ -3,7 +3,9 @@ set -euo pipefail
 
 APP_PORT="${APP_PORT:-8000}"
 APP_HOST="${APP_HOST:-0.0.0.0}"
-WORKERS="${GUNICORN_WORKERS:-2}"
+# One application process hosts one embedded event delivery worker by default.
+# Extra processes remain safe because pending event rows are locked while fetched.
+WORKERS="${GUNICORN_WORKERS:-1}"
 
 # Migrations are off by default in production — ECS should run them as a
 # one-shot task before the rolling deploy. Toggle on if you intentionally want

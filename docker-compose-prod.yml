@@ -10,6 +10,7 @@ services:
     environment:
       APP_HOST: 0.0.0.0
       APP_PORT: 8000
+      EVENT_DELIVERY_WORKER_ENABLED: "true"
     ports:
       - "8000:8000"
     networks:

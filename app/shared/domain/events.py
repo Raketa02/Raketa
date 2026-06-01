@@ -6,20 +6,14 @@ from typing import Protocol, runtime_checkable
 
 @runtime_checkable
 class DomainEvent(Protocol):
-    """Structural contract every domain event must satisfy.
-
-    Events are immutable facts about something that happened in the domain.
-    They are recorded on the aggregate that produced them and pulled out by
-    the application layer after a successful state transition.
-    """
+    """Immutable fact recorded by an aggregate during a state transition."""
 
     @property
     def occurred_at(self) -> datetime: ...
 
 
 class EventRecorder:
-    """Owned by an aggregate via composition. Collects events raised during
-    a unit of work; the application layer pulls them after commit."""
+    """Collects events raised by one aggregate until the use case releases them."""
 
     __slots__ = ("_events",)
 

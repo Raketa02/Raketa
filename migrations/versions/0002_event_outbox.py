@@ -4,6 +4,7 @@ Revision ID: 0002_event_outbox
 Revises: 0001_initial
 Create Date: 2026-05-25
 """
+
 import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects.postgresql import JSONB
@@ -29,9 +30,7 @@ def upgrade() -> None:
             server_default=sa.func.now(),
         ),
         sa.Column("published_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column(
-            "attempts", sa.Integer(), nullable=False, server_default="0"
-        ),
+        sa.Column("attempts", sa.Integer(), nullable=False, server_default="0"),
         sa.Column("last_error", sa.Text(), nullable=True),
     )
     op.create_index(

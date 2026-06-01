@@ -24,7 +24,6 @@ class ResolveCurrentUserFromAccessToken:
     async def execute(self, raw_token: str | None) -> User:
         if not raw_token:
             raise UnauthorizedError("missing bearer token")
-        
 
         try:
             payload = self._token_service.decode_access(raw_token)

@@ -12,9 +12,9 @@ def _to_asyncpg_url(url: str) -> str:
     query params (`sslmode`, `sslrootcert`, ...) that asyncpg cannot parse.
     Non-Postgres URLs pass through untouched."""
     if url.startswith("postgresql://"):
-        url = "postgresql+asyncpg://" + url[len("postgresql://"):]
+        url = "postgresql+asyncpg://" + url[len("postgresql://") :]
     elif url.startswith("postgres://"):
-        url = "postgresql+asyncpg://" + url[len("postgres://"):]
+        url = "postgresql+asyncpg://" + url[len("postgres://") :]
 
     if not url.startswith("postgresql+asyncpg://"):
         return url

@@ -1,15 +1,14 @@
 from fastapi import FastAPI
 
 from app.api.v1.router import api_router
+from app.bootstrap.events import build_event_runtime
 from app.core.config import Settings, get_settings
-from app.core.events import build_event_registry, register_handlers
 from app.core.exception_handlers import register_exception_handlers
 from app.core.lifespan import build_lifespan
 from app.core.logging import configure_logging
 from app.core.middleware import register_middleware
 from app.infrastructure.database import models as _models  # noqa: F401
-from app.shared.events import InProcessEventBus
-##
+
 
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or get_settings()
@@ -24,13 +23,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         lifespan=build_lifespan(settings),
     )
 
-    # Compose the events subsystem here (not in lifespan) so the registry and
-    # bus exist as soon as `create_app` returns. Tests that drive the ASGI app
-    # without running lifespan still need the registry to serialize outbox
-    # records.
-    app.state.event_registry = build_event_registry()
-    app.state.event_bus = InProcessEventBus()
-    register_handlers(app.state.event_bus)
+    # Keep event contracts available for request dependency resolution even
+    # when an ASGI test client does not execute lifespan startup.
+    app.state.event_runtime = build_event_runtime()
 
     register_middleware(app, settings)
     register_exception_handlers(app)

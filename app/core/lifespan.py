@@ -4,14 +4,16 @@ from typing import AsyncIterator
 from fastapi import FastAPI
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
+from app.bootstrap.events import build_event_delivery_worker
 from app.core.config import Settings
 from app.infrastructure.database.engine import (
     dispose_engine,
     get_engine,
     init_engine,
 )
-from app.infrastructure.events.outbox_processor import OutboxProcessor
-from app.shared.clock import SystemClock
+from app.infrastructure.events.event_delivery_worker import (
+    EventWorker,
+)
 
 
 def build_lifespan(settings: Settings):
@@ -19,27 +21,24 @@ def build_lifespan(settings: Settings):
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         init_engine(settings)
 
-        processor: OutboxProcessor | None = None
-        if settings.OUTBOX_PROCESSOR_ENABLED:
+        worker: EventWorker | None = None
+        if settings.EVENT_DELIVERY_WORKER_ENABLED:
             session_factory = async_sessionmaker(
                 get_engine(), expire_on_commit=False, autoflush=False
             )
-            processor = OutboxProcessor(
+            worker = build_event_delivery_worker(
+                event_runtime=app.state.event_runtime,
                 session_factory=session_factory,
-                bus=app.state.event_bus,
-                registry=app.state.event_registry,
-                clock=SystemClock(),
-                poll_interval_seconds=settings.OUTBOX_POLL_INTERVAL_SECONDS,
-                batch_size=settings.OUTBOX_BATCH_SIZE,
+                settings=settings,
             )
-            processor.start()
-            app.state.outbox_processor = processor
+            worker.start()
+            app.state.event_delivery_worker = worker
 
         try:
             yield
         finally:
-            if processor is not None:
-                await processor.stop()
+            if worker is not None:
+                await worker.stop()
             await dispose_engine()
 
     return lifespan

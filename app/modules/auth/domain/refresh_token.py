@@ -10,7 +10,7 @@ from app.modules.auth.domain.events import (
     RefreshTokenRevoked,
     RefreshTokenRotated,
 )
-from app.shared.events import DomainEvent, EventRecorder
+from app.shared.domain import DomainEvent, EventRecorder
 
 
 @dataclass

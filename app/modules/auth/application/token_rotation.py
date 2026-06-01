@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from uuid import UUID
 
-from app.infrastructure.database.unit_of_work import UnitOfWork
+from app.application.ports import DomainEventPublisher, UnitOfWork
 from app.modules.auth.domain.ports import (
     PasswordHasher,
     RefreshTokenRepository,
@@ -11,7 +11,6 @@ from app.modules.auth.domain.ports import (
 )
 from app.modules.auth.domain.refresh_token import RefreshToken
 from app.shared.clock import Clock
-from app.shared.events import DomainEventPublisher
 from app.shared.ids import new_uuid
 
 

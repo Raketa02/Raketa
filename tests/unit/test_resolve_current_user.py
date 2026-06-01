@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from typing import cast
+from uuid import UUID
 
 import jwt
 import pytest
 
 from app.core.exception_handlers import UnauthorizedError
 from app.modules.auth.domain.ports import IssuedToken
+from app.modules.users.application.get_current_user import GetCurrentUser
 from app.modules.users.application.resolve_current_user import (
     ResolveCurrentUserFromAccessToken,
 )
@@ -52,9 +55,9 @@ class StubGetCurrentUser:
     ) -> None:
         self._user = user
         self._error = error
-        self.seen_user_id = None
+        self.seen_user_id: UUID | None = None
 
-    async def execute(self, user_id):
+    async def execute(self, user_id: UUID):
         self.seen_user_id = user_id
         if self._error is not None:
             raise self._error
@@ -75,9 +78,12 @@ def _user() -> User:
 async def test_resolve_current_user_from_access_token_success():
     user = _user()
     getter = StubGetCurrentUser(user=user)
+    typed_getter = cast(GetCurrentUser, getter)
     service = StubTokenService(payload={"sub": str(user.id)})
 
-    resolved = await ResolveCurrentUserFromAccessToken(service, getter).execute("token")
+    resolved = await ResolveCurrentUserFromAccessToken(
+        service, typed_getter
+    ).execute("token")
 
     assert resolved is user
     assert getter.seen_user_id == user.id
@@ -87,33 +93,37 @@ async def test_resolve_current_user_from_access_token_success():
 async def test_resolve_current_user_rejects_missing_access_token():
     service = StubTokenService(payload={"sub": str(new_uuid())})
     getter = StubGetCurrentUser(user=_user())
+    typed_getter = cast(GetCurrentUser, getter)
 
     with pytest.raises(UnauthorizedError, match="missing bearer token"):
-        await ResolveCurrentUserFromAccessToken(service, getter).execute(None)
+        await ResolveCurrentUserFromAccessToken(service, typed_getter).execute(None)
 
 
 @pytest.mark.asyncio
 async def test_resolve_current_user_rejects_invalid_access_token():
     service = StubTokenService(error=jwt.InvalidTokenError("bad token"))
     getter = StubGetCurrentUser(user=_user())
+    typed_getter = cast(GetCurrentUser, getter)
 
     with pytest.raises(UnauthorizedError, match="invalid access token"):
-        await ResolveCurrentUserFromAccessToken(service, getter).execute("token")
+        await ResolveCurrentUserFromAccessToken(service, typed_getter).execute("token")
 
 
 @pytest.mark.asyncio
 async def test_resolve_current_user_rejects_malformed_subject():
     service = StubTokenService(payload={"sub": "not-a-uuid"})
     getter = StubGetCurrentUser(user=_user())
+    typed_getter = cast(GetCurrentUser, getter)
 
     with pytest.raises(UnauthorizedError, match="malformed token subject"):
-        await ResolveCurrentUserFromAccessToken(service, getter).execute("token")
+        await ResolveCurrentUserFromAccessToken(service, typed_getter).execute("token")
 
 
 @pytest.mark.asyncio
 async def test_resolve_current_user_preserves_user_eligibility_errors():
     service = StubTokenService(payload={"sub": str(new_uuid())})
     getter = StubGetCurrentUser(error=UserNotEligible())
+    typed_getter = cast(GetCurrentUser, getter)
 
     with pytest.raises(UserNotEligible):
-        await ResolveCurrentUserFromAccessToken(service, getter).execute("token")
+        await ResolveCurrentUserFromAccessToken(service, typed_getter).execute("token")

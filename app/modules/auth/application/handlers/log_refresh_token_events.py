@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 
+from app.application.events import DeliveryContext
 from app.modules.auth.domain.events import (
     RefreshTokenIssued,
     RefreshTokenRevoked,
@@ -12,36 +13,48 @@ logger = logging.getLogger(__name__)
 
 
 class LogRefreshTokenIssued:
-    async def __call__(self, event: RefreshTokenIssued) -> None:
+    async def __call__(
+        self, event: RefreshTokenIssued, context: DeliveryContext
+    ) -> None:
         logger.info(
             "auth.refresh_token.issued",
             extra={
                 "user_id": str(event.user_id),
                 "jti": event.jti,
                 "expires_at": event.expires_at.isoformat(),
+                "event_id": str(context.event_id),
+                "attempt": context.attempt,
             },
         )
 
 
 class LogRefreshTokenRevoked:
-    async def __call__(self, event: RefreshTokenRevoked) -> None:
+    async def __call__(
+        self, event: RefreshTokenRevoked, context: DeliveryContext
+    ) -> None:
         logger.info(
             "auth.refresh_token.revoked",
             extra={
                 "user_id": str(event.user_id),
                 "jti": event.jti,
                 "reason": event.reason,
+                "event_id": str(context.event_id),
+                "attempt": context.attempt,
             },
         )
 
 
 class LogRefreshTokenRotated:
-    async def __call__(self, event: RefreshTokenRotated) -> None:
+    async def __call__(
+        self, event: RefreshTokenRotated, context: DeliveryContext
+    ) -> None:
         logger.info(
             "auth.refresh_token.rotated",
             extra={
                 "user_id": str(event.user_id),
                 "revoked_jti": event.revoked_jti,
                 "issued_jti": event.issued_jti,
+                "event_id": str(context.event_id),
+                "attempt": context.attempt,
             },
         )

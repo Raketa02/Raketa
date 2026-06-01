@@ -1,21 +1,8 @@
 from __future__ import annotations
 
-from typing import Protocol, runtime_checkable
-
 from sqlalchemy.ext.asyncio import AsyncSession
 
-
-@runtime_checkable
-class UnitOfWork(Protocol):
-    """Transactional boundary port consumed by use cases.
-
-    Use cases call `commit()` after a successful write; the FastAPI dependency
-    that yields the underlying session handles rollback on exception.
-    """
-
-    async def commit(self) -> None: ...
-    async def flush(self) -> None: ...
-    async def rollback(self) -> None: ...
+from app.application.ports.unit_of_work import UnitOfWork
 
 
 class AsyncSqlAlchemyUnitOfWork:
@@ -37,3 +24,6 @@ class AsyncSqlAlchemyUnitOfWork:
     @property
     def session(self) -> AsyncSession:
         return self._session
+
+
+__all__ = ["AsyncSqlAlchemyUnitOfWork", "UnitOfWork"]
