@@ -60,7 +60,15 @@ jobs:
   build-and-deploy:
     name: Build, push to ECR, deploy to ECS
     needs: test
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/release' || github.event_name == 'workflow_dispatch'
+    # `vars.AWS_REGION` is the switch. Until the AWS side is wired up (OIDC role,
+    # ECR repo, ECS cluster/service) this job skips instead of failing every push
+    # with a credentials error. Setting the repo variables turns it on:
+    #   gh variable set AWS_REGION --body eu-north-1
+    #   gh variable set ECR_REPOSITORY ECS_CLUSTER ECS_SERVICE ECS_CONTAINER_NAME
+    #   gh secret   set AWS_OIDC_ROLE_ARN
+    if: >-
+      vars.AWS_REGION != '' &&
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/release' || github.event_name == 'workflow_dispatch')
     # NOTE: no `defaults.working-directory` here — the actions below take explicit
     # paths (`context: backend`, `task-definition: backend/deploy/...`).
     runs-on: ubuntu-latest

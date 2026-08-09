@@ -20,6 +20,8 @@ jobs:
       backend: ${{ steps.filter.outputs.backend }}
       club: ${{ steps.filter.outputs.club }}
       player: ${{ steps.filter.outputs.player }}
+      club_ready: ${{ steps.bootstrapped.outputs.club }}
+      player_ready: ${{ steps.bootstrapped.outputs.player }}
     steps:
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v3
@@ -35,6 +37,26 @@ jobs:
             player:
               - 'frontend_player/**'
               - '.github/workflows/ci.yml'
+
+      # The two frontends ship as architecture + config; neither has been
+      # installed yet, so there is no lockfile to build from. Gate their jobs on
+      # one existing rather than failing every run until someone bootstraps them
+      # — a permanently-red CI teaches people to ignore CI.
+      # Each job switches itself on the moment its pnpm-lock.yaml is committed.
+      - id: bootstrapped
+        run: |
+          for app in club player; do
+            case $app in
+              club)   dir=frontend_club   ;;
+              player) dir=frontend_player ;;
+            esac
+            if [ -f "$dir/pnpm-lock.yaml" ]; then
+              echo "$app=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "$app=false" >> "$GITHUB_OUTPUT"
+              echo "::notice title=$dir not bootstrapped::Skipping $dir CI — no pnpm-lock.yaml yet. Run 'pnpm install' in $dir and commit the lockfile to enable it."
+            fi
+          done
 
   guardrails:
     name: Guardrail hooks
@@ -88,7 +110,7 @@ jobs:
   club:
     name: Club web — lint, typecheck, test, build
     needs: changes
-    if: needs.changes.outputs.club == 'true'
+    if: needs.changes.outputs.club == 'true' && needs.changes.outputs.club_ready == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -117,7 +139,7 @@ jobs:
   player:
     name: Player app — lint, typecheck, test
     needs: changes
-    if: needs.changes.outputs.player == 'true'
+    if: needs.changes.outputs.player == 'true' && needs.changes.outputs.player_ready == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
