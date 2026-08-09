@@ -1,0 +1,10 @@
+[tool.poetry]
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.11"
+sandbuket = { git = "https://github.com/RobertConstantin02/sandbuket.git", branch = "main" }
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

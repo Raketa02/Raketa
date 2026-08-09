@@ -1,0 +1,144 @@
+name: CI
+
+# Each app is gated independently and only when it changed — a Next.js edit
+# should not re-run the backend's Postgres suite. The guardrail hooks are
+# checked on every run because they protect the whole repo.
+on:
+  pull_request:
+  push:
+    branches: [main, release]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    name: Detect changed apps
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      club: ${{ steps.filter.outputs.club }}
+      player: ${{ steps.filter.outputs.player }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+              - '.github/workflows/ci.yml'
+            club:
+              - 'frontend_club/**'
+              - '.github/workflows/ci.yml'
+            player:
+              - 'frontend_player/**'
+              - '.github/workflows/ci.yml'
+
+  guardrails:
+    name: Guardrail hooks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify ownership + bash guards still match
+        run: bash .claude/hooks/test-hooks.sh
+
+  backend:
+    name: Backend — lint & test
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: rakieta
+          POSTGRES_USER: rakieta_user
+          POSTGRES_PASSWORD: rakieta_pwd
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U rakieta_user -d rakieta"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install poetry
+        run: pip install poetry==1.8.3
+      - name: Install deps
+        run: |
+          poetry config virtualenvs.create false
+          poetry install --no-interaction --no-root
+      - name: Lint
+        run: poetry run ruff check .
+      - name: Test
+        env:
+          WRITER_DB_URL: postgresql+asyncpg://rakieta_user:rakieta_pwd@localhost:5432/rakieta
+          EVENT_TEST_DATABASE_URL: postgresql+asyncpg://rakieta_user:rakieta_pwd@localhost:5432/rakieta
+          DB_SSL_MODE: disable
+          JWT_SECRET_KEY: ci-secret-do-not-use-in-prod
+        run: poetry run pytest tests --cov=app --cov-report=xml -q
+
+  club:
+    name: Club web — lint, typecheck, test, build
+    needs: changes
+    if: needs.changes.outputs.club == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend_club
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: frontend_club/pnpm-lock.yaml
+      - name: Install deps
+        run: pnpm install --frozen-lockfile
+      - name: Lint
+        run: pnpm lint
+      - name: Typecheck
+        run: pnpm typecheck
+      - name: Test
+        run: pnpm test
+      - name: Build
+        run: pnpm build
+
+  player:
+    name: Player app — lint, typecheck, test
+    needs: changes
+    if: needs.changes.outputs.player == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend_player
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: frontend_player/pnpm-lock.yaml
+      - name: Install deps
+        run: pnpm install --frozen-lockfile
+      - name: Lint
+        run: pnpm lint
+      - name: Typecheck
+        run: pnpm typecheck
+      - name: Test
+        run: pnpm test
+      # No `build` step: a release build is `eas build`, which is a deliberate
+      # human-triggered action, not part of PR CI. See docs/adr/0008.

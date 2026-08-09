@@ -1,8 +1,67 @@
+# ---------------------------------------------------------------------------
+# Rakieta monorepo — root ignore rules.
+# Each app may add its own .gitignore for stack-specific artifacts.
+# ---------------------------------------------------------------------------
+
+# --- secrets & credentials (never commit; commit the .example templates) ---
+.env
+.env.*
+!.env.example
+!.env.*.example
 .secrets/
 *.key
 *.crt
 *.pem
-.env*
+*.p12
+*.keystore
+*.mobileprovision
+
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.claude/settings.local.json
+
+# --- Python (backend/) ---
+.venv/
+venv/
 __pycache__/
 *.py[cod]
 .coverage
+coverage.xml
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+
+# --- local Postgres data (docker uses a named volume; this is stale bind-mount data) ---
+pgdata/
+
+# --- Node / TypeScript (frontend_club/, frontend_player/) ---
+node_modules/
+.pnpm-store/
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.tsbuildinfo
+
+# --- Next.js (frontend_club/) ---
+.next/
+out/
+.vercel/
+
+# --- Expo / React Native (frontend_player/) ---
+.expo/
+.expo-shared/
+web-build/
+*.jks
+android/
+ios/
+
+# --- test & build output ---
+playwright-report/
+test-results/

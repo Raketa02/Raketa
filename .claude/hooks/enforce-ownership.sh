@@ -1,0 +1,109 @@
+#!/bin/bash
+# ---------------------------------------------------------------------------
+# Ownership boundary guard for the Rakieta monorepo.
+#
+# The repo holds three independently deployable apps. An agent working in one of
+# them must not silently edit another — that is how a "small backend fix" quietly
+# rewrites the mobile app. This hook makes that boundary mechanical instead of
+# a request in a markdown file.
+#
+# PreToolUse hook on file-mutating tools. Exit 2 blocks the call and returns the
+# stderr text to the agent.
+#
+# Which app a session owns is resolved in this order:
+#   1. $RKTA_TIER  — explicit override: root | backend | player | club
+#   2. the session's cwd, relative to the repo root
+# A session at the repo root owns everything (you are the orchestrator).
+#
+# Requires: jq
+# ---------------------------------------------------------------------------
+set -uo pipefail
+
+INPUT=$(cat)
+
+ROOT="${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null)}"
+if [ -z "$ROOT" ]; then exit 0; fi
+
+if ! command -v jq >/dev/null 2>&1; then
+  echo 'Ownership hook cannot run: jq is not installed (brew install jq). Blocking to fail safe.' >&2
+  exit 2
+fi
+
+CWD=$(printf '%s' "$INPUT" | jq -r '.cwd // empty')
+TOOL=$(printf '%s' "$INPUT" | jq -r '.tool_name // empty')
+
+# Edit/Write/MultiEdit use .file_path; NotebookEdit uses .notebook_path.
+TARGET=$(printf '%s' "$INPUT" | jq -r '.tool_input.file_path // .tool_input.notebook_path // empty')
+[ -z "$TARGET" ] && exit 0
+
+# --- normalize both paths to be relative to the repo root ----------------------
+abs() {
+  case "$1" in
+    /*) printf '%s' "$1" ;;
+    *)  printf '%s' "${CWD:-$ROOT}/$1" ;;
+  esac
+}
+relpath() { # strip "$ROOT/" prefix; returns "." when equal
+  local p="${1%/}"
+  case "$p" in
+    "$ROOT")   printf '.' ;;
+    "$ROOT"/*) printf '%s' "${p#"$ROOT"/}" ;;
+    *)         printf '%s' "$p" ;;   # outside the repo entirely
+  esac
+}
+
+REL_TARGET=$(relpath "$(abs "$TARGET")")
+REL_CWD=$(relpath "${CWD:-$ROOT}")
+
+app_of() { # map a repo-relative path to the app that owns it
+  case "$1" in
+    backend|backend/*)                 printf 'backend' ;;
+    frontend_player|frontend_player/*) printf 'player'  ;;
+    frontend_club|frontend_club/*)     printf 'club'    ;;
+    *)                                 printf 'shared'  ;;
+  esac
+}
+
+# --- which app does this session own? -----------------------------------------
+TIER="${RKTA_TIER:-}"
+if [ -z "$TIER" ]; then
+  if [ "$REL_CWD" = "." ]; then TIER="root"; else TIER=$(app_of "$REL_CWD"); fi
+  [ "$TIER" = "shared" ] && TIER="root"
+fi
+
+# --- guardrail 1: never let a scoped session disarm its own guardrails ---------
+case "$REL_TARGET" in
+  .claude/hooks/*|.claude/settings.json)
+    if [ "$TIER" != "root" ]; then
+      echo "Blocked: '$REL_TARGET' is the ownership/safety guardrail itself, and this session is scoped to '$TIER'. Editing it from inside an app session would let an agent disable its own boundary. Make this change from a repo-root session." >&2
+      exit 2
+    fi
+    ;;
+esac
+
+# --- guardrail 2: no cross-app writes -----------------------------------------
+[ "$TIER" = "root" ] && exit 0
+
+TARGET_APP=$(app_of "$REL_TARGET")
+[ "$TARGET_APP" = "shared" ] && exit 0
+[ "$TARGET_APP" = "$TIER" ] && exit 0
+
+dir_of() { # bash 3.2 on macOS has no associative arrays — keep this a case
+  case "$1" in
+    backend) printf 'backend/'         ;;
+    player)  printf 'frontend_player/' ;;
+    club)    printf 'frontend_club/'   ;;
+    *)       printf '%s' "$1"          ;;
+  esac
+}
+
+cat >&2 <<EOF
+Blocked: this session owns '${TIER}' ($(dir_of "$TIER")) but ${TOOL} targets '${REL_TARGET}', which belongs to '${TARGET_APP}' ($(dir_of "$TARGET_APP")).
+
+The three apps are separate deployables and communicate over HTTP only — see docs/adr/0005 and CONTEXT-MAP.md.
+
+If '${TARGET_APP}' genuinely needs a change, the correct move is one of:
+  - state what the other app needs and let a session scoped to it make the change;
+  - if it is an API contract change, change it in backend/ and regenerate the clients (make gen-api).
+EOF
+exit 2

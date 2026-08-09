@@ -1,0 +1,21 @@
+# Next.js
+/.next/
+/out/
+next-env.d.ts
+
+# dependencies
+/node_modules/
+
+# testing
+/coverage/
+/playwright-report/
+/test-results/
+
+# env
+.env
+.env.*
+!.env.example
+
+# misc
+*.tsbuildinfo
+.vercel

@@ -1,0 +1,29 @@
+.git
+.gitignore
+.idea
+.vscode
+.mypy_cache
+.pytest_cache
+.venv
+__pycache__
+*.pyc
+.coverage
+coverage.xml
+htmlcov
+.DS_Store
+
+# don't bake env files into the image
+.env
+.env.*
+
+# don't bake local certs/secrets
+.secrets
+pgdata
+
+# docs / tooling
+*.md
+LICENSE
+docs
+
+# tests run in CI, not inside the runtime image
+tests

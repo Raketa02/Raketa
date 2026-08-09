@@ -1,27 +1,31 @@
 {
-    "version": "0.2.0",
-    "configurations": [
-      {
-        "name": "Python Debugger: Current File",
-        "type": "debugpy",
-        "request": "launch",
-        "program": "${file}",
-        "console": "integratedTerminal"
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Python Debugger: Current File",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${file}",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}/backend"
+    },
+    {
+      // Attaches to the debugpy port exposed by the `api` service in
+      // backend/docker-compose-dev.yml (ports: 5678:5678).
+      // remoteRoot matches its volume mount `./app:/home/app/app`.
+      "name": "Attach to Docker FastAPI (debugpy)",
+      "type": "debugpy",
+      "request": "attach",
+      "connect": {
+        "host": "localhost",
+        "port": 5678
       },
-      {
-        "name": "Attach to Docker FastAPI (debugpy)",
-        "type": "debugpy",
-        "request": "attach",
-        "connect": {
-          "host": "localhost",
-          "port": 5678
-        },
-        "pathMappings": [
-          {
-            "localRoot": "${workspaceFolder}/src",
-            "remoteRoot": "/home/docker_user/app"
-          }
-        ]
-      }
-    ]
-  }
+      "pathMappings": [
+        {
+          "localRoot": "${workspaceFolder}/backend/app",
+          "remoteRoot": "/home/app/app"
+        }
+      ]
+    }
+  ]
+}

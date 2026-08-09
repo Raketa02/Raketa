@@ -1,9 +1,13 @@
-name: CI / Deploy to ECS
+name: Deploy backend to ECS
 
+# Backend-only pipeline. Lint/test for every app runs in ci.yml; this workflow
+# builds and ships the FastAPI image and is scoped to `backend/` changes.
 on:
-  pull_request:
   push:
     branches: [main, release]
+    paths:
+      - "backend/**"
+      - ".github/workflows/deploy-ecs.yml"
   workflow_dispatch:
 
 permissions:
@@ -17,17 +21,20 @@ jobs:
   test:
     name: Lint & test
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
     services:
       postgres:
         image: postgres:17
         env:
-          POSTGRES_DB: basebackendb
-          POSTGRES_USER: basebackend_user
-          POSTGRES_PASSWORD: basebackend_pwd
+          POSTGRES_DB: rakieta
+          POSTGRES_USER: rakieta_user
+          POSTGRES_PASSWORD: rakieta_pwd
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U basebackend_user -d basebackendb"
+          --health-cmd "pg_isready -U rakieta_user -d rakieta"
           --health-interval 5s --health-timeout 3s --health-retries 10
     steps:
       - uses: actions/checkout@v4
@@ -44,8 +51,8 @@ jobs:
         run: poetry run ruff check .
       - name: Test
         env:
-          WRITER_DB_URL: postgresql+asyncpg://basebackend_user:basebackend_pwd@localhost:5432/basebackendb
-          EVENT_TEST_DATABASE_URL: postgresql+asyncpg://basebackend_user:basebackend_pwd@localhost:5432/basebackendb
+          WRITER_DB_URL: postgresql+asyncpg://rakieta_user:rakieta_pwd@localhost:5432/rakieta
+          EVENT_TEST_DATABASE_URL: postgresql+asyncpg://rakieta_user:rakieta_pwd@localhost:5432/rakieta
           DB_SSL_MODE: disable
           JWT_SECRET_KEY: ci-secret-do-not-use-in-prod
         run: poetry run pytest tests --cov=app --cov-report=xml -q
@@ -54,6 +61,8 @@ jobs:
     name: Build, push to ECR, deploy to ECS
     needs: test
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/release' || github.event_name == 'workflow_dispatch'
+    # NOTE: no `defaults.working-directory` here — the actions below take explicit
+    # paths (`context: backend`, `task-definition: backend/deploy/...`).
     runs-on: ubuntu-latest
     environment: production
     steps:
@@ -79,8 +88,8 @@ jobs:
       - name: Build & push image
         uses: docker/build-push-action@v6
         with:
-          context: .
-          file: docker/api/Dockerfile.prod
+          context: backend
+          file: backend/docker/api/Dockerfile.prod
           platforms: linux/amd64
           push: true
           tags: |
@@ -93,7 +102,7 @@ jobs:
         id: render
         uses: aws-actions/amazon-ecs-render-task-definition@v1
         with:
-          task-definition: deploy/ecs/taskdef.json
+          task-definition: backend/deploy/ecs/taskdef.json
           container-name: ${{ vars.ECS_CONTAINER_NAME }}
           image: ${{ steps.tag.outputs.image }}
 

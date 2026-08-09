@@ -1,0 +1,4 @@
+# Secrets and sandbuket run artifacts - never commit these.
+.env
+logs/
+worktrees/
