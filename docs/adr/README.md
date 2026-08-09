@@ -39,3 +39,4 @@ If your work **contradicts** an existing ADR, surface it rather than silently ov
 - [0007 — Club web: BFF with an httpOnly-cookie session](0007-club-web-bff-httponly-cookie-session.md)
 - [0008 — Player mobile: secure-store tokens, direct to the API](0008-player-mobile-securestore-direct-api.md)
 - [0009 — Feature-first Clean Architecture on both frontends](0009-feature-first-clean-architecture-frontends.md)
+- [0010 — Local-first development; AWS deployment deferred](0010-local-first-development-aws-deferred.md)

@@ -38,12 +38,18 @@ domain language and communicate only over HTTP.
 
 Each app owns its own commands. **Run them from that app's directory.**
 
+Everything runs locally. The backend needs **no env file** for the normal path —
+compose supplies the database URLs and runs migrations on start.
+
 ```bash
-# Backend
+# Backend — the whole stack in Docker (Postgres 17 + API + Redis)
 cd backend
-cp .env.local.example .env.local     # then set JWT_SECRET_KEY
-make install                          # poetry install
-make up                               # Postgres 17 + API + Redis
+make up                               # http://localhost:8000  ·  /health
+make logs                             # tail the API
+make down                             # stop
+
+# Backend — tests and checks (run on the host, no Docker needed)
+make install                          # poetry install  (needs Python 3.11)
 make check                            # lint + typecheck + test
 
 # Club web app  (first run: see frontend_club/README.md)
@@ -52,6 +58,10 @@ cd frontend_club && pnpm install && pnpm dev
 # Player app    (first run: see frontend_player/README.md)
 cd frontend_player && pnpm install && pnpm start
 ```
+
+Only if you want uvicorn on the **host** rather than in the container:
+`cd backend && cp .env.example .env`. The name matters — `config.py` loads `.env`, so a
+file called `.env.local` is read by nothing.
 
 The two frontends hold architecture, config and rules but have **not** been installed or
 generated yet — each README has its bootstrap sequence. They were deliberately not
@@ -106,12 +116,24 @@ make test-hooks    # 45 assertions over both guardrails
 The guardrails need `jq` (`brew install jq`); without it they block rather than wave
 things through.
 
-## Deployment
+## Deployment — none, for now
 
-The backend deploys to AWS ECS/Fargate —
-[`backend/docs/deployment/aws-ecs.md`](backend/docs/deployment/aws-ecs.md) and
-[`.github/workflows/deploy-ecs.yml`](.github/workflows/deploy-ecs.yml). Deployment and
-release commands are **blocked for agents** and require a human.
+Everything runs **locally**: local Postgres and local Docker via
+`backend/docker-compose-dev.yml`. There is no deployed environment, and no AWS account
+is needed to work on this project.
+
+The AWS ECS/Fargate path is **kept intact but dormant** — the task definition, the
+pipeline, the Makefile targets and
+[`backend/docs/deployment/aws-ecs.md`](backend/docs/deployment/aws-ecs.md) all remain, so
+deployment can resume later without being rebuilt from memory. It is dormant three ways:
+the workflow is manual-only, its deploy job is gated on `vars.AWS_REGION` being set, and
+deploy commands are blocked outright for agent sessions.
+
+Reactivation instructions are in the header of
+[`.github/workflows/deploy-ecs.yml`](.github/workflows/deploy-ecs.yml). Start by checking
+the task definition against the current settings — dormant infrastructure drifts from the
+code silently. The reasoning is in
+[ADR-0010](docs/adr/0010-local-first-development-aws-deferred.md).
 
 ## Licence
 

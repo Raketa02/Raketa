@@ -63,6 +63,15 @@ expect enforce-ownership.sh 2 "NotebookEdit honours the boundary" \
   "$(printf '{"cwd":"%s","tool_name":"NotebookEdit","tool_input":{"notebook_path":"%s"}}' "$ROOT/backend" "$ROOT/frontend_club/a.ipynb")"
 
 echo
+echo "enforce-ownership.sh — secret files (the shell guard's counterpart)"
+expect enforce-ownership.sh 2 "Write a real env file"            "$(edit "$ROOT/backend" "$ROOT/backend/${DOTENV}.local")"
+expect enforce-ownership.sh 2 "Write a bare .env"                "$(edit "$ROOT/frontend_club" "$ROOT/frontend_club/${DOTENV}")"
+expect enforce-ownership.sh 2 "root session is not exempt"       "$(edit "$ROOT" "$ROOT/backend/${DOTENV}.docker")"
+expect enforce-ownership.sh 2 "private key material"             "$(edit "$ROOT/backend" "$ROOT/backend/certs/server.key")"
+expect enforce-ownership.sh 0 "the .example template is fine"    "$(edit "$ROOT/backend" "$ROOT/backend/${DOTENV}.local.example")"
+expect enforce-ownership.sh 0 "an ordinary source file"          "$(edit "$ROOT/backend" "$ROOT/backend/app/core/config.py")"
+
+echo
 echo "guard-bash.sh — deployment and release"
 expect guard-bash.sh 0 "ordinary test run"           "$(cmd "$ROOT/backend" 'poetry run pytest tests -q')"
 expect guard-bash.sh 2 "make ecr-push"               "$(cmd "$ROOT/backend" 'make ecr-push')"

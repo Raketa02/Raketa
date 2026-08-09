@@ -217,6 +217,11 @@ docker compose -f docker-compose-dev.yml exec api alembic check
 
 ## Production Image
 
+> **Dormant.** There is no deployed environment — development is entirely local
+> (`docker-compose-dev.yml`). This section and `docker-compose-prod.yml` are kept
+> intact for when deployment resumes; see
+> [ADR-0010](../docs/adr/0010-local-first-development-aws-deferred.md).
+
 The production image is built from `docker/api/Dockerfile.prod`.
 
 ```bash
@@ -314,7 +319,9 @@ pytest-env.
   disabled, domain events still enter `event_delivery_queue` and can be delivered
   by a separately hosted worker using the same application workflow.
 - Detailed cloud deployment notes live in `docs/deployment/aws-ecs.md`; this
-  README focuses on the service architecture and Docker runtime.
+  README focuses on the service architecture and Docker runtime. That guide is
+  **dormant** — nothing in it is provisioned, and the pipeline is manual-only and
+  gated. See [ADR-0010](../docs/adr/0010-local-first-development-aws-deferred.md).
 
 ## Out Of Scope
 

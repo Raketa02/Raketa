@@ -67,7 +67,13 @@ shell:             ## bash into the api container
 migrate:           ## run alembic upgrade head inside the api container
 	$(COMPOSE_DEV) exec api alembic upgrade head
 
-## ----- production / ECR / ECS  (never run from an agent session — see CLAUDE.md Safety)
+## ----- production / ECR / ECS
+## DORMANT — AWS deployment is not in use; development is entirely local
+## (see ../docs/adr/0010-local-first-development-aws-deferred.md). These targets
+## are kept working for when it resumes. They are blocked for agent sessions by
+## .claude/hooks/guard-bash.sh and need a human plus a configured AWS account.
+## Reactivating starts with reviewing taskdef.json against app/core/config.py —
+## dormant infra drifts from the code silently.
 build-prod:        ## build the production image (tagged for ECR)
 	docker build -f docker/api/Dockerfile.prod -t $(IMAGE_NAME):$(TAG) -t $(ECR_URI):$(TAG) -t $(ECR_URI):latest .
 

@@ -1,14 +1,38 @@
-name: Deploy backend to ECS
+name: Deploy backend to ECS  [DORMANT]
 
-# Backend-only pipeline. Lint/test for every app runs in ci.yml; this workflow
-# builds and ships the FastAPI image and is scoped to `backend/` changes.
+# ---------------------------------------------------------------------------
+# DORMANT — AWS deployment is deliberately not in use.
+#
+# Development is entirely local: local Postgres + local Docker
+# (backend/docker-compose-dev.yml). This pipeline is kept intact, and correct,
+# so it can be switched back on without being rebuilt from memory.
+#
+# It is dormant in two independent ways, so neither alone can wake it by
+# accident:
+#   1. Trigger — manual only. It does not run on push. (Lint/test on every push
+#      is ci.yml's job; this file exists purely to ship an image.)
+#   2. The build-and-deploy job is gated on `vars.AWS_REGION` being set, so even
+#      a manual run stops after the tests until AWS actually exists.
+#
+# To reactivate, once the AWS side is provisioned:
+#   gh variable set AWS_REGION --body eu-north-1
+#   gh variable set ECR_REPOSITORY     --body rakieta-api
+#   gh variable set ECS_CLUSTER        --body rakieta-cluster
+#   gh variable set ECS_SERVICE        --body rakieta-service
+#   gh variable set ECS_CONTAINER_NAME --body api
+#   gh secret   set AWS_OIDC_ROLE_ARN  --body arn:aws:iam::<acct>:role/<role>
+# and restore the `push:` trigger below.
+#
+# Full provisioning guide: backend/docs/deployment/aws-ecs.md
+# ---------------------------------------------------------------------------
 on:
-  push:
-    branches: [main, release]
-    paths:
-      - "backend/**"
-      - ".github/workflows/deploy-ecs.yml"
   workflow_dispatch:
+  # Restore this block when deployment resumes:
+  # push:
+  #   branches: [main, release]
+  #   paths:
+  #     - "backend/**"
+  #     - ".github/workflows/deploy-ecs.yml"
 
 permissions:
   contents: read

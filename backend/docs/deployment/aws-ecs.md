@@ -1,5 +1,21 @@
 # AWS ECS / Fargate Deployment Guide
 
+> ## ⚠️ DORMANT — not currently in use
+>
+> Development is **entirely local**: local Postgres + local Docker via
+> [`../../docker-compose-dev.yml`](../../docker-compose-dev.yml). Nothing described
+> below is provisioned, and the pipeline that would use it
+> (`.github/workflows/deploy-ecs.yml`) is manual-only and gated on `vars.AWS_REGION`.
+>
+> This guide is kept intact so deployment can resume without being reconstructed from
+> memory. See [ADR-0010](../../../docs/adr/0010-local-first-development-aws-deferred.md).
+>
+> **Before reactivating, re-read this against the current code.** Dormant infrastructure
+> drifts silently — in particular, check that every setting in
+> [`../../app/core/config.py`](../../app/core/config.py) that has no default is present
+> in [`../../deploy/ecs/taskdef.json`](../../deploy/ecs/taskdef.json). A missing env var
+> shows up as a task that starts and immediately dies.
+
 This service is built to run on **ECS Fargate**, pulling images from **ECR**,
 secrets from **Secrets Manager**, logs to **CloudWatch**, and serving traffic
 through an **Application Load Balancer** that terminates HTTPS (and optionally

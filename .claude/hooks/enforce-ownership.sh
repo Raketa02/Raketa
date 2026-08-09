@@ -81,6 +81,19 @@ case "$REL_TARGET" in
     ;;
 esac
 
+# --- guardrail 2: no writing real secrets, from ANY session --------------------
+# guard-bash.sh covers this for the shell; without the same rule here, an agent
+# refused `cp x .env.local` could simply Write the file instead. Templates
+# (.env*.example) are editable — they exist to be.
+BASE="${REL_TARGET##*/}"
+case "$BASE" in
+  *.example) ;;                       # templates are fine
+  .env|.env.*|*.pem|*.key|*.p12|*.jks|*.p8|*.keystore|*.mobileprovision)
+    echo "Blocked: '$REL_TARGET' is a real secret/credential file. Agents don't create or edit these — edit the matching .env*.example template and let a human copy it. See CLAUDE.md Safety." >&2
+    exit 2
+    ;;
+esac
+
 # --- guardrail 2: no cross-app writes -----------------------------------------
 [ "$TIER" = "root" ] && exit 0
 

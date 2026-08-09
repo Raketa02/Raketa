@@ -52,9 +52,14 @@ Run via the Makefile from `backend/` (each target wraps the real command):
 - `make migrate` — `alembic upgrade head` inside the API container
 
 Run a single test with `poetry run pytest tests/unit/test_user_domain.py::test_name`.
-Deployment (build-prod / ECR / ECS) is manual — see the `Makefile`,
-[`docs/deployment/aws-ecs.md`](docs/deployment/aws-ecs.md) and
-`../.github/workflows/deploy-ecs.yml` (which builds from the `backend/` context).
+
+**Deployment is dormant.** Everything runs locally — local Postgres and local Docker via
+`docker-compose-dev.yml`. There is no deployed environment. The AWS ECS path
+(`build-prod`, `ecr-*`, `ecs-*`, `deploy/ecs/taskdef.json`,
+[`docs/deployment/aws-ecs.md`](docs/deployment/aws-ecs.md)) is kept intact for later but
+is not in use and is blocked for agent sessions. See
+[ADR-0010](../docs/adr/0010-local-first-development-aws-deferred.md). If a task seems to
+call for deploying, it doesn't — say so rather than reaching for those targets.
 
 ## Architecture
 
@@ -127,8 +132,13 @@ be covered before a change is considered done.
 
 ## Environment & gotchas
 
-- Copy `.env.local.example` → `.env.local` for local dev. Required: `WRITER_DB_URL`,
-  `JWT_SECRET_KEY`, `DB_SSL_MODE`. `READER_DB_URL` defaults to the writer if unset.
+- **`make up` needs no env file** — `docker-compose-dev.yml` supplies the DB URLs and
+  `.env.docker` the rest, and migrations run on container start. This is the normal path.
+- To run uvicorn **on the host** instead, `cp .env.example .env`. The filename matters:
+  `config.py` loads `.env` (`SettingsConfigDict(env_file=".env")`), so a file named
+  `.env.local` is read by nothing. Required: `WRITER_DB_URL`, `JWT_SECRET_KEY`,
+  `DB_SSL_MODE`; `READER_DB_URL` defaults to the writer if unset. Point it at
+  `rakieta_user:rakieta_pwd@localhost:5432/rakieta` to share the container's database.
 - Tests set their own env in `conftest.py` (SQLite, test JWT secret) — no `.env` needed.
 - Migrations are async-driver aware: the app uses `postgresql+asyncpg`, Alembic uses
   `psycopg2`. Keep **both** drivers working when touching DB config.
