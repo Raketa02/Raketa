@@ -52,11 +52,17 @@ Each client owns its own visual language, tokens and vocabulary — the two apps
 | --- | --- |
 | **`frontend_club/docs/design-system.md`** | The club console's rules: colour meanings, the five containers, the calendar, overlays, motion, copy. **Locked** — [ADR-0011](docs/adr/0011-club-console-design-system.md). |
 | **`frontend_club/src/shared/ui/tokens.css`** | The club console's values. The only legitimate source of a colour, size, space, radius, shadow or z-index in that app. |
-| **`frontend_player/`** | The player app's design system — not yet captured. |
+| **`frontend_player/docs/design-system.md`** | The player app's rules: colour meanings, the primitives, the level bar, overlays, touch and accessibility. **Locked** — [ADR-0012](docs/adr/0012-player-app-design-system.md). |
+| **`frontend_player/src/shared/ui/theme.ts`** | The player app's values, as a typed object. Same rule: no literal in a component. |
 
-Design-system *terms* (token, soft/ink, eyebrow, hairline, severity rail, sheet vs drawer)
-are technical vocabulary and live in that app's `CONTEXT.md`. A design system never
-settles a **domain** term — that happens in the root `CONTEXT.md` first.
+The two palettes **converge because it is one brand** — same paper, same coral, same
+semantics, the same "Rule C" for white-on-saturated fills. **The values are duplicated
+deliberately.** There is no shared design package and no cross-import; a client that needed
+to change its own coral would otherwise be unable to.
+
+Design-system *terms* (token, soft/ink, eyebrow, hairline, severity rail, band ink, sheet
+vs drawer) are technical vocabulary and live in that app's `CONTEXT.md`. A design system
+never settles a **domain** term — that happens in the root `CONTEXT.md` first.
 
 ## Decisions (ADRs)
 
@@ -96,6 +102,9 @@ hook keyed on the session's working directory rather than per-app settings files
 │   └── agents/               ← ownership boundaries, domain-doc consumption
 ├── backend/                  ← FastAPI  (CLAUDE.md + CONTEXT.md + its own docs/)
 ├── frontend_player/          ← Expo     (CLAUDE.md + CONTEXT.md)
+│   ├── docs/architecture.md          ← the player app's runtime contract (ADR-0013)
+│   ├── docs/design-system.md         ← the player app's LOCKED visual contract
+│   └── src/shared/ui/theme.ts        ← its values; components read the theme only
 ├── frontend_club/            ← Next.js  (CLAUDE.md + CONTEXT.md)
 │   ├── docs/design-system.md         ← the club console's LOCKED visual contract
 │   └── src/shared/ui/tokens.css      ← its values; components use var(--…) only

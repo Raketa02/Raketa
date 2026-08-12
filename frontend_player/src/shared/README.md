@@ -1,28 +1,50 @@
 # `src/shared/` — cross-feature infrastructure
 
 Generic, feature-agnostic building blocks. If something here starts to know about
-courts, bookings or matches, it belongs in a feature instead.
+courts, bookings or matches, it belongs in a feature instead. This is the layer the
+source architecture calls `core/` — the framework-facing code, concentrated here so an
+Expo SDK upgrade never has to touch a feature.
 
 | Folder | Holds |
 | --- | --- |
-| `ui/` | Design-system primitives (button, card, text…). Owned code, no feature logic. |
-| `lib/http/` | The typed fetch layer: base URL, `Authorization` header, 401 → refresh → retry. |
-| `lib/auth/` | **The only module that touches `expo-secure-store`.** Token read/write/clear. |
-| `lib/query-client/` | The TanStack Query client + defaults. |
-| `config/` | `env.ts` — Zod-validated config read from `expo-constants`. |
-| `errors/` | `AppError` and the error normalization used across features. |
-| `store/` | Zustand stores for **cross-cutting UI state only**. |
+| `ui/` | `theme.ts` — the source of every value — plus the design-system primitives and the reusable `Loading` / `Empty` / `Error` / `Offline` / `Skeleton` states. |
+| `lib/http/` | The typed fetch layer: base URL, headers, `Authorization`, correlation ID, `AbortSignal`, timeout classes, retry policy, error normalization, 401 → refresh → retry. **The only place `fetch` is configured.** |
+| `lib/auth/` | **The only module that touches `expo-secure-store`.** `tokenManager` (raw values + in-memory mirror) · `refreshCoordinator` (single-flight) · `authService` · `authSession` (the `SessionStatus` machine). |
+| `lib/query-client/` | The TanStack Query client and its **deliberate** defaults — stale times, gc, retry predicate, `networkMode`, refetch-on-focus. |
+| `lib/bootstrap/` | The ordered startup sequence, and the splash gate that hides it. |
+| `lib/platform/` | `appState` (drives Query's `focusManager`) · `networkState` (drives `onlineManager`) · `permissions` · narrow adapters over any native module. |
+| `lib/observability/` | `logger` (structured, redacting) · `analytics` · `telemetry`. The interface features depend on instead of a vendor SDK. |
+| `config/` | `env.ts` — Zod-validated config read from `expo-constants`, failing fast at startup. |
+| `errors/` | The `AppError` family, the backend-`code` → error mapping, and each error's recovery category. |
+| `store/` | Zustand for **app-wide** UI state only — and only when a feature-scoped store genuinely will not do. |
 
 ## Rules
 
+- **`shared/` never imports a feature.** That reverses the dependency arrow and couples
+  every future feature to this one. ESLint enforces it.
 - **`lib/auth/` is the single chokepoint for credentials.** No feature, screen or hook
   imports `expo-secure-store`. One module owning the keychain is what makes the token
-  lifetime auditable.
+  lifetime auditable — and it is why the UI can only ever see
+  `{ status, userId? }`, never a token value.
 - **Never `AsyncStorage` for tokens** — it is unencrypted plaintext on device. ESLint
   blocks the import.
+- **`lib/http` is the only place `fetch` is configured,** and the only place the refresh
+  rotation lives — so a 401 storm waits on **one** `refreshPromise` instead of firing N
+  refreshes that rotate each other out and log the user out at random. A retried request
+  is retried exactly once; a second 401 ends the session rather than looping.
+- **A rejected refresh and an unreachable one are different events.** Rejected clears
+  credentials and caches; unreachable preserves them. Losing signal is not a logout.
+- **Logout clears the Query cache** (`cancelQueries()` then `clear()`). Route replacement
+  clears nothing, and user A's cached data sitting in memory when user B signs in is a
+  privacy bug, not untidiness.
 - **Anything in the shipped bundle is public.** `app.json` `extra` and any `EXPO_PUBLIC_*`
   variable can be read out of the binary. Config, never secrets.
 - **Server data is never mirrored into a Zustand store.** TanStack Query owns server
-  state; Zustand owns UI state.
-- `lib/http` is the only place `fetch` is configured, and the only place the refresh
-  rotation is implemented — so a 401 storm can't fan out into N concurrent refreshes.
+  state; Zustand owns UI state — and prefers a feature-scoped store to this one.
+- **Nothing here logs a token, an `Authorization` header, a password or a full payload.**
+  The logger redacts structurally rather than trusting each call site.
+- **Vendor SDKs stay behind `lib/observability`.** Features call `analytics.track(…)` and
+  `logger.*`, never Sentry or an analytics client directly. ESLint enforces it.
+
+The full reasoning for every rule above is in
+[`docs/architecture.md`](../../docs/architecture.md) — Parts 3–7 and 15.

@@ -1,35 +1,57 @@
 # Rakieta — Club web app
 
 The web application clubs use to manage their courts, availability, pricing and
-bookings. Next.js (App Router) + React + TypeScript, talking to the FastAPI backend
+bookings. Next.js 15 (App Router) + React 19 + TypeScript, talking to the FastAPI backend
 **only over HTTP**, through its own BFF.
 
 One of three independently deployable apps in this monorepo — see the root
 [`CONTEXT-MAP.md`](../CONTEXT-MAP.md).
 
+## The architecture standard
+
+[`docs/architecture/production-architecture.md`](docs/architecture/production-architecture.md)
+is the canonical architecture for this app: runtime model, project structure, dependency
+rules, BFF design, authentication, multi-tenancy, TanStack Query, Zustand, URL state,
+Zod, OpenAPI, errors, testing, security, observability, CI and operations.
+
+[`CLAUDE.md`](CLAUDE.md) is the working digest — the decisions already made and the rules
+that get broken. Read it first; open the standard when you need the detail behind a rule.
+
+> **It supersedes [ADR-0009](../docs/adr/0009-feature-first-clean-architecture-frontends.md)
+> for this app.** `domain/`, `use-cases/` and `mappers/` are gone; the standard rejects
+> imitating backend Clean Architecture on a frontend (§3.8, §44). `frontend_player/` still
+> follows ADR-0009, so **the two clients no longer share a shape** — a rule learned there
+> does not transfer here. The ADR recording this is still outstanding; see
+> [Known gaps](CLAUDE.md#known-gaps).
+
 ## Bootstrap (first time)
 
-Nothing is installed yet: this directory holds the architecture, config and rules, not
-a generated app. To bring it to life:
+Nothing is installed yet: this directory holds the architecture, config and rules, not a
+generated app. To bring it to life:
 
 ```bash
 cd frontend_club
 pnpm install                 # installs what package.json already declares
 ```
 
-Then create the App Router entry points that Next expects — `src/app/layout.tsx` and
-`src/app/page.tsx` — and build outward from there. Keep the layer rules in
-[`CLAUDE.md`](CLAUDE.md); the folder contract is in
-[`src/features/_template/README.md`](src/features/_template/README.md).
+Then create the App Router entry points Next expects — `src/app/layout.tsx` and
+`src/app/page.tsx` — and build the foundations in the standard's **§47 order**:
+
+1. strict compiler, lint/import boundaries, `server-only` enforcement, CI baseline;
+2. the OpenAPI contract pipeline, FastAPI client, browser client, error model;
+3. auth — login/logout/refresh, cookie policy, session projection, CSRF, CSP;
+4. the state platform — QueryClient, query defaults, hydration, key conventions;
+5. tests — Vitest, component setup, Playwright fixtures, contract tests;
+6. observability — structured logs, tracing, error reporting, Web Vitals;
+7. business features, each built vertically through the established path.
 
 `layout.tsx` must `import '@/shared/ui/tokens.css'` and load Archivo + IBM Plex Mono via
-`next/font/google`, exposed as `--font-sans` / `--font-mono`. The design system is
-already locked — see below.
+`next/font/google`, exposed as `--font-sans` / `--font-mono`. The design system is already
+locked — see below.
 
-> Deliberately **not** scaffolded with `create-next-app`: its default flat `app/`
-> layout contradicts the feature-first structure recorded in
-> [ADR-0009](../docs/adr/0009-feature-first-clean-architecture-frontends.md). Starting
-> from the structure is cheaper than unpicking the generator's.
+> Deliberately **not** scaffolded with `create-next-app`: its default flat `app/` layout
+> contradicts the feature-oriented structure. Starting from the structure is cheaper than
+> unpicking the generator's.
 
 ## Commands
 
@@ -47,16 +69,25 @@ pnpm check        # lint + typecheck + test — the local gate
 ## Environment
 
 Copy `.env.example` → `.env.local`. `BACKEND_API_URL` is **server-only** and must never
-become `NEXT_PUBLIC_*`.
+become `NEXT_PUBLIC_*` — anything so prefixed is public information baked into the client
+bundle.
 
 ## Architecture in one paragraph
 
 The browser only ever calls this app's own BFF route handlers under `src/app/api/*`;
-those run server-side, hold the session in httpOnly cookies, and proxy FastAPI. Each
-user-facing capability is a vertical slice in `src/features/<name>/` with the full
-layer set (`domain/ use-cases/ api/ mappers/ schemas/ components/ hooks/`), and
-dependencies point inward. Wire types are generated from the backend contract and are
-confined to the `api/` and `mappers/` layers.
+those run server-side, hold the session in httpOnly cookies, and call FastAPI with an
+explicit header allowlist and a finite timeout. Server Components skip the BFF and use a
+server-only FastAPI adapter directly. Each business capability is a feature module under
+`src/features/<name>/` (`api/ model/ schemas/ state/ ui/ server/ test/` + `index.ts`),
+reachable only through its `index.ts`; application-wide infrastructure lives in
+`src/platform/`, generic capability in `src/shared/`. State has exactly one owner —
+Query for server data, the URL for navigable state, React for local interaction, Zustand
+for transient shared UI, httpOnly cookies for tokens, and FastAPI for business truth.
+
+Each directory has a README stating its own contract:
+[`src/app/api/`](src/app/api/README.md) · [`src/platform/`](src/platform/README.md) ·
+[`src/features/_template/`](src/features/_template/README.md) ·
+[`src/shared/`](src/shared/README.md) · [`src/generated/`](src/generated/README.md).
 
 ## Design system
 
@@ -70,6 +101,7 @@ The visual language was designed and audited before the app existed, and is **lo
   the archived measurement of the v7 prototype. Descriptive, superseded by the rules.
 
 Styling is **CSS Modules colocated with the component**. No Tailwind, no CSS-in-JS —
-[ADR-0011](../docs/adr/0011-club-console-design-system.md).
+[ADR-0011](../docs/adr/0011-club-console-design-system.md). The architecture standard's
+§39 agrees with it; nothing about the design system changed.
 
 Full rules: [`CLAUDE.md`](CLAUDE.md). Vocabulary: [`CONTEXT.md`](CONTEXT.md).

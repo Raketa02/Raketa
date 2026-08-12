@@ -41,3 +41,5 @@ If your work **contradicts** an existing ADR, surface it rather than silently ov
 - [0009 — Feature-first Clean Architecture on both frontends](0009-feature-first-clean-architecture-frontends.md)
 - [0010 — Local-first development; AWS deployment deferred](0010-local-first-development-aws-deferred.md)
 - [0011 — A locked design system for the club console](0011-club-console-design-system.md)
+- [0012 — A locked design system for the player app](0012-player-app-design-system.md)
+- [0013 — Player app: the production runtime architecture](0013-player-app-runtime-architecture.md)
