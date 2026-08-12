@@ -38,5 +38,50 @@ shared glossary [`../CONTEXT.md`](../CONTEXT.md), which all three apps obey. See
 - **UI state** — cross-cutting client state (the active club selector, modal open/close)
   held in **Zustand**. Server data is *not* UI state — TanStack owns that.
 
+## Glossary — design-system terms
+
+The rules behind these are in [`docs/design-system.md`](docs/design-system.md); the values
+are in [`src/shared/ui/tokens.css`](src/shared/ui/tokens.css). Named here so a component,
+a review comment and a commit message all use the same word.
+
+- **Token** — a CSS custom property in `tokens.css`, the only legitimate source of a
+  colour, type size, spacing step, radius, shadow, duration or z-index. _Avoid_: variable,
+  constant (a token is a *design* decision, not just a value).
+- **Paper / surface** — `--paper` is the application background; `--surface` is white, and
+  everything raised off the paper (cards, nav, table heads, the calendar) sits on it.
+- **Line vs line2** — `--line` **bounds a thing** (card edge, table header rule); `--line2`
+  **separates rows within a thing** (hairlines, row borders, inert fills). The distinction
+  is load-bearing, not stylistic.
+- **Soft / ink** — a semantic accent's companions. `-soft` is the tinted background;
+  `-ink` is the darkened form that carries text on that soft, and the fill used whenever
+  white text sits on top (**Rule C**).
+- **Rule C** — white text never sits on `--coral` or `--mint`; it needs `--coral-ink`,
+  `--mint-ink` or `--mint-deep`. `--ink` is the only dark permitted on `--coral`.
+- **The five containers** — **card**, **stat tile**, **note**, **row list**, **action
+  row**. Nearly every screen is built from these; a new container needs justifying.
+- **Tag** — a 19px uppercase state chip that always **carries a word**. Never clickable —
+  a clickable pill is a **chip**.
+- **Eyebrow** — the 9.5px uppercase `--muted` group label above a set. _Avoid_: overline,
+  kicker.
+- **Hairline** — the 1px `--line2` divider *inside* a card, with 11px margins.
+- **Severity rail** — the 4px vertical bar on an action row. The only vertical colour bar
+  in the system, which is why it reads as severity.
+- **Sheet** — the right-hand detail overlay on a `--paper` background. **Drawer** — the
+  narrower `--night-deep` operator overlay. **Toast** — the bottom-centre `--night`
+  confirmation carrying one volt-emphasised phrase. Three distinct surfaces; not synonyms.
+- **Block** — a booking rendered inside a calendar cell (`inset: 2px`, `pointer-events:
+  none`). **Cell** — the 44px grid unit beneath it, which owns the click.
+- **Past vs nosell** — *past* is elapsed time; *nosell* is time outside that court's
+  opening hours. Both inert; only nosell dims, because it was never inventory.
+- **Hatch** — the 45° texture marking blocked/programme time. Texture rather than colour,
+  so blocked time leaves the sold/free axis entirely.
+- **Hard hold / soft hold** — in the *interface*, a soft hold is drawn with a **dashed**
+  edge and a hard hold with a solid fill. In *copy*, both are reported to the club as
+  **off sale** — see the design system's Part 12 vocabulary table.
+
+> The demand surfaces (heat map, demand map, match card, timeline) name *interface*
+> concepts only. Their domain terms are unmodelled — Bookings, Courts and Matches are
+> Part 2 of the shared glossary. Settle those there first, then rename the UI to match.
+
 Add club-app-only technical terms here as they are resolved. Anything describing the
 *domain* belongs in the shared glossary instead.

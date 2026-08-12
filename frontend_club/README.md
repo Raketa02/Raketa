@@ -22,6 +22,10 @@ Then create the App Router entry points that Next expects — `src/app/layout.ts
 [`CLAUDE.md`](CLAUDE.md); the folder contract is in
 [`src/features/_template/README.md`](src/features/_template/README.md).
 
+`layout.tsx` must `import '@/shared/ui/tokens.css'` and load Archivo + IBM Plex Mono via
+`next/font/google`, exposed as `--font-sans` / `--font-mono`. The design system is
+already locked — see below.
+
 > Deliberately **not** scaffolded with `create-next-app`: its default flat `app/`
 > layout contradicts the feature-first structure recorded in
 > [ADR-0009](../docs/adr/0009-feature-first-clean-architecture-frontends.md). Starting
@@ -53,5 +57,19 @@ user-facing capability is a vertical slice in `src/features/<name>/` with the fu
 layer set (`domain/ use-cases/ api/ mappers/ schemas/ components/ hooks/`), and
 dependencies point inward. Wire types are generated from the backend contract and are
 confined to the `api/` and `mappers/` layers.
+
+## Design system
+
+The visual language was designed and audited before the app existed, and is **locked**:
+
+- [`docs/design-system.md`](docs/design-system.md) — the rules.
+- [`src/shared/ui/tokens.css`](src/shared/ui/tokens.css) — every colour, size, space,
+  radius, shadow, duration and z-index. Components reference `var(--…)`; **a literal in a
+  component is a bug.**
+- [`docs/design-system-v7-prototype-audit.md`](docs/design-system-v7-prototype-audit.md) —
+  the archived measurement of the v7 prototype. Descriptive, superseded by the rules.
+
+Styling is **CSS Modules colocated with the component**. No Tailwind, no CSS-in-JS —
+[ADR-0011](../docs/adr/0011-club-console-design-system.md).
 
 Full rules: [`CLAUDE.md`](CLAUDE.md). Vocabulary: [`CONTEXT.md`](CONTEXT.md).

@@ -43,6 +43,21 @@ own **technical** vocabulary:
 An app `CONTEXT.md` must **never redefine** a domain term — it points back to the root
 glossary.
 
+## Design systems are per-app and never shared
+
+Each client owns its own visual language, tokens and vocabulary — the two apps share a
+*shape*, never values or code ([ADR-0005](docs/adr/0005-three-app-monorepo-ownership-boundaries.md)).
+
+| File | Owns |
+| --- | --- |
+| **`frontend_club/docs/design-system.md`** | The club console's rules: colour meanings, the five containers, the calendar, overlays, motion, copy. **Locked** — [ADR-0011](docs/adr/0011-club-console-design-system.md). |
+| **`frontend_club/src/shared/ui/tokens.css`** | The club console's values. The only legitimate source of a colour, size, space, radius, shadow or z-index in that app. |
+| **`frontend_player/`** | The player app's design system — not yet captured. |
+
+Design-system *terms* (token, soft/ink, eyebrow, hairline, severity rail, sheet vs drawer)
+are technical vocabulary and live in that app's `CONTEXT.md`. A design system never
+settles a **domain** term — that happens in the root `CONTEXT.md` first.
+
 ## Decisions (ADRs)
 
 **`docs/adr/`** (root) holds every decision affecting the system or the contract
@@ -82,5 +97,7 @@ hook keyed on the session's working directory rather than per-app settings files
 ├── backend/                  ← FastAPI  (CLAUDE.md + CONTEXT.md + its own docs/)
 ├── frontend_player/          ← Expo     (CLAUDE.md + CONTEXT.md)
 ├── frontend_club/            ← Next.js  (CLAUDE.md + CONTEXT.md)
+│   ├── docs/design-system.md         ← the club console's LOCKED visual contract
+│   └── src/shared/ui/tokens.css      ← its values; components use var(--…) only
 └── tools/afk/ + .sandbuket/  ← the AFK agent execution loop and its sandbox image
 ```
