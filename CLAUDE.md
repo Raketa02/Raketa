@@ -35,11 +35,14 @@ and communicate **only over HTTP**.
 - **The two clients share a shape, not code.** Both use the same feature-layer
   structure, so a rule learned in one transfers to the other. They share no source
   ([ADR-0005](docs/adr/0005-three-app-monorepo-ownership-boundaries.md)).
-- **Each client owns its own design system.** The club console's is **locked**:
+- **Each client owns its own design system, and both are locked.**
   [`frontend_club/docs/design-system.md`](frontend_club/docs/design-system.md) with its
-  values in `frontend_club/src/shared/ui/tokens.css`
-  ([ADR-0011](docs/adr/0011-club-console-design-system.md)). Tokens and visual rules are
-  never shared between the two clients, and a component never contains a literal value.
+  values in `src/shared/ui/tokens.css` ([ADR-0011](docs/adr/0011-club-console-design-system.md)),
+  and [`frontend_player/docs/design-system.md`](frontend_player/docs/design-system.md)
+  with its values in `src/shared/ui/theme.ts`
+  ([ADR-0012](docs/adr/0012-player-app-design-system.md)). The palettes converge because
+  it is one brand, but **the values are duplicated deliberately** — no shared design
+  package, no cross-import — and **a component never contains a literal value.**
 
 ## Safety — never do these without an explicit human request
 
