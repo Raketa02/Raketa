@@ -25,7 +25,7 @@ from app.engines.assessment import (
     AskQuestion,
     Complete,
 )
-from app.engines.racketskill.core import SCALE_MAX, SCALE_MIN
+from app.engines.racketskill.core import SCALE_MAX, SCALE_MIN, band_for
 from app.engines.racketskill.v3 import RacketSkillEngineV3
 from app.engines.racketskill.v3.engine import (
     CONTRADICTION_EXTRA_QUESTIONS,
@@ -459,7 +459,6 @@ def test_random_policies_stay_in_bounds_and_below_the_ceiling() -> None:
         assert SCALE_MIN <= result.mu <= SCALE_MAX
         assert result.sigma >= SIGMA_FLOOR
         assert result.confidence <= 30  # nobody leaves onboarding above 30%
-        assert result.band.lower <= result.mu <= result.band.upper or result.mu in (
-            SCALE_MIN,
-            SCALE_MAX,
-        )
+        # Bands are non-contiguous by design, so assert the band agrees with the
+        # model rather than that the Level sits inside the printed range.
+        assert result.band.name == band_for(result.mu).label

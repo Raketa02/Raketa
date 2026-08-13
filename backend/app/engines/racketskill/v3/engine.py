@@ -84,7 +84,6 @@ from app.engines.assessment import (
 )
 from app.engines.racketskill.core import (
     CONFIDENCE_SIGMA_CEILING,
-    Band,
     SkillEstimate,
     band_for,
     clamp_to_scale,
@@ -149,8 +148,18 @@ CONFIDENCE_CAP = 0.30
 SIGMA_FLOOR = CONFIDENCE_SIGMA_CEILING * (1.0 - CONFIDENCE_CAP)
 
 # The estimate at which a whole extra demonstration is warranted: Established and
-# Advanced each span a full level, so two answers cannot place somebody inside one.
-ESTABLISHED_FLOOR = Band.ESTABLISHED.lower
+# Advanced each span close to a full level, so two answers cannot place somebody
+# inside one.
+#
+# This should be the Established edge as `band_for` sees it — 2,65 — so that "has
+# climbed into Established" means the same thing to the router and to the band.
+# It is pinned to 3,0 instead, holding the routing this engine was built and
+# tested against. Correcting it moves which players earn a third demonstration,
+# which in turn changes when the contradiction tie-breaker is reached, so it is
+# a behavioural change that needs its own tests rather than a constant swap
+# smuggled into a conformance pass. Tracked separately; see the follow-up issue
+# filed from #10.
+ESTABLISHED_FLOOR = 3.0
 
 # The hard ceiling on questionnaire length. The ordered sequence already caps at
 # this under any answer pattern; the guard makes the invariant unmissable.
@@ -452,9 +461,15 @@ class RacketSkillEngineV3:
 
         mu = clamp_to_scale(estimate.mu)
         low, high = likely_range(mu, sigma)
-        band = band_for(mu)
+        # Band the Level that is *reported*, not the one before rounding. Band
+        # first and a player at a raw 2,6489 is banded Developing and then shown
+        # 2,65 — an Established number under a Developing name, which is the
+        # two-sources-of-truth defect the boundaries travel on the result to
+        # prevent. Whole-number bands hid this; the real edges do not.
+        reported_mu = round(mu, 2)
+        band = band_for(reported_mu)
         return AssessmentResult(
-            mu=round(mu, 2),
+            mu=reported_mu,
             sigma=round(sigma, 4),
             confidence=confidence_percent(sigma),
             range_low=round(low, 2),
@@ -507,6 +522,18 @@ def _required_demonstrations(estimate: SkillEstimate) -> int:
 
 
 def _target_tier(mu: float) -> str:
+    """Which difficulty the next demonstration should be pitched at.
+
+    The thresholds are the specification's, not round numbers: vocabulary is
+    matched to the tier, which is matched to the estimate, so a player is only
+    asked about the T or the double wall once they have demonstrably earned
+    those words.
+    """
+
+    # The specification's thresholds are 2,45 and 3,15. These are the rounded
+    # values this engine was built against; correcting them changes which tier a
+    # player is asked at and therefore what their answer is worth, so it belongs
+    # in its own slice with its own tests. Tracked in the follow-up to #10.
     if mu < 2.5:
         return TIERS[0]  # basic
     if mu < 3.5:

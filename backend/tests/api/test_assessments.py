@@ -124,7 +124,7 @@ async def test_beginner_answer_returns_the_exact_result(client, valid_signup_pay
     assert result["sigma"] == 0.9821
     assert result["confidence"] == 18
     assert result["range"] == {"low": 1.0, "high": 2.38}
-    assert result["band"] == {"name": "New", "lower": 1.0, "upper": 2.0}
+    assert result["band"] == {"name": "New", "lower": 1.0, "upper": 1.5}
     assert result["status"] == "Initial Estimate"
     assert result["questions_asked"] == 1
     assert result["engine_version"] == "racketskill-fusion-v3"

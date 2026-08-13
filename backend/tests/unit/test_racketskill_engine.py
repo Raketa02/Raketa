@@ -51,7 +51,7 @@ def test_beginner_persona_is_exact() -> None:
     assert result.confidence == 18
     assert (result.range_low, result.range_high) == (1.00, 2.38)
     assert result.band.name == "New"
-    assert (result.band.lower, result.band.upper) == (1.0, 2.0)
+    assert (result.band.lower, result.band.upper) == (1.0, 1.5)
     assert result.status == "Initial Estimate"
     assert result.questions_asked == 1
     assert result.engine_version == "racketskill-fusion-v3"

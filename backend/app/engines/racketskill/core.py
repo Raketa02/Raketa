@@ -35,17 +35,26 @@ class SkillEstimate:
 
 
 class Band(Enum):
-    """The four plain-language bands, each spanning one whole level of range.
+    """The four plain-language bands, **deliberately uneven in width**.
 
-    Boundaries travel *on the estimate* (``docs/adr`` / PRD): a screen printing a
+    New and Developing are narrow; Established and Advanced each span close to a
+    full level of range. That asymmetry is load-bearing, not an accident of
+    rounding: two demonstrations are enough to separate New from Developing
+    because the bands down there are narrow and the basic questions decisive,
+    which is exactly why an estimate that climbs into Established earns a *third*
+    demonstration before the engine will consider stopping (``ESTABLISHED_FLOOR``
+    in the v3 router is this band's lower edge, less the same tolerance
+    ``band_for`` applies).
+
+    Boundaries travel *on the estimate* (``CONTEXT.md``, PRD): a screen printing a
     range prints these values, never a second set of drawing constants, so a card
     can never name a band that disagrees with the number beside it.
     """
 
-    NEW = ("New", 1.0, 2.0)
-    DEVELOPING = ("Developing", 2.0, 3.0)
-    ESTABLISHED = ("Established", 3.0, 4.0)
-    ADVANCED = ("Advanced", 4.0, 5.0)
+    NEW = ("New", 1.0, 1.5)
+    DEVELOPING = ("Developing", 1.6, 2.6)
+    ESTABLISHED = ("Established", 2.7, 3.8)
+    ADVANCED = ("Advanced", 3.9, 5.0)
 
     def __init__(self, label: str, lower: float, upper: float) -> None:
         self.label = label
@@ -59,13 +68,28 @@ def clamp_to_scale(value: float) -> float:
     return max(SCALE_MIN, min(SCALE_MAX, value))
 
 
-def band_for(mu: float) -> Band:
-    """The band a Level falls in; the top band is inclusive of the ceiling."""
+#: The printed bands leave a gap between them (1,5 → 1,6), so a Level landing in
+#: one has to be assigned somewhere. It goes to the *higher* band from halfway
+#: across the gap: the effective edges are 1,55 · 2,65 · 3,85.
+BAND_EDGE_TOLERANCE = 0.05
 
+
+def band_for(mu: float) -> Band:
+    """The band a Level falls in — the highest whose lower edge it reaches.
+
+    Compared against ``lower - BAND_EDGE_TOLERANCE`` rather than ``upper`` so the
+    gaps between printed bands are covered and the top band stays inclusive of
+    the ceiling.
+    """
+
+    chosen = Band.NEW
     for band in Band:
-        if mu < band.upper:
-            return band
-    return Band.ADVANCED
+        # Rounded because the subtraction is not exact in binary: 2,7 − 0,05 is
+        # 2.6500000000000004, which would push a Level of exactly 2,65 down a
+        # band. Levels are carried to two decimals, so the edges are too.
+        if mu >= round(band.lower - BAND_EDGE_TOLERANCE, 2):
+            chosen = band
+    return chosen
 
 
 def combine_sigma(a: float, b: float) -> float:

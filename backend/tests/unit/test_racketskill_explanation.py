@@ -26,6 +26,7 @@ from app.engines.assessment import (
     ResultFactor,
     UncertaintyFactor,
 )
+from app.engines.racketskill.core import band_for
 from app.engines.racketskill.v3 import RacketSkillEngineV3
 from app.engines.racketskill.v3.engine import (
     CONFIDENCE_REASON_CONTRADICTION,
@@ -334,9 +335,16 @@ def test_the_payload_carries_no_presentation_values() -> None:
 def test_the_band_boundaries_travel_on_the_result() -> None:
     # The structural fix for a card printing a band name that disagreed with the
     # number beside it: there is no second source to read them from.
+    # The printed bands are not contiguous — 1,5 to 1,6 and 2,6 to 2,7 are gaps —
+    # so a Level can sit between two of them and still be banded. What must hold
+    # is that the band travelling on the result is the one the model's own
+    # `band_for` assigns to the Level beside it, with that band's own edges.
     for pairs in (BEGINNER, DISAGREEING, returning_after("l3")):
         result = finalize(*pairs)
-        assert result.band.lower <= result.mu < result.band.upper
+        expected = band_for(result.mu)
+        assert result.band.name == expected.label
+        edges = (result.band.lower, result.band.upper)
+        assert edges == (expected.lower, expected.upper)
 
 
 def test_the_explanation_is_deterministic() -> None:
