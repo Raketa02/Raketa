@@ -28,10 +28,12 @@ from app.engines.assessment import (
 from app.engines.racketskill.core import SCALE_MAX, SCALE_MIN
 from app.engines.racketskill.v3 import RacketSkillEngineV3
 from app.engines.racketskill.v3.engine import (
+    CONTRADICTION_EXTRA_QUESTIONS,
     MAX_QUESTIONS,
     SIGMA_FLOOR,
     STOP_BEGINNER,
     STOP_MARGINAL,
+    TIE_BREAKER_REASON,
 )
 from app.engines.racketskill.v3.questions import (
     ENVIRONMENT_QUESTION_ID,
@@ -69,7 +71,9 @@ def run(engine: RacketSkillEngineV3, sport: Sport, policy: dict[str, str]):
         asked.append(step)
         option_id = policy[step.question.id]
         transcript.append(AnsweredQuestion(step.question.id, option_id))
-        assert len(transcript) <= MAX_QUESTIONS  # never loops past the ceiling
+        # Never loops past the ceiling. A contradiction raises it by exactly one
+        # — the tie-breaker — and nothing else does (tests/unit/…contradiction).
+        assert len(transcript) <= MAX_QUESTIONS + CONTRADICTION_EXTRA_QUESTIONS
     result = engine.finalize(sport=sport, transcript=tuple(transcript))
     return asked, tuple(transcript), result
 
@@ -448,7 +452,10 @@ def test_random_policies_stay_in_bounds_and_below_the_ceiling() -> None:
         sport = rng.choice(ALL_SPORTS)
         policy = {qid: rng.choice(options) for qid, options in option_pool.items()}
         asked, transcript, result = run(engine, sport, policy)
-        assert len(transcript) <= MAX_QUESTIONS
+        assert len(transcript) <= MAX_QUESTIONS + CONTRADICTION_EXTRA_QUESTIONS
+        if len(transcript) > MAX_QUESTIONS:
+            # Only a tie-breaker is ever allowed past the normal ceiling.
+            assert any(step.reason == TIE_BREAKER_REASON for step in asked)
         assert SCALE_MIN <= result.mu <= SCALE_MAX
         assert result.sigma >= SIGMA_FLOOR
         assert result.confidence <= 30  # nobody leaves onboarding above 30%

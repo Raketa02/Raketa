@@ -54,6 +54,36 @@ EXECUTION_QUESTION_IDS: dict[str, str] = {
 }
 TACTICAL_QUESTION_IDS: tuple[str, ...] = ("tactical.reading", "tactical.decision")
 
+# --- Evidence kinds: what an answer is a statement *about* ---------------------
+
+# A **claim** is a statement about standing — how much you play, what you compete
+# in, how you do against your usual group. A **demonstration** is a statement
+# about what happens inside a point. The distinction is what lets the engine
+# notice that the two disagree, and it is a property of the question, not of the
+# answer, so it can never drift with the copy.
+#
+# A layoff is neither: it widens uncertainty and moves nothing, so it stands
+# outside the comparison entirely.
+KIND_CLAIM = "claim"
+KIND_DEMONSTRATION = "demonstration"
+KIND_UNCERTAINTY = "uncertainty"
+
+_KINDS: dict[str, str] = {
+    OPENING_QUESTION_ID: KIND_CLAIM,
+    VOLUME_QUESTION_ID: KIND_CLAIM,
+    ENVIRONMENT_QUESTION_ID: KIND_CLAIM,
+    RELATIVE_QUESTION_ID: KIND_CLAIM,
+    LAYOFF_QUESTION_ID: KIND_UNCERTAINTY,
+    **{qid: KIND_DEMONSTRATION for qid in EXECUTION_QUESTION_IDS.values()},
+    **{qid: KIND_DEMONSTRATION for qid in TACTICAL_QUESTION_IDS},
+}
+
+
+def kind_for(question_id: str) -> str | None:
+    """Whether a question asks for a claim, a demonstration, or neither."""
+
+    return _KINDS.get(question_id)
+
 # --- Categories (the screen title, read last on a top-down screen) -------------
 
 CATEGORY_REGULARITY = "Playing regularly"

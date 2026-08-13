@@ -29,16 +29,39 @@ stopping** otherwise ends the assessment the moment the best remaining question
 would not tighten the floored estimate meaningfully; because the self-report bias
 never shrinks, that value decays to zero on its own. The hard ceiling still caps
 every path. Layoff widens uncertainty and never touches the estimate.
+
+Between the minimums and those two rules sits the **contradiction** check. Claims
+(how much you play, what you compete in, how you do against your usual group) are
+fused separately from demonstrations (what happens inside a point); a gap beyond
+tolerance between the two earns exactly one tie-breaker, and it is the execution
+question at the tier the *claims* imply — an easier one would not test the claim
+and a harder one would test something the claim never made. If the player can do
+the thing their claims imply, the claims were right; if not, they were not. When
+that question has already been answered the claims have been tested at their own
+level already, so nothing extra is asked. An unresolved gap resolves without a
+direction — claims keep only part of their precision, σ widens in proportion to
+the gap, and calibration priority is raised. Nobody is moved up, moved down, or
+accused. A gap *within* tolerance is not a disagreement at all: a strong smash
+and a weak backhand is an uneven game, and it widens the band through dispersion.
+
+That resolution is applied in ``finalize`` and not to the running estimate, so a
+widened σ can never buy the player extra questions: routing already has its own
+answer to a contradiction, which is the tie-breaker.
 """
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from app.engines.assessment import (
+    CALIBRATION_PRIORITY_ELEVATED,
+    CALIBRATION_PRIORITY_STANDARD,
     AnsweredQuestion,
     AskQuestion,
     AssessmentResult,
     BandView,
     Complete,
+    ConfidenceReason,
     Question,
     Step,
     Transcript,
@@ -58,6 +81,8 @@ from app.engines.racketskill.v3.questions import (
     ENVIRONMENT_QUESTION_ID,
     EXECUTION_QUESTION_IDS,
     HISTORY_REGULARITY_OPTIONS,
+    KIND_CLAIM,
+    KIND_DEMONSTRATION,
     LAYOFF_QUESTION_ID,
     LOW_VOLUME_OPTION_ID,
     NEVER_PLAYED_OPTION_ID,
@@ -74,6 +99,7 @@ from app.engines.racketskill.v3.questions import (
     execution_sigma,
     is_extreme_execution,
     is_extreme_tactical,
+    kind_for,
     layoff_question,
     layoff_sigma,
     opening_question,
@@ -117,11 +143,58 @@ MAX_QUESTIONS = 9
 # decays to zero on its own — so the rule terminates without needing a count.
 MIN_MARGINAL_GAIN = 0.01
 
+
+# --- Contradiction ------------------------------------------------------------
+
+# The gap, in level units, beyond which the fused claims and the fused
+# demonstrations are genuinely disagreeing rather than merely imprecise. Below it
+# the two are read as one uneven profile, which widens the band through dispersion
+# and is never reported as a disagreement.
+CONTRADICTION_TOLERANCE = 0.80
+
+# A comparison needs both sides, and one demonstration is a data point rather than
+# a side: the routing minimums guarantee at least this many before the check runs.
+MIN_DEMONSTRATIONS_COMPARED = 2
+
+# The share of their precision claims keep when the tie-breaker did not settle the
+# disagreement. Broad claims are the softer evidence, so they give way to the
+# demonstrations — but only partly, and by exactly as much whichever side is the
+# higher one. That symmetry is the whole anti-sandbagging design: claiming too
+# little costs precision exactly as fast as claiming too much.
+CLAIM_PRECISION_RETAINED = 0.50
+
+# The σ an unresolved gap adds, in quadrature and in proportion to its size, with
+# a cap so that even the widest disagreement leaves a usable range. It is combined
+# with the *floored* σ, because "we kept your starting range wider" is a statement
+# about the range the player would otherwise have left with.
+CONTRADICTION_SIGMA_PER_LEVEL = 0.35
+CONTRADICTION_SIGMA_MAX = 0.60
+
+# A contradiction buys exactly one question beyond the hard ceiling — the
+# tie-breaker itself, and nothing else.
+CONTRADICTION_EXTRA_QUESTIONS = 1
+
+# Dispersion: how unevenly the demonstrations sit around their own fused level. A
+# strong smash and a weak backhand is an uneven game, not a lie, so it earns a
+# wider band. The tolerance absorbs the scatter every honest answer set carries.
+DISPERSION_TOLERANCE = 0.55
+DISPERSION_SIGMA_MAX = 0.50
+
+# The one confidence-reason branch this version authors. The remaining branches
+# (no match evidence yet, a layoff) arrive with the explained result (#9).
+CONFIDENCE_REASON_CONTRADICTION = "answers-disagreed"
+CONTRADICTION_SENTENCE = (
+    "Some of your answers point to different skill ranges, so we kept your "
+    "starting range wider. Your first matches will help us calibrate it quickly."
+)
+
 # The reasons a stop is recorded under — the counterpart to an ``AskQuestion``'s
 # routing reason, so the value that caused the stop is never lost.
 STOP_BEGINNER = "beginner-fast-path"
 STOP_CEILING = "hard-ceiling"
 STOP_MARGINAL = "marginal-value-below-threshold"
+
+TIE_BREAKER_REASON = "contradiction-tie-breaker"
 
 # Every onboarding rating is a hypothesis, not a verdict.
 RESULT_STATUS = "Initial Estimate"
@@ -158,9 +231,14 @@ class RacketSkillEngineV3:
         ):
             return Complete(reason=STOP_BEGINNER, value=0.0)
 
-        # The hard ceiling. The sequence below never reaches it, but the guard
-        # makes "never exceeds the ceiling under any answer pattern" unmissable.
-        if len(transcript) >= MAX_QUESTIONS:
+        # The hard ceiling, which a contradiction raises by exactly one — the
+        # tie-breaker, and nothing else. The sequence below never reaches it, but
+        # the guard makes "never exceeds the ceiling" unmissable.
+        tie_breaker_at = _tie_breaker_at(transcript)
+        ceiling = MAX_QUESTIONS + (
+            CONTRADICTION_EXTRA_QUESTIONS if tie_breaker_at is not None else 0
+        )
+        if len(transcript) >= ceiling:
             return Complete(reason=STOP_CEILING, value=float(len(transcript)))
 
         estimate = _fuse(transcript)
@@ -197,7 +275,7 @@ class RacketSkillEngineV3:
         # tactical answer.
         asked_tiers = _asked_execution_tiers(transcript)
         if len(asked_tiers) < _required_demonstrations(estimate):
-            tier = _next_execution_tier(estimate, asked_tiers)
+            tier = _next_execution_tier(estimate.mu, asked_tiers)
             return _ask(
                 execution_question(sport, tier), f"demonstration-{tier}", estimate
             )
@@ -208,7 +286,24 @@ class RacketSkillEngineV3:
         if not tactical_asked:
             return _ask(tactical_question(sport, 0), "tactical", estimate)
 
-        # Minimums satisfied. Extreme-answer bracketing first: a last demonstration
+        # Minimums satisfied, so the two sides can now be compared. A gap beyond
+        # tolerance earns one question at the level the *claims* imply: if the
+        # player can do the thing their claims imply, the claims were right, and
+        # if not, they were not. ``tie_breaker_at`` is the position it is asked
+        # at, so an earlier position means it has been asked already and this
+        # transcript does not get a second one.
+        if tie_breaker_at == len(transcript):
+            sides = _contradiction(_evidence_points(transcript))
+            assert sides is not None  # a tie-breaker is due only with both sides
+            tie_breaker_tier = _tie_breaker_tier(sides, asked_tiers)
+            assert tie_breaker_tier is not None  # and with that tier unasked
+            return _ask(
+                execution_question(sport, tie_breaker_tier),
+                TIE_BREAKER_REASON,
+                estimate,
+            )
+
+        # Extreme-answer bracketing next: a last demonstration
         # at an end of the scale earns another at the tier the estimate now implies.
         if _last_demonstration_was_extreme(transcript):
             bracket = _bracketing_demonstration(
@@ -229,8 +324,37 @@ class RacketSkillEngineV3:
         return Complete(reason=STOP_MARGINAL, value=round(gain, 4))
 
     def finalize(self, *, sport: Sport, transcript: Transcript) -> AssessmentResult:
-        estimate = _fuse(transcript)
+        points = _evidence_points(transcript)
+
+        # A disagreement the tie-breaker did not settle resolves without a
+        # direction: the claims — the softer evidence — keep only part of their
+        # precision, and by exactly as much whichever side is the higher one.
+        # Nobody is moved up, moved down, or accused.
+        contradiction = _contradiction(points)
+        estimate = _fuse_points(
+            points,
+            layoff=_layoff_penalty(transcript),
+            claim_weight=(
+                CLAIM_PRECISION_RETAINED if contradiction is not None else 1.0
+            ),
+        )
+
+        # The floor first: "we kept your starting range wider" is a statement
+        # about the range the player would otherwise have left with.
         sigma = max(estimate.sigma, SIGMA_FLOOR)
+        dispersion = _dispersion_sigma(points)
+        if dispersion > 0.0:
+            sigma = combine_sigma(sigma, dispersion)
+
+        calibration_priority = CALIBRATION_PRIORITY_STANDARD
+        confidence_reason: ConfidenceReason | None = None
+        if contradiction is not None:
+            sigma = combine_sigma(sigma, _contradiction_sigma(contradiction.gap))
+            calibration_priority = CALIBRATION_PRIORITY_ELEVATED
+            confidence_reason = ConfidenceReason(
+                key=CONFIDENCE_REASON_CONTRADICTION, sentence=CONTRADICTION_SENTENCE
+            )
+
         mu = clamp_to_scale(estimate.mu)
         low, high = likely_range(mu, sigma)
         band = band_for(mu)
@@ -244,6 +368,8 @@ class RacketSkillEngineV3:
             status=RESULT_STATUS,
             questions_asked=len(transcript),
             engine_version=ENGINE_VERSION,
+            calibration_priority=calibration_priority,
+            confidence_reason=confidence_reason,
         )
 
 
@@ -289,14 +415,16 @@ def _target_tier(mu: float) -> str:
     return TIERS[2]  # discriminating
 
 
-def _next_execution_tier(estimate: SkillEstimate, asked: set[str]) -> str:
-    """The unasked tier nearest the estimate's target, tie-broken toward the lower.
+def _next_execution_tier(mu: float, asked: set[str]) -> str:
+    """The unasked tier nearest ``mu``'s target, tie-broken toward the lower.
 
     Tie-breaking toward the lower tier is what keeps a developing player off a
-    discriminating question when their target tier is already spent.
+    discriminating question when their target tier is already spent. The caller
+    chooses whose level to pitch at: the running estimate normally, the fused
+    *claims* for a tie-breaker.
     """
 
-    target = TIERS.index(_target_tier(estimate.mu))
+    target = TIERS.index(_target_tier(mu))
     candidates = [tier for tier in TIERS if tier not in asked]
 
     def distance(tier: str) -> tuple[int, int]:
@@ -336,7 +464,7 @@ def _bracketing_demonstration(
     """
 
     if len(asked_tiers) < len(TIERS):
-        tier = _next_execution_tier(estimate, asked_tiers)
+        tier = _next_execution_tier(estimate.mu, asked_tiers)
         return execution_question(sport, tier), f"extreme-bracketing-{tier}"
     index = _next_tactical_index(tactical_asked)
     if index is not None:
@@ -397,6 +525,18 @@ def _projected_gain(current_sigma: float, candidate_sigma: float) -> float:
 # --- Fusion --------------------------------------------------------------------
 
 
+@dataclass(frozen=True)
+class _Evidence:
+    """One μ-moving answer: what it is a statement about, and what it encodes to.
+
+    The kind is read off the question, never off the answer, so the claim /
+    demonstration split cannot drift with the copy.
+    """
+
+    kind: str
+    estimate: SkillEstimate
+
+
 def _biased(
     raw: tuple[float, float] | None, entry: AnsweredQuestion
 ) -> SkillEstimate:
@@ -406,19 +546,33 @@ def _biased(
     return SkillEstimate(mu=mu, sigma=combine_sigma(sigma, SELF_REPORT_BIAS))
 
 
-def _evidence_points(transcript: Transcript) -> list[SkillEstimate]:
+def _point(entry: AnsweredQuestion, raw: tuple[float, float] | None) -> _Evidence:
+    kind = kind_for(entry.question_id)
+    assert kind is not None  # the caller has already matched a known question id
+    return _Evidence(kind=kind, estimate=_biased(raw, entry))
+
+
+def _fuse_estimates(estimates: list[SkillEstimate]) -> SkillEstimate:
+    """Inverse-variance fusion of a set of estimates, with no prior."""
+
+    precision = sum(1.0 / (estimate.sigma**2) for estimate in estimates)
+    weighted_mu = sum(estimate.mu / (estimate.sigma**2) for estimate in estimates)
+    return SkillEstimate(mu=weighted_mu / precision, sigma=(1.0 / precision) ** 0.5)
+
+
+def _evidence_points(transcript: Transcript) -> list[_Evidence]:
     """The μ-moving evidence in a transcript. Layoff is excluded — it is σ-only."""
 
-    points: list[SkillEstimate] = []
+    points: list[_Evidence] = []
     environment_option: str | None = None
     relative_option: str | None = None
 
     for entry in transcript:
         qid = entry.question_id
         if qid == OPENING_QUESTION_ID:
-            points.append(_biased(regularity_evidence(entry.option_id), entry))
+            points.append(_point(entry, regularity_evidence(entry.option_id)))
         elif qid == VOLUME_QUESTION_ID:
-            points.append(_biased(volume_evidence(entry.option_id), entry))
+            points.append(_point(entry, volume_evidence(entry.option_id)))
         elif qid == ENVIRONMENT_QUESTION_ID:
             environment_option = entry.option_id
         elif qid == RELATIVE_QUESTION_ID:
@@ -428,15 +582,16 @@ def _evidence_points(transcript: Transcript) -> list[SkillEstimate]:
                 raise UnknownAnswer(f"{qid}/{entry.option_id} is not a v3 answer")
             # σ only — folded in after fusion, never into μ.
         elif (tier := tier_for_execution_id(qid)) is not None:
-            points.append(_biased(execution_evidence(tier, entry.option_id), entry))
+            points.append(_point(entry, execution_evidence(tier, entry.option_id)))
         elif qid in TACTICAL_QUESTION_IDS:
-            points.append(_biased(tactical_evidence(entry.option_id), entry))
+            points.append(_point(entry, tactical_evidence(entry.option_id)))
         else:
             raise UnknownAnswer(f"{qid}/{entry.option_id} is not a v3 answer")
 
     context = _competitive_context(environment_option, relative_option)
     if context is not None:
-        points.append(context)
+        # Where you play and how you do there is a statement about standing.
+        points.append(_Evidence(kind=KIND_CLAIM, estimate=context))
     return points
 
 
@@ -479,22 +634,183 @@ def _layoff_penalty(transcript: Transcript) -> float:
 
 
 def _fuse(transcript: Transcript) -> SkillEstimate:
+    """The running estimate: every answer at full weight.
+
+    Routing reads this one, so a contradiction's resolution — which ``finalize``
+    applies — can never widen σ into extra questions. Routing already has its own
+    answer to a disagreement, and that is the tie-breaker.
+    """
+
+    return _fuse_points(
+        _evidence_points(transcript), layoff=_layoff_penalty(transcript)
+    )
+
+
+def _fuse_points(
+    points: list[_Evidence], *, layoff: float, claim_weight: float = 1.0
+) -> SkillEstimate:
     """Inverse-variance fusion of the prior and every μ-moving answer.
 
     A layoff widens σ afterwards and leaves μ untouched, so a player who was good
     two years ago is not assumed to have got worse without evidence.
+    ``claim_weight`` is the share of its precision each claim keeps: the whole of
+    it normally, part of it when the tie-breaker did not settle a disagreement.
     """
 
     precision = 1.0 / (POPULATION_PRIOR.sigma**2)
     weighted_mu = POPULATION_PRIOR.mu * precision
-    for evidence in _evidence_points(transcript):
-        p = 1.0 / (evidence.sigma**2)
+    for point in points:
+        weight = claim_weight if point.kind == KIND_CLAIM else 1.0
+        p = weight / (point.estimate.sigma**2)
         precision += p
-        weighted_mu += evidence.mu * p
+        weighted_mu += point.estimate.mu * p
     mu = weighted_mu / precision
     sigma = (1.0 / precision) ** 0.5
 
-    layoff = _layoff_penalty(transcript)
     if layoff > 0.0:
         sigma = combine_sigma(sigma, layoff)
     return SkillEstimate(mu=mu, sigma=sigma)
+
+
+# --- Contradiction: the two sides, the tie-breaker, the resolution -------------
+
+
+@dataclass(frozen=True)
+class _Sides:
+    """The two sides of the comparison, each fused on its own evidence alone.
+
+    The population prior is deliberately left out of both: pulling the claims and
+    the demonstrations toward the average would hide exactly the disagreement the
+    check exists to find.
+    """
+
+    claims: SkillEstimate
+    demonstrations: SkillEstimate
+
+    @property
+    def gap(self) -> float:
+        """How far apart the two sides are, in level units and without a sign.
+
+        Unsigned because the resolution has no direction: a player who claims
+        more than they demonstrate and one who demonstrates more than they claim
+        are the same amount of disagreement, and cost the same.
+        """
+
+        return abs(self.claims.mu - self.demonstrations.mu)
+
+
+def _sides(points: list[_Evidence]) -> _Sides | None:
+    """The fused claims and demonstrations, or ``None`` without both sides.
+
+    One demonstration is a data point rather than a side, so the comparison waits
+    for ``MIN_DEMONSTRATIONS_COMPARED`` — which the routing minimums guarantee.
+    """
+
+    claims = [point.estimate for point in points if point.kind == KIND_CLAIM]
+    demonstrations = [
+        point.estimate for point in points if point.kind == KIND_DEMONSTRATION
+    ]
+    if not claims or len(demonstrations) < MIN_DEMONSTRATIONS_COMPARED:
+        return None
+    return _Sides(
+        claims=_fuse_estimates(claims),
+        demonstrations=_fuse_estimates(demonstrations),
+    )
+
+
+def _contradiction(points: list[_Evidence]) -> _Sides | None:
+    """The two sides when they genuinely disagree, or ``None`` when they do not.
+
+    Below the tolerance the two are read as one uneven profile, which earns a
+    wider band through dispersion rather than an accusation.
+    """
+
+    sides = _sides(points)
+    if sides is None or sides.gap <= CONTRADICTION_TOLERANCE:
+        return None
+    return sides
+
+
+def _minimums_met(transcript: Transcript) -> bool:
+    """Whether the hard-minimum phase of the routing sequence is complete.
+
+    The same conditions the sequence checks, read off a transcript rather than
+    driven from one — which is what lets the engine locate the tie-breaker in a
+    replayed transcript without holding any state between calls.
+    """
+
+    answered = {entry.question_id for entry in transcript}
+    if ENVIRONMENT_QUESTION_ID not in answered or RELATIVE_QUESTION_ID not in answered:
+        return False
+    if not any(qid in answered for qid in TACTICAL_QUESTION_IDS):
+        return False
+    return len(_asked_execution_tiers(transcript)) >= _required_demonstrations(
+        _fuse(transcript)
+    )
+
+
+def _tie_breaker_tier(sides: _Sides, asked_tiers: set[str]) -> str | None:
+    """The tier a tie-breaker would be asked at, or ``None`` when there is none.
+
+    Exactly the tier the *claims* imply, and nothing else: an easier question
+    does not test the claim, and a harder one tests something the claim never
+    made. When that question has already been answered the claims have been
+    tested at their own level already, so no extra question is earned and the
+    disagreement goes to ``finalize`` unaided.
+    """
+
+    tier = _target_tier(sides.claims.mu)
+    return None if tier in asked_tiers else tier
+
+
+def _tie_breaker_at(transcript: Transcript) -> int | None:
+    """The position the tie-breaker is (or was) asked at, or ``None`` for never.
+
+    The first position at which the minimums were met, the two sides disagreed,
+    and the claims' own tier was still unasked. Returning the *first* such
+    position is what makes the tie-breaker at most one question: a position
+    earlier than the transcript's end means it has been asked already, whether or
+    not the disagreement survived it.
+    """
+
+    for index in range(len(transcript) + 1):
+        prefix = transcript[:index]
+        if not _minimums_met(prefix):
+            continue
+        sides = _contradiction(_evidence_points(prefix))
+        if sides is None:
+            continue
+        if _tie_breaker_tier(sides, _asked_execution_tiers(prefix)) is not None:
+            return index
+    return None
+
+
+def _contradiction_sigma(gap: float) -> float:
+    """The σ an unresolved disagreement adds, in proportion to its size."""
+
+    return min(CONTRADICTION_SIGMA_MAX, CONTRADICTION_SIGMA_PER_LEVEL * gap)
+
+
+def _dispersion_sigma(points: list[_Evidence]) -> float:
+    """The σ an uneven profile adds: how far the demonstrations scatter.
+
+    A strong smash and a weak backhand is an uneven game, not a lie. It widens
+    the band and is never reported as a disagreement — the tolerance absorbs the
+    scatter every honest answer set carries.
+    """
+
+    demonstrations = [
+        point.estimate for point in points if point.kind == KIND_DEMONSTRATION
+    ]
+    if len(demonstrations) < MIN_DEMONSTRATIONS_COMPARED:
+        return 0.0
+    fused = _fuse_estimates(demonstrations)
+    total_weight = sum(1.0 / (estimate.sigma**2) for estimate in demonstrations)
+    variance = (
+        sum(
+            (estimate.mu - fused.mu) ** 2 / (estimate.sigma**2)
+            for estimate in demonstrations
+        )
+        / total_weight
+    )
+    return min(DISPERSION_SIGMA_MAX, max(0.0, variance**0.5 - DISPERSION_TOLERANCE))

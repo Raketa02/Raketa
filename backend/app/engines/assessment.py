@@ -65,12 +65,32 @@ class BandView:
     upper: float
 
 
+# How urgently the rating wants real matches to calibrate it. Raised when the
+# assessment ended with answers that still disagreed, because the estimate then
+# rests on evidence the questionnaire could not settle.
+CALIBRATION_PRIORITY_STANDARD = "standard"
+CALIBRATION_PRIORITY_ELEVATED = "elevated"
+
+
+@dataclass(frozen=True)
+class ConfidenceReason:
+    """Why confidence landed where it did: a stable key and the sentence shown.
+
+    The key is what a projection or a support agent reads; the sentence is
+    server-authored copy, so wording changes without a client release. The
+    remaining branches and the factor rows arrive with the explained result (#9).
+    """
+
+    key: str
+    sentence: str
+
+
 @dataclass(frozen=True)
 class AssessmentResult:
     """The finalised rating: numbers plus the band's boundaries. No presentation.
 
-    Colours, glyphs and ordering are the client's; factor rows and the
-    confidence-reason sentence arrive with the explained result (#9).
+    Colours, glyphs and ordering are the client's; the factor rows arrive with the
+    explained result (#9).
     """
 
     mu: float
@@ -82,6 +102,8 @@ class AssessmentResult:
     status: str
     questions_asked: int
     engine_version: str
+    calibration_priority: str = CALIBRATION_PRIORITY_STANDARD
+    confidence_reason: ConfidenceReason | None = None
 
 
 @dataclass(frozen=True)
