@@ -47,6 +47,17 @@ and a weak backhand is an uneven game, and it widens the band through dispersion
 That resolution is applied in ``finalize`` and not to the running estimate, so a
 widened σ can never buy the player extra questions: routing already has its own
 answer to a contradiction, which is the tie-breaker.
+
+``finalize`` also **explains** the number it produces. One factor row per evidence
+category the player answered — recent activity, competitive context, match
+execution, tactical execution — each fused on its own evidence and compared
+against the final estimate, so its direction is computed rather than authored and
+retuning a constant moves the arrows with no copy edited. Separately, the things
+that widened *uncertainty* rather than moving the estimate are listed as such,
+each carrying the σ it actually added: a contributor the floor absorbed entirely
+did nothing and says nothing. The confidence sentence branches on whichever of
+those actually dominated, falling back to the case every onboarding rating
+shares — we have not seen the player play yet.
 """
 
 from __future__ import annotations
@@ -56,6 +67,9 @@ from dataclasses import dataclass
 from app.engines.assessment import (
     CALIBRATION_PRIORITY_ELEVATED,
     CALIBRATION_PRIORITY_STANDARD,
+    FACTOR_DIRECTION_DOWN,
+    FACTOR_DIRECTION_NEUTRAL,
+    FACTOR_DIRECTION_UP,
     AnsweredQuestion,
     AskQuestion,
     AssessmentResult,
@@ -63,8 +77,10 @@ from app.engines.assessment import (
     Complete,
     ConfidenceReason,
     Question,
+    ResultFactor,
     Step,
     Transcript,
+    UncertaintyFactor,
 )
 from app.engines.racketskill.core import (
     CONFIDENCE_SIGMA_CEILING,
@@ -80,6 +96,9 @@ from app.engines.racketskill.v3.questions import (
     AMBIGUOUS_REGULARITY_OPTIONS,
     ENVIRONMENT_QUESTION_ID,
     EXECUTION_QUESTION_IDS,
+    FACTOR_COMPETITIVE_CONTEXT,
+    FACTOR_KEYS,
+    FACTOR_LABELS,
     HISTORY_REGULARITY_OPTIONS,
     KIND_CLAIM,
     KIND_DEMONSTRATION,
@@ -97,6 +116,7 @@ from app.engines.racketskill.v3.questions import (
     execution_evidence,
     execution_question,
     execution_sigma,
+    factor_for,
     is_extreme_execution,
     is_extreme_tactical,
     kind_for,
@@ -180,12 +200,78 @@ CONTRADICTION_EXTRA_QUESTIONS = 1
 DISPERSION_TOLERANCE = 0.55
 DISPERSION_SIGMA_MAX = 0.50
 
-# The one confidence-reason branch this version authors. The remaining branches
-# (no match evidence yet, a layoff) arrive with the explained result (#9).
-CONFIDENCE_REASON_CONTRADICTION = "answers-disagreed"
+# --- The explained result: factor rows, uncertainty rows, the confidence reason -
+
+# How far one category's own level has to sit from the final estimate before the
+# row claims a direction. Below it the category agrees with where the estimate
+# landed, and an arrow would be reading noise as meaning.
+FACTOR_DIRECTION_TOLERANCE = 0.15
+
+# A widener is reported only if it survives the rounding its own σ is reported
+# at: a short break the σ floor absorbs entirely did nothing, and saying it did
+# would be the explanation drifting from the arithmetic.
+SIGMA_REPORTING_DIGITS = 4
+
+# The things that widen uncertainty rather than moving the estimate. Each carries
+# the σ it actually added, so the rows add up to the range the player sees.
+UNCERTAINTY_TIME_AWAY = "time-away"
+UNCERTAINTY_UNEVEN_PROFILE = "uneven-profile"
+UNCERTAINTY_ANSWERS_DISAGREED = "answers-disagreed"
+
+UNCERTAINTY_LABELS: dict[str, str] = {
+    UNCERTAINTY_TIME_AWAY: "Time away from the game",
+    UNCERTAINTY_UNEVEN_PROFILE: "An uneven game",
+    UNCERTAINTY_ANSWERS_DISAGREED: "Answers pointing to different ranges",
+}
+
+UNCERTAINTY_DETAILS: dict[str, str] = {
+    UNCERTAINTY_TIME_AWAY: (
+        "You have been away from the game, so we widened your range rather than "
+        "lowering your level."
+    ),
+    UNCERTAINTY_UNEVEN_PROFILE: (
+        "Your game is stronger in some areas than in others, so your range is a "
+        "little wider."
+    ),
+    UNCERTAINTY_ANSWERS_DISAGREED: (
+        "Your answers point to more than one range, so we kept the range wider "
+        "rather than picking one."
+    ),
+}
+
+# The confidence-reason branches, one per situation that actually produces one.
+# Which applies is decided by the contributor that widened uncertainty most, and
+# the base case is the one every onboarding rating shares: we have not seen the
+# player play yet.
+CONFIDENCE_REASON_LIMITED_EVIDENCE = "limited-match-evidence"
+CONFIDENCE_REASON_TIME_AWAY = UNCERTAINTY_TIME_AWAY
+CONFIDENCE_REASON_CONTRADICTION = UNCERTAINTY_ANSWERS_DISAGREED
+
+LIMITED_EVIDENCE_SENTENCE = (
+    "We have not seen you play yet, so this is a starting estimate built from "
+    "your answers. Your first matches will sharpen it quickly."
+)
+TIME_AWAY_SENTENCE = (
+    "You have been away from the game for a while, so we widened your starting "
+    "range rather than lowering it. Your first matches will show where you are now."
+)
 CONTRADICTION_SENTENCE = (
     "Some of your answers point to different skill ranges, so we kept your "
     "starting range wider. Your first matches will help us calibrate it quickly."
+)
+
+CONFIDENCE_SENTENCES: dict[str, str] = {
+    CONFIDENCE_REASON_LIMITED_EVIDENCE: LIMITED_EVIDENCE_SENTENCE,
+    CONFIDENCE_REASON_TIME_AWAY: TIME_AWAY_SENTENCE,
+    CONFIDENCE_REASON_CONTRADICTION: CONTRADICTION_SENTENCE,
+}
+
+# An uneven profile widens the range but authors no confidence sentence: "your
+# game is uneven" is not a reason we cannot be confident *yet*, it is a fact
+# about the player, and it is already reported as its own uncertainty row.
+CONFIDENCE_AUTHORING_WIDENERS: tuple[str, ...] = (
+    UNCERTAINTY_TIME_AWAY,
+    UNCERTAINTY_ANSWERS_DISAGREED,
 )
 
 # The reasons a stop is recorded under — the counterpart to an ``AskQuestion``'s
@@ -331,29 +417,38 @@ class RacketSkillEngineV3:
         # precision, and by exactly as much whichever side is the higher one.
         # Nobody is moved up, moved down, or accused.
         contradiction = _contradiction(points)
-        estimate = _fuse_points(
-            points,
-            layoff=_layoff_penalty(transcript),
-            claim_weight=(
-                CLAIM_PRECISION_RETAINED if contradiction is not None else 1.0
-            ),
-        )
+        claim_weight = CLAIM_PRECISION_RETAINED if contradiction is not None else 1.0
+        layoff = _layoff_penalty(transcript)
+        estimate = _fuse_points(points, layoff=layoff, claim_weight=claim_weight)
 
         # The floor first: "we kept your starting range wider" is a statement
         # about the range the player would otherwise have left with.
         sigma = max(estimate.sigma, SIGMA_FLOOR)
+        wideners: list[UncertaintyFactor] = []
+
+        # What the layoff actually cost, measured against the same transcript
+        # without it. A short break disappears into the floor, and a widener that
+        # widened nothing is not reported.
+        if layoff > 0.0:
+            unaffected = _fuse_points(points, layoff=0.0, claim_weight=claim_weight)
+            _record_widener(
+                wideners,
+                UNCERTAINTY_TIME_AWAY,
+                sigma - max(unaffected.sigma, SIGMA_FLOOR),
+            )
+
         dispersion = _dispersion_sigma(points)
         if dispersion > 0.0:
-            sigma = combine_sigma(sigma, dispersion)
+            widened = combine_sigma(sigma, dispersion)
+            _record_widener(wideners, UNCERTAINTY_UNEVEN_PROFILE, widened - sigma)
+            sigma = widened
 
         calibration_priority = CALIBRATION_PRIORITY_STANDARD
-        confidence_reason: ConfidenceReason | None = None
         if contradiction is not None:
-            sigma = combine_sigma(sigma, _contradiction_sigma(contradiction.gap))
+            widened = combine_sigma(sigma, _contradiction_sigma(contradiction.gap))
+            _record_widener(wideners, UNCERTAINTY_ANSWERS_DISAGREED, widened - sigma)
+            sigma = widened
             calibration_priority = CALIBRATION_PRIORITY_ELEVATED
-            confidence_reason = ConfidenceReason(
-                key=CONFIDENCE_REASON_CONTRADICTION, sentence=CONTRADICTION_SENTENCE
-            )
 
         mu = clamp_to_scale(estimate.mu)
         low, high = likely_range(mu, sigma)
@@ -369,7 +464,11 @@ class RacketSkillEngineV3:
             questions_asked=len(transcript),
             engine_version=ENGINE_VERSION,
             calibration_priority=calibration_priority,
-            confidence_reason=confidence_reason,
+            confidence_reason=_confidence_reason(wideners),
+            # Compared against the *reported* Level, so a row can never contradict
+            # the two numbers printed either side of it.
+            factors=_factors(points, round(mu, 2)),
+            uncertainty_factors=tuple(wideners),
         )
 
 
@@ -529,17 +628,17 @@ def _projected_gain(current_sigma: float, candidate_sigma: float) -> float:
 class _Evidence:
     """One μ-moving answer: what it is a statement about, and what it encodes to.
 
-    The kind is read off the question, never off the answer, so the claim /
-    demonstration split cannot drift with the copy.
+    Both the kind and the category are read off the question, never off the
+    answer, so neither the claim / demonstration split nor the factor rows can
+    drift with the copy.
     """
 
     kind: str
+    category: str
     estimate: SkillEstimate
 
 
-def _biased(
-    raw: tuple[float, float] | None, entry: AnsweredQuestion
-) -> SkillEstimate:
+def _biased(raw: tuple[float, float] | None, entry: AnsweredQuestion) -> SkillEstimate:
     if raw is None:
         raise UnknownAnswer(f"{entry.question_id}/{entry.option_id} is not a v3 answer")
     mu, sigma = raw
@@ -548,8 +647,10 @@ def _biased(
 
 def _point(entry: AnsweredQuestion, raw: tuple[float, float] | None) -> _Evidence:
     kind = kind_for(entry.question_id)
-    assert kind is not None  # the caller has already matched a known question id
-    return _Evidence(kind=kind, estimate=_biased(raw, entry))
+    category = factor_for(entry.question_id)
+    # The caller has already matched a known, μ-moving question id.
+    assert kind is not None and category is not None
+    return _Evidence(kind=kind, category=category, estimate=_biased(raw, entry))
 
 
 def _fuse_estimates(estimates: list[SkillEstimate]) -> SkillEstimate:
@@ -590,8 +691,15 @@ def _evidence_points(transcript: Transcript) -> list[_Evidence]:
 
     context = _competitive_context(environment_option, relative_option)
     if context is not None:
-        # Where you play and how you do there is a statement about standing.
-        points.append(_Evidence(kind=KIND_CLAIM, estimate=context))
+        # Where you play and how you do there is a statement about standing. The
+        # two questions fuse into one point, so they are also one factor row.
+        points.append(
+            _Evidence(
+                kind=KIND_CLAIM,
+                category=FACTOR_COMPETITIVE_CONTEXT,
+                estimate=context,
+            )
+        )
     return points
 
 
@@ -814,3 +922,90 @@ def _dispersion_sigma(points: list[_Evidence]) -> float:
         / total_weight
     )
     return min(DISPERSION_SIGMA_MAX, max(0.0, variance**0.5 - DISPERSION_TOLERANCE))
+
+
+# --- The explanation: factor rows, uncertainty rows, the confidence reason -----
+
+
+def _factors(points: list[_Evidence], mu: float) -> tuple[ResultFactor, ...]:
+    """One row per evidence category the player actually answered.
+
+    Each category is fused on its **own evidence alone** — deliberately without
+    the population prior, which would pull every category toward the average and
+    flatten the very differences the rows exist to show — and its level is
+    compared against the final estimate. The direction therefore falls out of the
+    arithmetic: retune a constant in the bank and the arrows move with it, with
+    no copy edited anywhere.
+
+    Both sides of the comparison are the values the player is actually shown, so
+    a row saying "up" always sits above the Level printed beside it.
+    """
+
+    rows: list[ResultFactor] = []
+    for key in FACTOR_KEYS:
+        estimates = [point.estimate for point in points if point.category == key]
+        if not estimates:
+            continue
+        level = round(_fuse_estimates(estimates).mu, 2)
+        rows.append(
+            ResultFactor(
+                key=key,
+                label=FACTOR_LABELS[key],
+                direction=_direction(level, mu),
+                level=level,
+            )
+        )
+    return tuple(rows)
+
+
+def _direction(level: float, mu: float) -> str:
+    """Where one category sits relative to the estimate the player is given."""
+
+    difference = level - mu
+    if difference > FACTOR_DIRECTION_TOLERANCE:
+        return FACTOR_DIRECTION_UP
+    if difference < -FACTOR_DIRECTION_TOLERANCE:
+        return FACTOR_DIRECTION_DOWN
+    return FACTOR_DIRECTION_NEUTRAL
+
+
+def _record_widener(
+    wideners: list[UncertaintyFactor], key: str, sigma_added: float
+) -> None:
+    """Record a widener, but only once it has actually widened something.
+
+    The σ floor absorbs a small contribution entirely, and a row claiming credit
+    for a range it did not change is the explanation drifting from the numbers.
+    """
+
+    added = round(sigma_added, SIGMA_REPORTING_DIGITS)
+    if added <= 0.0:
+        return
+    wideners.append(
+        UncertaintyFactor(
+            key=key,
+            label=UNCERTAINTY_LABELS[key],
+            detail=UNCERTAINTY_DETAILS[key],
+            sigma_added=added,
+        )
+    )
+
+
+def _confidence_reason(wideners: list[UncertaintyFactor]) -> ConfidenceReason:
+    """The branch the situation that actually produced it belongs to.
+
+    Whichever widener contributed the most σ authors the sentence, so the reason
+    is chosen by the arithmetic rather than by an authored precedence list. With
+    nothing having widened beyond the floor, the base case every onboarding
+    rating shares applies: we have not seen the player play yet.
+    """
+
+    candidates = [
+        widener for widener in wideners if widener.key in CONFIDENCE_AUTHORING_WIDENERS
+    ]
+    key = (
+        max(candidates, key=lambda widener: widener.sigma_added).key
+        if candidates
+        else CONFIDENCE_REASON_LIMITED_EVIDENCE
+    )
+    return ConfidenceReason(key=key, sentence=CONFIDENCE_SENTENCES[key])

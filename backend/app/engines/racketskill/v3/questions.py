@@ -84,6 +84,51 @@ def kind_for(question_id: str) -> str | None:
 
     return _KINDS.get(question_id)
 
+
+# --- Evidence categories: the rows the explained result is built from ----------
+
+# The bank's four μ-moving categories. A factor row is one of these, fused on its
+# own evidence and compared against the final estimate, so the row count follows
+# the questions actually asked rather than a fixed list of headings.
+FACTOR_RECENT_ACTIVITY = "recent-activity"
+FACTOR_COMPETITIVE_CONTEXT = "competitive-context"
+FACTOR_MATCH_EXECUTION = "match-execution"
+FACTOR_TACTICAL_EXECUTION = "tactical-execution"
+
+# Declaration order, which is the order the rows come out in. It carries no
+# ranking — the client owns presentation and may order them however it likes.
+FACTOR_KEYS: tuple[str, ...] = (
+    FACTOR_RECENT_ACTIVITY,
+    FACTOR_COMPETITIVE_CONTEXT,
+    FACTOR_MATCH_EXECUTION,
+    FACTOR_TACTICAL_EXECUTION,
+)
+
+FACTOR_LABELS: dict[str, str] = {
+    FACTOR_RECENT_ACTIVITY: "Recent activity",
+    FACTOR_COMPETITIVE_CONTEXT: "Competitive context",
+    FACTOR_MATCH_EXECUTION: "Match execution",
+    FACTOR_TACTICAL_EXECUTION: "Tactical execution",
+}
+
+# Layoff is deliberately absent: it widens uncertainty and moves nothing, so it
+# is reported as an uncertainty factor rather than as a row with a direction.
+_FACTORS: dict[str, str] = {
+    OPENING_QUESTION_ID: FACTOR_RECENT_ACTIVITY,
+    VOLUME_QUESTION_ID: FACTOR_RECENT_ACTIVITY,
+    ENVIRONMENT_QUESTION_ID: FACTOR_COMPETITIVE_CONTEXT,
+    RELATIVE_QUESTION_ID: FACTOR_COMPETITIVE_CONTEXT,
+    **{qid: FACTOR_MATCH_EXECUTION for qid in EXECUTION_QUESTION_IDS.values()},
+    **{qid: FACTOR_TACTICAL_EXECUTION for qid in TACTICAL_QUESTION_IDS},
+}
+
+
+def factor_for(question_id: str) -> str | None:
+    """The evidence category a question's answer belongs to, if it moves μ."""
+
+    return _FACTORS.get(question_id)
+
+
 # --- Categories (the screen title, read last on a top-down screen) -------------
 
 CATEGORY_REGULARITY = "Playing regularly"

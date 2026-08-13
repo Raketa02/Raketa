@@ -15,6 +15,7 @@ from __future__ import annotations
 
 from app.application.ports import DomainEventPublisher, DomainEventStore, UnitOfWork
 from app.engines.assessment import AskQuestion, AssessmentEngine, Question
+from app.modules.rating.application.assessment_view import completed_result
 from app.modules.rating.application.commands import (
     AssessmentStep,
     SubmitAnswerCommand,
@@ -157,7 +158,9 @@ class SubmitAnswer:
                 assessment_id=assessment.id,
                 status=assessment.status.value,
                 question=None,
-                result=assessment.result,
+                # The same explained result the first response carried, so a
+                # retried submission is indistinguishable from the original.
+                result=completed_result(self._engine, assessment),
             )
         return AssessmentStep(
             assessment_id=assessment.id,

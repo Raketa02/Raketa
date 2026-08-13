@@ -1,16 +1,22 @@
 """Wire schemas for the assessment endpoints.
 
-The result payload is numbers plus the band's own boundaries plus a
-server-authored status — no colours, no glyphs, no ordering. The client owns
-presentation. Factor rows and the confidence-reason sentence arrive with the
-explained result (#9).
+The result payload is numbers, the band's own boundaries, computed directions and
+server-authored copy — no colours, no glyphs, no ordering. The client owns
+presentation, and the two clients do not share a shape, so anything decided here
+is a decision one of them would have to undo.
 """
 
 from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
-from app.engines.assessment import AssessmentResult, Question
+from app.engines.assessment import (
+    AssessmentResult,
+    ConfidenceReason,
+    Question,
+    ResultFactor,
+    UncertaintyFactor,
+)
 from app.kernel import Sport
 from app.modules.rating.application.commands import AssessmentStep
 
@@ -67,6 +73,59 @@ class BandResponse(BaseModel):
     upper: float
 
 
+class FactorResponse(BaseModel):
+    """One evidence category's row: what it says, and which way it pulled.
+
+    ``direction`` is one of ``up`` / ``down`` / ``neutral``, computed by the
+    engine from that category's own evidence against the final estimate. The
+    client never derives it — a client-side arrow is a second opinion about the
+    arithmetic, and two clients would eventually hold two of them.
+    """
+
+    key: str
+    label: str
+    direction: str
+    level: float
+
+    @classmethod
+    def from_domain(cls, factor: ResultFactor) -> "FactorResponse":
+        return cls(
+            key=factor.key,
+            label=factor.label,
+            direction=factor.direction,
+            level=factor.level,
+        )
+
+
+class UncertaintyFactorResponse(BaseModel):
+    """Something that widened the range instead of moving the estimate."""
+
+    key: str
+    label: str
+    detail: str
+    sigma_added: float
+
+    @classmethod
+    def from_domain(cls, factor: UncertaintyFactor) -> "UncertaintyFactorResponse":
+        return cls(
+            key=factor.key,
+            label=factor.label,
+            detail=factor.detail,
+            sigma_added=factor.sigma_added,
+        )
+
+
+class ConfidenceReasonResponse(BaseModel):
+    """Why confidence landed where it did: a stable key and the sentence shown."""
+
+    key: str
+    sentence: str
+
+    @classmethod
+    def from_domain(cls, reason: ConfidenceReason) -> "ConfidenceReasonResponse":
+        return cls(key=reason.key, sentence=reason.sentence)
+
+
 class ResultResponse(BaseModel):
     mu: float
     sigma: float
@@ -76,6 +135,10 @@ class ResultResponse(BaseModel):
     status: str
     questions_asked: int
     engine_version: str
+    calibration_priority: str
+    confidence_reason: ConfidenceReasonResponse | None = None
+    factors: list[FactorResponse] = Field(default_factory=list)
+    uncertainty_factors: list[UncertaintyFactorResponse] = Field(default_factory=list)
 
     @classmethod
     def from_domain(cls, result: AssessmentResult) -> "ResultResponse":
@@ -92,6 +155,17 @@ class ResultResponse(BaseModel):
             status=result.status,
             questions_asked=result.questions_asked,
             engine_version=result.engine_version,
+            calibration_priority=result.calibration_priority,
+            confidence_reason=(
+                ConfidenceReasonResponse.from_domain(result.confidence_reason)
+                if result.confidence_reason is not None
+                else None
+            ),
+            factors=[FactorResponse.from_domain(factor) for factor in result.factors],
+            uncertainty_factors=[
+                UncertaintyFactorResponse.from_domain(factor)
+                for factor in result.uncertainty_factors
+            ],
         )
 
 

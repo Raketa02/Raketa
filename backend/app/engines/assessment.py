@@ -71,14 +71,54 @@ class BandView:
 CALIBRATION_PRIORITY_STANDARD = "standard"
 CALIBRATION_PRIORITY_ELEVATED = "elevated"
 
+# Which way one evidence category pulled, relative to where the estimate landed.
+# A direction is *computed* — the category fused on its own and compared against
+# the final estimate — never authored, so it cannot drift from the arithmetic.
+FACTOR_DIRECTION_UP = "up"
+FACTOR_DIRECTION_DOWN = "down"
+FACTOR_DIRECTION_NEUTRAL = "neutral"
+
+
+@dataclass(frozen=True)
+class ResultFactor:
+    """One evidence category's contribution to the estimate, as a row.
+
+    ``key`` is stable and machine-readable; ``label`` is server-authored copy, so
+    wording changes without a client release. ``level`` is what this category
+    says fused on its own, and ``direction`` is that level compared against the
+    final estimate. There is no colour, no glyph and no ordering field — the
+    client owns presentation.
+    """
+
+    key: str
+    label: str
+    direction: str
+    level: float
+
+
+@dataclass(frozen=True)
+class UncertaintyFactor:
+    """Something that widened the range rather than moving the estimate.
+
+    A layoff, an unresolved disagreement, an uneven profile: each reports the σ
+    it actually added to the final uncertainty, so a contributor the σ floor
+    absorbed entirely is not claimed to have done anything.
+    """
+
+    key: str
+    label: str
+    detail: str
+    sigma_added: float
+
 
 @dataclass(frozen=True)
 class ConfidenceReason:
     """Why confidence landed where it did: a stable key and the sentence shown.
 
     The key is what a projection or a support agent reads; the sentence is
-    server-authored copy, so wording changes without a client release. The
-    remaining branches and the factor rows arrive with the explained result (#9).
+    server-authored copy, so wording changes without a client release. Which
+    branch applies is decided by the situation that actually produced it — the
+    contributor that widened uncertainty most — and not by an authored ordering.
     """
 
     key: str
@@ -87,10 +127,12 @@ class ConfidenceReason:
 
 @dataclass(frozen=True)
 class AssessmentResult:
-    """The finalised rating: numbers plus the band's boundaries. No presentation.
+    """The finalised rating: numbers, the band's boundaries, and the explanation.
 
-    Colours, glyphs and ordering are the client's; the factor rows arrive with the
-    explained result (#9).
+    Colours, glyphs and ordering are the client's. ``factors`` are the evidence
+    categories that moved the estimate; ``uncertainty_factors`` are the ones that
+    widened the range instead, kept apart because they are different claims about
+    the player.
     """
 
     mu: float
@@ -104,6 +146,8 @@ class AssessmentResult:
     engine_version: str
     calibration_priority: str = CALIBRATION_PRIORITY_STANDARD
     confidence_reason: ConfidenceReason | None = None
+    factors: tuple[ResultFactor, ...] = ()
+    uncertainty_factors: tuple[UncertaintyFactor, ...] = ()
 
 
 @dataclass(frozen=True)

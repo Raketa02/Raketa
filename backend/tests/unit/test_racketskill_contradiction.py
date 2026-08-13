@@ -25,6 +25,8 @@ from app.engines.assessment import (
 from app.engines.racketskill.v3 import RacketSkillEngineV3
 from app.engines.racketskill.v3.engine import (
     CONFIDENCE_REASON_CONTRADICTION,
+    CONFIDENCE_REASON_LIMITED_EVIDENCE,
+    CONFIDENCE_SENTENCES,
     CONTRADICTION_EXTRA_QUESTIONS,
     CONTRADICTION_SENTENCE,
     MAX_QUESTIONS,
@@ -52,6 +54,17 @@ def answers(*pairs: tuple[str, str]) -> tuple[AnsweredQuestion, ...]:
 
 def finalize(*pairs: tuple[str, str]) -> AssessmentResult:
     return RacketSkillEngineV3().finalize(sport=SPORT, transcript=answers(*pairs))
+
+
+def not_a_disagreement(result: AssessmentResult) -> bool:
+    """Nothing about the result says the player's answers disagreed.
+
+    Every rating carries a confidence sentence now, so "no disagreement" is the
+    base branch — we have not seen you play yet — rather than an absent one.
+    """
+
+    assert result.confidence_reason is not None
+    return result.confidence_reason.key == CONFIDENCE_REASON_LIMITED_EVIDENCE
 
 
 def run(policy: dict[str, str], sport: Sport = SPORT):
@@ -108,7 +121,7 @@ def test_answers_that_hang_together_are_not_reported_as_a_disagreement() -> None
         (STANDARD, "e2"),
     )
     assert result.calibration_priority == CALIBRATION_PRIORITY_STANDARD
-    assert result.confidence_reason is None
+    assert not_a_disagreement(result)
 
 
 def test_a_gap_within_tolerance_is_not_reported_as_a_disagreement() -> None:
@@ -122,7 +135,7 @@ def test_a_gap_within_tolerance_is_not_reported_as_a_disagreement() -> None:
         (STANDARD, "e1"),
     )
     assert result.calibration_priority == CALIBRATION_PRIORITY_STANDARD
-    assert result.confidence_reason is None
+    assert not_a_disagreement(result)
 
 
 def test_an_uneven_profile_widens_the_range_without_an_accusation() -> None:
@@ -143,7 +156,7 @@ def test_an_uneven_profile_widens_the_range_without_an_accusation() -> None:
     assert uneven.range_high - uneven.range_low > even.range_high - even.range_low
     for result in (uneven, even):
         assert result.calibration_priority == CALIBRATION_PRIORITY_STANDARD
-        assert result.confidence_reason is None
+        assert not_a_disagreement(result)
 
 
 # --- The tie-breaker ------------------------------------------------------------
@@ -190,7 +203,7 @@ def test_passing_the_tie_breaker_settles_the_disagreement() -> None:
     assert len(tie_breakers(passed_asked)) == 1
     assert len(tie_breakers(failed_asked)) == 1
     assert passed.calibration_priority == CALIBRATION_PRIORITY_STANDARD
-    assert passed.confidence_reason is None
+    assert not_a_disagreement(passed)
     assert failed.calibration_priority == CALIBRATION_PRIORITY_ELEVATED
     assert failed.confidence_reason is not None
 
@@ -369,8 +382,14 @@ def test_the_copy_never_accuses_the_player() -> None:
         *WEAK_DEMONSTRATIONS,
     )
     assert result.confidence_reason is not None
-    sentence = result.confidence_reason.sentence
-    assert sentence == CONTRADICTION_SENTENCE
+    assert result.confidence_reason.sentence == CONTRADICTION_SENTENCE
+    # Every branch, not only this one: a sentence the player never sees today is
+    # a sentence nobody re-reads before the branch that shows it goes live.
+    for sentence in CONFIDENCE_SENTENCES.values():
+        assert_does_not_accuse(sentence)
+
+
+def assert_does_not_accuse(sentence: str) -> None:
     for accusation in (
         "inconsistent",
         "contradict",

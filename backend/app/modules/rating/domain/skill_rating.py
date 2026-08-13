@@ -13,7 +13,7 @@ from datetime import datetime
 from typing import Iterable
 from uuid import UUID
 
-from app.engines.assessment import AssessmentResult
+from app.engines.assessment import CALIBRATION_PRIORITY_STANDARD, AssessmentResult
 from app.kernel import Sport
 from app.modules.rating.domain.events import RatingInitialised
 from app.shared.domain import DomainEvent
@@ -35,6 +35,11 @@ class SkillRating:
     band_upper: float
     status: str
     engine_version: str
+    # How urgently this rating wants real matches, and why its confidence landed
+    # where it did. Both are facts about the rating, so they travel with it into
+    # the match-update engine rather than living only on the assessment.
+    calibration_priority: str = CALIBRATION_PRIORITY_STANDARD
+    confidence_reason_key: str | None = None
     version: int = 0
     _events: EventRecorder = field(
         default_factory=EventRecorder, init=False, repr=False, compare=False
@@ -86,6 +91,12 @@ class SkillRating:
                 engine_version=result.engine_version,
                 source_assessment_id=source_assessment_id,
                 occurred_at=occurred_at,
+                calibration_priority=result.calibration_priority,
+                confidence_reason_key=(
+                    result.confidence_reason.key
+                    if result.confidence_reason is not None
+                    else None
+                ),
             )
         )
         return rating
@@ -109,6 +120,8 @@ class SkillRating:
             self.band_upper = event.band_upper
             self.status = event.status
             self.engine_version = event.engine_version
+            self.calibration_priority = event.calibration_priority
+            self.confidence_reason_key = event.confidence_reason_key
             self.version += 1
             return
         raise TypeError(f"Unsupported rating event {event!r}")

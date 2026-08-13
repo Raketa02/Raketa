@@ -541,6 +541,25 @@
         ],
         "title": "BandResponse"
       },
+      "ConfidenceReasonResponse": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "sentence": {
+            "type": "string",
+            "title": "Sentence"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "sentence"
+        ],
+        "title": "ConfidenceReasonResponse",
+        "description": "Why confidence landed where it did: a stable key and the sentence shown."
+      },
       "CreateAssessmentRequest": {
         "properties": {
           "sport": {
@@ -552,6 +571,35 @@
           "sport"
         ],
         "title": "CreateAssessmentRequest"
+      },
+      "FactorResponse": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "direction": {
+            "type": "string",
+            "title": "Direction"
+          },
+          "level": {
+            "type": "number",
+            "title": "Level"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "label",
+          "direction",
+          "level"
+        ],
+        "title": "FactorResponse",
+        "description": "One evidence category's row: what it says, and which way it pulled.\n\n``direction`` is one of ``up`` / ``down`` / ``neutral``, computed by the\nengine from that category's own evidence against the final estimate. The\nclient never derives it \u2014 a client-side arrow is a second opinion about the\narithmetic, and two clients would eventually hold two of them."
       },
       "HTTPValidationError": {
         "properties": {
@@ -729,6 +777,34 @@
           "engine_version": {
             "type": "string",
             "title": "Engine Version"
+          },
+          "calibration_priority": {
+            "type": "string",
+            "title": "Calibration Priority"
+          },
+          "confidence_reason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ConfidenceReasonResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "factors": {
+            "items": {
+              "$ref": "#/components/schemas/FactorResponse"
+            },
+            "type": "array",
+            "title": "Factors"
+          },
+          "uncertainty_factors": {
+            "items": {
+              "$ref": "#/components/schemas/UncertaintyFactorResponse"
+            },
+            "type": "array",
+            "title": "Uncertainty Factors"
           }
         },
         "type": "object",
@@ -740,7 +816,8 @@
           "band",
           "status",
           "questions_asked",
-          "engine_version"
+          "engine_version",
+          "calibration_priority"
         ],
         "title": "ResultResponse"
       },
@@ -846,6 +923,35 @@
           "expires_in"
         ],
         "title": "TokenResponse"
+      },
+      "UncertaintyFactorResponse": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          },
+          "sigma_added": {
+            "type": "number",
+            "title": "Sigma Added"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "label",
+          "detail",
+          "sigma_added"
+        ],
+        "title": "UncertaintyFactorResponse",
+        "description": "Something that widened the range instead of moving the estimate."
       },
       "UserCreateRequest": {
         "properties": {

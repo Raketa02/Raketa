@@ -177,6 +177,12 @@ class Assessment:
                 questions_asked=result.questions_asked,
                 engine_version=result.engine_version,
                 occurred_at=occurred_at,
+                calibration_priority=result.calibration_priority,
+                confidence_reason_key=(
+                    result.confidence_reason.key
+                    if result.confidence_reason is not None
+                    else None
+                ),
             )
         )
 
@@ -208,6 +214,15 @@ class Assessment:
 
     @property
     def result(self) -> Optional[AssessmentResult]:
+        """The result as it was **recorded**: the numbers, and nothing derived.
+
+        The explanation — the factor rows and the confidence sentence — is
+        reproduced from the transcript by the engine that produced them rather
+        than stored a second time, exactly as the outstanding question is. See
+        ``application/assessment_view.completed_result``, which is what the
+        client is served.
+        """
+
         return self._result
 
     # --- event application ------------------------------------------------
@@ -255,6 +270,7 @@ class Assessment:
                 status=event.status,
                 questions_asked=event.questions_asked,
                 engine_version=event.engine_version,
+                calibration_priority=event.calibration_priority,
             )
             self.version += 1
             return

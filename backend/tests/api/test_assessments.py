@@ -56,6 +56,29 @@ async def _abandon(client, headers, assessment_id):
     )
 
 
+async def _run_to_result(client, headers, sport="PADEL", option=-1):
+    """Answer whatever the server asks until it returns a result.
+
+    The client cannot know which question is the last one — the engine decides it
+    has enough only after an answer arrives — so the loop is exactly what a client
+    must do: keep answering until ``question`` comes back null.
+    """
+
+    body = (await _create(client, headers, sport)).json()
+    while body["question"] is not None:
+        question = body["question"]
+        resp = await _answer(
+            client,
+            headers,
+            body["assessment_id"],
+            question["id"],
+            question["options"][option]["id"],
+        )
+        assert resp.status_code == 200, resp.text
+        body = resp.json()
+    return body
+
+
 @pytest.mark.asyncio
 async def test_create_returns_opening_question(client, valid_signup_payload):
     headers = await _auth_headers(client, valid_signup_payload)
@@ -447,3 +470,166 @@ async def test_two_sports_are_independent(
             .all()
         )
     assert len({row.aggregate_id for row in ratings}) == 2
+
+
+# --- The explained result -------------------------------------------------------
+
+RESULT_KEYS = {
+    "mu",
+    "sigma",
+    "confidence",
+    "range",
+    "band",
+    "status",
+    "questions_asked",
+    "engine_version",
+    "calibration_priority",
+    "confidence_reason",
+    "factors",
+    "uncertainty_factors",
+}
+
+
+@pytest.mark.asyncio
+async def test_the_result_explains_itself(client, valid_signup_payload):
+    headers = await _auth_headers(client, valid_signup_payload)
+    result = (await _run_to_result(client, headers))["result"]
+
+    assert set(result) == RESULT_KEYS
+    assert result["calibration_priority"] in {"standard", "elevated"}
+
+    # Every factor row carries a direction the server computed, and the client
+    # is given the level it was computed from rather than being asked to trust it.
+    assert result["factors"]
+    for factor in result["factors"]:
+        assert set(factor) == {"key", "label", "direction", "level"}
+        assert factor["direction"] in {"up", "down", "neutral"}
+        assert factor["key"] and factor["label"]
+
+    for widened in result["uncertainty_factors"]:
+        assert set(widened) == {"key", "label", "detail", "sigma_added"}
+        assert widened["sigma_added"] > 0
+
+    # The confidence sentence travels with the number it explains, so a wording
+    # change never needs a mobile release.
+    reason = result["confidence_reason"]
+    assert set(reason) == {"key", "sentence"}
+    assert reason["key"] and reason["sentence"].endswith(".")
+
+
+@pytest.mark.asyncio
+async def test_the_beginner_result_explains_itself_too(client, valid_signup_payload):
+    headers = await _auth_headers(client, valid_signup_payload)
+    created = (await _create(client, headers)).json()
+    result = (
+        await _answer(
+            client,
+            headers,
+            created["assessment_id"],
+            created["question"]["id"],
+            "never-played",
+        )
+    ).json()["result"]
+
+    # One answer, so one row — and the base confidence branch, because nothing
+    # widened the range beyond the floor every onboarding rating sits at.
+    assert [factor["key"] for factor in result["factors"]] == ["recent-activity"]
+    assert result["uncertainty_factors"] == []
+    assert result["confidence_reason"]["key"] == "limited-match-evidence"
+    assert result["calibration_priority"] == "standard"
+
+
+@pytest.mark.asyncio
+async def test_the_payload_carries_no_presentation_values(client, valid_signup_payload):
+    # Colours, glyphs and ordering are the client's, and the two clients do not
+    # share a shape — a hex code here is a decision one of them would have to undo.
+    headers = await _auth_headers(client, valid_signup_payload)
+    result = (await _run_to_result(client, headers))["result"]
+
+    def keys(node):
+        if isinstance(node, dict):
+            for key, value in node.items():
+                yield key
+                yield from keys(value)
+        elif isinstance(node, list):
+            for item in node:
+                yield from keys(item)
+
+    for key in keys(result):
+        assert not any(
+            word in key.lower()
+            for word in ("colour", "color", "icon", "glyph", "emoji", "order", "sort")
+        ), f"{key} looks like presentation"
+
+
+@pytest.mark.asyncio
+async def test_refetching_a_finished_assessment_returns_the_same_explanation(
+    client, valid_signup_payload
+):
+    # The explanation is reproduced from the transcript rather than stored, so
+    # this is the test that the reproduction is exact — a refetched result that
+    # differed from the one the player was shown would be the worst kind of bug.
+    headers = await _auth_headers(client, valid_signup_payload)
+    finished = await _run_to_result(client, headers)
+
+    fetched = (await _get(client, headers, finished["assessment_id"])).json()
+    assert fetched["status"] == "completed"
+    assert fetched["result"] == finished["result"]
+
+
+@pytest.mark.asyncio
+async def test_the_explanation_survives_a_retried_submission(
+    client, valid_signup_payload
+):
+    headers = await _auth_headers(client, valid_signup_payload)
+    created = (await _create(client, headers)).json()
+    question_id = created["question"]["id"]
+    first = (
+        await _answer(
+            client, headers, created["assessment_id"], question_id, "never-played"
+        )
+    ).json()
+
+    # The same answer again: a lost response, retried. It records nothing and
+    # returns the identical explained result.
+    retried = (
+        await _answer(
+            client, headers, created["assessment_id"], question_id, "never-played"
+        )
+    ).json()
+    assert retried["result"] == first["result"]
+
+
+@pytest.mark.asyncio
+async def test_completion_records_why_confidence_landed_where_it_did(
+    client, session_factory, valid_signup_payload
+):
+    # The stable key is a fact and is recorded; the sentence it selects is copy
+    # and is not, so a wording change is never a migration.
+    headers = await _auth_headers(client, valid_signup_payload)
+    finished = await _run_to_result(client, headers)
+    expected = finished["result"]["confidence_reason"]["key"]
+
+    async with session_factory() as session:
+        rows = (
+            (
+                await session.execute(
+                    select(EventStoreORM).where(
+                        EventStoreORM.event_type.in_(
+                            ("rating.assessment_completed", "rating.rating_initialised")
+                        )
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+
+    assert len(rows) == 2
+    for row in rows:
+        assert row.payload["confidence_reason_key"] == expected
+        assert (
+            row.payload["calibration_priority"]
+            == finished["result"]["calibration_priority"]
+        )
+        assert "sentence" not in str(row.payload)
