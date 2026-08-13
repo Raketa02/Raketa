@@ -20,20 +20,36 @@ feature, not after:
 | [`docs/architecture.md`](docs/architecture.md) | Where code lives, who owns which state, how auth/errors/Query/native behave in production. |
 | [`docs/design-system.md`](docs/design-system.md) | Every colour, type role, spacing step and interaction rule. **Locked.** |
 
-## Not scaffolded yet
+## Scaffolded, and nothing more
 
-This directory holds architecture, config and rules — not a running app. `pnpm install` has
-not been run and there is no `src/app/_layout.tsx`. Read [`README.md`](README.md) for the
-first-run steps and build outward from the structure below rather than reaching for
-`create-expo-app` (its default template contradicts ADR-0009).
+The app boots to a placeholder. `src/app/_layout.tsx` composes the providers,
+`src/shared/lib/bootstrap` runs the one ordered startup sequence, and `src/app/index.tsx`
+is a stand-in. The route groups, the HTTP client, auth and every feature are still empty —
+build outward from the structure below rather than reaching for `create-expo-app` (its
+default template contradicts ADR-0009).
+
+**Copy `.env.example` → `.env.local` before the first run.** `EXPO_PUBLIC_API_URL` and
+`EXPO_PUBLIC_ENV` are both required and validated once at launch by
+`src/shared/config/env.ts`. A missing or malformed value stops the app on a startup screen
+naming it — that is the guardrail working, not a bug.
 
 **Dependency versions target Expo SDK 52.** Expo pins React Native and its own packages
-tightly, so after the first install run `npx expo install --check` and trust Expo's
-resolution over the pins in `package.json`.
+tightly, so after changing dependencies run `npx expo install --check` and trust Expo's
+resolution over the pins in `package.json`. That pin is why `eslint.config.mjs` reaches
+`eslint-config-expo` through `FlatCompat`: its flat config ships from v9, which belongs to
+SDK 53.
 
-The first `_layout.tsx` must load Archivo (400–800) and IBM Plex Mono (400–600) with
-`expo-font` and **await them before hiding the splash screen** — a font that arrives late
-reflows every number on screen.
+**`.npmrc` sets `node-linker=hoisted`.** Metro and jest-expo decide what still needs
+transforming with `node_modules/(?!…)` allowlists, and pnpm's default symlinked layout
+defeats them — React Native ships untranspiled Flow, so the first casualty is `jest`
+failing to parse `error-guard.js`. Hoisting is Expo's documented answer; it changes nothing
+architectural, and this app still shares no packages with `frontend_club`.
+
+Archivo (400–800) and IBM Plex Mono (400–600) are loaded with `expo-font` and **awaited
+before the splash screen hides** — a font that arrives late reflows every number on screen.
+They are imported **file by file**: each `@expo-google-fonts` index `require`s every weight
+and italic it ships, and Metro does not tree-shake, so importing one name costs 4,2 MB
+instead of 1,0 MB.
 
 ## Commands
 

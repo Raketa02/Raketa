@@ -1,4 +1,18 @@
-import expoConfig from "eslint-config-expo/flat.js";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+import { FlatCompat } from "@eslint/eslintrc";
+
+// eslint-config-expo only ships a flat config from v9, which belongs to SDK 53 —
+// `npx expo install --check` pins this app to ~8.0.1, and dependency agreement with the
+// SDK wins over config ergonomics. FlatCompat loads that eslintrc-style config into flat
+// config unchanged, so the base rule set is Expo's own either way. Delete this bridge and
+// go back to `eslint-config-expo/flat.js` at the SDK 53 upgrade.
+const compat = new FlatCompat({
+  baseDirectory: path.dirname(fileURLToPath(import.meta.url)),
+});
+
+const expoConfig = compat.extends("eslint-config-expo");
 
 // ---------------------------------------------------------------------------
 // Architectural boundaries from CLAUDE.md and docs/architecture.md, enforced by
