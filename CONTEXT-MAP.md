@@ -35,7 +35,7 @@ own **technical** vocabulary:
 
 | File | Scope | Owns |
 | --- | --- | --- |
-| **`CONTEXT.md`** (root) | **Shared domain language — source of truth** | User, Authority, Email, Club, Court, Booking, statuses, domain events… |
+| **`CONTEXT.md`** (root) | **Shared domain language — source of truth** | User, Authority, Email, Sport, SportSpec, Club, Court, Booking, statuses, domain events… |
 | **`backend/CONTEXT.md`** | Backend technical vocab only | event-sourced aggregate, outbox, event store, port/adapter, UoW… |
 | **`frontend_player/CONTEXT.md`** | Player-app technical vocab only | feature, use-case, mapper, wire type vs DTO, screen, secure store, query/mutation… |
 | **`frontend_club/CONTEXT.md`** | Club-app technical vocab only | feature, model/server layer, wire type vs DTO, Server/Client Component, BFF route handler, tenant-scoped query key… |

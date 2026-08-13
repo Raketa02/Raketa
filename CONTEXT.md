@@ -72,6 +72,28 @@ Authentication and session lifecycle.
 - Login returns **the same error** for unknown-email and wrong-password
   (`InvalidCredentials`) — no account enumeration.
 
+### Shared kernel (`backend/app/kernel/`)
+
+The dependency-free ring that every bounded context and every engine reads verbatim and
+none may redefine ([ADR-0015](docs/adr/0015-engines-as-a-pure-versioned-layer.md)).
+
+- **Sport** — a **closed enum** of exactly four values: `PADEL`, `TENNIS`, `SQUASH`,
+  `BADMINTON`. Adding a sport is a code change and a release, never a row. A club's sport
+  list *filters* this registry and never extends or overrides it.
+- **SportSpec** — the frozen per-sport facts: `players` (how many the sport is played for)
+  and `durations` (the bookable lengths in minutes). Served read-only over the player API at
+  `GET /api/v1/sports` so neither client hardcodes it.
+- **There is no `Format`.** One rating per sport, one question bank per sport, worded for how
+  that sport is actually played — padel and badminton as doubles, tennis and squash as
+  singles. *Padel singles* and *tennis doubles* are not terms in this system.
+
+| Sport | players | durations (min) |
+| --- | --- | --- |
+| PADEL | 4 | 60 / 90 / 120 |
+| TENNIS | 2 | 60 / 90 |
+| SQUASH | 2 | 45 / 60 / 90 |
+| BADMINTON | 4 | 60 / 90 |
+
 ---
 
 ## Part 2 — Planned bounded contexts

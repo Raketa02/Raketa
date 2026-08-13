@@ -16,7 +16,7 @@ make test        # poetry run pytest tests -q
 make lint        # ruff check .          make format → ruff format .
 make typecheck   # mypy app
 make check       # lint + typecheck + test — the same gate CI runs
-make openapi     # dump openapi.json, the contract both clients generate from
+make openapi     # emit openapi.player.json + openapi.club.json, one per client
 make up / down   # dev stack (Postgres 17 + API + Redis); make logs, make shell
 make migrate     # alembic upgrade head inside the API container
 ```
@@ -70,9 +70,10 @@ Rules to preserve:
 ## The API contract
 
 This app is the single source of truth for the API
-([ADR-0006](../docs/adr/0006-backend-owns-api-contract.md)). Both clients generate their
-TypeScript wire types from `openapi.json`, so a response-shape change is load-bearing
-outside this directory. When you change one, run the `api-contract-change` skill.
+([ADR-0006](../docs/adr/0006-backend-owns-api-contract.md)). The contract is emitted as two
+documents — `openapi.player.json` and `openapi.club.json` — and each client generates its
+TypeScript wire types from its own (`make openapi`), so a response-shape change is
+load-bearing outside this directory. When you change one, run the `api-contract-change` skill.
 
 Prefer additive changes. Removing or renaming a field breaks two shipped clients, one of
 which is a mobile app whose old versions stay installed on real phones for months.

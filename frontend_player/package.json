@@ -18,7 +18,7 @@
     "typecheck": "tsc --noEmit",
     "test": "jest --passWithNoTests",
     "test:watch": "jest --watch",
-    "gen:api": "openapi-typescript ../backend/openapi.json -o src/generated/schema.d.ts",
+    "gen:api": "openapi-typescript ../backend/openapi.player.json -o src/generated/schema.d.ts",
     "check": "pnpm lint && pnpm typecheck && pnpm test",
     "doctor": "npx expo-doctor",
     "prebuild": "expo prebuild"

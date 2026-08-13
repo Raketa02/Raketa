@@ -29,8 +29,9 @@ the hooks themselves, `make gen-api`.
 
 - **Never import across apps.** They are separate deployables; the only contract between
   them is HTTP ([ADR-0005](docs/adr/0005-three-app-monorepo-ownership-boundaries.md)).
-- **The backend owns the API contract.** Both clients generate their wire types from
-  `backend/openapi.json` and never hand-write a DTO mirroring a backend response
+- **The backend owns the API contract.** It is emitted as two documents —
+  `backend/openapi.player.json` and `backend/openapi.club.json` — and each client generates
+  its wire types from its own, never hand-writing a DTO mirroring a backend response
   ([ADR-0006](docs/adr/0006-backend-owns-api-contract.md)). Regenerate with `make gen-api`.
 - **One session changes one app.** A `PreToolUse` hook blocks writes that cross an app
   boundary. A block is information — surface it, don't route around it. See
