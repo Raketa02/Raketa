@@ -17,7 +17,83 @@ event sourcing.
 
 ## Part 1 — Implemented bounded contexts
 
-These exist in `backend/app/modules/` today and are the authority for their terms.
+These exist in `backend/app/` today and are the authority for their terms.
+
+### Sports (`backend/app/shared/domain/sports.py`) — shared kernel
+
+What a sport **is**. Not a bounded context: a **shared kernel** every context reads
+verbatim, so "padel" cannot come to mean two things in two places. The player app and the
+club console must agree on it exactly, so neither client hardcodes it.
+
+- **Sport** — a closed enum, exactly four values: `PADEL`, `TENNIS`, `SQUASH`,
+  `BADMINTON`.
+- **SportSpec** — what the registry knows about one sport: `players`, the number of people
+  a match of that sport is played and sold for, and `durations`, the lengths it is sold in.
+  Padel 4 · 60/90/120 · Tennis 2 · 60/90 · Squash 2 · 45/60/90 · Badminton 4 · 60/90.
+
+**Invariants**
+- **A sport's player count is never club-configurable.** No field on any club or court may
+  override it; the value is read from exactly one place, everywhere. A club cannot sell a
+  two-player padel match because the registry forbids it structurally, not by convention.
+- **The registry is closed.** Adding a sport is a code change and a release, never a row.
+- **A club's sports list filters the registry, never extends it.** Not every club offers
+  every sport; no club offers a sport the registry does not define.
+- **There is no Format.** Deliberately, not pending. One rating per sport, one question
+  bank per sport, worded for how that sport is actually played — padel and badminton as
+  doubles, tennis and squash as singles. *Padel singles* and *tennis doubles* are not terms
+  in this system, and neither is a `format` field. Reintroducing that dimension would be a
+  new decision, not a gap someone should fill in.
+
+### Skill rating (`backend/app/modules/rating/`)
+
+What the platform believes about how well a player plays one sport, and how sure it is.
+A rating is **never only a number**.
+
+- **Skill rating** — an **event-sourced aggregate**, one per (player, sport).
+- **Level (μ)** — the current best estimate on a fixed **1,0–5,0** scale. Public. **5,0 does
+  not mean professional**; it means at or above the top of the competitive amateur
+  population this marketplace exists to match.
+- **Uncertainty (σ)** — how unsure the platform is. **Skill and certainty are separate
+  variables**: two players both showing 3,0, at ±0,15 and ±0,90, are not the same player,
+  and matchmaking reads the record rather than the headline.
+- **Confidence** — σ restated as a percentage for the player, `100 × (1 − σ/1,20)`, capped
+  at 99. **Never 100** — the platform cannot claim total certainty about anybody.
+- **Likely range** — μ ± σ, clamped to the scale. The player's own range, and the only
+  range shown to them; a band's numeric edges are not a second range to compare it against.
+- **Band** — one of four named ranges, deliberately uneven in width, each with a
+  plain-language meaning: **New** 1,0–1,5 · **Developing** 1,6–2,6 · **Established**
+  2,7–3,8 · **Advanced** 3,9–5,0.
+- **Rating status** — **Initial Estimate** (onboarding output, no counted matches) →
+  **Calibrating** (real matches started, still moving) → **Stable**.
+- **Volatility** — how fast the estimate currently appears to be moving.
+- **Assessment** — an **event-sourced aggregate**: one adaptive questionnaire run, for one
+  player and one sport. Its event stream *is* the transcript the engine reads.
+- **Claim** / **demonstration** — every answer is one or the other. A claim is a statement
+  about standing (how often you play, what you compete in, how you do against your usual
+  group). A demonstration is a statement about what you do inside a point.
+- **Contradiction** — a gap beyond tolerance between fused claims and fused demonstrations.
+  *"I regularly compete in strong club matches"* against *"I almost never maintain a basic
+  rally"* is one. A strong smash and a weak backhand is not — that is an **uneven profile**,
+  and it widens the range without being called a contradiction.
+- **Layoff** — declared time away from the sport, asked only of players with a history.
+
+**Invariants**
+- **A level is proved, never declared.** Not by the player, not by staff, not by a club.
+  Manual editing is refused by the domain itself, not guarded by a permission check.
+- **Only the rating context writes μ, σ, volatility and status.** Every other engine
+  contributes evidence, an information weight, or an anomaly signal — never a rating point.
+- **Absence widens, it never lowers.** Layoff and inactivity add to σ and never touch μ. A
+  player who was 3,20 two years ago has no obligation to still be 3,20 — and no obligation
+  to have got worse. The honest position is *we are less sure*, not *we assume decline*.
+- **A contradiction is never resolved by picking a side.** It widens the range and raises
+  calibration priority; it never moves the player up or down, and it never accuses them.
+  Resolution has no direction, which is what stops under-reporting being profitable.
+- **Onboarding cannot produce confidence above 30%.** The questionnaire is the entire
+  evidence surface and self-report has an irreducible ceiling, enforced as a floor on σ
+  rather than as a display cap. Everyone leaves onboarding as an *Initial Estimate*.
+- **A rating carries the engine version that produced it.** Every constant in the engine is
+  a hypothesis with a measurement that would falsify it — and you cannot falsify one you
+  cannot attribute a rating back to.
 
 ### Users (`backend/app/modules/users/`)
 
@@ -27,6 +103,12 @@ Identity and account state.
   events. Constructed only via `User.register(...)` or rehydrated via
   `User.from_history(events)`. Carries an `EventRecorder`; the application layer drains
   pending events with `pull_events()`.
+- **Player** — a User acting in the player app. **Not a separate aggregate and not a
+  separate id**: a player's identity *is* the `UserId`. `PlayerId` exists as a distinct
+  type so the code reads in the domain's own vocabulary and so the two have one place to
+  diverge, but today every `PlayerId` is a `UserId`. There is no `players` table.
+  Revisit only if a person can be known to the system as a participant without holding an
+  account, or if club staff share this accounts system — neither is true today.
 - **Authority** — role enum, `USER` or `ADMIN`.
 - **Email** — value object. Trimmed, lower-cased, RFC-ish validated, ≤ 320 chars.
 - **Nickname** — value object. Trimmed, 2–64 chars, `[A-Za-z0-9_.-]`.

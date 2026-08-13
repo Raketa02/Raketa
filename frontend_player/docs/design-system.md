@@ -15,6 +15,8 @@ described here means extending the system deliberately (Part 15), not inventing 
 - **The prototype is a web page; this app is not.** Part 2 of this document is about
   translating a stylesheet into React Native, and that translation is not mechanical —
   see [Part 0](#part-0--reading-a-web-prototype-as-a-native-app) first.
+- **Changes made since locking** are recorded in [Part 16](#part-16--amendments-after-locking),
+  never absorbed silently. Locked means changes are *visible*, not forbidden.
 - **Implementation:** the tokens are real code at
   [`../src/shared/ui/theme.ts`](../src/shared/ui/theme.ts). That file is the single source
   of colour, type, spacing, radius, elevation and motion values.
@@ -940,7 +942,7 @@ answers.**
 Match execution                          ← h1 is the CATEGORY, not the question
 Padel · Rating 1 of 1                    ← eyebrow
 
-Question 3     [discriminating] [3,17 so far]
+Question 3     [discriminating]
 ┌─ card ────────────────────────────────────────┐
 │ ── PICTURE THIS ──────────── paper2 header ──  │
 │ A deep lob pushes you off the net             │  13 / 600
@@ -950,7 +952,8 @@ Question 3     [discriminating] [3,17 so far]
 │ winner?                                       │
 │ A normal match against players at your level  │  tiny
 └───────────────────────────────────────────────┘
-[ Almost never ]      ← five pressable cards
+[ Almost never ]      ← five pressable cards — selection only, never submission
+[ Next ]              ← primary button, present from the start, disabled until selected
 ```
 
 **The situation is a shaded header inside the same card as the question** — on `paper2`
@@ -958,6 +961,21 @@ with a 1pt bottom border. **The question is never the page title**, because a ti
 last on a screen the eye scans top-down.
 
 Difficulty is a tag: basic / standard / **discriminating** (hot).
+
+**Tapping an answer selects it; it does not submit.** Submission is the `Next` button, and
+it is irreversible — there is no back control anywhere in the questionnaire. That is a
+domain constraint, not a styling one
+([ADR-0017](../../docs/adr/0017-rating-context-event-sourced.md)): an answer's numeric
+meaning depends on the difficulty tier it was asked at, and that tier was chosen from the
+estimate as it stood. Revising an earlier answer would silently change what every later
+answer meant. Because the commitment is final the player gets an explicit moment to make
+it — the confirm is what earns the irreversibility, and it removes any need for a timed
+undo window.
+
+**The button label never changes.** The engine decides it has enough information *after*
+the answer arrives, so the client cannot know which question is the last one. The result
+screen arrives without a countdown, which suits a flow that never asks the player to brace
+for a verdict.
 
 ### The result screen
 
@@ -1116,6 +1134,18 @@ theme. Adding one is a new ADR, not a styling change — every semantic soft bac
 every `Ink` would need a second computed value.
 
 ---
+
+# Part 16 — Amendments after locking
+
+[Part 14](#part-14--corrections-applied-to-the-prototype) is the diff against the
+prototype. This is the diff against **this document**, for changes made after it was locked
+by [ADR-0012](../../docs/adr/0012-player-app-design-system.md). A locked document is not an
+unchangeable one; it is one whose changes are recorded rather than absorbed.
+
+| Date | Section | Was | Is | Why |
+|---|---|---|---|---|
+| 2026-08-13 | [12.1](#121-onboarding) question screen | The header row carried the running estimate: `Question 3  [discriminating]  [3,17 so far]` | The estimate is removed. The tag stays | A live number reframes the questionnaire from *describe yourself accurately* to *make this number go up*. A player who answers honestly, watches 3,4 fall to 2,9 and feels the drop has been taught mid-flow that honesty is expensive — which corrupts the only evidence the engine has. It is also the least explained number in the app, in a screen whose final figures each earn an information mark and a popover because *"none is self-explanatory"*. The difficulty tag survives because three coarse values read as *we think you can handle a hard one*, not as a score |
+| 2026-08-13 | [12.1](#121-onboarding) question screen | Five pressable cards, tap to answer | Five cards select; a `Next` button submits | Answers are irreversible ([ADR-0017](../../docs/adr/0017-rating-context-event-sourced.md)), and taking a reflex tap and making it permanent is a bad bargain. The confirm is the moment the player accepts finality, and it makes a timed undo window unnecessary |
 
 # Appendix A — The token contract
 
