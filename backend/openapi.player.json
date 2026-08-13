@@ -1,0 +1,1093 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Rakieta Player API",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/v1/users": {
+      "post": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Create a user",
+        "operationId": "register_user_api_v1_users_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/me": {
+      "get": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Current authenticated user",
+        "operationId": "me_api_v1_users_me_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Authenticate and obtain an access/refresh token pair",
+        "operationId": "login_api_v1_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/refresh": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Rotate access and refresh tokens",
+        "operationId": "refresh_api_v1_auth_refresh_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Revoke a refresh token (idempotent)",
+        "operationId": "logout_api_v1_auth_logout_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LogoutRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LogoutResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sports": {
+      "get": {
+        "tags": [
+          "sports"
+        ],
+        "summary": "List the supported sports",
+        "operationId": "list_sports_api_v1_sports_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SportsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/assessments": {
+      "post": {
+        "tags": [
+          "assessments"
+        ],
+        "summary": "Start an assessment and receive its opening question",
+        "operationId": "create_assessment_api_v1_assessments_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAssessmentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssessmentStepResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/assessments/in-progress": {
+      "get": {
+        "tags": [
+          "assessments"
+        ],
+        "summary": "Resume: the sport's in-progress assessment, or nothing",
+        "operationId": "find_in_progress_api_v1_assessments_in_progress_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "sport",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Sport"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssessmentStepResponse"
+                }
+              }
+            }
+          },
+          "204": {
+            "description": "No assessment in progress"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/assessments/{assessment_id}": {
+      "get": {
+        "tags": [
+          "assessments"
+        ],
+        "summary": "Fetch an assessment's current state \u2014 its question or its result",
+        "operationId": "get_assessment_api_v1_assessments__assessment_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "assessment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Assessment Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssessmentStepResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/assessments/{assessment_id}/abandonment": {
+      "post": {
+        "tags": [
+          "assessments"
+        ],
+        "summary": "Abandon an in-progress assessment, freeing the sport to start again",
+        "operationId": "abandon_assessment_api_v1_assessments__assessment_id__abandonment_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "assessment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Assessment Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/assessments/{assessment_id}/answers": {
+      "post": {
+        "tags": [
+          "assessments"
+        ],
+        "summary": "Answer the outstanding question and receive the next step",
+        "operationId": "submit_answer_api_v1_assessments__assessment_id__answers_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "assessment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Assessment Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitAnswerRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssessmentStepResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AnswerOptionResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "text"
+        ],
+        "title": "AnswerOptionResponse"
+      },
+      "AssessmentStepResponse": {
+        "properties": {
+          "assessment_id": {
+            "type": "string",
+            "title": "Assessment Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "question": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QuestionResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ResultResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "assessment_id",
+          "status"
+        ],
+        "title": "AssessmentStepResponse",
+        "description": "The server-driven step. Exactly one of ``question`` / ``result`` is set."
+      },
+      "BandResponse": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "lower": {
+            "type": "number",
+            "title": "Lower"
+          },
+          "upper": {
+            "type": "number",
+            "title": "Upper"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "lower",
+          "upper"
+        ],
+        "title": "BandResponse"
+      },
+      "ConfidenceReasonResponse": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "sentence": {
+            "type": "string",
+            "title": "Sentence"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "sentence"
+        ],
+        "title": "ConfidenceReasonResponse",
+        "description": "Why confidence landed where it did: a stable key and the sentence shown."
+      },
+      "CreateAssessmentRequest": {
+        "properties": {
+          "sport": {
+            "$ref": "#/components/schemas/Sport"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sport"
+        ],
+        "title": "CreateAssessmentRequest"
+      },
+      "FactorResponse": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "direction": {
+            "type": "string",
+            "title": "Direction"
+          },
+          "level": {
+            "type": "number",
+            "title": "Level"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "label",
+          "direction",
+          "level"
+        ],
+        "title": "FactorResponse",
+        "description": "One evidence category's row: what it says, and which way it pulled.\n\n``direction`` is one of ``up`` / ``down`` / ``neutral``, computed by the\nengine from that category's own evidence against the final estimate. The\nclient never derives it \u2014 a client-side arrow is a second opinion about the\narithmetic, and two clients would eventually hold two of them."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "LoginRequest": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "title": "LoginRequest"
+      },
+      "LogoutRequest": {
+        "properties": {
+          "refresh_token": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Refresh Token"
+          }
+        },
+        "type": "object",
+        "required": [
+          "refresh_token"
+        ],
+        "title": "LogoutRequest"
+      },
+      "LogoutResponse": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "default": "Logged out successfully"
+          }
+        },
+        "type": "object",
+        "title": "LogoutResponse"
+      },
+      "QuestionResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "tier": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tier"
+          },
+          "situation": {
+            "type": "string",
+            "title": "Situation"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "qualifier": {
+            "type": "string",
+            "title": "Qualifier"
+          },
+          "options": {
+            "items": {
+              "$ref": "#/components/schemas/AnswerOptionResponse"
+            },
+            "type": "array",
+            "title": "Options"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "category",
+          "tier",
+          "situation",
+          "text",
+          "qualifier",
+          "options"
+        ],
+        "title": "QuestionResponse",
+        "description": "A question in reading order: category, situation, question, answers."
+      },
+      "RangeResponse": {
+        "properties": {
+          "low": {
+            "type": "number",
+            "title": "Low"
+          },
+          "high": {
+            "type": "number",
+            "title": "High"
+          }
+        },
+        "type": "object",
+        "required": [
+          "low",
+          "high"
+        ],
+        "title": "RangeResponse"
+      },
+      "RefreshRequest": {
+        "properties": {
+          "refresh_token": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Refresh Token"
+          }
+        },
+        "type": "object",
+        "required": [
+          "refresh_token"
+        ],
+        "title": "RefreshRequest"
+      },
+      "ResultResponse": {
+        "properties": {
+          "mu": {
+            "type": "number",
+            "title": "Mu"
+          },
+          "sigma": {
+            "type": "number",
+            "title": "Sigma"
+          },
+          "confidence": {
+            "type": "integer",
+            "title": "Confidence"
+          },
+          "range": {
+            "$ref": "#/components/schemas/RangeResponse"
+          },
+          "band": {
+            "$ref": "#/components/schemas/BandResponse"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "questions_asked": {
+            "type": "integer",
+            "title": "Questions Asked"
+          },
+          "engine_version": {
+            "type": "string",
+            "title": "Engine Version"
+          },
+          "calibration_priority": {
+            "type": "string",
+            "title": "Calibration Priority"
+          },
+          "confidence_reason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ConfidenceReasonResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "factors": {
+            "items": {
+              "$ref": "#/components/schemas/FactorResponse"
+            },
+            "type": "array",
+            "title": "Factors"
+          },
+          "uncertainty_factors": {
+            "items": {
+              "$ref": "#/components/schemas/UncertaintyFactorResponse"
+            },
+            "type": "array",
+            "title": "Uncertainty Factors"
+          }
+        },
+        "type": "object",
+        "required": [
+          "mu",
+          "sigma",
+          "confidence",
+          "range",
+          "band",
+          "status",
+          "questions_asked",
+          "engine_version",
+          "calibration_priority"
+        ],
+        "title": "ResultResponse"
+      },
+      "Sport": {
+        "type": "string",
+        "enum": [
+          "PADEL",
+          "TENNIS",
+          "SQUASH",
+          "BADMINTON"
+        ],
+        "title": "Sport",
+        "description": "The four sports Rakieta rates, as a closed enum."
+      },
+      "SportResource": {
+        "properties": {
+          "sport": {
+            "$ref": "#/components/schemas/Sport"
+          },
+          "players": {
+            "type": "integer",
+            "title": "Players",
+            "description": "Number of players the sport is played for"
+          },
+          "durations": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Durations",
+            "description": "Bookable durations in minutes, ascending"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sport",
+          "players",
+          "durations"
+        ],
+        "title": "SportResource",
+        "description": "One sport as served: how many play it and the durations it is sold in."
+      },
+      "SportsResponse": {
+        "properties": {
+          "sports": {
+            "items": {
+              "$ref": "#/components/schemas/SportResource"
+            },
+            "type": "array",
+            "title": "Sports"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sports"
+        ],
+        "title": "SportsResponse"
+      },
+      "SubmitAnswerRequest": {
+        "properties": {
+          "question_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Question Id"
+          },
+          "option_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Option Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "question_id",
+          "option_id"
+        ],
+        "title": "SubmitAnswerRequest"
+      },
+      "TokenResponse": {
+        "properties": {
+          "access_token": {
+            "type": "string",
+            "title": "Access Token"
+          },
+          "refresh_token": {
+            "type": "string",
+            "title": "Refresh Token"
+          },
+          "token_type": {
+            "type": "string",
+            "title": "Token Type",
+            "default": "bearer"
+          },
+          "expires_in": {
+            "type": "integer",
+            "title": "Expires In"
+          }
+        },
+        "type": "object",
+        "required": [
+          "access_token",
+          "refresh_token",
+          "expires_in"
+        ],
+        "title": "TokenResponse"
+      },
+      "UncertaintyFactorResponse": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          },
+          "sigma_added": {
+            "type": "number",
+            "title": "Sigma Added"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "label",
+          "detail",
+          "sigma_added"
+        ],
+        "title": "UncertaintyFactorResponse",
+        "description": "Something that widened the range instead of moving the estimate."
+      },
+      "UserCreateRequest": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "password1": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 8,
+            "title": "Password1"
+          },
+          "password2": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 8,
+            "title": "Password2"
+          },
+          "nickname": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 2,
+            "pattern": "^[A-Za-z0-9_.-]+$",
+            "title": "Nickname"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "password1",
+          "password2",
+          "nickname"
+        ],
+        "title": "UserCreateRequest"
+      },
+      "UserResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "nickname": {
+            "type": "string",
+            "title": "Nickname"
+          },
+          "authority": {
+            "type": "string",
+            "title": "Authority"
+          },
+          "is_admin": {
+            "type": "boolean",
+            "title": "Is Admin"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "email",
+          "nickname",
+          "authority",
+          "is_admin",
+          "is_active"
+        ],
+        "title": "UserResponse"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    },
+    "securitySchemes": {
+      "HTTPBearer": {
+        "type": "http",
+        "description": "Bearer access token",
+        "scheme": "bearer"
+      }
+    }
+  }
+}

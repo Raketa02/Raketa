@@ -34,32 +34,42 @@ The alternatives considered:
 - **Engine math inside the owning module's `domain/`,** as ordinary DDD domain logic.
   Correct for exactly one engine. It breaks on the second engine that two contexts need:
   either one module imports another module's `domain/` — the coupling vertical slices
-  exist to prevent — or the formula is written twice.
+  exist to prevent — or the formula is written twice. It also couples the arithmetic to
+  SQLAlchemy, making it untestable without I/O.
 - **An engine microservice.** A pure function behind a network call has no state to own
   and no independent lifecycle, so the hop buys no isolation that an import rule does not
   already give, while adding latency, a second contract to version, and a new failure
   mode. See [ADR-0016](0016-modular-monolith-two-api-surfaces.md).
-- **A dedicated pure layer** beside `modules/`, with mechanically enforced import rules.
+- **A dedicated pure layer with an interface but no enforced purity.** Nothing then stops
+  the next engine reaching for `datetime.now()` and silently becoming irreproducible.
+- **A dedicated pure layer beside `modules/`, with mechanically enforced import rules.**
 
 ## Decision
 
 We will keep engines in a top-level `backend/app/engines/` layer that is **not** a bounded
-context and owns no state.
+context and owns no state, alongside a dependency-free **shared kernel** at
+`backend/app/kernel/`.
 
-- **Import rules, enforced by `import-linter` in CI.** `engines/` may import `shared/` and
-  nothing else — never `modules/`, never FastAPI, SQLAlchemy or any I/O library.
-  `modules/` may import `engines/` freely.
-- **One `Protocol` per engine** in `engines/contracts.py`. `modules/` depends on the
-  Protocol, never on a concrete engine, so swapping a version or an implementation is a
-  wiring change at the FastAPI boundary like any other port.
+- **Import rules, enforced by `import-linter` in CI.** `backend/.importlinter` carries two
+  `forbidden` contracts: **engines** may not import a module (`app.modules.*`), a framework
+  or any I/O library; the **kernel** may not import anything in the app, nor any framework
+  or I/O library. CI runs `lint-imports`; a broken contract fails the build. `modules/` may
+  import `engines/` and `kernel/` freely — the fence is one-directional.
+- **One `Protocol` per engine.** `engines/assessment.py` declares `AssessmentEngine`;
+  `modules/` depends on the Protocol, never on a concrete engine, so swapping a version or
+  an implementation — including a future ML-inference engine behind HTTP — is a wiring
+  change at the FastAPI boundary like any other port.
 - **A version is a directory.** `engines/racketskill/v3/` is the v3 engine, permanently.
   Shipped versions are never deleted, which is also what makes a historical assessment
-  interpretable: the question definitions *are* the code that asked them.
+  interpretable: a version's question definitions *are* the code that asked them, so no
+  `question_definition` table is needed.
 - **Constants travel with the version** as a frozen dataclass, and every engine output
   carries the engine version that produced it.
-- **`core/` holds what outlives a version.** The scale, the bands, `SIGMA_MAX`, the
-  confidence transform and the σ-combination rule live in `engines/racketskill/core/`, so
-  onboarding and later match updates cannot develop two ideas of what σ means.
+- **What outlives a version lives in `engines/racketskill/core.py`** — the scale, the
+  bands, `SIGMA_MAX`, the confidence transform and the σ-combination rule — so onboarding
+  and the later match-update engine cannot develop two ideas of what σ means.
+- **What is shared with the rest of the app lives in the kernel.** `kernel/sports.py`
+  holds the `Sport` registry, which engines and modules both read verbatim.
 
 Three purity rules bind every engine, from the first one:
 
@@ -76,7 +86,8 @@ one, golden personas that are meant to break on one, and property tests holding 
 
 **Easier**
 
-- One implementation of each question, enforced by a linter rather than by vigilance.
+- One implementation of each question, enforced by a linter rather than by vigilance — the
+  boundary still holds in six months because CI checks it, not a reviewer's memory.
 - A rating is reproducible from its stored inputs and its engine version, which is what
   makes the falsification programme possible at all.
 - Engines are testable with no database, no fixtures and no HTTP — the cheapest and
@@ -89,18 +100,18 @@ one, golden personas that are meant to break on one, and property tests holding 
 
 - **A layer that is not a bounded context is unusual,** and a reader who knows DDD will
   reasonably ask why the fusion is not in `rating/domain/`. That is what this record is for.
+- **A value shared between an engine and a module now has exactly one correct home** — the
+  kernel — and putting it anywhere else is a CI failure rather than a judgement call. That
+  is the point, but it removes the easy shortcut of importing across the fence.
 - Engines cannot read configuration, feature flags or the database. Anything an engine
   needs must be assembled by the calling module and passed in, which makes some call sites
   wordier than a direct lookup would be.
 - Never deleting a shipped engine version means the tree accumulates code nothing runs.
   That is the price of interpreting old assessments, and it is paid on purpose.
-- `import-linter` is one more CI gate to keep green, and a boundary nothing checks is a
-  boundary that is already broken — so it must not be allowed to rot.
+- `import-linter` is one more CI gate to keep green, and its `include_external_packages`
+  mode is sensitive to how third-party imports are written.
 
 **Neutral**
 
-- The registry every engine reads — sports, ids, clock types — sits in `shared/` as a
-  shared kernel. That is a deliberate exception to context autonomy, justified by the
-  registry being tiny, closed and required to be identical everywhere.
 - Engines emit no events and perform no side effects. The calling module decides what a
   result means and what to record about it.

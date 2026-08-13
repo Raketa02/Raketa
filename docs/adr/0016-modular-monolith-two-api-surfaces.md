@@ -7,6 +7,9 @@
 
 [ADR-0005](0005-three-app-monorepo-ownership-boundaries.md) settled three deployables: a
 backend and two clients. It did not settle whether the *backend* stays one deployable.
+[ADR-0006](0006-backend-owns-api-contract.md) settled that the backend owns the API
+contract and both clients generate their wire types from it — but assumed a **single**
+`openapi.json`.
 
 The question is real, because the player app and the club console look like two systems.
 They have different users, different vocabularies, different screens and — plausibly —
@@ -37,6 +40,11 @@ tension, and the specifications pick a side.
 teams. There is one developer. A network boundary where no organisational boundary exists
 buys operational cost and no autonomy.
 
+**But a single contract document has its own latent problem:** it lets either client take a
+dependency on a path or schema meant for the other. Once both clients have generated
+against one document, splitting it later is a migration touching real, shipped wire types —
+including a mobile app whose old versions stay installed on phones for months.
+
 The alternatives considered:
 
 - **Three services** — player, club, engines. Rejected above.
@@ -48,20 +56,27 @@ The alternatives considered:
 
 ## Decision
 
-We will keep **one backend deployable**, and put the player/club isolation where it belongs.
+We will keep **one backend deployable**, and put the player/club isolation at the contract
+rather than the process.
 
-- **Two route trees.** `app/api/player/v1/` and `app/api/club/v1/`, mounted separately.
-- **Two OpenAPI documents.** `make gen-api` emits `openapi-player.json` and
-  `openapi-club.json`. Each client generates types only for the surface it may reach, so
-  neither can take a dependency on the other's contract — a stronger guarantee at the
-  thing that actually matters than a service boundary would give.
+- **Two route trees.** `app/api/v1/player.py` and `app/api/v1/club.py` each build a surface
+  router under the versioned `/api/v1` prefix. `app/api/v1/router.py` mounts **both**; the
+  deployable is single.
+- **Two committed OpenAPI documents.** `make openapi` (`python -m app.api.contract`) emits
+  `backend/openapi.player.json` and `backend/openapi.club.json`, each generated from a
+  throwaway app carrying only that surface's routes — so a player client never sees a club
+  path and vice versa. Each client's `pnpm gen:api` reads its own document.
+- **The split is set up now,** while it costs two one-line edits, rather than after real
+  club wire types exist. The club surface currently carries no endpoints; the tree exists
+  so club routes have a home the day they are written.
 - **A module owns its tables.** No module reads another module's tables; cross-context
   reads go through a published interface.
 - **Boundaries are enforced mechanically** by `import-linter` in CI, in the same posture as
-  the ownership hooks: `engines/` imports `shared/` only; `modules/` may import `engines/`
-  and `shared/`; no module reaches into another module's internals.
+  the ownership hooks — see [ADR-0015](0015-engines-as-a-pure-versioned-layer.md).
 - **Contexts communicate by domain events** over the transactional outbox that already
   exists, wherever the coupling is temporal rather than transactional.
+
+This amends ADR-0006's single-document mechanism; ADR-0006 points here.
 
 We will extract a service when — and only when — one of these becomes true, and each
 should be re-read before anyone proposes a split:
@@ -80,6 +95,10 @@ should be re-read before anyone proposes a split:
 - The operations that cross the player/club line — funding a seat, taking a hold, running
   the Intent Pool — stay inside one transaction, so the invariants that protect inventory
   are enforced by the database rather than by a saga.
+- Neither client can accidentally depend on the other's contract: the other's paths are not
+  in its document to import.
+- Adding the club surface later is additive — mount routes on the club router, regenerate,
+  commit. No migration of existing player wire types.
 - One migration history, one test suite, one local dev command. A request can be followed
   in a single process, which matters when the operator is learning.
 - The cross-application assertions stay unit tests over shared code instead of becoming
@@ -89,6 +108,12 @@ should be re-read before anyone proposes a split:
 
 - **The whole backend deploys together.** A change to club reporting redeploys the player
   API. Acceptable at one team; the first real cost of this decision.
+- **Two documents to keep current instead of one,** and `make gen-api` regenerates two
+  targets. A stale document still looks authoritative — CI should eventually verify both
+  are current.
+- **A route's surface is now a deliberate choice**, not an afterthought: a developer must
+  decide which router to mount it on, and a genuinely shared endpoint (auth, identity) has
+  to be included on **each** surface that needs it.
 - **Boundaries are conventions plus a linter, not physics.** A determined shortcut can
   cross a module edge in a way a network could have refused. The linter is therefore
   load-bearing and must stay green.
@@ -102,6 +127,3 @@ should be re-read before anyone proposes a split:
 - Most of the extraction kit is already built — event store, transactional outbox, and an
   event catalog mapping classes to durable names and versions so history survives renames.
   This decision is the first stage of a path that stays open, not a corner painted into.
-- Two OpenAPI documents change `make gen-api` and both clients' codegen configuration;
-  [ADR-0006](0006-backend-owns-api-contract.md) is unaffected in substance — the backend
-  still owns the contract, it now publishes two of them.

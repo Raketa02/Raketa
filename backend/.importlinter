@@ -1,0 +1,70 @@
+# Import boundaries, enforced in CI (make lint-imports / the CI backend job).
+# A boundary that nothing checks is a boundary that is already broken.
+#
+# The load-bearing rule (docs/adr/0015): the engines layer owns computation and
+# nothing else. It may import the shared kernel and stdlib — never a module, never
+# FastAPI, SQLAlchemy, Pydantic or any I/O library. Modules may import engines
+# freely, so this is a one-directional fence.
+
+[importlinter]
+root_package = app
+include_external_packages = True
+
+[importlinter:contract:engines-are-pure]
+name = Engines import only the shared kernel — never a module, framework or I/O library
+type = forbidden
+source_modules =
+    app.engines
+forbidden_modules =
+    app.modules
+    app.api
+    app.application
+    app.infrastructure
+    app.bootstrap
+    app.core
+    app.main
+    fastapi
+    starlette
+    sqlalchemy
+    pydantic
+    pydantic_settings
+    alembic
+    asyncpg
+    aiosqlite
+    redis
+    aiohttp
+    httpx
+    celery
+    jwt
+    bcrypt
+allow_indirect_imports = true
+
+[importlinter:contract:kernel-is-innermost]
+name = The shared kernel depends on nothing in the app and no framework or I/O library
+type = forbidden
+source_modules =
+    app.kernel
+forbidden_modules =
+    app.engines
+    app.modules
+    app.api
+    app.application
+    app.infrastructure
+    app.bootstrap
+    app.core
+    app.main
+    fastapi
+    starlette
+    sqlalchemy
+    pydantic
+    pydantic_settings
+    alembic
+    asyncpg
+    aiosqlite
+    redis
+    aiohttp
+    httpx
+    celery
+    jwt
+    bcrypt
+allow_indirect_imports = true

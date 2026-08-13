@@ -4,7 +4,8 @@ React Native + Expo + TypeScript. The native app players use to find courts, boo
 organise matches. It renders with **real platform components** — this is not a website in a
 WebView. Feature-first Clean Architecture
 ([ADR-0009](../docs/adr/0009-feature-first-clean-architecture-frontends.md)), talking to
-FastAPI over HTTPS and generating its wire types from `backend/openapi.json`. pnpm.
+FastAPI over HTTPS and generating its wire types from `backend/openapi.player.json`
+(the player half of the two-document contract). pnpm.
 
 > The `frontend_player/` app of a three-app monorepo — see the root
 > [`CLAUDE.md`](../CLAUDE.md). Run every command from this directory. Never import from
@@ -42,7 +43,7 @@ pnpm ios / android
 pnpm lint         # ESLint — also enforces the import boundaries below
 pnpm typecheck    # tsc --noEmit (strict)
 pnpm test         # Jest (jest-expo)
-pnpm gen:api      # regenerate src/generated/ from ../backend/openapi.json
+pnpm gen:api      # regenerate src/generated/ from ../backend/openapi.player.json
 pnpm doctor       # npx expo-doctor — checks dependency/SDK agreement
 pnpm check        # lint + typecheck + test — the local gate
 ```
@@ -180,7 +181,7 @@ asymmetry by adding a proxy, and don't copy the club app's cookie code here.
 
 Conventional Commits scoped `player`: `feat(player): court search filters`. Run `pnpm check`
 before pushing. **Contract drift fails the build:** CI regenerates from
-`backend/openapi.json` and diffs — commit the regenerated `src/generated/`. Before opening a
+`backend/openapi.player.json` and diffs — commit the regenerated `src/generated/`. Before opening a
 PR, walk the Definition of Done in
 [`docs/architecture.md` Part 20](docs/architecture.md#part-20--definition-of-done-and-the-pr-checklist).
 

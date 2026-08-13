@@ -19,31 +19,6 @@ event sourcing.
 
 These exist in `backend/app/` today and are the authority for their terms.
 
-### Sports (`backend/app/shared/domain/sports.py`) — shared kernel
-
-What a sport **is**. Not a bounded context: a **shared kernel** every context reads
-verbatim, so "padel" cannot come to mean two things in two places. The player app and the
-club console must agree on it exactly, so neither client hardcodes it.
-
-- **Sport** — a closed enum, exactly four values: `PADEL`, `TENNIS`, `SQUASH`,
-  `BADMINTON`.
-- **SportSpec** — what the registry knows about one sport: `players`, the number of people
-  a match of that sport is played and sold for, and `durations`, the lengths it is sold in.
-  Padel 4 · 60/90/120 · Tennis 2 · 60/90 · Squash 2 · 45/60/90 · Badminton 4 · 60/90.
-
-**Invariants**
-- **A sport's player count is never club-configurable.** No field on any club or court may
-  override it; the value is read from exactly one place, everywhere. A club cannot sell a
-  two-player padel match because the registry forbids it structurally, not by convention.
-- **The registry is closed.** Adding a sport is a code change and a release, never a row.
-- **A club's sports list filters the registry, never extends it.** Not every club offers
-  every sport; no club offers a sport the registry does not define.
-- **There is no Format.** Deliberately, not pending. One rating per sport, one question
-  bank per sport, worded for how that sport is actually played — padel and badminton as
-  doubles, tennis and squash as singles. *Padel singles* and *tennis doubles* are not terms
-  in this system, and neither is a `format` field. Reintroducing that dimension would be a
-  new decision, not a gap someone should fill in.
-
 ### Skill rating (`backend/app/modules/rating/`)
 
 What the platform believes about how well a player plays one sport, and how sure it is.
@@ -153,6 +128,36 @@ Authentication and session lifecycle.
 - `revoke()` / `rotate_to()` are no-ops on an already-invalid token.
 - Login returns **the same error** for unknown-email and wrong-password
   (`InvalidCredentials`) — no account enumeration.
+
+### Shared kernel (`backend/app/kernel/`)
+
+The dependency-free ring that every bounded context and every engine reads verbatim and
+none may redefine ([ADR-0015](docs/adr/0015-engines-as-a-pure-versioned-layer.md)).
+
+- **Sport** — a **closed enum** of exactly four values: `PADEL`, `TENNIS`, `SQUASH`,
+  `BADMINTON`. Adding a sport is a code change and a release, never a row. A club's sport
+  list *filters* this registry and never extends or overrides it.
+- **SportSpec** — the frozen per-sport facts: `players` (how many the sport is played for)
+  and `durations` (the bookable lengths in minutes). Served read-only over the player API at
+  `GET /api/v1/sports` so neither client hardcodes it.
+- **There is no `Format`.** One rating per sport, one question bank per sport, worded for how
+  that sport is actually played — padel and badminton as doubles, tennis and squash as
+  singles. *Padel singles* and *tennis doubles* are not terms in this system.
+
+| Sport | players | durations (min) |
+| --- | --- | --- |
+| PADEL | 4 | 60 / 90 / 120 |
+| TENNIS | 2 | 60 / 90 |
+| SQUASH | 2 | 45 / 60 / 90 |
+| BADMINTON | 4 | 60 / 90 |
+
+**Invariants**
+- **A sport's player count is never club-configurable.** No field on any club or court may
+  override it; the value is read from exactly one place, everywhere. A club cannot sell a
+  two-player padel match because the registry forbids it structurally, not by convention.
+- **Reintroducing `Format` would be a new decision, not a gap someone should fill in.**
+  Its absence is deliberate and load-bearing: one rating per sport is what let onboarding
+  drop cross-sport transfer and the singles/doubles link entirely.
 
 ---
 

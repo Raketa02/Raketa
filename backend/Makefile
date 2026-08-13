@@ -15,7 +15,7 @@ ECR_URI          ?= $(AWS_ACCOUNT_ID).dkr.ecr.$(AWS_REGION).amazonaws.com/$(ECR_
 ECS_CLUSTER      ?= rakieta-cluster
 ECS_SERVICE      ?= rakieta-service
 
-.PHONY: help install test lint format typecheck check openapi \
+.PHONY: help install test lint lint-imports format typecheck check openapi \
         build-dev up down logs ps shell migrate \
         build-prod ecr-login ecr-push ecs-deploy
 
@@ -32,18 +32,20 @@ test:              ## run pytest
 lint:              ## ruff check
 	poetry run ruff check .
 
+lint-imports:      ## enforce the engines/kernel import boundaries (.importlinter)
+	poetry run lint-imports
+
 format:            ## ruff format
 	poetry run ruff format .
 
 typecheck:         ## mypy
 	poetry run mypy app
 
-check: lint typecheck test  ## the full local gate (matches CI)
+check: lint lint-imports typecheck test  ## the full local gate (matches CI)
 
 ## ----- API contract
-openapi:           ## dump the OpenAPI contract to backend/openapi.json
-	poetry run python -c "import json; from app.main import app; print(json.dumps(app.openapi(), indent=2))" > openapi.json
-	@echo "Wrote backend/openapi.json"
+openapi:           ## emit the contract as two documents (player + club)
+	poetry run python -m app.api.contract
 
 ## ----- local docker
 build-dev:         ## build dev image
