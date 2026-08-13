@@ -12,7 +12,12 @@ from app.api.dependencies import (
 )
 from app.engines.assessment import AssessmentEngine
 from app.engines.racketskill.v3 import RacketSkillEngineV3
+from app.modules.rating.application.abandon_assessment import AbandonAssessment
 from app.modules.rating.application.create_assessment import CreateAssessment
+from app.modules.rating.application.find_in_progress_assessment import (
+    FindInProgressAssessment,
+)
+from app.modules.rating.application.get_assessment import GetAssessment
 from app.modules.rating.application.submit_answer import SubmitAnswer
 
 
@@ -62,3 +67,42 @@ def get_submit_answer(
 
 
 SubmitAnswerDep = Annotated[SubmitAnswer, Depends(get_submit_answer)]
+
+
+def get_get_assessment(
+    engine: AssessmentEngineDep,
+    event_store: DomainEventStoreDep,
+) -> GetAssessment:
+    return GetAssessment(engine=engine, event_store=event_store)
+
+
+GetAssessmentDep = Annotated[GetAssessment, Depends(get_get_assessment)]
+
+
+def get_find_in_progress_assessment(
+    engine: AssessmentEngineDep,
+    event_store: DomainEventStoreDep,
+) -> FindInProgressAssessment:
+    return FindInProgressAssessment(engine=engine, event_store=event_store)
+
+
+FindInProgressAssessmentDep = Annotated[
+    FindInProgressAssessment, Depends(get_find_in_progress_assessment)
+]
+
+
+def get_abandon_assessment(
+    event_store: DomainEventStoreDep,
+    uow: UnitOfWorkDep,
+    clock: ClockDep,
+    events: EventPublisherDep,
+) -> AbandonAssessment:
+    return AbandonAssessment(
+        event_store=event_store,
+        uow=uow,
+        clock=clock,
+        events=events,
+    )
+
+
+AbandonAssessmentDep = Annotated[AbandonAssessment, Depends(get_abandon_assessment)]

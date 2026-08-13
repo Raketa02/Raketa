@@ -28,6 +28,13 @@ class QuestionNotOutstanding(ConflictError):
         super().__init__("This answer is not for the question awaiting a response.")
 
 
+class AssessmentAlreadyFinished(ConflictError):
+    """A completed assessment cannot be abandoned — its rating already exists."""
+
+    def __init__(self) -> None:
+        super().__init__("This assessment is already finished.")
+
+
 class InvalidAnswerOption(BadRequestError):
     """The chosen option is not one this question offers."""
 

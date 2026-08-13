@@ -4,6 +4,7 @@ from app.application.events import EventCatalog, EventDispatcher
 from app.modules.rating.application.handlers import LogRatingEvent
 from app.modules.rating.domain.events import (
     AnswerSubmitted,
+    AssessmentAbandoned,
     AssessmentCompleted,
     AssessmentStarted,
     QuestionAsked,
@@ -18,6 +19,9 @@ def register_rating_events(catalog: EventCatalog) -> None:
     catalog.register(
         AssessmentCompleted, name="rating.assessment_completed", version=1
     )
+    catalog.register(
+        AssessmentAbandoned, name="rating.assessment_abandoned", version=1
+    )
     catalog.register(RatingInitialised, name="rating.rating_initialised", version=1)
 
 
@@ -27,6 +31,9 @@ def subscribe_rating_handlers(dispatcher: EventDispatcher) -> None:
     dispatcher.subscribe(AnswerSubmitted, LogRatingEvent("rating.answer_submitted"))
     dispatcher.subscribe(
         AssessmentCompleted, LogRatingEvent("rating.assessment_completed")
+    )
+    dispatcher.subscribe(
+        AssessmentAbandoned, LogRatingEvent("rating.assessment_abandoned")
     )
     dispatcher.subscribe(
         RatingInitialised, LogRatingEvent("rating.rating_initialised")

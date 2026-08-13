@@ -40,6 +40,22 @@ async def _answer(client, headers, assessment_id, question_id, option_id):
     )
 
 
+async def _get(client, headers, assessment_id):
+    return await client.get(f"/api/v1/assessments/{assessment_id}", headers=headers)
+
+
+async def _in_progress(client, headers, sport="PADEL"):
+    return await client.get(
+        "/api/v1/assessments/in-progress", params={"sport": sport}, headers=headers
+    )
+
+
+async def _abandon(client, headers, assessment_id):
+    return await client.post(
+        f"/api/v1/assessments/{assessment_id}/abandonment", headers=headers
+    )
+
+
 @pytest.mark.asyncio
 async def test_create_returns_opening_question(client, valid_signup_payload):
     headers = await _auth_headers(client, valid_signup_payload)
@@ -198,6 +214,201 @@ async def test_a_player_cannot_touch_another_players_assessment(
 
     bob = await _auth_headers(client, BOB)
     resp = await _answer(client, bob, aid, qid, "never-played")
+    assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_fetch_returns_the_outstanding_question(client, valid_signup_payload):
+    headers = await _auth_headers(client, valid_signup_payload)
+    created = (await _create(client, headers)).json()
+
+    resp = await _get(client, headers, created["assessment_id"])
+
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["status"] == "in_progress"
+    assert body["result"] is None
+    assert body["question"]["id"] == created["question"]["id"]
+
+
+@pytest.mark.asyncio
+async def test_fetch_a_finished_assessment_returns_its_result(
+    client, valid_signup_payload
+):
+    headers = await _auth_headers(client, valid_signup_payload)
+    created = (await _create(client, headers)).json()
+    await _answer(
+        client,
+        headers,
+        created["assessment_id"],
+        created["question"]["id"],
+        "never-played",
+    )
+
+    resp = await _get(client, headers, created["assessment_id"])
+
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["status"] == "completed"
+    assert body["question"] is None
+    assert body["result"]["mu"] == 1.40
+
+
+@pytest.mark.asyncio
+async def test_fetch_another_players_assessment_is_not_found(
+    client, valid_signup_payload
+):
+    alice = await _auth_headers(client, valid_signup_payload)
+    created = (await _create(client, alice)).json()
+
+    bob = await _auth_headers(client, BOB)
+    resp = await _get(client, bob, created["assessment_id"])
+    assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_in_progress_offers_the_run_to_resume(client, valid_signup_payload):
+    headers = await _auth_headers(client, valid_signup_payload)
+    created = (await _create(client, headers)).json()
+
+    resp = await _in_progress(client, headers, "PADEL")
+
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["assessment_id"] == created["assessment_id"]
+    assert body["question"]["id"] == created["question"]["id"]
+
+
+@pytest.mark.asyncio
+async def test_in_progress_is_nothing_when_none_open(client, valid_signup_payload):
+    headers = await _auth_headers(client, valid_signup_payload)
+    resp = await _in_progress(client, headers, "PADEL")
+    assert resp.status_code == 204
+
+
+@pytest.mark.asyncio
+async def test_in_progress_is_scoped_to_the_sport(client, valid_signup_payload):
+    headers = await _auth_headers(client, valid_signup_payload)
+    await _create(client, headers, "PADEL")
+
+    assert (await _in_progress(client, headers, "PADEL")).status_code == 200
+    assert (await _in_progress(client, headers, "TENNIS")).status_code == 204
+
+
+@pytest.mark.asyncio
+async def test_resuming_continues_the_same_stream(
+    client, session_factory, valid_signup_payload
+):
+    headers = await _auth_headers(client, valid_signup_payload)
+    created = (await _create(client, headers)).json()
+
+    resumed = (await _in_progress(client, headers, "PADEL")).json()
+    done = (
+        await _answer(
+            client,
+            headers,
+            resumed["assessment_id"],
+            resumed["question"]["id"],
+            "never-played",
+        )
+    ).json()
+
+    assert resumed["assessment_id"] == created["assessment_id"]
+    assert done["status"] == "completed"
+
+    # Resuming answered the existing run rather than starting a new one: exactly
+    # one assessment stream exists.
+    async with session_factory() as session:
+        rows = (
+            (
+                await session.execute(
+                    select(EventStoreORM).where(
+                        EventStoreORM.aggregate_type == "assessment"
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+    assert len({row.aggregate_id for row in rows}) == 1
+
+
+@pytest.mark.asyncio
+async def test_abandoning_ends_the_run_and_frees_the_sport(
+    client, session_factory, valid_signup_payload
+):
+    headers = await _auth_headers(client, valid_signup_payload)
+    first = (await _create(client, headers, "PADEL")).json()
+
+    assert (await _abandon(client, headers, first["assessment_id"])).status_code == 204
+
+    # The abandoned run is no longer offered for resume.
+    assert (await _in_progress(client, headers, "PADEL")).status_code == 204
+    # Its own state reads as abandoned, not as a question or a result.
+    fetched = (await _get(client, headers, first["assessment_id"])).json()
+    assert fetched["status"] == "abandoned"
+    assert fetched["question"] is None and fetched["result"] is None
+
+    # A new PADEL run can be started, and it is the one now offered.
+    second = (await _create(client, headers, "PADEL")).json()
+    assert second["assessment_id"] != first["assessment_id"]
+    resumed = (await _in_progress(client, headers, "PADEL")).json()
+    assert resumed["assessment_id"] == second["assessment_id"]
+
+    async with session_factory() as session:
+        abandoned = (
+            (
+                await session.execute(
+                    select(EventStoreORM).where(
+                        EventStoreORM.event_type == "rating.assessment_abandoned"
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+    assert len(abandoned) == 1
+
+
+@pytest.mark.asyncio
+async def test_abandoning_one_sport_leaves_another_untouched(
+    client, valid_signup_payload
+):
+    headers = await _auth_headers(client, valid_signup_payload)
+    padel = (await _create(client, headers, "PADEL")).json()
+    await _create(client, headers, "BADMINTON")
+
+    await _abandon(client, headers, padel["assessment_id"])
+
+    assert (await _in_progress(client, headers, "PADEL")).status_code == 204
+    assert (await _in_progress(client, headers, "BADMINTON")).status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_abandoning_a_finished_assessment_conflicts(client, valid_signup_payload):
+    headers = await _auth_headers(client, valid_signup_payload)
+    created = (await _create(client, headers)).json()
+    await _answer(
+        client,
+        headers,
+        created["assessment_id"],
+        created["question"]["id"],
+        "never-played",
+    )
+
+    resp = await _abandon(client, headers, created["assessment_id"])
+    assert resp.status_code == 409
+
+
+@pytest.mark.asyncio
+async def test_abandoning_another_players_assessment_is_not_found(
+    client, valid_signup_payload
+):
+    alice = await _auth_headers(client, valid_signup_payload)
+    created = (await _create(client, alice)).json()
+
+    bob = await _auth_headers(client, BOB)
+    resp = await _abandon(client, bob, created["assessment_id"])
     assert resp.status_code == 404
 
 

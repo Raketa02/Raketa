@@ -9,7 +9,10 @@ import pytest
 from app.engines.assessment import AnsweredQuestion, AssessmentResult, BandView
 from app.kernel import Sport
 from app.modules.rating.domain.assessment import Assessment
-from app.modules.rating.domain.errors import QuestionNotOutstanding
+from app.modules.rating.domain.errors import (
+    AssessmentAlreadyFinished,
+    QuestionNotOutstanding,
+)
 
 NOW = datetime(2026, 8, 13, tzinfo=timezone.utc)
 
@@ -83,3 +86,45 @@ def test_a_completed_assessment_rejects_further_answers() -> None:
             option_id="never-played",
             occurred_at=NOW,
         )
+
+
+def test_abandonment_ends_the_stream_and_survives_replay() -> None:
+    assessment = _started()
+    assessment.abandon(occurred_at=NOW)
+
+    replayed = Assessment.from_history(assessment.pull_events())
+
+    assert replayed.is_abandoned
+    assert not replayed.is_in_progress
+    assert replayed.outstanding_question_id is None
+
+
+def test_an_abandoned_assessment_rejects_further_answers() -> None:
+    assessment = _started()
+    assessment.abandon(occurred_at=NOW)
+    with pytest.raises(QuestionNotOutstanding):
+        assessment.answer(
+            question_id="opening.regularity",
+            option_id="never-played",
+            occurred_at=NOW,
+        )
+
+
+def test_abandoning_twice_is_a_no_op() -> None:
+    assessment = _started()
+    assessment.abandon(occurred_at=NOW)
+    assessment.pull_events()
+
+    assessment.abandon(occurred_at=NOW)
+
+    assert assessment.pull_events() == []
+
+
+def test_a_completed_assessment_cannot_be_abandoned() -> None:
+    assessment = _started()
+    assessment.answer(
+        question_id="opening.regularity", option_id="never-played", occurred_at=NOW
+    )
+    assessment.complete(result=_result(), occurred_at=NOW)
+    with pytest.raises(AssessmentAlreadyFinished):
+        assessment.abandon(occurred_at=NOW)

@@ -6,7 +6,8 @@ refactored. Replaying an assessment's stream reproduces exactly the transcript
 the engine consumed; there is no second representation.
 
 Assessment events cover starting, each question being asked (with the selection
-reason and the μ and σ that existed at that moment), each answer, and completion.
+reason and the μ and σ that existed at that moment), each answer, completion, and
+abandonment — the two terminal states an assessment stream can reach.
 Rating events cover initialisation today; match, inactivity and status-change
 events are reserved for the match-update engine.
 """
@@ -59,6 +60,12 @@ class AssessmentCompleted:
     status: str
     questions_asked: int
     engine_version: str
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class AssessmentAbandoned:
+    assessment_id: UUID
     occurred_at: datetime
 
 

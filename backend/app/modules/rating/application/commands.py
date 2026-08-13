@@ -24,6 +24,24 @@ class SubmitAnswerCommand:
 
 
 @dataclass(frozen=True)
+class GetAssessmentQuery:
+    player_id: UUID
+    assessment_id: UUID
+
+
+@dataclass(frozen=True)
+class FindInProgressQuery:
+    player_id: UUID
+    sport: Sport
+
+
+@dataclass(frozen=True)
+class AbandonAssessmentCommand:
+    player_id: UUID
+    assessment_id: UUID
+
+
+@dataclass(frozen=True)
 class AssessmentStep:
     """The server-driven step: the current question, or the final result.
 

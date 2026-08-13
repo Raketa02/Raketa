@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from uuid import UUID
 
 from sqlalchemy import func, select
@@ -85,6 +85,20 @@ class SqlAlchemyEventStore:
             .order_by(EventStoreORM.version)
         )
         return [_to_stored(row, self._codec) for row in result.scalars().all()]
+
+    async def find_aggregate_ids_by_first_event(
+        self, *, aggregate_type: str, payload_equals: Mapping[str, str]
+    ) -> list[UUID]:
+        query = select(EventStoreORM.aggregate_id).where(
+            EventStoreORM.aggregate_type == aggregate_type,
+            EventStoreORM.version == 1,
+        )
+        for key, value in payload_equals.items():
+            query = query.where(EventStoreORM.payload[key].as_string() == value)
+        result = await self._session.execute(
+            query.order_by(EventStoreORM.occurred_at, EventStoreORM.version)
+        )
+        return list(result.scalars().all())
 
     async def _current_version(
         self, *, aggregate_type: str, aggregate_id: UUID

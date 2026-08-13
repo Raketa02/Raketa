@@ -21,9 +21,13 @@ from app.engines.assessment import (
     Transcript,
 )
 from app.kernel import Sport
-from app.modules.rating.domain.errors import QuestionNotOutstanding
+from app.modules.rating.domain.errors import (
+    AssessmentAlreadyFinished,
+    QuestionNotOutstanding,
+)
 from app.modules.rating.domain.events import (
     AnswerSubmitted,
+    AssessmentAbandoned,
     AssessmentCompleted,
     AssessmentStarted,
     QuestionAsked,
@@ -35,6 +39,7 @@ from app.shared.domain.events import EventRecorder
 class AssessmentStatus(str, Enum):
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
+    ABANDONED = "abandoned"
 
 
 @dataclass
@@ -138,6 +143,24 @@ class Assessment:
             )
         )
 
+    def abandon(self, *, occurred_at: datetime) -> None:
+        """End an in-progress assessment, freeing the sport to be started again.
+
+        Abandoning an already-abandoned assessment is a no-op so a retried
+        request cannot fail; a finished (completed) assessment cannot be
+        abandoned — its rating already exists.
+        """
+        if self.status is AssessmentStatus.ABANDONED:
+            return
+        if self.status is not AssessmentStatus.IN_PROGRESS:
+            raise AssessmentAlreadyFinished()
+        self._record_that(
+            AssessmentAbandoned(
+                assessment_id=self.id,
+                occurred_at=occurred_at,
+            )
+        )
+
     def complete(self, *, result: AssessmentResult, occurred_at: datetime) -> None:
         self._record_that(
             AssessmentCompleted(
@@ -174,6 +197,14 @@ class Assessment:
     @property
     def is_completed(self) -> bool:
         return self.status is AssessmentStatus.COMPLETED
+
+    @property
+    def is_abandoned(self) -> bool:
+        return self.status is AssessmentStatus.ABANDONED
+
+    @property
+    def is_in_progress(self) -> bool:
+        return self.status is AssessmentStatus.IN_PROGRESS
 
     @property
     def result(self) -> Optional[AssessmentResult]:
@@ -225,6 +256,11 @@ class Assessment:
                 questions_asked=event.questions_asked,
                 engine_version=event.engine_version,
             )
+            self.version += 1
+            return
+        if isinstance(event, AssessmentAbandoned):
+            self.status = AssessmentStatus.ABANDONED
+            self._outstanding_question_id = None
             self.version += 1
             return
         raise TypeError(f"Unsupported assessment event {event!r}")

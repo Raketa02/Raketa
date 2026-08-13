@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Protocol
@@ -53,6 +53,18 @@ class DomainEventStore(Protocol):
     async def load_stream(
         self, *, aggregate_type: str, aggregate_id: UUID
     ) -> list[StoredDomainEvent]: ...
+
+    async def find_aggregate_ids_by_first_event(
+        self, *, aggregate_type: str, payload_equals: Mapping[str, str]
+    ) -> list[UUID]:
+        """Ids of streams whose first (version 1) event's payload matches all pairs.
+
+        The read side of an event-sourced index: a stream's opening event carries
+        the fields it is keyed by (a player, a sport), so a lookup needs no
+        parallel table — it reads the streams directly. Ordered by when the stream
+        opened, oldest first.
+        """
+        ...
 
 
 class PendingOutbox(Protocol):
