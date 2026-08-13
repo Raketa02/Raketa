@@ -1,7 +1,14 @@
 # ADR-0009 — Feature-first Clean Architecture on both frontends
 
-- **Status:** Accepted
+- **Status:** Accepted, **narrowed to `frontend_player/` by
+  [ADR-0014](0014-club-console-production-architecture-standard.md)**
 - **Date:** 2026-08-09
+
+> **Scope note.** This ADR governs **`frontend_player/` only.** The club app follows its
+> own production architecture standard, which rejects the uniform layer set for a
+> frontend. Read every "both frontends" below as "the player app". In particular, the
+> claim under *Consequences → Easier* that a rule transfers between the two clients no
+> longer holds.
 
 ## Context
 

@@ -24,7 +24,11 @@ COMMAND=$(printf '%s' "$INPUT" | jq -r '.tool_input.command // empty')
 CWD=$(printf '%s' "$INPUT" | jq -r '.cwd // empty')
 [ -z "$COMMAND" ] && exit 0
 
-ROOT="${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null)}"
+# The REPO root — see the note in enforce-ownership.sh. $CLAUDE_PROJECT_DIR is the
+# launch directory, so it is backend/ in a scoped session and cannot be used to
+# decide which app a path belongs to.
+ROOT=$(git -C "${CWD:-.}" rev-parse --show-toplevel 2>/dev/null)
+[ -z "$ROOT" ] && ROOT="${CLAUDE_PROJECT_DIR:-}"
 
 # Match only when the trigger is in COMMAND position — start of line, or right
 # after a shell separator. Keeps a deploy word inside a quoted commit message
@@ -85,8 +89,10 @@ if [ -n "$ROOT" ]; then
   if [ "$TIER" != 'root' ]; then
     for other in backend frontend_player frontend_club; do
       [ "$(app_of "$other")" = "$TIER" ] && continue
-      # a write verb or a redirect aimed at the other app's directory
-      if printf '%s' "$COMMAND" | grep -qE "(${SEP}(cp|mv|rm|tee|touch|mkdir|sed[[:space:]]+-i)[^|;&]*|>>?[[:space:]]*)(\.\./)?${other}/"; then
+      # a write verb or a redirect aimed at the other app's directory. Both arms
+      # allow arbitrary leading path text so an absolute path, a '../' and a
+      # 'backend/../frontend_club/' all match the same way.
+      if printf '%s' "$COMMAND" | grep -qE "(${SEP}(cp|mv|rm|tee|touch|mkdir|sed[[:space:]]+-i)|>>?)[^|;&]*(^|[[:space:]/])${other}/"; then
         echo "Blocked: this session owns '${TIER}', but the command writes into '${other}/'. The three apps are separate deployables — see docs/adr/0005. Make the change from a session scoped to that app." >&2
         exit 2
       fi

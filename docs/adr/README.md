@@ -38,8 +38,9 @@ If your work **contradicts** an existing ADR, surface it rather than silently ov
 - [0006 — The backend owns the API contract](0006-backend-owns-api-contract.md)
 - [0007 — Club web: BFF with an httpOnly-cookie session](0007-club-web-bff-httponly-cookie-session.md)
 - [0008 — Player mobile: secure-store tokens, direct to the API](0008-player-mobile-securestore-direct-api.md)
-- [0009 — Feature-first Clean Architecture on both frontends](0009-feature-first-clean-architecture-frontends.md)
+- [0009 — Feature-first Clean Architecture on both frontends](0009-feature-first-clean-architecture-frontends.md) — *narrowed to the player app by 0014*
 - [0010 — Local-first development; AWS deployment deferred](0010-local-first-development-aws-deferred.md)
 - [0011 — A locked design system for the club console](0011-club-console-design-system.md)
 - [0012 — A locked design system for the player app](0012-player-app-design-system.md)
 - [0013 — Player app: the production runtime architecture](0013-player-app-runtime-architecture.md)
+- [0014 — The club console follows its production architecture standard](0014-club-console-production-architecture-standard.md)

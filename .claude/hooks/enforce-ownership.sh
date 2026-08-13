@@ -21,9 +21,6 @@ set -uo pipefail
 
 INPUT=$(cat)
 
-ROOT="${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null)}"
-if [ -z "$ROOT" ]; then exit 0; fi
-
 if ! command -v jq >/dev/null 2>&1; then
   echo 'Ownership hook cannot run: jq is not installed (brew install jq). Blocking to fail safe.' >&2
   exit 2
@@ -31,6 +28,16 @@ fi
 
 CWD=$(printf '%s' "$INPUT" | jq -r '.cwd // empty')
 TOOL=$(printf '%s' "$INPUT" | jq -r '.tool_name // empty')
+
+# The REPO root, which is not $CLAUDE_PROJECT_DIR. That variable holds the
+# directory Claude Code was launched from, so in a `cd backend && claude` session
+# it is backend/ — and every path outside backend/ would then look like it sits
+# outside the repo and get waved through. git is the authority on where the root
+# is; CLAUDE_PROJECT_DIR is only the fallback for a non-git checkout, where the
+# launch directory is the best guess available.
+ROOT=$(git -C "${CWD:-.}" rev-parse --show-toplevel 2>/dev/null)
+[ -z "$ROOT" ] && ROOT="${CLAUDE_PROJECT_DIR:-}"
+if [ -z "$ROOT" ]; then exit 0; fi
 
 # Edit/Write/MultiEdit use .file_path; NotebookEdit uses .notebook_path.
 TARGET=$(printf '%s' "$INPUT" | jq -r '.tool_input.file_path // .tool_input.notebook_path // empty')
@@ -43,8 +50,30 @@ abs() {
     *)  printf '%s' "${CWD:-$ROOT}/$1" ;;
   esac
 }
+# Collapse '.' and '..' segments textually. Without this, 'backend/../frontend_club/x'
+# is classified as belonging to backend, and the whole boundary is one '../' away from
+# being bypassed — which is the form a relative path from a scoped session naturally
+# takes. Purely lexical on purpose: the target file usually does not exist yet, so
+# realpath/readlink -f cannot resolve it.
+normalize() {
+  local path="$1" out='' seg oldifs="$IFS"
+  IFS='/'
+  set -f                     # a path segment must never be glob-expanded
+  for seg in $path; do
+    case "$seg" in
+      ''|.) ;;
+      ..)   out="${out%/*}" ;;   # at the root this stays empty — cannot escape upward
+      *)    out="$out/$seg" ;;
+    esac
+  done
+  set +f
+  IFS="$oldifs"
+  printf '%s' "${out:-/}"
+}
 relpath() { # strip "$ROOT/" prefix; returns "." when equal
-  local p="${1%/}"
+  local p
+  p=$(normalize "$1")
+  p="${p%/}"
   case "$p" in
     "$ROOT")   printf '.' ;;
     "$ROOT"/*) printf '%s' "${p#"$ROOT"/}" ;;

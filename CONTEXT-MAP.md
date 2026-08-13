@@ -38,15 +38,18 @@ own **technical** vocabulary:
 | **`CONTEXT.md`** (root) | **Shared domain language — source of truth** | User, Authority, Email, Club, Court, Booking, statuses, domain events… |
 | **`backend/CONTEXT.md`** | Backend technical vocab only | event-sourced aggregate, outbox, event store, port/adapter, UoW… |
 | **`frontend_player/CONTEXT.md`** | Player-app technical vocab only | feature, use-case, mapper, wire type vs DTO, screen, secure store, query/mutation… |
-| **`frontend_club/CONTEXT.md`** | Club-app technical vocab only | feature, use-case, mapper, wire type vs DTO, Server/Client Component, BFF route handler… |
+| **`frontend_club/CONTEXT.md`** | Club-app technical vocab only | feature, model/server layer, wire type vs DTO, Server/Client Component, BFF route handler, tenant-scoped query key… |
 
 An app `CONTEXT.md` must **never redefine** a domain term — it points back to the root
 glossary.
 
 ## Design systems are per-app and never shared
 
-Each client owns its own visual language, tokens and vocabulary — the two apps share a
-*shape*, never values or code ([ADR-0005](docs/adr/0005-three-app-monorepo-ownership-boundaries.md)).
+Each client owns its own visual language, tokens and vocabulary, and shares no code with the
+other ([ADR-0005](docs/adr/0005-three-app-monorepo-ownership-boundaries.md)). They do not
+share an architectural shape either — the club app follows its production architecture
+standard, the player app follows ADR-0009
+([ADR-0014](docs/adr/0014-club-console-production-architecture-standard.md)).
 
 | File | Owns |
 | --- | --- |
@@ -73,17 +76,29 @@ and one numbered sequence is easier to reason about than three.
 
 ## Claude Code instructions
 
-Claude Code auto-loads the nearest `CLAUDE.md` up the tree. Work from inside the app
-you are changing so you get its rules and not another's:
+`CLAUDE.md` files load from the working directory **and every ancestor**, so a session in
+`backend/` gets the root file plus the backend's. Files in sibling apps never load. Work
+from inside the app you are changing:
 
 - **`CLAUDE.md`** (root) — monorepo orientation and the repo-wide safety list.
 - **`backend/CLAUDE.md`** — Python/FastAPI rules (TDD, hexagonal, events, Poetry).
 - **`frontend_player/CLAUDE.md`** — Expo/RN rules (feature layering, secure store, codegen).
 - **`frontend_club/CLAUDE.md`** — Next.js rules (feature layering, BFF, codegen, TanStack).
 
-Settings and hooks are **root-only** — Claude Code reads `.claude/settings.json` from
-the repository root, not from subdirectories. That is why the ownership boundary is a
-hook keyed on the session's working directory rather than per-app settings files. See
+**Settings and hooks do not work that way.** Claude Code reads `.claude/settings.json`
+**only from the directory the session started in** — it is not inherited from ancestors.
+So each app carries its own `.claude/settings.json` that registers the same two hooks and
+adds that app's permissions. Registering them only at the root would leave every scoped
+session — the ones the ownership boundary exists for — running with no guardrails.
+
+Each app also carries:
+
+- **`.claude/rules/`** — conventions with `paths:` frontmatter, loaded only when Claude
+  opens a matching file (design system on UI files, BFF rules on route handlers).
+- **`.claude/skills/`** — procedures, loaded only when invoked or judged relevant.
+
+The always-loaded `CLAUDE.md` holds what is true in *every* session in that app; everything
+else lives one layer down. See
 [`docs/agents/ownership-boundaries.md`](docs/agents/ownership-boundaries.md).
 
 ## Where things live
@@ -95,8 +110,9 @@ hook keyed on the session's working directory rather than per-app settings files
 ├── CONTEXT.md                ← SHARED domain glossary (source of truth)
 ├── Makefile                  ← thin root helpers (gen-api, check, afk)
 ├── .claude/
-│   ├── settings.json         ← permissions + hook registration (root-only)
-│   └── hooks/                ← enforce-ownership.sh, guard-bash.sh, test-hooks.sh
+│   ├── settings.json         ← root-session permissions + hook registration
+│   ├── hooks/                ← enforce-ownership.sh, guard-bash.sh, test-hooks.sh
+│   └── skills/               ← cross-app procedures (write-adr, guardrails)
 ├── docs/
 │   ├── adr/                  ← system-wide decisions (0001…)
 │   └── agents/               ← ownership boundaries, domain-doc consumption

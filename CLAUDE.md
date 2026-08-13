@@ -4,45 +4,44 @@ A racket-sport platform: players find and book courts; clubs manage those courts
 Three **independently deployable** apps share one repository and one domain language,
 and communicate **only over HTTP**.
 
-**Start at [`CONTEXT-MAP.md`](CONTEXT-MAP.md)** for the topology and where everything lives.
+| App | Path | Stack |
+| --- | --- | --- |
+| Backend API | `backend/` | FastAPI, Clean/hexagonal, DDD, event sourcing, Poetry |
+| Player app | `frontend_player/` | React Native + Expo + TypeScript (iOS & Android) |
+| Club web app | `frontend_club/` | Next.js (App Router) + React + TypeScript |
 
-## The three apps
+## Start the session inside the app you are changing
 
-| App | Path | Stack | Instructions |
-| --- | --- | --- | --- |
-| Backend API | `backend/` | FastAPI, Clean/hexagonal, DDD, event sourcing, Poetry | [`backend/CLAUDE.md`](backend/CLAUDE.md) |
-| Player app | `frontend_player/` | React Native + Expo + TypeScript (iOS & Android) | [`frontend_player/CLAUDE.md`](frontend_player/CLAUDE.md) |
-| Club web app | `frontend_club/` | Next.js (App Router) + React + TypeScript | [`frontend_club/CLAUDE.md`](frontend_club/CLAUDE.md) |
+```bash
+cd backend && claude          # likewise frontend_club/ and frontend_player/
+```
 
-## Working rules
+**YOU MUST launch from the app directory. This is mechanical, not etiquette.** Claude
+Code loads settings, hooks and skills from the directory it starts in — not from
+ancestors. A session started in `backend/` loads `backend/.claude/settings.json`, which
+registers the ownership guardrails and that app's permissions. A session started at the
+repo root loads the root's settings instead and owns *everything*.
 
-- **Work from inside the app you are changing.** `cd backend`, `cd frontend_player`, or
-  `cd frontend_club` and run that app's commands. Claude Code loads the nearest
-  `CLAUDE.md`, so a session in `frontend_club/` gets this file plus the club's rules —
-  never the backend's Python rules.
-- **One session changes one app.** This is enforced, not merely requested: a
-  `PreToolUse` hook blocks writes that cross an app boundary. See
-  [`docs/agents/ownership-boundaries.md`](docs/agents/ownership-boundaries.md).
-- **Never import across apps.** They are separate deployables; the only contract
-  between them is HTTP ([ADR-0005](docs/adr/0005-three-app-monorepo-ownership-boundaries.md)).
+Launch at the root only for work that is genuinely cross-app: ADRs, the shared glossary,
+the hooks themselves, `make gen-api`.
+
+## Invariants
+
+- **Never import across apps.** They are separate deployables; the only contract between
+  them is HTTP ([ADR-0005](docs/adr/0005-three-app-monorepo-ownership-boundaries.md)).
 - **The backend owns the API contract.** Both clients generate their wire types from
-  `backend/openapi.json` — they never hand-write DTOs mirroring a backend response
-  ([ADR-0006](docs/adr/0006-backend-owns-api-contract.md)). Regenerate with
-  `make gen-api` from the repo root.
-- **The domain language is shared and singular.** Domain terms are defined once in
-  [`CONTEXT.md`](CONTEXT.md). Each app's `CONTEXT.md` holds only its own *technical*
-  vocabulary and never redefines a domain term.
-- **The two clients share a shape, not code.** Both use the same feature-layer
-  structure, so a rule learned in one transfers to the other. They share no source
-  ([ADR-0005](docs/adr/0005-three-app-monorepo-ownership-boundaries.md)).
-- **Each client owns its own design system, and both are locked.**
-  [`frontend_club/docs/design-system.md`](frontend_club/docs/design-system.md) with its
-  values in `src/shared/ui/tokens.css` ([ADR-0011](docs/adr/0011-club-console-design-system.md)),
-  and [`frontend_player/docs/design-system.md`](frontend_player/docs/design-system.md)
-  with its values in `src/shared/ui/theme.ts`
-  ([ADR-0012](docs/adr/0012-player-app-design-system.md)). The palettes converge because
-  it is one brand, but **the values are duplicated deliberately** — no shared design
-  package, no cross-import — and **a component never contains a literal value.**
+  `backend/openapi.json` and never hand-write a DTO mirroring a backend response
+  ([ADR-0006](docs/adr/0006-backend-owns-api-contract.md)). Regenerate with `make gen-api`.
+- **One session changes one app.** A `PreToolUse` hook blocks writes that cross an app
+  boundary. A block is information — surface it, don't route around it. See
+  [`docs/agents/ownership-boundaries.md`](docs/agents/ownership-boundaries.md).
+- **Domain terms are defined once,** in [`CONTEXT.md`](CONTEXT.md). Each app's
+  `CONTEXT.md` adds only its own *technical* vocabulary and never redefines a domain term.
+- **The two clients do not share a shape.** `frontend_club/` follows its production
+  architecture standard ([ADR-0014](docs/adr/0014-club-console-production-architecture-standard.md));
+  `frontend_player/` follows feature-first Clean Architecture
+  ([ADR-0009](docs/adr/0009-feature-first-clean-architecture-frontends.md)). A rule
+  learned in one **does not** transfer to the other.
 
 ## Safety — never do these without an explicit human request
 
@@ -55,24 +54,16 @@ and communicate **only over HTTP**.
 - Edit an already-applied Alembic migration.
 - Change public API behavior without calling it out in the plan first.
 
-The first three are enforced by `.claude/hooks/guard-bash.sh`. A blocked command is
-the guardrail doing its job — surface it to the human, don't work around it.
+The first three are enforced by `.claude/hooks/guard-bash.sh`. A blocked command is the
+guardrail doing its job.
 
-## Repo-wide docs (at the root)
+## Repo-wide docs
 
-- [`CONTEXT.md`](CONTEXT.md) — the shared domain glossary. **Source of truth for
-  domain terms.**
+- [`CONTEXT.md`](CONTEXT.md) — the shared domain glossary. **Source of truth for domain
+  terms.** Much of the racket-sport domain is still unwritten; see
+  [`docs/agents/domain.md`](docs/agents/domain.md) before naming something new.
 - [`CONTEXT-MAP.md`](CONTEXT-MAP.md) — topology: which file owns which vocabulary.
-- [`docs/adr/`](docs/adr/) — architecture decisions affecting the system or the
-  contract between apps.
-- [`docs/agents/`](docs/agents/) — how ownership boundaries work and how to consume
-  the domain docs.
+- [`docs/adr/`](docs/adr/) — decisions affecting the system or the contract between apps.
 
-## Verifying the guardrails
-
-```bash
-bash .claude/hooks/test-hooks.sh    # 45 assertions over both hooks
-```
-
-Run it after touching either hook. A guardrail that silently stops matching is worse
-than none, because you stop watching for what it was supposed to catch.
+After changing either hook, run `make test-hooks` (65 assertions). A guardrail that
+silently stops matching is worse than none, because you stop watching for it.

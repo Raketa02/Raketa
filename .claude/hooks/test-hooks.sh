@@ -49,6 +49,29 @@ expect enforce-ownership.sh 0 "nested cwd still owns its app"      "$(edit "$ROO
 expect enforce-ownership.sh 2 "nested cwd still blocked cross-app" "$(edit "$ROOT/backend/app/modules" "$ROOT/frontend_club/x.ts")"
 expect enforce-ownership.sh 0 "relative path resolves via cwd"     "$(edit "$ROOT/backend" "app/core/config.py")"
 expect enforce-ownership.sh 0 "root session edits any app"         "$(edit "$ROOT" "$ROOT/backend/app/main.py")"
+# The '../' escape. These are not exotic — a relative path out of a scoped session is
+# the ordinary way an agent names a sibling app, and until the hook normalized '..' it
+# classified 'backend/../frontend_club/x' as backend and waved every one of them through.
+expect enforce-ownership.sh 2 "relative ../ escape to club"        "$(edit "$ROOT/backend" "../frontend_club/src/a.tsx")"
+expect enforce-ownership.sh 2 "relative ../ escape to player"      "$(edit "$ROOT/frontend_club" "../frontend_player/src/a.ts")"
+expect enforce-ownership.sh 2 "absolute path with .. segment"      "$(edit "$ROOT/backend" "$ROOT/backend/../frontend_club/x.ts")"
+expect enforce-ownership.sh 2 "../ escape from a nested cwd"       "$(edit "$ROOT/backend/app/modules" "../../../frontend_club/x.ts")"
+expect enforce-ownership.sh 2 "./ noise does not hide the target"  "$(edit "$ROOT/backend" "./../frontend_club/./x.ts")"
+expect enforce-ownership.sh 0 ".. that stays inside the same app"  "$(edit "$ROOT/backend/app" "../app/core/config.py")"
+expect enforce-ownership.sh 2 "../ escape to a real env file"      "$(edit "$ROOT/frontend_club" "../backend/${DOTENV}.local")"
+
+echo
+echo "both hooks — scoped session (CLAUDE_PROJECT_DIR is the LAUNCH dir, not the root)"
+# `cd backend && claude` sets CLAUDE_PROJECT_DIR=<root>/backend. A hook that trusted
+# that variable as the repo root saw every sibling app as "outside the repo" and
+# allowed everything. These assertions are the regression guard for that.
+export CLAUDE_PROJECT_DIR="$ROOT/backend"
+expect enforce-ownership.sh 2 "scoped: backend session edits club"  "$(edit "$ROOT/backend" "$ROOT/frontend_club/src/a.tsx")"
+expect enforce-ownership.sh 2 "scoped: ../ escape still blocked"    "$(edit "$ROOT/backend" "../frontend_club/src/a.tsx")"
+expect enforce-ownership.sh 0 "scoped: backend edits its own tree"  "$(edit "$ROOT/backend" "$ROOT/backend/app/main.py")"
+expect guard-bash.sh        2 "scoped: shell write into club"       "$(cmd "$ROOT/backend" 'cp x.json ../frontend_club/src/y.json')"
+expect guard-bash.sh        0 "scoped: ordinary test run"           "$(cmd "$ROOT/backend" 'poetry run pytest tests -q')"
+export CLAUDE_PROJECT_DIR="$ROOT"
 
 echo
 echo "enforce-ownership.sh — shared files and self-defence"
@@ -105,6 +128,8 @@ echo "guard-bash.sh — cross-app shell writes"
 expect guard-bash.sh 2 "backend session copies into club"   "$(cmd "$ROOT/backend" 'cp x.json ../frontend_club/src/y.json')"
 expect guard-bash.sh 2 "backend session rm -rf in player"   "$(cmd "$ROOT/backend" 'rm -rf ../frontend_player/src/old')"
 expect guard-bash.sh 2 "club session redirects into backend" "$(cmd "$ROOT/frontend_club" 'echo x > ../backend/app/y.py')"
+expect guard-bash.sh 2 "redirect through a .. segment"       "$(cmd "$ROOT/frontend_club" 'echo x > ../../repo/backend/app/y.py')"
+expect guard-bash.sh 2 "absolute path into another app"      "$(cmd "$ROOT/backend" "cp x.json $ROOT/frontend_club/src/y.json")"
 expect guard-bash.sh 0 "club session writes its own tree"   "$(cmd "$ROOT/frontend_club" 'mkdir -p src/features/booking')"
 expect guard-bash.sh 0 "root session may write anywhere"    "$(cmd "$ROOT" 'cp a.txt backend/b.txt')"
 expect guard-bash.sh 0 "pnpm install"                       "$(cmd "$ROOT/frontend_club" 'pnpm install')"

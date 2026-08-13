@@ -1,0 +1,45 @@
+---
+paths:
+  - "src/shared/lib/auth/**"
+  - "src/shared/lib/http/**"
+  - "src/shared/lib/bootstrap/**"
+  - "src/app/(auth)/**"
+---
+
+# Auth, in four rules that are easy to get wrong
+
+1. **Single-flight refresh.** One `refreshPromise`; every concurrent 401 awaits the same one.
+   Ten parallel refreshes rotate each other out and log the user out at random.
+2. **Retry an authenticated request exactly once.** The retry carries a flag saying refresh
+   was attempted; a second 401 terminates the session instead of looping forever.
+3. **Rejected ≠ unreachable.** A refresh the auth server *rejects* clears credentials and
+   caches. A refresh that *times out* preserves them — losing signal in a lift is not a
+   logout.
+4. **Logout is a system operation.** Revoke → clear memory → delete keychain → cancel
+   in-flight requests → `queryClient.cancelQueries()` + `clear()` → reset sensitive UI state
+   → set unauthenticated → navigate. Skipping the cache clear leaks user A's data to user B
+   on the same device.
+
+## The chokepoints
+
+- `src/shared/lib/auth` is the **only** consumer of `expo-secure-store`
+  (`tokenManager · refreshCoordinator · authService · authSession`). No feature, screen or
+  hook imports it directly. One module owning the keychain is what makes token lifetime
+  auditable.
+- `src/shared/lib/http` is the **only** place `fetch` is configured, and the only place the
+  401 → refresh → retry rotation lives. A second networking path defeats both.
+- Timeouts live here as classes (request/upload/download/background). `fetch` has no default
+  timeout, and no feature contains a millisecond literal.
+
+## Bootstrap
+
+Model it as a **state**, never as `user === undefined`. The ordered sequence is: error
+reporting → validate config → wire focus/online managers → read SecureStore →
+restore/validate session → hide splash → render a tree. Nothing renders a route tree before
+it resolves.
+
+iOS Keychain data can survive a reinstall, so **a token existing is not proof a session
+exists** — bootstrap validates it.
+
+Never log a token, an `Authorization` header, a password or a full payload. The logger
+redacts structurally; production logging is stricter than development.

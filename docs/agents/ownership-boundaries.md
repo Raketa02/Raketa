@@ -45,9 +45,7 @@ RKTA_TIER=club claude            # scoped to the club app wherever you launched 
 
 ## What enforces it
 
-Claude Code reads `.claude/settings.json` **from the repository root only** — not from
-subdirectories. Per-app settings files would be inert. So the boundary is a pair of
-`PreToolUse` hooks registered at the root, keyed on the session's working directory.
+A pair of `PreToolUse` hooks, keyed on the session's working directory:
 
 | File | Matcher | Blocks |
 | --- | --- | --- |
@@ -55,6 +53,36 @@ subdirectories. Per-app settings files would be inert. So the boundary is a pair
 | `.claude/hooks/guard-bash.sh` | `Bash` | deploys/releases, real `.env*`/secret writes, destructive git, and cross-app writes via shell |
 
 Both exit `2` to block, and the stderr text is returned to the agent as the reason.
+
+### They are registered four times, and that is not redundancy
+
+Claude Code reads `.claude/settings.json` **from the directory the session started in**, and
+does **not** inherit it from ancestor directories the way it inherits `CLAUDE.md`. So the
+hooks are registered in the root `.claude/settings.json` *and* in each app's
+`backend/.claude/settings.json`, `frontend_club/.claude/settings.json` and
+`frontend_player/.claude/settings.json`.
+
+This was originally built the other way round, on the belief that root settings covered every
+session. They did not: a session started with `cd backend && claude` ran with **no hooks at
+all**, no `.env` read denials and no `git push` confirmation. Enforcement existed only in the
+root session — the one session where the ownership hook deliberately allows everything.
+
+Two mechanical details that follow from this, and that will bite anyone editing the hooks:
+
+- **`$CLAUDE_PROJECT_DIR` is the launch directory, not the repo root.** In a `backend/`
+  session it is `<repo>/backend`. The per-app registrations therefore invoke
+  `"$CLAUDE_PROJECT_DIR"/../.claude/hooks/…`, and both hooks resolve the repo root with
+  `git rev-parse --show-toplevel` rather than trusting the variable. A hook that trusted it
+  would treat every sibling app as "outside the repo" and allow the write.
+- **Paths are normalized before classification.** `backend/../frontend_club/x` is a
+  `frontend_club` path, and a relative path out of a scoped session is the ordinary way an
+  agent names a sibling app. Without normalization the boundary was one `../` from being
+  bypassed.
+
+The per-app settings files also carry that app's permission allowlist, so routine commands
+(`pnpm test`, `poetry run pytest`) stop prompting, and `additionalDirectories: [".."]`, which
+restores read access to the rest of the repo — reading across apps is legitimate, and the
+ownership hook is what stops the writes.
 
 Two further rules:
 
@@ -72,15 +100,26 @@ key material, and an `ask` list for `git push` / `gh pr merge` / `gh release`.
 ## Verifying it
 
 ```bash
-bash .claude/hooks/test-hooks.sh
+make test-hooks        # or: bash .claude/hooks/test-hooks.sh
 ```
 
-45 assertions across both hooks: cross-app writes, shared-doc writes, self-defence,
-relative-path resolution, deploy commands, secret writes, destructive git, and the
-false-positive cases that must **not** be blocked (a commit message mentioning
-`ecs-deploy`, editing a `.env.example` template, an ordinary `git push`).
+65 assertions across both hooks: cross-app writes, `../` escapes, scoped-session resolution,
+shared-doc writes, self-defence, deploy commands, secret writes, destructive git, and the
+false-positive cases that must **not** be blocked (a commit message mentioning `ecs-deploy`,
+editing a `.env.example` template, an ordinary `git push`).
 
-Run it after touching either hook. A guardrail that silently stops matching is worse than
+Passing unit tests do **not** prove the hooks are registered for a given session. Verify that
+separately, end to end:
+
+```bash
+cd backend && claude -p "Use the Write tool to create ../frontend_club/probe.txt" \
+  --allowedTools Write
+```
+
+That must be blocked. If it succeeds, the problem is the app's `.claude/settings.json`, not
+the hook script.
+
+Run both after touching either hook. A guardrail that silently stops matching is worse than
 none, because you stop watching for what it was supposed to catch.
 
 **Requires `jq`.** If `jq` is missing the hooks block rather than waving everything
