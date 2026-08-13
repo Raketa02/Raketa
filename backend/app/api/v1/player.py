@@ -10,6 +10,7 @@ from fastapi import APIRouter
 
 from app.api.v1.sports import router as sports_router
 from app.modules.auth.presentation.routes import router as auth_router
+from app.modules.rating.presentation.routes import ratings_router
 from app.modules.rating.presentation.routes import router as assessments_router
 from app.modules.users.presentation.routes import router as users_router
 
@@ -18,3 +19,4 @@ player_api_router.include_router(users_router)
 player_api_router.include_router(auth_router)
 player_api_router.include_router(sports_router)
 player_api_router.include_router(assessments_router)
+player_api_router.include_router(ratings_router)
