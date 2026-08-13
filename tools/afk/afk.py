@@ -50,7 +50,13 @@ PROMPT_FILE = REPO_ROOT / ".sandbuket" / "prompt.md"
 COMPLETION_SIGNAL = "<promise>COMPLETE</promise>"
 DEFAULT_IMAGE = "sandbuket:rakieta"
 DEFAULT_BRANCH = "agent/afk"
-DEFAULT_MODEL = "claude-opus-4-8"
+DEFAULT_MODEL = "claude-opus-5"
+# xhigh is the documented best setting for coding and agentic work, and is the
+# default in Claude Code itself. `max` exists above it but is for extremely hard,
+# latency-insensitive work — it shows diminishing returns and can overthink the
+# routine issues this loop mostly picks up. Sweep down to `high` or `medium` if
+# an iteration's token spend is not buying quality.
+DEFAULT_EFFORT = "xhigh"
 DEFAULT_LABEL = "ready-for-agent"
 
 
@@ -110,12 +116,13 @@ async def afk(args: argparse.Namespace) -> int:
         print(f"error: {PROMPT_FILE} not found", file=sys.stderr)
         return 2
 
-    agent = claude_code(args.model)
+    agent = claude_code(args.model, effort=args.effort)
     sandbox = docker(image_name=args.image)
 
     print(
         f"AFK loop: up to {args.iterations} iteration(s) on branch "
-        f"'{args.branch}' (image {args.image}, model {args.model})."
+        f"'{args.branch}' (image {args.image}, model {args.model}, "
+        f"effort {args.effort})."
     )
 
     async with await create_sandbox(
@@ -157,6 +164,12 @@ def main() -> int:
     parser.add_argument("--base-branch", default=None)
     parser.add_argument("--image", default=DEFAULT_IMAGE)
     parser.add_argument("--model", default=DEFAULT_MODEL)
+    parser.add_argument(
+        "--effort",
+        default=DEFAULT_EFFORT,
+        choices=["low", "medium", "high", "xhigh", "max"],
+        help="reasoning effort (default: %(default)s)",
+    )
     parser.add_argument("--label", default=DEFAULT_LABEL)
     args = parser.parse_args()
     try:

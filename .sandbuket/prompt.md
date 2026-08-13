@@ -45,7 +45,19 @@ layering and event sourcing, or a frontend's feature-slice layer set. Prefer an
 existing seam to a new one, and copy the shape of the nearest comparable module
 rather than inventing a second way to do the same thing.
 
-Do not invent broad rewrites. Keep changes scoped to the issue.
+Deliver what the issue asked for, at the scope it intended. Make routine judgment
+calls yourself; if you conclude the issue is mistaken or a better approach exists,
+say so in the commit message and in an issue comment, and keep going with the task
+as written — don't quietly narrow, widen, or transform it. Finish the whole task,
+not just the easy part; report completion only when it is fully done, and if
+something genuinely can't be finished, do the rest and state plainly what is
+missing and why. Stop short of changes clearly beyond what the issue implies.
+
+Delegate to subagents rarely. Each one re-establishes context, re-explores, and
+reports back, and you then re-read its report — that multiplies cost and time. Use
+one only for genuinely independent, sizeable tracks, never for work you could
+finish in a handful of tool calls, and never to review or double-check your own
+work: verification belongs in the checks below, in your main loop.
 
 ## Execution
 

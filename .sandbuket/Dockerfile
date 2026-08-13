@@ -63,6 +63,17 @@ USER ${AGENT_UID}:${AGENT_GID}
 RUN pipx install --python /usr/local/bin/python3.11 poetry==2.1.3 && pipx ensurepath
 RUN curl -fsSL https://claude.ai/install.sh | bash
 
+# Pre-accept the workspace trust dialog. Functionally this changes nothing —
+# sandbuket runs the agent with --dangerously-skip-permissions, so the
+# "Ignoring N permissions.allow entries" it otherwise prints is moot. It is
+# silenced because it lands on stderr, and sandbuket reports stderr as the
+# failure reason: a real error (a usage limit, say) gets reported as this
+# instead, which sends you debugging the wrong thing. The installer has already
+# written .claude.json by now, so merge rather than overwrite.
+RUN jq '.projects["/home/agent/workspace"].hasTrustDialogAccepted = true' \
+      /home/agent/.claude.json > /tmp/claude.json \
+    && mv /tmp/claude.json /home/agent/.claude.json
+
 ENV PATH="/home/agent/.local/bin:$PATH"
 WORKDIR /home/agent
 

@@ -50,7 +50,14 @@ poetry -C tools/afk run python afk.py 3 --label ready-for-agent
 
 Options: `iterations` (default 5), `--branch` (default `agent/afk`),
 `--base-branch` (default current HEAD), `--image` (default `sandbuket:rakieta`),
-`--model` (default `claude-opus-4-8`), and `--label` (default
+`--model` (default `claude-opus-5`), `--effort`
+(`low|medium|high|xhigh|max`, default `xhigh`), and `--label` (default
 `ready-for-agent`).
+
+**On `--effort`.** `xhigh` is the documented best setting for coding and agentic
+work and is what Claude Code uses by default. `max` sits above it but is meant for
+extremely hard, latency-insensitive work — it shows diminishing returns and can
+overthink routine issues. If an iteration's token spend stops buying quality,
+sweep down (`high`, then `medium`) rather than up.
 
 Work lands on the named branch. Review the branch and open a PR when done.
