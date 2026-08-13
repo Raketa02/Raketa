@@ -1080,6 +1080,50 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "ErrorResponse": {
+        "description": "The body of every error response, on both API surfaces.",
+        "properties": {
+          "code": {
+            "description": "Stable, machine-readable identifier for this exact failure. The only half of the envelope a client may branch on.",
+            "examples": [
+              "question_not_outstanding"
+            ],
+            "title": "Code",
+            "type": "string"
+          },
+          "message": {
+            "description": "Human-readable diagnostic. Never the copy shown to a user \u2014 that is the client's, chosen from the code.",
+            "title": "Message",
+            "type": "string"
+          },
+          "trace_id": {
+            "description": "This request's identifier, also returned on the X-Request-ID header. Ties a client-side failure to a server log without logging a payload.",
+            "title": "Trace Id",
+            "type": "string"
+          },
+          "details": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Structured context for this code, when the code defines any.",
+            "title": "Details"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "trace_id"
+        ],
+        "title": "ErrorResponse",
+        "type": "object"
       }
     },
     "securitySchemes": {
