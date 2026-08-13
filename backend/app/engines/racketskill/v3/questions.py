@@ -478,11 +478,45 @@ def execution_evidence(tier: str, option_id: str) -> tuple[float, float] | None:
     return mu, _EXECUTION_SIGMA[tier]
 
 
+def execution_sigma(tier: str) -> float | None:
+    """The raw σ an execution answer at ``tier`` encodes, before the bias.
+
+    Used to project how much one more demonstration at this tier would tighten the
+    estimate, without committing to an answer for it.
+    """
+
+    return _EXECUTION_SIGMA.get(tier)
+
+
 def tactical_evidence(option_id: str) -> tuple[float, float] | None:
     index = _option_index(TACTICAL_OPTIONS, option_id)
     if index is None:
         return None
     return _TACTICAL_BASE + index * _TACTICAL_STEP, _TACTICAL_SIGMA
+
+
+def tactical_sigma() -> float:
+    """The raw σ a tactical answer encodes, before the bias."""
+
+    return _TACTICAL_SIGMA
+
+
+# The answers at either end of each scale. An extreme answer proves "at least
+# this good" and bounds nothing above, so it widens no uncertainty — the reason
+# an uncertainty-only stop would halt exactly where a strong player gets
+# interesting, and the reason such an answer earns another demonstration.
+EXTREME_EXECUTION_OPTIONS = frozenset(
+    {EXECUTION_OPTIONS[0][0], EXECUTION_OPTIONS[-1][0]}
+)
+EXTREME_TACTICAL_OPTIONS = frozenset({TACTICAL_OPTIONS[0][0], TACTICAL_OPTIONS[-1][0]})
+
+
+def is_extreme_execution(option_id: str) -> bool:
+    return option_id in EXTREME_EXECUTION_OPTIONS
+
+
+def is_extreme_tactical(option_id: str) -> bool:
+    return option_id in EXTREME_TACTICAL_OPTIONS
 
 
 def tier_for_execution_id(question_id: str) -> str | None:

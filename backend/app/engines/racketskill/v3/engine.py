@@ -20,8 +20,15 @@ above it has passed:
    each at the difficulty tier the running estimate implies;
 7. one tactical answer.
 
-Stopping in this slice is the **hard ceiling only**; marginal-value stopping
-arrives separately. Layoff widens uncertainty and never touches the estimate.
+Once those minimums are met, two rules decide whether to keep going. **Extreme-
+answer bracketing** notices that an answer at either end of the scale proves "at
+least this good" and bounds nothing above, so — confidence having already hit its
+ceiling — it asks another demonstration at the tier the updated estimate implies,
+the one place the questionnaire lengthens for a strong player. **Marginal-value
+stopping** otherwise ends the assessment the moment the best remaining question
+would not tighten the floored estimate meaningfully; because the self-report bias
+never shrinks, that value decays to zero on its own. The hard ceiling still caps
+every path. Layoff widens uncertainty and never touches the estimate.
 """
 
 from __future__ import annotations
@@ -64,6 +71,9 @@ from app.engines.racketskill.v3.questions import (
     environment_question,
     execution_evidence,
     execution_question,
+    execution_sigma,
+    is_extreme_execution,
+    is_extreme_tactical,
     layoff_question,
     layoff_sigma,
     opening_question,
@@ -72,6 +82,7 @@ from app.engines.racketskill.v3.questions import (
     relative_question,
     tactical_evidence,
     tactical_question,
+    tactical_sigma,
     tier_for_execution_id,
     volume_evidence,
     volume_question,
@@ -98,6 +109,19 @@ ESTABLISHED_FLOOR = Band.ESTABLISHED.lower
 # The hard ceiling on questionnaire length. The ordered sequence already caps at
 # this under any answer pattern; the guard makes the invariant unmissable.
 MAX_QUESTIONS = 9
+
+# Marginal-value stopping: once the hard minimums are met, the questionnaire ends
+# as soon as the best remaining question would not tighten the *floored* estimate
+# by at least this much. Because the irreducible self-report bias never shrinks, σ
+# reaches its floor within a couple of answers and every further question's value
+# decays to zero on its own — so the rule terminates without needing a count.
+MIN_MARGINAL_GAIN = 0.01
+
+# The reasons a stop is recorded under — the counterpart to an ``AskQuestion``'s
+# routing reason, so the value that caused the stop is never lost.
+STOP_BEGINNER = "beginner-fast-path"
+STOP_CEILING = "hard-ceiling"
+STOP_MARGINAL = "marginal-value-below-threshold"
 
 # Every onboarding rating is a hypothesis, not a verdict.
 RESULT_STATUS = "Initial Estimate"
@@ -132,12 +156,12 @@ class RacketSkillEngineV3:
             opening.question_id == OPENING_QUESTION_ID
             and regularity_option == NEVER_PLAYED_OPTION_ID
         ):
-            return Complete()
+            return Complete(reason=STOP_BEGINNER, value=0.0)
 
         # The hard ceiling. The sequence below never reaches it, but the guard
         # makes "never exceeds the ceiling under any answer pattern" unmissable.
         if len(transcript) >= MAX_QUESTIONS:
-            return Complete()
+            return Complete(reason=STOP_CEILING, value=float(len(transcript)))
 
         estimate = _fuse(transcript)
         answered = {entry.question_id for entry in transcript}
@@ -168,8 +192,9 @@ class RacketSkillEngineV3:
         if RELATIVE_QUESTION_ID not in answered:
             return _ask(relative_question(sport), "relative-performance", estimate)
 
-        # Execution demonstrations: a minimum that scales with the estimate, each
-        # at the tier the running estimate implies.
+        # Hard minimums. Execution demonstrations, a count that scales with the
+        # estimate, each at the tier the running estimate implies; then one
+        # tactical answer.
         asked_tiers = _asked_execution_tiers(transcript)
         if len(asked_tiers) < _required_demonstrations(estimate):
             tier = _next_execution_tier(estimate, asked_tiers)
@@ -177,11 +202,31 @@ class RacketSkillEngineV3:
                 execution_question(sport, tier), f"demonstration-{tier}", estimate
             )
 
-        # One tactical answer.
-        if not any(entry.question_id in TACTICAL_QUESTION_IDS for entry in transcript):
+        tactical_asked = [
+            entry for entry in transcript if entry.question_id in TACTICAL_QUESTION_IDS
+        ]
+        if not tactical_asked:
             return _ask(tactical_question(sport, 0), "tactical", estimate)
 
-        return Complete()
+        # Minimums satisfied. Extreme-answer bracketing first: a last demonstration
+        # at an end of the scale earns another at the tier the estimate now implies.
+        if _last_demonstration_was_extreme(transcript):
+            bracket = _bracketing_demonstration(
+                sport, estimate, asked_tiers, tactical_asked
+            )
+            if bracket is not None:
+                question, reason = bracket
+                return _ask(question, reason, estimate)
+
+        # Otherwise stop as soon as the best remaining question would not tighten
+        # the floored estimate meaningfully.
+        gain, candidate = _best_marginal_candidate(
+            sport, estimate, asked_tiers, tactical_asked
+        )
+        if candidate is not None and gain >= MIN_MARGINAL_GAIN:
+            question, reason = candidate
+            return _ask(question, reason, estimate)
+        return Complete(reason=STOP_MARGINAL, value=round(gain, 4))
 
     def finalize(self, *, sport: Sport, transcript: Transcript) -> AssessmentResult:
         estimate = _fuse(transcript)
@@ -259,6 +304,94 @@ def _next_execution_tier(estimate: SkillEstimate, asked: set[str]) -> str:
         return abs(index - target), index
 
     return min(candidates, key=distance)
+
+
+def _last_demonstration_was_extreme(transcript: Transcript) -> bool:
+    """Whether the most recent demonstration landed at an end of the scale.
+
+    A demonstration is an execution or tactical answer — what happens inside a
+    point. Claims (regularity, volume, competitive context) are not demonstrations
+    and never trigger bracketing.
+    """
+
+    for entry in reversed(transcript):
+        if tier_for_execution_id(entry.question_id) is not None:
+            return is_extreme_execution(entry.option_id)
+        if entry.question_id in TACTICAL_QUESTION_IDS:
+            return is_extreme_tactical(entry.option_id)
+    return False
+
+
+def _bracketing_demonstration(
+    sport: Sport,
+    estimate: SkillEstimate,
+    asked_tiers: set[str],
+    tactical_asked: list[AnsweredQuestion],
+) -> tuple[Question, str] | None:
+    """The next demonstration to bracket an extreme answer, or ``None`` if spent.
+
+    An unasked execution tier nearest the implied level comes first — that is the
+    "at the tier the updated estimate implies" the specification asks for — then a
+    remaining tactical question, which is a demonstration too.
+    """
+
+    if len(asked_tiers) < len(TIERS):
+        tier = _next_execution_tier(estimate, asked_tiers)
+        return execution_question(sport, tier), f"extreme-bracketing-{tier}"
+    index = _next_tactical_index(tactical_asked)
+    if index is not None:
+        return tactical_question(sport, index), "extreme-bracketing-tactical"
+    return None
+
+
+def _next_tactical_index(tactical_asked: list[AnsweredQuestion]) -> int | None:
+    asked_ids = {entry.question_id for entry in tactical_asked}
+    for index, question_id in enumerate(TACTICAL_QUESTION_IDS):
+        if question_id not in asked_ids:
+            return index
+    return None
+
+
+def _best_marginal_candidate(
+    sport: Sport,
+    estimate: SkillEstimate,
+    asked_tiers: set[str],
+    tactical_asked: list[AnsweredQuestion],
+) -> tuple[float, tuple[Question, str] | None]:
+    """The remaining demonstration that would tighten the estimate most, and by how.
+
+    Each candidate's gain is projected as if it were answered exactly at the
+    current estimate, measured against the σ floor: once the estimate has reached
+    the floor, no question can improve the result it produces, so the best gain is
+    zero and the caller stops.
+    """
+
+    best_gain = 0.0
+    best: tuple[Question, str] | None = None
+    for tier in TIERS:
+        if tier in asked_tiers:
+            continue
+        sigma = execution_sigma(tier)
+        assert sigma is not None
+        gain = _projected_gain(estimate.sigma, sigma)
+        if gain > best_gain:
+            best_gain, best = gain, (execution_question(sport, tier), "marginal-value")
+    index = _next_tactical_index(tactical_asked)
+    if index is not None:
+        gain = _projected_gain(estimate.sigma, tactical_sigma())
+        if gain > best_gain:
+            best_gain = gain
+            best = (tactical_question(sport, index), "marginal-value")
+    return best_gain, best
+
+
+def _projected_gain(current_sigma: float, candidate_sigma: float) -> float:
+    """How much one more answer of ``candidate_sigma`` tightens the floored σ."""
+
+    biased = combine_sigma(candidate_sigma, SELF_REPORT_BIAS)
+    precision = 1.0 / (current_sigma**2) + 1.0 / (biased**2)
+    projected = (1.0 / precision) ** 0.5
+    return max(current_sigma, SIGMA_FLOOR) - max(projected, SIGMA_FLOOR)
 
 
 # --- Fusion --------------------------------------------------------------------

@@ -101,7 +101,16 @@ class AskQuestion:
 
 @dataclass(frozen=True)
 class Complete:
-    """The engine has enough evidence; the caller should now ``finalize``."""
+    """The engine has enough evidence; the caller should now ``finalize``.
+
+    ``reason`` and ``value`` are the stop rationale — why the questionnaire ended
+    and the number that drove the decision (the marginal gain that fell below
+    threshold, the ceiling that was hit) — so a stop is recorded with the value
+    that caused it, exactly as every ``AskQuestion`` records why it was asked.
+    """
+
+    reason: str
+    value: float
 
 
 Step = AskQuestion | Complete

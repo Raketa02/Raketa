@@ -27,7 +27,12 @@ from app.engines.assessment import (
 )
 from app.engines.racketskill.core import SCALE_MAX, SCALE_MIN
 from app.engines.racketskill.v3 import RacketSkillEngineV3
-from app.engines.racketskill.v3.engine import MAX_QUESTIONS, SIGMA_FLOOR
+from app.engines.racketskill.v3.engine import (
+    MAX_QUESTIONS,
+    SIGMA_FLOOR,
+    STOP_BEGINNER,
+    STOP_MARGINAL,
+)
 from app.engines.racketskill.v3.questions import (
     ENVIRONMENT_QUESTION_ID,
     EXECUTION_QUESTION_IDS,
@@ -149,9 +154,9 @@ def test_advanced_player_is_asked_a_discriminating_question() -> None:
 
 
 def test_advanced_player_demonstrates_more_than_a_developing_one() -> None:
-    # In this slice the length is the hard-ceiling sequence, not yet trimmed by
-    # marginal-value stopping (#7), so the distinguishing behaviour is the
-    # demonstration count that scales with the estimate: three against two.
+    # The demonstration count scales with the estimate: three against two. The
+    # total-question comparison is asserted separately below, now that
+    # marginal-value stopping and extreme-answer bracketing (#7) drive the length.
     engine = RacketSkillEngineV3()
     developing_asked, _, _ = run(engine, Sport.PADEL, DEVELOPING)
     advanced_asked, _, _ = run(engine, Sport.PADEL, ADVANCED)
@@ -250,6 +255,104 @@ def test_every_routing_decision_records_a_reason_and_the_estimate() -> None:
             assert step.reason
             assert SCALE_MIN <= step.mu <= SCALE_MAX
             assert step.sigma > 0.0
+
+
+# --- Marginal-value stopping and extreme-answer bracketing (#7) -----------------
+
+# Documented question-count ranges per archetype. Like the golden personas these
+# are hypotheses, to be re-baselined on a constant retune. The load-bearing shape
+# is that a beginner is always exactly one and an advanced player always answers
+# more than a developing one — extreme answers earn extra demonstrations.
+QUESTION_COUNT_RANGES = {
+    "beginner": (1, 1),
+    "developing": (5, 8),
+    "established": (5, 8),
+    "advanced": (7, MAX_QUESTIONS),
+}
+
+
+def _stop_step(engine: RacketSkillEngineV3, sport: Sport, transcript) -> Complete:
+    step = engine.next_step(sport=sport, transcript=transcript)
+    assert isinstance(step, Complete)
+    return step
+
+
+def test_consistent_answers_finish_in_fewer_questions_than_new_information() -> None:
+    # Identical claims; only the demonstrations differ. Tightly consistent answers
+    # let the estimate reach its floor and stop; extreme answers keep proving a
+    # higher ceiling — genuinely new information — so they earn more questions.
+    engine = RacketSkillEngineV3()
+    consistent = DEVELOPING  # e2 execution, t1 tactical
+    new_info = dict(
+        DEVELOPING,
+        **{
+            EXECUTION_QUESTION_IDS["basic"]: "e4",
+            EXECUTION_QUESTION_IDS["standard"]: "e4",
+            EXECUTION_QUESTION_IDS["discriminating"]: "e4",
+            TACTICAL_QUESTION_IDS[0]: "t3",
+            TACTICAL_QUESTION_IDS[1]: "t3",
+        },
+    )
+    _, consistent_t, _ = run(engine, Sport.TENNIS, consistent)
+    _, new_info_t, _ = run(engine, Sport.TENNIS, new_info)
+    assert len(new_info_t) > len(consistent_t)
+
+
+def test_an_advanced_player_answers_more_questions_than_a_developing_one() -> None:
+    engine = RacketSkillEngineV3()
+    _, developing_t, _ = run(engine, Sport.PADEL, DEVELOPING)
+    _, advanced_t, _ = run(engine, Sport.PADEL, ADVANCED)
+    assert len(advanced_t) > len(developing_t)
+
+
+def test_an_extreme_last_demonstration_triggers_another_at_the_implied_tier() -> None:
+    # A developing player whose execution stays moderate but whose last
+    # demonstration lands at the top of the scale earns one more demonstration —
+    # the discriminating tier the raised estimate now implies — that an otherwise
+    # identical moderate run never sees.
+    engine = RacketSkillEngineV3()
+    moderate = dict(DEVELOPING, **{TACTICAL_QUESTION_IDS[0]: "t1"})
+    extreme = dict(DEVELOPING, **{TACTICAL_QUESTION_IDS[0]: "t3"})
+    moderate_asked, _, _ = run(engine, Sport.TENNIS, moderate)
+    extreme_asked, _, _ = run(engine, Sport.TENNIS, extreme)
+    discriminating = EXECUTION_QUESTION_IDS["discriminating"]
+    assert discriminating not in asked_ids(moderate_asked)
+    assert discriminating in asked_ids(extreme_asked)
+    assert len(extreme_asked) > len(moderate_asked)
+
+
+def test_never_exceeds_the_ceiling_under_all_extreme_answers() -> None:
+    engine = RacketSkillEngineV3()
+    for sport in ALL_SPORTS:
+        _, transcript, _ = run(engine, sport, ADVANCED)  # every answer extreme
+        assert len(transcript) <= MAX_QUESTIONS
+
+
+def test_the_stop_decision_records_the_value_that_caused_it() -> None:
+    engine = RacketSkillEngineV3()
+    for policy in (BEGINNER, DEVELOPING, ESTABLISHED, ADVANCED):
+        _, transcript, _ = run(engine, Sport.BADMINTON, policy)
+        stop = _stop_step(engine, Sport.BADMINTON, transcript)
+        assert stop.reason
+        assert isinstance(stop.value, float)
+    beginner_run = run(engine, Sport.PADEL, BEGINNER)[1]
+    assert _stop_step(engine, Sport.PADEL, beginner_run).reason == STOP_BEGINNER
+    developing_run = run(engine, Sport.PADEL, DEVELOPING)[1]
+    assert _stop_step(engine, Sport.PADEL, developing_run).reason == STOP_MARGINAL
+
+
+def test_question_counts_fall_within_the_documented_ranges() -> None:
+    engine = RacketSkillEngineV3()
+    runs = {
+        "beginner": BEGINNER,
+        "developing": DEVELOPING,
+        "established": ESTABLISHED,
+        "advanced": ADVANCED,
+    }
+    for name, policy in runs.items():
+        _, transcript, _ = run(engine, Sport.PADEL, policy)
+        low, high = QUESTION_COUNT_RANGES[name]
+        assert low <= len(transcript) <= high, f"{name}: {len(transcript)}"
 
 
 # --- The question bank: reading order, word budget, jargon-free basics ---------
