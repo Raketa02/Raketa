@@ -19,6 +19,32 @@ from pathlib import Path
 from sandbuket import claude_code, create_sandbox
 from sandbuket.sandboxes.docker import docker
 
+# --- workaround: sandbuket's 64 KiB stdout line cap --------------------------
+# sandbuket's stream_subprocess() calls asyncio.create_subprocess_exec() without
+# a `limit=`, so stdout gets asyncio's default 64 KiB StreamReader cap. Claude
+# Code speaks stream-json — one JSON object per line — and any line carrying a
+# large tool result or message exceeds that, so readline() raises
+#
+#     ValueError: Separator is found, but chunk is longer than limit
+#
+# which kills the run mid-iteration and loses that iteration's work.
+#
+# Patching asyncio.streams._DEFAULT_LIMIT does NOT work: create_subprocess_exec
+# binds it as a default argument at import time. Wrapping the function does,
+# because sandbuket resolves it through the module at call time.
+#
+# Remove once sandbuket passes an explicit limit of its own.
+_create_subprocess_exec = asyncio.create_subprocess_exec
+
+
+async def _create_subprocess_exec_unbounded(*args, **kwargs):  # type: ignore[no-untyped-def]
+    kwargs.setdefault("limit", 64 * 1024 * 1024)
+    return await _create_subprocess_exec(*args, **kwargs)
+
+
+asyncio.create_subprocess_exec = _create_subprocess_exec_unbounded  # type: ignore[assignment]
+# -----------------------------------------------------------------------------
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 PROMPT_FILE = REPO_ROOT / ".sandbuket" / "prompt.md"
 COMPLETION_SIGNAL = "<promise>COMPLETE</promise>"
@@ -54,29 +80,27 @@ def fetch_issues(label: str) -> str:
     return json.dumps(issues, indent=2)
 
 
-def fetch_recent_commits() -> str:
+def fetch_recent_commits(branch: str | None = None) -> str:
+    # Log the AGENT's branch, not HEAD. The host repo sits on whatever branch you
+    # were last on; the agent's commits live on `branch` and are not ancestors of
+    # it, so logging HEAD reports "no previous AFK commits" on every iteration and
+    # the agent restarts blind — redoing work it already did, on top of itself.
+    cmd = ["git", "log"]
+    if branch:
+        cmd.append(branch)
+    cmd += ["--grep=AFK", "-n", "10", "--format=%H%n%ad%n%B---", "--date=short"]
     try:
-        out = _sh(
-            [
-                "git",
-                "log",
-                "--grep=AFK",
-                "-n",
-                "10",
-                "--format=%H%n%ad%n%B---",
-                "--date=short",
-            ]
-        )
+        out = _sh(cmd)
     except subprocess.CalledProcessError:
-        out = ""
+        out = ""  # branch does not exist yet — first iteration
     return out or "(no previous AFK commits)"
 
 
-def build_prompt(label: str) -> str:
+def build_prompt(label: str, branch: str | None = None) -> str:
     base = PROMPT_FILE.read_text()
     return (
         f"# ISSUES\n\n```json\n{fetch_issues(label)}\n```\n\n"
-        f"# RECENT COMMITS\n\n```\n{fetch_recent_commits()}\n```\n\n"
+        f"# RECENT COMMITS\n\n```\n{fetch_recent_commits(branch)}\n```\n\n"
         f"---\n\n{base}"
     )
 
@@ -105,7 +129,7 @@ async def afk(args: argparse.Namespace) -> int:
             print(f"\n--- iteration {i}/{args.iterations} ---")
             result = await sb.run(
                 agent=agent,
-                prompt=build_prompt(args.label),
+                prompt=build_prompt(args.label, args.branch),
                 completion_signal=COMPLETION_SIGNAL,
                 max_iterations=1,
             )
