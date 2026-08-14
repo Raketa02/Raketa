@@ -200,6 +200,10 @@ MIN_DEMONSTRATIONS_COMPARED = 2
 # demonstrations — but only partly, and by exactly as much whichever side is the
 # higher one. That symmetry is the whole anti-sandbagging design: claiming too
 # little costs precision exactly as fast as claiming too much.
+#
+# It is a symmetry of *cost*, and only that. Which players are offered a
+# tie-breaker — the chance to avoid this resolution entirely — is not symmetric,
+# because the claims are asked first; see ``_tie_breaker_tier``.
 CLAIM_PRECISION_RETAINED = 0.50
 
 # The σ an unresolved gap adds, in quadrature and in proportion to its size, with
@@ -898,6 +902,35 @@ def _tie_breaker_tier(sides: _Sides, asked_tiers: set[str]) -> str | None:
     made. When that question has already been answered the claims have been
     tested at their own level already, so no extra question is earned and the
     disagreement goes to ``finalize`` unaided.
+
+    In practice this makes the tie-breaker an **over-claimer's question**, and
+    that asymmetry is a consequence of asking the claims first rather than a
+    property anyone chose. Measured over 64.000 routed padel transcripts, under
+    both the pre-correction constants and the current ones, *every* tie-breaker
+    asked was pitched at ``discriminating`` and none at ``basic`` or
+    ``standard``:
+
+    - A **sandbagger**'s fused claims are low, so the tier they imply is
+      ``basic``. The claims are answered first, so the running estimate during
+      the demonstration phase is claims-dominated and also low — which makes
+      ``_target_tier`` pick ``basic`` for the very first demonstration. Their
+      claims' own tier is therefore already spent by the time the two sides can
+      be compared, and no tie-breaker is ever due.
+    - An **over-claimer**'s claims imply ``discriminating``, and whether the
+      routed minimums spend that tier depends on where their demonstrations drag
+      the estimate — so it is sometimes still free.
+
+    So an over-claimer can be handed one more question and, by doing the thing
+    their claims imply, leave with their claims intact and a standard calibration
+    priority; a player who under-reports and then demonstrates well is never
+    offered the equivalent chance, and their disagreement always reaches
+    ``finalize`` unresolved.
+
+    This does **not** contradict the symmetry at ``CLAIM_PRECISION_RETAINED``.
+    That one is about what an unresolved disagreement *costs*, and it holds in
+    both directions — guarded by
+    ``test_claiming_further_below_the_demonstrations_stops_paying_too``. This is
+    about who gets the chance to avoid paying at all.
     """
 
     tier = _target_tier(sides.claims.mu)
