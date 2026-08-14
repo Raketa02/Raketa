@@ -256,6 +256,14 @@ const size = {
   timeSquare: 32,
   meter: 5,
   bar: 4,
+  /** The confidence ring — a drawn object, dark card only. Stroke matches the level
+   *  bar's band segments; the tick crosses the stroke and overshoots it outward.
+   *  Geometry and reasoning: docs/design-system.md 7.8. The 30% ceiling the tick marks
+   *  is a domain constant, NOT a design value — it does not belong here. */
+  ring: 72,
+  ringStroke: 6,
+  ringTick: 2,
+  ringTickOvershoot: 3,
   balanceBar: 24,
   sportDot: 6,
   infoGlyph: 14,

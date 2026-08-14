@@ -762,6 +762,53 @@ last hairline in the card: marginTop auto
 says "there are more". `marginTop: auto` on the last hairline pushes the footer to the
 bottom **so footers align across cards of differing height.**
 
+## 7.8 The confidence ring
+
+Like the level bar, not a styled component but a drawn object — an arc, a track and a tick,
+in `react-native-svg`. It appears **only inside a dark card**, because `volt` is legible
+nowhere else ([2.2](#22-accent-and-semantics)).
+
+```
+ring     size.ring 72        stroke size.ringStroke 6, butt caps
+                             starts at 12 o'clock, sweeps clockwise
+track    full circle         color.onDarkHair    ← the dark card's structural line
+arc      0 → value           color.volt          ← 10.60:1 on night
+ceiling  at 30% (108°)       size.ringTick 2, in color.volt, spanning the stroke
+                             and overshooting size.ringTickOvershoot 3 outward
+value    num.numXL 22 mono 700, tabular, #fff, optically centred in the ring
+label    type.eyebrow "CONFIDENCE" beneath — repainted .52 by the dark card
+```
+
+Every value above is a token. **The 30% is not** — it is the onboarding confidence ceiling,
+a domain constant, and it belongs with the engine rather than in `theme.ts`. The ring is
+told where its ceiling sits; it does not know why.
+
+**The scale is always the full 0–100**, exactly as the level bar is always the full
+1,00–5,00 ([7.5](#75-the-level-bar)) — so the same percentage always lands in the same
+place, on the onboarding result and on a rating settled by fifty matches alike.
+
+**The ceiling tick is what makes the full scale survivable.** Onboarding cannot produce
+confidence above 30% — the questionnaire is the entire evidence surface — so every player
+leaves it with an arc covering under a third of the circle. A bare arc that short reads as
+failure. The tick turns "nearly empty" into "as far as a questionnaire can prove", and it
+does so without a second component: when matches later push confidence to 75%, the same
+ring means the same thing and the tick simply sits behind the arc.
+
+**Butt caps, not round.** A round cap adds half a stroke width at each end, which on a 3%
+arc is most of the arc — it would inflate the smallest values, exactly where the number is
+least certain, and it would overhang the ceiling tick. The arc's drawn length is its
+value.
+
+**The tick is radial where the arc is tangential.** That is a difference in shape, not in
+colour, which is what [Part 13](#part-13--accessibility) requires — the mark survives
+being unable to distinguish volt from white.
+
+**The ring is not pressable.** Its meaning is carried by the adjacent information mark and
+its popover ([12.1](#121-onboarding)); do not give the ring its own press state or touch
+target. Its accessibility role is `progressbar`, and its value text names both numbers —
+the confidence reached and the ceiling that applies — because the tick is invisible to a
+screen reader.
+
 ---
 
 # Part 8 — Scrolling patterns
@@ -933,6 +980,20 @@ Specified at the level the design system owns — order and composition, not cop
 Steps: welcome → sports → adaptive questions → result → done → data. Chrome is a header
 plus a progress bar filled `coral`.
 
+**That step list is exhaustive. The app has one question screen.** The prototype showed a
+separate *gate* screen ("have you played this sport?") and a *history* screen (the layoff
+question); neither is a screen here. Both are ordinary questions in the engine's bank,
+served through the same adaptive loop as every other question, because the engine decides
+what to ask next and the client does not get a vote. Building either as its own screen
+would put the engine's question order into the navigator, where it cannot be changed
+without shipping an app.
+
+**Cut from the prototype's history screen, and not to be rebuilt from it:** cross-sport
+transfer, format links, external ratings, coach assessments, and verified results. These
+are not deferred — they are out of the onboarding evidence surface entirely, which is why
+onboarding cannot exceed 30% confidence. Anyone reading the prototype later will find
+these screens in it; they are listed here so the answer is already written down.
+
 ### The question screen
 
 **The reading order is fixed and deliberate: category → progress → situation → question →
@@ -979,12 +1040,40 @@ for a verdict.
 
 ### The result screen
 
-A dark card with the level at `levelHero`, the likely range, a confidence ring in `volt`,
-the level bar with labels and legend, and a band/status/questions row. Then a light card
-whose **3pt left border is the band's own ink** — the only place a band colour appears
-outside the bar.
+**Upper half — the verdict.** A dark card with the level at `levelHero`, the likely range,
+a confidence ring ([7.8](#78-the-confidence-ring)), the level bar with labels and legend
+([7.5](#75-the-level-bar)), and a band/status/questions row. Then a light card whose **3pt
+left border is the band's own ink** — the only place a band colour appears outside the bar.
 
 Three information marks, three anchored popovers.
+
+**Lower half — the evidence trail.** The verdict alone is a number without an account of
+itself, and the rating is never only a number. The trail is **two lists, and they stay
+apart**, because they answer different questions:
+
+```
+WHAT MOVED THE LEVEL      each kind of evidence, fused on its own, and where
+                          that sits relative to the estimate given
+                          → direction is a shape and a word, never colour alone
+
+WHAT WIDENED THE RANGE    a layoff, a contradiction, an uneven profile — each
+                          reporting how much uncertainty it actually added
+                          → never drawn as an up or a down
+```
+
+**Nothing appears in both lists, and the second list has no direction.** Something that
+widened the range did not move the level, and drawing it with an arrow would describe a
+different rating than the one produced. Where a contributor sits is computed by comparing
+it against the estimate; the confidence reason is whichever thing widened the range most.
+**No copy in this app decides either** — retuning a constant moves the explanation with it,
+which is the whole point ([`CONTEXT.md`](../../CONTEXT.md)).
+
+Where calibration priority is raised, it is stated as a property of the *estimate* — it
+changes who the player is matched with, never where they sit — and it is never phrased as a
+judgement of the player.
+
+Each contributor is a row ([5.5](#55-row--the-key-value-line)); the two lists are separated by a
+hairline, not by two cards, because they are one account with two halves.
 
 ## 12.2 Find
 
@@ -1146,6 +1235,10 @@ unchangeable one; it is one whose changes are recorded rather than absorbed.
 |---|---|---|---|---|
 | 2026-08-13 | [12.1](#121-onboarding) question screen | The header row carried the running estimate: `Question 3  [discriminating]  [3,17 so far]` | The estimate is removed. The tag stays | A live number reframes the questionnaire from *describe yourself accurately* to *make this number go up*. A player who answers honestly, watches 3,4 fall to 2,9 and feels the drop has been taught mid-flow that honesty is expensive — which corrupts the only evidence the engine has. It is also the least explained number in the app, in a screen whose final figures each earn an information mark and a popover because *"none is self-explanatory"*. The difficulty tag survives because three coarse values read as *we think you can handle a hard one*, not as a score |
 | 2026-08-13 | [12.1](#121-onboarding) question screen | Five pressable cards, tap to answer | Five cards select; a `Next` button submits | Answers are irreversible ([ADR-0017](../../docs/adr/0017-rating-context-event-sourced.md)), and taking a reflex tap and making it permanent is a bad bargain. The confirm is the moment the player accepts finality, and it makes a timed undo window unnecessary |
+| 2026-08-14 | [7.8](#78-the-confidence-ring) | The confidence ring was named in [2.2](#22-accent-and-semantics) and required by [12.1](#121-onboarding), but never specified as a component — no diameter, stroke, track, cap or ceiling treatment | **Specified**: 72 × 72, stroke 6, butt caps, track `rgba(255,255,255,.15)`, arc `volt`, a 2pt radial ceiling tick at 30%, value in `numXL` inside and an `eyebrow` label beneath | An agent building it would have been inventing design rather than implementing it. Added through [15.1](#151-adding-a-component); the stroke matches the level bar's band segments and the diameter is on the 3pt grid |
+| 2026-08-14 | [7.8](#78-the-confidence-ring) | — | The ring's scale is **always the full 0–100**, with the 30% onboarding ceiling marked on the track | The same reasoning as the level bar's fixed 1,00–5,00 scale: a value must land in the same place everywhere or the component means different things on different screens. Every player leaves onboarding at or below 30%, so a bare arc would read as failure; the tick makes the short arc legible as *as far as a questionnaire can prove*, and keeps the component honest when matches later push confidence to 75% |
+| 2026-08-14 | [12.1](#121-onboarding) result screen | The lower half stopped at the band-meaning card | The **evidence trail** is recorded as specified composition: two lists — what moved the level, what widened the range — kept apart, the second carrying no direction | The source specification calls the trail critical, and the engine already supplies it as structured data. Leaving it unspecified invited each implementer to invent a layout for the one part of the screen that explains the rest |
+| 2026-08-14 | [12.1](#121-onboarding) | The step list was correct but silent about the prototype's *gate* and *history* screens | A note: both are engine questions, not screens — **the app has one question screen** — and the rest of the history screen is listed as cut content | The step list being correct was not the same as it being unambiguous. Someone reading the prototype later would have found two screens with no record of why they are absent, and rebuilt them |
 
 # Appendix A — The token contract
 

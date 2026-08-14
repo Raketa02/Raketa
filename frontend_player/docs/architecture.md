@@ -1053,17 +1053,25 @@ telemetry non-sensitive? Does the backend stay compatible with older clients?
 
 ## Part 21 — Capabilities not yet in `package.json`
 
-The manifest currently targets Expo SDK 52 with expo-router, secure-store, TanStack Query,
-Zod, Zustand, Jest/jest-expo, Testing Library, ESLint, Prettier and openapi-typescript.
-The architecture above additionally requires, and these should be added when the code that
-needs them is written — not preemptively:
+The manifest currently targets Expo SDK 52 with expo-router, secure-store, expo-network,
+TanStack Query, Zod, Zustand, Jest/jest-expo, Testing Library, ESLint, Prettier and
+openapi-typescript. The architecture above additionally requires, and these should be added
+when the code that needs them is written — not preemptively:
 
 **Near-essential**
-- `expo-network` or `@react-native-community/netinfo` — native connectivity for
-  `onlineManager` ([Part 7](#part-7--tanstack-query)).
+- `react-native-svg` — arcs and the ceiling tick of the confidence ring, which is a drawn
+  object rather than a styled component
+  ([design system 7.8](design-system.md#78-the-confidence-ring)). Nothing else in the app
+  needs vector drawing yet; the level bar is built from Views. `jest.config.js` already
+  whitelists it in `transformIgnorePatterns`, so it needs no test-config change.
 - Crash/error monitoring — Sentry (`@sentry/react-native`, Expo-supported) or equivalent,
   behind `shared/lib/observability` ([Part 15](#part-15--observability)).
 - Maestro — E2E journeys ([Part 16](#part-16--testing)).
+
+> `expo-network` was on this list and has since joined the manifest, with the code that
+> wires the online and focus managers ([Part 7](#part-7--tanstack-query)). It is listed
+> above as present rather than pending — this list is what is *missing*, and an entry that
+> outlives its own arrival makes the list untrustworthy.
 
 **Strong optional**
 - `openapi-fetch` — the typed companion to `openapi-typescript`, if the thin `fetch`
