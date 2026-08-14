@@ -13,22 +13,10 @@
  * store's internals or a hook's return shape.
  */
 
-import { QueryClientProvider, onlineManager } from "@tanstack/react-query";
-import { Slot } from "expo-router";
+import { onlineManager } from "@tanstack/react-query";
 import { fireEvent, renderRouter, screen, waitFor } from "expo-router/testing-library";
-import { SafeAreaProvider } from "react-native-safe-area-context";
 
-import AppLayout from "@/app/(app)/_layout";
-import TabsLayout from "@/app/(app)/(tabs)/_layout";
-import HomeRoute from "@/app/(app)/(tabs)/index";
-import AuthLayout from "@/app/(auth)/_layout";
-import SignInRoute from "@/app/(auth)/sign-in";
-import OnboardingLayout from "@/app/(onboarding)/_layout";
-import QuestionRoute from "@/app/(onboarding)/question/[assessmentId]";
-import SportsRoute from "@/app/(onboarding)/sports";
-import WelcomeRoute from "@/app/(onboarding)/welcome";
 import {
-  beginSession,
   clearStoredTokens,
   resetSessionStatus,
   setSessionStatus,
@@ -37,10 +25,15 @@ import {
 import { queryClient } from "@/shared/lib/query-client";
 import { refreshTokens } from "@/features/auth/types";
 import {
+  ONBOARDING_ROUTES,
+  SPORTS_SERVED,
+  launchSignedIn,
+  stubGate as stubGateWith,
+} from "@/test-support/onboardingRouter";
+import {
   errorResponse,
   installTransport,
   json,
-  noContent,
   type Transport,
   type Wire,
 } from "@/test-support/transport";
@@ -48,15 +41,6 @@ import {
 import { useSportQueue } from "../store/sportQueue.store";
 
 const ASSESSMENT_ID = "1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6";
-
-const SPORTS_SERVED: Wire["SportsResponse"] = {
-  sports: [
-    { sport: "PADEL", players: 4, durations: [60, 90, 120] },
-    { sport: "TENNIS", players: 2, durations: [60, 90] },
-    { sport: "SQUASH", players: 2, durations: [45, 60, 90] },
-    { sport: "BADMINTON", players: 4, durations: [60, 90] },
-  ],
-};
 
 const RATING: Wire["RatingResponse"] = {
   sport: "PADEL",
@@ -97,61 +81,10 @@ const USER: Wire["UserResponse"] = {
   created_at: "2026-08-13T10:00:00Z",
 };
 
-const ROUTES = {
-  _layout: TestRoot,
-  "(app)/_layout": AppLayout,
-  "(app)/(tabs)/_layout": TabsLayout,
-  "(app)/(tabs)/index": HomeRoute,
-  "(auth)/_layout": AuthLayout,
-  "(auth)/sign-in": SignInRoute,
-  "(onboarding)/_layout": OnboardingLayout,
-  "(onboarding)/welcome": WelcomeRoute,
-  "(onboarding)/sports": SportsRoute,
-  "(onboarding)/question/[assessmentId]": QuestionRoute,
-};
-
-/**
- * The providers the real root layout composes, without the bootstrap sequence — fonts,
- * the splash screen and config validation are the launch path's business and have their
- * own tests.
- */
-function TestRoot() {
-  return (
-    <SafeAreaProvider
-      initialMetrics={{
-        frame: { x: 0, y: 0, width: 390, height: 844 },
-        insets: { top: 0, left: 0, right: 0, bottom: 0 },
-      }}
-    >
-      <QueryClientProvider client={queryClient}>
-        <Slot />
-      </QueryClientProvider>
-    </SafeAreaProvider>
-  );
-}
-
 let transport: Transport;
 
-/** The gate's two reads: what this player is rated at, and what they left unfinished. */
-function stubGate({
-  ratings = [],
-  run,
-}: {
-  readonly ratings?: readonly Wire["RatingResponse"][];
-  readonly run?: { readonly sport: string; readonly step: Wire["AssessmentStepResponse"] };
-} = {}) {
-  transport.on("GET", "/api/v1/ratings", () =>
-    json<Wire["RatingsResponse"]>({ ratings: [...ratings] }),
-  );
-
-  // One request per sport, because the endpoint is scoped to one. 204 is "nothing here",
-  // which is the normal state of a sport and not a failure.
-  for (const sport of ["PADEL", "TENNIS", "SQUASH", "BADMINTON"]) {
-    transport.on("GET", `/api/v1/assessments/in-progress?sport=${sport}`, () =>
-      run?.sport === sport ? json(run.step) : noContent(),
-    );
-  }
-}
+const stubGate = (options?: Parameters<typeof stubGateWith>[1]) =>
+  stubGateWith(transport, options);
 
 beforeEach(async () => {
   transport = installTransport();
@@ -168,11 +101,6 @@ afterEach(() => {
   onlineManager.setOnline(true);
 });
 
-async function launchSignedIn() {
-  await beginSession({ accessToken: "access-1", refreshToken: "refresh-1" });
-  renderRouter(ROUTES, { initialUrl: "/" });
-}
-
 // ---------------------------------------------------------------------------
 // The entry gate — all four outcomes
 // ---------------------------------------------------------------------------
@@ -181,7 +109,7 @@ describe("where a launch lands", () => {
   it("sends a signed-out player to sign in", async () => {
     setSessionStatus("unauthenticated");
 
-    renderRouter(ROUTES, { initialUrl: "/" });
+    renderRouter(ONBOARDING_ROUTES, { initialUrl: "/" });
 
     await waitFor(() => expect(screen).toHavePathname("/sign-in"));
     // The gate's reads are authenticated, and firing them without a session would only

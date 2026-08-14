@@ -26,9 +26,10 @@ feature, not after:
 ordered startup sequence. Above that: the HTTP client with its 401 → refresh → retry
 rotation, the `AppError` family, `shared/lib/auth` over the keychain, and two features —
 `auth` (sign up, sign in, session restore) and `onboarding` (the entry gate, welcome, the
-sports picker, and the question route the adaptive loop fills in).
+sports picker, the adaptive question loop, and the result route the rating screen fills
+in).
 
-`src/shared/ui/` holds the first five design-system primitives; the rest arrive with the
+`src/shared/ui/` holds the first seven design-system primitives; the rest arrive with the
 features that need them. **Build outward from the structure below** rather than reaching
 for `create-expo-app` — its default template contradicts ADR-0009 — and copy the shape of
 `src/features/auth/` or `src/features/onboarding/` rather than inventing a second one.

@@ -36,7 +36,15 @@ export function Note({
   accessibilityRole,
 }: NoteProps) {
   return (
-    <View style={[s.note, SURFACE[variant]]} accessibilityRole={accessibilityRole}>
+    <View
+      style={[s.note, SURFACE[variant]]}
+      accessibilityRole={accessibilityRole}
+      // An alert has to be **one** accessibility element, or the role announces nothing:
+      // a View is not an accessibility element by default, so its children would be read
+      // as ordinary text in document order — which is precisely the announcement the role
+      // exists to replace. The other variants stay as flowing text on purpose.
+      accessible={accessibilityRole === "alert" ? true : undefined}
+    >
       <View style={s.head}>
         {variant === "info" ? <InfoGlyph /> : null}
         {title !== undefined ? <Text style={s.title}>{title}</Text> : null}

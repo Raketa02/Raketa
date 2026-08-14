@@ -74,7 +74,7 @@ components from the start. The prototype maintained a second copy of each in its
 recorded that they had drifted — one implementation, used everywhere.
 
 Built so far, by the onboarding slice: `Button`, `Card` (+ `PressableCard`), `Note`,
-`Bar`, `ScreenHeader`. Import them from `@/shared/ui`.
+`Bar`, `ScreenHeader`, `Tag`, `Hairline`. Import them from `@/shared/ui`.
 
 **A feature never keeps a second copy of one of these.** If a primitive does not do what
 a screen needs, extend the primitive — the two auth-form controls that remain in

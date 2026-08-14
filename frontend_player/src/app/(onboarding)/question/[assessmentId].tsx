@@ -13,10 +13,10 @@
 
 import { Redirect, useLocalSearchParams } from "expo-router";
 
-import { QuestionScreen, parseQuestionRouteParams } from "@/features/onboarding/types";
+import { QuestionScreen, parseAssessmentRouteParams } from "@/features/onboarding/types";
 
 export default function QuestionRoute() {
-  const params = parseQuestionRouteParams(useLocalSearchParams());
+  const params = parseAssessmentRouteParams(useLocalSearchParams());
 
   if (params === undefined) return <Redirect href="/welcome" />;
 

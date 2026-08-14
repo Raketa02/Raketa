@@ -8,6 +8,7 @@
 
 export { EntryUnavailableScreen } from "./components/EntryUnavailableScreen";
 export { QuestionScreen } from "./components/QuestionScreen";
+export { ResultScreen } from "./components/ResultScreen";
 export { SportsPickerScreen } from "./components/SportsPickerScreen";
 export { WelcomeScreen } from "./components/WelcomeScreen";
 
@@ -24,6 +25,6 @@ export { useEntryDecision, type EntryDecision } from "./hooks/useEntryDecision";
 
 /** Route params are untrusted input, so the route that reads them validates them here. */
 export {
-  parseQuestionRouteParams,
-  type QuestionRouteParams,
+  parseAssessmentRouteParams,
+  type AssessmentRouteParams,
 } from "./schemas/routeParams";

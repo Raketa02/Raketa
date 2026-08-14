@@ -13,6 +13,7 @@ type RatingsResponse = components["schemas"]["RatingsResponse"];
 type SportsResponse = components["schemas"]["SportsResponse"];
 type AssessmentStepResponse = components["schemas"]["AssessmentStepResponse"];
 type CreateAssessmentRequest = components["schemas"]["CreateAssessmentRequest"];
+type SubmitAnswerRequest = components["schemas"]["SubmitAnswerRequest"];
 type WireSport = components["schemas"]["Sport"];
 
 export interface OnboardingApiOptions {
@@ -75,6 +76,27 @@ export function createAssessment(
   return httpRequest<AssessmentStepResponse>({
     method: "POST",
     path: "/api/v1/assessments",
+    body,
+    authenticated: true,
+    signal,
+  });
+}
+
+/**
+ * Answer the outstanding question, and receive the next step in the same response.
+ *
+ * **One round trip, and the response is the next question.** The engine is conversational
+ * but stateless — it takes the whole transcript on every call — so choosing what to ask
+ * next *is* the rating calculation. There is nothing here for a client to predict.
+ */
+export function submitAnswer(
+  assessmentId: string,
+  body: SubmitAnswerRequest,
+  { signal }: OnboardingApiOptions = {},
+): Promise<AssessmentStepResponse> {
+  return httpRequest<AssessmentStepResponse>({
+    method: "POST",
+    path: `/api/v1/assessments/${encodeURIComponent(assessmentId)}/answers`,
     body,
     authenticated: true,
     signal,

@@ -9,6 +9,8 @@
 export { Bar, type BarProps } from "./Bar";
 export { Button, type ButtonProps, type ButtonSize, type ButtonVariant } from "./Button";
 export { Card, PressableCard, type CardProps, type PressableCardProps } from "./Card";
+export { Hairline, type HairlineProps } from "./Hairline";
 export { Note, type NoteProps, type NoteVariant } from "./Note";
 export { ScreenHeader, type ScreenHeaderProps } from "./ScreenHeader";
+export { Tag, type TagProps, type TagVariant } from "./Tag";
 export { theme, type BandKey, type SportKey, type Theme } from "./theme";
