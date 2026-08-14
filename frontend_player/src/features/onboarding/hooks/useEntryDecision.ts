@@ -18,6 +18,7 @@ import { useSessionStatus } from "@/shared/lib/auth";
 import { networkUnavailable, type AppError } from "@/shared/errors";
 
 import { entryDestination, type EntryDestination } from "../domain/entryDecision";
+import { useDeferredRuns } from "../store/deferredRuns.store";
 import { findRunInProgress } from "../use-cases/findRunInProgress";
 import { listRatings } from "../use-cases/listRatings";
 
@@ -40,6 +41,9 @@ export function useEntryDecision(): EntryDecision {
   // and a 401 at launch is exactly what would make the token rotation chase a session
   // that never existed.
   const enabled = status === "authenticated";
+  // Not server data and never mirrored from it: the run really is unfinished, and this
+  // is the player's decision to leave it that way until the next launch.
+  const deferredRunIds = useDeferredRuns((state) => state.deferred);
 
   const ratings = useQuery({
     queryKey: onboardingKeys.ratings(),
@@ -84,5 +88,6 @@ export function useEntryDecision(): EntryDecision {
   return entryDestination({
     ratings: ratings.data,
     runInProgress: run.data ?? undefined,
+    deferredRunIds,
   });
 }

@@ -21,6 +21,26 @@ export function toggleSport(queue: readonly Sport[], sport: Sport): readonly Spo
   return queue.includes(sport) ? queue.filter((s) => s !== sport) : [...queue, sport];
 }
 
+/**
+ * What to rate after this sport, or nothing if there is nothing after it.
+ *
+ * **The queue is not edited as sports are dealt with.** A sport that was abandoned was
+ * still chosen, so it keeps its place: removing it would renumber the progress bar
+ * underneath the player and turn "Rating 2 of 2" into "Rating 1 of 1" as a reward for
+ * giving up on the first one.
+ *
+ * A sport that is not in the queue has nothing after it. That is the resumed case — the
+ * queue was never persisted, so a player returning to an unfinished run is rating exactly
+ * one sport as far as anyone can now know.
+ */
+export function nextSport(
+  queue: readonly Sport[],
+  sport: Sport,
+): Sport | undefined {
+  const at = queue.indexOf(sport);
+  return at === -1 ? undefined : queue[at + 1];
+}
+
 export interface RatingPosition {
   /** 1-based: the sport being rated right now. */
   readonly index: number;

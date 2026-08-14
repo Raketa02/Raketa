@@ -35,18 +35,32 @@ export interface Question {
 }
 
 /**
+ * How a run ended, where it ended at all.
+ *
+ * The two terminal states are **not interchangeable and demand opposite screens**: a
+ * completed run produced a rating, and an abandoned one produced nothing and discarded
+ * its answers. Both arrive with no outstanding question, so "no question left" cannot be
+ * read as "there is a result" — which is exactly what it meant before abandonment
+ * existed.
+ *
+ * An unrecognised status is treated as `in_progress`: the question is what says whether
+ * there is something to answer, and a status this build has never heard of is not
+ * grounds for throwing a player out of a run.
+ */
+export type AssessmentStatus = "in_progress" | "completed" | "abandoned";
+
+/**
  * The server-driven step: what to render next.
  *
  * A step carries a question, or a finished assessment carries none.
  *
- * The wire also carries a status and, once finished, a result. Neither is mapped yet:
- * **nothing in this slice acts on them**, and a field mapped for a future screen is a
- * field no test covers. The result payload arrives with the result screen (#25); the
- * status arrives with the abandonment flow (#27), which is the first thing that has to
- * tell an abandoned run from a completed one.
+ * The wire also carries the result once a run is finished. It is not mapped: **nothing
+ * in this slice acts on it**, and a field mapped for a future screen is a field no test
+ * covers. The result payload arrives with the result screen (#25).
  */
 export interface AssessmentStep {
   readonly assessmentId: string;
+  readonly status: AssessmentStatus;
   readonly question: Question | undefined;
 }
 

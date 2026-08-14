@@ -1,4 +1,4 @@
-import { ratingPosition, toggleSport } from "./sportQueue";
+import { nextSport, ratingPosition, toggleSport } from "./sportQueue";
 
 describe("choosing sports", () => {
   it("keeps the order they were chosen in", () => {
@@ -21,6 +21,32 @@ describe("choosing sports", () => {
     const queue = ["tennis"] as const;
     toggleSport(queue, "padel");
     expect(queue).toEqual(["tennis"]);
+  });
+});
+
+describe("what comes after a sport", () => {
+  it("is the next one chosen", () => {
+    expect(nextSport(["tennis", "padel", "squash"], "padel")).toBe("squash");
+  });
+
+  it("is nothing after the last one", () => {
+    expect(nextSport(["tennis", "padel"], "padel")).toBeUndefined();
+  });
+
+  it("is nothing for a sport that was never queued", () => {
+    // The resumed case: no queue was ever persisted, so a run reached from the entry gate
+    // has nothing after it and finishing or abandoning it ends onboarding.
+    expect(nextSport([], "padel")).toBeUndefined();
+  });
+
+  it("leaves the queue alone, so abandoning does not renumber the ones left", () => {
+    const queue = ["tennis", "padel"] as const;
+    nextSport(queue, "tennis");
+
+    // A sport that was abandoned was still chosen. Dropping it would turn "Rating 2 of 2"
+    // into "Rating 1 of 1" as a reward for giving up on the first one.
+    expect(queue).toEqual(["tennis", "padel"]);
+    expect(ratingPosition(queue, "padel")).toEqual({ index: 2, total: 2 });
   });
 });
 

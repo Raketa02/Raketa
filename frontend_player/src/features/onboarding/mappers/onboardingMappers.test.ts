@@ -111,6 +111,32 @@ describe("assessment steps", () => {
     expect(step.question).toBeUndefined();
   });
 
+  it("tells the two terminal states apart", () => {
+    // Both arrive with no question, and they demand opposite screens: one produced a
+    // rating, the other discarded its answers and produced nothing.
+    const abandoned = toAssessmentStep({
+      assessment_id: "1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6",
+      status: "abandoned",
+      question: null,
+    });
+
+    expect(abandoned.status).toBe("abandoned");
+    expect(abandoned.question).toBeUndefined();
+  });
+
+  it("reads a status it does not recognise as still running", () => {
+    // The question is what says whether there is something to answer. A status added to
+    // the engine after this build shipped is not grounds for throwing a player out of a
+    // run they are half way through.
+    const step = toAssessmentStep({
+      assessment_id: "1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6",
+      status: "quarantined_pending_review",
+      question: QUESTION,
+    });
+
+    expect(step.status).toBe("in_progress");
+  });
+
   it("takes the run's sport from the question that was asked, not from the answer", () => {
     // `/assessments/in-progress` is scoped to a sport and the payload does not name one.
     const run = toAssessmentRun(

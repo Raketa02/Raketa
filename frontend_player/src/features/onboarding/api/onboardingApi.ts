@@ -103,6 +103,25 @@ export function submitAnswer(
   });
 }
 
+/**
+ * End a run without a rating, freeing its sport to be started again.
+ *
+ * A POST to a sub-resource rather than a `DELETE`, because **nothing is deleted**: the
+ * run reaches a terminal state and the record of it stays on its stream. 204 — there is
+ * no new step to report, and asking for one would describe a run that no longer exists.
+ */
+export function abandonAssessment(
+  assessmentId: string,
+  { signal }: OnboardingApiOptions = {},
+): Promise<void> {
+  return httpRequest<void>({
+    method: "POST",
+    path: `/api/v1/assessments/${encodeURIComponent(assessmentId)}/abandonment`,
+    authenticated: true,
+    signal,
+  });
+}
+
 /** An assessment's current state — its outstanding question, or nothing left to ask. */
 export function getAssessment(
   assessmentId: string,

@@ -15,7 +15,12 @@
 
 import type { components } from "@/generated/schema";
 
-import type { AssessmentRun, AssessmentStep, Question } from "../domain/Assessment";
+import type {
+  AssessmentRun,
+  AssessmentStatus,
+  AssessmentStep,
+  Question,
+} from "../domain/Assessment";
 import type { SkillRating } from "../domain/SkillRating";
 import type { Sport } from "../domain/Sport";
 
@@ -100,9 +105,20 @@ function toQuestion(wire: QuestionResponse): Question {
   };
 }
 
+/**
+ * `status` is a bare string on the wire, so the narrowing happens here rather than being
+ * asserted downstream. Anything this build does not recognise is `in_progress`: the
+ * question is what says whether there is something to answer, and an unknown status is
+ * not grounds for ending a run the client cannot interpret.
+ */
+function toStatus(wire: string): AssessmentStatus {
+  return wire === "completed" || wire === "abandoned" ? wire : "in_progress";
+}
+
 export function toAssessmentStep(wire: AssessmentStepResponse): AssessmentStep {
   return {
     assessmentId: wire.assessment_id,
+    status: toStatus(wire.status),
     question: wire.question == null ? undefined : toQuestion(wire.question),
   };
 }

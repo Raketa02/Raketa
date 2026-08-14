@@ -7,8 +7,15 @@
  */
 
 export { Bar, type BarProps } from "./Bar";
+export {
+  BottomSheet,
+  behindSheet,
+  type BottomSheetProps,
+  type FocusTarget,
+} from "./BottomSheet";
 export { Button, type ButtonProps, type ButtonSize, type ButtonVariant } from "./Button";
 export { Card, PressableCard, type CardProps, type PressableCardProps } from "./Card";
+export { CloseControl, type CloseControlProps } from "./CloseControl";
 export { Hairline, type HairlineProps } from "./Hairline";
 export { Note, type NoteProps, type NoteVariant } from "./Note";
 export { ScreenHeader, type ScreenHeaderProps } from "./ScreenHeader";

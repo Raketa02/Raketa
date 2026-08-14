@@ -1,8 +1,8 @@
 /**
  * The entry gate's rule, with no renderer and no network.
  *
- * These four cases are the whole of "where does a player belong on launch", and each one
- * is a decision someone could plausibly get backwards.
+ * These cases are the whole of "where does a player belong on launch", and each one is a
+ * decision someone could plausibly get backwards.
  */
 
 import type { AssessmentRun } from "./Assessment";
@@ -29,24 +29,38 @@ const RUN: AssessmentRun = {
   sport: "tennis",
 };
 
+/** Nothing set aside — the ordinary launch, and the default for most of these. */
+const NONE_DEFERRED: readonly string[] = [];
+
 describe("where a player belongs on launch", () => {
   it("sends a player with no ratings to the welcome screen", () => {
-    expect(entryDestination({ ratings: [], runInProgress: undefined })).toEqual({
-      kind: "welcome",
-    });
+    expect(
+      entryDestination({
+        ratings: [],
+        runInProgress: undefined,
+        deferredRunIds: NONE_DEFERRED,
+      }),
+    ).toEqual({ kind: "welcome" });
   });
 
   it("sends a rated player into the app", () => {
     expect(
-      entryDestination({ ratings: [rating("padel")], runInProgress: undefined }),
+      entryDestination({
+        ratings: [rating("padel")],
+        runInProgress: undefined,
+        deferredRunIds: NONE_DEFERRED,
+      }),
     ).toEqual({ kind: "app" });
   });
 
   it("resumes an unfinished run", () => {
-    expect(entryDestination({ ratings: [], runInProgress: RUN })).toEqual({
-      kind: "resume",
-      run: RUN,
-    });
+    expect(
+      entryDestination({
+        ratings: [],
+        runInProgress: RUN,
+        deferredRunIds: NONE_DEFERRED,
+      }),
+    ).toEqual({ kind: "resume", run: RUN });
   });
 
   it("resumes an unfinished run even when the player is already rated elsewhere", () => {
@@ -54,7 +68,47 @@ describe("where a player belongs on launch", () => {
     // ratings first would drop them into the app with those tennis answers stranded, and
     // nothing would ever offer them the rest of the questionnaire.
     expect(
-      entryDestination({ ratings: [rating("padel")], runInProgress: RUN }),
+      entryDestination({
+        ratings: [rating("padel")],
+        runInProgress: RUN,
+        deferredRunIds: NONE_DEFERRED,
+      }),
+    ).toEqual({ kind: "resume", run: RUN });
+  });
+});
+
+describe("a run the player asked to come back to later", () => {
+  it("is not resumed, so leaving the questionnaire is actually leaving it", () => {
+    // Without this the exit is not an exit: the run is genuinely still unfinished, so the
+    // gate would route straight back to the question the player just left.
+    expect(
+      entryDestination({
+        ratings: [],
+        runInProgress: RUN,
+        deferredRunIds: [RUN.assessmentId],
+      }),
+    ).toEqual({ kind: "welcome" });
+  });
+
+  it("lets a player rated elsewhere reach the app", () => {
+    expect(
+      entryDestination({
+        ratings: [rating("padel")],
+        runInProgress: RUN,
+        deferredRunIds: [RUN.assessmentId],
+      }),
+    ).toEqual({ kind: "app" });
+  });
+
+  it("does not stand in for a different run", () => {
+    // Deferral is about one run, not about onboarding. A tennis run set aside says
+    // nothing about the squash run the player started afterwards.
+    expect(
+      entryDestination({
+        ratings: [],
+        runInProgress: RUN,
+        deferredRunIds: ["a-different-assessment"],
+      }),
     ).toEqual({ kind: "resume", run: RUN });
   });
 });
