@@ -25,7 +25,10 @@ from __future__ import annotations
 
 from app.application.ports import DomainEventPublisher, DomainEventStore, UnitOfWork
 from app.engines.assessment import AskQuestion, AssessmentEngine
-from app.modules.rating.application.assessment_view import current_step
+from app.modules.rating.application.assessment_view import (
+    current_step,
+    questions_asked,
+)
 from app.modules.rating.application.commands import (
     AssessmentStart,
     AssessmentStep,
@@ -107,6 +110,9 @@ class CreateAssessment:
             step=AssessmentStep(
                 assessment_id=assessment_id,
                 status=assessment.status.value,
+                # Nothing has been answered yet, and the opening question does not
+                # count itself — a fresh run reports 0 and the client shows 1.
+                questions_asked=questions_asked(assessment),
                 question=step.question,
                 result=None,
             ),

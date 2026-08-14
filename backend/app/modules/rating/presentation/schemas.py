@@ -224,6 +224,18 @@ class AssessmentStepResponse(BaseModel):
 
     assessment_id: str
     status: str
+    questions_asked: int = Field(
+        ...,
+        description=(
+            "How many of this run's questions have been answered. The outstanding "
+            "`question` is **not** counted — it has been put to the player but not "
+            "answered — so a question counter reads this plus one, and a fresh run "
+            "reports 0. Replayed from the transcript on every read, which is what "
+            "lets a resumed run report the position it is really at rather than "
+            "restarting at 1. Once the run is over this is the same number "
+            "`result.questions_asked` carries."
+        ),
+    )
     question: QuestionResponse | None = None
     result: ResultResponse | None = None
 
@@ -232,6 +244,7 @@ class AssessmentStepResponse(BaseModel):
         return cls(
             assessment_id=str(step.assessment_id),
             status=step.status,
+            questions_asked=step.questions_asked,
             question=(
                 QuestionResponse.from_domain(step.question)
                 if step.question is not None

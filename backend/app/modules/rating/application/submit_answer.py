@@ -15,7 +15,10 @@ from __future__ import annotations
 
 from app.application.ports import DomainEventPublisher, DomainEventStore, UnitOfWork
 from app.engines.assessment import AskQuestion, AssessmentEngine, Question
-from app.modules.rating.application.assessment_view import completed_result
+from app.modules.rating.application.assessment_view import (
+    completed_result,
+    questions_asked,
+)
 from app.modules.rating.application.commands import (
     AssessmentStep,
     SubmitAnswerCommand,
@@ -108,6 +111,9 @@ class SubmitAnswer:
             return AssessmentStep(
                 assessment_id=assessment.id,
                 status=assessment.status.value,
+                # The answer just recorded is in the transcript, so this response
+                # already counts it — the next question is one further along.
+                questions_asked=questions_asked(assessment),
                 question=step.question,
                 result=None,
             )
@@ -148,15 +154,20 @@ class SubmitAnswer:
         return AssessmentStep(
             assessment_id=assessment.id,
             status=assessment.status.value,
+            # Equal to the result's own count by construction: both are the length
+            # of this transcript, so the run's number does not jump as it finishes.
+            questions_asked=questions_asked(assessment),
             question=None,
             result=result,
         )
 
     def _current_state(self, assessment: Assessment) -> AssessmentStep:
+        answered = questions_asked(assessment)
         if assessment.is_completed:
             return AssessmentStep(
                 assessment_id=assessment.id,
                 status=assessment.status.value,
+                questions_asked=answered,
                 question=None,
                 # The same explained result the first response carried, so a
                 # retried submission is indistinguishable from the original.
@@ -165,6 +176,7 @@ class SubmitAnswer:
         return AssessmentStep(
             assessment_id=assessment.id,
             status=assessment.status.value,
+            questions_asked=answered,
             question=self._reproduce_outstanding(assessment),
             result=None,
         )

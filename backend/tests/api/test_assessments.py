@@ -647,6 +647,180 @@ async def test_two_sports_are_independent(
     assert len({row.aggregate_id for row in ratings}) == 2
 
 
+# --- The question counter -------------------------------------------------------
+#
+# ``questions_asked`` on the step is what the client's "question N" counter reads.
+# It counts the answers *behind* the player, so the outstanding question is not in
+# it and a fresh run reports 0 — the position shown is one further along. Counting
+# the outstanding question here would make the mid-run number and the finished
+# result's number, which deliberately share a name, describe two different things.
+
+
+async def _answer_the_outstanding_question(client, headers, body):
+    """Answer whatever is outstanding with its last option, and return the step."""
+
+    resp = await _answer(
+        client,
+        headers,
+        body["assessment_id"],
+        body["question"]["id"],
+        body["question"]["options"][-1]["id"],
+    )
+    assert resp.status_code == 200, resp.text
+    return resp.json()
+
+
+@pytest.mark.asyncio
+async def test_a_fresh_run_has_no_answers_behind_it(client, valid_signup_payload):
+    headers = await _auth_headers(client, valid_signup_payload)
+    created = (await _create(client, headers)).json()
+
+    assert created["questions_asked"] == 0
+
+
+@pytest.mark.asyncio
+async def test_each_answer_advances_the_count_by_one(client, valid_signup_payload):
+    headers = await _auth_headers(client, valid_signup_payload)
+    body = (await _create(client, headers)).json()
+
+    counts = [body["questions_asked"]]
+    while body["question"] is not None:
+        body = await _answer_the_outstanding_question(client, headers, body)
+        counts.append(body["questions_asked"])
+
+    # 0, 1, 2, … — one step per answer, with no gap and no repeat.
+    assert counts == list(range(len(counts)))
+    assert len(counts) > 2, "a full run asks more than one question"
+
+
+@pytest.mark.asyncio
+async def test_a_resumed_run_reports_the_answers_already_given(
+    client, valid_signup_payload
+):
+    # The defect this closes: a player who answered four questions yesterday came
+    # back to their outstanding question and was told they were on question 1,
+    # because the count was the client's own tally of what it had shown. The
+    # transcript never lived on the device — which is what makes resume survive a
+    # force-quit, a reinstall and a new handset — so only the server can answer it.
+    headers = await _auth_headers(client, valid_signup_payload)
+    body = (await _create(client, headers)).json()
+    for _ in range(4):
+        body = await _answer_the_outstanding_question(client, headers, body)
+        assert body["question"] is not None, "the run ended before four answers"
+
+    # Cold reads: a relaunch, a reinstall, a second handset. Neither knows anything
+    # of the exchange above — the count is replayed from the stream.
+    resumed = (await _in_progress(client, headers, "PADEL")).json()
+    fetched = (await _get(client, headers, body["assessment_id"])).json()
+
+    assert resumed["questions_asked"] == 4
+    assert fetched["questions_asked"] == 4
+
+
+@pytest.mark.asyncio
+async def test_answering_and_reading_agree_on_the_count(client, valid_signup_payload):
+    headers = await _auth_headers(client, valid_signup_payload)
+    created = (await _create(client, headers)).json()
+
+    answered = await _answer_the_outstanding_question(client, headers, created)
+    fetched = (await _get(client, headers, created["assessment_id"])).json()
+
+    assert answered["questions_asked"] == 1
+    assert fetched["questions_asked"] == answered["questions_asked"]
+
+
+@pytest.mark.asyncio
+async def test_a_resumed_start_reports_the_count_too(client, valid_signup_payload):
+    # Starting is idempotent, so a restart mid-run hands back the open run. It is a
+    # read of an existing run like any other and must not report it as a fresh one.
+    headers = await _auth_headers(client, valid_signup_payload)
+    created = (await _create(client, headers)).json()
+    await _answer_the_outstanding_question(client, headers, created)
+
+    restarted = await _create(client, headers, "PADEL")
+
+    assert restarted.status_code == 200, restarted.text
+    assert restarted.json()["questions_asked"] == 1
+
+
+@pytest.mark.asyncio
+async def test_the_finished_step_agrees_with_its_result(client, valid_signup_payload):
+    # The step's count and the result's carry one name because they are one
+    # quantity at two moments in a run's life. A count that jumped as the run
+    # finished would make that a lie.
+    headers = await _auth_headers(client, valid_signup_payload)
+    finished = await _run_to_result(client, headers)
+
+    assert finished["questions_asked"] == finished["result"]["questions_asked"]
+
+    fetched = (await _get(client, headers, finished["assessment_id"])).json()
+    assert fetched["questions_asked"] == finished["result"]["questions_asked"]
+
+
+@pytest.mark.asyncio
+async def test_an_abandoned_run_reports_what_was_answered_before_it_ended(
+    client, valid_signup_payload
+):
+    headers = await _auth_headers(client, valid_signup_payload)
+    created = (await _create(client, headers)).json()
+    await _answer_the_outstanding_question(client, headers, created)
+    await _abandon(client, headers, created["assessment_id"])
+
+    fetched = (await _get(client, headers, created["assessment_id"])).json()
+
+    assert fetched["status"] == "abandoned"
+    assert fetched["question"] is None and fetched["result"] is None
+    assert fetched["questions_asked"] == 1
+
+
+@pytest.mark.asyncio
+async def test_the_count_is_not_recorded_a_second_time(
+    client, session_factory, valid_signup_payload
+):
+    # Derived from the replayed transcript, never stored. A counter on the stream
+    # would be a second place holding a fact the transcript already holds, and the
+    # two would disagree the first time either moved. The completion event keeps
+    # its own `questions_asked` — that one is the *result's*, recorded beside the
+    # numbers the player was shown.
+    headers = await _auth_headers(client, valid_signup_payload)
+    body = (await _create(client, headers)).json()
+    body = await _answer_the_outstanding_question(client, headers, body)
+
+    async with session_factory() as session:
+        rows = (
+            (
+                await session.execute(
+                    select(EventStoreORM).where(
+                        EventStoreORM.aggregate_type == "assessment"
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+
+    assert rows
+    for row in rows:
+        if row.event_type == "rating.assessment_completed":
+            continue
+        assert "questions_asked" not in row.payload, row.event_type
+
+
+@pytest.mark.asyncio
+async def test_the_step_states_its_count_on_the_player_contract():
+    # #34 reads this field and adds one to it. A field the document called optional
+    # would push a null check into the client for a number that always exists.
+    from app.api.contract import build_surface_spec
+    from app.api.v1.player import player_api_router
+
+    schema = build_surface_spec("player", player_api_router)["components"]["schemas"][
+        "AssessmentStepResponse"
+    ]
+
+    assert "questions_asked" in schema["properties"]
+    assert "questions_asked" in schema["required"]
+
+
 # --- The explained result -------------------------------------------------------
 
 RESULT_KEYS = {

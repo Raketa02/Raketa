@@ -77,10 +77,16 @@ class AssessmentStep:
 
     Exactly one of ``question`` / ``result`` is set. The client holds no flow
     state — this mutation response *is* the current state of the assessment.
+
+    ``questions_asked`` is how many answers are already behind the run, which is
+    what lets a resumed run report the position it is really at. It is required
+    rather than optional so that no step can be built without it: see
+    ``assessment_view.questions_asked`` for what it counts and what it does not.
     """
 
     assessment_id: UUID
     status: str
+    questions_asked: int
     question: Question | None
     result: AssessmentResult | None
 
