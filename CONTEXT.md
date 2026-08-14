@@ -51,6 +51,17 @@ A rating is **never only a number**.
   rally"* is one. A strong smash and a weak backhand is not — that is an **uneven profile**,
   and it widens the range without being called a contradiction.
 - **Layoff** — declared time away from the sport, asked only of players with a history.
+- **Evidence trail** — the account a rating gives of itself: what the platform concluded
+  and why. It has two halves and they are deliberately kept apart, because they answer
+  different questions. **What moved the level** — each kind of evidence the player gave,
+  fused on its own, and where that sits relative to the estimate they were given. **What
+  widened the range** — a layoff, a contradiction, an uneven profile, each reporting how
+  much uncertainty it actually added. Something that widened the range did not move the
+  level, and saying otherwise would describe a different rating than the one produced.
+- **Calibration priority** — how urgently a rating wants real matches to settle it. Raised
+  when the assessment ended on evidence the questionnaire could not resolve. It is a
+  statement about the *estimate*, never about the player, and it changes who they are
+  matched with, never where they sit.
 
 **Invariants**
 - **A level is proved, never declared.** Not by the player, not by staff, not by a club.
@@ -66,9 +77,21 @@ A rating is **never only a number**.
 - **Onboarding cannot produce confidence above 30%.** The questionnaire is the entire
   evidence surface and self-report has an irreducible ceiling, enforced as a floor on σ
   rather than as a display cap. Everyone leaves onboarding as an *Initial Estimate*.
+- **A rating explains itself, and the explanation is computed, never authored.** Which way
+  a kind of evidence pulled is decided by comparing it against the estimate, and which
+  reason is given for the confidence is decided by whichever thing widened the range most.
+  Nobody writes down that standing pulled a player up; the arithmetic says so, or it does
+  not. Retuning a constant therefore moves the explanation with it, and an explanation
+  cannot quietly drift out of step with the number it explains.
 - **A rating carries the engine version that produced it.** Every constant in the engine is
   a hypothesis with a measurement that would falsify it — and you cannot falsify one you
   cannot attribute a rating back to.
+- **There is no *onboarded player*.** Onboarding is not a state a player is in or out of;
+  it is how a Skill rating comes to exist, and a rating is per sport. A player can be rated
+  at padel and unrated at tennis at the same moment, indefinitely. Anything that needs to
+  know "has this player been through onboarding" is really asking "does a rating exist for
+  this sport", and must ask it that way — a per-player onboarding flag would be a second,
+  coarser truth about the same fact.
 
 ### Users (`backend/app/modules/users/`)
 
