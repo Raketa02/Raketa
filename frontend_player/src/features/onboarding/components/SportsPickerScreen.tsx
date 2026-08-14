@@ -19,8 +19,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button, Note, PressableCard, theme } from '@/shared/ui';
 
 import type { Sport } from '../domain/Sport';
-import { useCompletedRuns } from '../store/completedRuns.store';
-import { useSportQueue } from '../store/sportQueue.store';
+import { useOnboardingPass } from '../store/onboardingPass.store';
 import { useSports } from '../hooks/useSports';
 import { useStartAssessment } from '../hooks/useStartAssessment';
 
@@ -31,19 +30,20 @@ import { sportColour, sportLabel } from './sportPresentation';
 export function SportsPickerScreen() {
   const router = useRouter();
   const sports = useSports();
-  const queue = useSportQueue((state) => state.queue);
-  const toggle = useSportQueue((state) => state.toggle);
-  const clearCompleted = useCompletedRuns((state) => state.reset);
+  const queue = useOnboardingPass((state) => state.pass.queue);
+  const toggle = useOnboardingPass((state) => state.choose);
+  const beginPass = useOnboardingPass((state) => state.begin);
   const start = useStartAssessment();
 
   const [first] = queue;
 
   const begin = () => {
     if (first === undefined) return;
-    // A new queue is a new run, and the done screen accounts for *this* run. Nothing else
-    // reaches onboarding twice in one launch today; clearing here is what keeps that a
-    // property of the flow rather than a consequence of nothing else being possible.
-    clearCompleted();
+    // A new queue is a new pass, and the done screen accounts for *this* pass. Nothing
+    // else reaches onboarding twice in one launch today; beginning here is what keeps
+    // that a property of the flow rather than a consequence of nothing else being
+    // possible. #47 makes it the definition, by ending a pass at the entry gate.
+    beginPass(queue);
     start.mutate(first, {
       onSuccess: (step) =>
         router.replace({

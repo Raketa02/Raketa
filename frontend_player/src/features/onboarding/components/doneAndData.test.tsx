@@ -24,8 +24,7 @@ import {
 } from '@/test-support/onboardingRouter';
 import { installTransport, json, type Transport, type Wire } from '@/test-support/transport';
 
-import { useCompletedRuns } from '../store/completedRuns.store';
-import { useSportQueue } from '../store/sportQueue.store';
+import { useOnboardingPass } from '../store/onboardingPass.store';
 
 const PADEL_ID = '1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6';
 const TENNIS_ID = 'b7c8d9e0-1f2a-4b3c-8d4e-5f6a7b8c9d0e';
@@ -153,8 +152,7 @@ beforeEach(async () => {
   wireHttpCredentials(refreshTokens);
   await clearStoredTokens();
   queryClient.clear();
-  useSportQueue.getState().reset();
-  useCompletedRuns.getState().reset();
+  useOnboardingPass.getState().reset();
   held = [];
 });
 

@@ -33,9 +33,8 @@ import {
 } from '@/test-support/transport';
 
 import { onboardingKeys } from '../hooks/onboardingKeys';
-import { useCompletedRuns } from '../store/completedRuns.store';
 import { useDeferredRuns } from '../store/deferredRuns.store';
-import { useSportQueue } from '../store/sportQueue.store';
+import { useOnboardingPass } from '../store/onboardingPass.store';
 
 const PADEL_RUN = '1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6';
 const TENNIS_RUN = '2a1b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d';
@@ -139,9 +138,8 @@ beforeEach(async () => {
   wireHttpCredentials(refreshTokens);
   await clearStoredTokens();
   queryClient.clear();
-  useSportQueue.getState().reset();
+  useOnboardingPass.getState().reset();
   useDeferredRuns.getState().reset();
-  useCompletedRuns.getState().reset();
 });
 
 afterEach(() => {
@@ -158,9 +156,8 @@ afterEach(() => {
 async function relaunch(initialUrl = '/') {
   cleanup();
   queryClient.clear();
-  useSportQueue.getState().reset();
+  useOnboardingPass.getState().reset();
   useDeferredRuns.getState().reset();
-  useCompletedRuns.getState().reset();
   resetSessionStatus();
   await launchSignedIn(initialUrl);
 }
@@ -405,7 +402,7 @@ describe('abandoning a sport', () => {
     // done screen accounts for the rating they did make, and the data screen says what
     // was kept and that no one can hand-edit a Level. Ending on an abandonment is not a
     // reason to be told none of it.
-    useCompletedRuns.getState().record({ assessmentId: PADEL_RUN, sport: 'padel' });
+    useOnboardingPass.getState().record({ assessmentId: PADEL_RUN, sport: 'padel' });
 
     stubGate({ runs: [runInProgress('TENNIS', TENNIS_RUN)] });
     transport.on('GET', stepPath(TENNIS_RUN), () => json(TENNIS_OPENING));

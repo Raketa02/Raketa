@@ -61,11 +61,10 @@ import {
 
 import type { AssessmentResult } from '../domain/AssessmentResult';
 import type { Sport } from '../domain/Sport';
-import { nextSport, ratingPosition } from '../domain/sportQueue';
+import { nextDestination, positionOf } from '../domain/onboardingPass';
 import { useAssessment } from '../hooks/useAssessment';
 import { useStartAssessment } from '../hooks/useStartAssessment';
-import { useCompletedRuns } from '../store/completedRuns.store';
-import { useSportQueue } from '../store/sportQueue.store';
+import { useOnboardingPass } from '../store/onboardingPass.store';
 
 import { EvidenceTrail } from './EvidenceTrail';
 import { OnboardingChrome } from './OnboardingChrome';
@@ -132,10 +131,14 @@ export function ResultScreen({ assessmentId, sport }: ResultScreenProps) {
   const router = useRouter();
   const assessment = useAssessment(assessmentId);
   const start = useStartAssessment();
-  const queue = useSportQueue((state) => state.queue);
-  const position = ratingPosition(queue, sport);
-  const next = nextSport(queue, sport);
-  const recordRun = useCompletedRuns((state) => state.record);
+  const pass = useOnboardingPass((state) => state.pass);
+  const position = positionOf(pass, sport);
+  // Which sport is offered is the pass's answer, not a second reading of the queue. With
+  // nothing after this one there is nothing to offer — see `finish` below for where the
+  // player goes instead.
+  const onwards = nextDestination(pass, sport);
+  const next = onwards.kind === 'rate' ? onwards.sport : undefined;
+  const recordRun = useOnboardingPass((state) => state.record);
 
   // One ref per mark: the popover anchors to the mark it was opened from and returns
   // focus to it on close, which is one prop doing both jobs.

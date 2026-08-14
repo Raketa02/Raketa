@@ -20,12 +20,12 @@ import type { ReactNode } from 'react';
 
 import { Bar, ScreenHeader, theme } from '@/shared/ui';
 
-import type { RatingPosition } from '../domain/sportQueue';
+import type { RatingPosition } from '../domain/onboardingPass';
 
 export interface OnboardingChromeProps {
   readonly title: string;
   readonly eyebrow?: string;
-  /** Absent before a queue exists — welcome and the picker have nothing to measure. */
+  /** Absent before a pass exists — welcome and the picker have nothing to measure. */
   readonly position?: RatingPosition;
   /** The header's right slot. Never a back control — see above. */
   readonly right?: ReactNode;

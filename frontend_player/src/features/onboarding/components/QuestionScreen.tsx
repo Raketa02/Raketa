@@ -53,14 +53,13 @@ import {
 
 import type { AnswerOption } from '../domain/Assessment';
 import type { Sport } from '../domain/Sport';
-import { nextSport, ratingPosition } from '../domain/sportQueue';
+import { nextDestination, positionOf } from '../domain/onboardingPass';
 import { useAbandonAssessment } from '../hooks/useAbandonAssessment';
 import { useAnswerQuestion } from '../hooks/useAnswerQuestion';
 import { useAssessment } from '../hooks/useAssessment';
 import { useStartAssessment } from '../hooks/useStartAssessment';
-import { useCompletedRuns } from '../store/completedRuns.store';
 import { useDeferredRuns } from '../store/deferredRuns.store';
-import { useSportQueue } from '../store/sportQueue.store';
+import { useOnboardingPass } from '../store/onboardingPass.store';
 
 import { LeaveAssessmentSheet } from './LeaveAssessmentSheet';
 import { OnboardingChrome } from './OnboardingChrome';
@@ -82,10 +81,10 @@ export function QuestionScreen({ assessmentId, sport }: QuestionScreenProps) {
   const answer = useAnswerQuestion(assessmentId);
   const abandon = useAbandonAssessment(assessmentId);
   const start = useStartAssessment();
-  const queue = useSportQueue((state) => state.queue);
+  const pass = useOnboardingPass((state) => state.pass);
   const defer = useDeferredRuns((state) => state.defer);
 
-  const position = ratingPosition(queue, sport);
+  const position = positionOf(pass, sport);
   const step = assessment.data;
   const question = step?.question;
   /**
@@ -134,35 +133,26 @@ export function QuestionScreen({ assessmentId, sport }: QuestionScreenProps) {
   const departing = useRef(false);
 
   /**
-   * The end of onboarding, or the next sport the player chose.
+   * Out of this sport, wherever the pass says that is: the next sport the player chose,
+   * the closing screens, or the app. **The decision is `nextDestination`'s** — which
+   * route expresses each answer is this layer's, and nothing here recomputes the rule.
    *
-   * The queue is not edited as sports are dealt with, so *which* sport comes next is
-   * `nextSport`'s to answer (a sport that was abandoned was still chosen, and still
-   * counts in the progress bar). With nothing after it the flow leaves onboarding, and
-   * the entry gate decides where that lands — exactly as it does from the result screen.
-   *
-   * **Where "nothing after it" lands depends on what the run produced.** Abandoning is
-   * the player saying stop, and it is still the end of the run: if any sport was rated
-   * along the way, they leave through the same closing screens as the player who
-   * finished — the done screen accounts for the ratings they made, and the data screen
-   * says what was kept, what is never done with it, and that no one can hand-edit a
-   * Level. Ending on an abandonment is not a reason to be told none of that.
-   *
-   * When the run produced nothing, it goes straight to the app. There is no account to
-   * give, `/done` has only its empty state to show, and answering *stop* with two more
-   * screens would be the wrong response to what the player just asked for.
+   * The result screen holds the same three-way move, and the two copies have already
+   * diverged over what a failed start does. #50 gives the feature one hook that owns the
+   * whole transition; until then this is the half that has an error branch.
    */
-  const completedRuns = useCompletedRuns((state) => state.completed);
   const startNext = start.mutate;
   const leaveTheQuestionnaire = useCallback(() => {
     if (departing.current) return;
     departing.current = true;
 
-    const next = nextSport(queue, sport);
-    if (next === undefined) {
-      router.replace(completedRuns.length > 0 ? '/done' : '/');
+    const destination = nextDestination(pass, sport);
+    if (destination.kind !== 'rate') {
+      router.replace(destination.kind === 'closing' ? '/done' : '/');
       return;
     }
+
+    const next = destination.sport;
     startNext(next, {
       onSuccess: (opening) =>
         router.replace({
@@ -176,7 +166,7 @@ export function QuestionScreen({ assessmentId, sport }: QuestionScreenProps) {
         departing.current = false;
       },
     });
-  }, [queue, sport, router, startNext, completedRuns]);
+  }, [pass, sport, router, startNext]);
 
   // The run is over: the outstanding question is gone and a rating exists. `replace`,
   // because the questionnaire has no way back — this is the one exit from the loop.

@@ -30,7 +30,7 @@ import {
   type Wire,
 } from '@/test-support/transport';
 
-import { useSportQueue } from '../store/sportQueue.store';
+import { useOnboardingPass } from '../store/onboardingPass.store';
 
 const ASSESSMENT_ID = '1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6';
 const ANSWERS_PATH = `/api/v1/assessments/${ASSESSMENT_ID}/answers`;
@@ -128,7 +128,7 @@ beforeEach(async () => {
   wireHttpCredentials(refreshTokens);
   await clearStoredTokens();
   queryClient.clear();
-  useSportQueue.getState().reset();
+  useOnboardingPass.getState().reset();
 });
 
 afterEach(() => {

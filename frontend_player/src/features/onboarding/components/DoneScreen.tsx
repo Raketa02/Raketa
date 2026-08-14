@@ -1,11 +1,12 @@
 /**
- * The done screen: everything this run produced, in one place, and what it is worth.
+ * The done screen: everything this onboarding pass produced, in one place, and what it is
+ * worth.
  *
  * **The cards are what the player just walked through, not what they are rated at.** The
  * two differ for anyone who arrived here with a rating already — a resumed tennis run
  * belonging to a player rated at padel — and this screen answers the first question. The
- * runs come from the store that recorded them; every number in a card is Query's, read
- * back through the key the result screen filled.
+ * runs are the pass's, which is the concept that records them; every number in a card is
+ * Query's, read back through the key the result screen filled.
  *
  * **The sentence under the cards is the point of the screen.** A player who leaves
  * believing their Level is a judgement has been mis-served by it: these are hypotheses,
@@ -31,7 +32,7 @@ import { Button, Card, Hairline, Note, Row, theme } from '@/shared/ui';
 
 import { confidenceLimit, type ConfidenceLimit } from '../domain/confidenceLimit';
 import { useRunResults, type RunResult } from '../hooks/useRunResults';
-import { useCompletedRuns } from '../store/completedRuns.store';
+import { useOnboardingPass } from '../store/onboardingPass.store';
 
 import { OnboardingChrome } from './OnboardingChrome';
 import { ratingStatusLabel } from './bandPresentation';
@@ -59,8 +60,8 @@ const CONFIDENCE_LIMIT_NOTE: Readonly<Record<ConfidenceLimit, (ceiling: number) 
 
 export function DoneScreen() {
   const router = useRouter();
-  const completed = useCompletedRuns((state) => state.completed);
-  const results = useRunResults(completed);
+  const rated = useOnboardingPass((state) => state.pass.rated);
+  const results = useRunResults(rated);
 
   // Which engine produced these, said out loud, because the data screen claims it is kept
   // and a claim the player can check is worth more than one they cannot. Deduplicated:
@@ -82,7 +83,7 @@ export function DoneScreen() {
       <OnboardingChrome eyebrow="Rakieta" title="Your starting ratings" />
 
       <ScrollView contentContainerStyle={s.content}>
-        {completed.length === 0 ? (
+        {rated.length === 0 ? (
           <Note variant="amber">
             There are no ratings from this session to show. You can rate any sport whenever you
             like.
