@@ -1,5 +1,5 @@
 // Learn more: https://docs.expo.dev/guides/customizing-metro/
-const { getDefaultConfig } = require("expo/metro-config");
+const { getDefaultConfig } = require('expo/metro-config');
 
 // NOTE: this app owns its own node_modules and shares no workspace packages with
 // frontend_club (ADR-0005). That is why there is no `watchFolders` /

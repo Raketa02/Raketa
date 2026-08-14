@@ -1,9 +1,9 @@
 ---
 paths:
-  - "src/shared/lib/auth/**"
-  - "src/shared/lib/http/**"
-  - "src/shared/lib/bootstrap/**"
-  - "src/app/(auth)/**"
+  - 'src/shared/lib/auth/**'
+  - 'src/shared/lib/http/**'
+  - 'src/shared/lib/bootstrap/**'
+  - 'src/app/(auth)/**'
 ---
 
 # Auth, in four rules that are easy to get wrong
@@ -12,8 +12,8 @@ paths:
    Ten parallel refreshes rotate each other out and log the user out at random.
 2. **Retry an authenticated request exactly once.** The retry carries a flag saying refresh
    was attempted; a second 401 terminates the session instead of looping forever.
-3. **Rejected ≠ unreachable.** A refresh the auth server *rejects* clears credentials and
-   caches. A refresh that *times out* preserves them — losing signal in a lift is not a
+3. **Rejected ≠ unreachable.** A refresh the auth server _rejects_ clears credentials and
+   caches. A refresh that _times out_ preserves them — losing signal in a lift is not a
    logout.
 4. **Logout is a system operation.** Revoke → clear memory → delete keychain → cancel
    in-flight requests → `queryClient.cancelQueries()` + `clear()` → reset sensitive UI state

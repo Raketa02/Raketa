@@ -4,7 +4,12 @@ from uuid import UUID
 
 import jwt
 
-from app.core.exception_handlers import UnauthorizedError
+from app.modules.auth.domain.errors import (
+    AccessTokenExpired,
+    AccessTokenInvalid,
+    AccessTokenMissing,
+    AccessTokenSubjectMalformed,
+)
 from app.modules.auth.domain.ports import TokenService
 from app.modules.users.application.get_current_user import GetCurrentUser
 from app.modules.users.domain.user import User
@@ -23,18 +28,18 @@ class ResolveCurrentUserFromAccessToken:
 
     async def execute(self, raw_token: str | None) -> User:
         if not raw_token:
-            raise UnauthorizedError("missing bearer token")
+            raise AccessTokenMissing()
 
         try:
             payload = self._token_service.decode_access(raw_token)
         except jwt.ExpiredSignatureError as exc:
-            raise UnauthorizedError("access token expired") from exc
+            raise AccessTokenExpired() from exc
         except jwt.InvalidTokenError as exc:
-            raise UnauthorizedError("invalid access token") from exc
+            raise AccessTokenInvalid() from exc
 
         try:
             user_id = UUID(payload["sub"])
         except (KeyError, ValueError) as exc:
-            raise UnauthorizedError("malformed token subject") from exc
+            raise AccessTokenSubjectMalformed() from exc
 
         return await self._get_current_user.execute(user_id)

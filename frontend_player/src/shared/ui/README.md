@@ -5,7 +5,7 @@ starts to know about courts, bookings or matches, it belongs in a feature instea
 
 **The rules live in [`../../../docs/design-system.md`](../../../docs/design-system.md).**
 Read it before adding anything here — in particular its Part 0, which separates the
-prototype's *harness* from the product. The decision is
+prototype's _harness_ from the product. The decision is
 [ADR-0012](../../../../docs/adr/0012-player-app-design-system.md).
 
 ## `theme.ts` — the source of values
@@ -36,7 +36,7 @@ design-system doc, in the same commit.
 ## Four React Native traps this system exists to prevent
 
 1. **`fontWeight` is ignored on Android** when a custom `fontFamily` is set. Weight is a
-   *family name*: use `theme.font.sans[700]`, never `fontWeight: '700'`. This is the most
+   _family name_: use `theme.font.sans[700]`, never `fontWeight: '700'`. This is the most
    common way an RN app silently loses its typography on one platform.
 2. **`letterSpacing` and `lineHeight` are in points**, not em or multiples. `theme.type`
    and `theme.num` carry pre-converted values — never re-derive them.
@@ -72,3 +72,27 @@ This folder is deliberately not pre-populated, with one exception worth knowing:
 **match card**, the **state card**, the **level bar** and the **popover** are shared
 components from the start. The prototype maintained a second copy of each in its deck and
 recorded that they had drifted — one implementation, used everywhere.
+
+Built so far, by the onboarding slice: `Button`, `Card` (+ `PressableCard`), `Note`,
+`Bar`, `ScreenHeader`, `Tag`, `Hairline`, `BottomSheet`, `CloseControl`, `DarkCard`,
+`Row`, `LevelBar`, `ConfidenceRing`, `Popover` (+ `InfoMark`) and `InfoGlyph`. Import them
+from `@/shared/ui`.
+
+**Overlays.** `BottomSheet` and `Popover` are both real modals, and 9.1's and 7.6's "it is
+a real modal" is three separate obligations rather than one prop — read `overlay.ts` and
+either docblock before adding a third. Two of them are the caller's: the screen behind
+spreads `behindOverlay(open)`, and the overlay is rendered as that screen's _sibling_,
+never inside it. `CloseControl` is 9.1's close circle, shared because the header control
+that opens a sheet, the sheet's own close and the popover's are the same 28pt object;
+`InfoGlyph` is shared for the same reason between the info note and the popover's mark.
+
+**Drawn objects.** `LevelBar` (7.5) and `ConfidenceRing` (7.8) are geometry, not styling —
+their values are `theme.size.levelBar` and `theme.size.ring*`, and both keep a fixed scale
+(1,00–5,00 and 0–100) so a value lands in the same place on every screen that draws one.
+`ConfidenceRing` is the only component that needs `react-native-svg`. Both take a
+`variant`/repaint for the dark card, because React Native has no colour cascade.
+
+**A feature never keeps a second copy of one of these.** If a primitive does not do what
+a screen needs, extend the primitive — the two auth-form controls that remain in
+`features/auth/components/AuthControls.tsx` are there because the design system genuinely
+specifies no text field and no _ended badly_ note variant, and each says so in place.

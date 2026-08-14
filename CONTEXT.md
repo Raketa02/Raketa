@@ -17,7 +17,81 @@ event sourcing.
 
 ## Part 1 — Implemented bounded contexts
 
-These exist in `backend/app/modules/` today and are the authority for their terms.
+These exist in `backend/app/` today and are the authority for their terms.
+
+### Skill rating (`backend/app/modules/rating/`)
+
+What the platform believes about how well a player plays one sport, and how sure it is.
+A rating is **never only a number**.
+
+- **Skill rating** — an **event-sourced aggregate**, one per (player, sport).
+- **Level (μ)** — the current best estimate on a fixed **1,0–5,0** scale. Public. **5,0 does
+  not mean professional**; it means at or above the top of the competitive amateur
+  population this marketplace exists to match.
+- **Uncertainty (σ)** — how unsure the platform is. **Skill and certainty are separate
+  variables**: two players both showing 3,0, at ±0,15 and ±0,90, are not the same player,
+  and matchmaking reads the record rather than the headline.
+- **Confidence** — σ restated as a percentage for the player, `100 × (1 − σ/1,20)`, capped
+  at 99. **Never 100** — the platform cannot claim total certainty about anybody.
+- **Likely range** — μ ± σ, clamped to the scale. The player's own range, and the only
+  range shown to them; a band's numeric edges are not a second range to compare it against.
+- **Band** — one of four named ranges, deliberately uneven in width, each with a
+  plain-language meaning: **New** 1,0–1,5 · **Developing** 1,6–2,6 · **Established**
+  2,7–3,8 · **Advanced** 3,9–5,0.
+- **Rating status** — **Initial Estimate** (onboarding output, no counted matches) →
+  **Calibrating** (real matches started, still moving) → **Stable**.
+- **Volatility** — how fast the estimate currently appears to be moving.
+- **Assessment** — an **event-sourced aggregate**: one adaptive questionnaire run, for one
+  player and one sport. Its event stream *is* the transcript the engine reads.
+- **Claim** / **demonstration** — every answer is one or the other. A claim is a statement
+  about standing (how often you play, what you compete in, how you do against your usual
+  group). A demonstration is a statement about what you do inside a point.
+- **Contradiction** — a gap beyond tolerance between fused claims and fused demonstrations.
+  *"I regularly compete in strong club matches"* against *"I almost never maintain a basic
+  rally"* is one. A strong smash and a weak backhand is not — that is an **uneven profile**,
+  and it widens the range without being called a contradiction.
+- **Layoff** — declared time away from the sport, asked only of players with a history.
+- **Evidence trail** — the account a rating gives of itself: what the platform concluded
+  and why. It has two halves and they are deliberately kept apart, because they answer
+  different questions. **What moved the level** — each kind of evidence the player gave,
+  fused on its own, and where that sits relative to the estimate they were given. **What
+  widened the range** — a layoff, a contradiction, an uneven profile, each reporting how
+  much uncertainty it actually added. Something that widened the range did not move the
+  level, and saying otherwise would describe a different rating than the one produced.
+- **Calibration priority** — how urgently a rating wants real matches to settle it. Raised
+  when the assessment ended on evidence the questionnaire could not resolve. It is a
+  statement about the *estimate*, never about the player, and it changes who they are
+  matched with, never where they sit.
+
+**Invariants**
+- **A level is proved, never declared.** Not by the player, not by staff, not by a club.
+  Manual editing is refused by the domain itself, not guarded by a permission check.
+- **Only the rating context writes μ, σ, volatility and status.** Every other engine
+  contributes evidence, an information weight, or an anomaly signal — never a rating point.
+- **Absence widens, it never lowers.** Layoff and inactivity add to σ and never touch μ. A
+  player who was 3,20 two years ago has no obligation to still be 3,20 — and no obligation
+  to have got worse. The honest position is *we are less sure*, not *we assume decline*.
+- **A contradiction is never resolved by picking a side.** It widens the range and raises
+  calibration priority; it never moves the player up or down, and it never accuses them.
+  Resolution has no direction, which is what stops under-reporting being profitable.
+- **Onboarding cannot produce confidence above 30%.** The questionnaire is the entire
+  evidence surface and self-report has an irreducible ceiling, enforced as a floor on σ
+  rather than as a display cap. Everyone leaves onboarding as an *Initial Estimate*.
+- **A rating explains itself, and the explanation is computed, never authored.** Which way
+  a kind of evidence pulled is decided by comparing it against the estimate, and which
+  reason is given for the confidence is decided by whichever thing widened the range most.
+  Nobody writes down that standing pulled a player up; the arithmetic says so, or it does
+  not. Retuning a constant therefore moves the explanation with it, and an explanation
+  cannot quietly drift out of step with the number it explains.
+- **A rating carries the engine version that produced it.** Every constant in the engine is
+  a hypothesis with a measurement that would falsify it — and you cannot falsify one you
+  cannot attribute a rating back to.
+- **There is no *onboarded player*.** Onboarding is not a state a player is in or out of;
+  it is how a Skill rating comes to exist, and a rating is per sport. A player can be rated
+  at padel and unrated at tennis at the same moment, indefinitely. Anything that needs to
+  know "has this player been through onboarding" is really asking "does a rating exist for
+  this sport", and must ask it that way — a per-player onboarding flag would be a second,
+  coarser truth about the same fact.
 
 ### Users (`backend/app/modules/users/`)
 
@@ -27,6 +101,12 @@ Identity and account state.
   events. Constructed only via `User.register(...)` or rehydrated via
   `User.from_history(events)`. Carries an `EventRecorder`; the application layer drains
   pending events with `pull_events()`.
+- **Player** — a User acting in the player app. **Not a separate aggregate and not a
+  separate id**: a player's identity *is* the `UserId`. `PlayerId` exists as a distinct
+  type so the code reads in the domain's own vocabulary and so the two have one place to
+  diverge, but today every `PlayerId` is a `UserId`. There is no `players` table.
+  Revisit only if a person can be known to the system as a participant without holding an
+  account, or if club staff share this accounts system — neither is true today.
 - **Authority** — role enum, `USER` or `ADMIN`.
 - **Email** — value object. Trimmed, lower-cased, RFC-ish validated, ≤ 320 chars.
 - **Nickname** — value object. Trimmed, 2–64 chars, `[A-Za-z0-9_.-]`.
@@ -71,6 +151,36 @@ Authentication and session lifecycle.
 - `revoke()` / `rotate_to()` are no-ops on an already-invalid token.
 - Login returns **the same error** for unknown-email and wrong-password
   (`InvalidCredentials`) — no account enumeration.
+
+### Shared kernel (`backend/app/kernel/`)
+
+The dependency-free ring that every bounded context and every engine reads verbatim and
+none may redefine ([ADR-0015](docs/adr/0015-engines-as-a-pure-versioned-layer.md)).
+
+- **Sport** — a **closed enum** of exactly four values: `PADEL`, `TENNIS`, `SQUASH`,
+  `BADMINTON`. Adding a sport is a code change and a release, never a row. A club's sport
+  list *filters* this registry and never extends or overrides it.
+- **SportSpec** — the frozen per-sport facts: `players` (how many the sport is played for)
+  and `durations` (the bookable lengths in minutes). Served read-only over the player API at
+  `GET /api/v1/sports` so neither client hardcodes it.
+- **There is no `Format`.** One rating per sport, one question bank per sport, worded for how
+  that sport is actually played — padel and badminton as doubles, tennis and squash as
+  singles. *Padel singles* and *tennis doubles* are not terms in this system.
+
+| Sport | players | durations (min) |
+| --- | --- | --- |
+| PADEL | 4 | 60 / 90 / 120 |
+| TENNIS | 2 | 60 / 90 |
+| SQUASH | 2 | 45 / 60 / 90 |
+| BADMINTON | 4 | 60 / 90 |
+
+**Invariants**
+- **A sport's player count is never club-configurable.** No field on any club or court may
+  override it; the value is read from exactly one place, everywhere. A club cannot sell a
+  two-player padel match because the registry forbids it structurally, not by convention.
+- **Reintroducing `Format` would be a new decision, not a gap someone should fill in.**
+  Its absence is deliberate and load-bearing: one rating per sport is what let onboarding
+  drop cross-sport transfer and the singles/doubles link entirely.
 
 ---
 

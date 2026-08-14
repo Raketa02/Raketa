@@ -35,7 +35,7 @@ async def test_signup_duplicate_email(client, valid_signup_payload):
     dup = {**valid_signup_payload, "nickname": "alice2"}
     resp = await client.post("/api/v1/users", json=dup)
     assert resp.status_code == 409
-    assert resp.json()["error"] == "conflict"
+    assert resp.json()["code"] == "email_already_registered"
 
 
 @pytest.mark.asyncio

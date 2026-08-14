@@ -16,10 +16,10 @@
 
 # Rakieta — Design System, Theming and Visual Specification
 
-*Derived from `rakieta-player-app-prototype-v34.html`, cross-checked against
+_Derived from `rakieta-player-app-prototype-v34.html`, cross-checked against
 `rakieta-player-deck-v34.html`. Every token, class and measurement in this document is read
 from the implementation. Where the prototype and the deck differ, the prototype wins and the
-difference is noted.*
+difference is noted._
 
 ---
 
@@ -50,12 +50,12 @@ button, the level mark on the band bar, the active rail item, the FAB, the timel
 `--mint`, `--amber`, `--red` and `--info` each mean one thing and are never used to make
 something look nice:
 
-| Token | Means |
-|---|---|
-| `--mint` | Settled, safe, covered, confirmed |
+| Token     | Means                                  |
+| --------- | -------------------------------------- |
+| `--mint`  | Settled, safe, covered, confirmed      |
 | `--amber` | Watch this — reversible, not yet wrong |
-| `--red` | Ended badly |
-| `--info` | Explanation, not status |
+| `--red`   | Ended badly                            |
+| `--info`  | Explanation, not status                |
 
 `--info` is `#12495B`, the deep teal already in the palette, rather than a new blue. The palette
 does not grow to accommodate a new meaning; a meaning is assigned to a colour already present.
@@ -86,17 +86,17 @@ All defined on `:root`. Twenty-six tokens, no more.
 
 ### 2.1 Surfaces and structure
 
-| Token | Value | Role |
-|---|---|---|
-| `--paper` | `#F4F2ED` | App background. Warm off-white |
-| `--paper2` | `#EDEAE3` | Recessed surface — the situation block in a question, the popover close button |
-| `--surface` | `#FFFFFF` | Declared, but cards use literal `#fff` |
-| `--ink` | `#101B20` | Body text, selected chip, `.tsq.on` |
-| `--night` | `#0A3441` | Dark cards, avatars, fit badge, meter fill, toast |
-| `--night2` | `#12495B` | Secondary dark, panel body text in the deck |
-| `--muted` | `#6E7F85` | Secondary text, `.tiny`, eyebrows, disabled |
-| `--line` | `#E5E1D8` | Card borders, chip borders, dividers |
-| `--line2` | `#F0EDE6` | Hairlines inside cards, tag backgrounds, inactive tracks |
+| Token       | Value     | Role                                                                           |
+| ----------- | --------- | ------------------------------------------------------------------------------ |
+| `--paper`   | `#F4F2ED` | App background. Warm off-white                                                 |
+| `--paper2`  | `#EDEAE3` | Recessed surface — the situation block in a question, the popover close button |
+| `--surface` | `#FFFFFF` | Declared, but cards use literal `#fff`                                         |
+| `--ink`     | `#101B20` | Body text, selected chip, `.tsq.on`                                            |
+| `--night`   | `#0A3441` | Dark cards, avatars, fit badge, meter fill, toast                              |
+| `--night2`  | `#12495B` | Secondary dark, panel body text in the deck                                    |
+| `--muted`   | `#6E7F85` | Secondary text, `.tiny`, eyebrows, disabled                                    |
+| `--line`    | `#E5E1D8` | Card borders, chip borders, dividers                                           |
+| `--line2`   | `#F0EDE6` | Hairlines inside cards, tag backgrounds, inactive tracks                       |
 
 `--surface` is defined and never used — a small inconsistency; cards are written as `#fff`.
 
@@ -105,33 +105,33 @@ All defined on `:root`. Twenty-six tokens, no more.
 Each semantic colour ships as a **triplet**: the colour, a soft background, and where needed an
 ink variant for text on that background.
 
-| Token | Value | Used for |
-|---|---|---|
-| `--coral` | `#E8482B` | The single accent |
-| `--coral-soft` | `#FDEBE6` | Backgrounds behind coral messaging |
-| `--coral-ink` | `#B8351C` | Text on `--coral-soft` (`.tag.hot`) |
-| `--mint` | `#0C8F6B` | Good, settled, covered |
-| `--mint-soft` | `#E2F3EC` | Free time slots, ok tags |
-| `--amber` | `#9A6A0B` | Caution, reversible |
-| `--amber-soft` | `#FBF0DA` | Caution backgrounds |
-| `--red` | `#B4392C` | Failure |
-| `--red-soft` | `#FBEAE7` | Failure backgrounds |
-| `--volt` | `#D9F24B` | Rail group headers, confidence ring, active info mark. **Only on dark** |
-| `--info` | `#12495B` | Explanatory notes |
-| `--info-soft` | `#EAF1F4` | Explanatory backgrounds |
-| `--info-line` | `#C7DBE3` | Explanatory borders |
+| Token          | Value     | Used for                                                                |
+| -------------- | --------- | ----------------------------------------------------------------------- |
+| `--coral`      | `#E8482B` | The single accent                                                       |
+| `--coral-soft` | `#FDEBE6` | Backgrounds behind coral messaging                                      |
+| `--coral-ink`  | `#B8351C` | Text on `--coral-soft` (`.tag.hot`)                                     |
+| `--mint`       | `#0C8F6B` | Good, settled, covered                                                  |
+| `--mint-soft`  | `#E2F3EC` | Free time slots, ok tags                                                |
+| `--amber`      | `#9A6A0B` | Caution, reversible                                                     |
+| `--amber-soft` | `#FBF0DA` | Caution backgrounds                                                     |
+| `--red`        | `#B4392C` | Failure                                                                 |
+| `--red-soft`   | `#FBEAE7` | Failure backgrounds                                                     |
+| `--volt`       | `#D9F24B` | Rail group headers, confidence ring, active info mark. **Only on dark** |
+| `--info`       | `#12495B` | Explanatory notes                                                       |
+| `--info-soft`  | `#EAF1F4` | Explanatory backgrounds                                                 |
+| `--info-line`  | `#C7DBE3` | Explanatory borders                                                     |
 
 `--volt` is the one colour that only ever appears on a dark surface. It is illegible on paper
 and is never used there.
 
 ### 2.3 Sport identity
 
-| Sport | Token | Value | Shares with |
-|---|---|---|---|
-| Padel | `--pad` | `#E8482B` | `--coral` |
-| Tennis | `--ten` | `#0C8F6B` | `--mint` |
-| Squash | `--squ` | `#12495B` | `--info` / `--night2` |
-| Badminton | `--bad` | `#9A6A0B` | `--amber` |
+| Sport     | Token   | Value     | Shares with           |
+| --------- | ------- | --------- | --------------------- |
+| Padel     | `--pad` | `#E8482B` | `--coral`             |
+| Tennis    | `--ten` | `#0C8F6B` | `--mint`              |
+| Squash    | `--squ` | `#12495B` | `--info` / `--night2` |
+| Badminton | `--bad` | `#9A6A0B` | `--amber`             |
 
 Sport colours **reuse the semantic palette rather than extending it**. This is a deliberate
 constraint: four more hues would have made every screen with a sport dot on it noisier, and the
@@ -145,12 +145,12 @@ adjacent in a way that could confuse, but a fifth sport would force a real decis
 
 Not CSS variables — a JS constant, because the bar needs both a tint and a deep value per band.
 
-| Band | Range | Tint | Deep |
-|---|---|---|---|
-| New | 1,0–1,55 | `#9AA8AD` | `#7E8C92` |
-| Developing | 1,55–2,65 | `#7FB3CC` | `#4E8FAE` |
+| Band        | Range     | Tint      | Deep      |
+| ----------- | --------- | --------- | --------- |
+| New         | 1,0–1,55  | `#9AA8AD` | `#7E8C92` |
+| Developing  | 1,55–2,65 | `#7FB3CC` | `#4E8FAE` |
 | Established | 2,65–3,85 | `#6FC5A8` | `#3FA184` |
-| Advanced | 3,85–5,0 | `#F0A08A` | `#D9714F` |
+| Advanced    | 3,85–5,0  | `#F0A08A` | `#D9714F` |
 
 These are drawing boundaries and are **contiguous**; the model's documented band edges have gaps
 (1,0–1,5 / 1,6–2,6 / 2,7–3,8 / 3,9–5,0). The rating carries `bandLo`/`bandHi` so the card prints
@@ -158,16 +158,16 @@ the model's values, never the drawing values.
 
 ### 2.5 Fixed colours outside the token set
 
-| Value | Where |
-|---|---|
-| `#08222B` | `html, body` — the stage behind everything |
-| `#071C24` | Scenario rail and mobile top bar |
-| `#0B2B36` | Mobile time bar |
-| `#24505E` | Phone frame border |
-| `#BFE0D2` | Free-slot border (a mint-soft companion, not tokenised) |
-| `#C7D3D1` | *(removed in v34 — the band bar's grey span became `#5C6B70`)* |
-| `#5C6B70` | The likely-range bracket on light backgrounds |
-| `#CFE7DD` / `#F3CFC5` / `#EFDCB8` | Note border companions for mint / coral / amber |
+| Value                             | Where                                                          |
+| --------------------------------- | -------------------------------------------------------------- |
+| `#08222B`                         | `html, body` — the stage behind everything                     |
+| `#071C24`                         | Scenario rail and mobile top bar                               |
+| `#0B2B36`                         | Mobile time bar                                                |
+| `#24505E`                         | Phone frame border                                             |
+| `#BFE0D2`                         | Free-slot border (a mint-soft companion, not tokenised)        |
+| `#C7D3D1`                         | _(removed in v34 — the band bar's grey span became `#5C6B70`)_ |
+| `#5C6B70`                         | The likely-range bracket on light backgrounds                  |
+| `#CFE7DD` / `#F3CFC5` / `#EFDCB8` | Note border companions for mint / coral / amber                |
 
 ---
 
@@ -183,9 +183,19 @@ the model's values, never the drawing values.
 them.
 
 ```css
-body { font-family:'Archivo', system-ui, sans-serif; -webkit-font-smoothing:antialiased }
-.mono { font-family:'IBM Plex Mono', ui-monospace, monospace; font-variant-numeric:tabular-nums }
-.num  { font-weight:700; letter-spacing:-.035em; font-variant-numeric:tabular-nums }
+body {
+  font-family: 'Archivo', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+.mono {
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+.num {
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  font-variant-numeric: tabular-nums;
+}
 ```
 
 `.num` is the **display number** treatment — it does not change the family, only the weight and
@@ -195,39 +205,48 @@ tracking. It is almost always combined with `.mono`: `class="mono num"`.
 
 There is no modular ratio. Sizes are chosen per role and there are only nine of them.
 
-| Class | Size | Weight | Tracking | Line | Role |
-|---|---|---|---|---|---|
-| `.h1` | 19px | 700 | −.03em | — | Screen title in `.pbar` |
-| `.h2` | 15px | 700 | −.025em | — | Card and section title |
-| — | 13px | 600–700 | — | — | Card title inline (`<b style="font-size:13px">`) |
-| — | 12.5px | 600–700 | — | — | The most common inline title size |
-| `.rl` | 11.5px | 400/600 | — | — | Row label and value |
-| `.tiny` | 11px | 400 | — | 1.45 | Secondary text everywhere |
-| `.eyebrow` | 9.5px | 700 | .15em | — | Uppercase section label |
-| `.flab` | 10.5px | 700 | .09em | — | **Form label** — uppercase, `--night`, not muted |
-| `.tag` | 9.5px | 700 | — | — | Pill text |
+| Class      | Size   | Weight  | Tracking | Line | Role                                             |
+| ---------- | ------ | ------- | -------- | ---- | ------------------------------------------------ |
+| `.h1`      | 19px   | 700     | −.03em   | —    | Screen title in `.pbar`                          |
+| `.h2`      | 15px   | 700     | −.025em  | —    | Card and section title                           |
+| —          | 13px   | 600–700 | —        | —    | Card title inline (`<b style="font-size:13px">`) |
+| —          | 12.5px | 600–700 | —        | —    | The most common inline title size                |
+| `.rl`      | 11.5px | 400/600 | —        | —    | Row label and value                              |
+| `.tiny`    | 11px   | 400     | —        | 1.45 | Secondary text everywhere                        |
+| `.eyebrow` | 9.5px  | 700     | .15em    | —    | Uppercase section label                          |
+| `.flab`    | 10.5px | 700     | .09em    | —    | **Form label** — uppercase, `--night`, not muted |
+| `.tag`     | 9.5px  | 700     | —        | —    | Pill text                                        |
 
 Display sizes are inline rather than classed:
 
-| Size | Where |
-|---|---|
-| 40px | The estimated level on the onboarding result card |
-| 26px | Level on comparison cards |
-| 22px / 20px / 19px | Numbers in panels and summaries |
-| 17px / 14px / 13.5px | `.num` in rows and prices |
+| Size                 | Where                                             |
+| -------------------- | ------------------------------------------------- |
+| 40px                 | The estimated level on the onboarding result card |
+| 26px                 | Level on comparison cards                         |
+| 22px / 20px / 19px   | Numbers in panels and summaries                   |
+| 17px / 14px / 13.5px | `.num` in rows and prices                         |
 
 ### 3.3 Why `.flab` exists separately from `.eyebrow`
 
 They look almost identical and mean different things:
 
 ```css
-.eyebrow { font-size:9.5px; letter-spacing:.15em; color:var(--muted) }
-.flab    { font-size:10.5px; letter-spacing:.09em; color:var(--night); margin-bottom:7px }
+.eyebrow {
+  font-size: 9.5px;
+  letter-spacing: 0.15em;
+  color: var(--muted);
+}
+.flab {
+  font-size: 10.5px;
+  letter-spacing: 0.09em;
+  color: var(--night);
+  margin-bottom: 7px;
+}
 ```
 
 `.eyebrow` labels a region you are reading. `.flab` labels a control you are about to operate.
-The comment in the source is explicit: *"a form label has to be findable at a glance, which the
-muted eyebrow was not."* It is a full point larger, tighter-tracked, and near-black.
+The comment in the source is explicit: _"a form label has to be findable at a glance, which the
+muted eyebrow was not."_ It is a full point larger, tighter-tracked, and near-black.
 
 ### 3.4 Negative tracking on headings
 
@@ -253,19 +272,19 @@ measurement in the app derives from it.
 
 ### 4.2 Radius
 
-| Radius | Applied to |
-|---|---|
-| 34px | The phone frame |
-| 22px 22px 0 0 | Bottom sheet |
-| 15px | `.card-n` (dark cards) |
-| 13px | `.card`, `.ipop` |
-| 12px | Toast |
-| 10px | `.btn`, `.note`, `.dsq`, `.seg` |
-| 9px | `.hr`, `.hsq`, `.avat`, `.ibtn` |
-| 8px | `.tsq`, `.balbar`, rail items |
-| 7px | `.fit` |
-| 6px | `.tag`, sport dots |
-| 999px | `.chip` — the only true pill |
+| Radius        | Applied to                      |
+| ------------- | ------------------------------- |
+| 34px          | The phone frame                 |
+| 22px 22px 0 0 | Bottom sheet                    |
+| 15px          | `.card-n` (dark cards)          |
+| 13px          | `.card`, `.ipop`                |
+| 12px          | Toast                           |
+| 10px          | `.btn`, `.note`, `.dsq`, `.seg` |
+| 9px           | `.hr`, `.hsq`, `.avat`, `.ibtn` |
+| 8px           | `.tsq`, `.balbar`, rail items   |
+| 7px           | `.fit`                          |
+| 6px           | `.tag`, sport dots              |
+| 999px         | `.chip` — the only true pill    |
 
 The pattern: **the bigger the surface, the rounder**. A dark card is 15px where a light one is
 13px, because the darker fill makes the corner read tighter at the same radius.
@@ -275,10 +294,18 @@ The pattern: **the bigger the surface, the rounder**. A dark card is 15px where 
 Three shadows in the entire stylesheet.
 
 ```css
-#phone  { box-shadow:0 40px 90px -40px rgba(0,0,0,.8) }
-#sheet  { box-shadow:0 -20px 40px -22px rgba(10,32,40,.6) }
-.ipop   { box-shadow:0 12px 30px rgba(11,31,42,.24) }
-.tst    { box-shadow:0 12px 28px -12px rgba(0,0,0,.6) }
+#phone {
+  box-shadow: 0 40px 90px -40px rgba(0, 0, 0, 0.8);
+}
+#sheet {
+  box-shadow: 0 -20px 40px -22px rgba(10, 32, 40, 0.6);
+}
+.ipop {
+  box-shadow: 0 12px 30px rgba(11, 31, 42, 0.24);
+}
+.tst {
+  box-shadow: 0 12px 28px -12px rgba(0, 0, 0, 0.6);
+}
 ```
 
 Cards never have a shadow. Depth on the paper background comes from the surface change and the
@@ -293,9 +320,21 @@ Cards never have a shadow. Depth on the paper background comes from the surface 
 ### 5.1 `.card` — the workhorse
 
 ```css
-.card { background:#fff; border:1px solid var(--line); border-radius:13px; padding:12px; margin-bottom:9px }
-.card.tap { cursor:pointer; transition:.12s }
-.card.tap:hover { border-color:var(--coral); transform:translateY(-1px) }
+.card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  padding: 12px;
+  margin-bottom: 9px;
+}
+.card.tap {
+  cursor: pointer;
+  transition: 0.12s;
+}
+.card.tap:hover {
+  border-color: var(--coral);
+  transform: translateY(-1px);
+}
 ```
 
 The hover state changes the **border** to coral and lifts by 1px. No shadow, no scale.
@@ -303,10 +342,22 @@ The hover state changes the **border** to coral and lifts by 1px. No shadow, no 
 ### 5.2 `.card-n` — the dark card
 
 ```css
-.card-n { background:var(--night); color:#fff; border-radius:15px; padding:14px; margin-bottom:9px }
-.card-n .tiny    { color:rgba(255,255,255,.68) }
-.card-n .eyebrow { color:rgba(255,255,255,.52) }
-.card-n .hair    { border-color:rgba(255,255,255,.15) }
+.card-n {
+  background: var(--night);
+  color: #fff;
+  border-radius: 15px;
+  padding: 14px;
+  margin-bottom: 9px;
+}
+.card-n .tiny {
+  color: rgba(255, 255, 255, 0.68);
+}
+.card-n .eyebrow {
+  color: rgba(255, 255, 255, 0.52);
+}
+.card-n .hair {
+  border-color: rgba(255, 255, 255, 0.15);
+}
 ```
 
 The dark card **repaints its children** rather than requiring every child to know it is on
@@ -314,9 +365,15 @@ dark. This is elegant until something light-on-light sits inside it — which is
 happened with the info popover, and is why three counter-overrides exist:
 
 ```css
-.card-n .ipop .tiny    { color:var(--muted) }
-.card-n .ipop .eyebrow { color:var(--muted) }
-.card-n .ipop .mono    { color:var(--ink) }
+.card-n .ipop .tiny {
+  color: var(--muted);
+}
+.card-n .ipop .eyebrow {
+  color: var(--muted);
+}
+.card-n .ipop .mono {
+  color: var(--ink);
+}
 ```
 
 Used for: the onboarding result, the state card on a match, the level card on the passport.
@@ -324,7 +381,11 @@ Used for: the onboarding result, the state card on a match, the level card on th
 ### 5.3 `.hair` — the internal divider
 
 ```css
-.hair { border-top:1px solid var(--line2); margin-top:9px; padding-top:8px }
+.hair {
+  border-top: 1px solid var(--line2);
+  margin-top: 9px;
+  padding-top: 8px;
+}
 ```
 
 One rule, used everywhere a card needs a second section. `--line2` rather than `--line` so it
@@ -333,36 +394,63 @@ reads as a fold inside one object rather than a boundary between two.
 ### 5.4 `.note` — the message block
 
 ```css
-.note { padding:11px 13px; border:1px solid var(--line); border-left:3px solid var(--night);
-        border-radius:10px; background:#fff; margin-bottom:9px }
-.note b { display:block; font-size:11.5px; margin-bottom:3px }
+.note {
+  padding: 11px 13px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--night);
+  border-radius: 10px;
+  background: #fff;
+  margin-bottom: 9px;
+}
+.note b {
+  display: block;
+  font-size: 11.5px;
+  margin-bottom: 3px;
+}
 ```
 
 A card with a **3px left bar** carrying the semantic. Four variants:
 
-| Variant | Left bar | Background | Border |
-|---|---|---|---|
-| *(base)* | `--night` | `#fff` | `--line` |
-| `.mint` | `--mint` | `--mint-soft` | `#CFE7DD` |
-| `.coral` | `--coral` | `--coral-soft` | `#F3CFC5` |
-| `.amber` | `--amber` | `--amber-soft` | `#EFDCB8` |
-| `.info` | `--info` | `--info-soft` | `--info-line` |
+| Variant  | Left bar  | Background     | Border        |
+| -------- | --------- | -------------- | ------------- |
+| _(base)_ | `--night` | `#fff`         | `--line`      |
+| `.mint`  | `--mint`  | `--mint-soft`  | `#CFE7DD`     |
+| `.coral` | `--coral` | `--coral-soft` | `#F3CFC5`     |
+| `.amber` | `--amber` | `--amber-soft` | `#EFDCB8`     |
+| `.info`  | `--info`  | `--info-soft`  | `--info-line` |
 
-`.note.info` is the only one with a glyph — a CSS-generated serif *i* in a filled circle:
+`.note.info` is the only one with a glyph — a CSS-generated serif _i_ in a filled circle:
 
 ```css
-.note.info b::before { content:'i'; width:14px; height:14px; border-radius:50%;
-  background:var(--info); color:#fff; font-family:Georgia,serif; font-style:italic }
+.note.info b::before {
+  content: 'i';
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--info);
+  color: #fff;
+  font-family: Georgia, serif;
+  font-style: italic;
+}
 ```
 
-A serif italic *i* inside a sans-serif app, because the information mark is a **symbol**, not
+A serif italic _i_ inside a sans-serif app, because the information mark is a **symbol**, not
 text, and the serif form is the one people recognise.
 
 ### 5.5 `.rl` — the row
 
 ```css
-.rl { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:6px 0; font-size:11.5px }
-.rl + .rl { border-top:1px solid var(--line2) }
+.rl {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 0;
+  font-size: 11.5px;
+}
+.rl + .rl {
+  border-top: 1px solid var(--line2);
+}
 ```
 
 Label left, value right, hairline between consecutive rows via the adjacent-sibling selector —
@@ -376,14 +464,38 @@ key-value list in the app: price breakdowns, passport stats, wallet lines.
 ### 6.1 `.btn`
 
 ```css
-.btn { height:34px; padding:0 14px; border-radius:10px; font-size:12px; font-weight:700 }
-.btn:hover { filter:brightness(1.06) }
-.btn.p { background:var(--coral); color:#fff }   /* primary */
-.btn.n { background:var(--night);  color:#fff }  /* dark    */
-.btn.s { background:#fff; border:1px solid var(--line) }  /* secondary */
-.btn.w { background:rgba(255,255,255,.17); color:#fff }   /* on dark   */
-.btn.full { width:100% }
-.btn:disabled { opacity:.4 }
+.btn {
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.btn:hover {
+  filter: brightness(1.06);
+}
+.btn.p {
+  background: var(--coral);
+  color: #fff;
+} /* primary */
+.btn.n {
+  background: var(--night);
+  color: #fff;
+} /* dark    */
+.btn.s {
+  background: #fff;
+  border: 1px solid var(--line);
+} /* secondary */
+.btn.w {
+  background: rgba(255, 255, 255, 0.17);
+  color: #fff;
+} /* on dark   */
+.btn.full {
+  width: 100%;
+}
+.btn:disabled {
+  opacity: 0.4;
+}
 ```
 
 Hover is `filter: brightness()` rather than a second colour token — one rule covers all four
@@ -395,10 +507,25 @@ Heights in practice: 32px (tertiary in a card), 34px (default), 40px (screen act
 ### 6.2 `.chip` — the filter pill
 
 ```css
-.chip { height:27px; padding:0 11px; border-radius:999px; border:1px solid var(--line);
-        font-size:10.5px; background:#fff; font-weight:600 }
-.chip.on { background:var(--ink); color:#fff; border-color:var(--ink) }
-.chip.sm { height:25px; padding:0 8px; font-size:10px }
+.chip {
+  height: 27px;
+  padding: 0 11px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  font-size: 10.5px;
+  background: #fff;
+  font-weight: 600;
+}
+.chip.on {
+  background: var(--ink);
+  color: #fff;
+  border-color: var(--ink);
+}
+.chip.sm {
+  height: 25px;
+  padding: 0 8px;
+  font-size: 10px;
+}
 ```
 
 The **only** true pill in the app. Selected state is ink-filled, not coral — coral is reserved
@@ -407,10 +534,26 @@ for actions, and a selected filter is a state.
 ### 6.3 `.seg` — the segmented control
 
 ```css
-.seg { display:flex; background:var(--line2); border-radius:10px; padding:3px; gap:3px }
-.seg span { flex:1; text-align:center; padding:7px 4px; font-size:10.5px; font-weight:700;
-            color:var(--muted); border-radius:8px }
-.seg span.on { background:#fff; color:var(--ink) }
+.seg {
+  display: flex;
+  background: var(--line2);
+  border-radius: 10px;
+  padding: 3px;
+  gap: 3px;
+}
+.seg span {
+  flex: 1;
+  text-align: center;
+  padding: 7px 4px;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--muted);
+  border-radius: 8px;
+}
+.seg span.on {
+  background: #fff;
+  color: var(--ink);
+}
 ```
 
 Inset track, raised selection — the inverse of the chip. Used for Games/Courts and for
@@ -441,12 +584,12 @@ Three siblings for the three kinds of time selector:
 
 `.tsq` and `.hr` share a four-state vocabulary:
 
-| State | Background | Border | Text |
-|---|---|---|---|
-| `.free` | `--mint-soft` | `#BFE0D2` | `--ink` |
-| `.off` / `.taken` | `--line2` | transparent | `--muted` |
-| `.on` / `.sel` | `--ink` | `--ink` | `#fff` |
-| `.end` | `#fff` | `--ink` | `--ink` |
+| State             | Background    | Border      | Text      |
+| ----------------- | ------------- | ----------- | --------- |
+| `.free`           | `--mint-soft` | `#BFE0D2`   | `--ink`   |
+| `.off` / `.taken` | `--line2`     | transparent | `--muted` |
+| `.on` / `.sel`    | `--ink`       | `--ink`     | `#fff`    |
+| `.end`            | `#fff`        | `--ink`     | `--ink`   |
 
 `.end` is the hollow square marking where a booking finishes — the same border as selected, the
 opposite fill.
@@ -458,9 +601,18 @@ opposite fill.
 ### 7.1 `.fit` — the Match Fit badge
 
 ```css
-.fit { height:23px; padding:0 9px; border-radius:7px; background:var(--night); color:#fff;
-       font-size:11px; font-weight:700 }
-.fit.hi { background:var(--coral) }
+.fit {
+  height: 23px;
+  padding: 0 9px;
+  border-radius: 7px;
+  background: var(--night);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+}
+.fit.hi {
+  background: var(--coral);
+}
 ```
 
 Dark by default, **coral at 90 or above**. The threshold is in the JS
@@ -470,9 +622,22 @@ with the accent.
 ### 7.2 `.balbar` — the balance split
 
 ```css
-.balbar { display:flex; height:24px; border-radius:8px; overflow:hidden; background:var(--line2) }
-.balbar i { display:flex; align-items:center; justify-content:center; font-size:9.5px;
-            font-weight:700; color:#fff; font-style:italic }
+.balbar {
+  display: flex;
+  height: 24px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--line2);
+}
+.balbar i {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9.5px;
+  font-weight: 700;
+  color: #fff;
+  font-style: italic;
+}
 ```
 
 Two flex children whose widths are the predicted shares. Percentages sit **inside** the bar,
@@ -491,12 +656,30 @@ caller and is used for the onboarding progress strip, where it is coral.
 ### 7.4 `.avat` — the seat avatar
 
 ```css
-.avat    { width:27px; height:27px; border-radius:9px; background:var(--night); color:#fff;
-           font-size:9.5px; font-weight:700; transition:transform .12s }
-.avat.d  { background:none; border:1.5px dashed var(--line); color:var(--muted) }  /* empty seat */
-.avat.me { background:var(--coral) }
-.hold:active .avat { transform:scale(.93) }
-.holding .avat     { box-shadow:0 0 0 3px var(--coral-soft) }
+.avat {
+  width: 27px;
+  height: 27px;
+  border-radius: 9px;
+  background: var(--night);
+  color: #fff;
+  font-size: 9.5px;
+  font-weight: 700;
+  transition: transform 0.12s;
+}
+.avat.d {
+  background: none;
+  border: 1.5px dashed var(--line);
+  color: var(--muted);
+} /* empty seat */
+.avat.me {
+  background: var(--coral);
+}
+.hold:active .avat {
+  transform: scale(0.93);
+}
+.holding .avat {
+  box-shadow: 0 0 0 3px var(--coral-soft);
+}
 ```
 
 A **dashed** border for an empty seat is the only dashed element in the app, and it means one
@@ -526,11 +709,26 @@ Scale is always the full 1,00–5,00 so the same value always lands in the same 
 ### 7.6 `.ipop` — the anchored popover
 
 ```css
-.ipop { position:absolute; top:25px; width:250px; background:#fff; border:1px solid var(--line);
-        border-radius:13px; padding:11px 12px 12px; box-shadow:0 12px 30px rgba(11,31,42,.24) }
-.ipop-arrow { top:-6px; width:11px; height:11px; background:#fff;
-              border-left:1px solid var(--line); border-top:1px solid var(--line);
-              transform:rotate(45deg); border-radius:2px 0 0 0 }
+.ipop {
+  position: absolute;
+  top: 25px;
+  width: 250px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  padding: 11px 12px 12px;
+  box-shadow: 0 12px 30px rgba(11, 31, 42, 0.24);
+}
+.ipop-arrow {
+  top: -6px;
+  width: 11px;
+  height: 11px;
+  background: #fff;
+  border-left: 1px solid var(--line);
+  border-top: 1px solid var(--line);
+  transform: rotate(45deg);
+  border-radius: 2px 0 0 0;
+}
 ```
 
 The arrow is a rotated square carrying **two** of the four borders, so it reads as a continuation
@@ -542,10 +740,21 @@ right edge.
 ### 7.7 `.mrail` — the horizontal card rail
 
 ```css
-.mrail { margin:0 0 9px }
-.mrail > *      { width:268px }
-.mrail .card    { margin-bottom:0; height:100%; display:flex; flex-direction:column }
-.mrail .card > .hair:last-child { margin-top:auto }
+.mrail {
+  margin: 0 0 9px;
+}
+.mrail > * {
+  width: 268px;
+}
+.mrail .card {
+  margin-bottom: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.mrail .card > .hair:last-child {
+  margin-top: auto;
+}
 ```
 
 Applied together with `.sqrow`. **268px against 362px of content** leaves the next card peeking
@@ -557,11 +766,29 @@ footer to the bottom so footers align across cards of differing height.
 ## 8. Scrolling patterns
 
 ```css
-.sqrow  { display:flex; gap:6px; overflow-x:auto; padding:1px 0 3px; scrollbar-width:none }
-.sqrow > * { flex:0 0 auto }
-.hstrip { display:flex; gap:10px; overflow-x:auto; scroll-snap-type:x mandatory;
-          margin:0 -15px 10px; padding:1px 15px 5px }
-.hstrip > * { scroll-snap-align:center; scroll-snap-stop:always; flex:0 0 100% }
+.sqrow {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 1px 0 3px;
+  scrollbar-width: none;
+}
+.sqrow > * {
+  flex: 0 0 auto;
+}
+.hstrip {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  margin: 0 -15px 10px;
+  padding: 1px 15px 5px;
+}
+.hstrip > * {
+  scroll-snap-align: center;
+  scroll-snap-stop: always;
+  flex: 0 0 100%;
+}
 ```
 
 Two horizontal patterns with different jobs:
@@ -595,10 +822,28 @@ The scrim is the **night** colour at 45%, not black — the dim matches the pale
 ### 9.2 Toast
 
 ```css
-#toast { position:absolute; left:15px; right:15px; bottom:78px; z-index:40; pointer-events:none }
-.tst   { background:var(--night); color:#fff; border-radius:12px; padding:11px 14px;
-         font-size:12px; font-weight:600 }
-.tst.ok{ background:var(--mint) }  .tst.bad{ background:var(--red) }
+#toast {
+  position: absolute;
+  left: 15px;
+  right: 15px;
+  bottom: 78px;
+  z-index: 40;
+  pointer-events: none;
+}
+.tst {
+  background: var(--night);
+  color: #fff;
+  border-radius: 12px;
+  padding: 11px 14px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.tst.ok {
+  background: var(--mint);
+}
+.tst.bad {
+  background: var(--red);
+}
 ```
 
 Bottom 78px clears the tab bar. `pointer-events:none` on the container so a toast never blocks
@@ -606,13 +851,13 @@ a tap.
 
 ### 9.3 Z-index scale
 
-| z | Element |
-|---|---|
-| 20 | Sheet wrapper |
-| 30 | Mobile top bar |
-| 40 | Toast, mobile time bar |
-| 50 | Rail scrim (mobile) |
-| 60 | Rail drawer (mobile), info popover |
+| z   | Element                            |
+| --- | ---------------------------------- |
+| 20  | Sheet wrapper                      |
+| 30  | Mobile top bar                     |
+| 40  | Toast, mobile time bar             |
+| 50  | Rail scrim (mobile)                |
+| 60  | Rail drawer (mobile), info popover |
 
 ---
 
@@ -654,9 +899,25 @@ the brand. The rail becomes a fixed drawer at `min(320px, 86vw)` with a 260ms sl
 ### 10.3 The tab bar
 
 ```css
-#tabbar { display:grid; grid-template-columns:repeat(5,1fr); padding:7px 0 12px }
-.tab i  { width:16px; height:16px; border-radius:5px; background:currentColor; opacity:.85 }
-.tab.fab i { width:28px; height:28px; border-radius:10px; background:var(--coral); margin-bottom:-4px }
+#tabbar {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  padding: 7px 0 12px;
+}
+.tab i {
+  width: 16px;
+  height: 16px;
+  border-radius: 5px;
+  background: currentColor;
+  opacity: 0.85;
+}
+.tab.fab i {
+  width: 28px;
+  height: 28px;
+  border-radius: 10px;
+  background: var(--coral);
+  margin-bottom: -4px;
+}
 ```
 
 Five columns. Icons are `currentColor` squares — the prototype does not ship an icon set, and
@@ -809,7 +1070,7 @@ The longest screen in the app. Order:
 Step 1 is the mode choice (Open Match / Private Court) as two tall `.card.tap`s with a
 four-row comparison each.
 
-Step 2 is one scrolling screen: sport → club → category chips → **calendar** → *overlap block* →
+Step 2 is one scrolling screen: sport → club → category chips → **calendar** → _overlap block_ →
 price → five rules → create.
 
 ### 15.1 The calendar
@@ -861,22 +1122,22 @@ A large `.num`, a `.meter`, the gate threshold marked, and the record rows.
 
 ## 19. Complete class index
 
-| Class | Purpose |
-|---|---|
-| `.mono` `.num` | Monospace, display number |
-| `.h1` `.h2` `.eyebrow` `.flab` `.tiny` `.sect` | Type roles |
-| `.card` `.card-n` `.card.tap` `.hair` | Containers |
-| `.note` + `.mint` `.coral` `.amber` `.info` | Message blocks |
-| `.btn` + `.p` `.n` `.s` `.w` `.full` | Buttons |
-| `.chip` + `.on` `.sm` | Filter pills |
-| `.seg` | Segmented control |
-| `.tag` + `.ok` `.hot` `.warn` `.bad` `.w` | Status pills |
-| `.rl` | Key-value row |
-| `.row` `.sqrow` `.hstrip` `.dots` `.mrail` | Layout and scroll |
-| `.dsq` `.tsq` `.hsq` `.hr` + states | Slot selectors |
-| `.fit` `.balbar` `.meter` `.bar` `.avat` | Data display |
-| `.iwrap` `.ibtn` `.ipop` `.ipop-*` | Information popover |
-| `.empty` `.grab` `.tst` `.hold` `.holding` | Misc |
+| Class                                          | Purpose                   |
+| ---------------------------------------------- | ------------------------- |
+| `.mono` `.num`                                 | Monospace, display number |
+| `.h1` `.h2` `.eyebrow` `.flab` `.tiny` `.sect` | Type roles                |
+| `.card` `.card-n` `.card.tap` `.hair`          | Containers                |
+| `.note` + `.mint` `.coral` `.amber` `.info`    | Message blocks            |
+| `.btn` + `.p` `.n` `.s` `.w` `.full`           | Buttons                   |
+| `.chip` + `.on` `.sm`                          | Filter pills              |
+| `.seg`                                         | Segmented control         |
+| `.tag` + `.ok` `.hot` `.warn` `.bad` `.w`      | Status pills              |
+| `.rl`                                          | Key-value row             |
+| `.row` `.sqrow` `.hstrip` `.dots` `.mrail`     | Layout and scroll         |
+| `.dsq` `.tsq` `.hsq` `.hr` + states            | Slot selectors            |
+| `.fit` `.balbar` `.meter` `.bar` `.avat`       | Data display              |
+| `.iwrap` `.ibtn` `.ipop` `.ipop-*`             | Information popover       |
+| `.empty` `.grab` `.tst` `.hold` `.holding`     | Misc                      |
 
 ## 20. Known inconsistencies
 
@@ -891,14 +1152,15 @@ Documented rather than hidden.
    values from `bandLo`/`bandHi`.
 5. **No spacing scale.** Values are chosen per component from 5–15px.
 6. **No icon set.** Tab icons are `currentColor` squares.
-7. **Two "open seat" casings** in the line-up helpers: *"the open seat"* mid-sentence and
-   *"Open seat"* in lists.
+7. **Two "open seat" casings** in the line-up helpers: _"the open seat"_ mid-sentence and
+   _"Open seat"_ in lists.
 8. **The deck maintains a parallel implementation** of `matchCard` (`mCard`), `bandBar`
    (`obBar`) and the popover. They are kept in sync by hand and have drifted before.
 
 ## 21. Accessibility
 
 **Present:**
+
 - `:focus-visible { outline:2px solid var(--coral); outline-offset:2px }` globally.
 - `prefers-reduced-motion` disables every animation and transition in one rule.
 - `aria-label` on the info marks, the popover close and the mobile rail toggle.
@@ -906,6 +1168,7 @@ Documented rather than hidden.
 - Tabular numerals everywhere numbers are compared.
 
 **Missing, and worth recording:**
+
 - No `aria-live` region for the toast.
 - No focus trap in the sheet or the popover.
 - `.tiny` at 11px in `--muted` on `--paper` is **3.9:1** — below WCAG AA for body text. It

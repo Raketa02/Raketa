@@ -35,7 +35,7 @@ If your work **contradicts** an existing ADR, surface it rather than silently ov
 - [0003 — Transactional outbox for event delivery](0003-transactional-outbox-for-event-delivery.md)
 - [0004 — JWT access tokens with rotating refresh tokens](0004-jwt-access-with-rotating-refresh-tokens.md)
 - [0005 — Three-app monorepo with enforced ownership boundaries](0005-three-app-monorepo-ownership-boundaries.md)
-- [0006 — The backend owns the API contract](0006-backend-owns-api-contract.md)
+- [0006 — The backend owns the API contract](0006-backend-owns-api-contract.md) — *amended to two documents by 0016*
 - [0007 — Club web: BFF with an httpOnly-cookie session](0007-club-web-bff-httponly-cookie-session.md)
 - [0008 — Player mobile: secure-store tokens, direct to the API](0008-player-mobile-securestore-direct-api.md)
 - [0009 — Feature-first Clean Architecture on both frontends](0009-feature-first-clean-architecture-frontends.md) — *narrowed to the player app by 0014*
@@ -44,3 +44,5 @@ If your work **contradicts** an existing ADR, surface it rather than silently ov
 - [0012 — A locked design system for the player app](0012-player-app-design-system.md)
 - [0013 — Player app: the production runtime architecture](0013-player-app-runtime-architecture.md)
 - [0014 — The club console follows its production architecture standard](0014-club-console-production-architecture-standard.md)
+- [0015 — Engines as a pure, versioned layer](0015-engines-as-a-pure-versioned-layer.md)
+- [0016 — A modular monolith with two API surfaces](0016-modular-monolith-two-api-surfaces.md)

@@ -9,25 +9,25 @@ One of three independently deployable apps in this monorepo — see the root
 
 ## First run
 
-Nothing is installed yet: this directory holds the architecture, config and rules, not
-a generated app. To bring it to life:
-
 ```bash
 cd frontend_player
 pnpm install
-npx expo-doctor          # verifies the dependency versions agree with the SDK
-pnpm start               # then press i (iOS sim) / a (Android emulator)
+cp .env.example .env.local   # both values are required — see Environment below
+npx expo-doctor              # verifies the dependency versions agree with the SDK
+pnpm start                   # then press i (iOS sim) / a (Android emulator)
 ```
 
-Then create the expo-router entry points — `src/app/_layout.tsx` and
-`src/app/index.tsx` — and build outward. The folder contract is in
-[`src/features/_template/README.md`](src/features/_template/README.md).
+The app boots to a placeholder screen. `src/app/_layout.tsx` composes the root providers
+and gates the splash screen on the **bootstrap sequence** — the ordered startup path in
+[`docs/architecture.md` Part 3](docs/architecture.md#part-3--bootstrap-and-the-session-state-machine),
+implemented in `src/shared/lib/bootstrap/`. It validates config, then loads Archivo and
+IBM Plex Mono with `expo-font` and awaits them before the splash hides. Routing, sessions
+and features arrive in later slices; build them outward from the folder contract in
+[`src/features/_template/README.md`](src/features/_template/README.md). The design system
+is already locked — see below.
 
-`_layout.tsx` composes the root providers and gates the splash screen on the **bootstrap
-sequence** — the ordered startup path in
-[`docs/architecture.md` Part 3](docs/architecture.md#part-3--bootstrap-and-the-session-state-machine).
-Part of that gate is loading Archivo and IBM Plex Mono with `expo-font` and awaiting them
-before the splash hides. The design system is already locked — see below.
+`.npmrc` pins pnpm to `node-linker=hoisted`, because Metro and jest-expo resolve what to
+transform through `node_modules/(?!…)` allowlists that pnpm's symlinked layout defeats.
 
 > Deliberately **not** scaffolded with `create-expo-app`: its default template
 > contradicts the feature-first structure recorded in
@@ -46,14 +46,18 @@ pnpm android      # build & run on an Android emulator
 pnpm lint         # ESLint (also enforces the import boundaries)
 pnpm typecheck    # tsc --noEmit, strict
 pnpm test         # Jest (jest-expo)
+pnpm format       # Prettier --write   pnpm format:check → --check
 pnpm gen:api      # regenerate src/generated/ from ../backend/openapi.json
-pnpm check        # lint + typecheck + test — the local gate
+pnpm check        # lint + format check + typecheck + test — the local gate
 ```
 
 ## Environment
 
-Copy `.env.example` → `.env.local`. On a **physical device**, `EXPO_PUBLIC_API_URL`
-must be a LAN IP or tunnel — `localhost` on a phone means the phone.
+Copy `.env.example` → `.env.local`. `EXPO_PUBLIC_API_URL` and `EXPO_PUBLIC_ENV` are both
+**required**: `src/shared/config/env.ts` validates them once at launch and the app stops
+on a startup screen naming whichever is missing or malformed, rather than failing later
+inside a feature. On a **physical device**, `EXPO_PUBLIC_API_URL` must be a LAN IP or
+tunnel — `localhost` on a phone means the phone.
 
 Every `EXPO_PUBLIC_*` value ships inside the bundle and is readable from a released
 app. Config only, never secrets.
@@ -89,7 +93,7 @@ The visual language was designed and audited before the app existed, and is **lo
   — the archived measurement of the v34 web prototype. Descriptive, superseded by the rules.
 
 The prototype's phone frame, dark stage, scenario rail and time bar are **harness and do
-not ship** — the app *is* the phone. Styling is a typed theme plus `StyleSheet.create`; no
+not ship** — the app _is_ the phone. Styling is a typed theme plus `StyleSheet.create`; no
 NativeWind, no styling library — [ADR-0012](../docs/adr/0012-player-app-design-system.md).
 
 Full rules: [`CLAUDE.md`](CLAUDE.md). Vocabulary: [`CONTEXT.md`](CONTEXT.md).

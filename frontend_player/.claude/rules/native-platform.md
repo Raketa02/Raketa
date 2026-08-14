@@ -1,10 +1,10 @@
 ---
 paths:
-  - "app.json"
-  - "app.config.*"
-  - "src/shared/lib/platform/**"
-  - "eas.json"
-  - "package.json"
+  - 'app.json'
+  - 'app.config.*'
+  - 'src/shared/lib/platform/**'
+  - 'eas.json'
+  - 'package.json'
 ---
 
 # Native, Expo and release mechanics

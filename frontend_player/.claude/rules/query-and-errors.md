@@ -1,8 +1,8 @@
 ---
 paths:
-  - "src/features/*/hooks/**"
-  - "src/shared/lib/query-client/**"
-  - "src/shared/errors/**"
+  - 'src/features/*/hooks/**'
+  - 'src/shared/lib/query-client/**'
+  - 'src/shared/errors/**'
 ---
 
 # TanStack Query and the error family
@@ -50,6 +50,6 @@ Never branch on a user-visible string (`status === MatchStatus.Cancelled`, not
 `'Cancelled'`). Distinguish a timestamp from a local calendar date, and never make a business
 decision from the device clock or a formatted string.
 
-Offline and flaky networks are the normal case, not an edge case — but that is *not* a licence
+Offline and flaky networks are the normal case, not an edge case — but that is _not_ a licence
 to call this app offline-first. It is network-backed with an in-memory cache and graceful
 offline UX, and stays that way until a persistent local layer is decided deliberately.

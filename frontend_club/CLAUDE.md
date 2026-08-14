@@ -50,7 +50,7 @@ pnpm build        # production build
 pnpm lint         # ESLint — also enforces the import boundaries below
 pnpm typecheck    # tsc --noEmit (strict)
 pnpm test         # Vitest (unit + component)     pnpm test:e2e → Playwright
-pnpm gen:api      # regenerate src/generated/ from ../backend/openapi.json
+pnpm gen:api      # regenerate src/generated/ from ../backend/openapi.club.json
 pnpm check        # lint + typecheck + test — the local gate
 ```
 

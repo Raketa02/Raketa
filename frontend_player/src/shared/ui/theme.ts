@@ -98,7 +98,8 @@ const sport = {
 /**
  * The level bar's four bands. Three values each, not one with opacity:
  *   tint — the large bar fill
- *   deep — the current band's fill, and the bar mark
+ *   deep — the current band's fill. NOT the bar's mark: 7.5 draws that in `coral`, and
+ *          the legend calls it a coral tick. The two disagreed here until #25 built it.
  *   ink  — TEXT and the band card's left rail. (!) The prototype drew band names in
  *          `deep`, which is 2.83-3.20 on paper — below AA. Every `ink` is 4.51-4.59 on
  *          paper and >=5.05 for white on it.
@@ -256,6 +257,39 @@ const size = {
   timeSquare: 32,
   meter: 5,
   bar: 4,
+  /** The confidence ring — a drawn object, dark card only. Stroke matches the level
+   *  bar's band segments; the tick crosses the stroke and overshoots it outward.
+   *  Geometry and reasoning: docs/design-system.md 7.8. The 30% ceiling the tick marks
+   *  is a domain constant, NOT a design value — it does not belong here. */
+  ring: 72,
+  ringStroke: 6,
+  ringTick: 2,
+  ringTickOvershoot: 3,
+  /** The level bar — the other drawn object, per docs/design-system.md 7.5.
+   *
+   *  `trackTop`, `bracketTop` and `namesTop` are 7.5's own y coordinates, kept as
+   *  coordinates rather than pre-subtracted into margins, so this block can be read
+   *  against the specification line by line. The component does the arithmetic.
+   *
+   *  Its scale is always the full 1,00-5,00, exactly as the ring's is always 0-100 —
+   *  that is what makes a value land in the same place on every screen that draws one. */
+  levelBar: {
+    trackTop: 0,
+    trackHeight: 6,
+    trackRadius: 3,
+    /** 1pt separators between segments, drawn in the surface colour. */
+    segmentSeparator: 1,
+    /** Bands that are not the player's. A shape carries the state as well: the mark. */
+    inactiveOpacity: 0.38,
+    markTop: -3,
+    markWidth: 3,
+    markHeight: 12,
+    markRing: 2,
+    bracketTop: 13,
+    bracketHeight: 8,
+    bracketStroke: 2,
+    namesTop: 24,
+  },
   balanceBar: 24,
   sportDot: 6,
   infoGlyph: 14,

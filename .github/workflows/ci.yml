@@ -99,6 +99,8 @@ jobs:
           poetry install --no-interaction --no-root
       - name: Lint
         run: poetry run ruff check .
+      - name: Import boundaries
+        run: poetry run lint-imports
       - name: Test
         env:
           WRITER_DB_URL: postgresql+asyncpg://rakieta_user:rakieta_pwd@localhost:5432/rakieta

@@ -4,7 +4,8 @@ React Native + Expo + TypeScript. The native app players use to find courts, boo
 organise matches. It renders with **real platform components** — this is not a website in a
 WebView. Feature-first Clean Architecture
 ([ADR-0009](../docs/adr/0009-feature-first-clean-architecture-frontends.md)), talking to
-FastAPI over HTTPS and generating its wire types from `backend/openapi.json`. pnpm.
+FastAPI over HTTPS and generating its wire types from `backend/openapi.player.json`
+(the player half of the two-document contract). pnpm.
 
 > The `frontend_player/` app of a three-app monorepo — see the root
 > [`CLAUDE.md`](../CLAUDE.md). Run every command from this directory. Never import from
@@ -14,25 +15,49 @@ FastAPI over HTTPS and generating its wire types from `backend/openapi.json`. pn
 Two contracts predate the code and are **already settled** — read them before writing a
 feature, not after:
 
-| Doc | Settles |
-| --- | --- |
-| [`docs/architecture.md`](docs/architecture.md) | Where code lives, who owns which state, how auth/errors/Query/native behave in production. |
-| [`docs/design-system.md`](docs/design-system.md) | Every colour, type role, spacing step and interaction rule. **Locked.** |
+| Doc                                              | Settles                                                                                    |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------ |
+| [`docs/architecture.md`](docs/architecture.md)   | Where code lives, who owns which state, how auth/errors/Query/native behave in production. |
+| [`docs/design-system.md`](docs/design-system.md) | Every colour, type role, spacing step and interaction rule. **Locked.**                    |
 
-## Not scaffolded yet
+## What exists
 
-This directory holds architecture, config and rules — not a running app. `pnpm install` has
-not been run and there is no `src/app/_layout.tsx`. Read [`README.md`](README.md) for the
-first-run steps and build outward from the structure below rather than reaching for
-`create-expo-app` (its default template contradicts ADR-0009).
+`src/app/_layout.tsx` composes the providers and `src/shared/lib/bootstrap` runs the one
+ordered startup sequence. Above that: the HTTP client with its 401 → refresh → retry
+rotation, the `AppError` family, `shared/lib/auth` over the keychain, and two features —
+`auth` (sign up, sign in, session restore) and `onboarding` (the entry gate, welcome, the
+sports picker, the adaptive question loop, the explained result, and the summary and data
+screens a player leaves through).
+
+`src/shared/ui/` holds the design-system primitives built so far — the cards, note, row,
+hairline, button, tag, bar, header, and the overlays and drawn objects the result screen
+needed (bottom sheet, popover, level bar, confidence ring); the rest arrive with the
+features that need them. **Build outward from the structure below** rather than reaching
+for `create-expo-app` — its default template contradicts ADR-0009 — and copy the shape of
+`src/features/auth/` or `src/features/onboarding/` rather than inventing a second one.
+
+**Copy `.env.example` → `.env.local` before the first run.** `EXPO_PUBLIC_API_URL` and
+`EXPO_PUBLIC_ENV` are both required and validated once at launch by
+`src/shared/config/env.ts`. A missing or malformed value stops the app on a startup screen
+naming it — that is the guardrail working, not a bug.
 
 **Dependency versions target Expo SDK 52.** Expo pins React Native and its own packages
-tightly, so after the first install run `npx expo install --check` and trust Expo's
-resolution over the pins in `package.json`.
+tightly, so after changing dependencies run `npx expo install --check` and trust Expo's
+resolution over the pins in `package.json`. That pin is why `eslint.config.mjs` reaches
+`eslint-config-expo` through `FlatCompat`: its flat config ships from v9, which belongs to
+SDK 53.
 
-The first `_layout.tsx` must load Archivo (400–800) and IBM Plex Mono (400–600) with
-`expo-font` and **await them before hiding the splash screen** — a font that arrives late
-reflows every number on screen.
+**`.npmrc` sets `node-linker=hoisted`.** Metro and jest-expo decide what still needs
+transforming with `node_modules/(?!…)` allowlists, and pnpm's default symlinked layout
+defeats them — React Native ships untranspiled Flow, so the first casualty is `jest`
+failing to parse `error-guard.js`. Hoisting is Expo's documented answer; it changes nothing
+architectural, and this app still shares no packages with `frontend_club`.
+
+Archivo (400–800) and IBM Plex Mono (400–600) are loaded with `expo-font` and **awaited
+before the splash screen hides** — a font that arrives late reflows every number on screen.
+They are imported **file by file**: each `@expo-google-fonts` index `require`s every weight
+and italic it ships, and Metro does not tree-shake, so importing one name costs 4,2 MB
+instead of 1,0 MB.
 
 ## Commands
 
@@ -42,9 +67,10 @@ pnpm ios / android
 pnpm lint         # ESLint — also enforces the import boundaries below
 pnpm typecheck    # tsc --noEmit (strict)
 pnpm test         # Jest (jest-expo)
-pnpm gen:api      # regenerate src/generated/ from ../backend/openapi.json
+pnpm format       # Prettier --write   pnpm format:check → --check
+pnpm gen:api      # regenerate src/generated/ from ../backend/openapi.player.json
 pnpm doctor       # npx expo-doctor — checks dependency/SDK agreement
-pnpm check        # lint + typecheck + test — the local gate
+pnpm check        # lint + format check + typecheck + test — the local gate
 ```
 
 **You cannot see the screen.** If a change is visual, say so and ask for a look rather than
@@ -55,12 +81,12 @@ asserting it renders correctly.
 - **Store credentials anywhere but the OS keychain.** Tokens live in `expo-secure-store`,
   reached only through `src/shared/lib/auth`. **Never** `AsyncStorage` (unencrypted
   plaintext on device), never a module variable that outlives a session, never a log line.
-  *(ESLint blocks the AsyncStorage import.)*
+  _(ESLint blocks the AsyncStorage import.)_
 - **Put a secret in `app.json` `extra`, or in any `EXPO_PUBLIC_*` variable.** Everything in
   the bundle is readable from a shipped app. Those are **config**, not secrets. A secret a
   mobile client "needs" is a design error — it belongs behind the backend.
-- **Run a build or release** (`eas build|submit|update`, `expo publish`). *(hook-enforced)*
-- **Create or edit a real `.env*` file.** Edit `.env.example`. *(hook-enforced)*
+- **Run a build or release** (`eas build|submit|update`, `expo publish`). _(hook-enforced)_
+- **Create or edit a real `.env*` file.** Edit `.env.example`. _(hook-enforced)_
 - **Import from `src/generated/` outside a feature's `api/` or `mappers/` layer.**
 - **Hand-write a type that mirrors a backend response.** Regenerate with `pnpm gen:api`.
 - **Put business rules in screens or hooks.** Rules live in `domain/` + `use-cases/`.
@@ -125,16 +151,16 @@ Rules to preserve:
 
 ### One owner per kind of state
 
-| State | Owner |
-| --- | --- |
-| Anything from the backend | **TanStack Query** — never mirrored into a store |
-| Access + refresh tokens | `shared/lib/auth` → `expo-secure-store` (+ in-memory mirror) |
-| Logged-in / out | `SessionStatus`: `bootstrapping \| authenticated \| unauthenticated` |
-| Local component state | `useState` / `useReducer` |
-| Shared ephemeral UI state | Zustand, **feature-scoped first** |
-| Form input | The form + one Zod schema |
-| Navigation | expo-router — a route param is not app state |
-| Config | `shared/config/env.ts`, Zod-validated at startup |
+| State                     | Owner                                                                |
+| ------------------------- | -------------------------------------------------------------------- |
+| Anything from the backend | **TanStack Query** — never mirrored into a store                     |
+| Access + refresh tokens   | `shared/lib/auth` → `expo-secure-store` (+ in-memory mirror)         |
+| Logged-in / out           | `SessionStatus`: `bootstrapping \| authenticated \| unauthenticated` |
+| Local component state     | `useState` / `useReducer`                                            |
+| Shared ephemeral UI state | Zustand, **feature-scoped first**                                    |
+| Form input                | The form + one Zod schema                                            |
+| Navigation                | expo-router — a route param is not app state                         |
+| Config                    | `shared/config/env.ts`, Zod-validated at startup                     |
 
 Reach for Zustand last: component-local → feature store → app-wide store, and only with a
 reason. Zustand never holds API entities, tokens, a backend cache, or a global loading flag.
@@ -180,7 +206,7 @@ asymmetry by adding a proxy, and don't copy the club app's cookie code here.
 
 Conventional Commits scoped `player`: `feat(player): court search filters`. Run `pnpm check`
 before pushing. **Contract drift fails the build:** CI regenerates from
-`backend/openapi.json` and diffs — commit the regenerated `src/generated/`. Before opening a
+`backend/openapi.player.json` and diffs — commit the regenerated `src/generated/`. Before opening a
 PR, walk the Definition of Done in
 [`docs/architecture.md` Part 20](docs/architecture.md#part-20--definition-of-done-and-the-pr-checklist).
 

@@ -21,11 +21,15 @@ in two directions.
 We will treat the **backend as the single source of truth for the API contract**, and
 **generate** both clients' wire types from it.
 
-- `make openapi` (in `backend/`) dumps `backend/openapi.json` from the FastAPI app — no
-  running server needed. The file is **committed**.
-- Each client generates its own `src/generated/schema.d.ts` from that file with
-  `openapi-typescript` (`pnpm gen:api`). `make gen-api` at the repo root does the whole
-  chain for both clients.
+- `make openapi` (in `backend/`) emits the contract as **two documents** —
+  `backend/openapi.player.json` and `backend/openapi.club.json`, one per client surface —
+  from the FastAPI app with no running server needed. Both files are **committed**. The
+  split is so neither client can take a dependency on the other's contract
+  (see ADR-0016). *(Amended: originally a single `openapi.json`.)*
+- Each client generates its own `src/generated/schema.d.ts` from **its own** document with
+  `openapi-typescript` (`pnpm gen:api`) — the player app from `openapi.player.json`, the
+  club app from `openapi.club.json`. `make gen-api` at the repo root does the whole chain
+  for both clients.
 - **Hand-writing a type that mirrors a backend response is forbidden.** If a type is
   missing, the fix is to correct the backend schema and regenerate.
 - **Generated types are raw transport, confined to a feature's `api/` and `mappers/`
@@ -42,10 +46,11 @@ We will treat the **backend as the single source of truth for the API contract**
   are most likely to: the wire.
 - Removing or renaming a backend field surfaces as a **type error at generation time** in
   both clients, rather than as a runtime `undefined` in one of them.
-- The contract is reviewable: `backend/openapi.json` appears in the diff.
+- The contract is reviewable: `backend/openapi.player.json` and `backend/openapi.club.json`
+  appear in the diff.
 
 **Harder**
-- Regeneration is a step someone has to remember. A committed `openapi.json` that is
+- Regeneration is a step someone has to remember. A committed contract document that is
   stale relative to the code is worse than none, because it looks authoritative. CI
   should eventually verify it is current.
 - Generated types are shaped by FastAPI/Pydantic, not by what the UI wants — hence the
