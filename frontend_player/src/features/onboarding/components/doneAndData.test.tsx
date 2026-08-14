@@ -62,6 +62,9 @@ const PADEL_RESULT: Wire['ResultResponse'] = {
   mu: 2.71,
   sigma: 0.62,
   confidence: 30,
+  // The ceiling is the engine's and travels with the rating; the two sentences below are
+  // the app comparing these two numbers, never a number the app holds.
+  confidence_ceiling: 30,
   range: { low: 2.09, high: 3.33 },
   band: { name: 'Established', lower: 2.65, upper: 3.85 },
   status: 'initial_estimate',
@@ -81,6 +84,7 @@ const TENNIS_RESULT: Wire['ResultResponse'] = {
   mu: 1.9,
   sigma: 0.8,
   confidence: 18,
+  confidence_ceiling: 30,
   range: { low: 1.1, high: 2.7 },
   band: { name: 'Developing', lower: 1.55, upper: 2.65 },
   status: 'initial_estimate',
@@ -307,6 +311,47 @@ describe('the done screen', () => {
     // the ceiling bound nothing and its own evidence is what stopped it.
     expect(await screen.findByText(/Nothing you answered held it back/)).toBeTruthy();
     expect(screen.getByText(/because your answers left more to settle/)).toBeTruthy();
+
+    // Both sentences name the ceiling that was actually served with each rating.
+    expect(screen.getByText(/reached the 30% a questionnaire can prove/)).toBeTruthy();
+    expect(screen.getByText(/sits below the 30% a questionnaire can prove/)).toBeTruthy();
+  });
+
+  it('reads each rating against the ceiling it was served, not a number of its own', async () => {
+    // The same 30% is the ceiling for one engine and short of it for another. A client
+    // holding a copy would tell this player nothing held their padel rating back, when the
+    // engine that produced it says its own evidence did.
+    await startRating('Padel');
+    await answerTheLastQuestion(PADEL_ID, 'PADEL', {
+      ...PADEL_RESULT,
+      confidence: 30,
+      confidence_ceiling: 45,
+    });
+
+    fireEvent.press(await screen.findByLabelText('See your ratings'));
+    await waitFor(() => expect(screen).toHavePathname('/done'));
+
+    expect(await screen.findByText(/sits below the 45% a questionnaire can prove/)).toBeTruthy();
+    expect(screen.queryByText(/Nothing you answered held it back/)).toBeNull();
+  });
+
+  it('says nothing about a ceiling for a rating whose engine has been retired', async () => {
+    // No served ceiling is not a missing number to fill in — it is a rating replayed from
+    // its stream, which keeps its figures and loses its explanation. The card shows the
+    // figures and simply does not make the ceiling-versus-evidence claim, exactly as the
+    // result screen shows no confidence sentence when the engine sent none.
+    await startRating('Padel');
+    await answerTheLastQuestion(PADEL_ID, 'PADEL', {
+      ...PADEL_RESULT,
+      confidence_ceiling: null,
+      confidence_reason: null,
+    });
+
+    fireEvent.press(await screen.findByLabelText('See your ratings'));
+    await waitFor(() => expect(screen).toHavePathname('/done'));
+
+    expect(await screen.findByLabelText('Padel confidence: 30%')).toBeTruthy();
+    expect(screen.queryByText(/a questionnaire can prove/)).toBeNull();
   });
 
   it('says the ratings are hypotheses, and that matches are what narrow them', async () => {

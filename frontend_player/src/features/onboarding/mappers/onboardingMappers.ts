@@ -129,12 +129,20 @@ function toStatus(wire: string): AssessmentStatus {
  * `factors` and `uncertainty_factors` are optional on the wire and absent means empty: a
  * beginner who answered one question has one contribution and no wideners, and that is an
  * ordinary result rather than a missing one.
+ *
+ * `confidence_ceiling` is nullable and its absence is *not* empty — it is a rating whose
+ * engine has been retired, which is the same case that carries no `confidence_reason`. It
+ * stays absent all the way to the screens, which then say nothing about a ceiling; a default
+ * applied here would be the client's own number wearing the server's clothes.
  */
 export function toAssessmentResult(wire: ResultResponse): AssessmentResult {
   return {
     level: wire.mu,
     uncertainty: wire.sigma,
     confidence: wire.confidence,
+    // `null` and a field this response predates both mean the same thing to the app, and
+    // `undefined` is how the app spells absent.
+    confidenceCeiling: wire.confidence_ceiling ?? undefined,
     range: { low: wire.range.low, high: wire.range.high },
     // Straight from the response, like every other band in this file.
     band: { name: wire.band.name, lower: wire.band.lower, upper: wire.band.upper },

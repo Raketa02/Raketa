@@ -60,7 +60,6 @@ import {
 } from '@/shared/ui';
 
 import type { AssessmentResult } from '../domain/AssessmentResult';
-import { ONBOARDING_CONFIDENCE_CEILING } from '../domain/AssessmentResult';
 import type { Sport } from '../domain/Sport';
 import { nextSport, ratingPosition } from '../domain/sportQueue';
 import { useAssessment } from '../hooks/useAssessment';
@@ -75,31 +74,44 @@ import { onboardingErrorMessage } from './onboardingErrorMessage';
 import { formatConfidence, formatLevel, formatRange } from './ratingFormat';
 import { sportLabel } from './sportPresentation';
 
+type ExplainerKey = 'level' | 'range' | 'confidence';
+
+type Explainers = Readonly<Record<ExplainerKey, { readonly title: string; readonly body: string }>>;
+
 /**
  * The three figures with an information mark. **None of them is self-explanatory**, which
  * is the reason each has one: a player can ask what a term means at the moment they meet
  * it, rather than being expected to have read something first.
  *
  * This is the app's own copy, not the engine's — the wire carries no definition of what a
- * Level *is*, and unlike the evidence trail nothing here changes when a constant is
- * retuned.
+ * Level *is*. The one number in it is the ceiling, which the engine serves rather than the
+ * app knowing, so the copy is built per result instead of being a module constant: retuning
+ * the ceiling moves this sentence with it and no release is involved.
+ *
+ * **With no ceiling served, the sentence naming one goes.** The rest still holds — what
+ * Confidence is, and that matches are what raise it — but a rating whose engine has been
+ * retired has no number for "at most", and inventing one would say a retired engine was
+ * measured against a limit that did not exist when it ran.
  */
-const EXPLAINERS = {
-  level: {
-    title: 'Your Level',
-    body: 'Where you sit on the 1,00–5,00 scale for this sport. It is an estimate rather than a grade, and it is meant to move — real matches are what settle it.',
-  },
-  range: {
-    title: 'Your likely range',
-    body: 'Where we think your Level really sits. A wide range means we are less sure, not that you are weaker: it narrows as you play, without your Level having to move at all.',
-  },
-  confidence: {
-    title: 'Confidence',
-    body: `How sure we are, not how good you are. A questionnaire can prove at most ${ONBOARDING_CONFIDENCE_CEILING}% — the mark on the ring — because we have not seen you play yet. Matches are what raise it.`,
-  },
-} as const;
-
-type ExplainerKey = keyof typeof EXPLAINERS;
+function explainers(ceiling: number | undefined): Explainers {
+  return {
+    level: {
+      title: 'Your Level',
+      body: 'Where you sit on the 1,00–5,00 scale for this sport. It is an estimate rather than a grade, and it is meant to move — real matches are what settle it.',
+    },
+    range: {
+      title: 'Your likely range',
+      body: 'Where we think your Level really sits. A wide range means we are less sure, not that you are weaker: it narrows as you play, without your Level having to move at all.',
+    },
+    confidence: {
+      title: 'Confidence',
+      body:
+        ceiling === undefined
+          ? 'How sure we are, not how good you are. It starts low because a questionnaire is all we have to go on — we have not seen you play yet. Matches are what raise it.'
+          : `How sure we are, not how good you are. A questionnaire can prove at most ${ceiling}% — the mark on the ring — because we have not seen you play yet. Matches are what raise it.`,
+    },
+  };
+}
 
 /**
  * `MutableRefObject`, not the shared `FocusTarget`: the same ref is handed to `InfoMark`
@@ -158,6 +170,7 @@ export function ResultScreen({ assessmentId, sport }: ResultScreenProps) {
   const closing = useRef<ExplainerKey>('level');
   if (explainer !== undefined) closing.current = explainer;
   const explaining = explainer ?? closing.current;
+  const explained = explainers(result?.confidenceCeiling)[explaining];
 
   /**
    * The next sport they chose. `replace`, like every other move in this flow: the
@@ -279,9 +292,9 @@ export function ResultScreen({ assessmentId, sport }: ResultScreenProps) {
       <Popover
         visible={explainer !== undefined}
         trigger={marks[explaining]}
-        title={EXPLAINERS[explaining].title}
-        body={EXPLAINERS[explaining].body}
-        closeLabel={`Close ${EXPLAINERS[explaining].title}`}
+        title={explained.title}
+        body={explained.body}
+        closeLabel={`Close ${explained.title}`}
         onClose={() => setExplainer(undefined)}
       />
     </>
@@ -333,11 +346,18 @@ function Verdict({ result, marks, onExplain }: VerdictProps) {
           </View>
 
           <View style={s.ring}>
+            {/* The ceiling is the engine's and arrives with the rating. Absent, the ring
+                draws no tick and its name states the one number it has — see
+                `AssessmentResult.confidenceCeiling`. */}
             <ConfidenceRing
               value={result.confidence}
-              ceiling={ONBOARDING_CONFIDENCE_CEILING}
+              ceiling={result.confidenceCeiling}
               label="Confidence"
-              accessibilityLabel={`Confidence ${confidence}, out of the ${ONBOARDING_CONFIDENCE_CEILING}% a questionnaire can prove`}
+              accessibilityLabel={
+                result.confidenceCeiling === undefined
+                  ? `Confidence ${confidence}`
+                  : `Confidence ${confidence}, out of the ${result.confidenceCeiling}% a questionnaire can prove`
+              }
             />
             <InfoMark
               ref={marks.confidence}

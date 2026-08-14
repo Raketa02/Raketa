@@ -29,7 +29,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button, Card, Hairline, Note, Row, theme } from '@/shared/ui';
 
-import { ONBOARDING_CONFIDENCE_CEILING } from '../domain/AssessmentResult';
 import { confidenceLimit, type ConfidenceLimit } from '../domain/confidenceLimit';
 import { useRunResults, type RunResult } from '../hooks/useRunResults';
 import { useCompletedRuns } from '../store/completedRuns.store';
@@ -44,12 +43,18 @@ import { sportColour, sportLabel } from './sportPresentation';
  * The two ways a Confidence can be where it is, said as two different sentences.
  *
  * Client copy, like the band meanings and unlike the evidence trail: the wire carries the
- * number and the engine's own reason for it, and this is the app explaining its own
- * ceiling — which is a property of the questionnaire rather than of any rating.
+ * two numbers and the engine's own reason for them, and this is the app explaining what the
+ * comparison between them means.
+ *
+ * The ceiling is the engine's, so each sentence takes it rather than closing over a copy —
+ * a retune moves the number in the sentence with no release involved. A rating that arrives
+ * without one gets **no sentence at all**; see `RatingCard`.
  */
-const CONFIDENCE_LIMIT_NOTE: Readonly<Record<ConfidenceLimit, string>> = {
-  ceiling: `This reached the ${ONBOARDING_CONFIDENCE_CEILING}% a questionnaire can prove. Nothing you answered held it back — only playing can raise it.`,
-  evidence: `This sits below the ${ONBOARDING_CONFIDENCE_CEILING}% a questionnaire can prove, because your answers left more to settle rather than because of the ceiling.`,
+const CONFIDENCE_LIMIT_NOTE: Readonly<Record<ConfidenceLimit, (ceiling: number) => string>> = {
+  ceiling: (ceiling) =>
+    `This reached the ${ceiling}% a questionnaire can prove. Nothing you answered held it back — only playing can raise it.`,
+  evidence: (ceiling) =>
+    `This sits below the ${ceiling}% a questionnaire can prove, because your answers left more to settle rather than because of the ceiling.`,
 };
 
 export function DoneScreen() {
@@ -128,6 +133,7 @@ interface RatingCardProps {
 function RatingCard({ entry: { run, query } }: RatingCardProps) {
   const sport = sportLabel(run.sport);
   const result = query.data?.result;
+  const ceiling = result?.confidenceCeiling;
 
   return (
     <Card style={[s.card, { borderLeftColor: sportColour(run.sport) }]}>
@@ -189,7 +195,15 @@ function RatingCard({ entry: { run, query } }: RatingCardProps) {
             />
           </Hairline>
 
-          <Text style={s.limit}>{CONFIDENCE_LIMIT_NOTE[confidenceLimit(result.confidence)]}</Text>
+          {/* No ceiling served means the engine that produced this rating has been retired,
+              so there is nothing to have held it *against* and the card says nothing about
+              one — the same shape the result screen has for a missing confidence sentence.
+              A fallback here would be the app's own number presented as the engine's. */}
+          {ceiling !== undefined ? (
+            <Text style={s.limit}>
+              {CONFIDENCE_LIMIT_NOTE[confidenceLimit(result.confidence, ceiling)](ceiling)}
+            </Text>
+          ) : null}
         </>
       ) : null}
     </Card>

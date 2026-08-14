@@ -84,6 +84,7 @@ describe('assessment steps', () => {
     mu: 2.71,
     sigma: 0.62,
     confidence: 28,
+    confidence_ceiling: 30,
     range: { low: 2.09, high: 3.33 },
     band: { name: 'Established', lower: 2.65, upper: 3.85 },
     status: 'initial_estimate',
@@ -201,6 +202,7 @@ describe('assessment steps', () => {
 
     expect(step.result?.level).toBe(2.71);
     expect(step.result?.uncertainty).toBe(0.62);
+    expect(step.result?.confidenceCeiling).toBe(30);
     expect(step.result?.band).toEqual({ name: 'Established', lower: 2.65, upper: 3.85 });
     expect(step.result?.confidenceReason?.sentence).toBe('We have not seen you play yet.');
     // Carried across, never interpreted: the direction is the engine's word and the key
@@ -232,6 +234,49 @@ describe('assessment steps', () => {
     expect(step.result?.contributions).toEqual([]);
     expect(step.result?.wideners).toEqual([]);
     expect(step.result?.confidenceReason).toBeDefined();
+  });
+
+  it('reads a rating with no served ceiling as having none, never as having the usual one', () => {
+    // The engine that produced this rating has been retired, so the result was replayed
+    // from its stream: the numbers survive and the explanation does not. `null` on the
+    // wire and a response predating the field are the same absence, and both have to stay
+    // absent — a default here would put back the constant this pair of changes deleted,
+    // and it would be wrong in the one case it fired.
+    const nulled = toAssessmentStep({
+      assessment_id: '1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6',
+      status: 'completed',
+      questions_asked: 2,
+      question: null,
+      result: { ...RESULT, confidence_ceiling: null, confidence_reason: null },
+    });
+
+    const older = toAssessmentStep({
+      assessment_id: '1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6',
+      status: 'completed',
+      questions_asked: 2,
+      question: null,
+      result: { ...RESULT, confidence_ceiling: undefined },
+    });
+
+    expect(nulled.result?.confidenceCeiling).toBeUndefined();
+    expect(older.result?.confidenceCeiling).toBeUndefined();
+    // The numbers it does have are untouched by the absence.
+    expect(nulled.result?.confidence).toBe(28);
+  });
+
+  it('carries a ceiling of zero rather than reading it as absent', () => {
+    // `?? undefined` and not `|| undefined`: 0 is a number the engine could serve and is
+    // the one falsy value in range. A rating at 0% against a ceiling of 0 was held by the
+    // ceiling, and dropping it would say the opposite.
+    const step = toAssessmentStep({
+      assessment_id: '1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6',
+      status: 'completed',
+      questions_asked: 2,
+      question: null,
+      result: { ...RESULT, confidence: 0, confidence_ceiling: 0 },
+    });
+
+    expect(step.result?.confidenceCeiling).toBe(0);
   });
 
   it('has no result while a run is still running', () => {

@@ -425,6 +425,11 @@ export interface components {
             sigma: number;
             /** Confidence */
             confidence: number;
+            /**
+             * Confidence Ceiling
+             * @description The highest `confidence` this engine version can reach, as a whole percent — a questionnaire has an irreducible limit, so a rating at this value was held by the ceiling and one below it by its own evidence. Absent only for a rating replayed from an engine version that has since been retired, which is the same case that carries no `confidence_reason`: such a rating keeps its numbers and loses its explanation. Do not hold a local copy of this number — it is version-scoped and may be retuned without a client release.
+             */
+            confidence_ceiling?: number | null;
             range: components["schemas"]["RangeResponse"];
             band: components["schemas"]["BandResponse"];
             /** Status */

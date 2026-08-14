@@ -23,8 +23,10 @@
  * prove*, and when matches later push confidence to 75% the same ring means the same thing
  * with the tick simply sitting behind the arc.
  *
- * **The ceiling is told, never known.** Where it sits is a domain constant belonging to
- * whoever draws the ring; this component has no opinion about why.
+ * **The ceiling is told, never known**, and it may not be told at all. Where it sits belongs
+ * to whoever draws the ring; this component has no opinion about why. Given none, it draws
+ * **no tick** rather than a default one — a tick is a claim about what could have been
+ * proved, and a caller that cannot make that claim must not have one drawn for it.
  *
  * **Butt caps, not round.** A round cap adds half a stroke width at each end, which on a
  * 3% arc is most of the arc — it would inflate the smallest values, exactly where the
@@ -38,6 +40,7 @@
  * and its popover; it has no press state and no touch target of its own. Its role is
  * `progressbar`, and its accessible name has to state both numbers — the confidence
  * reached and the ceiling that applies — because the tick is invisible to a screen reader.
+ * Where there is no tick there is no second number, and the name says the one there is.
  */
 
 import { StyleSheet, Text, View } from 'react-native';
@@ -60,18 +63,18 @@ const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 export interface ConfidenceRingProps {
   /** 0–100. Drawn on the full scale, never rescaled to the ceiling. */
   readonly value: number;
-  /** Where the tick sits, on the same 0–100 scale. */
-  readonly ceiling: number;
+  /** Where the tick sits, on the same 0–100 scale. Absent draws no tick. */
+  readonly ceiling?: number;
   /** The eyebrow beneath, drawn uppercase. */
   readonly label: string;
-  /** Names both numbers — the value reached and the ceiling that applies. */
+  /** Names every number drawn — the value reached, and the ceiling if there is one. */
   readonly accessibilityLabel: string;
 }
 
 export function ConfidenceRing({ value, ceiling, label, accessibilityLabel }: ConfidenceRingProps) {
   const held = Math.min(Math.max(value, 0), SCALE);
   const drawn = CIRCUMFERENCE * (held / SCALE);
-  const tick = radial(ceiling);
+  const tick = ceiling === undefined ? undefined : radial(ceiling);
 
   return (
     <View style={s.ring}>
@@ -104,14 +107,16 @@ export function ConfidenceRing({ value, ceiling, label, accessibilityLabel }: Co
             // 12 o'clock, sweeping clockwise: SVG's zero is 3 o'clock.
             transform={`rotate(-90 ${CENTRE} ${CENTRE})`}
           />
-          <Line
-            x1={tick.x1}
-            y1={tick.y1}
-            x2={tick.x2}
-            y2={tick.y2}
-            stroke={theme.color.volt}
-            strokeWidth={theme.size.ringTick}
-          />
+          {tick === undefined ? null : (
+            <Line
+              x1={tick.x1}
+              y1={tick.y1}
+              x2={tick.x2}
+              y2={tick.y2}
+              stroke={theme.color.volt}
+              strokeWidth={theme.size.ringTick}
+            />
+          )}
         </Svg>
 
         {/* Over the drawing rather than inside it, so the figure scales with the OS text
