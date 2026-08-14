@@ -46,3 +46,13 @@ jest.mock('expo-network', () => ({
 // on unvalidated config rather than on whatever the test is actually about.
 // `src/shared/config/env.test.ts` still covers the failure paths, on `parseEnv`.
 require('./src/shared/config/env').loadEnv();
+
+// --- Query's garbage-collection timers ---------------------------------------
+// `gcTime` is five minutes, so an unmounted query or mutation leaves a real five-minute
+// timer behind and the jest worker's event loop never empties — which is the whole of the
+// "failed to exit gracefully" warning (#29). `queryClient.clear()` cannot cancel all of
+// them; the reasoning, and what was measured, is in the module.
+//
+// Installed here rather than per suite so no suite has to remember, and installed before
+// any test file loads so nothing is scheduled through the old provider.
+require('./src/test-support/queryTimeouts').installUnrefTimeouts();
