@@ -65,20 +65,48 @@ async def list_ratings(
     "",
     response_model=AssessmentStepResponse,
     status_code=status.HTTP_201_CREATED,
+    responses={
+        status.HTTP_200_OK: {
+            "model": AssessmentStepResponse,
+            "description": (
+                "An assessment for this sport was already in progress; its "
+                "outstanding question is returned and nothing was created."
+            ),
+        },
+        status.HTTP_201_CREATED: {
+            "model": AssessmentStepResponse,
+            "description": (
+                "A new assessment was started; its opening question is returned."
+            ),
+        },
+    },
     summary="Start an assessment and receive its opening question",
+    description=(
+        "Idempotent per player and sport. Starting a sport that already has an "
+        "unfinished run returns **that** run and its outstanding question with a "
+        "200, rather than opening a second one — so a double-tapped confirm, or a "
+        "retry after a lost response, costs nothing. A sport whose previous run was "
+        "completed or abandoned still starts a new run, with a 201.\n\n"
+        "Both outcomes carry the same body, so a client that only routes on the "
+        "step needs no branch; the status code is there for one that wants to tell "
+        "the two apart."
+    ),
 )
 async def create_assessment(
     body: CreateAssessmentRequest,
     current_user: CurrentUserDep,
     use_case: CreateAssessmentDep,
+    response: Response,
 ) -> AssessmentStepResponse:
-    step = await use_case.execute(
+    started = await use_case.execute(
         CreateAssessmentCommand(
             player_id=PlayerId(current_user.id),
             sport=body.sport,
         )
     )
-    return AssessmentStepResponse.from_step(step)
+    if not started.created:
+        response.status_code = status.HTTP_200_OK
+    return AssessmentStepResponse.from_step(started.step)
 
 
 @router.get(

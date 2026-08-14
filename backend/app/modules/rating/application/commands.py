@@ -83,3 +83,18 @@ class AssessmentStep:
     status: str
     question: Question | None
     result: AssessmentResult | None
+
+
+@dataclass(frozen=True)
+class AssessmentStart:
+    """A step, and whether this call is what opened the run it describes.
+
+    Starting is idempotent per player and sport, so the step alone cannot say
+    whether a run was created or an open one was handed back. The flag is not a
+    fact about the assessment — it is a fact about *this call* — which is why it
+    travels beside the step rather than on it, and why presentation spends it on
+    a status code rather than putting it on the wire.
+    """
+
+    step: AssessmentStep
+    created: bool

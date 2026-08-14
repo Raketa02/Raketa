@@ -222,6 +222,7 @@
           "assessments"
         ],
         "summary": "Start an assessment and receive its opening question",
+        "description": "Idempotent per player and sport. Starting a sport that already has an unfinished run returns **that** run and its outstanding question with a 200, rather than opening a second one \u2014 so a double-tapped confirm, or a retry after a lost response, costs nothing. A sport whose previous run was completed or abandoned still starts a new run, with a 201.\n\nBoth outcomes carry the same body, so a client that only routes on the step needs no branch; the status code is there for one that wants to tell the two apart.",
         "operationId": "create_assessment_api_v1_assessments_post",
         "requestBody": {
           "content": {
@@ -235,7 +236,17 @@
         },
         "responses": {
           "201": {
-            "description": "Successful Response",
+            "description": "A new assessment was started; its opening question is returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssessmentStepResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "An assessment for this sport was already in progress; its outstanding question is returned and nothing was created.",
             "content": {
               "application/json": {
                 "schema": {

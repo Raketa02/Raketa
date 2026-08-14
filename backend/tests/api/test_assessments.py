@@ -102,6 +102,172 @@ async def test_create_requires_authentication(client):
     assert resp.status_code == 401
 
 
+# --- Starting is idempotent per player and sport --------------------------------
+
+
+async def _assessment_stream_ids(session_factory) -> set:
+    async with session_factory() as session:
+        rows = (
+            (
+                await session.execute(
+                    select(EventStoreORM).where(
+                        EventStoreORM.aggregate_type == "assessment"
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+    return {row.aggregate_id for row in rows}
+
+
+@pytest.mark.asyncio
+async def test_starting_twice_for_one_sport_returns_the_open_run(
+    client, session_factory, valid_signup_payload
+):
+    # A double-tapped confirm, or a retry after a response lost in flight. Before
+    # the guard this opened a second stream and stranded one of them: the
+    # in-progress lookup answers with a single run, so the other was neither
+    # resumable nor abandonable through any client path.
+    headers = await _auth_headers(client, valid_signup_payload)
+    first = (await _create(client, headers, "PADEL")).json()
+
+    resp = await _create(client, headers, "PADEL")
+
+    assert resp.status_code == 200, resp.text
+    second = resp.json()
+    assert second["assessment_id"] == first["assessment_id"]
+    assert second["question"]["id"] == first["question"]["id"]
+    assert second["status"] == "in_progress"
+
+    assert len(await _assessment_stream_ids(session_factory)) == 1
+
+
+@pytest.mark.asyncio
+async def test_the_second_start_returns_the_outstanding_question_not_the_opening_one(
+    client, valid_signup_payload
+):
+    # Idempotent means *resumed*, not "replayed from the top". A start that
+    # handed back the opening question of a run already several answers deep
+    # would re-ask something answered and be rejected by the aggregate.
+    headers = await _auth_headers(client, valid_signup_payload)
+    created = (await _create(client, headers, "PADEL")).json()
+    mid_run = (
+        await _answer(
+            client,
+            headers,
+            created["assessment_id"],
+            created["question"]["id"],
+            "regular",
+        )
+    ).json()
+    assert mid_run["question"] is not None
+    assert mid_run["question"]["id"] != created["question"]["id"]
+
+    resp = await _create(client, headers, "PADEL")
+
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["question"]["id"] == mid_run["question"]["id"]
+
+
+@pytest.mark.asyncio
+async def test_starting_after_a_completed_run_opens_a_new_one(
+    client, session_factory, valid_signup_payload
+):
+    # The guard is scoped to runs in progress, never to any run that ever
+    # existed — a rated sport can always be rated again.
+    headers = await _auth_headers(client, valid_signup_payload)
+    finished = await _run_to_result(client, headers, "PADEL")
+    assert finished["status"] == "completed"
+
+    resp = await _create(client, headers, "PADEL")
+
+    assert resp.status_code == 201, resp.text
+    assert resp.json()["assessment_id"] != finished["assessment_id"]
+    assert resp.json()["question"]["id"] == "opening.regularity"
+    assert len(await _assessment_stream_ids(session_factory)) == 2
+
+
+@pytest.mark.asyncio
+async def test_starting_after_an_abandoned_run_opens_a_new_one(
+    client, session_factory, valid_signup_payload
+):
+    headers = await _auth_headers(client, valid_signup_payload)
+    abandoned = (await _create(client, headers, "PADEL")).json()
+    await _abandon(client, headers, abandoned["assessment_id"])
+
+    resp = await _create(client, headers, "PADEL")
+
+    assert resp.status_code == 201, resp.text
+    assert resp.json()["assessment_id"] != abandoned["assessment_id"]
+    assert len(await _assessment_stream_ids(session_factory)) == 2
+
+
+@pytest.mark.asyncio
+async def test_the_guard_is_scoped_to_one_sport(client, valid_signup_payload):
+    # A player may hold in-progress runs for several sports at once, and that is
+    # correct — the guard must not read one sport's open run as another's.
+    headers = await _auth_headers(client, valid_signup_payload)
+    padel = (await _create(client, headers, "PADEL")).json()
+
+    resp = await _create(client, headers, "BADMINTON")
+
+    assert resp.status_code == 201, resp.text
+    assert resp.json()["assessment_id"] != padel["assessment_id"]
+
+
+@pytest.mark.asyncio
+async def test_the_guard_is_scoped_to_one_player(client, valid_signup_payload):
+    # Alice's open PADEL run must not be handed to Bob, nor stop him starting his
+    # own — the lookup is keyed by player as well as sport.
+    alice = await _auth_headers(client, valid_signup_payload)
+    hers = (await _create(client, alice, "PADEL")).json()
+
+    bob = await _auth_headers(client, BOB)
+    resp = await _create(client, bob, "PADEL")
+
+    assert resp.status_code == 201, resp.text
+    assert resp.json()["assessment_id"] != hers["assessment_id"]
+
+
+@pytest.mark.asyncio
+async def test_the_resumed_start_and_the_in_progress_read_agree(
+    client, valid_signup_payload
+):
+    # Two routes answering the same question must not disagree about which run is
+    # open, or the entry gate and the sports picker would route to different runs.
+    headers = await _auth_headers(client, valid_signup_payload)
+    first = (await _create(client, headers, "PADEL")).json()
+
+    restarted = (await _create(client, headers, "PADEL")).json()
+    resumed = (await _in_progress(client, headers, "PADEL")).json()
+
+    # All three name the run the *first* call opened. Asserting only that the
+    # last two agree would pass without the guard at all, because both would
+    # then name the second run the restart had just created.
+    assert restarted["assessment_id"] == first["assessment_id"]
+    assert resumed["assessment_id"] == first["assessment_id"]
+    assert restarted["question"]["id"] == resumed["question"]["id"]
+
+
+@pytest.mark.asyncio
+async def test_both_start_outcomes_are_stated_on_the_operation():
+    # A client can only rely on the idempotence if the contract says so — this is
+    # what the generated types and a reader of the document both see.
+    from app.api.contract import build_surface_spec
+    from app.api.v1.player import player_api_router
+
+    operation = build_surface_spec("player", player_api_router)["paths"][
+        "/api/v1/assessments"
+    ]["post"]
+
+    assert "Idempotent per player and sport" in operation["description"]
+    for code in ("200", "201"):
+        schema = operation["responses"][code]["content"]["application/json"]["schema"]
+        assert schema["$ref"].endswith("/AssessmentStepResponse")
+        assert operation["responses"][code]["description"]
+
+
 @pytest.mark.asyncio
 async def test_beginner_answer_returns_the_exact_result(client, valid_signup_payload):
     headers = await _auth_headers(client, valid_signup_payload)
