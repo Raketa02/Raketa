@@ -19,7 +19,9 @@ import { queryClient } from '@/shared/lib/query-client';
 import {
   SPORTS_SERVED,
   launchSignedIn,
+  runInProgress,
   stubGate as stubGateWith,
+  stubRunsInProgress,
 } from '@/test-support/onboardingRouter';
 import {
   installTransport,
@@ -137,7 +139,7 @@ async function relaunch(initialUrl = '/') {
 
 /** Land mid-run, the way the gate does: an unfinished padel assessment, resumed. */
 async function resumePadel(step = PADEL_OPENING) {
-  stubGate({ run: { sport: 'PADEL', step } });
+  stubGate({ runs: [runInProgress('PADEL', PADEL_RUN)] });
   transport.on('GET', stepPath(PADEL_RUN), () => json(step));
 
   await launchSignedIn();
@@ -169,16 +171,21 @@ function openTheConfirm() {
 }
 
 /**
- * A server that actually performs the transition: once the run is abandoned, its sport
- * reports nothing in progress.
+ * A server that actually performs the transition: once the run is abandoned, it is no
+ * longer among the player's unfinished runs.
  *
  * Worth the four lines. A fake that kept answering "unfinished" after a successful
  * abandonment would let the client pass while relying on a cached answer the server had
  * already contradicted — which is the exact failure the gate has to survive.
+ *
+ * `remaining` is what is still unfinished afterwards, which for every case here is nothing.
  */
-function stubAbandonment(assessmentId: string, wireSport: string) {
+function stubAbandonment(
+  assessmentId: string,
+  remaining: readonly Wire['InProgressAssessmentResponse'][] = [],
+) {
   transport.on('POST', abandonmentPath(assessmentId), () => {
-    transport.on('GET', `/api/v1/assessments/in-progress?sport=${wireSport}`, () => noContent());
+    stubRunsInProgress(transport, remaining);
     return noContent();
   });
 }
@@ -326,7 +333,7 @@ describe('abandoning a sport', () => {
   it('ends the run and starts the next sport the player chose', async () => {
     await walkInWithTwoSports();
 
-    stubAbandonment(PADEL_RUN, 'PADEL');
+    stubAbandonment(PADEL_RUN);
     transport.on('POST', '/api/v1/assessments', () => json(TENNIS_OPENING, 201));
 
     openTheConfirm();
@@ -349,7 +356,7 @@ describe('abandoning a sport', () => {
 
   it('ends onboarding when it was the only sport', async () => {
     await resumePadel();
-    stubAbandonment(PADEL_RUN, 'PADEL');
+    stubAbandonment(PADEL_RUN);
 
     openTheConfirm();
     fireEvent.press(await screen.findByLabelText(/^Stop rating Padel\./));
@@ -364,7 +371,7 @@ describe('abandoning a sport', () => {
 
   it('leaves cleanly even when the gate still has an answer cached', async () => {
     await resumePadel();
-    stubAbandonment(PADEL_RUN, 'PADEL');
+    stubAbandonment(PADEL_RUN);
 
     // A warm gate: the launch answer is still in the cache and it says this run is
     // unfinished. That was true a moment ago and is about to stop being true.
@@ -384,9 +391,9 @@ describe('abandoning a sport', () => {
 
   it("touches no other sport's assessment", async () => {
     // Rated at padel already, and half way through a tennis run that is not this one.
-    stubGate({ ratings: [PADEL_RATING], run: { sport: 'TENNIS', step: TENNIS_OPENING } });
+    stubGate({ ratings: [PADEL_RATING], runs: [runInProgress('TENNIS', TENNIS_RUN)] });
     transport.on('GET', stepPath(TENNIS_RUN), () => json(TENNIS_OPENING));
-    stubAbandonment(TENNIS_RUN, 'TENNIS');
+    stubAbandonment(TENNIS_RUN);
 
     await launchSignedIn();
     await waitFor(() => expect(screen).toHavePathname(`/question/${TENNIS_RUN}`));
@@ -406,7 +413,7 @@ describe('abandoning a sport', () => {
 
   it('is not resumed on a later launch, and the sport can be started again', async () => {
     await resumePadel();
-    stubAbandonment(PADEL_RUN, 'PADEL');
+    stubAbandonment(PADEL_RUN);
 
     openTheConfirm();
     fireEvent.press(await screen.findByLabelText(/^Stop rating Padel\./));
@@ -457,7 +464,7 @@ describe('when abandoning does not go through', () => {
 
     // Abandonment is a state transition and a second one is a no-op on the server, so
     // pressing again is safe however far the first attempt actually got.
-    stubAbandonment(PADEL_RUN, 'PADEL');
+    stubAbandonment(PADEL_RUN);
     fireEvent.press(screen.getByLabelText(/^Stop rating Padel\./));
 
     await waitFor(() => expect(screen).toHavePathname('/welcome'));
@@ -467,7 +474,7 @@ describe('when abandoning does not go through', () => {
   it('keeps the confirm open when the next sport fails to start, and retries the pair', async () => {
     await walkInWithTwoSports();
 
-    stubAbandonment(PADEL_RUN, 'PADEL');
+    stubAbandonment(PADEL_RUN);
     // The abandonment lands and the connection drops before the next sport can start —
     // the moment where a confirm that closed itself would leave the failure nowhere.
     transport.on('POST', '/api/v1/assessments', networkFailure());

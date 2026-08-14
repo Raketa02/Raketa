@@ -30,6 +30,8 @@ type RatingsResponse = components['schemas']['RatingsResponse'];
 type SportsResponse = components['schemas']['SportsResponse'];
 type QuestionResponse = components['schemas']['QuestionResponse'];
 type AssessmentStepResponse = components['schemas']['AssessmentStepResponse'];
+type InProgressAssessmentResponse = components['schemas']['InProgressAssessmentResponse'];
+type InProgressAssessmentsResponse = components['schemas']['InProgressAssessmentsResponse'];
 
 const SPORT_BY_WIRE = {
   PADEL: 'padel',
@@ -125,12 +127,35 @@ export function toAssessmentStep(wire: AssessmentStepResponse): AssessmentStep {
 }
 
 /**
- * A run to resume.
+ * A run to resume. `undefined` for a sport this build has no identity for.
  *
- * The sport comes from the caller, not from the payload: `/assessments/in-progress` is
- * asked one sport at a time, so which sport a run belongs to is known from the question
- * rather than from the answer.
+ * The sport now comes from the payload rather than from the caller: the collection form of
+ * `/assessments/in-progress` names the sport of each run, which is what lets one request
+ * answer for all of them.
+ *
+ * The drop is the same rule as everywhere else in this file, and here it is load-bearing
+ * rather than cosmetic — the resume route validates its sport against `SPORTS` before it
+ * renders anything, so a run this build cannot name is a run it cannot route to.
  */
-export function toAssessmentRun(wire: AssessmentStepResponse, sport: Sport): AssessmentRun {
+export function toAssessmentRun(wire: InProgressAssessmentResponse): AssessmentRun | undefined {
+  const sport = toSport(wire.sport);
+  if (sport === undefined) return undefined;
+
   return { assessmentId: wire.assessment_id, sport };
+}
+
+/**
+ * Every unfinished run, in the order the server sent them.
+ *
+ * **An empty collection is an answer, not a failure** — and it is the common one. Ordering
+ * is the server's: it sends them in sport-registry order, which is `SPORTS`' order, so a
+ * caller wanting one run takes the first. Re-sorting here would be a second copy of a rule
+ * the contract already states, and two copies are two places for it to drift.
+ */
+export function toAssessmentRuns(
+  response: InProgressAssessmentsResponse,
+): readonly AssessmentRun[] {
+  return response.assessments
+    .map((entry) => toAssessmentRun(entry))
+    .filter((run): run is AssessmentRun => run !== undefined);
 }

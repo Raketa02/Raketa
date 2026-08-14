@@ -18,6 +18,7 @@ import { queryClient } from '@/shared/lib/query-client';
 import {
   SPORTS_SERVED,
   launchSignedIn,
+  runInProgress,
   stubGate as stubGateWith,
 } from '@/test-support/onboardingRouter';
 import {
@@ -142,7 +143,7 @@ afterEach(() => {
  * exercises the same one screen; the walk in from the picker has its own test below.
  */
 async function resumeAtTheOpeningQuestion() {
-  stubGate({ run: { sport: 'PADEL', step: OPENING } });
+  stubGate({ runs: [runInProgress('PADEL', ASSESSMENT_ID)] });
   transport.on('GET', STEP_PATH, () => json(OPENING));
 
   await launchSignedIn();
@@ -237,7 +238,7 @@ describe('the question screen', () => {
     // count is the server's replay of the transcript — the only thing that ever survived
     // the player closing the app, so it is the only thing that can answer this.
     const resumed: Wire['AssessmentStepResponse'] = { ...EXECUTION, questions_asked: 4 };
-    stubGate({ run: { sport: 'PADEL', step: resumed } });
+    stubGate({ runs: [runInProgress('PADEL', ASSESSMENT_ID)] });
     transport.on('GET', STEP_PATH, () => json(resumed));
 
     await launchSignedIn();
@@ -509,7 +510,7 @@ describe('finishing', () => {
   });
 
   it('leaves a resumed-but-finished run on the result rather than on a dead question', async () => {
-    stubGate({ run: { sport: 'PADEL', step: OPENING } });
+    stubGate({ runs: [runInProgress('PADEL', ASSESSMENT_ID)] });
     // The gate saw a run in progress; by the time the screen read it, it was over.
     transport.on('GET', STEP_PATH, () => json(FINISHED));
 

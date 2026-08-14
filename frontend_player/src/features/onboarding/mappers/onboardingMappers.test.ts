@@ -9,6 +9,7 @@ import type { Wire } from '@/test-support/transport';
 
 import {
   toAssessmentRun,
+  toAssessmentRuns,
   toAssessmentStep,
   toSkillRatings,
   toSport,
@@ -43,8 +44,9 @@ describe('sports', () => {
     const served: Wire['SportsResponse'] = {
       sports: [
         { sport: 'TENNIS', players: 2, durations: [60, 90] },
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- see above: the
-        // point of the case is a value the contract says is impossible.
+        // See above: the point of the case is a value the contract says is impossible.
+        // No eslint directive — `@typescript-eslint/no-explicit-any` is not configured in
+        // this app, so a disable for it is dead and reported as one.
         { sport: 'PICKLEBALL' as any, players: 4, durations: [60] },
       ],
     };
@@ -163,20 +165,55 @@ describe('assessment steps', () => {
     expect(step.status).toBe('in_progress');
   });
 
-  it("takes the run's sport from the question that was asked, not from the answer", () => {
-    // `/assessments/in-progress` is scoped to a sport and the payload does not name one.
-    const run = toAssessmentRun(
-      {
-        assessment_id: '1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6',
-        status: 'in_progress',
-        questions_asked: 3,
-      },
-      'squash',
-    );
+  it("takes the run's sport from the payload, which now names it", () => {
+    const run = toAssessmentRun({
+      assessment_id: '1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6',
+      sport: 'SQUASH',
+    });
 
     expect(run).toEqual({
       assessmentId: '1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6',
       sport: 'squash',
     });
+  });
+});
+
+describe('the runs a player left unfinished', () => {
+  it('reads an empty collection as no run in progress, not as a failure', () => {
+    // The commonest answer there is — a new account, and every player who finished what
+    // they started. If this were an error path the gate would break for almost everyone.
+    expect(toAssessmentRuns({ assessments: [] })).toEqual([]);
+  });
+
+  it('keeps the order it was sent in, so the first entry is the first in registry order', () => {
+    const runs = toAssessmentRuns({
+      assessments: [
+        { assessment_id: 'run-padel', sport: 'PADEL' },
+        { assessment_id: 'run-squash', sport: 'SQUASH' },
+      ],
+    });
+
+    // Sorting here would be a second copy of a rule the contract already states.
+    expect(runs).toEqual([
+      { assessmentId: 'run-padel', sport: 'padel' },
+      { assessmentId: 'run-squash', sport: 'squash' },
+    ]);
+  });
+
+  it('drops a run whose sport this build has no identity for', () => {
+    // Not cosmetic here, unlike the picker: the resume route validates its sport against
+    // `SPORTS` before it renders, so a run this build cannot name is one it cannot route
+    // to. Dropping it leaves the player at welcome; keeping it would fail route-param
+    // validation with a run they can neither resume nor abandon.
+    const runs = toAssessmentRuns({
+      assessments: [
+        // The contract says this cannot arrive; a phone that has not updated in eight
+        // months says otherwise.
+        { assessment_id: 'run-pickleball', sport: 'PICKLEBALL' as any },
+        { assessment_id: 'run-tennis', sport: 'TENNIS' },
+      ],
+    });
+
+    expect(runs).toEqual([{ assessmentId: 'run-tennis', sport: 'tennis' }]);
   });
 });

@@ -28,7 +28,7 @@ import WelcomeRoute from '@/app/(onboarding)/welcome';
 import { beginSession } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 
-import { json, noContent, type Transport, type Wire } from './transport';
+import { json, type Transport, type Wire } from './transport';
 
 export const ONBOARDING_ROUTES = {
   _layout: TestRoot,
@@ -74,27 +74,48 @@ export const SPORTS_SERVED: Wire['SportsResponse'] = {
   ],
 };
 
+export const RUNS_IN_PROGRESS_PATH = '/api/v1/assessments/in-progress';
+
 export interface GateStub {
   readonly ratings?: readonly Wire['RatingResponse'][];
-  readonly run?: {
-    readonly sport: string;
-    readonly step: Wire['AssessmentStepResponse'];
-  };
+  /**
+   * The runs this player left unfinished, in the order the server sends them — sport
+   * registry order. A single run is the ordinary case; two is what proves which one the
+   * gate picks.
+   */
+  readonly runs?: readonly Wire['InProgressAssessmentResponse'][];
 }
 
-/** The gate's two reads: what this player is rated at, and what they left unfinished. */
-export function stubGate(transport: Transport, { ratings = [], run }: GateStub = {}) {
+/**
+ * The gate's two reads: what this player is rated at, and what they left unfinished.
+ *
+ * The second is **one** request covering every sport. An empty list is the answer for a
+ * player with nothing outstanding — a 200, not a 204 and not a failure.
+ */
+export function stubGate(transport: Transport, { ratings = [], runs = [] }: GateStub = {}) {
   transport.on('GET', '/api/v1/ratings', () =>
     json<Wire['RatingsResponse']>({ ratings: [...ratings] }),
   );
 
-  // One request per sport, because the endpoint is scoped to one. 204 is "nothing here",
-  // which is the normal state of a sport and not a failure.
-  for (const sport of ['PADEL', 'TENNIS', 'SQUASH', 'BADMINTON']) {
-    transport.on('GET', `/api/v1/assessments/in-progress?sport=${sport}`, () =>
-      run?.sport === sport ? json(run.step) : noContent(),
-    );
-  }
+  stubRunsInProgress(transport, runs);
+}
+
+/** Replace the gate's unfinished-run answer — what the server says *now*. */
+export function stubRunsInProgress(
+  transport: Transport,
+  runs: readonly Wire['InProgressAssessmentResponse'][],
+) {
+  transport.on('GET', RUNS_IN_PROGRESS_PATH, () =>
+    json<Wire['InProgressAssessmentsResponse']>({ assessments: [...runs] }),
+  );
+}
+
+/** One unfinished run, as the collection reports it: the id and its sport, nothing else. */
+export function runInProgress(
+  sport: Wire['Sport'],
+  assessmentId: string,
+): Wire['InProgressAssessmentResponse'] {
+  return { assessment_id: assessmentId, sport };
 }
 
 /** A cold launch with credentials already in the keychain. */

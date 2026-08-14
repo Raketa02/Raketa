@@ -26,8 +26,10 @@ import { queryClient } from '@/shared/lib/query-client';
 import { refreshTokens } from '@/features/auth/types';
 import {
   ONBOARDING_ROUTES,
+  RUNS_IN_PROGRESS_PATH,
   SPORTS_SERVED,
   launchSignedIn,
+  runInProgress,
   stubGate as stubGateWith,
 } from '@/test-support/onboardingRouter';
 import {
@@ -137,7 +139,7 @@ describe('where a launch lands', () => {
   });
 
   it('resumes an assessment that was left unfinished', async () => {
-    stubGate({ run: { sport: 'TENNIS', step: OPENING_STEP } });
+    stubGate({ runs: [runInProgress('TENNIS', ASSESSMENT_ID)] });
     transport.on('GET', `/api/v1/assessments/${ASSESSMENT_ID}`, () => json(OPENING_STEP));
 
     await launchSignedIn();
@@ -147,6 +149,55 @@ describe('where a launch lands', () => {
     // no queue, because the queue was never persisted.
     expect(await screen.findByText('Recent activity')).toBeTruthy();
     expect(screen.getByText('Tennis · Rating 1 of 1')).toBeTruthy();
+  });
+
+  it('asks whether any run is unfinished with one request, not one per sport', async () => {
+    stubGate();
+
+    await launchSignedIn();
+
+    await waitFor(() => expect(screen).toHavePathname('/welcome'));
+    // The whole point of the collection form. Four requests on every cold launch, for an
+    // answer that is almost always "no", is what this replaced — so the count is the
+    // assertion, and asserting the *route* as well is what stops a fan-out reappearing
+    // under per-sport paths that this count would never see.
+    expect(transport.requestsTo('GET', RUNS_IN_PROGRESS_PATH)).toHaveLength(1);
+    expect(
+      transport.requests.filter((request) => request.path.startsWith(RUNS_IN_PROGRESS_PATH)),
+    ).toHaveLength(1);
+  });
+
+  it('resumes the first run in registry order when two sports are unfinished', async () => {
+    const tennisRun = 'b7c8d9e0-1f2a-4b3c-8d4e-5f6a7b8c9d0e';
+    // Registry order — padel, tennis, squash, badminton — which is the order the server
+    // sends them in, and the order today's fan-out resolved ties by. Padel is first, so
+    // padel is what a player with both unfinished goes back to.
+    stubGate({
+      runs: [runInProgress('PADEL', ASSESSMENT_ID), runInProgress('TENNIS', tennisRun)],
+    });
+    transport.on('GET', `/api/v1/assessments/${ASSESSMENT_ID}`, () => json(OPENING_STEP));
+
+    await launchSignedIn();
+
+    await waitFor(() => expect(screen).toHavePathname(`/question/${ASSESSMENT_ID}`));
+    expect(await screen.findByText('Padel · Rating 1 of 1')).toBeTruthy();
+    // And the run it did not route to is not read: the gate picks one, and only that one
+    // is re-read for its outstanding question.
+    expect(transport.requestsTo('GET', `/api/v1/assessments/${tennisRun}`)).toEqual([]);
+  });
+
+  it('says so rather than guessing, when the collection read answers the wrong shape', async () => {
+    stubGate();
+    // The route answers two shapes off one path, chosen by a parameter this call omits.
+    // A step arriving here is the route answering a question the gate did not ask, and
+    // reading it as an empty collection would send a player with an unfinished run past
+    // the gate — silently, and only for the player it hurts.
+    transport.on('GET', RUNS_IN_PROGRESS_PATH, () => json(OPENING_STEP));
+
+    await launchSignedIn();
+
+    expect(await screen.findByText("We couldn't pick up where you left off")).toBeTruthy();
+    expect(screen).not.toHavePathname('/welcome');
   });
 
   it('asks both gate questions at once rather than one after the other', async () => {
@@ -167,11 +218,7 @@ describe('where a launch lands', () => {
 
     await launchSignedIn();
 
-    await waitFor(() =>
-      expect(
-        transport.requestsTo('GET', '/api/v1/assessments/in-progress?sport=BADMINTON'),
-      ).toHaveLength(1),
-    );
+    await waitFor(() => expect(transport.requestsTo('GET', RUNS_IN_PROGRESS_PATH)).toHaveLength(1));
 
     answerRatings();
     await waitFor(() => expect(screen).toHavePathname('/welcome'));

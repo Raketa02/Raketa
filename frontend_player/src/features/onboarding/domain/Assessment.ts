@@ -77,8 +77,9 @@ export interface AssessmentStep {
 /**
  * A run the player has left unfinished, as the entry gate sees it.
  *
- * The sport is **not** on the wire — `GET /assessments/in-progress` is asked one sport at
- * a time, so the sport is known from the question rather than from the answer.
+ * The assessment id and its sport, and nothing else: this is what a router needs. The
+ * outstanding question is deliberately absent — the gate decides *where* to send the
+ * player, and the run it routes to is re-read there.
  */
 export interface AssessmentRun {
   readonly assessmentId: string;

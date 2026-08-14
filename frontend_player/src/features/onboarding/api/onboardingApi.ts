@@ -6,7 +6,8 @@
  * and what a failure means all belong above.
  */
 
-import type { components } from '@/generated/schema';
+import type { components, operations } from '@/generated/schema';
+import { mapDecodeFailure } from '@/shared/errors';
 import { httpRequest } from '@/shared/lib/http';
 
 type RatingsResponse = components['schemas']['RatingsResponse'];
@@ -14,7 +15,15 @@ type SportsResponse = components['schemas']['SportsResponse'];
 type AssessmentStepResponse = components['schemas']['AssessmentStepResponse'];
 type CreateAssessmentRequest = components['schemas']['CreateAssessmentRequest'];
 type SubmitAnswerRequest = components['schemas']['SubmitAnswerRequest'];
-type WireSport = components['schemas']['Sport'];
+type InProgressAssessmentsResponse = components['schemas']['InProgressAssessmentsResponse'];
+
+/**
+ * The union the route's 200 actually is — taken from the operation rather than assembled
+ * here, so an arm the backend adds or drops arrives through `pnpm gen:api` instead of
+ * being restated at a second desk.
+ */
+type FindInProgressResponse =
+  operations['find_in_progress_api_v1_assessments_in_progress_get']['responses'][200]['content']['application/json'];
 
 export interface OnboardingApiOptions {
   readonly signal?: AbortSignal;
@@ -47,21 +56,40 @@ export function listSports({ signal }: OnboardingApiOptions = {}): Promise<Sport
 }
 
 /**
- * The sport's unfinished run, or nothing.
+ * Every unfinished run this player holds — in **one** request, at most one entry per sport,
+ * in sport-registry order, and an empty collection when there are none.
  *
- * 204 is the "nothing" answer and is not an error: no run in progress is the normal state
- * of a sport. `httpRequest` decodes an empty body as `undefined`.
+ * Empty arrives as a 200 with an empty list, never a 204 and never a 404: no run in
+ * progress is the ordinary state of an account and by far the commonest answer.
+ *
+ * `sport` is deliberately omitted, and that is what selects the shape. The route answers
+ * two ways off one path — that sport's outstanding step when `sport` is supplied, this
+ * collection when it is not — so the contract's 200 is a union, and the arm this call asked
+ * for is picked out here at the wire boundary rather than carried inward for a mapper to
+ * sort out. A body with no `assessments` is the route answering a question this call did
+ * not ask: a decode failure, and emphatically not "nothing in progress", because an empty
+ * list would send a player with an unfinished run straight past the gate.
  */
-export function findInProgress(
-  sport: WireSport,
-  { signal }: OnboardingApiOptions = {},
-): Promise<AssessmentStepResponse | undefined> {
-  return httpRequest<AssessmentStepResponse | undefined>({
+export async function listRunsInProgress({
+  signal,
+}: OnboardingApiOptions = {}): Promise<InProgressAssessmentsResponse> {
+  const body = await httpRequest<FindInProgressResponse>({
     method: 'GET',
-    path: `/api/v1/assessments/in-progress?sport=${encodeURIComponent(sport)}`,
+    path: '/api/v1/assessments/in-progress',
     authenticated: true,
     signal,
   });
+
+  if (!isCollection(body)) {
+    throw mapDecodeFailure(
+      new Error('GET /assessments/in-progress answered with a step, not the collection.'),
+    );
+  }
+  return body;
+}
+
+function isCollection(body: FindInProgressResponse): body is InProgressAssessmentsResponse {
+  return Array.isArray((body as InProgressAssessmentsResponse).assessments);
 }
 
 /** Start an assessment and receive its opening question in the same round trip. */
