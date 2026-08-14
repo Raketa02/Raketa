@@ -19,6 +19,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button, Note, PressableCard, theme } from '@/shared/ui';
 
 import type { Sport } from '../domain/Sport';
+import { useCompletedRuns } from '../store/completedRuns.store';
 import { useSportQueue } from '../store/sportQueue.store';
 import { useSports } from '../hooks/useSports';
 import { useStartAssessment } from '../hooks/useStartAssessment';
@@ -32,12 +33,17 @@ export function SportsPickerScreen() {
   const sports = useSports();
   const queue = useSportQueue((state) => state.queue);
   const toggle = useSportQueue((state) => state.toggle);
+  const clearCompleted = useCompletedRuns((state) => state.reset);
   const start = useStartAssessment();
 
   const [first] = queue;
 
   const begin = () => {
     if (first === undefined) return;
+    // A new queue is a new run, and the done screen accounts for *this* run. Nothing else
+    // reaches onboarding twice in one launch today; clearing here is what keeps that a
+    // property of the flow rather than a consequence of nothing else being possible.
+    clearCompleted();
     start.mutate(first, {
       onSuccess: (step) =>
         router.replace({

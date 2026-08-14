@@ -26,8 +26,8 @@ feature, not after:
 ordered startup sequence. Above that: the HTTP client with its 401 → refresh → retry
 rotation, the `AppError` family, `shared/lib/auth` over the keychain, and two features —
 `auth` (sign up, sign in, session restore) and `onboarding` (the entry gate, welcome, the
-sports picker, the adaptive question loop, and the result route the rating screen fills
-in).
+sports picker, the adaptive question loop, the explained result, and the summary and data
+screens a player leaves through).
 
 `src/shared/ui/` holds the design-system primitives built so far — the cards, note, row,
 hairline, button, tag, bar, header, and the overlays and drawn objects the result screen

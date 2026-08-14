@@ -6,6 +6,8 @@
  * detail this feature is free to change.
  */
 
+export { DataScreen } from './components/DataScreen';
+export { DoneScreen } from './components/DoneScreen';
 export { EntryUnavailableScreen } from './components/EntryUnavailableScreen';
 export { QuestionScreen } from './components/QuestionScreen';
 export { ResultScreen } from './components/ResultScreen';

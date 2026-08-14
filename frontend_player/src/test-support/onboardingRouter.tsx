@@ -20,6 +20,8 @@ import TabsLayout from '@/app/(app)/(tabs)/_layout';
 import HomeRoute from '@/app/(app)/(tabs)/index';
 import AuthLayout from '@/app/(auth)/_layout';
 import SignInRoute from '@/app/(auth)/sign-in';
+import DataRoute from '@/app/(onboarding)/data';
+import DoneRoute from '@/app/(onboarding)/done';
 import OnboardingLayout from '@/app/(onboarding)/_layout';
 import QuestionRoute from '@/app/(onboarding)/question/[assessmentId]';
 import ResultRoute from '@/app/(onboarding)/result/[assessmentId]';
@@ -42,6 +44,8 @@ export const ONBOARDING_ROUTES = {
   '(onboarding)/sports': SportsRoute,
   '(onboarding)/question/[assessmentId]': QuestionRoute,
   '(onboarding)/result/[assessmentId]': ResultRoute,
+  '(onboarding)/done': DoneRoute,
+  '(onboarding)/data': DataRoute,
 };
 
 /**

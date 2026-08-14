@@ -26,10 +26,21 @@
  * The popovers are rendered as **siblings** of the screen root, never inside it: the root
  * spreads `behindOverlay` while one is open, and an overlay inside that element would hide
  * itself along with everything else.
+ *
+ * ## Where the flow goes from here
+ *
+ * **Rate the next sport they chose, or stop.** Stopping part-way is an ordinary outcome
+ * rather than an abandonment: the player leaves with the ratings they produced and goes
+ * into the app, and a sport not rated today can be rated any time later. Which sport is
+ * next is the queue's to answer, and with nothing after this one there is nothing to
+ * offer — so the screen shows one control instead of pretending there is a choice.
+ *
+ * Either way the summary comes first: the done screen is where a run is accounted for, and
+ * a player who stopped after one rating is owed that account as much as one who finished.
  */
 
 import { useRouter } from 'expo-router';
-import { useRef, useState, type MutableRefObject } from 'react';
+import { useEffect, useRef, useState, type MutableRefObject } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -51,8 +62,10 @@ import {
 import type { AssessmentResult } from '../domain/AssessmentResult';
 import { ONBOARDING_CONFIDENCE_CEILING } from '../domain/AssessmentResult';
 import type { Sport } from '../domain/Sport';
-import { ratingPosition } from '../domain/sportQueue';
+import { nextSport, ratingPosition } from '../domain/sportQueue';
 import { useAssessment } from '../hooks/useAssessment';
+import { useStartAssessment } from '../hooks/useStartAssessment';
+import { useCompletedRuns } from '../store/completedRuns.store';
 import { useSportQueue } from '../store/sportQueue.store';
 
 import { EvidenceTrail } from './EvidenceTrail';
@@ -106,8 +119,11 @@ export interface ResultScreenProps {
 export function ResultScreen({ assessmentId, sport }: ResultScreenProps) {
   const router = useRouter();
   const assessment = useAssessment(assessmentId);
+  const start = useStartAssessment();
   const queue = useSportQueue((state) => state.queue);
   const position = ratingPosition(queue, sport);
+  const next = nextSport(queue, sport);
+  const recordRun = useCompletedRuns((state) => state.record);
 
   // One ref per mark: the popover anchors to the mark it was opened from and returns
   // focus to it on close, which is one prop doing both jobs.
@@ -121,6 +137,19 @@ export function ResultScreen({ assessmentId, sport }: ResultScreenProps) {
   const result = assessment.data?.result;
 
   /**
+   * A rating exists for this sport, so this run belongs on the summary.
+   *
+   * Recorded **where the rating is shown** rather than where the run finished: what the
+   * done screen lists is what the player was told, and a run whose result could not be
+   * read is not something to promise them a card for. Recording the same run twice is a
+   * no-op, which is what makes a refetch or a remount free.
+   */
+  useEffect(() => {
+    if (result === undefined) return;
+    recordRun({ assessmentId, sport });
+  }, [result, recordRun, assessmentId, sport]);
+
+  /**
    * Which mark the popover belongs to, **held past the close**. Dropping it the moment
    * `explainer` clears would empty the card while it is still fading out and — the part
    * that matters — leave the close with no trigger to return accessibility focus to.
@@ -129,6 +158,27 @@ export function ResultScreen({ assessmentId, sport }: ResultScreenProps) {
   const closing = useRef<ExplainerKey>('level');
   if (explainer !== undefined) closing.current = explainer;
   const explaining = explainer ?? closing.current;
+
+  /**
+   * The next sport they chose. `replace`, like every other move in this flow: the
+   * questionnaire has no way back, and a result is not somewhere to return to — it is on
+   * the summary, which is where a player reads their ratings after this.
+   */
+  const rateNext = () => {
+    if (next === undefined) return;
+    start.mutate(next, {
+      onSuccess: (opening) =>
+        router.replace({
+          pathname: '/question/[assessmentId]',
+          params: { assessmentId: opening.assessmentId, sport: next },
+        }),
+    });
+  };
+
+  /** Stopping here is an outcome, not an abandonment: nothing is discarded and nothing is
+   *  sent. The queue keeps the sports that were never rated, and any of them can be rated
+   *  another day. */
+  const finish = () => router.replace('/done');
 
   return (
     <>
@@ -193,7 +243,36 @@ export function ResultScreen({ assessmentId, sport }: ResultScreenProps) {
         </ScrollView>
 
         <View style={s.action}>
-          <Button label="Go to Rakieta" size="lg" onPress={() => router.replace('/')} />
+          {/* Starting the next sport is the only thing this screen can fail at, and a
+              failed start changed nothing — so the retry is the control that failed, with
+              the reason above it. */}
+          {start.error !== null ? (
+            <Note variant="coral" accessibilityRole="alert">
+              {onboardingErrorMessage(start.error)}
+            </Note>
+          ) : null}
+
+          {next === undefined ? (
+            <Button label="See your ratings" size="lg" onPress={finish} />
+          ) : (
+            <>
+              <Button
+                label={`Rate ${sportLabel(next)}`}
+                size="lg"
+                busy={start.isPending}
+                busyLabel="Starting…"
+                accessibilityHint={`Starts the ${sportLabel(next)} questions`}
+                onPress={rateNext}
+              />
+              <Button
+                label="Done for now"
+                variant="secondary"
+                size="lg"
+                accessibilityHint={`Keeps the ratings you have and skips ${sportLabel(next)}`}
+                onPress={finish}
+              />
+            </>
+          )}
         </View>
       </SafeAreaView>
 
@@ -354,5 +433,6 @@ const s = StyleSheet.create({
     paddingHorizontal: theme.size.gutter,
     paddingTop: theme.space.md,
     paddingBottom: theme.space.lg,
+    gap: theme.space.sm,
   },
 });
