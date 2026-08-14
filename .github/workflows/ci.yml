@@ -11,6 +11,12 @@ on:
 
 permissions:
   contents: read
+  # `dorny/paths-filter` asks the API which files a *pull request* touched, rather
+  # than diffing locally as it does for a push — so without this the detect job
+  # fails with "Resource not accessible by integration" and every app job skips
+  # behind it, which reads as a green run that tested nothing. It went unnoticed
+  # until the first pull request, because pushes never take the API path.
+  pull-requests: read
 
 jobs:
   changes:
