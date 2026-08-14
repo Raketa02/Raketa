@@ -9,6 +9,7 @@
  * server has seen answer four.
  */
 
+import type { AssessmentResult } from './AssessmentResult';
 import type { Sport } from './Sport';
 
 export interface AnswerOption {
@@ -52,11 +53,10 @@ export type AssessmentStatus = 'in_progress' | 'completed' | 'abandoned';
 /**
  * The server-driven step: what to render next.
  *
- * A step carries a question, or a finished assessment carries none.
- *
- * The wire also carries the result once a run is finished. It is not mapped: **nothing
- * in this slice acts on it**, and a field mapped for a future screen is a field no test
- * covers. The result payload arrives with the result screen (#25).
+ * A step carries a question, or a finished assessment carries a result. **Neither is
+ * guaranteed**: an abandoned run has ended with no question left and nothing to show, and
+ * reading "no question" as "there is a result" is what would announce a rating to a player
+ * who stopped rating that sport.
  */
 export interface AssessmentStep {
   readonly assessmentId: string;
@@ -72,6 +72,8 @@ export interface AssessmentStep {
    */
   readonly questionsAsked: number;
   readonly question: Question | undefined;
+  /** The rating this run produced, once it has produced one. */
+  readonly result: AssessmentResult | undefined;
 }
 
 /**

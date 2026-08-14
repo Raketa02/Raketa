@@ -21,6 +21,7 @@ import type {
   AssessmentStep,
   Question,
 } from '../domain/Assessment';
+import type { AssessmentResult } from '../domain/AssessmentResult';
 import type { SkillRating } from '../domain/SkillRating';
 import type { Sport } from '../domain/Sport';
 
@@ -30,6 +31,7 @@ type RatingsResponse = components['schemas']['RatingsResponse'];
 type SportsResponse = components['schemas']['SportsResponse'];
 type QuestionResponse = components['schemas']['QuestionResponse'];
 type AssessmentStepResponse = components['schemas']['AssessmentStepResponse'];
+type ResultResponse = components['schemas']['ResultResponse'];
 type InProgressAssessmentResponse = components['schemas']['InProgressAssessmentResponse'];
 type InProgressAssessmentsResponse = components['schemas']['InProgressAssessmentsResponse'];
 
@@ -115,6 +117,50 @@ function toStatus(wire: string): AssessmentStatus {
   return wire === 'completed' || wire === 'abandoned' ? wire : 'in_progress';
 }
 
+/**
+ * The finished run's rating and its account of itself.
+ *
+ * **Everything here is carried across, never interpreted.** `direction`, `key`,
+ * `calibration_priority` and `status` stay the engine's own words: the client resolves how
+ * to *draw* a key it recognises and falls back for one it does not, which is a decision
+ * about presentation. Re-ordering, re-deriving or dropping any of it would make this
+ * client's explanation a second opinion about a rating it did not compute.
+ *
+ * `factors` and `uncertainty_factors` are optional on the wire and absent means empty: a
+ * beginner who answered one question has one contribution and no wideners, and that is an
+ * ordinary result rather than a missing one.
+ */
+export function toAssessmentResult(wire: ResultResponse): AssessmentResult {
+  return {
+    level: wire.mu,
+    uncertainty: wire.sigma,
+    confidence: wire.confidence,
+    range: { low: wire.range.low, high: wire.range.high },
+    // Straight from the response, like every other band in this file.
+    band: { name: wire.band.name, lower: wire.band.lower, upper: wire.band.upper },
+    status: wire.status,
+    questionsAsked: wire.questions_asked,
+    engineVersion: wire.engine_version,
+    calibrationPriority: wire.calibration_priority,
+    confidenceReason:
+      wire.confidence_reason == null
+        ? undefined
+        : { key: wire.confidence_reason.key, sentence: wire.confidence_reason.sentence },
+    contributions: (wire.factors ?? []).map((factor) => ({
+      key: factor.key,
+      label: factor.label,
+      direction: factor.direction,
+      level: factor.level,
+    })),
+    wideners: (wire.uncertainty_factors ?? []).map((widener) => ({
+      key: widener.key,
+      label: widener.label,
+      detail: widener.detail,
+      sigmaAdded: widener.sigma_added,
+    })),
+  };
+}
+
 export function toAssessmentStep(wire: AssessmentStepResponse): AssessmentStep {
   return {
     assessmentId: wire.assessment_id,
@@ -123,6 +169,7 @@ export function toAssessmentStep(wire: AssessmentStepResponse): AssessmentStep {
     // it arrives — the client neither counts nor adjusts it; see `AssessmentStep`.
     questionsAsked: wire.questions_asked,
     question: wire.question == null ? undefined : toQuestion(wire.question),
+    result: wire.result == null ? undefined : toAssessmentResult(wire.result),
   };
 }
 

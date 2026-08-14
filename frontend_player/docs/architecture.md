@@ -1070,18 +1070,16 @@ when the code that needs them is written — not preemptively:
 
 **Near-essential**
 
-- `react-native-svg` — arcs and the ceiling tick of the confidence ring, which is a drawn
-  object rather than a styled component
-  ([design system 7.8](design-system.md#78-the-confidence-ring)). Nothing else in the app
-  needs vector drawing yet; the level bar is built from Views. `jest.config.js` already
-  whitelists it in `transformIgnorePatterns`, so it needs no test-config change.
 - Crash/error monitoring — Sentry (`@sentry/react-native`, Expo-supported) or equivalent,
   behind `shared/lib/observability` ([Part 15](#part-15--observability)).
 - Maestro — E2E journeys ([Part 16](#part-16--testing)).
 
 > `expo-network` was on this list and has since joined the manifest, with the code that
-> wires the online and focus managers ([Part 7](#part-7--tanstack-query)). It is listed
-> above as present rather than pending — this list is what is _missing_, and an entry that
+> wires the online and focus managers ([Part 7](#part-7--tanstack-query)). So has
+> `react-native-svg`, with the confidence ring — the one drawn object that needs vector
+> arcs ([design system 7.8](design-system.md#78-the-confidence-ring)); the level bar beside
+> it is still built from Views, and nothing else in the app needs drawing yet. Both are
+> listed as present rather than pending — this list is what is _missing_, and an entry that
 > outlives its own arrival makes the list untrustworthy.
 
 **Strong optional**

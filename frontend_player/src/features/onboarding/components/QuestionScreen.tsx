@@ -40,7 +40,7 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-nat
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
-  behindSheet,
+  behindOverlay,
   Button,
   Card,
   CloseControl,
@@ -221,7 +221,7 @@ export function QuestionScreen({ assessmentId, sport }: QuestionScreenProps) {
         // A sheet is a real modal: while it is open nothing behind it is reachable by a
         // screen reader. The sheet is a sibling below, never a child — inside here it
         // would hide itself along with the question.
-        {...behindSheet(confirmingExit)}
+        {...behindOverlay(confirmingExit)}
       >
         <OnboardingChrome
           eyebrow={`${sportLabel(sport)} · Rating ${position.index} of ${position.total}`}

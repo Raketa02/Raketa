@@ -74,15 +74,23 @@ components from the start. The prototype maintained a second copy of each in its
 recorded that they had drifted — one implementation, used everywhere.
 
 Built so far, by the onboarding slice: `Button`, `Card` (+ `PressableCard`), `Note`,
-`Bar`, `ScreenHeader`, `Tag`, `Hairline`, `BottomSheet`, `CloseControl`. Import them from
-`@/shared/ui`.
+`Bar`, `ScreenHeader`, `Tag`, `Hairline`, `BottomSheet`, `CloseControl`, `DarkCard`,
+`Row`, `LevelBar`, `ConfidenceRing`, `Popover` (+ `InfoMark`) and `InfoGlyph`. Import them
+from `@/shared/ui`.
 
-`BottomSheet` is the app's first **overlay**, and 9.1's "it is a real modal" is three
-separate obligations rather than one prop — read its docblock before adding a second
-sheet. Two of them are the caller's: the screen behind spreads `behindSheet(open)`, and
-the sheet is rendered as that screen's _sibling_, never inside it. `CloseControl` is 9.1's
-close circle, shared because the header control that opens a sheet and the sheet's own
-close are the same 28pt object.
+**Overlays.** `BottomSheet` and `Popover` are both real modals, and 9.1's and 7.6's "it is
+a real modal" is three separate obligations rather than one prop — read `overlay.ts` and
+either docblock before adding a third. Two of them are the caller's: the screen behind
+spreads `behindOverlay(open)`, and the overlay is rendered as that screen's _sibling_,
+never inside it. `CloseControl` is 9.1's close circle, shared because the header control
+that opens a sheet, the sheet's own close and the popover's are the same 28pt object;
+`InfoGlyph` is shared for the same reason between the info note and the popover's mark.
+
+**Drawn objects.** `LevelBar` (7.5) and `ConfidenceRing` (7.8) are geometry, not styling —
+their values are `theme.size.levelBar` and `theme.size.ring*`, and both keep a fixed scale
+(1,00–5,00 and 0–100) so a value lands in the same place on every screen that draws one.
+`ConfidenceRing` is the only component that needs `react-native-svg`. Both take a
+`variant`/repaint for the dark card, because React Native has no colour cascade.
 
 **A feature never keeps a second copy of one of these.** If a primitive does not do what
 a screen needs, extend the primitive — the two auth-form controls that remain in

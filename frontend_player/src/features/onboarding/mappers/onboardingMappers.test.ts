@@ -80,6 +80,31 @@ describe('ratings', () => {
 });
 
 describe('assessment steps', () => {
+  const RESULT: Wire['ResultResponse'] = {
+    mu: 2.71,
+    sigma: 0.62,
+    confidence: 28,
+    range: { low: 2.09, high: 3.33 },
+    band: { name: 'Established', lower: 2.65, upper: 3.85 },
+    status: 'initial_estimate',
+    questions_asked: 2,
+    engine_version: 'racketskill-v3',
+    calibration_priority: 'standard',
+    confidence_reason: {
+      key: 'limited-match-evidence',
+      sentence: 'We have not seen you play yet.',
+    },
+    factors: [{ key: 'match-execution', label: 'Match execution', direction: 'up', level: 3.1 }],
+    uncertainty_factors: [
+      {
+        key: 'time-away',
+        label: 'Time away from the game',
+        detail: 'We widened your range rather than lowering your level.',
+        sigma_added: 0.18,
+      },
+    ],
+  };
+
   const QUESTION: Wire['QuestionResponse'] = {
     id: 'q-regularity',
     category: 'Recent activity',
@@ -163,6 +188,61 @@ describe('assessment steps', () => {
     });
 
     expect(step.status).toBe('in_progress');
+  });
+
+  it('carries the result a finished run produced, and its account of itself', () => {
+    const step = toAssessmentStep({
+      assessment_id: '1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6',
+      status: 'completed',
+      questions_asked: 2,
+      question: null,
+      result: RESULT,
+    });
+
+    expect(step.result?.level).toBe(2.71);
+    expect(step.result?.uncertainty).toBe(0.62);
+    expect(step.result?.band).toEqual({ name: 'Established', lower: 2.65, upper: 3.85 });
+    expect(step.result?.confidenceReason?.sentence).toBe('We have not seen you play yet.');
+    // Carried across, never interpreted: the direction is the engine's word and the key
+    // is its own, so a row this client cannot draw is still a row it was sent.
+    expect(step.result?.contributions).toEqual([
+      { key: 'match-execution', label: 'Match execution', direction: 'up', level: 3.1 },
+    ]);
+    expect(step.result?.wideners).toEqual([
+      {
+        key: 'time-away',
+        label: 'Time away from the game',
+        detail: 'We widened your range rather than lowering your level.',
+        sigmaAdded: 0.18,
+      },
+    ]);
+  });
+
+  it('reads an explanation with no rows as empty, not as missing', () => {
+    // `factors` and `uncertainty_factors` are optional on the wire, and a beginner who
+    // answered one question genuinely has no wideners. That is an ordinary result.
+    const step = toAssessmentStep({
+      assessment_id: '1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6',
+      status: 'completed',
+      questions_asked: 1,
+      question: null,
+      result: { ...RESULT, factors: undefined, uncertainty_factors: undefined },
+    });
+
+    expect(step.result?.contributions).toEqual([]);
+    expect(step.result?.wideners).toEqual([]);
+    expect(step.result?.confidenceReason).toBeDefined();
+  });
+
+  it('has no result while a run is still running', () => {
+    const step = toAssessmentStep({
+      assessment_id: '1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6',
+      status: 'in_progress',
+      questions_asked: 1,
+      question: QUESTION,
+    });
+
+    expect(step.result).toBeUndefined();
   });
 
   it("takes the run's sport from the payload, which now names it", () => {

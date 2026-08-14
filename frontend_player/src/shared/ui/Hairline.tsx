@@ -15,21 +15,29 @@ import type { ReactNode } from 'react';
 
 import { theme } from './theme';
 
+export type HairlineVariant = 'base' | 'onDark';
+
 export interface HairlineProps {
   /** The section below the fold. */
   readonly children: ReactNode;
+  /** 5.2's repaint: a fold inside a dark card is drawn in the on-dark hairline. */
+  readonly variant?: HairlineVariant;
   readonly style?: StyleProp<ViewStyle>;
 }
 
-export function Hairline({ children, style }: HairlineProps) {
-  return <View style={[s.section, style]}>{children}</View>;
+export function Hairline({ children, variant = 'base', style }: HairlineProps) {
+  return <View style={[s.section, FOLD[variant], style]}>{children}</View>;
 }
 
 const s = StyleSheet.create({
   section: {
     borderTopWidth: 1,
-    borderTopColor: theme.color.line2,
     marginTop: theme.space.sm,
     paddingTop: theme.space.sm,
   },
+});
+
+const FOLD = StyleSheet.create({
+  base: { borderTopColor: theme.color.line2 },
+  onDark: { borderTopColor: theme.color.onDarkHair },
 });
