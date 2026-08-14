@@ -113,11 +113,13 @@ class SubmitAnswer:
             )
 
         # The engine is done: complete the assessment and initialise the rating,
-        # both appended in the same transaction.
+        # both appended in the same transaction. ``step`` is the stop itself, and
+        # it is passed through rather than discarded — the questionnaire's last
+        # routing decision is recorded exactly as every earlier one is.
         result = self._engine.finalize(
             sport=assessment.sport, transcript=assessment.transcript
         )
-        assessment.complete(result=result, occurred_at=now)
+        assessment.complete(result=result, stop=step, occurred_at=now)
 
         rating = SkillRating.initialise(
             rating_id=skill_rating_id(assessment.player_id, assessment.sport),

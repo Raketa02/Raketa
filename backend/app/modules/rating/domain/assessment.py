@@ -18,6 +18,7 @@ from app.engines.assessment import (
     AnsweredQuestion,
     AssessmentResult,
     BandView,
+    Complete,
     Transcript,
 )
 from app.kernel import Sport
@@ -54,6 +55,8 @@ class Assessment:
     _outstanding_question_id: Optional[str] = field(default=None, repr=False)
     _last_answered_question_id: Optional[str] = field(default=None, repr=False)
     _result: Optional[AssessmentResult] = field(default=None, repr=False)
+    _stop_reason: Optional[str] = field(default=None, repr=False)
+    _stop_value: Optional[float] = field(default=None, repr=False)
     _events: EventRecorder = field(
         default_factory=EventRecorder, init=False, repr=False, compare=False
     )
@@ -79,6 +82,8 @@ class Assessment:
         assessment._outstanding_question_id = None
         assessment._last_answered_question_id = None
         assessment._result = None
+        assessment._stop_reason = None
+        assessment._stop_value = None
         assessment._events = EventRecorder()
         return assessment
 
@@ -161,7 +166,16 @@ class Assessment:
             )
         )
 
-    def complete(self, *, result: AssessmentResult, occurred_at: datetime) -> None:
+    def complete(
+        self, *, result: AssessmentResult, stop: Complete, occurred_at: datetime
+    ) -> None:
+        """Record the finalised numbers, and why the questionnaire stopped.
+
+        The stop arrives as the engine's own step rather than as two loose
+        arguments, so a reason cannot be recorded beside a value that did not
+        cause it — the same reason the result arrives whole.
+        """
+
         self._record_that(
             AssessmentCompleted(
                 assessment_id=self.id,
@@ -183,6 +197,8 @@ class Assessment:
                     if result.confidence_reason is not None
                     else None
                 ),
+                stop_reason=stop.reason,
+                stop_value=stop.value,
             )
         )
 
@@ -224,6 +240,31 @@ class Assessment:
         """
 
         return self._result
+
+    @property
+    def stop_reason(self) -> Optional[str]:
+        """Why the questionnaire stopped asking, as the engine's stable key.
+
+        On a completed run ``None`` means one thing and permanently — *this run
+        was completed before stops were recorded* — and never "we do not know".
+        Every completion since carries one, so the absence dates a row rather
+        than describing it.
+
+        Nothing serves this to a player. It is an engine diagnostic: what a
+        training projection reads to learn why a question was *never* asked, and
+        what would catch the hard-ceiling stop firing when the engine's own
+        sequence says it cannot.
+        """
+
+        return self._stop_reason
+
+    @property
+    def stop_value(self) -> Optional[float]:
+        """The number that drove the stop — the marginal gain that fell below
+        threshold, the ceiling that was reached. Absent under the same rule as
+        ``stop_reason``, and absent together with it."""
+
+        return self._stop_value
 
     # --- event application ------------------------------------------------
 
@@ -272,6 +313,8 @@ class Assessment:
                 engine_version=event.engine_version,
                 calibration_priority=event.calibration_priority,
             )
+            self._stop_reason = event.stop_reason
+            self._stop_value = event.stop_value
             self.version += 1
             return
         if isinstance(event, AssessmentAbandoned):

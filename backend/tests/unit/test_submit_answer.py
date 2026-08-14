@@ -5,12 +5,24 @@ the question currently outstanding, re-submitting the just-answered one records
 nothing, and anything else conflicts. Completion writes two streams in one
 transaction, which is the assertion this file exists for — it was reachable only
 through HTTP over SQLite before the repository.
+
+Completion also records **why the questionnaire stopped**. Nothing serves it, and
+that is deliberate: a decision never recorded cannot be recovered later, so it is
+written from the day it ships rather than from the day something reads it.
 """
 
 from __future__ import annotations
 
+from uuid import UUID
+
 import pytest
 
+from app.engines.racketskill.v3.engine import (
+    MIN_MARGINAL_GAIN,
+    STOP_BEGINNER,
+    STOP_MARGINAL,
+)
+from app.engines.racketskill.v3.questions import NEVER_PLAYED_OPTION_ID
 from app.kernel import Sport
 from app.modules.rating.application.commands import SubmitAnswerCommand
 from app.modules.rating.domain.errors import (
@@ -277,3 +289,77 @@ async def test_replaying_the_answer_that_finished_a_run_returns_its_result() -> 
     assert again.result.mu == final.result.mu
     assert store.appends == 0
     assert call.uow.commits == 0
+
+
+# --- The stop, recorded on the stream ------------------------------------------
+
+
+async def _completion(
+    store: InMemoryEventStore, assessment_id: UUID
+) -> AssessmentCompleted:
+    """The completion event as the store hands it back — encoded and decoded."""
+
+    stream = await store.load_stream(
+        aggregate_type=ASSESSMENT_AGGREGATE, aggregate_id=assessment_id
+    )
+    completed = stream[-1].event
+    assert isinstance(completed, AssessmentCompleted)
+    return completed
+
+
+async def test_the_beginner_fast_path_records_that_it_is_why_the_run_stopped() -> None:
+    # A run of one question is the shortest thing this engine produces, and
+    # nothing about the transcript says whether that was the fast path or a
+    # questionnaire that ran out of useful questions after one answer. The stop
+    # is what distinguishes them, and it is the only place either is written.
+    store = InMemoryEventStore()
+    player_id = new_uuid()
+    opening = (await start(store, player_id)).step
+    assert opening.question is not None
+
+    final = await request(store).submit.execute(
+        SubmitAnswerCommand(
+            player_id=player_id,
+            assessment_id=opening.assessment_id,
+            question_id=opening.question.id,
+            option_id=NEVER_PLAYED_OPTION_ID,
+        )
+    )
+    assert final.result is not None
+
+    completed = await _completion(store, final.assessment_id)
+    assert completed.stop_reason == STOP_BEGINNER
+    assert completed.stop_value == 0.0
+
+
+async def test_a_run_that_runs_out_of_useful_questions_records_the_gain() -> None:
+    # The ordinary stop. The value is the marginal gain the best remaining
+    # question offered, so it is asserted against the threshold that rejected it
+    # rather than against a typed-in number — which is what makes the recorded
+    # value usable for retuning that threshold against real runs.
+    store = InMemoryEventStore()
+    player_id = new_uuid()
+
+    final, _ = await run_to_result(store, player_id, Sport.PADEL)
+
+    completed = await _completion(store, final.assessment_id)
+    assert completed.stop_reason == STOP_MARGINAL
+    assert completed.stop_value is not None
+    assert completed.stop_value < MIN_MARGINAL_GAIN
+
+
+async def test_the_stop_is_readable_from_a_reloaded_assessment() -> None:
+    # Through the repository, which is how a projection will reach it: the
+    # aggregate carries the stop across replay rather than it being a fact only
+    # the raw stream holds.
+    store = InMemoryEventStore()
+    player_id = new_uuid()
+    final, _ = await run_to_result(store, player_id, Sport.TENNIS)
+
+    reloaded = await request(store).repository.load(
+        final.assessment_id, for_player=player_id
+    )
+
+    assert reloaded.is_completed
+    assert reloaded.stop_reason == STOP_MARGINAL
+    assert reloaded.stop_value is not None

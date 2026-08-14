@@ -12,10 +12,11 @@ Rating events cover initialisation today; match, inactivity and status-change
 events are reserved for the match-update engine.
 
 A completion records the **facts** its numbers rest on — including why confidence
-landed where it did, as a stable key. The sentence that key selects is copy and is
-never stored: freezing copy in history is how a wording change becomes a
-migration. The factor rows are likewise reproduced from the transcript by the
-engine version that produced them, not recorded a second time.
+landed where it did, and why the questionnaire stopped asking, both as stable
+keys. The sentence a key selects is copy and is never stored: freezing copy in
+history is how a wording change becomes a migration. The factor rows are likewise
+reproduced from the transcript by the engine version that produced them, not
+recorded a second time.
 """
 
 from __future__ import annotations
@@ -73,6 +74,14 @@ class AssessmentCompleted:
     # written before they existed decodes with them, and adds no migration.
     calibration_priority: str = CALIBRATION_PRIORITY_STANDARD
     confidence_reason_key: str | None = None
+    # Why the questionnaire stopped asking, and the number that drove it — the
+    # counterpart to a ``QuestionAsked``'s reason and its μ/σ snapshot. Without
+    # them the one routing decision missing from the stream is the last one: an
+    # aggregate that records why every question *was* asked, and nothing about
+    # the moment it decided to ask no more. Absent means one thing and
+    # permanently — *completed before stops were recorded* — never "unknown".
+    stop_reason: str | None = None
+    stop_value: float | None = None
 
 
 @dataclass(frozen=True)
