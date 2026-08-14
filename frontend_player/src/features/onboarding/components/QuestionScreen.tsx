@@ -51,7 +51,7 @@ import {
   theme,
 } from "@/shared/ui";
 
-import type { AnswerOption, Question } from "../domain/Assessment";
+import type { AnswerOption } from "../domain/Assessment";
 import type { Sport } from "../domain/Sport";
 import { nextSport, ratingPosition } from "../domain/sportQueue";
 import { useAbandonAssessment } from "../hooks/useAbandonAssessment";
@@ -115,7 +115,17 @@ export function QuestionScreen({ assessmentId, sport }: QuestionScreenProps) {
       ? choice.optionId
       : undefined;
 
-  const number = useQuestionNumber(question);
+  /**
+   * Which question this is: the answers already behind the run, plus one.
+   *
+   * **The count is read from the step, never recomputed or remembered here.** It is the
+   * replayed transcript's length, so a run resumed after four answers reads as question
+   * five — on this device, on a second one, or after a reinstall. A client counting what
+   * it had itself shown could only ever say "question 1", because the transcript never
+   * lived on the device. The outstanding question is deliberately not in the server's
+   * count, which is what the plus one is.
+   */
+  const number = step === undefined ? 0 : step.questionsAsked + 1;
 
   /**
    * A one-way latch. Every exit below is a `replace`, and the screen stays mounted while
@@ -330,31 +340,6 @@ export function QuestionScreen({ assessmentId, sport }: QuestionScreenProps) {
       />
     </>
   );
-}
-
-/**
- * Which question this is, counted from the ones this run has actually shown.
- *
- * **A resumed run restarts the count**, and that is a real limitation rather than a
- * choice: `AssessmentStepResponse` carries `questions_asked` only once the run is
- * finished, so while it is in progress the server never tells the client how many answers
- * are already behind it. Counting on the device is the honest half — it measures movement,
- * which is what the counter is for, and it is never a fraction, so it cannot imply a
- * length the flow does not have. The fix is a field on the in-progress step; it is filed
- * as a backend follow-up, because a client that remembered its own count would be
- * inventing history the moment the player switched devices.
- *
- * Counting *ids seen* rather than incrementing on submit is what keeps a recovered
- * duplicate submission from advancing the number twice.
- */
-function useQuestionNumber(question: Question | undefined): number {
-  const seen = useRef<string[]>([]);
-
-  if (question !== undefined && !seen.current.includes(question.id)) {
-    seen.current.push(question.id);
-  }
-
-  return question === undefined ? 0 : seen.current.indexOf(question.id) + 1;
 }
 
 /** Absent where the engine supplies no tier — the opening and layoff questions have none. */

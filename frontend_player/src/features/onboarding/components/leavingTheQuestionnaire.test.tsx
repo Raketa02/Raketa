@@ -51,6 +51,7 @@ function opening(
   return {
     assessment_id: assessmentId,
     status: "in_progress",
+    questions_asked: 0,
     question: {
       id: `q-played-${assessmentId}`,
       category: "Recent activity",
@@ -73,6 +74,7 @@ const TENNIS_OPENING = opening(TENNIS_RUN, "Have you played tennis before?");
 const PADEL_SECOND: Wire["AssessmentStepResponse"] = {
   assessment_id: PADEL_RUN,
   status: "in_progress",
+  questions_asked: 1,
   question: {
     id: "q-overhead",
     category: "Match execution",
@@ -90,6 +92,7 @@ const PADEL_SECOND: Wire["AssessmentStepResponse"] = {
 const PADEL_ABANDONED: Wire["AssessmentStepResponse"] = {
   assessment_id: PADEL_RUN,
   status: "abandoned",
+  questions_asked: 1,
   question: null,
 };
 

@@ -115,7 +115,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Start an assessment and receive its opening question */
+        /**
+         * Start an assessment and receive its opening question
+         * @description Idempotent per player and sport. Starting a sport that already has an unfinished run returns **that** run and its outstanding question with a 200, rather than opening a second one — so a double-tapped confirm, or a retry after a lost response, costs nothing. A sport whose previous run was completed or abandoned still starts a new run, with a 201.
+         *
+         *     Both outcomes carry the same body, so a client that only routes on the step needs no branch; the status code is there for one that wants to tell the two apart.
+         */
         post: operations["create_assessment_api_v1_assessments_post"];
         delete?: never;
         options?: never;
@@ -228,6 +233,11 @@ export interface components {
             assessment_id: string;
             /** Status */
             status: string;
+            /**
+             * Questions Asked
+             * @description How many of this run's questions have been answered. The outstanding `question` is **not** counted — it has been put to the player but not answered — so a question counter reads this plus one, and a fresh run reports 0. Replayed from the transcript on every read, which is what lets a resumed run report the position it is really at rather than restarting at 1. Once the run is over this is the same number `result.questions_asked` carries.
+             */
+            questions_asked: number;
             question?: components["schemas"]["QuestionResponse"] | null;
             result?: components["schemas"]["ResultResponse"] | null;
         };
@@ -731,7 +741,16 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Successful Response */
+            /** @description An assessment for this sport was already in progress; its outstanding question is returned and nothing was created. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentStepResponse"];
+                };
+            };
+            /** @description A new assessment was started; its opening question is returned. */
             201: {
                 headers: {
                     [name: string]: unknown;

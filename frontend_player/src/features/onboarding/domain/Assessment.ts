@@ -61,6 +61,16 @@ export type AssessmentStatus = "in_progress" | "completed" | "abandoned";
 export interface AssessmentStep {
   readonly assessmentId: string;
   readonly status: AssessmentStatus;
+  /**
+   * How many of this run's questions have been **answered**.
+   *
+   * The outstanding `question` is not one of them — it has been put to the player and not
+   * answered — so a counter showing which question this is reads this plus one, and a
+   * fresh run reports 0. The server replays it from the transcript on every read, which
+   * is the whole reason it is here rather than counted on the device: the transcript is
+   * the only thing that ever survived a resume, a reinstall or a second handset.
+   */
+  readonly questionsAsked: number;
   readonly question: Question | undefined;
 }
 

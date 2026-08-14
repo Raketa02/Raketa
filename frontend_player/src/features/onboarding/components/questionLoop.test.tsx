@@ -43,6 +43,8 @@ const STEP_PATH = `/api/v1/assessments/${ASSESSMENT_ID}`;
 const OPENING: Wire["AssessmentStepResponse"] = {
   assessment_id: ASSESSMENT_ID,
   status: "in_progress",
+  // Nothing answered yet. The outstanding question is never in this count.
+  questions_asked: 0,
   question: {
     id: "q-played",
     category: "Recent activity",
@@ -61,6 +63,7 @@ const OPENING: Wire["AssessmentStepResponse"] = {
 const EXECUTION: Wire["AssessmentStepResponse"] = {
   assessment_id: ASSESSMENT_ID,
   status: "in_progress",
+  questions_asked: 1,
   question: {
     id: "q-overhead",
     category: "Match execution",
@@ -72,6 +75,25 @@ const EXECUTION: Wire["AssessmentStepResponse"] = {
       { id: "rarely", text: "Rarely" },
       { id: "sometimes", text: "About half the time" },
       { id: "usually", text: "Usually" },
+    ],
+  },
+};
+
+/** Another ordinary question from the bank, deeper into a run. */
+const LAYOFF: Wire["AssessmentStepResponse"] = {
+  assessment_id: ASSESSMENT_ID,
+  status: "in_progress",
+  questions_asked: 5,
+  question: {
+    id: "q-layoff",
+    category: "Time away",
+    tier: null,
+    situation: "Life gets in the way",
+    text: "Have you had a break from padel in the last year?",
+    qualifier: "A break of a month or more",
+    options: [
+      { id: "none", text: "No real break" },
+      { id: "six-months", text: "About six months" },
     ],
   },
 };
@@ -92,6 +114,9 @@ const RESULT: Wire["ResultResponse"] = {
 const FINISHED: Wire["AssessmentStepResponse"] = {
   assessment_id: ASSESSMENT_ID,
   status: "completed",
+  // The same number the result carries — the count means one thing at both moments in a
+  // run's life, so it does not jump as the run finishes.
+  questions_asked: 2,
   question: null,
   result: RESULT,
 };
@@ -212,6 +237,28 @@ describe("the question screen", () => {
 
     expect(await screen.findByText("Question 2")).toBeTruthy();
     expect(screen.getByLabelText("Rating 1 of 1")).toBeTruthy();
+  });
+
+  it("shows a resumed run the position it is really at, not question 1", async () => {
+    // Four answers behind them from yesterday, and the fifth question outstanding. The
+    // count is the server's replay of the transcript — the only thing that ever survived
+    // the player closing the app, so it is the only thing that can answer this.
+    const resumed: Wire["AssessmentStepResponse"] = { ...EXECUTION, questions_asked: 4 };
+    stubGate({ run: { sport: "PADEL", step: resumed } });
+    transport.on("GET", STEP_PATH, () => json(resumed));
+
+    await launchSignedIn();
+
+    expect(await screen.findByText("Question 5")).toBeTruthy();
+    expect(screen.queryByText("Question 1")).toBeNull();
+
+    // And it carries on from there. A screen counting the questions it had itself shown
+    // would say "Question 2" here — which is the bug this reads the step to avoid.
+    transport.on("POST", ANSWERS_PATH, () => json(LAYOFF));
+    fireEvent.press(screen.getByLabelText("Usually"));
+    fireEvent.press(screen.getByLabelText("Confirm answer"));
+
+    expect(await screen.findByText("Question 6")).toBeTruthy();
   });
 });
 

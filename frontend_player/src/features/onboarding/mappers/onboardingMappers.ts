@@ -119,6 +119,9 @@ export function toAssessmentStep(wire: AssessmentStepResponse): AssessmentStep {
   return {
     assessmentId: wire.assessment_id,
     status: toStatus(wire.status),
+    // Answers behind the run, never including the outstanding question. Carried across as
+    // it arrives — the client neither counts nor adjusts it; see `AssessmentStep`.
+    questionsAsked: wire.questions_asked,
     question: wire.question == null ? undefined : toQuestion(wire.question),
   };
 }

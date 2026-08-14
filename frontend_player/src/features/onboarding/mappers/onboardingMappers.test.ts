@@ -92,6 +92,7 @@ describe("assessment steps", () => {
     const step = toAssessmentStep({
       assessment_id: "1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6",
       status: "in_progress",
+      questions_asked: 0,
       question: QUESTION,
     });
 
@@ -101,10 +102,33 @@ describe("assessment steps", () => {
     expect(step.question?.options).toEqual([{ id: "weekly", text: "About once a week" }]);
   });
 
+  it("carries the answers already behind the run, without counting the outstanding one", () => {
+    // The count is the server's, taken as sent. A run four answers in reports 4 while
+    // holding a fifth question — the screen is what adds the one, not this.
+    const resumed = toAssessmentStep({
+      assessment_id: "1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6",
+      status: "in_progress",
+      questions_asked: 4,
+      question: QUESTION,
+    });
+
+    expect(resumed.questionsAsked).toBe(4);
+
+    const fresh = toAssessmentStep({
+      assessment_id: "1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6",
+      status: "in_progress",
+      questions_asked: 0,
+      question: QUESTION,
+    });
+
+    expect(fresh.questionsAsked).toBe(0);
+  });
+
   it("has no question when there is nothing outstanding", () => {
     const step = toAssessmentStep({
       assessment_id: "1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6",
       status: "completed",
+      questions_asked: 2,
       question: null,
     });
 
@@ -117,6 +141,7 @@ describe("assessment steps", () => {
     const abandoned = toAssessmentStep({
       assessment_id: "1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6",
       status: "abandoned",
+      questions_asked: 2,
       question: null,
     });
 
@@ -131,6 +156,7 @@ describe("assessment steps", () => {
     const step = toAssessmentStep({
       assessment_id: "1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6",
       status: "quarantined_pending_review",
+      questions_asked: 1,
       question: QUESTION,
     });
 
@@ -140,7 +166,11 @@ describe("assessment steps", () => {
   it("takes the run's sport from the question that was asked, not from the answer", () => {
     // `/assessments/in-progress` is scoped to a sport and the payload does not name one.
     const run = toAssessmentRun(
-      { assessment_id: "1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6", status: "in_progress" },
+      {
+        assessment_id: "1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6",
+        status: "in_progress",
+        questions_asked: 3,
+      },
       "squash",
     );
 

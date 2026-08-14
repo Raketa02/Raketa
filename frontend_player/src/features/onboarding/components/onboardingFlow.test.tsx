@@ -57,6 +57,7 @@ const RATING: Wire["RatingResponse"] = {
 const OPENING_STEP: Wire["AssessmentStepResponse"] = {
   assessment_id: ASSESSMENT_ID,
   status: "in_progress",
+  questions_asked: 0,
   question: {
     id: "q-played",
     category: "Recent activity",
