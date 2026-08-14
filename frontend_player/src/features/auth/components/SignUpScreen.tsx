@@ -19,12 +19,12 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { theme } from "@/shared/ui/theme";
+import { Button, theme } from "@/shared/ui";
 
 import { useSignUp } from "../hooks/useAuthActions";
 import { signUpSchema, validate, type FieldErrors } from "../schemas/authForms";
 
-import { AuthButton, AuthField, AuthNotice } from "./AuthControls";
+import { AuthField, AuthNotice } from "./AuthControls";
 import { authErrorField, authErrorMessage } from "./authErrorMessage";
 
 export function SignUpScreen() {
@@ -135,8 +135,9 @@ export function SignUpScreen() {
             />
           </View>
 
-          <AuthButton
+          <Button
             label="Create account"
+            size="lg"
             busyLabel="Creating account…"
             busy={signUp.isPending}
             onPress={submit}

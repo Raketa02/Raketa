@@ -20,13 +20,18 @@ feature, not after:
 | [`docs/architecture.md`](docs/architecture.md) | Where code lives, who owns which state, how auth/errors/Query/native behave in production. |
 | [`docs/design-system.md`](docs/design-system.md) | Every colour, type role, spacing step and interaction rule. **Locked.** |
 
-## Scaffolded, and nothing more
+## What exists
 
-The app boots to a placeholder. `src/app/_layout.tsx` composes the providers,
-`src/shared/lib/bootstrap` runs the one ordered startup sequence, and `src/app/index.tsx`
-is a stand-in. The route groups, the HTTP client, auth and every feature are still empty —
-build outward from the structure below rather than reaching for `create-expo-app` (its
-default template contradicts ADR-0009).
+`src/app/_layout.tsx` composes the providers and `src/shared/lib/bootstrap` runs the one
+ordered startup sequence. Above that: the HTTP client with its 401 → refresh → retry
+rotation, the `AppError` family, `shared/lib/auth` over the keychain, and two features —
+`auth` (sign up, sign in, session restore) and `onboarding` (the entry gate, welcome, the
+sports picker, and the question route the adaptive loop fills in).
+
+`src/shared/ui/` holds the first five design-system primitives; the rest arrive with the
+features that need them. **Build outward from the structure below** rather than reaching
+for `create-expo-app` — its default template contradicts ADR-0009 — and copy the shape of
+`src/features/auth/` or `src/features/onboarding/` rather than inventing a second one.
 
 **Copy `.env.example` → `.env.local` before the first run.** `EXPO_PUBLIC_API_URL` and
 `EXPO_PUBLIC_ENV` are both required and validated once at launch by

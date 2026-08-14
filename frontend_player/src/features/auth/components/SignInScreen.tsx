@@ -19,12 +19,12 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { theme } from "@/shared/ui/theme";
+import { Button, theme } from "@/shared/ui";
 
 import { useSignIn } from "../hooks/useAuthActions";
 import { signInSchema, validate, type FieldErrors } from "../schemas/authForms";
 
-import { AuthButton, AuthField, AuthNotice } from "./AuthControls";
+import { AuthField, AuthNotice } from "./AuthControls";
 import { authErrorMessage } from "./authErrorMessage";
 
 export function SignInScreen() {
@@ -98,8 +98,9 @@ export function SignInScreen() {
             />
           </View>
 
-          <AuthButton
+          <Button
             label="Sign in"
+            size="lg"
             busyLabel="Signing in…"
             busy={signIn.isPending}
             onPress={submit}

@@ -15,12 +15,12 @@
 import { StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { theme } from "@/shared/ui/theme";
+import { Button, theme } from "@/shared/ui";
 
 import { useSignOut } from "../hooks/useAuthActions";
 import { useCurrentUser } from "../hooks/useCurrentUser";
 
-import { AuthButton, AuthNotice } from "./AuthControls";
+import { AuthNotice } from "./AuthControls";
 import { authErrorMessage } from "./authErrorMessage";
 
 export function AccountScreen() {
@@ -46,12 +46,14 @@ export function AccountScreen() {
           <AuthNotice message={authErrorMessage(user.error)} />
         ) : null}
 
-        <Text style={s.body}>
-          Onboarding and the rest of the app arrive in later slices.
-        </Text>
+        <Text style={s.body}>The rest of the app arrives in later slices.</Text>
 
-        <AuthButton
+        <Button
           label="Sign out"
+          // `dark`, not `primary`: coral is the accent an action *wants* you to take,
+          // and leaving is not that action.
+          variant="dark"
+          size="lg"
           busyLabel="Signing out…"
           busy={signOut.isPending}
           onPress={() => signOut.mutate()}

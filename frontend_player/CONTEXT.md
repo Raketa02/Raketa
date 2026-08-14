@@ -78,10 +78,15 @@ review comment and a test description all use the same word.
 ### Routing
 
 - **Route group** — a parenthesised directory in `src/app/` — `(public)`, `(auth)`,
-  `(app)` — making the authorization boundary visible in the file tree.
+  `(app)`, `(onboarding)` — making the authorization boundary visible in the file tree.
 - **Guard** — the redirect in `(app)/_layout.tsx` keyed on session status. On SDK 52 this
   is a redirect, not a declarative protected route; those landed later. _Avoid_:
   "middleware" (that is the club app's word, and it runs on a server).
+- **Entry gate** — the *second* redirect in `(app)/_layout.tsx`, deciding between the app
+  and onboarding from two parallel reads: is a run unfinished, and does a rating exist.
+  Distinct from the guard, and deliberately **not** part of session status — a rating
+  check inside bootstrap would block every cold launch on a network request. _Avoid_:
+  "onboarded flag" — there is no such thing, because a rating is per sport.
 - **Untrusted route input** — any param from a deep link, push payload, universal link,
   App Link or QR code. Zod-validated in the feature's `schemas/` before use.
 

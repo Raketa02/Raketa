@@ -1,24 +1,21 @@
 /**
- * The two controls the auth forms need.
+ * The two controls the auth forms need that the design system does not specify.
  *
- * **These are deliberately local to this feature, and deliberately not named `Button` or
- * `Input`.** The design system (ADR-0012) specifies no text field, and its button, card
- * and header primitives are built to spec in `shared/ui/` by the onboarding slice (#23).
- * Naming a placeholder `Button` here would guarantee two of them — which is exactly how
- * the prototype's copies drifted. When #23 lands its primitives, these go.
+ * The placeholder button that used to live here **is gone**: `@/shared/ui`'s `Button` is
+ * the spec'd one, and the auth screens use it. Two implementations of one primitive is
+ * exactly how the prototype's copies drifted.
+ *
+ * These two remain because the system genuinely has no equivalent. A **text field** is
+ * unspecified (ADR-0012 covers no form control), and a form-level failure banner is not a
+ * `Note`: the five note variants are base, mint, coral, amber and info, and none of them
+ * means *ended badly*. Adding a red note is a design-system change, in its own commit,
+ * with its computed contrast — not something a screen invents on the way past.
  *
  * Every value still comes from the theme: a placeholder is not an excuse for a literal.
  */
 
 import { forwardRef, useState } from "react";
-import {
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-  type TextInputProps,
-} from "react-native";
+import { StyleSheet, Text, TextInput, View, type TextInputProps } from "react-native";
 
 import { theme } from "@/shared/ui/theme";
 
@@ -70,46 +67,6 @@ export const AuthField = forwardRef<TextInput, AuthFieldProps>(function AuthFiel
   );
 });
 
-export interface AuthButtonProps {
-  readonly label: string;
-  readonly onPress: () => void;
-  readonly disabled?: boolean;
-  /** Renders the label as the busy label and blocks presses. */
-  readonly busy?: boolean;
-  readonly busyLabel?: string;
-}
-
-export function AuthButton({
-  label,
-  onPress,
-  disabled = false,
-  busy = false,
-  busyLabel,
-}: AuthButtonProps) {
-  const blocked = disabled || busy;
-
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      // Disabled state reaches a screen reader as state, not as a colour change.
-      accessibilityState={{ disabled: blocked, busy }}
-      disabled={blocked}
-      onPress={onPress}
-      hitSlop={theme.hit.btn}
-      style={({ pressed }) => [
-        s.button,
-        blocked && s.buttonBlocked,
-        // No animation: press feedback is immediate, which is also what makes it
-        // correct under reduced motion with no branch.
-        pressed && !blocked && s.buttonPressed,
-      ]}
-    >
-      <Text style={s.buttonLabel}>{busy ? (busyLabel ?? label) : label}</Text>
-    </Pressable>
-  );
-}
-
 export interface AuthNoticeProps {
   readonly message: string;
 }
@@ -153,25 +110,6 @@ const s = StyleSheet.create({
   fieldError: {
     ...theme.type.tiny,
     color: theme.color.red,
-  },
-  button: {
-    minHeight: theme.size.btnLg,
-    borderRadius: theme.radius.btn,
-    backgroundColor: theme.color.ink,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: theme.space.lg,
-  },
-  buttonBlocked: {
-    backgroundColor: theme.color.muted,
-  },
-  buttonPressed: {
-    backgroundColor: theme.color.night,
-  },
-  buttonLabel: {
-    ...theme.type.btn,
-    color: theme.color.paper,
-    textTransform: "uppercase",
   },
   notice: {
     backgroundColor: theme.color.redSoft,
