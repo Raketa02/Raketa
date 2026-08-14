@@ -4,7 +4,7 @@
  * single route would be chrome pretending to be navigation.
  */
 
-import { Stack } from "expo-router";
+import { Stack } from 'expo-router';
 
 export default function TabsLayout() {
   return <Stack screenOptions={{ headerShown: false }} />;

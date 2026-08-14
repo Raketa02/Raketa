@@ -8,6 +8,6 @@
  * allowed to put in a cache key.
  */
 export const authKeys = {
-  all: ["auth"] as const,
-  currentUser: () => [...authKeys.all, "current-user"] as const,
+  all: ['auth'] as const,
+  currentUser: () => [...authKeys.all, 'current-user'] as const,
 } as const;

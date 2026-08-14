@@ -12,39 +12,33 @@
  * renders "undefined" on a cold launch.
  */
 
-import { StyleSheet, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Button, theme } from "@/shared/ui";
+import { Button, theme } from '@/shared/ui';
 
-import { useSignOut } from "../hooks/useAuthActions";
-import { useCurrentUser } from "../hooks/useCurrentUser";
+import { useSignOut } from '../hooks/useAuthActions';
+import { useCurrentUser } from '../hooks/useCurrentUser';
 
-import { AuthNotice } from "./AuthControls";
-import { authErrorMessage } from "./authErrorMessage";
+import { AuthNotice } from './AuthControls';
+import { authErrorMessage } from './authErrorMessage';
 
 export function AccountScreen() {
   const user = useCurrentUser();
   const signOut = useSignOut();
 
   return (
-    <SafeAreaView style={s.screen} edges={["top", "bottom"]}>
+    <SafeAreaView style={s.screen} edges={['top', 'bottom']}>
       <View style={s.content}>
         <View style={s.header}>
           <Text style={s.eyebrow}>Signed in</Text>
-          <Text style={s.title}>
-            {user.data === undefined ? "Rakieta" : user.data.nickname}
-          </Text>
-          {user.data !== undefined ? (
-            <Text style={s.body}>{user.data.email}</Text>
-          ) : null}
+          <Text style={s.title}>{user.data === undefined ? 'Rakieta' : user.data.nickname}</Text>
+          {user.data !== undefined ? <Text style={s.body}>{user.data.email}</Text> : null}
         </View>
 
         {user.isPending ? <Text style={s.body}>Loading your profile…</Text> : null}
 
-        {user.error !== null ? (
-          <AuthNotice message={authErrorMessage(user.error)} />
-        ) : null}
+        {user.error !== null ? <AuthNotice message={authErrorMessage(user.error)} /> : null}
 
         <Text style={s.body}>The rest of the app arrives in later slices.</Text>
 
@@ -67,7 +61,7 @@ const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: theme.color.paper },
   content: {
     flex: 1,
-    justifyContent: "center",
+    justifyContent: 'center',
     paddingHorizontal: theme.size.gutter,
     gap: theme.space.md,
   },
@@ -75,7 +69,7 @@ const s = StyleSheet.create({
   eyebrow: {
     ...theme.type.eyebrow,
     color: theme.color.muted,
-    textTransform: "uppercase",
+    textTransform: 'uppercase',
   },
   title: { ...theme.type.h1, color: theme.color.ink },
   body: { ...theme.type.tiny, color: theme.color.muted },

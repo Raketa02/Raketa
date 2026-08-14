@@ -11,15 +11,15 @@
  * asking for it again would be a second round trip for an answer already in hand.
  */
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
-import type { AppError } from "@/shared/errors";
+import type { AppError } from '@/shared/errors';
 
-import type { AssessmentStep } from "../domain/Assessment";
-import type { Sport } from "../domain/Sport";
-import { startAssessment } from "../use-cases/startAssessment";
+import type { AssessmentStep } from '../domain/Assessment';
+import type { Sport } from '../domain/Sport';
+import { startAssessment } from '../use-cases/startAssessment';
 
-import { onboardingKeys } from "./onboardingKeys";
+import { onboardingKeys } from './onboardingKeys';
 
 export function useStartAssessment() {
   const queryClient = useQueryClient();

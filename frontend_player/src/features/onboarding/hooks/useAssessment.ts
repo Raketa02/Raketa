@@ -7,14 +7,14 @@
  * so it is read from the server, which is the only place it ever lived.
  */
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from '@tanstack/react-query';
 
-import type { AppError } from "@/shared/errors";
+import type { AppError } from '@/shared/errors';
 
-import type { AssessmentStep } from "../domain/Assessment";
-import { fetchAssessment } from "../use-cases/fetchAssessment";
+import type { AssessmentStep } from '../domain/Assessment';
+import { fetchAssessment } from '../use-cases/fetchAssessment';
 
-import { onboardingKeys } from "./onboardingKeys";
+import { onboardingKeys } from './onboardingKeys';
 
 export function useAssessment(assessmentId: string) {
   return useQuery<AssessmentStep, AppError>({

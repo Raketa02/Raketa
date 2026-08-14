@@ -14,10 +14,10 @@
  * (design-system 6.5). The pressed appearance is declared, because there is no hover.
  */
 
-import { forwardRef } from "react";
-import { Pressable, StyleSheet, Text, type View } from "react-native";
+import { forwardRef } from 'react';
+import { Pressable, StyleSheet, Text, type View } from 'react-native';
 
-import { theme } from "./theme";
+import { theme } from './theme';
 
 export interface CloseControlProps {
   readonly onPress: () => void;
@@ -47,7 +47,7 @@ export const CloseControl = forwardRef<View, CloseControlProps>(function CloseCo
       {/* A multiplication sign, not a lowercase x — the x has a baseline and sits low
           in the circle. Hidden from assistive tech: the control carries the name. */}
       <Text style={s.mark} accessibilityElementsHidden importantForAccessibility="no">
-        {"×"}
+        {'×'}
       </Text>
     </Pressable>
   );
@@ -59,8 +59,8 @@ const s = StyleSheet.create({
     height: theme.size.sheetClose,
     borderRadius: theme.size.sheetClose / 2,
     backgroundColor: theme.color.line2,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   pressed: { backgroundColor: theme.color.line },
   mark: { ...theme.type.h2, color: theme.color.muted },

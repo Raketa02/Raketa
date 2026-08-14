@@ -15,7 +15,7 @@
  * a crash report is a live credential in a third party's database.
  */
 
-import { getEnv } from "@/shared/config/env";
+import { getEnv } from '@/shared/config/env';
 import {
   AppError,
   mapDecodeFailure,
@@ -23,9 +23,9 @@ import {
   mapTransportFailure,
   networkUnavailable,
   timedOut,
-} from "@/shared/errors";
+} from '@/shared/errors';
 
-import { TIMEOUT_MS, type TimeoutClass } from "./timeouts";
+import { TIMEOUT_MS, type TimeoutClass } from './timeouts';
 
 /** A credential and the rotation it belongs to. Supplied by the auth subsystem. */
 export interface HttpCredential {
@@ -39,7 +39,7 @@ export interface HttpCredential {
 }
 
 /** What a rotation leaves the request free to do. Mirrors `RefreshOutcome`. */
-export type HttpRefreshOutcome = "retry" | "session-ended" | "unavailable";
+export type HttpRefreshOutcome = 'retry' | 'session-ended' | 'unavailable';
 
 /**
  * How the HTTP client reaches credentials without importing the auth subsystem.
@@ -72,7 +72,7 @@ export interface HttpCredentials {
  */
 const NO_CREDENTIALS: HttpCredentials = {
   current: () => undefined,
-  refresh: () => Promise.resolve("unavailable"),
+  refresh: () => Promise.resolve('unavailable'),
   abandon: () => Promise.resolve(),
 };
 
@@ -88,7 +88,7 @@ export function resetHttp(): void {
   credentials = NO_CREDENTIALS;
 }
 
-export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
 export interface HttpRequest {
   readonly method: HttpMethod;
@@ -124,8 +124,8 @@ function newCorrelationId(): string {
 }
 
 function buildUrl(path: string): string {
-  const base = getEnv().apiUrl.replace(/\/+$/, "");
-  return `${base}${path.startsWith("/") ? path : `/${path}`}`;
+  const base = getEnv().apiUrl.replace(/\/+$/, '');
+  return `${base}${path.startsWith('/') ? path : `/${path}`}`;
 }
 
 /**
@@ -148,7 +148,7 @@ function withTimeout(timeoutMs: number, callerSignal?: AbortSignal) {
   const onCallerAbort = () => controller.abort();
   if (callerSignal !== undefined) {
     if (callerSignal.aborted) controller.abort();
-    else callerSignal.addEventListener("abort", onCallerAbort);
+    else callerSignal.addEventListener('abort', onCallerAbort);
   }
 
   return {
@@ -158,7 +158,7 @@ function withTimeout(timeoutMs: number, callerSignal?: AbortSignal) {
     },
     dispose() {
       clearTimeout(timer);
-      callerSignal?.removeEventListener("abort", onCallerAbort);
+      callerSignal?.removeEventListener('abort', onCallerAbort);
     },
   };
 }
@@ -203,11 +203,11 @@ async function sendOnce(
   payload: string | undefined,
 ): Promise<Attempt> {
   const headers: Record<string, string> = {
-    Accept: "application/json",
-    "X-Request-ID": newCorrelationId(),
+    Accept: 'application/json',
+    'X-Request-ID': newCorrelationId(),
   };
 
-  if (payload !== undefined) headers["Content-Type"] = "application/json";
+  if (payload !== undefined) headers['Content-Type'] = 'application/json';
 
   let sentWith: number | undefined;
   if (request.authenticated) {
@@ -218,7 +218,7 @@ async function sendOnce(
     }
   }
 
-  const timeoutMs = TIMEOUT_MS[request.timeout ?? "request"];
+  const timeoutMs = TIMEOUT_MS[request.timeout ?? 'request'];
   const timeout = withTimeout(timeoutMs, request.signal);
 
   let response: Response;
@@ -282,7 +282,7 @@ export async function httpRequest<T>(request: HttpRequest): Promise<T> {
   if (attempt.status === 401 && attempt.sentWith !== undefined) {
     const outcome = await credentials.refresh(attempt.sentWith);
 
-    if (outcome === "unavailable") {
+    if (outcome === 'unavailable') {
       // We could not find out whether the session is still valid, and the session has
       // deliberately *not* been touched. Surfacing the 401 here would be a lie with
       // consequences: its recovery is `requires-reauthentication`, so launch validation
@@ -290,7 +290,7 @@ export async function httpRequest<T>(request: HttpRequest): Promise<T> {
       throw networkUnavailable();
     }
 
-    if (outcome === "retry" && credentials.current() !== undefined) {
+    if (outcome === 'retry' && credentials.current() !== undefined) {
       attempt = await sendOnce(request, url, payload);
 
       if (attempt.status === 401) {
@@ -305,7 +305,7 @@ export async function httpRequest<T>(request: HttpRequest): Promise<T> {
   if (!attempt.ok) throw mapErrorResponse(attempt.status, attempt.body);
 
   // A successful response that was not JSON is a broken contract, not a network fault.
-  if (typeof attempt.body === "string") throw mapDecodeFailure(attempt.body);
+  if (typeof attempt.body === 'string') throw mapDecodeFailure(attempt.body);
 
   return attempt.body as T;
 }

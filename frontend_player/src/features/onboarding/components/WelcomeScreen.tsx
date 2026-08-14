@@ -7,26 +7,26 @@
  * permanent, refined by real matches later.
  */
 
-import { useRouter } from "expo-router";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter } from 'expo-router';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Button, Card, Note, theme } from "@/shared/ui";
+import { Button, Card, Note, theme } from '@/shared/ui';
 
-import { OnboardingChrome } from "./OnboardingChrome";
+import { OnboardingChrome } from './OnboardingChrome';
 
 const POINTS = [
   {
-    title: "You get a starting level for each sport",
-    body: "A Level, the range it probably sits in, and how confident we are in it — one rating per sport you play.",
+    title: 'You get a starting level for each sport',
+    body: 'A Level, the range it probably sits in, and how confident we are in it — one rating per sport you play.',
   },
   {
-    title: "It takes about a minute per sport",
-    body: "A few questions, one at a time. How many depends on your answers: a first-timer is done after one.",
+    title: 'It takes about a minute per sport',
+    body: 'A few questions, one at a time. How many depends on your answers: a first-timer is done after one.',
   },
   {
-    title: "Nothing here is permanent",
-    body: "This is a starting hypothesis, not a verdict. Real matches are what narrow it, and you can rate a sport again later.",
+    title: 'Nothing here is permanent',
+    body: 'This is a starting hypothesis, not a verdict. Real matches are what narrow it, and you can rate a sport again later.',
   },
 ] as const;
 
@@ -34,7 +34,7 @@ export function WelcomeScreen() {
   const router = useRouter();
 
   return (
-    <SafeAreaView style={s.screen} edges={["top", "bottom"]}>
+    <SafeAreaView style={s.screen} edges={['top', 'bottom']}>
       <OnboardingChrome eyebrow="Rakieta" title="Let's find your level" />
 
       <ScrollView contentContainerStyle={s.content}>
@@ -46,8 +46,8 @@ export function WelcomeScreen() {
         ))}
 
         <Note variant="info">
-          Answer for a normal match, not your best day — that is what the questions mean,
-          and it is what makes the level useful.
+          Answer for a normal match, not your best day — that is what the questions mean, and it is
+          what makes the level useful.
         </Note>
       </ScrollView>
 
@@ -55,7 +55,7 @@ export function WelcomeScreen() {
         <Button
           label="Get started"
           size="lg"
-          onPress={() => router.push("/sports")}
+          onPress={() => router.push('/sports')}
           accessibilityHint="Choose the sports you play"
         />
       </View>

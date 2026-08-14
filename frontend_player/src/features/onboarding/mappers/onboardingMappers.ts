@@ -13,43 +13,41 @@
  *    picker shows the ones it can and the player rates the rest after updating.
  */
 
-import type { components } from "@/generated/schema";
+import type { components } from '@/generated/schema';
 
 import type {
   AssessmentRun,
   AssessmentStatus,
   AssessmentStep,
   Question,
-} from "../domain/Assessment";
-import type { SkillRating } from "../domain/SkillRating";
-import type { Sport } from "../domain/Sport";
+} from '../domain/Assessment';
+import type { SkillRating } from '../domain/SkillRating';
+import type { Sport } from '../domain/Sport';
 
-type WireSport = components["schemas"]["Sport"];
-type RatingResponse = components["schemas"]["RatingResponse"];
-type RatingsResponse = components["schemas"]["RatingsResponse"];
-type SportsResponse = components["schemas"]["SportsResponse"];
-type QuestionResponse = components["schemas"]["QuestionResponse"];
-type AssessmentStepResponse = components["schemas"]["AssessmentStepResponse"];
+type WireSport = components['schemas']['Sport'];
+type RatingResponse = components['schemas']['RatingResponse'];
+type RatingsResponse = components['schemas']['RatingsResponse'];
+type SportsResponse = components['schemas']['SportsResponse'];
+type QuestionResponse = components['schemas']['QuestionResponse'];
+type AssessmentStepResponse = components['schemas']['AssessmentStepResponse'];
 
 const SPORT_BY_WIRE = {
-  PADEL: "padel",
-  TENNIS: "tennis",
-  SQUASH: "squash",
-  BADMINTON: "badminton",
+  PADEL: 'padel',
+  TENNIS: 'tennis',
+  SQUASH: 'squash',
+  BADMINTON: 'badminton',
 } as const satisfies Record<WireSport, Sport>;
 
 const WIRE_BY_SPORT = {
-  padel: "PADEL",
-  tennis: "TENNIS",
-  squash: "SQUASH",
-  badminton: "BADMINTON",
+  padel: 'PADEL',
+  tennis: 'TENNIS',
+  squash: 'SQUASH',
+  badminton: 'BADMINTON',
 } as const satisfies Record<Sport, WireSport>;
 
 /** `undefined` for a sport this build has no identity for — see the note above. */
 export function toSport(wire: string): Sport | undefined {
-  return Object.hasOwn(SPORT_BY_WIRE, wire)
-    ? SPORT_BY_WIRE[wire as WireSport]
-    : undefined;
+  return Object.hasOwn(SPORT_BY_WIRE, wire) ? SPORT_BY_WIRE[wire as WireSport] : undefined;
 }
 
 export function toWireSport(sport: Sport): WireSport {
@@ -112,7 +110,7 @@ function toQuestion(wire: QuestionResponse): Question {
  * not grounds for ending a run the client cannot interpret.
  */
 function toStatus(wire: string): AssessmentStatus {
-  return wire === "completed" || wire === "abandoned" ? wire : "in_progress";
+  return wire === 'completed' || wire === 'abandoned' ? wire : 'in_progress';
 }
 
 export function toAssessmentStep(wire: AssessmentStepResponse): AssessmentStep {
@@ -133,9 +131,6 @@ export function toAssessmentStep(wire: AssessmentStepResponse): AssessmentStep {
  * asked one sport at a time, so which sport a run belongs to is known from the question
  * rather than from the answer.
  */
-export function toAssessmentRun(
-  wire: AssessmentStepResponse,
-  sport: Sport,
-): AssessmentRun {
+export function toAssessmentRun(wire: AssessmentStepResponse, sport: Sport): AssessmentRun {
   return { assessmentId: wire.assessment_id, sport };
 }

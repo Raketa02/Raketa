@@ -21,11 +21,11 @@
  * written at all.
  */
 
-import type { AppError } from "@/shared/errors";
+import type { AppError } from '@/shared/errors';
 
 const STALE_STEP_CODES: readonly string[] = [
-  "question_not_outstanding",
-  "assessment_already_finished",
+  'question_not_outstanding',
+  'assessment_already_finished',
 ];
 
 /**

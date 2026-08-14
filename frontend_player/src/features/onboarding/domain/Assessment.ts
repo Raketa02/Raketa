@@ -9,7 +9,7 @@
  * server has seen answer four.
  */
 
-import type { Sport } from "./Sport";
+import type { Sport } from './Sport';
 
 export interface AnswerOption {
   readonly id: string;
@@ -47,7 +47,7 @@ export interface Question {
  * there is something to answer, and a status this build has never heard of is not
  * grounds for throwing a player out of a run.
  */
-export type AssessmentStatus = "in_progress" | "completed" | "abandoned";
+export type AssessmentStatus = 'in_progress' | 'completed' | 'abandoned';
 
 /**
  * The server-driven step: what to render next.

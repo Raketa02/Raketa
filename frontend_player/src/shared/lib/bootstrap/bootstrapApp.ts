@@ -25,10 +25,10 @@
  * fails to compile until its step is wired in.
  */
 
-import { loadEnv } from "@/shared/config/env";
-import { wireFocusManager, wireOnlineManager } from "@/shared/lib/platform";
+import { loadEnv } from '@/shared/config/env';
+import { wireFocusManager, wireOnlineManager } from '@/shared/lib/platform';
 
-import { loadFonts } from "./fonts";
+import { loadFonts } from './fonts';
 
 export interface BootstrapSteps {
   /** Throws when the build's public config is missing or malformed. */
@@ -63,7 +63,7 @@ export const sharedBootstrapSteps = {
     wireOnlineManager();
   },
   loadFonts,
-} as const satisfies Omit<BootstrapSteps, "restoreSession" | "wireCredentials">;
+} as const satisfies Omit<BootstrapSteps, 'restoreSession' | 'wireCredentials'>;
 
 export async function bootstrapApp(steps: BootstrapSteps): Promise<void> {
   steps.validateConfig();

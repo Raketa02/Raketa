@@ -33,11 +33,11 @@
  * **Nothing in this file logs.** The values passing through it are credentials.
  */
 
-import { AppError } from "@/shared/errors";
+import { AppError } from '@/shared/errors';
 
-import { endSession } from "./session";
-import type { Tokens } from "./auth.types";
-import { getGeneration, getRefreshToken, save } from "./tokenManager";
+import { endSession } from './session';
+import type { Tokens } from './auth.types';
+import { getGeneration, getRefreshToken, save } from './tokenManager';
 
 /**
  * What the caller of a rotation may do next.
@@ -47,11 +47,11 @@ import { getGeneration, getRefreshToken, save } from "./tokenManager";
  */
 export type RefreshOutcome =
   /** Current credentials are in place. Replay the request with them. */
-  | "retry"
+  | 'retry'
   /** The server rejected our credentials. The session has already been torn down. */
-  | "session-ended"
+  | 'session-ended'
   /** The rotation could not be completed. Credentials are untouched; do not replay. */
-  | "unavailable";
+  | 'unavailable';
 
 /**
  * The wire half of a rotation: a refresh token in, a new pair out, rejecting with an
@@ -88,7 +88,7 @@ let inFlight: Promise<RefreshOutcome> | undefined;
  * the answer is to retry against whatever is current, not to rotate again.
  */
 export function refreshSession(seen: number): Promise<RefreshOutcome> {
-  if (getGeneration() !== seen) return Promise.resolve("retry");
+  if (getGeneration() !== seen) return Promise.resolve('retry');
 
   if (inFlight === undefined) {
     inFlight = runRefresh();
@@ -108,8 +108,8 @@ async function runRefresh(): Promise<RefreshOutcome> {
   // No refresh token is not a failure to classify — there is simply no session to
   // rotate, and the 401 that got us here was correct.
   if (refreshToken === undefined || exchange === undefined) {
-    await endSession("session-invalidated");
-    return "session-ended";
+    await endSession('session-invalidated');
+    return 'session-ended';
   }
 
   const startedAt = getGeneration();
@@ -121,22 +121,22 @@ async function runRefresh(): Promise<RefreshOutcome> {
     if (error instanceof AppError && error.invalidatesSession) {
       // The auth server said no: expired, revoked, or not recognised. This is the only
       // answer that ends a session.
-      await endSession("session-invalidated");
-      return "session-ended";
+      await endSession('session-invalidated');
+      return 'session-ended';
     }
 
     // Unreachable, timed out, or the server itself broke. None of those say anything
     // about whether this session is valid, so nothing is destroyed.
-    return "unavailable";
+    return 'unavailable';
   }
 
   // The session moved while we were waiting — the player signed out, or another path
   // cleared the credentials. Writing now would resurrect a session the app has already
   // left, leaving a live token on a device showing a sign-in screen.
-  if (getGeneration() !== startedAt) return "session-ended";
+  if (getGeneration() !== startedAt) return 'session-ended';
 
   // One write, both halves. A pair split across two writes is a session that cannot
   // recover from being interrupted between them.
   await save(tokens);
-  return "retry";
+  return 'retry';
 }

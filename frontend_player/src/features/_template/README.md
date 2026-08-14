@@ -5,20 +5,20 @@ feature carries the full layer set, so an agent applies one rule instead of judg
 (see [ADR-0009](../../../../docs/adr/0009-feature-first-clean-architecture-frontends.md)).
 
 This mirrors `frontend_club`'s structure on purpose: the two client apps are separate
-deployables that share no code, but they share a *shape*, so a rule you learn in one
+deployables that share no code, but they share a _shape_, so a rule you learn in one
 transfers to the other.
 
-| Layer | Holds | May import | Must never import |
-| --- | --- | --- | --- |
-| `domain/` | Entities, value objects, invariants. Pure TypeScript. | nothing outside `domain/` | React, React Native, Expo, TanStack, Zustand, `fetch`, `@/generated` |
-| `use-cases/` | One function per workflow. Orchestrates `domain/` + the `api/` port. | `domain/`, `api/` types | React Native, Expo, `@/generated` |
-| `api/` | Calls **FastAPI directly** through `@/shared/lib/http`. Speaks wire types. | `@/generated`, `@/shared/lib/http` | `components/`, `hooks/`, `fetch` |
-| `mappers/` | Pure `wire DTO ⇄ domain object` functions. **The wire boundary.** | `@/generated`, `domain/` | React Native |
-| `schemas/` | Zod schemas for forms, route params, deep links, any external input. | `zod`, `domain/` | React Native |
-| `components/` | Rendering and interaction only. | `hooks/`, `@/shared/ui`, `domain/` types | `api/`, `@/generated` |
-| `hooks/` | Thin adapters over use-cases. TanStack Query + the **query-key factory**. | `use-cases/`, `store/`, `@tanstack/react-query` | `@/generated` |
-| `store/` *(optional)* | A small feature-scoped Zustand store, when the feature needs one. | `zod`, plain types | server data, tokens, `api/` |
-| `types.ts` | **The feature's only public surface.** Re-exports what other features and `src/app/` may use. | — | — |
+| Layer                 | Holds                                                                                         | May import                                      | Must never import                                                    |
+| --------------------- | --------------------------------------------------------------------------------------------- | ----------------------------------------------- | -------------------------------------------------------------------- |
+| `domain/`             | Entities, value objects, invariants. Pure TypeScript.                                         | nothing outside `domain/`                       | React, React Native, Expo, TanStack, Zustand, `fetch`, `@/generated` |
+| `use-cases/`          | One function per workflow. Orchestrates `domain/` + the `api/` port.                          | `domain/`, `api/` types                         | React Native, Expo, `@/generated`                                    |
+| `api/`                | Calls **FastAPI directly** through `@/shared/lib/http`. Speaks wire types.                    | `@/generated`, `@/shared/lib/http`              | `components/`, `hooks/`, `fetch`                                     |
+| `mappers/`            | Pure `wire DTO ⇄ domain object` functions. **The wire boundary.**                             | `@/generated`, `domain/`                        | React Native                                                         |
+| `schemas/`            | Zod schemas for forms, route params, deep links, any external input.                          | `zod`, `domain/`                                | React Native                                                         |
+| `components/`         | Rendering and interaction only.                                                               | `hooks/`, `@/shared/ui`, `domain/` types        | `api/`, `@/generated`                                                |
+| `hooks/`              | Thin adapters over use-cases. TanStack Query + the **query-key factory**.                     | `use-cases/`, `store/`, `@tanstack/react-query` | `@/generated`                                                        |
+| `store/` _(optional)_ | A small feature-scoped Zustand store, when the feature needs one.                             | `zod`, plain types                              | server data, tokens, `api/`                                          |
+| `types.ts`            | **The feature's only public surface.** Re-exports what other features and `src/app/` may use. | —                                               | —                                                                    |
 
 `store/` is the one **optional** layer — present when the feature has UI state that
 outlives a component, absent otherwise. Everything else is always there, even when thin.
@@ -68,7 +68,7 @@ Then:
 
 ## Two things a feature must define, not inherit
 
-**A query-key factory,** in `hooks/`, listing every key the feature uses — with *every*
+**A query-key factory,** in `hooks/`, listing every key the feature uses — with _every_
 parameter that changes the response, including the cursor:
 
 ```ts

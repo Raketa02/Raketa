@@ -11,16 +11,16 @@
  * sign-out path and from #22's rotation, both of which live outside React.
  */
 
-import { QueryClientProvider } from "@tanstack/react-query";
-import { Slot } from "expo-router";
-import { StatusBar } from "expo-status-bar";
-import { useCallback } from "react";
-import { SafeAreaProvider, initialWindowMetrics } from "react-native-safe-area-context";
+import { QueryClientProvider } from '@tanstack/react-query';
+import { Slot } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { useCallback } from 'react';
+import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 
-import { authKeys, refreshTokens, restoreSession } from "@/features/auth/types";
-import { wireHttpCredentials } from "@/shared/lib/auth";
-import { BootstrapGate, bootstrapApp, sharedBootstrapSteps } from "@/shared/lib/bootstrap";
-import { queryClient } from "@/shared/lib/query-client";
+import { authKeys, refreshTokens, restoreSession } from '@/features/auth/types';
+import { wireHttpCredentials } from '@/shared/lib/auth';
+import { BootstrapGate, bootstrapApp, sharedBootstrapSteps } from '@/shared/lib/bootstrap';
+import { queryClient } from '@/shared/lib/query-client';
 
 /**
  * Hand the HTTP client its credential adapter, including the wire call its 401 rotation

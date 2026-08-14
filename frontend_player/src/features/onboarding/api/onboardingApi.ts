@@ -6,27 +6,25 @@
  * and what a failure means all belong above.
  */
 
-import type { components } from "@/generated/schema";
-import { httpRequest } from "@/shared/lib/http";
+import type { components } from '@/generated/schema';
+import { httpRequest } from '@/shared/lib/http';
 
-type RatingsResponse = components["schemas"]["RatingsResponse"];
-type SportsResponse = components["schemas"]["SportsResponse"];
-type AssessmentStepResponse = components["schemas"]["AssessmentStepResponse"];
-type CreateAssessmentRequest = components["schemas"]["CreateAssessmentRequest"];
-type SubmitAnswerRequest = components["schemas"]["SubmitAnswerRequest"];
-type WireSport = components["schemas"]["Sport"];
+type RatingsResponse = components['schemas']['RatingsResponse'];
+type SportsResponse = components['schemas']['SportsResponse'];
+type AssessmentStepResponse = components['schemas']['AssessmentStepResponse'];
+type CreateAssessmentRequest = components['schemas']['CreateAssessmentRequest'];
+type SubmitAnswerRequest = components['schemas']['SubmitAnswerRequest'];
+type WireSport = components['schemas']['Sport'];
 
 export interface OnboardingApiOptions {
   readonly signal?: AbortSignal;
 }
 
 /** Every sport this player is rated at. An unrated player is an empty collection. */
-export function listRatings({
-  signal,
-}: OnboardingApiOptions = {}): Promise<RatingsResponse> {
+export function listRatings({ signal }: OnboardingApiOptions = {}): Promise<RatingsResponse> {
   return httpRequest<RatingsResponse>({
-    method: "GET",
-    path: "/api/v1/ratings",
+    method: 'GET',
+    path: '/api/v1/ratings',
     authenticated: true,
     signal,
   });
@@ -39,12 +37,10 @@ export function listRatings({
  * backend's shared kernel, and this route exists precisely so that neither client
  * restates it.
  */
-export function listSports({
-  signal,
-}: OnboardingApiOptions = {}): Promise<SportsResponse> {
+export function listSports({ signal }: OnboardingApiOptions = {}): Promise<SportsResponse> {
   return httpRequest<SportsResponse>({
-    method: "GET",
-    path: "/api/v1/sports",
+    method: 'GET',
+    path: '/api/v1/sports',
     authenticated: true,
     signal,
   });
@@ -61,7 +57,7 @@ export function findInProgress(
   { signal }: OnboardingApiOptions = {},
 ): Promise<AssessmentStepResponse | undefined> {
   return httpRequest<AssessmentStepResponse | undefined>({
-    method: "GET",
+    method: 'GET',
     path: `/api/v1/assessments/in-progress?sport=${encodeURIComponent(sport)}`,
     authenticated: true,
     signal,
@@ -74,8 +70,8 @@ export function createAssessment(
   { signal }: OnboardingApiOptions = {},
 ): Promise<AssessmentStepResponse> {
   return httpRequest<AssessmentStepResponse>({
-    method: "POST",
-    path: "/api/v1/assessments",
+    method: 'POST',
+    path: '/api/v1/assessments',
     body,
     authenticated: true,
     signal,
@@ -95,7 +91,7 @@ export function submitAnswer(
   { signal }: OnboardingApiOptions = {},
 ): Promise<AssessmentStepResponse> {
   return httpRequest<AssessmentStepResponse>({
-    method: "POST",
+    method: 'POST',
     path: `/api/v1/assessments/${encodeURIComponent(assessmentId)}/answers`,
     body,
     authenticated: true,
@@ -115,7 +111,7 @@ export function abandonAssessment(
   { signal }: OnboardingApiOptions = {},
 ): Promise<void> {
   return httpRequest<void>({
-    method: "POST",
+    method: 'POST',
     path: `/api/v1/assessments/${encodeURIComponent(assessmentId)}/abandonment`,
     authenticated: true,
     signal,
@@ -128,7 +124,7 @@ export function getAssessment(
   { signal }: OnboardingApiOptions = {},
 ): Promise<AssessmentStepResponse> {
   return httpRequest<AssessmentStepResponse>({
-    method: "GET",
+    method: 'GET',
     path: `/api/v1/assessments/${encodeURIComponent(assessmentId)}`,
     authenticated: true,
     signal,

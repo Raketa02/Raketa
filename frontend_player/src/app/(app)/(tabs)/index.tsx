@@ -1,4 +1,4 @@
-import { AccountScreen } from "@/features/auth/types";
+import { AccountScreen } from '@/features/auth/types';
 
 export default function HomeRoute() {
   return <AccountScreen />;

@@ -6,13 +6,13 @@
  * nothing at all about `is_admin` because it must not branch on it.
  */
 
-import type { components } from "@/generated/schema";
-import type { Tokens } from "@/shared/lib/auth";
+import type { components } from '@/generated/schema';
+import type { Tokens } from '@/shared/lib/auth';
 
-import type { AuthenticatedUser } from "../domain/AuthenticatedUser";
+import type { AuthenticatedUser } from '../domain/AuthenticatedUser';
 
-type TokenResponse = components["schemas"]["TokenResponse"];
-type UserResponse = components["schemas"]["UserResponse"];
+type TokenResponse = components['schemas']['TokenResponse'];
+type UserResponse = components['schemas']['UserResponse'];
 
 /**
  * `expires_in` is deliberately dropped. Expiry is discovered from the server's 401, not

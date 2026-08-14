@@ -22,7 +22,7 @@ import {
   unknownFailure,
   type AppErrorKind,
   type Recovery,
-} from "./AppError";
+} from './AppError';
 
 /** The parsed envelope. Deliberately tolerant — a body may be truncated or absent. */
 export interface ErrorEnvelope {
@@ -46,19 +46,19 @@ const BY_CODE: Readonly<Record<string, Classification>> = {
   // them as re-authentication would mean the sign-in screen reacting to a mistyped
   // password by tearing down a session the player never had — and, once #22's rotation
   // lands, by trying to refresh a token that does not exist.
-  invalid_credentials: ["unauthorized", "requires-user-correction"],
+  invalid_credentials: ['unauthorized', 'requires-user-correction'],
   // The account exists and the password was right. Retrying changes nothing and the
   // player cannot fix it from the app.
-  account_disabled: ["unauthorized", "terminal"],
-  user_not_eligible: ["unauthorized", "terminal"],
+  account_disabled: ['unauthorized', 'terminal'],
+  user_not_eligible: ['unauthorized', 'terminal'],
 
   // --- 409s the player fixes by typing something else ----------------------------
   //
   // A conflict by status, but the recovery is a correction: pick another email or
   // nickname. Routing these to "business-conflict" would put a reconcile-and-retry
   // affordance on what is really a field error.
-  email_already_registered: ["conflict", "requires-user-correction"],
-  nickname_already_taken: ["conflict", "requires-user-correction"],
+  email_already_registered: ['conflict', 'requires-user-correction'],
+  nickname_already_taken: ['conflict', 'requires-user-correction'],
 };
 
 /**
@@ -69,25 +69,25 @@ const BY_CODE: Readonly<Record<string, Classification>> = {
  * unauthenticated endpoints, which are a closed and short list.
  */
 function byStatus(status: number): Classification {
-  if (status === 400) return ["validation", "requires-user-correction"];
-  if (status === 401) return ["unauthorized", "requires-reauthentication"];
+  if (status === 400) return ['validation', 'requires-user-correction'];
+  if (status === 401) return ['unauthorized', 'requires-reauthentication'];
   // A 403 is "you may not do this", said to a session that is perfectly valid. It must
   // never touch the session state machine. See docs/architecture.md Part 6.
-  if (status === 403) return ["forbidden", "terminal"];
-  if (status === 404) return ["not-found", "terminal"];
-  if (status === 409) return ["conflict", "business-conflict"];
-  if (status === 422) return ["validation", "requires-user-correction"];
-  if (status === 429) return ["rate-limit", "retryable-by-user"];
-  if (status >= 500) return ["server", "retryable-automatically"];
-  return ["unknown", "terminal"];
+  if (status === 403) return ['forbidden', 'terminal'];
+  if (status === 404) return ['not-found', 'terminal'];
+  if (status === 409) return ['conflict', 'business-conflict'];
+  if (status === 422) return ['validation', 'requires-user-correction'];
+  if (status === 429) return ['rate-limit', 'retryable-by-user'];
+  if (status >= 500) return ['server', 'retryable-automatically'];
+  return ['unknown', 'terminal'];
 }
 
 function asString(value: unknown): string | undefined {
-  return typeof value === "string" && value.length > 0 ? value : undefined;
+  return typeof value === 'string' && value.length > 0 ? value : undefined;
 }
 
 function asDetails(value: unknown): Readonly<Record<string, unknown>> | undefined {
-  return typeof value === "object" && value !== null && !Array.isArray(value)
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
     ? (value as Record<string, unknown>)
     : undefined;
 }
@@ -101,11 +101,10 @@ function asDetails(value: unknown): Readonly<Record<string, unknown>> | undefine
  */
 export function mapErrorResponse(status: number, body: unknown): AppError {
   const envelope: ErrorEnvelope =
-    typeof body === "object" && body !== null ? (body as ErrorEnvelope) : {};
+    typeof body === 'object' && body !== null ? (body as ErrorEnvelope) : {};
 
   const code = asString(envelope.code);
-  const classification =
-    (code !== undefined ? BY_CODE[code] : undefined) ?? byStatus(status);
+  const classification = (code !== undefined ? BY_CODE[code] : undefined) ?? byStatus(status);
   const [kind, recovery] = classification;
 
   return new AppError(

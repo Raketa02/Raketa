@@ -10,10 +10,10 @@
  * boundary between two — which is the whole distinction between the two line tokens.
  */
 
-import { StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
-import type { ReactNode } from "react";
+import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import type { ReactNode } from 'react';
 
-import { theme } from "./theme";
+import { theme } from './theme';
 
 export interface HairlineProps {
   /** The section below the fold. */

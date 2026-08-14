@@ -26,6 +26,6 @@
  * The type is derived from the list rather than declared beside it, so the two cannot
  * disagree.
  */
-export const SPORTS = ["padel", "tennis", "squash", "badminton"] as const;
+export const SPORTS = ['padel', 'tennis', 'squash', 'badminton'] as const;
 
 export type Sport = (typeof SPORTS)[number];

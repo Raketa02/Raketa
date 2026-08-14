@@ -11,9 +11,9 @@
  * that was asked, not from the answer.
  */
 
-import { Redirect, useLocalSearchParams } from "expo-router";
+import { Redirect, useLocalSearchParams } from 'expo-router';
 
-import { QuestionScreen, parseAssessmentRouteParams } from "@/features/onboarding/types";
+import { QuestionScreen, parseAssessmentRouteParams } from '@/features/onboarding/types';
 
 export default function QuestionRoute() {
   const params = parseAssessmentRouteParams(useLocalSearchParams());

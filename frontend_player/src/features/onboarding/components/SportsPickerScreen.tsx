@@ -12,20 +12,20 @@
  * question. It is `replace`, not `push`: the questionnaire has no way back.
  */
 
-import { useRouter } from "expo-router";
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter } from 'expo-router';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Button, Note, PressableCard, theme } from "@/shared/ui";
+import { Button, Note, PressableCard, theme } from '@/shared/ui';
 
-import type { Sport } from "../domain/Sport";
-import { useSportQueue } from "../store/sportQueue.store";
-import { useSports } from "../hooks/useSports";
-import { useStartAssessment } from "../hooks/useStartAssessment";
+import type { Sport } from '../domain/Sport';
+import { useSportQueue } from '../store/sportQueue.store';
+import { useSports } from '../hooks/useSports';
+import { useStartAssessment } from '../hooks/useStartAssessment';
 
-import { OnboardingChrome } from "./OnboardingChrome";
-import { onboardingErrorMessage } from "./onboardingErrorMessage";
-import { sportColour, sportLabel } from "./sportPresentation";
+import { OnboardingChrome } from './OnboardingChrome';
+import { onboardingErrorMessage } from './onboardingErrorMessage';
+import { sportColour, sportLabel } from './sportPresentation';
 
 export function SportsPickerScreen() {
   const router = useRouter();
@@ -41,41 +41,36 @@ export function SportsPickerScreen() {
     start.mutate(first, {
       onSuccess: (step) =>
         router.replace({
-          pathname: "/question/[assessmentId]",
+          pathname: '/question/[assessmentId]',
           params: { assessmentId: step.assessmentId, sport: first },
         }),
     });
   };
 
   return (
-    <SafeAreaView style={s.screen} edges={["top", "bottom"]}>
+    <SafeAreaView style={s.screen} edges={['top', 'bottom']}>
       <OnboardingChrome eyebrow="Rakieta" title="Which sports do you play?" />
 
       <ScrollView contentContainerStyle={s.content}>
         <Note variant="info">
-          Each sport gets its own level. They are never borrowed from one another — being
-          strong at tennis says nothing about your padel.
+          Each sport gets its own level. They are never borrowed from one another — being strong at
+          tennis says nothing about your padel.
         </Note>
 
         {/* Paused, not loading: `networkMode: 'online'` holds a query rather than
             failing it, so an offline player would otherwise watch a spinner forever. */}
-        {sports.fetchStatus === "paused" ? (
+        {sports.fetchStatus === 'paused' ? (
           <Note variant="amber">
             You&apos;re offline. The sports will load as soon as you&apos;re back.
           </Note>
         ) : null}
 
-        {sports.isPending && sports.fetchStatus !== "paused" ? (
-          <ActivityIndicator
-            accessibilityLabel="Loading sports"
-            color={theme.color.muted}
-          />
+        {sports.isPending && sports.fetchStatus !== 'paused' ? (
+          <ActivityIndicator accessibilityLabel="Loading sports" color={theme.color.muted} />
         ) : null}
 
         {sports.data?.length === 0 ? (
-          <Note variant="amber">
-            No sports are available to rate right now. Try again later.
-          </Note>
+          <Note variant="amber">No sports are available to rate right now. Try again later.</Note>
         ) : null}
 
         {sports.error !== null ? (
@@ -83,11 +78,7 @@ export function SportsPickerScreen() {
             <Note variant="coral" accessibilityRole="alert">
               {onboardingErrorMessage(sports.error)}
             </Note>
-            <Button
-              label="Try again"
-              variant="secondary"
-              onPress={() => void sports.refetch()}
-            />
+            <Button label="Try again" variant="secondary" onPress={() => void sports.refetch()} />
           </View>
         ) : null}
 
@@ -123,8 +114,8 @@ export function SportsPickerScreen() {
 
 /** The count is on the control, so nobody continues wondering what they just chose. */
 function continueLabel(count: number): string {
-  if (count === 0) return "Choose a sport to continue";
-  return count === 1 ? "Rate 1 sport" : `Rate ${count} sports`;
+  if (count === 0) return 'Choose a sport to continue';
+  return count === 1 ? 'Rate 1 sport' : `Rate ${count} sports`;
 }
 
 interface SportCardProps {
@@ -144,7 +135,7 @@ function SportCard({ sport, selected, onPress }: SportCardProps) {
       onPress={onPress}
       selected={selected}
       accessibilityLabel={sportLabel(sport)}
-      accessibilityHint={selected ? "Removes this sport" : "Adds this sport"}
+      accessibilityHint={selected ? 'Removes this sport' : 'Adds this sport'}
       style={s.sportCard}
     >
       <View style={[s.dot, { backgroundColor: sportColour(sport) }]} />
@@ -163,8 +154,8 @@ const s = StyleSheet.create({
   },
   failure: { gap: theme.space.sm },
   sportCard: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: theme.space.sm,
   },
   dot: {
@@ -176,7 +167,7 @@ const s = StyleSheet.create({
   selectedMark: {
     ...theme.type.eyebrow,
     color: theme.color.ink,
-    textTransform: "uppercase",
+    textTransform: 'uppercase',
   },
   action: {
     paddingHorizontal: theme.size.gutter,

@@ -9,17 +9,17 @@
 //
 // These are config, never secrets: the app deliberately refuses to boot without them, and
 // CI has no .env file (nor may an agent create one).
-process.env.EXPO_PUBLIC_API_URL = "https://api.test.rakieta.invalid";
-process.env.EXPO_PUBLIC_ENV = "development";
+process.env.EXPO_PUBLIC_API_URL = 'https://api.test.rakieta.invalid';
+process.env.EXPO_PUBLIC_ENV = 'development';
 
 module.exports = {
-  preset: "jest-expo",
-  setupFilesAfterEnv: ["<rootDir>/jest.setup.js"],
-  testMatch: ["<rootDir>/src/**/*.test.{ts,tsx}"],
+  preset: 'jest-expo',
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
+  testMatch: ['<rootDir>/src/**/*.test.{ts,tsx}'],
   transformIgnorePatterns: [
-    "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@sentry/react-native|native-base|react-native-svg)",
+    'node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@sentry/react-native|native-base|react-native-svg)',
   ],
   moduleNameMapper: {
-    "^@/(.*)$": "<rootDir>/src/$1",
+    '^@/(.*)$': '<rootDir>/src/$1',
   },
 };

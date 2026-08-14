@@ -15,21 +15,19 @@
  * two unfinished runs resolve the same way every launch.
  */
 
-import type { AssessmentRun } from "../domain/Assessment";
-import { SPORTS, type Sport } from "../domain/Sport";
-import { findInProgress } from "../api/onboardingApi";
-import { toAssessmentRun, toWireSport } from "../mappers/onboardingMappers";
+import type { AssessmentRun } from '../domain/Assessment';
+import { SPORTS, type Sport } from '../domain/Sport';
+import { findInProgress } from '../api/onboardingApi';
+import { toAssessmentRun, toWireSport } from '../mappers/onboardingMappers';
 
 export interface FindRunInProgressOptions {
   readonly signal?: AbortSignal;
 }
 
-export async function findRunInProgress({
-  signal,
-}: FindRunInProgressOptions = {}): Promise<AssessmentRun | undefined> {
-  const found = await Promise.all(
-    SPORTS.map((sport) => runFor(sport, signal)),
-  );
+export async function findRunInProgress({ signal }: FindRunInProgressOptions = {}): Promise<
+  AssessmentRun | undefined
+> {
+  const found = await Promise.all(SPORTS.map((sport) => runFor(sport, signal)));
 
   return found.find((run): run is AssessmentRun => run !== undefined);
 }

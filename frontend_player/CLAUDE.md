@@ -15,10 +15,10 @@ FastAPI over HTTPS and generating its wire types from `backend/openapi.player.js
 Two contracts predate the code and are **already settled** — read them before writing a
 feature, not after:
 
-| Doc | Settles |
-| --- | --- |
-| [`docs/architecture.md`](docs/architecture.md) | Where code lives, who owns which state, how auth/errors/Query/native behave in production. |
-| [`docs/design-system.md`](docs/design-system.md) | Every colour, type role, spacing step and interaction rule. **Locked.** |
+| Doc                                              | Settles                                                                                    |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------ |
+| [`docs/architecture.md`](docs/architecture.md)   | Where code lives, who owns which state, how auth/errors/Query/native behave in production. |
+| [`docs/design-system.md`](docs/design-system.md) | Every colour, type role, spacing step and interaction rule. **Locked.**                    |
 
 ## What exists
 
@@ -65,9 +65,10 @@ pnpm ios / android
 pnpm lint         # ESLint — also enforces the import boundaries below
 pnpm typecheck    # tsc --noEmit (strict)
 pnpm test         # Jest (jest-expo)
+pnpm format       # Prettier --write   pnpm format:check → --check
 pnpm gen:api      # regenerate src/generated/ from ../backend/openapi.player.json
 pnpm doctor       # npx expo-doctor — checks dependency/SDK agreement
-pnpm check        # lint + typecheck + test — the local gate
+pnpm check        # lint + format check + typecheck + test — the local gate
 ```
 
 **You cannot see the screen.** If a change is visual, say so and ask for a look rather than
@@ -78,12 +79,12 @@ asserting it renders correctly.
 - **Store credentials anywhere but the OS keychain.** Tokens live in `expo-secure-store`,
   reached only through `src/shared/lib/auth`. **Never** `AsyncStorage` (unencrypted
   plaintext on device), never a module variable that outlives a session, never a log line.
-  *(ESLint blocks the AsyncStorage import.)*
+  _(ESLint blocks the AsyncStorage import.)_
 - **Put a secret in `app.json` `extra`, or in any `EXPO_PUBLIC_*` variable.** Everything in
   the bundle is readable from a shipped app. Those are **config**, not secrets. A secret a
   mobile client "needs" is a design error — it belongs behind the backend.
-- **Run a build or release** (`eas build|submit|update`, `expo publish`). *(hook-enforced)*
-- **Create or edit a real `.env*` file.** Edit `.env.example`. *(hook-enforced)*
+- **Run a build or release** (`eas build|submit|update`, `expo publish`). _(hook-enforced)_
+- **Create or edit a real `.env*` file.** Edit `.env.example`. _(hook-enforced)_
 - **Import from `src/generated/` outside a feature's `api/` or `mappers/` layer.**
 - **Hand-write a type that mirrors a backend response.** Regenerate with `pnpm gen:api`.
 - **Put business rules in screens or hooks.** Rules live in `domain/` + `use-cases/`.
@@ -148,16 +149,16 @@ Rules to preserve:
 
 ### One owner per kind of state
 
-| State | Owner |
-| --- | --- |
-| Anything from the backend | **TanStack Query** — never mirrored into a store |
-| Access + refresh tokens | `shared/lib/auth` → `expo-secure-store` (+ in-memory mirror) |
-| Logged-in / out | `SessionStatus`: `bootstrapping \| authenticated \| unauthenticated` |
-| Local component state | `useState` / `useReducer` |
-| Shared ephemeral UI state | Zustand, **feature-scoped first** |
-| Form input | The form + one Zod schema |
-| Navigation | expo-router — a route param is not app state |
-| Config | `shared/config/env.ts`, Zod-validated at startup |
+| State                     | Owner                                                                |
+| ------------------------- | -------------------------------------------------------------------- |
+| Anything from the backend | **TanStack Query** — never mirrored into a store                     |
+| Access + refresh tokens   | `shared/lib/auth` → `expo-secure-store` (+ in-memory mirror)         |
+| Logged-in / out           | `SessionStatus`: `bootstrapping \| authenticated \| unauthenticated` |
+| Local component state     | `useState` / `useReducer`                                            |
+| Shared ephemeral UI state | Zustand, **feature-scoped first**                                    |
+| Form input                | The form + one Zod schema                                            |
+| Navigation                | expo-router — a route param is not app state                         |
+| Config                    | `shared/config/env.ts`, Zod-validated at startup                     |
 
 Reach for Zustand last: component-local → feature store → app-wide store, and only with a
 reason. Zustand never holds API entities, tokens, a backend cache, or a global loading flag.

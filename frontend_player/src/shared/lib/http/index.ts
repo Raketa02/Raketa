@@ -5,5 +5,5 @@ export {
   type HttpCredentials,
   type HttpMethod,
   type HttpRequest,
-} from "./httpClient";
-export { TIMEOUT_MS, type TimeoutClass } from "./timeouts";
+} from './httpClient';
+export { TIMEOUT_MS, type TimeoutClass } from './timeouts';

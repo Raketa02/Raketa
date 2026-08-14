@@ -9,13 +9,13 @@
  * and nothing else.
  */
 
-import { StyleSheet, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import type { AppError } from "@/shared/errors";
-import { Button, Note, theme } from "@/shared/ui";
+import type { AppError } from '@/shared/errors';
+import { Button, Note, theme } from '@/shared/ui';
 
-import { onboardingErrorMessage } from "./onboardingErrorMessage";
+import { onboardingErrorMessage } from './onboardingErrorMessage';
 
 export interface EntryUnavailableScreenProps {
   readonly error: AppError;
@@ -24,7 +24,7 @@ export interface EntryUnavailableScreenProps {
 
 export function EntryUnavailableScreen({ error, onRetry }: EntryUnavailableScreenProps) {
   return (
-    <SafeAreaView style={s.screen} edges={["top", "bottom"]}>
+    <SafeAreaView style={s.screen} edges={['top', 'bottom']}>
       <View style={s.content}>
         <Text style={s.title} accessibilityRole="header">
           We couldn&apos;t pick up where you left off
@@ -42,7 +42,7 @@ const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: theme.color.paper },
   content: {
     flex: 1,
-    justifyContent: "center",
+    justifyContent: 'center',
     paddingHorizontal: theme.size.gutter,
     gap: theme.space.md,
   },

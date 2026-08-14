@@ -5,7 +5,7 @@ starts to know about courts, bookings or matches, it belongs in a feature instea
 
 **The rules live in [`../../../docs/design-system.md`](../../../docs/design-system.md).**
 Read it before adding anything here — in particular its Part 0, which separates the
-prototype's *harness* from the product. The decision is
+prototype's _harness_ from the product. The decision is
 [ADR-0012](../../../../docs/adr/0012-player-app-design-system.md).
 
 ## `theme.ts` — the source of values
@@ -36,7 +36,7 @@ design-system doc, in the same commit.
 ## Four React Native traps this system exists to prevent
 
 1. **`fontWeight` is ignored on Android** when a custom `fontFamily` is set. Weight is a
-   *family name*: use `theme.font.sans[700]`, never `fontWeight: '700'`. This is the most
+   _family name_: use `theme.font.sans[700]`, never `fontWeight: '700'`. This is the most
    common way an RN app silently loses its typography on one platform.
 2. **`letterSpacing` and `lineHeight` are in points**, not em or multiples. `theme.type`
    and `theme.num` carry pre-converted values — never re-derive them.
@@ -80,11 +80,11 @@ Built so far, by the onboarding slice: `Button`, `Card` (+ `PressableCard`), `No
 `BottomSheet` is the app's first **overlay**, and 9.1's "it is a real modal" is three
 separate obligations rather than one prop — read its docblock before adding a second
 sheet. Two of them are the caller's: the screen behind spreads `behindSheet(open)`, and
-the sheet is rendered as that screen's *sibling*, never inside it. `CloseControl` is 9.1's
+the sheet is rendered as that screen's _sibling_, never inside it. `CloseControl` is 9.1's
 close circle, shared because the header control that opens a sheet and the sheet's own
 close are the same 28pt object.
 
 **A feature never keeps a second copy of one of these.** If a primitive does not do what
 a screen needs, extend the primitive — the two auth-form controls that remain in
 `features/auth/components/AuthControls.tsx` are there because the design system genuinely
-specifies no text field and no *ended badly* note variant, and each says so in place.
+specifies no text field and no _ended badly_ note variant, and each says so in place.

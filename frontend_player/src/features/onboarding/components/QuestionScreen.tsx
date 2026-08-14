@@ -34,10 +34,10 @@
  * why the design system's `[3,17 so far]` chip is deliberately absent from the meta row.
  */
 
-import { useRouter } from "expo-router";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
   behindSheet,
@@ -49,26 +49,26 @@ import {
   PressableCard,
   Tag,
   theme,
-} from "@/shared/ui";
+} from '@/shared/ui';
 
-import type { AnswerOption } from "../domain/Assessment";
-import type { Sport } from "../domain/Sport";
-import { nextSport, ratingPosition } from "../domain/sportQueue";
-import { useAbandonAssessment } from "../hooks/useAbandonAssessment";
-import { useAnswerQuestion } from "../hooks/useAnswerQuestion";
-import { useAssessment } from "../hooks/useAssessment";
-import { useStartAssessment } from "../hooks/useStartAssessment";
-import { useDeferredRuns } from "../store/deferredRuns.store";
-import { useSportQueue } from "../store/sportQueue.store";
+import type { AnswerOption } from '../domain/Assessment';
+import type { Sport } from '../domain/Sport';
+import { nextSport, ratingPosition } from '../domain/sportQueue';
+import { useAbandonAssessment } from '../hooks/useAbandonAssessment';
+import { useAnswerQuestion } from '../hooks/useAnswerQuestion';
+import { useAssessment } from '../hooks/useAssessment';
+import { useStartAssessment } from '../hooks/useStartAssessment';
+import { useDeferredRuns } from '../store/deferredRuns.store';
+import { useSportQueue } from '../store/sportQueue.store';
 
-import { LeaveAssessmentSheet } from "./LeaveAssessmentSheet";
-import { OnboardingChrome } from "./OnboardingChrome";
-import { difficultyTag } from "./difficultyTag";
-import { onboardingErrorMessage } from "./onboardingErrorMessage";
-import { sportLabel } from "./sportPresentation";
+import { LeaveAssessmentSheet } from './LeaveAssessmentSheet';
+import { OnboardingChrome } from './OnboardingChrome';
+import { difficultyTag } from './difficultyTag';
+import { onboardingErrorMessage } from './onboardingErrorMessage';
+import { sportLabel } from './sportPresentation';
 
 /** Identical on every question. See the note above — this is a domain rule, not copy. */
-const CONFIRM_LABEL = "Confirm answer";
+const CONFIRM_LABEL = 'Confirm answer';
 
 export interface QuestionScreenProps {
   readonly assessmentId: string;
@@ -95,7 +95,7 @@ export function QuestionScreen({ assessmentId, sport }: QuestionScreenProps) {
    * another device, or a link to a run that is already over — because abandoning from
    * this screen navigates rather than waiting to be told.
    */
-  const endedWithoutRating = step?.status === "abandoned";
+  const endedWithoutRating = step?.status === 'abandoned';
   const finished = assessment.isSuccess && question === undefined && !endedWithoutRating;
 
   const [confirmingExit, setConfirmingExit] = useState(false);
@@ -111,9 +111,7 @@ export function QuestionScreen({ assessmentId, sport }: QuestionScreenProps) {
     readonly optionId: string;
   }>();
   const selectedOptionId =
-    question !== undefined && choice?.questionId === question.id
-      ? choice.optionId
-      : undefined;
+    question !== undefined && choice?.questionId === question.id ? choice.optionId : undefined;
 
   /**
    * Which question this is: the answers already behind the run, plus one.
@@ -149,13 +147,13 @@ export function QuestionScreen({ assessmentId, sport }: QuestionScreenProps) {
 
     const next = nextSport(queue, sport);
     if (next === undefined) {
-      router.replace("/");
+      router.replace('/');
       return;
     }
     startNext(next, {
       onSuccess: (opening) =>
         router.replace({
-          pathname: "/question/[assessmentId]",
+          pathname: '/question/[assessmentId]',
           params: { assessmentId: opening.assessmentId, sport: next },
         }),
       // The abandonment stands — it is a state transition on the server and there is
@@ -173,7 +171,7 @@ export function QuestionScreen({ assessmentId, sport }: QuestionScreenProps) {
     if (!finished || departing.current) return;
     departing.current = true;
     router.replace({
-      pathname: "/result/[assessmentId]",
+      pathname: '/result/[assessmentId]',
       params: { assessmentId, sport },
     });
   }, [finished, router, assessmentId, sport]);
@@ -198,7 +196,7 @@ export function QuestionScreen({ assessmentId, sport }: QuestionScreenProps) {
   const continueLater = () => {
     setConfirmingExit(false);
     defer(assessmentId);
-    router.replace("/");
+    router.replace('/');
   };
 
   /**
@@ -219,7 +217,7 @@ export function QuestionScreen({ assessmentId, sport }: QuestionScreenProps) {
     <>
       <SafeAreaView
         style={s.screen}
-        edges={["top", "bottom"]}
+        edges={['top', 'bottom']}
         // A sheet is a real modal: while it is open nothing behind it is reachable by a
         // screen reader. The sheet is a sibling below, never a child — inside here it
         // would hide itself along with the question.
@@ -241,14 +239,14 @@ export function QuestionScreen({ assessmentId, sport }: QuestionScreenProps) {
 
         <ScrollView contentContainerStyle={s.content}>
           {/* Paused, not loading — see the picker: an offline query is held, not failed. */}
-          {assessment.fetchStatus === "paused" ? (
+          {assessment.fetchStatus === 'paused' ? (
             <Note variant="amber">
-              You&apos;re offline. Your question will load as soon as you&apos;re back, and
-              your answers so far are safe on the server.
+              You&apos;re offline. Your question will load as soon as you&apos;re back, and your
+              answers so far are safe on the server.
             </Note>
           ) : null}
 
-          {assessment.isPending && assessment.fetchStatus !== "paused" ? (
+          {assessment.isPending && assessment.fetchStatus !== 'paused' ? (
             <ActivityIndicator
               accessibilityLabel="Loading your question"
               color={theme.color.muted}
@@ -294,9 +292,7 @@ export function QuestionScreen({ assessmentId, sport }: QuestionScreenProps) {
                   key={option.id}
                   option={option}
                   selected={option.id === selectedOptionId}
-                  onPress={() =>
-                    setChoice({ questionId: question.id, optionId: option.id })
-                  }
+                  onPress={() => setChoice({ questionId: question.id, optionId: option.id })}
                 />
               ))}
             </>
@@ -348,11 +344,7 @@ function DifficultyTag({ tier }: { readonly tier: string | undefined }) {
 
   const tag = difficultyTag(tier);
   return (
-    <Tag
-      label={tag.label}
-      variant={tag.variant}
-      accessibilityLabel={`Difficulty: ${tag.label}`}
-    />
+    <Tag label={tag.label} variant={tag.variant} accessibilityLabel={`Difficulty: ${tag.label}`} />
   );
 }
 
@@ -393,12 +385,12 @@ const s = StyleSheet.create({
   },
   failure: { gap: theme.space.sm },
   meta: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     gap: theme.space.sm,
   },
-  counter: { ...theme.type.eyebrow, color: theme.color.muted, textTransform: "uppercase" },
+  counter: { ...theme.type.eyebrow, color: theme.color.muted, textTransform: 'uppercase' },
   // Bled to the card's edges and back up over its padding, so the shaded block reads as a
   // header of the card rather than a panel floating inside it.
   situation: {
@@ -414,17 +406,17 @@ const s = StyleSheet.create({
   situationEyebrow: {
     ...theme.type.eyebrow,
     color: theme.color.muted,
-    textTransform: "uppercase",
+    textTransform: 'uppercase',
   },
   situationText: { ...theme.type.tiny, color: theme.color.ink },
   question: { ...theme.type.question, color: theme.color.ink },
   qualifier: { ...theme.type.tiny, color: theme.color.muted, marginTop: theme.space.xxs },
-  answer: { flexDirection: "row", alignItems: "center", gap: theme.space.sm },
+  answer: { flexDirection: 'row', alignItems: 'center', gap: theme.space.sm },
   answerText: { ...theme.type.h2, color: theme.color.ink, flex: 1 },
   selectedMark: {
     ...theme.type.eyebrow,
     color: theme.color.ink,
-    textTransform: "uppercase",
+    textTransform: 'uppercase',
   },
   action: {
     paddingHorizontal: theme.size.gutter,

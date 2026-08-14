@@ -1,0 +1,13 @@
+# `src/generated/` is openapi-typescript output, not source. The documented CI
+# pipeline runs an OpenAPI drift check (docs/architecture.md Part 17) that
+# regenerates it and diffs, so the file has to reproduce byte for byte from
+# `pnpm gen:api`. Formatting it would put Prettier and the generator in a fight
+# the generator wins on every run.
+src/generated/
+
+# Build and tooling output — not source either.
+.expo/
+dist/
+web-build/
+coverage/
+pnpm-lock.yaml

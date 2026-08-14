@@ -10,9 +10,9 @@
  * words nearby, because a filled rectangle is not readable at any font size.
  */
 
-import { StyleSheet, View } from "react-native";
+import { StyleSheet, View } from 'react-native';
 
-import { theme } from "./theme";
+import { theme } from './theme';
 
 export interface BarProps {
   /** How far along, as a count — `now` of `total`. Both are what the label says. */
@@ -46,7 +46,7 @@ const s = StyleSheet.create({
     height: theme.size.bar,
     borderRadius: theme.radius.bar,
     backgroundColor: theme.color.line2,
-    overflow: "hidden",
+    overflow: 'hidden',
   },
-  fill: { height: "100%", borderRadius: theme.radius.bar },
+  fill: { height: '100%', borderRadius: theme.radius.bar },
 });

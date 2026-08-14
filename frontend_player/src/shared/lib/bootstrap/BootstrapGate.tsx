@@ -11,23 +11,23 @@
  * hang with no symptom.
  */
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 
-import { theme } from "@/shared/ui/theme";
+import { theme } from '@/shared/ui/theme';
 
-import { hideSplash, preventSplashAutoHide } from "./splash";
+import { hideSplash, preventSplashAutoHide } from './splash';
 
 // Module scope, so the native splash is pinned before React renders anything at all.
 preventSplashAutoHide();
 
 type GateState =
-  | { readonly status: "bootstrapping" }
-  | { readonly status: "ready" }
-  | { readonly status: "failed"; readonly reason: string };
+  | { readonly status: 'bootstrapping' }
+  | { readonly status: 'ready' }
+  | { readonly status: 'failed'; readonly reason: string };
 
 function reasonOf(error: unknown): string {
-  return error instanceof Error ? error.message : "The app could not start.";
+  return error instanceof Error ? error.message : 'The app could not start.';
 }
 
 export interface BootstrapGateProps {
@@ -43,7 +43,7 @@ export interface BootstrapGateProps {
 }
 
 export function BootstrapGate({ children, run }: BootstrapGateProps) {
-  const [state, setState] = useState<GateState>({ status: "bootstrapping" });
+  const [state, setState] = useState<GateState>({ status: 'bootstrapping' });
   const splashHidden = useRef(false);
 
   useEffect(() => {
@@ -51,10 +51,10 @@ export function BootstrapGate({ children, run }: BootstrapGateProps) {
 
     run().then(
       () => {
-        if (live) setState({ status: "ready" });
+        if (live) setState({ status: 'ready' });
       },
       (error: unknown) => {
-        if (live) setState({ status: "failed", reason: reasonOf(error) });
+        if (live) setState({ status: 'failed', reason: reasonOf(error) });
       },
     );
 
@@ -63,7 +63,7 @@ export function BootstrapGate({ children, run }: BootstrapGateProps) {
     };
   }, [run]);
 
-  if (state.status === "bootstrapping") {
+  if (state.status === 'bootstrapping') {
     // Nothing renders behind the splash — not a spinner, not an empty tree.
     return null;
   }
@@ -78,7 +78,7 @@ export function BootstrapGate({ children, run }: BootstrapGateProps) {
 
   return (
     <View style={s.root} onLayout={onLayout} testID="app-root">
-      {state.status === "failed" ? <StartupFailure reason={state.reason} /> : children}
+      {state.status === 'failed' ? <StartupFailure reason={state.reason} /> : children}
     </View>
   );
 }
@@ -102,14 +102,14 @@ const s = StyleSheet.create({
   },
   failure: {
     flex: 1,
-    justifyContent: "center",
+    justifyContent: 'center',
     paddingHorizontal: theme.size.gutter,
     gap: theme.space.sm,
   },
   eyebrow: {
     ...theme.type.eyebrow,
     color: theme.color.muted,
-    textTransform: "uppercase",
+    textTransform: 'uppercase',
   },
   title: {
     ...theme.type.h1,

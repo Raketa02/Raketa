@@ -1,8 +1,8 @@
 ---
 paths:
-  - "src/shared/ui/**"
-  - "src/features/*/components/**"
-  - "src/app/**"
+  - 'src/shared/ui/**'
+  - 'src/features/*/components/**'
+  - 'src/app/**'
 ---
 
 # Design system — locked
@@ -13,10 +13,10 @@ corrections: [ADR-0012](../../../docs/adr/0012-player-app-design-system.md).
 
 Three artefacts that **change together, in the same commit**:
 
-| File | Is |
-| --- | --- |
-| `src/shared/ui/theme.ts` | The source of every value. Read via `StyleSheet.create`. |
-| `docs/design-system.md` | The rules. |
+| File                                        | Is                                                            |
+| ------------------------------------------- | ------------------------------------------------------------- |
+| `src/shared/ui/theme.ts`                    | The source of every value. Read via `StyleSheet.create`.      |
+| `docs/design-system.md`                     | The rules.                                                    |
 | `docs/design-system-v34-prototype-audit.md` | Archived measurement of the web prototype. **Not the rules.** |
 
 ## What to read, and when
@@ -24,12 +24,12 @@ Three artefacts that **change together, in the same commit**:
 You are not expected to read the rules document end to end — and "it was long" is not a
 reason to skip it.
 
-| When | Read |
-| --- | --- |
-| **Every time you touch a rendered surface** | [Appendix B — quick reference card](../../docs/design-system.md#appendix-b--quick-reference-card). ~20 lines. The floor. |
-| **Once, before your first component** | [Part 0](../../docs/design-system.md#part-0--reading-a-web-prototype-as-a-native-app) and [`src/shared/ui/README.md`](../../src/shared/ui/README.md) |
-| **Building a specific surface** | Part 5 primitives · 6 controls · 7 data display · 9 overlays · 12 screens |
-| **A value you need does not exist** | [Part 15 — extension guide](../../docs/design-system.md#part-15--extension-guide). Extend deliberately; never invent beside the system. |
+| When                                        | Read                                                                                                                                                 |
+| ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Every time you touch a rendered surface** | [Appendix B — quick reference card](../../docs/design-system.md#appendix-b--quick-reference-card). ~20 lines. The floor.                             |
+| **Once, before your first component**       | [Part 0](../../docs/design-system.md#part-0--reading-a-web-prototype-as-a-native-app) and [`src/shared/ui/README.md`](../../src/shared/ui/README.md) |
+| **Building a specific surface**             | Part 5 primitives · 6 controls · 7 data display · 9 overlays · 12 screens                                                                            |
+| **A value you need does not exist**         | [Part 15 — extension guide](../../docs/design-system.md#part-15--extension-guide). Extend deliberately; never invent beside the system.              |
 
 ESLint rejects hex and `rgb()`/`rgba()` literals and the `fontWeight` property outright, so a
 component that ignores the theme fails `pnpm lint` rather than review.
@@ -37,7 +37,7 @@ component that ignores the theme fails `pnpm lint` rather than review.
 ## The prototype is a web page. This app is not.
 
 The audit describes an HTML file, and **its phone frame, dark stage, scenario rail, time bar
-and 900px breakpoint are harness — they do not ship.** The app *is* the phone. Never build a
+and 900px breakpoint are harness — they do not ship.** The app _is_ the phone. Never build a
 frame, a stage or a scenario switcher, and never use the four stage colours (`#08222B`
 `#071C24` `#0B2B36` `#24505E`) — they are not in the theme.
 

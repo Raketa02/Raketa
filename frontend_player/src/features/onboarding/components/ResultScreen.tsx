@@ -13,18 +13,18 @@
  * field mapped for a screen that does not exist yet is a field no test covers.
  */
 
-import { useRouter } from "expo-router";
-import { ScrollView, StyleSheet, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter } from 'expo-router';
+import { ScrollView, StyleSheet, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Button, Note, theme } from "@/shared/ui";
+import { Button, Note, theme } from '@/shared/ui';
 
-import type { Sport } from "../domain/Sport";
-import { ratingPosition } from "../domain/sportQueue";
-import { useSportQueue } from "../store/sportQueue.store";
+import type { Sport } from '../domain/Sport';
+import { ratingPosition } from '../domain/sportQueue';
+import { useSportQueue } from '../store/sportQueue.store';
 
-import { OnboardingChrome } from "./OnboardingChrome";
-import { sportLabel } from "./sportPresentation";
+import { OnboardingChrome } from './OnboardingChrome';
+import { sportLabel } from './sportPresentation';
 
 export interface ResultScreenProps {
   readonly assessmentId: string;
@@ -37,7 +37,7 @@ export function ResultScreen({ sport }: ResultScreenProps) {
   const position = ratingPosition(queue, sport);
 
   return (
-    <SafeAreaView style={s.screen} edges={["top", "bottom"]}>
+    <SafeAreaView style={s.screen} edges={['top', 'bottom']}>
       <OnboardingChrome
         eyebrow={`${sportLabel(sport)} · Rating ${position.index} of ${position.total}`}
         title="Your rating is ready"
@@ -46,13 +46,12 @@ export function ResultScreen({ sport }: ResultScreenProps) {
 
       <ScrollView contentContainerStyle={s.content}>
         <Note variant="mint">
-          That&apos;s everything we need for {sportLabel(sport)}. Your starting level is
-          saved.
+          That&apos;s everything we need for {sportLabel(sport)}. Your starting level is saved.
         </Note>
       </ScrollView>
 
       <View style={s.action}>
-        <Button label="Go to Rakieta" size="lg" onPress={() => router.replace("/")} />
+        <Button label="Go to Rakieta" size="lg" onPress={() => router.replace('/')} />
       </View>
     </SafeAreaView>
   );

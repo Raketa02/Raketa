@@ -12,11 +12,11 @@
  * through one sequence instead of three.
  */
 
-import { queryClient } from "@/shared/lib/query-client";
+import { queryClient } from '@/shared/lib/query-client';
 
-import { setSessionStatus } from "./authSession";
-import type { SignOutReason, Tokens } from "./auth.types";
-import { clear, save } from "./tokenManager";
+import { setSessionStatus } from './authSession';
+import type { SignOutReason, Tokens } from './auth.types';
+import { clear, save } from './tokenManager';
 
 /**
  * Persist credentials and open the session.
@@ -27,7 +27,7 @@ import { clear, save } from "./tokenManager";
  */
 export async function beginSession(tokens: Tokens): Promise<void> {
   await save(tokens);
-  setSessionStatus("authenticated");
+  setSessionStatus('authenticated');
 }
 
 /**
@@ -57,5 +57,5 @@ export async function endSession(reason: SignOutReason): Promise<void> {
   queryClient.clear();
 
   // 4. The status change, which the routing guard turns into a redirect.
-  setSessionStatus("unauthenticated");
+  setSessionStatus('unauthenticated');
 }

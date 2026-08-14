@@ -7,31 +7,24 @@
  * to change.
  */
 
-import { Link } from "expo-router";
-import { useState } from "react";
-import {
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { Link } from 'expo-router';
+import { useState } from 'react';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Button, theme } from "@/shared/ui";
+import { Button, theme } from '@/shared/ui';
 
-import { useSignUp } from "../hooks/useAuthActions";
-import { signUpSchema, validate, type FieldErrors } from "../schemas/authForms";
+import { useSignUp } from '../hooks/useAuthActions';
+import { signUpSchema, validate, type FieldErrors } from '../schemas/authForms';
 
-import { AuthField, AuthNotice } from "./AuthControls";
-import { authErrorField, authErrorMessage } from "./authErrorMessage";
+import { AuthField, AuthNotice } from './AuthControls';
+import { authErrorField, authErrorMessage } from './authErrorMessage';
 
 export function SignUpScreen() {
-  const [email, setEmail] = useState("");
-  const [nickname, setNickname] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [email, setEmail] = useState('');
+  const [nickname, setNickname] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
   const signUp = useSignUp();
@@ -62,16 +55,11 @@ export function SignUpScreen() {
   const serverField = signUp.error === null ? undefined : authErrorField(signUp.error);
   const errorFor = (field: string) =>
     fieldErrors[field] ??
-    (serverField === field && signUp.error !== null
-      ? authErrorMessage(signUp.error)
-      : undefined);
+    (serverField === field && signUp.error !== null ? authErrorMessage(signUp.error) : undefined);
 
   return (
-    <SafeAreaView style={s.screen} edges={["top", "bottom"]}>
-      <KeyboardAvoidingView
-        style={s.flex}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-      >
+    <SafeAreaView style={s.screen} edges={['top', 'bottom']}>
+      <KeyboardAvoidingView style={s.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
           contentContainerStyle={s.content}
           keyboardShouldPersistTaps="handled"
@@ -91,7 +79,7 @@ export function SignUpScreen() {
               label="Email"
               value={email}
               onChangeText={setEmail}
-              error={errorFor("email")}
+              error={errorFor('email')}
               autoCapitalize="none"
               autoComplete="email"
               autoCorrect={false}
@@ -103,7 +91,7 @@ export function SignUpScreen() {
               label="Nickname"
               value={nickname}
               onChangeText={setNickname}
-              error={errorFor("nickname")}
+              error={errorFor('nickname')}
               autoCapitalize="none"
               autoCorrect={false}
               textContentType="nickname"
@@ -113,7 +101,7 @@ export function SignUpScreen() {
               label="Password"
               value={password}
               onChangeText={setPassword}
-              error={errorFor("password")}
+              error={errorFor('password')}
               secureTextEntry
               autoCapitalize="none"
               autoComplete="new-password"
@@ -124,7 +112,7 @@ export function SignUpScreen() {
               label="Repeat password"
               value={confirmPassword}
               onChangeText={setConfirmPassword}
-              error={errorFor("confirmPassword")}
+              error={errorFor('confirmPassword')}
               secureTextEntry
               autoCapitalize="none"
               autoComplete="new-password"
@@ -160,7 +148,7 @@ const s = StyleSheet.create({
   flex: { flex: 1 },
   content: {
     flexGrow: 1,
-    justifyContent: "center",
+    justifyContent: 'center',
     paddingHorizontal: theme.size.gutter,
     paddingVertical: theme.space.xxl,
     gap: theme.space.lg,
@@ -169,15 +157,15 @@ const s = StyleSheet.create({
   eyebrow: {
     ...theme.type.eyebrow,
     color: theme.color.muted,
-    textTransform: "uppercase",
+    textTransform: 'uppercase',
   },
   title: { ...theme.type.h1, color: theme.color.ink },
   form: { gap: theme.space.md },
   footer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    flexWrap: "wrap",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexWrap: 'wrap',
     gap: theme.space.xs,
   },
   footerText: { ...theme.type.tiny, color: theme.color.muted },

@@ -14,13 +14,13 @@
  * the server. The entry is stale and unreachable, and it ages out.
  */
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
-import type { AppError } from "@/shared/errors";
+import type { AppError } from '@/shared/errors';
 
-import { abandonAssessment } from "../use-cases/abandonAssessment";
+import { abandonAssessment } from '../use-cases/abandonAssessment';
 
-import { onboardingKeys } from "./onboardingKeys";
+import { onboardingKeys } from './onboardingKeys';
 
 export function useAbandonAssessment(assessmentId: string) {
   const queryClient = useQueryClient();

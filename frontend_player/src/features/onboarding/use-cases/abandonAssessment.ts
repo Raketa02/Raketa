@@ -13,7 +13,7 @@
  * gets to make on the player's behalf; the retry is a control they press.
  */
 
-import { abandonAssessment as sendAbandonment } from "../api/onboardingApi";
+import { abandonAssessment as sendAbandonment } from '../api/onboardingApi';
 
 export interface AbandonAssessmentOptions {
   readonly signal?: AbortSignal;

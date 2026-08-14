@@ -6,9 +6,9 @@
  * not say which sport a step belongs to, so the sport travels as a param.
  */
 
-import { Redirect, useLocalSearchParams } from "expo-router";
+import { Redirect, useLocalSearchParams } from 'expo-router';
 
-import { ResultScreen, parseAssessmentRouteParams } from "@/features/onboarding/types";
+import { ResultScreen, parseAssessmentRouteParams } from '@/features/onboarding/types';
 
 export default function ResultRoute() {
   const params = parseAssessmentRouteParams(useLocalSearchParams());

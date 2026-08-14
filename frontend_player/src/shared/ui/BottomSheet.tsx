@@ -39,7 +39,7 @@
  * the difference between `slide` and `none`.
  */
 
-import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
+import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import {
   AccessibilityInfo,
   Modal,
@@ -48,10 +48,10 @@ import {
   Text,
   View,
   findNodeHandle,
-} from "react-native";
+} from 'react-native';
 
-import { CloseControl } from "./CloseControl";
-import { theme } from "./theme";
+import { CloseControl } from './CloseControl';
+import { theme } from './theme';
 
 /** A ref to whatever should hold accessibility focus — a host element, not a component. */
 export type FocusTarget = RefObject<View | null>;
@@ -78,7 +78,7 @@ export interface BottomSheetProps {
 export function behindSheet(open: boolean) {
   return {
     accessibilityElementsHidden: open,
-    importantForAccessibility: open ? ("no-hide-descendants" as const) : ("auto" as const),
+    importantForAccessibility: open ? ('no-hide-descendants' as const) : ('auto' as const),
   };
 }
 
@@ -106,7 +106,7 @@ export function BottomSheet({
       transparent
       // Android's hardware back. Required there, ignored on iOS.
       onRequestClose={onClose}
-      animationType={reducedMotion ? "none" : "slide"}
+      animationType={reducedMotion ? 'none' : 'slide'}
     >
       <View style={s.stage}>
         {/* Dismissal, not a control: the sheet's close carries the name, and a second
@@ -161,10 +161,7 @@ function useReducedMotion(): boolean {
       if (live) setReduced(enabled);
     });
 
-    const subscription = AccessibilityInfo.addEventListener(
-      "reduceMotionChanged",
-      setReduced,
-    );
+    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduced);
     return () => {
       live = false;
       subscription.remove();
@@ -175,7 +172,7 @@ function useReducedMotion(): boolean {
 }
 
 const s = StyleSheet.create({
-  stage: { flex: 1, justifyContent: "flex-end" },
+  stage: { flex: 1, justifyContent: 'flex-end' },
   scrim: { ...StyleSheet.absoluteFillObject, backgroundColor: theme.color.scrim },
   sheet: {
     backgroundColor: theme.color.surface,
@@ -183,7 +180,7 @@ const s = StyleSheet.create({
     borderTopRightRadius: theme.radius.sheet,
     // A proportion, never a fixed height: the sheet grows with its content and with the
     // OS text size, and stops before it becomes the screen.
-    maxHeight: "88%",
+    maxHeight: '88%',
     paddingHorizontal: theme.size.gutter,
     paddingTop: theme.space.sm,
     paddingBottom: theme.space.xxl,
@@ -195,12 +192,12 @@ const s = StyleSheet.create({
     height: theme.size.grabber.height,
     borderRadius: theme.radius.bar,
     backgroundColor: theme.color.line,
-    alignSelf: "center",
+    alignSelf: 'center',
     marginBottom: theme.space.sm,
   },
   head: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: theme.space.sm,
     marginBottom: theme.space.xxs,
   },

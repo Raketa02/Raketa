@@ -8,8 +8,8 @@
  * data that is minutes stale and looks authoritative.
  */
 
-import { focusManager } from "@tanstack/react-query";
-import { AppState, type AppStateStatus } from "react-native";
+import { focusManager } from '@tanstack/react-query';
+import { AppState, type AppStateStatus } from 'react-native';
 
 /**
  * Only `active` counts as focused.
@@ -19,12 +19,12 @@ import { AppState, type AppStateStatus } from "react-native";
  * every time someone half-swiped the app switcher.
  */
 function onAppStateChange(state: AppStateStatus): void {
-  focusManager.setFocused(state === "active");
+  focusManager.setFocused(state === 'active');
 }
 
 /** Called once, by the bootstrap sequence. Returns the unsubscribe for tests. */
 export function wireFocusManager(): () => void {
-  const subscription = AppState.addEventListener("change", onAppStateChange);
-  focusManager.setFocused(AppState.currentState === "active");
+  const subscription = AppState.addEventListener('change', onAppStateChange);
+  focusManager.setFocused(AppState.currentState === 'active');
   return () => subscription.remove();
 }

@@ -6,14 +6,14 @@
  * the screen spends their data plan on an answer that cannot have moved.
  */
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from '@tanstack/react-query';
 
-import type { AppError } from "@/shared/errors";
+import type { AppError } from '@/shared/errors';
 
-import type { Sport } from "../domain/Sport";
-import { listSports } from "../use-cases/listSports";
+import type { Sport } from '../domain/Sport';
+import { listSports } from '../use-cases/listSports';
 
-import { onboardingKeys } from "./onboardingKeys";
+import { onboardingKeys } from './onboardingKeys';
 
 const REFERENCE_DATA_STALE_MS = 24 * 60 * 60 * 1000;
 

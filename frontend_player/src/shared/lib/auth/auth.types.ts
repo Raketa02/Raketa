@@ -11,7 +11,7 @@
  * valid credentials are still being read out of the keychain, and the authenticated tree
  * flashing before a redirect.
  */
-export type SessionStatus = "bootstrapping" | "authenticated" | "unauthenticated";
+export type SessionStatus = 'bootstrapping' | 'authenticated' | 'unauthenticated';
 
 /**
  * The token pair, as one value.
@@ -28,6 +28,6 @@ export interface Tokens {
 /** Why the session ended. Recorded so a screen can say something true about it. */
 export type SignOutReason =
   /** The player asked. */
-  | "requested"
+  | 'requested'
   /** The server rejected our credentials — the session was already over. */
-  | "session-invalidated";
+  | 'session-invalidated';

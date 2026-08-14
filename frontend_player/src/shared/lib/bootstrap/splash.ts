@@ -8,7 +8,7 @@
  * thrown out of an effect.
  */
 
-import * as SplashScreen from "expo-splash-screen";
+import * as SplashScreen from 'expo-splash-screen';
 
 export function preventSplashAutoHide(): void {
   void SplashScreen.preventAutoHideAsync().catch(() => {});

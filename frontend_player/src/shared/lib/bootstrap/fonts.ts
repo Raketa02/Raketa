@@ -15,15 +15,15 @@
 // Imported file by file, not from the package index. Each index `require`s every weight
 // and italic the family ships — 32 files and 4.2 MB where this app needs 8 and 1.1 MB —
 // and Metro does not tree-shake, so importing one name ships all of them.
-import Archivo_400Regular from "@expo-google-fonts/archivo/Archivo_400Regular.ttf";
-import Archivo_500Medium from "@expo-google-fonts/archivo/Archivo_500Medium.ttf";
-import Archivo_600SemiBold from "@expo-google-fonts/archivo/Archivo_600SemiBold.ttf";
-import Archivo_700Bold from "@expo-google-fonts/archivo/Archivo_700Bold.ttf";
-import Archivo_800ExtraBold from "@expo-google-fonts/archivo/Archivo_800ExtraBold.ttf";
-import IBMPlexMono_400Regular from "@expo-google-fonts/ibm-plex-mono/IBMPlexMono_400Regular.ttf";
-import IBMPlexMono_500Medium from "@expo-google-fonts/ibm-plex-mono/IBMPlexMono_500Medium.ttf";
-import IBMPlexMono_600SemiBold from "@expo-google-fonts/ibm-plex-mono/IBMPlexMono_600SemiBold.ttf";
-import * as Font from "expo-font";
+import Archivo_400Regular from '@expo-google-fonts/archivo/Archivo_400Regular.ttf';
+import Archivo_500Medium from '@expo-google-fonts/archivo/Archivo_500Medium.ttf';
+import Archivo_600SemiBold from '@expo-google-fonts/archivo/Archivo_600SemiBold.ttf';
+import Archivo_700Bold from '@expo-google-fonts/archivo/Archivo_700Bold.ttf';
+import Archivo_800ExtraBold from '@expo-google-fonts/archivo/Archivo_800ExtraBold.ttf';
+import IBMPlexMono_400Regular from '@expo-google-fonts/ibm-plex-mono/IBMPlexMono_400Regular.ttf';
+import IBMPlexMono_500Medium from '@expo-google-fonts/ibm-plex-mono/IBMPlexMono_500Medium.ttf';
+import IBMPlexMono_600SemiBold from '@expo-google-fonts/ibm-plex-mono/IBMPlexMono_600SemiBold.ttf';
+import * as Font from 'expo-font';
 
 export const appFonts = {
   Archivo_400Regular,

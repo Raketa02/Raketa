@@ -46,8 +46,9 @@ pnpm android      # build & run on an Android emulator
 pnpm lint         # ESLint (also enforces the import boundaries)
 pnpm typecheck    # tsc --noEmit, strict
 pnpm test         # Jest (jest-expo)
+pnpm format       # Prettier --write   pnpm format:check → --check
 pnpm gen:api      # regenerate src/generated/ from ../backend/openapi.json
-pnpm check        # lint + typecheck + test — the local gate
+pnpm check        # lint + format check + typecheck + test — the local gate
 ```
 
 ## Environment
@@ -92,7 +93,7 @@ The visual language was designed and audited before the app existed, and is **lo
   — the archived measurement of the v34 web prototype. Descriptive, superseded by the rules.
 
 The prototype's phone frame, dark stage, scenario rail and time bar are **harness and do
-not ship** — the app *is* the phone. Styling is a typed theme plus `StyleSheet.create`; no
+not ship** — the app _is_ the phone. Styling is a typed theme plus `StyleSheet.create`; no
 NativeWind, no styling library — [ADR-0012](../docs/adr/0012-player-app-design-system.md).
 
 Full rules: [`CLAUDE.md`](CLAUDE.md). Vocabulary: [`CONTEXT.md`](CONTEXT.md).

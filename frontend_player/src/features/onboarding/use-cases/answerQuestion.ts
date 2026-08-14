@@ -21,14 +21,14 @@
  * repeating the write.
  */
 
-import { isAppError } from "@/shared/errors";
+import { isAppError } from '@/shared/errors';
 
-import { submitAnswer } from "../api/onboardingApi";
-import type { AssessmentStep } from "../domain/Assessment";
-import { isStaleStepConflict } from "../domain/answerRecovery";
-import { toAssessmentStep } from "../mappers/onboardingMappers";
+import { submitAnswer } from '../api/onboardingApi';
+import type { AssessmentStep } from '../domain/Assessment';
+import { isStaleStepConflict } from '../domain/answerRecovery';
+import { toAssessmentStep } from '../mappers/onboardingMappers';
 
-import { fetchAssessment } from "./fetchAssessment";
+import { fetchAssessment } from './fetchAssessment';
 
 export interface AnswerQuestionCommand {
   readonly assessmentId: string;
