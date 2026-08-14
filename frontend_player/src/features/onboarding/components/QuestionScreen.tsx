@@ -58,6 +58,7 @@ import { useAbandonAssessment } from '../hooks/useAbandonAssessment';
 import { useAnswerQuestion } from '../hooks/useAnswerQuestion';
 import { useAssessment } from '../hooks/useAssessment';
 import { useStartAssessment } from '../hooks/useStartAssessment';
+import { useCompletedRuns } from '../store/completedRuns.store';
 import { useDeferredRuns } from '../store/deferredRuns.store';
 import { useSportQueue } from '../store/sportQueue.store';
 
@@ -139,7 +140,19 @@ export function QuestionScreen({ assessmentId, sport }: QuestionScreenProps) {
    * `nextSport`'s to answer (a sport that was abandoned was still chosen, and still
    * counts in the progress bar). With nothing after it the flow leaves onboarding, and
    * the entry gate decides where that lands — exactly as it does from the result screen.
+   *
+   * **Where "nothing after it" lands depends on what the run produced.** Abandoning is
+   * the player saying stop, and it is still the end of the run: if any sport was rated
+   * along the way, they leave through the same closing screens as the player who
+   * finished — the done screen accounts for the ratings they made, and the data screen
+   * says what was kept, what is never done with it, and that no one can hand-edit a
+   * Level. Ending on an abandonment is not a reason to be told none of that.
+   *
+   * When the run produced nothing, it goes straight to the app. There is no account to
+   * give, `/done` has only its empty state to show, and answering *stop* with two more
+   * screens would be the wrong response to what the player just asked for.
    */
+  const completedRuns = useCompletedRuns((state) => state.completed);
   const startNext = start.mutate;
   const leaveTheQuestionnaire = useCallback(() => {
     if (departing.current) return;
@@ -147,7 +160,7 @@ export function QuestionScreen({ assessmentId, sport }: QuestionScreenProps) {
 
     const next = nextSport(queue, sport);
     if (next === undefined) {
-      router.replace('/');
+      router.replace(completedRuns.length > 0 ? '/done' : '/');
       return;
     }
     startNext(next, {
@@ -163,7 +176,7 @@ export function QuestionScreen({ assessmentId, sport }: QuestionScreenProps) {
         departing.current = false;
       },
     });
-  }, [queue, sport, router, startNext]);
+  }, [queue, sport, router, startNext, completedRuns]);
 
   // The run is over: the outstanding question is gone and a rating exists. `replace`,
   // because the questionnaire has no way back — this is the one exit from the loop.

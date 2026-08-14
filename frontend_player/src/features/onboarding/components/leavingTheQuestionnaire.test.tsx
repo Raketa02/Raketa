@@ -33,6 +33,7 @@ import {
 } from '@/test-support/transport';
 
 import { onboardingKeys } from '../hooks/onboardingKeys';
+import { useCompletedRuns } from '../store/completedRuns.store';
 import { useDeferredRuns } from '../store/deferredRuns.store';
 import { useSportQueue } from '../store/sportQueue.store';
 
@@ -103,6 +104,31 @@ const PADEL_RATING: Wire['RatingResponse'] = {
   updated_at: '2026-08-14T09:00:00Z',
 };
 
+/** The padel run finished, as the done screen reads it back to draw its card. */
+const PADEL_FINISHED: Wire['AssessmentStepResponse'] = {
+  assessment_id: PADEL_RUN,
+  status: 'completed',
+  questions_asked: 4,
+  question: null,
+  result: {
+    mu: 2.71,
+    sigma: 0.62,
+    confidence: 28,
+    range: { low: 2.09, high: 3.33 },
+    band: { name: 'Established', lower: 2.65, upper: 3.85 },
+    status: 'initial_estimate',
+    questions_asked: 4,
+    engine_version: 'racketskill-v3',
+    calibration_priority: 'standard',
+    confidence_reason: {
+      key: 'self-report-ceiling',
+      sentence: 'A questionnaire can only take a rating so far.',
+    },
+    factors: [{ key: 'match-execution', label: 'Match execution', direction: 'up', level: 3.1 }],
+    uncertainty_factors: [],
+  },
+};
+
 let transport: Transport;
 
 const stubGate = (options?: Parameters<typeof stubGateWith>[1]) => stubGateWith(transport, options);
@@ -115,6 +141,7 @@ beforeEach(async () => {
   queryClient.clear();
   useSportQueue.getState().reset();
   useDeferredRuns.getState().reset();
+  useCompletedRuns.getState().reset();
 });
 
 afterEach(() => {
@@ -133,6 +160,7 @@ async function relaunch(initialUrl = '/') {
   queryClient.clear();
   useSportQueue.getState().reset();
   useDeferredRuns.getState().reset();
+  useCompletedRuns.getState().reset();
   resetSessionStatus();
   await launchSignedIn(initialUrl);
 }
@@ -362,11 +390,38 @@ describe('abandoning a sport', () => {
     fireEvent.press(await screen.findByLabelText(/^Stop rating Padel\./));
 
     // Onboarding ends and the entry gate answers for an unrated player with no run left,
-    // exactly as it does from the result screen. There is nowhere else this can go.
+    // exactly as it does from the result screen. There is nowhere else this can go: the
+    // run produced nothing, so `/done` would have only its empty state to show, and
+    // answering *stop* with two more screens is the wrong response to what was asked.
     await waitFor(() => expect(screen).toHavePathname('/welcome'));
     expect(transport.requestsTo('POST', abandonmentPath(PADEL_RUN))).toHaveLength(1);
     // Nothing was started in its place: there was nothing after it in the queue.
     expect(transport.requestsTo('POST', '/api/v1/assessments')).toEqual([]);
+  });
+
+  it('leaves through the done screen when the run already produced a rating', async () => {
+    // Padel was rated in this pass; tennis is the last sport, and the player stops there.
+    // Abandoning is still the end of the run, so the closing screens are still owed: the
+    // done screen accounts for the rating they did make, and the data screen says what
+    // was kept and that no one can hand-edit a Level. Ending on an abandonment is not a
+    // reason to be told none of it.
+    useCompletedRuns.getState().record({ assessmentId: PADEL_RUN, sport: 'padel' });
+
+    stubGate({ runs: [runInProgress('TENNIS', TENNIS_RUN)] });
+    transport.on('GET', stepPath(TENNIS_RUN), () => json(TENNIS_OPENING));
+    transport.on('GET', stepPath(PADEL_RUN), () => json(PADEL_FINISHED));
+    stubAbandonment(TENNIS_RUN);
+
+    await launchSignedIn();
+    await waitFor(() => expect(screen).toHavePathname(`/question/${TENNIS_RUN}`));
+
+    openTheConfirm();
+    fireEvent.press(await screen.findByLabelText(/^Stop rating Tennis\./));
+
+    await waitFor(() => expect(screen).toHavePathname('/done'));
+    // The abandonment still happened — this is a different destination, not a different
+    // operation. The tennis run is ended on the server exactly as before.
+    expect(transport.requestsTo('POST', abandonmentPath(TENNIS_RUN))).toHaveLength(1);
   });
 
   it('leaves cleanly even when the gate still has an answer cached', async () => {
@@ -401,8 +456,9 @@ describe('abandoning a sport', () => {
     openTheConfirm();
     fireEvent.press(await screen.findByLabelText(/^Stop rating Tennis\./));
 
-    // Into the app, because the padel rating is still there. Abandoning the tennis run
-    // did not cost them the sport they had already been rated at.
+    // Into the app: this pass produced nothing, so there is no account to give. The padel
+    // rating is older than this run — the player never answered a padel question today —
+    // and abandoning tennis did not cost them the sport they were already rated at.
     await waitFor(() => expect(screen).toHavePathname('/'));
 
     // One abandonment, naming one run. Nothing was sent about padel, whose rating and
