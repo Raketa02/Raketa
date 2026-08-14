@@ -73,7 +73,11 @@ def request(store: InMemoryEventStore) -> Request:
         events=events,
         uow=uow,
         create=CreateAssessment(
-            engine=engine, assessments=repository, uow=uow, clock=clock
+            engine=engine,
+            assessments=repository,
+            ratings=ratings,
+            uow=uow,
+            clock=clock,
         ),
         submit=SubmitAnswer(
             engine=engine,

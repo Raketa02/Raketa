@@ -73,12 +73,17 @@ SkillRatingRepositoryDep = Annotated[
 def get_create_assessment(
     engine: AssessmentEngineDep,
     assessments: AssessmentRepositoryDep,
+    ratings: SkillRatingRepositoryDep,
     uow: UnitOfWorkDep,
     clock: ClockDep,
 ) -> CreateAssessment:
+    # The rating repository is here to be *asked a question*, not written: a
+    # sport the player is already rated at cannot produce a second rating, and
+    # the start is where refusing costs the player nothing.
     return CreateAssessment(
         engine=engine,
         assessments=assessments,
+        ratings=ratings,
         uow=uow,
         clock=clock,
     )

@@ -177,21 +177,44 @@ async def test_the_second_start_returns_the_outstanding_question_not_the_opening
 
 
 @pytest.mark.asyncio
-async def test_starting_after_a_completed_run_opens_a_new_one(
+async def test_starting_after_a_completed_run_is_refused(
     client, session_factory, valid_signup_payload
 ):
-    # The guard is scoped to runs in progress, never to any run that ever
-    # existed — a rated sport can always be rated again.
+    # This test used to assert the opposite — that a rated sport can always be
+    # rated again — and the assertion held only because it stopped at the start.
+    # Answering that second run to the end appended a second opening event to a
+    # rating stream keyed by (player, sport), which the store rejects, so the
+    # player got a 500 on the last answer of a questionnaire they had just
+    # finished (#53).
+    #
+    # The run is refused where refusing is free instead. Whether re-rating
+    # should *replace* the rating is a live question; the transition that would
+    # answer it belongs to the match-update engine.
     headers = await _auth_headers(client, valid_signup_payload)
     finished = await _run_to_result(client, headers, "PADEL")
     assert finished["status"] == "completed"
 
     resp = await _create(client, headers, "PADEL")
 
+    assert resp.status_code == 409, resp.text
+    assert resp.json()["code"] == "sport_already_rated"
+    # Nothing was opened: the one stream is the run that produced the rating.
+    assert len(await _assessment_stream_ids(session_factory)) == 1
+
+
+@pytest.mark.asyncio
+async def test_a_rated_sport_does_not_block_an_unrated_one(
+    client, valid_signup_payload
+):
+    # The refusal is per sport, like every other guard on this endpoint. A
+    # player rated at padel is still a player who has never played tennis.
+    headers = await _auth_headers(client, valid_signup_payload)
+    await _run_to_result(client, headers, "PADEL")
+
+    resp = await _create(client, headers, "TENNIS")
+
     assert resp.status_code == 201, resp.text
-    assert resp.json()["assessment_id"] != finished["assessment_id"]
     assert resp.json()["question"]["id"] == "opening.regularity"
-    assert len(await _assessment_stream_ids(session_factory)) == 2
 
 
 @pytest.mark.asyncio

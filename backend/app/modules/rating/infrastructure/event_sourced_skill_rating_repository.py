@@ -28,6 +28,8 @@ from __future__ import annotations
 from uuid import UUID
 
 from app.application.ports import DomainEventPublisher, DomainEventStore
+from app.kernel import Sport
+from app.modules.rating.domain.ids import skill_rating_id
 from app.modules.rating.domain.skill_rating import SkillRating
 
 RATING_AGGREGATE = "skill_rating"
@@ -73,6 +75,17 @@ class EventSourcedSkillRatingRepository:
         # Deliberately no commit: completion writes this stream and the
         # assessment's in one transaction, and that boundary is the use case's.
         self._remember(rating)
+
+    async def exists_for(self, *, player_id: UUID, sport: Sport) -> bool:
+        # One lookup, not a scan: the stream id *is* the pair, so asking whether
+        # the rating exists is asking whether that stream does. Nothing is
+        # replayed and nothing is remembered — a caller that only asked a
+        # question must not be able to save an aggregate it never read.
+        stored = await self._event_store.load_stream(
+            aggregate_type=RATING_AGGREGATE,
+            aggregate_id=skill_rating_id(player_id, sport),
+        )
+        return bool(stored)
 
     async def find_all_for(self, *, player_id: UUID) -> list[SkillRating]:
         rating_ids = await self._event_store.find_aggregate_ids_by_first_event(

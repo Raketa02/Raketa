@@ -21,7 +21,12 @@ from app.api.contract import (
     SURFACES,
     build_surface_spec,
 )
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+
+from app.application.events.store import EventStreamVersionConflict
 from app.core.exception_handlers import (
+    CONCURRENT_MODIFICATION_CODE,
     AppError,
     BadRequestError,
     ConflictError,
@@ -29,6 +34,7 @@ from app.core.exception_handlers import (
     NotFoundError,
     UnauthorizedError,
     code_for_status,
+    register_exception_handlers,
 )
 
 # Imported for their side effect: every error module must be loaded before the
@@ -151,3 +157,39 @@ def test_the_committed_document_carries_the_envelope(surface):
     )
 
     assert ERROR_SCHEMA_NAME in committed["components"]["schemas"]
+
+
+# --- The conflict no context authored ------------------------------------------
+
+
+def test_the_stream_conflict_code_collides_with_no_domain_error():
+    # It is mapped centrally rather than re-declared per module, so it is not in
+    # the subclass walk above and would not be caught by the uniqueness test.
+    assert CODE_PATTERN.match(CONCURRENT_MODIFICATION_CODE)
+    assert CONCURRENT_MODIFICATION_CODE not in {cls.code for cls in _domain_errors()}
+
+
+def test_a_stream_version_conflict_is_a_409_in_the_envelope():
+    # Until this handler existed, a genuine concurrent write told the client the
+    # server had broken. It is a 409 for the same reason
+    # `question_not_outstanding` is: the recovery is to re-read and retry.
+    app = FastAPI()
+    register_exception_handlers(app)
+
+    @app.get("/boom")
+    async def _boom() -> None:
+        raise EventStreamVersionConflict(
+            "Expected assessment/00000000-0000-0000-0000-000000000001 at "
+            "version 0, found 1"
+        )
+
+    response = TestClient(app, raise_server_exceptions=False).get("/boom")
+
+    assert response.status_code == 409
+    body = response.json()
+    assert body["code"] == CONCURRENT_MODIFICATION_CODE
+    assert body["trace_id"]
+    # The exception's own text names a stream and two versions. That is a fact
+    # about our storage, and it stays in the log.
+    assert "version" not in body["message"]
+    assert "assessment/" not in body["message"]

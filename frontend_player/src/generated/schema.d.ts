@@ -117,9 +117,11 @@ export interface paths {
         put?: never;
         /**
          * Start an assessment and receive its opening question
-         * @description Idempotent per player and sport. Starting a sport that already has an unfinished run returns **that** run and its outstanding question with a 200, rather than opening a second one — so a double-tapped confirm, or a retry after a lost response, costs nothing. A sport whose previous run was completed or abandoned still starts a new run, with a 201.
+         * @description Idempotent per player and sport. Starting a sport that already has an unfinished run returns **that** run and its outstanding question with a 200, rather than opening a second one — so a double-tapped confirm, or a retry after a lost response, costs nothing. A sport whose previous run was abandoned still starts a new run, with a 201.
          *
          *     Both outcomes carry the same body, so a client that only routes on the step needs no branch; the status code is there for one that wants to tell the two apart.
+         *
+         *     **A sport this player is already rated at is refused with a 409** (`sport_already_rated`). A rating stream is keyed by player and sport and initialisation is its only transition, so a second completed run for one sport cannot be stored — and refusing at the start is the only point at which refusing costs the player nothing rather than a whole questionnaire. The picker offers unrated sports, so no shipped flow reaches this.
          */
         post: operations["create_assessment_api_v1_assessments_post"];
         delete?: never;
@@ -272,6 +274,36 @@ export interface components {
         /** CreateAssessmentRequest */
         CreateAssessmentRequest: {
             sport: components["schemas"]["Sport"];
+        };
+        /**
+         * ErrorResponse
+         * @description The body of every error response, on both API surfaces.
+         */
+        ErrorResponse: {
+            /**
+             * Code
+             * @description Stable, machine-readable identifier for this exact failure. The only half of the envelope a client may branch on.
+             * @example question_not_outstanding
+             */
+            code: string;
+            /**
+             * Message
+             * @description Human-readable diagnostic. Never the copy shown to a user — that is the client's, chosen from the code.
+             */
+            message: string;
+            /**
+             * Trace Id
+             * @description This request's identifier, also returned on the X-Request-ID header. Ties a client-side failure to a server log without logging a payload.
+             */
+            trace_id: string;
+            /**
+             * Details
+             * @description Structured context for this code, when the code defines any.
+             * @default null
+             */
+            details: {
+                [key: string]: unknown;
+            } | null;
         };
         /**
          * FactorResponse
@@ -559,36 +591,6 @@ export interface components {
             /** Context */
             ctx?: Record<string, never>;
         };
-        /**
-         * ErrorResponse
-         * @description The body of every error response, on both API surfaces.
-         */
-        ErrorResponse: {
-            /**
-             * Code
-             * @description Stable, machine-readable identifier for this exact failure. The only half of the envelope a client may branch on.
-             * @example question_not_outstanding
-             */
-            code: string;
-            /**
-             * Message
-             * @description Human-readable diagnostic. Never the copy shown to a user — that is the client's, chosen from the code.
-             */
-            message: string;
-            /**
-             * Trace Id
-             * @description This request's identifier, also returned on the X-Request-ID header. Ties a client-side failure to a server log without logging a payload.
-             */
-            trace_id: string;
-            /**
-             * Details
-             * @description Structured context for this code, when the code defines any.
-             * @default null
-             */
-            details: {
-                [key: string]: unknown;
-            } | null;
-        };
     };
     responses: never;
     parameters: never;
@@ -799,6 +801,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AssessmentStepResponse"];
+                };
+            };
+            /** @description `sport_already_rated` — this player already holds a Skill rating for this sport, so no assessment is started. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
             /** @description Validation Error */

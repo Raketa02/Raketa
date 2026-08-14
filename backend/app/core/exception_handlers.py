@@ -33,6 +33,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from app.application.events.store import EventStreamVersionConflict
 from app.core.tracing import trace_id_for
 
 logger = logging.getLogger(__name__)
@@ -118,6 +119,19 @@ class ConflictError(AppError):
 #: and whatever Starlette raises on its own behalf (an unrouted path, a wrong
 #: method). Statuses are unchanged — only the body is now the envelope.
 VALIDATION_ERROR_CODE = "validation_error"
+
+#: Two writes reached the same aggregate stream and the store rejected the
+#: second. Not a domain error — no context authored it, and every event-sourced
+#: context can raise it — so it is mapped here rather than being re-declared as
+#: an ``AppError`` per module, which would also make an application-layer store
+#: error know about HTTP.
+#:
+#: **Until this existed it was a 500**, because nothing mapped it: a genuine
+#: concurrent double-submit told the client the server had broken, when what had
+#: actually happened was that its own retry lost a race it can safely re-read.
+#: The recovery is to refetch the current step, which is the same recovery
+#: ``question_not_outstanding`` asks for and the reason both are 409s.
+CONCURRENT_MODIFICATION_CODE = "concurrent_modification"
 
 _STATUS_CODES: dict[int, str] = {
     status.HTTP_400_BAD_REQUEST: BadRequestError.code,
@@ -205,6 +219,25 @@ def register_exception_handlers(app: FastAPI) -> None:
             code=exc.code,
             message=exc.message,
             details=exc.details,
+        )
+
+    @app.exception_handler(EventStreamVersionConflict)
+    async def _stream_conflict_handler(
+        request: Request, exc: EventStreamVersionConflict
+    ) -> JSONResponse:
+        # The exception's own text names the aggregate type, the stream id and
+        # the two versions. That is a diagnostic about our storage, not about
+        # the caller's request, so it is logged here and the envelope carries a
+        # generic message — the trace id is what ties the two together.
+        logger.warning(
+            "event stream version conflict",
+            extra={"extra_fields": {"detail": str(exc), "path": request.url.path}},
+        )
+        return _error_response(
+            request,
+            status_code=status.HTTP_409_CONFLICT,
+            code=CONCURRENT_MODIFICATION_CODE,
+            message="This resource was modified concurrently; re-read and retry.",
         )
 
     @app.exception_handler(RequestValidationError)

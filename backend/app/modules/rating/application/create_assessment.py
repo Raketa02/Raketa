@@ -8,8 +8,19 @@ stranded, because the in-progress lookup answers with a single run and the other
 is then neither resumable nor abandonable through any client path.
 
 The guard is scoped to runs that are *in progress*, never to any run that ever
-existed: a sport whose previous run was completed or abandoned still starts a
-genuinely new one.
+existed: a sport whose previous run was **abandoned** still starts a genuinely
+new one.
+
+**A sport the player is already rated at is refused** (`SportAlreadyRated`,
+409). A rating's stream is keyed by ``(player, sport)`` and initialisation is
+its only transition, so a second completed run appends a second opening event to
+a stream that already has one and the store rejects it — on the *last* answer,
+after the whole questionnaire. Refusing the start is the only place where
+refusing costs the player nothing, and it is checked **before** the in-progress
+lookup so that a run stranded by that older behaviour cannot be resumed into the
+same wall. Whether re-rating should instead replace the rating is deliberately
+left open; the transition that would answer it is the match-update engine's
+(#53).
 
 **What this closes and what it does not.** The check is a read before a write, so
 it resolves every case where the first start has already committed — the retry
@@ -35,7 +46,8 @@ from app.modules.rating.application.commands import (
     CreateAssessmentCommand,
 )
 from app.modules.rating.domain.assessment import Assessment
-from app.modules.rating.domain.ports import AssessmentRepository
+from app.modules.rating.domain.errors import SportAlreadyRated
+from app.modules.rating.domain.ports import AssessmentRepository, SkillRatingRepository
 from app.shared.clock import Clock
 from app.shared.ids import new_uuid
 
@@ -46,15 +58,27 @@ class CreateAssessment:
         *,
         engine: AssessmentEngine,
         assessments: AssessmentRepository,
+        ratings: SkillRatingRepository,
         uow: UnitOfWork,
         clock: Clock,
     ) -> None:
         self._engine = engine
         self._assessments = assessments
+        self._ratings = ratings
         self._uow = uow
         self._clock = clock
 
     async def execute(self, command: CreateAssessmentCommand) -> AssessmentStart:
+        # Asked first, and asked as a question rather than by loading anything.
+        # A rated sport can produce no second rating, so opening a run for it —
+        # or handing back one that is already open — only defers the failure to
+        # the answer that would have finished it.
+        if await self._ratings.exists_for(
+            player_id=command.player_id,
+            sport=command.sport,
+        ):
+            raise SportAlreadyRated()
+
         open_run = await self._assessments.find_open(
             player_id=command.player_id,
             sport=command.sport,

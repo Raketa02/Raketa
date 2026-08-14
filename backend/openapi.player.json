@@ -222,7 +222,7 @@
           "assessments"
         ],
         "summary": "Start an assessment and receive its opening question",
-        "description": "Idempotent per player and sport. Starting a sport that already has an unfinished run returns **that** run and its outstanding question with a 200, rather than opening a second one \u2014 so a double-tapped confirm, or a retry after a lost response, costs nothing. A sport whose previous run was completed or abandoned still starts a new run, with a 201.\n\nBoth outcomes carry the same body, so a client that only routes on the step needs no branch; the status code is there for one that wants to tell the two apart.",
+        "description": "Idempotent per player and sport. Starting a sport that already has an unfinished run returns **that** run and its outstanding question with a 200, rather than opening a second one \u2014 so a double-tapped confirm, or a retry after a lost response, costs nothing. A sport whose previous run was abandoned still starts a new run, with a 201.\n\nBoth outcomes carry the same body, so a client that only routes on the step needs no branch; the status code is there for one that wants to tell the two apart.\n\n**A sport this player is already rated at is refused with a 409** (`sport_already_rated`). A rating stream is keyed by player and sport and initialisation is its only transition, so a second completed run for one sport cannot be stored \u2014 and refusing at the start is the only point at which refusing costs the player nothing rather than a whole questionnaire. The picker offers unrated sports, so no shipped flow reaches this.",
         "operationId": "create_assessment_api_v1_assessments_post",
         "requestBody": {
           "content": {
@@ -251,6 +251,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AssessmentStepResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`sport_already_rated` \u2014 this player already holds a Skill rating for this sport, so no assessment is started.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -631,6 +641,50 @@
           "sport"
         ],
         "title": "CreateAssessmentRequest"
+      },
+      "ErrorResponse": {
+        "description": "The body of every error response, on both API surfaces.",
+        "properties": {
+          "code": {
+            "description": "Stable, machine-readable identifier for this exact failure. The only half of the envelope a client may branch on.",
+            "examples": [
+              "question_not_outstanding"
+            ],
+            "title": "Code",
+            "type": "string"
+          },
+          "message": {
+            "description": "Human-readable diagnostic. Never the copy shown to a user \u2014 that is the client's, chosen from the code.",
+            "title": "Message",
+            "type": "string"
+          },
+          "trace_id": {
+            "description": "This request's identifier, also returned on the X-Request-ID header. Ties a client-side failure to a server log without logging a payload.",
+            "title": "Trace Id",
+            "type": "string"
+          },
+          "details": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Structured context for this code, when the code defines any.",
+            "title": "Details"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "trace_id"
+        ],
+        "title": "ErrorResponse",
+        "type": "object"
       },
       "FactorResponse": {
         "properties": {
@@ -1256,50 +1310,6 @@
           "type"
         ],
         "title": "ValidationError"
-      },
-      "ErrorResponse": {
-        "description": "The body of every error response, on both API surfaces.",
-        "properties": {
-          "code": {
-            "description": "Stable, machine-readable identifier for this exact failure. The only half of the envelope a client may branch on.",
-            "examples": [
-              "question_not_outstanding"
-            ],
-            "title": "Code",
-            "type": "string"
-          },
-          "message": {
-            "description": "Human-readable diagnostic. Never the copy shown to a user \u2014 that is the client's, chosen from the code.",
-            "title": "Message",
-            "type": "string"
-          },
-          "trace_id": {
-            "description": "This request's identifier, also returned on the X-Request-ID header. Ties a client-side failure to a server log without logging a payload.",
-            "title": "Trace Id",
-            "type": "string"
-          },
-          "details": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "description": "Structured context for this code, when the code defines any.",
-            "title": "Details"
-          }
-        },
-        "required": [
-          "code",
-          "message",
-          "trace_id"
-        ],
-        "title": "ErrorResponse",
-        "type": "object"
       }
     },
     "securitySchemes": {

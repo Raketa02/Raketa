@@ -92,6 +92,22 @@ class SkillRatingRepository(Protocol):
         """
         ...
 
+    async def exists_for(self, *, player_id: UUID, sport: Sport) -> bool:
+        """Whether this player already holds a rating for this sport.
+
+        Asked before an assessment is started, so a sport that cannot produce a
+        second rating is refused before the player answers anything.
+
+        A question rather than the aggregate, deliberately. The stream is keyed
+        by ``(player, sport)`` so this is one lookup, where ``find_all_for``
+        replays every rating the player holds; and a caller asking *is there
+        one* has no business with an aggregate it might then mutate. The
+        by-id ``load`` this port still lacks stays unwritten until something
+        wants to transition a rating — which is the match-update engine's
+        problem, not this one's.
+        """
+        ...
+
     async def find_all_for(self, *, player_id: UUID) -> list[SkillRating]:
         """Every Skill rating this player holds, one per sport they are rated at.
 
