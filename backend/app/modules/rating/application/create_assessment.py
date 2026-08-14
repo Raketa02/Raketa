@@ -23,7 +23,7 @@ carrying one row per (player, sport, open run), or a stream id derived from thos
 
 from __future__ import annotations
 
-from app.application.ports import DomainEventPublisher, DomainEventStore, UnitOfWork
+from app.application.ports import UnitOfWork
 from app.engines.assessment import AskQuestion, AssessmentEngine
 from app.modules.rating.application.assessment_view import (
     current_step,
@@ -34,12 +34,10 @@ from app.modules.rating.application.commands import (
     AssessmentStep,
     CreateAssessmentCommand,
 )
-from app.modules.rating.application.find_in_progress_assessment import load_in_progress
 from app.modules.rating.domain.assessment import Assessment
+from app.modules.rating.domain.ports import AssessmentRepository
 from app.shared.clock import Clock
 from app.shared.ids import new_uuid
-
-ASSESSMENT_AGGREGATE = "assessment"
 
 
 class CreateAssessment:
@@ -47,20 +45,17 @@ class CreateAssessment:
         self,
         *,
         engine: AssessmentEngine,
-        event_store: DomainEventStore,
+        assessments: AssessmentRepository,
         uow: UnitOfWork,
         clock: Clock,
-        events: DomainEventPublisher,
     ) -> None:
         self._engine = engine
-        self._event_store = event_store
+        self._assessments = assessments
         self._uow = uow
         self._clock = clock
-        self._events = events
 
     async def execute(self, command: CreateAssessmentCommand) -> AssessmentStart:
-        open_run = await load_in_progress(
-            self._event_store,
+        open_run = await self._assessments.find_open(
             player_id=command.player_id,
             sport=command.sport,
         )
@@ -96,14 +91,10 @@ class CreateAssessment:
             occurred_at=now,
         )
 
-        pending = assessment.pull_events()
-        await self._event_store.append(
-            aggregate_type=ASSESSMENT_AGGREGATE,
-            aggregate_id=assessment_id,
-            expected_version=0,
-            events=pending,
-        )
-        await self._events.publish_many(pending)
+        # Appended at version zero without saying so: the repository never
+        # loaded this aggregate, so it has no version for it, and "this stream
+        # does not exist yet" follows from that rather than from a claim here.
+        await self._assessments.save(assessment)
         await self._uow.commit()
 
         return AssessmentStart(

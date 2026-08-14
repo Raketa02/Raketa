@@ -2,8 +2,8 @@
 
 Everything a use case used to have to remember lives here: which aggregate-type
 string the streams are filed under, that state is rebuilt by replaying them, that
-the player must be checked before the aggregate is handed back, and what version
-the next append expects.
+the player must be checked before the aggregate is handed back, what version the
+next append expects, and which stored keys a stream is found by.
 
 **The version is recovered, not taken.** The adapter remembers the version of
 every aggregate it loaded, so ``save`` knows what the stream looked like when the
@@ -14,22 +14,42 @@ the stream has since passed. An aggregate this repository never loaded has no
 entry and is therefore appended at version zero, which is how "this stream does
 not exist yet" follows from never having read it rather than from a caller
 saying so.
+
+**The finders live here for a reason of their own.** They locate a stream by
+matching the *stored JSON payload* of its opening event, so their keys must agree
+with ``AssessmentStarted``'s serialized field names. A rename does not raise:
+the query simply returns nothing, which is indistinguishable from *no run in
+progress* — the ordinary answer for almost every player. That coupling now has
+one home, and it is this one, because this is the only module that knows the
+streams are events at all.
 """
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from uuid import UUID
 
 from app.application.ports import DomainEventPublisher, DomainEventStore
 from app.kernel import Sport
-from app.modules.rating.application.find_in_progress_assessment import (
-    load_all_in_progress,
-    load_in_progress,
-)
 from app.modules.rating.domain.assessment import Assessment
 from app.modules.rating.domain.errors import AssessmentNotFound
 
 ASSESSMENT_AGGREGATE = "assessment"
+
+
+def _opening_key(player_id: UUID, sport: Sport | None = None) -> dict[str, str]:
+    """What a stream's opening event must carry to be one of this player's.
+
+    The keys are ``AssessmentStarted``'s field names as the codec writes them,
+    and the values are its primitive forms — a sport as its ``str`` value, not
+    the enum. One expression for both finders, because the per-sport lookup is
+    the same key with the sport left off.
+    """
+
+    key = {"player_id": str(player_id)}
+    if sport is not None:
+        key["sport"] = sport.value
+    return key
 
 
 class EventSourcedAssessmentRepository:
@@ -50,14 +70,9 @@ class EventSourcedAssessmentRepository:
         self._versions: dict[UUID, int] = {}
 
     async def load(self, assessment_id: UUID, *, for_player: UUID) -> Assessment:
-        stored = await self._event_store.load_stream(
-            aggregate_type=ASSESSMENT_AGGREGATE,
-            aggregate_id=assessment_id,
-        )
-        if not stored:
+        assessment = await self._replay(assessment_id)
+        if assessment is None:
             raise AssessmentNotFound()
-
-        assessment = Assessment.from_history(record.event for record in stored)
         if assessment.player_id != for_player:
             # Another player's assessment is reported exactly as an absent one,
             # so the route cannot be used to discover which ids exist.
@@ -85,25 +100,65 @@ class EventSourcedAssessmentRepository:
         self._remember(assessment)
 
     async def find_open(self, *, player_id: UUID, sport: Sport) -> Assessment | None:
-        # The scan itself still lives in ``find_in_progress_assessment`` because
-        # three use cases call it directly; #46 moves the body in here and
-        # deletes the module-level functions, so the encoded lookup keys end up
-        # with one home. Delegating rather than copying is what stops the two
-        # having a chance to disagree in the meantime.
-        assessment = await load_in_progress(
-            self._event_store, player_id=player_id, sport=sport
-        )
-        if assessment is not None:
-            self._remember(assessment)
-        return assessment
+        open_runs = await self._newest_open_by_sport(_opening_key(player_id, sport))
+        return open_runs.get(sport)
 
     async def find_all_open(self, *, player_id: UUID) -> list[Assessment]:
-        assessments = await load_all_in_progress(
-            self._event_store, player_id=player_id
+        open_runs = await self._newest_open_by_sport(_opening_key(player_id))
+        # Registry order (``Sport``'s own), so a caller that wants exactly one
+        # run — the entry gate does — can take the first entry and get a stable
+        # answer rather than one that depends on which sport was started first.
+        return [open_runs[sport] for sport in Sport if sport in open_runs]
+
+    async def _newest_open_by_sport(
+        self, payload_equals: Mapping[str, str]
+    ) -> dict[Sport, Assessment]:
+        """This player's unfinished runs, at most one per sport, newest winning.
+
+        One implementation, shared by both finders, because they answer the same
+        question about the same player: a gate routing to one run while the
+        resume read offered another would be a bug no client could see. Narrowing
+        the key to a sport is all that separates them.
+
+        Newest-first is a tie-break between *open* runs, not a stopping rule — a
+        newer run that has since ended must not hide the open one behind it —
+        which is why the scan keeps going rather than stopping at the first
+        stream it replays.
+
+        This replays every assessment stream the player has ever opened,
+        finished and abandoned ones included, exactly as ``list_ratings``
+        replays every rating. That is the cost of reading an event-sourced store
+        without a projection; a player's streams are counted in tens, and the
+        alternative is a second place holding a fact the streams already hold.
+        """
+
+        candidate_ids = await self._event_store.find_aggregate_ids_by_first_event(
+            aggregate_type=ASSESSMENT_AGGREGATE,
+            payload_equals=payload_equals,
         )
-        for assessment in assessments:
-            self._remember(assessment)
-        return assessments
+
+        # Candidates are ordered oldest-first; the most recently opened run is
+        # the one to resume, so scan from the newest end.
+        open_by_sport: dict[Sport, Assessment] = {}
+        for assessment_id in reversed(candidate_ids):
+            assessment = await self._replay(assessment_id)
+            if assessment is None:
+                continue
+            if assessment.is_in_progress and assessment.sport not in open_by_sport:
+                # Registered in the identity map like any loaded aggregate, so a
+                # run that was found is a run that can be saved.
+                self._remember(assessment)
+                open_by_sport[assessment.sport] = assessment
+        return open_by_sport
+
+    async def _replay(self, assessment_id: UUID) -> Assessment | None:
+        stored = await self._event_store.load_stream(
+            aggregate_type=ASSESSMENT_AGGREGATE,
+            aggregate_id=assessment_id,
+        )
+        if not stored:
+            return None
+        return Assessment.from_history(record.event for record in stored)
 
     def _remember(self, assessment: Assessment) -> None:
         self._versions[assessment.id] = assessment.version

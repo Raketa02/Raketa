@@ -54,17 +54,15 @@ AssessmentRepositoryDep = Annotated[
 
 def get_create_assessment(
     engine: AssessmentEngineDep,
-    event_store: DomainEventStoreDep,
+    assessments: AssessmentRepositoryDep,
     uow: UnitOfWorkDep,
     clock: ClockDep,
-    events: EventPublisherDep,
 ) -> CreateAssessment:
     return CreateAssessment(
         engine=engine,
-        event_store=event_store,
+        assessments=assessments,
         uow=uow,
         clock=clock,
-        events=events,
     )
 
 
@@ -73,13 +71,18 @@ CreateAssessmentDep = Annotated[CreateAssessment, Depends(get_create_assessment)
 
 def get_submit_answer(
     engine: AssessmentEngineDep,
+    assessments: AssessmentRepositoryDep,
     event_store: DomainEventStoreDep,
     uow: UnitOfWorkDep,
     clock: ClockDep,
     events: EventPublisherDep,
 ) -> SubmitAnswer:
+    # The event store and publisher are still here for the *rating* stream the
+    # completion path writes; the assessment goes through the repository. #49
+    # gives the rating one too and both drop away.
     return SubmitAnswer(
         engine=engine,
+        assessments=assessments,
         event_store=event_store,
         uow=uow,
         clock=clock,
@@ -92,9 +95,9 @@ SubmitAnswerDep = Annotated[SubmitAnswer, Depends(get_submit_answer)]
 
 def get_get_assessment(
     engine: AssessmentEngineDep,
-    event_store: DomainEventStoreDep,
+    assessments: AssessmentRepositoryDep,
 ) -> GetAssessment:
-    return GetAssessment(engine=engine, event_store=event_store)
+    return GetAssessment(engine=engine, assessments=assessments)
 
 
 GetAssessmentDep = Annotated[GetAssessment, Depends(get_get_assessment)]
@@ -102,9 +105,9 @@ GetAssessmentDep = Annotated[GetAssessment, Depends(get_get_assessment)]
 
 def get_find_in_progress_assessment(
     engine: AssessmentEngineDep,
-    event_store: DomainEventStoreDep,
+    assessments: AssessmentRepositoryDep,
 ) -> FindInProgressAssessment:
-    return FindInProgressAssessment(engine=engine, event_store=event_store)
+    return FindInProgressAssessment(engine=engine, assessments=assessments)
 
 
 FindInProgressAssessmentDep = Annotated[
@@ -113,12 +116,12 @@ FindInProgressAssessmentDep = Annotated[
 
 
 def get_list_in_progress_assessments(
-    event_store: DomainEventStoreDep,
+    assessments: AssessmentRepositoryDep,
 ) -> ListInProgressAssessments:
     # No engine: the collection reports which runs are unfinished, not what they
     # are asking. Reproducing four outstanding questions to answer "none" would
     # be work nobody reads.
-    return ListInProgressAssessments(event_store=event_store)
+    return ListInProgressAssessments(assessments=assessments)
 
 
 ListInProgressAssessmentsDep = Annotated[

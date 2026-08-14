@@ -14,6 +14,9 @@ run has ended. A private copy of this logic that had never grown an abandoned
 case answered that replay with a question for a run the server considered over,
 and the two routes described one run differently.
 
+The assessment itself is loaded and saved through its repository, so the
+ownership guard and the version this append expects are no longer things this
+use case has to remember — asking for the aggregate means saying whose it is.
 
 Completion is one transaction: the assessment-completed event and the
 rating-initialised event are appended together and the result returns inline,
@@ -33,51 +36,49 @@ from app.modules.rating.application.commands import (
     AssessmentStep,
     SubmitAnswerCommand,
 )
-from app.modules.rating.domain.assessment import Assessment
 from app.modules.rating.domain.errors import (
-    AssessmentNotFound,
     InvalidAnswerOption,
     QuestionNotOutstanding,
 )
 from app.modules.rating.domain.ids import skill_rating_id
+from app.modules.rating.domain.ports import AssessmentRepository
 from app.modules.rating.domain.skill_rating import SkillRating
 from app.shared.clock import Clock
 
-ASSESSMENT_AGGREGATE = "assessment"
 RATING_AGGREGATE = "skill_rating"
 
 
 class SubmitAnswer:
+    """The assessment moves through its repository; the rating does not yet.
+
+    The Skill rating still names the event store, its aggregate string and an
+    expected version of zero — the properties this slice removed everywhere
+    else. That is #49's half of the change, deliberately left rather than
+    half-made here, because a rating repository is its own port and adapter and
+    the ratings read moves onto it in the same breath.
+    """
+
     def __init__(
         self,
         *,
         engine: AssessmentEngine,
+        assessments: AssessmentRepository,
         event_store: DomainEventStore,
         uow: UnitOfWork,
         clock: Clock,
         events: DomainEventPublisher,
     ) -> None:
         self._engine = engine
+        self._assessments = assessments
         self._event_store = event_store
         self._uow = uow
         self._clock = clock
         self._events = events
 
     async def execute(self, command: SubmitAnswerCommand) -> AssessmentStep:
-        stored = await self._event_store.load_stream(
-            aggregate_type=ASSESSMENT_AGGREGATE,
-            aggregate_id=command.assessment_id,
+        assessment = await self._assessments.load(
+            command.assessment_id, for_player=command.player_id
         )
-        if not stored:
-            raise AssessmentNotFound()
-
-        assessment = Assessment.from_history(record.event for record in stored)
-        if assessment.player_id != command.player_id:
-            # A player can only see and act on their own assessments; a mismatch
-            # is indistinguishable from "does not exist".
-            raise AssessmentNotFound()
-
-        base_version = assessment.version
 
         # Idempotent replay of the just-answered question: record nothing, return
         # the current state. A lost response can never double-record.
@@ -109,14 +110,7 @@ class SubmitAnswer:
                 sigma=step.sigma,
                 occurred_at=now,
             )
-            pending = assessment.pull_events()
-            await self._event_store.append(
-                aggregate_type=ASSESSMENT_AGGREGATE,
-                aggregate_id=assessment.id,
-                expected_version=base_version,
-                events=pending,
-            )
-            await self._events.publish_many(pending)
+            await self._assessments.save(assessment)
             await self._uow.commit()
             return AssessmentStep(
                 assessment_id=assessment.id,
@@ -134,7 +128,6 @@ class SubmitAnswer:
             sport=assessment.sport, transcript=assessment.transcript
         )
         assessment.complete(result=result, occurred_at=now)
-        assessment_events = assessment.pull_events()
 
         rating = SkillRating.initialise(
             rating_id=skill_rating_id(assessment.player_id, assessment.sport),
@@ -146,19 +139,17 @@ class SubmitAnswer:
         )
         rating_events = rating.pull_events()
 
-        await self._event_store.append(
-            aggregate_type=ASSESSMENT_AGGREGATE,
-            aggregate_id=assessment.id,
-            expected_version=base_version,
-            events=assessment_events,
-        )
+        # Two streams, one transaction. ``save`` appends and publishes but never
+        # commits, so the boundary stays here — ADR-0017 states the single
+        # transaction as a domain rule rather than a persistence detail.
+        await self._assessments.save(assessment)
         await self._event_store.append(
             aggregate_type=RATING_AGGREGATE,
             aggregate_id=rating.id,
             expected_version=0,
             events=rating_events,
         )
-        await self._events.publish_many([*assessment_events, *rating_events])
+        await self._events.publish_many(rating_events)
         await self._uow.commit()
 
         return AssessmentStep(

@@ -47,8 +47,21 @@ class AssessmentRepository(Protocol):
         """
         ...
 
-    async def find_open(
-        self, *, player_id: UUID, sport: Sport
-    ) -> Assessment | None: ...
+    async def find_open(self, *, player_id: UUID, sport: Sport) -> Assessment | None:
+        """This player's unfinished run for a sport, or nothing.
 
-    async def find_all_open(self, *, player_id: UUID) -> list[Assessment]: ...
+        At most one, and the newest of them if the store somehow holds two — the
+        same rules ``find_all_open`` reports, because the two answer the same
+        question about the same player. A gate routing to one run while the
+        resume read offered another would be a bug no client could see.
+        """
+        ...
+
+    async def find_all_open(self, *, player_id: UUID) -> list[Assessment]:
+        """Every sport's unfinished run, at most one per sport, in registry order.
+
+        Registry order (``Sport``'s own) so a caller that wants exactly one — the
+        entry gate does — can take the first entry and get a stable answer rather
+        than one that depends on which sport was started first.
+        """
+        ...

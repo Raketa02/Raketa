@@ -29,6 +29,7 @@ from app.modules.rating.infrastructure.event_sourced_assessment_repository impor
 from app.shared.ids import new_uuid
 from tests.unit.fake_event_store import (
     CountingUnitOfWork,
+    FrozenClock,
     InMemoryEventStore,
     RecordingPublisher,
     utc,
@@ -36,11 +37,6 @@ from tests.unit.fake_event_store import (
 
 NOW = utc(2026, 8, 14)
 ENGINE = "racketskill-fusion-v3"
-
-
-class FrozenClock:
-    def now(self):
-        return NOW
 
 
 def _started(player_id, sport: Sport = Sport.PADEL) -> Assessment:

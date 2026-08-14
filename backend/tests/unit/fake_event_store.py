@@ -182,3 +182,13 @@ class CountingUnitOfWork:
 
 def utc(year: int, month: int, day: int) -> datetime:
     return datetime(year, month, day, tzinfo=timezone.utc)
+
+
+@dataclass
+class FrozenClock:
+    """One instant, so an event's ``occurred_at`` is something a test can name."""
+
+    at: datetime = field(default_factory=lambda: utc(2026, 8, 14))
+
+    def now(self) -> datetime:
+        return self.at
