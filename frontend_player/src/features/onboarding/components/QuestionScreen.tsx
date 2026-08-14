@@ -35,7 +35,7 @@
  */
 
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -53,11 +53,11 @@ import {
 
 import type { AnswerOption } from '../domain/Assessment';
 import type { Sport } from '../domain/Sport';
-import { nextDestination, positionOf } from '../domain/onboardingPass';
+import { positionOf } from '../domain/onboardingPass';
 import { useAbandonAssessment } from '../hooks/useAbandonAssessment';
+import { useAdvanceThroughPass } from '../hooks/useAdvanceThroughPass';
 import { useAnswerQuestion } from '../hooks/useAnswerQuestion';
 import { useAssessment } from '../hooks/useAssessment';
-import { useStartAssessment } from '../hooks/useStartAssessment';
 import { useDeferredRuns } from '../store/deferredRuns.store';
 import { useOnboardingPass } from '../store/onboardingPass.store';
 
@@ -81,7 +81,6 @@ export function QuestionScreen({ assessmentId, sport }: QuestionScreenProps) {
   const assessment = useAssessment(assessmentId);
   const answer = useAnswerQuestion(assessmentId);
   const abandon = useAbandonAssessment(assessmentId);
-  const start = useStartAssessment();
   const beginIfAbsent = useOnboardingPass((state) => state.beginIfAbsent);
   const defer = useDeferredRuns((state) => state.defer);
 
@@ -105,6 +104,13 @@ export function QuestionScreen({ assessmentId, sport }: QuestionScreenProps) {
   const pass = useOnboardingPass((state) => state.pass);
   /** Absent for a sport outside the pass — reachable by deep link. The bar then goes. */
   const position = positionOf(pass, sport);
+  /**
+   * Leaving this sport, in one place. The screen holds no navigation and no latch of its
+   * own: which route each answer means, and what a failed start does, are the hook's, and
+   * the result screen calls the same one so the two cannot disagree again.
+   */
+  const onwards = useAdvanceThroughPass(sport);
+  const { advance, showResultOf } = onwards;
   const step = assessment.data;
   const question = step?.question;
   /**
@@ -145,66 +151,18 @@ export function QuestionScreen({ assessmentId, sport }: QuestionScreenProps) {
    */
   const number = step === undefined ? 0 : step.questionsAsked + 1;
 
-  /**
-   * A one-way latch. Every exit below is a `replace`, and the screen stays mounted while
-   * the next one is being arranged — so without this, a step arriving mid-departure could
-   * navigate a second time on top of a decision already taken.
-   */
-  const departing = useRef(false);
-
-  /**
-   * Out of this sport, wherever the pass says that is: the next sport the player chose,
-   * the closing screens, or the app. **The decision is `nextDestination`'s** — which
-   * route expresses each answer is this layer's, and nothing here recomputes the rule.
-   *
-   * The result screen holds the same three-way move, and the two copies have already
-   * diverged over what a failed start does. #50 gives the feature one hook that owns the
-   * whole transition; until then this is the half that has an error branch.
-   */
-  const startNext = start.mutate;
-  const leaveTheQuestionnaire = useCallback(() => {
-    if (departing.current) return;
-    departing.current = true;
-
-    const destination = nextDestination(pass, sport);
-    if (destination.kind !== 'rate') {
-      router.replace(destination.kind === 'closing' ? '/done' : '/');
-      return;
-    }
-
-    const next = destination.sport;
-    startNext(next, {
-      onSuccess: (opening) =>
-        router.replace({
-          pathname: '/question/[assessmentId]',
-          params: { assessmentId: opening.assessmentId, sport: next },
-        }),
-      // The abandonment stands — it is a state transition on the server and there is
-      // nothing to undo. Only the departure failed, so the latch is released and the
-      // confirm stays open with the failure beside the control that retries it.
-      onError: () => {
-        departing.current = false;
-      },
-    });
-  }, [pass, sport, router, startNext]);
-
-  // The run is over: the outstanding question is gone and a rating exists. `replace`,
-  // because the questionnaire has no way back — this is the one exit from the loop.
+  // The run is over: the outstanding question is gone and a rating exists.
   useEffect(() => {
-    if (!finished || departing.current) return;
-    departing.current = true;
-    router.replace({
-      pathname: '/result/[assessmentId]',
-      params: { assessmentId, sport },
-    });
-  }, [finished, router, assessmentId, sport]);
+    if (!finished) return;
+    showResultOf(assessmentId);
+  }, [finished, showResultOf, assessmentId]);
 
   // Ended elsewhere, with no rating to show. There is nothing to say about a run that is
   // simply gone, so the flow moves on the same way an abandonment from here would.
   useEffect(() => {
     if (!endedWithoutRating) return;
-    leaveTheQuestionnaire();
-  }, [endedWithoutRating, leaveTheQuestionnaire]);
+    advance();
+  }, [endedWithoutRating, advance]);
 
   const submit = () => {
     if (question === undefined || selectedOptionId === undefined) return;
@@ -229,12 +187,12 @@ export function QuestionScreen({ assessmentId, sport }: QuestionScreenProps) {
    * server treats as a no-op, and tries the departure again.
    */
   const stopRatingThisSport = () => {
-    abandon.mutate(undefined, { onSuccess: leaveTheQuestionnaire });
+    abandon.mutate(undefined, { onSuccess: advance });
   };
 
   // The abandon request, then the next sport's opening question: one departure to the
   // player, and either half can fail.
-  const leaving = abandon.isPending || start.isPending;
+  const leaving = abandon.isPending || onwards.advancing;
 
   return (
     <>
@@ -354,7 +312,7 @@ export function QuestionScreen({ assessmentId, sport }: QuestionScreenProps) {
         onContinueLater={continueLater}
         onAbandon={stopRatingThisSport}
         leaving={leaving}
-        error={abandon.error ?? start.error}
+        error={abandon.error ?? onwards.error}
         returnFocusTo={closeControl}
       />
     </>

@@ -139,6 +139,19 @@ export type PassDestination =
   | { readonly kind: 'app' };
 
 /**
+ * Where a player who **stops before the end of the queue** goes.
+ *
+ * The closing screens when this pass produced a rating, the app when it produced nothing.
+ * Named on its own because it is asked twice — by a player pressing *done for now* with
+ * sports still to go, and by `nextDestination` when there are none left — and one rule
+ * answering both is what stops the two from drifting into different answers to *is there
+ * anything to account for*.
+ */
+export function stopDestination(pass: OnboardingPass | undefined): PassDestination {
+  return pass !== undefined && pass.rated.length > 0 ? { kind: 'closing' } : { kind: 'app' };
+}
+
+/**
  * Where the player goes once this sport is dealt with, however it was dealt with.
  *
  * **Finished and abandoned land in the same place**, which is why one rule answers for
@@ -165,5 +178,5 @@ export function nextDestination(pass: OnboardingPass | undefined, sport: Sport):
   const next = at === -1 ? undefined : pass.queue[at + 1];
 
   if (next !== undefined) return { kind: 'rate', sport: next };
-  return pass.rated.length > 0 ? { kind: 'closing' } : { kind: 'app' };
+  return stopDestination(pass);
 }

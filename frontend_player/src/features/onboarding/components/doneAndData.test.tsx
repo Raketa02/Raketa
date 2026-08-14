@@ -25,6 +25,7 @@ import {
 import {
   installTransport,
   json,
+  networkFailure,
   noContent,
   type Transport,
   type Wire,
@@ -275,6 +276,36 @@ describe('after a result', () => {
     expect(await screen.findByLabelText('Padel level: 2,71')).toBeTruthy();
     expect(screen.queryByText('Tennis')).toBeNull();
     expect(transport.requestsTo('POST', '/api/v1/assessments')).toHaveLength(1);
+  });
+
+  it('tells the player when the next sport fails to start, and retries it in place', async () => {
+    // The defect this closes: the result screen held its own copy of "start the next sport
+    // and go there" and had no error branch at all, so a failed tap did **nothing
+    // visible**. Both screens now call the same hook, and this is the question screen's
+    // behaviour arriving here — a message, and the control that failed as the retry.
+    await startRating('Padel', 'Tennis');
+    await answerTheLastQuestion(PADEL_ID, 'PADEL', PADEL_RESULT);
+
+    transport.on('POST', '/api/v1/assessments', networkFailure());
+    fireEvent.press(await screen.findByLabelText('Rate Tennis'));
+
+    expect(
+      await screen.findByText("We couldn't reach Rakieta. Check your connection and try again."),
+    ).toBeTruthy();
+    expect(screen.getByRole('alert')).toBeTruthy();
+    // Still here. A failed start changed nothing, so the padel result is exactly as it
+    // was — including the control that failed, which is the retry.
+    expect(screen).toHavePathname(`/result/${PADEL_ID}`);
+    expect(screen.getByText('Your rating')).toBeTruthy();
+    expect(screen.getByLabelText('Rate Tennis')).toBeTruthy();
+
+    // And the latch was released, so pressing again genuinely tries again rather than
+    // being swallowed by a departure that never completed.
+    transport.on('POST', '/api/v1/assessments', () => json(outstanding(TENNIS_ID), 201));
+    fireEvent.press(screen.getByLabelText('Rate Tennis'));
+
+    await waitFor(() => expect(screen).toHavePathname(`/question/${TENNIS_ID}`));
+    expect(transport.requestsTo('POST', '/api/v1/assessments')).toHaveLength(3);
   });
 
   it('offers no next sport when there is none, and never invents one', async () => {
