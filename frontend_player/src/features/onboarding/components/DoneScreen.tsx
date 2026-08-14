@@ -31,6 +31,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button, Card, Hairline, Note, Row, theme } from '@/shared/ui';
 
 import { confidenceLimit, type ConfidenceLimit } from '../domain/confidenceLimit';
+import type { RatedRun } from '../domain/onboardingPass';
 import { useRunResults, type RunResult } from '../hooks/useRunResults';
 import { useOnboardingPass } from '../store/onboardingPass.store';
 
@@ -39,6 +40,14 @@ import { ratingStatusLabel } from './bandPresentation';
 import { onboardingErrorMessage } from './onboardingErrorMessage';
 import { formatConfidence, formatLevel, formatRange } from './ratingFormat';
 import { sportColour, sportLabel } from './sportPresentation';
+
+/**
+ * One reference, module-level, for the no-pass answer.
+ *
+ * A selector that built a fresh `[]` each call would return a new identity every time the
+ * store notified, and the screen would re-render itself forever.
+ */
+const NOTHING_RATED: readonly RatedRun[] = [];
 
 /**
  * The two ways a Confidence can be where it is, said as two different sentences.
@@ -60,7 +69,10 @@ const CONFIDENCE_LIMIT_NOTE: Readonly<Record<ConfidenceLimit, (ceiling: number) 
 
 export function DoneScreen() {
   const router = useRouter();
-  const rated = useOnboardingPass((state) => state.pass.rated);
+  // Empty with no pass running, which is the same as a pass that rated nothing: this
+  // screen accounts for *this* walk, and there is nothing to account for. Reachable only
+  // by deep link — the flow arrives here through the pass that produced the cards.
+  const rated = useOnboardingPass((state) => state.pass?.rated ?? NOTHING_RATED);
   const results = useRunResults(rated);
 
   // Which engine produced these, said out loud, because the data screen claims it is kept

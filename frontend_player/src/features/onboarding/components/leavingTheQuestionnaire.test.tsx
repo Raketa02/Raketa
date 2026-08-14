@@ -402,6 +402,13 @@ describe('abandoning a sport', () => {
     // done screen accounts for the rating they did make, and the data screen says what
     // was kept and that no one can hand-edit a Level. Ending on an abandonment is not a
     // reason to be told none of it.
+    //
+    // The pass is begun over **both** sports, which is what makes tennis part of it. It
+    // used to be enough to record padel into a pass with an empty queue, because the
+    // resumed tennis run then borrowed whatever pass was lying around. It no longer is,
+    // and that is the point: an earlier walk's ratings do not follow a player into a run
+    // they resumed after it — see the two-passes test below for that case.
+    useOnboardingPass.getState().begin(['padel', 'tennis']);
     useOnboardingPass.getState().record({ assessmentId: PADEL_RUN, sport: 'padel' });
 
     stubGate({ runs: [runInProgress('TENNIS', TENNIS_RUN)] });

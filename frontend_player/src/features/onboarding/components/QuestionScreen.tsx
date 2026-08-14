@@ -65,6 +65,7 @@ import { LeaveAssessmentSheet } from './LeaveAssessmentSheet';
 import { OnboardingChrome } from './OnboardingChrome';
 import { difficultyTag } from './difficultyTag';
 import { onboardingErrorMessage } from './onboardingErrorMessage';
+import { passEyebrow } from './passEyebrow';
 import { sportLabel } from './sportPresentation';
 
 /** Identical on every question. See the note above — this is a domain rule, not copy. */
@@ -81,9 +82,28 @@ export function QuestionScreen({ assessmentId, sport }: QuestionScreenProps) {
   const answer = useAnswerQuestion(assessmentId);
   const abandon = useAbandonAssessment(assessmentId);
   const start = useStartAssessment();
-  const pass = useOnboardingPass((state) => state.pass);
+  const beginIfAbsent = useOnboardingPass((state) => state.beginIfAbsent);
   const defer = useDeferredRuns((state) => state.defer);
 
+  /**
+   * A run reached with no pass running is a pass of one sport, and saying so **during the
+   * first render** is the whole requirement: the chrome reads a position immediately, and
+   * an effect flushes after that render has already happened. Doing it from the entry gate
+   * was rejected for the same reason — its redirect fires before an effect would run.
+   *
+   * The ref makes it once-per-mount; `beginIfAbsent` makes it harmless when the picker has
+   * already begun one. It is only safe to begin conditionally because ending is now
+   * reliable — otherwise this would adopt a finished walk's queue, which is the defect it
+   * exists to fix wearing a new interface.
+   */
+  const begun = useRef(false);
+  if (!begun.current) {
+    begun.current = true;
+    beginIfAbsent([sport]);
+  }
+
+  const pass = useOnboardingPass((state) => state.pass);
+  /** Absent for a sport outside the pass — reachable by deep link. The bar then goes. */
   const position = positionOf(pass, sport);
   const step = assessment.data;
   const question = step?.question;
@@ -227,7 +247,7 @@ export function QuestionScreen({ assessmentId, sport }: QuestionScreenProps) {
         {...behindOverlay(confirmingExit)}
       >
         <OnboardingChrome
-          eyebrow={`${sportLabel(sport)} · Rating ${position.index} of ${position.total}`}
+          eyebrow={passEyebrow(sport, position)}
           title={question?.category ?? sportLabel(sport)}
           position={position}
           right={

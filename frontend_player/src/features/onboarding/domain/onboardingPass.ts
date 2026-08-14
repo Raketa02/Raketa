@@ -73,14 +73,14 @@ export function begin(queue: readonly Sport[]): OnboardingPass {
  * Add or remove a sport, preserving the order they were chosen in.
  *
  * Appending rather than re-sorting is what keeps choice order true.
+ *
+ * **This operates on a queue, not on a pass, because the picker's selection is not one.**
+ * A player still choosing has not begun anything — they can add and remove sports and walk
+ * away — and modelling that as a pass is what made "no pass" and "a pass someone left
+ * half-built" the same value.
  */
-export function toggleSport(pass: OnboardingPass, sport: Sport): OnboardingPass {
-  return {
-    ...pass,
-    queue: pass.queue.includes(sport)
-      ? pass.queue.filter((chosen) => chosen !== sport)
-      : [...pass.queue, sport],
-  };
+export function toggleSport(queue: readonly Sport[], sport: Sport): readonly Sport[] {
+  return queue.includes(sport) ? queue.filter((chosen) => chosen !== sport) : [...queue, sport];
 }
 
 /**
@@ -109,14 +109,25 @@ export interface RatingPosition {
  * longer move the Band), so sports are the one thing the player actually chose and the
  * one honest thing to measure.
  *
- * A sport outside the pass is reported as its own run of one. **That fallback is a lie
- * this slice deliberately keeps**: it is how a resumed run reads "Rating 1 of 1" today,
- * and it is also how a resumed run after a completed pass reads "Rating 2 of 2". Removing
- * it needs a pass to begin explicitly, which is #47's — this module changes no behaviour.
+ * **Nothing, when there is no pass or the sport is not in it.** There is no honest
+ * position for a sport nobody chose, and the chrome renders no bar rather than inventing
+ * a denominator — a state it already supports, because welcome and the picker have
+ * nothing to measure either.
+ *
+ * This used to return `{index: 1, total: 1}` for a sport outside the pass. That fallback
+ * is what made a resumed run read "Rating 1 of 1" *and* what made a resumed run after a
+ * completed pass read "Rating 2 of 2": with the earlier pass never ended, the sport was
+ * still in its queue and the fallback never fired. Beginning and ending a pass is what
+ * lets it go — a resumed run is now a genuine pass of one sport and reports one of one
+ * honestly, through the ordinary rule.
  */
-export function positionOf(pass: OnboardingPass, sport: Sport): RatingPosition {
+export function positionOf(
+  pass: OnboardingPass | undefined,
+  sport: Sport,
+): RatingPosition | undefined {
+  if (pass === undefined) return undefined;
   const at = pass.queue.indexOf(sport);
-  return at === -1 ? { index: 1, total: 1 } : { index: at + 1, total: pass.queue.length };
+  return at === -1 ? undefined : { index: at + 1, total: pass.queue.length };
 }
 
 export type PassDestination =
@@ -141,8 +152,15 @@ export type PassDestination =
  * give, the done screen has only its empty state to show, and answering *stop* with two
  * more screens would be the wrong response to what the player just asked for. That branch
  * was an array length inside a screen callback until this module existed.
+ *
+ * **No pass at all is the same answer as a pass that produced nothing**, and for the same
+ * reason: there is nothing to account for. This is what sends a player who abandons a
+ * resumed run into the app rather than to a summary of the ratings an *earlier* walk
+ * produced — that walk ended when they reached the app, and its ratings went with it.
  */
-export function nextDestination(pass: OnboardingPass, sport: Sport): PassDestination {
+export function nextDestination(pass: OnboardingPass | undefined, sport: Sport): PassDestination {
+  if (pass === undefined) return { kind: 'app' };
+
   const at = pass.queue.indexOf(sport);
   const next = at === -1 ? undefined : pass.queue[at + 1];
 

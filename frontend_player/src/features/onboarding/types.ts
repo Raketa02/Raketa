@@ -25,5 +25,12 @@ export { onboardingKeys } from './hooks/onboardingKeys';
  */
 export { useEntryDecision, type EntryDecision } from './hooks/useEntryDecision';
 
+/**
+ * A walk through onboarding is over when the player is in the app. The gate is the one
+ * place that knows they are, so it is the one place that says so — see the hook for why
+ * this is the definition rather than a convention.
+ */
+export { useEndOnboardingPass } from './hooks/useEndOnboardingPass';
+
 /** Route params are untrusted input, so the route that reads them validates them here. */
 export { parseAssessmentRouteParams, type AssessmentRouteParams } from './schemas/routeParams';

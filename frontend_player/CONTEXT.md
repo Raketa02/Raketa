@@ -100,9 +100,14 @@ player's decision to come back later. Both are modelled in
 - **Onboarding pass** — **one walk through onboarding**: the sports the player chose, in
   the order they chose them, and which of those produced a Skill rating. It is what the
   progress bar measures, what decides which sport comes next, and what the closing screens
-  account for. Client-only, in-memory, never persisted. _Avoid_: **"run"** — that is one
-  Assessment, and a pass is a sequence of them; **"session"** — that is the auth session,
-  and the two have different lifetimes; also "onboarding state", "wizard".
+  account for. Client-only, in-memory, never persisted. It **begins** explicitly — at the
+  picker with the queue that was chosen, or at the question route for a run resumed
+  straight from the entry gate, which is a genuine pass of one sport — and it **ends** in
+  one place, when the player reaches the app. Between passes there is **no pass**, and
+  that absence is load-bearing: it is what lets a resumed run begin one without adopting a
+  finished walk's queue. _Avoid_: **"run"** — that is one Assessment, and a pass is a
+  sequence of them; **"session"** — that is the auth session, and the two have different
+  lifetimes; also "onboarding state", "wizard".
 - **Deferred run** — an Assessment the player asked to **continue later**. Unfinished on
   the server with every answer intact, and held on the client only so the entry gate stops
   resuming it. It lasts the **app session**, deliberately outliving the pass: a pass ends

@@ -41,35 +41,25 @@ describe('beginning a pass', () => {
 });
 
 describe('choosing sports', () => {
+  // A queue, not a pass: the picker's selection is a list a player is still building, and
+  // calling that a pass is what made "no pass" and "a pass nobody ended" the same value.
   it('keeps the order they were chosen in', () => {
-    let pass = toggleSport(begin([]), 'tennis');
-    pass = toggleSport(pass, 'padel');
+    let queue = toggleSport([], 'tennis');
+    queue = toggleSport(queue, 'padel');
 
     // Not registry order: the first sport tapped is the first assessment, and that is the
     // only thing the order means.
-    expect(pass.queue).toEqual(['tennis', 'padel']);
+    expect(queue).toEqual(['tennis', 'padel']);
   });
 
   it('removes a sport that was already chosen', () => {
-    expect(toggleSport(passOver(['tennis', 'padel', 'squash']), 'padel').queue).toEqual([
-      'tennis',
-      'squash',
-    ]);
+    expect(toggleSport(['tennis', 'padel', 'squash'], 'padel')).toEqual(['tennis', 'squash']);
   });
 
-  it('leaves what has been rated alone', () => {
-    const pass = recordRated(passOver(['padel', 'tennis']), {
-      assessmentId: PADEL_RUN,
-      sport: 'padel',
-    });
-
-    expect(toggleSport(pass, 'squash').rated).toEqual(pass.rated);
-  });
-
-  it('does not mutate the pass it was given', () => {
-    const pass = passOver(['tennis']);
-    toggleSport(pass, 'padel');
-    expect(pass.queue).toEqual(['tennis']);
+  it('does not mutate the queue it was given', () => {
+    const queue: readonly ('padel' | 'tennis')[] = ['tennis'];
+    toggleSport(queue, 'padel');
+    expect(queue).toEqual(['tennis']);
   });
 });
 
@@ -115,10 +105,22 @@ describe('position across sports', () => {
     expect(positionOf(pass, 'padel')).toEqual({ index: 2, total: 2 });
   });
 
-  it('treats a sport outside the pass as a run of one', () => {
-    // The resumed case, and a fallback that is only honest while a pass begins implicitly:
-    // a run resumed after a completed pass reads "Rating 2 of 2" today. #47 removes it.
-    expect(positionOf(begin([]), 'padel')).toEqual({ index: 1, total: 1 });
+  it('has no position for a sport outside the pass', () => {
+    // Reachable by deep link to a question whose sport was never chosen. There is no
+    // honest position for it, so the chrome renders no bar rather than inventing one.
+    expect(positionOf(begin([]), 'padel')).toBeUndefined();
+    expect(positionOf(passOver(['tennis']), 'padel')).toBeUndefined();
+  });
+
+  it('has no position at all when no pass is running', () => {
+    expect(positionOf(undefined, 'padel')).toBeUndefined();
+  });
+
+  it('reads a resumed run as one of one, through the ordinary rule', () => {
+    // The defect this replaced: with nothing ending a pass, a run resumed after a walk
+    // that rated two sports was still inside that walk and read "Rating 2 of 2". A resumed
+    // run is now a genuine pass of one sport, and needs no special case to say so.
+    expect(positionOf(begin(['padel']), 'padel')).toEqual({ index: 1, total: 1 });
   });
 });
 
@@ -165,6 +167,13 @@ describe('where the player goes after a sport', () => {
   it('goes straight to the app from a sport outside the pass that produced nothing', () => {
     // The resumed run that was abandoned: nothing was chosen, nothing was rated.
     expect(nextDestination(begin([]), 'padel')).toEqual({ kind: 'app' });
+  });
+
+  it('goes straight to the app when no pass is running', () => {
+    // The same answer as a pass that produced nothing, for the same reason: there is
+    // nothing to account for. This is what sends a player who abandons a resumed run into
+    // the app rather than to a summary of an earlier walk's ratings.
+    expect(nextDestination(undefined, 'padel')).toEqual({ kind: 'app' });
   });
 
   it('shows the closing screens from a sport outside the pass once something was rated', () => {

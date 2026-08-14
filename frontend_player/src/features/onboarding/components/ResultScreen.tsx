@@ -70,6 +70,7 @@ import { EvidenceTrail } from './EvidenceTrail';
 import { OnboardingChrome } from './OnboardingChrome';
 import { BAND_NAMES, bandPresentation, ratingStatusLabel } from './bandPresentation';
 import { onboardingErrorMessage } from './onboardingErrorMessage';
+import { passEyebrow } from './passEyebrow';
 import { formatConfidence, formatLevel, formatRange } from './ratingFormat';
 import { sportLabel } from './sportPresentation';
 
@@ -206,7 +207,7 @@ export function ResultScreen({ assessmentId, sport }: ResultScreenProps) {
         {...behindOverlay(explainer !== undefined)}
       >
         <OnboardingChrome
-          eyebrow={`${sportLabel(sport)} · Rating ${position.index} of ${position.total}`}
+          eyebrow={passEyebrow(sport, position)}
           title="Your rating"
           position={position}
         />

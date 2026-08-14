@@ -13,12 +13,14 @@
  */
 
 import { useRouter } from 'expo-router';
+import { useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button, Note, PressableCard, theme } from '@/shared/ui';
 
 import type { Sport } from '../domain/Sport';
+import { toggleSport } from '../domain/onboardingPass';
 import { useOnboardingPass } from '../store/onboardingPass.store';
 import { useSports } from '../hooks/useSports';
 import { useStartAssessment } from '../hooks/useStartAssessment';
@@ -30,8 +32,15 @@ import { sportColour, sportLabel } from './sportPresentation';
 export function SportsPickerScreen() {
   const router = useRouter();
   const sports = useSports();
-  const queue = useOnboardingPass((state) => state.pass.queue);
-  const toggle = useOnboardingPass((state) => state.choose);
+  /**
+   * The selection is this screen's own state, not a pass. A player still choosing has not
+   * begun a walk through onboarding — they can add sports, remove them and leave — and the
+   * pass begins on continue, with what they settled on. Ordering is `toggleSport`'s, so
+   * "the first sport tapped is the first assessment" stays a tested rule rather than an
+   * accident of how the array was built.
+   */
+  const [queue, setQueue] = useState<readonly Sport[]>([]);
+  const toggle = (sport: Sport) => setQueue((chosen) => toggleSport(chosen, sport));
   const beginPass = useOnboardingPass((state) => state.begin);
   const start = useStartAssessment();
 
@@ -39,10 +48,9 @@ export function SportsPickerScreen() {
 
   const begin = () => {
     if (first === undefined) return;
-    // A new queue is a new pass, and the done screen accounts for *this* pass. Nothing
-    // else reaches onboarding twice in one launch today; beginning here is what keeps
-    // that a property of the flow rather than a consequence of nothing else being
-    // possible. #47 makes it the definition, by ending a pass at the entry gate.
+    // The pass begins here, with the queue that was chosen. It no longer *clears* an
+    // earlier walk — the entry gate ended that one when the player reached the app — so
+    // this is a beginning rather than a reset that happened to double as one.
     beginPass(queue);
     start.mutate(first, {
       onSuccess: (step) =>
