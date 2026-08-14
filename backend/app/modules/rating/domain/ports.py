@@ -48,6 +48,22 @@ class AssessmentRepository(Protocol):
         """
         ...
 
+    async def next_identity(self, *, player_id: UUID, sport: Sport) -> UUID:
+        """The id the next run for this pair will be filed under.
+
+        Derived from ``(player, sport, attempt)`` rather than minted at random,
+        which is what makes *at most one open run per sport* something the store
+        enforces instead of something a read-before-write hopes for. Two starts
+        that both read before either appends compute the **same** id and collide
+        on one stream's version 1; one wins and the other is told (#35).
+
+        Asked of the repository because the attempt number is a fact about what
+        the store already holds. The read is not load-bearing for correctness —
+        a stale count yields a candidate id that the unique constraint rejects,
+        which is exactly the outcome it should.
+        """
+        ...
+
     async def find_open(self, *, player_id: UUID, sport: Sport) -> Assessment | None:
         """This player's unfinished run for a sport, or nothing.
 

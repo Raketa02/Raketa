@@ -33,6 +33,7 @@ from app.application.ports import DomainEventPublisher, DomainEventStore
 from app.kernel import Sport
 from app.modules.rating.domain.assessment import Assessment
 from app.modules.rating.domain.errors import AssessmentNotFound
+from app.modules.rating.domain.ids import assessment_stream_id
 
 ASSESSMENT_AGGREGATE = "assessment"
 
@@ -98,6 +99,17 @@ class EventSourcedAssessmentRepository:
         # Deliberately no commit: the transaction spans two aggregates when an
         # assessment completes, so its boundary stays in the use case.
         self._remember(assessment)
+
+    async def next_identity(self, *, player_id: UUID, sport: Sport) -> UUID:
+        # Every stream this pair has ever opened, whatever became of it: an
+        # abandoned run still happened and still holds its attempt number, so
+        # counting only the open ones would hand the next run an id that is
+        # already taken.
+        existing = await self._event_store.find_aggregate_ids_by_first_event(
+            aggregate_type=ASSESSMENT_AGGREGATE,
+            payload_equals=_opening_key(player_id, sport),
+        )
+        return assessment_stream_id(player_id, sport, len(existing))
 
     async def find_open(self, *, player_id: UUID, sport: Sport) -> Assessment | None:
         open_runs = await self._newest_open_by_sport(_opening_key(player_id, sport))

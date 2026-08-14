@@ -22,18 +22,29 @@ same wall. Whether re-rating should instead replace the rating is deliberately
 left open; the transition that would answer it is the match-update engine's
 (#53).
 
-**What this closes and what it does not.** The check is a read before a write, so
-it resolves every case where the first start has already committed — the retry
-after a lost response, the second device, the double tap slower than a round trip.
-It does not serialise two starts that read the store *before either has appended*:
-each mints its own stream id, so there is no version to collide on and both
-succeed. Closing that needs a uniqueness the store can enforce — a projection
-carrying one row per (player, sport, open run), or a stream id derived from those
-— which is a schema decision rather than a guard, and is filed separately.
+**The guard is a read before a write, and it is no longer the only thing holding
+the line.** It resolves every case where the first start has already committed —
+the retry after a lost response, the second device, the double tap slower than a
+round trip — and it does so without writing anything.
+
+What it never could resolve is two starts that read the store *before either has
+appended*. While each minted a random stream id there was nothing for them to
+collide on, so both succeeded and one run was stranded: invisible to every client
+path, so nothing surfaced it and nothing cleaned it up (#35).
+
+**The stream id is now derived from (player, sport, attempt)**, so those two
+starts compute the *same* id and collide on version 1 of one stream. The store
+already enforces that — ``uq_event_store_stream_version`` has been on the table
+since it was created — so this needs no projection, no migration and no rule for
+who maintains one. The loser rolls back and re-reads: if the winner has committed
+it hands back that run, exactly as the ordinary retry does; if it has not, the
+conflict surfaces as a 409 the client can retry into the same answer. Either way
+**no second stream is ever opened**, which is the part that was permanent.
 """
 
 from __future__ import annotations
 
+from app.application.events.store import EventStreamVersionConflict
 from app.application.ports import UnitOfWork
 from app.engines.assessment import AskQuestion, AssessmentEngine
 from app.modules.rating.application.assessment_view import (
@@ -49,7 +60,6 @@ from app.modules.rating.domain.assessment import Assessment
 from app.modules.rating.domain.errors import SportAlreadyRated
 from app.modules.rating.domain.ports import AssessmentRepository, SkillRatingRepository
 from app.shared.clock import Clock
-from app.shared.ids import new_uuid
 
 
 class CreateAssessment:
@@ -93,7 +103,13 @@ class CreateAssessment:
             )
 
         now = self._clock.now()
-        assessment_id = new_uuid()
+        # Derived, not minted: see the module docstring. A concurrent start
+        # computes this same id, which is what gives the store something to
+        # reject.
+        assessment_id = await self._assessments.next_identity(
+            player_id=command.player_id,
+            sport=command.sport,
+        )
 
         # A fresh assessment always opens with a question; the engine reports why
         # it asked and the estimate that existed at that moment (the prior).
@@ -118,8 +134,11 @@ class CreateAssessment:
         # Appended at version zero without saying so: the repository never
         # loaded this aggregate, so it has no version for it, and "this stream
         # does not exist yet" follows from that rather than from a claim here.
-        await self._assessments.save(assessment)
-        await self._uow.commit()
+        try:
+            await self._assessments.save(assessment)
+            await self._uow.commit()
+        except EventStreamVersionConflict as conflict:
+            return await self._yield_to_the_winner(command, conflict)
 
         return AssessmentStart(
             step=AssessmentStep(
@@ -132,4 +151,38 @@ class CreateAssessment:
                 result=None,
             ),
             created=True,
+        )
+
+    async def _yield_to_the_winner(
+        self,
+        command: CreateAssessmentCommand,
+        conflict: EventStreamVersionConflict,
+    ) -> AssessmentStart:
+        """Another start reached this stream first. Hand back its run, or say so.
+
+        The transaction is rolled back before anything is re-read: the append
+        failed inside it, and a session that has raised is not a session you can
+        keep querying.
+
+        If the winner has committed, its run is found and returned exactly as the
+        ordinary retry returns it — the player cannot tell the two apart, and
+        should not be able to. If it has not committed yet, there is nothing
+        truthful to hand back, so the conflict is re-raised and surfaces as a 409
+        the client retries into the same answer a moment later. What does **not**
+        happen either way is a second stream, which is the failure that was
+        silent and permanent.
+        """
+
+        await self._uow.rollback()
+
+        winner = await self._assessments.find_open(
+            player_id=command.player_id,
+            sport=command.sport,
+        )
+        if winner is None:
+            raise conflict
+
+        return AssessmentStart(
+            step=current_step(self._engine, winner),
+            created=False,
         )
