@@ -10,7 +10,13 @@
 
 import { configureHttp } from "@/shared/lib/http";
 
-import { getAccessToken } from "./tokenManager";
+import {
+  configureRefresh,
+  refreshSession,
+  type RefreshExchange,
+} from "./refreshCoordinator";
+import { endSession } from "./session";
+import { getCredential } from "./tokenManager";
 
 export type { SessionStatus, SignOutReason, Tokens } from "./auth.types";
 
@@ -23,6 +29,8 @@ export {
 } from "./authSession";
 
 export { beginSession, endSession } from "./session";
+
+export { resetRefresh, type RefreshExchange, type RefreshOutcome } from "./refreshCoordinator";
 
 export {
   clear as clearStoredTokens,
@@ -38,8 +46,21 @@ export {
  * client needs this subsystem's access token — so one direction is inverted instead of
  * left as an import cycle. Auth registers itself; the client never imports auth.
  *
+ * `exchange` comes from the caller for the same reason the bootstrap sequence takes
+ * `restoreSession` from one: the refresh endpoint's path and its generated types live in
+ * the auth feature's `api/` layer, and `shared/` may never import a feature. Only the
+ * wire call is injected — when to rotate, how to coordinate, and what a failure means all
+ * stay in `shared/lib/http` and `refreshCoordinator`.
+ *
  * Called by the bootstrap sequence, before any request can be made.
  */
-export function wireHttpCredentials(): void {
-  configureHttp({ getAccessToken });
+export function wireHttpCredentials(exchange: RefreshExchange): void {
+  configureRefresh(exchange);
+  configureHttp({
+    current: getCredential,
+    refresh: refreshSession,
+    // The transport only reaches this after a freshly-rotated credential was rejected,
+    // which is the same fact a rejected refresh establishes — so it is the same exit.
+    abandon: () => endSession("session-invalidated"),
+  });
 }

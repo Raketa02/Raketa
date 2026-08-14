@@ -20,8 +20,13 @@ export { authKeys } from "./hooks/authKeys";
 export { useCurrentUser } from "./hooks/useCurrentUser";
 
 /**
- * The launch step. Exported because the bootstrap sequence needs it and
+ * The two launch steps. Exported because the bootstrap sequence needs them and
  * `shared/lib/bootstrap` may not import a feature — so the root layout, whose job is
  * composition, wires the two together.
+ *
+ * `refreshTokens` is the wire call the rotation is built on, not the rotation itself:
+ * that lives in `shared/lib/http` and `shared/lib/auth`, and nothing here may re-implement
+ * it.
  */
+export { refreshTokens } from "./use-cases/refreshTokens";
 export { restoreSession, type RestoredSession } from "./use-cases/restoreSession";

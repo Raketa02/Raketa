@@ -32,6 +32,7 @@ import {
 
 import { authKeys } from "../hooks/authKeys";
 
+import { refreshTokens } from "./refreshTokens";
 import { restoreSession } from "./restoreSession";
 
 const USER: Wire["UserResponse"] = {
@@ -48,7 +49,7 @@ let transport: Transport;
 beforeEach(async () => {
   transport = installTransport();
   resetSessionStatus();
-  wireHttpCredentials();
+  wireHttpCredentials(refreshTokens);
   await clearStoredTokens();
   queryClient.clear();
 });
@@ -100,18 +101,54 @@ describe("relaunching", () => {
     expect(transport.requests).toHaveLength(0);
   });
 
-  it("discards a token the server no longer recognises", async () => {
+  it("discards credentials the server no longer recognises", async () => {
     // The iOS reinstall case: Keychain data outlives the app, so a fresh install can
-    // start life holding a credential the backend retired months ago.
+    // start life holding credentials the backend retired months ago. Both halves are
+    // dead here — an access token alone is no longer proof, because a stale one is now
+    // answered by a rotation.
     await credentialsOnDevice();
     transport.on("GET", "/api/v1/users/me", () =>
       errorResponse(401, "access_token_invalid"),
+    );
+    transport.on("POST", "/api/v1/auth/refresh", () =>
+      errorResponse(401, "refresh_token_not_recognised"),
     );
 
     const restored = await restoreSession();
 
     expect(restored.status).toBe("unauthenticated");
     expect(hasTokens()).toBe(false);
+  });
+
+  it("refreshes an expired access token rather than ending the session", async () => {
+    // An access token expires in minutes and a refresh token lasts weeks, so this is the
+    // *ordinary* relaunch — the app has been closed overnight. Signing the player out
+    // here would mean re-entering a password every morning.
+    await credentialsOnDevice();
+    const rotatedPair: Wire["TokenResponse"] = {
+      access_token: "access-2",
+      refresh_token: "refresh-2",
+      token_type: "bearer",
+      expires_in: 900,
+    };
+
+    let rotated = false;
+    transport.on("GET", "/api/v1/users/me", (request) =>
+      request.headers.Authorization === "Bearer access-2"
+        ? json(USER)
+        : errorResponse(401, "access_token_expired"),
+    );
+    transport.on("POST", "/api/v1/auth/refresh", () => {
+      rotated = true;
+      return json(rotatedPair);
+    });
+
+    const restored = await restoreSession();
+
+    expect(rotated).toBe(true);
+    expect(restored.status).toBe("authenticated");
+    expect(restored.user?.nickname).toBe("ada");
+    expect(hasTokens()).toBe(true);
   });
 
   it("keeps the session when the server could not be reached", async () => {
@@ -155,7 +192,7 @@ function renderLaunch() {
     bootstrapApp({
       validateConfig: () => {},
       wirePlatformManagers: () => {},
-      wireCredentials: wireHttpCredentials,
+      wireCredentials: () => wireHttpCredentials(refreshTokens),
       restoreSession: async () => {
         const restored = await restoreSession();
         if (restored.user !== undefined) {

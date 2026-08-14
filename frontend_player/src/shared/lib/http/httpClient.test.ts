@@ -19,6 +19,22 @@ import { TIMEOUT_MS } from "./timeouts";
 
 let transport: Transport;
 
+/**
+ * A credential adapter holding one token and refusing to rotate.
+ *
+ * The rotation itself is driven end to end in `shared/lib/auth/tokenRotation.test.ts`,
+ * against the real coordinator; these tests are about the chokepoint's other behaviours,
+ * so here a refresh is `unavailable` — the outcome that changes nothing.
+ */
+function credentialsFor(accessToken: string | undefined) {
+  return {
+    current: () =>
+      accessToken === undefined ? undefined : { accessToken, generation: 1 },
+    refresh: () => Promise.resolve("unavailable" as const),
+    abandon: () => Promise.resolve(),
+  };
+}
+
 beforeEach(() => {
   transport = installTransport();
   resetHttp();
@@ -32,7 +48,7 @@ afterEach(() => {
 
 describe("the auth header", () => {
   it("is attached to an authenticated request", async () => {
-    configureHttp({ getAccessToken: () => "token-1" });
+    configureHttp(credentialsFor("token-1"));
     transport.on("GET", "/api/v1/users/me", () => json({ ok: true }));
 
     await httpRequest({ method: "GET", path: "/api/v1/users/me", authenticated: true });
@@ -43,7 +59,7 @@ describe("the auth header", () => {
   it("is absent from an unauthenticated request even when a token exists", async () => {
     // Login, refresh and registration must not carry a stale token: the endpoints that
     // take none are a different set from the endpoints that happen to have none.
-    configureHttp({ getAccessToken: () => "token-1" });
+    configureHttp(credentialsFor("token-1"));
     transport.on("POST", "/api/v1/auth/login", () => json({ ok: true }));
 
     await httpRequest({
@@ -57,7 +73,7 @@ describe("the auth header", () => {
   });
 
   it("is absent when there is no session", async () => {
-    configureHttp({ getAccessToken: () => undefined });
+    configureHttp(credentialsFor(undefined));
     transport.on("GET", "/api/v1/sports", () => json({ sports: [] }));
 
     await httpRequest({ method: "GET", path: "/api/v1/sports", authenticated: true });

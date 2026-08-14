@@ -15,6 +15,7 @@ type UserResponse = components["schemas"]["UserResponse"];
 type UserCreateRequest = components["schemas"]["UserCreateRequest"];
 type LoginRequest = components["schemas"]["LoginRequest"];
 type LogoutResponse = components["schemas"]["LogoutResponse"];
+type RefreshRequest = components["schemas"]["RefreshRequest"];
 
 export interface AuthApiOptions {
   readonly signal?: AbortSignal;
@@ -45,6 +46,26 @@ export function register(
   return httpRequest<UserResponse>({
     method: "POST",
     path: "/api/v1/users",
+    body,
+    authenticated: false,
+    signal,
+  });
+}
+
+/**
+ * Trade a refresh token for a fresh pair.
+ *
+ * `authenticated: false` is doing real work here, not just describing the endpoint: it is
+ * what stops the refresh call from being refreshed. A rotation whose own 401 triggered
+ * another rotation would recurse until the app fell over.
+ */
+export function refresh(
+  body: RefreshRequest,
+  { signal }: AuthApiOptions = {},
+): Promise<TokenResponse> {
+  return httpRequest<TokenResponse>({
+    method: "POST",
+    path: "/api/v1/auth/refresh",
     body,
     authenticated: false,
     signal,

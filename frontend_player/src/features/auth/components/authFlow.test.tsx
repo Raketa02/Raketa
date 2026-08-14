@@ -35,6 +35,7 @@ import {
 } from "@/test-support/transport";
 
 import { authKeys } from "../hooks/authKeys";
+import { refreshTokens } from "../use-cases/refreshTokens";
 import { signIn } from "../use-cases/signIn";
 
 import { AccountScreen } from "./AccountScreen";
@@ -69,7 +70,7 @@ beforeEach(async () => {
   resetSessionStatus();
   // The real wiring: the session subsystem hands the http client its credential adapter
   // exactly as bootstrap does.
-  wireHttpCredentials();
+  wireHttpCredentials(refreshTokens);
   await clearStoredTokens();
   queryClient.clear();
 });

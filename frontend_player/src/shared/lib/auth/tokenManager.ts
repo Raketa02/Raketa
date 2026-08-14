@@ -29,6 +29,39 @@ const SESSION_KEY = "rakieta.session.v1";
  */
 let cached: Tokens | undefined;
 
+/**
+ * Which rotation the mirror currently holds. Bumped by **every** change — a save, a
+ * clear, a launch read — and never reset while the app runs.
+ *
+ * This is what makes a 401 legible. A 401 says "the token you sent is not accepted", and
+ * on a slow connection that answer can arrive long after the token it refers to was
+ * already replaced. Without a generation the rotation cannot tell that case from a
+ * genuinely current failure, and rotates again for each straggler — which is the
+ * "refresh token rotated ten times, nine of them invalidating each other" failure
+ * docs/architecture.md Part 5 describes. Comparing generations turns a stale 401 into a
+ * plain retry.
+ *
+ * It counts rotations, not credentials: nothing about a token value leaks through it, so
+ * it is safe to hand to the HTTP client.
+ */
+let generation = 0;
+
+/** A credential and the rotation it belongs to. The only shape that leaves this module. */
+export interface Credential {
+  readonly accessToken: string;
+  readonly generation: number;
+}
+
+/**
+ * The one way the mirror changes. Every path goes through here so that no future edit can
+ * move the credentials without moving the generation with them — a save that forgot to
+ * bump would make the rotation treat a fresh 401 as a stale one and never refresh.
+ */
+function setCached(next: Tokens | undefined): void {
+  cached = next;
+  generation += 1;
+}
+
 function isTokens(value: unknown): value is Tokens {
   if (typeof value !== "object" || value === null) return false;
   const candidate = value as Partial<Tokens>;
@@ -52,12 +85,12 @@ export async function load(): Promise<Tokens | undefined> {
   try {
     const raw = await SecureStore.getItemAsync(SESSION_KEY);
     if (raw === null) {
-      cached = undefined;
+      setCached(undefined);
       return undefined;
     }
 
     const parsed: unknown = JSON.parse(raw);
-    cached = isTokens(parsed) ? parsed : undefined;
+    setCached(isTokens(parsed) ? parsed : undefined);
 
     // An unreadable entry is not left behind to fail identically on every launch.
     if (cached === undefined) await SecureStore.deleteItemAsync(SESSION_KEY);
@@ -65,7 +98,7 @@ export async function load(): Promise<Tokens | undefined> {
     return cached;
   } catch {
     // Never log the failure with its value attached — the value is the credential.
-    cached = undefined;
+    setCached(undefined);
     return undefined;
   }
 }
@@ -78,7 +111,7 @@ export async function load(): Promise<Tokens | undefined> {
  */
 export async function save(tokens: Tokens): Promise<void> {
   await SecureStore.setItemAsync(SESSION_KEY, JSON.stringify(tokens));
-  cached = tokens;
+  setCached(tokens);
 }
 
 /**
@@ -89,7 +122,7 @@ export async function save(tokens: Tokens): Promise<void> {
  * memory because a disk write failed is a sign-out that did not happen.
  */
 export async function clear(): Promise<void> {
-  cached = undefined;
+  setCached(undefined);
   try {
     await SecureStore.deleteItemAsync(SESSION_KEY);
   } catch {
@@ -98,12 +131,27 @@ export async function clear(): Promise<void> {
   }
 }
 
-/** The access token for the next request. Synchronous by design — this is the hot path. */
-export function getAccessToken(): string | undefined {
-  return cached?.accessToken;
+/**
+ * The credential for the next request, stamped with the rotation it belongs to.
+ * Synchronous by design — this is the hot path, on every request.
+ */
+export function getCredential(): Credential | undefined {
+  return cached === undefined
+    ? undefined
+    : { accessToken: cached.accessToken, generation };
 }
 
-/** The refresh token. Read by sign-out (to revoke) and, later, by #22's rotation. */
+/**
+ * Which rotation the mirror holds right now, whether or not there is a credential in it.
+ *
+ * The refresh coordinator reads this twice — before and after the exchange — to notice
+ * that the session moved underneath an in-flight refresh.
+ */
+export function getGeneration(): number {
+  return generation;
+}
+
+/** The refresh token. Read by sign-out (to revoke) and by the refresh coordinator. */
 export function getRefreshToken(): string | undefined {
   return cached?.refreshToken;
 }

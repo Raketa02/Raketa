@@ -26,7 +26,6 @@
  */
 
 import { loadEnv } from "@/shared/config/env";
-import { wireHttpCredentials } from "@/shared/lib/auth";
 import { wireFocusManager, wireOnlineManager } from "@/shared/lib/platform";
 
 import { loadFonts } from "./fonts";
@@ -36,7 +35,12 @@ export interface BootstrapSteps {
   readonly validateConfig: () => void;
   /** Points TanStack Query's focus and online managers at native state. */
   readonly wirePlatformManagers: () => void;
-  /** Hands the HTTP client its credential adapter, before any request can be made. */
+  /**
+   * Hands the HTTP client its credential adapter, before any request can be made.
+   *
+   * Supplied by the root layout: the adapter now carries the token rotation, and the
+   * rotation's wire call belongs to the auth feature.
+   */
   readonly wireCredentials: () => void;
   /**
    * Reads the keychain and asks the server whether what it found is still a session.
@@ -49,8 +53,8 @@ export interface BootstrapSteps {
 }
 
 /**
- * The steps `shared/` can supply on its own. The root layout spreads this and adds
- * `restoreSession`, which is the one step that has to come from a feature.
+ * The steps `shared/` can supply on its own. The root layout spreads this and adds the
+ * two that have to come from a feature.
  */
 export const sharedBootstrapSteps = {
   validateConfig: loadEnv,
@@ -58,9 +62,8 @@ export const sharedBootstrapSteps = {
     wireFocusManager();
     wireOnlineManager();
   },
-  wireCredentials: wireHttpCredentials,
   loadFonts,
-} as const satisfies Omit<BootstrapSteps, "restoreSession">;
+} as const satisfies Omit<BootstrapSteps, "restoreSession" | "wireCredentials">;
 
 export async function bootstrapApp(steps: BootstrapSteps): Promise<void> {
   steps.validateConfig();

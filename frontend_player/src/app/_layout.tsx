@@ -17,12 +17,22 @@ import { StatusBar } from "expo-status-bar";
 import { useCallback } from "react";
 import { SafeAreaProvider, initialWindowMetrics } from "react-native-safe-area-context";
 
-import { authKeys, restoreSession } from "@/features/auth/types";
+import { authKeys, refreshTokens, restoreSession } from "@/features/auth/types";
+import { wireHttpCredentials } from "@/shared/lib/auth";
 import { BootstrapGate, bootstrapApp, sharedBootstrapSteps } from "@/shared/lib/bootstrap";
 import { queryClient } from "@/shared/lib/query-client";
 
 /**
- * The one step `shared/` cannot supply itself: restoring a session belongs to the auth
+ * Hand the HTTP client its credential adapter, including the wire call its 401 rotation
+ * needs. The rotation itself lives in `shared/`; only the endpoint comes from the feature,
+ * because only a feature's `api/` layer may read the generated wire types.
+ */
+function wireCredentialsStep(): void {
+  wireHttpCredentials(refreshTokens);
+}
+
+/**
+ * The other step `shared/` cannot supply itself: restoring a session belongs to the auth
  * feature, and `shared/lib/bootstrap` may never import a feature. Composing them is a
  * route file's job, which is why this adapter is here and is this small.
  *
@@ -39,7 +49,12 @@ async function restoreSessionStep(): Promise<void> {
 
 export default function RootLayout() {
   const run = useCallback(
-    () => bootstrapApp({ ...sharedBootstrapSteps, restoreSession: restoreSessionStep }),
+    () =>
+      bootstrapApp({
+        ...sharedBootstrapSteps,
+        wireCredentials: wireCredentialsStep,
+        restoreSession: restoreSessionStep,
+      }),
     [],
   );
 
