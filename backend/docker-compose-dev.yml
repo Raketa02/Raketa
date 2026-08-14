@@ -1,3 +1,12 @@
+# Named explicitly, because Compose otherwise derives the project name from the
+# directory — which here is `backend`, a name generic enough that a second project
+# on the same machine can claim it. When that happens the two share `backend_pgdata`,
+# and the loser is whichever stack starts second: Postgres applies POSTGRES_USER and
+# POSTGRES_PASSWORD only when it initialises an *empty* data directory, so an existing
+# volume keeps the other project's roles and the API dies on "password authentication
+# failed for user rakieta_user" — with a healthy database sitting right next to it.
+name: rakieta
+
 services:
   db:
     image: postgres:17
