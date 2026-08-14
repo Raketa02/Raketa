@@ -105,7 +105,10 @@ player's decision to come back later. Both are modelled in
   straight from the entry gate, which is a genuine pass of one sport — and it **ends** in
   one place, when the player reaches the app. Between passes there is **no pass**, and
   that absence is load-bearing: it is what lets a resumed run begin one without adopting a
-  finished walk's queue. _Avoid_: **"run"** — that is one Assessment, and a pass is a
+  finished walk's queue. **Onboarding happens once, at the beginning** — there is no
+  re-take from inside the app — so a link naming a sport outside the running pass is sent
+  to welcome rather than into the middle of a flow. _Avoid_: **"run"** — that is one
+  Assessment, and a pass is a
   sequence of them; **"session"** — that is the auth session, and the two have different
   lifetimes; also "onboarding state", "wizard".
 - **Deferred run** — an Assessment the player asked to **continue later**. Unfinished on

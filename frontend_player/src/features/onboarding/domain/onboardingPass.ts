@@ -110,9 +110,10 @@ export interface RatingPosition {
  * one honest thing to measure.
  *
  * **Nothing, when there is no pass or the sport is not in it.** There is no honest
- * position for a sport nobody chose, and the chrome renders no bar rather than inventing
- * a denominator — a state it already supports, because welcome and the picker have
- * nothing to measure either.
+ * position for a sport nobody chose — and rather than draw a bar with no denominator, the
+ * question and result routes turn that player away entirely (`admissionTo` below). So no
+ * screen reaches the empty answer today; it stays because it is the honest one, and
+ * because it is *why* those routes can send the player back to the beginning.
  *
  * This used to return `{index: 1, total: 1}` for a sport outside the pass. That fallback
  * is what made a resumed run read "Rating 1 of 1" *and* what made a resumed run after a
@@ -128,6 +129,43 @@ export function positionOf(
   if (pass === undefined) return undefined;
   const at = pass.queue.indexOf(sport);
   return at === -1 ? undefined : { index: at + 1, total: pass.queue.length };
+}
+
+export type PassAdmission =
+  /** This sport is in the pass that is running. Render the questionnaire. */
+  | { readonly kind: 'admit' }
+  /** No pass is running: a run reached on its own is a pass of that one sport. */
+  | { readonly kind: 'begin' }
+  /** A pass is running and this sport is not in it. Onboarding starts at the start. */
+  | { readonly kind: 'start-over' };
+
+/**
+ * Whether a player may be dropped straight into this sport's questionnaire.
+ *
+ * **Onboarding happens once, at the beginning.** There is no re-take from inside the app
+ * yet, so the only legitimate ways onto a question are the picker's queue and the entry
+ * gate resuming an unfinished run. A link that lands somewhere else — a hand-built URL, a
+ * stale notification, an invitation forwarded to a player who never chose these sports —
+ * is not a shortcut into the middle of a flow, and treating it as one is what produced a
+ * questionnaire with no honest progress to show.
+ *
+ * The three answers are the three real situations:
+ *
+ * - **No pass** is the resume path. The gate redirects to an outstanding question with no
+ *   picker in between, and that run is a genuine pass of one sport.
+ * - **The sport is in the pass** is the ordinary case, every screen after the picker.
+ * - **A pass is running without this sport** cannot be reached by any flow the app has.
+ *   The player goes back to the beginning, and if the run really was theirs the picker
+ *   hands it straight back — starting a sport with an unfinished run returns that run.
+ *
+ * `start-over` must not send the player through the entry gate. The gate answers *resume*
+ * for an outstanding run, which would redirect to this same question and ask this same
+ * question again — a loop. Welcome is a screen, and it is also literally where onboarding
+ * begins.
+ */
+export function admissionTo(pass: OnboardingPass | undefined, sport: Sport): PassAdmission {
+  if (pass === undefined) return { kind: 'begin' };
+  return pass.queue.includes(sport) ? { kind: 'admit' } : { kind: 'start-over' };
 }
 
 export type PassDestination =

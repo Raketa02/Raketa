@@ -8,6 +8,7 @@
  */
 
 import {
+  admissionTo,
   begin,
   nextDestination,
   positionOf,
@@ -106,8 +107,9 @@ describe('position across sports', () => {
   });
 
   it('has no position for a sport outside the pass', () => {
-    // Reachable by deep link to a question whose sport was never chosen. There is no
-    // honest position for it, so the chrome renders no bar rather than inventing one.
+    // No longer reachable on a screen — `admissionTo` turns those players away — but it
+    // stays the honest answer, and it is *why* they can be turned away rather than drawn
+    // a bar with no denominator.
     expect(positionOf(begin([]), 'padel')).toBeUndefined();
     expect(positionOf(passOver(['tennis']), 'padel')).toBeUndefined();
   });
@@ -182,5 +184,37 @@ describe('where the player goes after a sport', () => {
     const pass = recordRated(passOver(['padel']), { assessmentId: PADEL_RUN, sport: 'padel' });
 
     expect(nextDestination(pass, 'squash')).toEqual({ kind: 'closing' });
+  });
+});
+
+describe('being admitted to a questionnaire', () => {
+  // Onboarding happens once, at the beginning: there is no re-take from inside the app,
+  // so the only ways onto a question are the picker's queue and the gate resuming an
+  // unfinished run.
+  it('admits a sport that is in the pass', () => {
+    expect(admissionTo(passOver(['padel', 'tennis']), 'tennis')).toEqual({ kind: 'admit' });
+  });
+
+  it('begins a pass of one sport when none is running, which is the resumed run', () => {
+    expect(admissionTo(undefined, 'padel')).toEqual({ kind: 'begin' });
+  });
+
+  it('starts a player over when a pass is running without this sport', () => {
+    // The link nobody in this app can produce: a well-formed URL naming a sport that was
+    // never chosen, arriving mid-walk. There is no honest progress to draw for it.
+    expect(admissionTo(passOver(['padel']), 'squash')).toEqual({ kind: 'start-over' });
+  });
+
+  it('is unmoved by what the pass has already rated', () => {
+    // Admission is about the queue, not about outcomes: a sport whose run was abandoned
+    // was still chosen, and it keeps its place.
+    const pass = recordRated(passOver(['padel', 'tennis']), {
+      assessmentId: PADEL_RUN,
+      sport: 'padel',
+    });
+
+    expect(admissionTo(pass, 'padel')).toEqual({ kind: 'admit' });
+    expect(admissionTo(pass, 'tennis')).toEqual({ kind: 'admit' });
+    expect(admissionTo(pass, 'squash')).toEqual({ kind: 'start-over' });
   });
 });

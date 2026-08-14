@@ -81,28 +81,16 @@ export function QuestionScreen({ assessmentId, sport }: QuestionScreenProps) {
   const assessment = useAssessment(assessmentId);
   const answer = useAnswerQuestion(assessmentId);
   const abandon = useAbandonAssessment(assessmentId);
-  const beginIfAbsent = useOnboardingPass((state) => state.beginIfAbsent);
   const defer = useDeferredRuns((state) => state.defer);
 
-  /**
-   * A run reached with no pass running is a pass of one sport, and saying so **during the
-   * first render** is the whole requirement: the chrome reads a position immediately, and
-   * an effect flushes after that render has already happened. Doing it from the entry gate
-   * was rejected for the same reason — its redirect fires before an effect would run.
-   *
-   * The ref makes it once-per-mount; `beginIfAbsent` makes it harmless when the picker has
-   * already begun one. It is only safe to begin conditionally because ending is now
-   * reliable — otherwise this would adopt a finished walk's queue, which is the defect it
-   * exists to fix wearing a new interface.
-   */
-  const begun = useRef(false);
-  if (!begun.current) {
-    begun.current = true;
-    beginIfAbsent([sport]);
-  }
-
   const pass = useOnboardingPass((state) => state.pass);
-  /** Absent for a sport outside the pass — reachable by deep link. The bar then goes. */
+  /**
+   * Always present by the time this screen renders: the route admits nobody whose sport is
+   * outside the running pass, and begins a pass of one sport when there is none — which is
+   * the resumed run. `positionOf` still answers *nothing* for a sport it cannot place,
+   * because that is the honest answer and it is the reason the route can turn those
+   * players away rather than draw them a bar with no denominator.
+   */
   const position = positionOf(pass, sport);
   /**
    * Leaving this sport, in one place. The screen holds no navigation and no latch of its

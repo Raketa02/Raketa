@@ -32,5 +32,12 @@ export { useEntryDecision, type EntryDecision } from './hooks/useEntryDecision';
  */
 export { useEndOnboardingPass } from './hooks/useEndOnboardingPass';
 
+/**
+ * Whether a link may drop a player straight into a sport's questionnaire. Onboarding
+ * happens once, at the beginning, so a link naming a sport this player never chose sends
+ * them there rather than into the middle of a flow with nothing honest to show.
+ */
+export { useOnboardingAdmission, type OnboardingAdmission } from './hooks/useOnboardingAdmission';
+
 /** Route params are untrusted input, so the route that reads them validates them here. */
 export { parseAssessmentRouteParams, type AssessmentRouteParams } from './schemas/routeParams';

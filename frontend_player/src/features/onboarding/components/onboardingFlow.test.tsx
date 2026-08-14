@@ -374,10 +374,10 @@ describe('walking into the questionnaire', () => {
     answer();
     await waitFor(() => expect(screen).toHavePathname(`/question/${ASSESSMENT_ID}`));
 
-    // The blocked button is **UX, not correctness**: `POST /assessments` has no
-    // in-progress guard, so two starts that did reach the server would open two runs for
-    // one sport and strand one of them. The real defence is backend-side — see the
-    // follow-up issue.
+    // The blocked button is **UX, not correctness**, and the correctness now exists
+    // behind it: `POST /assessments` guards on an unfinished run, and the assessment's
+    // stream id is derived from (player, sport, attempt) so two starts that both read
+    // before either appends collide on one stream instead of stranding a second run.
     expect(transport.requestsTo('POST', '/api/v1/assessments')).toHaveLength(1);
   });
 
@@ -392,5 +392,73 @@ describe('walking into the questionnaire', () => {
     // not a write, and there is no endpoint it could be one against.
     const writes = transport.requests.filter((request) => request.method !== 'GET');
     expect(writes).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Links into the middle of onboarding
+// ---------------------------------------------------------------------------
+
+/** Well-formed, and pointing at a run this player has no business being handed. */
+const STRANGE_LINK_ID = 'e5f6a7b8-9c0d-4e1f-8a2b-3c4d5e6f7a8b';
+
+describe('a link into the middle of onboarding', () => {
+  // Onboarding happens once, at the beginning, and there is no re-take from inside the
+  // app. So surviving param validation is not the same as belonging here: a well-formed
+  // link naming a sport this player never chose is not a shortcut into a flow already
+  // under way, and drawing it a questionnaire meant drawing progress with no denominator.
+  it('sends a question link for a sport this player never chose back to the beginning', async () => {
+    stubGate();
+    // A pass is running over padel — the player is mid-onboarding — and the link names
+    // squash.
+    useOnboardingPass.getState().begin(['padel']);
+
+    await launchSignedIn(`/question/${STRANGE_LINK_ID}?sport=squash`);
+
+    await waitFor(() => expect(screen).toHavePathname('/welcome'));
+    // Turned away before anything was asked of the server, rather than after a request
+    // whose answer would have been rendered into a screen with nothing honest to show.
+    expect(transport.requestsTo('GET', `/api/v1/assessments/${STRANGE_LINK_ID}`)).toEqual([]);
+  });
+
+  it('sends a result link for a sport this player never chose back to the beginning', async () => {
+    // A result is a screen inside onboarding, so it carries the same rule for the same
+    // reason — it belongs at the beginning, not at somebody's rating.
+    stubGate();
+    useOnboardingPass.getState().begin(['padel']);
+
+    await launchSignedIn(`/result/${STRANGE_LINK_ID}?sport=squash`);
+
+    await waitFor(() => expect(screen).toHavePathname('/welcome'));
+    expect(transport.requestsTo('GET', `/api/v1/assessments/${STRANGE_LINK_ID}`)).toEqual([]);
+  });
+
+  it('welcomes back to the beginning rather than through the gate, so a real run cannot loop', async () => {
+    // The trap this avoids: the gate answers *resume* for an outstanding run, so sending
+    // a turned-away player through `/` would redirect them straight back to the question
+    // that turned them away. Welcome is a screen, and the picker hands the run back
+    // anyway — starting a sport with an unfinished run returns that run.
+    stubGate({ runs: [runInProgress('SQUASH', STRANGE_LINK_ID)] });
+    useOnboardingPass.getState().begin(['padel']);
+
+    await launchSignedIn(`/question/${STRANGE_LINK_ID}?sport=squash`);
+
+    await waitFor(() => expect(screen).toHavePathname('/welcome'));
+    // Still there a beat later: not bouncing between the gate and the question.
+    expect(await screen.findByLabelText('Get started')).toBeTruthy();
+    expect(screen).toHavePathname('/welcome');
+  });
+
+  it('still admits a run resumed with no pass, which is the gate doing its job', async () => {
+    // The other side of the same rule, and the one that must not regress: the gate
+    // redirects to an outstanding question with no picker in between, and that run is a
+    // genuine pass of one sport.
+    stubGate({ runs: [runInProgress('TENNIS', ASSESSMENT_ID)] });
+    transport.on('GET', `/api/v1/assessments/${ASSESSMENT_ID}`, () => json(OPENING_STEP));
+
+    await launchSignedIn();
+
+    await waitFor(() => expect(screen).toHavePathname(`/question/${ASSESSMENT_ID}`));
+    expect(await screen.findByText('Tennis · Rating 1 of 1')).toBeTruthy();
   });
 });
