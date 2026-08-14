@@ -1,8 +1,12 @@
-"""The assessment endpoints — server-driven, one exchange per answer.
+"""The rating context's endpoints: the assessment exchange, and the ratings held.
 
 Creating an assessment returns the first question; submitting an answer returns
 either the next question or the final result. The client holds no flow state; the
 mutation response *is* the current question.
+
+``/ratings`` is the other side of that — not a run in progress but the ratings a
+player already holds. Two routers, because they are two resources; the client's
+entry gate reads both, in parallel, and neither answers the other's question.
 """
 
 from __future__ import annotations
@@ -17,6 +21,7 @@ from app.modules.rating.application.commands import (
     CreateAssessmentCommand,
     FindInProgressQuery,
     GetAssessmentQuery,
+    ListRatingsQuery,
     SubmitAnswerCommand,
 )
 from app.modules.rating.domain.ids import PlayerId
@@ -25,16 +30,35 @@ from app.modules.rating.presentation.dependencies import (
     CreateAssessmentDep,
     FindInProgressAssessmentDep,
     GetAssessmentDep,
+    ListPlayerRatingsDep,
     SubmitAnswerDep,
 )
 from app.modules.rating.presentation.schemas import (
     AssessmentStepResponse,
     CreateAssessmentRequest,
+    RatingsResponse,
     SubmitAnswerRequest,
 )
 from app.modules.users.presentation.dependencies import CurrentUserDep
 
 router = APIRouter(prefix="/assessments", tags=["assessments"])
+ratings_router = APIRouter(prefix="/ratings", tags=["ratings"])
+
+
+@ratings_router.get(
+    "",
+    response_model=RatingsResponse,
+    status_code=status.HTTP_200_OK,
+    summary="The Skill ratings this player holds, one per rated sport",
+)
+async def list_ratings(
+    current_user: CurrentUserDep,
+    use_case: ListPlayerRatingsDep,
+) -> RatingsResponse:
+    ratings = await use_case.execute(
+        ListRatingsQuery(player_id=PlayerId(current_user.id))
+    )
+    return RatingsResponse.from_views(ratings)
 
 
 @router.post(

@@ -1,4 +1,4 @@
-"""Wire schemas for the assessment endpoints.
+"""Wire schemas for the rating context — assessments and the ratings a player holds.
 
 The result payload is numbers, the band's own boundaries, computed directions and
 server-authored copy — no colours, no glyphs, no ordering. The client owns
@@ -7,6 +7,8 @@ is a decision one of them would have to undo.
 """
 
 from __future__ import annotations
+
+from datetime import datetime
 
 from pydantic import BaseModel, Field
 
@@ -18,7 +20,7 @@ from app.engines.assessment import (
     UncertaintyFactor,
 )
 from app.kernel import Sport
-from app.modules.rating.application.commands import AssessmentStep
+from app.modules.rating.application.commands import AssessmentStep, RatingView
 
 
 class CreateAssessmentRequest(BaseModel):
@@ -167,6 +169,54 @@ class ResultResponse(BaseModel):
                 for factor in result.uncertainty_factors
             ],
         )
+
+
+class RatingResponse(BaseModel):
+    """One sport's Skill rating.
+
+    ``mu`` and ``sigma`` are the Level and the Uncertainty — the same spelling
+    ``ResultResponse`` already puts on the wire for the same two numbers, so a
+    client never has to learn that the rating it was just shown and the rating it
+    later reads back are described in two vocabularies.
+    """
+
+    sport: Sport
+    mu: float
+    sigma: float
+    confidence: int
+    range: RangeResponse
+    band: BandResponse
+    status: str
+    engine_version: str
+    updated_at: datetime
+
+    @classmethod
+    def from_view(cls, rating: RatingView) -> "RatingResponse":
+        return cls(
+            sport=rating.sport,
+            mu=rating.mu,
+            sigma=rating.sigma,
+            confidence=rating.confidence,
+            range=RangeResponse(low=rating.range_low, high=rating.range_high),
+            band=BandResponse(
+                name=rating.band_name,
+                lower=rating.band_lower,
+                upper=rating.band_upper,
+            ),
+            status=rating.status,
+            engine_version=rating.engine_version,
+            updated_at=rating.updated_at,
+        )
+
+
+class RatingsResponse(BaseModel):
+    """Every sport this player is rated at — empty when they are rated at none."""
+
+    ratings: list[RatingResponse]
+
+    @classmethod
+    def from_views(cls, ratings: list[RatingView]) -> "RatingsResponse":
+        return cls(ratings=[RatingResponse.from_view(rating) for rating in ratings])
 
 
 class AssessmentStepResponse(BaseModel):

@@ -18,6 +18,7 @@ from app.modules.rating.application.find_in_progress_assessment import (
     FindInProgressAssessment,
 )
 from app.modules.rating.application.get_assessment import GetAssessment
+from app.modules.rating.application.list_ratings import ListPlayerRatings
 from app.modules.rating.application.submit_answer import SubmitAnswer
 
 
@@ -106,3 +107,12 @@ def get_abandon_assessment(
 
 
 AbandonAssessmentDep = Annotated[AbandonAssessment, Depends(get_abandon_assessment)]
+
+
+def get_list_player_ratings(event_store: DomainEventStoreDep) -> ListPlayerRatings:
+    # No engine: a stored rating is replayed, never recomputed. Its numbers are
+    # the ones the player was shown, whatever the engine has since become.
+    return ListPlayerRatings(event_store=event_store)
+
+
+ListPlayerRatingsDep = Annotated[ListPlayerRatings, Depends(get_list_player_ratings)]

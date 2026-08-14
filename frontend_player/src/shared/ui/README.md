@@ -72,3 +72,19 @@ This folder is deliberately not pre-populated, with one exception worth knowing:
 **match card**, the **state card**, the **level bar** and the **popover** are shared
 components from the start. The prototype maintained a second copy of each in its deck and
 recorded that they had drifted — one implementation, used everywhere.
+
+Built so far, by the onboarding slice: `Button`, `Card` (+ `PressableCard`), `Note`,
+`Bar`, `ScreenHeader`, `Tag`, `Hairline`, `BottomSheet`, `CloseControl`. Import them from
+`@/shared/ui`.
+
+`BottomSheet` is the app's first **overlay**, and 9.1's "it is a real modal" is three
+separate obligations rather than one prop — read its docblock before adding a second
+sheet. Two of them are the caller's: the screen behind spreads `behindSheet(open)`, and
+the sheet is rendered as that screen's *sibling*, never inside it. `CloseControl` is 9.1's
+close circle, shared because the header control that opens a sheet and the sheet's own
+close are the same 28pt object.
+
+**A feature never keeps a second copy of one of these.** If a primitive does not do what
+a screen needs, extend the primitive — the two auth-form controls that remain in
+`features/auth/components/AuthControls.tsx` are there because the design system genuinely
+specifies no text field and no *ended badly* note variant, and each says so in place.

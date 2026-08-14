@@ -18,6 +18,7 @@ from fastapi import APIRouter, FastAPI
 from app.api.v1.club import club_api_router
 from app.api.v1.player import player_api_router
 from app.core.config import get_settings
+from app.core.exception_handlers import ErrorResponse
 
 # Written next to this backend's package root, alongside the sources both clients
 # read with ``openapi-typescript ../backend/openapi.<surface>.json``.
@@ -27,6 +28,26 @@ SURFACES: dict[str, APIRouter] = {
     "player": player_api_router,
     "club": club_api_router,
 }
+
+
+#: The name both clients generate their error type from.
+ERROR_SCHEMA_NAME = "ErrorResponse"
+
+
+def _document_error_envelope(spec: dict) -> dict:
+    """Publish the error envelope as a schema on this surface.
+
+    Registered on ``components`` directly rather than declared per operation:
+    the envelope is what *every* failure returns, on both surfaces, including
+    the ones no route can enumerate — an unrouted path, a rejected body, a
+    surface that has no paths yet. Attaching a guessed list of statuses to each
+    operation would document claims the code does not make, while leaving the
+    club document — which has no operations at all today — with no error type.
+    """
+
+    schemas = spec.setdefault("components", {}).setdefault("schemas", {})
+    schemas[ERROR_SCHEMA_NAME] = ErrorResponse.model_json_schema()
+    return spec
 
 
 def build_surface_spec(title: str, router: APIRouter) -> dict:
@@ -40,7 +61,7 @@ def build_surface_spec(title: str, router: APIRouter) -> dict:
     settings = get_settings()
     app = FastAPI(title=title, version=settings.VERSION)
     app.include_router(router)
-    return app.openapi()
+    return _document_error_envelope(app.openapi())
 
 
 def write_contracts(root: Path = _BACKEND_ROOT) -> list[Path]:

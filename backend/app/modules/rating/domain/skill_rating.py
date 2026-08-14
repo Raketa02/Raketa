@@ -35,6 +35,10 @@ class SkillRating:
     band_upper: float
     status: str
     engine_version: str
+    # When this rating last moved. Every transition sets it, so once the
+    # match-update engine appends to this stream the field keeps meaning the same
+    # thing without anyone remembering to maintain it.
+    updated_at: datetime
     # How urgently this rating wants real matches, and why its confidence landed
     # where it did. Both are facts about the rating, so they travel with it into
     # the match-update engine rather than living only on the assessment.
@@ -120,6 +124,7 @@ class SkillRating:
             self.band_upper = event.band_upper
             self.status = event.status
             self.engine_version = event.engine_version
+            self.updated_at = event.occurred_at
             self.calibration_priority = event.calibration_priority
             self.confidence_reason_key = event.confidence_reason_key
             self.version += 1

@@ -1,4 +1,18 @@
-import expoConfig from "eslint-config-expo/flat.js";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+import { FlatCompat } from "@eslint/eslintrc";
+
+// eslint-config-expo only ships a flat config from v9, which belongs to SDK 53 —
+// `npx expo install --check` pins this app to ~8.0.1, and dependency agreement with the
+// SDK wins over config ergonomics. FlatCompat loads that eslintrc-style config into flat
+// config unchanged, so the base rule set is Expo's own either way. Delete this bridge and
+// go back to `eslint-config-expo/flat.js` at the SDK 53 upgrade.
+const compat = new FlatCompat({
+  baseDirectory: path.dirname(fileURLToPath(import.meta.url)),
+});
+
+const expoConfig = compat.extends("eslint-config-expo");
 
 // ---------------------------------------------------------------------------
 // Architectural boundaries from CLAUDE.md and docs/architecture.md, enforced by
@@ -221,6 +235,31 @@ export default [
     // design system's colours, weights and metrics are defined.
     files: ["src/shared/ui/theme.ts"],
     rules: { "no-restricted-syntax": "off" },
+  },
+
+  // --- tests may describe the wire, because that is what makes drift fail ------
+  {
+    // A test's fake responses are typed from the generated schema on purpose: a
+    // backend shape change then fails `pnpm typecheck` instead of failing a test
+    // run with a confusing assertion. This SERVES the wire-boundary rule rather
+    // than defeating it — the rule exists to keep transport types out of
+    // components, hooks and domain, and a fake response is doing exactly what an
+    // api/ module does. The transport stub replaces `fetch` for the same reason:
+    // it IS the socket under test, and it ships to no build.
+    files: ["src/test-support/**", "**/*.test.ts", "**/*.test.tsx"],
+    rules: {
+      "no-restricted-imports": restrict(CORE_PATTERNS),
+      "no-restricted-globals": "off",
+    },
+  },
+
+  {
+    // Jest's setup file runs *inside* the test environment, where the runner injects
+    // `jest` as a global. Nothing in the file's location tells ESLint that, and the
+    // test-file block above is keyed on `*.test.*` — which a setup file deliberately is
+    // not, because `testMatch` would then try to run it as a suite.
+    files: ["jest.setup.js"],
+    languageOptions: { globals: { jest: "readonly" } },
   },
 
   // --- route files are adapters: feature public surfaces only -----------------

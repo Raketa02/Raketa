@@ -204,6 +204,10 @@ async def test_finished_assessment_conflicts_on_a_different_question(
 
     resp = await _answer(client, headers, aid, "some.other.question", "x")
     assert resp.status_code == 409
+    # Refetch the current step and re-render — the *other* 409 this endpoint
+    # family can return means jump to the result, so the code is what separates
+    # a double-tapped confirm from a second device on a finished assessment.
+    assert resp.json()["code"] == "question_not_outstanding"
 
 
 @pytest.mark.asyncio
@@ -218,6 +222,7 @@ async def test_invalid_option_is_rejected(client, valid_signup_payload):
         "not-an-option",
     )
     assert resp.status_code == 400
+    assert resp.json()["code"] == "invalid_answer_option"
 
 
 @pytest.mark.asyncio
@@ -225,6 +230,7 @@ async def test_unknown_assessment_is_not_found(client, valid_signup_payload):
     headers = await _auth_headers(client, valid_signup_payload)
     resp = await _answer(client, headers, uuid4(), "opening.regularity", "never-played")
     assert resp.status_code == 404
+    assert resp.json()["code"] == "assessment_not_found"
 
 
 @pytest.mark.asyncio
@@ -421,6 +427,9 @@ async def test_abandoning_a_finished_assessment_conflicts(client, valid_signup_p
 
     resp = await _abandon(client, headers, created["assessment_id"])
     assert resp.status_code == 409
+    # Jump to the result: the rating already exists. Distinguishable on the wire
+    # from `question_not_outstanding`, which asks for the opposite recovery.
+    assert resp.json()["code"] == "assessment_already_finished"
 
 
 @pytest.mark.asyncio

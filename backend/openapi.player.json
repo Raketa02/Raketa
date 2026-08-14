@@ -457,6 +457,32 @@
           }
         }
       }
+    },
+    "/api/v1/ratings": {
+      "get": {
+        "tags": [
+          "ratings"
+        ],
+        "summary": "The Skill ratings this player holds, one per rated sport",
+        "operationId": "list_ratings_api_v1_ratings_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RatingsResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -731,6 +757,75 @@
           "high"
         ],
         "title": "RangeResponse"
+      },
+      "RatingResponse": {
+        "properties": {
+          "sport": {
+            "$ref": "#/components/schemas/Sport"
+          },
+          "mu": {
+            "type": "number",
+            "title": "Mu"
+          },
+          "sigma": {
+            "type": "number",
+            "title": "Sigma"
+          },
+          "confidence": {
+            "type": "integer",
+            "title": "Confidence"
+          },
+          "range": {
+            "$ref": "#/components/schemas/RangeResponse"
+          },
+          "band": {
+            "$ref": "#/components/schemas/BandResponse"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "engine_version": {
+            "type": "string",
+            "title": "Engine Version"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sport",
+          "mu",
+          "sigma",
+          "confidence",
+          "range",
+          "band",
+          "status",
+          "engine_version",
+          "updated_at"
+        ],
+        "title": "RatingResponse",
+        "description": "One sport's Skill rating.\n\n``mu`` and ``sigma`` are the Level and the Uncertainty \u2014 the same spelling\n``ResultResponse`` already puts on the wire for the same two numbers, so a\nclient never has to learn that the rating it was just shown and the rating it\nlater reads back are described in two vocabularies."
+      },
+      "RatingsResponse": {
+        "properties": {
+          "ratings": {
+            "items": {
+              "$ref": "#/components/schemas/RatingResponse"
+            },
+            "type": "array",
+            "title": "Ratings"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ratings"
+        ],
+        "title": "RatingsResponse",
+        "description": "Every sport this player is rated at \u2014 empty when they are rated at none."
       },
       "RefreshRequest": {
         "properties": {
@@ -1080,6 +1175,50 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "ErrorResponse": {
+        "description": "The body of every error response, on both API surfaces.",
+        "properties": {
+          "code": {
+            "description": "Stable, machine-readable identifier for this exact failure. The only half of the envelope a client may branch on.",
+            "examples": [
+              "question_not_outstanding"
+            ],
+            "title": "Code",
+            "type": "string"
+          },
+          "message": {
+            "description": "Human-readable diagnostic. Never the copy shown to a user \u2014 that is the client's, chosen from the code.",
+            "title": "Message",
+            "type": "string"
+          },
+          "trace_id": {
+            "description": "This request's identifier, also returned on the X-Request-ID header. Ties a client-side failure to a server log without logging a payload.",
+            "title": "Trace Id",
+            "type": "string"
+          },
+          "details": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Structured context for this code, when the code defines any.",
+            "title": "Details"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "trace_id"
+        ],
+        "title": "ErrorResponse",
+        "type": "object"
       }
     },
     "securitySchemes": {
