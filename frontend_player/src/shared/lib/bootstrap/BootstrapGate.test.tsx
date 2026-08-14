@@ -28,6 +28,24 @@ function layOutTheApp() {
   });
 }
 
+/**
+ * This suite renders without the `expo-router/testing-library` harness, so it runs on
+ * **real timers** where the router-harness suites run on jest's fake ones. That is what
+ * makes it the only suite here sensitive to wall-clock contention: its `waitFor` calls
+ * wait for actual elapsed time, not for a clock the test advances itself.
+ *
+ * The work is small — the first test takes ~400 ms — but it needed only a >12× slowdown
+ * to blow the 5 s default, and it reached that under two test suites running at once on
+ * one container. CI runners with noisy neighbours are not exotic, and a timeout failure
+ * reads as a broken gate rather than a busy machine.
+ *
+ * So the margin is stated rather than left implicit. This is headroom for a loaded
+ * machine, never permission for the sequence to be slow: if a test here genuinely
+ * approaches this number, something has started doing real work and the fix is not a
+ * larger timeout.
+ */
+jest.setTimeout(30_000);
+
 beforeEach(() => {
   jest.clearAllMocks();
 });
