@@ -6,6 +6,15 @@ records nothing and returns the current state; any other question conflicts.
 Optimistic concurrency on the event store makes a genuine double-submit fail
 loudly.
 
+That replay answers with ``assessment_view.current_step`` — the same function the
+read route uses, deliberately rather than a copy of it. The replay branch is
+guarded on the question id alone, and abandonment clears the outstanding question
+while leaving the last-answered id where it was, so a replay can arrive after the
+run has ended. A private copy of this logic that had never grown an abandoned
+case answered that replay with a question for a run the server considered over,
+and the two routes described one run differently.
+
+
 Completion is one transaction: the assessment-completed event and the
 rating-initialised event are appended together and the result returns inline,
 because the player sees their rating on the very next screen.
@@ -14,9 +23,10 @@ because the player sees their rating on the very next screen.
 from __future__ import annotations
 
 from app.application.ports import DomainEventPublisher, DomainEventStore, UnitOfWork
-from app.engines.assessment import AskQuestion, AssessmentEngine, Question
+from app.engines.assessment import AskQuestion, AssessmentEngine
 from app.modules.rating.application.assessment_view import (
-    completed_result,
+    current_step,
+    outstanding_question,
     questions_asked,
 )
 from app.modules.rating.application.commands import (
@@ -72,12 +82,12 @@ class SubmitAnswer:
         # Idempotent replay of the just-answered question: record nothing, return
         # the current state. A lost response can never double-record.
         if command.question_id == assessment.last_answered_question_id:
-            return self._current_state(assessment)
+            return current_step(self._engine, assessment)
 
         if command.question_id != assessment.outstanding_question_id:
             raise QuestionNotOutstanding()
 
-        outstanding = self._reproduce_outstanding(assessment)
+        outstanding = outstanding_question(self._engine, assessment)
         if command.option_id not in {option.id for option in outstanding.options}:
             raise InvalidAnswerOption()
 
@@ -161,32 +171,3 @@ class SubmitAnswer:
             result=result,
         )
 
-    def _current_state(self, assessment: Assessment) -> AssessmentStep:
-        answered = questions_asked(assessment)
-        if assessment.is_completed:
-            return AssessmentStep(
-                assessment_id=assessment.id,
-                status=assessment.status.value,
-                questions_asked=answered,
-                question=None,
-                # The same explained result the first response carried, so a
-                # retried submission is indistinguishable from the original.
-                result=completed_result(self._engine, assessment),
-            )
-        return AssessmentStep(
-            assessment_id=assessment.id,
-            status=assessment.status.value,
-            questions_asked=answered,
-            question=self._reproduce_outstanding(assessment),
-            result=None,
-        )
-
-    def _reproduce_outstanding(self, assessment: Assessment) -> Question:
-        # The engine is deterministic, so the outstanding question is exactly the
-        # question it returns for the answered transcript — no need to store the
-        # question copy, the version's code *is* the question definition.
-        step = self._engine.next_step(
-            sport=assessment.sport, transcript=assessment.transcript
-        )
-        assert isinstance(step, AskQuestion)
-        return step.question

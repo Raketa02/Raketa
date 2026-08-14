@@ -953,6 +953,49 @@ async def test_an_abandoned_run_reports_what_was_answered_before_it_ended(
 
 
 @pytest.mark.asyncio
+async def test_a_replayed_answer_after_abandonment_agrees_with_the_read(
+    client, valid_signup_payload
+):
+    """An abandoned run must not carry a question to answer, on either route.
+
+    Reachable by exactly the sequence the replay branch exists to serve: an answer
+    whose response was lost in flight, a player who then stops rating that sport,
+    and the client's automatic retry arriving after the run has ended. The branch
+    is guarded on the question id alone and abandonment leaves that id in place,
+    so the retry lands in it.
+
+    The client half is what makes disagreement expensive: the wire mapper treats
+    the *question* as what says whether there is something to answer, so a
+    question here tells the client to render a step for a run the server considers
+    over — and the answer it then submits is rejected.
+    """
+
+    headers = await _auth_headers(client, valid_signup_payload)
+    created = (await _create(client, headers)).json()
+    question = created["question"]
+    await _answer_the_outstanding_question(client, headers, created)
+    await _abandon(client, headers, created["assessment_id"])
+
+    replayed = await _answer(
+        client,
+        headers,
+        created["assessment_id"],
+        question["id"],
+        question["options"][-1]["id"],
+    )
+
+    assert replayed.status_code == 200, replayed.text
+    replayed_body = replayed.json()
+    assert replayed_body["status"] == "abandoned"
+    assert replayed_body["question"] is None
+    assert replayed_body["result"] is None
+
+    # One run, one description: the replay and the read agree field for field.
+    fetched = (await _get(client, headers, created["assessment_id"])).json()
+    assert replayed_body == fetched
+
+
+@pytest.mark.asyncio
 async def test_the_count_is_not_recorded_a_second_time(
     client, session_factory, valid_signup_payload
 ):
