@@ -237,6 +237,31 @@ export default [
     rules: { "no-restricted-syntax": "off" },
   },
 
+  // --- tests may describe the wire, because that is what makes drift fail ------
+  {
+    // A test's fake responses are typed from the generated schema on purpose: a
+    // backend shape change then fails `pnpm typecheck` instead of failing a test
+    // run with a confusing assertion. This SERVES the wire-boundary rule rather
+    // than defeating it — the rule exists to keep transport types out of
+    // components, hooks and domain, and a fake response is doing exactly what an
+    // api/ module does. The transport stub replaces `fetch` for the same reason:
+    // it IS the socket under test, and it ships to no build.
+    files: ["src/test-support/**", "**/*.test.ts", "**/*.test.tsx"],
+    rules: {
+      "no-restricted-imports": restrict(CORE_PATTERNS),
+      "no-restricted-globals": "off",
+    },
+  },
+
+  {
+    // Jest's setup file runs *inside* the test environment, where the runner injects
+    // `jest` as a global. Nothing in the file's location tells ESLint that, and the
+    // test-file block above is keyed on `*.test.*` — which a setup file deliberately is
+    // not, because `testMatch` would then try to run it as a suite.
+    files: ["jest.setup.js"],
+    languageOptions: { globals: { jest: "readonly" } },
+  },
+
   // --- route files are adapters: feature public surfaces only -----------------
   {
     files: ["src/app/**"],

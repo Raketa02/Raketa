@@ -16,7 +16,6 @@ import { StyleSheet, Text, View } from "react-native";
 
 import { theme } from "@/shared/ui/theme";
 
-import { bootstrapApp } from "./bootstrapApp";
 import { hideSplash, preventSplashAutoHide } from "./splash";
 
 // Module scope, so the native splash is pinned before React renders anything at all.
@@ -33,11 +32,17 @@ function reasonOf(error: unknown): string {
 
 export interface BootstrapGateProps {
   readonly children: ReactNode;
-  /** The sequence to run. Overridden only by tests, which drive its timing. */
-  readonly run?: () => Promise<void>;
+  /**
+   * The sequence to run.
+   *
+   * Required, and deliberately not defaulted to `bootstrapApp`: one of its steps —
+   * restoring the session — belongs to a feature, and `shared/` may never import one.
+   * The root layout composes the steps and passes the result in.
+   */
+  readonly run: () => Promise<void>;
 }
 
-export function BootstrapGate({ children, run = bootstrapApp }: BootstrapGateProps) {
+export function BootstrapGate({ children, run }: BootstrapGateProps) {
   const [state, setState] = useState<GateState>({ status: "bootstrapping" });
   const splashHidden = useRef(false);
 

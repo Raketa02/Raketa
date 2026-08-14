@@ -1,2 +1,6 @@
 export { BootstrapGate } from "./BootstrapGate";
-export { bootstrapApp, type BootstrapSteps } from "./bootstrapApp";
+export {
+  bootstrapApp,
+  sharedBootstrapSteps,
+  type BootstrapSteps,
+} from "./bootstrapApp";
