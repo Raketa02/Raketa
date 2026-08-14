@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
 from uuid import UUID
 
 from app.engines.assessment import AssessmentResult, Question
@@ -72,30 +71,6 @@ class AbandonAssessmentCommand:
 @dataclass(frozen=True)
 class ListRatingsQuery:
     player_id: UUID
-
-
-@dataclass(frozen=True)
-class RatingView:
-    """One sport's Skill rating as a reader sees it.
-
-    A view rather than the aggregate itself: the aggregate carries its event
-    recorder and its stream version, neither of which is a fact about the rating,
-    and a read path that hands those to presentation invites a write through a
-    read.
-    """
-
-    sport: Sport
-    mu: float
-    sigma: float
-    confidence: int
-    range_low: float
-    range_high: float
-    band_name: str
-    band_lower: float
-    band_upper: float
-    status: str
-    engine_version: str
-    updated_at: datetime
 
 
 @dataclass(frozen=True)

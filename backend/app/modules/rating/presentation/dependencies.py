@@ -21,9 +21,12 @@ from app.modules.rating.application.find_in_progress_assessment import (
 from app.modules.rating.application.get_assessment import GetAssessment
 from app.modules.rating.application.list_ratings import ListPlayerRatings
 from app.modules.rating.application.submit_answer import SubmitAnswer
-from app.modules.rating.domain.ports import AssessmentRepository
+from app.modules.rating.domain.ports import AssessmentRepository, SkillRatingRepository
 from app.modules.rating.infrastructure.event_sourced_assessment_repository import (
     EventSourcedAssessmentRepository,
+)
+from app.modules.rating.infrastructure.event_sourced_skill_rating_repository import (
+    EventSourcedSkillRatingRepository,
 )
 
 
@@ -52,6 +55,21 @@ AssessmentRepositoryDep = Annotated[
 ]
 
 
+def get_skill_rating_repository(
+    event_store: DomainEventStoreDep,
+    events: EventPublisherDep,
+) -> SkillRatingRepository:
+    # Per request, for the same reason the assessment's is: it remembers the
+    # versions it read, and one request's versions must never answer for
+    # another's.
+    return EventSourcedSkillRatingRepository(event_store=event_store, events=events)
+
+
+SkillRatingRepositoryDep = Annotated[
+    SkillRatingRepository, Depends(get_skill_rating_repository)
+]
+
+
 def get_create_assessment(
     engine: AssessmentEngineDep,
     assessments: AssessmentRepositoryDep,
@@ -72,21 +90,18 @@ CreateAssessmentDep = Annotated[CreateAssessment, Depends(get_create_assessment)
 def get_submit_answer(
     engine: AssessmentEngineDep,
     assessments: AssessmentRepositoryDep,
-    event_store: DomainEventStoreDep,
+    ratings: SkillRatingRepositoryDep,
     uow: UnitOfWorkDep,
     clock: ClockDep,
-    events: EventPublisherDep,
 ) -> SubmitAnswer:
-    # The event store and publisher are still here for the *rating* stream the
-    # completion path writes; the assessment goes through the repository. #49
-    # gives the rating one too and both drop away.
+    # Two repositories and one unit of work: completion writes both streams
+    # inside one transaction, and only the transaction is this use case's.
     return SubmitAnswer(
         engine=engine,
         assessments=assessments,
-        event_store=event_store,
+        ratings=ratings,
         uow=uow,
         clock=clock,
-        events=events,
     )
 
 
@@ -140,10 +155,10 @@ def get_abandon_assessment(
 AbandonAssessmentDep = Annotated[AbandonAssessment, Depends(get_abandon_assessment)]
 
 
-def get_list_player_ratings(event_store: DomainEventStoreDep) -> ListPlayerRatings:
+def get_list_player_ratings(ratings: SkillRatingRepositoryDep) -> ListPlayerRatings:
     # No engine: a stored rating is replayed, never recomputed. Its numbers are
     # the ones the player was shown, whatever the engine has since become.
-    return ListPlayerRatings(event_store=event_store)
+    return ListPlayerRatings(ratings=ratings)
 
 
 ListPlayerRatingsDep = Annotated[ListPlayerRatings, Depends(get_list_player_ratings)]

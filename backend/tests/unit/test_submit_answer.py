@@ -28,11 +28,12 @@ from app.modules.rating.domain.ids import skill_rating_id
 from app.modules.rating.infrastructure.event_sourced_assessment_repository import (
     ASSESSMENT_AGGREGATE,
 )
+from app.modules.rating.infrastructure.event_sourced_skill_rating_repository import (
+    RATING_AGGREGATE,
+)
 from app.shared.ids import new_uuid
 from tests.unit.assessment_requests import answer, request, run_to_result, start
 from tests.unit.fake_event_store import InMemoryEventStore
-
-RATING_AGGREGATE = "skill_rating"
 
 
 async def test_answering_records_the_answer_and_the_next_question() -> None:

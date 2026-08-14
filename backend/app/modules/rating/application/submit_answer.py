@@ -14,9 +14,10 @@ run has ended. A private copy of this logic that had never grown an abandoned
 case answered that replay with a question for a run the server considered over,
 and the two routes described one run differently.
 
-The assessment itself is loaded and saved through its repository, so the
-ownership guard and the version this append expects are no longer things this
-use case has to remember — asking for the aggregate means saying whose it is.
+Both aggregates are loaded and saved through their repositories, so the ownership
+guard, the aggregate-type strings and the versions these appends expect are no
+longer things this use case has to remember — asking for the aggregate means
+saying whose it is.
 
 Completion is one transaction: the assessment-completed event and the
 rating-initialised event are appended together and the result returns inline,
@@ -25,7 +26,7 @@ because the player sees their rating on the very next screen.
 
 from __future__ import annotations
 
-from app.application.ports import DomainEventPublisher, DomainEventStore, UnitOfWork
+from app.application.ports import UnitOfWork
 from app.engines.assessment import AskQuestion, AssessmentEngine
 from app.modules.rating.application.assessment_view import (
     current_step,
@@ -41,39 +42,28 @@ from app.modules.rating.domain.errors import (
     QuestionNotOutstanding,
 )
 from app.modules.rating.domain.ids import skill_rating_id
-from app.modules.rating.domain.ports import AssessmentRepository
+from app.modules.rating.domain.ports import AssessmentRepository, SkillRatingRepository
 from app.modules.rating.domain.skill_rating import SkillRating
 from app.shared.clock import Clock
 
-RATING_AGGREGATE = "skill_rating"
-
 
 class SubmitAnswer:
-    """The assessment moves through its repository; the rating does not yet.
-
-    The Skill rating still names the event store, its aggregate string and an
-    expected version of zero — the properties this slice removed everywhere
-    else. That is #49's half of the change, deliberately left rather than
-    half-made here, because a rating repository is its own port and adapter and
-    the ratings read moves onto it in the same breath.
-    """
+    """Both aggregates move through repositories; the transaction stays here."""
 
     def __init__(
         self,
         *,
         engine: AssessmentEngine,
         assessments: AssessmentRepository,
-        event_store: DomainEventStore,
+        ratings: SkillRatingRepository,
         uow: UnitOfWork,
         clock: Clock,
-        events: DomainEventPublisher,
     ) -> None:
         self._engine = engine
         self._assessments = assessments
-        self._event_store = event_store
+        self._ratings = ratings
         self._uow = uow
         self._clock = clock
-        self._events = events
 
     async def execute(self, command: SubmitAnswerCommand) -> AssessmentStep:
         assessment = await self._assessments.load(
@@ -137,19 +127,13 @@ class SubmitAnswer:
             source_assessment_id=assessment.id,
             occurred_at=now,
         )
-        rating_events = rating.pull_events()
 
-        # Two streams, one transaction. ``save`` appends and publishes but never
-        # commits, so the boundary stays here — ADR-0017 states the single
-        # transaction as a domain rule rather than a persistence detail.
+        # Two streams, one transaction. Neither ``save`` commits, so the boundary
+        # stays here — ADR-0017 states the single transaction as a domain rule
+        # rather than a persistence detail. The assessment is saved first because
+        # the outbox takes them in the order they happened.
         await self._assessments.save(assessment)
-        await self._event_store.append(
-            aggregate_type=RATING_AGGREGATE,
-            aggregate_id=rating.id,
-            expected_version=0,
-            events=rating_events,
-        )
-        await self._events.publish_many(rating_events)
+        await self._ratings.save(rating)
         await self._uow.commit()
 
         return AssessmentStep(

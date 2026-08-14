@@ -23,8 +23,8 @@ from app.kernel import Sport
 from app.modules.rating.application.commands import (
     AssessmentStep,
     InProgressAssessmentView,
-    RatingView,
 )
+from app.modules.rating.domain.skill_rating import SkillRating
 
 
 class CreateAssessmentRequest(BaseModel):
@@ -184,6 +184,12 @@ class RatingResponse(BaseModel):
     later reads back are described in two vocabularies.
     """
 
+    # Built from the aggregate, exactly as ``ResultResponse`` is built from the
+    # engine's result: one policy for how the six rating facts reach the wire.
+    # Kept as a comment rather than added to the docstring above, because a
+    # response model's docstring *is* wire copy — it lands in both API documents
+    # as the schema description, so a note to the next reader here would have
+    # been a contract diff.
     sport: Sport
     mu: float
     sigma: float
@@ -195,7 +201,10 @@ class RatingResponse(BaseModel):
     updated_at: datetime
 
     @classmethod
-    def from_view(cls, rating: RatingView) -> "RatingResponse":
+    def from_domain(cls, rating: SkillRating) -> "RatingResponse":
+        # The band travels as the engine computed it. Its boundaries are
+        # deliberately uneven and were wrong once already, so nothing downstream
+        # may restate them.
         return cls(
             sport=rating.sport,
             mu=rating.mu,
@@ -219,8 +228,8 @@ class RatingsResponse(BaseModel):
     ratings: list[RatingResponse]
 
     @classmethod
-    def from_views(cls, ratings: list[RatingView]) -> "RatingsResponse":
-        return cls(ratings=[RatingResponse.from_view(rating) for rating in ratings])
+    def from_domain(cls, ratings: list[SkillRating]) -> "RatingsResponse":
+        return cls(ratings=[RatingResponse.from_domain(rating) for rating in ratings])
 
 
 class AssessmentStepResponse(BaseModel):

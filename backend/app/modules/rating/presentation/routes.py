@@ -61,7 +61,7 @@ async def list_ratings(
     ratings = await use_case.execute(
         ListRatingsQuery(player_id=PlayerId(current_user.id))
     )
-    return RatingsResponse.from_views(ratings)
+    return RatingsResponse.from_domain(ratings)
 
 
 @router.post(

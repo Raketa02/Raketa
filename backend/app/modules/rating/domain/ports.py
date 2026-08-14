@@ -17,6 +17,7 @@ from uuid import UUID
 
 from app.kernel import Sport
 from app.modules.rating.domain.assessment import Assessment
+from app.modules.rating.domain.skill_rating import SkillRating
 
 
 @runtime_checkable
@@ -63,5 +64,39 @@ class AssessmentRepository(Protocol):
         Registry order (``Sport``'s own) so a caller that wants exactly one — the
         entry gate does — can take the first entry and get a stable answer rather
         than one that depends on which sport was started first.
+        """
+        ...
+
+
+@runtime_checkable
+class SkillRatingRepository(Protocol):
+    """Saves and reads back SkillRating aggregates.
+
+    ``save`` appends and publishes without committing, exactly as
+    ``AssessmentRepository.save`` does and for the same reason: completing an
+    assessment writes this stream and the assessment's inside one transaction,
+    so the boundary belongs to the use case.
+
+    **There is no ``load``.** Nothing reads a single rating by id — the one read
+    is "every rating this player holds", and a rating's stream id is derived from
+    the player and the sport rather than looked up, so a by-id port would be a
+    member no caller could want. Add it when something wants it, with the
+    ownership argument ``AssessmentRepository.load`` makes; a rating loaded
+    without saying whose it is has the same hazard.
+    """
+
+    async def save(self, rating: SkillRating) -> None:
+        """Append the rating's pending events and publish them.
+
+        A no-op when nothing is pending, on the same rule as the assessment's.
+        """
+        ...
+
+    async def find_all_for(self, *, player_id: UUID) -> list[SkillRating]:
+        """Every Skill rating this player holds, one per sport they are rated at.
+
+        Empty for an unrated player — the ordinary state of a new account, never
+        an error. Ordered as the ratings were earned, which is what the store's
+        oldest-first ids already give.
         """
         ...

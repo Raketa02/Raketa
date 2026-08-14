@@ -28,9 +28,13 @@ from app.modules.rating.application.commands import (
 )
 from app.modules.rating.application.create_assessment import CreateAssessment
 from app.modules.rating.application.get_assessment import GetAssessment
+from app.modules.rating.application.list_ratings import ListPlayerRatings
 from app.modules.rating.application.submit_answer import SubmitAnswer
 from app.modules.rating.infrastructure.event_sourced_assessment_repository import (
     EventSourcedAssessmentRepository,
+)
+from app.modules.rating.infrastructure.event_sourced_skill_rating_repository import (
+    EventSourcedSkillRatingRepository,
 )
 from tests.unit.fake_event_store import (
     CountingUnitOfWork,
@@ -46,11 +50,13 @@ class Request:
 
     store: InMemoryEventStore
     repository: EventSourcedAssessmentRepository
+    ratings_repository: EventSourcedSkillRatingRepository
     events: RecordingPublisher
     uow: CountingUnitOfWork
     create: CreateAssessment
     submit: SubmitAnswer
     get: GetAssessment
+    list_ratings: ListPlayerRatings
 
 
 def request(store: InMemoryEventStore) -> Request:
@@ -59,9 +65,11 @@ def request(store: InMemoryEventStore) -> Request:
     uow = CountingUnitOfWork()
     clock = FrozenClock()
     repository = EventSourcedAssessmentRepository(event_store=store, events=events)
+    ratings = EventSourcedSkillRatingRepository(event_store=store, events=events)
     return Request(
         store=store,
         repository=repository,
+        ratings_repository=ratings,
         events=events,
         uow=uow,
         create=CreateAssessment(
@@ -70,12 +78,12 @@ def request(store: InMemoryEventStore) -> Request:
         submit=SubmitAnswer(
             engine=engine,
             assessments=repository,
-            event_store=store,
+            ratings=ratings,
             uow=uow,
             clock=clock,
-            events=events,
         ),
         get=GetAssessment(engine=engine, assessments=repository),
+        list_ratings=ListPlayerRatings(ratings=ratings),
     )
 
 
