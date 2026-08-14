@@ -37,6 +37,33 @@ class FindInProgressQuery:
 
 
 @dataclass(frozen=True)
+class ListInProgressQuery:
+    """Which of this player's runs are unfinished — the question, not per sport.
+
+    ``FindInProgressQuery`` asks it of one sport, which is what a client resuming
+    a sport it has already chosen wants. This asks it of the player, which is
+    what the entry gate wants, and what it previously had to spell as one request
+    per sport.
+    """
+
+    player_id: UUID
+
+
+@dataclass(frozen=True)
+class InProgressAssessmentView:
+    """One unfinished run, as much of it as a router needs: which, and what of.
+
+    Deliberately not a step. The outstanding question is reproduced by running
+    the engine over the transcript, and a caller deciding *where to send the
+    player* does not render it — it re-reads the run it routes to. Putting it
+    here would make the common answer, an empty collection, the only cheap one.
+    """
+
+    assessment_id: UUID
+    sport: Sport
+
+
+@dataclass(frozen=True)
 class AbandonAssessmentCommand:
     player_id: UUID
     assessment_id: UUID

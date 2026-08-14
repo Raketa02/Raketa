@@ -50,6 +50,12 @@ async def _in_progress(client, headers, sport="PADEL"):
     )
 
 
+async def _all_in_progress(client, headers):
+    """The same route with the sport left off — every unfinished run at once."""
+
+    return await client.get("/api/v1/assessments/in-progress", headers=headers)
+
+
 async def _abandon(client, headers, assessment_id):
     return await client.post(
         f"/api/v1/assessments/{assessment_id}/abandonment", headers=headers
@@ -488,6 +494,179 @@ async def test_in_progress_is_scoped_to_the_sport(client, valid_signup_payload):
 
     assert (await _in_progress(client, headers, "PADEL")).status_code == 200
     assert (await _in_progress(client, headers, "TENNIS")).status_code == 204
+
+
+# --- One read for every sport ---------------------------------------------------
+#
+# The entry gate asks "is any run unfinished" on every cold launch. Asked one
+# sport at a time it cost four requests for an answer that is almost always no.
+
+
+@pytest.mark.asyncio
+async def test_the_collection_answers_for_every_sport_in_one_read(
+    client, valid_signup_payload
+):
+    headers = await _auth_headers(client, valid_signup_payload)
+    padel = (await _create(client, headers, "PADEL")).json()
+    squash = (await _create(client, headers, "SQUASH")).json()
+
+    resp = await _all_in_progress(client, headers)
+
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["assessments"] == [
+        {"assessment_id": padel["assessment_id"], "sport": "PADEL"},
+        {"assessment_id": squash["assessment_id"], "sport": "SQUASH"},
+    ]
+
+
+@pytest.mark.asyncio
+async def test_the_collection_is_empty_rather_than_an_error_when_none_are_open(
+    client, valid_signup_payload
+):
+    # The ordinary state of a new account, and the answer the gate gets on almost
+    # every launch. Absence of an unfinished run is not a failure, so it is a 200
+    # with an empty list — never the singular form's 204, and never a 404.
+    headers = await _auth_headers(client, valid_signup_payload)
+
+    resp = await _all_in_progress(client, headers)
+
+    assert resp.status_code == 200, resp.text
+    assert resp.json() == {"assessments": []}
+
+
+@pytest.mark.asyncio
+async def test_the_collection_is_ordered_by_the_sport_registry(
+    client, valid_signup_payload
+):
+    # Started back-to-front on purpose. A caller that wants one run takes the
+    # first entry, so the order must be the registry's and not the order the
+    # player happened to start them in.
+    headers = await _auth_headers(client, valid_signup_payload)
+    for sport in ("BADMINTON", "SQUASH", "TENNIS", "PADEL"):
+        await _create(client, headers, sport)
+
+    resp = await _all_in_progress(client, headers)
+
+    assert [entry["sport"] for entry in resp.json()["assessments"]] == [
+        "PADEL",
+        "TENNIS",
+        "SQUASH",
+        "BADMINTON",
+    ]
+
+
+@pytest.mark.asyncio
+async def test_the_collection_holds_only_unfinished_runs(client, valid_signup_payload):
+    # Completed and abandoned runs are not unfinished, and the read is about
+    # unfinished ones. A completed sport is rated; an abandoned one was decided
+    # against. Returning either would send the gate back into a run that ended.
+    headers = await _auth_headers(client, valid_signup_payload)
+    await _run_to_result(client, headers, "TENNIS")
+    abandoned = (await _create(client, headers, "SQUASH")).json()
+    await _abandon(client, headers, abandoned["assessment_id"])
+    open_run = (await _create(client, headers, "PADEL")).json()
+
+    resp = await _all_in_progress(client, headers)
+
+    assert resp.json()["assessments"] == [
+        {"assessment_id": open_run["assessment_id"], "sport": "PADEL"}
+    ]
+
+
+@pytest.mark.asyncio
+async def test_the_collection_is_scoped_to_the_player(client, valid_signup_payload):
+    alice = await _auth_headers(client, valid_signup_payload)
+    hers = (await _create(client, alice, "PADEL")).json()
+
+    bob = await _auth_headers(client, BOB)
+    his = (await _create(client, bob, "TENNIS")).json()
+
+    assert (await _all_in_progress(client, alice)).json()["assessments"] == [
+        {"assessment_id": hers["assessment_id"], "sport": "PADEL"}
+    ]
+    assert (await _all_in_progress(client, bob)).json()["assessments"] == [
+        {"assessment_id": his["assessment_id"], "sport": "TENNIS"}
+    ]
+
+
+@pytest.mark.asyncio
+async def test_the_collection_and_the_per_sport_read_name_the_same_run(
+    client, valid_signup_payload
+):
+    # Two shapes of one question. A gate routing on the collection and a resume
+    # reading the sport must never land on different runs.
+    headers = await _auth_headers(client, valid_signup_payload)
+    await _create(client, headers, "PADEL")
+    body = (await _create(client, headers, "TENNIS")).json()
+    await _answer_the_outstanding_question(client, headers, body)
+
+    entries = (await _all_in_progress(client, headers)).json()["assessments"]
+
+    for entry in entries:
+        resumed = (await _in_progress(client, headers, entry["sport"])).json()
+        assert resumed["assessment_id"] == entry["assessment_id"]
+    assert {entry["sport"] for entry in entries} == {"PADEL", "TENNIS"}
+
+
+@pytest.mark.asyncio
+async def test_an_entry_carries_only_what_a_router_needs(client, valid_signup_payload):
+    # No question, no result, no progress. The caller re-reads the run it routes
+    # to, and reproducing four outstanding questions to answer "none" would make
+    # the common case pay for data nobody reads.
+    headers = await _auth_headers(client, valid_signup_payload)
+    await _create(client, headers, "PADEL")
+
+    entry = (await _all_in_progress(client, headers)).json()["assessments"][0]
+
+    assert set(entry) == {"assessment_id", "sport"}
+
+
+@pytest.mark.asyncio
+async def test_supplying_the_sport_still_returns_that_sport_s_step(
+    client, valid_signup_payload
+):
+    # The parameter is optional, not gone: the per-sport read is unchanged, and
+    # the fan-out keeps working against it while the client migrates.
+    headers = await _auth_headers(client, valid_signup_payload)
+    created = (await _create(client, headers, "PADEL")).json()
+
+    resp = await _in_progress(client, headers, "PADEL")
+
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["assessment_id"] == created["assessment_id"]
+    assert body["question"]["id"] == created["question"]["id"]
+    assert body["questions_asked"] == 0
+    assert "assessments" not in body
+
+
+@pytest.mark.asyncio
+async def test_the_collection_read_needs_authentication(client):
+    assert (await client.get("/api/v1/assessments/in-progress")).status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_both_in_progress_shapes_are_stated_on_the_operation():
+    # A client can only rely on omitting the parameter if the document says so.
+    # This is what the generated types and a reader of the contract both see.
+    from app.api.contract import build_surface_spec
+    from app.api.v1.player import player_api_router
+
+    operation = build_surface_spec("player", player_api_router)["paths"][
+        "/api/v1/assessments/in-progress"
+    ]["get"]
+
+    sport_param = next(p for p in operation["parameters"] if p["name"] == "sport")
+    assert sport_param["required"] is False
+
+    schema = operation["responses"]["200"]["content"]["application/json"]["schema"]
+    refs = {option["$ref"].rsplit("/", 1)[-1] for option in schema["anyOf"]}
+    assert refs == {"AssessmentStepResponse", "InProgressAssessmentsResponse"}
+
+    entry = build_surface_spec("player", player_api_router)["components"]["schemas"][
+        "InProgressAssessmentResponse"
+    ]
+    assert set(entry["required"]) == {"assessment_id", "sport"}
 
 
 @pytest.mark.asyncio

@@ -21,6 +21,7 @@ from app.modules.rating.application.commands import (
     CreateAssessmentCommand,
     FindInProgressQuery,
     GetAssessmentQuery,
+    ListInProgressQuery,
     ListRatingsQuery,
     SubmitAnswerCommand,
 )
@@ -30,12 +31,14 @@ from app.modules.rating.presentation.dependencies import (
     CreateAssessmentDep,
     FindInProgressAssessmentDep,
     GetAssessmentDep,
+    ListInProgressAssessmentsDep,
     ListPlayerRatingsDep,
     SubmitAnswerDep,
 )
 from app.modules.rating.presentation.schemas import (
     AssessmentStepResponse,
     CreateAssessmentRequest,
+    InProgressAssessmentsResponse,
     RatingsResponse,
     SubmitAnswerRequest,
 )
@@ -111,17 +114,45 @@ async def create_assessment(
 
 @router.get(
     "/in-progress",
-    response_model=AssessmentStepResponse,
+    response_model=AssessmentStepResponse | InProgressAssessmentsResponse,
     responses={
-        status.HTTP_204_NO_CONTENT: {"description": "No assessment in progress"}
+        status.HTTP_204_NO_CONTENT: {
+            "description": (
+                "No assessment in progress for that sport. Only ever returned "
+                "when `sport` is supplied."
+            )
+        }
     },
-    summary="Resume: the sport's in-progress assessment, or nothing",
+    summary="Resume: one sport's in-progress assessment, or every sport's",
+    description=(
+        "One question — *which of this player's runs are unfinished* — asked two "
+        "ways.\n\n"
+        "**With `sport`,** the answer is that sport's outstanding run as an "
+        "`AssessmentStepResponse`, carrying its outstanding question, or a 204 "
+        "when there is none. This is the resume read, unchanged.\n\n"
+        "**Without `sport`,** the answer is an `InProgressAssessmentsResponse`: "
+        "every unfinished run this player holds, at most one per sport, ordered "
+        "by the sport registry, and an empty list — with a 200, never a 204 or a "
+        "404 — when there are none. Each entry carries the assessment id and its "
+        "sport, which is what a router needs; it carries no question, because the "
+        "caller re-reads the run it routes to and the empty answer is the common "
+        "one.\n\n"
+        "Which shape comes back is decided by the parameter, so a caller that "
+        "always omits `sport` always sees the collection."
+    ),
 )
 async def find_in_progress(
-    sport: Sport,
     current_user: CurrentUserDep,
     use_case: FindInProgressAssessmentDep,
-) -> Response | AssessmentStepResponse:
+    list_use_case: ListInProgressAssessmentsDep,
+    sport: Sport | None = None,
+) -> Response | AssessmentStepResponse | InProgressAssessmentsResponse:
+    if sport is None:
+        entries = await list_use_case.execute(
+            ListInProgressQuery(player_id=PlayerId(current_user.id))
+        )
+        return InProgressAssessmentsResponse.from_views(entries)
+
     step = await use_case.execute(
         FindInProgressQuery(
             player_id=PlayerId(current_user.id),
