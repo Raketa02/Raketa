@@ -924,6 +924,18 @@
             "type": "integer",
             "title": "Confidence"
           },
+          "confidence_ceiling": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence Ceiling",
+            "description": "The highest `confidence` this engine version can reach, as a whole percent \u2014 a questionnaire has an irreducible limit, so a rating at this value was held by the ceiling and one below it by its own evidence. Absent only for a rating replayed from an engine version that has since been retired, which is the same case that carries no `confidence_reason`: such a rating keeps its numbers and loses its explanation. Do not hold a local copy of this number \u2014 it is version-scoped and may be retuned without a client release."
+          },
           "range": {
             "$ref": "#/components/schemas/RangeResponse"
           },

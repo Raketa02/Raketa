@@ -198,6 +198,10 @@ def test_the_stream_records_the_facts_and_not_the_copy() -> None:
     assert recorded.calibration_priority == CALIBRATION_PRIORITY_STANDARD
     assert recorded.confidence_reason is None  # copy is not replayed
     assert recorded.factors == ()
+    # Nor is the ceiling: what a questionnaire could prove belongs to the engine
+    # version that ran it, and the stream records the rating rather than the
+    # engine. Every served result gets it back from the engine that is asked.
+    assert recorded.confidence_ceiling is None
 
 
 def test_the_reproduced_explanation_agrees_with_the_recorded_numbers() -> None:
@@ -229,8 +233,12 @@ def test_the_reproduced_explanation_agrees_with_the_recorded_numbers() -> None:
         recorded.range_high,
     )
     assert served.calibration_priority == recorded.calibration_priority
-    # And the explanation the recorded result cannot carry is there.
+    # And the explanation the recorded result cannot carry is there, the ceiling
+    # among it: the engine that is asked answers for what it can prove, so the
+    # number and the ceiling it is read against always come from one engine.
     assert served.factors and served.confidence_reason is not None
+    assert served.confidence_ceiling is not None
+    assert served.confidence <= served.confidence_ceiling
 
 
 def test_a_result_from_a_retired_engine_keeps_its_number_and_loses_its_commentary() -> (
@@ -248,6 +256,12 @@ def test_a_result_from_a_retired_engine_keeps_its_number_and_loses_its_commentar
     served = completed_result(engine, replayed)
     assert served == replayed.result
     assert served is not None and served.factors == ()
+    # Including the ceiling, which is why the field is optional on the wire. The
+    # ceiling in force is v4's, and this rating is not v4's; serving the current
+    # engine's number here would say a v3 rating was measured against a limit
+    # that did not exist when it was produced. A client shows no tick instead —
+    # the same thing it already does with the missing confidence sentence.
+    assert served.confidence_ceiling is None
 
 
 # --- The stop: the one routing decision that used to go unrecorded --------------

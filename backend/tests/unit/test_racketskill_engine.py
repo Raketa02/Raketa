@@ -15,6 +15,7 @@ from app.engines.racketskill.core import (
     confidence_percent,
 )
 from app.engines.racketskill.v3 import RacketSkillEngineV3
+from app.engines.racketskill.v3.engine import SIGMA_FLOOR
 from app.engines.racketskill.v3.questions import (
     NEVER_PLAYED_OPTION_ID,
     OPENING_QUESTION_ID,
@@ -55,6 +56,7 @@ def test_beginner_persona_is_exact() -> None:
     assert result.status == "Initial Estimate"
     assert result.questions_asked == 1
     assert result.engine_version == "racketskill-fusion-v3"
+    assert result.confidence_ceiling == 30
 
 
 def test_engine_is_pure_and_deterministic() -> None:
@@ -84,6 +86,28 @@ def test_every_opening_answer_stays_in_bounds_and_below_the_ceiling() -> None:
         assert SCALE_MIN <= result.mu <= SCALE_MAX
         assert result.sigma >= 0.84  # the σ floor
         assert result.confidence <= 30  # nobody leaves onboarding above 30%
+
+
+def test_every_result_reports_the_ceiling_its_own_confidence_was_held_to() -> None:
+    """The ceiling travels on the rating, so no reader has to hold a copy.
+
+    It is the confidence transform's answer for a rating sitting exactly on this
+    version's σ floor — not ``CONFIDENCE_CAP`` restated as a percent — because it
+    is the transform's answer that a ring's tick and a "was this the ceiling or
+    your answers" sentence have to be read against.
+    """
+
+    engine = RacketSkillEngineV3()
+    expected = confidence_percent(SIGMA_FLOOR)
+
+    options = engine.next_step(sport=Sport.PADEL, transcript=()).question.options  # type: ignore[union-attr]
+    for option in options:
+        result = engine.finalize(
+            sport=Sport.PADEL,
+            transcript=(AnsweredQuestion(OPENING_QUESTION_ID, option.id),),
+        )
+        assert result.confidence_ceiling == expected
+        assert result.confidence <= result.confidence_ceiling
 
 
 def test_bands_are_ordered_and_all_reachable() -> None:

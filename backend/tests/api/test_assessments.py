@@ -1049,6 +1049,7 @@ RESULT_KEYS = {
     "mu",
     "sigma",
     "confidence",
+    "confidence_ceiling",
     "range",
     "band",
     "status",
@@ -1108,6 +1109,29 @@ async def test_the_beginner_result_explains_itself_too(client, valid_signup_payl
     assert result["uncertainty_factors"] == []
     assert result["confidence_reason"]["key"] == "limited-match-evidence"
     assert result["calibration_priority"] == "standard"
+
+
+@pytest.mark.asyncio
+async def test_the_result_carries_the_ceiling_its_confidence_is_measured_against(
+    client, valid_signup_payload
+):
+    """The ceiling is served, so nothing downstream has to keep a copy of it.
+
+    Expected from the engine's own constants rather than from ``30``: the point
+    of serving it is that a retune reaches the client through the response, and a
+    test pinning the literal would make the retune look like a regression here
+    while the phone quietly went on drawing the old tick.
+    """
+
+    from app.engines.racketskill.core import confidence_percent
+    from app.engines.racketskill.v3.engine import SIGMA_FLOOR
+
+    headers = await _auth_headers(client, valid_signup_payload)
+    result = (await _run_to_result(client, headers))["result"]
+
+    assert result["confidence_ceiling"] == confidence_percent(SIGMA_FLOOR)
+    # The relationship the client draws: an arc under a tick, never over it.
+    assert result["confidence"] <= result["confidence_ceiling"]
 
 
 @pytest.mark.asyncio

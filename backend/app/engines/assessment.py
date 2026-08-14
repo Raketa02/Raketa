@@ -144,6 +144,20 @@ class AssessmentResult:
     status: str
     questions_asked: int
     engine_version: str
+    #: The highest Confidence this engine version can reach, as a whole percent —
+    #: its σ floor put through its own confidence transform. It travels with the
+    #: rating rather than being known separately, because a reader comparing a
+    #: Confidence against a ceiling it holds its own copy of is comparing against
+    #: a number nothing keeps honest: retune the floor and the two disagree
+    #: silently, in the direction of telling a player their answers were the
+    #: limit when the questionnaire was.
+    #:
+    #: Absent under exactly the rule ``confidence_reason`` is absent: a result
+    #: replayed from its stream because the engine that produced it has been
+    #: retired keeps its numbers and loses its explanation, and what a *retired*
+    #: engine could prove is part of that explanation. Every live result carries
+    #: it.
+    confidence_ceiling: int | None = None
     calibration_priority: str = CALIBRATION_PRIORITY_STANDARD
     confidence_reason: ConfidenceReason | None = None
     factors: tuple[ResultFactor, ...] = ()

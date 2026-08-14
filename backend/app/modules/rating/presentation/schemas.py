@@ -133,9 +133,26 @@ class ConfidenceReasonResponse(BaseModel):
 
 
 class ResultResponse(BaseModel):
+    # The ceiling is a fact about the rating — the most this questionnaire could
+    # ever have proved about anybody — and not a drawing instruction. A client
+    # marking it on a ring is presentation the client owns; *what the number is*
+    # was never the client's to know, and it held a copy until this field existed.
     mu: float
     sigma: float
     confidence: int
+    confidence_ceiling: int | None = Field(
+        None,
+        description=(
+            "The highest `confidence` this engine version can reach, as a whole "
+            "percent — a questionnaire has an irreducible limit, so a rating at "
+            "this value was held by the ceiling and one below it by its own "
+            "evidence. Absent only for a rating replayed from an engine version "
+            "that has since been retired, which is the same case that carries no "
+            "`confidence_reason`: such a rating keeps its numbers and loses its "
+            "explanation. Do not hold a local copy of this number — it is "
+            "version-scoped and may be retuned without a client release."
+        ),
+    )
     range: RangeResponse
     band: BandResponse
     status: str
@@ -152,6 +169,7 @@ class ResultResponse(BaseModel):
             mu=result.mu,
             sigma=result.sigma,
             confidence=result.confidence,
+            confidence_ceiling=result.confidence_ceiling,
             range=RangeResponse(low=result.range_low, high=result.range_high),
             band=BandResponse(
                 name=result.band.name,

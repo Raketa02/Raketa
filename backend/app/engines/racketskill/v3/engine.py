@@ -492,6 +492,13 @@ class RacketSkillEngineV3:
             status=RESULT_STATUS,
             questions_asked=len(transcript),
             engine_version=ENGINE_VERSION,
+            # The ceiling this version can prove, put through the same transform
+            # that produced the number above it — so it is the confidence of a
+            # rating sitting exactly on the σ floor, not ``CONFIDENCE_CAP``
+            # restated as a percent. The two agree today and would part company
+            # the moment the transform gained a rounding rule or a clamp, and it
+            # is the transform's answer a ring's tick has to match.
+            confidence_ceiling=confidence_percent(SIGMA_FLOOR),
             calibration_priority=calibration_priority,
             confidence_reason=_confidence_reason(wideners),
             # Compared against the *reported* Level, so a row can never contradict
