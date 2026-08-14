@@ -11,6 +11,7 @@ from app.engines.assessment import (
     AnsweredQuestion,
     AssessmentResult,
     BandView,
+    Complete,
 )
 from app.engines.racketskill.v3 import RacketSkillEngineV3
 from app.kernel import Sport
@@ -20,6 +21,7 @@ from app.modules.rating.domain.errors import (
     AssessmentAlreadyFinished,
     QuestionNotOutstanding,
 )
+from app.modules.rating.domain.events import AssessmentCompleted
 
 NOW = datetime(2026, 8, 13, tzinfo=timezone.utc)
 
@@ -36,6 +38,10 @@ def _result() -> AssessmentResult:
         questions_asked=1,
         engine_version="racketskill-fusion-v3",
     )
+
+
+def _stop() -> Complete:
+    return Complete(reason="beginner-fast-path", value=0.0)
 
 
 def _started() -> Assessment:
@@ -61,7 +67,7 @@ def test_replay_reproduces_transcript_and_result() -> None:
     assessment.answer(
         question_id="opening.regularity", option_id="never-played", occurred_at=NOW
     )
-    assessment.complete(result=_result(), occurred_at=NOW)
+    assessment.complete(result=_result(), stop=_stop(), occurred_at=NOW)
 
     replayed = Assessment.from_history(assessment.pull_events())
 
@@ -86,7 +92,7 @@ def test_a_completed_assessment_rejects_further_answers() -> None:
     assessment.answer(
         question_id="opening.regularity", option_id="never-played", occurred_at=NOW
     )
-    assessment.complete(result=_result(), occurred_at=NOW)
+    assessment.complete(result=_result(), stop=_stop(), occurred_at=NOW)
     with pytest.raises(QuestionNotOutstanding):
         assessment.answer(
             question_id="opening.regularity",
@@ -132,7 +138,7 @@ def test_a_completed_assessment_cannot_be_abandoned() -> None:
     assessment.answer(
         question_id="opening.regularity", option_id="never-played", occurred_at=NOW
     )
-    assessment.complete(result=_result(), occurred_at=NOW)
+    assessment.complete(result=_result(), stop=_stop(), occurred_at=NOW)
     with pytest.raises(AssessmentAlreadyFinished):
         assessment.abandon(occurred_at=NOW)
 
@@ -140,8 +146,18 @@ def test_a_completed_assessment_cannot_be_abandoned() -> None:
 # --- The recorded result, and the explanation reproduced from the transcript ----
 
 
-def _completed_from(engine, transcript: tuple[AnsweredQuestion, ...]) -> Assessment:
-    """An assessment driven to completion by the engine, as the use case does."""
+def _completed_from(
+    engine,
+    transcript: tuple[AnsweredQuestion, ...],
+    stop: Complete | None = None,
+) -> Assessment:
+    """An assessment driven to completion by the engine, as the use case does.
+
+    The transcripts here are hand-built fixtures chosen for what they say about
+    the *result*, and the engine would have gone on asking after several of them,
+    so the stop defaults to a fixture. A test that means something by the stop
+    passes the engine's own step instead.
+    """
 
     assessment = Assessment.start(
         assessment_id=uuid4(),
@@ -163,6 +179,7 @@ def _completed_from(engine, transcript: tuple[AnsweredQuestion, ...]) -> Assessm
         )
     assessment.complete(
         result=engine.finalize(sport=Sport.PADEL, transcript=assessment.transcript),
+        stop=stop or _stop(),
         occurred_at=NOW,
     )
     return Assessment.from_history(assessment.pull_events())
@@ -181,6 +198,10 @@ def test_the_stream_records_the_facts_and_not_the_copy() -> None:
     assert recorded.calibration_priority == CALIBRATION_PRIORITY_STANDARD
     assert recorded.confidence_reason is None  # copy is not replayed
     assert recorded.factors == ()
+    # Nor is the ceiling: what a questionnaire could prove belongs to the engine
+    # version that ran it, and the stream records the rating rather than the
+    # engine. Every served result gets it back from the engine that is asked.
+    assert recorded.confidence_ceiling is None
 
 
 def test_the_reproduced_explanation_agrees_with_the_recorded_numbers() -> None:
@@ -212,8 +233,12 @@ def test_the_reproduced_explanation_agrees_with_the_recorded_numbers() -> None:
         recorded.range_high,
     )
     assert served.calibration_priority == recorded.calibration_priority
-    # And the explanation the recorded result cannot carry is there.
+    # And the explanation the recorded result cannot carry is there, the ceiling
+    # among it: the engine that is asked answers for what it can prove, so the
+    # number and the ceiling it is read against always come from one engine.
     assert served.factors and served.confidence_reason is not None
+    assert served.confidence_ceiling is not None
+    assert served.confidence <= served.confidence_ceiling
 
 
 def test_a_result_from_a_retired_engine_keeps_its_number_and_loses_its_commentary() -> (
@@ -231,3 +256,63 @@ def test_a_result_from_a_retired_engine_keeps_its_number_and_loses_its_commentar
     served = completed_result(engine, replayed)
     assert served == replayed.result
     assert served is not None and served.factors == ()
+    # Including the ceiling, which is why the field is optional on the wire. The
+    # ceiling in force is v4's, and this rating is not v4's; serving the current
+    # engine's number here would say a v3 rating was measured against a limit
+    # that did not exist when it was produced. A client shows no tick instead —
+    # the same thing it already does with the missing confidence sentence.
+    assert served.confidence_ceiling is None
+
+
+# --- The stop: the one routing decision that used to go unrecorded --------------
+
+
+def test_the_stop_survives_replay_with_the_engine_s_own_reason_and_value() -> None:
+    # Every question this aggregate asked records why it was asked; the moment it
+    # decided to ask no more must be answerable the same way, from the stream
+    # alone and without re-running the engine.
+    engine = RacketSkillEngineV3()
+    transcript = (AnsweredQuestion("opening.regularity", "never-played"),)
+    stop = engine.next_step(sport=Sport.PADEL, transcript=transcript)
+    assert isinstance(stop, Complete)  # the fast path really does end here
+
+    replayed = _completed_from(engine, transcript, stop=stop)
+
+    assert replayed.stop_reason == stop.reason == "beginner-fast-path"
+    assert replayed.stop_value == stop.value == 0.0
+
+
+def test_a_completion_recorded_before_stops_were_recorded_replays_without_one() -> None:
+    # The fields carry defaults rather than a new catalog version, so history
+    # written before them decodes unchanged. On such a run the absence dates the
+    # row — completed before stops were recorded — and is never "we do not know".
+    assessment = _started()
+    assessment.answer(
+        question_id="opening.regularity", option_id="never-played", occurred_at=NOW
+    )
+    result = _result()
+    replayed = Assessment.from_history(
+        [
+            *assessment.pull_events(),
+            AssessmentCompleted(
+                assessment_id=assessment.id,
+                mu=result.mu,
+                sigma=result.sigma,
+                confidence=result.confidence,
+                range_low=result.range_low,
+                range_high=result.range_high,
+                band_name=result.band.name,
+                band_lower=result.band.lower,
+                band_upper=result.band.upper,
+                status=result.status,
+                questions_asked=result.questions_asked,
+                engine_version=result.engine_version,
+                occurred_at=NOW,
+            ),
+        ]
+    )
+
+    assert replayed.is_completed
+    assert replayed.result == result
+    assert replayed.stop_reason is None
+    assert replayed.stop_value is None

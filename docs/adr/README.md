@@ -46,3 +46,6 @@ If your work **contradicts** an existing ADR, surface it rather than silently ov
 - [0014 — The club console follows its production architecture standard](0014-club-console-production-architecture-standard.md)
 - [0015 — Engines as a pure, versioned layer](0015-engines-as-a-pure-versioned-layer.md)
 - [0016 — A modular monolith with two API surfaces](0016-modular-monolith-two-api-surfaces.md)
+- [0017 — Assessment and SkillRating are event-sourced](0017-rating-context-event-sourced.md)
+- [0018 — Aggregate repositories over the event store](0018-aggregate-repositories-over-the-event-store.md)
+- [0019 — Assessment stream ids are derived from (player, sport, attempt)](0019-deterministic-assessment-stream-ids.md)

@@ -23,6 +23,16 @@
  * Abandonment is the *permanent* way out and it is a server-side transition. This is the
  * temporary one, and it is not a fact about the player's rating, so it never leaves the
  * device.
+ *
+ * ## Why this is not part of the onboarding pass
+ *
+ * It looks like it should be — it is in-memory routing state about onboarding, which is
+ * what a pass holds — and it must not be. **The two have different lifetimes.** A pass
+ * ends when the player reaches the app; a deferral's whole job is to survive that, because
+ * the entry gate is evaluated again the moment they get there. Folded into the pass, a
+ * deferral would be cleared at exactly the instant the gate next reads it, and the player
+ * who tapped "continue later" would be sent straight back into the run they set aside —
+ * which is the bug this store exists to prevent, reintroduced by a tidier structure.
  */
 
 import { create } from 'zustand';

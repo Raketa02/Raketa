@@ -25,7 +25,7 @@ import {
 } from '@/test-support/onboardingRouter';
 import { installTransport, json, type Transport, type Wire } from '@/test-support/transport';
 
-import { useSportQueue } from '../store/sportQueue.store';
+import { useOnboardingPass } from '../store/onboardingPass.store';
 
 const ASSESSMENT_ID = '1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6';
 const ANSWERS_PATH = `/api/v1/assessments/${ASSESSMENT_ID}/answers`;
@@ -61,6 +61,10 @@ const RESULT: Wire['ResultResponse'] = {
   mu: 2.71,
   sigma: 0.62,
   confidence: 28,
+  // The engine's, not the app's. Every assertion about the ring's tick, its name and the
+  // Confidence explainer reads this fixture — a client-side copy would keep them passing
+  // while the served number moved underneath them.
+  confidence_ceiling: 30,
   range: { low: 2.09, high: 3.33 },
   band: { name: 'Established', lower: 2.65, upper: 3.85 },
   status: 'initial_estimate',
@@ -105,7 +109,7 @@ beforeEach(async () => {
   wireHttpCredentials(refreshTokens);
   await clearStoredTokens();
   queryClient.clear();
-  useSportQueue.getState().reset();
+  useOnboardingPass.getState().reset();
 });
 
 afterEach(() => {
@@ -165,6 +169,37 @@ describe('the verdict', () => {
     });
 
     expect(ring.props.accessibilityValue).toEqual({ min: 0, max: 100, now: 28 });
+  });
+
+  it('names the ceiling the engine served, not one of its own', async () => {
+    // The number is version-scoped and the app no longer holds a copy. A retune reaches the
+    // ring on the next response rather than on the next release — so an engine whose
+    // ceiling is 45 has to be read straight through, tick and name alike.
+    await arriveAtTheResult({ ...RESULT, confidence: 41, confidence_ceiling: 45 });
+
+    expect(
+      await screen.findByRole('progressbar', {
+        name: 'Confidence 41%, out of the 45% a questionnaire can prove',
+      }),
+    ).toBeTruthy();
+    expect(screen.queryByLabelText(/30%/)).toBeNull();
+  });
+
+  it('says nothing about a ceiling for a rating whose engine has been retired', async () => {
+    // The result was replayed from its stream because the engine that produced it is gone:
+    // the numbers survive, the explanation does not, and what a retired engine could prove
+    // is part of that explanation. So the ring's name carries the one number it has — and
+    // a client falling back to a constant would state a limit that did not exist when this
+    // rating was produced.
+    await arriveAtTheResult({ ...RESULT, confidence_ceiling: null, confidence_reason: null });
+
+    const ring = await screen.findByRole('progressbar', { name: 'Confidence 28%' });
+    expect(ring.props.accessibilityValue).toEqual({ min: 0, max: 100, now: 28 });
+
+    // The rating itself is still shown in full. Losing the explanation is not losing the
+    // rating.
+    expect(screen.getByText('2,71')).toBeTruthy();
+    expect(screen.getByLabelText('Band: Established')).toBeTruthy();
   });
 
   it('shows the reason Confidence landed where it did', async () => {
@@ -396,11 +431,25 @@ describe('the information marks', () => {
   });
 
   it('names the ceiling in the explanation, so a low number does not read as failure', async () => {
-    await arriveAtTheResult();
+    // 28% out of a possible 100 reads as a failing grade. 28% out of the 30 a questionnaire
+    // can prove reads as what it is, and the number in that sentence is the engine's.
+    await arriveAtTheResult({ ...RESULT, confidence: 41, confidence_ceiling: 45 });
 
     fireEvent.press(await screen.findByLabelText('What Confidence means'));
 
-    expect(await screen.findByText(/at most 30%/)).toBeTruthy();
+    expect(await screen.findByText(/at most 45%/)).toBeTruthy();
+  });
+
+  it('drops the sentence naming a ceiling when no ceiling was served', async () => {
+    // The rest of the explanation still holds — what Confidence is, and that matches are
+    // what raise it. Only the claim about a maximum goes, because there is no honest
+    // number to put in it.
+    await arriveAtTheResult({ ...RESULT, confidence_ceiling: null, confidence_reason: null });
+
+    fireEvent.press(await screen.findByLabelText('What Confidence means'));
+
+    expect(await screen.findByText(/How sure we are, not how good you are/)).toBeTruthy();
+    expect(screen.queryByText(/at most/)).toBeNull();
   });
 });
 

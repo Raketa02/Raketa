@@ -177,21 +177,44 @@ async def test_the_second_start_returns_the_outstanding_question_not_the_opening
 
 
 @pytest.mark.asyncio
-async def test_starting_after_a_completed_run_opens_a_new_one(
+async def test_starting_after_a_completed_run_is_refused(
     client, session_factory, valid_signup_payload
 ):
-    # The guard is scoped to runs in progress, never to any run that ever
-    # existed — a rated sport can always be rated again.
+    # This test used to assert the opposite — that a rated sport can always be
+    # rated again — and the assertion held only because it stopped at the start.
+    # Answering that second run to the end appended a second opening event to a
+    # rating stream keyed by (player, sport), which the store rejects, so the
+    # player got a 500 on the last answer of a questionnaire they had just
+    # finished (#53).
+    #
+    # The run is refused where refusing is free instead. Whether re-rating
+    # should *replace* the rating is a live question; the transition that would
+    # answer it belongs to the match-update engine.
     headers = await _auth_headers(client, valid_signup_payload)
     finished = await _run_to_result(client, headers, "PADEL")
     assert finished["status"] == "completed"
 
     resp = await _create(client, headers, "PADEL")
 
+    assert resp.status_code == 409, resp.text
+    assert resp.json()["code"] == "sport_already_rated"
+    # Nothing was opened: the one stream is the run that produced the rating.
+    assert len(await _assessment_stream_ids(session_factory)) == 1
+
+
+@pytest.mark.asyncio
+async def test_a_rated_sport_does_not_block_an_unrated_one(
+    client, valid_signup_payload
+):
+    # The refusal is per sport, like every other guard on this endpoint. A
+    # player rated at padel is still a player who has never played tennis.
+    headers = await _auth_headers(client, valid_signup_payload)
+    await _run_to_result(client, headers, "PADEL")
+
+    resp = await _create(client, headers, "TENNIS")
+
     assert resp.status_code == 201, resp.text
-    assert resp.json()["assessment_id"] != finished["assessment_id"]
     assert resp.json()["question"]["id"] == "opening.regularity"
-    assert len(await _assessment_stream_ids(session_factory)) == 2
 
 
 @pytest.mark.asyncio
@@ -1049,6 +1072,7 @@ RESULT_KEYS = {
     "mu",
     "sigma",
     "confidence",
+    "confidence_ceiling",
     "range",
     "band",
     "status",
@@ -1108,6 +1132,29 @@ async def test_the_beginner_result_explains_itself_too(client, valid_signup_payl
     assert result["uncertainty_factors"] == []
     assert result["confidence_reason"]["key"] == "limited-match-evidence"
     assert result["calibration_priority"] == "standard"
+
+
+@pytest.mark.asyncio
+async def test_the_result_carries_the_ceiling_its_confidence_is_measured_against(
+    client, valid_signup_payload
+):
+    """The ceiling is served, so nothing downstream has to keep a copy of it.
+
+    Expected from the engine's own constants rather than from ``30``: the point
+    of serving it is that a retune reaches the client through the response, and a
+    test pinning the literal would make the retune look like a regression here
+    while the phone quietly went on drawing the old tick.
+    """
+
+    from app.engines.racketskill.core import confidence_percent
+    from app.engines.racketskill.v3.engine import SIGMA_FLOOR
+
+    headers = await _auth_headers(client, valid_signup_payload)
+    result = (await _run_to_result(client, headers))["result"]
+
+    assert result["confidence_ceiling"] == confidence_percent(SIGMA_FLOOR)
+    # The relationship the client draws: an arc under a tick, never over it.
+    assert result["confidence"] <= result["confidence_ceiling"]
 
 
 @pytest.mark.asyncio

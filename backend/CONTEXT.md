@@ -35,6 +35,18 @@ there; they are not repeated here.
 - **Durable event name** — the stable `"<context>.<event>"` string plus integer version
   registered in the event catalog, e.g. `users.user_registered` / v1. It is the wire
   contract for stored history and is **independent of the Python class name**.
+- **Aggregate repository** — the port a use case loads and saves an **event-sourced
+  aggregate** through, e.g. `AssessmentRepository`. It owns the aggregate-type name, the
+  replay, the ownership scoping and the optimistic-concurrency bookkeeping, so a use case
+  never names the event store. `save` appends and publishes and **does not commit** — the
+  `UnitOfWork` stays a use-case dependency, because one transaction can span two
+  aggregates. Its adapter keeps a **per-request** identity map of loaded versions, so it
+  must be constructed per request from the session. _Avoid_: DAO, store, gateway.
+- **Read-model repository** — the port a use case reads *projected current state* through,
+  e.g. `UserRepository`. It answers queries against a table, not by replaying a stream, and
+  has no version bookkeeping. **The trap:** `UserRepository` is this kind despite its name
+  and despite `User` being an event-sourced aggregate — it is the projection side, not the
+  write side. It keeps its name; read the shape, not the noun.
 
 Add backend-specific technical terms here as they are resolved. Anything describing the
 *domain* belongs in the shared glossary instead.

@@ -144,6 +144,20 @@ class AssessmentResult:
     status: str
     questions_asked: int
     engine_version: str
+    #: The highest Confidence this engine version can reach, as a whole percent —
+    #: its σ floor put through its own confidence transform. It travels with the
+    #: rating rather than being known separately, because a reader comparing a
+    #: Confidence against a ceiling it holds its own copy of is comparing against
+    #: a number nothing keeps honest: retune the floor and the two disagree
+    #: silently, in the direction of telling a player their answers were the
+    #: limit when the questionnaire was.
+    #:
+    #: Absent under exactly the rule ``confidence_reason`` is absent: a result
+    #: replayed from its stream because the engine that produced it has been
+    #: retired keeps its numbers and loses its explanation, and what a *retired*
+    #: engine could prove is part of that explanation. Every live result carries
+    #: it.
+    confidence_ceiling: int | None = None
     calibration_priority: str = CALIBRATION_PRIORITY_STANDARD
     confidence_reason: ConfidenceReason | None = None
     factors: tuple[ResultFactor, ...] = ()
@@ -173,6 +187,17 @@ class Complete:
     and the number that drove the decision (the marginal gain that fell below
     threshold, the ceiling that was hit) — so a stop is recorded with the value
     that caused it, exactly as every ``AskQuestion`` records why it was asked.
+
+    **The finalised result is deliberately not carried here, and this note is so
+    that is not re-proposed.** Folding it in looks like it would save the caller
+    a ``finalize`` call, and it would: there is one implementation and one
+    non-test caller. But ``next_step`` is the routing half of the engine, asked
+    on every answer by a caller that only wants to know whether there is another
+    question. Returning a result would make every terminating call author the
+    player-facing copy ``finalize`` owns — the confidence sentence, the factor
+    labels, the widener detail — for a caller that may not want it. Callers that
+    do want it ask for it, which is also what keeps a completed run's result
+    reproducible from its transcript rather than from a step nobody kept.
     """
 
     reason: str

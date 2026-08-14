@@ -1,9 +1,9 @@
 """Rating-context errors, rendered as structured JSON over HTTP.
 
-Each carries its own wire code. The two 409s are the reason that matters: they
+Each carries its own wire code. The three 409s are the reason that matters: they
 arrive on the same status from the same endpoint family — a double-tapped
-confirm, or the same assessment resumed on a second device — and they ask the
-client for opposite recoveries.
+confirm, the same assessment resumed on a second device, a sport already rated —
+and they ask the client for opposite recoveries.
 """
 
 from __future__ import annotations
@@ -52,6 +52,31 @@ class AssessmentAlreadyFinished(ConflictError):
 
     def __init__(self) -> None:
         super().__init__("This assessment is already finished.")
+
+
+class SportAlreadyRated(ConflictError):
+    """This player already holds a Skill rating for this sport.
+
+    A rating's stream is keyed by ``(player, sport)`` and initialisation is its
+    only transition today, so a second completed run for a sport would append a
+    second opening event to a stream that already has one — which the store
+    rejects, *after* the player has answered every question.
+
+    Refusing the start is the only place where refusing is cheap. Whether a
+    second assessment should instead **replace** a rating is a real domain
+    question, and it is deliberately not answered here: the same transition is
+    what the match-update engine will need, and designing it with only
+    onboarding in view would settle its shape for the wrong caller (#53).
+
+    The client recovery is to offer the sport as already rated rather than as
+    startable — which is what the picker does today, so no shipped flow reaches
+    this.
+    """
+
+    code = "sport_already_rated"
+
+    def __init__(self) -> None:
+        super().__init__("This player is already rated at this sport.")
 
 
 class InvalidAnswerOption(BadRequestError):

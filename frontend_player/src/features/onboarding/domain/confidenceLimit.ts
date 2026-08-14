@@ -13,10 +13,18 @@
  * there by the evidence itself — thin answers, time away, or answers that disagreed — and
  * the engine's own confidence sentence says which of those it was.
  *
- * **The comparison is the only thing decided here, and it is decided against the number
- * the engine sent.** The ceiling is a domain constant rather than a display cap, so a
+ * **The comparison is the only thing decided here, and both numbers come from the server.**
+ * The ceiling is version-scoped and arrives on the result beside the Confidence it bound; a
+ * copy held here would answer for an engine that has since been retuned, and would do it in
+ * a build already on phones. The ceiling is a floor on σ rather than a display cap, so a
  * Confidence that reached it reached it in the arithmetic; this reads that arithmetic, it
  * does not repeat it.
+ *
+ * **A rating with no served ceiling has no answer here and must not be given one.** Its
+ * engine has been retired, so what it *could* have proved is not knowable — the caller shows
+ * no sentence, exactly as it shows none when the engine's own confidence reason is absent.
+ * That is why this takes a ceiling rather than reaching for a default: there is no default
+ * that would be true.
  *
  * Two things it is deliberately **not**:
  *
@@ -28,14 +36,16 @@
  *   arrived above the ceiling is one this rule must never describe as evidence-limited.
  */
 
-import { ONBOARDING_CONFIDENCE_CEILING } from './AssessmentResult';
-
 export type ConfidenceLimit =
   /** The questionnaire's own ceiling. The evidence would have supported more. */
   | 'ceiling'
   /** The answers themselves. The ceiling was never reached, so it bound nothing. */
   | 'evidence';
 
-export function confidenceLimit(confidence: number): ConfidenceLimit {
-  return confidence >= ONBOARDING_CONFIDENCE_CEILING ? 'ceiling' : 'evidence';
+/**
+ * @param confidence The Confidence the engine produced, 0–100.
+ * @param ceiling The ceiling that engine served beside it, on the same scale.
+ */
+export function confidenceLimit(confidence: number, ceiling: number): ConfidenceLimit {
+  return confidence >= ceiling ? 'ceiling' : 'evidence';
 }

@@ -9,16 +9,29 @@
  * The sport travels as a param because the wire does not carry it: `/assessments/{id}`
  * answers with a step, and which sport that step belongs to is known from the question
  * that was asked, not from the answer.
+ *
+ * **Surviving validation is not the same as belonging here.** A well-formed link naming a
+ * sport this player never chose is still not a way into the middle of onboarding — that
+ * happens once, at the beginning, and there is no re-take from inside the app. Whether a
+ * player may be admitted is the feature's rule; turning its answer into a route is this
+ * file's whole job.
  */
 
 import { Redirect, useLocalSearchParams } from 'expo-router';
 
-import { QuestionScreen, parseAssessmentRouteParams } from '@/features/onboarding/types';
+import {
+  QuestionScreen,
+  parseAssessmentRouteParams,
+  useOnboardingAdmission,
+} from '@/features/onboarding/types';
 
 export default function QuestionRoute() {
   const params = parseAssessmentRouteParams(useLocalSearchParams());
+  // Before the guard below, because a hook may not be conditional. It tolerates the
+  // absent sport a rejected link leaves behind.
+  const admission = useOnboardingAdmission(params?.sport);
 
-  if (params === undefined) return <Redirect href="/welcome" />;
+  if (params === undefined || admission === 'start-over') return <Redirect href="/welcome" />;
 
   return <QuestionScreen assessmentId={params.assessmentId} sport={params.sport} />;
 }

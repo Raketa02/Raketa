@@ -35,7 +35,7 @@
  */
 
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -53,19 +53,19 @@ import {
 
 import type { AnswerOption } from '../domain/Assessment';
 import type { Sport } from '../domain/Sport';
-import { nextSport, ratingPosition } from '../domain/sportQueue';
+import { positionOf } from '../domain/onboardingPass';
 import { useAbandonAssessment } from '../hooks/useAbandonAssessment';
+import { useAdvanceThroughPass } from '../hooks/useAdvanceThroughPass';
 import { useAnswerQuestion } from '../hooks/useAnswerQuestion';
 import { useAssessment } from '../hooks/useAssessment';
-import { useStartAssessment } from '../hooks/useStartAssessment';
-import { useCompletedRuns } from '../store/completedRuns.store';
 import { useDeferredRuns } from '../store/deferredRuns.store';
-import { useSportQueue } from '../store/sportQueue.store';
+import { useOnboardingPass } from '../store/onboardingPass.store';
 
 import { LeaveAssessmentSheet } from './LeaveAssessmentSheet';
 import { OnboardingChrome } from './OnboardingChrome';
 import { difficultyTag } from './difficultyTag';
 import { onboardingErrorMessage } from './onboardingErrorMessage';
+import { passEyebrow } from './passEyebrow';
 import { sportLabel } from './sportPresentation';
 
 /** Identical on every question. See the note above — this is a domain rule, not copy. */
@@ -81,11 +81,24 @@ export function QuestionScreen({ assessmentId, sport }: QuestionScreenProps) {
   const assessment = useAssessment(assessmentId);
   const answer = useAnswerQuestion(assessmentId);
   const abandon = useAbandonAssessment(assessmentId);
-  const start = useStartAssessment();
-  const queue = useSportQueue((state) => state.queue);
   const defer = useDeferredRuns((state) => state.defer);
 
-  const position = ratingPosition(queue, sport);
+  const pass = useOnboardingPass((state) => state.pass);
+  /**
+   * Always present by the time this screen renders: the route admits nobody whose sport is
+   * outside the running pass, and begins a pass of one sport when there is none — which is
+   * the resumed run. `positionOf` still answers *nothing* for a sport it cannot place,
+   * because that is the honest answer and it is the reason the route can turn those
+   * players away rather than draw them a bar with no denominator.
+   */
+  const position = positionOf(pass, sport);
+  /**
+   * Leaving this sport, in one place. The screen holds no navigation and no latch of its
+   * own: which route each answer means, and what a failed start does, are the hook's, and
+   * the result screen calls the same one so the two cannot disagree again.
+   */
+  const onwards = useAdvanceThroughPass(sport);
+  const { advance, showResultOf } = onwards;
   const step = assessment.data;
   const question = step?.question;
   /**
@@ -126,75 +139,18 @@ export function QuestionScreen({ assessmentId, sport }: QuestionScreenProps) {
    */
   const number = step === undefined ? 0 : step.questionsAsked + 1;
 
-  /**
-   * A one-way latch. Every exit below is a `replace`, and the screen stays mounted while
-   * the next one is being arranged — so without this, a step arriving mid-departure could
-   * navigate a second time on top of a decision already taken.
-   */
-  const departing = useRef(false);
-
-  /**
-   * The end of onboarding, or the next sport the player chose.
-   *
-   * The queue is not edited as sports are dealt with, so *which* sport comes next is
-   * `nextSport`'s to answer (a sport that was abandoned was still chosen, and still
-   * counts in the progress bar). With nothing after it the flow leaves onboarding, and
-   * the entry gate decides where that lands — exactly as it does from the result screen.
-   *
-   * **Where "nothing after it" lands depends on what the run produced.** Abandoning is
-   * the player saying stop, and it is still the end of the run: if any sport was rated
-   * along the way, they leave through the same closing screens as the player who
-   * finished — the done screen accounts for the ratings they made, and the data screen
-   * says what was kept, what is never done with it, and that no one can hand-edit a
-   * Level. Ending on an abandonment is not a reason to be told none of that.
-   *
-   * When the run produced nothing, it goes straight to the app. There is no account to
-   * give, `/done` has only its empty state to show, and answering *stop* with two more
-   * screens would be the wrong response to what the player just asked for.
-   */
-  const completedRuns = useCompletedRuns((state) => state.completed);
-  const startNext = start.mutate;
-  const leaveTheQuestionnaire = useCallback(() => {
-    if (departing.current) return;
-    departing.current = true;
-
-    const next = nextSport(queue, sport);
-    if (next === undefined) {
-      router.replace(completedRuns.length > 0 ? '/done' : '/');
-      return;
-    }
-    startNext(next, {
-      onSuccess: (opening) =>
-        router.replace({
-          pathname: '/question/[assessmentId]',
-          params: { assessmentId: opening.assessmentId, sport: next },
-        }),
-      // The abandonment stands — it is a state transition on the server and there is
-      // nothing to undo. Only the departure failed, so the latch is released and the
-      // confirm stays open with the failure beside the control that retries it.
-      onError: () => {
-        departing.current = false;
-      },
-    });
-  }, [queue, sport, router, startNext, completedRuns]);
-
-  // The run is over: the outstanding question is gone and a rating exists. `replace`,
-  // because the questionnaire has no way back — this is the one exit from the loop.
+  // The run is over: the outstanding question is gone and a rating exists.
   useEffect(() => {
-    if (!finished || departing.current) return;
-    departing.current = true;
-    router.replace({
-      pathname: '/result/[assessmentId]',
-      params: { assessmentId, sport },
-    });
-  }, [finished, router, assessmentId, sport]);
+    if (!finished) return;
+    showResultOf(assessmentId);
+  }, [finished, showResultOf, assessmentId]);
 
   // Ended elsewhere, with no rating to show. There is nothing to say about a run that is
   // simply gone, so the flow moves on the same way an abandonment from here would.
   useEffect(() => {
     if (!endedWithoutRating) return;
-    leaveTheQuestionnaire();
-  }, [endedWithoutRating, leaveTheQuestionnaire]);
+    advance();
+  }, [endedWithoutRating, advance]);
 
   const submit = () => {
     if (question === undefined || selectedOptionId === undefined) return;
@@ -219,12 +175,12 @@ export function QuestionScreen({ assessmentId, sport }: QuestionScreenProps) {
    * server treats as a no-op, and tries the departure again.
    */
   const stopRatingThisSport = () => {
-    abandon.mutate(undefined, { onSuccess: leaveTheQuestionnaire });
+    abandon.mutate(undefined, { onSuccess: advance });
   };
 
   // The abandon request, then the next sport's opening question: one departure to the
   // player, and either half can fail.
-  const leaving = abandon.isPending || start.isPending;
+  const leaving = abandon.isPending || onwards.advancing;
 
   return (
     <>
@@ -237,7 +193,7 @@ export function QuestionScreen({ assessmentId, sport }: QuestionScreenProps) {
         {...behindOverlay(confirmingExit)}
       >
         <OnboardingChrome
-          eyebrow={`${sportLabel(sport)} · Rating ${position.index} of ${position.total}`}
+          eyebrow={passEyebrow(sport, position)}
           title={question?.category ?? sportLabel(sport)}
           position={position}
           right={
@@ -344,7 +300,7 @@ export function QuestionScreen({ assessmentId, sport }: QuestionScreenProps) {
         onContinueLater={continueLater}
         onAbandon={stopRatingThisSport}
         leaving={leaving}
-        error={abandon.error ?? start.error}
+        error={abandon.error ?? onwards.error}
         returnFocusTo={closeControl}
       />
     </>

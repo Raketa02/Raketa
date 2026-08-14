@@ -23,8 +23,8 @@ from app.kernel import Sport
 from app.modules.rating.application.commands import (
     AssessmentStep,
     InProgressAssessmentView,
-    RatingView,
 )
+from app.modules.rating.domain.skill_rating import SkillRating
 
 
 class CreateAssessmentRequest(BaseModel):
@@ -133,9 +133,26 @@ class ConfidenceReasonResponse(BaseModel):
 
 
 class ResultResponse(BaseModel):
+    # The ceiling is a fact about the rating — the most this questionnaire could
+    # ever have proved about anybody — and not a drawing instruction. A client
+    # marking it on a ring is presentation the client owns; *what the number is*
+    # was never the client's to know, and it held a copy until this field existed.
     mu: float
     sigma: float
     confidence: int
+    confidence_ceiling: int | None = Field(
+        None,
+        description=(
+            "The highest `confidence` this engine version can reach, as a whole "
+            "percent — a questionnaire has an irreducible limit, so a rating at "
+            "this value was held by the ceiling and one below it by its own "
+            "evidence. Absent only for a rating replayed from an engine version "
+            "that has since been retired, which is the same case that carries no "
+            "`confidence_reason`: such a rating keeps its numbers and loses its "
+            "explanation. Do not hold a local copy of this number — it is "
+            "version-scoped and may be retuned without a client release."
+        ),
+    )
     range: RangeResponse
     band: BandResponse
     status: str
@@ -152,6 +169,7 @@ class ResultResponse(BaseModel):
             mu=result.mu,
             sigma=result.sigma,
             confidence=result.confidence,
+            confidence_ceiling=result.confidence_ceiling,
             range=RangeResponse(low=result.range_low, high=result.range_high),
             band=BandResponse(
                 name=result.band.name,
@@ -184,6 +202,12 @@ class RatingResponse(BaseModel):
     later reads back are described in two vocabularies.
     """
 
+    # Built from the aggregate, exactly as ``ResultResponse`` is built from the
+    # engine's result: one policy for how the six rating facts reach the wire.
+    # Kept as a comment rather than added to the docstring above, because a
+    # response model's docstring *is* wire copy — it lands in both API documents
+    # as the schema description, so a note to the next reader here would have
+    # been a contract diff.
     sport: Sport
     mu: float
     sigma: float
@@ -195,7 +219,10 @@ class RatingResponse(BaseModel):
     updated_at: datetime
 
     @classmethod
-    def from_view(cls, rating: RatingView) -> "RatingResponse":
+    def from_domain(cls, rating: SkillRating) -> "RatingResponse":
+        # The band travels as the engine computed it. Its boundaries are
+        # deliberately uneven and were wrong once already, so nothing downstream
+        # may restate them.
         return cls(
             sport=rating.sport,
             mu=rating.mu,
@@ -219,8 +246,8 @@ class RatingsResponse(BaseModel):
     ratings: list[RatingResponse]
 
     @classmethod
-    def from_views(cls, ratings: list[RatingView]) -> "RatingsResponse":
-        return cls(ratings=[RatingResponse.from_view(rating) for rating in ratings])
+    def from_domain(cls, ratings: list[SkillRating]) -> "RatingsResponse":
+        return cls(ratings=[RatingResponse.from_domain(rating) for rating in ratings])
 
 
 class AssessmentStepResponse(BaseModel):

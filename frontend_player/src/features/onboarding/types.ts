@@ -25,5 +25,19 @@ export { onboardingKeys } from './hooks/onboardingKeys';
  */
 export { useEntryDecision, type EntryDecision } from './hooks/useEntryDecision';
 
+/**
+ * A walk through onboarding is over when the player is in the app. The gate is the one
+ * place that knows they are, so it is the one place that says so — see the hook for why
+ * this is the definition rather than a convention.
+ */
+export { useEndOnboardingPass } from './hooks/useEndOnboardingPass';
+
+/**
+ * Whether a link may drop a player straight into a sport's questionnaire. Onboarding
+ * happens once, at the beginning, so a link naming a sport this player never chose sends
+ * them there rather than into the middle of a flow with nothing honest to show.
+ */
+export { useOnboardingAdmission, type OnboardingAdmission } from './hooks/useOnboardingAdmission';
+
 /** Route params are untrusted input, so the route that reads them validates them here. */
 export { parseAssessmentRouteParams, type AssessmentRouteParams } from './schemas/routeParams';

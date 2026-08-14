@@ -16,22 +16,6 @@
 import type { Band, LikelyRange } from './SkillRating';
 
 /**
- * The Confidence ceiling onboarding cannot exceed.
- *
- * A domain constant, not a design value: the questionnaire is the entire evidence surface
- * and self-report has an irreducible ceiling, **enforced as a floor on σ rather than as a
- * display cap** — so this is not a number the client clamps anything to. It is what the
- * confidence ring's tick marks, which is why the ring is *told* where its ceiling sits
- * rather than knowing.
- *
- * It is not on the wire. `CONTEXT.md` states it as an invariant of the rating context and
- * the engine holds it as `CONFIDENCE_CAP`; this is the third place it is written down, and
- * a rating whose confidence exceeded it would be the engine contradicting the glossary
- * rather than this constant being stale.
- */
-export const ONBOARDING_CONFIDENCE_CEILING = 30;
-
-/**
  * One evidence category, fused on its own evidence, and where that sits relative to the
  * estimate the player was given.
  *
@@ -72,8 +56,26 @@ export interface AssessmentResult {
   readonly level: number;
   /** The Uncertainty. `sigma` on the wire. */
   readonly uncertainty: number;
-  /** 0-100, at or below {@link ONBOARDING_CONFIDENCE_CEILING} for every onboarding run. */
+  /** 0-100, at or below {@link AssessmentResult.confidenceCeiling} for every onboarding run. */
   readonly confidence: number;
+  /**
+   * The highest Confidence the engine that produced this rating could reach, as a whole
+   * percent. It is what the ring's tick marks and what `confidenceLimit` reads a Confidence
+   * against.
+   *
+   * **Served, never held.** The questionnaire is the entire evidence surface and self-report
+   * has an irreducible ceiling (`CONTEXT.md`), enforced as a floor on σ rather than as a
+   * display cap — so nothing here clamps anything to it. It is *version-scoped*: a copy in
+   * the bundle would be a number nothing can keep honest, and it would be wrong the first
+   * time the engine retuned, in a build already on phones.
+   *
+   * `undefined` for a rating replayed from an engine version that has since been retired —
+   * exactly the case that carries no {@link AssessmentResult.confidenceReason}. Such a rating
+   * keeps its numbers and loses its explanation, and what a *retired* engine could prove is
+   * part of that explanation. **Draw no tick and say nothing about the ceiling. Never fall
+   * back to a constant**, which would be wrong in the one case it fired.
+   */
+  readonly confidenceCeiling: number | undefined;
   readonly range: LikelyRange;
   readonly band: Band;
   /** `initial_estimate` after onboarding. Machine-readable; never rendered raw. */

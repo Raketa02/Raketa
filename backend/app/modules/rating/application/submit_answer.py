@@ -14,6 +14,10 @@ run has ended. A private copy of this logic that had never grown an abandoned
 case answered that replay with a question for a run the server considered over,
 and the two routes described one run differently.
 
+Both aggregates are loaded and saved through their repositories, so the ownership
+guard, the aggregate-type strings and the versions these appends expect are no
+longer things this use case has to remember — asking for the aggregate means
+saying whose it is.
 
 Completion is one transaction: the assessment-completed event and the
 rating-initialised event are appended together and the result returns inline,
@@ -22,7 +26,7 @@ because the player sees their rating on the very next screen.
 
 from __future__ import annotations
 
-from app.application.ports import DomainEventPublisher, DomainEventStore, UnitOfWork
+from app.application.ports import UnitOfWork
 from app.engines.assessment import AskQuestion, AssessmentEngine
 from app.modules.rating.application.assessment_view import (
     current_step,
@@ -33,51 +37,38 @@ from app.modules.rating.application.commands import (
     AssessmentStep,
     SubmitAnswerCommand,
 )
-from app.modules.rating.domain.assessment import Assessment
 from app.modules.rating.domain.errors import (
-    AssessmentNotFound,
     InvalidAnswerOption,
     QuestionNotOutstanding,
 )
 from app.modules.rating.domain.ids import skill_rating_id
+from app.modules.rating.domain.ports import AssessmentRepository, SkillRatingRepository
 from app.modules.rating.domain.skill_rating import SkillRating
 from app.shared.clock import Clock
 
-ASSESSMENT_AGGREGATE = "assessment"
-RATING_AGGREGATE = "skill_rating"
-
 
 class SubmitAnswer:
+    """Both aggregates move through repositories; the transaction stays here."""
+
     def __init__(
         self,
         *,
         engine: AssessmentEngine,
-        event_store: DomainEventStore,
+        assessments: AssessmentRepository,
+        ratings: SkillRatingRepository,
         uow: UnitOfWork,
         clock: Clock,
-        events: DomainEventPublisher,
     ) -> None:
         self._engine = engine
-        self._event_store = event_store
+        self._assessments = assessments
+        self._ratings = ratings
         self._uow = uow
         self._clock = clock
-        self._events = events
 
     async def execute(self, command: SubmitAnswerCommand) -> AssessmentStep:
-        stored = await self._event_store.load_stream(
-            aggregate_type=ASSESSMENT_AGGREGATE,
-            aggregate_id=command.assessment_id,
+        assessment = await self._assessments.load(
+            command.assessment_id, for_player=command.player_id
         )
-        if not stored:
-            raise AssessmentNotFound()
-
-        assessment = Assessment.from_history(record.event for record in stored)
-        if assessment.player_id != command.player_id:
-            # A player can only see and act on their own assessments; a mismatch
-            # is indistinguishable from "does not exist".
-            raise AssessmentNotFound()
-
-        base_version = assessment.version
 
         # Idempotent replay of the just-answered question: record nothing, return
         # the current state. A lost response can never double-record.
@@ -109,14 +100,7 @@ class SubmitAnswer:
                 sigma=step.sigma,
                 occurred_at=now,
             )
-            pending = assessment.pull_events()
-            await self._event_store.append(
-                aggregate_type=ASSESSMENT_AGGREGATE,
-                aggregate_id=assessment.id,
-                expected_version=base_version,
-                events=pending,
-            )
-            await self._events.publish_many(pending)
+            await self._assessments.save(assessment)
             await self._uow.commit()
             return AssessmentStep(
                 assessment_id=assessment.id,
@@ -129,12 +113,13 @@ class SubmitAnswer:
             )
 
         # The engine is done: complete the assessment and initialise the rating,
-        # both appended in the same transaction.
+        # both appended in the same transaction. ``step`` is the stop itself, and
+        # it is passed through rather than discarded — the questionnaire's last
+        # routing decision is recorded exactly as every earlier one is.
         result = self._engine.finalize(
             sport=assessment.sport, transcript=assessment.transcript
         )
-        assessment.complete(result=result, occurred_at=now)
-        assessment_events = assessment.pull_events()
+        assessment.complete(result=result, stop=step, occurred_at=now)
 
         rating = SkillRating.initialise(
             rating_id=skill_rating_id(assessment.player_id, assessment.sport),
@@ -144,21 +129,13 @@ class SubmitAnswer:
             source_assessment_id=assessment.id,
             occurred_at=now,
         )
-        rating_events = rating.pull_events()
 
-        await self._event_store.append(
-            aggregate_type=ASSESSMENT_AGGREGATE,
-            aggregate_id=assessment.id,
-            expected_version=base_version,
-            events=assessment_events,
-        )
-        await self._event_store.append(
-            aggregate_type=RATING_AGGREGATE,
-            aggregate_id=rating.id,
-            expected_version=0,
-            events=rating_events,
-        )
-        await self._events.publish_many([*assessment_events, *rating_events])
+        # Two streams, one transaction. Neither ``save`` commits, so the boundary
+        # stays here — ADR-0017 states the single transaction as a domain rule
+        # rather than a persistence detail. The assessment is saved first because
+        # the outbox takes them in the order they happened.
+        await self._assessments.save(assessment)
+        await self._ratings.save(rating)
         await self._uow.commit()
 
         return AssessmentStep(

@@ -90,6 +90,36 @@ review comment and a test description all use the same word.
 - **Untrusted route input** — any param from a deep link, push payload, universal link,
   App Link or QR code. Zod-validated in the feature's `schemas/` before use.
 
+### The onboarding flow
+
+Two client-only concepts. **Neither exists on the backend and neither should:** an
+Assessment is per sport, and nothing on the server records the sequence of them or a
+player's decision to come back later. Both are modelled in
+`features/onboarding/domain/onboardingPass.ts` and held in that feature's stores.
+
+- **Onboarding pass** — **one walk through onboarding**: the sports the player chose, in
+  the order they chose them, and which of those produced a Skill rating. It is what the
+  progress bar measures, what decides which sport comes next, and what the closing screens
+  account for. Client-only, in-memory, never persisted. It **begins** explicitly — at the
+  picker with the queue that was chosen, or at the question route for a run resumed
+  straight from the entry gate, which is a genuine pass of one sport — and it **ends** in
+  one place, when the player reaches the app. Between passes there is **no pass**, and
+  that absence is load-bearing: it is what lets a resumed run begin one without adopting a
+  finished walk's queue. **Onboarding happens once, at the beginning** — there is no
+  re-take from inside the app — so a link naming a sport outside the running pass is sent
+  to welcome rather than into the middle of a flow. _Avoid_: **"run"** — that is one
+  Assessment, and a pass is a
+  sequence of them; **"session"** — that is the auth session, and the two have different
+  lifetimes; also "onboarding state", "wizard".
+- **Deferred run** — an Assessment the player asked to **continue later**. Unfinished on
+  the server with every answer intact, and held on the client only so the entry gate stops
+  resuming it. It lasts the **app session**, deliberately outliving the pass: a pass ends
+  when the player reaches the app, and that is the exact moment the gate re-evaluates, so
+  a deferral folded into a pass would send the player back into the run they set aside.
+  _Avoid_: "paused run", "saved run" — both suggest a server-side state, and there is
+  none; "abandoned run" — that **is** a server-side transition and is the permanent way
+  out, where this is the temporary one.
+
 ### Data and errors
 
 - **Query key factory** — the per-feature object in `hooks/` defining every key, with

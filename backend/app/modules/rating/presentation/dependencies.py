@@ -21,6 +21,13 @@ from app.modules.rating.application.find_in_progress_assessment import (
 from app.modules.rating.application.get_assessment import GetAssessment
 from app.modules.rating.application.list_ratings import ListPlayerRatings
 from app.modules.rating.application.submit_answer import SubmitAnswer
+from app.modules.rating.domain.ports import AssessmentRepository, SkillRatingRepository
+from app.modules.rating.infrastructure.event_sourced_assessment_repository import (
+    EventSourcedAssessmentRepository,
+)
+from app.modules.rating.infrastructure.event_sourced_skill_rating_repository import (
+    EventSourcedSkillRatingRepository,
+)
 
 
 def get_assessment_engine() -> AssessmentEngine:
@@ -33,19 +40,52 @@ def get_assessment_engine() -> AssessmentEngine:
 AssessmentEngineDep = Annotated[AssessmentEngine, Depends(get_assessment_engine)]
 
 
+def get_assessment_repository(
+    event_store: DomainEventStoreDep,
+    events: EventPublisherDep,
+) -> AssessmentRepository:
+    # Per request, like the event store and publisher it is built from. The
+    # repository remembers the versions it loaded, and one request's versions
+    # must never answer for another's.
+    return EventSourcedAssessmentRepository(event_store=event_store, events=events)
+
+
+AssessmentRepositoryDep = Annotated[
+    AssessmentRepository, Depends(get_assessment_repository)
+]
+
+
+def get_skill_rating_repository(
+    event_store: DomainEventStoreDep,
+    events: EventPublisherDep,
+) -> SkillRatingRepository:
+    # Per request, for the same reason the assessment's is: it remembers the
+    # versions it read, and one request's versions must never answer for
+    # another's.
+    return EventSourcedSkillRatingRepository(event_store=event_store, events=events)
+
+
+SkillRatingRepositoryDep = Annotated[
+    SkillRatingRepository, Depends(get_skill_rating_repository)
+]
+
+
 def get_create_assessment(
     engine: AssessmentEngineDep,
-    event_store: DomainEventStoreDep,
+    assessments: AssessmentRepositoryDep,
+    ratings: SkillRatingRepositoryDep,
     uow: UnitOfWorkDep,
     clock: ClockDep,
-    events: EventPublisherDep,
 ) -> CreateAssessment:
+    # The rating repository is here to be *asked a question*, not written: a
+    # sport the player is already rated at cannot produce a second rating, and
+    # the start is where refusing costs the player nothing.
     return CreateAssessment(
         engine=engine,
-        event_store=event_store,
+        assessments=assessments,
+        ratings=ratings,
         uow=uow,
         clock=clock,
-        events=events,
     )
 
 
@@ -54,17 +94,19 @@ CreateAssessmentDep = Annotated[CreateAssessment, Depends(get_create_assessment)
 
 def get_submit_answer(
     engine: AssessmentEngineDep,
-    event_store: DomainEventStoreDep,
+    assessments: AssessmentRepositoryDep,
+    ratings: SkillRatingRepositoryDep,
     uow: UnitOfWorkDep,
     clock: ClockDep,
-    events: EventPublisherDep,
 ) -> SubmitAnswer:
+    # Two repositories and one unit of work: completion writes both streams
+    # inside one transaction, and only the transaction is this use case's.
     return SubmitAnswer(
         engine=engine,
-        event_store=event_store,
+        assessments=assessments,
+        ratings=ratings,
         uow=uow,
         clock=clock,
-        events=events,
     )
 
 
@@ -73,9 +115,9 @@ SubmitAnswerDep = Annotated[SubmitAnswer, Depends(get_submit_answer)]
 
 def get_get_assessment(
     engine: AssessmentEngineDep,
-    event_store: DomainEventStoreDep,
+    assessments: AssessmentRepositoryDep,
 ) -> GetAssessment:
-    return GetAssessment(engine=engine, event_store=event_store)
+    return GetAssessment(engine=engine, assessments=assessments)
 
 
 GetAssessmentDep = Annotated[GetAssessment, Depends(get_get_assessment)]
@@ -83,9 +125,9 @@ GetAssessmentDep = Annotated[GetAssessment, Depends(get_get_assessment)]
 
 def get_find_in_progress_assessment(
     engine: AssessmentEngineDep,
-    event_store: DomainEventStoreDep,
+    assessments: AssessmentRepositoryDep,
 ) -> FindInProgressAssessment:
-    return FindInProgressAssessment(engine=engine, event_store=event_store)
+    return FindInProgressAssessment(engine=engine, assessments=assessments)
 
 
 FindInProgressAssessmentDep = Annotated[
@@ -94,12 +136,12 @@ FindInProgressAssessmentDep = Annotated[
 
 
 def get_list_in_progress_assessments(
-    event_store: DomainEventStoreDep,
+    assessments: AssessmentRepositoryDep,
 ) -> ListInProgressAssessments:
     # No engine: the collection reports which runs are unfinished, not what they
     # are asking. Reproducing four outstanding questions to answer "none" would
     # be work nobody reads.
-    return ListInProgressAssessments(event_store=event_store)
+    return ListInProgressAssessments(assessments=assessments)
 
 
 ListInProgressAssessmentsDep = Annotated[
@@ -108,26 +150,20 @@ ListInProgressAssessmentsDep = Annotated[
 
 
 def get_abandon_assessment(
-    event_store: DomainEventStoreDep,
+    assessments: AssessmentRepositoryDep,
     uow: UnitOfWorkDep,
     clock: ClockDep,
-    events: EventPublisherDep,
 ) -> AbandonAssessment:
-    return AbandonAssessment(
-        event_store=event_store,
-        uow=uow,
-        clock=clock,
-        events=events,
-    )
+    return AbandonAssessment(assessments=assessments, uow=uow, clock=clock)
 
 
 AbandonAssessmentDep = Annotated[AbandonAssessment, Depends(get_abandon_assessment)]
 
 
-def get_list_player_ratings(event_store: DomainEventStoreDep) -> ListPlayerRatings:
+def get_list_player_ratings(ratings: SkillRatingRepositoryDep) -> ListPlayerRatings:
     # No engine: a stored rating is replayed, never recomputed. Its numbers are
     # the ones the player was shown, whatever the engine has since become.
-    return ListPlayerRatings(event_store=event_store)
+    return ListPlayerRatings(ratings=ratings)
 
 
 ListPlayerRatingsDep = Annotated[ListPlayerRatings, Depends(get_list_player_ratings)]

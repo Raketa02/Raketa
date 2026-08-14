@@ -22,13 +22,29 @@ import {
   runInProgress,
   stubGate as stubGateWith,
 } from '@/test-support/onboardingRouter';
-import { installTransport, json, type Transport, type Wire } from '@/test-support/transport';
+import {
+  installTransport,
+  json,
+  networkFailure,
+  noContent,
+  type Transport,
+  type Wire,
+} from '@/test-support/transport';
 
-import { useCompletedRuns } from '../store/completedRuns.store';
-import { useSportQueue } from '../store/sportQueue.store';
+import { onboardingKeys } from '../hooks/onboardingKeys';
+import { useOnboardingPass } from '../store/onboardingPass.store';
 
 const PADEL_ID = '1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6';
 const TENNIS_ID = 'b7c8d9e0-1f2a-4b3c-8d4e-5f6a7b8c9d0e';
+/**
+ * A second tennis run, unfinished — started on another device, or from a link.
+ *
+ * Tennis on purpose, and not a sport nobody chose: the defect is that a resumed run was
+ * numbered against the queue of a walk that was already over, and tennis is *in* that
+ * queue. A third sport would have fallen through to the old "a sport outside the pass is a
+ * run of one" fallback and read correctly by accident.
+ */
+const TENNIS_AGAIN_ID = 'c9d0e1f2-3a4b-4c5d-8e6f-7a8b9c0d1e2f';
 
 const stepPath = (assessmentId: string) => `/api/v1/assessments/${assessmentId}`;
 const answersPath = (assessmentId: string) => `${stepPath(assessmentId)}/answers`;
@@ -62,6 +78,9 @@ const PADEL_RESULT: Wire['ResultResponse'] = {
   mu: 2.71,
   sigma: 0.62,
   confidence: 30,
+  // The ceiling is the engine's and travels with the rating; the two sentences below are
+  // the app comparing these two numbers, never a number the app holds.
+  confidence_ceiling: 30,
   range: { low: 2.09, high: 3.33 },
   band: { name: 'Established', lower: 2.65, upper: 3.85 },
   status: 'initial_estimate',
@@ -81,6 +100,7 @@ const TENNIS_RESULT: Wire['ResultResponse'] = {
   mu: 1.9,
   sigma: 0.8,
   confidence: 18,
+  confidence_ceiling: 30,
   range: { low: 1.1, high: 2.7 },
   band: { name: 'Developing', lower: 1.55, upper: 2.65 },
   status: 'initial_estimate',
@@ -149,8 +169,7 @@ beforeEach(async () => {
   wireHttpCredentials(refreshTokens);
   await clearStoredTokens();
   queryClient.clear();
-  useSportQueue.getState().reset();
-  useCompletedRuns.getState().reset();
+  useOnboardingPass.getState().reset();
   held = [];
 });
 
@@ -259,6 +278,36 @@ describe('after a result', () => {
     expect(transport.requestsTo('POST', '/api/v1/assessments')).toHaveLength(1);
   });
 
+  it('tells the player when the next sport fails to start, and retries it in place', async () => {
+    // The defect this closes: the result screen held its own copy of "start the next sport
+    // and go there" and had no error branch at all, so a failed tap did **nothing
+    // visible**. Both screens now call the same hook, and this is the question screen's
+    // behaviour arriving here — a message, and the control that failed as the retry.
+    await startRating('Padel', 'Tennis');
+    await answerTheLastQuestion(PADEL_ID, 'PADEL', PADEL_RESULT);
+
+    transport.on('POST', '/api/v1/assessments', networkFailure());
+    fireEvent.press(await screen.findByLabelText('Rate Tennis'));
+
+    expect(
+      await screen.findByText("We couldn't reach Rakieta. Check your connection and try again."),
+    ).toBeTruthy();
+    expect(screen.getByRole('alert')).toBeTruthy();
+    // Still here. A failed start changed nothing, so the padel result is exactly as it
+    // was — including the control that failed, which is the retry.
+    expect(screen).toHavePathname(`/result/${PADEL_ID}`);
+    expect(screen.getByText('Your rating')).toBeTruthy();
+    expect(screen.getByLabelText('Rate Tennis')).toBeTruthy();
+
+    // And the latch was released, so pressing again genuinely tries again rather than
+    // being swallowed by a departure that never completed.
+    transport.on('POST', '/api/v1/assessments', () => json(outstanding(TENNIS_ID), 201));
+    fireEvent.press(screen.getByLabelText('Rate Tennis'));
+
+    await waitFor(() => expect(screen).toHavePathname(`/question/${TENNIS_ID}`));
+    expect(transport.requestsTo('POST', '/api/v1/assessments')).toHaveLength(3);
+  });
+
   it('offers no next sport when there is none, and never invents one', async () => {
     await startRating('Padel');
     await answerTheLastQuestion(PADEL_ID, 'PADEL', PADEL_RESULT);
@@ -307,6 +356,47 @@ describe('the done screen', () => {
     // the ceiling bound nothing and its own evidence is what stopped it.
     expect(await screen.findByText(/Nothing you answered held it back/)).toBeTruthy();
     expect(screen.getByText(/because your answers left more to settle/)).toBeTruthy();
+
+    // Both sentences name the ceiling that was actually served with each rating.
+    expect(screen.getByText(/reached the 30% a questionnaire can prove/)).toBeTruthy();
+    expect(screen.getByText(/sits below the 30% a questionnaire can prove/)).toBeTruthy();
+  });
+
+  it('reads each rating against the ceiling it was served, not a number of its own', async () => {
+    // The same 30% is the ceiling for one engine and short of it for another. A client
+    // holding a copy would tell this player nothing held their padel rating back, when the
+    // engine that produced it says its own evidence did.
+    await startRating('Padel');
+    await answerTheLastQuestion(PADEL_ID, 'PADEL', {
+      ...PADEL_RESULT,
+      confidence: 30,
+      confidence_ceiling: 45,
+    });
+
+    fireEvent.press(await screen.findByLabelText('See your ratings'));
+    await waitFor(() => expect(screen).toHavePathname('/done'));
+
+    expect(await screen.findByText(/sits below the 45% a questionnaire can prove/)).toBeTruthy();
+    expect(screen.queryByText(/Nothing you answered held it back/)).toBeNull();
+  });
+
+  it('says nothing about a ceiling for a rating whose engine has been retired', async () => {
+    // No served ceiling is not a missing number to fill in — it is a rating replayed from
+    // its stream, which keeps its figures and loses its explanation. The card shows the
+    // figures and simply does not make the ceiling-versus-evidence claim, exactly as the
+    // result screen shows no confidence sentence when the engine sent none.
+    await startRating('Padel');
+    await answerTheLastQuestion(PADEL_ID, 'PADEL', {
+      ...PADEL_RESULT,
+      confidence_ceiling: null,
+      confidence_reason: null,
+    });
+
+    fireEvent.press(await screen.findByLabelText('See your ratings'));
+    await waitFor(() => expect(screen).toHavePathname('/done'));
+
+    expect(await screen.findByLabelText('Padel confidence: 30%')).toBeTruthy();
+    expect(screen.queryByText(/a questionnaire can prove/)).toBeNull();
   });
 
   it('says the ratings are hypotheses, and that matches are what narrow them', async () => {
@@ -438,5 +528,79 @@ describe('the data screen', () => {
 
     expect(await screen.findByText('ada')).toBeTruthy();
     expect(screen).toHavePathname('/');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Two passes, one process
+
+/**
+ * The case every other suite in this app hides.
+ *
+ * Each of them resets the stores in `beforeEach`, so a walk through onboarding always
+ * begins from nothing — and the defect is precisely that a *second* walk in the same
+ * process did not. **Nothing is reset between the two passes below**, deliberately, and
+ * that is what makes this the regression test rather than a longer version of the others.
+ *
+ * The second pass is reached the way a player reaches one: not through the picker, but
+ * through the entry gate's resume path, which redirects straight to an outstanding
+ * question. That path is why the picker's "nothing else reaches onboarding twice in one
+ * launch" assumption was never true.
+ */
+describe('a second pass in the same process', () => {
+  /** Two sports rated, the closing screens read, standing in the app. */
+  async function completeAPassAndEnterTheApp() {
+    transport.on('GET', '/api/v1/users/me', () => json(USER));
+    await rateBothSports();
+
+    fireEvent.press(await screen.findByLabelText('Continue'));
+    await waitFor(() => expect(screen).toHavePathname('/data'));
+
+    fireEvent.press(screen.getByLabelText('Start playing'));
+    expect(await screen.findByText('ada')).toBeTruthy();
+    expect(screen).toHavePathname('/');
+  }
+
+  /**
+   * The gate discovers an unfinished run and redirects to it — no relaunch, no picker, and
+   * **no store reset**. A third sport the player started somewhere else, or on another
+   * device, is the ordinary way this happens.
+   */
+  async function resumeTennisWithoutRelaunching() {
+    stubGate({ ratings: held, runs: [runInProgress('TENNIS', TENNIS_AGAIN_ID)] });
+    transport.on('GET', stepPath(TENNIS_AGAIN_ID), () => json(outstanding(TENNIS_AGAIN_ID)));
+
+    await queryClient.invalidateQueries({ queryKey: onboardingKeys.runInProgress() });
+    await waitFor(() => expect(screen).toHavePathname(`/question/${TENNIS_AGAIN_ID}`));
+  }
+
+  it('reports a resumed run as one of one, not as the last pass plus one', async () => {
+    await completeAPassAndEnterTheApp();
+    await resumeTennisWithoutRelaunching();
+
+    // The defect, exactly as filed: padel and tennis were rated in a walk that is over,
+    // and this single run used to be numbered against that walk's queue — "Rating 2 of 2"
+    // for one run. A run resumed on its own is a pass of one sport, and the bar and its
+    // eyebrow both say so, because the pass does.
+    expect(screen.getByLabelText('Rating 1 of 1')).toBeTruthy();
+    expect(screen.queryByLabelText('Rating 2 of 2')).toBeNull();
+    expect(await screen.findByText(/Tennis · Rating 1 of 1/)).toBeTruthy();
+  });
+
+  it("sends a player who abandons a resumed run to the app, not to an earlier walk's summary", async () => {
+    await completeAPassAndEnterTheApp();
+    await resumeTennisWithoutRelaunching();
+
+    transport.on('POST', `${stepPath(TENNIS_AGAIN_ID)}/abandonment`, () => noContent());
+    stubGate({ ratings: held, runs: [] });
+
+    fireEvent.press(screen.getByLabelText('Leave this rating'));
+    fireEvent.press(await screen.findByLabelText(/^Stop rating Tennis\./));
+
+    // This pass rated nothing, so there is no account to give. The done screen would have
+    // listed padel and tennis — ratings from a walk the player already finished and was
+    // already shown — which is the summary they must not be sent back to.
+    await waitFor(() => expect(screen).toHavePathname('/'));
+    expect(screen.queryByText('Your ratings')).toBeNull();
   });
 });

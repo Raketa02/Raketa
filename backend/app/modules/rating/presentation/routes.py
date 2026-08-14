@@ -15,6 +15,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Response, status
 
+from app.core.exception_handlers import ErrorResponse
 from app.kernel import Sport
 from app.modules.rating.application.commands import (
     AbandonAssessmentCommand,
@@ -61,7 +62,7 @@ async def list_ratings(
     ratings = await use_case.execute(
         ListRatingsQuery(player_id=PlayerId(current_user.id))
     )
-    return RatingsResponse.from_views(ratings)
+    return RatingsResponse.from_domain(ratings)
 
 
 @router.post(
@@ -82,6 +83,13 @@ async def list_ratings(
                 "A new assessment was started; its opening question is returned."
             ),
         },
+        status.HTTP_409_CONFLICT: {
+            "model": ErrorResponse,
+            "description": (
+                "`sport_already_rated` — this player already holds a Skill rating "
+                "for this sport, so no assessment is started."
+            ),
+        },
     },
     summary="Start an assessment and receive its opening question",
     description=(
@@ -89,10 +97,16 @@ async def list_ratings(
         "unfinished run returns **that** run and its outstanding question with a "
         "200, rather than opening a second one — so a double-tapped confirm, or a "
         "retry after a lost response, costs nothing. A sport whose previous run was "
-        "completed or abandoned still starts a new run, with a 201.\n\n"
+        "abandoned still starts a new run, with a 201.\n\n"
         "Both outcomes carry the same body, so a client that only routes on the "
         "step needs no branch; the status code is there for one that wants to tell "
-        "the two apart."
+        "the two apart.\n\n"
+        "**A sport this player is already rated at is refused with a 409** "
+        "(`sport_already_rated`). A rating stream is keyed by player and sport and "
+        "initialisation is its only transition, so a second completed run for one "
+        "sport cannot be stored — and refusing at the start is the only point at "
+        "which refusing costs the player nothing rather than a whole questionnaire. "
+        "The picker offers unrated sports, so no shipped flow reaches this."
     ),
 )
 async def create_assessment(

@@ -1,7 +1,7 @@
 /**
- * Every rating this pass through onboarding produced, read back.
+ * Every rating this onboarding pass produced, read back.
  *
- * The runs are the store's — which assessments, and which sports — and the *ratings* are
+ * The runs are the pass's — which assessments, and which sports — and the *ratings* are
  * Query's, read through the same key and the same `queryFn` the result screen used. So the
  * done screen ordinarily performs no request at all: it is showing what the player has
  * just been shown, one card each, out of the cache it was shown from.
@@ -21,16 +21,16 @@ import { useQueries, type UseQueryResult } from '@tanstack/react-query';
 import type { AppError } from '@/shared/errors';
 
 import type { AssessmentStep } from '../domain/Assessment';
-import type { CompletedRun } from '../store/completedRuns.store';
+import type { RatedRun } from '../domain/onboardingPass';
 
 import { assessmentQuery } from './useAssessment';
 
 export interface RunResult {
-  readonly run: CompletedRun;
+  readonly run: RatedRun;
   readonly query: UseQueryResult<AssessmentStep, AppError>;
 }
 
-export function useRunResults(runs: readonly CompletedRun[]): readonly RunResult[] {
+export function useRunResults(runs: readonly RatedRun[]): readonly RunResult[] {
   const results = useQueries({
     queries: runs.map((run) => assessmentQuery(run.assessmentId)),
   });

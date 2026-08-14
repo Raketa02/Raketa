@@ -13,55 +13,30 @@ first time someone rated a second sport.
 An unrated player is an empty collection, not a 404: absence of a rating is the
 normal state of a new account, not an error.
 
-The lookup reads the streams directly, exactly as the in-progress lookup does —
-every rating stream's opening event carries the player it is keyed by, so no
-parallel index is involved. Ordering is the order the ratings were earned, which
-is what the store's oldest-first ids already give.
+The lookup lives on the repository, which is the only place that knows a rating
+is a stream at all. Ordering is the order the ratings were earned.
+
+**The aggregate is what comes back, not a view of it.** There used to be an
+intermediate object here whose whole work was regrouping the range and the band
+fields, and the module ran two policies for the same six facts: the result
+response is built from an engine dataclass directly, while this one was built
+from a hand copy. Presentation already imports engine dataclasses, so the
+layering argument for the view was conceded long ago, and twenty-two field copies
+between one producer and one consumer bought nothing. When the ratings projection
+named in ADR-0017 arrives as a third consumer, it is the one that should decide
+whether those six facts want a shared name.
 """
 
 from __future__ import annotations
 
-from app.application.ports import DomainEventStore
-from app.modules.rating.application.commands import ListRatingsQuery, RatingView
+from app.modules.rating.application.commands import ListRatingsQuery
+from app.modules.rating.domain.ports import SkillRatingRepository
 from app.modules.rating.domain.skill_rating import SkillRating
-
-RATING_AGGREGATE = "skill_rating"
 
 
 class ListPlayerRatings:
-    def __init__(self, *, event_store: DomainEventStore) -> None:
-        self._event_store = event_store
+    def __init__(self, *, ratings: SkillRatingRepository) -> None:
+        self._ratings = ratings
 
-    async def execute(self, query: ListRatingsQuery) -> list[RatingView]:
-        rating_ids = await self._event_store.find_aggregate_ids_by_first_event(
-            aggregate_type=RATING_AGGREGATE,
-            payload_equals={"player_id": str(query.player_id)},
-        )
-
-        ratings: list[RatingView] = []
-        for rating_id in rating_ids:
-            stored = await self._event_store.load_stream(
-                aggregate_type=RATING_AGGREGATE,
-                aggregate_id=rating_id,
-            )
-            ratings.append(_to_view(SkillRating.from_history(r.event for r in stored)))
-        return ratings
-
-
-def _to_view(rating: SkillRating) -> RatingView:
-    # The band travels as the engine computed it. Its boundaries are deliberately
-    # uneven and were wrong once already, so nothing downstream may restate them.
-    return RatingView(
-        sport=rating.sport,
-        mu=rating.mu,
-        sigma=rating.sigma,
-        confidence=rating.confidence,
-        range_low=rating.range_low,
-        range_high=rating.range_high,
-        band_name=rating.band_name,
-        band_lower=rating.band_lower,
-        band_upper=rating.band_upper,
-        status=rating.status,
-        engine_version=rating.engine_version,
-        updated_at=rating.updated_at,
-    )
+    async def execute(self, query: ListRatingsQuery) -> list[SkillRating]:
+        return await self._ratings.find_all_for(player_id=query.player_id)

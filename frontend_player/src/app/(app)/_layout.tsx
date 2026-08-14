@@ -23,12 +23,22 @@
 
 import { Redirect, Stack } from 'expo-router';
 
-import { EntryUnavailableScreen, useEntryDecision } from '@/features/onboarding/types';
+import {
+  EntryUnavailableScreen,
+  useEndOnboardingPass,
+  useEntryDecision,
+} from '@/features/onboarding/types';
 import { useSessionStatus } from '@/shared/lib/auth';
 
 export default function AppLayout() {
   const status = useSessionStatus();
   const entry = useEntryDecision();
+
+  // A walk through onboarding is over when the player is in the app. Declared here because
+  // this is the branch that knows it — one site, and the definition rather than a line
+  // someone has to remember on each of the several ways out of the flow. Called before the
+  // returns below, because a hook may not be conditional.
+  useEndOnboardingPass(entry.kind === 'app');
 
   // Can't happen in practice — `BootstrapGate` renders nothing until the sequence
   // resolves, so no route tree exists while the status is still `bootstrapping`. It is

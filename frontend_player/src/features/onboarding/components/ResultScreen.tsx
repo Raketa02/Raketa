@@ -32,14 +32,17 @@
  * **Rate the next sport they chose, or stop.** Stopping part-way is an ordinary outcome
  * rather than an abandonment: the player leaves with the ratings they produced and goes
  * into the app, and a sport not rated today can be rated any time later. Which sport is
- * next is the queue's to answer, and with nothing after this one there is nothing to
+ * next is the pass's to answer, and with nothing after this one there is nothing to
  * offer — so the screen shows one control instead of pretending there is a choice.
  *
  * Either way the summary comes first: the done screen is where a run is accounted for, and
  * a player who stopped after one rating is owed that account as much as one who finished.
+ *
+ * **None of that is decided here.** `useAdvanceThroughPass` owns the whole transition and
+ * the question screen calls the same hook, so the two screens cannot answer differently
+ * again — which they did, over what a failed start does.
  */
 
-import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState, type MutableRefObject } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -60,20 +63,23 @@ import {
 } from '@/shared/ui';
 
 import type { AssessmentResult } from '../domain/AssessmentResult';
-import { ONBOARDING_CONFIDENCE_CEILING } from '../domain/AssessmentResult';
 import type { Sport } from '../domain/Sport';
-import { nextSport, ratingPosition } from '../domain/sportQueue';
+import { positionOf } from '../domain/onboardingPass';
+import { useAdvanceThroughPass } from '../hooks/useAdvanceThroughPass';
 import { useAssessment } from '../hooks/useAssessment';
-import { useStartAssessment } from '../hooks/useStartAssessment';
-import { useCompletedRuns } from '../store/completedRuns.store';
-import { useSportQueue } from '../store/sportQueue.store';
+import { useOnboardingPass } from '../store/onboardingPass.store';
 
 import { EvidenceTrail } from './EvidenceTrail';
 import { OnboardingChrome } from './OnboardingChrome';
 import { BAND_NAMES, bandPresentation, ratingStatusLabel } from './bandPresentation';
 import { onboardingErrorMessage } from './onboardingErrorMessage';
+import { passEyebrow } from './passEyebrow';
 import { formatConfidence, formatLevel, formatRange } from './ratingFormat';
 import { sportLabel } from './sportPresentation';
+
+type ExplainerKey = 'level' | 'range' | 'confidence';
+
+type Explainers = Readonly<Record<ExplainerKey, { readonly title: string; readonly body: string }>>;
 
 /**
  * The three figures with an information mark. **None of them is self-explanatory**, which
@@ -81,25 +87,34 @@ import { sportLabel } from './sportPresentation';
  * it, rather than being expected to have read something first.
  *
  * This is the app's own copy, not the engine's — the wire carries no definition of what a
- * Level *is*, and unlike the evidence trail nothing here changes when a constant is
- * retuned.
+ * Level *is*. The one number in it is the ceiling, which the engine serves rather than the
+ * app knowing, so the copy is built per result instead of being a module constant: retuning
+ * the ceiling moves this sentence with it and no release is involved.
+ *
+ * **With no ceiling served, the sentence naming one goes.** The rest still holds — what
+ * Confidence is, and that matches are what raise it — but a rating whose engine has been
+ * retired has no number for "at most", and inventing one would say a retired engine was
+ * measured against a limit that did not exist when it ran.
  */
-const EXPLAINERS = {
-  level: {
-    title: 'Your Level',
-    body: 'Where you sit on the 1,00–5,00 scale for this sport. It is an estimate rather than a grade, and it is meant to move — real matches are what settle it.',
-  },
-  range: {
-    title: 'Your likely range',
-    body: 'Where we think your Level really sits. A wide range means we are less sure, not that you are weaker: it narrows as you play, without your Level having to move at all.',
-  },
-  confidence: {
-    title: 'Confidence',
-    body: `How sure we are, not how good you are. A questionnaire can prove at most ${ONBOARDING_CONFIDENCE_CEILING}% — the mark on the ring — because we have not seen you play yet. Matches are what raise it.`,
-  },
-} as const;
-
-type ExplainerKey = keyof typeof EXPLAINERS;
+function explainers(ceiling: number | undefined): Explainers {
+  return {
+    level: {
+      title: 'Your Level',
+      body: 'Where you sit on the 1,00–5,00 scale for this sport. It is an estimate rather than a grade, and it is meant to move — real matches are what settle it.',
+    },
+    range: {
+      title: 'Your likely range',
+      body: 'Where we think your Level really sits. A wide range means we are less sure, not that you are weaker: it narrows as you play, without your Level having to move at all.',
+    },
+    confidence: {
+      title: 'Confidence',
+      body:
+        ceiling === undefined
+          ? 'How sure we are, not how good you are. It starts low because a questionnaire is all we have to go on — we have not seen you play yet. Matches are what raise it.'
+          : `How sure we are, not how good you are. A questionnaire can prove at most ${ceiling}% — the mark on the ring — because we have not seen you play yet. Matches are what raise it.`,
+    },
+  };
+}
 
 /**
  * `MutableRefObject`, not the shared `FocusTarget`: the same ref is handed to `InfoMark`
@@ -117,13 +132,20 @@ export interface ResultScreenProps {
 }
 
 export function ResultScreen({ assessmentId, sport }: ResultScreenProps) {
-  const router = useRouter();
   const assessment = useAssessment(assessmentId);
-  const start = useStartAssessment();
-  const queue = useSportQueue((state) => state.queue);
-  const position = ratingPosition(queue, sport);
-  const next = nextSport(queue, sport);
-  const recordRun = useCompletedRuns((state) => state.record);
+  const pass = useOnboardingPass((state) => state.pass);
+  const position = positionOf(pass, sport);
+  /**
+   * Leaving this sport, in one place — the same hook the question screen calls.
+   *
+   * This screen used to hold its own copy of the move and had **no error branch at all**,
+   * so a failed "rate the next sport" did nothing visible: no message, no retry, nothing
+   * to tell the player the tap had been heard. The hook owns the latch and the failure,
+   * and the destination below is only ever read to *label* a control.
+   */
+  const onwards = useAdvanceThroughPass(sport);
+  const next = onwards.destination.kind === 'rate' ? onwards.destination.sport : undefined;
+  const recordRun = useOnboardingPass((state) => state.record);
 
   // One ref per mark: the popover anchors to the mark it was opened from and returns
   // focus to it on close, which is one prop doing both jobs.
@@ -158,27 +180,7 @@ export function ResultScreen({ assessmentId, sport }: ResultScreenProps) {
   const closing = useRef<ExplainerKey>('level');
   if (explainer !== undefined) closing.current = explainer;
   const explaining = explainer ?? closing.current;
-
-  /**
-   * The next sport they chose. `replace`, like every other move in this flow: the
-   * questionnaire has no way back, and a result is not somewhere to return to — it is on
-   * the summary, which is where a player reads their ratings after this.
-   */
-  const rateNext = () => {
-    if (next === undefined) return;
-    start.mutate(next, {
-      onSuccess: (opening) =>
-        router.replace({
-          pathname: '/question/[assessmentId]',
-          params: { assessmentId: opening.assessmentId, sport: next },
-        }),
-    });
-  };
-
-  /** Stopping here is an outcome, not an abandonment: nothing is discarded and nothing is
-   *  sent. The queue keeps the sports that were never rated, and any of them can be rated
-   *  another day. */
-  const finish = () => router.replace('/done');
+  const explained = explainers(result?.confidenceCeiling)[explaining];
 
   return (
     <>
@@ -190,7 +192,7 @@ export function ResultScreen({ assessmentId, sport }: ResultScreenProps) {
         {...behindOverlay(explainer !== undefined)}
       >
         <OnboardingChrome
-          eyebrow={`${sportLabel(sport)} · Rating ${position.index} of ${position.total}`}
+          eyebrow={passEyebrow(sport, position)}
           title="Your rating"
           position={position}
         />
@@ -245,31 +247,36 @@ export function ResultScreen({ assessmentId, sport }: ResultScreenProps) {
         <View style={s.action}>
           {/* Starting the next sport is the only thing this screen can fail at, and a
               failed start changed nothing — so the retry is the control that failed, with
-              the reason above it. */}
-          {start.error !== null ? (
+              the reason above it. The same note the question screen uses, because it is
+              the same failure; until the advance rule was shared this branch was missing
+              here entirely and a failed tap was silently ignored. */}
+          {onwards.error !== null ? (
             <Note variant="coral" accessibilityRole="alert">
-              {onboardingErrorMessage(start.error)}
+              {onboardingErrorMessage(onwards.error)}
             </Note>
           ) : null}
 
           {next === undefined ? (
-            <Button label="See your ratings" size="lg" onPress={finish} />
+            // Stopping here is an outcome, not an abandonment: nothing is discarded and
+            // nothing is sent. Where it leads is the pass's answer — the closing screens,
+            // since this run just produced a rating.
+            <Button label="See your ratings" size="lg" onPress={onwards.advance} />
           ) : (
             <>
               <Button
                 label={`Rate ${sportLabel(next)}`}
                 size="lg"
-                busy={start.isPending}
+                busy={onwards.advancing}
                 busyLabel="Starting…"
                 accessibilityHint={`Starts the ${sportLabel(next)} questions`}
-                onPress={rateNext}
+                onPress={onwards.advance}
               />
               <Button
                 label="Done for now"
                 variant="secondary"
                 size="lg"
                 accessibilityHint={`Keeps the ratings you have and skips ${sportLabel(next)}`}
-                onPress={finish}
+                onPress={onwards.stopHere}
               />
             </>
           )}
@@ -279,9 +286,9 @@ export function ResultScreen({ assessmentId, sport }: ResultScreenProps) {
       <Popover
         visible={explainer !== undefined}
         trigger={marks[explaining]}
-        title={EXPLAINERS[explaining].title}
-        body={EXPLAINERS[explaining].body}
-        closeLabel={`Close ${EXPLAINERS[explaining].title}`}
+        title={explained.title}
+        body={explained.body}
+        closeLabel={`Close ${explained.title}`}
         onClose={() => setExplainer(undefined)}
       />
     </>
@@ -333,11 +340,18 @@ function Verdict({ result, marks, onExplain }: VerdictProps) {
           </View>
 
           <View style={s.ring}>
+            {/* The ceiling is the engine's and arrives with the rating. Absent, the ring
+                draws no tick and its name states the one number it has — see
+                `AssessmentResult.confidenceCeiling`. */}
             <ConfidenceRing
               value={result.confidence}
-              ceiling={ONBOARDING_CONFIDENCE_CEILING}
+              ceiling={result.confidenceCeiling}
               label="Confidence"
-              accessibilityLabel={`Confidence ${confidence}, out of the ${ONBOARDING_CONFIDENCE_CEILING}% a questionnaire can prove`}
+              accessibilityLabel={
+                result.confidenceCeiling === undefined
+                  ? `Confidence ${confidence}`
+                  : `Confidence ${confidence}, out of the ${result.confidenceCeiling}% a questionnaire can prove`
+              }
             />
             <InfoMark
               ref={marks.confidence}
