@@ -21,6 +21,10 @@ from app.modules.rating.application.find_in_progress_assessment import (
 from app.modules.rating.application.get_assessment import GetAssessment
 from app.modules.rating.application.list_ratings import ListPlayerRatings
 from app.modules.rating.application.submit_answer import SubmitAnswer
+from app.modules.rating.domain.ports import AssessmentRepository
+from app.modules.rating.infrastructure.event_sourced_assessment_repository import (
+    EventSourcedAssessmentRepository,
+)
 
 
 def get_assessment_engine() -> AssessmentEngine:
@@ -31,6 +35,21 @@ def get_assessment_engine() -> AssessmentEngine:
 
 
 AssessmentEngineDep = Annotated[AssessmentEngine, Depends(get_assessment_engine)]
+
+
+def get_assessment_repository(
+    event_store: DomainEventStoreDep,
+    events: EventPublisherDep,
+) -> AssessmentRepository:
+    # Per request, like the event store and publisher it is built from. The
+    # repository remembers the versions it loaded, and one request's versions
+    # must never answer for another's.
+    return EventSourcedAssessmentRepository(event_store=event_store, events=events)
+
+
+AssessmentRepositoryDep = Annotated[
+    AssessmentRepository, Depends(get_assessment_repository)
+]
 
 
 def get_create_assessment(
@@ -108,17 +127,11 @@ ListInProgressAssessmentsDep = Annotated[
 
 
 def get_abandon_assessment(
-    event_store: DomainEventStoreDep,
+    assessments: AssessmentRepositoryDep,
     uow: UnitOfWorkDep,
     clock: ClockDep,
-    events: EventPublisherDep,
 ) -> AbandonAssessment:
-    return AbandonAssessment(
-        event_store=event_store,
-        uow=uow,
-        clock=clock,
-        events=events,
-    )
+    return AbandonAssessment(assessments=assessments, uow=uow, clock=clock)
 
 
 AbandonAssessmentDep = Annotated[AbandonAssessment, Depends(get_abandon_assessment)]
