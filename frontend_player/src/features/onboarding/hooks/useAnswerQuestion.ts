@@ -16,14 +16,14 @@
  * again would be a second round trip for an answer already in hand.
  */
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
-import type { AppError } from "@/shared/errors";
+import type { AppError } from '@/shared/errors';
 
-import type { AssessmentStep } from "../domain/Assessment";
-import { answerQuestion } from "../use-cases/answerQuestion";
+import type { AssessmentStep } from '../domain/Assessment';
+import { answerQuestion } from '../use-cases/answerQuestion';
 
-import { onboardingKeys } from "./onboardingKeys";
+import { onboardingKeys } from './onboardingKeys';
 
 export interface AnswerSelection {
   readonly questionId: string;

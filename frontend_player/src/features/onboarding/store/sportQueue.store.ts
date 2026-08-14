@@ -12,10 +12,10 @@
  * been rated at".
  */
 
-import { create } from "zustand";
+import { create } from 'zustand';
 
-import type { Sport } from "../domain/Sport";
-import { toggleSport } from "../domain/sportQueue";
+import type { Sport } from '../domain/Sport';
+import { toggleSport } from '../domain/sportQueue';
 
 interface SportQueueState {
   /** The sports chosen, in the order they were chosen. */

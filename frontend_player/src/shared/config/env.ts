@@ -11,7 +11,7 @@
  * not three screens deep as `fetch("undefined/api/v1/…")`.
  */
 
-import { z } from "zod";
+import { z } from 'zod';
 
 const EnvSchema = z.object({
   /**
@@ -23,12 +23,12 @@ const EnvSchema = z.object({
     .string()
     .url()
     .refine((value) => /^https?:\/\//i.test(value), {
-      message: "must start with http:// or https://",
+      message: 'must start with http:// or https://',
     }),
-  EXPO_PUBLIC_ENV: z.enum(["development", "staging", "production"]),
+  EXPO_PUBLIC_ENV: z.enum(['development', 'staging', 'production']),
 });
 
-export type AppEnvironment = z.infer<typeof EnvSchema>["EXPO_PUBLIC_ENV"];
+export type AppEnvironment = z.infer<typeof EnvSchema>['EXPO_PUBLIC_ENV'];
 
 export interface Env {
   /** FastAPI base URL. On a physical device this is a LAN IP or tunnel — a phone's
@@ -43,7 +43,7 @@ export interface Env {
  * family exist, and no recovery category applies to it.
  */
 export class ConfigError extends Error {
-  override readonly name = "ConfigError";
+  override readonly name = 'ConfigError';
 }
 
 /** The raw shape a build hands us: every variable present-or-absent, always a string. */
@@ -59,8 +59,8 @@ export function parseEnv(raw: RawEnv): Env {
 
   if (!result.success) {
     const problems = result.error.issues
-      .map((issue) => `${issue.path.join(".") || "(root)"}: ${issue.message}`)
-      .join("; ");
+      .map((issue) => `${issue.path.join('.') || '(root)'}: ${issue.message}`)
+      .join('; ');
 
     throw new ConfigError(
       `Invalid app configuration — ${problems}. Copy .env.example to .env.local and fill it in.`,
@@ -100,7 +100,7 @@ export function loadEnv(): Env {
  */
 export function getEnv(): Env {
   if (loaded === undefined) {
-    throw new ConfigError("Config read before bootstrap validated it. Call loadEnv() first.");
+    throw new ConfigError('Config read before bootstrap validated it. Call loadEnv() first.');
   }
   return loaded;
 }

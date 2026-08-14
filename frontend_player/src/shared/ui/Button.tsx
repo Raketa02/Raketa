@@ -13,24 +13,17 @@
  * what a label on a saturated fill uses. There is no separate `white` token, deliberately.
  */
 
-import {
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-  type StyleProp,
-  type ViewStyle,
-} from "react-native";
+import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
-import { theme } from "./theme";
+import { theme } from './theme';
 
-export type ButtonVariant = "primary" | "dark" | "secondary";
+export type ButtonVariant = 'primary' | 'dark' | 'secondary';
 
 /**
  * 32 tertiary-in-card · 34 default · 40 screen action · 42 the primary action on a
  * result screen. All four clear the 44pt reachable minimum once `hit.btn` is applied.
  */
-export type ButtonSize = "sm" | "md" | "lg" | "xl";
+export type ButtonSize = 'sm' | 'md' | 'lg' | 'xl';
 
 export interface ButtonProps {
   readonly label: string;
@@ -50,8 +43,8 @@ export interface ButtonProps {
 export function Button({
   label,
   onPress,
-  variant = "primary",
-  size = "md",
+  variant = 'primary',
+  size = 'md',
   disabled = false,
   busy = false,
   busyLabel,
@@ -97,8 +90,8 @@ const s = StyleSheet.create({
   base: {
     borderRadius: theme.radius.btn,
     paddingHorizontal: theme.space.lg,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   // `minHeight`, never `height`: at large OS text sizes the label has to grow the button
   // rather than be clipped by it.

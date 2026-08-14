@@ -15,7 +15,7 @@
  * engine's vocabulary, and restating them here would be a second copy to drift.
  */
 
-import type { TagVariant } from "@/shared/ui";
+import type { TagVariant } from '@/shared/ui';
 
 export interface DifficultyTag {
   readonly label: string;
@@ -23,11 +23,11 @@ export interface DifficultyTag {
 }
 
 const VARIANT_BY_TIER: Readonly<Record<string, TagVariant>> = {
-  basic: "base",
-  standard: "base",
-  discriminating: "hot",
+  basic: 'base',
+  standard: 'base',
+  discriminating: 'hot',
 };
 
 export function difficultyTag(tier: string): DifficultyTag {
-  return { label: tier, variant: VARIANT_BY_TIER[tier] ?? "base" };
+  return { label: tier, variant: VARIANT_BY_TIER[tier] ?? 'base' };
 }

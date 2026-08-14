@@ -6,17 +6,17 @@ shared glossary [`../CONTEXT.md`](../CONTEXT.md), which all three apps obey. See
 [`../CONTEXT-MAP.md`](../CONTEXT-MAP.md) for the topology.
 
 > When you name a mobile architecture concept, use the term as defined here. When you
-> name a *domain* concept, use the root glossary. Don't drift to synonyms either avoids.
+> name a _domain_ concept, use the root glossary. Don't drift to synonyms either avoids.
 
 ## Glossary — player-app technical terms
 
 - **Feature** — a vertical slice under `src/features/<name>/` owning a user-facing
   capability, split into the full layer set (`domain/ use-cases/ api/ mappers/
-  schemas/ components/ hooks/ types.ts`). _Avoid_: module, screen-folder.
+schemas/ components/ hooks/ types.ts`). _Avoid_: module, screen-folder.
 - **Screen** — an expo-router route file under `src/app/`. Thin: it composes a feature's
   components and owns navigation, nothing else. _Avoid_: page, view.
 - **Wire type** — a raw request/response shape **generated** from the backend's
-  `openapi.json` into `src/generated/`. _Avoid_: DTO (a wire type is the *input* to
+  `openapi.json` into `src/generated/`. _Avoid_: DTO (a wire type is the _input_ to
   building a DTO).
 - **DTO** — the app's **own** transport object, built in a feature's `api/` layer from a
   wire type. Owned here; never imported from `generated/` directly.
@@ -37,7 +37,7 @@ shared glossary [`../CONTEXT.md`](../CONTEXT.md), which all three apps obey. See
   polling via `refetchInterval`) and writes, always against FastAPI through
   `shared/lib/http`. _Avoid_: calling `fetch` from a component.
 - **UI state** — cross-cutting client state (filters, sheet open/close) held in
-  **Zustand**. Server data is *not* UI state — TanStack owns that.
+  **Zustand**. Server data is _not_ UI state — TanStack owns that.
 - **Public surface** — a feature's `types.ts`. The only file another feature or a route
   may import from it. _Avoid_: "barrel", "index" — this app has no `index.ts`, and the
   word "barrel" suggests re-exporting everything, which is the opposite of the intent.
@@ -62,7 +62,7 @@ review comment and a test description all use the same word.
   (reporting → config → focus/online wiring → keychain → session → splash → tree).
   _Avoid_: "init", "app setup" — those name a place, not an order, and the order is the
   point.
-- **Splash gate** — holding `expo-splash-screen` until bootstrap resolves *and* the fonts
+- **Splash gate** — holding `expo-splash-screen` until bootstrap resolves _and_ the fonts
   are loaded. The mechanism that makes the tri-state visible-free.
 - **Token manager** — the module in `shared/lib/auth` owning raw token values and their
   **in-memory mirror** (read from the keychain once at bootstrap; written back atomically
@@ -82,7 +82,7 @@ review comment and a test description all use the same word.
 - **Guard** — the redirect in `(app)/_layout.tsx` keyed on session status. On SDK 52 this
   is a redirect, not a declarative protected route; those landed later. _Avoid_:
   "middleware" (that is the club app's word, and it runs on a server).
-- **Entry gate** — the *second* redirect in `(app)/_layout.tsx`, deciding between the app
+- **Entry gate** — the _second_ redirect in `(app)/_layout.tsx`, deciding between the app
   and onboarding from two parallel reads: is a run unfinished, and does a rating exist.
   Distinct from the guard, and deliberately **not** part of session status — a rating
   check inside bootstrap would block every cold launch on a network request. _Avoid_:
@@ -106,8 +106,8 @@ review comment and a test description all use the same word.
   on. The message is copy.
 - **`AppError`** — the normalized client-side error family in `shared/errors`. Nothing
   above `shared/lib/http` ever sees a raw `fetch` rejection or backend JSON.
-- **Recovery category** — which of *auto-retry · user-retry · re-auth · user correction ·
-  conflict · terminal* an error is. Assigned when the endpoint is mapped.
+- **Recovery category** — which of _auto-retry · user-retry · re-auth · user correction ·
+  conflict · terminal_ an error is. Assigned when the endpoint is mapped.
 - **Idempotency key** — the client-supplied token that makes a repeated mutation safe to
   send. The actual duplicate-booking defence; a disabled button is only UX.
 - **Correlation ID / trace ID** — the per-request identifier that ties a mobile failure to
@@ -147,7 +147,7 @@ comment and a commit message all use the same word.
 
 - **Token** — a value in `theme.ts`, the only legitimate source of a colour, type role,
   spacing step, radius, metric, shadow or duration. _Avoid_: constant, variable (a token
-  is a *design* decision, not just a value).
+  is a _design_ decision, not just a value).
 - **Harness** — the prototype's phone frame, dark stage, scenario rail and time bar. **Not
   product.** _Avoid_: calling any of it a "shell" or "chrome" — those words imply it ships.
 - **Paper / surface** — `paper` is the app background; `surface` is white, and everything
@@ -156,7 +156,7 @@ comment and a commit message all use the same word.
   **fold inside one thing** (the hairline, tag backgrounds, inactive tracks). Load-bearing,
   not stylistic.
 - **Soft / ink / line companion** — a semantic colour's family. `Soft` is the tinted
-  background, `Ink` is the darkened form that carries text on that soft *and* the fill
+  background, `Ink` is the darkened form that carries text on that soft _and_ the fill
   whenever white text sits on top (**Rule C**), `Line` is the soft's border.
 - **Rule C** — white text never sits on `coral` or `mint`; it needs `coralInk` or
   `mintInk`. `ink` is the only dark permitted on `coral`.
@@ -169,8 +169,8 @@ comment and a commit message all use the same word.
   applied from the second row onward.
 - **Tag vs chip** — a **tag** is a 9.5pt state pill and is **never pressable**; a **chip**
   is a pressable filter pill and the only true pill in the app. A pressable tag is a chip.
-- **Eyebrow vs form label** — an **eyebrow** labels a region you are *reading*; a **form
-  label** labels a control you are about to *operate*. Not interchangeable.
+- **Eyebrow vs form label** — an **eyebrow** labels a region you are _reading_; a **form
+  label** labels a control you are about to _operate_. Not interchangeable.
 - **Slot square** — the day / time / hour / range selectors, sharing a four-state
   vocabulary: **free**, **off** (taken), **selected**, **end** (the hollow square marking
   where a booking finishes).
@@ -181,7 +181,7 @@ comment and a commit message all use the same word.
 - **Level bar** — the drawn object: band segments, the coral mark, the likely-range bracket
   below, and the band names. **The separation of the two rows is the whole design.**
 - **Seat pip / empty seat** — an avatar per seat; the dashed one is the only dashed element
-  in the app and means *a place that could be filled*.
+  in the app and means _a place that could be filled_.
 - **Square row vs strip** — a free-scrolling row of content-sized children, versus a
   snapping carousel of full-width children that bleeds to the screen edge.
 - **Sheet · toast · popover** — the three overlays. Three distinct surfaces, not synonyms,
@@ -192,4 +192,4 @@ comment and a commit message all use the same word.
 > Matches are Part 2 of the shared glossary. Settle those there first, then rename here.
 
 Add player-app-only technical terms here as they are resolved. Anything describing the
-*domain* belongs in the shared glossary instead.
+_domain_ belongs in the shared glossary instead.

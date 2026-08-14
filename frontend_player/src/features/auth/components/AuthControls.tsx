@@ -14,12 +14,12 @@
  * Every value still comes from the theme: a placeholder is not an excuse for a literal.
  */
 
-import { forwardRef, useState } from "react";
-import { StyleSheet, Text, TextInput, View, type TextInputProps } from "react-native";
+import { forwardRef, useState } from 'react';
+import { StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native';
 
-import { theme } from "@/shared/ui/theme";
+import { theme } from '@/shared/ui/theme';
 
-export interface AuthFieldProps extends Omit<TextInputProps, "style"> {
+export interface AuthFieldProps extends Omit<TextInputProps, 'style'> {
   readonly label: string;
   /** Shown under the field and announced. Absent when the field is fine. */
   readonly error?: string;
@@ -87,7 +87,7 @@ const s = StyleSheet.create({
   label: {
     ...theme.type.flab,
     color: theme.color.ink,
-    textTransform: "uppercase",
+    textTransform: 'uppercase',
   },
   input: {
     ...theme.type.rlValue,

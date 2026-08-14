@@ -16,10 +16,10 @@
  * the `AppError` reaches it intact.
  */
 
-import type { Tokens } from "@/shared/lib/auth";
+import type { Tokens } from '@/shared/lib/auth';
 
-import { refresh } from "../api/authApi";
-import { toTokens } from "../mappers/authMappers";
+import { refresh } from '../api/authApi';
+import { toTokens } from '../mappers/authMappers';
 
 export async function refreshTokens(refreshToken: string): Promise<Tokens> {
   return toTokens(await refresh({ refresh_token: refreshToken }));

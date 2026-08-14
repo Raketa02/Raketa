@@ -21,10 +21,10 @@
  * route file.
  */
 
-import { Redirect, Stack } from "expo-router";
+import { Redirect, Stack } from 'expo-router';
 
-import { EntryUnavailableScreen, useEntryDecision } from "@/features/onboarding/types";
-import { useSessionStatus } from "@/shared/lib/auth";
+import { EntryUnavailableScreen, useEntryDecision } from '@/features/onboarding/types';
+import { useSessionStatus } from '@/shared/lib/auth';
 
 export default function AppLayout() {
   const status = useSessionStatus();
@@ -34,29 +34,29 @@ export default function AppLayout() {
   // resolves, so no route tree exists while the status is still `bootstrapping`. It is
   // handled anyway because the alternative is falling through to the redirect, which
   // would turn any future change to the gate into a login-screen flash.
-  if (status === "bootstrapping") return null;
+  if (status === 'bootstrapping') return null;
 
-  if (status === "unauthenticated") return <Redirect href="/sign-in" />;
+  if (status === 'unauthenticated') return <Redirect href="/sign-in" />;
 
   switch (entry.kind) {
-    case "pending":
+    case 'pending':
       // Nothing, not a spinner: the same rule as bootstrap. A route tree rendered before
       // the gate resolves is the authenticated-tree flash, one frame before a redirect.
       return null;
-    case "unavailable":
+    case 'unavailable':
       return <EntryUnavailableScreen error={entry.error} onRetry={entry.retry} />;
-    case "welcome":
+    case 'welcome':
       return <Redirect href="/welcome" />;
-    case "resume":
+    case 'resume':
       return (
         <Redirect
           href={{
-            pathname: "/question/[assessmentId]",
+            pathname: '/question/[assessmentId]',
             params: { assessmentId: entry.run.assessmentId, sport: entry.run.sport },
           }}
         />
       );
-    case "app":
+    case 'app':
       return <Stack screenOptions={{ headerShown: false }} />;
   }
 }

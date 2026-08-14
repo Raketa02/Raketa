@@ -13,13 +13,13 @@
  * guard must read it synchronously during render.
  */
 
-import { useSyncExternalStore } from "react";
+import { useSyncExternalStore } from 'react';
 
-import type { SessionStatus } from "./auth.types";
+import type { SessionStatus } from './auth.types';
 
 type Listener = () => void;
 
-let status: SessionStatus = "bootstrapping";
+let status: SessionStatus = 'bootstrapping';
 const listeners = new Set<Listener>();
 
 function emit(): void {
@@ -52,7 +52,7 @@ export function subscribeToSession(listener: Listener): () => void {
 
 /** Test seam. Returns the machine to its pre-bootstrap state. */
 export function resetSessionStatus(): void {
-  status = "bootstrapping";
+  status = 'bootstrapping';
   listeners.clear();
 }
 

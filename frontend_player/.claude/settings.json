@@ -28,9 +28,7 @@
       "Read(./android/**)",
       "Read(./ios/**)"
     ],
-    "additionalDirectories": [
-      ".."
-    ]
+    "additionalDirectories": [".."]
   },
   "hooks": {
     "PreToolUse": [

@@ -16,9 +16,9 @@
  * so the parser is named for the params it checks and not for the screen that reads them.
  */
 
-import { z } from "zod";
+import { z } from 'zod';
 
-import { SPORTS } from "../domain/Sport";
+import { SPORTS } from '../domain/Sport';
 
 export const assessmentRouteParams = z.object({
   assessmentId: z.string().uuid(),

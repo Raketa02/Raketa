@@ -12,7 +12,7 @@ in production.
   [ADR-0008](../../docs/adr/0008-player-mobile-securestore-direct-api.md). The runtime
   decisions it introduces are recorded in
   [ADR-0013](../../docs/adr/0013-player-app-runtime-architecture.md).
-- **Scope: `frontend_player/` only.** The club app shares the *shape* of Parts 1, 6, 7
+- **Scope: `frontend_player/` only.** The club app shares the _shape_ of Parts 1, 6, 7
   and 9 but not this document, and never this code
   ([ADR-0005](../../docs/adr/0005-three-app-monorepo-ownership-boundaries.md)).
 - **The rule that generates the rest:** every piece of data and every kind of logic has
@@ -30,23 +30,23 @@ The source document proposes a directory layout. This repo had already chosen a
 compatible but differently-named one, and that choice is locked by an accepted ADR shared
 with the club app. **This repo's names win.** Translate as follows:
 
-| Source document | Here | Why the difference |
-|---|---|---|
-| `app/` at the project root | `src/app/` | expo-router is configured for `src/app`; everything the app owns sits under `src/`. |
-| `src/core/api/httpClient.ts` | `src/shared/lib/http/` | This repo groups cross-cutting infrastructure under `shared/lib/` rather than a second top-level `core/`. |
-| `src/core/auth/*` | `src/shared/lib/auth/` | Same. The internal split — token manager, refresh coordinator, session, service — is adopted verbatim. |
-| `src/core/query/*` | `src/shared/lib/query-client/` | Same. |
-| `src/core/storage/*` | `src/shared/lib/auth/` (secure) | The only secure-store consumer is auth. A general storage module arrives only when a non-credential persistence need does. |
-| `src/core/config/env.ts` | `src/shared/config/env.ts` | Already exists as a directory. |
-| `src/core/errors/*` | `src/shared/errors/` | Already exists as a directory. |
-| `src/core/observability/*` | `src/shared/lib/observability/` | New; see [Part 15](#part-15--observability). |
-| `src/core/platform/*` | `src/shared/lib/platform/` | New; see [Part 13](#part-13--native-and-platform). |
-| `src/core/bootstrap/bootstrapApp.ts` | `src/shared/lib/bootstrap/` | New; see [Part 3](#part-3--bootstrap-and-the-session-state-machine). |
-| feature `ui/` | feature `components/` | ADR-0009. `ui` at this repo means the design system (`src/shared/ui/`). |
-| feature `store/` | feature `store/` — **optional layer** | Adopted. See [Part 8](#part-8--zustand). |
-| — | feature `use-cases/`, `mappers/` | ADR-0009 adds these two; the source document folds them into hooks and api. Keep them. |
-| `src/generated/api/openapi.d.ts` | `src/generated/schema.d.ts` | Existing `pnpm gen:api` output path. |
-| `__tests__/` at the root | colocated `*.test.ts(x)` | Existing convention — **except router tests**, which must live outside `src/app/`. See [Part 16](#part-16--testing). |
+| Source document                      | Here                                  | Why the difference                                                                                                         |
+| ------------------------------------ | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `app/` at the project root           | `src/app/`                            | expo-router is configured for `src/app`; everything the app owns sits under `src/`.                                        |
+| `src/core/api/httpClient.ts`         | `src/shared/lib/http/`                | This repo groups cross-cutting infrastructure under `shared/lib/` rather than a second top-level `core/`.                  |
+| `src/core/auth/*`                    | `src/shared/lib/auth/`                | Same. The internal split — token manager, refresh coordinator, session, service — is adopted verbatim.                     |
+| `src/core/query/*`                   | `src/shared/lib/query-client/`        | Same.                                                                                                                      |
+| `src/core/storage/*`                 | `src/shared/lib/auth/` (secure)       | The only secure-store consumer is auth. A general storage module arrives only when a non-credential persistence need does. |
+| `src/core/config/env.ts`             | `src/shared/config/env.ts`            | Already exists as a directory.                                                                                             |
+| `src/core/errors/*`                  | `src/shared/errors/`                  | Already exists as a directory.                                                                                             |
+| `src/core/observability/*`           | `src/shared/lib/observability/`       | New; see [Part 15](#part-15--observability).                                                                               |
+| `src/core/platform/*`                | `src/shared/lib/platform/`            | New; see [Part 13](#part-13--native-and-platform).                                                                         |
+| `src/core/bootstrap/bootstrapApp.ts` | `src/shared/lib/bootstrap/`           | New; see [Part 3](#part-3--bootstrap-and-the-session-state-machine).                                                       |
+| feature `ui/`                        | feature `components/`                 | ADR-0009. `ui` at this repo means the design system (`src/shared/ui/`).                                                    |
+| feature `store/`                     | feature `store/` — **optional layer** | Adopted. See [Part 8](#part-8--zustand).                                                                                   |
+| —                                    | feature `use-cases/`, `mappers/`      | ADR-0009 adds these two; the source document folds them into hooks and api. Keep them.                                     |
+| `src/generated/api/openapi.d.ts`     | `src/generated/schema.d.ts`           | Existing `pnpm gen:api` output path.                                                                                       |
+| `__tests__/` at the root             | colocated `*.test.ts(x)`              | Existing convention — **except router tests**, which must live outside `src/app/`. See [Part 16](#part-16--testing).       |
 
 Everything else in the source document is adopted as written.
 
@@ -94,8 +94,8 @@ nothing in `shared/` may import a feature.
 3. **A feature never deep-imports another feature.** Cross-feature access goes through
    the target's `types.ts` public surface, or the concept moves to `shared/`.
 4. **Do not move code to `shared/` because two files use it.** Shared code couples every
-   future feature to itself. *Keep code local until its cross-feature ownership is
-   proven.*
+   future feature to itself. _Keep code local until its cross-feature ownership is
+   proven._
 5. **Abstraction stays proportional.** No `UseCase` + `Repository` + interface + mapper +
    DTO for a trivial GET. ADR-0009's escape hatch stands: where a feature genuinely has no
    business rule, `use-cases/` may be pass-throughs and `domain/` may be types. **Do not
@@ -105,16 +105,16 @@ nothing in `shared/` may import a feature.
 
 ### One source of truth per kind of state
 
-| State | Owner |
-|---|---|
-| Remote/backend data | **TanStack Query** |
-| Access + refresh tokens | `src/shared/lib/auth` → `expo-secure-store` |
+| State                         | Owner                                                                                  |
+| ----------------------------- | -------------------------------------------------------------------------------------- |
+| Remote/backend data           | **TanStack Query**                                                                     |
+| Access + refresh tokens       | `src/shared/lib/auth` → `expo-secure-store`                                            |
 | Logged-in / logged-out status | The session state machine ([Part 3](#part-3--bootstrap-and-the-session-state-machine)) |
-| Local component UI state | `useState` / `useReducer` |
-| Shared ephemeral UI state | Zustand, feature-scoped |
-| Form input | The form layer + a Zod schema |
-| Navigation state | expo-router |
-| Build/environment config | `src/shared/config/env.ts` |
+| Local component UI state      | `useState` / `useReducer`                                                              |
+| Shared ephemeral UI state     | Zustand, feature-scoped                                                                |
+| Form input                    | The form layer + a Zod schema                                                          |
+| Navigation state              | expo-router                                                                            |
+| Build/environment config      | `src/shared/config/env.ts`                                                             |
 
 Never represent the same state in two of these at once. In particular: **never copy
 Query data into Zustand**, **never put a token in Zustand**, and **never use a navigation
@@ -259,7 +259,7 @@ export const matchesApi = { getMatch, listMatches, joinMatch, leaveMatch };
 TanStack Query passes an `AbortSignal`; the HTTP layer forwards it to `fetch`.
 
 ```ts
-queryFn: ({ signal }) => matchesApi.getMatch(matchId, { signal })
+queryFn: ({ signal }) => matchesApi.getMatch(matchId, { signal });
 ```
 
 This is what stops work continuing after a screen change, a param change, a query
@@ -351,10 +351,10 @@ A retried request carries internal metadata saying refresh was already attempted
 
 Losing signal in a lift must not log the user out.
 
-| Failure | Behaviour |
-|---|---|
-| Refresh **rejected** by the auth server (invalid/expired/revoked) | clear credentials · clear private caches · set `unauthenticated` · redirect |
-| Refresh **could not reach** the server | preserve credentials · surface connectivity · retry under the controlled policy |
+| Failure                                                           | Behaviour                                                                       |
+| ----------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| Refresh **rejected** by the auth server (invalid/expired/revoked) | clear credentials · clear private caches · set `unauthenticated` · redirect     |
+| Refresh **could not reach** the server                            | preserve credentials · surface connectivity · retry under the controlled policy |
 
 ### Rotation is atomic
 
@@ -391,7 +391,7 @@ must delete explicitly rather than relying on uninstall.
 
 `SecureStore.requireAuthentication` must not be applied blindly: a silent background
 refresh would then prompt for Face ID. If biometric locking is wanted, model it as a
-deliberate product feature — *backend session* **+** *optional local app unlock* — rather
+deliberate product feature — _backend session_ **+** _optional local app unlock_ — rather
 than making every token read biometric. Account for enrolment changes invalidating
 protected entries.
 
@@ -404,17 +404,27 @@ Raw `fetch` rejections and arbitrary backend JSON must not reach a screen.
 
 ```ts
 type AppError =
-  | NetworkUnavailableError | TimeoutError
-  | UnauthorizedError | ForbiddenError
-  | ValidationError | ConflictError
-  | RateLimitError | ServerError | UnknownError;
+  | NetworkUnavailableError
+  | TimeoutError
+  | UnauthorizedError
+  | ForbiddenError
+  | ValidationError
+  | ConflictError
+  | RateLimitError
+  | ServerError
+  | UnknownError;
 ```
 
 The backend's envelope is stable and machine-readable:
 
 ```json
-{ "code": "MATCH_ALREADY_FULL", "message": "...", "details": {},
-  "field_errors": {}, "trace_id": "..." }
+{
+  "code": "MATCH_ALREADY_FULL",
+  "message": "...",
+  "details": {},
+  "field_errors": {},
+  "trace_id": "..."
+}
 ```
 
 **Branch on `code`, never on `message`.** `error.message === "Match already full"` breaks
@@ -422,16 +432,16 @@ the moment someone improves the copy or the app is localized.
 
 ### Status semantics
 
-| Status | Meaning |
-|---|---|
-| 400 | malformed request |
-| 401 | missing / expired / invalid authentication |
-| 403 | authenticated but forbidden |
-| 404 | not found |
-| 409 | state conflict |
-| 422 | input / domain validation |
-| 429 | rate limited |
-| 5xx | server failure |
+| Status | Meaning                                    |
+| ------ | ------------------------------------------ |
+| 400    | malformed request                          |
+| 401    | missing / expired / invalid authentication |
+| 403    | authenticated but forbidden                |
+| 404    | not found                                  |
+| 409    | state conflict                             |
+| 422    | input / domain validation                  |
+| 429    | rate limited                               |
+| 5xx    | server failure                             |
 
 **Not every 4xx is a logout.** Only authentication-invalidating responses touch the
 session. A 403 means "you may not do this", and logging the user out in response is both
@@ -733,10 +743,10 @@ sessions.
 - **Platform files over scattered branches.** `share.ios.ts` / `share.android.ts` when
   behaviour genuinely differs; not `if (Platform.OS === 'ios')` in twenty components.
 - **Permissions are requested just in time**, when the user understands why, through one
-  central module distinguishing *not requested / granted / denied / permanently denied*.
+  central module distinguishing _not requested / granted / denied / permanently denied_.
   Never a permission wall at first launch. Android and iOS behave differently here.
 - **Push notifications:** payloads are untrusted, sensitive content stays out of them,
-  deep-link targets are validated, the destination is authorized *after* open, routing is
+  deep-link targets are validated, the destination is authorized _after_ open, routing is
   centralized, token rotation is supported and synchronized with the backend. **A push
   never mutates business state without backend confirmation.**
 - **Background work** is a native, platform-constrained capability. A JS timer does not
@@ -760,7 +770,7 @@ const EnvSchema = z.object({
 ```
 
 **Nothing in the bundle is secret.** `EXPO_PUBLIC_*` values and `app.json` `extra` are
-extractable from a shipped binary — they are *public config*. Private API keys, backend
+extractable from a shipped binary — they are _public config_. Private API keys, backend
 credentials, signing secrets, encryption keys and privileged service credentials belong on
 a server. A secret the mobile client appears to need is a design error.
 
@@ -789,8 +799,8 @@ breadcrumbs · correlation IDs. Sentry is the Expo-supported default choice.
 ### Correlation IDs
 
 Each request carries or receives a request/trace ID; FastAPI returns `trace_id` in the
-error envelope; the client attaches it to the error report. That links *mobile failure ↔
-backend request ↔ server logs* **without logging any payload**.
+error envelope; the client attaches it to the error report. That links _mobile failure ↔
+backend request ↔ server logs_ **without logging any payload**.
 
 ### Redaction
 
@@ -833,8 +843,8 @@ many pure unit tests → component tests → integration tests → a few E2E jou
 
 - **Unit (Jest):** domain rules, mappers, schemas, formatters, query-key factories, the
   refresh coordinator, error mapping, store logic. Pure — no renderer.
-- **Component (`@testing-library/react-native` + `jest-expo`):** *given state, when the
-  user acts, then observable behaviour changes.* Assert what the user can see, never
+- **Component (`@testing-library/react-native` + `jest-expo`):** _given state, when the
+  user acts, then observable behaviour changes._ Assert what the user can see, never
   internal state variables.
 - **Router:** tests live **outside `src/app/`**. Cover redirects, the authenticated route
   boundary, deep-link routes, params, navigation. Authorization routing deserves
@@ -842,12 +852,12 @@ many pure unit tests → component tests → integration tests → a few E2E jou
 - **Auth concurrency — mandatory, and the reason this section exists.** Ordinary login
   tests never catch these:
 
-  | Scenario | Expected |
-  |---|---|
-  | Many simultaneous 401s | exactly **one** refresh request; all waiters reuse it |
-  | Refresh rejected | a single logout transition; tokens cleared; cache cleared |
-  | Refresh times out on the network | the session is **not** destroyed |
-  | The retried request 401s again | no infinite refresh loop; session terminates once |
+  | Scenario                         | Expected                                                  |
+  | -------------------------------- | --------------------------------------------------------- |
+  | Many simultaneous 401s           | exactly **one** refresh request; all waiters reuse it     |
+  | Refresh rejected                 | a single logout transition; tokens cleared; cache cleared |
+  | Refresh times out on the network | the session is **not** destroyed                          |
+  | The retried request 401s again   | no infinite refresh loop; session terminates once         |
 
 - **Query integration:** correct key, correct `enabled`, cache update after mutation,
   invalidation after mutation, optimistic rollback if used, cache cleanup on logout,
@@ -1000,7 +1010,7 @@ treating a hidden button as authorization.
 ### Backend authorization is the only authorization
 
 Hiding a button is not a security boundary. Every protected FastAPI operation validates
-*identity + authorization + resource ownership* server-side. The app may prevent an
+_identity + authorization + resource ownership_ server-side. The app may prevent an
 obviously invalid action for UX; the server remains authoritative. Root/jailbreak
 detection is a risk signal, not a control. Attestation is an additional signal, not a
 replacement for authentication.
@@ -1059,21 +1069,21 @@ openapi-typescript. The architecture above additionally requires, and these shou
 when the code that needs them is written — not preemptively:
 
 **Near-essential**
-- `react-native-svg` — arcs and the ceiling tick of the confidence ring, which is a drawn
-  object rather than a styled component
-  ([design system 7.8](design-system.md#78-the-confidence-ring)). Nothing else in the app
-  needs vector drawing yet; the level bar is built from Views. `jest.config.js` already
-  whitelists it in `transformIgnorePatterns`, so it needs no test-config change.
+
 - Crash/error monitoring — Sentry (`@sentry/react-native`, Expo-supported) or equivalent,
   behind `shared/lib/observability` ([Part 15](#part-15--observability)).
 - Maestro — E2E journeys ([Part 16](#part-16--testing)).
 
 > `expo-network` was on this list and has since joined the manifest, with the code that
-> wires the online and focus managers ([Part 7](#part-7--tanstack-query)). It is listed
-> above as present rather than pending — this list is what is *missing*, and an entry that
+> wires the online and focus managers ([Part 7](#part-7--tanstack-query)). So has
+> `react-native-svg`, with the confidence ring — the one drawn object that needs vector
+> arcs ([design system 7.8](design-system.md#78-the-confidence-ring)); the level bar beside
+> it is still built from Views, and nothing else in the app needs drawing yet. Both are
+> listed as present rather than pending — this list is what is _missing_, and an entry that
 > outlives its own arrival makes the list untrustworthy.
 
 **Strong optional**
+
 - `openapi-fetch` — the typed companion to `openapi-typescript`, if the thin `fetch`
   wrapper starts growing ([Part 4](#part-4--the-http-client)).
 - React Hook Form + `@hookform/resolvers` — once a form outgrows local state

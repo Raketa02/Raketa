@@ -12,15 +12,15 @@ import {
   readStoredTokens,
   setSessionStatus,
   type SessionStatus,
-} from "@/shared/lib/auth";
-import { AppError } from "@/shared/errors";
+} from '@/shared/lib/auth';
+import { AppError } from '@/shared/errors';
 
-import { me } from "../api/authApi";
-import type { AuthenticatedUser } from "../domain/AuthenticatedUser";
-import { toAuthenticatedUser } from "../mappers/authMappers";
+import { me } from '../api/authApi';
+import type { AuthenticatedUser } from '../domain/AuthenticatedUser';
+import { toAuthenticatedUser } from '../mappers/authMappers';
 
 export interface RestoredSession {
-  readonly status: Extract<SessionStatus, "authenticated" | "unauthenticated">;
+  readonly status: Extract<SessionStatus, 'authenticated' | 'unauthenticated'>;
   /**
    * The validated player, when the server answered. Handed back so bootstrap can seed
    * the Query cache with it — the profile is backend data and Query owns it, so this is
@@ -53,25 +53,25 @@ export async function restoreSession(): Promise<RestoredSession> {
   const tokens = await readStoredTokens();
 
   if (tokens === undefined) {
-    setSessionStatus("unauthenticated");
-    return { status: "unauthenticated" };
+    setSessionStatus('unauthenticated');
+    return { status: 'unauthenticated' };
   }
 
   try {
     const user = toAuthenticatedUser(await me());
-    setSessionStatus("authenticated");
-    return { status: "authenticated", user };
+    setSessionStatus('authenticated');
+    return { status: 'authenticated', user };
   } catch (error) {
     if (error instanceof AppError && error.invalidatesSession) {
       // Rejected. The credentials are dead — destroy them rather than carry them into a
       // session that will fail on its first request.
-      await endSession("session-invalidated");
-      return { status: "unauthenticated" };
+      await endSession('session-invalidated');
+      return { status: 'unauthenticated' };
     }
 
     // Unreachable, timed out, or the server itself failed. None of those say anything
     // about whether this session is valid.
-    setSessionStatus("authenticated");
-    return { status: "authenticated" };
+    setSessionStatus('authenticated');
+    return { status: 'authenticated' };
   }
 }

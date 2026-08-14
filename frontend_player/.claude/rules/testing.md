@@ -1,8 +1,8 @@
 ---
 paths:
-  - "**/*.test.ts"
-  - "**/*.test.tsx"
-  - "src/**/__tests__/**"
+  - '**/*.test.ts'
+  - '**/*.test.tsx'
+  - 'src/**/__tests__/**'
 ---
 
 # Testing — test first

@@ -27,8 +27,21 @@ boundaries had been evenly spaced (1–2, 2–3, 3–4, 4–5) where the specifi
 ``CONTEXT.md`` and the locked design system all give deliberately uneven ones
 (1,0–1,5 · 1,6–2,6 · 2,7–3,8 · 3,9–5,0). The advanced persona is what exposed it:
 at μ 3,91 the old boundaries banded it *Established* while the published figure
-says *Advanced*. The tier thresholds and the third-demonstration floor had been
-rounded the same way and were corrected with it.
+says *Advanced*.
+
+The tier thresholds and the third-demonstration floor had been rounded the same
+way. They were *not* corrected with the bands, because unlike the boundaries they
+are behavioural — they move which tier a player is asked at, and so what an
+answer is worth. They were pinned, and corrected separately in #15.
+
+**Not one number below moved when they were corrected**, which is worth recording
+because the expectation was that they would. The corrected constants change the
+*order* in which two of these personas are asked their demonstrations, and change
+nothing about the set: the same tiers, answered the same way. Fusion is a
+precision-weighted product over the whole transcript and so is order-invariant, so
+an identical answer set produces an identical result. Verified by diffing every
+persona's answer set and routed order across the change, not by the numbers here
+happening to stay green.
 """
 
 from collections.abc import Callable

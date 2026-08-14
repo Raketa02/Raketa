@@ -3,16 +3,16 @@
  * mirrors it. The session machine holds a status and deliberately not this.
  */
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from '@tanstack/react-query';
 
-import { useSessionStatus } from "@/shared/lib/auth";
-import type { AppError } from "@/shared/errors";
+import { useSessionStatus } from '@/shared/lib/auth';
+import type { AppError } from '@/shared/errors';
 
-import { me } from "../api/authApi";
-import type { AuthenticatedUser } from "../domain/AuthenticatedUser";
-import { toAuthenticatedUser } from "../mappers/authMappers";
+import { me } from '../api/authApi';
+import type { AuthenticatedUser } from '../domain/AuthenticatedUser';
+import { toAuthenticatedUser } from '../mappers/authMappers';
 
-import { authKeys } from "./authKeys";
+import { authKeys } from './authKeys';
 
 /**
  * `enabled` on the session status, not on a token: an unauthenticated launch must not
@@ -28,6 +28,6 @@ export function useCurrentUser() {
   return useQuery<AuthenticatedUser, AppError>({
     queryKey: authKeys.currentUser(),
     queryFn: ({ signal }) => me({ signal }).then(toAuthenticatedUser),
-    enabled: status === "authenticated",
+    enabled: status === 'authenticated',
   });
 }

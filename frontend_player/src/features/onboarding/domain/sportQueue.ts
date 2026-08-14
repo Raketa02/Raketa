@@ -8,7 +8,7 @@
  * The rules live here rather than in the store so they can be tested without one.
  */
 
-import type { Sport } from "./Sport";
+import type { Sport } from './Sport';
 
 /**
  * Add or remove a sport, preserving the order they were chosen in.
@@ -33,10 +33,7 @@ export function toggleSport(queue: readonly Sport[], sport: Sport): readonly Spo
  * queue was never persisted, so a player returning to an unfinished run is rating exactly
  * one sport as far as anyone can now know.
  */
-export function nextSport(
-  queue: readonly Sport[],
-  sport: Sport,
-): Sport | undefined {
+export function nextSport(queue: readonly Sport[], sport: Sport): Sport | undefined {
   const at = queue.indexOf(sport);
   return at === -1 ? undefined : queue[at + 1];
 }
@@ -58,10 +55,7 @@ export interface RatingPosition {
  * queue was never persisted, so a player returning to an unfinished padel assessment is
  * rating exactly one sport as far as anyone can now know.
  */
-export function ratingPosition(
-  queue: readonly Sport[],
-  sport: Sport,
-): RatingPosition {
+export function ratingPosition(queue: readonly Sport[], sport: Sport): RatingPosition {
   const at = queue.indexOf(sport);
   return at === -1 ? { index: 1, total: 1 } : { index: at + 1, total: queue.length };
 }

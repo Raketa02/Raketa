@@ -15,12 +15,12 @@
  * persistence and memory is what a request reads. Neither is reachable from a component.
  */
 
-import * as SecureStore from "expo-secure-store";
+import * as SecureStore from 'expo-secure-store';
 
-import type { Tokens } from "./auth.types";
+import type { Tokens } from './auth.types';
 
 /** One key, because the pair is one fact. See the note above. */
-const SESSION_KEY = "rakieta.session.v1";
+const SESSION_KEY = 'rakieta.session.v1';
 
 /**
  * The runtime copy. A module variable holding a credential is normally a bug; here it
@@ -63,12 +63,12 @@ function setCached(next: Tokens | undefined): void {
 }
 
 function isTokens(value: unknown): value is Tokens {
-  if (typeof value !== "object" || value === null) return false;
+  if (typeof value !== 'object' || value === null) return false;
   const candidate = value as Partial<Tokens>;
   return (
-    typeof candidate.accessToken === "string" &&
+    typeof candidate.accessToken === 'string' &&
     candidate.accessToken.length > 0 &&
-    typeof candidate.refreshToken === "string" &&
+    typeof candidate.refreshToken === 'string' &&
     candidate.refreshToken.length > 0
   );
 }
@@ -136,9 +136,7 @@ export async function clear(): Promise<void> {
  * Synchronous by design — this is the hot path, on every request.
  */
 export function getCredential(): Credential | undefined {
-  return cached === undefined
-    ? undefined
-    : { accessToken: cached.accessToken, generation };
+  return cached === undefined ? undefined : { accessToken: cached.accessToken, generation };
 }
 
 /**

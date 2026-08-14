@@ -6,9 +6,9 @@
  * validation) and demand opposite behaviour.
  */
 
-import { QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react-native";
-import { Text } from "react-native";
+import { QueryClientProvider } from '@tanstack/react-query';
+import { render, screen, waitFor } from '@testing-library/react-native';
+import { Text } from 'react-native';
 
 import {
   beginSession,
@@ -18,9 +18,9 @@ import {
   resetSessionStatus,
   useSessionStatus,
   wireHttpCredentials,
-} from "@/shared/lib/auth";
-import { BootstrapGate, bootstrapApp } from "@/shared/lib/bootstrap";
-import { queryClient } from "@/shared/lib/query-client";
+} from '@/shared/lib/auth';
+import { BootstrapGate, bootstrapApp } from '@/shared/lib/bootstrap';
+import { queryClient } from '@/shared/lib/query-client';
 import {
   errorResponse,
   installTransport,
@@ -28,18 +28,18 @@ import {
   networkFailure,
   type Transport,
   type Wire,
-} from "@/test-support/transport";
+} from '@/test-support/transport';
 
-import { authKeys } from "../hooks/authKeys";
+import { authKeys } from '../hooks/authKeys';
 
-import { refreshTokens } from "./refreshTokens";
-import { restoreSession } from "./restoreSession";
+import { refreshTokens } from './refreshTokens';
+import { restoreSession } from './restoreSession';
 
-const USER: Wire["UserResponse"] = {
-  id: "11111111-2222-4333-8444-555555555555",
-  email: "ada@example.com",
-  nickname: "ada",
-  authority: "player",
+const USER: Wire['UserResponse'] = {
+  id: '11111111-2222-4333-8444-555555555555',
+  email: 'ada@example.com',
+  nickname: 'ada',
+  authority: 'player',
   is_admin: false,
   is_active: true,
 };
@@ -61,19 +61,19 @@ afterEach(() => {
 
 /** A previous run of the app that ended with a signed-in player. */
 async function credentialsOnDevice() {
-  await beginSession({ accessToken: "access-1", refreshToken: "refresh-1" });
+  await beginSession({ accessToken: 'access-1', refreshToken: 'refresh-1' });
   resetSessionStatus(); // the process restarted; only the keychain survived
 }
 
-describe("relaunching", () => {
-  it("restores the session when the server still recognises the token", async () => {
+describe('relaunching', () => {
+  it('restores the session when the server still recognises the token', async () => {
     await credentialsOnDevice();
-    transport.on("GET", "/api/v1/users/me", () => json(USER));
+    transport.on('GET', '/api/v1/users/me', () => json(USER));
 
     const restored = await restoreSession();
 
-    expect(restored.status).toBe("authenticated");
-    expect(getSessionStatus()).toBe("authenticated");
+    expect(restored.status).toBe('authenticated');
+    expect(getSessionStatus()).toBe('authenticated');
     expect(restored.user).toEqual({
       id: USER.id,
       email: USER.email,
@@ -81,64 +81,62 @@ describe("relaunching", () => {
     });
   });
 
-  it("sends the stored token on the validation request", async () => {
+  it('sends the stored token on the validation request', async () => {
     await credentialsOnDevice();
-    transport.on("GET", "/api/v1/users/me", () => json(USER));
+    transport.on('GET', '/api/v1/users/me', () => json(USER));
 
     await restoreSession();
 
-    const [validation] = transport.requestsTo("GET", "/api/v1/users/me");
-    expect(validation?.headers.Authorization).toBe("Bearer access-1");
+    const [validation] = transport.requestsTo('GET', '/api/v1/users/me');
+    expect(validation?.headers.Authorization).toBe('Bearer access-1');
   });
 
-  it("is signed out when the device holds no credentials", async () => {
+  it('is signed out when the device holds no credentials', async () => {
     const restored = await restoreSession();
 
-    expect(restored.status).toBe("unauthenticated");
-    expect(getSessionStatus()).toBe("unauthenticated");
+    expect(restored.status).toBe('unauthenticated');
+    expect(getSessionStatus()).toBe('unauthenticated');
     // Nothing was asked of the server: an unauthenticated launch that fires an
     // authenticated request can only 401.
     expect(transport.requests).toHaveLength(0);
   });
 
-  it("discards credentials the server no longer recognises", async () => {
+  it('discards credentials the server no longer recognises', async () => {
     // The iOS reinstall case: Keychain data outlives the app, so a fresh install can
     // start life holding credentials the backend retired months ago. Both halves are
     // dead here — an access token alone is no longer proof, because a stale one is now
     // answered by a rotation.
     await credentialsOnDevice();
-    transport.on("GET", "/api/v1/users/me", () =>
-      errorResponse(401, "access_token_invalid"),
-    );
-    transport.on("POST", "/api/v1/auth/refresh", () =>
-      errorResponse(401, "refresh_token_not_recognised"),
+    transport.on('GET', '/api/v1/users/me', () => errorResponse(401, 'access_token_invalid'));
+    transport.on('POST', '/api/v1/auth/refresh', () =>
+      errorResponse(401, 'refresh_token_not_recognised'),
     );
 
     const restored = await restoreSession();
 
-    expect(restored.status).toBe("unauthenticated");
+    expect(restored.status).toBe('unauthenticated');
     expect(hasTokens()).toBe(false);
   });
 
-  it("refreshes an expired access token rather than ending the session", async () => {
+  it('refreshes an expired access token rather than ending the session', async () => {
     // An access token expires in minutes and a refresh token lasts weeks, so this is the
     // *ordinary* relaunch — the app has been closed overnight. Signing the player out
     // here would mean re-entering a password every morning.
     await credentialsOnDevice();
-    const rotatedPair: Wire["TokenResponse"] = {
-      access_token: "access-2",
-      refresh_token: "refresh-2",
-      token_type: "bearer",
+    const rotatedPair: Wire['TokenResponse'] = {
+      access_token: 'access-2',
+      refresh_token: 'refresh-2',
+      token_type: 'bearer',
       expires_in: 900,
     };
 
     let rotated = false;
-    transport.on("GET", "/api/v1/users/me", (request) =>
-      request.headers.Authorization === "Bearer access-2"
+    transport.on('GET', '/api/v1/users/me', (request) =>
+      request.headers.Authorization === 'Bearer access-2'
         ? json(USER)
-        : errorResponse(401, "access_token_expired"),
+        : errorResponse(401, 'access_token_expired'),
     );
-    transport.on("POST", "/api/v1/auth/refresh", () => {
+    transport.on('POST', '/api/v1/auth/refresh', () => {
       rotated = true;
       return json(rotatedPair);
     });
@@ -146,31 +144,31 @@ describe("relaunching", () => {
     const restored = await restoreSession();
 
     expect(rotated).toBe(true);
-    expect(restored.status).toBe("authenticated");
-    expect(restored.user?.nickname).toBe("ada");
+    expect(restored.status).toBe('authenticated');
+    expect(restored.user?.nickname).toBe('ada');
     expect(hasTokens()).toBe(true);
   });
 
-  it("keeps the session when the server could not be reached", async () => {
+  it('keeps the session when the server could not be reached', async () => {
     // Unreachable is not rejected. Destroying a valid session — and costing someone
     // their password — because a tunnel swallowed one request is the worst outcome here,
     // and it is the easy mistake.
     await credentialsOnDevice();
-    transport.on("GET", "/api/v1/users/me", networkFailure());
+    transport.on('GET', '/api/v1/users/me', networkFailure());
 
     const restored = await restoreSession();
 
-    expect(restored.status).toBe("authenticated");
+    expect(restored.status).toBe('authenticated');
     expect(hasTokens()).toBe(true);
   });
 
-  it("keeps the session when the server itself failed", async () => {
+  it('keeps the session when the server itself failed', async () => {
     await credentialsOnDevice();
-    transport.on("GET", "/api/v1/users/me", () => errorResponse(503, "internal_error"));
+    transport.on('GET', '/api/v1/users/me', () => errorResponse(503, 'internal_error'));
 
     const restored = await restoreSession();
 
-    expect(restored.status).toBe("authenticated");
+    expect(restored.status).toBe('authenticated');
     expect(hasTokens()).toBe(true);
   });
 });
@@ -182,7 +180,7 @@ describe("relaunching", () => {
 /** Stands in for the route tree: it names whichever branch the guard would render. */
 function TreeUnderTest() {
   const status = useSessionStatus();
-  return <Text>{status === "authenticated" ? "Signed in" : "Sign in"}</Text>;
+  return <Text>{status === 'authenticated' ? 'Signed in' : 'Sign in'}</Text>;
 }
 
 function renderLaunch() {
@@ -219,31 +217,31 @@ function Recorder({ seen }: { readonly seen: string[] }) {
   return <TreeUnderTest />;
 }
 
-describe("the launch sequence", () => {
-  it("shows the authenticated tree with no login-screen flash", async () => {
+describe('the launch sequence', () => {
+  it('shows the authenticated tree with no login-screen flash', async () => {
     await credentialsOnDevice();
-    transport.on("GET", "/api/v1/users/me", () => json(USER));
+    transport.on('GET', '/api/v1/users/me', () => json(USER));
 
     const seen = renderLaunch();
 
-    expect(await screen.findByText("Signed in")).toBeTruthy();
+    expect(await screen.findByText('Signed in')).toBeTruthy();
     // The tree renders only after the sequence resolves, so it was never mounted while
     // the status was still `bootstrapping` — which is what a login-screen flash is.
-    expect(seen).not.toContain("bootstrapping");
-    expect(seen).not.toContain("unauthenticated");
+    expect(seen).not.toContain('bootstrapping');
+    expect(seen).not.toContain('unauthenticated');
   });
 
-  it("shows the sign-in tree with no authenticated-tree flash", async () => {
+  it('shows the sign-in tree with no authenticated-tree flash', async () => {
     const seen = renderLaunch();
 
-    expect(await screen.findByText("Sign in")).toBeTruthy();
-    expect(seen).not.toContain("bootstrapping");
-    expect(seen).not.toContain("authenticated");
+    expect(await screen.findByText('Sign in')).toBeTruthy();
+    expect(seen).not.toContain('bootstrapping');
+    expect(seen).not.toContain('authenticated');
   });
 
-  it("seeds the profile it already fetched, so the first screen does not refetch", async () => {
+  it('seeds the profile it already fetched, so the first screen does not refetch', async () => {
     await credentialsOnDevice();
-    transport.on("GET", "/api/v1/users/me", () => json(USER));
+    transport.on('GET', '/api/v1/users/me', () => json(USER));
 
     renderLaunch();
 
@@ -254,6 +252,6 @@ describe("the launch sequence", () => {
         nickname: USER.nickname,
       }),
     );
-    expect(transport.requestsTo("GET", "/api/v1/users/me")).toHaveLength(1);
+    expect(transport.requestsTo('GET', '/api/v1/users/me')).toHaveLength(1);
   });
 });

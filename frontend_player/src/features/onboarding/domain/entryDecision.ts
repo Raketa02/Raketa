@@ -25,16 +25,16 @@
  * the permanent way out is abandonment, which changes the run rather than the routing.
  */
 
-import type { AssessmentRun } from "./Assessment";
-import type { SkillRating } from "./SkillRating";
+import type { AssessmentRun } from './Assessment';
+import type { SkillRating } from './SkillRating';
 
 export type EntryDestination =
   /** The authenticated tree. Onboarding is behind them, at least for one sport. */
-  | { readonly kind: "app" }
+  | { readonly kind: 'app' }
   /** Onboarding from the beginning: what it produces, then the sports picker. */
-  | { readonly kind: "welcome" }
+  | { readonly kind: 'welcome' }
   /** Straight back to the outstanding question of a run they already started. */
-  | { readonly kind: "resume"; readonly run: AssessmentRun };
+  | { readonly kind: 'resume'; readonly run: AssessmentRun };
 
 export interface EntryInput {
   readonly ratings: readonly SkillRating[];
@@ -49,8 +49,8 @@ export function entryDestination({
   deferredRunIds,
 }: EntryInput): EntryDestination {
   if (runInProgress !== undefined && !deferredRunIds.includes(runInProgress.assessmentId)) {
-    return { kind: "resume", run: runInProgress };
+    return { kind: 'resume', run: runInProgress };
   }
-  if (ratings.length === 0) return { kind: "welcome" };
-  return { kind: "app" };
+  if (ratings.length === 0) return { kind: 'welcome' };
+  return { kind: 'app' };
 }

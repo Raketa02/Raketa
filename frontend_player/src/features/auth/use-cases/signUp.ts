@@ -7,10 +7,10 @@
  * whether their account exists.
  */
 
-import { register } from "../api/authApi";
-import type { Registration } from "../domain/AuthenticatedUser";
+import { register } from '../api/authApi';
+import type { Registration } from '../domain/AuthenticatedUser';
 
-import { signIn } from "./signIn";
+import { signIn } from './signIn';
 
 /**
  * The password is sent twice because the backend asks for both halves and checks them

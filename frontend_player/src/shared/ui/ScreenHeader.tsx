@@ -12,10 +12,10 @@
  * you are about to OPERATE — the two are not interchangeable (design-system 3.3).
  */
 
-import { Pressable, StyleSheet, Text, View } from "react-native";
-import type { ReactNode } from "react";
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import type { ReactNode } from 'react';
 
-import { theme } from "./theme";
+import { theme } from './theme';
 
 export interface ScreenHeaderProps {
   readonly title: string;
@@ -31,7 +31,7 @@ export function ScreenHeader({
   eyebrow,
   right,
   onBack,
-  backLabel = "Back",
+  backLabel = 'Back',
 }: ScreenHeaderProps) {
   return (
     <View style={s.header}>
@@ -44,7 +44,7 @@ export function ScreenHeader({
           hitSlop={theme.hit.infoMark}
           style={({ pressed }) => [s.back, pressed ? s.backPressed : undefined]}
         >
-          <Text style={s.backMark}>{"‹"}</Text>
+          <Text style={s.backMark}>{'‹'}</Text>
         </Pressable>
       ) : null}
 
@@ -62,8 +62,8 @@ export function ScreenHeader({
 
 const s = StyleSheet.create({
   header: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: theme.space.sm,
     paddingHorizontal: theme.size.gutter,
     paddingVertical: theme.space.md,
@@ -72,11 +72,11 @@ const s = StyleSheet.create({
   eyebrow: {
     ...theme.type.eyebrow,
     color: theme.color.muted,
-    textTransform: "uppercase",
+    textTransform: 'uppercase',
   },
   title: { ...theme.type.h1, color: theme.color.ink },
-  back: { alignItems: "center", justifyContent: "center" },
+  back: { alignItems: 'center', justifyContent: 'center' },
   backPressed: { opacity: 0.7 },
   backMark: { ...theme.type.h1, color: theme.color.muted },
-  right: { alignItems: "flex-end" },
+  right: { alignItems: 'flex-end' },
 });

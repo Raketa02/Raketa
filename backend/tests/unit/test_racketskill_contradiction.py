@@ -32,6 +32,9 @@ from app.engines.racketskill.v3.engine import (
     MAX_QUESTIONS,
     STOP_CEILING,
     TIE_BREAKER_REASON,
+    _contradiction,
+    _evidence_points,
+    _target_tier,
 )
 from app.engines.racketskill.v3.questions import (
     ENVIRONMENT_QUESTION_ID,
@@ -161,11 +164,36 @@ def test_an_uneven_profile_widens_the_range_without_an_accusation() -> None:
 
 # --- The tie-breaker ------------------------------------------------------------
 
-# Claims an Established player's environment and results, demonstrated poorly.
-# The demonstrations the routing asks for are pitched at the running estimate,
-# which sits between the two sides — so the tier the *claims* imply is still
-# unasked when the disagreement is noticed, and it is the tie-breaker.
+# Claims a player who plays several times a week, demonstrated at the bottom of
+# the bank. The demonstrations drag the running estimate back under the
+# Established floor, so only two are required — which leaves the tier the
+# *claims* imply unasked when the disagreement is noticed, and it is the
+# tie-breaker.
+#
+# That "only two are required" is the load-bearing half of this fixture, and it
+# is why the tie-breaker exists at all: a third demonstration would be asked at
+# one of the three tiers, and with three tiers in the bank a player who earns
+# three has necessarily been asked the claims' own tier already. See
+# ``STRONG_OVER_CLAIMER`` below for that player, who is the commoner one.
 OVER_CLAIMER = {
+    OPENING_QUESTION_ID: "frequent",
+    VOLUME_QUESTION_ID: "v0",
+    LAYOFF_QUESTION_ID: "l0",
+    ENVIRONMENT_QUESTION_ID: "env0",
+    RELATIVE_QUESTION_ID: "r1",
+    BASIC: "e0",
+    STANDARD: "e0",
+    DISCRIMINATING: "e0",
+    TACTICAL_QUESTION_IDS[0]: "t0",
+    TACTICAL_QUESTION_IDS[1]: "t0",
+}
+
+# The same disagreement in a player whose demonstrations stay inside Established.
+# They earn a third demonstration, the routing spends it on the discriminating
+# tier, and so the claims are tested at their own level *by the sequence* — one
+# question earlier than a tie-breaker would have done it, and with the same
+# question.
+STRONG_OVER_CLAIMER = {
     OPENING_QUESTION_ID: "regular",
     VOLUME_QUESTION_ID: "v2",
     LAYOFF_QUESTION_ID: "l0",
@@ -183,14 +211,22 @@ def tie_breakers(asked: list[AskQuestion]) -> list[AskQuestion]:
     return [step for step in asked if step.reason == TIE_BREAKER_REASON]
 
 
+def claims_tier(transcript: tuple[AnsweredQuestion, ...]) -> str | None:
+    """The tier this transcript's fused claims imply, or ``None`` if they agree."""
+
+    sides = _contradiction(_evidence_points(transcript))
+    return None if sides is None else _target_tier(sides.claims.mu)
+
+
 def test_the_tie_breaker_is_asked_once_at_the_tier_the_claims_imply() -> None:
-    asked, _, _ = run(OVER_CLAIMER)
+    asked, transcript, _ = run(OVER_CLAIMER)
     breakers = tie_breakers(asked)
     assert len(breakers) == 1
     # The claims describe an Established player, so the claims are tested with
     # the hardest question in the bank — not with the tier the (lower) running
     # estimate would have chosen.
     assert breakers[0].question.tier == TIER_DISCRIMINATING
+    assert claims_tier(transcript) == TIER_DISCRIMINATING
 
 
 def test_passing_the_tie_breaker_settles_the_disagreement() -> None:
@@ -208,6 +244,39 @@ def test_passing_the_tie_breaker_settles_the_disagreement() -> None:
     assert failed.confidence_reason is not None
 
 
+def test_a_third_demonstration_tests_the_claims_instead_of_a_tie_breaker() -> None:
+    """The other way the claims get tested at their own level, and the commoner one.
+
+    A player whose demonstrations keep the estimate inside Established earns a
+    third demonstration, and with three tiers in the bank that spends the claims'
+    own tier. No extra question is earned — and none is needed, because the
+    question a tie-breaker would have asked has already been answered.
+
+    The disagreement is still reported: what the tie-breaker buys is a chance to
+    settle it, not the noticing of it.
+    """
+
+    asked, transcript, failed = run(STRONG_OVER_CLAIMER)
+
+    assert tie_breakers(asked) == []
+    assert claims_tier(transcript) == TIER_DISCRIMINATING
+    # …and that tier was asked anyway, as a routed demonstration.
+    demonstrations = [
+        step
+        for step in asked
+        if step.reason == f"demonstration-{TIER_DISCRIMINATING}"
+        and step.question.tier == TIER_DISCRIMINATING
+    ]
+    assert len(demonstrations) == 1
+    assert failed.calibration_priority == CALIBRATION_PRIORITY_ELEVATED
+    assert not not_a_disagreement(failed)
+
+    # Doing the thing the claims imply settles it here too, with no tie-breaker.
+    _, _, passed = run(dict(STRONG_OVER_CLAIMER, **{DISCRIMINATING: "e4"}))
+    assert passed.calibration_priority == CALIBRATION_PRIORITY_STANDARD
+    assert not_a_disagreement(passed)
+
+
 def test_a_disagreement_permits_exactly_one_question_beyond_the_ceiling() -> None:
     # Nine answers, every one of them recorded, and the claims' own tier still
     # unasked. The ceiling gives way for the tie-breaker and for nothing else:
@@ -218,6 +287,11 @@ def test_a_disagreement_permits_exactly_one_question_beyond_the_ceiling() -> Non
     # ceiling with the claims' own tier still unasked, so this is the guard
     # being tested rather than the path, on a transcript the engine must handle
     # because a replayed stream is the only thing it is ever given.
+    #
+    # The regularity claim is modest deliberately. The minimums have to be *met*
+    # for a tie-breaker to be due, and a stronger claim here lifts the fused
+    # estimate over the Established floor, which asks for a third demonstration
+    # this transcript does not have — so the guard would never be reached.
     engine = RacketSkillEngineV3()
     at_the_ceiling = answers(
         (BASIC, "e0"),
@@ -225,7 +299,7 @@ def test_a_disagreement_permits_exactly_one_question_beyond_the_ceiling() -> Non
         (TACTICAL_QUESTION_IDS[0], "t0"),
         (TACTICAL_QUESTION_IDS[1], "t0"),
         (LAYOFF_QUESTION_ID, "l0"),
-        (OPENING_QUESTION_ID, "frequent"),
+        (OPENING_QUESTION_ID, "tried-a-few-times"),
         (VOLUME_QUESTION_ID, "v3"),
         (ENVIRONMENT_QUESTION_ID, "env3"),
         (RELATIVE_QUESTION_ID, "r3"),
@@ -247,7 +321,12 @@ def test_a_disagreement_permits_exactly_one_question_beyond_the_ceiling() -> Non
 def test_a_settled_disagreement_does_not_buy_a_second_tie_breaker() -> None:
     # The disagreement survives the tie-breaker here, and still earns only one:
     # the run's length is capped by the same single extra question either way.
-    for policy in (OVER_CLAIMER, dict(OVER_CLAIMER, **{DISCRIMINATING: "e4"})):
+    for policy in (
+        OVER_CLAIMER,
+        dict(OVER_CLAIMER, **{DISCRIMINATING: "e4"}),
+        STRONG_OVER_CLAIMER,
+        dict(STRONG_OVER_CLAIMER, **{DISCRIMINATING: "e4"}),
+    ):
         asked, transcript, _ = run(policy)
         assert len(tie_breakers(asked)) <= 1
         assert len(transcript) <= MAX_QUESTIONS + CONTRADICTION_EXTRA_QUESTIONS

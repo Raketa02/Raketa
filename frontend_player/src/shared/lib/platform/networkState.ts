@@ -11,8 +11,8 @@
  * because code needs it, never preemptively.
  */
 
-import * as Network from "expo-network";
-import { onlineManager } from "@tanstack/react-query";
+import * as Network from 'expo-network';
+import { onlineManager } from '@tanstack/react-query';
 
 /**
  * Reachability, not merely "an interface is up".

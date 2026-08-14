@@ -8,17 +8,13 @@
  * module may call SecureStore, and ESLint enforces that.
  */
 
-import { configureHttp } from "@/shared/lib/http";
+import { configureHttp } from '@/shared/lib/http';
 
-import {
-  configureRefresh,
-  refreshSession,
-  type RefreshExchange,
-} from "./refreshCoordinator";
-import { endSession } from "./session";
-import { getCredential } from "./tokenManager";
+import { configureRefresh, refreshSession, type RefreshExchange } from './refreshCoordinator';
+import { endSession } from './session';
+import { getCredential } from './tokenManager';
 
-export type { SessionStatus, SignOutReason, Tokens } from "./auth.types";
+export type { SessionStatus, SignOutReason, Tokens } from './auth.types';
 
 export {
   getSessionStatus,
@@ -26,18 +22,18 @@ export {
   setSessionStatus,
   subscribeToSession,
   useSessionStatus,
-} from "./authSession";
+} from './authSession';
 
-export { beginSession, endSession } from "./session";
+export { beginSession, endSession } from './session';
 
-export { resetRefresh, type RefreshExchange, type RefreshOutcome } from "./refreshCoordinator";
+export { resetRefresh, type RefreshExchange, type RefreshOutcome } from './refreshCoordinator';
 
 export {
   clear as clearStoredTokens,
   getRefreshToken,
   hasTokens,
   load as readStoredTokens,
-} from "./tokenManager";
+} from './tokenManager';
 
 /**
  * Hand the HTTP client its credential adapter.
@@ -61,6 +57,6 @@ export function wireHttpCredentials(exchange: RefreshExchange): void {
     refresh: refreshSession,
     // The transport only reaches this after a freshly-rotated credential was rejected,
     // which is the same fact a rejected refresh establishes — so it is the same exit.
-    abandon: () => endSession("session-invalidated"),
+    abandon: () => endSession('session-invalidated'),
   });
 }

@@ -9,16 +9,10 @@
  * reason a selected chip is ink-filled (6.2) — selection is a state, not an action.
  */
 
-import {
-  Pressable,
-  StyleSheet,
-  View,
-  type StyleProp,
-  type ViewStyle,
-} from "react-native";
-import type { ReactNode } from "react";
+import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import type { ReactNode } from 'react';
 
-import { theme } from "./theme";
+import { theme } from './theme';
 
 export interface CardProps {
   readonly children: ReactNode;

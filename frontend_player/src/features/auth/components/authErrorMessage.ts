@@ -11,22 +11,22 @@
  * about what to do next — even one this build has never seen.
  */
 
-import type { AppError } from "@/shared/errors";
+import type { AppError } from '@/shared/errors';
 
 const BY_CODE: Readonly<Record<string, string>> = {
   invalid_credentials: "That email and password don't match. Try again.",
-  account_disabled: "This account has been disabled. Get in touch with us to reopen it.",
-  email_already_registered: "That email already has an account. Sign in instead.",
-  nickname_already_taken: "That nickname is taken. Pick another.",
+  account_disabled: 'This account has been disabled. Get in touch with us to reopen it.',
+  email_already_registered: 'That email already has an account. Sign in instead.',
+  nickname_already_taken: 'That nickname is taken. Pick another.',
 };
 
-const BY_RECOVERY: Readonly<Record<AppError["recovery"], string>> = {
-  "retryable-automatically": "We couldn't reach Rakieta. Check your connection and try again.",
-  "retryable-by-user": "That didn't go through. Try again in a moment.",
-  "requires-reauthentication": "Your session has ended. Sign in again.",
-  "requires-user-correction": "Check the details above and try again.",
-  "business-conflict": "That can't be done right now.",
-  terminal: "Something went wrong at our end. Try again later.",
+const BY_RECOVERY: Readonly<Record<AppError['recovery'], string>> = {
+  'retryable-automatically': "We couldn't reach Rakieta. Check your connection and try again.",
+  'retryable-by-user': "That didn't go through. Try again in a moment.",
+  'requires-reauthentication': 'Your session has ended. Sign in again.',
+  'requires-user-correction': 'Check the details above and try again.',
+  'business-conflict': "That can't be done right now.",
+  terminal: 'Something went wrong at our end. Try again later.',
 };
 
 export function authErrorMessage(error: AppError): string {
@@ -42,5 +42,5 @@ export function authErrorMessage(error: AppError): string {
  */
 export function authErrorField(error: AppError): string | undefined {
   const field = error.details?.field;
-  return typeof field === "string" ? field : undefined;
+  return typeof field === 'string' ? field : undefined;
 }

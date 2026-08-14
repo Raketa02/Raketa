@@ -8,16 +8,16 @@
  * property of where a screen lives, not of how a player happened to arrive.
  */
 
-import { Redirect, Stack } from "expo-router";
+import { Redirect, Stack } from 'expo-router';
 
-import { useSessionStatus } from "@/shared/lib/auth";
+import { useSessionStatus } from '@/shared/lib/auth';
 
 export default function OnboardingLayout() {
   const status = useSessionStatus();
 
-  if (status === "bootstrapping") return null;
+  if (status === 'bootstrapping') return null;
 
-  if (status === "unauthenticated") return <Redirect href="/sign-in" />;
+  if (status === 'unauthenticated') return <Redirect href="/sign-in" />;
 
   return <Stack screenOptions={{ headerShown: false }} />;
 }

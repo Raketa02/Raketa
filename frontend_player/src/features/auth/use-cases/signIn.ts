@@ -5,11 +5,11 @@
  * single answer that a test can drive without a renderer.
  */
 
-import { beginSession } from "@/shared/lib/auth";
+import { beginSession } from '@/shared/lib/auth';
 
-import { login } from "../api/authApi";
-import type { SignInCredentials } from "../domain/AuthenticatedUser";
-import { toTokens } from "../mappers/authMappers";
+import { login } from '../api/authApi';
+import type { SignInCredentials } from '../domain/AuthenticatedUser';
+import { toTokens } from '../mappers/authMappers';
 
 /**
  * The order is load-bearing. `beginSession` persists the pair *before* flipping the

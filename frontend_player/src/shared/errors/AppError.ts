@@ -21,29 +21,29 @@
  */
 export type Recovery =
   /** Transient and machine-recoverable — the retry policy may handle it unattended. */
-  | "retryable-automatically"
+  | 'retryable-automatically'
   /** The player can retry, but only they can decide to: it costs data, or repeats a write. */
-  | "retryable-by-user"
+  | 'retryable-by-user'
   /** The session is over. The ONLY category that may touch the session state machine. */
-  | "requires-reauthentication"
+  | 'requires-reauthentication'
   /** The request was wrong. Fix the input; retrying it unchanged fails identically. */
-  | "requires-user-correction"
+  | 'requires-user-correction'
   /** The server is in a state that makes this operation meaningless. Reconcile, don't retry. */
-  | "business-conflict"
+  | 'business-conflict'
   /** Nothing the client can do. Report it and stop. */
-  | "terminal";
+  | 'terminal';
 
 export type AppErrorKind =
-  | "network-unavailable"
-  | "timeout"
-  | "unauthorized"
-  | "forbidden"
-  | "validation"
-  | "not-found"
-  | "conflict"
-  | "rate-limit"
-  | "server"
-  | "unknown";
+  | 'network-unavailable'
+  | 'timeout'
+  | 'unauthorized'
+  | 'forbidden'
+  | 'validation'
+  | 'not-found'
+  | 'conflict'
+  | 'rate-limit'
+  | 'server'
+  | 'unknown';
 
 export interface AppErrorContext {
   /** The backend's stable identifier, when the failure came from the backend at all. */
@@ -64,7 +64,7 @@ export interface AppErrorContext {
  * and `kind`. Rendering `message` directly is a fallback, not the design.
  */
 export class AppError extends Error {
-  override readonly name = "AppError";
+  override readonly name = 'AppError';
   readonly kind: AppErrorKind;
   readonly recovery: Recovery;
   readonly code?: string;
@@ -95,7 +95,7 @@ export class AppError extends Error {
    * infuriating. Only an authentication-invalidating response ends a session.
    */
   get invalidatesSession(): boolean {
-    return this.recovery === "requires-reauthentication";
+    return this.recovery === 'requires-reauthentication';
   }
 }
 
@@ -106,9 +106,9 @@ export function isAppError(value: unknown): value is AppError {
 /** Nothing reached the server. Says nothing about whether the session is still valid. */
 export function networkUnavailable(cause?: unknown): AppError {
   return new AppError(
-    "network-unavailable",
-    "retryable-automatically",
-    "The request could not reach the server.",
+    'network-unavailable',
+    'retryable-automatically',
+    'The request could not reach the server.',
     { cause },
   );
 }
@@ -119,8 +119,8 @@ export function networkUnavailable(cause?: unknown): AppError {
  */
 export function timedOut(afterMs: number): AppError {
   return new AppError(
-    "timeout",
-    "retryable-automatically",
+    'timeout',
+    'retryable-automatically',
     `The request timed out after ${afterMs}ms.`,
     { details: { afterMs } },
   );
@@ -128,5 +128,5 @@ export function timedOut(afterMs: number): AppError {
 
 /** A failure with no envelope behind it — a decode failure, or a thrown non-Error. */
 export function unknownFailure(message: string, cause?: unknown): AppError {
-  return new AppError("unknown", "terminal", message, { cause });
+  return new AppError('unknown', 'terminal', message, { cause });
 }

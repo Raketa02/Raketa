@@ -7,28 +7,25 @@
  * belong to the use-cases above.
  */
 
-import type { components } from "@/generated/schema";
-import { httpRequest } from "@/shared/lib/http";
+import type { components } from '@/generated/schema';
+import { httpRequest } from '@/shared/lib/http';
 
-type TokenResponse = components["schemas"]["TokenResponse"];
-type UserResponse = components["schemas"]["UserResponse"];
-type UserCreateRequest = components["schemas"]["UserCreateRequest"];
-type LoginRequest = components["schemas"]["LoginRequest"];
-type LogoutResponse = components["schemas"]["LogoutResponse"];
-type RefreshRequest = components["schemas"]["RefreshRequest"];
+type TokenResponse = components['schemas']['TokenResponse'];
+type UserResponse = components['schemas']['UserResponse'];
+type UserCreateRequest = components['schemas']['UserCreateRequest'];
+type LoginRequest = components['schemas']['LoginRequest'];
+type LogoutResponse = components['schemas']['LogoutResponse'];
+type RefreshRequest = components['schemas']['RefreshRequest'];
 
 export interface AuthApiOptions {
   readonly signal?: AbortSignal;
 }
 
 /** Exchange credentials for a token pair. Unauthenticated by definition. */
-export function login(
-  body: LoginRequest,
-  { signal }: AuthApiOptions = {},
-): Promise<TokenResponse> {
+export function login(body: LoginRequest, { signal }: AuthApiOptions = {}): Promise<TokenResponse> {
   return httpRequest<TokenResponse>({
-    method: "POST",
-    path: "/api/v1/auth/login",
+    method: 'POST',
+    path: '/api/v1/auth/login',
     body,
     authenticated: false,
     signal,
@@ -44,8 +41,8 @@ export function register(
   { signal }: AuthApiOptions = {},
 ): Promise<UserResponse> {
   return httpRequest<UserResponse>({
-    method: "POST",
-    path: "/api/v1/users",
+    method: 'POST',
+    path: '/api/v1/users',
     body,
     authenticated: false,
     signal,
@@ -64,8 +61,8 @@ export function refresh(
   { signal }: AuthApiOptions = {},
 ): Promise<TokenResponse> {
   return httpRequest<TokenResponse>({
-    method: "POST",
-    path: "/api/v1/auth/refresh",
+    method: 'POST',
+    path: '/api/v1/auth/refresh',
     body,
     authenticated: false,
     signal,
@@ -81,8 +78,8 @@ export function refresh(
  */
 export function me({ signal }: AuthApiOptions = {}): Promise<UserResponse> {
   return httpRequest<UserResponse>({
-    method: "GET",
-    path: "/api/v1/users/me",
+    method: 'GET',
+    path: '/api/v1/users/me',
     authenticated: true,
     signal,
   });
@@ -97,8 +94,8 @@ export function revokeRefreshToken(
   { signal }: AuthApiOptions = {},
 ): Promise<LogoutResponse> {
   return httpRequest<LogoutResponse>({
-    method: "POST",
-    path: "/api/v1/auth/logout",
+    method: 'POST',
+    path: '/api/v1/auth/logout',
     body: { refresh_token: refreshToken },
     authenticated: false,
     signal,

@@ -5,14 +5,14 @@
  * is `retry: false` and overriding it silently is how a mutation gets repeated.
  */
 
-import { useMutation } from "@tanstack/react-query";
+import { useMutation } from '@tanstack/react-query';
 
-import type { AppError } from "@/shared/errors";
+import type { AppError } from '@/shared/errors';
 
-import type { Registration, SignInCredentials } from "../domain/AuthenticatedUser";
-import { signIn } from "../use-cases/signIn";
-import { signOut } from "../use-cases/signOut";
-import { signUp } from "../use-cases/signUp";
+import type { Registration, SignInCredentials } from '../domain/AuthenticatedUser';
+import { signIn } from '../use-cases/signIn';
+import { signOut } from '../use-cases/signOut';
+import { signUp } from '../use-cases/signUp';
 
 /**
  * **Not retried.** A failed sign-in is almost always a wrong password, and repeating it

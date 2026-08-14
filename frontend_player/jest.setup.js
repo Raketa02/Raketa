@@ -12,7 +12,7 @@
 // expo-secure-store talks to the iOS Keychain / Android Keystore and has no JS
 // implementation to fall back on. An in-memory map with the same async shape is enough
 // to exercise every path src/shared/lib/auth actually takes, including a failing read.
-jest.mock("expo-secure-store", () => {
+jest.mock('expo-secure-store', () => {
   const store = new Map();
   return {
     __store: store,
@@ -29,7 +29,7 @@ jest.mock("expo-secure-store", () => {
 // --- native connectivity ----------------------------------------------------
 // Reports a working connection and never changes it. Tests that care about offline
 // behaviour drive onlineManager directly rather than through this.
-jest.mock("expo-network", () => ({
+jest.mock('expo-network', () => ({
   addNetworkStateListener: jest.fn(() => ({ remove: jest.fn() })),
   getNetworkStateAsync: jest.fn(async () => ({
     isConnected: true,
@@ -45,4 +45,14 @@ jest.mock("expo-network", () => ({
 // validated once, through `loadEnv`. A test that skipped it would have every request fail
 // on unvalidated config rather than on whatever the test is actually about.
 // `src/shared/config/env.test.ts` still covers the failure paths, on `parseEnv`.
-require("./src/shared/config/env").loadEnv();
+require('./src/shared/config/env').loadEnv();
+
+// --- Query's garbage-collection timers ---------------------------------------
+// `gcTime` is five minutes, so an unmounted query or mutation leaves a real five-minute
+// timer behind and the jest worker's event loop never empties — which is the whole of the
+// "failed to exit gracefully" warning (#29). `queryClient.clear()` cannot cancel all of
+// them; the reasoning, and what was measured, is in the module.
+//
+// Installed here rather than per suite so no suite has to remember, and installed before
+// any test file loads so nothing is scheduled through the old provider.
+require('./src/test-support/queryTimeouts').installUnrefTimeouts();

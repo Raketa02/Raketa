@@ -12,15 +12,15 @@
  * so a sport that reached one without the other fails `pnpm typecheck`.
  */
 
-import { theme } from "@/shared/ui";
+import { theme } from '@/shared/ui';
 
-import type { Sport } from "../domain/Sport";
+import type { Sport } from '../domain/Sport';
 
 const LABELS: Readonly<Record<Sport, string>> = {
-  padel: "Padel",
-  tennis: "Tennis",
-  squash: "Squash",
-  badminton: "Badminton",
+  padel: 'Padel',
+  tennis: 'Tennis',
+  squash: 'Squash',
+  badminton: 'Badminton',
 };
 
 export function sportLabel(sport: Sport): string {

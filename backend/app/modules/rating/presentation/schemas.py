@@ -20,7 +20,11 @@ from app.engines.assessment import (
     UncertaintyFactor,
 )
 from app.kernel import Sport
-from app.modules.rating.application.commands import AssessmentStep, RatingView
+from app.modules.rating.application.commands import (
+    AssessmentStep,
+    InProgressAssessmentView,
+    RatingView,
+)
 
 
 class CreateAssessmentRequest(BaseModel):
@@ -224,6 +228,18 @@ class AssessmentStepResponse(BaseModel):
 
     assessment_id: str
     status: str
+    questions_asked: int = Field(
+        ...,
+        description=(
+            "How many of this run's questions have been answered. The outstanding "
+            "`question` is **not** counted — it has been put to the player but not "
+            "answered — so a question counter reads this plus one, and a fresh run "
+            "reports 0. Replayed from the transcript on every read, which is what "
+            "lets a resumed run report the position it is really at rather than "
+            "restarting at 1. Once the run is over this is the same number "
+            "`result.questions_asked` carries."
+        ),
+    )
     question: QuestionResponse | None = None
     result: ResultResponse | None = None
 
@@ -232,6 +248,7 @@ class AssessmentStepResponse(BaseModel):
         return cls(
             assessment_id=str(step.assessment_id),
             status=step.status,
+            questions_asked=step.questions_asked,
             question=(
                 QuestionResponse.from_domain(step.question)
                 if step.question is not None
@@ -242,4 +259,46 @@ class AssessmentStepResponse(BaseModel):
                 if step.result is not None
                 else None
             ),
+        )
+
+
+class InProgressAssessmentResponse(BaseModel):
+    """One unfinished run: which assessment, and which sport it is for.
+
+    Carries no question, no result and no progress. A caller reading this is
+    deciding *where to send the player*; it re-reads the run it routes to, and
+    that read is the one that reproduces the outstanding question.
+    """
+
+    assessment_id: str
+    sport: Sport
+
+    @classmethod
+    def from_view(
+        cls, entry: InProgressAssessmentView
+    ) -> "InProgressAssessmentResponse":
+        return cls(assessment_id=str(entry.assessment_id), sport=entry.sport)
+
+
+class InProgressAssessmentsResponse(BaseModel):
+    """Every unfinished run this player holds — empty when they hold none.
+
+    Empty is the ordinary answer for a new account and for a player who has
+    finished everything they started, so it is a 200 with an empty list rather
+    than a 404 or the singular form's 204.
+
+    Ordered by the sport registry, so a caller that wants one run can take the
+    first entry.
+    """
+
+    assessments: list[InProgressAssessmentResponse]
+
+    @classmethod
+    def from_views(
+        cls, entries: list[InProgressAssessmentView]
+    ) -> "InProgressAssessmentsResponse":
+        return cls(
+            assessments=[
+                InProgressAssessmentResponse.from_view(entry) for entry in entries
+            ]
         )

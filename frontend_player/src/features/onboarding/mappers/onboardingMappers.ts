@@ -13,43 +13,45 @@
  *    picker shows the ones it can and the player rates the rest after updating.
  */
 
-import type { components } from "@/generated/schema";
+import type { components } from '@/generated/schema';
 
 import type {
   AssessmentRun,
   AssessmentStatus,
   AssessmentStep,
   Question,
-} from "../domain/Assessment";
-import type { SkillRating } from "../domain/SkillRating";
-import type { Sport } from "../domain/Sport";
+} from '../domain/Assessment';
+import type { AssessmentResult } from '../domain/AssessmentResult';
+import type { SkillRating } from '../domain/SkillRating';
+import type { Sport } from '../domain/Sport';
 
-type WireSport = components["schemas"]["Sport"];
-type RatingResponse = components["schemas"]["RatingResponse"];
-type RatingsResponse = components["schemas"]["RatingsResponse"];
-type SportsResponse = components["schemas"]["SportsResponse"];
-type QuestionResponse = components["schemas"]["QuestionResponse"];
-type AssessmentStepResponse = components["schemas"]["AssessmentStepResponse"];
+type WireSport = components['schemas']['Sport'];
+type RatingResponse = components['schemas']['RatingResponse'];
+type RatingsResponse = components['schemas']['RatingsResponse'];
+type SportsResponse = components['schemas']['SportsResponse'];
+type QuestionResponse = components['schemas']['QuestionResponse'];
+type AssessmentStepResponse = components['schemas']['AssessmentStepResponse'];
+type ResultResponse = components['schemas']['ResultResponse'];
+type InProgressAssessmentResponse = components['schemas']['InProgressAssessmentResponse'];
+type InProgressAssessmentsResponse = components['schemas']['InProgressAssessmentsResponse'];
 
 const SPORT_BY_WIRE = {
-  PADEL: "padel",
-  TENNIS: "tennis",
-  SQUASH: "squash",
-  BADMINTON: "badminton",
+  PADEL: 'padel',
+  TENNIS: 'tennis',
+  SQUASH: 'squash',
+  BADMINTON: 'badminton',
 } as const satisfies Record<WireSport, Sport>;
 
 const WIRE_BY_SPORT = {
-  padel: "PADEL",
-  tennis: "TENNIS",
-  squash: "SQUASH",
-  badminton: "BADMINTON",
+  padel: 'PADEL',
+  tennis: 'TENNIS',
+  squash: 'SQUASH',
+  badminton: 'BADMINTON',
 } as const satisfies Record<Sport, WireSport>;
 
 /** `undefined` for a sport this build has no identity for — see the note above. */
 export function toSport(wire: string): Sport | undefined {
-  return Object.hasOwn(SPORT_BY_WIRE, wire)
-    ? SPORT_BY_WIRE[wire as WireSport]
-    : undefined;
+  return Object.hasOwn(SPORT_BY_WIRE, wire) ? SPORT_BY_WIRE[wire as WireSport] : undefined;
 }
 
 export function toWireSport(sport: Sport): WireSport {
@@ -112,27 +114,95 @@ function toQuestion(wire: QuestionResponse): Question {
  * not grounds for ending a run the client cannot interpret.
  */
 function toStatus(wire: string): AssessmentStatus {
-  return wire === "completed" || wire === "abandoned" ? wire : "in_progress";
+  return wire === 'completed' || wire === 'abandoned' ? wire : 'in_progress';
+}
+
+/**
+ * The finished run's rating and its account of itself.
+ *
+ * **Everything here is carried across, never interpreted.** `direction`, `key`,
+ * `calibration_priority` and `status` stay the engine's own words: the client resolves how
+ * to *draw* a key it recognises and falls back for one it does not, which is a decision
+ * about presentation. Re-ordering, re-deriving or dropping any of it would make this
+ * client's explanation a second opinion about a rating it did not compute.
+ *
+ * `factors` and `uncertainty_factors` are optional on the wire and absent means empty: a
+ * beginner who answered one question has one contribution and no wideners, and that is an
+ * ordinary result rather than a missing one.
+ */
+export function toAssessmentResult(wire: ResultResponse): AssessmentResult {
+  return {
+    level: wire.mu,
+    uncertainty: wire.sigma,
+    confidence: wire.confidence,
+    range: { low: wire.range.low, high: wire.range.high },
+    // Straight from the response, like every other band in this file.
+    band: { name: wire.band.name, lower: wire.band.lower, upper: wire.band.upper },
+    status: wire.status,
+    questionsAsked: wire.questions_asked,
+    engineVersion: wire.engine_version,
+    calibrationPriority: wire.calibration_priority,
+    confidenceReason:
+      wire.confidence_reason == null
+        ? undefined
+        : { key: wire.confidence_reason.key, sentence: wire.confidence_reason.sentence },
+    contributions: (wire.factors ?? []).map((factor) => ({
+      key: factor.key,
+      label: factor.label,
+      direction: factor.direction,
+      level: factor.level,
+    })),
+    wideners: (wire.uncertainty_factors ?? []).map((widener) => ({
+      key: widener.key,
+      label: widener.label,
+      detail: widener.detail,
+      sigmaAdded: widener.sigma_added,
+    })),
+  };
 }
 
 export function toAssessmentStep(wire: AssessmentStepResponse): AssessmentStep {
   return {
     assessmentId: wire.assessment_id,
     status: toStatus(wire.status),
+    // Answers behind the run, never including the outstanding question. Carried across as
+    // it arrives — the client neither counts nor adjusts it; see `AssessmentStep`.
+    questionsAsked: wire.questions_asked,
     question: wire.question == null ? undefined : toQuestion(wire.question),
+    result: wire.result == null ? undefined : toAssessmentResult(wire.result),
   };
 }
 
 /**
- * A run to resume.
+ * A run to resume. `undefined` for a sport this build has no identity for.
  *
- * The sport comes from the caller, not from the payload: `/assessments/in-progress` is
- * asked one sport at a time, so which sport a run belongs to is known from the question
- * rather than from the answer.
+ * The sport now comes from the payload rather than from the caller: the collection form of
+ * `/assessments/in-progress` names the sport of each run, which is what lets one request
+ * answer for all of them.
+ *
+ * The drop is the same rule as everywhere else in this file, and here it is load-bearing
+ * rather than cosmetic — the resume route validates its sport against `SPORTS` before it
+ * renders anything, so a run this build cannot name is a run it cannot route to.
  */
-export function toAssessmentRun(
-  wire: AssessmentStepResponse,
-  sport: Sport,
-): AssessmentRun {
+export function toAssessmentRun(wire: InProgressAssessmentResponse): AssessmentRun | undefined {
+  const sport = toSport(wire.sport);
+  if (sport === undefined) return undefined;
+
   return { assessmentId: wire.assessment_id, sport };
+}
+
+/**
+ * Every unfinished run, in the order the server sent them.
+ *
+ * **An empty collection is an answer, not a failure** — and it is the common one. Ordering
+ * is the server's: it sends them in sport-registry order, which is `SPORTS`' order, so a
+ * caller wanting one run takes the first. Re-sorting here would be a second copy of a rule
+ * the contract already states, and two copies are two places for it to drift.
+ */
+export function toAssessmentRuns(
+  response: InProgressAssessmentsResponse,
+): readonly AssessmentRun[] {
+  return response.assessments
+    .map((entry) => toAssessmentRun(entry))
+    .filter((run): run is AssessmentRun => run !== undefined);
 }

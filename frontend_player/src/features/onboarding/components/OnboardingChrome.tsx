@@ -15,12 +15,12 @@
  * an answer, and the question screen puts its close control there.
  */
 
-import { StyleSheet, View } from "react-native";
-import type { ReactNode } from "react";
+import { StyleSheet, View } from 'react-native';
+import type { ReactNode } from 'react';
 
-import { Bar, ScreenHeader, theme } from "@/shared/ui";
+import { Bar, ScreenHeader, theme } from '@/shared/ui';
 
-import type { RatingPosition } from "../domain/sportQueue";
+import type { RatingPosition } from '../domain/sportQueue';
 
 export interface OnboardingChromeProps {
   readonly title: string;
@@ -31,12 +31,7 @@ export interface OnboardingChromeProps {
   readonly right?: ReactNode;
 }
 
-export function OnboardingChrome({
-  title,
-  eyebrow,
-  position,
-  right,
-}: OnboardingChromeProps) {
+export function OnboardingChrome({ title, eyebrow, position, right }: OnboardingChromeProps) {
   return (
     <View>
       <ScreenHeader title={title} eyebrow={eyebrow} right={right} />

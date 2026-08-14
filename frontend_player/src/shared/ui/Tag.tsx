@@ -9,11 +9,11 @@
  * because of a status is a row whose layout depends on server copy.
  */
 
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from 'react-native';
 
-import { theme } from "./theme";
+import { theme } from './theme';
 
-export type TagVariant = "base" | "ok" | "hot" | "warn" | "bad" | "onDark";
+export type TagVariant = 'base' | 'ok' | 'hot' | 'warn' | 'bad' | 'onDark';
 
 export interface TagProps {
   readonly label: string;
@@ -27,7 +27,7 @@ export interface TagProps {
   readonly accessibilityLabel?: string;
 }
 
-export function Tag({ label, variant = "base", dot, accessibilityLabel }: TagProps) {
+export function Tag({ label, variant = 'base', dot, accessibilityLabel }: TagProps) {
   return (
     <View style={[s.tag, SURFACE[variant]]}>
       {dot !== undefined ? (
@@ -50,14 +50,14 @@ export function Tag({ label, variant = "base", dot, accessibilityLabel }: TagPro
 
 const s = StyleSheet.create({
   tag: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: theme.space.xxs,
     paddingVertical: theme.space.xxs,
     paddingHorizontal: theme.space.xs,
     borderRadius: theme.radius.tag,
     // `alignSelf`, so a tag in a row is its own width rather than the row's.
-    alignSelf: "flex-start",
+    alignSelf: 'flex-start',
   },
   // Square, not round: the round form is the sport dot, and the two mean different things.
   dot: { width: theme.size.sportDot, height: theme.size.sportDot },

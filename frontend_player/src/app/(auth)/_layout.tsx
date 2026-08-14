@@ -9,16 +9,16 @@
  * surface has no reset endpoint, so there is nothing to build against yet.
  */
 
-import { Redirect, Stack } from "expo-router";
+import { Redirect, Stack } from 'expo-router';
 
-import { useSessionStatus } from "@/shared/lib/auth";
+import { useSessionStatus } from '@/shared/lib/auth';
 
 export default function AuthLayout() {
   const status = useSessionStatus();
 
-  if (status === "bootstrapping") return null;
+  if (status === 'bootstrapping') return null;
 
-  if (status === "authenticated") return <Redirect href="/" />;
+  if (status === 'authenticated') return <Redirect href="/" />;
 
   return <Stack screenOptions={{ headerShown: false }} />;
 }

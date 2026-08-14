@@ -16,16 +16,15 @@
  * `shared/` becomes a junk drawer. **A third copy is the signal to move it.**
  */
 
-import type { AppError } from "@/shared/errors";
+import type { AppError } from '@/shared/errors';
 
-const BY_RECOVERY: Readonly<Record<AppError["recovery"], string>> = {
-  "retryable-automatically":
-    "We couldn't reach Rakieta. Check your connection and try again.",
-  "retryable-by-user": "That didn't go through. Try again in a moment.",
-  "requires-reauthentication": "Your session has ended. Sign in again.",
-  "requires-user-correction": "Check the details above and try again.",
-  "business-conflict": "That can't be done right now.",
-  terminal: "Something went wrong at our end. Try again later.",
+const BY_RECOVERY: Readonly<Record<AppError['recovery'], string>> = {
+  'retryable-automatically': "We couldn't reach Rakieta. Check your connection and try again.",
+  'retryable-by-user': "That didn't go through. Try again in a moment.",
+  'requires-reauthentication': 'Your session has ended. Sign in again.',
+  'requires-user-correction': 'Check the details above and try again.',
+  'business-conflict': "That can't be done right now.",
+  terminal: 'Something went wrong at our end. Try again later.',
 };
 
 export function onboardingErrorMessage(error: AppError): string {

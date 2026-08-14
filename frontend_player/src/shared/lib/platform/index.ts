@@ -1,2 +1,2 @@
-export { wireFocusManager } from "./appState";
-export { wireOnlineManager } from "./networkState";
+export { wireFocusManager } from './appState';
+export { wireOnlineManager } from './networkState';

@@ -31,6 +31,29 @@ def outstanding_question(engine: AssessmentEngine, assessment: Assessment) -> Qu
     return step.question
 
 
+def questions_asked(assessment: Assessment) -> int:
+    """How many of this run's questions have been answered.
+
+    The length of the replayed transcript — the same expression, on the same data,
+    that the engine puts on a finished result under this name. So the number does
+    not jump as a run finishes: it is one quantity at two moments in the run's
+    life, which is why it keeps one name.
+
+    Two things it deliberately is not:
+
+    - **Stored.** A counter on the stream would be a second place holding a fact
+      the transcript already holds, and the two would disagree the first time
+      either moved. It is also what makes the count survive a reinstall: the
+      transcript is the only thing that ever did.
+    - **Inclusive of the outstanding question.** That question has been put to the
+      player but not answered, so mid-run this is the number of answers *behind*
+      them and their position is one further along. Counting it would make the
+      mid-run number and the finished one describe two different things.
+    """
+
+    return len(assessment.transcript)
+
+
 def completed_result(
     engine: AssessmentEngine, assessment: Assessment
 ) -> AssessmentResult | None:
@@ -51,10 +74,12 @@ def completed_result(
 
 
 def current_step(engine: AssessmentEngine, assessment: Assessment) -> AssessmentStep:
+    answered = questions_asked(assessment)
     if assessment.is_completed:
         return AssessmentStep(
             assessment_id=assessment.id,
             status=assessment.status.value,
+            questions_asked=answered,
             question=None,
             result=completed_result(engine, assessment),
         )
@@ -62,12 +87,14 @@ def current_step(engine: AssessmentEngine, assessment: Assessment) -> Assessment
         return AssessmentStep(
             assessment_id=assessment.id,
             status=assessment.status.value,
+            questions_asked=answered,
             question=None,
             result=None,
         )
     return AssessmentStep(
         assessment_id=assessment.id,
         status=assessment.status.value,
+        questions_asked=answered,
         question=outstanding_question(engine, assessment),
         result=None,
     )

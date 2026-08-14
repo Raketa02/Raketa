@@ -16,6 +16,7 @@ from app.modules.rating.application.abandon_assessment import AbandonAssessment
 from app.modules.rating.application.create_assessment import CreateAssessment
 from app.modules.rating.application.find_in_progress_assessment import (
     FindInProgressAssessment,
+    ListInProgressAssessments,
 )
 from app.modules.rating.application.get_assessment import GetAssessment
 from app.modules.rating.application.list_ratings import ListPlayerRatings
@@ -89,6 +90,20 @@ def get_find_in_progress_assessment(
 
 FindInProgressAssessmentDep = Annotated[
     FindInProgressAssessment, Depends(get_find_in_progress_assessment)
+]
+
+
+def get_list_in_progress_assessments(
+    event_store: DomainEventStoreDep,
+) -> ListInProgressAssessments:
+    # No engine: the collection reports which runs are unfinished, not what they
+    # are asking. Reproducing four outstanding questions to answer "none" would
+    # be work nobody reads.
+    return ListInProgressAssessments(event_store=event_store)
+
+
+ListInProgressAssessmentsDep = Annotated[
+    ListInProgressAssessments, Depends(get_list_in_progress_assessments)
 ]
 
 

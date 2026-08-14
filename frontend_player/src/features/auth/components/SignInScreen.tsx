@@ -7,29 +7,22 @@
  * can test.
  */
 
-import { Link } from "expo-router";
-import { useState } from "react";
-import {
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { Link } from 'expo-router';
+import { useState } from 'react';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Button, theme } from "@/shared/ui";
+import { Button, theme } from '@/shared/ui';
 
-import { useSignIn } from "../hooks/useAuthActions";
-import { signInSchema, validate, type FieldErrors } from "../schemas/authForms";
+import { useSignIn } from '../hooks/useAuthActions';
+import { signInSchema, validate, type FieldErrors } from '../schemas/authForms';
 
-import { AuthField, AuthNotice } from "./AuthControls";
-import { authErrorMessage } from "./authErrorMessage";
+import { AuthField, AuthNotice } from './AuthControls';
+import { authErrorMessage } from './authErrorMessage';
 
 export function SignInScreen() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
   const signIn = useSignIn();
@@ -47,12 +40,12 @@ export function SignInScreen() {
   };
 
   return (
-    <SafeAreaView style={s.screen} edges={["top", "bottom"]}>
+    <SafeAreaView style={s.screen} edges={['top', 'bottom']}>
       <KeyboardAvoidingView
         style={s.flex}
         // The keyboard covers the submit button on iOS otherwise; Android's
         // windowSoftInputMode already handles it and would double-inset.
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView
           contentContainerStyle={s.content}
@@ -65,9 +58,7 @@ export function SignInScreen() {
             <Text style={s.title}>Sign in</Text>
           </View>
 
-          {signIn.error !== null ? (
-            <AuthNotice message={authErrorMessage(signIn.error)} />
-          ) : null}
+          {signIn.error !== null ? <AuthNotice message={authErrorMessage(signIn.error)} /> : null}
 
           <View style={s.form}>
             <AuthField
@@ -123,7 +114,7 @@ const s = StyleSheet.create({
   flex: { flex: 1 },
   content: {
     flexGrow: 1,
-    justifyContent: "center",
+    justifyContent: 'center',
     paddingHorizontal: theme.size.gutter,
     paddingVertical: theme.space.xxl,
     gap: theme.space.lg,
@@ -132,15 +123,15 @@ const s = StyleSheet.create({
   eyebrow: {
     ...theme.type.eyebrow,
     color: theme.color.muted,
-    textTransform: "uppercase",
+    textTransform: 'uppercase',
   },
   title: { ...theme.type.h1, color: theme.color.ink },
   form: { gap: theme.space.md },
   footer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    flexWrap: "wrap",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexWrap: 'wrap',
     gap: theme.space.xs,
   },
   footerText: { ...theme.type.tiny, color: theme.color.muted },

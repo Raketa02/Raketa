@@ -6,9 +6,9 @@
  * nobody chose is a default nobody can change safely.
  */
 
-import { QueryClient } from "@tanstack/react-query";
+import { QueryClient } from '@tanstack/react-query';
 
-import { AppError } from "@/shared/errors";
+import { AppError } from '@/shared/errors';
 
 /** How many times an automatically-retryable failure is retried before it surfaces. */
 const MAX_QUERY_RETRIES = 2;
@@ -26,7 +26,7 @@ const MAX_QUERY_RETRIES = 2;
 function shouldRetryQuery(failureCount: number, error: unknown): boolean {
   if (failureCount >= MAX_QUERY_RETRIES) return false;
   if (!(error instanceof AppError)) return false;
-  return error.recovery === "retryable-automatically";
+  return error.recovery === 'retryable-automatically';
 }
 
 export function createQueryClient(): QueryClient {
@@ -56,7 +56,7 @@ export function createQueryClient(): QueryClient {
         // With onlineManager wired, this pauses queries while offline instead of failing
         // them — so a reconnect resumes rather than showing an error the player has to
         // dismiss.
-        networkMode: "online",
+        networkMode: 'online',
       },
       mutations: {
         // **Mutations are never retried globally.** A mutation is retried only when the
@@ -64,7 +64,7 @@ export function createQueryClient(): QueryClient {
         // repeat — and then at its own call site, with the reason stated there. A global
         // retry of "book this court" is a double booking. See Part 4.
         retry: false,
-        networkMode: "online",
+        networkMode: 'online',
       },
     },
   });

@@ -6,10 +6,10 @@
  * whole assessment in a single answer.
  */
 
-import { createAssessment } from "../api/onboardingApi";
-import type { AssessmentStep } from "../domain/Assessment";
-import type { Sport } from "../domain/Sport";
-import { toAssessmentStep, toWireSport } from "../mappers/onboardingMappers";
+import { createAssessment } from '../api/onboardingApi';
+import type { AssessmentStep } from '../domain/Assessment';
+import type { Sport } from '../domain/Sport';
+import { toAssessmentStep, toWireSport } from '../mappers/onboardingMappers';
 
 export interface StartAssessmentOptions {
   readonly signal?: AbortSignal;
@@ -19,7 +19,5 @@ export function startAssessment(
   sport: Sport,
   { signal }: StartAssessmentOptions = {},
 ): Promise<AssessmentStep> {
-  return createAssessment({ sport: toWireSport(sport) }, { signal }).then(
-    toAssessmentStep,
-  );
+  return createAssessment({ sport: toWireSport(sport) }, { signal }).then(toAssessmentStep);
 }

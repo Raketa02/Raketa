@@ -83,7 +83,9 @@ from app.engines.assessment import (
     UncertaintyFactor,
 )
 from app.engines.racketskill.core import (
+    BAND_EDGE_TOLERANCE,
     CONFIDENCE_SIGMA_CEILING,
+    Band,
     SkillEstimate,
     band_for,
     clamp_to_scale,
@@ -151,15 +153,23 @@ SIGMA_FLOOR = CONFIDENCE_SIGMA_CEILING * (1.0 - CONFIDENCE_CAP)
 # Advanced each span close to a full level, so two answers cannot place somebody
 # inside one.
 #
-# This should be the Established edge as `band_for` sees it — 2,65 — so that "has
-# climbed into Established" means the same thing to the router and to the band.
-# It is pinned to 3,0 instead, holding the routing this engine was built and
-# tested against. Correcting it moves which players earn a third demonstration,
-# which in turn changes when the contradiction tie-breaker is reached, so it is
-# a behavioural change that needs its own tests rather than a constant swap
-# smuggled into a conformance pass. Tracked separately; see the follow-up issue
-# filed from #10.
-ESTABLISHED_FLOOR = 3.0
+# Derived from the band rather than written down, so "has climbed into Established"
+# means the same thing to the router as it does to ``band_for`` — which compares
+# against the same tolerated edge. A literal here was how the two drifted apart
+# once already: the bands moved to their specified uneven edges and this stayed
+# where the even ones had put it.
+ESTABLISHED_FLOOR = Band.ESTABLISHED.lower - BAND_EDGE_TOLERANCE
+
+# The estimates at which the next demonstration steps up a difficulty tier. The
+# specification's values, which are deliberately not round: each sits just under
+# the band edge above it (2,45 under Established's 2,65; 3,15 under Advanced's
+# 3,85), so a player is pitched the harder vocabulary while they are still
+# climbing towards the band that owns it rather than only once they have arrived.
+# Rounding them to 2,5 and 3,5 — as this engine once did — asks a slice of every
+# band's upper reach at the tier beneath the one it earned, and an answer is worth
+# exactly what its tier says it is worth.
+TIER_BASIC_BELOW = 2.45
+TIER_STANDARD_BELOW = 3.15
 
 # The hard ceiling on questionnaire length. The ordered sequence already caps at
 # this under any answer pattern; the guard makes the invariant unmissable.
@@ -530,13 +540,9 @@ def _target_tier(mu: float) -> str:
     those words.
     """
 
-    # The specification's thresholds are 2,45 and 3,15. These are the rounded
-    # values this engine was built against; correcting them changes which tier a
-    # player is asked at and therefore what their answer is worth, so it belongs
-    # in its own slice with its own tests. Tracked in the follow-up to #10.
-    if mu < 2.5:
+    if mu < TIER_BASIC_BELOW:
         return TIERS[0]  # basic
-    if mu < 3.5:
+    if mu < TIER_STANDARD_BELOW:
         return TIERS[1]  # standard
     return TIERS[2]  # discriminating
 

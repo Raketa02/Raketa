@@ -9,7 +9,8 @@
  * server has seen answer four.
  */
 
-import type { Sport } from "./Sport";
+import type { AssessmentResult } from './AssessmentResult';
+import type { Sport } from './Sport';
 
 export interface AnswerOption {
   readonly id: string;
@@ -47,28 +48,40 @@ export interface Question {
  * there is something to answer, and a status this build has never heard of is not
  * grounds for throwing a player out of a run.
  */
-export type AssessmentStatus = "in_progress" | "completed" | "abandoned";
+export type AssessmentStatus = 'in_progress' | 'completed' | 'abandoned';
 
 /**
  * The server-driven step: what to render next.
  *
- * A step carries a question, or a finished assessment carries none.
- *
- * The wire also carries the result once a run is finished. It is not mapped: **nothing
- * in this slice acts on it**, and a field mapped for a future screen is a field no test
- * covers. The result payload arrives with the result screen (#25).
+ * A step carries a question, or a finished assessment carries a result. **Neither is
+ * guaranteed**: an abandoned run has ended with no question left and nothing to show, and
+ * reading "no question" as "there is a result" is what would announce a rating to a player
+ * who stopped rating that sport.
  */
 export interface AssessmentStep {
   readonly assessmentId: string;
   readonly status: AssessmentStatus;
+  /**
+   * How many of this run's questions have been **answered**.
+   *
+   * The outstanding `question` is not one of them — it has been put to the player and not
+   * answered — so a counter showing which question this is reads this plus one, and a
+   * fresh run reports 0. The server replays it from the transcript on every read, which
+   * is the whole reason it is here rather than counted on the device: the transcript is
+   * the only thing that ever survived a resume, a reinstall or a second handset.
+   */
+  readonly questionsAsked: number;
   readonly question: Question | undefined;
+  /** The rating this run produced, once it has produced one. */
+  readonly result: AssessmentResult | undefined;
 }
 
 /**
  * A run the player has left unfinished, as the entry gate sees it.
  *
- * The sport is **not** on the wire — `GET /assessments/in-progress` is asked one sport at
- * a time, so the sport is known from the question rather than from the answer.
+ * The assessment id and its sport, and nothing else: this is what a router needs. The
+ * outstanding question is deliberately absent — the gate decides *where* to send the
+ * player, and the run it routes to is re-read there.
  */
 export interface AssessmentRun {
   readonly assessmentId: string;

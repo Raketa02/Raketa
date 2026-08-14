@@ -12,13 +12,13 @@
  * disagree the server wins, and the mapped `ValidationError` is what the player sees.
  */
 
-import { z } from "zod";
+import { z } from 'zod';
 
 /** Trimmed because a leading space is a typo, not an email. Lowercased for the same reason. */
 const email = z
   .string()
   .trim()
-  .min(1, "Enter your email address.")
+  .min(1, 'Enter your email address.')
   .email("That doesn't look like an email address.")
   .transform((value) => value.toLowerCase());
 
@@ -26,7 +26,7 @@ export const signInSchema = z.object({
   email,
   // Deliberately only "not empty": a sign-in form must never tell someone their existing
   // password is invalid because the rules changed after they chose it.
-  password: z.string().min(1, "Enter your password."),
+  password: z.string().min(1, 'Enter your password.'),
 });
 
 export type SignInInput = z.input<typeof signInSchema>;
@@ -38,22 +38,19 @@ export const signUpSchema = z
     nickname: z
       .string()
       .trim()
-      .min(2, "Nicknames are at least 2 characters.")
-      .max(64, "Nicknames are at most 64 characters.")
-      .regex(
-        /^[A-Za-z0-9_.-]+$/,
-        "Use letters, numbers, and . _ - only — no spaces.",
-      ),
+      .min(2, 'Nicknames are at least 2 characters.')
+      .max(64, 'Nicknames are at most 64 characters.')
+      .regex(/^[A-Za-z0-9_.-]+$/, 'Use letters, numbers, and . _ - only — no spaces.'),
     password: z
       .string()
-      .min(8, "Use at least 8 characters.")
+      .min(8, 'Use at least 8 characters.')
       .max(128, "That's longer than 128 characters."),
-    confirmPassword: z.string().min(1, "Repeat your password."),
+    confirmPassword: z.string().min(1, 'Repeat your password.'),
   })
   .refine((values) => values.password === values.confirmPassword, {
     // Attached to the field the player must fix, not to the form, so the message lands
     // under the box they need to retype.
-    path: ["confirmPassword"],
+    path: ['confirmPassword'],
     message: "Those passwords don't match.",
   });
 
@@ -82,7 +79,7 @@ export function validate<TSchema extends z.ZodTypeAny>(
   for (const issue of result.error.issues) {
     const field = issue.path[0];
     // First message wins: a field with three broken rules still has one box to explain.
-    if (typeof field === "string" && fieldErrors[field] === undefined) {
+    if (typeof field === 'string' && fieldErrors[field] === undefined) {
       fieldErrors[field] = issue.message;
     }
   }

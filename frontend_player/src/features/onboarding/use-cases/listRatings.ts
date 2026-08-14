@@ -7,16 +7,14 @@
  * recover from a failure to decide where to send someone.
  */
 
-import { listRatings as fetchRatings } from "../api/onboardingApi";
-import type { SkillRating } from "../domain/SkillRating";
-import { toSkillRatings } from "../mappers/onboardingMappers";
+import { listRatings as fetchRatings } from '../api/onboardingApi';
+import type { SkillRating } from '../domain/SkillRating';
+import { toSkillRatings } from '../mappers/onboardingMappers';
 
 export interface ListRatingsOptions {
   readonly signal?: AbortSignal;
 }
 
-export function listRatings({
-  signal,
-}: ListRatingsOptions = {}): Promise<readonly SkillRating[]> {
+export function listRatings({ signal }: ListRatingsOptions = {}): Promise<readonly SkillRating[]> {
   return fetchRatings({ signal }).then(toSkillRatings);
 }

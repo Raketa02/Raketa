@@ -28,23 +28,16 @@
  * (ADR-0017).
  */
 
-import { StyleSheet, Text } from "react-native";
+import { StyleSheet, Text } from 'react-native';
 
-import {
-  BottomSheet,
-  Button,
-  Note,
-  PressableCard,
-  theme,
-  type FocusTarget,
-} from "@/shared/ui";
+import { BottomSheet, Button, Note, PressableCard, theme, type FocusTarget } from '@/shared/ui';
 
-import type { AppError } from "@/shared/errors";
+import type { AppError } from '@/shared/errors';
 
-import type { Sport } from "../domain/Sport";
+import type { Sport } from '../domain/Sport';
 
-import { onboardingErrorMessage } from "./onboardingErrorMessage";
-import { sportLabel } from "./sportPresentation";
+import { onboardingErrorMessage } from './onboardingErrorMessage';
+import { sportLabel } from './sportPresentation';
 
 export interface LeaveAssessmentSheetProps {
   readonly visible: boolean;

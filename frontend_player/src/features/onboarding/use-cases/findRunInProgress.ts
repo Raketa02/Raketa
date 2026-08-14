@@ -1,45 +1,36 @@
 /**
  * Is any assessment unfinished?
  *
- * **This is one question to the player and four requests to the server**, because
- * `GET /assessments/in-progress` is scoped to a sport — each sport is isolated, and there
- * is no collection form of the route. The fan-out is here rather than in a hook so that
- * the gate reads it as the single query it conceptually is, and so the cost is written
- * down in one place: four parallel reads on a cold launch.
+ * **One question to the player, and now one request to the server.** The collection form of
+ * `GET /assessments/in-progress` answers for every sport at once, so the fan-out this used
+ * to be — four parallel per-sport reads on every cold launch, for an answer that is almost
+ * always "no" — is gone.
  *
- * If that cost becomes a problem the fix is a collection endpoint on the backend, not a
- * cache in the client — a client that remembered "no run in progress" would strand a
- * player who started one on another device.
+ * The answer is the first run the server sent. Entries come back in sport-registry order,
+ * which is `SPORTS`' order, so "first in registry order" is the first entry and two
+ * unfinished runs still resolve the same way on every launch. That ordering is the
+ * contract's, and this client does not restate it.
  *
- * The requests go out together, and the answer is the first run in registry order so that
- * two unfinished runs resolve the same way every launch.
+ * An empty collection means no run in progress. It is the ordinary answer and never an
+ * error path.
+ *
+ * Nothing here is cached beyond the query above it: a client that remembered "no run in
+ * progress" would strand a player who started one on another device, which is the case
+ * resume exists for.
  */
 
-import type { AssessmentRun } from "../domain/Assessment";
-import { SPORTS, type Sport } from "../domain/Sport";
-import { findInProgress } from "../api/onboardingApi";
-import { toAssessmentRun, toWireSport } from "../mappers/onboardingMappers";
+import type { AssessmentRun } from '../domain/Assessment';
+import { listRunsInProgress } from '../api/onboardingApi';
+import { toAssessmentRuns } from '../mappers/onboardingMappers';
 
 export interface FindRunInProgressOptions {
   readonly signal?: AbortSignal;
 }
 
-export async function findRunInProgress({
-  signal,
-}: FindRunInProgressOptions = {}): Promise<AssessmentRun | undefined> {
-  const found = await Promise.all(
-    SPORTS.map((sport) => runFor(sport, signal)),
-  );
+export async function findRunInProgress({ signal }: FindRunInProgressOptions = {}): Promise<
+  AssessmentRun | undefined
+> {
+  const runs = toAssessmentRuns(await listRunsInProgress({ signal }));
 
-  return found.find((run): run is AssessmentRun => run !== undefined);
-}
-
-async function runFor(
-  sport: Sport,
-  signal: AbortSignal | undefined,
-): Promise<AssessmentRun | undefined> {
-  // 204 — no run for this sport — decodes to `undefined`, which is an answer rather than
-  // a failure.
-  const step = await findInProgress(toWireSport(sport), { signal });
-  return step === undefined ? undefined : toAssessmentRun(step, sport);
+  return runs[0];
 }

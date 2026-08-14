@@ -6,9 +6,9 @@
  * deterministic engine reproduces the question rather than storing it twice.
  */
 
-import { getAssessment } from "../api/onboardingApi";
-import type { AssessmentStep } from "../domain/Assessment";
-import { toAssessmentStep } from "../mappers/onboardingMappers";
+import { getAssessment } from '../api/onboardingApi';
+import type { AssessmentStep } from '../domain/Assessment';
+import { toAssessmentStep } from '../mappers/onboardingMappers';
 
 export interface FetchAssessmentOptions {
   readonly signal?: AbortSignal;

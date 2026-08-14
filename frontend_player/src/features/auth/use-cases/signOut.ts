@@ -5,9 +5,9 @@
  * *first* because it needs the refresh token that `endSession` is about to destroy.
  */
 
-import { endSession, getRefreshToken } from "@/shared/lib/auth";
+import { endSession, getRefreshToken } from '@/shared/lib/auth';
 
-import { revokeRefreshToken } from "../api/authApi";
+import { revokeRefreshToken } from '../api/authApi';
 
 /**
  * Revoke server-side, then tear the local session down.
@@ -32,5 +32,5 @@ export async function signOut(): Promise<void> {
     }
   }
 
-  await endSession("requested");
+  await endSession('requested');
 }

@@ -14,9 +14,9 @@
  * Not app code — nothing under `src/` imports this, so Metro never bundles it.
  */
 
-import type { components } from "@/generated/schema";
+import type { components } from '@/generated/schema';
 
-export type Wire = components["schemas"];
+export type Wire = components['schemas'];
 
 /** What the fake server does with one request. */
 export type Responder = (request: RecordedRequest) => Response | Promise<Response>;
@@ -44,20 +44,16 @@ export interface Transport {
 export function json<T>(body: T, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "Content-Type": "application/json" },
+    headers: { 'Content-Type': 'application/json' },
   });
 }
 
 /** The backend's error envelope — the same shape on every failing route. */
-export function errorResponse(
-  status: number,
-  code: string,
-  message = "test failure",
-): Response {
-  const envelope: Wire["ErrorResponse"] = {
+export function errorResponse(status: number, code: string, message = 'test failure'): Response {
+  const envelope: Wire['ErrorResponse'] = {
     code,
     message,
-    trace_id: "trace-test",
+    trace_id: 'trace-test',
     details: null,
   };
   return json(envelope, status);
@@ -75,7 +71,7 @@ export function noContent(): Response {
  * model classifies it by *what threw* rather than by reading its message.
  */
 export function networkFailure(): Responder {
-  return () => Promise.reject(new TypeError("Network request failed"));
+  return () => Promise.reject(new TypeError('Network request failed'));
 }
 
 /** A server that accepts the connection and never answers. Drives the timeout path. */
@@ -99,14 +95,12 @@ export function installTransport(): Transport {
   const original = global.fetch;
 
   const fakeFetch: typeof fetch = async (input, init) => {
-    const url = typeof input === "string" ? input : String(input);
-    const path = url.replace(/^https?:\/\/[^/]+/, "");
-    const method = (init?.method ?? "GET").toUpperCase();
+    const url = typeof input === 'string' ? input : String(input);
+    const path = url.replace(/^https?:\/\/[^/]+/, '');
+    const method = (init?.method ?? 'GET').toUpperCase();
 
     const headers: Record<string, string> = {};
-    for (const [name, value] of Object.entries(
-      (init?.headers ?? {}) as Record<string, string>,
-    )) {
+    for (const [name, value] of Object.entries((init?.headers ?? {}) as Record<string, string>)) {
       headers[name] = value;
     }
 
@@ -114,7 +108,7 @@ export function installTransport(): Transport {
       method,
       path,
       headers,
-      body: typeof init?.body === "string" ? JSON.parse(init.body) : undefined,
+      body: typeof init?.body === 'string' ? JSON.parse(init.body) : undefined,
     };
     requests.push(recorded);
 
@@ -137,7 +131,7 @@ export function installTransport(): Transport {
     return Promise.race([
       Promise.resolve(response),
       new Promise<Response>((_resolve, reject) => {
-        signal.addEventListener("abort", () => reject(abortError()));
+        signal.addEventListener('abort', () => reject(abortError()));
       }),
     ]);
   };
@@ -160,7 +154,7 @@ export function installTransport(): Transport {
 }
 
 function abortError(): Error {
-  const error = new Error("Aborted");
-  error.name = "AbortError";
+  const error = new Error('Aborted');
+  error.name = 'AbortError';
   return error;
 }

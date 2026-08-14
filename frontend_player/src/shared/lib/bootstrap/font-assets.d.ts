@@ -5,7 +5,7 @@
  * importing from `@expo-google-fonts/<family>` — pulls that package's index, which
  * `require`s every weight and italic it ships, and Metro has no tree-shaking to undo it.
  */
-declare module "*.ttf" {
+declare module '*.ttf' {
   const asset: number;
   export default asset;
 }

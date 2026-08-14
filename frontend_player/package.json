@@ -19,7 +19,7 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "gen:api": "openapi-typescript ../backend/openapi.player.json -o src/generated/schema.d.ts",
-    "check": "pnpm lint && pnpm typecheck && pnpm test",
+    "check": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test",
     "doctor": "npx expo-doctor",
     "prebuild": "expo prebuild"
   },
@@ -40,6 +40,7 @@
     "react-native": "0.76.9",
     "react-native-safe-area-context": "4.12.0",
     "react-native-screens": "~4.4.0",
+    "react-native-svg": "15.8.0",
     "zod": "^3.24.0",
     "zustand": "^5.0.2"
   },
