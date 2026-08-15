@@ -1481,3 +1481,411 @@ async def test_the_transcript_is_stated_on_the_player_contract():
 
     entry = schemas["TranscriptEntryResponse"]
     assert set(entry["required"]) == {"question", "option_id"}
+
+
+# --- Revising an answer ---------------------------------------------------------
+#
+# Submitting an answer for a question the run has already answered **changes** it:
+# the transcript truncates there and the engine is replayed from the prefix. One
+# route and one request shape, because a client is not asked to know which of the
+# two it is doing (ADR-0020).
+#
+# The truncation is the whole design and it is what makes revising free. An
+# answer's numeric meaning depends on the difficulty tier it was asked at, and
+# that tier was chosen from the estimate as it then stood — so an answer that
+# outlived a change to an earlier one would mean something the player never said.
+
+
+async def _straight_through(client, headers, sport="PADEL"):
+    """Answer every question with its last option, in one pass."""
+
+    body = (await _create(client, headers, sport)).json()
+    while body["question"] is not None:
+        body = await _answer_the_outstanding_question(client, headers, body)
+    return body
+
+
+async def _by_a_different_road(client, headers, sport="PADEL"):
+    """Reach the straight-through transcript, having first answered elsewhere.
+
+    The detour **diverges** deliberately rather than merely differing.
+    ``occasional`` is the one genuinely ambiguous regularity answer, so the
+    engine follows it with a volume question the straight-through run never sees
+    — and that answer is then discarded by the revision. A detour that happened
+    to be asked the same questions would test a change that did not matter.
+    """
+
+    body = (await _create(client, headers, sport)).json()
+    opening = body["question"]
+
+    body = (
+        await _answer(
+            client, headers, body["assessment_id"], opening["id"], "occasional"
+        )
+    ).json()
+    assert body["question"]["id"] == "recent.volume", "the detour must diverge"
+    body = await _answer_the_outstanding_question(client, headers, body)
+
+    # The revision: the opening question again, with the straight run's answer.
+    body = (
+        await _answer(
+            client,
+            headers,
+            body["assessment_id"],
+            opening["id"],
+            opening["options"][-1]["id"],
+        )
+    ).json()
+    assert _transcript_ids(body) == [opening["id"]], "the volume answer is discarded"
+
+    while body["question"] is not None:
+        body = await _answer_the_outstanding_question(client, headers, body)
+    return body
+
+
+@pytest.mark.asyncio
+async def test_two_players_reaching_one_transcript_are_rated_identically(
+    client, valid_signup_payload
+):
+    """The load-bearing test: revising costs nothing in accuracy.
+
+    One player answers straight through. The other answers the opening question
+    differently, changes it, and carries on — landing on the same transcript by a
+    different road. ``next_step`` and ``finalize`` are pure functions of the
+    transcript (ADR-0015), so a truncated transcript is simply a transcript and
+    the two must be rated the same to the digit.
+
+    This is what makes "revising is free" a fact rather than a claim in an ADR.
+    **It must never be deleted.**
+    """
+
+    alice = await _auth_headers(client, valid_signup_payload)
+    bob = await _auth_headers(client, BOB)
+
+    straight = await _straight_through(client, alice)
+    revised = await _by_a_different_road(client, bob)
+
+    # The same road, reached two ways.
+    assert _transcript_ids(revised) == _transcript_ids(straight)
+    assert [entry["option_id"] for entry in revised["transcript"]] == [
+        entry["option_id"] for entry in straight["transcript"]
+    ]
+    # Every field of the result: the numbers, the band, the ceiling, the
+    # confidence sentence and both halves of the evidence trail. `ResultResponse`
+    # carries no id and no timestamp, so this is the whole payload.
+    assert revised["result"] == straight["result"]
+    assert revised["questions_asked"] == straight["questions_asked"]
+
+    # And the rating that was stored from it, which is what every later feature
+    # reads. `updated_at` is the one field that cannot agree.
+    alice_rating = (await client.get("/api/v1/ratings", headers=alice)).json()
+    bob_rating = (await client.get("/api/v1/ratings", headers=bob)).json()
+    assert {
+        key: value
+        for key, value in bob_rating["ratings"][0].items()
+        if key != "updated_at"
+    } == {
+        key: value
+        for key, value in alice_rating["ratings"][0].items()
+        if key != "updated_at"
+    }
+
+
+@pytest.mark.asyncio
+async def test_revising_truncates_the_transcript_and_returns_the_next_step(
+    client, valid_signup_payload
+):
+    headers = await _auth_headers(client, valid_signup_payload)
+    body = (await _create(client, headers)).json()
+    for _ in range(3):
+        body = await _answer_the_outstanding_question(client, headers, body)
+    first = body["transcript"][0]
+    changed_to = first["question"]["options"][-2]["id"]
+
+    resp = await _answer(
+        client, headers, body["assessment_id"], first["question"]["id"], changed_to
+    )
+
+    assert resp.status_code == 200, resp.text
+    revised = resp.json()
+    # Every answer after the changed one is gone, and the changed one is changed.
+    assert _transcript_ids(revised) == [first["question"]["id"]]
+    assert revised["transcript"][0]["option_id"] == changed_to
+    assert revised["questions_asked"] == 1
+    assert revised["question"] is not None
+    assert revised["status"] == "in_progress"
+
+    # And the read route says the same thing, so a client that refetches instead
+    # of trusting the mutation response is not shown a different run.
+    assert (await _get(client, headers, body["assessment_id"])).json() == revised
+
+
+@pytest.mark.asyncio
+async def test_re_selecting_the_option_already_recorded_records_nothing(
+    client, session_factory, valid_signup_payload
+):
+    # Changing your mind and changing it back is not punished, and a retry after
+    # a response lost in flight is free. Both arrive as this exact request.
+    headers = await _auth_headers(client, valid_signup_payload)
+    body = (await _create(client, headers)).json()
+    for _ in range(3):
+        body = await _answer_the_outstanding_question(client, headers, body)
+    first = body["transcript"][0]
+
+    resp = await _answer(
+        client,
+        headers,
+        body["assessment_id"],
+        first["question"]["id"],
+        first["option_id"],
+    )
+
+    assert resp.status_code == 200, resp.text
+    assert resp.json() == body
+
+    async with session_factory() as session:
+        rows = (await session.execute(select(EventStoreORM))).scalars().all()
+    assert [r.event_type for r in rows].count("rating.answer_revised") == 0
+
+
+@pytest.mark.asyncio
+async def test_revising_the_opening_answer_to_never_played_stops_the_run(
+    client, valid_signup_payload
+):
+    # The beginner fast path is the engine's, and a revision reaches it by the
+    # ordinary route: the client must handle a change that *ends* the
+    # questionnaire rather than continuing it.
+    headers = await _auth_headers(client, valid_signup_payload)
+    body = (await _create(client, headers)).json()
+    opening = body["question"]["id"]
+    for _ in range(3):
+        body = await _answer_the_outstanding_question(client, headers, body)
+
+    resp = await _answer(
+        client, headers, body["assessment_id"], opening, "never-played"
+    )
+
+    assert resp.status_code == 200, resp.text
+    final = resp.json()
+    assert final["question"] is None
+    assert final["status"] == "completed"
+    assert final["result"]["questions_asked"] == 1
+    assert _transcript_ids(final) == [opening]
+    # The same rating a player who said so first time would have got.
+    assert final["result"]["mu"] == 1.40
+    assert final["result"]["confidence"] == 18
+
+
+@pytest.mark.asyncio
+async def test_revising_the_first_question_from_deep_in_a_run(
+    client, valid_signup_payload
+):
+    headers = await _auth_headers(client, valid_signup_payload)
+    body = (await _create(client, headers)).json()
+    opening = body["question"]
+    while body["question"] is not None and len(body["transcript"]) < 5:
+        body = await _answer_the_outstanding_question(client, headers, body)
+    assert len(body["transcript"]) == 5, "a run this long is what the test is for"
+
+    resp = await _answer(
+        client,
+        headers,
+        body["assessment_id"],
+        opening["id"],
+        opening["options"][-2]["id"],
+    )
+
+    assert resp.status_code == 200, resp.text
+    assert len(resp.json()["transcript"]) == 1
+
+
+@pytest.mark.asyncio
+async def test_revising_repeatedly_works(client, valid_signup_payload):
+    headers = await _auth_headers(client, valid_signup_payload)
+    body = (await _create(client, headers)).json()
+    for _ in range(3):
+        body = await _answer_the_outstanding_question(client, headers, body)
+    first = body["transcript"][0]["question"]
+
+    for option in (first["options"][-2], first["options"][-3], first["options"][-1]):
+        resp = await _answer(
+            client, headers, body["assessment_id"], first["id"], option["id"]
+        )
+        assert resp.status_code == 200, resp.text
+        body = resp.json()
+        # Each change lands the run back on one answer and asks again from there.
+        assert len(body["transcript"]) == 1
+        assert body["transcript"][0]["option_id"] == option["id"]
+        body = await _answer_the_outstanding_question(client, headers, body)
+
+
+@pytest.mark.asyncio
+async def test_a_revision_is_appended_and_no_event_is_deleted(
+    client, session_factory, valid_signup_payload
+):
+    """The stream grows; only the projection shortens.
+
+    "A revision shortens the past; it never edits it" is a claim about the
+    stream, and the truncated transcript every other test here asserts is exactly
+    what a *destructive* implementation would also produce. The record that the
+    player changed their mind, and to what, is the thing a future model would
+    otherwise learn nothing from.
+    """
+
+    headers = await _auth_headers(client, valid_signup_payload)
+    body = (await _create(client, headers)).json()
+    for _ in range(3):
+        body = await _answer_the_outstanding_question(client, headers, body)
+    before = _transcript_ids(body)
+    first = body["transcript"][0]
+
+    revised = (
+        await _answer(
+            client,
+            headers,
+            body["assessment_id"],
+            first["question"]["id"],
+            first["question"]["options"][-2]["id"],
+        )
+    ).json()
+
+    async with session_factory() as session:
+        rows = (
+            (
+                await session.execute(
+                    select(EventStoreORM)
+                    .where(EventStoreORM.aggregate_type == "assessment")
+                    .order_by(EventStoreORM.version)
+                )
+            )
+            .scalars()
+            .all()
+        )
+
+    answered = [r for r in rows if r.event_type == "rating.answer_submitted"]
+    assert [r.payload["question_id"] for r in answered] == before
+    revisions = [r for r in rows if r.event_type == "rating.answer_revised"]
+    assert len(revisions) == 1
+    assert revisions[0].payload["question_id"] == first["question"]["id"]
+    assert revisions[0].payload["option_id"] == revised["transcript"][0]["option_id"]
+    # Appended *after* every answer it supersedes rather than over any of them —
+    # the question it then asked is the only thing further along the stream.
+    assert revisions[0].version > max(r.version for r in answered)
+    # And the stream still replays to the transcript the engine consumed.
+    assert _transcript_ids(
+        (await _get(client, headers, body["assessment_id"])).json()
+    ) == [first["question"]["id"]]
+
+
+@pytest.mark.asyncio
+async def test_revising_once_the_rating_exists_is_refused(client, valid_signup_payload):
+    # Its own code, because the recovery is opposite to the other conflicts':
+    # there is no question to refetch and re-render, only a rating to show.
+    headers = await _auth_headers(client, valid_signup_payload)
+    finished = await _straight_through(client, headers)
+    first = finished["transcript"][0]
+
+    resp = await _answer(
+        client,
+        headers,
+        finished["assessment_id"],
+        first["question"]["id"],
+        first["question"]["options"][-2]["id"],
+    )
+
+    assert resp.status_code == 409
+    assert resp.json()["code"] == "answer_not_revisable"
+
+
+@pytest.mark.asyncio
+async def test_an_abandoned_run_refuses_a_change_with_the_ordinary_conflict(
+    client, valid_signup_payload
+):
+    # No rating to show, so nothing the not-revisable code would say that
+    # refetching does not: the client reads the abandoned status and leaves.
+    headers = await _auth_headers(client, valid_signup_payload)
+    body = (await _create(client, headers)).json()
+    for _ in range(2):
+        body = await _answer_the_outstanding_question(client, headers, body)
+    await _abandon(client, headers, body["assessment_id"])
+    first = body["transcript"][0]
+
+    resp = await _answer(
+        client,
+        headers,
+        body["assessment_id"],
+        first["question"]["id"],
+        first["question"]["options"][-2]["id"],
+    )
+
+    assert resp.status_code == 409
+    assert resp.json()["code"] == "question_not_outstanding"
+
+
+@pytest.mark.asyncio
+async def test_an_option_the_revised_question_never_offered_is_rejected(
+    client, valid_signup_payload
+):
+    headers = await _auth_headers(client, valid_signup_payload)
+    body = (await _create(client, headers)).json()
+    for _ in range(2):
+        body = await _answer_the_outstanding_question(client, headers, body)
+
+    resp = await _answer(
+        client,
+        headers,
+        body["assessment_id"],
+        body["transcript"][0]["question"]["id"],
+        "not-an-option",
+    )
+
+    assert resp.status_code == 400
+    assert resp.json()["code"] == "invalid_answer_option"
+
+
+@pytest.mark.asyncio
+async def test_revising_is_stated_on_the_player_contract():
+    # Two clients generate from this document and neither is in this session. The
+    # route's shape does not change — a revision is the same request as an answer
+    # — so what a client reads to *know it can revise at all* is the description
+    # and the conflict code, which makes both part of the contract.
+    from app.api.contract import build_surface_spec
+    from app.api.v1.player import player_api_router
+
+    spec = build_surface_spec("player", player_api_router)
+    operation = spec["paths"]["/api/v1/assessments/{assessment_id}/answers"]["post"]
+
+    assert "revision" in operation["description"].lower()
+    assert "answer_not_revisable" in operation["responses"]["409"]["description"]
+    assert "question_not_outstanding" in operation["responses"]["409"]["description"]
+
+
+@pytest.mark.asyncio
+async def test_a_revised_run_resumes_to_what_the_change_left_behind(
+    client, valid_signup_payload
+):
+    # Navigation survives a reinstall because the transcript is served rather
+    # than accumulated on the device, and a revision is the case where a stale
+    # local copy would be *longer* than the truth — the one direction a client
+    # cannot detect by counting.
+    headers = await _auth_headers(client, valid_signup_payload)
+    body = (await _create(client, headers)).json()
+    for _ in range(3):
+        body = await _answer_the_outstanding_question(client, headers, body)
+    first = body["transcript"][0]
+    revised = (
+        await _answer(
+            client,
+            headers,
+            body["assessment_id"],
+            first["question"]["id"],
+            first["question"]["options"][-2]["id"],
+        )
+    ).json()
+
+    resumed = (await _in_progress(client, headers)).json()
+    fetched = (await _get(client, headers, body["assessment_id"])).json()
+
+    assert resumed == revised
+    assert fetched == revised
+    assert len(resumed["transcript"]) == 1

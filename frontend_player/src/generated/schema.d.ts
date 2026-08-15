@@ -199,7 +199,18 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Answer the outstanding question and receive the next step */
+        /**
+         * Answer the outstanding question, or change an answer already given
+         * @description **One request, decided by what the run has already answered.**
+         *
+         *     - A `question_id` the run has *not* answered must be the outstanding one: this is an ordinary answer, and the next question — or the final result — comes back.
+         *     - A `question_id` the run *has* answered with a **different** `option_id` is a **revision**. The answers given after it are discarded, because each was pitched at a difficulty chosen from the estimate as it then stood, and the response is whatever the questionnaire asks next given the shortened set of answers. That may be a question, and it may be the final result — changing the opening answer to *I have never played* ends the run there.
+         *     - A `question_id` the run has answered with the **same** `option_id` records nothing and returns the current step. So a retry after a lost response is free, and so is changing your mind and changing it back.
+         *
+         *     The `transcript` on every response is the answers as they now stand; after a revision it is **shorter**, and a client showing the run's progress should read it rather than remember what it last drew.
+         *
+         *     **Answers are revisable for as long as the run is, and no longer.** Once the run has produced a Skill rating, a change is refused with `answer_not_revisable` — a code of its own, because the recovery is to show the rating rather than to re-render a question.
+         */
         post: operations["submit_answer_api_v1_assessments__assessment_id__answers_post"];
         delete?: never;
         options?: never;
@@ -958,6 +969,24 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AssessmentStepResponse"];
+                };
+            };
+            /** @description `invalid_answer_option` — the chosen option is not one that question offers. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `question_not_outstanding` — the question is neither the one awaiting a response nor one this run has answered; refetch the current step and re-render it. `answer_not_revisable` — this run's Skill rating already exists, so its answers are settled; show the rating instead. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
             /** @description Validation Error */

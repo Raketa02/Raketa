@@ -2,7 +2,10 @@
 
 Creating an assessment returns the first question; submitting an answer returns
 either the next question or the final result. The client holds no flow state; the
-mutation response *is* the current question.
+mutation response *is* the current question. Submitting an answer for a question
+already answered **changes** it, discarding the answers that depended on it — one
+route, because the client is not asked to know which of the two it is doing
+(``docs/adr/0020``).
 
 ``/ratings`` is the other side of that — not a run in progress but the ratings a
 player already holds. Two routers, because they are two resources; the client's
@@ -220,7 +223,49 @@ async def abandon_assessment(
     "/{assessment_id}/answers",
     response_model=AssessmentStepResponse,
     status_code=status.HTTP_200_OK,
-    summary="Answer the outstanding question and receive the next step",
+    responses={
+        status.HTTP_400_BAD_REQUEST: {
+            "model": ErrorResponse,
+            "description": (
+                "`invalid_answer_option` — the chosen option is not one that "
+                "question offers."
+            ),
+        },
+        status.HTTP_409_CONFLICT: {
+            "model": ErrorResponse,
+            "description": (
+                "`question_not_outstanding` — the question is neither the one "
+                "awaiting a response nor one this run has answered; refetch the "
+                "current step and re-render it. `answer_not_revisable` — this "
+                "run's Skill rating already exists, so its answers are settled; "
+                "show the rating instead."
+            ),
+        },
+    },
+    summary="Answer the outstanding question, or change an answer already given",
+    description=(
+        "**One request, decided by what the run has already answered.**\n\n"
+        "- A `question_id` the run has *not* answered must be the outstanding "
+        "one: this is an ordinary answer, and the next question — or the final "
+        "result — comes back.\n"
+        "- A `question_id` the run *has* answered with a **different** "
+        "`option_id` is a **revision**. The answers given after it are "
+        "discarded, because each was pitched at a difficulty chosen from the "
+        "estimate as it then stood, and the response is whatever the "
+        "questionnaire asks next given the shortened set of answers. That may "
+        "be a question, and it may be the final result — changing the opening "
+        "answer to *I have never played* ends the run there.\n"
+        "- A `question_id` the run has answered with the **same** `option_id` "
+        "records nothing and returns the current step. So a retry after a lost "
+        "response is free, and so is changing your mind and changing it back.\n\n"
+        "The `transcript` on every response is the answers as they now stand; "
+        "after a revision it is **shorter**, and a client showing the run's "
+        "progress should read it rather than remember what it last drew.\n\n"
+        "**Answers are revisable for as long as the run is, and no longer.** "
+        "Once the run has produced a Skill rating, a change is refused with "
+        "`answer_not_revisable` — a code of its own, because the recovery is to "
+        "show the rating rather than to re-render a question."
+    ),
 )
 async def submit_answer(
     assessment_id: UUID,

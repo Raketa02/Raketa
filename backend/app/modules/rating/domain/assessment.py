@@ -1,9 +1,17 @@
 """The Assessment aggregate — event-sourced.
 
-Its stream *is* the transcript the engine consumes: replaying the events yields
-exactly the ordered answers the engine saw. The aggregate holds no engine logic;
-it records what was asked and answered and guards the one invariant that makes
-retries safe — an answer is accepted only for the question currently outstanding.
+Replaying its stream yields exactly the ordered answers the engine saw. The
+aggregate holds no engine logic; it records what was asked and answered and
+guards the two invariants that make retries safe — an answer is accepted only for
+the question currently outstanding, and an answer is *changed* only for a question
+the transcript already holds.
+
+**The stream is append-only; the transcript is a projection over it.** A revision
+appends an ``AnswerRevised`` and nothing is deleted, but replaying one truncates
+the transcript at that question: every answer after it was pitched at a difficulty
+chosen from the estimate as it then stood, so an answer that outlived a change to
+an earlier one would mean something the player never said (``docs/adr/0020``).
+A revision therefore shortens the past; it never edits it.
 """
 
 from __future__ import annotations
@@ -27,6 +35,7 @@ from app.modules.rating.domain.errors import (
     QuestionNotOutstanding,
 )
 from app.modules.rating.domain.events import (
+    AnswerRevised,
     AnswerSubmitted,
     AssessmentAbandoned,
     AssessmentCompleted,
@@ -148,6 +157,39 @@ class Assessment:
             )
         )
 
+    def revise(
+        self, *, question_id: str, option_id: str, occurred_at: datetime
+    ) -> None:
+        """Change an answer already given, discarding every answer after it.
+
+        Guarded exactly as ``answer`` is, on the other side of the transcript: an
+        answer can be changed only while the run is in progress and only for a
+        question the transcript already holds. A question that was never answered
+        is not revisable, and reaching here with one means the caller confused a
+        revision with an answer.
+
+        **Re-selecting the option already recorded records nothing**, the same
+        no-op shape ``abandon`` takes on an already-abandoned run. Changing your
+        mind and changing it back is not a decision the stream needs to hold, and
+        a revision event that revised nothing would truncate the transcript at
+        that question for no reason — discarding later answers the player never
+        asked to lose.
+        """
+
+        recorded = self.recorded_option(question_id)
+        if self.status is not AssessmentStatus.IN_PROGRESS or recorded is None:
+            raise QuestionNotOutstanding()
+        if recorded == option_id:
+            return
+        self._record_that(
+            AnswerRevised(
+                assessment_id=self.id,
+                question_id=question_id,
+                option_id=option_id,
+                occurred_at=occurred_at,
+            )
+        )
+
     def abandon(self, *, occurred_at: datetime) -> None:
         """End an in-progress assessment, freeing the sport to be started again.
 
@@ -207,6 +249,21 @@ class Assessment:
     @property
     def transcript(self) -> Transcript:
         return tuple(self._answered)
+
+    def recorded_option(self, question_id: str) -> Optional[str]:
+        """Which option this question is answered with, or ``None`` if it is not.
+
+        The transcript holds each question at most once — the engine never asks
+        one twice, and a revision truncates rather than appending a second entry
+        — so *the* recorded option is a well-formed question to ask of it.
+
+        This is what separates the three things a submission can be: an answer to
+        the outstanding question (no recorded option), a revision (a different
+        one recorded), or a replay of an answer already given (the same one).
+        """
+
+        position = self._position_of(question_id)
+        return None if position is None else self._answered[position].option_id
 
     @property
     def outstanding_question_id(self) -> Optional[str]:
@@ -268,6 +325,12 @@ class Assessment:
 
     # --- event application ------------------------------------------------
 
+    def _position_of(self, question_id: str) -> Optional[int]:
+        for position, entry in enumerate(self._answered):
+            if entry.question_id == question_id:
+                return position
+        return None
+
     def _record_that(self, event: DomainEvent) -> None:
         self._apply(event)
         self._events.record(event)
@@ -292,6 +355,29 @@ class Assessment:
                 )
             )
             self._last_answered_question_id = event.question_id
+            self._outstanding_question_id = None
+            self.version += 1
+            return
+        if isinstance(event, AnswerRevised):
+            # The one place the transcript shortens. The event stays on the
+            # stream; the *projection* truncates at the revised question and puts
+            # the new option there, which is what makes the replayed transcript
+            # the one the engine consumed rather than a merge of two runs.
+            position = self._position_of(event.question_id)
+            if position is None:
+                raise ValueError(
+                    f"Revision of unanswered question {event.question_id!r} on "
+                    f"assessment {event.assessment_id}"
+                )
+            self._answered[position:] = [
+                AnsweredQuestion(
+                    question_id=event.question_id, option_id=event.option_id
+                )
+            ]
+            self._last_answered_question_id = event.question_id
+            # The outstanding question was chosen from the estimate as it stood
+            # before the change, so it is no longer the question to ask; the
+            # caller asks the engine what this transcript wants next.
             self._outstanding_question_id = None
             self.version += 1
             return
