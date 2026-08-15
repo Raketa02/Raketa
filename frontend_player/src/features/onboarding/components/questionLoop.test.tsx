@@ -402,21 +402,16 @@ describe('moving over answered questions', () => {
     expect(submitted?.body).toEqual({ question_id: 'q-overhead', option_id: 'usually' });
   });
 
-  it('cannot be changed from here — this slice moves, it does not revise', async () => {
-    await resumeFiveQuestionsIn();
-
-    goBack();
-    expect(await screen.findByText('Question 4')).toBeTruthy();
-
-    // The option they did not choose is shown and is not operable. A control that looked
-    // pressable and led nowhere would be a promise the screen cannot keep yet; changing
-    // an answer is its own act, with its own confirmation, and is not built here.
-    expect(screen.queryByRole('button', { name: 'What they did not' })).toBeNull();
-    fireEvent.press(screen.getByLabelText('What they did not'));
-
-    expect(screen.getByLabelText('What the player chose. Your answer.')).toBeTruthy();
-    expect(transport.requestsTo('POST', ANSWERS_PATH)).toEqual([]);
-  });
+  /*
+   * DELETED HERE, deliberately: `cannot be changed from here — this slice moves, it does
+   * not revise`.
+   *
+   * It asserted that an answered question's alternatives are not operable, which was true
+   * of the slice that could only move over them. They are operable now, and pressing one
+   * opens the change sheet — see `changing an answer` below, which asserts the opposite of
+   * every line of it. The part worth keeping is that a press still changes nothing on its
+   * own; that is `asks before it changes anything, and names what the change costs`.
+   */
 
   it('stays on one route, so the device back gesture never walks out of the run', async () => {
     await resumeFiveQuestionsIn();
@@ -476,6 +471,269 @@ describe('the question navigator', () => {
     // enumerate.
     expect(screen.queryAllByRole('progressbar')).toEqual([]);
     expect(screen.queryByRole('button', { name: /Question 2/ })).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Changing an answer, and losing the answers that depended on it (ADR-0020)
+// ---------------------------------------------------------------------------
+
+/**
+ * What a change at position 2 of a four-answer run comes back as: two answers, the second
+ * of them now the other option, and the question the engine chooses from that transcript.
+ *
+ * The two answers that were behind it are simply not in it — which is the whole of
+ * "truncates", as a client sees it.
+ */
+const REVISED_AT_TWO: Wire['AssessmentStepResponse'] = {
+  assessment_id: ASSESSMENT_ID,
+  status: 'in_progress',
+  questions_asked: 2,
+  transcript: transcriptOf(2).map((entry, index) =>
+    index === 1 ? { ...entry, option_id: 'other' } : entry,
+  ),
+  question: LAYOFF_QUESTION,
+};
+
+/**
+ * A change to the opening answer that ends the questionnaire — "never played" is the one
+ * answer that stops a run on its own.
+ *
+ * In progress, one answer, and **neither a question nor a result**: the run has stopped
+ * and nothing has been rated (#59). Nothing here is special to a revision — a last
+ * ordinary answer produces the same shape.
+ */
+const STOPPED_AFTER_ONE: Wire['AssessmentStepResponse'] = {
+  assessment_id: ASSESSMENT_ID,
+  status: 'in_progress',
+  questions_asked: 1,
+  transcript: transcriptOf(1).map((entry) => ({ ...entry, option_id: 'other' })),
+  question: null,
+  result: null,
+};
+
+const askToChange = () => fireEvent.press(screen.getByLabelText('What they did not'));
+const confirmChange = () => fireEvent.press(screen.getByLabelText('Change my answer'));
+
+/** Back to the second of four answers — the one with two answers standing on it. */
+async function walkBackToQuestionTwo() {
+  await resumeFiveQuestionsIn();
+  goBack();
+  goBack();
+  goBack();
+  expect(await screen.findByText('Question 2')).toBeTruthy();
+}
+
+describe('changing an answer', () => {
+  it('asks before it changes anything, and names what the change costs', async () => {
+    await walkBackToQuestionTwo();
+
+    askToChange();
+
+    // The consequence is put in front of the player rather than performed on them, and
+    // the number is the decision: two answers here, none at all at the end of a run.
+    expect(await screen.findByRole('header', { name: 'Change this answer?' })).toBeTruthy();
+    expect(screen.getByText(/Changing it discards 2 later answers/)).toBeTruthy();
+    expect(transport.requestsTo('POST', ANSWERS_PATH)).toEqual([]);
+
+    fireEvent.press(screen.getByLabelText('Keep my answer'));
+
+    await waitFor(() =>
+      expect(screen.queryByRole('header', { name: 'Change this answer?' })).toBeNull(),
+    );
+    // Nothing was sent and nothing moved: the answer they had is still the answer they
+    // have, on the question they were looking at.
+    expect(transport.requestsTo('POST', ANSWERS_PATH)).toEqual([]);
+    expect(screen.getByText('Question 2')).toBeTruthy();
+    expect(screen.getByLabelText('What the player chose. Your answer.')).toBeTruthy();
+  });
+
+  it('changes an answer deep in a run, and continues from what the engine now asks', async () => {
+    await walkBackToQuestionTwo();
+    transport.on('POST', ANSWERS_PATH, () => json(REVISED_AT_TWO));
+
+    askToChange();
+    expect(await screen.findByRole('header', { name: 'Change this answer?' })).toBeTruthy();
+    confirmChange();
+
+    // Not the most recent answer — any answered question, which is what stops this being
+    // a one-step undo wearing another name.
+    expect(
+      await screen.findByText('Have you had a break from padel in the last year?'),
+    ).toBeTruthy();
+    const [sent] = transport.requestsTo('POST', ANSWERS_PATH);
+    expect(sent?.body).toEqual({ question_id: 'answered-2', option_id: 'other' });
+
+    // Standing on the question the engine chose from the transcript this change produced,
+    // rather than on the answer they just changed. A screen that kept its position would
+    // leave them re-reading what they had already decided.
+    expect(screen.getByText('Question 3')).toBeTruthy();
+    expect(screen.getByLabelText('Confirm answer')).toBeTruthy();
+  });
+
+  it('shrinks the navigator to match the answers that are left', async () => {
+    await walkBackToQuestionTwo();
+    expect(
+      screen.getByLabelText('Question 2, already answered. 4 answers given so far.'),
+    ).toBeTruthy();
+
+    transport.on('POST', ANSWERS_PATH, () => json(REVISED_AT_TWO));
+    askToChange();
+    confirmChange();
+
+    // The run describes less progress than it did a moment ago, and the indicator says so.
+    // Anything counting what it had itself shown would still be claiming four.
+    expect(await screen.findByLabelText('Question 3. 2 answers given so far.')).toBeTruthy();
+  });
+
+  it('walks back to the change and finds the new answer recorded there', async () => {
+    await walkBackToQuestionTwo();
+    transport.on('POST', ANSWERS_PATH, () => json(REVISED_AT_TWO));
+    askToChange();
+    confirmChange();
+    expect(await screen.findByText('Question 3')).toBeTruthy();
+
+    goBack();
+
+    // The run is coherent afterwards: what they said is what is recorded, and the option
+    // they turned down is the one they had before.
+    expect(await screen.findByText('Question 2')).toBeTruthy();
+    expect(screen.getByLabelText('What they did not. Your answer.')).toBeTruthy();
+    expect(screen.getByLabelText('What the player chose')).toBeTruthy();
+  });
+
+  it('does nothing at all when the answer already recorded is chosen again', async () => {
+    await walkBackToQuestionTwo();
+
+    fireEvent.press(screen.getByLabelText('What the player chose. Your answer.'));
+
+    // Changing your mind and changing it back is not punished — and a confirmation naming
+    // a cost nobody pays would be the punishment.
+    expect(screen.queryByRole('header', { name: 'Change this answer?' })).toBeNull();
+    expect(transport.requestsTo('POST', ANSWERS_PATH)).toEqual([]);
+    expect(screen.getByText('Question 2')).toBeTruthy();
+  });
+
+  it('shows no level, range or confidence while any of this happens', async () => {
+    await walkBackToQuestionTwo();
+    transport.on('POST', ANSWERS_PATH, () => json(REVISED_AT_TWO));
+
+    askToChange();
+    expect(await screen.findByRole('header', { name: 'Change this answer?' })).toBeTruthy();
+    // Not on the sheet, which is the one screen in the flow that could argue for it:
+    // a player told what a change would do to their number would change until it moved.
+    expect(screen.queryByText(/so far/i)).toBeNull();
+    expect(screen.queryByText(/2[.,]71/)).toBeNull();
+
+    confirmChange();
+
+    expect(await screen.findByText('Question 3')).toBeTruthy();
+    expect(screen.queryByText(/2[.,]71/)).toBeNull();
+    expect(screen.queryByText(/%/)).toBeNull();
+  });
+
+  it('routes onward when a change ends the questionnaire', async () => {
+    await resumeFiveQuestionsIn();
+    goBack();
+    goBack();
+    goBack();
+    goBack();
+    expect(await screen.findByText('Question 1')).toBeTruthy();
+
+    // The beginner's answer, given late: "never played" leaves the engine nothing more to
+    // ask, so the response carries no question — and the client must not sit waiting for
+    // one. Where onward *is* today is the result screen, by the same path a last ordinary
+    // answer takes; #62 makes both of them the review.
+    transport.on('POST', ANSWERS_PATH, () => json(STOPPED_AFTER_ONE));
+    askToChange();
+    confirmChange();
+
+    await waitFor(() => expect(screen).toHavePathname(`/result/${ASSESSMENT_ID}`));
+    expect(transport.requestsTo('POST', ANSWERS_PATH)).toHaveLength(1);
+  });
+});
+
+describe('when a change does not go through', () => {
+  it('offers a retry in place and keeps the option that was chosen', async () => {
+    await walkBackToQuestionTwo();
+    transport.on('POST', ANSWERS_PATH, networkFailure());
+
+    askToChange();
+    confirmChange();
+
+    // The message is beside the control that retries it, and the sheet stays open with the
+    // change still described — a dropped request must not cost the player the answers a
+    // successful change would have kept.
+    expect(
+      await screen.findByText("We couldn't reach Rakieta. Check your connection and try again."),
+    ).toBeTruthy();
+    expect(screen.getByRole('header', { name: 'Change this answer?' })).toBeTruthy();
+    expect(screen.getByText(/Changing it discards 2 later answers/)).toBeTruthy();
+
+    transport.on('POST', ANSWERS_PATH, () => json(REVISED_AT_TWO));
+    confirmChange();
+
+    expect(await screen.findByText('Question 3')).toBeTruthy();
+    expect(transport.requestsTo('POST', ANSWERS_PATH)).toHaveLength(2);
+    const [, retried] = transport.requestsTo('POST', ANSWERS_PATH);
+    expect(retried?.body).toEqual({ question_id: 'answered-2', option_id: 'other' });
+  });
+
+  it('makes one change out of a double-tapped confirm', async () => {
+    await walkBackToQuestionTwo();
+
+    let land = () => {};
+    const held = new Promise<void>((resolve) => {
+      land = resolve;
+    });
+    transport.on('POST', ANSWERS_PATH, async () => {
+      await held;
+      return json(REVISED_AT_TWO);
+    });
+
+    askToChange();
+    // The same node, pressed again while the first press is still in the air — which is
+    // exactly what a player does on a slow connection, and this is the control that
+    // discards their later answers.
+    const control = screen.getByLabelText('Change my answer');
+    fireEvent.press(control);
+    fireEvent.press(control);
+    fireEvent.press(control);
+
+    await waitFor(() => expect(screen.getByLabelText('Changing…')).toBeTruthy());
+    expect(transport.requestsTo('POST', ANSWERS_PATH)).toHaveLength(1);
+
+    // And it cannot be dismissed out from under the request it started: the change is
+    // already running, and a sheet that closed here would say otherwise.
+    fireEvent.press(screen.getByLabelText('Close and keep your answer'));
+    expect(screen.getByRole('header', { name: 'Change this answer?' })).toBeTruthy();
+
+    await act(async () => {
+      land();
+    });
+
+    // And even had a duplicate reached the server, it would have recorded nothing: the
+    // option is already the one the transcript holds. The guarantee here is the client's
+    // half — one press's worth of consequence per change.
+    expect(await screen.findByText('Question 3')).toBeTruthy();
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.queryByRole('header', { name: 'Change this answer?' })).toBeNull();
+  });
+
+  it('recovers silently when the rating already exists', async () => {
+    await walkBackToQuestionTwo();
+
+    // Revising is refused once a rating has been proved, with its own code — and the
+    // recovery is the opposite of a retry: there is no question to go back to, only a
+    // rating to show. Reached by re-reading the step, like the other two.
+    transport.on('POST', ANSWERS_PATH, () => errorResponse(409, 'answer_not_revisable'));
+    transport.on('GET', STEP_PATH, () => json(FINISHED));
+
+    askToChange();
+    confirmChange();
+
+    await waitFor(() => expect(screen).toHavePathname(`/result/${ASSESSMENT_ID}`));
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 });
 
@@ -565,6 +823,36 @@ describe('what leaves the device', () => {
     // The next question *is* the response, so it is written into the cache. Invalidating
     // and refetching would be a second round trip for an answer already in hand.
     expect(transport.requestsTo('GET', STEP_PATH)).toHaveLength(readsBefore);
+  });
+
+  it('sends one answer however many times the confirm is pressed', async () => {
+    await resumeAtTheOpeningQuestion();
+
+    let land = () => {};
+    const held = new Promise<void>((resolve) => {
+      land = resolve;
+    });
+    transport.on('POST', ANSWERS_PATH, async () => {
+      await held;
+      return json(EXECUTION);
+    });
+
+    fireEvent.press(screen.getByLabelText('I play regularly'));
+    // The same node, pressed again while the first press is still in the air. The busy
+    // control cannot answer for this: it belongs to a render that does not exist yet when
+    // the second tap lands.
+    const confirm = screen.getByLabelText('Confirm answer');
+    fireEvent.press(confirm);
+    fireEvent.press(confirm);
+    fireEvent.press(confirm);
+
+    await waitFor(() => expect(screen.getByLabelText('Submitting…')).toBeTruthy());
+    expect(transport.requestsTo('POST', ANSWERS_PATH)).toHaveLength(1);
+
+    await act(async () => {
+      land();
+    });
+    expect(await screen.findByText('Match execution')).toBeTruthy();
   });
 
   it('applies no optimistic update — the question does not move until the server answers', async () => {

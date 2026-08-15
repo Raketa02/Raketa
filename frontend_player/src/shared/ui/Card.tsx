@@ -10,7 +10,7 @@
  */
 
 import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
-import type { ReactNode } from 'react';
+import { forwardRef, type ReactNode } from 'react';
 
 import { theme } from './theme';
 
@@ -32,17 +32,26 @@ export interface PressableCardProps extends CardProps {
   readonly accessibilityHint?: string;
 }
 
-export function PressableCard({
-  children,
-  style,
-  onPress,
-  selected = false,
-  disabled = false,
-  accessibilityLabel,
-  accessibilityHint,
-}: PressableCardProps) {
+/**
+ * The ref is forwarded for the same reason `CloseControl`'s is: a card can be the control
+ * an overlay returns focus to when it closes — see `BottomSheet`. Nothing else needs it,
+ * and nothing about the drawing changes.
+ */
+export const PressableCard = forwardRef<View, PressableCardProps>(function PressableCard(
+  {
+    children,
+    style,
+    onPress,
+    selected = false,
+    disabled = false,
+    accessibilityLabel,
+    accessibilityHint,
+  },
+  ref,
+) {
   return (
     <Pressable
+      ref={ref}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       accessibilityHint={accessibilityHint}
@@ -61,7 +70,7 @@ export function PressableCard({
       {children}
     </Pressable>
   );
-}
+});
 
 const s = StyleSheet.create({
   card: {

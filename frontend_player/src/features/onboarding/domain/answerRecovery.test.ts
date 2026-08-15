@@ -24,6 +24,13 @@ describe('a stale-step conflict', () => {
     expect(isStaleStepConflict(conflict('assessment_already_finished'))).toBe(true);
   });
 
+  it('recognises a change asked for after the rating already existed', () => {
+    // The revision's own refusal. Nothing was recorded, but there is nothing to record
+    // either — the rating is proved and the answers behind it are settled — so the honest
+    // response is to re-read and show the player what their run actually is now.
+    expect(isStaleStepConflict(conflict('answer_not_revisable'))).toBe(true);
+  });
+
   it('does not swallow another conflict on the same status', () => {
     // `kind` and `status` are identical to the two above. Only the code separates them,
     // and a rule keyed on either of the other two would silently recover from a failure

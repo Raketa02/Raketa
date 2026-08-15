@@ -23,8 +23,14 @@
  * shows the answer they gave as they gave it. Movement is the header's back control and
  * the forward control below; the navigator draws where they are and never moves them,
  * because ten tappable segments across the content width is a 26pt target against the
- * 44pt minimum. This slice **only moves** — changing an answer is its own act, with its
- * own confirmation, and is not built here.
+ * 44pt minimum.
+ *
+ * **And they can change what they said.** Tapping a different option on an answered
+ * question opens the change sheet, which names how many later answers the change discards
+ * before it happens; tapping the option already recorded does nothing at all. Only two
+ * acts on this screen cost a request — answering a new question, and changing an old
+ * answer — and they are the same request, which is why a change lands on the same
+ * mutation, with the same failure and the same retry in place.
  *
  * **Leaving is still not going back.** The close control in the header opens a confirm
  * offering to continue later, to stop rating this sport, or to carry on. Every exit below
@@ -36,7 +42,7 @@
  */
 
 import { useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { forwardRef, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -57,6 +63,7 @@ import type { AnswerOption } from '../domain/Assessment';
 import type { Sport } from '../domain/Sport';
 import { positionOf } from '../domain/onboardingPass';
 import { outstandingPosition, questionAt, standingPosition } from '../domain/questionNavigation';
+import { proposeRevision } from '../domain/revision';
 import { useAbandonAssessment } from '../hooks/useAbandonAssessment';
 import { useAdvanceThroughPass } from '../hooks/useAdvanceThroughPass';
 import { useAnswerQuestion } from '../hooks/useAnswerQuestion';
@@ -64,6 +71,7 @@ import { useAssessment } from '../hooks/useAssessment';
 import { useDeferredRuns } from '../store/deferredRuns.store';
 import { useOnboardingPass } from '../store/onboardingPass.store';
 
+import { ChangeAnswerSheet, type AnswerChange } from './ChangeAnswerSheet';
 import { LeaveAssessmentSheet } from './LeaveAssessmentSheet';
 import { OnboardingChrome } from './OnboardingChrome';
 import { difficultyTag } from './difficultyTag';
@@ -143,7 +151,11 @@ export function QuestionScreen({ assessmentId, sport }: QuestionScreenProps) {
    * `movedTo` is where the player walked, and `undefined` is *not* a position: it means
    * they have not walked anywhere and follow the end of the run, which is what keeps them
    * on the question their last answer produced. It is never sent anywhere and never
-   * recorded — moving is a local act, and this slice does not revise.
+   * recorded — moving is a local act, and only answering and changing are not.
+   *
+   * It is dropped after a change rather than adjusted, for the same reason: the transcript
+   * is shorter than the one they walked into, and where they belong is wherever the engine
+   * has just decided to ask them next.
    */
   const [movedTo, setMovedTo] = useState<number>();
   const answered = step?.transcript.length ?? 0;
@@ -151,6 +163,23 @@ export function QuestionScreen({ assessmentId, sport }: QuestionScreenProps) {
   const showing = questionAt(step, at);
   /** The recorded answer, on a question already answered. Absent on the outstanding one. */
   const recorded = showing?.answer;
+
+  /**
+   * The change being asked about, held until the player confirms it or keeps what they
+   * had. It survives a failed request, which is the point: a revision that never reached
+   * the server must not cost the player the option they had chosen.
+   */
+  const [proposed, setProposed] = useState<AnswerChange>();
+  /**
+   * Where focus returns when the change sheet closes.
+   *
+   * The answer they already gave, deliberately, rather than the option they tapped. The
+   * tapped card is the one that may be about to stop being an option at all, and a player
+   * who kept their answer is best returned to it — which is also why this ref stays
+   * attached while the sheet closes, where one hung off the proposal would have emptied
+   * in the same update.
+   */
+  const recordedAnswer = useRef<View | null>(null);
 
   // The run is over: the outstanding question is gone and a rating exists.
   useEffect(() => {
@@ -165,18 +194,98 @@ export function QuestionScreen({ assessmentId, sport }: QuestionScreenProps) {
     advance();
   }, [endedWithoutRating, advance]);
 
+  /**
+   * One press's worth of consequence per press, on either control.
+   *
+   * `answer.isPending` cannot do this: it reaches a *later* render, and the second tap of
+   * a double tap arrives before that render exists — so the busy control a player sees is
+   * the state after the burst, not during it. A ref is read at the moment of the press,
+   * which is when the question is being asked. It is the latch `useAdvanceThroughPass`
+   * uses, for the same reason and released the same way: `onSettled`, so a failure leaves
+   * the retry available.
+   *
+   * The server would survive the burst either way — a repeated answer names a question no
+   * longer outstanding, and a repeated change names an option it already holds, so both
+   * record nothing. That is a reason not to *panic* about it, not a reason to send three
+   * writes and let the recovery paths sort out which of them was the player's.
+   */
+  const sending = useRef(false);
+
+  const send = (questionId: string, optionId: string, onSuccess?: () => void) => {
+    if (sending.current) return;
+    sending.current = true;
+    answer.mutate(
+      { questionId, optionId },
+      {
+        onSuccess,
+        onSettled: () => {
+          sending.current = false;
+        },
+      },
+    );
+  };
+
   const submit = () => {
     if (question === undefined || selectedOptionId === undefined) return;
-    answer.mutate({ questionId: question.id, optionId: selectedOptionId });
+    send(question.id, selectedOptionId);
   };
 
   /**
-   * Moving, and it is the whole of what this slice does with an answered question.
+   * Tapping an option on a question already answered.
+   *
+   * **It asks; it does not change.** What a change costs is knowable from the transcript
+   * already in hand, so it is put in front of the player before anything is sent — and
+   * `proposeRevision` is where "this is not a change at all" is decided, so re-selecting
+   * the answer already recorded reaches nothing and shows nothing.
+   */
+  const askToChange = (option: AnswerOption) => {
+    const revision = proposeRevision(step, at, option.id);
+    if (revision === undefined) return;
+
+    // A failure from an earlier change belongs to that change. Left standing, it would
+    // greet the next one as though it had already failed.
+    answer.reset();
+    setProposed({ revision, answerText: option.text });
+  };
+
+  /**
+   * Keeping the answer they have — the button, the scrim, the sheet's close control and
+   * the Android back gesture, which are one act and so are one function.
+   *
+   * **Not while a change is in the air.** The request that discards their later answers is
+   * already running; dismissing the sheet over it would leave the player watching a screen
+   * that says nothing is happening, and resetting a mutation mid-flight drops the
+   * callbacks this screen unlatches itself in. The sheet closes when the change lands.
+   */
+  const keepAnswer = () => {
+    if (sending.current) return;
+    setProposed(undefined);
+    answer.reset();
+  };
+
+  /**
+   * The change itself — the same mutation an answer uses, because it is the same request.
+   *
+   * On success the pin is dropped rather than moved: the transcript is now shorter than
+   * the one they were standing in, and following the end of the run is what puts them on
+   * the question the engine has just chosen from what they actually said. A failure
+   * leaves everything where it is, sheet included, with the retry beside the message.
+   */
+  const change = () => {
+    if (proposed === undefined) return;
+    send(proposed.revision.questionId, proposed.revision.optionId, () => {
+      setProposed(undefined);
+      setMovedTo(undefined);
+    });
+  };
+
+  /**
+   * Moving — which is looking, and is not changing.
    *
    * **Neither costs a request.** The transcript arrived with the step, so walking back to
    * question two from question eight and forward again touches the network not at all —
-   * which is what makes looking free, and what "revisable" has to mean before it can mean
-   * anything else.
+   * which is what makes looking free, and what has to be true before "you can change your
+   * mind" can be worth anything. A change is the one act here that spends a round trip.
    *
    * Forward onto the outstanding question clears the pin rather than setting it to that
    * position: from there the player follows the end of the run again, so the next answer
@@ -217,9 +326,9 @@ export function QuestionScreen({ assessmentId, sport }: QuestionScreenProps) {
         style={s.screen}
         edges={['top', 'bottom']}
         // A sheet is a real modal: while it is open nothing behind it is reachable by a
-        // screen reader. The sheet is a sibling below, never a child — inside here it
+        // screen reader. Both sheets are siblings below, never children — inside here one
         // would hide itself along with the question.
-        {...behindOverlay(confirmingExit)}
+        {...behindOverlay(confirmingExit || proposed !== undefined)}
       >
         <OnboardingChrome
           eyebrow={passEyebrow(sport, position)}
@@ -298,23 +407,27 @@ export function QuestionScreen({ assessmentId, sport }: QuestionScreenProps) {
                 </Hairline>
               </Card>
 
-              {/* An answered question is shown as it was answered. Nothing here is
-                  pressable: this slice moves over answers and does not change them, and a
-                  selection that led nowhere would be a promise the screen cannot keep. */}
-              {showing.question.options.map((option) =>
-                recorded === undefined ? (
+              {/* One list, on every question. An answered one shows the option recorded
+                  as selected and the alternatives beside it — re-reading what you agreed
+                  to means re-reading what you turned down — and a press on an alternative
+                  asks about a change rather than making one. */}
+              {showing.question.options.map((option) => {
+                const chosen = option.id === recorded;
+                return (
                   <AnswerCard
                     key={option.id}
+                    ref={chosen ? recordedAnswer : undefined}
                     option={option}
-                    selected={option.id === selectedOptionId}
+                    answered={recorded !== undefined}
+                    selected={recorded === undefined ? option.id === selectedOptionId : chosen}
                     onPress={() =>
-                      setChoice({ questionId: showing.question.id, optionId: option.id })
+                      recorded === undefined
+                        ? setChoice({ questionId: showing.question.id, optionId: option.id })
+                        : askToChange(option)
                     }
                   />
-                ) : (
-                  <RecordedAnswer key={option.id} option={option} chosen={option.id === recorded} />
-                ),
-              )}
+                );
+              })}
             </>
           ) : null}
         </ScrollView>
@@ -324,7 +437,11 @@ export function QuestionScreen({ assessmentId, sport }: QuestionScreenProps) {
             {/* A stale-step conflict never reaches here — it is recovered as a re-read, so
                 a double-tapped confirm leaves the player on the correct question with
                 nothing to dismiss. What is left is a genuine failure, and the retry is the
-                confirm control itself, with the selection still made. */}
+                confirm control itself, with the selection still made.
+
+                Only on the live question: the same mutation carries a change, and a
+                change's failure belongs in the sheet the player is looking at, beside the
+                control that retries it. */}
             {answer.error !== null && recorded === undefined ? (
               <Note variant="coral" accessibilityRole="alert">
                 {onboardingErrorMessage(answer.error)}
@@ -356,6 +473,15 @@ export function QuestionScreen({ assessmentId, sport }: QuestionScreenProps) {
         ) : null}
       </SafeAreaView>
 
+      <ChangeAnswerSheet
+        change={proposed}
+        onChange={change}
+        onKeep={keepAnswer}
+        changing={answer.isPending}
+        error={answer.error}
+        returnFocusTo={recordedAnswer}
+      />
+
       <LeaveAssessmentSheet
         visible={confirmingExit}
         sport={sport}
@@ -383,57 +509,52 @@ function DifficultyTag({ tier }: { readonly tier: string | undefined }) {
 interface AnswerCardProps {
   readonly option: AnswerOption;
   readonly selected: boolean;
+  /** Whether this question is already answered, which is what a press here means. */
+  readonly answered: boolean;
   readonly onPress: () => void;
 }
 
 /**
- * One answer. Individually reachable, and **selection is announced as state** rather than
- * drawn only as a border — a state that exists only as a colour excludes whoever cannot
- * see that colour, which is why the word is there too.
+ * One answer, on a question being asked or on one already answered.
  *
- * The hint says what pressing does, because pressing an answer here does *not* submit it.
+ * **One component, because it is one thing to a player.** The card looks the same, is
+ * reached the same way, and carries its state the same way; what differs is the word
+ * beside the border and what a press leads to. Two components would be two answers to
+ * "what does tapping an answer do", which is the mental model this screen has exactly one
+ * of.
+ *
+ * **Selection is announced as state** rather than drawn only as a border — a state that
+ * exists only as a colour excludes whoever cannot see that colour, which is why the word
+ * is there too, and why the recorded answer says so in its name.
+ *
+ * The hint says what pressing does, and it is honest in all three cases: on a live
+ * question pressing selects and never submits; on an answered one it offers a change; and
+ * on the answer already recorded it does nothing at all, so there is nothing to promise.
  */
-function AnswerCard({ option, selected, onPress }: AnswerCardProps) {
+const AnswerCard = forwardRef<View, AnswerCardProps>(function AnswerCard(
+  { option, selected, answered, onPress },
+  ref,
+) {
   return (
     <PressableCard
+      ref={ref}
       onPress={onPress}
       selected={selected}
-      accessibilityLabel={option.text}
-      accessibilityHint="Selects this answer"
+      accessibilityLabel={answered && selected ? `${option.text}. Your answer.` : option.text}
+      accessibilityHint={answerHint(answered, selected)}
       style={s.answer}
     >
       <Text style={s.answerText}>{option.text}</Text>
-      {selected ? <Text style={s.selectedMark}>Selected</Text> : null}
+      {selected ? (
+        <Text style={s.selectedMark}>{answered ? 'Your answer' : 'Selected'}</Text>
+      ) : null}
     </PressableCard>
   );
-}
+});
 
-/**
- * One option on a question the player has already answered.
- *
- * The alternatives are shown alongside the chosen one, because re-reading what you agreed
- * to means re-reading what you turned down — and the chosen one carries a **word**, not
- * only a border, for the same reason the live question's selection does.
- *
- * It is a card rather than a pressable card: nothing on an answered question can be
- * operated yet, and a control that looks operable and is not is worse than one that does
- * not look it.
- */
-function RecordedAnswer({
-  option,
-  chosen,
-}: {
-  readonly option: AnswerOption;
-  readonly chosen: boolean;
-}) {
-  return (
-    <View accessible accessibilityLabel={chosen ? `${option.text}. Your answer.` : option.text}>
-      <Card style={[s.answer, chosen ? s.chosen : undefined]}>
-        <Text style={s.answerText}>{option.text}</Text>
-        {chosen ? <Text style={s.selectedMark}>Your answer</Text> : null}
-      </Card>
-    </View>
-  );
+function answerHint(answered: boolean, selected: boolean): string | undefined {
+  if (!answered) return 'Selects this answer';
+  return selected ? undefined : 'Offers changing your answer to this one';
 }
 
 const s = StyleSheet.create({
@@ -472,10 +593,6 @@ const s = StyleSheet.create({
   question: { ...theme.type.question, color: theme.color.ink },
   qualifier: { ...theme.type.tiny, color: theme.color.muted, marginTop: theme.space.xxs },
   answer: { flexDirection: 'row', alignItems: 'center', gap: theme.space.sm },
-  // The selected border a chosen answer carries on the live question, on a card that
-  // cannot be pressed to acquire it. Selection is a state, not an action, so it is `ink`
-  // — and the word beside it is what carries the state where the colour cannot.
-  chosen: { borderColor: theme.color.ink },
   answerText: { ...theme.type.h2, color: theme.color.ink, flex: 1 },
   selectedMark: {
     ...theme.type.eyebrow,
