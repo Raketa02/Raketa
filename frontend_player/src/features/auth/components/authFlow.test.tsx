@@ -298,8 +298,10 @@ describe('the account screen', () => {
 
     renderScreen(<AccountScreen />);
 
-    expect(await screen.findByText('ada')).toBeTruthy();
-    expect(screen.getByText('ada@example.com')).toBeTruthy();
+    // The identity is one line, and it is the whole assertion: the screen's own heading
+    // says "Inside the app" for every player, so who is signed in is only ever visible
+    // through what Query fetched.
+    expect(await screen.findByText('ada · ada@example.com')).toBeTruthy();
   });
 
   it('does not sign the player out when a request is forbidden', async () => {
