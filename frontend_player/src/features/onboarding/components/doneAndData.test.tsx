@@ -256,12 +256,12 @@ describe('after a result', () => {
     await answerTheLastQuestion(PADEL_ID, 'PADEL', PADEL_RESULT);
 
     // Named, not "next sport": the player chose these and is owed the one they are being
-    // offered. The bar moves with it, because sports are what it measures.
+    // offered. The eyebrow moves with it — it is the sole carrier of which sport of how
+    // many, now that onboarding's indicator measures the run instead (ADR-0020).
     fireEvent.press(await screen.findByLabelText('Rate Tennis'));
 
     await waitFor(() => expect(screen).toHavePathname(`/question/${TENNIS_ID}`));
     expect(await screen.findByText('Tennis · Rating 2 of 2')).toBeTruthy();
-    expect(screen.getByLabelText('Rating 2 of 2')).toBeTruthy();
 
     const [, second] = transport.requestsTo('POST', '/api/v1/assessments');
     expect(second?.body).toEqual({ sport: 'TENNIS' });
@@ -583,11 +583,10 @@ describe('a second pass in the same process', () => {
 
     // The defect, exactly as filed: padel and tennis were rated in a walk that is over,
     // and this single run used to be numbered against that walk's queue — "Rating 2 of 2"
-    // for one run. A run resumed on its own is a pass of one sport, and the bar and its
-    // eyebrow both say so, because the pass does.
-    expect(screen.getByLabelText('Rating 1 of 1')).toBeTruthy();
-    expect(screen.queryByLabelText('Rating 2 of 2')).toBeNull();
+    // for one run. A run resumed on its own is a pass of one sport, and the eyebrow says
+    // so, because the pass does.
     expect(await screen.findByText(/Tennis · Rating 1 of 1/)).toBeTruthy();
+    expect(screen.queryByText(/Rating 2 of 2/)).toBeNull();
   });
 
   it("sends a player who abandons a resumed run to the app, not to an earlier walk's summary", async () => {

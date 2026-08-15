@@ -1,11 +1,14 @@
 /**
  * Submitting one answer.
  *
- * **Not retried**, per the client's default for every mutation: an answer is append-only
- * and irreversible, and a silent retry of a request that actually succeeded but whose
- * response was lost would record a second answer to a question the run has already moved
- * past. The player retries by pressing confirm again — which is also why a failure must
- * leave their selection where it was.
+ * **Not retried**, per the client's default for every mutation. The submission is the one
+ * request in this flow that changes the run, and a retry it makes on its own is a request
+ * the player did not authorise — one that now carries more than a duplicate answer, since
+ * the same route also revises, and a revision discards every answer after the question it
+ * names (ADR-0020). Re-sending *this* answer is safe on the wire, because the same option
+ * for the same question records nothing; that is the server's guarantee to lean on when
+ * the player presses confirm again, not a licence to press it for them. Which is also why
+ * a failure must leave their selection where it was.
  *
  * **No `onMutate`.** There is no optimistic update to write here and never will be: the
  * next question is chosen from the whole transcript by the engine, so the client cannot

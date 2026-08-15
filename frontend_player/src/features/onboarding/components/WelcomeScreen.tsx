@@ -1,10 +1,10 @@
 /**
  * Welcome — what is about to happen, before it happens.
  *
- * The player is about to answer questions they cannot revise, in a flow whose length they
- * cannot see. Saying so first is what makes the irreversibility feel deliberate rather
- * than sprung on them: a starting level per sport, about a minute each, nothing
- * permanent, refined by real matches later.
+ * The player is about to answer questions in a flow whose length they cannot see — the
+ * engine decides it has heard enough one answer at a time. Saying what is coming first is
+ * what makes that feel deliberate rather than sprung on them: a starting level per sport,
+ * about a minute each, nothing permanent, refined by real matches later.
  */
 
 import { useRouter } from 'expo-router';

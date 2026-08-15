@@ -9,7 +9,9 @@
  * screen says out loud: with cross-sport transfer cut, it is now literally true.
  *
  * Continuing starts the first selected sport's assessment and lands on its opening
- * question. It is `replace`, not `push`: the questionnaire has no way back.
+ * question. It is `replace`, not `push`: a player walks back through the questionnaire
+ * with its own control (ADR-0020), and the system back gesture must not be a second,
+ * unlabelled way out of the run.
  */
 
 import { useRouter } from 'expo-router';

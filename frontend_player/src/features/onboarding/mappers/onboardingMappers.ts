@@ -176,6 +176,16 @@ export function toAssessmentStep(wire: AssessmentStepResponse): AssessmentStep {
     // Answers behind the run, never including the outstanding question. Carried across as
     // it arrives — the client neither counts nor adjusts it; see `AssessmentStep`.
     questionsAsked: wire.questions_asked,
+    /**
+     * In the order the server sent them, which is the order they were given — and the
+     * order a revision truncates at. Re-sorting or de-duplicating here would be this
+     * client holding a second opinion about a run it did not conduct. An answered
+     * question carries its own copy, so the same `toQuestion` reads both.
+     */
+    transcript: wire.transcript.map((entry) => ({
+      question: toQuestion(entry.question),
+      optionId: entry.option_id,
+    })),
     question: wire.question == null ? undefined : toQuestion(wire.question),
     result: wire.result == null ? undefined : toAssessmentResult(wire.result),
   };

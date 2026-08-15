@@ -86,8 +86,10 @@ export function useAdvanceThroughPass(sport: Sport): PassAdvance {
     (assessmentId: string) => {
       if (departing.current) return;
       departing.current = true;
-      // `replace`, because the questionnaire has no way back — this is the one exit from
-      // the loop that has something of this sport's to show.
+      // `replace`, because this is the exit from the loop, not a step inside it. Moving
+      // between questions is state on one route (ADR-0020); leaving the run is a route
+      // change, and a player who has been rated must not land back in the questionnaire
+      // on the system back gesture.
       router.replace({ pathname: '/result/[assessmentId]', params: { assessmentId, sport } });
     },
     [router, sport],

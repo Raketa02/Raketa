@@ -155,6 +155,46 @@ describe('assessment steps', () => {
     expect(fresh.questionsAsked).toBe(0);
   });
 
+  it('carries the served transcript, question copy and all, in the order it arrived', () => {
+    // Each entry is a question **as it was asked** plus the option chosen, because the
+    // device has nothing of its own to render an answered question from — a resumed run
+    // on a fresh install has never seen any of them.
+    const step = toAssessmentStep({
+      assessment_id: '1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6',
+      status: 'in_progress',
+      questions_asked: 2,
+      transcript: [
+        { question: { ...QUESTION, id: 'q-first' }, option_id: 'weekly' },
+        { question: { ...QUESTION, id: 'q-second', tier: 'discriminating' }, option_id: 'rarely' },
+      ],
+      question: QUESTION,
+    });
+
+    expect(step.transcript).toHaveLength(2);
+    expect(step.transcript[0]?.question.id).toBe('q-first');
+    expect(step.transcript[0]?.optionId).toBe('weekly');
+    // The same reading of the wire's null tier the outstanding question gets: an answered
+    // question is a question, and one mapper reads both.
+    expect(step.transcript[0]?.question.tier).toBeUndefined();
+    expect(step.transcript[1]?.question.tier).toBe('discriminating');
+    expect(step.transcript[1]?.optionId).toBe('rarely');
+  });
+
+  it('reads an empty transcript as a run with nothing behind it', () => {
+    // Empty is an answer and it is the common one. The field is always sent, so there is
+    // no absent case to fall back for — a fresh run and a withheld transcript are not two
+    // readings of one payload.
+    const fresh = toAssessmentStep({
+      assessment_id: '1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6',
+      status: 'in_progress',
+      questions_asked: 0,
+      transcript: [],
+      question: QUESTION,
+    });
+
+    expect(fresh.transcript).toEqual([]);
+  });
+
   it('has no question when there is nothing outstanding', () => {
     const step = toAssessmentStep({
       assessment_id: '1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6',

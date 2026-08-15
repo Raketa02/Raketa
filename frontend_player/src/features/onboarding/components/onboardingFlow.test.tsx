@@ -341,10 +341,10 @@ describe('walking into the questionnaire', () => {
     expect(started?.body).toEqual({ sport: 'PADEL' });
 
     expect(await screen.findByText('Recent activity')).toBeTruthy();
+    // Which sport of how many, in the eyebrow and nowhere else: the indicator under the
+    // header measures the run's questions now, not the pass's sports (ADR-0020), and a
+    // filled rectangle was never readable at any font size anyway.
     expect(screen.getByText('Padel · Rating 1 of 2')).toBeTruthy();
-    // The bar measures sports — the one denominator the player actually chose — and says
-    // so in words as well, because a filled rectangle is unreadable at any font size.
-    expect(screen.getByLabelText('Rating 1 of 2')).toBeTruthy();
 
     // The response *is* the next question, so it is written into the cache rather than
     // asked for a second time.

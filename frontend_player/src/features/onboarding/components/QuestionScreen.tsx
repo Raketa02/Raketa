@@ -10,25 +10,26 @@
  * answers**. The category is the screen heading and the question is never the page title,
  * because a title is read last on a screen the eye scans top-down.
  *
- * **Tapping an answer selects it; the confirm control submits it.** The confirm is what
- * earns the irreversibility — an explicit moment to commit removes any need for a timed
- * undo window, and a mis-tap costs nothing. It is present from the first question so the
- * control never appears from nowhere, and **its label is identical on every question,
- * including the last**: the engine decides it has enough information *after* the answer
- * arrives, so the client cannot know which question is the last one and a changing label
- * would claim otherwise. (`busyLabel` is about the request in flight, not about which
- * question this is; nothing about it implies an end.)
+ * **Tapping an answer selects it; the confirm control submits it.** The confirm is the
+ * deliberate submission of one answer — a mis-tap costs nothing. It is present from the
+ * first question so the control never appears from nowhere, and **its label is identical
+ * on every question, including the last**: the engine decides it has enough information
+ * *after* the answer arrives, so the client cannot know which question is the last one and
+ * a changing label would claim otherwise. It no longer has to — answering creates nothing
+ * ([ADR-0020](../../../../../docs/adr/0020-revisable-assessment-answers.md)).
  *
- * **There is no back control, and none may be added.** An answer's numeric meaning depends
- * on the difficulty tier it was asked at, and that tier was chosen from the estimate as it
- * stood — so revising an earlier answer would silently change what every later answer
- * meant (ADR-0017). Nothing here pushes a route either: the next question replaces this
- * one's data in place, so the device back gesture has no answered question to return to.
+ * **A player can walk back over the questions they have answered, and it costs nothing.**
+ * The served transcript arrives with every step, so moving issues no request at all and
+ * shows the answer they gave as they gave it. Movement is the header's back control and
+ * the forward control below; the navigator draws where they are and never moves them,
+ * because ten tappable segments across the content width is a 26pt target against the
+ * 44pt minimum. This slice **only moves** — changing an answer is its own act, with its
+ * own confirmation, and is not built here.
  *
- * **There is a way out, and it is not back navigation.** The close control in the header
- * opens a confirm offering to continue later, to stop rating this sport, or to carry on.
- * Leaving the questionnaire is not revisiting an answer, and every exit below is a
- * `replace`: no path here returns the player to a question they have already answered.
+ * **Leaving is still not going back.** The close control in the header opens a confirm
+ * offering to continue later, to stop rating this sport, or to carry on. Every exit below
+ * is a `replace`: walking back inside the run is one thing, and a route the player can be
+ * dropped into the middle of is another.
  *
  * **There is no live estimate.** The player sees no running Level at any point, which is
  * why the design system's `[3,17 so far]` chip is deliberately absent from the meta row.
@@ -47,6 +48,7 @@ import {
   Hairline,
   Note,
   PressableCard,
+  QuestionNavigator,
   Tag,
   theme,
 } from '@/shared/ui';
@@ -54,6 +56,7 @@ import {
 import type { AnswerOption } from '../domain/Assessment';
 import type { Sport } from '../domain/Sport';
 import { positionOf } from '../domain/onboardingPass';
+import { outstandingPosition, questionAt, standingPosition } from '../domain/questionNavigation';
 import { useAbandonAssessment } from '../hooks/useAbandonAssessment';
 import { useAdvanceThroughPass } from '../hooks/useAdvanceThroughPass';
 import { useAnswerQuestion } from '../hooks/useAnswerQuestion';
@@ -64,6 +67,7 @@ import { useOnboardingPass } from '../store/onboardingPass.store';
 import { LeaveAssessmentSheet } from './LeaveAssessmentSheet';
 import { OnboardingChrome } from './OnboardingChrome';
 import { difficultyTag } from './difficultyTag';
+import { navigatorLabel } from './navigatorLabel';
 import { onboardingErrorMessage } from './onboardingErrorMessage';
 import { passEyebrow } from './passEyebrow';
 import { sportLabel } from './sportPresentation';
@@ -89,7 +93,7 @@ export function QuestionScreen({ assessmentId, sport }: QuestionScreenProps) {
    * outside the running pass, and begins a pass of one sport when there is none — which is
    * the resumed run. `positionOf` still answers *nothing* for a sport it cannot place,
    * because that is the honest answer and it is the reason the route can turn those
-   * players away rather than draw them a bar with no denominator.
+   * players away rather than draw them an eyebrow claiming a position in no pass.
    */
   const position = positionOf(pass, sport);
   /**
@@ -128,16 +132,25 @@ export function QuestionScreen({ assessmentId, sport }: QuestionScreenProps) {
     question !== undefined && choice?.questionId === question.id ? choice.optionId : undefined;
 
   /**
-   * Which question this is: the answers already behind the run, plus one.
+   * Where the player is standing, and what is drawn there.
    *
-   * **The count is read from the step, never recomputed or remembered here.** It is the
-   * replayed transcript's length, so a run resumed after four answers reads as question
-   * five — on this device, on a second one, or after a reinstall. A client counting what
-   * it had itself shown could only ever say "question 1", because the transcript never
-   * lived on the device. The outstanding question is deliberately not in the server's
-   * count, which is what the plus one is.
+   * **Both are read from the step, never remembered.** The served transcript is the run's
+   * whole past on every read, so a run resumed after four answers stands at question five
+   * — on this device, on a second one, or after a reinstall — and every one of those four
+   * can be walked back to from a cache that already holds them. A client counting what it
+   * had itself shown could only ever say "question 1".
+   *
+   * `movedTo` is where the player walked, and `undefined` is *not* a position: it means
+   * they have not walked anywhere and follow the end of the run, which is what keeps them
+   * on the question their last answer produced. It is never sent anywhere and never
+   * recorded — moving is a local act, and this slice does not revise.
    */
-  const number = step === undefined ? 0 : step.questionsAsked + 1;
+  const [movedTo, setMovedTo] = useState<number>();
+  const answered = step?.transcript.length ?? 0;
+  const at = standingPosition(step, movedTo);
+  const showing = questionAt(step, at);
+  /** The recorded answer, on a question already answered. Absent on the outstanding one. */
+  const recorded = showing?.answer;
 
   // The run is over: the outstanding question is gone and a rating exists.
   useEffect(() => {
@@ -156,6 +169,22 @@ export function QuestionScreen({ assessmentId, sport }: QuestionScreenProps) {
     if (question === undefined || selectedOptionId === undefined) return;
     answer.mutate({ questionId: question.id, optionId: selectedOptionId });
   };
+
+  /**
+   * Moving, and it is the whole of what this slice does with an answered question.
+   *
+   * **Neither costs a request.** The transcript arrived with the step, so walking back to
+   * question two from question eight and forward again touches the network not at all —
+   * which is what makes looking free, and what "revisable" has to mean before it can mean
+   * anything else.
+   *
+   * Forward onto the outstanding question clears the pin rather than setting it to that
+   * position: from there the player follows the end of the run again, so the next answer
+   * does not leave them standing behind it.
+   */
+  const end = outstandingPosition(step);
+  const goBack = at > 1 ? () => setMovedTo(at - 1) : undefined;
+  const goForward = () => setMovedTo(at + 1 >= end ? undefined : at + 1);
 
   /**
    * Nothing is sent. The run stays in progress with every answer intact, and the gate is
@@ -194,8 +223,11 @@ export function QuestionScreen({ assessmentId, sport }: QuestionScreenProps) {
       >
         <OnboardingChrome
           eyebrow={passEyebrow(sport, position)}
-          title={question?.category ?? sportLabel(sport)}
-          position={position}
+          title={showing?.question.category ?? sportLabel(sport)}
+          // Back through the run, never out of it — the way out is the close control on
+          // the other side of the header, and the two must not be confused for each other.
+          onBack={goBack}
+          backLabel="Previous question"
           right={
             <CloseControl
               ref={closeControl}
@@ -203,6 +235,16 @@ export function QuestionScreen({ assessmentId, sport }: QuestionScreenProps) {
               accessibilityLabel="Leave this rating"
               accessibilityHint="Offers continuing later or stopping this sport"
             />
+          }
+          progress={
+            step === undefined ? undefined : (
+              <QuestionNavigator
+                answered={answered}
+                outstanding={question !== undefined}
+                at={at}
+                accessibilityLabel={navigatorLabel(at, answered)}
+              />
+            )
           }
         />
 
@@ -235,11 +277,11 @@ export function QuestionScreen({ assessmentId, sport }: QuestionScreenProps) {
             </View>
           ) : null}
 
-          {question !== undefined ? (
+          {showing !== undefined ? (
             <>
               <View style={s.meta}>
-                <Text style={s.counter}>{`Question ${number}`}</Text>
-                <DifficultyTag tier={question.tier} />
+                <Text style={s.counter}>{`Question ${showing.position}`}</Text>
+                <DifficultyTag tier={showing.question.tier} />
               </View>
 
               <Card>
@@ -247,48 +289,69 @@ export function QuestionScreen({ assessmentId, sport }: QuestionScreenProps) {
                     and the hairline is the fold between them — one object, two sections. */}
                 <View style={s.situation}>
                   <Text style={s.situationEyebrow}>Picture this</Text>
-                  <Text style={s.situationText}>{question.situation}</Text>
+                  <Text style={s.situationText}>{showing.question.situation}</Text>
                 </View>
 
                 <Hairline>
-                  <Text style={s.question}>{question.text}</Text>
-                  <Text style={s.qualifier}>{question.qualifier}</Text>
+                  <Text style={s.question}>{showing.question.text}</Text>
+                  <Text style={s.qualifier}>{showing.question.qualifier}</Text>
                 </Hairline>
               </Card>
 
-              {question.options.map((option) => (
-                <AnswerCard
-                  key={option.id}
-                  option={option}
-                  selected={option.id === selectedOptionId}
-                  onPress={() => setChoice({ questionId: question.id, optionId: option.id })}
-                />
-              ))}
+              {/* An answered question is shown as it was answered. Nothing here is
+                  pressable: this slice moves over answers and does not change them, and a
+                  selection that led nowhere would be a promise the screen cannot keep. */}
+              {showing.question.options.map((option) =>
+                recorded === undefined ? (
+                  <AnswerCard
+                    key={option.id}
+                    option={option}
+                    selected={option.id === selectedOptionId}
+                    onPress={() =>
+                      setChoice({ questionId: showing.question.id, optionId: option.id })
+                    }
+                  />
+                ) : (
+                  <RecordedAnswer key={option.id} option={option} chosen={option.id === recorded} />
+                ),
+              )}
             </>
           ) : null}
         </ScrollView>
 
-        {question !== undefined ? (
+        {showing !== undefined ? (
           <View style={s.action}>
             {/* A stale-step conflict never reaches here — it is recovered as a re-read, so
                 a double-tapped confirm leaves the player on the correct question with
                 nothing to dismiss. What is left is a genuine failure, and the retry is the
                 confirm control itself, with the selection still made. */}
-            {answer.error !== null ? (
+            {answer.error !== null && recorded === undefined ? (
               <Note variant="coral" accessibilityRole="alert">
                 {onboardingErrorMessage(answer.error)}
               </Note>
             ) : null}
 
-            <Button
-              label={CONFIRM_LABEL}
-              size="lg"
-              disabled={selectedOptionId === undefined}
-              busy={answer.isPending}
-              busyLabel="Submitting…"
-              accessibilityHint="Your answer cannot be changed afterwards"
-              onPress={submit}
-            />
+            {recorded === undefined ? (
+              <Button
+                label={CONFIRM_LABEL}
+                size="lg"
+                disabled={selectedOptionId === undefined}
+                busy={answer.isPending}
+                busyLabel="Submitting…"
+                accessibilityHint="Submits this answer and moves the questionnaire on"
+                onPress={submit}
+              />
+            ) : (
+              // Forward over ground already covered. It sends nothing — the answer at the
+              // next position is already in hand — so it is a move and never a second way
+              // to submit.
+              <Button
+                label="Next question"
+                size="lg"
+                accessibilityHint="Returns towards the question you are being asked"
+                onPress={goForward}
+              />
+            )}
           </View>
         ) : null}
       </SafeAreaView>
@@ -345,6 +408,34 @@ function AnswerCard({ option, selected, onPress }: AnswerCardProps) {
   );
 }
 
+/**
+ * One option on a question the player has already answered.
+ *
+ * The alternatives are shown alongside the chosen one, because re-reading what you agreed
+ * to means re-reading what you turned down — and the chosen one carries a **word**, not
+ * only a border, for the same reason the live question's selection does.
+ *
+ * It is a card rather than a pressable card: nothing on an answered question can be
+ * operated yet, and a control that looks operable and is not is worse than one that does
+ * not look it.
+ */
+function RecordedAnswer({
+  option,
+  chosen,
+}: {
+  readonly option: AnswerOption;
+  readonly chosen: boolean;
+}) {
+  return (
+    <View accessible accessibilityLabel={chosen ? `${option.text}. Your answer.` : option.text}>
+      <Card style={[s.answer, chosen ? s.chosen : undefined]}>
+        <Text style={s.answerText}>{option.text}</Text>
+        {chosen ? <Text style={s.selectedMark}>Your answer</Text> : null}
+      </Card>
+    </View>
+  );
+}
+
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: theme.color.paper },
   content: {
@@ -381,6 +472,10 @@ const s = StyleSheet.create({
   question: { ...theme.type.question, color: theme.color.ink },
   qualifier: { ...theme.type.tiny, color: theme.color.muted, marginTop: theme.space.xxs },
   answer: { flexDirection: 'row', alignItems: 'center', gap: theme.space.sm },
+  // The selected border a chosen answer carries on the live question, on a card that
+  // cannot be pressed to acquire it. Selection is a state, not an action, so it is `ink`
+  // — and the word beside it is what carries the state where the colour cannot.
+  chosen: { borderColor: theme.color.ink },
   answerText: { ...theme.type.h2, color: theme.color.ink, flex: 1 },
   selectedMark: {
     ...theme.type.eyebrow,

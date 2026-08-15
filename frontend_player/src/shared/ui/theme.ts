@@ -290,6 +290,26 @@ const size = {
     bracketStroke: 2,
     namesTop: 24,
   },
+  /** The question navigator — the third drawn object, per docs/design-system.md 7.9.
+   *
+   *  Fixed-width segments in a left-aligned row: the row GROWS and never arrives, which
+   *  is how it claims no total. A flex-filled track would put the last segment at the
+   *  right edge and assert a denominator the engine does not have. At the engine's
+   *  10-question ceiling the row is 10 x 12 + 9 x 3 = 147pt against 290pt of content on
+   *  the narrowest phone, so it is visibly short of the end at every length it reaches.
+   *
+   *  `currentHeight` is double `segmentHeight` for the same reason the level bar's mark
+   *  is double its track: height carries the state, never opacity alone. The segments are
+   *  NOT touch targets — ten of them across the content width is 26pt each against the
+   *  44pt minimum, so the navigator indicates and the header's back control moves. */
+  navigator: {
+    segmentWidth: 12,
+    segmentHeight: 4, // = size.bar
+    segmentRadius: 2,
+    currentHeight: 8,
+    currentRadius: 3,
+    gap: 3,
+  },
   balanceBar: 24,
   sportDot: 6,
   infoGlyph: 14,

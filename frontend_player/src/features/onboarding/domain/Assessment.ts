@@ -36,6 +36,19 @@ export interface Question {
 }
 
 /**
+ * One question already answered: the question **as it was asked**, and what was chosen.
+ *
+ * The copy is carried rather than referenced because the server is the only thing that
+ * ever held it. A run resumed after a reinstall, or picked up on a second handset, has
+ * nothing on the device to render an answered question from — which is why the transcript
+ * is served on every step instead of accumulated as the player answers.
+ */
+export interface AnsweredQuestion {
+  readonly question: Question;
+  readonly optionId: string;
+}
+
+/**
  * How a run ended, where it ended at all.
  *
  * The two terminal states are **not interchangeable and demand opposite screens**: a
@@ -71,6 +84,17 @@ export interface AssessmentStep {
    * the only thing that ever survived a resume, a reinstall or a second handset.
    */
   readonly questionsAsked: number;
+  /**
+   * Every answer given so far, in the order they were given — the run's whole past, on
+   * every read.
+   *
+   * **Empty, never absent, and never remembered.** It is replayed from the stream on each
+   * response, so it survives a resume, a reinstall and a second handset; and a client that
+   * counted what it had itself shown would be wrong in the one direction it could not
+   * detect, because a revision makes the transcript *shorter* than the one before it.
+   * Its length is `questionsAsked`; the outstanding `question` is not in it.
+   */
+  readonly transcript: readonly AnsweredQuestion[];
   readonly question: Question | undefined;
   /** The rating this run produced, once it has produced one. */
   readonly result: AssessmentResult | undefined;
