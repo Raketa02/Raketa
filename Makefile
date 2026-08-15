@@ -6,7 +6,7 @@
 # genuinely span apps.
 # ----------------------------------------------------------------------------
 .PHONY: help gen-api openapi check check-backend check-club check-player \
-        test-hooks afk-install afk-build afk
+        test-hooks test-drift afk-install afk-build afk
 
 help:              ## list targets
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS=":.*?## "}; {printf "\033[36m%-16s\033[0m %s\n", $$1, $$2}'
@@ -14,14 +14,15 @@ help:              ## list targets
 # ----------------------------------------------------------------------------
 # API contract — the backend is the source of truth (docs/adr/0006).
 # ----------------------------------------------------------------------------
-openapi:           ## dump backend/openapi.json from the FastAPI app
+openapi:           ## emit the contract as two documents (player + club)
 	$(MAKE) -C backend openapi
 
 gen-api: openapi   ## regenerate BOTH clients' wire types from the contract
 	cd frontend_club   && pnpm gen:api
 	cd frontend_player && pnpm gen:api
 	@echo "Regenerated frontend_club/src/generated/ and frontend_player/src/generated/"
-	@echo "Commit both, along with backend/openapi.json."
+	@echo "Commit both, along with backend/openapi.player.json and backend/openapi.club.json."
+	@echo "CI diffs them (make test-drift covers the check itself)."
 
 # ----------------------------------------------------------------------------
 # Gates. Each app's own `check` is the real one; these just fan out.
@@ -42,6 +43,9 @@ check: check-backend check-club check-player  ## every app's gate
 # ----------------------------------------------------------------------------
 test-hooks:        ## verify the ownership + bash guardrails still match
 	bash .claude/hooks/test-hooks.sh
+
+test-drift:        ## verify the contract drift check still fires
+	bash .github/scripts/test-contract-drift.sh
 
 # ----------------------------------------------------------------------------
 # AFK agent loop (sandbuket). See tools/afk/README.md.

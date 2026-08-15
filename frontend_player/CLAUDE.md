@@ -205,8 +205,11 @@ asymmetry by adding a proxy, and don't copy the club app's cookie code here.
 ## Git & domain language
 
 Conventional Commits scoped `player`: `feat(player): court search filters`. Run `pnpm check`
-before pushing. **Contract drift fails the build:** CI regenerates from
-`backend/openapi.player.json` and diffs — commit the regenerated `src/generated/`. Before opening a
+before pushing. **Contract drift fails the build:** this app's CI job regenerates from
+`backend/openapi.player.json` with the `openapi-typescript` its own lockfile pins, and diffs
+— commit the regenerated `src/generated/`. It is **not** part of `pnpm check`, so a local
+gate can be green while CI is not. The job also runs on a backend-only pull request, because
+its paths filter watches that document alongside `frontend_player/**`. Before opening a
 PR, walk the Definition of Done in
 [`docs/architecture.md` Part 20](docs/architecture.md#part-20--definition-of-done-and-the-pr-checklist).
 

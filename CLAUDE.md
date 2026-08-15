@@ -32,7 +32,11 @@ the hooks themselves, `make gen-api`.
 - **The backend owns the API contract.** It is emitted as two documents —
   `backend/openapi.player.json` and `backend/openapi.club.json` — and each client generates
   its wire types from its own, never hand-writing a DTO mirroring a backend response
-  ([ADR-0006](docs/adr/0006-backend-owns-api-contract.md)). Regenerate with `make gen-api`.
+  ([ADR-0006](docs/adr/0006-backend-owns-api-contract.md)). Regenerate with `make gen-api`
+  and commit the result — CI regenerates and diffs, so a contract change shipped without
+  its client types fails the build
+  ([`.github/scripts/check-contract-drift.sh`](.github/scripts/check-contract-drift.sh),
+  proven still to fire by `make test-drift`).
 - **One session changes one app.** A `PreToolUse` hook blocks writes that cross an app
   boundary. A block is information — surface it, don't route around it. See
   [`docs/agents/ownership-boundaries.md`](docs/agents/ownership-boundaries.md).
