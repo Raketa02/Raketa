@@ -34,17 +34,28 @@ async def _ratings(client, headers):
 
 
 async def _rate_as_beginner(client, headers, sport):
-    """Take the shortest honest path to a stored rating: answer "never played"."""
+    """Take the shortest honest path to a stored rating: answer "never played".
+
+    Two calls, because the questionnaire stopping and the assessment completing
+    are two moments — the answer ends the questioning and the completion is what
+    creates the rating (``docs/adr/0020``).
+    """
 
     created = (
         await client.post(
             "/api/v1/assessments", json={"sport": sport}, headers=headers
         )
     ).json()
-    done = await client.post(
+    stopped = await client.post(
         f"/api/v1/assessments/{created['assessment_id']}/answers",
         json={"question_id": created["question"]["id"], "option_id": "never-played"},
         headers=headers,
+    )
+    assert stopped.status_code == 200, stopped.text
+    assert stopped.json()["status"] == "in_progress"
+
+    done = await client.post(
+        f"/api/v1/assessments/{created['assessment_id']}/completion", headers=headers
     )
     assert done.status_code == 200, done.text
     body = done.json()

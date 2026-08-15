@@ -69,6 +69,20 @@ class AbandonAssessmentCommand:
 
 
 @dataclass(frozen=True)
+class CompleteAssessmentCommand:
+    """Finish a stopped run: create its Skill rating and hand back the result.
+
+    Carries nothing but the two ids. What the rating is made of is the whole
+    transcript, which the server already holds — a completion that named the
+    answers it was completing would be a second account of the run, arriving
+    from the one place that must not be able to author one.
+    """
+
+    player_id: UUID
+    assessment_id: UUID
+
+
+@dataclass(frozen=True)
 class ListRatingsQuery:
     player_id: UUID
 
@@ -97,8 +111,13 @@ class TranscriptEntry:
 class AssessmentStep:
     """The server-driven step: the current question, or the final result.
 
-    Exactly one of ``question`` / ``result`` is set. The client holds no flow
-    state — this mutation response *is* the current state of the assessment.
+    **At most one** of ``question`` / ``result`` is set — it was exactly one
+    until stopping and completing became two moments (``docs/adr/0020``).
+    Neither means the run is not asking and has not been rated, which ``status``
+    resolves: ``in_progress`` is a questionnaire that has stopped and is waiting
+    for the request that creates its rating, and ``abandoned`` is a run that
+    ended without one. The client holds no flow state — this mutation response
+    *is* the current state of the assessment.
 
     ``questions_asked`` is how many answers are already behind the run, which is
     what lets a resumed run report the position it is really at. It is required

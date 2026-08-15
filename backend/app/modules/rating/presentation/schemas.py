@@ -274,11 +274,37 @@ class RatingsResponse(BaseModel):
 
 
 class AssessmentStepResponse(BaseModel):
-    """The server-driven step: exactly one of ``question`` / ``result`` is set,
-    and ``transcript`` is everything already answered behind it."""
+    """The server-driven step: at most one of `question` / `result` is set, and
+    `transcript` is everything already answered behind it. Neither means the run
+    is not asking and has not been rated — see `status`."""
 
+    # The invariant was *exactly* one until the questionnaire's stop and the
+    # assessment's completion became two moments (docs/adr/0020). Both absent is
+    # now a state a live run passes through and sits in, and `status` is what
+    # separates it from an abandoned run. Weakening it rather than adding a flag
+    # keeps every field where it was: no client that reads `question` first has
+    # to learn a new one.
+    #
+    # Kept as a comment rather than added to the docstring above, because a
+    # response model's docstring *is* wire copy: it lands in the API document as
+    # the schema description. The lines that remain are written for a client.
     assessment_id: str
-    status: str
+    status: str = Field(
+        ...,
+        description=(
+            "`in_progress`, `completed` or `abandoned` — and the field that says "
+            "which of two things *neither a question nor a result* means.\n\n"
+            "- `in_progress` **with** a `question`: the questionnaire, awaiting "
+            "that answer.\n"
+            "- `in_progress` with **neither**: the questionnaire has **stopped**. "
+            "No remaining question would meaningfully tighten the estimate, and "
+            "nothing has been rated — every answer is still revisable, and "
+            "`POST /assessments/{assessment_id}/completion` is what creates the "
+            "Skill rating.\n"
+            "- `completed`: the `result` is here and the answers are settled.\n"
+            "- `abandoned`: neither, and the run ended without a rating."
+        ),
+    )
     questions_asked: int = Field(
         ...,
         description=(

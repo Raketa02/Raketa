@@ -1,10 +1,10 @@
 """Rating-context errors, rendered as structured JSON over HTTP.
 
-Each carries its own wire code. The four 409s are the reason that matters: they
+Each carries its own wire code. The five 409s are the reason that matters: they
 arrive on the same status from the same endpoint family — a double-tapped
 confirm, the same assessment resumed on a second device, a sport already rated, a
-change arriving after the rating exists — and they ask the client for opposite
-recoveries.
+change arriving after the rating exists, a rating asked for before the
+questionnaire has stopped — and they ask the client for opposite recoveries.
 """
 
 from __future__ import annotations
@@ -80,6 +80,33 @@ class AnswerNoLongerRevisable(ConflictError):
 
     def __init__(self) -> None:
         super().__init__("This assessment's rating exists; its answers are settled.")
+
+
+class AssessmentNotStopped(ConflictError):
+    """A rating was asked for from a questionnaire that has not stopped asking.
+
+    **Stopping and completing are two moments** (``docs/adr/0020``). The
+    questionnaire stops when the engine judges no remaining question would
+    meaningfully tighten the estimate; the rating is created by a separate,
+    explicit request, and that request is refused until the stop has happened.
+    Between the two the run sits in progress with nothing outstanding, which is
+    what lets a review screen exist without inventing a status.
+
+    Two runs get this, and one recovery answers both: a run still holding an
+    outstanding question, and a run that ended by being **abandoned** — which
+    never stopped, it stopped being. In both cases the client refetches the
+    current step and renders it, which is a question in the first case and a way
+    out of the flow in the second.
+
+    Not ``assessment_already_finished``, which says a rating already exists, and
+    not ``question_not_outstanding``, which is about a submission naming the
+    wrong question. This one is about *when* a rating may be created.
+    """
+
+    code = "assessment_not_stopped"
+
+    def __init__(self) -> None:
+        super().__init__("This assessment's questionnaire has not finished asking.")
 
 
 class SportAlreadyRated(ConflictError):

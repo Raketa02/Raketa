@@ -22,10 +22,12 @@ from app.kernel import Sport
 from app.modules.rating.application.commands import (
     AssessmentStart,
     AssessmentStep,
+    CompleteAssessmentCommand,
     CreateAssessmentCommand,
     GetAssessmentQuery,
     SubmitAnswerCommand,
 )
+from app.modules.rating.application.complete_assessment import CompleteAssessment
 from app.modules.rating.application.create_assessment import CreateAssessment
 from app.modules.rating.application.get_assessment import GetAssessment
 from app.modules.rating.application.list_ratings import ListPlayerRatings
@@ -55,6 +57,7 @@ class Request:
     uow: CountingUnitOfWork
     create: CreateAssessment
     submit: SubmitAnswer
+    complete: CompleteAssessment
     get: GetAssessment
     list_ratings: ListPlayerRatings
 
@@ -80,6 +83,12 @@ def request(store: InMemoryEventStore) -> Request:
             clock=clock,
         ),
         submit=SubmitAnswer(
+            engine=engine,
+            assessments=repository,
+            uow=uow,
+            clock=clock,
+        ),
+        complete=CompleteAssessment(
             engine=engine,
             assessments=repository,
             ratings=ratings,
@@ -126,18 +135,18 @@ async def read(
     )
 
 
-async def run_to_result(
+async def run_to_stop(
     store: InMemoryEventStore,
     player_id: UUID,
     sport: Sport = Sport.PADEL,
     option: int = -1,
 ) -> tuple[AssessmentStep, Request]:
-    """Answer until the engine returns a result; hand back the last request too.
+    """Answer until the engine stops asking; hand back the last request too.
 
     The caller cannot know which question is the last one — the engine decides it
     has heard enough only after an answer arrives — so this is the same loop a
-    client runs. The final ``Request`` is returned because what the completing
-    call wrote, published and committed is the thing worth asserting about.
+    client runs. The step it ends on carries **neither** a question nor a result:
+    the questionnaire has stopped and no rating exists yet.
     """
 
     step = (await start(store, player_id, sport)).step
@@ -153,6 +162,30 @@ async def run_to_result(
                 option_id=step.question.options[option].id,
             )
         )
+    return step, last
+
+
+async def run_to_result(
+    store: InMemoryEventStore,
+    player_id: UUID,
+    sport: Sport = Sport.PADEL,
+    option: int = -1,
+) -> tuple[AssessmentStep, Request]:
+    """Answer to the stop, then ask for the rating — the whole client flow.
+
+    The final ``Request`` is the **completing** one, because what that call
+    wrote, published and committed is the thing worth asserting about. It is a
+    separate request now: answering the last question no longer creates
+    anything (``docs/adr/0020``).
+    """
+
+    stopped, _ = await run_to_stop(store, player_id, sport, option)
+    last = request(store)
+    step = await last.complete.execute(
+        CompleteAssessmentCommand(
+            player_id=player_id, assessment_id=stopped.assessment_id
+        )
+    )
     return step, last
 
 

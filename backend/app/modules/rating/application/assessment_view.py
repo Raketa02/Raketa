@@ -2,9 +2,16 @@
 
 The client holds no flow state, so every read of an assessment answers the same
 question the mutation responses do: *what is the current step* — the outstanding
-question, the final result, or neither once it has been abandoned. Because the
-engine is deterministic, the outstanding question is reproduced from the answered
-transcript rather than stored a second time.
+question, the final result, or neither. Because the engine is deterministic, the
+outstanding question is reproduced from the answered transcript rather than
+stored a second time.
+
+**Neither is now two states rather than one.** A run that has been abandoned has
+no question and no result, and so does a run whose questionnaire has *stopped*
+and whose rating has not yet been asked for (``docs/adr/0020``). ``status`` is
+what tells them apart, and it always did: the stopped run is still
+``in_progress``. So a step carries *at most* one of question and result, where it
+once carried exactly one.
 
 The finished result is reproduced the same way, and for the same reason. Its
 numbers are recorded on the stream, but its *explanation* — the factor rows and
@@ -19,16 +26,53 @@ from app.engines.assessment import (
     AskQuestion,
     AssessmentEngine,
     AssessmentResult,
+    Complete,
     Question,
 )
 from app.modules.rating.application.commands import AssessmentStep, TranscriptEntry
 from app.modules.rating.domain.assessment import Assessment
 
 
-def outstanding_question(engine: AssessmentEngine, assessment: Assessment) -> Question:
+def pending_question(
+    engine: AssessmentEngine, assessment: Assessment
+) -> Question | None:
+    """The question this run is waiting on, or ``None`` because it has stopped.
+
+    Both answers are ordinary. The engine decides it has heard enough only after
+    an answer arrives, so *there is no next question* is a step a live run
+    reaches and sits at, not an error and not the end of the run.
+    """
+
     step = engine.next_step(sport=assessment.sport, transcript=assessment.transcript)
-    assert isinstance(step, AskQuestion)
-    return step.question
+    return step.question if isinstance(step, AskQuestion) else None
+
+
+def stop_reached(
+    engine: AssessmentEngine, assessment: Assessment
+) -> Complete | None:
+    """The stop this run's answers have reached, or ``None`` while it wants more.
+
+    The stop itself rather than a boolean, because the caller that asks this is
+    the one about to record it: the reason and the value that drove it are the
+    questionnaire's last routing decision, and they belong on the completion
+    beside the rest of it.
+    """
+
+    step = engine.next_step(sport=assessment.sport, transcript=assessment.transcript)
+    return step if isinstance(step, Complete) else None
+
+
+def outstanding_question(engine: AssessmentEngine, assessment: Assessment) -> Question:
+    """The question this run is waiting on, where a caller requires there to be one.
+
+    Only sound where the aggregate has already said a question is outstanding —
+    answering one, for instance. Anywhere else, a run may legitimately have
+    stopped: ask ``pending_question``.
+    """
+
+    question = pending_question(engine, assessment)
+    assert question is not None
+    return question
 
 
 def served_transcript(
@@ -132,11 +176,15 @@ def current_step(engine: AssessmentEngine, assessment: Assessment) -> Assessment
             question=None,
             result=None,
         )
+    # In progress. Either the engine still wants an answer, or it has stopped and
+    # the run is waiting on the request that creates its rating — in progress
+    # with nothing outstanding, which needs no status of its own because it is
+    # the absence of an outstanding question.
     return AssessmentStep(
         assessment_id=assessment.id,
         status=assessment.status.value,
         questions_asked=answered,
         transcript=transcript,
-        question=outstanding_question(engine, assessment),
+        question=pending_question(engine, assessment),
         result=None,
     )

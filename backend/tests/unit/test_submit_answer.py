@@ -4,13 +4,13 @@ Idempotency comes from the domain, not a header. What a submission *means* is
 decided by what the transcript already holds: an answer for the outstanding
 question, a **revision** for a question already answered with a different option,
 and a replay — recording nothing — for one answered with the same option.
-Anything else conflicts. Completion writes two streams in one transaction, which
-is the assertion this file exists for — it was reachable only through HTTP over
-SQLite before the repository.
+Anything else conflicts.
 
-Completion also records **why the questionnaire stopped**. Nothing serves it, and
-that is deliberate: a decision never recorded cannot be recovered later, so it is
-written from the day it ships rather than from the day something reads it.
+**Nothing here creates a rating.** Answering the question the engine has heard
+enough after records an answer and stops, leaving the run in progress with
+nothing outstanding; what happens next is ``test_complete_assessment.py``'s,
+which is where the single completion transaction and the recorded stop moved
+when the two moments separated (ADR-0020).
 """
 
 from __future__ import annotations
@@ -20,13 +20,7 @@ from uuid import UUID
 import pytest
 
 from app.application.events.store import EventStreamVersionConflict
-from app.engines.racketskill.v3.engine import (
-    MIN_MARGINAL_GAIN,
-    STOP_BEGINNER,
-    STOP_MARGINAL,
-)
 from app.engines.racketskill.v3.questions import NEVER_PLAYED_OPTION_ID
-from app.kernel import Sport
 from app.modules.rating.application.commands import (
     AssessmentStep,
     SubmitAnswerCommand,
@@ -42,16 +36,10 @@ from app.modules.rating.domain.errors import (
 from app.modules.rating.domain.events import (
     AnswerRevised,
     AnswerSubmitted,
-    AssessmentCompleted,
     QuestionAsked,
-    RatingInitialised,
 )
-from app.modules.rating.domain.ids import skill_rating_id
 from app.modules.rating.infrastructure.event_sourced_assessment_repository import (
     ASSESSMENT_AGGREGATE,
-)
-from app.modules.rating.infrastructure.event_sourced_skill_rating_repository import (
-    RATING_AGGREGATE,
 )
 from app.shared.ids import new_uuid
 from tests.unit.assessment_requests import (
@@ -225,57 +213,6 @@ async def test_an_absent_assessment_is_not_found() -> None:
     assert call.uow.commits == 0
 
 
-async def test_completing_writes_both_streams_in_one_transaction() -> None:
-    store = InMemoryEventStore()
-    player_id = new_uuid()
-
-    final, completing = await run_to_result(store, player_id, Sport.PADEL)
-
-    assert final.question is None and final.result is not None
-
-    assessment_stream = await store.load_stream(
-        aggregate_type=ASSESSMENT_AGGREGATE, aggregate_id=final.assessment_id
-    )
-    assert isinstance(assessment_stream[-1].event, AssessmentCompleted)
-
-    rating_stream = await store.load_stream(
-        aggregate_type=RATING_AGGREGATE,
-        aggregate_id=skill_rating_id(player_id, Sport.PADEL),
-    )
-    assert [type(record.event) for record in rating_stream] == [RatingInitialised]
-
-    # One transaction for two aggregates, and the assessment's events reach the
-    # outbox before the rating's — the order they happened in.
-    assert completing.uow.commits == 1
-    assert [type(event) for event in completing.events.published] == [
-        AnswerSubmitted,
-        AssessmentCompleted,
-        RatingInitialised,
-    ]
-
-
-async def test_the_recorded_rating_is_the_result_the_player_was_shown() -> None:
-    # Two streams written from one engine call, so a rating cannot describe a
-    # different run from the one the response reported.
-    store = InMemoryEventStore()
-    player_id = new_uuid()
-
-    final, _ = await run_to_result(store, player_id, Sport.TENNIS)
-    result = final.result
-    assert result is not None
-
-    rating_stream = await store.load_stream(
-        aggregate_type=RATING_AGGREGATE,
-        aggregate_id=skill_rating_id(player_id, Sport.TENNIS),
-    )
-    initialised = rating_stream[0].event
-    assert isinstance(initialised, RatingInitialised)
-    assert initialised.mu == result.mu
-    assert initialised.sigma == result.sigma
-    assert initialised.band_name == result.band.name
-    assert initialised.source_assessment_id == final.assessment_id
-
-
 async def test_replaying_the_answer_that_finished_a_run_returns_its_result() -> None:
     # The replay branch is guarded on the question id alone, and a finished run
     # keeps its last-answered id, so a retry of the answer that ended the run
@@ -309,80 +246,6 @@ async def test_replaying_the_answer_that_finished_a_run_returns_its_result() -> 
     assert again.result.mu == final.result.mu
     assert store.appends == 0
     assert call.uow.commits == 0
-
-
-# --- The stop, recorded on the stream ------------------------------------------
-
-
-async def _completion(
-    store: InMemoryEventStore, assessment_id: UUID
-) -> AssessmentCompleted:
-    """The completion event as the store hands it back — encoded and decoded."""
-
-    stream = await store.load_stream(
-        aggregate_type=ASSESSMENT_AGGREGATE, aggregate_id=assessment_id
-    )
-    completed = stream[-1].event
-    assert isinstance(completed, AssessmentCompleted)
-    return completed
-
-
-async def test_the_beginner_fast_path_records_that_it_is_why_the_run_stopped() -> None:
-    # A run of one question is the shortest thing this engine produces, and
-    # nothing about the transcript says whether that was the fast path or a
-    # questionnaire that ran out of useful questions after one answer. The stop
-    # is what distinguishes them, and it is the only place either is written.
-    store = InMemoryEventStore()
-    player_id = new_uuid()
-    opening = (await start(store, player_id)).step
-    assert opening.question is not None
-
-    final = await request(store).submit.execute(
-        SubmitAnswerCommand(
-            player_id=player_id,
-            assessment_id=opening.assessment_id,
-            question_id=opening.question.id,
-            option_id=NEVER_PLAYED_OPTION_ID,
-        )
-    )
-    assert final.result is not None
-
-    completed = await _completion(store, final.assessment_id)
-    assert completed.stop_reason == STOP_BEGINNER
-    assert completed.stop_value == 0.0
-
-
-async def test_a_run_that_runs_out_of_useful_questions_records_the_gain() -> None:
-    # The ordinary stop. The value is the marginal gain the best remaining
-    # question offered, so it is asserted against the threshold that rejected it
-    # rather than against a typed-in number — which is what makes the recorded
-    # value usable for retuning that threshold against real runs.
-    store = InMemoryEventStore()
-    player_id = new_uuid()
-
-    final, _ = await run_to_result(store, player_id, Sport.PADEL)
-
-    completed = await _completion(store, final.assessment_id)
-    assert completed.stop_reason == STOP_MARGINAL
-    assert completed.stop_value is not None
-    assert completed.stop_value < MIN_MARGINAL_GAIN
-
-
-async def test_the_stop_is_readable_from_a_reloaded_assessment() -> None:
-    # Through the repository, which is how a projection will reach it: the
-    # aggregate carries the stop across replay rather than it being a fact only
-    # the raw stream holds.
-    store = InMemoryEventStore()
-    player_id = new_uuid()
-    final, _ = await run_to_result(store, player_id, Sport.TENNIS)
-
-    reloaded = await request(store).repository.load(
-        final.assessment_id, for_player=player_id
-    )
-
-    assert reloaded.is_completed
-    assert reloaded.stop_reason == STOP_MARGINAL
-    assert reloaded.stop_value is not None
 
 
 # --- Revising: the transcript truncates, the stream does not ---------------------
@@ -507,27 +370,25 @@ async def test_re_selecting_the_option_already_recorded_records_nothing() -> Non
 
 async def test_a_revision_can_stop_the_run() -> None:
     # The client must not have to predict this: ``never-played`` on the opening
-    # question ends the questionnaire wherever it is submitted from, so a
-    # revision reaches the completion path by exactly the route a last answer
-    # does. Under ADR-0020 a stop is still what creates the rating; #59 is what
-    # separates the two.
+    # question ends the questioning wherever it is submitted from, so a revision
+    # reaches the stop by exactly the route a last answer does — which is what
+    # makes this need no special case in the use case.
     store = InMemoryEventStore()
     player_id = new_uuid()
     step = await _answered_run(store, player_id, answers=3)
 
-    final, call = await _revise(
+    stopped, call = await _revise(
         store, player_id, step, position=0, option_id=NEVER_PLAYED_OPTION_ID
     )
 
-    assert final.question is None
-    assert final.result is not None
-    assert final.status == "completed"
-    assert final.result.questions_asked == 1
-    assert [type(event) for event in call.events.published] == [
-        AnswerRevised,
-        AssessmentCompleted,
-        RatingInitialised,
-    ]
+    assert stopped.question is None
+    # Stopped, not rated. A revision cannot create a rating any more than an
+    # answer can, so a player who changes their mind into the fast path still
+    # gets the review before anything exists.
+    assert stopped.result is None
+    assert stopped.status == "in_progress"
+    assert stopped.questions_asked == 1
+    assert [type(event) for event in call.events.published] == [AnswerRevised]
     assert call.uow.commits == 1
 
 

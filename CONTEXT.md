@@ -53,6 +53,15 @@ A rating is **never only a number**.
   chosen from the estimate as it then stood, so an answer that outlived a change to an
   earlier one would mean something the player never said. Re-selecting the option already
   recorded is not a revision and changes nothing.
+- **Stop** — the moment the engine judges that no remaining question would meaningfully
+  tighten the estimate. The questionnaire ends there and *nothing is rated*: the run sits
+  in progress with nothing outstanding, and every answer stays revisable. A stop is a fact
+  about the transcript rather than a state anything records, so it is asked of the engine
+  and never stored.
+- **Completion** — the separate, explicit act that ends an assessment and brings its Skill
+  rating into existence. This is the irreversible moment, and the only one — which is what
+  lets a player see every answer laid out, still changeable, before it becomes a number.
+  Stopping and completing are deliberately two moments and not one.
 - **Claim** / **demonstration** — every answer is one or the other. A claim is a statement
   about standing (how often you play, what you compete in, how you do against your usual
   group). A demonstration is a statement about what you do inside a point.
@@ -105,6 +114,11 @@ A rating is **never only a number**.
   produced a Skill rating, its answers are settled: the account of a player stops moving at
   the moment the platform starts relying on it. This is the same invariant as *a level is
   proved, never declared*, read from the other end.
+- **The questionnaire stopping is not the rating existing.** Stopping is the engine having
+  heard enough; completion is a separate act that a player performs, and only completion
+  creates a rating. Nothing that ends the questioning — the last answer, or a revision that
+  reaches the beginner fast path — may create one as a side effect, because a player must
+  be able to see what they said before it becomes a number.
 - **There is no *onboarded player*.** Onboarding is not a state a player is in or out of;
   it is how a Skill rating comes to exist, and a rating is per sport. A player can be rated
   at padel and unrated at tennis at the same moment, indefinitely. Anything that needs to

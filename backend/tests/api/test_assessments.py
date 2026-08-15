@@ -62,12 +62,19 @@ async def _abandon(client, headers, assessment_id):
     )
 
 
-async def _run_to_result(client, headers, sport="PADEL", option=-1):
-    """Answer whatever the server asks until it returns a result.
+async def _complete(client, headers, assessment_id):
+    return await client.post(
+        f"/api/v1/assessments/{assessment_id}/completion", headers=headers
+    )
+
+
+async def _run_to_stop(client, headers, sport="PADEL", option=-1):
+    """Answer whatever the server asks until it stops asking.
 
     The client cannot know which question is the last one — the engine decides it
     has enough only after an answer arrives — so the loop is exactly what a client
-    must do: keep answering until ``question`` comes back null.
+    must do: keep answering until ``question`` comes back null. The step it ends
+    on carries neither a question nor a result, and no rating exists yet.
     """
 
     body = (await _create(client, headers, sport)).json()
@@ -83,6 +90,37 @@ async def _run_to_result(client, headers, sport="PADEL", option=-1):
         assert resp.status_code == 200, resp.text
         body = resp.json()
     return body
+
+
+async def _run_to_result(client, headers, sport="PADEL", option=-1):
+    """Answer to the stop, then ask for the rating — the whole client flow.
+
+    Two moments, not one: the rating is created by ``POST /completion``, which is
+    the only irreversible call a player makes (``docs/adr/0020``).
+    """
+
+    stopped = await _run_to_stop(client, headers, sport, option)
+    resp = await _complete(client, headers, stopped["assessment_id"])
+    assert resp.status_code == 200, resp.text
+    return resp.json()
+
+
+async def _beginner_to_result(client, headers, sport="PADEL"):
+    """The shortest run there is: *I have never played*, then the rating."""
+
+    created = (await _create(client, headers, sport)).json()
+    stopped = (
+        await _answer(
+            client,
+            headers,
+            created["assessment_id"],
+            created["question"]["id"],
+            "never-played",
+        )
+    ).json()
+    resp = await _complete(client, headers, stopped["assessment_id"])
+    assert resp.status_code == 200, resp.text
+    return resp.json()
 
 
 @pytest.mark.asyncio
@@ -300,18 +338,8 @@ async def test_both_start_outcomes_are_stated_on_the_operation():
 @pytest.mark.asyncio
 async def test_beginner_answer_returns_the_exact_result(client, valid_signup_payload):
     headers = await _auth_headers(client, valid_signup_payload)
-    created = (await _create(client, headers)).json()
+    body = await _beginner_to_result(client, headers)
 
-    resp = await _answer(
-        client,
-        headers,
-        created["assessment_id"],
-        created["question"]["id"],
-        "never-played",
-    )
-
-    assert resp.status_code == 200, resp.text
-    body = resp.json()
     assert body["question"] is None
     assert body["status"] == "completed"
     result = body["result"]
@@ -330,14 +358,7 @@ async def test_completion_writes_both_streams_in_one_transaction(
     client, session_factory, valid_signup_payload
 ):
     headers = await _auth_headers(client, valid_signup_payload)
-    created = (await _create(client, headers)).json()
-    await _answer(
-        client,
-        headers,
-        created["assessment_id"],
-        created["question"]["id"],
-        "never-played",
-    )
+    await _beginner_to_result(client, headers)
 
     async with session_factory() as session:
         rows = (
@@ -377,15 +398,20 @@ async def test_resubmitting_the_answered_question_is_idempotent(
     resp = await _answer(client, headers, aid, qid, "never-played")
 
     assert resp.status_code == 200, resp.text
-    assert resp.json()["result"] == first["result"]
+    # Both are the **stopped** step — no question left to ask, and nothing rated
+    # — and the replay describes the run exactly as the answer that reached it
+    # did, down to the transcript.
+    assert first["question"] is None and first["result"] is None
+    assert resp.json() == first
 
-    # Records nothing on replay: exactly one answer and one rating-init survive.
+    # Records nothing on replay, and the answer that stopped the run recorded no
+    # rating either: only completion does that.
     async with session_factory() as session:
         rows = (await session.execute(select(EventStoreORM))).scalars().all()
     event_types = [r.event_type for r in rows]
     assert event_types.count("rating.answer_submitted") == 1
-    assert event_types.count("rating.assessment_completed") == 1
-    assert event_types.count("rating.rating_initialised") == 1
+    assert event_types.count("rating.assessment_completed") == 0
+    assert event_types.count("rating.rating_initialised") == 0
 
 
 @pytest.mark.asyncio
@@ -396,6 +422,7 @@ async def test_finished_assessment_conflicts_on_a_different_question(
     created = (await _create(client, headers)).json()
     aid, qid = created["assessment_id"], created["question"]["id"]
     await _answer(client, headers, aid, qid, "never-played")
+    assert (await _complete(client, headers, aid)).status_code == 200
 
     resp = await _answer(client, headers, aid, "some.other.question", "x")
     assert resp.status_code == 409
@@ -460,16 +487,9 @@ async def test_fetch_a_finished_assessment_returns_its_result(
     client, valid_signup_payload
 ):
     headers = await _auth_headers(client, valid_signup_payload)
-    created = (await _create(client, headers)).json()
-    await _answer(
-        client,
-        headers,
-        created["assessment_id"],
-        created["question"]["id"],
-        "never-played",
-    )
+    finished = await _beginner_to_result(client, headers)
 
-    resp = await _get(client, headers, created["assessment_id"])
+    resp = await _get(client, headers, finished["assessment_id"])
 
     assert resp.status_code == 200, resp.text
     body = resp.json()
@@ -700,15 +720,14 @@ async def test_resuming_continues_the_same_stream(
     created = (await _create(client, headers)).json()
 
     resumed = (await _in_progress(client, headers, "PADEL")).json()
-    done = (
-        await _answer(
-            client,
-            headers,
-            resumed["assessment_id"],
-            resumed["question"]["id"],
-            "never-played",
-        )
-    ).json()
+    await _answer(
+        client,
+        headers,
+        resumed["assessment_id"],
+        resumed["question"]["id"],
+        "never-played",
+    )
+    done = (await _complete(client, headers, resumed["assessment_id"])).json()
 
     assert resumed["assessment_id"] == created["assessment_id"]
     assert done["status"] == "completed"
@@ -784,16 +803,9 @@ async def test_abandoning_one_sport_leaves_another_untouched(
 @pytest.mark.asyncio
 async def test_abandoning_a_finished_assessment_conflicts(client, valid_signup_payload):
     headers = await _auth_headers(client, valid_signup_payload)
-    created = (await _create(client, headers)).json()
-    await _answer(
-        client,
-        headers,
-        created["assessment_id"],
-        created["question"]["id"],
-        "never-played",
-    )
+    finished = await _beginner_to_result(client, headers)
 
-    resp = await _abandon(client, headers, created["assessment_id"])
+    resp = await _abandon(client, headers, finished["assessment_id"])
     assert resp.status_code == 409
     # Jump to the result: the rating already exists. Distinguishable on the wire
     # from `question_not_outstanding`, which asks for the opposite recovery.
@@ -823,15 +835,14 @@ async def test_two_sports_are_independent(
     assert padel["assessment_id"] != badminton["assessment_id"]
 
     for assessment in (padel, badminton):
-        done = (
-            await _answer(
-                client,
-                headers,
-                assessment["assessment_id"],
-                assessment["question"]["id"],
-                "never-played",
-            )
-        ).json()
+        await _answer(
+            client,
+            headers,
+            assessment["assessment_id"],
+            assessment["question"]["id"],
+            "never-played",
+        )
+        done = (await _complete(client, headers, assessment["assessment_id"])).json()
         assert done["status"] == "completed"
 
     async with session_factory() as session:
@@ -1115,16 +1126,7 @@ async def test_the_result_explains_itself(client, valid_signup_payload):
 @pytest.mark.asyncio
 async def test_the_beginner_result_explains_itself_too(client, valid_signup_payload):
     headers = await _auth_headers(client, valid_signup_payload)
-    created = (await _create(client, headers)).json()
-    result = (
-        await _answer(
-            client,
-            headers,
-            created["assessment_id"],
-            created["question"]["id"],
-            "never-played",
-        )
-    ).json()["result"]
+    result = (await _beginner_to_result(client, headers))["result"]
 
     # One answer, so one row — and the base confidence branch, because nothing
     # widened the range beyond the floor every onboarding rating sits at.
@@ -1384,11 +1386,17 @@ async def test_the_beginner_run_carries_the_single_answer_that_ended_it(
     created = (await _create(client, headers)).json()
     question = created["question"]
 
-    finished = (
+    stopped = (
         await _answer(
             client, headers, created["assessment_id"], question["id"], "never-played"
         )
     ).json()
+    finished = (await _complete(client, headers, created["assessment_id"])).json()
+
+    # The one answer is in the transcript from the moment it is given — before
+    # any rating exists — which is what a review screen is drawn from.
+    assert stopped["result"] is None
+    assert stopped["transcript"] == finished["transcript"]
 
     assert finished["result"] is not None
     (entry,) = finished["transcript"]
@@ -1497,12 +1505,12 @@ async def test_the_transcript_is_stated_on_the_player_contract():
 
 
 async def _straight_through(client, headers, sport="PADEL"):
-    """Answer every question with its last option, in one pass."""
+    """Answer every question with its last option, in one pass, then finish."""
 
     body = (await _create(client, headers, sport)).json()
     while body["question"] is not None:
         body = await _answer_the_outstanding_question(client, headers, body)
-    return body
+    return (await _complete(client, headers, body["assessment_id"])).json()
 
 
 async def _by_a_different_road(client, headers, sport="PADEL"):
@@ -1540,7 +1548,7 @@ async def _by_a_different_road(client, headers, sport="PADEL"):
 
     while body["question"] is not None:
         body = await _answer_the_outstanding_question(client, headers, body)
-    return body
+    return (await _complete(client, headers, body["assessment_id"])).json()
 
 
 @pytest.mark.asyncio
@@ -1666,11 +1674,17 @@ async def test_revising_the_opening_answer_to_never_played_stops_the_run(
     )
 
     assert resp.status_code == 200, resp.text
-    final = resp.json()
-    assert final["question"] is None
+    stopped = resp.json()
+    # Stopped, not rated: the revision reached the beginner fast path and the
+    # run now sits where every other stopped run sits, waiting to be finished.
+    assert stopped["question"] is None
+    assert stopped["result"] is None
+    assert stopped["status"] == "in_progress"
+    assert _transcript_ids(stopped) == [opening]
+
+    final = (await _complete(client, headers, stopped["assessment_id"])).json()
     assert final["status"] == "completed"
     assert final["result"]["questions_asked"] == 1
-    assert _transcript_ids(final) == [opening]
     # The same rating a player who said so first time would have got.
     assert final["result"]["mu"] == 1.40
     assert final["result"]["confidence"] == 18
@@ -1889,3 +1903,284 @@ async def test_a_revised_run_resumes_to_what_the_change_left_behind(
     assert resumed == revised
     assert fetched == revised
     assert len(resumed["transcript"]) == 1
+
+
+# --- Stopping and completing are two moments ------------------------------------
+#
+# The questionnaire **stops** when the engine judges no remaining question would
+# meaningfully tighten the estimate. That instant used to also create the Skill
+# rating, which is what made revisability vanish without warning: the confirm
+# control's label is identical on every question — necessarily, because the engine
+# decides after the answer arrives — so a player tapped it on the last question
+# exactly as they had tapped it on the others and found their rating already made.
+#
+# Now stopping produces a step with neither a question nor a result, the run sits
+# in progress with nothing outstanding, and `POST /completion` is what creates the
+# rating (ADR-0020). That is where irreversibility is earned, and what lets a
+# review of every answer exist between the two.
+
+
+@pytest.mark.asyncio
+async def test_the_answer_that_stops_the_questionnaire_creates_no_rating(
+    client, session_factory, valid_signup_payload
+):
+    headers = await _auth_headers(client, valid_signup_payload)
+
+    stopped = await _run_to_stop(client, headers)
+
+    assert stopped["question"] is None
+    assert stopped["result"] is None
+    # Still in progress, with nothing outstanding. No new status was needed: the
+    # stop *is* the absence of an outstanding question.
+    assert stopped["status"] == "in_progress"
+    assert len(stopped["transcript"]) == stopped["questions_asked"] > 1
+
+    # Nothing was rated, and nothing was written to say so.
+    assert (await client.get("/api/v1/ratings", headers=headers)).json() == {
+        "ratings": []
+    }
+    async with session_factory() as session:
+        rows = (await session.execute(select(EventStoreORM))).scalars().all()
+    event_types = [row.event_type for row in rows]
+    assert event_types.count("rating.assessment_completed") == 0
+    assert event_types.count("rating.rating_initialised") == 0
+
+
+@pytest.mark.asyncio
+async def test_the_completion_request_creates_the_rating_and_returns_it_inline(
+    client, session_factory, valid_signup_payload
+):
+    headers = await _auth_headers(client, valid_signup_payload)
+    stopped = await _run_to_stop(client, headers)
+
+    resp = await _complete(client, headers, stopped["assessment_id"])
+
+    assert resp.status_code == 200, resp.text
+    finished = resp.json()
+    assert finished["status"] == "completed"
+    assert finished["question"] is None
+    # Inline, because the player is shown their rating on the very next screen.
+    assert finished["result"]["mu"] > 0
+    assert finished["result"]["questions_asked"] == stopped["questions_asked"]
+    # The evidence did not move between the two moments, so neither did the
+    # rating: a review screen costs nothing in accuracy.
+    assert finished["transcript"] == stopped["transcript"]
+
+    rated = (await client.get("/api/v1/ratings", headers=headers)).json()["ratings"]
+    assert [entry["sport"] for entry in rated] == ["PADEL"]
+
+    async with session_factory() as session:
+        rows = (await session.execute(select(EventStoreORM))).scalars().all()
+    by_type = [(row.aggregate_type, row.event_type) for row in rows]
+    # Still one transaction across two aggregates (ADR-0017): only the trigger
+    # moved.
+    assert ("assessment", "rating.assessment_completed") in by_type
+    assert ("skill_rating", "rating.rating_initialised") in by_type
+
+
+@pytest.mark.asyncio
+async def test_completing_twice_returns_the_same_result_and_writes_nothing_new(
+    client, session_factory, valid_signup_payload
+):
+    # The control a player double-taps on a slow connection is the one that makes
+    # something irreversible, so a conflict here is one the client would have to
+    # translate back into "you already have your rating".
+    headers = await _auth_headers(client, valid_signup_payload)
+    stopped = await _run_to_stop(client, headers)
+
+    first = (await _complete(client, headers, stopped["assessment_id"])).json()
+    resp = await _complete(client, headers, stopped["assessment_id"])
+
+    assert resp.status_code == 200, resp.text
+    assert resp.json() == first
+
+    async with session_factory() as session:
+        rows = (await session.execute(select(EventStoreORM))).scalars().all()
+    event_types = [row.event_type for row in rows]
+    assert event_types.count("rating.assessment_completed") == 1
+    assert event_types.count("rating.rating_initialised") == 1
+
+
+@pytest.mark.asyncio
+async def test_completing_a_run_that_is_still_asking_is_refused(
+    client, valid_signup_payload
+):
+    headers = await _auth_headers(client, valid_signup_payload)
+    body = (await _create(client, headers)).json()
+    body = await _answer_the_outstanding_question(client, headers, body)
+    assert body["question"] is not None, "the run must still be asking"
+
+    resp = await _complete(client, headers, body["assessment_id"])
+
+    assert resp.status_code == 409, resp.text
+    assert resp.json()["code"] == "assessment_not_stopped"
+    # Refused, and nothing about the run changed: the question is still there.
+    assert (await _get(client, headers, body["assessment_id"])).json() == body
+
+
+@pytest.mark.asyncio
+async def test_completing_an_abandoned_run_is_refused(client, valid_signup_payload):
+    headers = await _auth_headers(client, valid_signup_payload)
+    stopped = await _run_to_stop(client, headers)
+    await _abandon(client, headers, stopped["assessment_id"])
+
+    resp = await _complete(client, headers, stopped["assessment_id"])
+
+    assert resp.status_code == 409, resp.text
+    assert resp.json()["code"] == "assessment_not_stopped"
+
+
+@pytest.mark.asyncio
+async def test_abandoning_a_stopped_run_still_works(client, valid_signup_payload):
+    # Reaching the end is not being trapped at it: leaving from the stop works
+    # exactly as leaving from a question does, and frees the sport.
+    headers = await _auth_headers(client, valid_signup_payload)
+    stopped = await _run_to_stop(client, headers)
+
+    assert (
+        await _abandon(client, headers, stopped["assessment_id"])
+    ).status_code == 204
+
+    assert (await _in_progress(client, headers, "PADEL")).status_code == 204
+    assert (await _create(client, headers, "PADEL")).status_code == 201
+
+
+@pytest.mark.asyncio
+async def test_completing_another_players_run_is_not_found(
+    client, valid_signup_payload
+):
+    alice = await _auth_headers(client, valid_signup_payload)
+    stopped = await _run_to_stop(client, alice)
+
+    bob = await _auth_headers(client, BOB)
+    resp = await _complete(client, bob, stopped["assessment_id"])
+
+    assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_completing_requires_authentication(client, valid_signup_payload):
+    headers = await _auth_headers(client, valid_signup_payload)
+    stopped = await _run_to_stop(client, headers)
+
+    resp = await client.post(
+        f"/api/v1/assessments/{stopped['assessment_id']}/completion"
+    )
+
+    assert resp.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_a_stopped_run_resumes_to_the_stopped_step(client, valid_signup_payload):
+    # A force-quit at the review comes back to the review. Nothing about the stop
+    # lives on the device, so this holds after a reinstall and on a second
+    # handset too — all three reads replay the same stream.
+    headers = await _auth_headers(client, valid_signup_payload)
+    stopped = await _run_to_stop(client, headers)
+
+    fetched = (await _get(client, headers, stopped["assessment_id"])).json()
+    resumed = (await _in_progress(client, headers, "PADEL")).json()
+    restarted = await _create(client, headers, "PADEL")
+    listed = (await _all_in_progress(client, headers)).json()
+
+    assert fetched == stopped
+    assert resumed == stopped
+    # Starting the sport again hands back the stopped run rather than opening a
+    # second one, exactly as it does mid-questionnaire.
+    assert restarted.status_code == 200, restarted.text
+    assert restarted.json() == stopped
+    # And the entry gate still sees it as unfinished, because it is.
+    assert listed["assessments"] == [
+        {"assessment_id": stopped["assessment_id"], "sport": "PADEL"}
+    ]
+
+
+@pytest.mark.asyncio
+async def test_the_beginner_stops_after_one_answer_rather_than_being_rated(
+    client, valid_signup_payload
+):
+    # One question screen, one review, one result is one rule an agent can apply.
+    # A beginner's single answer is the highest-leverage answer in the bank, so
+    # it gets the same last look as anybody else's nine.
+    headers = await _auth_headers(client, valid_signup_payload)
+    created = (await _create(client, headers)).json()
+
+    stopped = (
+        await _answer(
+            client,
+            headers,
+            created["assessment_id"],
+            created["question"]["id"],
+            "never-played",
+        )
+    ).json()
+
+    assert stopped["question"] is None
+    assert stopped["result"] is None
+    assert stopped["status"] == "in_progress"
+    assert stopped["questions_asked"] == 1
+
+    finished = (await _complete(client, headers, created["assessment_id"])).json()
+    assert finished["status"] == "completed"
+    assert finished["result"]["questions_asked"] == 1
+
+
+@pytest.mark.asyncio
+async def test_revising_from_a_stopped_run_returns_to_the_questionnaire(
+    client, valid_signup_payload
+):
+    # Changing an answer from the review puts the player back in the
+    # questionnaire, and stopping again is reachable — so the review is a real
+    # last look rather than a one-way door.
+    headers = await _auth_headers(client, valid_signup_payload)
+    stopped = await _run_to_stop(client, headers)
+    first = stopped["transcript"][0]
+
+    resp = await _answer(
+        client,
+        headers,
+        stopped["assessment_id"],
+        first["question"]["id"],
+        first["question"]["options"][-2]["id"],
+    )
+
+    assert resp.status_code == 200, resp.text
+    back = resp.json()
+    assert back["question"] is not None, "the run is asking again"
+    assert len(back["transcript"]) == 1
+
+    # And on to a second stop, which is where the review is reached again.
+    stopped_again = back
+    while stopped_again["question"] is not None:
+        stopped_again = await _answer_the_outstanding_question(
+            client, headers, stopped_again
+        )
+    assert stopped_again["result"] is None
+    assert stopped_again["status"] == "in_progress"
+    assert stopped_again["transcript"] != stopped["transcript"]
+
+    finished = (await _complete(client, headers, stopped["assessment_id"])).json()
+    assert finished["status"] == "completed"
+
+
+@pytest.mark.asyncio
+async def test_the_completion_is_stated_on_the_player_contract():
+    # A client cannot find a behaviour that exists only in prose, and this one is
+    # the difference between a rating that appears and a rating that is asked for.
+    from app.api.contract import build_surface_spec
+    from app.api.v1.player import player_api_router
+
+    spec = build_surface_spec("player", player_api_router)
+    path = "/api/v1/assessments/{assessment_id}/completion"
+    operation = spec["paths"][path]["post"]
+
+    assert operation["responses"]["200"]["content"]["application/json"]["schema"][
+        "$ref"
+    ].endswith("/AssessmentStepResponse")
+    assert "assessment_not_stopped" in operation["responses"]["409"]["description"]
+    assert "twice" in operation["description"]
+
+    # And the step says what *neither* means, since that is the invariant this
+    # change weakened: exactly one of question/result became at most one.
+    step = spec["components"]["schemas"]["AssessmentStepResponse"]
+    assert "stopped" in step["properties"]["status"]["description"]

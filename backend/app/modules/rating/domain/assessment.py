@@ -12,6 +12,15 @@ the transcript at that question: every answer after it was pitched at a difficul
 chosen from the estimate as it then stood, so an answer that outlived a change to
 an earlier one would mean something the player never said (``docs/adr/0020``).
 A revision therefore shortens the past; it never edits it.
+
+**Stopping and completing are two moments, and only the second is a transition
+here.** The questionnaire *stops* when the engine judges no remaining question
+would meaningfully tighten the estimate, and that is simply the absence of an
+outstanding question on a run still in progress — no event, no status, nothing
+for this aggregate to record, because a stop is a fact about the transcript and
+the transcript is already on the stream. The assessment *completes* on an
+explicit later command, and that is where the rating comes into existence and
+where irreversibility is earned.
 """
 
 from __future__ import annotations
@@ -32,6 +41,7 @@ from app.engines.assessment import (
 from app.kernel import Sport
 from app.modules.rating.domain.errors import (
     AssessmentAlreadyFinished,
+    AssessmentNotStopped,
     QuestionNotOutstanding,
 )
 from app.modules.rating.domain.events import (
@@ -216,8 +226,21 @@ class Assessment:
         The stop arrives as the engine's own step rather than as two loose
         arguments, so a reason cannot be recorded beside a value that did not
         cause it — the same reason the result arrives whole.
+
+        **Refused unless the run is stopped**: in progress, with nothing
+        outstanding (``docs/adr/0020``). A question still awaiting an answer
+        means the questionnaire has not finished asking, and a run that is no
+        longer in progress has either been abandoned or already produced its
+        rating. The use case checks first — so this is the second guard, and
+        without it the one transition that cannot be undone would be the one
+        transition nothing in the domain protected.
         """
 
+        if (
+            self.status is not AssessmentStatus.IN_PROGRESS
+            or self._outstanding_question_id is not None
+        ):
+            raise AssessmentNotStopped()
         self._record_that(
             AssessmentCompleted(
                 assessment_id=self.id,

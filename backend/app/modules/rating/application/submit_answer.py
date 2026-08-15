@@ -1,4 +1,4 @@
-"""Submit an answer and receive the next question, or the final result.
+"""Submit an answer and receive the next question — or the news that there is none.
 
 **One submission, three meanings, decided by what the transcript already holds**
 (``docs/adr/0020``). The question is either unanswered — in which case this is an
@@ -29,14 +29,21 @@ answer runs. Since ``next_step`` and ``finalize`` are pure functions of the
 transcript, a truncated transcript is simply a transcript — so a revision can ask
 another question, or stop the run, and neither is a special case here.
 
-Both aggregates are loaded and saved through their repositories, so the ownership
-guard, the aggregate-type strings and the versions these appends expect are no
-longer things this use case has to remember — asking for the aggregate means
-saying whose it is.
+The aggregate is loaded and saved through its repository, so the ownership guard,
+the aggregate-type string and the version this append expects are no longer
+things this use case has to remember — asking for the aggregate means saying
+whose it is.
 
-Completion is one transaction: the assessment-completed event and the
-rating-initialised event are appended together and the result returns inline,
-because the player sees their rating on the very next screen.
+**Answering never creates a rating.** When the engine judges no remaining
+question would meaningfully tighten the estimate, this returns a step with
+neither a question nor a result and the run sits in progress with nothing
+outstanding; the rating is created by ``CompleteAssessment``, on its own request
+(``docs/adr/0020``). That separation is the whole point of the change and it is
+what a review screen lives in: until this slice, the instant the questionnaire
+stopped was also the instant the rating existed, so a player tapped confirm on
+the last question exactly as they had tapped it on the others — the label cannot
+differ, because the engine decides after the answer arrives — and found their
+rating already made.
 """
 
 from __future__ import annotations
@@ -44,7 +51,7 @@ from __future__ import annotations
 from datetime import datetime
 
 from app.application.ports import UnitOfWork
-from app.engines.assessment import AskQuestion, AssessmentEngine
+from app.engines.assessment import AskQuestion, AssessmentEngine, Question
 from app.modules.rating.application.assessment_view import (
     current_step,
     outstanding_question,
@@ -61,27 +68,28 @@ from app.modules.rating.domain.errors import (
     InvalidAnswerOption,
     QuestionNotOutstanding,
 )
-from app.modules.rating.domain.ids import skill_rating_id
-from app.modules.rating.domain.ports import AssessmentRepository, SkillRatingRepository
-from app.modules.rating.domain.skill_rating import SkillRating
+from app.modules.rating.domain.ports import AssessmentRepository
 from app.shared.clock import Clock
 
 
 class SubmitAnswer:
-    """Both aggregates move through repositories; the transaction stays here."""
+    """One aggregate, one stream, one transaction.
+
+    The rating repository was here while a last answer created a rating. It is
+    ``CompleteAssessment``'s now, which is where the two streams are still
+    written together.
+    """
 
     def __init__(
         self,
         *,
         engine: AssessmentEngine,
         assessments: AssessmentRepository,
-        ratings: SkillRatingRepository,
         uow: UnitOfWork,
         clock: Clock,
     ) -> None:
         self._engine = engine
         self._assessments = assessments
-        self._ratings = ratings
         self._uow = uow
         self._clock = clock
 
@@ -167,14 +175,23 @@ class SubmitAnswer:
         Shared by answering and revising deliberately: the engine is a pure
         function of the transcript, so *how* the transcript reached its current
         shape is not something this code is entitled to branch on. A revision
-        that stops the run therefore completes it by the same path an ordinary
-        last answer does.
+        that stops the run therefore stops it by the same path an ordinary last
+        answer does, which is what makes "revise the opening answer to
+        never-played" need no special case.
+
+        **The stop is not recorded here and nothing marks it.** It is a fact
+        about the transcript, and the transcript is already on the stream — so
+        the run reached a stop is derivable at any later moment by asking the
+        engine, and a second representation of it would be a second thing that
+        can be wrong. What ends the run is ``CompleteAssessment``.
         """
 
         step = self._engine.next_step(
             sport=assessment.sport, transcript=assessment.transcript
         )
+        question: Question | None = None
         if isinstance(step, AskQuestion):
+            question = step.question
             assessment.ask(
                 question_id=step.question.id,
                 reason=step.reason,
@@ -182,55 +199,21 @@ class SubmitAnswer:
                 sigma=step.sigma,
                 occurred_at=now,
             )
-            await self._assessments.save(assessment)
-            await self._uow.commit()
-            return AssessmentStep(
-                assessment_id=assessment.id,
-                status=assessment.status.value,
-                # The answer just recorded is in the transcript, so this response
-                # already counts it — the next question is one further along, and
-                # the served transcript ends with the answer that produced it.
-                questions_asked=questions_asked(assessment),
-                transcript=served_transcript(self._engine, assessment),
-                question=step.question,
-                result=None,
-            )
 
-        # The engine is done: complete the assessment and initialise the rating,
-        # both appended in the same transaction. ``step`` is the stop itself, and
-        # it is passed through rather than discarded — the questionnaire's last
-        # routing decision is recorded exactly as every earlier one is.
-        result = self._engine.finalize(
-            sport=assessment.sport, transcript=assessment.transcript
-        )
-        assessment.complete(result=result, stop=step, occurred_at=now)
-
-        rating = SkillRating.initialise(
-            rating_id=skill_rating_id(assessment.player_id, assessment.sport),
-            player_id=assessment.player_id,
-            sport=assessment.sport,
-            result=result,
-            source_assessment_id=assessment.id,
-            occurred_at=now,
-        )
-
-        # Two streams, one transaction. Neither ``save`` commits, so the boundary
-        # stays here — ADR-0017 states the single transaction as a domain rule
-        # rather than a persistence detail. The assessment is saved first because
-        # the outbox takes them in the order they happened.
         await self._assessments.save(assessment)
-        await self._ratings.save(rating)
         await self._uow.commit()
 
         return AssessmentStep(
             assessment_id=assessment.id,
             status=assessment.status.value,
-            # Equal to the result's own count by construction: both are the length
-            # of this transcript, so the run's number does not jump as it finishes.
+            # The answer just recorded is in the transcript, so this response
+            # already counts it — the next question is one further along, and the
+            # served transcript ends with the answer that produced it.
             questions_asked=questions_asked(assessment),
-            # The evidence the result was computed from, served beside it. A
-            # finished run's transcript is still the answers the player gave.
             transcript=served_transcript(self._engine, assessment),
-            question=None,
-            result=result,
+            # Absent when the engine has stopped. The run is still in progress and
+            # carries no result: that pair is the stopped step, and it is what the
+            # review screen is drawn from.
+            question=question,
+            result=None,
         )

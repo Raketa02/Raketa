@@ -24,6 +24,7 @@ from app.modules.rating.application.assessment_view import completed_result
 from app.modules.rating.domain.assessment import Assessment
 from app.modules.rating.domain.errors import (
     AssessmentAlreadyFinished,
+    AssessmentNotStopped,
     QuestionNotOutstanding,
 )
 from app.modules.rating.domain.events import (
@@ -150,6 +151,41 @@ def test_a_completed_assessment_cannot_be_abandoned() -> None:
     assessment.complete(result=_result(), stop=_stop(), occurred_at=NOW)
     with pytest.raises(AssessmentAlreadyFinished):
         assessment.abandon(occurred_at=NOW)
+
+
+# --- Completing: only from a stop, and only once --------------------------------
+#
+# The use case refuses these first, so every one of them is reachable from a unit
+# test alone. That is the point: the one transition that cannot be undone is the
+# one that most wants a guard in the domain rather than only in front of it.
+
+
+def test_a_run_with_a_question_outstanding_cannot_be_completed() -> None:
+    # The questionnaire has not finished asking. Completing here would rate a
+    # player on a transcript missing the answer they were in the middle of.
+    assessment = _started()
+    with pytest.raises(AssessmentNotStopped):
+        assessment.complete(result=_result(), stop=_stop(), occurred_at=NOW)
+
+
+def test_an_abandoned_run_cannot_be_completed() -> None:
+    assessment = _started()
+    assessment.abandon(occurred_at=NOW)
+    with pytest.raises(AssessmentNotStopped):
+        assessment.complete(result=_result(), stop=_stop(), occurred_at=NOW)
+
+
+def test_a_completed_run_cannot_be_completed_twice() -> None:
+    # The use case answers a second completion with the first one's result, so a
+    # double-tapped submit never reaches here. If one ever does, a second
+    # rating-initialised event must not follow it.
+    assessment = _started()
+    assessment.answer(
+        question_id="opening.regularity", option_id="never-played", occurred_at=NOW
+    )
+    assessment.complete(result=_result(), stop=_stop(), occurred_at=NOW)
+    with pytest.raises(AssessmentNotStopped):
+        assessment.complete(result=_result(), stop=_stop(), occurred_at=NOW)
 
 
 # --- Revising: the stream grows, the transcript shortens -------------------------
