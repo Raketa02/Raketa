@@ -1,9 +1,9 @@
 /**
- * The rule that decides whether a failed answer failed at all.
+ * The rule that decides whether a failed submission failed at all.
  *
- * Pure — no renderer, no cache, no network. The two codes it recognises are the whole
- * reason #18 gave every backend error its own code: on status alone they are one 409
- * among many, and this rule could not tell them from a conflict that really is a failure.
+ * Pure — no renderer, no cache, no network. The codes it recognises are the whole reason
+ * #18 gave every backend error its own code: on status alone they are one 409 among many,
+ * and this rule could not tell them from a conflict that really is a failure.
  */
 
 import { AppError } from '@/shared/errors';
@@ -29,6 +29,13 @@ describe('a stale-step conflict', () => {
     // either — the rating is proved and the answers behind it are settled — so the honest
     // response is to re-read and show the player what their run actually is now.
     expect(isStaleStepConflict(conflict('answer_not_revisable'))).toBe(true);
+  });
+
+  it('recognises a rating asked for on a run that was not sitting at the stop', () => {
+    // Completion's own refusal, and it answers for two runs: one still holding a question,
+    // and one abandoned somewhere else. Both are this device being behind, and one
+    // re-read renders whichever it turns out to be.
+    expect(isStaleStepConflict(conflict('assessment_not_stopped'))).toBe(true);
   });
 
   it('does not swallow another conflict on the same status', () => {

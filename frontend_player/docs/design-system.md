@@ -1041,9 +1041,15 @@ Specified at the level the design system owns — order and composition, not cop
 
 ## 12.1 Onboarding
 
-Steps: welcome → sports → adaptive questions → result → done → data. Chrome is a header,
-and — on the questionnaire — the question navigator ([7.9](#79-the-question-navigator))
-beneath it.
+Steps: welcome → sports → adaptive questions → **review → calculating** → result → done →
+data. Chrome is a header, and — on the questionnaire — the question navigator
+([7.9](#79-the-question-navigator)) beneath it.
+
+**The questionnaire stopping and the rating existing are two moments, and the review sits
+between them** ([ADR-0020](../../docs/adr/0020-revisable-assessment-answers.md)). Every
+player passes through both new screens, including the beginner who answered one question:
+one question screen, one review, one result is one rule, and skipping the review for a short
+run earns nothing.
 
 **The eyebrow is the sole carrier of which Sport of how many.** A `coral` bar under the
 header used to say it too. It measured Sports, which meant it did not move for the eight
@@ -1117,8 +1123,66 @@ doors, two sides of one header, and they are not interchangeable.
 **The button label never changes.** The engine decides it has enough information _after_
 the answer arrives, so the client cannot know which question is the last one — and it no
 longer matters that it cannot, because answering never creates the rating. The label was a
-compromise and is now simply correct. The result screen arrives without a countdown, which
-suits a flow that never asks the player to brace for a verdict.
+compromise and is now simply correct. The review arrives without a countdown, which suits a
+flow that never asks the player to brace for a verdict.
+
+**Where the questionnaire has stopped, the forward control leads to the review** and says
+so, because there is no next question to promise. It is the same move — one step towards
+the end of the run — and the only place on this screen that could name a screen the run
+cannot produce.
+
+### The review screen
+
+The last look before the rating exists, and the first time the player sees the whole account
+of themselves rather than one question at a time.
+
+```
+Check your answers                       ← h1
+Padel · Rating 1 of 2                    ← eyebrow — the Sport it belongs to
+
+This is everything your Padel level …    ← tiny, muted
+┌─ pressable card ──────────────────────────────┐
+│ QUESTION 1                                    │  eyebrow
+│ Have you played padel before?                 │  question
+│ ─────────────────────────────────────────────  │  the fold
+│ YOUR ANSWER                                   │  eyebrow
+│ I play most weeks                             │  h2
+└───────────────────────────────────────────────┘  … one per answer, in order
+[ Get my Padel level ]   ← screen action, the one control that creates the rating
+```
+
+**No Level, likely range or Confidence appears anywhere on it.** The no-running-estimate
+rule ([Part 16](#part-16--amendments-after-locking), 2026-08-13) applies here exactly as it
+applies to a question, and with more force: every answer on this screen is still editable,
+so a number on it is an invitation to tune answers until it reads the way the player wants.
+
+**The whole card is the control**, and it opens that question in the questionnaire rather
+than editing anything here. A change costs later answers, and what it costs is named by the
+question screen's own confirmation — a second place to change an answer is a second place
+the cost can be misstated.
+
+**The header carries the way out and not a way back.** The right slot is the close control,
+identical to the questionnaire's, because reaching the end must not be the one screen with
+no exit. The left slot is empty: there is no question behind this screen, and every answer
+is reachable from the list.
+
+### The calculating screen
+
+One indicator, one short line naming the Sport, no chrome and no controls.
+
+**It is held for a minimum time** (`theme.motion.hold.calculating`) and is the one thing in
+this system that reduced motion does not skip — nothing moves except the indicator, and a
+held screen is not an animation. Completion is one round trip over fast arithmetic, so
+without the floor this appears and leaves inside a frame, which reads as a glitch rather
+than as the moment a Level came into existence.
+
+**The copy and the duration are one decision.** A sentence a player cannot finish before the
+screen leaves is worse than no sentence, so the line stays one short line; lengthening
+either means revisiting both.
+
+**Nothing can be left from here.** No close control and no back: the rating is already being
+created, and a control that appeared to cancel it would be a promise this screen cannot
+keep.
 
 ### The result screen
 
@@ -1380,6 +1444,10 @@ unchangeable one; it is one whose changes are recorded rather than absorbed.
 | 2026-08-15 | [12.1](#121-onboarding), [7.3](#73-meter-and-bar) | Chrome is a header plus a `coral` progress bar measuring **Sports**, repeating the eyebrow's `Rating 1 of 2`                                                                                        | The bar is gone from onboarding. The eyebrow is the **sole** carrier of Sport position, and the questionnaire draws the navigator ([7.9](#79-the-question-navigator)) instead                                                              | The bar measured the one denominator the player chose, which is honest and useless: rating two Sports, it moves once, so the screen a player spends the longest on showed no movement for eight questions. Two carriers of one fact was also how a Sport denominator would come back to a bar that no longer counts Sports — recording the eyebrow as the only one is what stops that. `Bar` itself is untouched for every other use                                                                                                                                                                         |
 | 2026-08-15 | [7.9](#79-the-question-navigator)                 | —                                                                                                                                                                                                   | **New section.** The question navigator: fixed-width segments in a left-aligned row, `coral` where answered and `line2` where not, double height where the player is standing, no total, and not a touch target                            | The bar's replacement needed specifying before it was built or every implementer would invent it, the way the confidence ring did. Two decisions in it are load-bearing and neither is taste: **no segment for an unasked question**, because that segment is the denominator the engine does not have; and **indicates rather than navigates**, because ten segments across the content width is a 29pt target against Part 13's 44pt minimum, and the tap it would get wrong is the one that discards answers                                                                                              |
 | 2026-08-15 | [10.3](#103-the-screen-header)                    | The back chevron was specified and forbidden — no screen in onboarding could use it                                                                                                                 | Unchanged as a component, and now **used**: it is the questionnaire's way back through the run                                                                                                                                             | It needed no design, only permission. Worth a row because the control existing all along is what made "the navigator indicates rather than navigates" cost nothing: the movement had a home before the indicator did                                                                                                                                                                                                                                                                                                                                                                                         |
+| 2026-08-15 | [12.1](#121-onboarding)                           | The step list ended the questionnaire at the result screen, because answering the last question created the rating                                                                                  | **Two screens added**: the step list is welcome → sports → questions → **review → calculating** → result → done → data, each with its own specified composition                                                                            | Stopping and completing are two moments now, and the screen between them had nowhere to be described. Both are visual surfaces with no composition at all, which is the gap the done and data screens were amended to close on 2026-08-14 — an implementer would otherwise invent one. Every player passes through both, the beginner with one answer included: one question screen, one review, one result is one rule, and exempting short runs is a second rule that earns nothing                                                                                                                        |
+| 2026-08-15 | [12.1](#121-onboarding) review screen             | —                                                                                                                                                                                                   | **New section.** A pressable card per answer — question above the fold, the option chosen below it — in the order asked, the Sport in the eyebrow, one screen action that creates the rating, and the questionnaire's own close control    | The load-bearing rule is the one that looks like an omission: **no Level, range or Confidence anywhere**. This is the only screen in the app that shows a player their whole evidence while they can still change it, so a number on it turns the questionnaire from _describe yourself_ into _make this read higher_ — the same argument that removed the running estimate, at the point it would bite hardest. The card opening the question rather than editing in place keeps one place a change can happen, which is the place that names what it costs                                                 |
+| 2026-08-15 | [12.1](#121-onboarding) calculating screen        | —                                                                                                                                                                                                   | **New section.** An indicator and one short line naming the Sport, no chrome and no way out, **held for a minimum duration** and not skipped under reduced motion                                                                          | The duration is the specification, not decoration: the request is one round trip over fast arithmetic, so unheld this screen appears and leaves inside a frame and reads as a glitch at the exact moment a Level comes into existence. Recording it here is what couples it to its copy — one short line, because a sentence a player cannot finish before the screen leaves is worse than none. `theme.motion.hold` lands with it, nested so the motion block keeps its one-line contract (_the four things reduced motion skips_)                                                                          |
+| 2026-08-15 | [12.1](#121-onboarding) question screen           | The forward control over answered questions read `Next question` everywhere                                                                                                                         | At the end of a **stopped** run it reads that it leads back to the answers, because there is no next question                                                                                                                              | The same move, and the one place this screen could name a screen the run cannot produce. It appeared with the review: before the stop existed, walking forward always arrived at a question                                                                                                                                                                                                                                                                                                                                                                                                                  |
 
 # Appendix A — The token contract
 

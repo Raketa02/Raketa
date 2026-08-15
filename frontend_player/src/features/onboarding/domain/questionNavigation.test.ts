@@ -8,7 +8,12 @@
  */
 
 import type { AnsweredQuestion, AssessmentStep, Question } from './Assessment';
-import { outstandingPosition, questionAt, standingPosition } from './questionNavigation';
+import {
+  answeredQuestions,
+  outstandingPosition,
+  questionAt,
+  standingPosition,
+} from './questionNavigation';
 
 function question(id: string): Question {
   return {
@@ -123,5 +128,46 @@ describe('what is drawn at a position', () => {
 
   it('has nothing at all while the step is still loading', () => {
     expect(questionAt(undefined, 1)).toBeUndefined();
+  });
+});
+
+describe('every question already answered', () => {
+  it('lists them in the order they were asked, with the option chosen against each', () => {
+    const listed = answeredQuestions(step({ transcript: THREE_ANSWERS }));
+
+    // The review's whole content, and the positions it opens the questionnaire at.
+    expect(listed.map((entry) => [entry.position, entry.question.id, entry.answer])).toEqual([
+      [1, 'q-1', 'rarely'],
+      [2, 'q-2', 'usually'],
+      [3, 'q-3', 'rarely'],
+    ]);
+  });
+
+  it('leaves out the question still being asked, which has no answer to review', () => {
+    const listed = answeredQuestions(step({ transcript: THREE_ANSWERS }));
+
+    expect(listed.map((entry) => entry.question.id)).not.toContain('q-outstanding');
+  });
+
+  it('numbers positions the way the questionnaire moves by them', () => {
+    // Not an index. A player opening the second entry has to land on `Question 2`, and an
+    // off-by-one here sends them to change the answer beside the one they meant.
+    const [first] = answeredQuestions(step({ transcript: THREE_ANSWERS }));
+
+    expect(first?.position).toBe(1);
+  });
+
+  it('is empty on a stopped run that answered nothing, and on one still loading', () => {
+    // Neither is a list with something missing from it: the first genuinely has no
+    // answers, and the second has no run yet.
+    expect(answeredQuestions(step({ question: undefined }))).toEqual([]);
+    expect(answeredQuestions(undefined)).toEqual([]);
+  });
+
+  it('lists the answers of a run that has stopped, which is the case the review exists for', () => {
+    // Neither a question nor a result, and every answer still the player's to change.
+    const stopped = step({ transcript: THREE_ANSWERS, question: undefined });
+
+    expect(answeredQuestions(stopped)).toHaveLength(3);
   });
 });

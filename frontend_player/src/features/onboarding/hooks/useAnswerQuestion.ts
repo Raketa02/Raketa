@@ -42,11 +42,17 @@ export function useAnswerQuestion(assessmentId: string) {
     onSuccess: (step) => {
       queryClient.setQueryData(onboardingKeys.assessment(assessmentId), step);
 
-      // Only a finished run changes what the entry gate would answer, and only a finished
-      // run produces a rating. Marking them stale rather than writing them keeps one
-      // source of truth for both — the server — and costs nothing while the gate's
+      // Only a run that has *ended* changes what the entry gate would answer, and only a
+      // completed one produces a rating. Marking them stale rather than writing them keeps
+      // one source of truth for both — the server — and costs nothing while the gate's
       // queries are unmounted, which they are for the whole of onboarding.
-      if (step.question === undefined) {
+      //
+      // **Not "no question left"**, which this read once was: a stopped questionnaire has
+      // no question and has still rated nothing, so reading it that way would mark a
+      // player's ratings stale at a moment none of them changed. Answering cannot finish a
+      // run at all now (ADR-0020) — what reaches here ended is the stale-step recovery's
+      // re-read, which is exactly the case that must not be missed.
+      if (step.status !== 'in_progress') {
         void queryClient.invalidateQueries({ queryKey: onboardingKeys.runInProgress() });
         void queryClient.invalidateQueries({ queryKey: onboardingKeys.ratings() });
       }

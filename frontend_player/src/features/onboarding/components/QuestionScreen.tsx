@@ -32,16 +32,23 @@
  * answer — and they are the same request, which is why a change lands on the same
  * mutation, with the same failure and the same retry in place.
  *
+ * **The questionnaire stopping is not the rating existing.** When the engine has nothing
+ * left to ask, the run sits in progress with every answer still revisable and the player
+ * goes to the **review** — which is also where the review sends them back from, at whatever
+ * question they want to change. So this screen is entered mid-run as readily as at the
+ * start of one, and `at` is the only thing that ever says where.
+ *
  * **Leaving is still not going back.** The close control in the header opens a confirm
- * offering to continue later, to stop rating this sport, or to carry on. Every exit below
- * is a `replace`: walking back inside the run is one thing, and a route the player can be
- * dropped into the middle of is another.
+ * offering to continue later, to stop rating this sport, or to carry on — the same one the
+ * review offers, through the same hook, because reaching the end of the questionnaire must
+ * not be the one place with no way out. Every exit below is a `replace`: walking back
+ * inside the run is one thing, and a route the player can be dropped into the middle of is
+ * another.
  *
  * **There is no live estimate.** The player sees no running Level at any point, which is
  * why the design system's `[3,17 so far]` chip is deliberately absent from the meta row.
  */
 
-import { useRouter } from 'expo-router';
 import { forwardRef, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -64,11 +71,11 @@ import type { Sport } from '../domain/Sport';
 import { positionOf } from '../domain/onboardingPass';
 import { outstandingPosition, questionAt, standingPosition } from '../domain/questionNavigation';
 import { proposeRevision } from '../domain/revision';
-import { useAbandonAssessment } from '../hooks/useAbandonAssessment';
+import { runStanding } from '../domain/runStanding';
 import { useAdvanceThroughPass } from '../hooks/useAdvanceThroughPass';
 import { useAnswerQuestion } from '../hooks/useAnswerQuestion';
 import { useAssessment } from '../hooks/useAssessment';
-import { useDeferredRuns } from '../store/deferredRuns.store';
+import { useLeaveAssessment } from '../hooks/useLeaveAssessment';
 import { useOnboardingPass } from '../store/onboardingPass.store';
 
 import { ChangeAnswerSheet, type AnswerChange } from './ChangeAnswerSheet';
@@ -86,14 +93,21 @@ const CONFIRM_LABEL = 'Confirm answer';
 export interface QuestionScreenProps {
   readonly assessmentId: string;
   readonly sport: Sport;
+  /**
+   * Which question to open on, 1-based — what an entry on the review opens, and nothing
+   * else sets it.
+   *
+   * **A starting point, not a position that is kept.** It seeds where the player stands and
+   * every move after it is theirs; a run that has since grown or been truncated is clamped
+   * to what still exists rather than refused, because the run is served fresh and the link
+   * was made against an older one.
+   */
+  readonly at?: number;
 }
 
-export function QuestionScreen({ assessmentId, sport }: QuestionScreenProps) {
-  const router = useRouter();
+export function QuestionScreen({ assessmentId, sport, at: openAt }: QuestionScreenProps) {
   const assessment = useAssessment(assessmentId);
   const answer = useAnswerQuestion(assessmentId);
-  const abandon = useAbandonAssessment(assessmentId);
-  const defer = useDeferredRuns((state) => state.defer);
 
   const pass = useOnboardingPass((state) => state.pass);
   /**
@@ -110,22 +124,27 @@ export function QuestionScreen({ assessmentId, sport }: QuestionScreenProps) {
    * the result screen calls the same one so the two cannot disagree again.
    */
   const onwards = useAdvanceThroughPass(sport);
-  const { advance, showResultOf } = onwards;
+  const { advance, showResultOf, showReviewOf } = onwards;
+  /**
+   * Leaving, in one place with the review's.
+   *
+   * Both screens offer the same way out and must offer it identically, and "identically" is
+   * not a promise two copies can keep — this hook exists because *start the next sport and
+   * go there* was written twice and had already drifted.
+   */
+  const leave = useLeaveAssessment(assessmentId, onwards);
   const step = assessment.data;
   const question = step?.question;
   /**
-   * **An abandoned run has no question either — and no rating.** Before abandonment
-   * existed, "nothing left to ask" could only mean "there is a result"; it cannot now,
-   * and reading it that way would show a player who stopped rating padel a screen
-   * announcing their padel rating is ready. This is the run being ended somewhere else —
-   * another device, or a link to a run that is already over — because abandoning from
-   * this screen navigates rather than waiting to be told.
+   * What the run is doing, in one reading shared with the review — see `runStanding`.
+   *
+   * **Three of the four readings are somewhere else's**, and none of them is "no question
+   * left". That was the reading before abandonment, and then before the stop, and each time
+   * it grew a case it could not tell apart: a player who abandoned padel elsewhere being
+   * shown their padel rating, and then a player who had answered everything being shown a
+   * result screen with no result on it.
    */
-  const endedWithoutRating = step?.status === 'abandoned';
-  const finished = assessment.isSuccess && question === undefined && !endedWithoutRating;
-
-  const [confirmingExit, setConfirmingExit] = useState(false);
-  const closeControl = useRef<View | null>(null);
+  const standing = runStanding(step);
 
   /**
    * The selection is held with the question it belongs to, so it clears itself when the
@@ -156,8 +175,11 @@ export function QuestionScreen({ assessmentId, sport }: QuestionScreenProps) {
    * It is dropped after a change rather than adjusted, for the same reason: the transcript
    * is shorter than the one they walked into, and where they belong is wherever the engine
    * has just decided to ask them next.
+   *
+   * The review seeds it, which is the one thing that ever arrives from outside: opening an
+   * entry is walking to that question, and it is the same walk from then on.
    */
-  const [movedTo, setMovedTo] = useState<number>();
+  const [movedTo, setMovedTo] = useState<number | undefined>(openAt);
   const answered = step?.transcript.length ?? 0;
   const at = standingPosition(step, movedTo);
   const showing = questionAt(step, at);
@@ -181,18 +203,27 @@ export function QuestionScreen({ assessmentId, sport }: QuestionScreenProps) {
    */
   const recordedAnswer = useRef<View | null>(null);
 
-  // The run is over: the outstanding question is gone and a rating exists.
+  /**
+   * When this screen is not where the player belongs.
+   *
+   * One effect and one latch, because the three are alternatives: a run that finishes while
+   * an abandonment is departing must not navigate twice.
+   *
+   * - **stopped** — the questionnaire has nothing left to ask, and the review is the last
+   *   look before the rating exists. Gated on there being nothing here to show, which is
+   *   what lets the review send a player *back* into a stopped run to change an answer:
+   *   standing on question three of a run that has stopped, they are exactly where they
+   *   asked to be, and walking off the end of it is what brings them back.
+   * - **rated** — a rating exists, so the result screen has something to show. Reached from
+   *   here only when the run was completed elsewhere; this device completes from the review.
+   * - **ended** — abandoned elsewhere. Nothing to show and nothing to say, so the flow moves
+   *   on exactly as an abandonment from this screen would.
+   */
   useEffect(() => {
-    if (!finished) return;
-    showResultOf(assessmentId);
-  }, [finished, showResultOf, assessmentId]);
-
-  // Ended elsewhere, with no rating to show. There is nothing to say about a run that is
-  // simply gone, so the flow moves on the same way an abandonment from here would.
-  useEffect(() => {
-    if (!endedWithoutRating) return;
-    advance();
-  }, [endedWithoutRating, advance]);
+    if (standing === 'stopped' && showing === undefined) showReviewOf(assessmentId);
+    else if (standing === 'rated') showResultOf(assessmentId);
+    else if (standing === 'ended') advance();
+  }, [standing, showing, assessmentId, showReviewOf, showResultOf, advance]);
 
   /**
    * One press's worth of consequence per press, on either control.
@@ -294,31 +325,16 @@ export function QuestionScreen({ assessmentId, sport }: QuestionScreenProps) {
   const end = outstandingPosition(step);
   const goBack = at > 1 ? () => setMovedTo(at - 1) : undefined;
   const goForward = () => setMovedTo(at + 1 >= end ? undefined : at + 1);
-
   /**
-   * Nothing is sent. The run stays in progress with every answer intact, and the gate is
-   * told to leave it alone until the next launch — which is what makes this a way out
-   * rather than a redirect back to the question one frame later.
+   * Where forward leads from the last answer of a **stopped** run: the review, because
+   * there is no question past it.
+   *
+   * The control is the same move — one step towards the end of the run — but a player is
+   * owed the name of the screen they are about to be on, and `Next question` on the last
+   * answer of a run with no more questions is the one place this screen could promise
+   * something that does not exist.
    */
-  const continueLater = () => {
-    setConfirmingExit(false);
-    defer(assessmentId);
-    router.replace('/');
-  };
-
-  /**
-   * The confirm stays open until the flow has somewhere to be, so a failure on either
-   * half — the abandonment or the next sport's opening question — lands in front of the
-   * player beside the control that retries it. Pressing again re-abandons, which the
-   * server treats as a no-op, and tries the departure again.
-   */
-  const stopRatingThisSport = () => {
-    abandon.mutate(undefined, { onSuccess: advance });
-  };
-
-  // The abandon request, then the next sport's opening question: one departure to the
-  // player, and either half can fail.
-  const leaving = abandon.isPending || onwards.advancing;
+  const forwardIsReview = question === undefined && at + 1 >= end;
 
   return (
     <>
@@ -328,7 +344,7 @@ export function QuestionScreen({ assessmentId, sport }: QuestionScreenProps) {
         // A sheet is a real modal: while it is open nothing behind it is reachable by a
         // screen reader. Both sheets are siblings below, never children — inside here one
         // would hide itself along with the question.
-        {...behindOverlay(confirmingExit || proposed !== undefined)}
+        {...behindOverlay(leave.confirming || proposed !== undefined)}
       >
         <OnboardingChrome
           eyebrow={passEyebrow(sport, position)}
@@ -339,8 +355,8 @@ export function QuestionScreen({ assessmentId, sport }: QuestionScreenProps) {
           backLabel="Previous question"
           right={
             <CloseControl
-              ref={closeControl}
-              onPress={() => setConfirmingExit(true)}
+              ref={leave.returnFocusTo}
+              onPress={leave.ask}
               accessibilityLabel="Leave this rating"
               accessibilityHint="Offers continuing later or stopping this sport"
             />
@@ -463,9 +479,13 @@ export function QuestionScreen({ assessmentId, sport }: QuestionScreenProps) {
               // next position is already in hand — so it is a move and never a second way
               // to submit.
               <Button
-                label="Next question"
+                label={forwardIsReview ? 'Back to your answers' : 'Next question'}
                 size="lg"
-                accessibilityHint="Returns towards the question you are being asked"
+                accessibilityHint={
+                  forwardIsReview
+                    ? 'Returns to the list of your answers'
+                    : 'Returns towards the question you are being asked'
+                }
                 onPress={goForward}
               />
             )}
@@ -483,14 +503,14 @@ export function QuestionScreen({ assessmentId, sport }: QuestionScreenProps) {
       />
 
       <LeaveAssessmentSheet
-        visible={confirmingExit}
+        visible={leave.confirming}
         sport={sport}
-        onKeepGoing={() => setConfirmingExit(false)}
-        onContinueLater={continueLater}
-        onAbandon={stopRatingThisSport}
-        leaving={leaving}
-        error={abandon.error ?? onwards.error}
-        returnFocusTo={closeControl}
+        onKeepGoing={leave.keepGoing}
+        onContinueLater={leave.continueLater}
+        onAbandon={leave.stopRating}
+        leaving={leave.leaving}
+        error={leave.error}
+        returnFocusTo={leave.returnFocusTo}
       />
     </>
   );

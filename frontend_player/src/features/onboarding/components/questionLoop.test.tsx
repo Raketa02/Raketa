@@ -642,13 +642,14 @@ describe('changing an answer', () => {
 
     // The beginner's answer, given late: "never played" leaves the engine nothing more to
     // ask, so the response carries no question — and the client must not sit waiting for
-    // one. Where onward *is* today is the result screen, by the same path a last ordinary
-    // answer takes; #62 makes both of them the review.
+    // one. Onward is the **review**, by the same path a last ordinary answer takes: the
+    // run has stopped and nothing has been rated, so there is no result to route to and
+    // every answer is still the player's to change (#62).
     transport.on('POST', ANSWERS_PATH, () => json(STOPPED_AFTER_ONE));
     askToChange();
     confirmChange();
 
-    await waitFor(() => expect(screen).toHavePathname(`/result/${ASSESSMENT_ID}`));
+    await waitFor(() => expect(screen).toHavePathname(`/review/${ASSESSMENT_ID}`));
     expect(transport.requestsTo('POST', ANSWERS_PATH)).toHaveLength(1);
   });
 });

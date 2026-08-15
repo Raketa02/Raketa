@@ -87,7 +87,9 @@ export function LeaveAssessmentSheet({
 
       <LeaveOption
         title="Continue later"
-        detail={`We'll bring you back to this question. Every answer you've given for ${name} is kept.`}
+        // Not "back to this question": the same sheet is offered from the review, where the
+        // player has answered every question there is and none is outstanding.
+        detail={`We'll bring you back to where you left off. Every answer you've given for ${name} is kept.`}
         hint="Leaves the questionnaire and keeps your answers"
         disabled={leaving}
         onPress={onContinueLater}

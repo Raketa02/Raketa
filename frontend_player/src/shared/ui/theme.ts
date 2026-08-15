@@ -387,6 +387,19 @@ const motion = {
   popover: 130,
   /** The prototype's cubic-bezier(.2,.8,.2,1) — decelerating. */
   easeDecel: { x1: 0.2, y1: 0.8, x2: 0.2, y2: 1 },
+  /** How long a state is SHOWN — the one thing here that reduced motion does not skip.
+   *
+   *  Nested so the block above keeps its one-line contract (*the four things reduced
+   *  motion skips*); a fifth flat key would have quietly broken it for whoever adds the
+   *  next duration. A held duration is not an animation: nothing moves, and the player
+   *  who asked the OS to calm things down is the last one who should get a 120ms flash
+   *  where the rating comes into existence (docs/design-system.md 12.1, Part 13). */
+  hold: {
+    /** The calculating screen. Coupled to its copy staying ONE short line — a sentence a
+     *  player cannot finish before the screen leaves is worse than no sentence at all, so
+     *  if the copy grows this grows with it, as an amendment rather than a tweak. */
+    calculating: 1200,
+  },
 } as const;
 
 /** zIndex is scoped to the parent in RN, so overlays render from a single root-level

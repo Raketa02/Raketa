@@ -52,6 +52,25 @@ export function standingPosition(
 }
 
 /**
+ * Every question the run has answered, in the order it asked them — the review's whole
+ * content.
+ *
+ * The same positions the questionnaire moves by, deliberately: an entry on the review opens
+ * that question in the questionnaire, and a position that meant one thing on one screen and
+ * something else on the other would send a player to change the wrong answer.
+ *
+ * Empty for a run that has answered nothing, and for one that has not loaded — neither is a
+ * list with something missing from it.
+ */
+export function answeredQuestions(step: AssessmentStep | undefined): readonly StandingQuestion[] {
+  return (step?.transcript ?? []).map((answered, index) => ({
+    position: index + 1,
+    question: answered.question,
+    answer: answered.optionId,
+  }));
+}
+
+/**
  * The question at a 1-based position: an answered one from the transcript, or the
  * outstanding one at the end.
  *

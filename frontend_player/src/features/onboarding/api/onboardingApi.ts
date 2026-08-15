@@ -128,6 +128,31 @@ export function submitAnswer(
 }
 
 /**
+ * Create the Skill rating from the answers as they now stand, and get the finished step
+ * back in the same response.
+ *
+ * **The moment the rating comes into existence, and the only request that makes one.**
+ * The questionnaire stopping does not: a stopped run sits in progress with every answer
+ * still revisable until this is called ([ADR-0020](../../../../../docs/adr/0020-revisable-assessment-answers.md)).
+ *
+ * A POST to a sub-resource for the same reason abandonment is one — the run reaches a
+ * terminal state rather than anything being created at a new address — and calling it
+ * twice returns the first call's result and records nothing, which is the server's half of
+ * a double-tapped submit.
+ */
+export function completeAssessment(
+  assessmentId: string,
+  { signal }: OnboardingApiOptions = {},
+): Promise<AssessmentStepResponse> {
+  return httpRequest<AssessmentStepResponse>({
+    method: 'POST',
+    path: `/api/v1/assessments/${encodeURIComponent(assessmentId)}/completion`,
+    authenticated: true,
+    signal,
+  });
+}
+
+/**
  * End a run without a rating, freeing its sport to be started again.
  *
  * A POST to a sub-resource rather than a `DELETE`, because **nothing is deleted**: the
