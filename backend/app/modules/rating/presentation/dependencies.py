@@ -13,6 +13,7 @@ from app.api.dependencies import (
 from app.engines.assessment import AssessmentEngine
 from app.engines.racketskill.v3 import RacketSkillEngineV3
 from app.modules.rating.application.abandon_assessment import AbandonAssessment
+from app.modules.rating.application.complete_assessment import CompleteAssessment
 from app.modules.rating.application.create_assessment import CreateAssessment
 from app.modules.rating.application.find_in_progress_assessment import (
     FindInProgressAssessment,
@@ -95,13 +96,32 @@ CreateAssessmentDep = Annotated[CreateAssessment, Depends(get_create_assessment)
 def get_submit_answer(
     engine: AssessmentEngineDep,
     assessments: AssessmentRepositoryDep,
-    ratings: SkillRatingRepositoryDep,
     uow: UnitOfWorkDep,
     clock: ClockDep,
 ) -> SubmitAnswer:
+    # One repository: answering never creates a rating any more, so the rating
+    # repository is the completion's.
+    return SubmitAnswer(
+        engine=engine,
+        assessments=assessments,
+        uow=uow,
+        clock=clock,
+    )
+
+
+SubmitAnswerDep = Annotated[SubmitAnswer, Depends(get_submit_answer)]
+
+
+def get_complete_assessment(
+    engine: AssessmentEngineDep,
+    assessments: AssessmentRepositoryDep,
+    ratings: SkillRatingRepositoryDep,
+    uow: UnitOfWorkDep,
+    clock: ClockDep,
+) -> CompleteAssessment:
     # Two repositories and one unit of work: completion writes both streams
     # inside one transaction, and only the transaction is this use case's.
-    return SubmitAnswer(
+    return CompleteAssessment(
         engine=engine,
         assessments=assessments,
         ratings=ratings,
@@ -110,7 +130,7 @@ def get_submit_answer(
     )
 
 
-SubmitAnswerDep = Annotated[SubmitAnswer, Depends(get_submit_answer)]
+CompleteAssessmentDep = Annotated[CompleteAssessment, Depends(get_complete_assessment)]
 
 
 def get_get_assessment(

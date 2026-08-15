@@ -20,9 +20,10 @@
  *
  * Every exit is a `replace` and the screen stays mounted while the next one is being
  * arranged, so a step arriving mid-departure could navigate a second time on top of a
- * decision already taken. One latch covers **both** ways out of a sport — onward through
- * the pass, and to this sport's own result — because they are alternatives, and a run that
- * finishes while an abandonment is departing must not produce two navigations.
+ * decision already taken. One latch covers **every** way off a screen in this run — onward
+ * through the pass, to this sport's result, to the review the stop leads to, and back into
+ * the questionnaire at an answer — because they are alternatives, and a run that finishes
+ * while an abandonment is departing must not produce two navigations.
  *
  * **A failed start releases it.** The abandonment that may have preceded it still stands —
  * it is a state transition on the server and there is nothing to undo — so only the
@@ -63,9 +64,28 @@ export interface PassAdvance {
    *
    * Here rather than in the question screen because it shares the latch — see above. The
    * result screen has no use for it, which is the honest shape: one hook owns leaving a
-   * sport, and leaving has two destinations.
+   * sport, and leaving has several destinations.
    */
   readonly showResultOf: (assessmentId: string) => void;
+  /**
+   * The questionnaire stopped, so the review is next — the last look before the rating
+   * exists (ADR-0020).
+   *
+   * The third destination out of the question loop, and the reason it is here rather than
+   * in the screen is the latch: a stopped run, a finished one and an abandonment are
+   * alternatives, and a step arriving mid-departure must not navigate on top of a
+   * decision already taken.
+   */
+  readonly showReviewOf: (assessmentId: string) => void;
+  /**
+   * Back into the questionnaire, standing on a question already answered — what a review
+   * entry opens, and where a run that is still asking belongs.
+   *
+   * `position` omitted means *wherever the run stands*, which is the outstanding question.
+   * It is navigation input rather than state: it says where the player starts standing,
+   * and every move after it is local to the screen and costs nothing.
+   */
+  readonly showQuestionAt: (assessmentId: string, position?: number) => void;
   /** A start is in flight. Drives the busy control, and the leave sheet's busy state. */
   readonly advancing: boolean;
   /** The failed start, if the last one failed. Rendered with the usual error note. */
@@ -86,9 +106,33 @@ export function useAdvanceThroughPass(sport: Sport): PassAdvance {
     (assessmentId: string) => {
       if (departing.current) return;
       departing.current = true;
-      // `replace`, because the questionnaire has no way back — this is the one exit from
-      // the loop that has something of this sport's to show.
+      // `replace`, because this is the exit from the loop, not a step inside it. Moving
+      // between questions is state on one route (ADR-0020); leaving the run is a route
+      // change, and a player who has been rated must not land back in the questionnaire
+      // on the system back gesture.
       router.replace({ pathname: '/result/[assessmentId]', params: { assessmentId, sport } });
+    },
+    [router, sport],
+  );
+
+  const showReviewOf = useCallback(
+    (assessmentId: string) => {
+      if (departing.current) return;
+      departing.current = true;
+      router.replace({ pathname: '/review/[assessmentId]', params: { assessmentId, sport } });
+    },
+    [router, sport],
+  );
+
+  const showQuestionAt = useCallback(
+    (assessmentId: string, position?: number) => {
+      if (departing.current) return;
+      departing.current = true;
+      router.replace({
+        pathname: '/question/[assessmentId]',
+        params:
+          position === undefined ? { assessmentId, sport } : { assessmentId, sport, at: position },
+      });
     },
     [router, sport],
   );
@@ -128,6 +172,8 @@ export function useAdvanceThroughPass(sport: Sport): PassAdvance {
     advance,
     stopHere,
     showResultOf,
+    showReviewOf,
+    showQuestionAt,
     advancing: start.isPending,
     error: start.error,
   };

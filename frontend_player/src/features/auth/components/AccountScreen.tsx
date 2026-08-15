@@ -1,12 +1,18 @@
 /**
- * The authenticated placeholder: who you are, and the way out.
+ * The authenticated placeholder — what a player who is past onboarding opens on.
  *
  * The walking skeleton needs *somewhere* on the far side of the guard, and sign-out is
  * genuinely this feature's surface — so this is the account screen rather than an
- * invented `home` feature with eight empty layers. The onboarding slice (#23) replaces
- * what the authenticated tree opens on.
+ * invented `home` feature with eight empty layers.
  *
- * The nickname comes from `useCurrentUser`, not from the session: the profile is backend
+ * **It says "Inside the app" on purpose, and provisionally.** A player reaching here has a
+ * Skill rating, so the entry gate will send them straight back here on every later launch
+ * rather than through onboarding again — and the screen naming that state is what makes the
+ * gate's decision visible while the real app is still unbuilt. The nickname and email are
+ * kept because they are how you tell *which* player the gate let through, and sign-out is
+ * kept because it is the only way back to the beginning.
+ *
+ * The identity comes from `useCurrentUser`, not from the session: the profile is backend
  * data and Query owns it. That is also why this screen models a loading and an error
  * state — a screen that renders a name it assumes is already there is a screen that
  * renders "undefined" on a cold launch.
@@ -32,15 +38,21 @@ export function AccountScreen() {
       <View style={s.content}>
         <View style={s.header}>
           <Text style={s.eyebrow}>Signed in</Text>
-          <Text style={s.title}>{user.data === undefined ? 'Rakieta' : user.data.nickname}</Text>
-          {user.data !== undefined ? <Text style={s.body}>{user.data.email}</Text> : null}
+          <Text style={s.title} accessibilityRole="header">
+            Inside the app
+          </Text>
+          {user.data !== undefined ? (
+            <Text style={s.body}>{`${user.data.nickname} · ${user.data.email}`}</Text>
+          ) : null}
         </View>
 
         {user.isPending ? <Text style={s.body}>Loading your profile…</Text> : null}
 
         {user.error !== null ? <AuthNotice message={authErrorMessage(user.error)} /> : null}
 
-        <Text style={s.body}>The rest of the app arrives in later slices.</Text>
+        <Text style={s.body}>
+          Onboarding is behind you. This is where the app itself arrives in later slices.
+        </Text>
 
         <Button
           label="Sign out"

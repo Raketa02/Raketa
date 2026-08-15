@@ -191,11 +191,10 @@ export function ResultScreen({ assessmentId, sport }: ResultScreenProps) {
         // a screen reader. The popover is a sibling below, never a child.
         {...behindOverlay(explainer !== undefined)}
       >
-        <OnboardingChrome
-          eyebrow={passEyebrow(sport, position)}
-          title="Your rating"
-          position={position}
-        />
+        {/* The eyebrow carries which sport of how many, and nothing else does: the bar
+            that used to repeat it under the header measured sports, and sports are no
+            longer what onboarding's progress indicator measures (ADR-0020). */}
+        <OnboardingChrome eyebrow={passEyebrow(sport, position)} title="Your rating" />
 
         <ScrollView contentContainerStyle={s.content}>
           {assessment.isPending ? (

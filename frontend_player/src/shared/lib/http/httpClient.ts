@@ -300,6 +300,17 @@ export async function httpRequest<T>(request: HttpRequest): Promise<T> {
         await credentials.abandon();
       }
     }
+  } else if (attempt.status === 401 && request.authenticated) {
+    // An authenticated request went out with **no credential at all** and was refused.
+    //
+    // The app believes it has a session and holds nothing to prove it. There is no token
+    // to rotate, so the block above cannot help and the 401 would otherwise surface as
+    // `requires-reauthentication` with the session machine untouched — leaving the player
+    // on a retry that re-sends the same headerless request every time it is pressed.
+    //
+    // Whatever produced the mismatch, the honest reading is the same: this session is
+    // over. Ending it lets the routing guard do what a retry cannot.
+    await credentials.abandon();
   }
 
   if (!attempt.ok) throw mapErrorResponse(attempt.status, attempt.body);

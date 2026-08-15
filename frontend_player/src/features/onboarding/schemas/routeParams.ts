@@ -10,7 +10,7 @@
  * The sport is a closed set and the assessment id is a UUID, which makes both of them
  * cheap to check and pointless to guess at.
  *
- * **One schema, both assessment routes.** The question route and the result route carry
+ * **One schema, all three assessment routes.** The question, review and result routes carry
  * the same two params for the same reason — the wire does not say which sport a step
  * belongs to, because `/assessments/{id}` is asked about a run rather than about a sport —
  * so the parser is named for the params it checks and not for the screen that reads them.
@@ -23,6 +23,17 @@ import { SPORTS } from '../domain/Sport';
 export const assessmentRouteParams = z.object({
   assessmentId: z.string().uuid(),
   sport: z.enum(SPORTS),
+  /**
+   * Which question to stand on, 1-based — what a review entry opens, and the one param
+   * only the questionnaire reads.
+   *
+   * **Navigation input, not state.** It says where the player starts standing; every move
+   * after it is local to the screen and costs nothing. Absent means *wherever the run
+   * stands*, which is the question being asked — and a number pointing outside the run is
+   * clamped to it rather than rejected, because the run it names is served fresh and may
+   * be shorter than the one the link was made from.
+   */
+  at: z.coerce.number().int().positive().optional(),
 });
 
 export type AssessmentRouteParams = z.infer<typeof assessmentRouteParams>;

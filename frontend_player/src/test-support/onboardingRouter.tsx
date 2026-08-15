@@ -25,6 +25,7 @@ import DoneRoute from '@/app/(onboarding)/done';
 import OnboardingLayout from '@/app/(onboarding)/_layout';
 import QuestionRoute from '@/app/(onboarding)/question/[assessmentId]';
 import ResultRoute from '@/app/(onboarding)/result/[assessmentId]';
+import ReviewRoute from '@/app/(onboarding)/review/[assessmentId]';
 import SportsRoute from '@/app/(onboarding)/sports';
 import WelcomeRoute from '@/app/(onboarding)/welcome';
 import { beginSession } from '@/shared/lib/auth';
@@ -43,6 +44,7 @@ export const ONBOARDING_ROUTES = {
   '(onboarding)/welcome': WelcomeRoute,
   '(onboarding)/sports': SportsRoute,
   '(onboarding)/question/[assessmentId]': QuestionRoute,
+  '(onboarding)/review/[assessmentId]': ReviewRoute,
   '(onboarding)/result/[assessmentId]': ResultRoute,
   '(onboarding)/done': DoneRoute,
   '(onboarding)/data': DataRoute,

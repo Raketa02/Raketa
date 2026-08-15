@@ -11,6 +11,7 @@ export { DoneScreen } from './components/DoneScreen';
 export { EntryUnavailableScreen } from './components/EntryUnavailableScreen';
 export { QuestionScreen } from './components/QuestionScreen';
 export { ResultScreen } from './components/ResultScreen';
+export { ReviewScreen } from './components/ReviewScreen';
 export { SportsPickerScreen } from './components/SportsPickerScreen';
 export { WelcomeScreen } from './components/WelcomeScreen';
 

@@ -28,6 +28,7 @@ import {
   json,
   networkFailure,
   noContent,
+  transcriptOf,
   type Transport,
   type Wire,
 } from '@/test-support/transport';
@@ -47,6 +48,7 @@ function opening(assessmentId: string, text: string): Wire['AssessmentStepRespon
     assessment_id: assessmentId,
     status: 'in_progress',
     questions_asked: 0,
+    transcript: transcriptOf(0),
     question: {
       id: `q-played-${assessmentId}`,
       category: 'Recent activity',
@@ -70,6 +72,7 @@ const PADEL_SECOND: Wire['AssessmentStepResponse'] = {
   assessment_id: PADEL_RUN,
   status: 'in_progress',
   questions_asked: 1,
+  transcript: transcriptOf(1),
   question: {
     id: 'q-overhead',
     category: 'Match execution',
@@ -88,6 +91,7 @@ const PADEL_ABANDONED: Wire['AssessmentStepResponse'] = {
   assessment_id: PADEL_RUN,
   status: 'abandoned',
   questions_asked: 1,
+  transcript: transcriptOf(1),
   question: null,
 };
 
@@ -108,6 +112,7 @@ const PADEL_FINISHED: Wire['AssessmentStepResponse'] = {
   assessment_id: PADEL_RUN,
   status: 'completed',
   questions_asked: 4,
+  transcript: transcriptOf(4),
   question: null,
   result: {
     mu: 2.71,
@@ -223,9 +228,10 @@ describe('the way out', () => {
   it('is reachable from the question and offers all three choices', async () => {
     await resumePadel();
 
-    // The close control is in the header's right slot. It is not a back control: leaving
-    // the questionnaire is not revisiting an answer (ADR-0017).
-    expect(screen.queryByLabelText('Back')).toBeNull();
+    // The close control is in the header's right slot, and the way back through the run
+    // is in the left one (ADR-0020). Two doors, and this test opens the one that leaves:
+    // on the opening question there is nothing behind the player to walk back to.
+    expect(screen.queryByLabelText('Previous question')).toBeNull();
     openTheConfirm();
 
     expect(await screen.findByRole('header', { name: 'Leave this rating?' })).toBeTruthy();
@@ -371,12 +377,14 @@ describe('abandoning a sport', () => {
     const [started] = transport.requestsTo('POST', '/api/v1/assessments').slice(-1);
     expect(started?.body).toEqual({ sport: 'TENNIS' });
 
-    // The padel question is gone and there is no way back to it. Abandoning is not back
-    // navigation, and no path returns a player to a question they have answered.
+    // The padel question is gone and there is no way back to it. A player may walk back
+    // over the questions of the run they are in (ADR-0020); abandoning is not that, and
+    // no path returns a player to a run that has ended.
     expect(screen.queryByText('Have you played padel before?')).toBeNull();
-    expect(screen.queryByLabelText('Back')).toBeNull();
-    // A sport that was abandoned was still chosen, so the queue is not renumbered.
-    expect(screen.getByLabelText('Rating 2 of 2')).toBeTruthy();
+    expect(screen.queryByLabelText('Previous question')).toBeNull();
+    // A sport that was abandoned was still chosen, so the queue is not renumbered. The
+    // eyebrow is where that count lives now, and the only place it does.
+    expect(screen.getByText('Tennis · Rating 2 of 2')).toBeTruthy();
   });
 
   it('ends onboarding when it was the only sport', async () => {

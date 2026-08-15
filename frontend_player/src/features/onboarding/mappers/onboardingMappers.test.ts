@@ -5,7 +5,7 @@
  * fails `pnpm typecheck` rather than failing here with a confusing assertion.
  */
 
-import type { Wire } from '@/test-support/transport';
+import { transcriptOf, type Wire } from '@/test-support/transport';
 
 import {
   toAssessmentRun,
@@ -121,6 +121,7 @@ describe('assessment steps', () => {
       assessment_id: '1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6',
       status: 'in_progress',
       questions_asked: 0,
+      transcript: transcriptOf(0),
       question: QUESTION,
     });
 
@@ -137,6 +138,7 @@ describe('assessment steps', () => {
       assessment_id: '1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6',
       status: 'in_progress',
       questions_asked: 4,
+      transcript: transcriptOf(4),
       question: QUESTION,
     });
 
@@ -146,10 +148,51 @@ describe('assessment steps', () => {
       assessment_id: '1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6',
       status: 'in_progress',
       questions_asked: 0,
+      transcript: transcriptOf(0),
       question: QUESTION,
     });
 
     expect(fresh.questionsAsked).toBe(0);
+  });
+
+  it('carries the served transcript, question copy and all, in the order it arrived', () => {
+    // Each entry is a question **as it was asked** plus the option chosen, because the
+    // device has nothing of its own to render an answered question from — a resumed run
+    // on a fresh install has never seen any of them.
+    const step = toAssessmentStep({
+      assessment_id: '1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6',
+      status: 'in_progress',
+      questions_asked: 2,
+      transcript: [
+        { question: { ...QUESTION, id: 'q-first' }, option_id: 'weekly' },
+        { question: { ...QUESTION, id: 'q-second', tier: 'discriminating' }, option_id: 'rarely' },
+      ],
+      question: QUESTION,
+    });
+
+    expect(step.transcript).toHaveLength(2);
+    expect(step.transcript[0]?.question.id).toBe('q-first');
+    expect(step.transcript[0]?.optionId).toBe('weekly');
+    // The same reading of the wire's null tier the outstanding question gets: an answered
+    // question is a question, and one mapper reads both.
+    expect(step.transcript[0]?.question.tier).toBeUndefined();
+    expect(step.transcript[1]?.question.tier).toBe('discriminating');
+    expect(step.transcript[1]?.optionId).toBe('rarely');
+  });
+
+  it('reads an empty transcript as a run with nothing behind it', () => {
+    // Empty is an answer and it is the common one. The field is always sent, so there is
+    // no absent case to fall back for — a fresh run and a withheld transcript are not two
+    // readings of one payload.
+    const fresh = toAssessmentStep({
+      assessment_id: '1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6',
+      status: 'in_progress',
+      questions_asked: 0,
+      transcript: [],
+      question: QUESTION,
+    });
+
+    expect(fresh.transcript).toEqual([]);
   });
 
   it('has no question when there is nothing outstanding', () => {
@@ -157,6 +200,7 @@ describe('assessment steps', () => {
       assessment_id: '1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6',
       status: 'completed',
       questions_asked: 2,
+      transcript: transcriptOf(2),
       question: null,
     });
 
@@ -170,6 +214,7 @@ describe('assessment steps', () => {
       assessment_id: '1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6',
       status: 'abandoned',
       questions_asked: 2,
+      transcript: transcriptOf(2),
       question: null,
     });
 
@@ -185,6 +230,7 @@ describe('assessment steps', () => {
       assessment_id: '1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6',
       status: 'quarantined_pending_review',
       questions_asked: 1,
+      transcript: transcriptOf(1),
       question: QUESTION,
     });
 
@@ -196,6 +242,7 @@ describe('assessment steps', () => {
       assessment_id: '1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6',
       status: 'completed',
       questions_asked: 2,
+      transcript: transcriptOf(2),
       question: null,
       result: RESULT,
     });
@@ -227,6 +274,7 @@ describe('assessment steps', () => {
       assessment_id: '1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6',
       status: 'completed',
       questions_asked: 1,
+      transcript: transcriptOf(1),
       question: null,
       result: { ...RESULT, factors: undefined, uncertainty_factors: undefined },
     });
@@ -246,6 +294,7 @@ describe('assessment steps', () => {
       assessment_id: '1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6',
       status: 'completed',
       questions_asked: 2,
+      transcript: transcriptOf(2),
       question: null,
       result: { ...RESULT, confidence_ceiling: null, confidence_reason: null },
     });
@@ -254,6 +303,7 @@ describe('assessment steps', () => {
       assessment_id: '1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6',
       status: 'completed',
       questions_asked: 2,
+      transcript: transcriptOf(2),
       question: null,
       result: { ...RESULT, confidence_ceiling: undefined },
     });
@@ -272,6 +322,7 @@ describe('assessment steps', () => {
       assessment_id: '1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6',
       status: 'completed',
       questions_asked: 2,
+      transcript: transcriptOf(2),
       question: null,
       result: { ...RESULT, confidence: 0, confidence_ceiling: 0 },
     });
@@ -284,6 +335,7 @@ describe('assessment steps', () => {
       assessment_id: '1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6',
       status: 'in_progress',
       questions_asked: 1,
+      transcript: transcriptOf(1),
       question: QUESTION,
     });
 

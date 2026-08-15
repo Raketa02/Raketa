@@ -1,50 +1,59 @@
 /**
- * Onboarding's chrome: a header, and a progress bar that measures **sports**.
+ * Onboarding's chrome: a header, and whatever the screen puts under it.
  *
- * Sports are the one denominator the player actually chose. Question count is unknowable
- * by design — the engine stops when one more answer would no longer move the Band — so
- * there is no honest per-question denominator, and a bar that invented one would be
- * lying about a flow whose whole premise is that it explains itself.
+ * **The bar that measured sports is gone, and the eyebrow is the sole carrier of which
+ * sport of how many.** The two said the same thing, and the words are the half that is
+ * readable at any font size — a filled rectangle is not. What replaces the bar on the
+ * questionnaire is the question navigator, which measures the run rather than the pass:
+ * the screen a player spends the longest on is the one that used to show no movement at
+ * all, because a bar counting sports does not move for eight questions
+ * ([ADR-0020](../../../../../docs/adr/0020-revisable-assessment-answers.md),
+ * design-system 12.1).
  *
- * The bar therefore says *which sport you are on*, not how far through it you are, and
- * the eyebrow says the same thing in words: a filled rectangle is not readable at any
- * font size, and colour is never the only carrier of a state.
+ * So the strip under the header is a slot rather than a component. Screens with nothing to
+ * measure — welcome, the picker, the result, the closing screens — pass nothing and draw a
+ * header, which is what they always drew once the sports bar stopped being honest.
  *
- * There is no back control, here or anywhere else in the questionnaire (ADR-0017). The
- * right slot is a different thing entirely: a way *out* of the flow is not a way back to
- * an answer, and the question screen puts its close control there.
+ * The header's two slots are not the same thing and never were: the right slot is a way
+ * *out* of the flow (the close control), and the left is the way *back* through it, which
+ * the questionnaire now has.
  */
 
 import { StyleSheet, View } from 'react-native';
 import type { ReactNode } from 'react';
 
-import { Bar, ScreenHeader, theme } from '@/shared/ui';
-
-import type { RatingPosition } from '../domain/onboardingPass';
+import { ScreenHeader, theme } from '@/shared/ui';
 
 export interface OnboardingChromeProps {
   readonly title: string;
   readonly eyebrow?: string;
-  /** Absent before a pass exists — welcome and the picker have nothing to measure. */
-  readonly position?: RatingPosition;
-  /** The header's right slot. Never a back control — see above. */
+  /** The header's right slot — the close control, on the screens that can be left. */
   readonly right?: ReactNode;
+  /** The header's left slot: back through the questionnaire, never out of it. */
+  readonly onBack?: () => void;
+  readonly backLabel?: string;
+  /** The strip under the header. The questionnaire puts its navigator here. */
+  readonly progress?: ReactNode;
 }
 
-export function OnboardingChrome({ title, eyebrow, position, right }: OnboardingChromeProps) {
+export function OnboardingChrome({
+  title,
+  eyebrow,
+  right,
+  onBack,
+  backLabel,
+  progress,
+}: OnboardingChromeProps) {
   return (
     <View>
-      <ScreenHeader title={title} eyebrow={eyebrow} right={right} />
-      {position !== undefined ? (
-        <View style={s.progress}>
-          <Bar
-            now={position.index}
-            total={position.total}
-            fill={theme.color.coral}
-            accessibilityLabel={`Rating ${position.index} of ${position.total}`}
-          />
-        </View>
-      ) : null}
+      <ScreenHeader
+        title={title}
+        eyebrow={eyebrow}
+        right={right}
+        onBack={onBack}
+        backLabel={backLabel}
+      />
+      {progress !== undefined ? <View style={s.progress}>{progress}</View> : null}
     </View>
   );
 }

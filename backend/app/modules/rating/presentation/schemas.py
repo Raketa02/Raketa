@@ -23,6 +23,7 @@ from app.kernel import Sport
 from app.modules.rating.application.commands import (
     AssessmentStep,
     InProgressAssessmentView,
+    TranscriptEntry,
 )
 from app.modules.rating.domain.skill_rating import SkillRating
 
@@ -65,6 +66,28 @@ class QuestionResponse(BaseModel):
                 AnswerOptionResponse(id=option.id, text=option.text)
                 for option in question.options
             ],
+        )
+
+
+class TranscriptEntryResponse(BaseModel):
+    """One answered question: the question as it was asked, and what was chosen."""
+
+    # ``option_id`` names one of ``question.options``, whose text is right there —
+    # carrying the text again would be one string in two places and so one string
+    # that can disagree with itself.
+    #
+    # Kept as a comment rather than added to the docstring above, because a
+    # response model's docstring *is* wire copy: it lands in the API document as
+    # the schema description, so a note to the next reader there is a contract
+    # diff. The one line that remains is written to be read by a client.
+    question: QuestionResponse
+    option_id: str
+
+    @classmethod
+    def from_domain(cls, entry: TranscriptEntry) -> "TranscriptEntryResponse":
+        return cls(
+            question=QuestionResponse.from_domain(entry.question),
+            option_id=entry.option_id,
         )
 
 
@@ -251,10 +274,37 @@ class RatingsResponse(BaseModel):
 
 
 class AssessmentStepResponse(BaseModel):
-    """The server-driven step. Exactly one of ``question`` / ``result`` is set."""
+    """The server-driven step: at most one of `question` / `result` is set, and
+    `transcript` is everything already answered behind it. Neither means the run
+    is not asking and has not been rated — see `status`."""
 
+    # The invariant was *exactly* one until the questionnaire's stop and the
+    # assessment's completion became two moments (docs/adr/0020). Both absent is
+    # now a state a live run passes through and sits in, and `status` is what
+    # separates it from an abandoned run. Weakening it rather than adding a flag
+    # keeps every field where it was: no client that reads `question` first has
+    # to learn a new one.
+    #
+    # Kept as a comment rather than added to the docstring above, because a
+    # response model's docstring *is* wire copy: it lands in the API document as
+    # the schema description. The lines that remain are written for a client.
     assessment_id: str
-    status: str
+    status: str = Field(
+        ...,
+        description=(
+            "`in_progress`, `completed` or `abandoned` — and the field that says "
+            "which of two things *neither a question nor a result* means.\n\n"
+            "- `in_progress` **with** a `question`: the questionnaire, awaiting "
+            "that answer.\n"
+            "- `in_progress` with **neither**: the questionnaire has **stopped**. "
+            "No remaining question would meaningfully tighten the estimate, and "
+            "nothing has been rated — every answer is still revisable, and "
+            "`POST /assessments/{assessment_id}/completion` is what creates the "
+            "Skill rating.\n"
+            "- `completed`: the `result` is here and the answers are settled.\n"
+            "- `abandoned`: neither, and the run ended without a rating."
+        ),
+    )
     questions_asked: int = Field(
         ...,
         description=(
@@ -267,6 +317,21 @@ class AssessmentStepResponse(BaseModel):
             "`result.questions_asked` carries."
         ),
     )
+    transcript: list[TranscriptEntryResponse] = Field(
+        ...,
+        description=(
+            "Every answer given in this run so far, in the order they were given, "
+            "each with the question it answered **as that question was asked** — "
+            "so an answered question can be rendered from the response alone, by a "
+            "client that was never shown it. Empty, never absent, on a run with no "
+            "answers yet: a fresh run and a run whose answers are being withheld "
+            "are not two readings of one payload. Grows by one entry per answer "
+            "and is replayed from the stream on every read, so it survives a "
+            "reinstall and a second device with nothing cached locally. Length is "
+            "`questions_asked`; the outstanding `question` is not in it, because it "
+            "has not been answered."
+        ),
+    )
     question: QuestionResponse | None = None
     result: ResultResponse | None = None
 
@@ -276,6 +341,9 @@ class AssessmentStepResponse(BaseModel):
             assessment_id=str(step.assessment_id),
             status=step.status,
             questions_asked=step.questions_asked,
+            transcript=[
+                TranscriptEntryResponse.from_domain(entry) for entry in step.transcript
+            ],
             question=(
                 QuestionResponse.from_domain(step.question)
                 if step.question is not None

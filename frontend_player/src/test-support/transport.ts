@@ -65,6 +65,33 @@ export function noContent(): Response {
 }
 
 /**
+ * A served Transcript of `answers` entries, for a step fixture that needs one.
+ *
+ * Every step the backend returns carries the answers already given, so a fixture must
+ * carry one too — and its length is `questions_asked`, never anything else. That is the
+ * only property of it any fixture here depends on: nothing in the app reads the entries
+ * yet, so their copy is filler and deliberately looks like filler. A screen that starts
+ * rendering answered questions wants real copy, and should say so by writing it out.
+ */
+export function transcriptOf(answers: number): Wire['AssessmentStepResponse']['transcript'] {
+  return Array.from({ length: answers }, (_unused, index) => ({
+    question: {
+      id: `answered-${index + 1}`,
+      category: 'Answered',
+      tier: null,
+      situation: `The situation for answer ${index + 1}`,
+      text: `The question answered at position ${index + 1}`,
+      qualifier: 'Choose the option that fits best.',
+      options: [
+        { id: 'chosen', text: 'What the player chose' },
+        { id: 'other', text: 'What they did not' },
+      ],
+    },
+    option_id: 'chosen',
+  }));
+}
+
+/**
  * A transport failure — nothing reached the server.
  *
  * React Native's `fetch` rejects with a bare `TypeError` here, which is why the error

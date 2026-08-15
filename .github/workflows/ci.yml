@@ -33,15 +33,24 @@ jobs:
       - uses: dorny/paths-filter@v3
         id: filter
         with:
+          # Each client watches its OWN OpenAPI document as well as its own
+          # directory. Without that, a backend pull request that regenerates the
+          # contract matches only `backend`, no client job runs, and the drift
+          # check below is dormant in precisely the case it exists to catch.
+          # `backend/**` already covers those documents for the backend job.
           filters: |
             backend:
               - 'backend/**'
               - '.github/workflows/ci.yml'
             club:
               - 'frontend_club/**'
+              - 'backend/openapi.club.json'
+              - '.github/scripts/**'
               - '.github/workflows/ci.yml'
             player:
               - 'frontend_player/**'
+              - 'backend/openapi.player.json'
+              - '.github/scripts/**'
               - '.github/workflows/ci.yml'
 
       # The two frontends ship as architecture + config; neither has been
@@ -135,6 +144,11 @@ jobs:
           cache-dependency-path: frontend_club/pnpm-lock.yaml
       - name: Install deps
         run: pnpm install --frozen-lockfile
+      # Inert until frontend_club is bootstrapped (#65): the whole job is gated
+      # on club_ready, so this step turns on by itself when the lockfile lands.
+      - name: Contract drift
+        working-directory: ${{ github.workspace }}
+        run: bash .github/scripts/check-contract-drift.sh frontend_club
       - name: Lint
         run: pnpm lint
       - name: Typecheck
@@ -164,11 +178,25 @@ jobs:
           cache-dependency-path: frontend_player/pnpm-lock.yaml
       - name: Install deps
         run: pnpm install --frozen-lockfile
+      # Runs on a backend-only pull request too — the `player` filter above
+      # watches backend/openapi.player.json. Regenerating with the app's own
+      # pinned openapi-typescript, before typecheck, because the generated types
+      # are typecheck's input.
+      - name: Contract drift
+        working-directory: ${{ github.workspace }}
+        run: bash .github/scripts/check-contract-drift.sh frontend_player
       - name: Lint
         run: pnpm lint
       - name: Typecheck
         run: pnpm typecheck
       - name: Test
         run: pnpm test
+      # Last, and after the check it tests: it perturbs the contract in the
+      # workspace and restores it. A drift check nothing exercises is one that
+      # can stop matching without anybody noticing — the argument test-hooks.sh
+      # already makes for the guardrail hooks.
+      - name: Verify the drift check itself fires
+        working-directory: ${{ github.workspace }}
+        run: bash .github/scripts/test-contract-drift.sh
       # No `build` step: a release build is `eas build`, which is a deliberate
       # human-triggered action, not part of PR CI. See docs/adr/0008.

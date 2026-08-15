@@ -1,8 +1,16 @@
 """The rating context's endpoints: the assessment exchange, and the ratings held.
 
 Creating an assessment returns the first question; submitting an answer returns
-either the next question or the final result. The client holds no flow state; the
-mutation response *is* the current question.
+the next one, or the news that there is none left to ask. The client holds no flow
+state; the mutation response *is* the current question. Submitting an answer for a
+question already answered **changes** it, discarding the answers that depended on
+it — one route, because the client is not asked to know which of the two it is
+doing (``docs/adr/0020``).
+
+**The rating is created by its own request**, on ``/completion``. The
+questionnaire stopping and the assessment completing are two moments, and the
+second is the irreversible one — which is what lets a review of every answer sit
+between them.
 
 ``/ratings`` is the other side of that — not a run in progress but the ratings a
 player already holds. Two routers, because they are two resources; the client's
@@ -19,6 +27,7 @@ from app.core.exception_handlers import ErrorResponse
 from app.kernel import Sport
 from app.modules.rating.application.commands import (
     AbandonAssessmentCommand,
+    CompleteAssessmentCommand,
     CreateAssessmentCommand,
     FindInProgressQuery,
     GetAssessmentQuery,
@@ -29,6 +38,7 @@ from app.modules.rating.application.commands import (
 from app.modules.rating.domain.ids import PlayerId
 from app.modules.rating.presentation.dependencies import (
     AbandonAssessmentDep,
+    CompleteAssessmentDep,
     CreateAssessmentDep,
     FindInProgressAssessmentDep,
     GetAssessmentDep,
@@ -198,6 +208,55 @@ async def get_assessment(
 
 
 @router.post(
+    "/{assessment_id}/completion",
+    response_model=AssessmentStepResponse,
+    status_code=status.HTTP_200_OK,
+    responses={
+        status.HTTP_409_CONFLICT: {
+            "model": ErrorResponse,
+            "description": (
+                "`assessment_not_stopped` — the questionnaire has not finished "
+                "asking, or the run was abandoned. Refetch the current step and "
+                "render it."
+            ),
+        },
+    },
+    summary="Finish a stopped assessment: create its Skill rating",
+    description=(
+        "**The irreversible one.** The questionnaire *stopping* and the "
+        "assessment *completing* are two moments: answering the question that "
+        "stops the run creates nothing and leaves every answer revisable, and "
+        "this request is what turns those answers into a Skill rating. So a "
+        "client can show the whole set of answers back to the player, still "
+        "changeable, before anything is committed.\n\n"
+        "Callable only on a **stopped** run — one whose step carries neither a "
+        "`question` nor a `result` while `status` is still `in_progress`. A run "
+        "with a question outstanding, and one that was abandoned, are both "
+        "refused with `assessment_not_stopped`.\n\n"
+        "The finished step comes back inline, `result` and all, because the "
+        "player is shown their rating on the very next screen. **Calling it "
+        "twice is safe**: the second call records nothing and returns the same "
+        "result, so a double-tapped submit produces one rating rather than a "
+        "conflict the client has to translate.\n\n"
+        "Once this has been called the run's answers are settled: a change is "
+        "refused with `answer_not_revisable`."
+    ),
+)
+async def complete_assessment(
+    assessment_id: UUID,
+    current_user: CurrentUserDep,
+    use_case: CompleteAssessmentDep,
+) -> AssessmentStepResponse:
+    step = await use_case.execute(
+        CompleteAssessmentCommand(
+            player_id=PlayerId(current_user.id),
+            assessment_id=assessment_id,
+        )
+    )
+    return AssessmentStepResponse.from_step(step)
+
+
+@router.post(
     "/{assessment_id}/abandonment",
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Abandon an in-progress assessment, freeing the sport to start again",
@@ -220,7 +279,55 @@ async def abandon_assessment(
     "/{assessment_id}/answers",
     response_model=AssessmentStepResponse,
     status_code=status.HTTP_200_OK,
-    summary="Answer the outstanding question and receive the next step",
+    responses={
+        status.HTTP_400_BAD_REQUEST: {
+            "model": ErrorResponse,
+            "description": (
+                "`invalid_answer_option` — the chosen option is not one that "
+                "question offers."
+            ),
+        },
+        status.HTTP_409_CONFLICT: {
+            "model": ErrorResponse,
+            "description": (
+                "`question_not_outstanding` — the question is neither the one "
+                "awaiting a response nor one this run has answered; refetch the "
+                "current step and re-render it. `answer_not_revisable` — this "
+                "run's Skill rating already exists, so its answers are settled; "
+                "show the rating instead."
+            ),
+        },
+    },
+    summary="Answer the outstanding question, or change an answer already given",
+    description=(
+        "**One request, decided by what the run has already answered.**\n\n"
+        "- A `question_id` the run has *not* answered must be the outstanding "
+        "one: this is an ordinary answer, and the next question comes back — or "
+        "**no question at all**, which is the questionnaire stopping.\n"
+        "- A `question_id` the run *has* answered with a **different** "
+        "`option_id` is a **revision**. The answers given after it are "
+        "discarded, because each was pitched at a difficulty chosen from the "
+        "estimate as it then stood, and the response is whatever the "
+        "questionnaire asks next given the shortened set of answers. That may "
+        "be a question, and it may be the stop — changing the opening answer to "
+        "*I have never played* ends the questioning there.\n"
+        "- A `question_id` the run has answered with the **same** `option_id` "
+        "records nothing and returns the current step. So a retry after a lost "
+        "response is free, and so is changing your mind and changing it back.\n\n"
+        "**`question` and `result` both null, with `status` still `in_progress`, "
+        "is the stop.** No further question would meaningfully tighten the "
+        "estimate, and nothing has been rated: the run waits, with every answer "
+        "still revisable, until `POST /completion` is called. Answering never "
+        "creates a Skill rating, so a client need not — and cannot — predict "
+        "which question is the last one.\n\n"
+        "The `transcript` on every response is the answers as they now stand; "
+        "after a revision it is **shorter**, and a client showing the run's "
+        "progress should read it rather than remember what it last drew.\n\n"
+        "**Answers are revisable for as long as the run is, and no longer.** "
+        "Once the run has produced a Skill rating, a change is refused with "
+        "`answer_not_revisable` — a code of its own, because the recovery is to "
+        "show the rating rather than to re-render a question."
+    ),
 )
 async def submit_answer(
     assessment_id: UUID,

@@ -1,5 +1,10 @@
 """The Assessment aggregate — replay reproduces the transcript, and the
-outstanding-question invariant holds."""
+outstanding-question invariant holds.
+
+Revision is the second half of that: the stream only ever grows, and replaying a
+revision **shortens the projection** rather than editing anything already on it.
+The two facts are asserted together on purpose — a truncation that lost the event
+would pass every transcript assertion here and quietly destroy the record."""
 
 from datetime import datetime, timezone
 from uuid import uuid4
@@ -19,9 +24,14 @@ from app.modules.rating.application.assessment_view import completed_result
 from app.modules.rating.domain.assessment import Assessment
 from app.modules.rating.domain.errors import (
     AssessmentAlreadyFinished,
+    AssessmentNotStopped,
     QuestionNotOutstanding,
 )
-from app.modules.rating.domain.events import AssessmentCompleted
+from app.modules.rating.domain.events import (
+    AnswerRevised,
+    AnswerSubmitted,
+    AssessmentCompleted,
+)
 
 NOW = datetime(2026, 8, 13, tzinfo=timezone.utc)
 
@@ -141,6 +151,179 @@ def test_a_completed_assessment_cannot_be_abandoned() -> None:
     assessment.complete(result=_result(), stop=_stop(), occurred_at=NOW)
     with pytest.raises(AssessmentAlreadyFinished):
         assessment.abandon(occurred_at=NOW)
+
+
+# --- Completing: only from a stop, and only once --------------------------------
+#
+# The use case refuses these first, so every one of them is reachable from a unit
+# test alone. That is the point: the one transition that cannot be undone is the
+# one that most wants a guard in the domain rather than only in front of it.
+
+
+def test_a_run_with_a_question_outstanding_cannot_be_completed() -> None:
+    # The questionnaire has not finished asking. Completing here would rate a
+    # player on a transcript missing the answer they were in the middle of.
+    assessment = _started()
+    with pytest.raises(AssessmentNotStopped):
+        assessment.complete(result=_result(), stop=_stop(), occurred_at=NOW)
+
+
+def test_an_abandoned_run_cannot_be_completed() -> None:
+    assessment = _started()
+    assessment.abandon(occurred_at=NOW)
+    with pytest.raises(AssessmentNotStopped):
+        assessment.complete(result=_result(), stop=_stop(), occurred_at=NOW)
+
+
+def test_a_completed_run_cannot_be_completed_twice() -> None:
+    # The use case answers a second completion with the first one's result, so a
+    # double-tapped submit never reaches here. If one ever does, a second
+    # rating-initialised event must not follow it.
+    assessment = _started()
+    assessment.answer(
+        question_id="opening.regularity", option_id="never-played", occurred_at=NOW
+    )
+    assessment.complete(result=_result(), stop=_stop(), occurred_at=NOW)
+    with pytest.raises(AssessmentNotStopped):
+        assessment.complete(result=_result(), stop=_stop(), occurred_at=NOW)
+
+
+# --- Revising: the stream grows, the transcript shortens -------------------------
+
+
+def _answered(*pairs: tuple[str, str]) -> Assessment:
+    """A run that asked and answered each pair, in order."""
+
+    assessment = Assessment.start(
+        assessment_id=uuid4(),
+        player_id=uuid4(),
+        sport=Sport.PADEL,
+        engine_version="racketskill-fusion-v3",
+        occurred_at=NOW,
+    )
+    for question_id, option_id in pairs:
+        assessment.ask(
+            question_id=question_id, reason="test", mu=2.6, sigma=2.6, occurred_at=NOW
+        )
+        assessment.answer(question_id=question_id, option_id=option_id, occurred_at=NOW)
+    return assessment
+
+
+def test_revising_truncates_the_transcript_at_the_revised_question() -> None:
+    assessment = _answered(("q1", "a"), ("q2", "b"), ("q3", "c"))
+
+    assessment.revise(question_id="q2", option_id="B", occurred_at=NOW)
+
+    # q3's answer is gone: it was pitched at a difficulty chosen from the estimate
+    # q2's old answer produced, so keeping it would mean something never said.
+    assert assessment.transcript == (
+        AnsweredQuestion("q1", "a"),
+        AnsweredQuestion("q2", "B"),
+    )
+    assert assessment.last_answered_question_id == "q2"
+    # The outstanding question was chosen from the estimate as it stood; there is
+    # nothing to answer until the engine is asked again.
+    assert assessment.outstanding_question_id is None
+
+
+def test_the_revision_is_appended_and_nothing_earlier_is_removed() -> None:
+    # The load-bearing half. "A revision shortens the past; it never edits it" is
+    # a statement about the *stream*, and the truncated transcript above is
+    # exactly what a wrong implementation would also produce.
+    assessment = _answered(("q1", "a"), ("q2", "b"), ("q3", "c"))
+
+    assessment.revise(question_id="q2", option_id="B", occurred_at=NOW)
+
+    recorded = assessment.pull_events()
+    answers = [event for event in recorded if isinstance(event, AnswerSubmitted)]
+    assert [(event.question_id, event.option_id) for event in answers] == [
+        ("q1", "a"),
+        ("q2", "b"),
+        ("q3", "c"),
+    ]
+    assert isinstance(recorded[-1], AnswerRevised)
+    assert (recorded[-1].question_id, recorded[-1].option_id) == ("q2", "B")
+
+
+def test_a_revision_survives_replay() -> None:
+    assessment = _answered(("q1", "a"), ("q2", "b"), ("q3", "c"))
+    assessment.revise(question_id="q2", option_id="B", occurred_at=NOW)
+
+    replayed = Assessment.from_history(assessment.pull_events())
+
+    assert replayed.transcript == assessment.transcript
+    assert replayed.version == assessment.version
+    assert replayed.last_answered_question_id == "q2"
+    assert replayed.outstanding_question_id is None
+
+
+def test_revising_the_first_answer_from_deep_in_a_run_leaves_one_answer() -> None:
+    assessment = _answered(("q1", "a"), ("q2", "b"), ("q3", "c"), ("q4", "d"))
+
+    assessment.revise(question_id="q1", option_id="A", occurred_at=NOW)
+
+    assert assessment.transcript == (AnsweredQuestion("q1", "A"),)
+
+
+def test_revising_repeatedly_replays_to_the_last_word() -> None:
+    assessment = _answered(("q1", "a"), ("q2", "b"))
+    assessment.revise(question_id="q2", option_id="B", occurred_at=NOW)
+    assessment.ask(question_id="q3", reason="test", mu=2.6, sigma=2.6, occurred_at=NOW)
+    assessment.answer(question_id="q3", option_id="c", occurred_at=NOW)
+
+    assessment.revise(question_id="q1", option_id="A", occurred_at=NOW)
+
+    replayed = Assessment.from_history(assessment.pull_events())
+    assert replayed.transcript == (AnsweredQuestion("q1", "A"),)
+
+
+def test_re_selecting_the_recorded_option_records_nothing() -> None:
+    # Changing your mind and changing it back is not a decision the stream needs,
+    # and a revision that revised nothing would still truncate — discarding later
+    # answers the player never asked to lose. Same no-op shape as ``abandon``.
+    assessment = _answered(("q1", "a"), ("q2", "b"))
+    assessment.pull_events()
+
+    assessment.revise(question_id="q1", option_id="a", occurred_at=NOW)
+
+    assert assessment.pull_events() == []
+    assert assessment.transcript == (
+        AnsweredQuestion("q1", "a"),
+        AnsweredQuestion("q2", "b"),
+    )
+
+
+def test_a_question_that_was_never_answered_is_not_revisable() -> None:
+    assessment = _answered(("q1", "a"))
+    with pytest.raises(QuestionNotOutstanding):
+        assessment.revise(question_id="q9", option_id="x", occurred_at=NOW)
+
+
+def test_a_completed_run_rejects_a_revision() -> None:
+    assessment = _answered(("opening.regularity", "never-played"))
+    assessment.complete(result=_result(), stop=_stop(), occurred_at=NOW)
+    with pytest.raises(QuestionNotOutstanding):
+        assessment.revise(
+            question_id="opening.regularity", option_id="frequent", occurred_at=NOW
+        )
+
+
+def test_an_abandoned_run_rejects_a_revision() -> None:
+    assessment = _answered(("q1", "a"))
+    assessment.abandon(occurred_at=NOW)
+    with pytest.raises(QuestionNotOutstanding):
+        assessment.revise(question_id="q1", option_id="b", occurred_at=NOW)
+
+
+def test_the_recorded_option_is_what_separates_an_answer_from_a_change() -> None:
+    assessment = _answered(("q1", "a"), ("q2", "b"))
+    assessment.ask(question_id="q3", reason="test", mu=2.6, sigma=2.6, occurred_at=NOW)
+
+    assert assessment.recorded_option("q1") == "a"
+    assert assessment.recorded_option("q2") == "b"
+    # Outstanding, so unanswered: a submission for it is an answer, not a change.
+    assert assessment.recorded_option("q3") is None
+    assert assessment.recorded_option("q9") is None
 
 
 # --- The recorded result, and the explanation reproduced from the transcript ----

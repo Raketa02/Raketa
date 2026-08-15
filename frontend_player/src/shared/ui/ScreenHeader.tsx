@@ -2,11 +2,15 @@
  * The screen header, per design-system 10.3 — eyebrow above, h1 below, an optional back
  * control and an optional right slot.
  *
- * **The back control is opt-in and stays that way.** The questionnaire has no back
- * navigation at all — an answer's numeric meaning depends on the difficulty tier it was
- * asked at, so revising an earlier answer would silently change what every later answer
- * meant (ADR-0017). A header that drew a chevron by default would put that control on
- * screen by omission.
+ * **The back control is opt-in and stays that way.** Most screens are somewhere a player
+ * arrived at rather than walked into, and a header that drew a chevron by default would
+ * put that control on screen by omission — pointing at whatever the router happened to
+ * have behind it. A screen that has a way back says so.
+ *
+ * The questionnaire is now one of them: a player may walk back over the questions they
+ * have answered ([ADR-0020](../../../../docs/adr/0020-revisable-assessment-answers.md),
+ * which supersedes ADR-0017's irreversibility rule), and this is the control they do it
+ * with — 20pt, `muted`, on a 44 × 44 target, per design-system 10.3.
  *
  * The eyebrow labels a region you are READING. It is not `flab`, which labels a control
  * you are about to OPERATE — the two are not interchangeable (design-system 3.3).

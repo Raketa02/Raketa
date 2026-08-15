@@ -26,6 +26,7 @@ import {
   installTransport,
   json,
   networkFailure,
+  transcriptOf,
   type Transport,
   type Wire,
 } from '@/test-support/transport';
@@ -37,62 +38,80 @@ const ANSWERS_PATH = `/api/v1/assessments/${ASSESSMENT_ID}/answers`;
 const STEP_PATH = `/api/v1/assessments/${ASSESSMENT_ID}`;
 
 /** The opening question, which the engine asks of everyone. No tier: it routes, it rates. */
+const OPENING_QUESTION: Wire['QuestionResponse'] = {
+  id: 'q-played',
+  category: 'Recent activity',
+  tier: null,
+  situation: 'Before anything else',
+  text: 'Have you played padel before?',
+  qualifier: 'Any level counts',
+  options: [
+    { id: 'never', text: 'Never played' },
+    { id: 'regular', text: 'I play regularly' },
+  ],
+};
+
+/** A demonstration, asked at the tier the estimate implied. */
+const EXECUTION_QUESTION: Wire['QuestionResponse'] = {
+  id: 'q-overhead',
+  category: 'Match execution',
+  tier: 'discriminating',
+  situation: 'A deep lob pushes you off the net',
+  text: 'How often do you play a controlled overhead and recover your position?',
+  qualifier: 'A normal match against players at your level',
+  options: [
+    { id: 'rarely', text: 'Rarely' },
+    { id: 'sometimes', text: 'About half the time' },
+    { id: 'usually', text: 'Usually' },
+  ],
+};
+
+/** Another ordinary question from the bank, deeper into a run. */
+const LAYOFF_QUESTION: Wire['QuestionResponse'] = {
+  id: 'q-layoff',
+  category: 'Time away',
+  tier: null,
+  situation: 'Life gets in the way',
+  text: 'Have you had a break from padel in the last year?',
+  qualifier: 'A break of a month or more',
+  options: [
+    { id: 'none', text: 'No real break' },
+    { id: 'six-months', text: 'About six months' },
+  ],
+};
+
 const OPENING: Wire['AssessmentStepResponse'] = {
   assessment_id: ASSESSMENT_ID,
   status: 'in_progress',
   // Nothing answered yet. The outstanding question is never in this count.
   questions_asked: 0,
-  question: {
-    id: 'q-played',
-    category: 'Recent activity',
-    tier: null,
-    situation: 'Before anything else',
-    text: 'Have you played padel before?',
-    qualifier: 'Any level counts',
-    options: [
-      { id: 'never', text: 'Never played' },
-      { id: 'regular', text: 'I play regularly' },
-    ],
-  },
+  transcript: [],
+  question: OPENING_QUESTION,
 };
 
-/** A demonstration, asked at the tier the estimate implied. */
+/**
+ * The step the opening answer produces — and it carries that answer.
+ *
+ * **The transcript is the question as it was asked plus the option chosen**, which is what
+ * lets the screen draw an answered question it may never have shown: a run resumed on a
+ * second handset has nothing else to draw it from. So a fixture that answers `q-played`
+ * and then serves a transcript without it would be describing a response the backend
+ * cannot produce.
+ */
 const EXECUTION: Wire['AssessmentStepResponse'] = {
   assessment_id: ASSESSMENT_ID,
   status: 'in_progress',
   questions_asked: 1,
-  question: {
-    id: 'q-overhead',
-    category: 'Match execution',
-    tier: 'discriminating',
-    situation: 'A deep lob pushes you off the net',
-    text: 'How often do you play a controlled overhead and recover your position?',
-    qualifier: 'A normal match against players at your level',
-    options: [
-      { id: 'rarely', text: 'Rarely' },
-      { id: 'sometimes', text: 'About half the time' },
-      { id: 'usually', text: 'Usually' },
-    ],
-  },
+  transcript: [{ question: OPENING_QUESTION, option_id: 'regular' }],
+  question: EXECUTION_QUESTION,
 };
 
-/** Another ordinary question from the bank, deeper into a run. */
 const LAYOFF: Wire['AssessmentStepResponse'] = {
   assessment_id: ASSESSMENT_ID,
   status: 'in_progress',
   questions_asked: 5,
-  question: {
-    id: 'q-layoff',
-    category: 'Time away',
-    tier: null,
-    situation: 'Life gets in the way',
-    text: 'Have you had a break from padel in the last year?',
-    qualifier: 'A break of a month or more',
-    options: [
-      { id: 'none', text: 'No real break' },
-      { id: 'six-months', text: 'About six months' },
-    ],
-  },
+  transcript: [...transcriptOf(4), { question: EXECUTION_QUESTION, option_id: 'usually' }],
+  question: LAYOFF_QUESTION,
 };
 
 const RESULT: Wire['ResultResponse'] = {
@@ -114,6 +133,7 @@ const FINISHED: Wire['AssessmentStepResponse'] = {
   // The same number the result carries — the count means one thing at both moments in a
   // run's life, so it does not jump as the run finishes.
   questions_asked: 2,
+  transcript: transcriptOf(2),
   question: null,
   result: RESULT,
 };
@@ -184,23 +204,21 @@ describe('the question screen', () => {
     expect(await screen.findByLabelText('Difficulty: discriminating')).toBeTruthy();
   });
 
-  it('has no back control, and answering never opens a route to go back to', async () => {
+  /*
+   * DELETED HERE, deliberately: `has no back control, and answering never opens a route to
+   * go back to`.
+   *
+   * It asserted the opposite of what this app now does. ADR-0020 supersedes ADR-0017's
+   * irreversibility rule: a player may walk back over the questions they have answered,
+   * and the header's back control is how. What the deleted test protected — that answering
+   * pushes no route, so the device back gesture cannot walk out of the run — is protected
+   * below by `stays on one route`, which is the half of it that survived.
+   */
+
+  it('offers no way back from the first question, because there is nothing behind it', async () => {
     await resumeAtTheOpeningQuestion();
 
-    // An answer's numeric meaning depends on the tier it was asked at, and that tier came
-    // from the estimate as it stood — so revisiting one would silently change what every
-    // later answer meant (ADR-0017).
-    expect(screen.queryByLabelText('Back')).toBeNull();
-
-    transport.on('POST', ANSWERS_PATH, () => json(EXECUTION));
-    fireEvent.press(screen.getByLabelText('I play regularly'));
-    fireEvent.press(screen.getByLabelText('Confirm answer'));
-
-    expect(await screen.findByText('Match execution')).toBeTruthy();
-    // The next question replaces this one's data in place rather than pushing a route, so
-    // the device back gesture has no answered question to return to.
-    expect(screen).toHavePathname(`/question/${ASSESSMENT_ID}`);
-    expect(screen.queryByLabelText('Back')).toBeNull();
+    expect(screen.queryByLabelText('Previous question')).toBeNull();
   });
 
   it('never shows a running level', async () => {
@@ -221,23 +239,32 @@ describe('the question screen', () => {
     await resumeAtTheOpeningQuestion();
 
     expect(screen.getByText('Question 1')).toBeTruthy();
-    // The bar measures sports, which is the one denominator the player chose. The counter
-    // carries movement inside a sport and is never a fraction.
-    expect(screen.getByLabelText('Rating 1 of 1')).toBeTruthy();
+    // Which sport of how many lives in the eyebrow and only there. The indicator under
+    // the header measures this run's questions now, so nothing on the screen counts
+    // sports twice — and nothing claims a total for a run whose length the engine
+    // decides one answer at a time.
+    expect(screen.getByText('Padel · Rating 1 of 1')).toBeTruthy();
+    expect(screen.queryByRole('progressbar')).toBeNull();
 
     transport.on('POST', ANSWERS_PATH, () => json(EXECUTION));
     fireEvent.press(screen.getByLabelText('I play regularly'));
     fireEvent.press(screen.getByLabelText('Confirm answer'));
 
     expect(await screen.findByText('Question 2')).toBeTruthy();
-    expect(screen.getByLabelText('Rating 1 of 1')).toBeTruthy();
+    expect(screen.getByText('Padel · Rating 1 of 1')).toBeTruthy();
   });
 
   it('shows a resumed run the position it is really at, not question 1', async () => {
     // Four answers behind them from yesterday, and the fifth question outstanding. The
     // count is the server's replay of the transcript — the only thing that ever survived
     // the player closing the app, so it is the only thing that can answer this.
-    const resumed: Wire['AssessmentStepResponse'] = { ...EXECUTION, questions_asked: 4 };
+    const resumed: Wire['AssessmentStepResponse'] = {
+      ...EXECUTION,
+      questions_asked: 4,
+      // Served with the count, and by the same replay: what survived the player
+      // closing the app is the stream, so both come from it or neither does.
+      transcript: transcriptOf(4),
+    };
     stubGate({ runs: [runInProgress('PADEL', ASSESSMENT_ID)] });
     transport.on('GET', STEP_PATH, () => json(resumed));
 
@@ -257,7 +284,462 @@ describe('the question screen', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Selecting, and the confirm that earns the irreversibility
+// Walking back over the questions already answered (ADR-0020)
+// ---------------------------------------------------------------------------
+
+/**
+ * Four answers behind them and a fifth question outstanding — the run a player would
+ * actually want to look back through. The four answered questions are the served
+ * transcript's, which is the only place they have ever existed as far as this device is
+ * concerned: nothing was cached when they were answered, because they were answered
+ * yesterday, or on another handset.
+ */
+async function resumeFiveQuestionsIn() {
+  const resumed: Wire['AssessmentStepResponse'] = {
+    ...EXECUTION,
+    questions_asked: 4,
+    transcript: transcriptOf(4),
+  };
+  stubGate({ runs: [runInProgress('PADEL', ASSESSMENT_ID)] });
+  transport.on('GET', STEP_PATH, () => json(resumed));
+
+  await launchSignedIn();
+
+  expect(await screen.findByText('Question 5')).toBeTruthy();
+}
+
+const goBack = () => fireEvent.press(screen.getByLabelText('Previous question'));
+const goForward = () => fireEvent.press(screen.getByLabelText('Next question'));
+
+describe('moving over answered questions', () => {
+  it('shows an answered question with the answer that was given', async () => {
+    await resumeFiveQuestionsIn();
+
+    goBack();
+
+    expect(await screen.findByText('Question 4')).toBeTruthy();
+    expect(screen.getByText('The question answered at position 4')).toBeTruthy();
+    // The choice they made, as a word rather than only a border — and the alternative
+    // beside it, because re-reading what you agreed to means re-reading what you did not.
+    expect(screen.getByText('Your answer')).toBeTruthy();
+    expect(screen.getByLabelText('What the player chose. Your answer.')).toBeTruthy();
+    expect(screen.getByLabelText('What they did not')).toBeTruthy();
+  });
+
+  it('costs nothing to look, in either direction', async () => {
+    await resumeFiveQuestionsIn();
+    const readsBefore = transport.requestsTo('GET', STEP_PATH).length;
+
+    goBack();
+    expect(await screen.findByText('Question 4')).toBeTruthy();
+    goBack();
+    goBack();
+    expect(await screen.findByText('Question 2')).toBeTruthy();
+    goForward();
+    goForward();
+    goForward();
+
+    // Back where they started, on the question they are actually being asked.
+    expect(
+      await screen.findByText(
+        'How often do you play a controlled overhead and recover your position?',
+      ),
+    ).toBeTruthy();
+
+    // **Zero.** The whole run arrived with the step, so looking is free — which is what
+    // has to be true before "you can change your mind" can mean anything.
+    expect(transport.requestsTo('GET', STEP_PATH)).toHaveLength(readsBefore);
+    expect(transport.requestsTo('POST', ANSWERS_PATH)).toEqual([]);
+  });
+
+  it('reaches the first question, and offers nothing behind it', async () => {
+    await resumeFiveQuestionsIn();
+
+    goBack();
+    goBack();
+    goBack();
+    goBack();
+
+    expect(await screen.findByText('Question 1')).toBeTruthy();
+    expect(screen.getByText('The question answered at position 1')).toBeTruthy();
+    // No answer is beyond reach, and there is nothing beyond the first one.
+    expect(screen.queryByLabelText('Previous question')).toBeNull();
+  });
+
+  it('keeps the question being asked distinguishable from the ones already answered', async () => {
+    await resumeFiveQuestionsIn();
+
+    // The live question is the one that can be answered, and the only one with a confirm.
+    expect(screen.getByLabelText('Confirm answer')).toBeTruthy();
+    expect(screen.queryByText('Your answer')).toBeNull();
+
+    goBack();
+
+    expect(await screen.findByText('Question 4')).toBeTruthy();
+    expect(screen.queryByLabelText('Confirm answer')).toBeNull();
+    expect(screen.getByLabelText('Next question')).toBeTruthy();
+  });
+
+  it('records nothing, and leaves the answer waiting where it was', async () => {
+    await resumeFiveQuestionsIn();
+
+    fireEvent.press(screen.getByLabelText('Usually'));
+    goBack();
+    expect(await screen.findByText('Question 4')).toBeTruthy();
+    goForward();
+    expect(await screen.findByText('Question 5')).toBeTruthy();
+
+    // Looking changed nothing: not the answers behind them, and not the one they were
+    // part-way through giving.
+    expect(transport.requestsTo('POST', ANSWERS_PATH)).toEqual([]);
+    expect(screen.getByRole('button', { name: 'Usually', selected: true })).toBeTruthy();
+
+    transport.on('POST', ANSWERS_PATH, () => json(LAYOFF));
+    fireEvent.press(screen.getByLabelText('Confirm answer'));
+
+    expect(await screen.findByText('Question 6')).toBeTruthy();
+    const [submitted] = transport.requestsTo('POST', ANSWERS_PATH);
+    expect(submitted?.body).toEqual({ question_id: 'q-overhead', option_id: 'usually' });
+  });
+
+  /*
+   * DELETED HERE, deliberately: `cannot be changed from here — this slice moves, it does
+   * not revise`.
+   *
+   * It asserted that an answered question's alternatives are not operable, which was true
+   * of the slice that could only move over them. They are operable now, and pressing one
+   * opens the change sheet — see `changing an answer` below, which asserts the opposite of
+   * every line of it. The part worth keeping is that a press still changes nothing on its
+   * own; that is `asks before it changes anything, and names what the change costs`.
+   */
+
+  it('stays on one route, so the device back gesture never walks out of the run', async () => {
+    await resumeFiveQuestionsIn();
+
+    goBack();
+    expect(await screen.findByText('Question 4')).toBeTruthy();
+
+    // Moving inside the questionnaire is state, not navigation — the half of the deleted
+    // no-back-control test that survived ADR-0020. Pushing a route per question would put
+    // the run's history behind the system back gesture, where leaving it and moving
+    // through it become the same gesture.
+    expect(screen).toHavePathname(`/question/${ASSESSMENT_ID}`);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The navigator: it grows, and it claims no total
+// ---------------------------------------------------------------------------
+
+describe('the question navigator', () => {
+  it('says where the player is and how much is behind them, and never a total', async () => {
+    await resumeAtTheOpeningQuestion();
+
+    // A row of rectangles is not readable at any font size, so this is the whole of it in
+    // words. There is no "of 9" anywhere in it: the engine decides it has heard enough
+    // only after an answer arrives, so no total exists to state.
+    expect(screen.getByLabelText('Question 1. No answers given yet.')).toBeTruthy();
+
+    transport.on('POST', ANSWERS_PATH, () => json(EXECUTION));
+    fireEvent.press(screen.getByLabelText('I play regularly'));
+    fireEvent.press(screen.getByLabelText('Confirm answer'));
+
+    // It advances with the answer — on the screen a player spends the longest on, which
+    // is the one the sports bar never moved on.
+    expect(await screen.findByLabelText('Question 2. 1 answer given so far.')).toBeTruthy();
+  });
+
+  it('announces standing on an answer as a different position from being asked one', async () => {
+    await resumeFiveQuestionsIn();
+
+    expect(screen.getByLabelText('Question 5. 4 answers given so far.')).toBeTruthy();
+
+    goBack();
+
+    // The sighted difference is a segment's fill; this is that difference in words.
+    expect(
+      await screen.findByLabelText('Question 4, already answered. 4 answers given so far.'),
+    ).toBeTruthy();
+  });
+
+  it('is not a control — the segments announce nothing and move nobody', async () => {
+    await resumeFiveQuestionsIn();
+
+    // Ten segments across the content width is a 26pt target against the 44pt minimum,
+    // and selecting the wrong one would be the most destructive tap in the flow. So it
+    // indicates: one element, one label, and never five buttons for a screen reader to
+    // enumerate.
+    expect(screen.queryAllByRole('progressbar')).toEqual([]);
+    expect(screen.queryByRole('button', { name: /Question 2/ })).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Changing an answer, and losing the answers that depended on it (ADR-0020)
+// ---------------------------------------------------------------------------
+
+/**
+ * What a change at position 2 of a four-answer run comes back as: two answers, the second
+ * of them now the other option, and the question the engine chooses from that transcript.
+ *
+ * The two answers that were behind it are simply not in it — which is the whole of
+ * "truncates", as a client sees it.
+ */
+const REVISED_AT_TWO: Wire['AssessmentStepResponse'] = {
+  assessment_id: ASSESSMENT_ID,
+  status: 'in_progress',
+  questions_asked: 2,
+  transcript: transcriptOf(2).map((entry, index) =>
+    index === 1 ? { ...entry, option_id: 'other' } : entry,
+  ),
+  question: LAYOFF_QUESTION,
+};
+
+/**
+ * A change to the opening answer that ends the questionnaire — "never played" is the one
+ * answer that stops a run on its own.
+ *
+ * In progress, one answer, and **neither a question nor a result**: the run has stopped
+ * and nothing has been rated (#59). Nothing here is special to a revision — a last
+ * ordinary answer produces the same shape.
+ */
+const STOPPED_AFTER_ONE: Wire['AssessmentStepResponse'] = {
+  assessment_id: ASSESSMENT_ID,
+  status: 'in_progress',
+  questions_asked: 1,
+  transcript: transcriptOf(1).map((entry) => ({ ...entry, option_id: 'other' })),
+  question: null,
+  result: null,
+};
+
+const askToChange = () => fireEvent.press(screen.getByLabelText('What they did not'));
+const confirmChange = () => fireEvent.press(screen.getByLabelText('Change my answer'));
+
+/** Back to the second of four answers — the one with two answers standing on it. */
+async function walkBackToQuestionTwo() {
+  await resumeFiveQuestionsIn();
+  goBack();
+  goBack();
+  goBack();
+  expect(await screen.findByText('Question 2')).toBeTruthy();
+}
+
+describe('changing an answer', () => {
+  it('asks before it changes anything, and names what the change costs', async () => {
+    await walkBackToQuestionTwo();
+
+    askToChange();
+
+    // The consequence is put in front of the player rather than performed on them, and
+    // the number is the decision: two answers here, none at all at the end of a run.
+    expect(await screen.findByRole('header', { name: 'Change this answer?' })).toBeTruthy();
+    expect(screen.getByText(/Changing it discards 2 later answers/)).toBeTruthy();
+    expect(transport.requestsTo('POST', ANSWERS_PATH)).toEqual([]);
+
+    fireEvent.press(screen.getByLabelText('Keep my answer'));
+
+    await waitFor(() =>
+      expect(screen.queryByRole('header', { name: 'Change this answer?' })).toBeNull(),
+    );
+    // Nothing was sent and nothing moved: the answer they had is still the answer they
+    // have, on the question they were looking at.
+    expect(transport.requestsTo('POST', ANSWERS_PATH)).toEqual([]);
+    expect(screen.getByText('Question 2')).toBeTruthy();
+    expect(screen.getByLabelText('What the player chose. Your answer.')).toBeTruthy();
+  });
+
+  it('changes an answer deep in a run, and continues from what the engine now asks', async () => {
+    await walkBackToQuestionTwo();
+    transport.on('POST', ANSWERS_PATH, () => json(REVISED_AT_TWO));
+
+    askToChange();
+    expect(await screen.findByRole('header', { name: 'Change this answer?' })).toBeTruthy();
+    confirmChange();
+
+    // Not the most recent answer — any answered question, which is what stops this being
+    // a one-step undo wearing another name.
+    expect(
+      await screen.findByText('Have you had a break from padel in the last year?'),
+    ).toBeTruthy();
+    const [sent] = transport.requestsTo('POST', ANSWERS_PATH);
+    expect(sent?.body).toEqual({ question_id: 'answered-2', option_id: 'other' });
+
+    // Standing on the question the engine chose from the transcript this change produced,
+    // rather than on the answer they just changed. A screen that kept its position would
+    // leave them re-reading what they had already decided.
+    expect(screen.getByText('Question 3')).toBeTruthy();
+    expect(screen.getByLabelText('Confirm answer')).toBeTruthy();
+  });
+
+  it('shrinks the navigator to match the answers that are left', async () => {
+    await walkBackToQuestionTwo();
+    expect(
+      screen.getByLabelText('Question 2, already answered. 4 answers given so far.'),
+    ).toBeTruthy();
+
+    transport.on('POST', ANSWERS_PATH, () => json(REVISED_AT_TWO));
+    askToChange();
+    confirmChange();
+
+    // The run describes less progress than it did a moment ago, and the indicator says so.
+    // Anything counting what it had itself shown would still be claiming four.
+    expect(await screen.findByLabelText('Question 3. 2 answers given so far.')).toBeTruthy();
+  });
+
+  it('walks back to the change and finds the new answer recorded there', async () => {
+    await walkBackToQuestionTwo();
+    transport.on('POST', ANSWERS_PATH, () => json(REVISED_AT_TWO));
+    askToChange();
+    confirmChange();
+    expect(await screen.findByText('Question 3')).toBeTruthy();
+
+    goBack();
+
+    // The run is coherent afterwards: what they said is what is recorded, and the option
+    // they turned down is the one they had before.
+    expect(await screen.findByText('Question 2')).toBeTruthy();
+    expect(screen.getByLabelText('What they did not. Your answer.')).toBeTruthy();
+    expect(screen.getByLabelText('What the player chose')).toBeTruthy();
+  });
+
+  it('does nothing at all when the answer already recorded is chosen again', async () => {
+    await walkBackToQuestionTwo();
+
+    fireEvent.press(screen.getByLabelText('What the player chose. Your answer.'));
+
+    // Changing your mind and changing it back is not punished — and a confirmation naming
+    // a cost nobody pays would be the punishment.
+    expect(screen.queryByRole('header', { name: 'Change this answer?' })).toBeNull();
+    expect(transport.requestsTo('POST', ANSWERS_PATH)).toEqual([]);
+    expect(screen.getByText('Question 2')).toBeTruthy();
+  });
+
+  it('shows no level, range or confidence while any of this happens', async () => {
+    await walkBackToQuestionTwo();
+    transport.on('POST', ANSWERS_PATH, () => json(REVISED_AT_TWO));
+
+    askToChange();
+    expect(await screen.findByRole('header', { name: 'Change this answer?' })).toBeTruthy();
+    // Not on the sheet, which is the one screen in the flow that could argue for it:
+    // a player told what a change would do to their number would change until it moved.
+    expect(screen.queryByText(/so far/i)).toBeNull();
+    expect(screen.queryByText(/2[.,]71/)).toBeNull();
+
+    confirmChange();
+
+    expect(await screen.findByText('Question 3')).toBeTruthy();
+    expect(screen.queryByText(/2[.,]71/)).toBeNull();
+    expect(screen.queryByText(/%/)).toBeNull();
+  });
+
+  it('routes onward when a change ends the questionnaire', async () => {
+    await resumeFiveQuestionsIn();
+    goBack();
+    goBack();
+    goBack();
+    goBack();
+    expect(await screen.findByText('Question 1')).toBeTruthy();
+
+    // The beginner's answer, given late: "never played" leaves the engine nothing more to
+    // ask, so the response carries no question — and the client must not sit waiting for
+    // one. Onward is the **review**, by the same path a last ordinary answer takes: the
+    // run has stopped and nothing has been rated, so there is no result to route to and
+    // every answer is still the player's to change (#62).
+    transport.on('POST', ANSWERS_PATH, () => json(STOPPED_AFTER_ONE));
+    askToChange();
+    confirmChange();
+
+    await waitFor(() => expect(screen).toHavePathname(`/review/${ASSESSMENT_ID}`));
+    expect(transport.requestsTo('POST', ANSWERS_PATH)).toHaveLength(1);
+  });
+});
+
+describe('when a change does not go through', () => {
+  it('offers a retry in place and keeps the option that was chosen', async () => {
+    await walkBackToQuestionTwo();
+    transport.on('POST', ANSWERS_PATH, networkFailure());
+
+    askToChange();
+    confirmChange();
+
+    // The message is beside the control that retries it, and the sheet stays open with the
+    // change still described — a dropped request must not cost the player the answers a
+    // successful change would have kept.
+    expect(
+      await screen.findByText("We couldn't reach Rakieta. Check your connection and try again."),
+    ).toBeTruthy();
+    expect(screen.getByRole('header', { name: 'Change this answer?' })).toBeTruthy();
+    expect(screen.getByText(/Changing it discards 2 later answers/)).toBeTruthy();
+
+    transport.on('POST', ANSWERS_PATH, () => json(REVISED_AT_TWO));
+    confirmChange();
+
+    expect(await screen.findByText('Question 3')).toBeTruthy();
+    expect(transport.requestsTo('POST', ANSWERS_PATH)).toHaveLength(2);
+    const [, retried] = transport.requestsTo('POST', ANSWERS_PATH);
+    expect(retried?.body).toEqual({ question_id: 'answered-2', option_id: 'other' });
+  });
+
+  it('makes one change out of a double-tapped confirm', async () => {
+    await walkBackToQuestionTwo();
+
+    let land = () => {};
+    const held = new Promise<void>((resolve) => {
+      land = resolve;
+    });
+    transport.on('POST', ANSWERS_PATH, async () => {
+      await held;
+      return json(REVISED_AT_TWO);
+    });
+
+    askToChange();
+    // The same node, pressed again while the first press is still in the air — which is
+    // exactly what a player does on a slow connection, and this is the control that
+    // discards their later answers.
+    const control = screen.getByLabelText('Change my answer');
+    fireEvent.press(control);
+    fireEvent.press(control);
+    fireEvent.press(control);
+
+    await waitFor(() => expect(screen.getByLabelText('Changing…')).toBeTruthy());
+    expect(transport.requestsTo('POST', ANSWERS_PATH)).toHaveLength(1);
+
+    // And it cannot be dismissed out from under the request it started: the change is
+    // already running, and a sheet that closed here would say otherwise.
+    fireEvent.press(screen.getByLabelText('Close and keep your answer'));
+    expect(screen.getByRole('header', { name: 'Change this answer?' })).toBeTruthy();
+
+    await act(async () => {
+      land();
+    });
+
+    // And even had a duplicate reached the server, it would have recorded nothing: the
+    // option is already the one the transcript holds. The guarantee here is the client's
+    // half — one press's worth of consequence per change.
+    expect(await screen.findByText('Question 3')).toBeTruthy();
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.queryByRole('header', { name: 'Change this answer?' })).toBeNull();
+  });
+
+  it('recovers silently when the rating already exists', async () => {
+    await walkBackToQuestionTwo();
+
+    // Revising is refused once a rating has been proved, with its own code — and the
+    // recovery is the opposite of a retry: there is no question to go back to, only a
+    // rating to show. Reached by re-reading the step, like the other two.
+    transport.on('POST', ANSWERS_PATH, () => errorResponse(409, 'answer_not_revisable'));
+    transport.on('GET', STEP_PATH, () => json(FINISHED));
+
+    askToChange();
+    confirmChange();
+
+    await waitFor(() => expect(screen).toHavePathname(`/result/${ASSESSMENT_ID}`));
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Selecting, and the confirm that submits one answer
 // ---------------------------------------------------------------------------
 
 describe('choosing an answer', () => {
@@ -342,6 +824,36 @@ describe('what leaves the device', () => {
     // The next question *is* the response, so it is written into the cache. Invalidating
     // and refetching would be a second round trip for an answer already in hand.
     expect(transport.requestsTo('GET', STEP_PATH)).toHaveLength(readsBefore);
+  });
+
+  it('sends one answer however many times the confirm is pressed', async () => {
+    await resumeAtTheOpeningQuestion();
+
+    let land = () => {};
+    const held = new Promise<void>((resolve) => {
+      land = resolve;
+    });
+    transport.on('POST', ANSWERS_PATH, async () => {
+      await held;
+      return json(EXECUTION);
+    });
+
+    fireEvent.press(screen.getByLabelText('I play regularly'));
+    // The same node, pressed again while the first press is still in the air. The busy
+    // control cannot answer for this: it belongs to a render that does not exist yet when
+    // the second tap lands.
+    const confirm = screen.getByLabelText('Confirm answer');
+    fireEvent.press(confirm);
+    fireEvent.press(confirm);
+    fireEvent.press(confirm);
+
+    await waitFor(() => expect(screen.getByLabelText('Submitting…')).toBeTruthy());
+    expect(transport.requestsTo('POST', ANSWERS_PATH)).toHaveLength(1);
+
+    await act(async () => {
+      land();
+    });
+    expect(await screen.findByText('Match execution')).toBeTruthy();
   });
 
   it('applies no optimistic update — the question does not move until the server answers', async () => {

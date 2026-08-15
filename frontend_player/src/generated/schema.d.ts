@@ -173,6 +173,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/assessments/{assessment_id}/completion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Finish a stopped assessment: create its Skill rating
+         * @description **The irreversible one.** The questionnaire *stopping* and the assessment *completing* are two moments: answering the question that stops the run creates nothing and leaves every answer revisable, and this request is what turns those answers into a Skill rating. So a client can show the whole set of answers back to the player, still changeable, before anything is committed.
+         *
+         *     Callable only on a **stopped** run — one whose step carries neither a `question` nor a `result` while `status` is still `in_progress`. A run with a question outstanding, and one that was abandoned, are both refused with `assessment_not_stopped`.
+         *
+         *     The finished step comes back inline, `result` and all, because the player is shown their rating on the very next screen. **Calling it twice is safe**: the second call records nothing and returns the same result, so a double-tapped submit produces one rating rather than a conflict the client has to translate.
+         *
+         *     Once this has been called the run's answers are settled: a change is refused with `answer_not_revisable`.
+         */
+        post: operations["complete_assessment_api_v1_assessments__assessment_id__completion_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/assessments/{assessment_id}/abandonment": {
         parameters: {
             query?: never;
@@ -199,7 +225,20 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Answer the outstanding question and receive the next step */
+        /**
+         * Answer the outstanding question, or change an answer already given
+         * @description **One request, decided by what the run has already answered.**
+         *
+         *     - A `question_id` the run has *not* answered must be the outstanding one: this is an ordinary answer, and the next question comes back — or **no question at all**, which is the questionnaire stopping.
+         *     - A `question_id` the run *has* answered with a **different** `option_id` is a **revision**. The answers given after it are discarded, because each was pitched at a difficulty chosen from the estimate as it then stood, and the response is whatever the questionnaire asks next given the shortened set of answers. That may be a question, and it may be the stop — changing the opening answer to *I have never played* ends the questioning there.
+         *     - A `question_id` the run has answered with the **same** `option_id` records nothing and returns the current step. So a retry after a lost response is free, and so is changing your mind and changing it back.
+         *
+         *     **`question` and `result` both null, with `status` still `in_progress`, is the stop.** No further question would meaningfully tighten the estimate, and nothing has been rated: the run waits, with every answer still revisable, until `POST /completion` is called. Answering never creates a Skill rating, so a client need not — and cannot — predict which question is the last one.
+         *
+         *     The `transcript` on every response is the answers as they now stand; after a revision it is **shorter**, and a client showing the run's progress should read it rather than remember what it last drew.
+         *
+         *     **Answers are revisable for as long as the run is, and no longer.** Once the run has produced a Skill rating, a change is refused with `answer_not_revisable` — a code of its own, because the recovery is to show the rating rather than to re-render a question.
+         */
         post: operations["submit_answer_api_v1_assessments__assessment_id__answers_post"];
         delete?: never;
         options?: never;
@@ -237,18 +276,33 @@ export interface components {
         };
         /**
          * AssessmentStepResponse
-         * @description The server-driven step. Exactly one of ``question`` / ``result`` is set.
+         * @description The server-driven step: at most one of `question` / `result` is set, and
+         *     `transcript` is everything already answered behind it. Neither means the run
+         *     is not asking and has not been rated — see `status`.
          */
         AssessmentStepResponse: {
             /** Assessment Id */
             assessment_id: string;
-            /** Status */
+            /**
+             * Status
+             * @description `in_progress`, `completed` or `abandoned` — and the field that says which of two things *neither a question nor a result* means.
+             *
+             *     - `in_progress` **with** a `question`: the questionnaire, awaiting that answer.
+             *     - `in_progress` with **neither**: the questionnaire has **stopped**. No remaining question would meaningfully tighten the estimate, and nothing has been rated — every answer is still revisable, and `POST /assessments/{assessment_id}/completion` is what creates the Skill rating.
+             *     - `completed`: the `result` is here and the answers are settled.
+             *     - `abandoned`: neither, and the run ended without a rating.
+             */
             status: string;
             /**
              * Questions Asked
              * @description How many of this run's questions have been answered. The outstanding `question` is **not** counted — it has been put to the player but not answered — so a question counter reads this plus one, and a fresh run reports 0. Replayed from the transcript on every read, which is what lets a resumed run report the position it is really at rather than restarting at 1. Once the run is over this is the same number `result.questions_asked` carries.
              */
             questions_asked: number;
+            /**
+             * Transcript
+             * @description Every answer given in this run so far, in the order they were given, each with the question it answered **as that question was asked** — so an answered question can be rendered from the response alone, by a client that was never shown it. Empty, never absent, on a run with no answers yet: a fresh run and a run whose answers are being withheld are not two readings of one payload. Grows by one entry per answer and is replayed from the stream on every read, so it survives a reinstall and a second device with nothing cached locally. Length is `questions_asked`; the outstanding `question` is not in it, because it has not been answered.
+             */
+            transcript: components["schemas"]["TranscriptEntryResponse"][];
             question?: components["schemas"]["QuestionResponse"] | null;
             result?: components["schemas"]["ResultResponse"] | null;
         };
@@ -526,6 +580,15 @@ export interface components {
             token_type: string;
             /** Expires In */
             expires_in: number;
+        };
+        /**
+         * TranscriptEntryResponse
+         * @description One answered question: the question as it was asked, and what was chosen.
+         */
+        TranscriptEntryResponse: {
+            question: components["schemas"]["QuestionResponse"];
+            /** Option Id */
+            option_id: string;
         };
         /**
          * UncertaintyFactorResponse
@@ -892,6 +955,46 @@ export interface operations {
             };
         };
     };
+    complete_assessment_api_v1_assessments__assessment_id__completion_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assessment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentStepResponse"];
+                };
+            };
+            /** @description `assessment_not_stopped` — the questionnaire has not finished asking, or the run was abandoned. Refetch the current step and render it. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     abandon_assessment_api_v1_assessments__assessment_id__abandonment_post: {
         parameters: {
             query?: never;
@@ -943,6 +1046,24 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AssessmentStepResponse"];
+                };
+            };
+            /** @description `invalid_answer_option` — the chosen option is not one that question offers. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `question_not_outstanding` — the question is neither the one awaiting a response nor one this run has answered; refetch the current step and re-render it. `answer_not_revisable` — this run's Skill rating already exists, so its answers are settled; show the rating instead. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
             /** @description Validation Error */

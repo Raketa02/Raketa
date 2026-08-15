@@ -6,8 +6,10 @@ refactored. Replaying an assessment's stream reproduces exactly the transcript
 the engine consumed; there is no second representation.
 
 Assessment events cover starting, each question being asked (with the selection
-reason and the μ and σ that existed at that moment), each answer, completion, and
-abandonment — the two terminal states an assessment stream can reach.
+reason and the μ and σ that existed at that moment), each answer, each revision
+of an answer, completion, and abandonment — the two terminal states an assessment
+stream can reach. Nothing is ever deleted or rewritten: a revision is an
+**appended** event and the transcript truncates when it replays one.
 Rating events cover initialisation today; match, inactivity and status-change
 events are reserved for the match-update engine.
 
@@ -49,6 +51,32 @@ class QuestionAsked:
 
 @dataclass(frozen=True)
 class AnswerSubmitted:
+    assessment_id: UUID
+    question_id: str
+    option_id: str
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class AnswerRevised:
+    """The player changed an answer they had already given.
+
+    Appended, never applied over the top of the ``AnswerSubmitted`` it replaces:
+    the stream is the record of what happened, and *the player changed their
+    mind, and to what* is exactly the kind of gap a future model would otherwise
+    learn from. The **transcript** is the projection that moves — replaying this
+    truncates it at ``question_id`` and puts this option there instead, because
+    every answer after it was pitched at a difficulty chosen from the estimate as
+    it then stood (``docs/adr/0020``).
+
+    What it deliberately does not carry is what it superseded: the option it
+    replaced and the answers it discarded are both in the events already on the
+    stream, and recording them here would be the same facts in two places and so
+    two places for them to disagree. A projection that wants "what did this
+    player change, and from what" replays the prefix, which is the same walk the
+    engine's own determinism already rests on.
+    """
+
     assessment_id: UUID
     question_id: str
     option_id: str

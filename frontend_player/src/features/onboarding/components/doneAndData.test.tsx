@@ -27,6 +27,7 @@ import {
   json,
   networkFailure,
   noContent,
+  transcriptOf,
   type Transport,
   type Wire,
 } from '@/test-support/transport';
@@ -55,6 +56,7 @@ function outstanding(assessmentId: string): Wire['AssessmentStepResponse'] {
     assessment_id: assessmentId,
     status: 'in_progress',
     questions_asked: 0,
+    transcript: transcriptOf(0),
     question: {
       id: 'q-overhead',
       category: 'Match execution',
@@ -127,6 +129,7 @@ function finished(assessmentId: string, result: Wire['ResultResponse']) {
     assessment_id: assessmentId,
     status: 'completed',
     questions_asked: result.questions_asked,
+    transcript: transcriptOf(result.questions_asked),
     question: null,
     result,
   } satisfies Wire['AssessmentStepResponse'];
@@ -253,12 +256,12 @@ describe('after a result', () => {
     await answerTheLastQuestion(PADEL_ID, 'PADEL', PADEL_RESULT);
 
     // Named, not "next sport": the player chose these and is owed the one they are being
-    // offered. The bar moves with it, because sports are what it measures.
+    // offered. The eyebrow moves with it — it is the sole carrier of which sport of how
+    // many, now that onboarding's indicator measures the run instead (ADR-0020).
     fireEvent.press(await screen.findByLabelText('Rate Tennis'));
 
     await waitFor(() => expect(screen).toHavePathname(`/question/${TENNIS_ID}`));
     expect(await screen.findByText('Tennis · Rating 2 of 2')).toBeTruthy();
-    expect(screen.getByLabelText('Rating 2 of 2')).toBeTruthy();
 
     const [, second] = transport.requestsTo('POST', '/api/v1/assessments');
     expect(second?.body).toEqual({ sport: 'TENNIS' });
@@ -517,7 +520,7 @@ describe('the data screen', () => {
 
     // The gate decides where finishing lands, exactly as it does from every other exit:
     // a player who now holds ratings belongs in the app.
-    expect(await screen.findByText('ada')).toBeTruthy();
+    expect(await screen.findByText('Inside the app')).toBeTruthy();
     expect(screen).toHavePathname('/');
 
     // And on the next launch, with nothing cached — which is the whole point of onboarding
@@ -526,8 +529,10 @@ describe('the data screen', () => {
     queryClient.clear();
     await launchSignedIn();
 
-    expect(await screen.findByText('ada')).toBeTruthy();
+    expect(await screen.findByText('Inside the app')).toBeTruthy();
     expect(screen).toHavePathname('/');
+    // Not back through the questionnaire, and not back through the welcome.
+    expect(screen.queryByText("Let's find your level")).toBeNull();
   });
 });
 
@@ -557,7 +562,7 @@ describe('a second pass in the same process', () => {
     await waitFor(() => expect(screen).toHavePathname('/data'));
 
     fireEvent.press(screen.getByLabelText('Start playing'));
-    expect(await screen.findByText('ada')).toBeTruthy();
+    expect(await screen.findByText('Inside the app')).toBeTruthy();
     expect(screen).toHavePathname('/');
   }
 
@@ -580,11 +585,10 @@ describe('a second pass in the same process', () => {
 
     // The defect, exactly as filed: padel and tennis were rated in a walk that is over,
     // and this single run used to be numbered against that walk's queue — "Rating 2 of 2"
-    // for one run. A run resumed on its own is a pass of one sport, and the bar and its
-    // eyebrow both say so, because the pass does.
-    expect(screen.getByLabelText('Rating 1 of 1')).toBeTruthy();
-    expect(screen.queryByLabelText('Rating 2 of 2')).toBeNull();
+    // for one run. A run resumed on its own is a pass of one sport, and the eyebrow says
+    // so, because the pass does.
     expect(await screen.findByText(/Tennis · Rating 1 of 1/)).toBeTruthy();
+    expect(screen.queryByText(/Rating 2 of 2/)).toBeNull();
   });
 
   it("sends a player who abandons a resumed run to the app, not to an earlier walk's summary", async () => {

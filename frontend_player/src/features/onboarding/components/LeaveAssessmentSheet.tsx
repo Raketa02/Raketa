@@ -12,20 +12,22 @@
  * Both are reachable because either one alone breaks something. Without abandonment the
  * entry gate becomes a trap — a player who has decided against padel is routed into the
  * padel questionnaire on every launch, and the only escape is finishing a rating they did
- * not want. Without "continue later", any interruption costs every answer given, in a
- * flow of up to twelve irreversible questions.
+ * not want. Without "continue later", any interruption costs every answer given, in a run
+ * of up to ten questions.
  *
  * **The abandon control says what it discards, on the control itself.** This is the one
- * destructive action in onboarding, and it sits in a flow that has spent the last ten
- * questions teaching the player that every tap is permanent — so a player here has been
- * trained to expect that tapping something does what it says. It had better say it.
+ * destructive action in onboarding: the questions behind the player can be walked back
+ * over freely
+ * ([ADR-0020](../../../../../docs/adr/0020-revisable-assessment-answers.md)), and this is
+ * the control that throws their answers away. A player here expects that tapping something
+ * does what it says, so it had better say it.
  *
  * Keeping going is the primary and is listed last, where the thumb is: the safe option
  * is the easy one, and the two ways out sit above it as deliberate choices.
  *
- * None of this is back navigation. Leaving the questionnaire is not revisiting an answer,
- * and no control here returns the player to a question they have already answered
- * (ADR-0017).
+ * **None of this is back navigation, and that distinction survived ADR-0020.** The
+ * questionnaire has a way back through it now; this is the way *out* of it, and the two
+ * are different doors on opposite sides of the header.
  */
 
 import { StyleSheet, Text } from 'react-native';
@@ -85,7 +87,9 @@ export function LeaveAssessmentSheet({
 
       <LeaveOption
         title="Continue later"
-        detail={`We'll bring you back to this question. Every answer you've given for ${name} is kept.`}
+        // Not "back to this question": the same sheet is offered from the review, where the
+        // player has answered every question there is and none is outstanding.
+        detail={`We'll bring you back to where you left off. Every answer you've given for ${name} is kept.`}
         hint="Leaves the questionnaire and keeps your answers"
         disabled={leaving}
         onPress={onContinueLater}

@@ -33,5 +33,7 @@ export default function QuestionRoute() {
 
   if (params === undefined || admission === 'start-over') return <Redirect href="/welcome" />;
 
-  return <QuestionScreen assessmentId={params.assessmentId} sport={params.sport} />;
+  // `at` says where the player starts standing, which is what an entry on the review opens.
+  // Absent is the ordinary case and means *wherever the run stands*.
+  return <QuestionScreen assessmentId={params.assessmentId} sport={params.sport} at={params.at} />;
 }

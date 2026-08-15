@@ -2,9 +2,16 @@
 
 The client holds no flow state, so every read of an assessment answers the same
 question the mutation responses do: *what is the current step* — the outstanding
-question, the final result, or neither once it has been abandoned. Because the
-engine is deterministic, the outstanding question is reproduced from the answered
-transcript rather than stored a second time.
+question, the final result, or neither. Because the engine is deterministic, the
+outstanding question is reproduced from the answered transcript rather than
+stored a second time.
+
+**Neither is now two states rather than one.** A run that has been abandoned has
+no question and no result, and so does a run whose questionnaire has *stopped*
+and whose rating has not yet been asked for (``docs/adr/0020``). ``status`` is
+what tells them apart, and it always did: the stopped run is still
+``in_progress``. So a step carries *at most* one of question and result, where it
+once carried exactly one.
 
 The finished result is reproduced the same way, and for the same reason. Its
 numbers are recorded on the stream, but its *explanation* — the factor rows and
@@ -19,16 +26,91 @@ from app.engines.assessment import (
     AskQuestion,
     AssessmentEngine,
     AssessmentResult,
+    Complete,
     Question,
 )
-from app.modules.rating.application.commands import AssessmentStep
+from app.modules.rating.application.commands import AssessmentStep, TranscriptEntry
 from app.modules.rating.domain.assessment import Assessment
 
 
-def outstanding_question(engine: AssessmentEngine, assessment: Assessment) -> Question:
+def pending_question(
+    engine: AssessmentEngine, assessment: Assessment
+) -> Question | None:
+    """The question this run is waiting on, or ``None`` because it has stopped.
+
+    Both answers are ordinary. The engine decides it has heard enough only after
+    an answer arrives, so *there is no next question* is a step a live run
+    reaches and sits at, not an error and not the end of the run.
+    """
+
     step = engine.next_step(sport=assessment.sport, transcript=assessment.transcript)
-    assert isinstance(step, AskQuestion)
-    return step.question
+    return step.question if isinstance(step, AskQuestion) else None
+
+
+def stop_reached(
+    engine: AssessmentEngine, assessment: Assessment
+) -> Complete | None:
+    """The stop this run's answers have reached, or ``None`` while it wants more.
+
+    The stop itself rather than a boolean, because the caller that asks this is
+    the one about to record it: the reason and the value that drove it are the
+    questionnaire's last routing decision, and they belong on the completion
+    beside the rest of it.
+    """
+
+    step = engine.next_step(sport=assessment.sport, transcript=assessment.transcript)
+    return step if isinstance(step, Complete) else None
+
+
+def outstanding_question(engine: AssessmentEngine, assessment: Assessment) -> Question:
+    """The question this run is waiting on, where a caller requires there to be one.
+
+    Only sound where the aggregate has already said a question is outstanding —
+    answering one, for instance. Anywhere else, a run may legitimately have
+    stopped: ask ``pending_question``.
+    """
+
+    question = pending_question(engine, assessment)
+    assert question is not None
+    return question
+
+
+def served_transcript(
+    engine: AssessmentEngine, assessment: Assessment
+) -> tuple[TranscriptEntry, ...]:
+    """Every answer given so far, each with the question it answered, in order.
+
+    The stream stores an answer as two ids, because that is all the engine reads.
+    A reader that has to *render* an answered question needs its copy, and the
+    copy is the engine's — so it is reproduced exactly as the outstanding question
+    is: the engine is asked what it would put to a player who had answered the
+    first *n* answers, for every *n* the run has. That is the same determinism
+    ``outstanding_question`` already rests on, applied to the run's past rather
+    than to its present, and it is why the copy is never stored a second time.
+
+    **It stops at the first disagreement instead of asserting.** ``next_step`` is
+    only guaranteed to reproduce what was asked while the engine asked is the
+    engine that asked it, so a run whose ``engine_version`` has since been retired
+    can replay to a question that was never put to this player — or to no question
+    at all. There is nothing truthful to serve past that point, and the transcript
+    ends there. It is the rule ``completed_result`` already applies to the
+    explanation, in the shape a sequence takes: what a retired engine asked is
+    part of what only that engine can say.
+
+    A live run therefore always yields its whole transcript, and that is the only
+    case any client has ever seen.
+    """
+
+    answered = assessment.transcript
+    entries: list[TranscriptEntry] = []
+    for position, entry in enumerate(answered):
+        step = engine.next_step(sport=assessment.sport, transcript=answered[:position])
+        if not isinstance(step, AskQuestion) or step.question.id != entry.question_id:
+            break
+        entries.append(
+            TranscriptEntry(question=step.question, option_id=entry.option_id)
+        )
+    return tuple(entries)
 
 
 def questions_asked(assessment: Assessment) -> int:
@@ -75,11 +157,13 @@ def completed_result(
 
 def current_step(engine: AssessmentEngine, assessment: Assessment) -> AssessmentStep:
     answered = questions_asked(assessment)
+    transcript = served_transcript(engine, assessment)
     if assessment.is_completed:
         return AssessmentStep(
             assessment_id=assessment.id,
             status=assessment.status.value,
             questions_asked=answered,
+            transcript=transcript,
             question=None,
             result=completed_result(engine, assessment),
         )
@@ -88,13 +172,19 @@ def current_step(engine: AssessmentEngine, assessment: Assessment) -> Assessment
             assessment_id=assessment.id,
             status=assessment.status.value,
             questions_asked=answered,
+            transcript=transcript,
             question=None,
             result=None,
         )
+    # In progress. Either the engine still wants an answer, or it has stopped and
+    # the run is waiting on the request that creates its rating — in progress
+    # with nothing outstanding, which needs no status of its own because it is
+    # the absence of an outstanding question.
     return AssessmentStep(
         assessment_id=assessment.id,
         status=assessment.status.value,
         questions_asked=answered,
-        question=outstanding_question(engine, assessment),
+        transcript=transcript,
+        question=pending_question(engine, assessment),
         result=None,
     )

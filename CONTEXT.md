@@ -42,7 +42,26 @@ A rating is **never only a number**.
   **Calibrating** (real matches started, still moving) → **Stable**.
 - **Volatility** — how fast the estimate currently appears to be moving.
 - **Assessment** — an **event-sourced aggregate**: one adaptive questionnaire run, for one
-  player and one sport. Its event stream *is* the transcript the engine reads.
+  player and one sport.
+- **Transcript** — the answers a run has given, in order, each as a question and the option
+  chosen for it. It is what the engine reads and the *only* thing it reads: given the same
+  transcript the engine always returns the same next question and the same rating. It is a
+  **projection over the assessment's stream**, not a second record beside it, which is why a
+  run resumed on a fresh install or a second handset still has all of it.
+- **Revision** — changing an answer already given. It **truncates** the transcript at that
+  question: every answer after it is discarded, because each was pitched at a difficulty
+  chosen from the estimate as it then stood, so an answer that outlived a change to an
+  earlier one would mean something the player never said. Re-selecting the option already
+  recorded is not a revision and changes nothing.
+- **Stop** — the moment the engine judges that no remaining question would meaningfully
+  tighten the estimate. The questionnaire ends there and *nothing is rated*: the run sits
+  in progress with nothing outstanding, and every answer stays revisable. A stop is a fact
+  about the transcript rather than a state anything records, so it is asked of the engine
+  and never stored.
+- **Completion** — the separate, explicit act that ends an assessment and brings its Skill
+  rating into existence. This is the irreversible moment, and the only one — which is what
+  lets a player see every answer laid out, still changeable, before it becomes a number.
+  Stopping and completing are deliberately two moments and not one.
 - **Claim** / **demonstration** — every answer is one or the other. A claim is a statement
   about standing (how often you play, what you compete in, how you do against your usual
   group). A demonstration is a statement about what you do inside a point.
@@ -86,6 +105,20 @@ A rating is **never only a number**.
 - **A rating carries the engine version that produced it.** Every constant in the engine is
   a hypothesis with a measurement that would falsify it — and you cannot falsify one you
   cannot attribute a rating back to.
+- **A revision shortens the past; it never edits it.** The change is *appended* to the
+  stream and nothing is deleted, so what a player answered first, and what they changed it
+  to, are both permanently recoverable. Only the transcript — the projection — gets shorter.
+  A player changing their mind is data to learn from rather than a gap
+  ([ADR-0020](docs/adr/0020-revisable-assessment-answers.md)).
+- **An answer is revisable for as long as its run is, and no longer.** Once a run has
+  produced a Skill rating, its answers are settled: the account of a player stops moving at
+  the moment the platform starts relying on it. This is the same invariant as *a level is
+  proved, never declared*, read from the other end.
+- **The questionnaire stopping is not the rating existing.** Stopping is the engine having
+  heard enough; completion is a separate act that a player performs, and only completion
+  creates a rating. Nothing that ends the questioning — the last answer, or a revision that
+  reaches the beginner fast path — may create one as a side effect, because a player must
+  be able to see what they said before it becomes a number.
 - **There is no *onboarded player*.** Onboarding is not a state a player is in or out of;
   it is how a Skill rating comes to exist, and a rating is per sport. A player can be rated
   at padel and unrated at tennis at the same moment, indefinitely. Anything that needs to

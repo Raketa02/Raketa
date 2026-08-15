@@ -1,7 +1,16 @@
 # ADR-0017 — Assessment and SkillRating are event-sourced
 
-- **Status:** Accepted
+- **Status:** Accepted — **its irreversibility rule superseded by
+  [ADR-0020](0020-revisable-assessment-answers.md)**
 - **Date:** 2026-08-13
+
+> **One rule here is no longer true.** ADR-0020 supersedes *"Answers are append-only. No
+> retraction event and no replay branching."* — a player may now revise any answer they have
+> given, which truncates the transcript there and replays the engine from the prefix. The two
+> passages it changes are marked below. **Every other decision in this ADR stands**: both
+> aggregates are event-sourced, the *stream* is still append-only (a revision is an appended
+> event, never a deletion), completion is still one transaction, and `expected_version` is
+> still the concurrency guard.
 
 ## Context
 
@@ -66,6 +75,14 @@ We will model both aggregates as **event-sourced**, on the existing `DomainEvent
   by domain rule; `expected_version` on the event store makes a concurrent double-submit
   fail loudly rather than corrupt the transcript. A mis-tap is prevented on the client with
   an explicit confirm before the answer is sent.
+
+  > **Superseded by [ADR-0020](0020-revisable-assessment-answers.md).** An answer is now
+  > accepted for any question the transcript holds: a different option is a *revision*, which
+  > appends `AnswerRevised` and truncates the transcript there. The half of this bullet that
+  > survives is the mechanism — the **stream** is still append-only and nothing is ever
+  > deleted, re-submitting the *same* option is still an idempotent no-op, and
+  > `expected_version` still makes two devices revising at once fail loudly. What the confirm
+  > earns changed with it: one deliberate answer, no longer the finality of the run.
 - **Completing an assessment is one transaction.** `AssessmentCompleted` and
   `RatingInitialised` are appended together and the result is returned inline, because the
   player sees their rating on the next screen. **The outbox carries side effects only** —
@@ -99,6 +116,16 @@ We will model both aggregates as **event-sourced**, on the existing `DomainEvent
 - Answers being irreversible is a real product constraint, not only a storage one. It is
   what keeps contradiction detection from becoming opt-out, and it costs the player the
   ability to change their mind two questions later.
+
+  > **Superseded by [ADR-0020](0020-revisable-assessment-answers.md), and the cost named here
+  > is why.** This bullet priced the constraint correctly and paid it anyway; ADR-0020 found
+  > the price too high in the one flow that is the entire evidence surface for a rating. The
+  > premise turned out to be wrong on its own terms: the irreversibility was already porous,
+  > since the start guard is scoped to runs *in progress*, so a player who wanted to rehearse
+  > could always abandon and restart. What actually keeps contradiction detection from
+  > becoming opt-out is the **absence of feedback** — no running estimate is shown and the
+  > tie-breaker arrives looking like any other execution question — and that property is
+  > untouched.
 
 **Neutral**
 
