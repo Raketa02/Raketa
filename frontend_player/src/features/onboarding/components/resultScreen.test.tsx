@@ -23,7 +23,13 @@ import {
   runInProgress,
   stubGate as stubGateWith,
 } from '@/test-support/onboardingRouter';
-import { installTransport, json, type Transport, type Wire } from '@/test-support/transport';
+import {
+  installTransport,
+  json,
+  transcriptOf,
+  type Transport,
+  type Wire,
+} from '@/test-support/transport';
 
 import { useOnboardingPass } from '../store/onboardingPass.store';
 
@@ -36,6 +42,7 @@ const OUTSTANDING: Wire['AssessmentStepResponse'] = {
   assessment_id: ASSESSMENT_ID,
   status: 'in_progress',
   questions_asked: 1,
+  transcript: transcriptOf(1),
   question: {
     id: 'q-overhead',
     category: 'Match execution',
@@ -94,6 +101,7 @@ function finished(result: Wire['ResultResponse']): Wire['AssessmentStepResponse'
     assessment_id: ASSESSMENT_ID,
     status: 'completed',
     questions_asked: result.questions_asked,
+    transcript: transcriptOf(result.questions_asked),
     question: null,
     result,
   };

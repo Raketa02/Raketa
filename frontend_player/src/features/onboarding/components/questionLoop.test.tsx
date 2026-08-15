@@ -26,6 +26,7 @@ import {
   installTransport,
   json,
   networkFailure,
+  transcriptOf,
   type Transport,
   type Wire,
 } from '@/test-support/transport';
@@ -42,6 +43,7 @@ const OPENING: Wire['AssessmentStepResponse'] = {
   status: 'in_progress',
   // Nothing answered yet. The outstanding question is never in this count.
   questions_asked: 0,
+  transcript: transcriptOf(0),
   question: {
     id: 'q-played',
     category: 'Recent activity',
@@ -61,6 +63,7 @@ const EXECUTION: Wire['AssessmentStepResponse'] = {
   assessment_id: ASSESSMENT_ID,
   status: 'in_progress',
   questions_asked: 1,
+  transcript: transcriptOf(1),
   question: {
     id: 'q-overhead',
     category: 'Match execution',
@@ -81,6 +84,7 @@ const LAYOFF: Wire['AssessmentStepResponse'] = {
   assessment_id: ASSESSMENT_ID,
   status: 'in_progress',
   questions_asked: 5,
+  transcript: transcriptOf(5),
   question: {
     id: 'q-layoff',
     category: 'Time away',
@@ -114,6 +118,7 @@ const FINISHED: Wire['AssessmentStepResponse'] = {
   // The same number the result carries — the count means one thing at both moments in a
   // run's life, so it does not jump as the run finishes.
   questions_asked: 2,
+  transcript: transcriptOf(2),
   question: null,
   result: RESULT,
 };
@@ -237,7 +242,13 @@ describe('the question screen', () => {
     // Four answers behind them from yesterday, and the fifth question outstanding. The
     // count is the server's replay of the transcript — the only thing that ever survived
     // the player closing the app, so it is the only thing that can answer this.
-    const resumed: Wire['AssessmentStepResponse'] = { ...EXECUTION, questions_asked: 4 };
+    const resumed: Wire['AssessmentStepResponse'] = {
+      ...EXECUTION,
+      questions_asked: 4,
+      // Served with the count, and by the same replay: what survived the player
+      // closing the app is the stream, so both come from it or neither does.
+      transcript: transcriptOf(4),
+    };
     stubGate({ runs: [runInProgress('PADEL', ASSESSMENT_ID)] });
     transport.on('GET', STEP_PATH, () => json(resumed));
 

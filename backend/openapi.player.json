@@ -558,6 +558,14 @@
             "title": "Questions Asked",
             "description": "How many of this run's questions have been answered. The outstanding `question` is **not** counted \u2014 it has been put to the player but not answered \u2014 so a question counter reads this plus one, and a fresh run reports 0. Replayed from the transcript on every read, which is what lets a resumed run report the position it is really at rather than restarting at 1. Once the run is over this is the same number `result.questions_asked` carries."
           },
+          "transcript": {
+            "items": {
+              "$ref": "#/components/schemas/TranscriptEntryResponse"
+            },
+            "type": "array",
+            "title": "Transcript",
+            "description": "Every answer given in this run so far, in the order they were given, each with the question it answered **as that question was asked** \u2014 so an answered question can be rendered from the response alone, by a client that was never shown it. Empty, never absent, on a run with no answers yet: a fresh run and a run whose answers are being withheld are not two readings of one payload. Grows by one entry per answer and is replayed from the stream on every read, so it survives a reinstall and a second device with nothing cached locally. Length is `questions_asked`; the outstanding `question` is not in it, because it has not been answered."
+          },
           "question": {
             "anyOf": [
               {
@@ -583,10 +591,11 @@
         "required": [
           "assessment_id",
           "status",
-          "questions_asked"
+          "questions_asked",
+          "transcript"
         ],
         "title": "AssessmentStepResponse",
-        "description": "The server-driven step. Exactly one of ``question`` / ``result`` is set."
+        "description": "The server-driven step: exactly one of ``question`` / ``result`` is set,\nand ``transcript`` is everything already answered behind it."
       },
       "BandResponse": {
         "properties": {
@@ -1153,6 +1162,24 @@
           "expires_in"
         ],
         "title": "TokenResponse"
+      },
+      "TranscriptEntryResponse": {
+        "properties": {
+          "question": {
+            "$ref": "#/components/schemas/QuestionResponse"
+          },
+          "option_id": {
+            "type": "string",
+            "title": "Option Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "question",
+          "option_id"
+        ],
+        "title": "TranscriptEntryResponse",
+        "description": "One answered question: the question as it was asked, and what was chosen."
       },
       "UncertaintyFactorResponse": {
         "properties": {

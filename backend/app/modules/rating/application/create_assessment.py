@@ -145,8 +145,11 @@ class CreateAssessment:
                 assessment_id=assessment_id,
                 status=assessment.status.value,
                 # Nothing has been answered yet, and the opening question does not
-                # count itself — a fresh run reports 0 and the client shows 1.
+                # count itself — a fresh run reports 0 and the client shows 1. The
+                # transcript is empty for the same reason, and is served empty
+                # rather than left out: a client reads one shape on every step.
                 questions_asked=questions_asked(assessment),
+                transcript=(),
                 question=step.question,
                 result=None,
             ),

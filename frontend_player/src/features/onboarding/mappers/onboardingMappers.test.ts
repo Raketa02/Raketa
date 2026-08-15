@@ -5,7 +5,7 @@
  * fails `pnpm typecheck` rather than failing here with a confusing assertion.
  */
 
-import type { Wire } from '@/test-support/transport';
+import { transcriptOf, type Wire } from '@/test-support/transport';
 
 import {
   toAssessmentRun,
@@ -121,6 +121,7 @@ describe('assessment steps', () => {
       assessment_id: '1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6',
       status: 'in_progress',
       questions_asked: 0,
+      transcript: transcriptOf(0),
       question: QUESTION,
     });
 
@@ -137,6 +138,7 @@ describe('assessment steps', () => {
       assessment_id: '1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6',
       status: 'in_progress',
       questions_asked: 4,
+      transcript: transcriptOf(4),
       question: QUESTION,
     });
 
@@ -146,6 +148,7 @@ describe('assessment steps', () => {
       assessment_id: '1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6',
       status: 'in_progress',
       questions_asked: 0,
+      transcript: transcriptOf(0),
       question: QUESTION,
     });
 
@@ -157,6 +160,7 @@ describe('assessment steps', () => {
       assessment_id: '1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6',
       status: 'completed',
       questions_asked: 2,
+      transcript: transcriptOf(2),
       question: null,
     });
 
@@ -170,6 +174,7 @@ describe('assessment steps', () => {
       assessment_id: '1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6',
       status: 'abandoned',
       questions_asked: 2,
+      transcript: transcriptOf(2),
       question: null,
     });
 
@@ -185,6 +190,7 @@ describe('assessment steps', () => {
       assessment_id: '1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6',
       status: 'quarantined_pending_review',
       questions_asked: 1,
+      transcript: transcriptOf(1),
       question: QUESTION,
     });
 
@@ -196,6 +202,7 @@ describe('assessment steps', () => {
       assessment_id: '1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6',
       status: 'completed',
       questions_asked: 2,
+      transcript: transcriptOf(2),
       question: null,
       result: RESULT,
     });
@@ -227,6 +234,7 @@ describe('assessment steps', () => {
       assessment_id: '1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6',
       status: 'completed',
       questions_asked: 1,
+      transcript: transcriptOf(1),
       question: null,
       result: { ...RESULT, factors: undefined, uncertainty_factors: undefined },
     });
@@ -246,6 +254,7 @@ describe('assessment steps', () => {
       assessment_id: '1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6',
       status: 'completed',
       questions_asked: 2,
+      transcript: transcriptOf(2),
       question: null,
       result: { ...RESULT, confidence_ceiling: null, confidence_reason: null },
     });
@@ -254,6 +263,7 @@ describe('assessment steps', () => {
       assessment_id: '1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6',
       status: 'completed',
       questions_asked: 2,
+      transcript: transcriptOf(2),
       question: null,
       result: { ...RESULT, confidence_ceiling: undefined },
     });
@@ -272,6 +282,7 @@ describe('assessment steps', () => {
       assessment_id: '1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6',
       status: 'completed',
       questions_asked: 2,
+      transcript: transcriptOf(2),
       question: null,
       result: { ...RESULT, confidence: 0, confidence_ceiling: 0 },
     });
@@ -284,6 +295,7 @@ describe('assessment steps', () => {
       assessment_id: '1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6',
       status: 'in_progress',
       questions_asked: 1,
+      transcript: transcriptOf(1),
       question: QUESTION,
     });
 

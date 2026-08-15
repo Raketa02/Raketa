@@ -237,7 +237,8 @@ export interface components {
         };
         /**
          * AssessmentStepResponse
-         * @description The server-driven step. Exactly one of ``question`` / ``result`` is set.
+         * @description The server-driven step: exactly one of ``question`` / ``result`` is set,
+         *     and ``transcript`` is everything already answered behind it.
          */
         AssessmentStepResponse: {
             /** Assessment Id */
@@ -249,6 +250,11 @@ export interface components {
              * @description How many of this run's questions have been answered. The outstanding `question` is **not** counted — it has been put to the player but not answered — so a question counter reads this plus one, and a fresh run reports 0. Replayed from the transcript on every read, which is what lets a resumed run report the position it is really at rather than restarting at 1. Once the run is over this is the same number `result.questions_asked` carries.
              */
             questions_asked: number;
+            /**
+             * Transcript
+             * @description Every answer given in this run so far, in the order they were given, each with the question it answered **as that question was asked** — so an answered question can be rendered from the response alone, by a client that was never shown it. Empty, never absent, on a run with no answers yet: a fresh run and a run whose answers are being withheld are not two readings of one payload. Grows by one entry per answer and is replayed from the stream on every read, so it survives a reinstall and a second device with nothing cached locally. Length is `questions_asked`; the outstanding `question` is not in it, because it has not been answered.
+             */
+            transcript: components["schemas"]["TranscriptEntryResponse"][];
             question?: components["schemas"]["QuestionResponse"] | null;
             result?: components["schemas"]["ResultResponse"] | null;
         };
@@ -526,6 +532,15 @@ export interface components {
             token_type: string;
             /** Expires In */
             expires_in: number;
+        };
+        /**
+         * TranscriptEntryResponse
+         * @description One answered question: the question as it was asked, and what was chosen.
+         */
+        TranscriptEntryResponse: {
+            question: components["schemas"]["QuestionResponse"];
+            /** Option Id */
+            option_id: string;
         };
         /**
          * UncertaintyFactorResponse

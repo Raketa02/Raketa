@@ -74,6 +74,26 @@ class ListRatingsQuery:
 
 
 @dataclass(frozen=True)
+class TranscriptEntry:
+    """One answered question, with the question as it was put to the player.
+
+    The whole question rather than its id, because the only thing that can render
+    an answered question is its copy, and a client resuming a run on a fresh
+    install has no local record of what it was shown. ``AnsweredQuestion`` — the
+    engine's transcript entry — is the id pair the engine reads; this is that pair
+    with the copy the player saw put back on it.
+
+    The chosen option travels as an id and not as its text: the option is one of
+    ``question.options``, which is already here in full, so carrying the text
+    again would be the same string twice on the wire and two places for it to
+    disagree.
+    """
+
+    question: Question
+    option_id: str
+
+
+@dataclass(frozen=True)
 class AssessmentStep:
     """The server-driven step: the current question, or the final result.
 
@@ -84,11 +104,18 @@ class AssessmentStep:
     what lets a resumed run report the position it is really at. It is required
     rather than optional so that no step can be built without it: see
     ``assessment_view.questions_asked`` for what it counts and what it does not.
+
+    ``transcript`` is those same answers spelled out — in the order they were
+    given, each with the question it answered. Required for the same reason and
+    empty rather than absent when nothing has been answered yet, so *no answers*
+    and *answers not served here* are never two readings of one payload. See
+    ``assessment_view.served_transcript``.
     """
 
     assessment_id: UUID
     status: str
     questions_asked: int
+    transcript: tuple[TranscriptEntry, ...]
     question: Question | None
     result: AssessmentResult | None
 

@@ -32,6 +32,7 @@ from app.modules.rating.application.assessment_view import (
     current_step,
     outstanding_question,
     questions_asked,
+    served_transcript,
 )
 from app.modules.rating.application.commands import (
     AssessmentStep,
@@ -106,8 +107,10 @@ class SubmitAnswer:
                 assessment_id=assessment.id,
                 status=assessment.status.value,
                 # The answer just recorded is in the transcript, so this response
-                # already counts it — the next question is one further along.
+                # already counts it — the next question is one further along, and
+                # the served transcript ends with the answer that produced it.
                 questions_asked=questions_asked(assessment),
+                transcript=served_transcript(self._engine, assessment),
                 question=step.question,
                 result=None,
             )
@@ -144,6 +147,9 @@ class SubmitAnswer:
             # Equal to the result's own count by construction: both are the length
             # of this transcript, so the run's number does not jump as it finishes.
             questions_asked=questions_asked(assessment),
+            # The evidence the result was computed from, served beside it. A
+            # finished run's transcript is still the answers the player gave.
+            transcript=served_transcript(self._engine, assessment),
             question=None,
             result=result,
         )

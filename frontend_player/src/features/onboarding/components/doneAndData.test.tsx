@@ -27,6 +27,7 @@ import {
   json,
   networkFailure,
   noContent,
+  transcriptOf,
   type Transport,
   type Wire,
 } from '@/test-support/transport';
@@ -55,6 +56,7 @@ function outstanding(assessmentId: string): Wire['AssessmentStepResponse'] {
     assessment_id: assessmentId,
     status: 'in_progress',
     questions_asked: 0,
+    transcript: transcriptOf(0),
     question: {
       id: 'q-overhead',
       category: 'Match execution',
@@ -127,6 +129,7 @@ function finished(assessmentId: string, result: Wire['ResultResponse']) {
     assessment_id: assessmentId,
     status: 'completed',
     questions_asked: result.questions_asked,
+    transcript: transcriptOf(result.questions_asked),
     question: null,
     result,
   } satisfies Wire['AssessmentStepResponse'];

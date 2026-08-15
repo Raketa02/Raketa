@@ -28,6 +28,7 @@ import {
   json,
   networkFailure,
   noContent,
+  transcriptOf,
   type Transport,
   type Wire,
 } from '@/test-support/transport';
@@ -47,6 +48,7 @@ function opening(assessmentId: string, text: string): Wire['AssessmentStepRespon
     assessment_id: assessmentId,
     status: 'in_progress',
     questions_asked: 0,
+    transcript: transcriptOf(0),
     question: {
       id: `q-played-${assessmentId}`,
       category: 'Recent activity',
@@ -70,6 +72,7 @@ const PADEL_SECOND: Wire['AssessmentStepResponse'] = {
   assessment_id: PADEL_RUN,
   status: 'in_progress',
   questions_asked: 1,
+  transcript: transcriptOf(1),
   question: {
     id: 'q-overhead',
     category: 'Match execution',
@@ -88,6 +91,7 @@ const PADEL_ABANDONED: Wire['AssessmentStepResponse'] = {
   assessment_id: PADEL_RUN,
   status: 'abandoned',
   questions_asked: 1,
+  transcript: transcriptOf(1),
   question: null,
 };
 
@@ -108,6 +112,7 @@ const PADEL_FINISHED: Wire['AssessmentStepResponse'] = {
   assessment_id: PADEL_RUN,
   status: 'completed',
   questions_asked: 4,
+  transcript: transcriptOf(4),
   question: null,
   result: {
     mu: 2.71,

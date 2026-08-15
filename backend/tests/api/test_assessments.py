@@ -1251,3 +1251,233 @@ async def test_completion_records_why_confidence_landed_where_it_did(
             == finished["result"]["calibration_priority"]
         )
         assert "sentence" not in str(row.payload)
+
+
+# --- The served Transcript ------------------------------------------------------
+#
+# Every step carries the answers already given, in order, each with the question
+# it answered *as that question was asked*. The copy and not the id, because the
+# only thing that can render an answered question is its copy and a run resumed on
+# a fresh install has nothing stored locally to render from. It is replayed from
+# the stream on every read, exactly as the outstanding question is, so there is no
+# second representation of a run to keep in step.
+
+
+def _transcript_ids(body):
+    return [entry["question"]["id"] for entry in body["transcript"]]
+
+
+@pytest.mark.asyncio
+async def test_a_fresh_run_carries_an_empty_transcript(client, valid_signup_payload):
+    headers = await _auth_headers(client, valid_signup_payload)
+    created = (await _create(client, headers)).json()
+
+    # Present and empty, never omitted: a client reads one shape on every step,
+    # and "no answers yet" is a length rather than a missing field.
+    assert created["transcript"] == []
+
+
+@pytest.mark.asyncio
+async def test_the_transcript_grows_by_one_entry_per_answer(
+    client, valid_signup_payload
+):
+    headers = await _auth_headers(client, valid_signup_payload)
+    body = (await _create(client, headers)).json()
+
+    lengths = [len(body["transcript"])]
+    asked = []
+    while body["question"] is not None:
+        asked.append(body["question"]["id"])
+        body = await _answer_the_outstanding_question(client, headers, body)
+        lengths.append(len(body["transcript"]))
+
+    # 0, 1, 2, … with no gap and no repeat, and the last entry is the answer that
+    # ended the run — the finished step serves the evidence it was rated on.
+    assert lengths == list(range(len(lengths)))
+    assert len(lengths) > 2, "a full run asks more than one question"
+    assert _transcript_ids(body) == asked
+    assert len(body["transcript"]) == body["questions_asked"]
+
+
+@pytest.mark.asyncio
+async def test_the_transcript_is_the_questions_that_were_actually_asked(
+    client, valid_signup_payload
+):
+    headers = await _auth_headers(client, valid_signup_payload)
+    body = (await _create(client, headers)).json()
+
+    asked, chosen = [], []
+    for _ in range(4):
+        asked.append(body["question"])
+        chosen.append(body["question"]["options"][-1]["id"])
+        body = await _answer_the_outstanding_question(client, headers, body)
+
+    # Whole questions, byte for byte what the player was shown — not a summary and
+    # not a reconstruction the client would have to trust separately.
+    assert [entry["question"] for entry in body["transcript"]] == asked
+    assert [entry["option_id"] for entry in body["transcript"]] == chosen
+    for entry in body["transcript"]:
+        assert entry["option_id"] in {
+            option["id"] for option in entry["question"]["options"]
+        }
+
+
+@pytest.mark.asyncio
+async def test_an_entry_carries_the_whole_question(client, valid_signup_payload):
+    headers = await _auth_headers(client, valid_signup_payload)
+    body = (await _create(client, headers)).json()
+    body = await _answer_the_outstanding_question(client, headers, body)
+
+    (entry,) = body["transcript"]
+    question = entry["question"]
+    assert set(question) == {
+        "id",
+        "category",
+        "tier",
+        "situation",
+        "text",
+        "qualifier",
+        "options",
+    }
+    assert question["category"] and question["situation"] and question["text"]
+    assert question["qualifier"] and question["options"]
+
+
+@pytest.mark.asyncio
+async def test_the_outstanding_question_is_not_in_the_transcript(
+    client, valid_signup_payload
+):
+    headers = await _auth_headers(client, valid_signup_payload)
+    body = (await _create(client, headers)).json()
+    body = await _answer_the_outstanding_question(client, headers, body)
+
+    # It has been put to the player but not answered, which is the same rule
+    # ``questions_asked`` follows — so the two agree by construction.
+    assert body["question"]["id"] not in _transcript_ids(body)
+    assert len(body["transcript"]) == body["questions_asked"]
+
+
+@pytest.mark.asyncio
+async def test_a_resumed_run_returns_the_full_transcript(client, valid_signup_payload):
+    headers = await _auth_headers(client, valid_signup_payload)
+    body = (await _create(client, headers)).json()
+    for _ in range(3):
+        body = await _answer_the_outstanding_question(client, headers, body)
+    answering = body["transcript"]
+
+    # The three reads a resuming client can make, and the start it may retry into.
+    fetched = (await _get(client, headers, body["assessment_id"])).json()
+    resumed = (await _in_progress(client, headers)).json()
+    restarted = (await _create(client, headers)).json()
+
+    assert len(answering) == 3
+    assert fetched["transcript"] == answering
+    assert resumed["transcript"] == answering
+    assert restarted["transcript"] == answering
+
+
+@pytest.mark.asyncio
+async def test_the_beginner_run_carries_the_single_answer_that_ended_it(
+    client, valid_signup_payload
+):
+    headers = await _auth_headers(client, valid_signup_payload)
+    created = (await _create(client, headers)).json()
+    question = created["question"]
+
+    finished = (
+        await _answer(
+            client, headers, created["assessment_id"], question["id"], "never-played"
+        )
+    ).json()
+
+    assert finished["result"] is not None
+    (entry,) = finished["transcript"]
+    assert entry["question"] == question
+    assert entry["option_id"] == "never-played"
+
+
+@pytest.mark.asyncio
+async def test_an_abandoned_run_still_carries_what_was_answered(
+    client, valid_signup_payload
+):
+    headers = await _auth_headers(client, valid_signup_payload)
+    body = (await _create(client, headers)).json()
+    body = await _answer_the_outstanding_question(client, headers, body)
+    body = await _answer_the_outstanding_question(client, headers, body)
+
+    await _abandon(client, headers, body["assessment_id"])
+    ended = (await _get(client, headers, body["assessment_id"])).json()
+
+    assert ended["status"] == "abandoned"
+    assert ended["question"] is None
+    assert ended["transcript"] == body["transcript"]
+
+
+@pytest.mark.asyncio
+async def test_a_finished_run_carries_the_evidence_beside_its_result(
+    client, valid_signup_payload
+):
+    headers = await _auth_headers(client, valid_signup_payload)
+    finished = await _run_to_result(client, headers)
+
+    refetched = (await _get(client, headers, finished["assessment_id"])).json()
+
+    assert len(finished["transcript"]) == finished["result"]["questions_asked"]
+    assert refetched["transcript"] == finished["transcript"]
+
+
+@pytest.mark.asyncio
+async def test_the_transcript_is_replayed_and_not_stored_a_second_time(
+    client, session_factory, valid_signup_payload
+):
+    # The copy is the engine's and the stream holds only the two ids the engine
+    # reads. A stored question would be a second place the wording lives, and the
+    # two would disagree the first time either moved.
+    headers = await _auth_headers(client, valid_signup_payload)
+    body = (await _create(client, headers)).json()
+    for _ in range(3):
+        body = await _answer_the_outstanding_question(client, headers, body)
+    shown = body["transcript"][0]["question"]
+
+    async with session_factory() as session:
+        rows = (
+            (
+                await session.execute(
+                    select(EventStoreORM).order_by(EventStoreORM.version)
+                )
+            )
+            .scalars()
+            .all()
+        )
+
+    answers = [row for row in rows if row.event_type == "rating.answer_submitted"]
+    assert len(answers) == 3
+    for row in answers:
+        assert set(row.payload) == {
+            "assessment_id",
+            "question_id",
+            "option_id",
+            "occurred_at",
+        }
+    stored = str([row.payload for row in rows])
+    assert shown["text"] not in stored
+    assert shown["situation"] not in stored
+
+
+@pytest.mark.asyncio
+async def test_the_transcript_is_stated_on_the_player_contract():
+    # The two clients generate from this document, so the field being required
+    # rather than defaulted is what makes it non-optional in their wire types. A
+    # defaulted list would have generated as `transcript?:` and pushed an absence
+    # check into both clients for a field that is always sent.
+    from app.api.contract import build_surface_spec
+    from app.api.v1.player import player_api_router
+
+    schemas = build_surface_spec("player", player_api_router)["components"]["schemas"]
+    step = schemas["AssessmentStepResponse"]
+
+    assert "transcript" in step["properties"]
+    assert "transcript" in step["required"]
+
+    entry = schemas["TranscriptEntryResponse"]
+    assert set(entry["required"]) == {"question", "option_id"}

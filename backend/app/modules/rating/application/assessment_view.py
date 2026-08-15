@@ -21,7 +21,7 @@ from app.engines.assessment import (
     AssessmentResult,
     Question,
 )
-from app.modules.rating.application.commands import AssessmentStep
+from app.modules.rating.application.commands import AssessmentStep, TranscriptEntry
 from app.modules.rating.domain.assessment import Assessment
 
 
@@ -29,6 +29,44 @@ def outstanding_question(engine: AssessmentEngine, assessment: Assessment) -> Qu
     step = engine.next_step(sport=assessment.sport, transcript=assessment.transcript)
     assert isinstance(step, AskQuestion)
     return step.question
+
+
+def served_transcript(
+    engine: AssessmentEngine, assessment: Assessment
+) -> tuple[TranscriptEntry, ...]:
+    """Every answer given so far, each with the question it answered, in order.
+
+    The stream stores an answer as two ids, because that is all the engine reads.
+    A reader that has to *render* an answered question needs its copy, and the
+    copy is the engine's — so it is reproduced exactly as the outstanding question
+    is: the engine is asked what it would put to a player who had answered the
+    first *n* answers, for every *n* the run has. That is the same determinism
+    ``outstanding_question`` already rests on, applied to the run's past rather
+    than to its present, and it is why the copy is never stored a second time.
+
+    **It stops at the first disagreement instead of asserting.** ``next_step`` is
+    only guaranteed to reproduce what was asked while the engine asked is the
+    engine that asked it, so a run whose ``engine_version`` has since been retired
+    can replay to a question that was never put to this player — or to no question
+    at all. There is nothing truthful to serve past that point, and the transcript
+    ends there. It is the rule ``completed_result`` already applies to the
+    explanation, in the shape a sequence takes: what a retired engine asked is
+    part of what only that engine can say.
+
+    A live run therefore always yields its whole transcript, and that is the only
+    case any client has ever seen.
+    """
+
+    answered = assessment.transcript
+    entries: list[TranscriptEntry] = []
+    for position, entry in enumerate(answered):
+        step = engine.next_step(sport=assessment.sport, transcript=answered[:position])
+        if not isinstance(step, AskQuestion) or step.question.id != entry.question_id:
+            break
+        entries.append(
+            TranscriptEntry(question=step.question, option_id=entry.option_id)
+        )
+    return tuple(entries)
 
 
 def questions_asked(assessment: Assessment) -> int:
@@ -75,11 +113,13 @@ def completed_result(
 
 def current_step(engine: AssessmentEngine, assessment: Assessment) -> AssessmentStep:
     answered = questions_asked(assessment)
+    transcript = served_transcript(engine, assessment)
     if assessment.is_completed:
         return AssessmentStep(
             assessment_id=assessment.id,
             status=assessment.status.value,
             questions_asked=answered,
+            transcript=transcript,
             question=None,
             result=completed_result(engine, assessment),
         )
@@ -88,6 +128,7 @@ def current_step(engine: AssessmentEngine, assessment: Assessment) -> Assessment
             assessment_id=assessment.id,
             status=assessment.status.value,
             questions_asked=answered,
+            transcript=transcript,
             question=None,
             result=None,
         )
@@ -95,6 +136,7 @@ def current_step(engine: AssessmentEngine, assessment: Assessment) -> Assessment
         assessment_id=assessment.id,
         status=assessment.status.value,
         questions_asked=answered,
+        transcript=transcript,
         question=outstanding_question(engine, assessment),
         result=None,
     )
