@@ -1,0 +1,212 @@
+"""Deliberately-wrong uses of the kernel, each one a constraint being claimed.
+
+This file is **not run and not collected**. It is read by ``mypy``, driven from
+``tests/unit/test_kernel_typing.py``, which asserts that every line marked with
+a ``# want-error:`` comment produces exactly that error code — and that no line
+without one produces any error at all.
+
+Why it exists: the kernel's constraints are carried by the type system, and the
+type system erases at runtime. Delete ``@final`` from ``Ok``, widen ``Err``'s
+reason to ``object``, drop the ``Never`` from ``exhaustive`` — every one of those
+changes behaviour not at all, breaks no test, and passes review as a
+simplification. The claim *"dividing before rounding does not typecheck"* is
+worth precisely what checks it.
+
+**Adding a case is the point.** Each branded module lands its own misuses here;
+the money module's raw-number-into-a-seat-share is what this harness is really
+being built for, and it arrives with that module.
+
+Every legitimate use below is load-bearing too: it is a line the harness asserts
+is *clean*, so a constraint that grows teeth it should not have — a narrowing
+that stops narrowing, a chain that stops composing — fails here as loudly as one
+that loses them.
+"""
+
+from dataclasses import dataclass
+from typing import Literal
+
+from app.kernel import (
+    SPORT_SPECS,
+    Err,
+    InvariantViolated,
+    Ok,
+    Reason,
+    Result,
+    Sport,
+    SportSpec,
+    Unavailable,
+    exhaustive,
+    invariant,
+)
+
+
+@dataclass(frozen=True)
+class Closed:
+    """A stand-in reason: a machine code and its payload, no sentence."""
+
+    day_offset: int
+    kind: Literal["closed"] = "closed"
+
+
+@dataclass(frozen=True)
+class Sentenced:
+    """A stand-in for the reason nobody may write: words instead of a code."""
+
+    message: str
+
+
+# --- Result has exactly two inhabitants, and neither is open -------------------
+
+
+class ThirdInhabitant(Ok[int]):  # want-error: misc
+    """A success that is also something else. `@final` is what forbids it."""
+
+
+class FourthInhabitant(Err[Closed]):  # want-error: misc
+    """Likewise a failure. Two `@final` classes are the whole closed set."""
+
+
+def a_result_is_immutable(result: Ok[int]) -> None:
+    result.value = 2  # want-error: misc
+
+
+def both_members_must_be_handled(result: Result[int, Closed]) -> int:
+    """A match that handles only the success is not a match over a `Result`."""
+
+    match result:
+        case Ok(value):
+            return value
+        case _:
+            exhaustive(result)  # want-error: arg-type
+
+
+# --- A reason is a machine code, never a sentence ------------------------------
+
+#: The case that catches the `Reason` bound being widened, and the only one that
+#: does. With no annotation to solve `_R` from, the bound is the sole thing that
+#: can refuse this. The two functions below are refused by their *return type*
+#: as well, so both would survive `_R` losing its bound entirely — which is what
+#: a mutation run found, and why this line is here.
+A_SENTENCE_IS_NOT_A_REASON = Err("No courts are available.")  # want-error: type-var
+
+
+def a_reason_is_never_a_sentence() -> Err[Reason]:
+    """The whole point of the `Reason` bound, and the one a reviewer forgets."""
+
+    return Err("No courts are available that afternoon.")  # want-error: arg-type
+
+
+def a_reason_without_a_code_is_not_a_reason() -> Err[Reason]:
+    """`Sentenced` carries words and no `kind`, so it is not a reason at all."""
+
+    return Err(Sentenced(message="No courts available."))  # want-error: arg-type
+
+
+def a_reason_is_a_plain_frozen_dataclass() -> Err[Closed]:
+    """And this one is clean: declaring `kind` is the whole of the contract."""
+
+    return Err(Closed(day_offset=1))
+
+
+# --- The reason union ships empty, and the compiler knows it ------------------
+
+
+def nothing_is_unavailable_yet() -> Result[int, Unavailable]:
+    """No reason exists yet, so nothing can be returned as one.
+
+    This line is what makes *"the union ships empty"* a fact rather than a
+    comment. It stops being an error on the day the time module lands the
+    nonexistent-local-time case, and that is when it moves out of this file.
+    """
+
+    return Err(Closed(day_offset=1))  # want-error: return-value
+
+
+def a_result_that_cannot_fail_is_still_a_result() -> Result[int, Unavailable]:
+    return Ok(1)
+
+
+# --- Mapping and chaining keep the reason's type ------------------------------
+
+
+@dataclass(frozen=True)
+class Elsewhere:
+    kind: Literal["elsewhere"] = "elsewhere"
+
+
+def a_chain_cannot_swap_the_reason(
+    result: Result[int, Closed],
+) -> Result[str, Closed]:
+    """`and_then` composes only where the two halves can fail the same way."""
+
+    return result.and_then(lambda value: Err(Elsewhere()))  # want-error: arg-type
+
+
+def a_chain_composes(result: Result[int, Closed]) -> Result[str, Closed]:
+    return result.and_then(lambda value: Ok(str(value)))
+
+
+def a_map_keeps_the_reason(result: Result[int, Closed]) -> Result[str, Closed]:
+    return result.map(str)
+
+
+# --- `invariant` narrows, and the narrowing is the reason it is not an `if` ---
+
+
+def without_the_invariant(sport: Sport) -> int:
+    """The state a caller is in before the guard: the lookup may miss."""
+
+    spec = SPORT_SPECS.get(sport)
+    return spec.players  # want-error: union-attr
+
+
+def with_the_invariant(sport: Sport) -> int:
+    """And after it. This line erroring means the narrowing has stopped.
+
+    It is the half of the pair that cannot be asserted by marking it — an
+    absence of an error is only evidence when something otherwise identical
+    does produce one, which is what the function above is for.
+    """
+
+    spec: SportSpec = invariant(SPORT_SPECS.get(sport), f"no spec: {sport!r}")
+    return spec.players
+
+
+def an_invariant_is_not_caught_as_a_value_error() -> None:
+    """`InvariantViolated` is deliberately not a `ValueError`."""
+
+    try:
+        invariant(None, "nothing")
+    except InvariantViolated:
+        pass
+
+
+# --- Exhaustiveness over the registry that is already closed ------------------
+
+
+def every_sport_must_be_named(sport: Sport) -> str:
+    """Badminton is missing, so `sport` is not `Never` where the tail sits."""
+
+    match sport:
+        case Sport.PADEL:
+            return "padel"
+        case Sport.TENNIS:
+            return "tennis"
+        case Sport.SQUASH:
+            return "squash"
+        case _:
+            exhaustive(sport)  # want-error: arg-type
+
+
+def all_four_named(sport: Sport) -> str:
+    match sport:
+        case Sport.PADEL:
+            return "padel"
+        case Sport.TENNIS:
+            return "tennis"
+        case Sport.SQUASH:
+            return "squash"
+        case Sport.BADMINTON:
+            return "badminton"
+        case _:
+            exhaustive(sport)

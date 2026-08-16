@@ -42,6 +42,22 @@ there; they are not repeated here.
   `UnitOfWork` stays a use-case dependency, because one transaction can span two
   aggregates. Its adapter keeps a **per-request** identity map of loaded versions, so it
   must be constructed per request from the session. _Avoid_: DAO, store, gateway.
+- **Invariant** vs **Unavailability** — the two ways kernel and engine code refuses, and
+  they are not interchangeable ([ADR-0022](../docs/adr/0022-kernel-negative-space-and-constant-homes.md)).
+  An **invariant** is a broken precondition: `invariant(subject, message)` raises
+  `InvariantViolated`, nothing catches it, and it raising in production means a bug
+  shipped. An **unavailability** is a legitimate domain state where no answer exists:
+  it is *returned* as a `Result` and the caller branches on it. Confusing them forces
+  `try` into pure code, or forces every call site to handle a case that cannot happen.
+  _Avoid_: "error" for either, unqualified.
+- **Result** — a frozen `Ok(value)` or a frozen `Err(reason)`, consumed by pattern match.
+  Two `@final` classes with one field each, so there is no third inhabitant: never both,
+  never neither. `map` and `and_then` pass a failure's reason through untouched.
+- **Reason** — why there is no answer: a stable machine `kind` code and its payload
+  fields, **never a sentence**. The clients own the words; a reason crosses the wire as
+  `{kind, …payload}`. `Unavailable` is the closed union of them and currently **ships
+  empty** — its first member arrives with the kernel's time module. _Avoid_: message,
+  detail, error text.
 - **Read-model repository** — the port a use case reads *projected current state* through,
   e.g. `UserRepository`. It answers queries against a table, not by replaying a stream, and
   has no version bookkeeping. **The trap:** `UserRepository` is this kind despite its name
