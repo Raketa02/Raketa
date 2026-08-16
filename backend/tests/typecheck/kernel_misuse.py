@@ -13,8 +13,9 @@ simplification. The claim *"dividing before rounding does not typecheck"* is
 worth precisely what checks it.
 
 **Adding a case is the point.** Each branded module lands its own misuses here;
-the money module's raw-number-into-a-seat-share is what this harness is really
-being built for, and it arrives with that module.
+the money module's raw-number-into-a-seat-share is what this harness was really
+built for, and it is now below — *"dividing before rounding does not typecheck"*
+is a claim about the compiler and nothing else could check it.
 
 Every legitimate use below is load-bearing too: it is a line the harness asserts
 is *clean*, so a constraint that grows teeth it should not have — a narrowing
@@ -24,35 +25,54 @@ that loses them.
 
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
+from fractions import Fraction
 from typing import Literal
 from zoneinfo import ZoneInfo
 
 from app.kernel import (
     SPORT_SPECS,
+    CardAllowance,
+    CardCoversShare,
     Clock,
+    ClubCard,
+    CourtPrice,
     DayOffset,
     Err,
+    Grosze,
     Instant,
     InvariantViolated,
     MinuteOfDay,
     Minutes,
+    NoCard,
     NonexistentLocalTime,
     Ok,
+    Payable,
+    Ratio,
     Reason,
     Result,
+    SeatShare,
     Sport,
     SportSpec,
     Unavailable,
+    add_grosze,
+    apply_fraction,
+    card_offset,
+    court_price,
     day_offset,
+    divide_among_players,
     elapsed_minutes,
     exhaustive,
+    grosze,
     hours,
     instant,
     invariant,
     minute_of_day,
     minutes,
+    payable_from,
+    percent,
     shifted,
     slot_start,
+    zloty,
 )
 
 
@@ -416,3 +436,155 @@ def a_gap_carries_a_local_date_never_a_day_offset(
         local_date=day,  # want-error: arg-type
         minute_of_day=minute_of_day(150),
     )
+
+
+# --- Money: the rounding order, made unwritable rather than documented --------
+#
+# `Grosze`, `CourtPrice`, `SeatShare`, `Payable` and `Ratio` are `NewType`s over
+# `int` and `Fraction`, and they erase completely. Collapse any of them and
+# every test in the suite still passes — a court price divided before it was
+# rounded computes a perfectly ordinary number, ten grosze away from the right
+# one. These lines are the only thing that notices.
+
+DISCOUNTED_COURT = court_price(zloty(96), percent(90))
+A_SEAT = divide_among_players(DISCOUNTED_COURT, 4)
+
+
+def a_raw_number_is_not_money() -> CourtPrice:
+    """The case that catches `Grosze` collapsing to `int`."""
+
+    return court_price(9600)  # want-error: arg-type
+
+
+def a_number_of_minutes_is_not_an_amount_of_money() -> CourtPrice:
+    """Two `NewType`s over `int`. A ninety-minute slot is not ninety grosze,
+    and transposing them produces a price with nothing wrong-looking in it."""
+
+    return court_price(minutes(90))  # want-error: arg-type
+
+
+def a_bare_int_is_not_grosze_on_the_way_out() -> Grosze:
+    return 2150  # want-error: return-value
+
+
+def dividing_before_rounding_does_not_typecheck() -> SeatShare:
+    """**The claim this whole harness was built for.**
+
+    `divide_among_players` accepts only a `CourtPrice`, and the only way to hold
+    one is to have gone through `court_price`, which is where the single
+    rounding to whole złoty happens. So there is no path from a raw amount to a
+    seat share, and the 21,60-instead-of-21,50 bug has nowhere to be written.
+    """
+
+    return divide_among_players(grosze(8640), 4)  # want-error: arg-type
+
+
+def a_float_price_does_not_typecheck_either() -> SeatShare:
+    """The other half of the same claim: no float reaches a price."""
+
+    return divide_among_players(86.4, 4)  # want-error: arg-type
+
+
+def a_seat_share_is_not_a_court_price() -> SeatShare:
+    """Two refinements of one base unit, and they do not interchange.
+
+    Splitting a share again is how a court gets divided by sixteen. Refused by
+    `CourtPrice`'s own brand, as is the case above it — collapsing `CourtPrice`
+    to `Grosze` frees both, which is checked rather than assumed: each of the
+    five money brands has at least one marker here that goes unenforced when it
+    alone is collapsed.
+    """
+
+    return divide_among_players(A_SEAT, 4)  # want-error: arg-type
+
+
+def a_plain_amount_is_not_a_seat_share() -> Payable:
+    return payable_from(grosze(2150), NoCard())  # want-error: arg-type
+
+
+def a_court_price_is_not_a_seat_share() -> Payable:
+    """The failure this one names is the expensive one: a `CourtPrice` is a
+    `Grosze`, so with `SeatShare` collapsed the whole court is charged to one
+    player and every number involved looks entirely ordinary."""
+
+    return payable_from(DISCOUNTED_COURT, NoCard())  # want-error: arg-type
+
+
+def an_amount_is_not_already_a_payable() -> Payable:
+    """The only direction `Payable`'s brand can be checked in — nothing takes
+    one as an argument, so the claim is that a `Grosze` cannot become one
+    without the card rule having run."""
+
+    return grosze(2150)  # want-error: return-value
+
+
+def a_float_is_not_a_multiplier() -> CourtPrice:
+    """`0.9` is not nine tenths, and this is where that stops being writable."""
+
+    return court_price(zloty(96), 0.9)  # want-error: arg-type
+
+
+def an_unbranded_fraction_is_not_a_multiplier_either() -> CourtPrice:
+    """Refused by `Ratio`'s own brand, and the only case that is.
+
+    `Fraction(0.9)` is exact and wrong — it is the double nearest nine tenths,
+    not nine tenths — so the brand is what forces the two-integer constructor.
+    """
+
+    return court_price(zloty(96), Fraction(9, 10))  # want-error: arg-type
+
+
+def a_percentage_is_not_a_ratio() -> Grosze:
+    return apply_fraction(A_SEAT, 50)  # want-error: arg-type
+
+
+class FourthKindOfCard(NoCard):  # want-error: misc
+    """A club card is one of three things. `@final` is what closes the set."""
+
+
+def a_card_is_immutable(card: CardAllowance) -> None:
+    card.amount = zloty(9)  # want-error: misc
+
+
+def every_kind_of_card_must_be_handled(share: SeatShare, card: ClubCard) -> Grosze:
+    """`CardCoversShare` is missing, so `card` is not `Never` at the tail — the
+    member whose omission would silently charge a fully-covered player."""
+
+    match card:
+        case NoCard():
+            return grosze(0)
+        case CardAllowance(amount):
+            return amount
+        case _:
+            exhaustive(card)  # want-error: arg-type
+
+
+# --- And the legitimate walk beside them, which has to stay legitimate --------
+
+
+def the_rounding_order_composes(base: Grosze, off_peak: Ratio) -> Payable:
+    return payable_from(
+        divide_among_players(court_price(base, off_peak, percent(90)), 4),
+        CardAllowance(zloty(8)),
+    )
+
+
+def a_refinement_goes_wherever_the_base_unit_is_wanted(
+    share: SeatShare, owed: Payable
+) -> Grosze:
+    """Arithmetic takes any amount and hands back an unrefined one, which is
+    the point: a share plus a payable is neither of those things."""
+
+    return add_grosze(share, owed)
+
+
+def all_three_cards_named(share: SeatShare, card: ClubCard) -> Grosze:
+    match card:
+        case NoCard():
+            return grosze(0)
+        case CardAllowance(amount):
+            return amount
+        case CardCoversShare():
+            return card_offset(share, card)
+        case _:
+            exhaustive(card)

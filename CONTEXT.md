@@ -215,11 +215,12 @@ none may redefine ([ADR-0015](docs/adr/0015-engines-as-a-pure-versioned-layer.md
   Its absence is deliberate and load-bearing: one rating per sport is what let onboarding
   drop cross-sport transfer and the singles/doubles link entirely.
 
-#### Money — *decided, not yet built*
+#### Money
 
-The words are settled ([ADR-0023](docs/adr/0023-money-integer-grosze-gross-whole-zloty.md));
-the module arrives with the first priced context. Named here so nothing invents a synonym in
-the meantime.
+The words are settled ([ADR-0023](docs/adr/0023-money-integer-grosze-gross-whole-zloty.md))
+and `backend/app/kernel/money.py` implements them. No priced context exists yet, so the
+module has no production caller — the rounding order and the split are correct and finished
+ahead of the first club, which is the whole reason they could be built now.
 
 - **Grosze** — the unit every price is held in. Integer, never a float, never a decimal
   string. One hundred grosze to the złoty.
