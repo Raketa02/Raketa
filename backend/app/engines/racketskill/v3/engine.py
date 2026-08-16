@@ -661,7 +661,12 @@ def _projected_gain(current_sigma: float, candidate_sigma: float) -> float:
 
     biased = combine_sigma(candidate_sigma, SELF_REPORT_BIAS)
     precision = 1.0 / (current_sigma**2) + 1.0 / (biased**2)
-    projected = (1.0 / precision) ** 0.5
+    # Annotated rather than switched to `math.sqrt`: typeshed types `float ** float`
+    # as `Any` (a negative base with a fractional exponent gives a complex), and
+    # strict mode reads that as an `Any` escaping through the return. The annotation
+    # pins the type and leaves the arithmetic bit-identical — `pow(x, 0.5)` and
+    # `sqrt(x)` may differ by an ulp on some libm builds, and σ decides a band edge.
+    projected: float = (1.0 / precision) ** 0.5
     return max(current_sigma, SIGMA_FLOOR) - max(projected, SIGMA_FLOOR)
 
 
@@ -994,7 +999,9 @@ def _dispersion_sigma(points: list[_Evidence]) -> float:
         )
         / total_weight
     )
-    return min(DISPERSION_SIGMA_MAX, max(0.0, variance**0.5 - DISPERSION_TOLERANCE))
+    # Annotated for the reason given in `_projected_gain`.
+    scatter: float = variance**0.5
+    return min(DISPERSION_SIGMA_MAX, max(0.0, scatter - DISPERSION_TOLERANCE))
 
 
 # --- The explanation: factor rows, uncertainty rows, the confidence reason -----

@@ -15,7 +15,8 @@ Run via the Makefile from `backend/`:
 make test        # poetry run pytest tests -q
 make lint        # ruff check .          make format → ruff format .
 make typecheck   # mypy app
-make check       # lint + typecheck + test — the same gate CI runs
+make check       # lint + lint-imports + typecheck + test — the same gate CI runs
+make test-gates  # prove the kernel/engines purity gates still fire (CI runs it)
 make openapi     # emit openapi.player.json + openapi.club.json, one per client
 make up / down   # dev stack (Postgres 17 + API + Redis); make logs, make shell
 make migrate     # alembic upgrade head inside the API container
@@ -66,6 +67,13 @@ Rules to preserve:
 - **New routes mount under `app/api/v1/router.py`;** keep the `/api/v1` prefix.
 - **Validate and normalize inside the value object**, not in the use case — see
   `app/modules/users/domain/value_objects.py`.
+- **`app/kernel/` and `app/engines/` are pure and fenced by three gates**, because no one
+  of them covers all of it ([ADR-0015](../docs/adr/0015-engines-as-a-pure-versioned-layer.md),
+  [ADR-0022](../docs/adr/0022-kernel-negative-space-and-constant-homes.md)): `.importlinter`
+  forbids `app.shared`, `random`, `uuid`, `secrets` and `time` to both — and `datetime` to
+  the engines, whose one legitimate home is the kernel; `tests/unit/test_kernel_purity.py`
+  walks the source for the clock reads module granularity cannot see; and `pyproject.toml`
+  scopes **mypy strict** to those two packages. An engine takes `now` as an input.
 
 ## The API contract
 

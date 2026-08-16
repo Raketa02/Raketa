@@ -5,13 +5,28 @@
 # nothing else. It may import the shared kernel and stdlib — never a module, never
 # FastAPI, SQLAlchemy, Pydantic or any I/O library. Modules may import engines
 # freely, so this is a one-directional fence.
+#
+# `app.shared` is forbidden to both, which is the hole ADR-0022 records: it was on
+# neither list, so a kernel or engine module could import `SystemClock` or
+# `new_uuid` with CI fully green. Ambience is forbidden with it — `random`, `uuid`,
+# `secrets` and `time` are the stdlib routes to the same thing, and ADR-0015's
+# three purity rules (no clock, no randomness, no hidden state) are worth exactly
+# what enforces them.
+#
+# `datetime` is forbidden to the **engines only**. The kernel's time module is its
+# one legitimate home; an engine receives an instant rather than constructing one.
+# `allow_indirect_imports = true` is what makes that expressible: an engine importing
+# the kernel, which imports `datetime`, is not an engine reading a clock. Module
+# granularity is also why this file cannot be the whole fence — `datetime` is legal
+# in the kernel while `datetime.now()` is not, and that half is an AST walk in
+# tests/unit/test_kernel_purity.py.
 
 [importlinter]
 root_package = app
 include_external_packages = True
 
 [importlinter:contract:engines-are-pure]
-name = Engines import only the shared kernel — never a module, framework or I/O library
+name = Engines import only the shared kernel — never a module, framework, I/O library or ambience
 type = forbidden
 source_modules =
     app.engines
@@ -23,6 +38,7 @@ forbidden_modules =
     app.bootstrap
     app.core
     app.main
+    app.shared
     fastapi
     starlette
     sqlalchemy
@@ -37,10 +53,15 @@ forbidden_modules =
     celery
     jwt
     bcrypt
+    random
+    uuid
+    secrets
+    time
+    datetime
 allow_indirect_imports = true
 
 [importlinter:contract:kernel-is-innermost]
-name = The shared kernel depends on nothing in the app and no framework or I/O library
+name = The shared kernel depends on nothing in the app, no framework or I/O library, and no ambience
 type = forbidden
 source_modules =
     app.kernel
@@ -53,6 +74,7 @@ forbidden_modules =
     app.bootstrap
     app.core
     app.main
+    app.shared
     fastapi
     starlette
     sqlalchemy
@@ -67,4 +89,8 @@ forbidden_modules =
     celery
     jwt
     bcrypt
+    random
+    uuid
+    secrets
+    time
 allow_indirect_imports = true

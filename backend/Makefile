@@ -15,7 +15,7 @@ ECR_URI          ?= $(AWS_ACCOUNT_ID).dkr.ecr.$(AWS_REGION).amazonaws.com/$(ECR_
 ECS_CLUSTER      ?= rakieta-cluster
 ECS_SERVICE      ?= rakieta-service
 
-.PHONY: help install test lint lint-imports format typecheck check openapi \
+.PHONY: help install test lint lint-imports format typecheck check test-gates openapi \
         build-dev up down logs ps shell migrate \
         build-prod ecr-login ecr-push ecs-deploy
 
@@ -34,6 +34,9 @@ lint:              ## ruff check
 
 lint-imports:      ## enforce the engines/kernel import boundaries (.importlinter)
 	poetry run lint-imports
+
+test-gates:        ## verify the kernel/engines purity gates still fire
+	bash scripts/test-purity-gates.sh
 
 format:            ## ruff format
 	poetry run ruff format .
