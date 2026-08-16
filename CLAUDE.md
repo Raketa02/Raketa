@@ -72,3 +72,22 @@ guardrail doing its job.
 
 After changing either hook, run `make test-hooks` (65 assertions). A guardrail that
 silently stops matching is worse than none, because you stop watching for it.
+
+## Agent skills
+
+### Issue tracker
+
+GitHub Issues on `RobertConstantin02/rakieta`, via the `gh` CLI. Blocking edges live in
+the issue body and a spec is labelled `prd`, not `ready-for-agent` — both are load-bearing
+for the AFK loop. See [`docs/agents/issue-tracker.md`](docs/agents/issue-tracker.md).
+
+### Triage labels
+
+The five canonical triage roles, each label string equal to its name. See
+[`docs/agents/triage-labels.md`](docs/agents/triage-labels.md).
+
+### Domain docs
+
+Multi-context: `CONTEXT-MAP.md` is the topology, the root `CONTEXT.md` owns the domain
+language, and each app's `CONTEXT.md` adds technical vocabulary only. See
+[`docs/agents/domain.md`](docs/agents/domain.md).
