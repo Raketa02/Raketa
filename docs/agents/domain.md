@@ -18,6 +18,22 @@ How to consume this repo's domain documentation before working in the codebase.
 Domain language is defined **once** at the root; each app adds only its own technical
 vocabulary. A `Court` is a `Court` in Python and in TypeScript.
 
+## Layout
+
+**Multi-context.** Note this differs from the usual multi-context shape: the contexts are
+three deployable apps at the root, not packages under `src/`, and **every ADR is
+system-wide** at the root — there are no per-app ADR directories.
+
+```
+/
+├── CONTEXT-MAP.md                topology — which file owns which vocabulary
+├── CONTEXT.md                    the shared domain glossary (source of truth)
+├── docs/adr/                     system-wide decisions, 0001 onward
+├── backend/CONTEXT.md            technical vocabulary only
+├── frontend_player/CONTEXT.md    technical vocabulary only
+└── frontend_club/CONTEXT.md      technical vocabulary only
+```
+
 ## Use the glossary's vocabulary
 
 When your output names a domain concept — an issue title, a type name, a test name, a
