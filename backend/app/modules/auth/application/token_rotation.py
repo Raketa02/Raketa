@@ -4,13 +4,13 @@ from dataclasses import dataclass
 from uuid import UUID
 
 from app.application.ports import DomainEventPublisher, UnitOfWork
+from app.kernel import Clock
 from app.modules.auth.domain.ports import (
     PasswordHasher,
     RefreshTokenRepository,
     TokenService,
 )
 from app.modules.auth.domain.refresh_token import RefreshToken
-from app.shared.clock import Clock
 from app.shared.ids import new_uuid
 
 

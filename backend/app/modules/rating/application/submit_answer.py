@@ -52,6 +52,7 @@ from datetime import datetime
 
 from app.application.ports import UnitOfWork
 from app.engines.assessment import AskQuestion, AssessmentEngine, Question
+from app.kernel import Clock
 from app.modules.rating.application.assessment_view import (
     current_step,
     outstanding_question,
@@ -69,7 +70,6 @@ from app.modules.rating.domain.errors import (
     QuestionNotOutstanding,
 )
 from app.modules.rating.domain.ports import AssessmentRepository
-from app.shared.clock import Clock
 
 
 class SubmitAnswer:

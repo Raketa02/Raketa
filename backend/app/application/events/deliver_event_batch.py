@@ -3,7 +3,7 @@ from __future__ import annotations
 from app.application.events.dispatcher import EventDispatcher
 from app.application.events.envelope import DeliveryContext
 from app.application.ports.events import EventCodec, PendingOutbox
-from app.shared.clock import Clock
+from app.kernel import Clock
 
 
 class EventBatch:

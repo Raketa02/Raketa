@@ -106,7 +106,9 @@ there; they are not repeated here.
   imported**. No module reads ambient time (ADR-0015's first purity rule), which is what
   makes scrubbing forwards and backwards, determinism and every fixed-`now` test
   possible. One read per command, captured once and passed on: two reads inside one
-  command can disagree. Its wall-clock adapter belongs in the infrastructure layer.
+  command can disagree. Its wall-clock adapter is `SystemClock` in
+  `app/infrastructure/clock.py`, and only a composition root imports it — depending on
+  *what a clock is* must not drag a live one into scope.
 - **Read-model repository** — the port a use case reads *projected current state* through,
   e.g. `UserRepository`. It answers queries against a table, not by replaying a stream, and
   has no version bookkeeping. **The trap:** `UserRepository` is this kind despite its name

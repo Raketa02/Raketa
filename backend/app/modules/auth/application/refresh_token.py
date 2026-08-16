@@ -5,6 +5,7 @@ from uuid import UUID
 
 import jwt
 
+from app.kernel import Clock
 from app.modules.auth.application.token_rotation import TokenPair, TokenRotator
 from app.modules.auth.domain.errors import (
     InvalidRefreshToken,
@@ -20,7 +21,6 @@ from app.modules.auth.domain.ports import (
 )
 from app.modules.users.domain.errors import UserNotEligible
 from app.modules.users.domain.ports import UserRepository
-from app.shared.clock import Clock
 
 
 @dataclass(frozen=True)

@@ -361,7 +361,7 @@ def a_duration_is_not_a_number_of_minutes_either() -> Instant:
 
 
 def an_instant_goes_wherever_a_datetime_is_wanted(moment: Instant) -> datetime:
-    """The claim that makes retiring `app/shared/clock.py` an import change
+    """The claim that made retiring `app/shared/clock.py` (#75) an import change
     rather than a rewrite: every existing signature already takes this."""
 
     return moment

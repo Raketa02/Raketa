@@ -8,8 +8,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.application.ports import DomainEventPublisher, DomainEventStore, UnitOfWork
 from app.bootstrap.events import EventRuntime
 from app.core.config import Settings, get_settings
+from app.infrastructure.clock import SystemClock
 from app.infrastructure.database.session import get_db
 from app.infrastructure.database.unit_of_work import AsyncSqlAlchemyUnitOfWork
+from app.kernel import Clock
 from app.modules.auth.application.token_rotation import TokenRotator
 from app.modules.auth.domain.ports import (
     PasswordHasher,
@@ -25,7 +27,6 @@ from app.modules.users.domain.ports import UserRepository
 from app.modules.users.infrastructure.sqlalchemy_user_repository import (
     SqlAlchemyUserRepository,
 )
-from app.shared.clock import Clock, SystemClock
 
 SettingsDep = Annotated[Settings, Depends(get_settings)]
 DbSession = Annotated[AsyncSession, Depends(get_db)]

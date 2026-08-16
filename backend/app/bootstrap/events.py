@@ -10,6 +10,7 @@ from app.application.events import (
 )
 from app.application.events.deliver_event_batch import EventBatch
 from app.core.config import Settings
+from app.infrastructure.clock import SystemClock
 from app.infrastructure.events.event_delivery_worker import (
     EventWorker,
 )
@@ -23,6 +24,7 @@ from app.infrastructure.events.sqlalchemy_event_delivery_queue import (
 from app.infrastructure.events.transactional_publisher import (
     EventPublisher,
 )
+from app.kernel import Clock
 from app.modules.auth.application.event_subscriptions import (
     register_auth_events,
     subscribe_auth_handlers,
@@ -35,7 +37,6 @@ from app.modules.users.application.event_subscriptions import (
     register_user_events,
     subscribe_user_handlers,
 )
-from app.shared.clock import Clock, SystemClock
 
 
 @dataclass(frozen=True)

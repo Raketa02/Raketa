@@ -5,12 +5,12 @@ from dataclasses import dataclass
 import jwt
 
 from app.application.ports import DomainEventPublisher, UnitOfWork
+from app.kernel import Clock
 from app.modules.auth.domain.ports import (
     PasswordHasher,
     RefreshTokenRepository,
     TokenService,
 )
-from app.shared.clock import Clock
 
 
 @dataclass(frozen=True)

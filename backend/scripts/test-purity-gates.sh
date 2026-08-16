@@ -42,6 +42,18 @@ for f in .importlinter pyproject.toml "$AST_TEST"; do
   [ -f "$ROOT/$f" ] || { echo "missing: $f" >&2; exit 2; }
 done
 
+# The modules the probes below import, and why their absence is fatal rather
+# than a red assertion: `import-linter` builds a graph of what resolves, so an
+# import of a module that no longer exists is not a broken contract — it is not
+# an edge at all, and the run comes back 0 broken. A probe naming a deleted
+# module therefore reports the fence as *holding* while proving nothing, which
+# is the failure mode this whole suite exists to refuse. #75 deleted
+# `app/shared/clock.py`, the kernel probe's original target, and this is the
+# check that would have said so in one line instead of an assertion diff.
+for f in app/shared/ids.py; do
+  [ -f "$ROOT/$f" ] || { echo "probed module is gone, so its probe proves nothing: $f" >&2; exit 2; }
+done
+
 pass=0
 fail=0
 ok()  { pass=$((pass + 1)); printf '  ok    %s\n' "$1"; }
@@ -86,14 +98,16 @@ echo
 echo ".importlinter — a forbidden import"
 
 # The hole ADR-0022 records: app.shared was on neither contract, so this exact
-# line typechecked, linted and shipped with CI fully green.
-probe "$KERNEL_PROBE" 'from app.shared.clock import SystemClock
+# line typechecked, linted and shipped with CI fully green. It read
+# `from app.shared.clock import SystemClock` until #75 retired that module, and
+# the substitution is not cosmetic — see the preflight note above.
+probe "$KERNEL_PROBE" 'from app.shared.ids import new_uuid
 
-CLOCK = SystemClock()
+ID = new_uuid()
 '
 expect red imports "the kernel reaching app.shared is refused" \
   "app.kernel is not allowed to import app.shared" \
-  "app.kernel._purity_probe -> app.shared.clock"
+  "app.kernel._purity_probe -> app.shared.ids"
 clean
 
 probe "$ENGINE_PROBE" 'from app.shared.ids import new_uuid
