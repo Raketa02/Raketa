@@ -67,6 +67,15 @@ Design-system *terms* (token, soft/ink, eyebrow, hairline, severity rail, band i
 vs drawer) are technical vocabulary and live in that app's `CONTEXT.md`. A design system
 never settles a **domain** term — that happens in the root `CONTEXT.md` first.
 
+**One thing sits between the two and is shared:**
+[`docs/value-formatting.md`](docs/value-formatting.md) — the exact string a price, a level, a
+time or a duration becomes. Not a design system (no colour, no size), not domain language (no
+nouns): a rendering contract. The backend sends numbers and machine codes and never display
+text ([ADR-0022](docs/adr/0022-kernel-negative-space-and-constant-homes.md)), so both clients
+format, and this is the one table they both implement. Enforced by the cross-application
+contract suite of [ADR-0021](docs/adr/0021-kernel-in-backend-clients-derive-by-comparison.md),
+not by hoping.
+
 ## Decisions (ADRs)
 
 **`docs/adr/`** (root) holds every decision affecting the system or the contract

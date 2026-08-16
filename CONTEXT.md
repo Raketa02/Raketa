@@ -215,6 +215,41 @@ none may redefine ([ADR-0015](docs/adr/0015-engines-as-a-pure-versioned-layer.md
   Its absence is deliberate and load-bearing: one rating per sport is what let onboarding
   drop cross-sport transfer and the singles/doubles link entirely.
 
+#### Money — *decided, not yet built*
+
+The words are settled ([ADR-0023](docs/adr/0023-money-integer-grosze-gross-whole-zloty.md));
+the module arrives with the first priced context. Named here so nothing invents a synonym in
+the meantime.
+
+- **Grosze** — the unit every price is held in. Integer, never a float, never a decimal
+  string. One hundred grosze to the złoty.
+- **Every price in Rakieta is gross** — VAT-inclusive, the number the player sees. `38,00 zł`
+  on a card is a gross figure. VAT decomposition is an invoicing concern, never a second kind
+  of money.
+- **CourtPrice** — what the whole court costs for one booked block, after every multiplier has
+  been applied. Always a **whole number of złoty**.
+- **SeatShare** — a `CourtPrice` divided by the sport's **sold** player count. The sold format,
+  not the current occupancy: a padel match with three players still divides by four, because
+  the court costs what it costs.
+- **Payable** — what one player actually owes: their `SeatShare` less any club card offset.
+  Never negative.
+- **Card offset** — a club's allowance against a seat, per sport. Either none, a capped
+  amount, or the whole share.
+
+**Invariants**
+- **A court price is a whole number of złoty.** This is marketplace law, not an observation.
+  It is what makes a seat share exact — a whole złoty is a multiple of 100 grosze, and both
+  100 ÷ 2 and 100 ÷ 4 are integers, so a split never rounds and never loses a grosz. A club
+  rate that would break it is rejected where the rate is configured.
+- **The rounding order is the rule, not a detail.** Multipliers compound, then one rounding to
+  whole złoty at the court, then the split. Dividing first gives a different — wrong — answer.
+- **A card can never produce a credit,** only reduce a payable to zero. A 15 zł allowance
+  against a 13 zł share yields a 13 zł offset.
+- **A seat share is written once, when the match is created, and is never re-priced.** It is
+  what makes a price guaranteeable before a court is assigned.
+- **The seat, not the court, is the unit of sale**, so nobody becomes financially responsible
+  for anybody else's money by joining a match.
+
 ---
 
 ## Part 2 — Planned bounded contexts
@@ -278,3 +313,11 @@ Both frontends describe the same nouns. A concept that exists in this glossary k
 its name in TypeScript: a `Court` is a `Court`, not a `Venue`, `Facility`, or `Pitch`.
 Client-only *technical* vocabulary (wire type, DTO, mapper, BFF route handler, secure
 store) belongs in that app's own `CONTEXT.md`, never here.
+
+Both frontends also **render** the same values. The backend sends numbers and machine codes
+and never display text ([ADR-0022](docs/adr/0022-kernel-negative-space-and-constant-homes.md)),
+so each client formats — and both implement one table, in
+[`docs/value-formatting.md`](docs/value-formatting.md). That is not a design system and holds
+no colour or size; it is the exact string a price, a level, a time or a duration becomes, so
+the two apps cannot drift into rendering `38.00 zł` and `38,00 zł` for one booking. **Copy is
+not formatting**: the sentence behind an unavailability code is each app's own.
