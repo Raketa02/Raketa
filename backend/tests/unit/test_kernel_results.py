@@ -12,7 +12,7 @@ from typing import Literal, Never, Union, get_args, get_origin
 
 import pytest
 
-from app.kernel import Err, Ok, Result, Unavailable
+from app.kernel import Err, NonexistentLocalTime, Ok, Result, Unavailable
 
 
 @dataclass(frozen=True)
@@ -149,18 +149,23 @@ def test_a_reason_survives_a_whole_chain_untouched() -> None:
     assert end.reason is reason
 
 
-# --- the reason union, empty ---------------------------------------------------
+# --- the reason union, no longer empty -----------------------------------------
 
 
-def test_the_reason_union_ships_empty() -> None:
-    """`Never` is how an empty union is spelled, and the emptiness is the claim.
+def test_the_reason_union_holds_the_reasons_the_kernel_can_actually_give() -> None:
+    """It shipped as `Never` — an empty union — and the emptiness was the claim.
 
-    Every kind the source specification documents name is produced by an engine
-    that does not exist, so inventing one now would be answering a domain
-    question this repo has deliberately left open. The first real member arrives
-    with the time module's nonexistent-local-time case, and this line changes
-    with it.
+    Every kind the source specification documents named was produced by an
+    engine that does not exist, so inventing one would have answered a domain
+    question this repo has deliberately left open. The time module's
+    nonexistent-local-time case is the first that has a producer, so it is the
+    first member (ADR-0024).
+
+    Enumerated rather than counted, so that adding a reason is a diff on this
+    line too — the union is the one page listing everything the kernel can
+    refuse, and it is worth what reads it.
     """
 
-    assert Unavailable is Never
-    assert get_args(Result[int, Unavailable])[1] == Err[Never]
+    assert Unavailable is not Never
+    members = get_args(Unavailable) or (Unavailable,)
+    assert set(members) == {NonexistentLocalTime}

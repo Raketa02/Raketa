@@ -55,9 +55,32 @@ there; they are not repeated here.
   never neither. `map` and `and_then` pass a failure's reason through untouched.
 - **Reason** — why there is no answer: a stable machine `kind` code and its payload
   fields, **never a sentence**. The clients own the words; a reason crosses the wire as
-  `{kind, …payload}`. `Unavailable` is the closed union of them and currently **ships
-  empty** — its first member arrives with the kernel's time module. _Avoid_: message,
-  detail, error text.
+  `{kind, …payload}`. `Unavailable` is the closed union of them, in
+  `app/kernel/unavailability.py` — its own module, because it is assembled *from* the
+  modules that produce its members while `results.py` knows about none of them. It
+  shipped empty (`Never`); its first member is `NonexistentLocalTime`. A function
+  declares the reasons it can actually give; only code aggregating over all of them
+  names `Unavailable`. _Avoid_: message, detail, error text.
+- **Instant** — a timezone-aware `datetime` in UTC, and the only representation of a
+  moment in this codebase ([ADR-0024](../docs/adr/0024-instant-as-aware-datetime-minute-coordinates.md)).
+  Not epoch milliseconds: the clock returns one, every domain event carries one, and
+  Postgres stores `timestamptz`, so a second representation would buy a conversion at
+  four boundaries and nothing else. It is a `NewType`, i.e. a **refinement** — an
+  `Instant` goes wherever a `datetime` is wanted and a bare `datetime` does not go where
+  an `Instant` is required. Built only through `instant()`, which rejects a naive value.
+- **Minute coordinates** — `MinuteOfDay`, `DayOffset` and `Minutes`, branded integers,
+  and what engines compute in: that is what makes an availability check integer
+  comparisons rather than datetime arithmetic. `slot_start()` is the **single**
+  conversion from coordinates to an `Instant`, so every timezone question has one place
+  to be asked; `zoneinfo` is imported in one module and a test walks `app/` to keep it
+  that way. **A `DayOffset` is never persisted and never serialised** — it is
+  anchor-relative, so a stored one silently changes meaning. _Avoid_: slot index, day
+  number, offset (unqualified).
+- **Clock** — the `Protocol` in the kernel returning an `Instant`, **passed, never
+  imported**. No module reads ambient time (ADR-0015's first purity rule), which is what
+  makes scrubbing forwards and backwards, determinism and every fixed-`now` test
+  possible. One read per command, captured once and passed on: two reads inside one
+  command can disagree. Its wall-clock adapter belongs in the infrastructure layer.
 - **Read-model repository** — the port a use case reads *projected current state* through,
   e.g. `UserRepository`. It answers queries against a table, not by replaying a stream, and
   has no version bookkeeping. **The trap:** `UserRepository` is this kind despite its name

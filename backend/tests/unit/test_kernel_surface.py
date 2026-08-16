@@ -39,6 +39,22 @@ THE_SURFACE = (
     "Reason",
     "Result",
     "Unavailable",
+    "MINUTES_PER_DAY",
+    "Clock",
+    "DayOffset",
+    "Instant",
+    "MinuteOfDay",
+    "Minutes",
+    "NonexistentLocalTime",
+    "day_offset",
+    "elapsed_minutes",
+    "hours",
+    "instant",
+    "local_minute_of_day",
+    "minute_of_day",
+    "minutes",
+    "shifted",
+    "slot_start",
 )
 
 

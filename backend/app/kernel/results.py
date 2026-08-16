@@ -29,17 +29,18 @@ clients own the words: an ``Unavailable`` crosses the wire as ``{kind, …payloa
 and each app renders it in its own language and its own design system, which is
 also the only way *"show nothing"* stays a client decision.
 
-**The reason union ships empty.** Every kind the source specification documents
-name is produced by an engine that does not exist yet, and a reason invented
-ahead of its producer is a guess about a domain question this repo has
-deliberately left open. The first real member arrives with the time module's
-nonexistent-local-time case.
+**The reasons themselves live elsewhere.** This module owns the machinery and
+knows about no particular reason; ``app/kernel/unavailability.py`` owns the
+closed union of them, assembled from the modules that produce them. A function
+declares the reasons it can actually give — ``Result[Instant,
+NonexistentLocalTime]`` — and only code aggregating over all of them names
+``Unavailable``.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Callable, Generic, Never, Protocol, TypeAlias, TypeVar, final
+from typing import Callable, Generic, Protocol, TypeAlias, TypeVar, final
 
 _T = TypeVar("_T")
 _U = TypeVar("_U")
@@ -110,12 +111,3 @@ class Err(Generic[_R]):
 
 #: A value, or the machine-readable reason there is none.
 Result: TypeAlias = Ok[_T] | Err[_R]
-
-#: The closed set of reasons the kernel itself can give — **and it is empty**.
-#:
-#: ``Never`` is what an empty union is spelled: there is no reason yet, so a
-#: function returning ``Result[T, Unavailable]`` today is one that cannot fail,
-#: and the compiler knows it. Adding the first member is a one-line change here,
-#: and ``exhaustive`` then fails the build at every match that does not handle
-#: it — which is the whole reason the set is written down while it is empty.
-Unavailable: TypeAlias = Never

@@ -20,8 +20,27 @@ only runs in development is a guard that has never been run where it counts.
 """
 
 from app.kernel.invariants import InvariantViolated, exhaustive, invariant
-from app.kernel.results import Err, Ok, Reason, Result, Unavailable
+from app.kernel.results import Err, Ok, Reason, Result
 from app.kernel.sports import SPORT_SPECS, Sport, SportSpec
+from app.kernel.time import (
+    MINUTES_PER_DAY,
+    Clock,
+    DayOffset,
+    Instant,
+    MinuteOfDay,
+    Minutes,
+    NonexistentLocalTime,
+    day_offset,
+    elapsed_minutes,
+    hours,
+    instant,
+    local_minute_of_day,
+    minute_of_day,
+    minutes,
+    shifted,
+    slot_start,
+)
+from app.kernel.unavailability import Unavailable
 
 __all__ = [
     # sports — the closed registry
@@ -38,4 +57,21 @@ __all__ = [
     "Reason",
     "Result",
     "Unavailable",
+    # time — instants, the integer coordinates, and the one conversion
+    "MINUTES_PER_DAY",
+    "Clock",
+    "DayOffset",
+    "Instant",
+    "MinuteOfDay",
+    "Minutes",
+    "NonexistentLocalTime",
+    "day_offset",
+    "elapsed_minutes",
+    "hours",
+    "instant",
+    "local_minute_of_day",
+    "minute_of_day",
+    "minutes",
+    "shifted",
+    "slot_start",
 ]

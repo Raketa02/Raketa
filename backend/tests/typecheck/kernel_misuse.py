@@ -23,20 +23,36 @@ that loses them.
 """
 
 from dataclasses import dataclass
+from datetime import date, datetime, timezone
 from typing import Literal
+from zoneinfo import ZoneInfo
 
 from app.kernel import (
     SPORT_SPECS,
+    Clock,
+    DayOffset,
     Err,
+    Instant,
     InvariantViolated,
+    MinuteOfDay,
+    Minutes,
+    NonexistentLocalTime,
     Ok,
     Reason,
     Result,
     Sport,
     SportSpec,
     Unavailable,
+    day_offset,
+    elapsed_minutes,
     exhaustive,
+    hours,
+    instant,
     invariant,
+    minute_of_day,
+    minutes,
+    shifted,
+    slot_start,
 )
 
 
@@ -108,18 +124,35 @@ def a_reason_is_a_plain_frozen_dataclass() -> Err[Closed]:
     return Err(Closed(day_offset=1))
 
 
-# --- The reason union ships empty, and the compiler knows it ------------------
+# --- The reason union is closed, and the compiler knows what is in it ---------
 
 
-def nothing_is_unavailable_yet() -> Result[int, Unavailable]:
-    """No reason exists yet, so nothing can be returned as one.
+def a_reason_nobody_declared_is_not_unavailable() -> Result[int, Unavailable]:
+    """`Closed` is a stand-in defined in this file, so it is not in the union.
 
-    This line is what makes *"the union ships empty"* a fact rather than a
-    comment. It stops being an error on the day the time module lands the
-    nonexistent-local-time case, and that is when it moves out of this file.
+    This is what makes *"the closed set of reasons the kernel can give"* a fact
+    rather than a comment: a module cannot widen it by declaring a dataclass,
+    only by adding a line to `app/kernel/unavailability.py`.
+
+    It was `return-value` while the union was `Never` and became `arg-type` when
+    it gained a member — with something concrete to solve `_R` against, mypy
+    refuses the reason rather than the return. Same constraint, and the marker
+    tracks what the compiler actually says.
     """
 
-    return Err(Closed(day_offset=1))  # want-error: return-value
+    return Err(Closed(day_offset=1))  # want-error: arg-type
+
+
+def the_union_has_a_member_now() -> Result[int, Unavailable]:
+    """It shipped as `Never`. The time module landed the first real reason."""
+
+    return Err(
+        NonexistentLocalTime(
+            zone="Europe/Warsaw",
+            local_date=date(2026, 3, 29),
+            minute_of_day=minute_of_day(150),
+        )
+    )
 
 
 def a_result_that_cannot_fail_is_still_a_result() -> Result[int, Unavailable]:
@@ -210,3 +243,176 @@ def all_four_named(sport: Sport) -> str:
             return "badminton"
         case _:
             exhaustive(sport)
+
+
+# --- Time: the brands bind, and a coordinate is not another coordinate --------
+#
+# `Instant`, `MinuteOfDay`, `DayOffset` and `Minutes` are `NewType`s, which erase
+# to `datetime` and `int` at runtime. Collapse them to their base types and every
+# test in the suite still passes — these lines are the only thing that notices.
+
+WARSAW = ZoneInfo("Europe/Warsaw")
+NOON = instant(datetime(2026, 3, 29, 12, 0, tzinfo=timezone.utc))
+
+
+def a_raw_minute_is_not_a_minute_of_day() -> Result[Instant, NonexistentLocalTime]:
+    """The brand's whole job: an unvalidated integer cannot reach the grid."""
+
+    return slot_start(
+        anchor=NOON,
+        day=day_offset(0),
+        minute=150,  # want-error: arg-type
+        zone=WARSAW,
+    )
+
+
+def a_day_is_not_a_minute() -> Result[Instant, NonexistentLocalTime]:
+    """Two `NewType`s over `int`, and they do not interchange — transposing
+    them asks for day 150 of a grid, silently and with no wrong-looking value
+    anywhere in the call."""
+
+    return slot_start(
+        anchor=NOON,
+        day=day_offset(0),
+        minute=day_offset(150),  # want-error: arg-type
+        zone=WARSAW,
+    )
+
+
+def a_minute_is_not_a_day() -> Result[Instant, NonexistentLocalTime]:
+    """And the same claim from the other side, which is the load-bearing half.
+
+    A mutation run found this missing. Every case above is refused by
+    `MinuteOfDay`'s brand, so **dropping `DayOffset`'s left the suite green** —
+    `day_offset(150)` returning a plain `int` is still refused where a
+    `MinuteOfDay` is wanted. Only a case refused by `DayOffset` *itself* catches
+    that, and this and the next one are those: with `DayOffset = int`, a
+    `MinuteOfDay` and a literal both become assignable and both lines go clean.
+    """
+
+    return slot_start(
+        anchor=NOON,
+        day=minute_of_day(0),  # want-error: arg-type
+        minute=minute_of_day(150),
+        zone=WARSAW,
+    )
+
+
+def a_raw_day_is_not_a_day_offset() -> Result[Instant, NonexistentLocalTime]:
+    return slot_start(
+        anchor=NOON,
+        day=0,  # want-error: arg-type
+        minute=minute_of_day(150),
+        zone=WARSAW,
+    )
+
+
+def a_duration_is_not_a_minute_of_day() -> Result[Instant, NonexistentLocalTime]:
+    """A length of time and a point in the day are both minutes, and neither
+    is the other — a ninety-minute slot is not 01:30."""
+
+    return slot_start(
+        anchor=NOON,
+        day=day_offset(0),
+        minute=minutes(90),  # want-error: arg-type
+        zone=WARSAW,
+    )
+
+
+def a_plain_datetime_is_not_an_instant() -> Minutes:
+    """Which is what makes `instant()` the one way in, naive check included."""
+
+    return elapsed_minutes(datetime(2026, 3, 29, 10, 0), NOON)  # want-error: arg-type
+
+
+def an_aware_datetime_is_not_an_instant_either() -> Minutes:
+    """Aware is *necessary*, not sufficient: an `Instant` is aware **and** UTC,
+    and only the constructor establishes that."""
+
+    aware = datetime(2026, 3, 29, 10, 0, tzinfo=timezone.utc)
+    return elapsed_minutes(aware, NOON)  # want-error: arg-type
+
+
+def a_duration_is_not_a_number_of_minutes_either() -> Instant:
+    return shifted(NOON, 90)  # want-error: arg-type
+
+
+# --- And the refinement holds in the direction #75 depends on -----------------
+
+
+def an_instant_goes_wherever_a_datetime_is_wanted(moment: Instant) -> datetime:
+    """The claim that makes retiring `app/shared/clock.py` an import change
+    rather than a rewrite: every existing signature already takes this."""
+
+    return moment
+
+
+def a_minute_of_day_is_still_an_int(minute: MinuteOfDay) -> int:
+    return minute * 2
+
+
+def a_clock_returns_an_instant(clock: Clock) -> datetime:
+    return clock.now()
+
+
+def the_coordinates_compose(anchor: Instant) -> Result[Instant, NonexistentLocalTime]:
+    return slot_start(
+        anchor=shifted(anchor, hours(-12)),
+        day=day_offset(-1),
+        minute=minute_of_day(150),
+        zone=WARSAW,
+    )
+
+
+# --- The conversion can fail, and the caller is made to notice ----------------
+
+
+def the_gap_cannot_be_ignored() -> Instant:
+    """`slot_start` returns a `Result`, so a nonexistent local time is not
+    something a caller can walk past — the whole point of returning it."""
+
+    return slot_start(  # want-error: return-value
+        anchor=NOON, day=day_offset(0), minute=minute_of_day(150), zone=WARSAW
+    )
+
+
+def both_halves_of_the_conversion_must_be_handled(anchor: Instant) -> str:
+    match slot_start(
+        anchor=anchor, day=day_offset(0), minute=minute_of_day(150), zone=WARSAW
+    ):
+        case Ok(value):
+            return value.isoformat()
+        case _:
+            exhaustive(anchor)  # want-error: arg-type
+
+
+def and_here_they_are(anchor: Instant) -> str:
+    match slot_start(
+        anchor=anchor, day=day_offset(0), minute=minute_of_day(150), zone=WARSAW
+    ):
+        case Ok(value):
+            return value.isoformat()
+        case Err(reason):
+            return reason.kind
+
+
+def a_gap_is_a_reason_and_reasons_are_frozen() -> None:
+    reason = NonexistentLocalTime(
+        zone="Europe/Warsaw",
+        local_date=date(2026, 3, 29),
+        minute_of_day=minute_of_day(150),
+    )
+    reason.zone = "Europe/Berlin"  # want-error: misc
+
+
+def a_gap_carries_a_local_date_never_a_day_offset(
+    day: DayOffset,
+) -> NonexistentLocalTime:
+    """A `DayOffset` is anchor-relative, so it must not leave the process — and
+    a reason is the one kernel value that crosses the wire."""
+
+    return NonexistentLocalTime(
+        zone="Europe/Warsaw",
+        local_date=day,  # want-error: arg-type
+        minute_of_day=minute_of_day(150),
+    )
