@@ -273,5 +273,42 @@ there; they are not repeated here.
   and despite `User` being an event-sourced aggregate — it is the projection side, not the
   write side. It keeps its name; read the shape, not the noun.
 
+- **Environment** — one of exactly four: `local`, `development`, `staging`, `production`,
+  spelled identically by all three apps and carried by `APP_ENV`. `local` is a developer's
+  own machine — a container on your laptop is still `local`, because the name describes
+  *where the software runs*, not whether it is containerised. **The load-bearing rule: the
+  environment may select configuration defaults; it may never select behaviour a domain
+  test could observe.** No deadline, threshold, validation, status code or response shape
+  varies by it. `APP_ENV` rather than `ENV` because the old name collides with an ordinary
+  shell variable, so a value inherited from the surrounding environment could decide what
+  environment the application thought it was in. _Avoid_: `dev`, `prod`, `test`, `stage` —
+  those are the spellings whose synonymy is the bug, and the settings object refuses every
+  one of them.
+- **Environment profile** — the settings `APP_ENV` supplies defaults for: `DEBUG`,
+  `LOG_LEVEL`, `LOG_JSON`. One value replaces three that had to be kept in agreement by
+  memory, and the failure that removes is the silent one — nothing goes wrong until the
+  deployment where somebody sets two and forgets the third. Each stays **explicitly
+  overridable**, because a legitimate one-off (verbose logging in staging while chasing a
+  bug) must not require abandoning the mechanism. Implemented with `model_fields_set`, so
+  *"was this configured?"* means *"did somebody actually set it"* rather than *"does it
+  differ from a sentinel"*. _Avoid_: environment-specific config file, profile inheritance.
+- **Startup refusal** — a `ConfigurationError` raised while the settings object is being
+  built, for configuration that is dangerous rather than merely wrong. It lives on the
+  settings object and not in the application factory, so it holds for a worker, a
+  migration or a seed run and not only for a process serving HTTP. Two constraints on the
+  message: it **names the offending variable and the reason**, and it **never contains the
+  offending value** — a `WRITER_DB_URL` carries a password and a refusal goes straight to a
+  log aggregator. `ConfigurationError` is deliberately **not** a `ValueError`: pydantic
+  wraps `ValueError` raised inside a validator into a `ValidationError` whose repr carries
+  `input_value=…`, which for an after-validator is the entire settings object, signing key
+  included. _Avoid_: falling back, warning and continuing, a "strict mode" flag.
+- **Unprovisioned environment** — `development` and `staging`. Defined and validated, but
+  no domain is registered, so neither has a host or a database. Selecting one without
+  `APP_HOST` and `WRITER_DB_URL` is a startup refusal naming the missing variable. **No
+  placeholder hostname is written anywhere**, which is why "configured" can only mean
+  "somebody set it": there is nothing to compare a host against. _Avoid_: inventing
+  `api-dev.…`; a config file naming a host that does not exist describes infrastructure
+  that does not exist.
+
 Add backend-specific technical terms here as they are resolved. Anything describing the
 *domain* belongs in the shared glossary instead.

@@ -2,7 +2,7 @@ from fastapi import FastAPI
 
 from app.api.v1.router import api_router
 from app.bootstrap.events import build_event_runtime
-from app.core.config import Settings, get_settings
+from app.core.config import Environment, Settings, get_settings
 from app.core.exception_handlers import register_exception_handlers
 from app.core.lifespan import build_lifespan
 from app.core.logging import configure_logging
@@ -18,8 +18,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         title=settings.TITLE,
         description=settings.DESCRIPTION,
         version=settings.VERSION,
-        docs_url="/docs" if not settings.is_production or settings.DEBUG else None,
-        redoc_url="/redoc" if not settings.is_production or settings.DEBUG else None,
+        # Production has no interactive documentation, and no way to re-enable it.
+        # The old spelling let `DEBUG=true` bring it back; that allowance is gone
+        # rather than adjusted, because the settings object now refuses to start in
+        # production with debug on at all — so the state was unreachable anyway, and
+        # an unreachable escape hatch is one a reader still has to reason about.
+        docs_url=None if settings.APP_ENV is Environment.PRODUCTION else "/docs",
+        redoc_url=None if settings.APP_ENV is Environment.PRODUCTION else "/redoc",
         lifespan=build_lifespan(settings),
     )
 

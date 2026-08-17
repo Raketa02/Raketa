@@ -109,12 +109,20 @@ tests.
 
 ## Environment gotchas
 
-- **`make up` needs no env file** — `docker-compose-dev.yml` supplies the DB URLs and
+- **`make up` needs no env file** — `docker-compose-local.yml` supplies the DB URLs and
   `.env.docker` the rest, and migrations run on container start. This is the normal path.
 - To run uvicorn **on the host**, `cp .env.example .env`. The filename matters: `config.py`
   loads `.env` (`SettingsConfigDict(env_file=".env")`), so a file named `.env.local` is
   read by nothing. Required: `WRITER_DB_URL`, `JWT_SECRET_KEY`, `DB_SSL_MODE`.
-- Tests set their own env in `conftest.py` (SQLite, test JWT secret) — no `.env` needed.
+- **`APP_ENV` is a strict enum** over `local | development | staging | production`, the
+  same four names both clients use. Only `local` runs; selecting `development` or
+  `staging` without `APP_HOST` and `WRITER_DB_URL` refuses to start, and so do five other
+  dangerous configurations (see the README's refusal table). It also supplies the defaults
+  for `DEBUG`, `LOG_LEVEL` and `LOG_JSON`, each still overridable. **The environment may
+  select configuration; it may never select behaviour a domain test could observe.**
+- Tests set their own env in `conftest.py` (SQLite, test JWT secret, `APP_ENV=local`) —
+  no `.env` needed. There is no `test` environment: a test run happens on somebody's
+  laptop or a CI runner, and both are `local`.
 - The embedded event-delivery worker polls the outbox on startup; toggle with
   `EVENT_DELIVERY_WORKER_ENABLED`.
 

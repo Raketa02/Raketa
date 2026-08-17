@@ -164,16 +164,63 @@ curl -X POST http://localhost:8000/api/v1/auth/login \
   -d '{"email":"alice@example.com","password":"Password123"}'
 ```
 
-In production mode, OpenAPI docs are disabled unless `DEBUG=true`.
+In `production`, OpenAPI docs are disabled, with no way to re-enable them.
 
 ## Runtime Configuration
 
 Configuration is loaded with Pydantic Settings from environment variables and an
-optional `.env` file. Important settings include:
+optional `.env` file.
+
+### The four environments
+
+`APP_ENV` is a strict enum over **`local`**, **`development`**, **`staging`** and
+**`production`** — the same four spellings the player app and the club app use. A
+value outside that set fails at startup rather than being accepted silently.
+
+**Only `local` runs today.** `development` and `staging` are defined and validated
+but not provisioned: no domain is registered, so neither has a host or a database.
+Selecting one without setting `APP_HOST` and `WRITER_DB_URL` is a startup failure
+naming the missing variable — never a silent fallback.
+
+`APP_ENV` supplies the defaults for the three settings that always move together.
+Each stays overridable by setting it explicitly:
+
+| `APP_ENV` | `DEBUG` | `LOG_LEVEL` | `LOG_JSON` |
+|---|---|---|---|
+| `local` | `true` | `DEBUG` | `false` |
+| `development` | `false` | `DEBUG` | `true` |
+| `staging` | `false` | `INFO` | `true` |
+| `production` | `false` | `INFO` | `true` |
+
+The boundary that governs this: **the environment may select configuration defaults;
+it may never select behaviour a domain test could observe.** No business rule,
+threshold, validation, status code or response shape varies by `APP_ENV`.
+
+### Refusing to start
+
+Configuration that is dangerous rather than merely wrong refuses to boot. Every
+refusal names the offending variable and the reason, and **never echoes its value** —
+a `WRITER_DB_URL` carries a password, and a refusal message ends up in a log
+aggregator.
+
+| Refused when | Because |
+|---|---|
+| `APP_ENV` is not one of the four | A typo must not silently change behaviour. |
+| `development`/`staging` with no `APP_HOST` or `WRITER_DB_URL` | Neither is provisioned; falling back points at a database that does not exist. |
+| `production` with the default `JWT_SECRET_KEY` | It is public in this repo's history, so every token it signs is forgeable. |
+| `production` with `DEBUG=true` | It serves verbose errors to callers. |
+| `production` with wildcard `ALLOW_ORIGINS` **and** `ALLOW_CREDENTIALS` | Browsers reject the combination anyway. |
+| `production` with a `DB_SSL_MODE` that does not encrypt | Transport security should not be something anyone has to remember. |
+
+The checks live on the settings object, not in the application factory, so they hold
+for every construction path — a worker, a migration or a seed run, not only a process
+serving HTTP.
+
+### Settings
 
 | Setting | Purpose |
 |---|---|
-| `ENV` | `dev`, `test`, `staging`, or `prod`. |
+| `APP_ENV` | `local`, `development`, `staging`, or `production`. |
 | `WRITER_DB_URL` | Primary SQLAlchemy database URL. |
 | `READER_DB_URL` | Optional read database URL; defaults to writer. |
 | `DB_SSL_MODE` | `disable`, `require`, `verify-ca`, or `verify-full`. |
@@ -194,7 +241,7 @@ with an explicit asyncpg SSL context built from the `DB_SSL_*` settings.
 Start the full development stack:
 
 ```bash
-docker compose -f docker-compose-dev.yml up --build -d
+docker compose -f docker-compose-local.yml up --build -d
 ```
 
 The development compose file starts:
@@ -210,15 +257,15 @@ Useful commands:
 
 ```bash
 curl http://localhost:8000/health
-docker compose -f docker-compose-dev.yml logs -f api
-docker compose -f docker-compose-dev.yml exec api alembic current
-docker compose -f docker-compose-dev.yml exec api alembic check
+docker compose -f docker-compose-local.yml logs -f api
+docker compose -f docker-compose-local.yml exec api alembic current
+docker compose -f docker-compose-local.yml exec api alembic check
 ```
 
 ## Production Image
 
 > **Dormant.** There is no deployed environment — development is entirely local
-> (`docker-compose-dev.yml`). This section and `docker-compose-prod.yml` are kept
+> (`docker-compose-local.yml`). This section and `docker-compose-prod.yml` are kept
 > intact for when deployment resumes; see
 > [ADR-0010](../docs/adr/0010-local-first-development-aws-deferred.md).
 

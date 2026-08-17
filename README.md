@@ -119,7 +119,7 @@ things through.
 ## Deployment — none, for now
 
 Everything runs **locally**: local Postgres and local Docker via
-`backend/docker-compose-dev.yml`. There is no deployed environment, and no AWS account
+`backend/docker-compose-local.yml`. There is no deployed environment, and no AWS account
 is needed to work on this project.
 
 The AWS ECS/Fargate path is **kept intact but dormant** — the task definition, the

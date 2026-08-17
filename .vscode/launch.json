@@ -11,7 +11,7 @@
     },
     {
       // Attaches to the debugpy port exposed by the `api` service in
-      // backend/docker-compose-dev.yml (ports: 5678:5678).
+      // backend/docker-compose-local.yml (ports: 5678:5678).
       // remoteRoot matches its volume mount `./app:/home/app/app`.
       "name": "Attach to Docker FastAPI (debugpy)",
       "type": "debugpy",

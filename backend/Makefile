@@ -4,7 +4,7 @@
 # Override any variable on the command line:
 #   make ecr-push AWS_REGION=us-east-1 ECR_REPOSITORY=my-repo
 # ----------------------------------------------------------------------------
-COMPOSE_DEV ?= docker compose -f docker-compose-dev.yml
+COMPOSE_LOCAL ?= docker compose -f docker-compose-local.yml
 IMAGE_NAME  ?= rakieta_api
 TAG         ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo dev)
 
@@ -52,25 +52,25 @@ openapi:           ## emit the contract as two documents (player + club)
 
 ## ----- local docker
 build-dev:         ## build dev image
-	$(COMPOSE_DEV) build
+	$(COMPOSE_LOCAL) build
 
 up:                ## bring up the dev stack (Postgres 17 + API + Redis)
-	$(COMPOSE_DEV) up -d
+	$(COMPOSE_LOCAL) up -d
 
 down:              ## tear down the dev stack
-	$(COMPOSE_DEV) down
+	$(COMPOSE_LOCAL) down
 
 logs:              ## tail api logs
-	$(COMPOSE_DEV) logs -f api
+	$(COMPOSE_LOCAL) logs -f api
 
 ps:                ## list running services
-	$(COMPOSE_DEV) ps
+	$(COMPOSE_LOCAL) ps
 
 shell:             ## bash into the api container
-	$(COMPOSE_DEV) exec api bash
+	$(COMPOSE_LOCAL) exec api bash
 
 migrate:           ## run alembic upgrade head inside the api container
-	$(COMPOSE_DEV) exec api alembic upgrade head
+	$(COMPOSE_LOCAL) exec api alembic upgrade head
 
 ## ----- production / ECR / ECS
 ## DORMANT — AWS deployment is not in use; development is entirely local

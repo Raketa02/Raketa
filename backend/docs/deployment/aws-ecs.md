@@ -3,7 +3,7 @@
 > ## ⚠️ DORMANT — not currently in use
 >
 > Development is **entirely local**: local Postgres + local Docker via
-> [`../../docker-compose-dev.yml`](../../docker-compose-dev.yml). Nothing described
+> [`../../docker-compose-local.yml`](../../docker-compose-local.yml). Nothing described
 > below is provisioned, and the pipeline that would use it
 > (`.github/workflows/deploy-ecs.yml`) is manual-only and gated on `vars.AWS_REGION`.
 >
