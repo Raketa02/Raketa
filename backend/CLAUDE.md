@@ -76,6 +76,11 @@ Rules to preserve:
   walk refuses a statement import or a `session.add` in that package. The production
   refusal is checked **on import** of `app/seeds/`, not in `make seed` — a make target is
   not what runs inside a container. See the README's *Seed Data*.
+- **A seed account is named for a state, and the name is checked.** The catalog is a list
+  of edges — nothing yet, one open run, one abandoned, a rating at the edge of its band —
+  and a rated scenario carries the band it promises, checked against the stored rating on
+  every run. Seed only what is **modeled**: Clubs, Courts, Bookings and Matches have no
+  aggregates, so they get no scenarios and no invented ones.
 - **New routes mount under `app/api/v1/router.py`;** keep the `/api/v1` prefix.
 - **Validate and normalize inside the value object**, not in the use case — see
   `app/modules/users/domain/value_objects.py`.

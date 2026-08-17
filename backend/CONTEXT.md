@@ -365,6 +365,27 @@ there; they are not repeated here.
   `development` and `staging`, written out per environment rather than derived as
   "everything but production", so a fifth environment has to be decided about rather than
   inheriting an answer. _Avoid_: guarding the entry point instead of the module.
+- **Seed scenario** — what one seeded account holds, **for one sport**: a run left open, a
+  run abandoned, or a run answered through and rated. A closed union, so the runner's
+  `match` over it stops typechecking the day a fourth state exists — an unhandled scenario
+  would otherwise be an account silently seeded into no state at all. One sport is one
+  scenario: two on the same sport describe a state the domain cannot reach, because a
+  rated sport refuses a second assessment. _Avoid_: an account that is a person rather
+  than a state, a scenario for a context with no aggregate.
+- **Answer policy** — how a seed scenario answers whatever the questionnaire asks: an
+  index into the question's *own* options counted from the weakest, clamped to the last
+  one, with one number for demonstrations and one for everything else. The split is read
+  off `Question.tier` — the port's own marker for an execution question — never off a
+  question id, which belongs to an engine version. Two small numbers rather than a script
+  of option ids, so rewritten copy and renamed options leave it working. _Avoid_: a fixed
+  transcript, a per-question-id table, choosing answers by reaching into the engine.
+- **Rating claim** — what a seeded account's *name* promises about the rating its run
+  produces: a band, and where in that band the Level must sit, as a fraction of the band's
+  own width. Checked against the **stored** rating on every run, including one that
+  created nothing, so an engine retune that moves `rating-barely-established` into
+  Developing stops the seed by name. The band's edges come from the rating rather than
+  from a second copy, so a re-cut band moves the claim with it. _Avoid_: a claim written as
+  literal Levels, a check that only runs on the account this run happened to create.
 
 Add backend-specific technical terms here as they are resolved. Anything describing the
 *domain* belongs in the shared glossary instead.

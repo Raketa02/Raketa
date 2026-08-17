@@ -348,14 +348,30 @@ make seed-host   # the same seed from the host — needs .env, like host-run uvi
 Both run `python -m app.seeds`. The schema must already exist; `make up` migrates on
 container start.
 
+Every address is `<state>@rakieta.example`, and the state is what the name says. The
+catalog is a list of **edges**, not of people: nothing yet, exactly one, the maximum, the
+failed case. A hundred average players is one scenario a hundred times, and no screen
+breaks on it.
+
 | Address | State |
 | --- | --- |
-| `assessment-in-progress@rakieta.example` | Registered player, onboarding assessment open at its first question, no rating yet |
+| `brand-new-player@rakieta.example` | Registered and nothing else — every empty state at once |
+| `assessment-in-progress@rakieta.example` | Padel assessment open at its first question, no rating |
+| `assessment-abandoned@rakieta.example` | Padel run ended without a rating; the sport is free to start again |
+| `assessment-completed@rakieta.example` | One completed run and the rating it produced, band **New** |
+| `rating-barely-established@rakieta.example` | Padel Level just inside **Established**, its range still reaching into Developing |
+| `rating-well-established@rakieta.example` | Padel Level well inside **Established**, clear of the lower edge |
+| `rated-in-every-sport@rakieta.example` | All four sports rated, one per band — the longest ratings list there is |
 
 The password for every seeded account is `rakieta-seed1`, and it is public by
 construction — it is written in `app/seeds/catalog.py`.
 
-Three rules hold this together, and each exists because of a specific way seed data goes
+Scope is what is **modeled**: players, onboarding assessments and Skill ratings. Clubs,
+Courts, Bookings and Matches have no aggregates, so they have no scenarios; each adds its
+own when it exists. A walk over `app/seeds/` asserts the package imports those two
+contexts and no others.
+
+Four rules hold this together, and each exists because of a specific way seed data goes
 wrong:
 
 - **Seeds execute use cases; nothing writes a table.** These aggregates are event-sourced
@@ -364,10 +380,24 @@ wrong:
   `app/bootstrap/composition.py` — the composition root the API uses, not a copy of it.
   A structural walk over `app/seeds/` refuses a statement import, an ORM model and
   `session.add`.
+- **A rated account answers the questionnaire.** The engine chooses each question from the
+  answers so far, so the only route to a Level near the bottom of Established is to answer
+  the way a player would. A scenario carries an `AnswerPolicy` — which option to pick,
+  counted from the weakest — and the transcript behind the rating is one a review screen
+  can render.
 - **Re-running changes nothing.** Registration is skipped when the address is already
   there; starting an assessment needs no help, because `CreateAssessment` is already
-  idempotent per player and sport. A seeded account's **address** is the stable handle —
-  its uuid is minted by the write path, so a fresh database yields a new one.
+  idempotent per player and sport; and abandoning or completing looks at the run itself,
+  because *abandoned* and *never started* are the same answer from every finder. That last
+  probe is also what resumes a run an interrupted seed left half answered. A seeded
+  account's **address** is the stable handle — its uuid is minted by the write path, so a
+  fresh database yields a new one.
+- **A name that stops matching its state stops the seed.** Every rated scenario carries the
+  band it promises and where in that band the Level must sit; the runner checks it against
+  the **stored** rating on every run, including one that creates nothing. Retune the engine
+  so `rating-barely-established` lands in Developing and `make seed` says so by name — an
+  account whose name lies is worse than one that is missing, because nothing about the
+  screen it is developed against would look wrong.
 - **Production is refused, on import.** `app/seeds/__init__.py` calls the guard, so
   importing anything in the package under `APP_ENV=production` raises `SeedRefused`
   before a database is opened. The guard is not in the make target: a make target is not
