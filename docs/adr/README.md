@@ -54,3 +54,6 @@ If your work **contradicts** an existing ADR, surface it rather than silently ov
 - [0022 — What the kernel is not, and where a constant lives](0022-kernel-negative-space-and-constant-homes.md)
 - [0023 — Money is integer grosze, gross, and a court price is a whole number of złoty](0023-money-integer-grosze-gross-whole-zloty.md)
 - [0024 — An Instant is an aware datetime; engines compute in integer minute coordinates](0024-instant-as-aware-datetime-minute-coordinates.md)
+- [0025 — A counted match's pairing is elected before commitment and fixed after](0025-binding-pairing-for-counted-matches.md)
+- [0026 — Two matchmaking engines, one snapshot input contract](0026-matchmaking-engines-snapshot-input-contract.md)
+- [0027 — Fit and certainty are separate numbers, and ranking a list is policy](0027-fit-and-certainty-are-separate-ranking-is-policy.md)

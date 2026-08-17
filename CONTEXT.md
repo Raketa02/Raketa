@@ -17,7 +17,9 @@ event sourcing.
 
 ## Part 1 — Implemented bounded contexts
 
-These exist in `backend/app/` today and are the authority for their terms.
+These exist in `backend/app/` today and are the authority for their terms — except
+**Matchmaking**, whose words are settled and whose code is not yet written; its section
+says so at the top.
 
 ### Skill rating (`backend/app/modules/rating/`)
 
@@ -250,6 +252,106 @@ ahead of the first club, which is the whole reason they could be built now.
   what makes a price guaranteeable before a court is assigned.
 - **The seat, not the court, is the unit of sale**, so nobody becomes financially responsible
   for anybody else's money by joining a match.
+
+### Matchmaking (`backend/app/engines/pairing/`, `backend/app/engines/matchfit/`)
+
+> **Words first, code second.** Nothing here is implemented yet. The terms are committed
+> because the decisions behind them are
+> ([ADR-0025](docs/adr/0025-binding-pairing-for-counted-matches.md),
+> [ADR-0026](docs/adr/0026-matchmaking-engines-snapshot-input-contract.md),
+> [ADR-0027](docs/adr/0027-fit-and-certainty-are-separate-ranking-is-policy.md)), and because
+> the engines cannot be written in vocabulary that does not exist. Terms describing a **seat's
+> state**, a match's **phase** and its **join cutoff** are borrowed from the clock and
+> commitment rules and will be *defined* with Matches, not here — this section reads them, it
+> does not own them.
+
+Two engines, neither of them a bounded context, both pure and versioned
+([ADR-0015](docs/adr/0015-engines-as-a-pure-versioned-layer.md)). **Pairing** asks whether a
+match is *balanced*; **Match Fit** asks whether it is *for you*. A perfectly balanced match
+forty minutes away at twice your ceiling is a good match in the abstract and a bad one for you.
+
+- **Pairing** — which players form which team. Four players admit exactly three splits, and
+  the engine searches all three; there is no heuristic and no better split it could miss.
+- **Team strength** — what a pair plays like, which is **not the average of the two**. It is
+  weighted toward the **weaker partner**, because the weaker side is attacked. Singles has no
+  pairing, and a team of one is that player.
+- **Balance forecast** — the prediction of how close a match will be, for one roster. It is
+  never a bare number: it is an **estimate and a margin**, and everything the player sees —
+  the percentage, the split bar, the two team strengths — is one calculation viewed
+  differently, so a card cannot contradict itself.
+- **Balance margin** — how wrong the forecast could be, in the same units as the forecast. It
+  is what makes *"49/51"* and *"49/51, and we barely know these people"* different claims.
+- **Certainty** — the forecast's grade of its own margin. A statement about the platform's
+  knowledge, never about the players.
+- **Beyond scale** — the gap is past the point the scale still reports usefully. The honest
+  answer there is *this is a mismatch*, not a small percentage, and the two are said
+  differently.
+- **Roster** — the people a forecast is about: the **paid** seats, plus **you** if you could
+  still join. A **held** seat contributes its player's level but not their attendance. An
+  **empty** seat is imputed.
+- **Imputed seat** — an empty seat stood in for by a hypothetical player drawn from the
+  **target band**. It is what lets a half-formed match be forecast at all, and it is why the
+  margin widens as a match gets emptier rather than the forecast disappearing.
+- **Seat target** — the level that would make a match with **exactly one** seat open as even
+  as possible. With more seats open the question is under-determined and the engine refuses it.
+- **Target band** — the level range a forming match is aimed at. Blunt by design, and the
+  fallback whenever a seat target cannot be answered.
+- **Match Fit** — how good one specific match is for one specific player, as a single
+  comparable score with its reasons attached. The score does the sorting; the reasons do the
+  explaining.
+- **Term** — one weighted component of Match Fit, and every signal is one; there are no
+  bonuses applied outside the weighting. Each term is one of exactly two kinds, and the kind
+  decides what its **absence** means:
+  - **Constraint term** — a limit the player declared (price, distance, hours, match type).
+    An undeclared limit is **no limit**: the term scores full marks and nothing is missing.
+  - **Evidence term** — something the platform observes (balance, reliability, skill overlap,
+    familiarity). Absent evidence is **not** a good score; the term is dropped and the
+    remaining weights carry the whole score between them.
+- **Coverage** — how much of Match Fit's weight was actually computed. A thin score and a
+  strong score are different facts and are reported as two numbers, never blended into one.
+- **Reason** — a term's contribution stated in the player's terms, ranked by how much the term
+  actually contributed rather than by how well it scored. A **warning** is the same thing for
+  a term scoring badly.
+- **At Stake** — the rating movement a win or a loss would produce, quoted **before** joining.
+  Deliberately not part of Match Fit: Fit ranks, At Stake warns, and only counted matches have
+  any.
+- **Match viability** — how likely the match is to actually happen, as distinct from how good
+  it would be. A match nobody has paid into, at a club with no court left to give, is a worse
+  recommendation than an identical one that is three-quarters paid.
+- **Player profile** — what the player declared about how they want to play: days, hours,
+  price ceiling, distance, appetite, competitive or social. One declaration, read by every
+  engine that needs it, never restated as a constant inside one.
+
+**Invariants**
+- **Fit and certainty are separate variables.** The same rule the rating context holds for
+  skill and confidence, for the same reason: collapsing them makes an unknown match
+  indistinguishable from a good one, and the platform would then recommend most confidently
+  the matches it understands least.
+- **Absence never flatters.** No match may score better because the platform knows less about
+  it. This is what the constraint/evidence split exists to guarantee, and it is checkable: a
+  term's exclusion must never raise a score.
+- **A missing declaration is not a missing measurement.** A player who set no price ceiling
+  has no price problem; a match with nobody in it has no reliability *reading*. Treating those
+  two silences the same way is the mistake the split is named after.
+- **The split bar is a rendering of the percentage, not a second opinion about it.** One
+  quantity is clamped and everything else is derived from the clamped value, so the bar and
+  the number cannot saturate at different moments and disagree in the gap.
+- **The estimate ranks; the card decides whether to print it.** A forecast too uncertain to
+  show is still the best guess available, and withholding it from the ranking would make an
+  uncertain match unrankable rather than honest.
+- **A counted match's pairing is elected before commitment and fixed after.** Otherwise At
+  Stake quotes a promise against teams that can silently change, and a rating moves on a
+  pairing nobody agreed to. Friendlies are free to rearrange
+  ([ADR-0025](docs/adr/0025-binding-pairing-for-counted-matches.md)).
+- **Rating movement has exactly one owner.** What a match is worth to a rating is the rating
+  context's arithmetic, and the number quoted before the match and the number applied after it
+  are the same function or the quote is not a promise.
+- **A score carries every engine version that produced it.** A Match Fit score has two
+  producers, and attributing it to one of them cannot falsify a constant belonging to the other.
+- **Ranking a list is not scoring a match.** Which matches a player is shown — the exploration,
+  the diversity, the impressions an unfilled match is owed — is policy, and it lives outside
+  the engines so that the engines stay pure, deterministic and reproducible
+  ([ADR-0027](docs/adr/0027-fit-and-certainty-are-separate-ranking-is-policy.md)).
 
 ---
 
