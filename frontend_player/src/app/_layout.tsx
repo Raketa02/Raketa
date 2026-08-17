@@ -18,6 +18,7 @@ import { useCallback } from 'react';
 import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 
 import { authKeys, refreshTokens, restoreSession } from '@/features/auth/types';
+import { EnvironmentBadge } from '@/shared/config/EnvironmentBadge';
 import { wireHttpCredentials } from '@/shared/lib/auth';
 import { BootstrapGate, bootstrapApp, sharedBootstrapSteps } from '@/shared/lib/bootstrap';
 import { queryClient } from '@/shared/lib/query-client';
@@ -66,6 +67,13 @@ export default function RootLayout() {
       <QueryClientProvider client={queryClient}>
         <BootstrapGate run={run}>
           <Slot />
+          {/*
+           * A sibling of the route tree rather than part of it, so the badge is on every
+           * screen without a screen having to know it exists — and inside the gate, so
+           * it reads config only after bootstrap has validated it. Nothing at all in
+           * production.
+           */}
+          <EnvironmentBadge />
         </BootstrapGate>
       </QueryClientProvider>
     </SafeAreaProvider>

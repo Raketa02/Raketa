@@ -47,6 +47,19 @@ API URL's scheme — `http://` for `local`, `https://` for the three deployed on
 laptop URL under a deployed name fails at launch naming both variables rather than
 shipping a build that points at nothing.
 
+**`app.config.ts` is a function of that environment**, not a static document — it replaced
+`app.json`. It holds no logic of its own: `src/shared/config/appIdentity.ts` is a pure
+table mapping each environment to the app's display name and its badge, and the config
+document calls it. Outside `production` the app is named for its environment and wears an
+amber badge over every screen; `production` is bare and unbadged. There is **one**
+installable variant — one bundle identifier, one URL scheme, no build profiles — until a
+second backend exists to point a second one at.
+
+Expo evaluates that document in **Node**, before Metro, so it reads `process.env`
+directly and refuses an unknown environment rather than defaulting to one. It registers
+sucrase's TS require hook first, because Node cannot otherwise `require` the `.ts`
+identity module — delete that line and `npx expo start` fails on a missing module.
+
 **Dependency versions target Expo SDK 52.** Expo pins React Native and its own packages
 tightly, so after changing dependencies run `npx expo install --check` and trust Expo's
 resolution over the pins in `package.json`. That pin is why `eslint.config.mjs` reaches
@@ -88,7 +101,7 @@ asserting it renders correctly.
   reached only through `src/shared/lib/auth`. **Never** `AsyncStorage` (unencrypted
   plaintext on device), never a module variable that outlives a session, never a log line.
   _(ESLint blocks the AsyncStorage import.)_
-- **Put a secret in `app.json` `extra`, or in any `EXPO_PUBLIC_*` variable.** Everything in
+- **Put a secret in `app.config.ts` `extra`, or in any `EXPO_PUBLIC_*` variable.** Everything in
   the bundle is readable from a shipped app. Those are **config**, not secrets. A secret a
   mobile client "needs" is a design error — it belongs behind the backend.
 - **Run a build or release** (`eas build|submit|update`, `expo publish`). _(hook-enforced)_
@@ -205,7 +218,7 @@ asymmetry by adding a proxy, and don't copy the club app's cookie code here.
 - **`fetch` has no default timeout.** Timeouts are centralized in `shared/lib/http` as
   classes (request/upload/download/background) — no millisecond literal in a feature.
 - **`android/` and `ios/` are `expo prebuild` output.** Native config goes through
-  `app.json` and config plugins; a hand edit is lost on the next prebuild.
+  `app.config.ts` and config plugins; a hand edit is lost on the next prebuild.
 - **Never log a token, an `Authorization` header, a password or a full payload.**
 
 ## Git & domain language

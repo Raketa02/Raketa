@@ -232,6 +232,21 @@ export default [
     files: ['src/shared/ui/theme.ts'],
     rules: { 'no-restricted-syntax': 'off' },
   },
+  {
+    // The native configuration document. Its `adaptiveIcon.backgroundColor` is an
+    // Android manifest value baked into a launcher icon by `expo prebuild` — it is not
+    // a design-system value and there is no token for it. It also *cannot* come from
+    // the theme: this file is evaluated by Node before Metro exists, and importing
+    // `theme.ts` would pull React Native into that process. The colour rule exists to
+    // keep literals out of components, and this is not one; the block is kept separate
+    // from theme.ts's above so the two exemptions are not read as one.
+    //
+    // This was `app.json` until the config became a function of the environment, and
+    // ESLint does not lint JSON — so the rule is not being relaxed, it is meeting the
+    // value for the first time.
+    files: ['app.config.ts'],
+    rules: { 'no-restricted-syntax': 'off' },
+  },
 
   // --- tests may describe the wire, because that is what makes drift fail ------
   {

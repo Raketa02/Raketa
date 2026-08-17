@@ -65,6 +65,15 @@ are validated but not provisioned. The environment decides the URL scheme, and t
 validated too: `local` is reached over `http://`, the other three over `https://`. A
 laptop URL under a deployed name is a startup failure naming both variables.
 
+The environment also decides what the app calls itself. `app.config.ts` is a **function**
+of it — not a static `app.json` — and delegates the one decision to
+`src/shared/config/appIdentity.ts`: outside `production` the app is named for its
+environment (`Rakieta local`) and wears an amber badge over every screen; `production` is
+`Rakieta`, unbadged. There is one installable variant — one bundle identifier, one URL
+scheme — so today all four resolve to the same app pointed at the same laptop. That is
+the point: the machinery is exercised in the only environment that runs, so it will not
+be wrong the first time it matters.
+
 Every `EXPO_PUBLIC_*` value ships inside the bundle and is readable from a released
 app. Config only, never secrets.
 

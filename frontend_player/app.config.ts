@@ -1,0 +1,84 @@
+/**
+ * The native configuration document — a **function of the environment**, not a static
+ * file. Replaces the `app.json` that used to sit here.
+ *
+ * Expo evaluates this in Node, before Metro exists, after it has loaded `.env*`. So the
+ * environment is read straight off `process.env` — `src/shared/config/env.ts` is the
+ * *runtime* resolver and cannot help here, and reaching for it would drag zod and Babel's
+ * `EXPO_PUBLIC_*` substitution into a document that runs before either.
+ *
+ * **It contains no logic.** The one decision — what the app is called, and whether it is
+ * badged — lives in `src/shared/config/appIdentity.ts`, where it is a pure table over the
+ * four environments and is unit-tested without booting anything. This file is a caller.
+ *
+ * **One installable variant.** One `bundleIdentifier`, one `package`, one `scheme`, and no
+ * build-profile configuration: per-environment identifiers wait until a second backend
+ * exists to point them at. What changes with the environment is the *name* and the badge.
+ *
+ * A missing or misspelled `EXPO_PUBLIC_ENV` refuses here rather than resolving to a
+ * default, for the same reason the runtime refuses it: the wrong default is the one that
+ * looks right. `expo start` stops with the variable's name; the value is never echoed,
+ * because a config failure lands in logs and CI output.
+ */
+
+import type { ExpoConfig } from 'expo/config';
+
+// Expo transpiles THIS file and then `require`s the result as CommonJS — so a relative
+// `./src/…` import is resolved by plain Node, which cannot load a `.ts` file. Measured,
+// not assumed: without this line `npx expo config` fails with
+// `Cannot find module './src/shared/config/appIdentity'`. The hook is sucrase's, which is
+// the transpiler `@expo/config` used on this file one line earlier — it is present
+// exactly when this document is evaluated at all, and `.npmrc`'s `node-linker=hoisted`
+// is what makes it resolvable by name from here.
+import 'sucrase/register/ts';
+
+import {
+  appIdentity,
+  isAppEnvironment,
+  IDENTIFIED_ENVIRONMENTS,
+} from './src/shared/config/appIdentity';
+
+export default (): ExpoConfig => {
+  const environment = process.env.EXPO_PUBLIC_ENV;
+
+  if (!isAppEnvironment(environment)) {
+    throw new Error(
+      `EXPO_PUBLIC_ENV must be one of ${IDENTIFIED_ENVIRONMENTS.join(', ')}. ` +
+        'Copy .env.example to .env.local and set it.',
+    );
+  }
+
+  return {
+    name: appIdentity(environment).displayName,
+    slug: 'rakieta-player',
+    version: '0.1.0',
+    orientation: 'portrait',
+    // One scheme, at every environment. A per-environment scheme would need
+    // per-environment identifiers to be installable side by side, and those are deferred.
+    scheme: 'rakieta',
+    userInterfaceStyle: 'automatic',
+    newArchEnabled: true,
+    ios: {
+      supportsTablet: true,
+      bundleIdentifier: 'com.rakieta.player',
+    },
+    android: {
+      package: 'com.rakieta.player',
+      adaptiveIcon: {
+        backgroundColor: '#ffffff',
+      },
+    },
+    plugins: ['expo-router', 'expo-secure-store'],
+    experiments: {
+      typedRoutes: true,
+    },
+    extra: {
+      '//':
+        'Non-secret config surfaced via expo-constants. Anything in the shipped bundle is ' +
+        'PUBLIC — never put a secret here. See CLAUDE.md Safety. Runtime config lives in ' +
+        'EXPO_PUBLIC_* and is validated by src/shared/config/env.ts; do not add a second ' +
+        'copy of a value here — including the environment name, which the badge reads from ' +
+        'the validated config rather than from a mirror that can drift.',
+    },
+  };
+};

@@ -725,13 +725,13 @@ sessions.
 
 ## Part 13 — Native and platform
 
-- **New Architecture stays enabled** (`newArchEnabled: true` in `app.json`) unless a
+- **New Architecture stays enabled** (`newArchEnabled: true` in `app.config.ts`) unless a
   verified production dependency blocks it — and then that dependency is technical debt
   with a migration plan, not a permanent exemption.
 - **SDK 52 is an upgradeable baseline, not a destination.** Framework-specific code is
   concentrated in `src/app/`, `src/shared/lib/platform/`, `src/shared/lib/auth/`, the
   config files and config plugins, so an SDK upgrade never restructures a feature.
-- **Continuous Native Generation.** `app.config.ts`/`app.json` + config plugins +
+- **Continuous Native Generation.** `app.config.ts` + config plugins +
   dependencies → `expo prebuild` → `android/`, `ios/`. Those directories are build output
   and are not committed; hand-editing them loses the edit on the next prebuild. Native
   configuration is expressed as official or local config plugins.
@@ -781,7 +781,21 @@ line.
 is checked across the two variables together, so a laptop URL under a deployed name is a
 startup failure naming both — not a build that silently points at nothing.
 
-**Nothing in the bundle is secret.** `EXPO_PUBLIC_*` values and `app.json` `extra` are
+**The native config is a function of the environment.** `app.config.ts` replaced
+`app.json`, and holds no logic: `src/shared/config/appIdentity.ts` maps each environment
+to the app's display name and whether a badge shows, and the document calls it. Outside
+`production` the app is named for its environment and an amber badge sits over every
+screen; `production` is bare and unbadged. Expo evaluates the document in Node before
+Metro exists, so it reads `process.env` directly and refuses an unknown environment
+rather than defaulting — and it registers sucrase's TS require hook first, because Node
+cannot otherwise load the `.ts` identity module.
+
+**One installable variant.** One bundle identifier, one package name, one URL scheme, no
+build-profile configuration. Per-environment identifiers wait until a second backend
+exists to point them at; three installable apps that all reach the same laptop would be
+ceremony, and the badge already answers the question they would.
+
+**Nothing in the bundle is secret.** `EXPO_PUBLIC_*` values and `app.config.ts` `extra` are
 extractable from a shipped binary — they are _public config_. Private API keys, backend
 credentials, signing secrets, encryption keys and privileged service credentials belong on
 a server. A secret the mobile client appears to need is a design error.
