@@ -20,6 +20,7 @@ make test-gates  # prove the kernel/engines purity gates still fire (CI runs it)
 make openapi     # emit openapi.player.json + openapi.club.json, one per client
 make up / down   # dev stack (Postgres 17 + API + Redis); make logs, make shell
 make migrate     # alembic upgrade head inside the API container
+make seed        # deterministic dev accounts (make seed-host to run it on the host)
 ```
 
 One test: `poetry run pytest tests/unit/test_user_domain.py::test_name`.
@@ -69,6 +70,12 @@ Rules to preserve:
 - **State changes emit domain events.** Use cases persist them through
   `DomainEventStore.append` and enqueue them on the transactional outbox in the same
   transaction; handlers perform side effects after commit.
+- **Seeds execute use cases, never SQL.** `app/seeds/` creates deterministic development
+  accounts through the same use cases a request runs, wired from the composition root, so
+  a seeded aggregate has the event stream and the outbox rows a real one has. A structural
+  walk refuses a statement import or a `session.add` in that package. The production
+  refusal is checked **on import** of `app/seeds/`, not in `make seed` — a make target is
+  not what runs inside a container. See the README's *Seed Data*.
 - **New routes mount under `app/api/v1/router.py`;** keep the `/api/v1` prefix.
 - **Validate and normalize inside the value object**, not in the use case — see
   `app/modules/users/domain/value_objects.py`.

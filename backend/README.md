@@ -335,6 +335,49 @@ Current migration sequence:
 `ALEMBIC_DATABASE_URL`, converts asyncpg URLs to sync psycopg URLs for Alembic,
 and imports all ORM models so schema checks see the full metadata.
 
+## Seed Data
+
+Deterministic development accounts, so a screen can be built against a fixed starting
+point rather than against whatever the database drifted into.
+
+```bash
+make seed        # into the running stack's database (needs `make up` first)
+make seed-host   # the same seed from the host — needs .env, like host-run uvicorn
+```
+
+Both run `python -m app.seeds`. The schema must already exist; `make up` migrates on
+container start.
+
+| Address | State |
+| --- | --- |
+| `assessment-in-progress@rakieta.example` | Registered player, onboarding assessment open at its first question, no rating yet |
+
+The password for every seeded account is `rakieta-seed1`, and it is public by
+construction — it is written in `app/seeds/catalog.py`.
+
+Three rules hold this together, and each exists because of a specific way seed data goes
+wrong:
+
+- **Seeds execute use cases; nothing writes a table.** These aggregates are event-sourced
+  with a transactional outbox, so a directly-inserted row is an aggregate with no history:
+  it reads correctly until something replays it. Wiring comes from
+  `app/bootstrap/composition.py` — the composition root the API uses, not a copy of it.
+  A structural walk over `app/seeds/` refuses a statement import, an ORM model and
+  `session.add`.
+- **Re-running changes nothing.** Registration is skipped when the address is already
+  there; starting an assessment needs no help, because `CreateAssessment` is already
+  idempotent per player and sport. A seeded account's **address** is the stable handle —
+  its uuid is minted by the write path, so a fresh database yields a new one.
+- **Production is refused, on import.** `app/seeds/__init__.py` calls the guard, so
+  importing anything in the package under `APP_ENV=production` raises `SeedRefused`
+  before a database is opened. The guard is not in the make target: a make target is not
+  what runs inside a container.
+
+Addresses are on `.example` — a TLD RFC 2606 reserves, so no registry can sell it and a
+run pointed at the wrong database cannot mail a stranger. Not the `.test` of the same
+sentence, because `EmailStr` at the HTTP boundary refuses that one and a seeded account
+nobody can sign in as is not an account.
+
 ## Testing And Quality
 
 The test suite uses pytest, pytest-asyncio, HTTPX ASGI transport, and in-memory

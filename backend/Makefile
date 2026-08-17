@@ -16,7 +16,7 @@ ECS_CLUSTER      ?= rakieta-cluster
 ECS_SERVICE      ?= rakieta-service
 
 .PHONY: help install test lint lint-imports format typecheck check test-gates openapi \
-        build-dev up down logs ps shell migrate \
+        build-dev up down logs ps shell migrate seed seed-host \
         build-prod ecr-login ecr-push ecs-deploy
 
 help:
@@ -71,6 +71,17 @@ shell:             ## bash into the api container
 
 migrate:           ## run alembic upgrade head inside the api container
 	$(COMPOSE_LOCAL) exec api alembic upgrade head
+
+## ----- seed data
+## Deterministic accounts, created by executing the same use cases a request
+## executes (app/seeds/). Needs the schema to exist — `make up` migrates on
+## start. The production guard is in the seed module and runs on import, not
+## here: a make target is not what runs inside a container.
+seed:              ## seed deterministic dev accounts into the running stack's database
+	$(COMPOSE_LOCAL) exec api python -m app.seeds
+
+seed-host:         ## the same seed from the host — needs .env, like host-run uvicorn
+	poetry run python -m app.seeds
 
 ## ----- production / ECR / ECS
 ## DORMANT — AWS deployment is not in use; development is entirely local

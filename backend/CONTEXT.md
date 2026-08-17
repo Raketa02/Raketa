@@ -340,5 +340,31 @@ there; they are not repeated here.
   takes it as a constructor argument. _Avoid_: importing settings "just for a default",
   a module-level `get_settings()` inside a business layer, an exemption.
 
+- **Seed account** — a deterministic development account created by `app/seeds/`, named
+  for the **state it represents** rather than for a person: signing in as
+  `assessment-in-progress@rakieta.example` is a statement about what you expect to see.
+  The address is *derived* from that name, so an account cannot be called one thing and
+  reachable at another, and it is on a TLD RFC 2606 reserves so it can never become
+  somebody's real mailbox. **`.example` rather than `.test`**, though the same sentence of
+  the same RFC reserves both: `EmailStr` at the HTTP boundary is `email-validator`, which
+  refuses `test`, `invalid`, `localhost`, `local`, `arpa` and `onion` outright — so a
+  `.test` account is one no client can sign in as. _Avoid_: a fixture user, a real domain,
+  an address that names a person.
+- **Seeding through the write path** — the rule that makes seed data trustworthy: a seed
+  executes the same use cases a request executes, wired from the **composition root**, so
+  the event stream, the outbox row and the projection are written by the code that
+  normally writes them. A row inserted straight into a table produces an aggregate with
+  **no history** — it reads correctly until something replays it, and then the seeded data
+  and the system's own account of that data disagree; it also skips every handler that
+  should have reacted. A structural walk over `app/seeds/` refuses a statement import, an
+  ORM model and `session.add`. _Avoid_: fixtures SQL, a factory that builds ORM objects.
+- **Seed guard** — the refusal that keeps fabricated accounts out of production, checked
+  **on import** of `app/seeds/` and again against the settings `run` is handed. Not in the
+  make target: a make target is not what runs inside a container, and a guard that
+  `python -m app.seeds` walks around is decoration. Seeding is permitted in `local`,
+  `development` and `staging`, written out per environment rather than derived as
+  "everything but production", so a fifth environment has to be decided about rather than
+  inheriting an answer. _Avoid_: guarding the entry point instead of the module.
+
 Add backend-specific technical terms here as they are resolved. Anything describing the
 *domain* belongs in the shared glossary instead.
