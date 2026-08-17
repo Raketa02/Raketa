@@ -33,6 +33,36 @@
 # granularity is also why this file cannot be the whole fence — `datetime` is legal
 # in the kernel while `datetime.now()` is not, and that half is an AST walk in
 # tests/unit/test_kernel_purity.py.
+#
+# Configuration is fenced out of the layers where business rules live. **The
+# environment may select configuration defaults; it may never select behaviour a
+# domain test could observe** — the rule `app/core/config.py`'s own docstring opens
+# with. A use case reading `settings.APP_ENV` to pick a deadline is a rule that is
+# true on a laptop and false in production, and the domain test suite cannot see the
+# difference. So the settings module is forbidden to the domain and application
+# layers outright, rather than trusted to be used carefully.
+#
+# `pydantic_settings` and `os` are forbidden beside it for the same reason ambience
+# is forbidden to the engines above: declaring a second `BaseSettings` or reading
+# `os.environ` directly is the same rule broken by a different import. Neither
+# appears anywhere in these four layers today, so this costs nothing to hold.
+#
+# The two `app.modules.*` arms are wildcards so that a context nobody has written yet
+# — Clubs, Courts, Bookings, Matches — is fenced on the day it is created rather than
+# on the day somebody remembers to come back here. That convenience carries a cost
+# worth knowing, and it was measured rather than assumed: **a wildcard matching
+# nothing is reported KEPT**, so an arm that stops matching becomes decoration in
+# silence. It is why scripts/test-purity-gates.sh drives a probe through *each* of
+# the four arms separately instead of through one and inferring the rest.
+#
+# `allow_indirect_imports = true` agrees with the contracts above, and here the
+# reason is specific rather than inherited. Strict transitive enforcement is green on
+# today's tree — measured — but it would fence the wrong thing: every module's
+# `domain/errors.py` takes its error base classes from `app.core.exception_handlers`,
+# so the day that module reads `DEBUG` to decide whether to serve a traceback, which
+# is a legitimate read at an HTTP boundary, the contract would go red naming a domain
+# module that had done nothing. The claim made here is the one that stays checkable:
+# no domain or application module *reads the settings module*.
 
 [importlinter]
 root_package = app
@@ -124,4 +154,18 @@ source_modules =
     app.engines.pairing
 forbidden_modules =
     app.engines.matchfit
+allow_indirect_imports = true
+
+[importlinter:contract:configuration-cannot-reach-a-business-rule]
+name = The domain and application layers cannot read configuration
+type = forbidden
+source_modules =
+    app.application
+    app.shared.domain
+    app.modules.*.domain
+    app.modules.*.application
+forbidden_modules =
+    app.core.config
+    pydantic_settings
+    os
 allow_indirect_imports = true

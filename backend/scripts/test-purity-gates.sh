@@ -34,11 +34,23 @@ ENGINE_PROBE="$ROOT/app/engines/_purity_probe.py"
 OUTSIDE_PROBE="$ROOT/app/shared/_purity_probe.py"
 PAIRING_PROBE="$ROOT/app/engines/pairing/_purity_probe.py"
 MATCHFIT_PROBE="$ROOT/app/engines/matchfit/_purity_probe.py"
+APPLICATION_PROBE="$ROOT/app/application/_purity_probe.py"
+SHARED_DOMAIN_PROBE="$ROOT/app/shared/domain/_purity_probe.py"
+MODULE_DOMAIN_PROBE="$ROOT/app/modules/users/domain/_purity_probe.py"
+MODULE_APPLICATION_PROBE="$ROOT/app/modules/users/application/_purity_probe.py"
+MODULE_INFRA_PROBE="$ROOT/app/modules/users/infrastructure/_purity_probe.py"
+# A whole context rather than a file: the one claim the wildcard arms make that no
+# probe inside an existing module can check. Fixed, script-owned, and removed with
+# the rest — it is the only probe that is a directory, so it is the only `rm -rf`.
+NEW_CONTEXT_DIR="$ROOT/app/modules/_purity_probe_context"
 AST_TEST="tests/unit/test_kernel_purity.py"
 
 clean() {
   rm -f "$KERNEL_PROBE" "$ENGINE_PROBE" "$OUTSIDE_PROBE" \
-        "$PAIRING_PROBE" "$MATCHFIT_PROBE"
+        "$PAIRING_PROBE" "$MATCHFIT_PROBE" \
+        "$APPLICATION_PROBE" "$SHARED_DOMAIN_PROBE" \
+        "$MODULE_DOMAIN_PROBE" "$MODULE_APPLICATION_PROBE" "$MODULE_INFRA_PROBE"
+  rm -rf "$NEW_CONTEXT_DIR"
 }
 trap clean EXIT INT TERM
 clean
@@ -58,8 +70,23 @@ done
 for f in app/shared/ids.py \
          app/engines/pairing/v1/__init__.py \
          app/engines/matchfit/v1/__init__.py \
-         app/engines/forecast.py; do
+         app/engines/forecast.py \
+         app/core/config.py; do
   [ -f "$ROOT/$f" ] || { echo "probed module is gone, so its probe proves nothing: $f" >&2; exit 2; }
+done
+
+# Where the probes are *written* matters for the same reason, and for one that is
+# sharper still. Two arms of the configuration contract are wildcards, and
+# `import-linter` reports a wildcard matching nothing as KEPT — not as an error, the
+# way it reports a literal module that does not exist. So a renamed package under
+# `app/modules/` would leave the contract green, this suite's probes landing in a
+# directory the fence no longer covers, and nothing anywhere saying so.
+for d in app/application \
+         app/shared/domain \
+         app/modules/users/domain \
+         app/modules/users/application \
+         app/modules/users/infrastructure; do
+  [ -f "$ROOT/$d/__init__.py" ] || { echo "a probe's home package is gone, so its arm proves nothing: $d" >&2; exit 2; }
 done
 
 pass=0
@@ -76,6 +103,12 @@ imports() { poetry run lint-imports 2>&1; }
 types()   { poetry run mypy app 2>&1; }
 walk()    { poetry run pytest "$AST_TEST" -q --no-cov -p no:cacheprovider 2>&1; }
 
+# Patterns are matched against one line at a time, and `import-linter` wraps its
+# report at 80 columns — so a pattern longer than that can never match, however
+# correct it looks. It is a silent miss rather than an error: the gate went red for
+# the right reason and the assertion about *why* fails beside it. Long module paths
+# are where this bites, so assert the "… is not allowed to import" line and the
+# "… -> target" chain line separately rather than as one long string.
 expect() { # <red|green> <gate> <name> [pattern...]
   local want="$1" gate="$2" name="$3" out status
   shift 3
@@ -192,6 +225,108 @@ probe "$MATCHFIT_PROBE" 'from app.engines.forecast import BalanceForecast, Pairi
 READS = (BalanceForecast, PairingAnalysis)
 '
 expect green imports "Match Fit reading the pairing engine's output types is allowed"
+clean
+
+# ---------------------------------------------------------------------------
+echo
+echo ".importlinter — configuration fenced out of the business rules"
+
+# The rule the contract states: the environment may select configuration defaults,
+# but never behaviour a domain test could observe. A use case reading `APP_ENV` to
+# pick a deadline is a rule that is true on a laptop and false in production, and the
+# domain suite cannot see the difference — which is what makes it worth a fence
+# rather than a review comment.
+#
+# Each of the contract's four source arms gets its **own** probe rather than one
+# standing in for all four. Two of them are wildcards, and a wildcard matching
+# nothing is reported KEPT (see the preflight above), so an arm can quietly stop
+# covering anything while the run still says the fence held. One probe would prove
+# one arm and imply three.
+probe "$APPLICATION_PROBE" 'from app.core.config import get_settings
+
+DEADLINE = get_settings().ACCESS_TOKEN_EXPIRE_SECONDS
+'
+expect red imports "the cross-cutting application layer reading settings is refused" \
+  "app.application is not allowed to import app.core.config" \
+  "app.application._purity_probe -> app.core.config"
+clean
+
+probe "$SHARED_DOMAIN_PROBE" 'from app.core.config import get_settings
+
+DEADLINE = get_settings().ACCESS_TOKEN_EXPIRE_SECONDS
+'
+expect red imports "the shared domain layer reading settings is refused" \
+  "app.shared.domain is not allowed to import app.core.config" \
+  "app.shared.domain._purity_probe -> app.core.config"
+clean
+
+# The two wildcard arms. `users` stands for every context under app/modules/ — and
+# for the four that are named in the glossary but not yet modelled, which is the
+# reason the arms are wildcards at all.
+probe "$MODULE_DOMAIN_PROBE" 'from app.core.config import get_settings
+
+MAX_ATTEMPTS = 3 if get_settings().DEBUG else 10
+'
+expect red imports "a module's domain layer reading settings is refused" \
+  "app.modules.users.domain is not allowed to import app.core.config" \
+  "app.modules.users.domain._purity_probe -> app.core.config"
+clean
+
+probe "$MODULE_APPLICATION_PROBE" 'from app.core.config import Environment, get_settings
+
+SKIP_CHECK = get_settings().APP_ENV is Environment.LOCAL
+'
+expect red imports "a module's application layer reading settings is refused" \
+  "app.modules.users.application is not allowed to import app.core.config" \
+  "app.modules.users.application._purity_probe -> app.core.config"
+clean
+
+# The two ways round the fence that are the same rule broken by a different import.
+# Both are forbidden beside the settings module for the reason ambience is forbidden
+# to the engines: naming only the obvious route leaves the others open.
+probe "$MODULE_APPLICATION_PROBE" 'from pydantic_settings import BaseSettings
+
+
+class LocalSettings(BaseSettings):
+    DEADLINE_SECONDS: int = 30
+'
+expect red imports "declaring a second settings class in a business layer is refused" \
+  "app.modules.users.application is not allowed to import pydantic_settings"
+clean
+
+probe "$MODULE_DOMAIN_PROBE" 'import os
+
+DEADLINE_SECONDS = int(os.environ.get("DEADLINE_SECONDS", "30"))
+'
+expect red imports "reading the process environment from a domain layer is refused" \
+  "app.modules.users.domain is not allowed to import os"
+clean
+
+# And the legitimate direction, which is what the fence is *for*: configuration is
+# read at the composition boundary and handed inward. An adapter is on the outside of
+# it, so the same import that is refused four times above is allowed here.
+probe "$MODULE_INFRA_PROBE" 'from app.core.config import get_settings
+
+SECRET = get_settings().JWT_SECRET_KEY
+'
+expect green imports "an infrastructure adapter reading settings is allowed"
+clean
+
+# The wildcard arms' whole reason for existing, and the one claim about them that a
+# probe inside `users` cannot make: a context that does not exist yet is fenced on
+# the day somebody creates it, not on the day somebody remembers to come back to
+# `.importlinter`. Clubs, Courts, Bookings and Matches are all named in the glossary
+# and none is modelled, so this is the case that will actually be exercised.
+mkdir -p "$NEW_CONTEXT_DIR/domain"
+: >"$NEW_CONTEXT_DIR/__init__.py"
+: >"$NEW_CONTEXT_DIR/domain/__init__.py"
+probe "$NEW_CONTEXT_DIR/domain/rules.py" 'from app.core.config import get_settings
+
+CANCELLATION_DEADLINE_HOURS = 1 if get_settings().DEBUG else 24
+'
+expect red imports "a context created tomorrow is fenced without touching .importlinter" \
+  "app.modules._purity_probe_context.domain is not allowed to import" \
+  "app.modules._purity_probe_context.domain.rules -> app.core.config"
 clean
 
 # ---------------------------------------------------------------------------

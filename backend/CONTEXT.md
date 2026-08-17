@@ -309,6 +309,21 @@ there; they are not repeated here.
   "somebody set it": there is nothing to compare a host against. _Avoid_: inventing
   `api-dev.…`; a config file naming a host that does not exist describes infrastructure
   that does not exist.
+- **Configuration boundary** — the line configuration is read at and never crosses. It is
+  the composition boundary: `app/api/dependencies.py`, `app/bootstrap/`, `app/core/`,
+  `app/main.py` and the adapters. Inward of it — `app/application/`, `app/shared/domain/`
+  and every `app/modules/*/domain` and `app/modules/*/application` — the settings module is
+  **structurally unreachable**, enforced by an `.importlinter` contract rather than by
+  review. That is what makes *the environment may never select behaviour a domain test
+  could observe* a checkable claim instead of an aspiration: a use case reading `APP_ENV`
+  to pick a deadline is a rule that is true on a laptop and false in production, and the
+  domain suite cannot see the difference. `pydantic_settings` and `os` are forbidden beside
+  it, because declaring a second settings class or reading `os.environ` is the same rule
+  broken by a different import. The two `app/modules/*` arms are **wildcards**, so a
+  context created tomorrow is fenced the day it exists — Clubs, Courts, Bookings and
+  Matches are all named and none is modelled. A use case that needs a configured value
+  takes it as a constructor argument. _Avoid_: importing settings "just for a default",
+  a module-level `get_settings()` inside a business layer, an exemption.
 
 Add backend-specific technical terms here as they are resolved. Anything describing the
 *domain* belongs in the shared glossary instead.

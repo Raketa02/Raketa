@@ -196,6 +196,20 @@ The boundary that governs this: **the environment may select configuration defau
 it may never select behaviour a domain test could observe.** No business rule,
 threshold, validation, status code or response shape varies by `APP_ENV`.
 
+That boundary is enforced, not remembered. An `.importlinter` contract forbids
+`app.core.config` to the domain and application layers — `app/application/`,
+`app/shared/domain/`, and every `app/modules/*/domain` and `app/modules/*/application`
+— so configuration can only be read at the composition boundary and handed inward. A
+use case that needs a configured value takes it as a constructor argument.
+`pydantic_settings` and `os` are forbidden beside it, since declaring a second
+settings class or reading `os.environ` is the same rule broken by a different import.
+
+The two `app/modules/*` arms are wildcards, so a context created tomorrow is fenced
+without anybody editing `.importlinter`. `make check` runs the contract; `make
+test-gates` drives it against a deliberately-violating tree — one probe per arm,
+because **import-linter reports a wildcard matching nothing as KEPT**, and an arm
+that quietly stopped matching would read as a fence that held and checked nothing.
+
 ### Refusing to start
 
 Configuration that is dangerous rather than merely wrong refuses to boot. Every
