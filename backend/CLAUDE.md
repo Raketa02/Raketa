@@ -58,9 +58,14 @@ shared infra in `app/infrastructure/`; event-runtime assembly in `app/bootstrap/
 
 Rules to preserve:
 
-- **Dependencies point inward:** presentation → application → domain. Adapters are wired
-  to ports only at the FastAPI boundary in `app/api/dependencies.py`, using
-  `Annotated[Port, Depends(factory)]`.
+- **Dependencies point inward:** presentation → application → domain. **Adapters are
+  constructed in `app/bootstrap/composition.py` and nowhere else** — one plain function
+  per port, taking a session and the settings, with no web framework in it, so a seed
+  run or a worker gets the wiring a request gets instead of a copy of it.
+  `app/api/dependencies.py` and each module's `presentation/dependencies.py` declare
+  *when* an adapter is built and how long it lives (`Annotated[Port, Depends(factory)]`),
+  never what. `tests/unit/test_composition_root.py` walks those files and fails if one
+  imports an adapter.
 - **State changes emit domain events.** Use cases persist them through
   `DomainEventStore.append` and enqueue them on the transactional outbox in the same
   transaction; handlers perform side effects after commit.

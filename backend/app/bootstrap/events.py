@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import lru_cache
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -85,6 +86,28 @@ def build_event_runtime() -> EventRuntime:
         codec=JsonEventCodec(catalog),
         dispatcher=dispatcher,
     )
+
+
+@lru_cache(maxsize=1)
+def get_event_runtime() -> EventRuntime:
+    """The process's event runtime, built once and reachable from anywhere.
+
+    It used to be reachable only as `request.app.state.event_runtime`, which
+    made the domain-event machinery a property of a *served HTTP request* rather
+    than of the process — so a seed run or a management command could only get
+    one by booting the API or by building a second, parallel runtime.
+
+    Cached, and safe to cache, because `EventRuntime` is frozen and what it
+    holds is declarative: a catalog of event names and a table of handler
+    subscriptions, both registered from static code. Nothing about it varies per
+    request, and nothing mutates it after `build_event_runtime` returns.
+    `build_event_runtime` stays public and uncached for the callers that
+    genuinely want a fresh one — a test asserting on a codec in isolation.
+
+    Cached the same way `get_settings` is, and with the same escape hatch:
+    `get_event_runtime.cache_clear()`.
+    """
+    return build_event_runtime()
 
 
 def build_event_delivery_worker(

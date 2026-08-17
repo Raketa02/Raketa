@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 
 from app.api.v1.router import api_router
-from app.bootstrap.events import build_event_runtime
+from app.bootstrap.events import get_event_runtime
 from app.core.config import Environment, Settings, get_settings
 from app.core.exception_handlers import register_exception_handlers
 from app.core.lifespan import build_lifespan
@@ -28,9 +28,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         lifespan=build_lifespan(settings),
     )
 
-    # Keep event contracts available for request dependency resolution even
-    # when an ASGI test client does not execute lifespan startup.
-    app.state.event_runtime = build_event_runtime()
+    # The lifespan's embedded delivery worker reads this. It is the process's
+    # runtime — the same object request dependencies resolve — rather than a
+    # second one built here: a worker dispatching through a different catalog
+    # than the requests that wrote the events is a failure with no symptom until
+    # an event goes undelivered.
+    app.state.event_runtime = get_event_runtime()
 
     register_middleware(app, settings)
     register_exception_handlers(app)

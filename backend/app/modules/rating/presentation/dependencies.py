@@ -10,8 +10,12 @@ from app.api.dependencies import (
     EventPublisherDep,
     UnitOfWorkDep,
 )
+from app.bootstrap.composition import (
+    build_assessment_engine,
+    build_assessment_repository,
+    build_skill_rating_repository,
+)
 from app.engines.assessment import AssessmentEngine
-from app.engines.racketskill.v3 import RacketSkillEngineV3
 from app.modules.rating.application.abandon_assessment import AbandonAssessment
 from app.modules.rating.application.complete_assessment import CompleteAssessment
 from app.modules.rating.application.create_assessment import CreateAssessment
@@ -23,19 +27,10 @@ from app.modules.rating.application.get_assessment import GetAssessment
 from app.modules.rating.application.list_ratings import ListPlayerRatings
 from app.modules.rating.application.submit_answer import SubmitAnswer
 from app.modules.rating.domain.ports import AssessmentRepository, SkillRatingRepository
-from app.modules.rating.infrastructure.event_sourced_assessment_repository import (
-    EventSourcedAssessmentRepository,
-)
-from app.modules.rating.infrastructure.event_sourced_skill_rating_repository import (
-    EventSourcedSkillRatingRepository,
-)
 
 
 def get_assessment_engine() -> AssessmentEngine:
-    # The concrete engine version is chosen here, at the boundary; the use cases
-    # depend only on the ``AssessmentEngine`` abstraction, so a version swap is a
-    # one-line change.
-    return RacketSkillEngineV3()
+    return build_assessment_engine()
 
 
 AssessmentEngineDep = Annotated[AssessmentEngine, Depends(get_assessment_engine)]
@@ -45,10 +40,10 @@ def get_assessment_repository(
     event_store: DomainEventStoreDep,
     events: EventPublisherDep,
 ) -> AssessmentRepository:
-    # Per request, like the event store and publisher it is built from. The
-    # repository remembers the versions it loaded, and one request's versions
-    # must never answer for another's.
-    return EventSourcedAssessmentRepository(event_store=event_store, events=events)
+    # Per request, like the event store and publisher it is built from — that is
+    # this file's decision to make. Why it must not outlive them is the factory's
+    # docstring.
+    return build_assessment_repository(event_store=event_store, events=events)
 
 
 AssessmentRepositoryDep = Annotated[
@@ -60,10 +55,8 @@ def get_skill_rating_repository(
     event_store: DomainEventStoreDep,
     events: EventPublisherDep,
 ) -> SkillRatingRepository:
-    # Per request, for the same reason the assessment's is: it remembers the
-    # versions it read, and one request's versions must never answer for
-    # another's.
-    return EventSourcedSkillRatingRepository(event_store=event_store, events=events)
+    # Per request, for the same reason the assessment's is.
+    return build_skill_rating_repository(event_store=event_store, events=events)
 
 
 SkillRatingRepositoryDep = Annotated[

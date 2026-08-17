@@ -309,8 +309,23 @@ there; they are not repeated here.
   "somebody set it": there is nothing to compare a host against. _Avoid_: inventing
   `api-dev.…`; a config file naming a host that does not exist describes infrastructure
   that does not exist.
+- **Composition root** — `app/bootstrap/composition.py`, the one place an adapter is
+  constructed. One plain function per port, taking a database session and the settings,
+  with no web framework in it and no request anywhere near it. Before it, every adapter
+  was built inside a `Depends` callable, so anything that is not an HTTP request had two
+  options and both were bad: boot the API to create data, or hand-copy the wiring into a
+  second root. **A hand-copied composition root drifts silently** — it keeps working, and
+  it stops being what production runs. _Avoid_: constructing an adapter anywhere else; a
+  walk over the dependency modules refuses it.
+- **Declaration vs construction** — the split the composition root buys, and the reason
+  `app/api/dependencies.py` still exists. A dependency declaration answers *when* an
+  adapter is built and how long it lives — one per request, cached by FastAPI for that
+  request, which is what keeps a repository from answering with another request's stream
+  versions. The factory answers *what* is built. Sharing is therefore the caller's
+  business: every adapter is a stateless wrapper over its session, so a caller outside a
+  request that wants one store for two repositories builds it once and passes it on.
 - **Configuration boundary** — the line configuration is read at and never crosses. It is
-  the composition boundary: `app/api/dependencies.py`, `app/bootstrap/`, `app/core/`,
+  the composition boundary: `app/bootstrap/`, `app/api/dependencies.py`, `app/core/`,
   `app/main.py` and the adapters. Inward of it — `app/application/`, `app/shared/domain/`
   and every `app/modules/*/domain` and `app/modules/*/application` — the settings module is
   **structurally unreachable**, enforced by an `.importlinter` contract rather than by

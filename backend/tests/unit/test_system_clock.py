@@ -26,9 +26,17 @@ ROOT = Path(__file__).resolve().parents[2]
 ADAPTER = "app.infrastructure.clock"
 RETIRED = "app.shared.clock"
 
-#: The only two modules that may reach for a live clock: the FastAPI dependency
-#: wiring and the event-runtime bootstrap. Everything else is handed one.
-COMPOSITION_ROOTS = ["app/api/dependencies.py", "app/bootstrap/events.py"]
+#: The only two modules that may reach for a live clock: the adapter factories
+#: and the event-runtime bootstrap. Everything else is handed one.
+#:
+#: Both are now in `app/bootstrap/`, and that is the list getting *narrower*
+#: rather than being adjusted to fit. It used to name `app/api/dependencies.py`,
+#: because the wall clock was constructed inside a `Depends` callable; #91 moved
+#: every adapter construction to `app/bootstrap/composition.py`, so no file under
+#: `app/api/` can reach a live clock at all any more. The rule the walk states is
+#: unchanged — wiring is the layer allowed to know which clock is real — and what
+#: changed is which files are wiring.
+COMPOSITION_ROOTS = ["app/bootstrap/composition.py", "app/bootstrap/events.py"]
 
 
 # --- What the adapter returns ---------------------------------------------------

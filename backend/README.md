@@ -32,12 +32,13 @@ app/
   main.py                         FastAPI app factory and health endpoint
   api/
     v1/router.py                  API version router composition
-    dependencies.py               Dependency wiring from HTTP to application ports
+    dependencies.py               Request-scoped declarations over the factories
   core/                           Settings, lifespan, logging, middleware, errors
   application/
     ports/                        Protocols consumed by use cases
     events/                       Event catalog, codec contracts, dispatcher workflow
   bootstrap/
+    composition.py                Adapter factories — every port, no web framework
     events.py                     Runtime assembly for event catalog/dispatcher/worker
   infrastructure/
     database/                     SQLAlchemy engine, sessions, unit of work, ORM imports
@@ -68,8 +69,9 @@ Domain code does not import FastAPI, SQLAlchemy, Pydantic, or Docker-specific
 runtime concerns. Application services depend on protocols such as
 `UserRepository`, `RefreshTokenRepository`, `TokenService`,
 `DomainEventStore`, `DomainEventPublisher`, and `UnitOfWork`. Concrete adapters
-are selected at the boundary through FastAPI dependency functions and bootstrap
-code.
+are built by `app/bootstrap/composition.py` and declared to the framework by the
+dependency modules — the composition root is one root, and it does not need a
+request.
 
 ## Domain Model
 
@@ -141,9 +143,22 @@ The main ports are defined as Python protocols:
 | `PendingOutbox` | Fetch and mark outbox delivery rows | `SqlAlchemyOutboxRepository` |
 
 This keeps use cases testable without depending directly on infrastructure.
-FastAPI dependencies in `app/api/dependencies.py` are the composition boundary for
-HTTP requests, while `app/bootstrap/events.py` assembles event catalogs,
-dispatchers, codecs, publishers, stores, and workers.
+
+**Every adapter is constructed in `app/bootstrap/composition.py`** — one plain
+function per port, taking a database session and the settings. Nothing in it
+imports FastAPI and nothing in it reads a request, so anything that is not an
+HTTP request (a seed run, a worker, a management command) assembles a use case
+without booting the API. `app/bootstrap/events.py` assembles event catalogs,
+dispatchers, codecs, publishers, stores and workers, and `get_event_runtime()`
+hands back the process's runtime rather than one read off an application object.
+
+`app/api/dependencies.py` and each module's `presentation/dependencies.py` are
+thin callers over those factories. They decide *when* an adapter is built and how
+long it lives — one per request, cached by FastAPI for that request — and never
+what is built. The split is enforced by a walk, not by review:
+`tests/unit/test_composition_root.py` fails if a dependency declaration imports
+an adapter, because the alternative is one line of convenience inside a `Depends`
+callable, and nothing about a green suite would look different afterwards.
 
 ## API
 
