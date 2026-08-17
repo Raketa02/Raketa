@@ -9,10 +9,10 @@ and wrong in the middle.
 on Wednesday is not a property; ``random.Random(SEED)`` gives the same sweep on every
 machine and every run, and widening the sweep is a diff on a number here.
 
-The sweep is over *declarations and prices*, never over ratings, because no term in
-this slice reads a Level. That is the honest shape of the thing being tested and it
-is why this file is shorter than the pairing engine's: half of Match Fit's table is
-still owed (#84, #85, #86).
+The sweep is over *declarations, prices and start times*, never over ratings, because
+no term in this slice reads a Level. That is the honest shape of the thing being
+tested and it is why this file is shorter than the pairing engine's: three of Match
+Fit's ten terms are still owed (#85, #86).
 """
 
 import random
@@ -30,15 +30,19 @@ from app.engines.matchmaking import (
     PlayerProfile,
     PlayerRef,
     PlayHistory,
+    Weekday,
 )
 from app.kernel import grosze, ratio
 from tests.unit.matchmaking_snapshots import (
     NOW,
+    WARSAW,
     analysis,
     doubles,
     profile,
     singles,
     skill,
+    starting,
+    window,
     with_records,
 )
 
@@ -59,6 +63,18 @@ DEE = skill("dee", 330, 60)
 
 LADDERS = tuple(LadderQualification)
 PREFERENCES = (None, MatchTypePreference.COMPETITIVE, MatchTypePreference.SOCIAL)
+
+#: Declarations of *when*, from silence to a single Tuesday morning. Drawn beside
+#: the prices and the distances so that the time term is crossed on both sides of
+#: both of its halves — the right day at the wrong hour and the wrong day at the
+#: right one — rather than only where a hand-written case happened to look.
+DAYS = (
+    None,
+    frozenset({Weekday.TUESDAY}),
+    frozenset({Weekday.SATURDAY, Weekday.SUNDAY}),
+    frozenset(Weekday),
+)
+HOURS = (None, (window(6, 9),), (window(18, 22),), (window(6, 9), window(18, 22)))
 
 
 def scored(snapshot: MatchSnapshot, declaration: PlayerProfile):
@@ -88,6 +104,7 @@ def drawn(seed: int = SEED):
                 travel_minutes=rng.randrange(0, 120),
                 counted=rng.choice((True, False)),
                 ladder=rng.choice(LADDERS),
+                start=starting(day=rng.randrange(0, 7), hour=rng.randrange(0, 24)),
             ),
             seat_share=grosze(max(payable, 2150)),
             payable=grosze(payable),
@@ -96,6 +113,8 @@ def drawn(seed: int = SEED):
             ceiling=rng.choice((None, *range(0, 6000, 250))),
             radius=rng.choice((None, *range(0, 90, 5))),
             match_type=rng.choice(PREFERENCES),
+            days=rng.choice(DAYS),
+            hours=rng.choice(HOURS),
         )
         yield snapshot, declaration
 
@@ -116,6 +135,7 @@ def test_the_sweep_reaches_every_branch_of_every_curve():
             else:
                 values[term.code].add("excluded")
 
+    assert values[TermCode.TIME_FIT] == {"full", "part"}
     assert values[TermCode.PRICE] == {"full", "part", "zero"}
     assert values[TermCode.TRAVEL] == {"full", "part", "zero"}
     assert values[TermCode.MATCH_TYPE] == {"full", "part"}
@@ -313,6 +333,68 @@ def test_more_new_faces_never_scores_lower_on_familiarity():
     assert values == [ratio(0, 1), ratio(1, 3), ratio(2, 3), ratio(1, 1)]
 
 
+def test_the_time_term_is_two_valued_and_never_decays():
+    """Full marks or the mismatch value, and nothing in between, over 400 draws.
+
+    Price and travel decay because *how far over* is a quantity; being at work is
+    not. A curve creeping in here — half marks for an hour early, say — would be a
+    third kind of constant with no measurement behind it, and it would show up as a
+    third value in this set.
+    """
+
+    seen = set()
+    for snapshot, declaration in drawn():
+        for term in scored(snapshot, declaration).terms:
+            if term.code is TermCode.TIME_FIT:
+                assert isinstance(term, ScoredTerm)
+                seen.add(term.value)
+    assert seen == {ratio(1, 1), CONSTANTS.time_outside}
+
+
+@pytest.mark.parametrize(
+    "days, hours",
+    [
+        (None, None),
+        (frozenset({Weekday.TUESDAY, Weekday.THURSDAY}), None),
+        (None, (window(18, 22),)),
+        (frozenset({Weekday.TUESDAY}), (window(6, 9), window(18, 22))),
+    ],
+    ids=["nothing", "days only", "hours only", "both"],
+)
+def test_the_whole_week_agrees_with_the_rule_written_out_independently(days, hours):
+    """The oracle: 168 starts, an hour apart, against the rule stated in English.
+
+    *Inside the declaration* is **on a declared day and starting inside a declared
+    window**, with a silence on either half meaning *any*. That sentence is written
+    out here in plain Python — set membership and a half-open comparison on the
+    local minute — so the engine and this file agree only if both are right. A term
+    reading the wrong half, comparing against the wrong end of a window, or reading
+    a weekday off the UTC instant disagrees somewhere in the week.
+    """
+
+    declaration = profile(days=days, hours=hours)
+    for day in range(7):
+        for hour in range(24):
+            start = starting(day=day, hour=hour)
+            local = start.astimezone(WARSAW)
+            inside_days = days is None or Weekday(local.isoweekday()) in days
+            minute = local.hour * 60 + local.minute
+            inside_hours = hours is None or any(
+                one.start <= minute < one.end for one in hours
+            )
+            inside = inside_days and inside_hours
+            expected = ratio(1, 1) if inside else CONSTANTS.time_outside
+            term = next(
+                item
+                for item in scored(
+                    doubles(ADA, BO, CY, DEE, start=start), declaration
+                ).terms
+                if item.code is TermCode.TIME_FIT
+            )
+            assert isinstance(term, ScoredTerm)
+            assert term.value == expected, (day, hour)
+
+
 # --- Absence, over the sweep ------------------------------------------------------
 
 
@@ -347,7 +429,7 @@ def test_a_constraint_never_drops_out_of_the_score():
         constraints = [
             term for term in result.terms if term.kind is TermKind.CONSTRAINT
         ]
-        assert len(constraints) == 4
+        assert len(constraints) == 5
         assert all(isinstance(term, ScoredTerm) for term in constraints)
 
 

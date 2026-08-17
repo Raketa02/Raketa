@@ -94,14 +94,27 @@ there; they are not repeated here.
   four boundaries and nothing else. It is a `NewType`, i.e. a **refinement** — an
   `Instant` goes wherever a `datetime` is wanted and a bare `datetime` does not go where
   an `Instant` is required. Built only through `instant()`, which rejects a naive value.
-- **Minute coordinates** — `MinuteOfDay`, `DayOffset` and `Minutes`, branded integers,
-  and what engines compute in: that is what makes an availability check integer
+- **Minute coordinates** — `MinuteOfDay`, `DayOffset`, `Minutes` and `IsoWeekday`, branded
+  integers, and what engines compute in: that is what makes an availability check integer
   comparisons rather than datetime arithmetic. `slot_start()` is the **single**
   conversion from coordinates to an `Instant`, so every timezone question has one place
   to be asked; `zoneinfo` is imported in one module and a test walks `app/` to keep it
   that way. **A `DayOffset` is never persisted and never serialised** — it is
-  anchor-relative, so a stored one silently changes meaning. _Avoid_: slot index, day
-  number, offset (unqualified).
+  anchor-relative, so a stored one silently changes meaning. An `IsoWeekday` is Monday 1
+  through Sunday 7 and is branded against the mistake that reads Wednesday as 00:03.
+  _Avoid_: slot index, day number, offset (unqualified).
+- **Local clock face** — `local_minute_of_day()` and `local_iso_weekday()`, the two halves
+  of reading an `Instant` back in a zone, and `slot_start()`'s inverse. Both take the zone,
+  because a weekday read off an instant's own UTC date is wrong for the two hours either
+  side of a local midnight — 22:30 UTC on a Sunday is already Monday in Warsaw — and wrong
+  silently. A **declaration** is a claim about a clock face and an `Instant` is UTC, so
+  these are the only place the two meet.
+- **Zone** — the kernel's alias for `zoneinfo.ZoneInfo`, exported so that a value object can
+  *hold* a zone without importing the module the walk allows in one file. Holding one is
+  legal everywhere; **building one is not legal in an engine**, because resolving an IANA
+  name reads the tz database, which is configuration and I/O — a separate walk over
+  `app/engines/` keeps it that way. An engine is given its zone exactly as it is given
+  `now`. _Avoid_: tz, timezone string, IANA name.
 - **Clock** — the `Protocol` in the kernel returning an `Instant`, **passed, never
   imported**. No module reads ambient time (ADR-0015's first purity rule), which is what
   makes scrubbing forwards and backwards, determinism and every fixed-`now` test
@@ -189,7 +202,7 @@ there; they are not repeated here.
   string fields are legitimate. A `ScoredTerm` checks its payload's kind against its own code,
   because the two are the same machine key spelled twice. _Avoid_: reason text, message,
   description.
-- **Pending weights** (`matchfit/v1/constants.PENDING_WEIGHTS`) — the four terms the table
+- **Pending weights** (`matchfit/v1/constants.PENDING_WEIGHTS`) — the three terms the table
   still owes, written out with the weight each will take, and the constants refuse to be built
   unless the declared and the pending weights sum to a hundred. So *the weights sum to 100* is
   enforced in the only form in which it can be true today, and completing the table is a diff

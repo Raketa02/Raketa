@@ -1,14 +1,16 @@
-"""Match Fit v1 — six of the ten terms, and the whole of the mechanism.
+"""Match Fit v1 — seven of the ten terms, and the whole of the mechanism.
 
 This version scores every term that needs nothing but the **Player profile** and the
-match itself: price against a declared ceiling, travel against a declared radius,
-the match's type against a declared preference, and a ladder the player entered.
-Beside them, the two terms that **ship dark** — group reliability and familiarity —
-whose snapshot fields are present and absent from the first commit, so exclusion,
-renormalisation and Coverage are exercised by every call rather than being untested
-machinery waiting for a context that does not exist.
+match itself: the match's start against the days and hours the player declared, price
+against a declared ceiling, travel against a declared radius, the match's type against
+a declared preference, and a ladder the player entered. Beside them, the two terms
+that **ship dark** — group reliability and familiarity — whose snapshot fields are
+present and absent from the first commit, so exclusion, renormalisation and Coverage
+are exercised by every call rather than being untested machinery waiting for a context
+that does not exist.
 
-The four terms still owed are named with their weights in ``constants.PENDING_WEIGHTS``.
+The three terms still owed are named with their weights in
+``constants.PENDING_WEIGHTS``.
 
 The whole score, in the order it happens:
 
@@ -52,6 +54,7 @@ from app.engines.fit import (
     Term,
     TermCode,
     TermFact,
+    TimeFact,
     TravelFact,
 )
 from app.engines.forecast import PairingAnalysis
@@ -75,8 +78,17 @@ from app.engines.matchmaking import (
     PlayerProfile,
     PlayerRef,
     SeatSnapshot,
+    Weekday,
 )
-from app.kernel import Instant, Ratio, exhaustive, invariant, ratio
+from app.kernel import (
+    Instant,
+    Ratio,
+    exhaustive,
+    invariant,
+    local_iso_weekday,
+    local_minute_of_day,
+    ratio,
+)
 
 
 @final
@@ -122,9 +134,12 @@ class MatchFitEngineV1:
         In this version it is read for the pairing version the score carries; the two
         terms that read its numbers are #86's.
 
-        ``now`` is unread by every term here — nothing about a price, a distance or a
-        ladder depends on when it is asked — and it is still an explicit input,
-        because the terms this table still owes do depend on it and because a score
+        ``now`` is unread by every term here — and it stays unread even now that one
+        of them is about time, because *when the match is* and *when you asked* are
+        different questions: the time fit term reads the match's own start, so the
+        same match scores the same at breakfast and at midnight. It is still an
+        explicit input, because the term this table still owes that measures the
+        run-up to the join cutoff does depend on it (#85) and because a score
         reproducible from its stored inputs is the whole basis of the falsification
         programme. That it is **rounded to the minute** is a precondition and is
         checked as one: a score computed from an instant carrying seconds could never
@@ -154,6 +169,41 @@ class MatchFitEngineV1:
             # forecast it was scored against.
             pairing_version=analysis.engine_version,
         )
+
+
+def _time_fit(scoring: Scoring) -> Term:
+    """Whether the match starts when the player said they can play.
+
+    **When somebody can play is the first thing they filter on**, and the source
+    design had no arithmetic for it at all: it labelled a term *"Time and travel"*
+    and computed only the travel half, so a match at seven in the morning and one
+    at seven in the evening were the same card to somebody who plays after work.
+
+    A constraint, so the two silences are *no limit* and not *no measurement*: no
+    declared days is any day, no declared hours is any hour, and a player who
+    declared neither has no time problem at all — full marks, full weight, Coverage
+    untouched, by the same route a missing price ceiling reaches it.
+
+    **Both halves through the kernel's coordinates, never by date arithmetic.** A
+    declaration is a claim about a clock face and an ``Instant`` is UTC, so the
+    club's zone is the only thing that can join them, and both readers take it. A
+    weekday read off the instant's own date would be wrong for the two hours either
+    side of a Warsaw midnight — 22:30 UTC on a Sunday is already Monday — and wrong
+    silently, which is why neither half is computed here.
+    """
+
+    zone = scoring.snapshot.club.zone
+    start = scoring.snapshot.start
+    fact = TimeFact(
+        weekday=Weekday(local_iso_weekday(start, zone)),
+        minute=local_minute_of_day(start, zone),
+        days=scoring.profile.days,
+        hours=scoring.profile.hours,
+    )
+    free = fact.on_a_declared_day and fact.inside_a_declared_window
+    return _constraint(
+        TermCode.TIME_FIT, FULL_MARKS if free else CONSTANTS.time_outside, fact
+    )
 
 
 def _price(scoring: Scoring) -> Term:
@@ -336,6 +386,7 @@ def _familiarity(scoring: Scoring) -> Term:
 #: that *one term per code* is true by construction and the constants' guard over the
 #: same key set is checking the same thing from the other side.
 _TABLE: Mapping[TermCode, Callable[[Scoring], Term]] = {
+    TermCode.TIME_FIT: _time_fit,
     TermCode.GROUP_RELIABILITY: _group_reliability,
     TermCode.TRAVEL: _travel,
     TermCode.LADDER_QUALIFICATION: _ladder,

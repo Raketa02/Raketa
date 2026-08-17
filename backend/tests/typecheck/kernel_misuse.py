@@ -73,6 +73,7 @@ from app.engines.fit import (
     Term,
     TermCode,
     TermKind,
+    TimeFact,
 )
 from app.engines.matchfit.core import Observed, constraint_term, evidence_term
 from app.engines.pairing.core import Contender, Roster, Side, as_float, side_of_one
@@ -88,6 +89,7 @@ from app.kernel import (
     Grosze,
     Instant,
     InvariantViolated,
+    IsoWeekday,
     MinuteOfDay,
     Minutes,
     NoCard,
@@ -101,6 +103,7 @@ from app.kernel import (
     Sport,
     SportSpec,
     Unavailable,
+    Zone,
     add_grosze,
     apply_fraction,
     card_offset,
@@ -113,6 +116,9 @@ from app.kernel import (
     hours,
     instant,
     invariant,
+    iso_weekday,
+    local_iso_weekday,
+    local_minute_of_day,
     minute_of_day,
     minutes,
     payable_from,
@@ -423,6 +429,85 @@ def a_clock_returns_an_instant(clock: Clock) -> datetime:
     return clock.now()
 
 
+def a_weekday_is_not_a_minute_of_day() -> MinuteOfDay:
+    """The case `IsoWeekday`'s brand alone catches, and the reason it exists.
+
+    Both are `NewType`s over `int` and Wednesday is 3, which is also a perfectly
+    legal minute meaning *three minutes past midnight*. Collapse `IsoWeekday` to
+    `int` and this line goes quiet while every runtime test still passes.
+    """
+
+    return local_iso_weekday(NOON, WARSAW)  # want-error: return-value
+
+
+def a_weekday_is_not_a_day_offset() -> DayOffset:
+    """Anchor-relative days and days of the week are different quantities.
+
+    Sunday is 7 and *seven days from the anchor* is 7, so the transposition has no
+    wrong-looking value anywhere in it — the two brands are the only thing between
+    a card offered next Sunday and one offered a week today.
+    """
+
+    return iso_weekday(7)  # want-error: return-value
+
+
+def a_minute_is_not_a_weekday() -> IsoWeekday:
+    """And the other direction, which the range check cannot make loud.
+
+    `iso_weekday` refuses anything outside 1..7 at runtime, so a minute of 600
+    raises — but a minute of 3 does not, and that is the call this line refuses
+    before it can be written.
+    """
+
+    return local_minute_of_day(NOON, WARSAW)  # want-error: return-value
+
+
+def a_zone_is_not_its_name() -> ClubSnapshot:
+    """A club carries the kernel's `Zone`, never the IANA string it was built from.
+
+    A name is a string until somebody resolves it, and *who resolves it* is the
+    question the kernel answers exactly once: an engine holds a zone and can
+    neither build one nor decide what one means.
+    """
+
+    return ClubSnapshot(
+        travel_minutes=minutes(12),
+        zone="Europe/Warsaw",  # want-error: arg-type
+    )
+
+
+def a_match_without_a_start_does_not_compile() -> MatchSnapshot:
+    """No default, for the same reason the price and the club have none.
+
+    A default of *now* is a match starting this instant, which is a wrong answer
+    rather than a loud one — so an assembler that forgets when the match is fails
+    to compile instead of scoring one against the wrong evening.
+    """
+
+    return MatchSnapshot(  # want-error: call-arg
+        sport=Sport.TENNIS,
+        seats=(SeatSnapshot(), SeatSnapshot()),
+        current_player=UnratedPlayer(player=A_REF),
+        counted=True,
+        seat_share=A_SEAT,
+        payable=A_PAYABLE,
+        club=ClubSnapshot(travel_minutes=minutes(12), zone=WARSAW),
+        ladder=LadderQualification.NOT_IN_A_LADDER,
+    )
+
+
+def a_zone_is_what_both_readers_take() -> tuple[IsoWeekday, MinuteOfDay]:
+    """The legitimate use beside them: one instant, one zone, both halves."""
+
+    return local_iso_weekday(NOON, WARSAW), local_minute_of_day(NOON, WARSAW)
+
+
+def a_zone_may_be_held_without_importing_zoneinfo(zone: Zone) -> IsoWeekday:
+    """And the reason `Zone` is exported at all: an engine names the type."""
+
+    return local_iso_weekday(NOON, zone)
+
+
 def the_coordinates_compose(anchor: Instant) -> Result[Instant, NonexistentLocalTime]:
     return slot_start(
         anchor=shifted(anchor, hours(-12)),
@@ -724,10 +809,11 @@ def a_snapshot_holds_a_tuple_of_seats_and_not_a_list() -> MatchSnapshot:
         current_player=PlayerSkill(
             player=A_REF, level=A_LEVEL, uncertainty=A_SIGMA, confidence=30
         ),
+        start=NOON,
         counted=True,
         seat_share=A_SEAT,
         payable=A_PAYABLE,
-        club=ClubSnapshot(travel_minutes=minutes(12)),
+        club=ClubSnapshot(travel_minutes=minutes(12), zone=WARSAW),
         ladder=LadderQualification.NOT_IN_A_LADDER,
     )
 
@@ -995,10 +1081,11 @@ def an_unrated_player_may_be_the_person_the_analysis_is_for() -> MatchSnapshot:
         sport=Sport.TENNIS,
         seats=(SeatSnapshot(), SeatSnapshot()),
         current_player=UnratedPlayer(player=A_REF),
+        start=NOON,
         counted=True,
         seat_share=A_SEAT,
         payable=A_PAYABLE,
-        club=ClubSnapshot(travel_minutes=minutes(12)),
+        club=ClubSnapshot(travel_minutes=minutes(12), zone=WARSAW),
         ladder=LadderQualification.NOT_IN_A_LADDER,
     )
 
@@ -1172,6 +1259,36 @@ def a_window_runs_over_minutes_of_the_day_and_not_over_durations() -> HourWindow
     return HourWindow(start=minutes(1080), end=minutes(1260))  # want-error: arg-type
 
 
+class ASecondKindOfTimeFact(TimeFact):  # want-error: misc
+    """`@final`, like every other payload. A subclass would be a member of
+    `TermFact` that nothing declared, so a `match` over the union would typecheck
+    while silently not handling it."""
+
+
+def a_time_payload_carries_the_clock_face_and_not_the_instant() -> TimeFact:
+    """The whole point of converting: a term compares a **local** weekday and
+    minute, and the instant it came from is not either of them."""
+
+    return TimeFact(
+        weekday=Weekday.TUESDAY,
+        minute=NOON,  # want-error: arg-type
+        days=None,
+        hours=None,
+    )
+
+
+def a_declared_day_set_is_frozen() -> TimeFact:
+    """The payload reports the declaration it was scored against, unchanged — a
+    mutable set handed to a client is a declaration a client could edit."""
+
+    return TimeFact(
+        weekday=Weekday.TUESDAY,
+        minute=minute_of_day(1110),
+        days={Weekday.TUESDAY},  # want-error: arg-type
+        hours=None,
+    )
+
+
 def every_way_a_term_can_be_absent_must_be_handled(term: Term) -> Ratio:
     """The union is two members. A caller handling only the scored one leaves the
     exclusion — the state the whole design turns on — unhandled at the tail."""
@@ -1208,6 +1325,22 @@ def an_evidence_term_scores_when_something_was_observed() -> Term:
         Observed(
             value=A_RATE,
             fact=ReliabilityFact(least_reliable=A_RATE, observed=3, seated=3),
+        ),
+    )
+
+
+def a_time_term_reads_a_clock_face_against_a_declaration() -> ScoredTerm:
+    """The legitimate shape: both halves local, both silences spelled ``None``."""
+
+    return constraint_term(
+        TermCode.TIME_FIT,
+        12,
+        A_RATE,
+        TimeFact(
+            weekday=Weekday(local_iso_weekday(NOON, WARSAW)),
+            minute=local_minute_of_day(NOON, WARSAW),
+            days=frozenset({Weekday.TUESDAY}),
+            hours=(HourWindow(start=minute_of_day(1080), end=minute_of_day(1320)),),
         ),
     )
 

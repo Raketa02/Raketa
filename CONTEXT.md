@@ -266,17 +266,20 @@ ahead of the first club, which is the whole reason they could be built now.
 > forecast rather than hidden and says how much of the answer was stood in for; the two
 > states that still decline are a court nobody has joined and one where nobody seated has a
 > rating at that sport, because both leave nothing for a stand-in to be drawn from.
-> **Match Fit** is half built. `app/engines/matchfit/` holds the framework whole — **Term**
-> in both its kinds, the renormalisation, **Coverage** as its own number, **Reason**s ranked
-> by contribution and one warning — with six of its ten terms: price, travel, match type and
-> ladder qualification, all reading the **Player profile**, plus group reliability and
-> familiarity, which are *present and absent* so that exclusion and Coverage are exercised by
-> every score rather than being untested machinery. The four still owed are named with their
-> weights in the engine's own constants: skill overlap and predicted balance, time fit, and
+> **Match Fit** is most of the way built. `app/engines/matchfit/` holds the framework whole —
+> **Term** in both its kinds, the renormalisation, **Coverage** as its own number, **Reason**s
+> ranked by contribution and one warning — with seven of its ten terms: **time fit**, price,
+> travel, match type and ladder qualification, all reading the **Player profile**, plus group
+> reliability and familiarity, which are *present and absent* so that exclusion and Coverage
+> are exercised by every score rather than being untested machinery. Time fit is the term the
+> source design named and never computed: a match's start is read against the days and hours
+> the player declared, through the club's zone and the kernel's coordinates, and a match
+> outside them ranks lower without being hidden. The three still owed are named with their
+> weights in the engine's own constants: skill overlap and predicted balance, and
 > **Match viability** — which is the term that closes *absence never flatters* for ranking,
 > because it is the only evidence term that is always computable. Until it lands, an empty
 > court that satisfies every declaration still scores above a well-formed match on Fit alone,
-> at a third less Coverage, and a golden persona says so. **Match viability** and **At Stake**
+> at a quarter less Coverage, and a golden persona says so. **Match viability** and **At Stake**
 > are still words without code. The terms are committed ahead of them because the decisions
 > behind them are
 > ([ADR-0025](docs/adr/0025-binding-pairing-for-counted-matches.md),
@@ -370,9 +373,16 @@ forty minutes away at twice your ceiling is a good match in the abstract and a b
   price ceiling, distance, appetite, competitive or social, and how far ahead they will
   commit. One declaration, read by every engine that needs it, never restated as a constant
   inside one. **Every part of it is optional and absence means undeclared** — which is what
-  a constraint term reads as *no limit*. Distance is declared in **minutes**, because that is
-  what a card shows and comparing a radius in kilometres against it would mean inventing a
-  speed. Appetite and the commitment horizon are the ranking policy's; no term reads them.
+  a constraint term reads as *no limit*, and days and hours are two declarations rather than
+  one, so a player who named days and no hours has no hour problem. Distance is declared in
+  **minutes**, because that is what a card shows and comparing a radius in kilometres against
+  it would mean inventing a speed. **Days and hours are a clock face and never an instant**:
+  *"I play after work"* is a claim about the wall in the club, so a match's start is compared
+  against them in the club's own zone. A declared stretch of a day runs forwards, never wraps
+  midnight — 22:00 to 01:00 is two declarations — and **excludes its end**, so two stretches
+  declared back to back do not overlap. A match is inside a declared stretch when it
+  **starts** inside it, however long it runs. Appetite and the commitment horizon are the
+  ranking policy's; no term reads them.
 
 **Invariants**
 - **Fit and certainty are separate variables.** The same rule the rating context holds for

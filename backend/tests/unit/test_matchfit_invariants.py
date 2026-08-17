@@ -15,6 +15,7 @@ ADR-0027 exists to close.
 
 import ast
 from dataclasses import FrozenInstanceError, replace
+from datetime import datetime, timezone
 from enum import Enum
 from fractions import Fraction
 from pathlib import Path
@@ -33,6 +34,7 @@ from app.engines.fit import (
     ScoredTerm,
     TermCode,
     TermKind,
+    TimeFact,
     TravelFact,
 )
 from app.engines.matchfit.core import (
@@ -72,18 +74,25 @@ from app.engines.matchmaking import (
 from app.kernel import (
     InvariantViolated,
     Ratio,
+    Zone,
     apply_fraction,
     grosze,
+    instant,
+    local_iso_weekday,
+    local_minute_of_day,
     minutes,
     ratio,
 )
 from tests.unit.matchmaking_snapshots import (
     NOW,
+    WARSAW,
     analysis,
     doubles,
     profile,
     singles,
     skill,
+    starting,
+    window,
     with_records,
 )
 
@@ -117,9 +126,20 @@ CASES: tuple[tuple[str, MatchSnapshot, PlayerProfile], ...] = (
             ceiling=2500,
             radius=20,
             match_type=MatchTypePreference.COMPETITIVE,
-            days=frozenset({Weekday.SATURDAY, Weekday.SUNDAY}),
+            days=frozenset({Weekday.TUESDAY, Weekday.SATURDAY}),
+            hours=(window(18, 22),),
             appetite=2,
         ),
+    ),
+    (
+        "on a day they did not declare",
+        doubles(ADA, BO, CY, None),
+        profile(days=frozenset({Weekday.SATURDAY, Weekday.SUNDAY})),
+    ),
+    (
+        "at an hour they did not declare",
+        doubles(ADA, BO, CY, None),
+        profile(days=frozenset({Weekday.TUESDAY}), hours=(window(6, 9),)),
     ),
     (
         "over the ceiling",
@@ -215,7 +235,7 @@ def test_the_invariants_below_are_asserted_over_every_shape():
     well and lit badly.
     """
 
-    assert len(CASES) == 14, IDS
+    assert len(CASES) == 16, IDS
     assert len(set(IDS)) == len(IDS), IDS
 
 
@@ -408,9 +428,18 @@ def test_a_player_who_declared_nothing_has_the_same_coverage_as_one_who_declared
     silent = scored(match, profile())
     declared = scored(
         match,
-        profile(ceiling=2500, radius=20, match_type=MatchTypePreference.COMPETITIVE),
+        profile(
+            ceiling=2500,
+            radius=20,
+            match_type=MatchTypePreference.COMPETITIVE,
+            days=frozenset({Weekday.TUESDAY}),
+            hours=(window(18, 22),),
+        ),
     )
-    assert silent.coverage == declared.coverage
+    breached = scored(
+        match, profile(days=frozenset({Weekday.SUNDAY}), hours=(window(6, 9),))
+    )
+    assert silent.coverage == declared.coverage == breached.coverage
     assert silent.fit == 100
 
 
@@ -672,6 +701,161 @@ def test_a_decay_from_inside_the_limit_is_a_caller_bug():
         decayed(Ratio(Fraction(-1, 2)), ratio(1, 1))
 
 
+# --- Time fit reads a clock face, and the clock face is the club's ---------------
+
+
+def _time(snapshot: MatchSnapshot, declaration: PlayerProfile) -> ScoredTerm:
+    term = next(
+        item
+        for item in scored(snapshot, declaration).terms
+        if item.code is TermCode.TIME_FIT
+    )
+    assert isinstance(term, ScoredTerm)
+    return term
+
+
+@pytest.mark.parametrize("name, snapshot, declaration", CASES, ids=IDS)
+def test_the_time_term_reads_both_halves_through_the_kernel(
+    name, snapshot, declaration
+):
+    """*Never by ad-hoc date arithmetic*, as something a test can hold the term to.
+
+    The payload's weekday and minute are asserted to be exactly what the kernel's
+    two readers return for this match's start in this club's zone. An engine that
+    computed either half itself would agree here on most days and disagree on the
+    two hours either side of a local midnight and twice a year, which is precisely
+    the class of bug nobody notices from a passing suite.
+    """
+
+    fact = _time(snapshot, declaration).fact
+    assert isinstance(fact, TimeFact)
+    zone = snapshot.club.zone
+    assert fact.weekday.value == local_iso_weekday(snapshot.start, zone)
+    assert fact.minute == local_minute_of_day(snapshot.start, zone)
+
+
+def test_a_match_after_midnight_utc_is_on_the_local_day_and_not_the_utc_one():
+    """22:30 UTC on a Sunday is already **Monday** in Warsaw.
+
+    The case that makes the conversion load-bearing rather than decorative: a term
+    reading the weekday off the instant would say Sunday, and somebody who declared
+    Sundays would be shown a match starting at half past midnight on Monday. Both
+    directions are asserted, so a mutation swapping the zone for UTC fails on the
+    declaration it satisfies as well as on the one it breaches.
+    """
+
+    after_midnight = doubles(ADA, BO, CY, DEE, start=starting(day=7, hour=0, minute=30))
+    assert after_midnight.start.isoweekday() == 7
+    assert _time(after_midnight, profile(days=frozenset({Weekday.MONDAY}))).value == 1
+    assert (
+        _time(after_midnight, profile(days=frozenset({Weekday.SUNDAY}))).value
+        == CONSTANTS.time_outside
+    )
+
+
+def test_the_clock_face_survives_a_daylight_saving_change():
+    """Poland observes DST, so the offset the conversion uses is not a constant.
+
+    01:30 UTC on 29 March 2026 is 03:30 in Warsaw, because the clocks went forward
+    an hour earlier that morning; read with the winter offset it would be 02:30, an
+    hour that does not exist that day. A declaration of 03:00–06:00 is satisfied and
+    one of 02:00–03:00 is not, which is the same fact asserted from both sides.
+    """
+
+    spring_forward = doubles(
+        ADA,
+        BO,
+        CY,
+        DEE,
+        start=instant(datetime(2026, 3, 29, 1, 30, tzinfo=timezone.utc)),
+    )
+    assert local_minute_of_day(spring_forward.start, WARSAW) == 3 * 60 + 30
+    assert _time(spring_forward, profile(hours=(window(3, 6),))).value == 1
+    assert (
+        _time(spring_forward, profile(hours=(window(2, 3),))).value
+        == CONSTANTS.time_outside
+    )
+
+
+def test_one_match_at_two_clubs_in_different_zones_scores_differently():
+    """The zone is read off the *club*, which is what makes it a club fact.
+
+    One instant, one declaration, two clubs: 20:30 in Warsaw is 19:30 in London, and
+    a player who declared 19:00–20:00 can play at one of them. Nothing else moves.
+    """
+
+    declaration = profile(hours=(window(19, 20),))
+    at_seven_thirty_in_london = doubles(
+        ADA, BO, CY, DEE, start=starting(hour=20, minute=30), zone=Zone("Europe/London")
+    )
+    at_eight_thirty_in_warsaw = replace(
+        at_seven_thirty_in_london,
+        club=replace(at_seven_thirty_in_london.club, zone=WARSAW),
+    )
+    assert _time(at_seven_thirty_in_london, declaration).value == 1
+    assert (
+        _time(at_eight_thirty_in_warsaw, declaration).value == CONSTANTS.time_outside
+    )
+
+
+def test_a_match_outside_the_declaration_ranks_lower_and_is_never_hidden():
+    """*Matches outside them rank lower without being hidden*, as arithmetic.
+
+    A declaration is a soft filter here, exactly as price and distance are: the term
+    scores above nothing and always runs, so a Saturday morning match reaches
+    somebody who declared weekday evenings as a card they can overrule rather than
+    as an absence they cannot argue with.
+    """
+
+    weekday_evenings = profile(
+        days=frozenset({Weekday.MONDAY, Weekday.TUESDAY}), hours=(window(18, 22),)
+    )
+    outside = _time(doubles(ADA, BO, CY, DEE, start=starting(day=5)), weekday_evenings)
+    assert 0 < outside.value < 1
+    assert outside.kind is TermKind.CONSTRAINT
+    assert isinstance(outside, ScoredTerm)
+
+
+def test_declaring_only_one_half_leaves_the_other_unconstrained():
+    """Days and hours are two declarations, and each silence is its own *no limit*.
+
+    A player who named days and no hours has no hour problem, and one who named
+    hours and no days has no day problem. Reading either silence as *nothing works*
+    is the mistake ``PlayerProfile`` refuses an empty set for.
+    """
+
+    tuesday_seven_in_the_morning = doubles(
+        ADA, BO, CY, DEE, start=starting(hour=7, minute=0)
+    )
+    assert _time(tuesday_seven_in_the_morning, profile()).value == 1
+    days_only = profile(days=frozenset({Weekday.TUESDAY}))
+    hours_only = profile(hours=(window(6, 9),))
+    assert _time(tuesday_seven_in_the_morning, days_only).value == 1
+    assert _time(tuesday_seven_in_the_morning, hours_only).value == 1
+    both = profile(days=frozenset({Weekday.TUESDAY}), hours=(window(18, 22),))
+    assert _time(tuesday_seven_in_the_morning, both).value == CONSTANTS.time_outside
+
+
+def test_which_half_failed_is_reported_even_though_it_does_not_move_the_score():
+    """One value for both halves, and a payload that can still tell them apart.
+
+    The score says *you cannot play then*; the payload says whether it was the day
+    or the hour. That is what lets a client write the true sentence without the
+    engine having to encode two constants and an ordering between them that no
+    measurement here could settle.
+    """
+
+    declaration = profile(days=frozenset({Weekday.TUESDAY}), hours=(window(18, 22),))
+    wrong_hour = _time(
+        doubles(ADA, BO, CY, DEE, start=starting(hour=7, minute=0)), declaration
+    ).fact
+    saturday = doubles(ADA, BO, CY, DEE, start=starting(day=5))
+    wrong_day = _time(saturday, declaration).fact
+    assert isinstance(wrong_hour, TimeFact) and isinstance(wrong_day, TimeFact)
+    assert wrong_hour.on_a_declared_day and not wrong_hour.inside_a_declared_window
+    assert wrong_day.inside_a_declared_window and not wrong_day.on_a_declared_day
+
+
 # --- The value object's own guards ----------------------------------------------
 
 
@@ -776,10 +960,9 @@ def test_the_declared_and_the_pending_weights_sum_to_a_hundred():
     assert set(PENDING_WEIGHTS) == {
         "skill_overlap",
         "predicted_balance",
-        "time_fit",
         "match_viability",
     }
-    assert sum(CONSTANTS.weights.values()) == 38
+    assert sum(CONSTANTS.weights.values()) == 50
 
 
 def test_a_table_that_does_not_sum_to_a_hundred_is_refused():
@@ -793,6 +976,7 @@ def test_a_term_the_vocabulary_names_and_the_table_does_not_weight_is_refused():
             weights={
                 code: weight
                 for code, weight in (
+                    (TermCode.TIME_FIT, 12),
                     (TermCode.GROUP_RELIABILITY, 11),
                     (TermCode.TRAVEL, 8),
                     (TermCode.LADDER_QUALIFICATION, 6),
@@ -806,8 +990,15 @@ def test_a_term_the_vocabulary_names_and_the_table_does_not_weight_is_refused():
 @pytest.mark.parametrize("mismatch", [ratio(1, 1), ratio(3, 2)])
 def test_a_mismatch_worth_full_marks_or_more_is_refused(mismatch):
     """At full marks the term is not a constraint any more: a friendly and a rated
-    match would score identically for somebody who asked for one of them."""
+    match would score identically for somebody who asked for one of them.
 
+    All three mismatch values, because the guard is a loop over a written-out list
+    and a value left off it is a constant nothing checks — which is exactly what a
+    mutation run found the first time this list was one short.
+    """
+
+    with pytest.raises(InvariantViolated, match="not below full marks"):
+        MatchFitConstants(time_outside=mismatch)
     with pytest.raises(InvariantViolated, match="not below full marks"):
         MatchFitConstants(match_type_mismatch=mismatch)
     with pytest.raises(InvariantViolated, match="not below full marks"):
@@ -817,6 +1008,45 @@ def test_a_mismatch_worth_full_marks_or_more_is_refused(mismatch):
 def test_a_span_of_nothing_is_refused():
     with pytest.raises(InvariantViolated, match="price span"):
         MatchFitConstants(price_decay_span=ratio(0, 1))
+
+
+def test_the_time_and_travel_weight_is_now_two_terms_that_move_independently():
+    """The split the spec asks for, asserted as the sum it was split from.
+
+    The source document labelled one term *"Time and travel"* and computed only the
+    travel half. The 20 points it held are now 12 and 8, two terms with their own
+    curves and their own falsifying measurements — and the table still sums to 100,
+    which the constants refuse to be built without.
+
+    **Where the 20 comes from is worth saying plainly**: the source document is not
+    in this repository. The figure is the one this repo's own table committed to,
+    when ``time_fit`` 12 was written into ``PENDING_WEIGHTS`` beside travel's 8, and
+    that is what this pins — a later retune is free to move either, and not free to
+    move them without this test saying so.
+    """
+
+    assert CONSTANTS.weights[TermCode.TIME_FIT] == 12
+    assert CONSTANTS.weights[TermCode.TRAVEL] == 8
+    split = CONSTANTS.weights[TermCode.TIME_FIT] + CONSTANTS.weights[TermCode.TRAVEL]
+    assert split == 20
+    assert "time_fit" not in PENDING_WEIGHTS
+    declared = sum(CONSTANTS.weights.values())
+    assert declared + sum(PENDING_WEIGHTS.values()) == WEIGHT_TOTAL
+
+
+def test_when_you_can_play_is_the_strictest_of_the_three_declarations():
+    """The ordering the three mismatch constants encode, so a retune cannot invert it.
+
+    A match outside your ladder is the right kind of evening that does not count; a
+    friendly offered to somebody who asked for counted matches is the wrong kind of
+    evening; a 07:00 match offered to somebody who plays after work is an evening
+    they are at work for. Two tenths, three tenths, a half — and a retune is free to
+    move all three and not free to reorder them without saying so here.
+    """
+
+    assert CONSTANTS.time_outside < CONSTANTS.match_type_mismatch
+    assert CONSTANTS.match_type_mismatch < CONSTANTS.ladder_outside
+    assert CONSTANTS.time_outside > 0
 
 
 def test_a_ladder_mismatch_is_milder_than_a_match_type_mismatch():
@@ -857,7 +1087,7 @@ def test_every_constant_carries_the_measurement_that_would_falsify_it():
         if "Falsified by:" not in note:
             unfalsifiable.append(node.target.id)
     assert unfalsifiable == [], unfalsifiable
-    assert len([node for node in body if isinstance(node, ast.AnnAssign)]) == 7, (
+    assert len([node for node in body if isinstance(node, ast.AnnAssign)]) == 8, (
         "the constant count moved — read the new one's falsifying note first"
     )
 
@@ -957,9 +1187,10 @@ def test_the_score_carries_no_display_text():
         "MatchTypeFact.kind",
         "PriceFact.kind",
         "ReliabilityFact.kind",
+        "TimeFact.kind",
         "TravelFact.kind",
     ]
-    assert len(fields) == 32, [name for name, _ in fields]
+    assert len(fields) == 37, [name for name, _ in fields]
 
 
 def test_no_match_fit_suite_reaches_for_the_pairing_engine():
@@ -1006,6 +1237,7 @@ def test_every_value_object_in_the_vocabulary_is_frozen_and_closed():
     """
 
     vocabulary = (
+        TimeFact,
         PriceFact,
         TravelFact,
         MatchTypeFact,

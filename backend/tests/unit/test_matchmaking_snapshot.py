@@ -35,16 +35,22 @@ from app.kernel import (
     InvariantViolated,
     Sport,
     grosze,
+    instant,
+    iso_weekday,
+    local_iso_weekday,
     minute_of_day,
     minutes,
     percent,
 )
 from tests.unit.matchmaking_snapshots import (
+    START,
+    WARSAW,
     bare,
     doubles,
     on_seat,
     singles,
     skill,
+    starting,
     unrated,
 )
 
@@ -278,13 +284,40 @@ def test_a_declared_window_runs_forwards_and_never_wraps_midnight():
         HourWindow(start=minute_of_day(600), end=minute_of_day(600))
 
 
-def test_a_declared_day_is_numbered_the_way_a_date_numbers_it():
+def test_a_declared_window_is_end_exclusive():
+    """18:00–22:00 is 18:00 up to but not including 22:00.
+
+    The same half-open convention a ``MinuteOfDay`` itself carries — a day is 0 up
+    to but not including 1440 — so two windows a player declares back to back do
+    not overlap and *"which window is 22:00 in"* has one answer. The rule lives on
+    the window rather than in the term that scores it, because two readers
+    comparing a minute against a window by hand are two chances to write ``<=``.
+    """
+
+    evening = HourWindow(start=minute_of_day(18 * 60), end=minute_of_day(22 * 60))
+    assert evening.contains(minute_of_day(18 * 60))
+    assert evening.contains(minute_of_day(21 * 60 + 59))
+    assert not evening.contains(minute_of_day(22 * 60))
+    assert not evening.contains(minute_of_day(17 * 60 + 59))
+
+
+def test_a_declared_day_is_numbered_the_way_the_kernel_numbers_one():
     """ISO numbering, so a match's local start day maps onto a declaration without
     a second convention being invented between the two. **Not a start of week**: a
-    set of days has no first element and nothing here says a week begins on Monday."""
+    set of days has no first element and nothing here says a week begins on Monday.
+
+    Asserted against the kernel's own reader rather than against ``date`` here,
+    because that mapping is the one line of the time fit term that could silently
+    renumber: ``Weekday(local_iso_weekday(...))`` is only correct while these two
+    agree about every one of the seven days.
+    """
 
     assert [day.value for day in Weekday] == [1, 2, 3, 4, 5, 6, 7]
     assert Weekday(date(2026, 8, 17).isoweekday()) is Weekday.MONDAY
+    for offset, day in enumerate(Weekday):
+        # The anchor is a Monday in Warsaw, so day zero is Weekday.MONDAY.
+        assert Weekday(local_iso_weekday(starting(day=offset), WARSAW)) is day
+        assert iso_weekday(day.value) == day.value
 
 
 def test_the_three_ladder_states_are_three_facts_and_not_a_bool():
@@ -300,7 +333,36 @@ def test_the_three_ladder_states_are_three_facts_and_not_a_bool():
 
 def test_a_club_cannot_be_a_negative_distance_away():
     with pytest.raises(InvariantViolated, match="a negative travel time"):
-        ClubSnapshot(travel_minutes=minutes(-1))
+        ClubSnapshot(travel_minutes=minutes(-1), zone=WARSAW)
+
+
+def test_a_club_carries_the_zone_its_matches_start_in():
+    """A timezone is a fact about the club, so every match at it shares one.
+
+    There is no default, deliberately, and the reason is the same as the price's: a
+    default of UTC is a club in the wrong country, and the two matches either side
+    of a Warsaw midnight would land on different days without a word.
+    """
+
+    assert doubles(skill("ada", 300, 20), None, None, None).club.zone is WARSAW
+
+
+def test_a_start_that_is_not_rounded_to_the_minute_is_refused():
+    """A start carrying seconds reads back as the minute *below* it.
+
+    So a match at 18:59:59 sits outside a window declared from 19:00 by one second
+    nobody can see, and every downstream coordinate is quietly one minute early.
+    """
+
+    assert START.second == 0 and START.microsecond == 0
+    with pytest.raises(InvariantViolated, match="not rounded to the minute"):
+        doubles(
+            skill("ada", 300, 20),
+            None,
+            None,
+            None,
+            start=instant(START.replace(second=30)),
+        )
 
 
 # --- The money the snapshot carries, and the pair that cannot contradict itself ---

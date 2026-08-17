@@ -6,12 +6,19 @@ carries, as its docstring, the measurement that would falsify it (``docs/adr/001
 number's clothes, and retuning it is then taste rather than science.
 
 **The table is incomplete, and it says so in arithmetic rather than in a comment.**
-Four of the ten terms ADR-0027 specifies are not built yet, so their weights are
+Three of the ten terms ADR-0027 specifies are not built yet, so their weights are
 written out in ``PENDING_WEIGHTS`` with the issue that lands each one, and the
 constants refuse to be built unless the declared weights and the pending ones sum to
 **exactly 100**. So the spec's *"the weights sum to 100"* is enforced today, in the
 only form in which it can be true today, and completing the table is a diff that
 moves a line from one mapping to the other.
+
+**Time fit and travel are two terms and used to be one number.** The source design
+labelled a single term *"Time and travel"* and then computed only the travel half,
+so *when a player said they could play* — the first thing anybody actually filters
+on — carried weight in the table and no arithmetic anywhere. The 20 points are now
+split 12 to time and 8 to travel, as two terms that move independently, and the two
+halves of a decision that were never separable are separately falsifiable.
 
 **Coverage is measured against the declared weights alone**, never against 100.
 Weight belonging to a term nobody has built is not evidence the platform is missing
@@ -34,7 +41,7 @@ from app.kernel import Minutes, Ratio, invariant, minutes, ratio
 #: can only be falsified against results it can be attributed to.
 ENGINE_VERSION = "matchfit-v1"
 
-#: The four terms the table still owes, with the weights ADR-0027 assigns them and
+#: The three terms the table still owes, with the weights ADR-0027 assigns them and
 #: the issue that lands each. They are here rather than in ``weights`` because a
 #: weight with no term behind it is a denominator with nothing in the numerator: it
 #: would lower every Coverage figure by the same amount and say nothing about any
@@ -43,15 +50,12 @@ ENGINE_VERSION = "matchfit-v1"
 #: * ``skill_overlap`` 24 and ``predicted_balance`` 14 — #86. Both read the pairing
 #:   analysis this engine already takes, which is why the analysis is an input from
 #:   the first commit rather than an argument added later.
-#: * ``time_fit`` 12 — #84. A constraint, reading the declared days and hours the
-#:   profile already carries.
 #: * ``match_viability`` 12 — #85. Evidence, and the only evidence term that is
 #:   *always* computable, because every match has a phase and a court hold state.
 PENDING_WEIGHTS: Mapping[str, int] = MappingProxyType(
     {
         "skill_overlap": 24,
         "predicted_balance": 14,
-        "time_fit": 12,
         "match_viability": 12,
     }
 )
@@ -64,12 +68,13 @@ WEIGHT_TOTAL = 100
 @final
 @dataclass(frozen=True)
 class MatchFitConstants:
-    """The v1 hypotheses: six weights, two decay spans, two mismatch values, and a
-    threshold."""
+    """The v1 hypotheses: seven weights, two decay spans, three mismatch values, and
+    a threshold."""
 
     weights: Mapping[TermCode, int] = field(
         default_factory=lambda: MappingProxyType(
             {
+                TermCode.TIME_FIT: 12,
                 TermCode.GROUP_RELIABILITY: 11,
                 TermCode.TRAVEL: 8,
                 TermCode.LADDER_QUALIFICATION: 6,
@@ -122,6 +127,40 @@ class MatchFitConstants:
     **Falsified by:** the same measurement pointed at minutes. Bucket joins by
     minutes past the declared radius; the point where the join rate reaches the base
     rate for matches inside the radius is where this span belongs.
+    """
+
+    time_outside: Ratio = field(default_factory=lambda: ratio(20, 100))
+    """What a match outside the declared days **or** the declared hours is worth.
+
+    **The strictest of the three mismatch values**, below the match-type mismatch
+    and well below the ladder one, and that ordering is the claim. A friendly
+    offered to somebody who asked for counted matches is the wrong kind of evening
+    and they can still play it; a match at 07:00 offered to somebody who plays
+    after work is an evening they are at work for. Not zero, because a declaration
+    of *when* is a rough statement of habit rather than a calendar — a Saturday
+    morning is joinable by somebody who declared weekday evenings, once — and
+    because *matches outside the declaration rank lower without being hidden*.
+
+    **One value for both halves, deliberately.** Wrong day and wrong hour are the
+    same sentence — *you said you cannot play then* — so splitting them would be
+    two constants and a claim about their ordering that no measurement here could
+    settle. What *is* reported is which half failed, on the term's payload, so a
+    client can say the true thing without the score having to encode it.
+
+    **The rule for a match that overlaps a window only partly: the start decides.**
+    A match beginning inside a declared window is inside it however long it runs,
+    so a 90-minute match starting at 08:30 satisfies a declared 06:00–09:00 and
+    the player reads the start time on the card. The alternative — *the whole
+    match must fit* — is a defensible rule and a different snapshot: it needs a
+    duration this one deliberately does not carry, so adopting it is a vocabulary
+    change rather than a retune of this number.
+
+    **Falsified by:** the join rate on matches whose start falls outside the
+    declared days or hours, against matched ones at otherwise equal fit. Zero is
+    falsified by any join at all. The overlap rule is falsified separately and by a
+    sharper measurement: bucket matches that *start* inside a declared window by
+    whether they end inside it too. If the two buckets join at materially different
+    rates, the start does not decide, and the snapshot owes this term a duration.
     """
 
     match_type_mismatch: Ratio = field(default_factory=lambda: ratio(30, 100))
@@ -201,6 +240,7 @@ class MatchFitConstants:
         for code, weight in self.weights.items():
             invariant(weight > 0, f"{code.value} carries weight {weight}")
         for named, value in (
+            ("the time outside value", self.time_outside),
             ("the match type mismatch", self.match_type_mismatch),
             ("the ladder outside value", self.ladder_outside),
             ("the warning threshold", self.warning_threshold),

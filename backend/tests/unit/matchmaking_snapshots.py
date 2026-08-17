@@ -55,10 +55,13 @@ from app.kernel import (
     Err,
     Instant,
     NoCard,
+    Ok,
     Payable,
     SeatShare,
     Sport,
+    Zone,
     court_price,
+    day_offset,
     divide_among_players,
     grosze,
     minute_of_day,
@@ -66,13 +69,51 @@ from app.kernel import (
     invariant,
     payable_from,
     percent,
+    slot_start,
     zloty,
 )
 
 #: A fixed instant, rounded to the minute. Every engine call takes one, and no
 #: forecast reads it — which is exactly why it is a constant here rather than
-#: something a test computes: a value that varied would suggest it mattered.
+#: something a test computes: a value that varied would suggest it mattered. It is
+#: **Monday 17 August 2026, 20:00 in Warsaw**, which is where the local weekday
+#: every time fit persona is written against comes from.
 NOW = Instant(datetime(2026, 8, 17, 18, 0, tzinfo=timezone.utc))
+
+#: The zone every club in the harness is in. A real one and not UTC, so a test that
+#: quietly read a weekday off an instant instead of off the club's clock face would
+#: be two hours out and would say so.
+WARSAW = Zone("Europe/Warsaw")
+
+
+def starting(
+    *, day: int = 1, hour: int = 18, minute: int = 30, zone: Zone = WARSAW
+) -> Instant:
+    """A start instant written on the club's **clock face**, days from ``NOW``.
+
+    Through ``slot_start`` rather than by building a ``datetime`` here, because
+    that is the one conversion the kernel allows and a harness with its own would
+    be exactly the second answer to a timezone question ADR-0024 forbids. It also
+    means a persona asking for a local time that does not exist — the spring-forward
+    gap — fails loudly here rather than silently scoring an hour it invented.
+    """
+
+    slot = slot_start(
+        anchor=NOW,
+        day=day_offset(day),
+        minute=minute_of_day(hour * 60 + minute),
+        zone=zone,
+    )
+    return invariant(
+        slot.value if isinstance(slot, Ok) else None,
+        f"no local {hour:02d}:{minute:02d} {day} days after the anchor in {zone}",
+    )
+
+
+#: When every match in the harness starts: **Tuesday 18 August 2026, 18:30 in
+#: Warsaw**. A weekday and an evening, so a declaration can be written that this
+#: satisfies and one it breaches, and neither is the same as declaring nothing.
+START = starting()
 
 #: A 96 zł court at a 10% off-peak rate — **ADR-0023's own worked example**, which
 #: rounds to 86 zł and divides into four seats of exactly 21,50. Built through
@@ -146,6 +187,8 @@ def singles(
     travel_minutes: int = 12,
     ladder: LadderQualification = LadderQualification.NOT_IN_A_LADDER,
     history: PlayHistory | None = None,
+    start: Instant = START,
+    zone: Zone = WARSAW,
 ) -> MatchSnapshot:
     """A two-seat match. ``None`` is an empty seat, as in ``doubles``.
 
@@ -164,10 +207,11 @@ def singles(
             on_seat(second, state=states[1]),
         ),
         current_player=viewer if viewer is not None else first,
+        start=start,
         counted=counted,
         seat_share=share,
         payable=payable,
-        club=ClubSnapshot(travel_minutes=minutes(travel_minutes)),
+        club=ClubSnapshot(travel_minutes=minutes(travel_minutes), zone=zone),
         ladder=ladder,
         history=history,
     )
@@ -183,6 +227,8 @@ def doubles(
     travel_minutes: int = 12,
     ladder: LadderQualification = LadderQualification.NOT_IN_A_LADDER,
     history: PlayHistory | None = None,
+    start: Instant = START,
+    zone: Zone = WARSAW,
 ) -> MatchSnapshot:
     """A four-seat match. ``None`` is an empty seat.
 
@@ -207,10 +253,11 @@ def doubles(
             for player, state in zip(occupants, states, strict=True)
         ),
         current_player=viewer if viewer is not None else fallback,
+        start=start,
         counted=counted,
         seat_share=share,
         payable=payable,
-        club=ClubSnapshot(travel_minutes=minutes(travel_minutes)),
+        club=ClubSnapshot(travel_minutes=minutes(travel_minutes), zone=zone),
         ladder=ladder,
         history=history,
     )
@@ -236,10 +283,11 @@ def bare(
         sport=sport,
         seats=seats,
         current_player=current_player,
+        start=START,
         counted=True,
         seat_share=share,
         payable=payable,
-        club=ClubSnapshot(travel_minutes=minutes(12)),
+        club=ClubSnapshot(travel_minutes=minutes(12), zone=WARSAW),
         ladder=LadderQualification.NOT_IN_A_LADDER,
     )
 

@@ -39,6 +39,8 @@ from app.kernel import (
     elapsed_minutes,
     hours,
     instant,
+    iso_weekday,
+    local_iso_weekday,
     local_minute_of_day,
     minute_of_day,
     minutes,
@@ -146,6 +148,21 @@ def test_a_negative_day_offset_is_legal_because_history_is_yesterday() -> None:
     assert day_offset(0) == 0
 
 
+@pytest.mark.parametrize("value", [1, 2, 3, 4, 5, 6, 7])
+def test_a_day_of_the_week_is_iso_numbered(value: int) -> None:
+    """Monday 1 through Sunday 7, the numbering `date.isoweekday` uses."""
+
+    assert iso_weekday(value) == value
+    assert date(2026, 8, 17).isoweekday() == 1
+
+
+@pytest.mark.parametrize("value", [-1, 0, 8, 100])
+def test_a_day_outside_the_week_raises_and_names_the_value(value: int) -> None:
+    with pytest.raises(InvariantViolated) as raised:
+        iso_weekday(value)
+    assert str(value) in str(raised.value)
+
+
 def test_a_duration_is_signed() -> None:
     assert minutes(90) == 90
     assert minutes(-90) == -90
@@ -153,7 +170,9 @@ def test_a_duration_is_signed() -> None:
     assert hours(-12) == -720
 
 
-@pytest.mark.parametrize("make", [minute_of_day, day_offset, minutes, hours])
+@pytest.mark.parametrize(
+    "make", [minute_of_day, day_offset, minutes, hours, iso_weekday]
+)
 def test_a_bool_is_never_a_coordinate(make: object) -> None:
     """`bool` is a subclass of `int`, so `True` would silently mean one."""
 
@@ -183,6 +202,62 @@ def test_a_minute_becomes_that_local_wall_time() -> None:
     started_at = started(anchored_on(date(2026, 8, 16)), 0, 9 * 60 + 45)
     local = started_at.astimezone(WARSAW)
     assert (local.hour, local.minute) == (9, 45)
+
+
+# --- Reading an instant back on a local clock face ------------------------------
+
+
+def test_both_readers_answer_for_the_local_day_and_not_the_utc_one() -> None:
+    """22:30 UTC on a Sunday is already **Monday, 00:30** in Warsaw.
+
+    The two hours a day where a weekday read off the instant's own date is wrong,
+    and the reason `local_iso_weekday` exists beside `local_minute_of_day` rather
+    than being left to a caller with an `astimezone` and an `isoweekday`.
+    """
+
+    late = instant(datetime(2026, 8, 23, 22, 30, tzinfo=UTC))
+    assert late.isoweekday() == 7
+    assert local_iso_weekday(late, WARSAW) == 1
+    assert local_minute_of_day(late, WARSAW) == 30
+
+
+def test_the_two_readers_are_the_inverse_of_the_conversion(
+) -> None:
+    """A week of coordinates out and back: the day and the minute both survive.
+
+    `slot_start` is the one way in and these two are the way out, so this is the
+    round trip stated over both halves — an off-by-one in either would show up on
+    exactly one of the seven days or at exactly one minute of the day.
+    """
+
+    anchor = anchored_on(date(2026, 8, 17))  # a Monday in Warsaw
+    for offset in range(7):
+        for minute in (0, 1, 599, 600, 1110, 1439):
+            started_at = started(anchor, offset, minute)
+            assert local_minute_of_day(started_at, WARSAW) == minute
+            expected = (date(2026, 8, 17) + timedelta(days=offset)).isoweekday()
+            assert local_iso_weekday(started_at, WARSAW) == expected
+
+
+def test_the_local_weekday_follows_the_zone_it_is_asked_in() -> None:
+    """One instant, two zones, two answers — which is what a zone argument means."""
+
+    late = instant(datetime(2026, 8, 23, 22, 30, tzinfo=UTC))
+    assert local_iso_weekday(late, WARSAW) == 1
+    assert local_iso_weekday(late, ZoneInfo("Europe/London")) == 7
+
+
+def test_the_readers_survive_a_daylight_saving_change() -> None:
+    """01:30 UTC on the spring-forward day is 03:30 in Warsaw, not 02:30.
+
+    Read with the winter offset it would be an hour that does not exist that day,
+    which is the failure `slot_start` returns an `Err` for — so the two halves of
+    the round trip have to agree about the offset or the grid and the card do not.
+    """
+
+    after_the_gap = instant(datetime(2026, 3, 29, 1, 30, tzinfo=UTC))
+    assert local_minute_of_day(after_the_gap, WARSAW) == 3 * 60 + 30
+    assert local_iso_weekday(after_the_gap, WARSAW) == 7
 
 
 # --- DST: the gap ---------------------------------------------------------------
@@ -521,6 +596,33 @@ def _imports_zoneinfo(path: Path) -> bool:
         if any(name.split(".")[0] == "zoneinfo" for name in names):
             return True
     return False
+
+
+def test_no_engine_builds_a_zone_and_every_engine_may_hold_one() -> None:
+    """An engine is *given* its zone, exactly as it is given `now`.
+
+    `Zone` is exported so that a club snapshot can name the type without importing
+    `zoneinfo`, and the export is what makes this walk necessary: constructing one
+    resolves an IANA name against the tz database, which is a read of configuration
+    and of the filesystem, and ADR-0015's purity rules forbid an engine both. The
+    contracts cannot see this — the name comes from `app.kernel`, which engines may
+    import — so it is a walk.
+    """
+
+    engines = _modules_of(ROOT / "app" / "engines")
+    builders = [
+        f"{path.relative_to(ROOT)}:{node.lineno}"
+        for path in engines
+        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8")))
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id in ("Zone", "ZoneInfo")
+    ]
+    assert builders == [], builders
+    assert len(engines) >= 10, "the walk has lost the tree it is claiming about"
+    assert any(
+        "Zone" in path.read_text(encoding="utf-8") for path in engines
+    ), "no engine names a zone at all — this walk is asserting nothing"
 
 
 def test_zoneinfo_is_imported_in_exactly_one_module() -> None:

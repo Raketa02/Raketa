@@ -14,7 +14,11 @@ as a field, because *a sport's player count is never club-configurable* — a pa
 match divides by four wherever it is read. A seat's **paid / held / empty** state
 is here now and is spelled exactly as the commitment rules spell it; the match's
 phase, its court hold tier and its join cutoff land with the viability term that
-reads them. Renaming any of those here would fork the clock. Money is the kernel's
+reads them. Renaming any of those here would fork the clock. Time is the kernel's
+in the same way: a match carries its start as an ``Instant`` and its club carries
+a ``Zone``, and the only route from the two to a local weekday and minute is the
+kernel's own pair of readers — an engine that computed either half itself would be
+the second answer to a timezone question. Money is the kernel's
 in the same way: a ``SeatShare`` and a ``Payable`` are carried as the types
 ``kernel/money.py`` produces, in integer grosze, so no engine can invent a second
 idea of what a seat costs or of the order the rounding happened in.
@@ -55,12 +59,14 @@ from typing import NewType, TypeAlias, final
 from app.kernel import (
     SPORT_SPECS,
     Grosze,
+    Instant,
     MinuteOfDay,
     Minutes,
     Payable,
     Ratio,
     SeatShare,
     Sport,
+    Zone,
     invariant,
     ratio,
 )
@@ -248,6 +254,22 @@ class HourWindow:
             f"an hour window from {self.start} to {self.end}",
         )
 
+    def contains(self, minute: MinuteOfDay) -> bool:
+        """Whether a local minute falls inside this window. **End-exclusive.**
+
+        18:00–22:00 is every minute from 18:00 up to but not including 22:00, the
+        same half-open convention ``MinuteOfDay`` itself carries — a day is 0 up to
+        but not including 1440. A window that included its end would overlap the
+        next one a player declared beside it, and *"which window is 22:00 in"*
+        would have two answers.
+
+        Here rather than in the term that reads it, because *what a declared
+        window means* is the declaration's own business: two terms comparing a
+        minute against a window by hand would be two chances to write ``<=``.
+        """
+
+        return self.start <= minute < self.end
+
 
 @final
 @dataclass(frozen=True)
@@ -356,11 +378,26 @@ class ClubSnapshot:
     because every match at that club shares it, and a match carrying its own copy
     would be the same number stored once per candidate.
 
-    The club's **crowding** lands with the viability term that reads it, which is
-    the only reason this value object has one field today.
+    The club's **crowding** lands with the viability term that reads it.
     """
 
     travel_minutes: Minutes
+
+    zone: Zone
+    """The club's timezone — the clock face a match at it starts on.
+
+    On the *club* because that is what a timezone is a fact about: every match at
+    a club shares it, and a match carrying its own copy would be the same zone
+    stored once per candidate with nothing keeping the copies equal.
+
+    Carried as the kernel's ``Zone`` and never as an IANA name, because a name is
+    a string until somebody resolves it and *"who resolves it"* is exactly the
+    question ADR-0024 answers once: ``zoneinfo`` is imported in one module in
+    ``app/``, so an engine can hold a zone and can neither build one nor decide
+    what one means. There is no default, for the same reason a price has none —
+    a default of UTC is a club in the wrong country, and the two matches either
+    side of a Warsaw midnight would land on different days without a word.
+    """
 
     def __post_init__(self) -> None:
         invariant(
@@ -494,6 +531,23 @@ class MatchSnapshot:
     seats: tuple[SeatSnapshot, ...]
     current_player: Occupant
 
+    start: Instant
+    """When the match starts, as an instant. **Never as a clock face.**
+
+    An ``Instant`` is UTC, and the day and hour a player declared are a clock
+    face, so the two only meet through the club's zone and the kernel's readers.
+    That conversion is the whole of the time fit term's arithmetic, and it is the
+    reason the start is carried as the moment rather than as the local Tuesday
+    19:00 it will be rendered as: a local weekday assembled elsewhere and carried
+    beside the instant is a second answer to a timezone question, and the two
+    disagree for the two hours either side of a Warsaw midnight before anybody
+    compares them.
+
+    Rounded to the minute, which is checked rather than assumed: a start carrying
+    seconds reads back as the minute *below* it, so a match at 18:59:59 sits
+    outside a window declared from 19:00 by one second nobody can see.
+    """
+
     counted: bool
     """Whether the match counts towards ratings and ladders.
 
@@ -541,6 +595,14 @@ class MatchSnapshot:
             len(self.seats) == self.sold_seats,
             f"{self.sport.value} is sold in {self.sold_seats} seats, "
             f"snapshot carries {len(self.seats)}",
+        )
+        # Read through attribute access and not by importing `datetime`, which
+        # the engines layer is forbidden — the same shape the engines' `now`
+        # precondition takes, and for the same reason: a coordinate read off an
+        # instant carrying seconds is silently one minute early.
+        invariant(
+            self.start.second == 0 and self.start.microsecond == 0,
+            f"a start that is not rounded to the minute: {self.start!r}",
         )
         # The money kernel's own claim — *"a payable is never negative and never
         # exceeds its share"* — holds by construction for anything built through

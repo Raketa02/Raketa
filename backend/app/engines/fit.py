@@ -22,9 +22,10 @@ are *terms* here for exactly that reason.
 absence means.** This is the whole repair ADR-0027 records, and it is structural
 rather than conventional:
 
-* A **constraint** term encodes a limit the player declared — price, travel, match
-  type, a ladder they entered. An undeclared limit is genuinely *no limit*: the
-  term scores full marks, keeps its weight, and Coverage is untouched.
+* A **constraint** term encodes a limit the player declared — the days and hours
+  they can play, price, travel, match type, a ladder they entered. An undeclared
+  limit is genuinely *no limit*: the term scores full marks, keeps its weight, and
+  Coverage is untouched.
 * An **evidence** term encodes something the platform observed — skill overlap,
   predicted balance, reliability, familiarity. Absent evidence is **not** a good
   score. The term is *excluded*, the surviving weights are renormalised over what
@@ -63,12 +64,22 @@ from typing import Literal, Protocol, TypeAlias, final, runtime_checkable
 
 from app.engines.forecast import PairingAnalysis
 from app.engines.matchmaking import (
+    HourWindow,
     LadderQualification,
     MatchSnapshot,
     MatchTypePreference,
     PlayerProfile,
+    Weekday,
 )
-from app.kernel import Grosze, Instant, Minutes, Payable, Ratio, invariant
+from app.kernel import (
+    Grosze,
+    Instant,
+    MinuteOfDay,
+    Minutes,
+    Payable,
+    Ratio,
+    invariant,
+)
 
 
 class TermKind(Enum):
@@ -88,11 +99,12 @@ class TermCode(Enum):
 
     A client renders copy per code and the codes never change, which is what lets
     the wording of a reason change without a backend release. The enum lists the
-    terms that **exist**; the four the table still owes it are named in
+    terms that **exist**; the three the table still owes it are named in
     ``matchfit/v1/constants.py`` with their weights, because a code nothing can
     produce is a code a client could handle and never receive.
     """
 
+    TIME_FIT = "time_fit"
     GROUP_RELIABILITY = "group_reliability"
     TRAVEL = "travel"
     LADDER_QUALIFICATION = "ladder_qualification"
@@ -115,6 +127,55 @@ class PriceFact:
     payable: Payable
     ceiling: Grosze | None
     kind: Literal["price"] = "price"
+
+
+@final
+@dataclass(frozen=True)
+class TimeFact:
+    """When the match starts on the club's clock face, and when the player said.
+
+    Both halves in the vocabulary the declaration is made in — a ``Weekday`` and a
+    ``MinuteOfDay``, never a rendered *"Tuesday 18:30"* — so the client owns the
+    words and the locale, and the two are the *club's* local day and minute rather
+    than anything read off a UTC instant.
+
+    ``days`` and ``hours`` are the declaration itself, absent when the player made
+    none. That is what lets a client say *"Tuesday 18:30"* rather than *"Tuesday
+    18:30, outside the hours you gave"* to somebody who gave none — the second
+    sentence is a claim about a declaration that does not exist.
+
+    The two predicates below are **properties and not fields**, so the rule that
+    decides the term's value is also the rule a client reads. A carried pair of
+    bools would be the same conclusion stored twice, free to disagree with the
+    quantities beside it after a refactor; deriving them means the payload cannot
+    say *inside* while the term scored *outside*.
+    """
+
+    weekday: Weekday
+    minute: MinuteOfDay
+    days: frozenset[Weekday] | None
+    hours: tuple[HourWindow, ...] | None
+    kind: Literal["time_fit"] = "time_fit"
+
+    @property
+    def on_a_declared_day(self) -> bool:
+        """True when the player declared no days at all, which is *any day*."""
+
+        return self.days is None or self.weekday in self.days
+
+    @property
+    def inside_a_declared_window(self) -> bool:
+        """True when the player declared no hours at all, which is *any hour*.
+
+        Otherwise the start has to fall inside one of them. **The start decides**
+        — a match that begins inside a declared window is inside it however long
+        it runs — which is a rule with a constant's falsifying note behind it in
+        ``matchfit/v1/constants.py`` and is the reason no duration is carried here.
+        """
+
+        return self.hours is None or any(
+            window.contains(self.minute) for window in self.hours
+        )
 
 
 @final
@@ -182,7 +243,8 @@ class FamiliarityFact:
 #: term that can score, each with the machine key its ``TermCode`` carries and a
 #: payload of numbers — never a sentence, never a formatted figure.
 TermFact: TypeAlias = (
-    PriceFact
+    TimeFact
+    | PriceFact
     | TravelFact
     | MatchTypeFact
     | LadderFact

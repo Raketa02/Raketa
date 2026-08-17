@@ -39,7 +39,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 from datetime import time as wall_time
-from typing import Literal, NewType, Protocol, runtime_checkable
+from typing import Literal, NewType, Protocol, TypeAlias, runtime_checkable
 from zoneinfo import ZoneInfo
 
 from app.kernel.invariants import invariant
@@ -64,6 +64,16 @@ DayOffset = NewType("DayOffset", int)
 
 #: A length of time in whole minutes. Signed: negative runs backwards.
 Minutes = NewType("Minutes", int)
+
+#: A day of the local week, ISO-numbered: Monday 1 through Sunday 7.
+IsoWeekday = NewType("IsoWeekday", int)
+
+#: An IANA timezone. Exported so that a caller may *hold* a zone — a club's, say —
+#: without importing `zoneinfo`, which this module does exactly once for the whole
+#: of `app/` and which a walk keeps that way. Naming it here is what makes the
+#: rule enforceable rather than aspirational: the type is available everywhere,
+#: and the answers derived from it are still only available from this file.
+Zone: TypeAlias = ZoneInfo
 
 
 def _not_a_bool(value: int, named: str) -> int:
@@ -125,6 +135,25 @@ def day_offset(value: int) -> DayOffset:
     return DayOffset(_not_a_bool(value, "day offset"))
 
 
+def iso_weekday(value: int) -> IsoWeekday:
+    """A day of the week as ISO 8601 numbers one: Monday 1 through Sunday 7.
+
+    Branded for the same reason `MinuteOfDay` is, and against the same mistake:
+    an unbranded weekday is an `int`, and `minute_of_day(3)` is a perfectly
+    legal minute meaning *three minutes past midnight*. Wednesday read as
+    00:03 is a wrong answer rather than a loud one, and the two quantities meet
+    in every module that compares a start against a declared window.
+
+    **ISO numbering, and no start of the week.** Which day a week *begins* on
+    is a constant with no owner (`docs/adr/0024`) and nothing here needs one:
+    membership of a set of days is the only question asked of this, and a set
+    has no first element.
+    """
+
+    invariant(1 <= value <= 7, f"iso weekday: {value}")
+    return IsoWeekday(_not_a_bool(value, "iso weekday"))
+
+
 def minutes(value: int) -> Minutes:
     """A length of time in whole minutes; negative runs backwards."""
 
@@ -168,7 +197,7 @@ def slot_start(
     anchor: Instant,
     day: DayOffset,
     minute: MinuteOfDay,
-    zone: ZoneInfo,
+    zone: Zone,
 ) -> Result[Instant, NonexistentLocalTime]:
     """The single conversion from in-day coordinates to an instant.
 
@@ -217,12 +246,26 @@ def slot_start(
     return Ok(instant(local))
 
 
-def local_minute_of_day(moment: Instant, zone: ZoneInfo) -> MinuteOfDay:
+def local_minute_of_day(moment: Instant, zone: Zone) -> MinuteOfDay:
     """Read an instant back as a minute of its local day — `slot_start`'s
     inverse for the minute, and the half that makes the round trip testable."""
 
     local = moment.astimezone(zone)
     return minute_of_day(local.hour * _MINUTES_PER_HOUR + local.minute)
+
+
+def local_iso_weekday(moment: Instant, zone: Zone) -> IsoWeekday:
+    """Which day of the local week an instant falls on. The other half of the read.
+
+    Beside `local_minute_of_day` because they are one question asked twice — *what
+    does the clock on that wall say* — and because a caller comparing a start
+    against a declared *Tuesday evening* needs both halves to have come from the
+    same zone. Asking either of them by hand is the mistake: 22:30 UTC on a Sunday
+    is already Monday in Warsaw, so a weekday read off the instant's own date is
+    wrong for two hours of every day and wrong in the direction nobody checks.
+    """
+
+    return iso_weekday(moment.astimezone(zone).isoweekday())
 
 
 def elapsed_minutes(start: Instant, end: Instant) -> Minutes:
