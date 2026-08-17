@@ -260,9 +260,11 @@ ahead of the first club, which is the whole reason they could be built now.
 > margin, Certainty, the split bar, Beyond scale — over the shared snapshot vocabulary in
 > `app/engines/matchmaking.py`, and **Pairing** and **Team strength** are built with it:
 > four players are enumerated into the three splits, each is forecast, and all three come
-> back ranked. **Seat target**, **Target band**, **Roster**, **Imputed seat**, everything
-> under **Match Fit**, and **Match viability** are still words without code — so a match
-> with a seat still open gets no forecast at all yet. The terms are committed ahead of them
+> back ranked. **Seat target** and **Target band** are built too, so a match one seat from
+> full now says what Level that seat is aimed at, and any match with somebody on a seat says
+> what range it is aimed at. **Roster**, **Imputed seat**, everything under **Match Fit**,
+> and **Match viability** are still words without code — so a match with a seat still open
+> gets a target and no forecast. The terms are committed ahead of them
 > because the decisions behind them are
 > ([ADR-0025](docs/adr/0025-binding-pairing-for-counted-matches.md),
 > [ADR-0026](docs/adr/0026-matchmaking-engines-snapshot-input-contract.md),
@@ -301,8 +303,12 @@ forty minutes away at twice your ceiling is a good match in the abstract and a b
   margin widens as a match gets emptier rather than the forecast disappearing.
 - **Seat target** — the level that would make a match with **exactly one** seat open as even
   as possible. With more seats open the question is under-determined and the engine refuses it.
-- **Target band** — the level range a forming match is aimed at. Blunt by design, and the
-  fallback whenever a seat target cannot be answered.
+  In doubles *three* levels each make the match exactly even, one for each seated player the
+  joiner could partner; the platform advertises the **middle** of the three, because the outer
+  two ask for somebody well below or well above everybody already in the match.
+- **Target band** — the level range a forming match is aimed at: the mean of the seated levels,
+  widened either side. Blunt by design, needs only one seated player, and is the fallback
+  whenever a seat target cannot be answered.
 - **Match Fit** — how good one specific match is for one specific player, as a single
   comparable score with its reasons attached. The score does the sorting; the reasons do the
   explaining.

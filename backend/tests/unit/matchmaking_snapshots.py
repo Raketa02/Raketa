@@ -49,12 +49,12 @@ def skill(name: str, level_hundredths: int, sigma_hundredths: int) -> PlayerSkil
 
 def singles(
     first: PlayerSkill,
-    second: PlayerSkill,
+    second: PlayerSkill | None,
     *,
     sport: Sport = Sport.TENNIS,
     viewer: PlayerSkill | None = None,
 ) -> MatchSnapshot:
-    """A two-seat match with both seats taken.
+    """A two-seat match. ``None`` is an empty seat, as in ``doubles``.
 
     ``viewer`` defaults to the player on the first seat, which is the ordinary
     case: a player looking at a match they are in.

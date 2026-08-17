@@ -354,3 +354,159 @@ def test_the_forecast_is_symmetric_in_which_seat_holds_which_player():
             other.certainty,
         ), seed
         assert one.expected_gap == pytest.approx(other.expected_gap), seed
+
+
+# --- The seat target, against a brute-force scan ----------------------------------
+
+
+#: The scan the analytic solve replaces, in hundredths of a Level, and wide
+#: enough to hold every answer the objective can have. Two players a Level apart
+#: can need a third well outside the rating scale to even them up — that is a
+#: true statement about the roster, not an error — so the sweep runs from −3,00
+#: to 10,00 rather than over 1,0–5,0, and would find the outer answers a scan of
+#: the scale alone would silently clip.
+SCAN_LOW, SCAN_HIGH = -300, 1000
+
+#: One step of that scan. The grid's own minimiser sits within a step of the true
+#: one, which is the resolution artefact the analytic solve removes and the
+#: tolerance this oracle has to allow.
+SCAN_STEP = 1
+
+
+def team_strength(one: float, other: float, weight: float) -> float:
+    """The model's sentence, written out here in floats rather than imported.
+
+    *A team is its weaker partner's Level, weighted above its stronger
+    partner's.* An oracle that reached into ``core`` for this would be checking
+    the engine against itself; written out, the two agree only if both are right.
+    """
+
+    weak, strong = (one, other) if one <= other else (other, one)
+    return weight * weak + (1.0 - weight) * strong
+
+
+def evening_gap(joiner: float, levels: list[float], partner: int, weight: float):
+    """How far off level the match is with ``joiner`` beside ``levels[partner]``."""
+
+    others = [level for seat, level in enumerate(levels) if seat != partner]
+    return abs(
+        team_strength(joiner, levels[partner], weight)
+        - team_strength(others[0], others[1], weight)
+    )
+
+
+def objective(joiner: float, levels: list[float], weight: float) -> float:
+    """What a seat target minimises: the gap the *chosen* arrangement would show.
+
+    The lowest of three piecewise-linear functions of the joiner's Level, which
+    is the whole shape of the problem — and the reason its minimum sits at a
+    handful of breakpoints rather than somewhere a grid has to hunt for.
+    """
+
+    return min(evening_gap(joiner, levels, partner, weight) for partner in range(3))
+
+
+def scanned() -> list[float]:
+    """Every hundredth the scan visits, as Levels."""
+
+    return [step / 100 for step in range(SCAN_LOW, SCAN_HIGH + 1, SCAN_STEP)]
+
+
+def brute_force_seat_target(levels: list[float], weight: float) -> float:
+    """The seat target as a 400-step grid would have found it.
+
+    Built from the stated rule and nothing else: for each of the three
+    arrangements, walk the scale and keep the Level that comes closest to
+    levelling the two sides; then take the middle of the three, because every one
+    of them evens the match and the middle is the one advertised.
+    """
+
+    grid = scanned()
+    bests = [
+        min(grid, key=lambda joiner: evening_gap(joiner, levels, partner, weight))
+        for partner in range(3)
+    ]
+    return sorted(bests)[1]
+
+
+def three_seated(seed=SEED + 20, count=60):
+    """Three-player rosters with the fourth seat open, drawn across the scale."""
+
+    draw = random.Random(seed)
+    for _ in range(count):
+        yield tuple((draw.randint(*LEVELS), draw.randint(*SIGMAS)) for _ in range(3))
+
+
+def seat_target_of(roster) -> float:
+    result = ENGINE.analyse(
+        snapshot=doubles(*players_of(*roster), None), now=NOW
+    ).seat_target
+    assert isinstance(result, Ok), roster
+    return as_float(result.value)
+
+
+def test_the_sweep_over_open_seats_reaches_every_roster_it_claims_to():
+    """A sweep that has quietly lost its inputs passes by finding nothing."""
+
+    drawn = list(three_seated())
+    assert len(drawn) == 60
+    assert len(set(drawn)) > 50
+
+
+def test_the_analytic_seat_target_matches_a_brute_force_scan():
+    """The replacement, proved against the thing it replaced.
+
+    A wrong piece of the piecewise strength, or the algebra inverted, gives an
+    answer the scan does not agree with — which is what makes this an oracle and
+    not a restatement. The tolerance is one grid step, because that is the
+    scan's own error and the reason it was worth replacing.
+    """
+
+    weight = float(WEIGHT)
+    for roster in three_seated():
+        levels = [level / 100 for level, _ in roster]
+        assert seat_target_of(roster) == pytest.approx(
+            brute_force_seat_target(levels, weight), abs=SCAN_STEP / 100
+        ), roster
+
+
+def test_no_level_the_scan_visits_evens_the_match_better_than_the_answer():
+    """The optimality claim on its own, over the whole sweep: the analytic answer
+    levels the two sides *exactly*, and no hundredth anywhere on the scan does
+    better. The grid's best is strictly worse on almost every roster, which is
+    the resolution artefact stated as a number rather than as a complaint."""
+
+    weight = float(WEIGHT)
+    for roster in three_seated():
+        levels = [level / 100 for level, _ in roster]
+        answer = objective(seat_target_of(roster), levels, weight)
+        assert answer < 1e-9, roster
+        assert answer <= min(
+            objective(joiner, levels, weight) for joiner in scanned()
+        ) + 1e-12, roster
+
+
+def test_the_seat_target_always_lands_inside_the_levels_already_seated():
+    """The middle of the three answers is the only one guaranteed to, and that is
+    why it is the one advertised. Asserted over the sweep because it is a
+    consequence of the weighting sitting between a half and one, not an
+    assumption — a retune outside that range breaks it."""
+
+    for roster in three_seated():
+        levels = [level / 100 for level, _ in roster]
+        assert min(levels) <= seat_target_of(roster) <= max(levels), roster
+
+
+def test_the_band_is_centred_on_the_seated_mean_however_many_are_seated():
+    draw = random.Random(SEED + 21)
+    for _ in range(60):
+        count = draw.randint(1, 4)
+        roster = [(draw.randint(*LEVELS), draw.randint(*SIGMAS)) for _ in range(count)]
+        players = players_of(*roster)
+        result = ENGINE.analyse(
+            snapshot=doubles(*players, *([None] * (4 - count))), now=NOW
+        ).target_band
+        assert isinstance(result, Ok), roster
+        assert as_float(result.value.midpoint) == pytest.approx(
+            sum(level for level, _ in roster) / (100 * count)
+        ), roster

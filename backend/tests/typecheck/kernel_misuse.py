@@ -36,9 +36,12 @@ from zoneinfo import ZoneInfo
 from app.engines.forecast import (
     BalanceForecast,
     NoForecast,
+    NoSeatTarget,
+    NoTargetBand,
     PairingAnalysis,
     SidesNotFormed,
     Split,
+    TargetBand,
 )
 from app.engines.matchmaking import (
     Level,
@@ -748,6 +751,8 @@ def a_name_is_not_a_player_ref_on_a_split_either(forecast: BalanceForecast) -> S
 
 def the_three_splits_are_a_tuple_and_not_a_list(
     forecast: Result[BalanceForecast, NoForecast],
+    seat_target: Result[Level, NoSeatTarget],
+    target_band: Result[TargetBand, NoTargetBand],
 ) -> PairingAnalysis:
     """Fixed-arity collections are tuples, everywhere (`docs/adr/0022`) — and an
     analysis a caller could append a fourth arrangement to is one that no longer
@@ -756,8 +761,60 @@ def the_three_splits_are_a_tuple_and_not_a_list(
     return PairingAnalysis(
         forecast=forecast,
         splits=[],  # want-error: arg-type
+        seat_target=seat_target,
+        target_band=target_band,
         engine_version="pairing-v1",
     )
+
+
+class ASecondKindOfTargetBand(TargetBand):  # want-error: misc
+    """`@final`, for the same reason a reason is: a band with a second shape is
+    one a caller drawing edges would have to ask which kind it had."""
+
+
+def a_band_is_immutable(band: TargetBand) -> None:
+    band.midpoint = level(300)  # want-error: misc
+
+
+def a_seat_target_is_a_level_and_not_a_band(
+    forecast: Result[BalanceForecast, NoForecast],
+    target_band: Result[TargetBand, NoTargetBand],
+) -> PairingAnalysis:
+    """The two answers a forming match gives are deliberately different types.
+    One is the Level a single seat is aimed at; the other is the range the whole
+    match is. A caller that could pass either where the other goes is one that
+    can print a band as though it were a seat."""
+
+    return PairingAnalysis(
+        forecast=forecast,
+        splits=(),
+        seat_target=target_band,  # want-error: arg-type
+        target_band=target_band,
+        engine_version="pairing-v1",
+    )
+
+
+def a_band_is_not_widened_by_a_bare_number() -> TargetBand:
+    """Refused by `Ratio`'s brand: a half width is an exact ratio over two
+    integers, and a float here is the `Fraction(0.9)` hole in a new place."""
+
+    return TargetBand(midpoint=level(300), half_width=0.5)  # want-error: arg-type
+
+
+def every_way_a_seat_target_can_be_absent_must_be_handled(
+    seat_target: Result[Level, NoSeatTarget],
+) -> Level:
+    """Two reasons, not one: the seat is under-determined, or there are no sides
+    to even up at all. A caller handling only the first leaves the second
+    unhandled at the tail."""
+
+    match seat_target:
+        case Ok(value):
+            return value
+        case Err(SidesNotFormed()):
+            return level(300)
+        case _:
+            exhaustive(seat_target)  # want-error: arg-type
 
 
 def every_way_a_forecast_can_be_absent_must_be_handled(

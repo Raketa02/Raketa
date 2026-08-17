@@ -2,8 +2,10 @@
 
 The balance forecast for a full match at either arity: the Protocol, the snapshot
 value objects, the folded-normal arithmetic, the one clamp, the one rounding, and
-in doubles the three splits ranked on the expected gap. The seat target, the
-target band and seat imputation extend this version rather than replacing it.
+in doubles the three splits ranked on the expected gap. Plus what a *forming*
+match can say without a forecast — the seat target, solved rather than scanned,
+and the target band it falls back to. Seat imputation extends this version rather
+than replacing it.
 """
 
 from app.engines.pairing.v1.constants import (

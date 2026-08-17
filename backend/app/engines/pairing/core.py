@@ -37,6 +37,14 @@ being formed rather than to the people in it. That is also why doubles is
 forecast *more* confidently than singles between the same players: averaging two
 independent estimates is what a team strength is.
 
+**The seat target is solved, not searched.** A team strength is piecewise-linear
+in the joiner's Level with a single kink where the joiner overtakes their partner,
+so *which Level would even this match* is one comparison and one division per
+arrangement, in exact rationals. That is why ``even_partner_level`` is here beside
+the strength it inverts: the two are the same line read in opposite directions,
+and a version that retuned one without the other would advertise a seat it could
+not then forecast as even.
+
 **The rating engine is not imported.** ``racketskill/core`` owns a σ-combination
 rule that is the same algebra, and it answers a different question: fusing several
 pieces of evidence about *one* player. Reaching for it would put this engine's
@@ -54,7 +62,7 @@ from dataclasses import dataclass
 from typing import final
 
 from app.engines.matchmaking import Level, PlayerSkill
-from app.kernel import Ratio
+from app.kernel import Ratio, invariant, ratio
 
 #: ``√(2/π)``, the folded-normal mean's coefficient at a mean of zero. Named
 #: because it is arithmetic rather than a hypothesis: retuning it would not
@@ -172,6 +180,104 @@ def _weaker_first(
     return (
         (first, second) if first.uncertainty >= second.uncertainty else (second, first)
     )
+
+
+def even_partner_level(
+    partner: Level, opposing: Level, *, weaker_weight: Ratio
+) -> Level:
+    """The Level that, sat next to ``partner``, makes the two sides exactly equal.
+
+    Team strength as a function of the joiner's Level ``t`` is
+    ``w·min(t, L) + (1−w)·max(t, L)`` for a partner at ``L`` — two straight lines
+    meeting at ``t = L``, with the steeper one below it, since the weaker partner
+    counts for more. It is continuous, strictly increasing and unbounded in both
+    directions, so ``strength(t) = opposing`` has **exactly one** solution and it
+    is found by picking the piece rather than by searching for it.
+
+    Which piece is decided by a single comparison: the two lines meet at
+    ``strength(L) = L``, so an opposing side weaker than the partner needs a
+    joiner below them and an opposing side stronger needs one above.
+
+    **Exact.** Two multiplications, a subtraction and a division over ``Ratio``,
+    so the answer is a rational and not the nearest point of somebody's grid. The
+    resolution of a scan is a property of the scan, and a seat target that moves
+    when the step size changes is reporting the step size.
+    """
+
+    stronger_weight = Ratio(1 - weaker_weight)
+    if opposing <= partner:
+        return Level(Ratio((opposing - stronger_weight * partner) / weaker_weight))
+    return Level(Ratio((opposing - weaker_weight * partner) / stronger_weight))
+
+
+def evening_levels(
+    seated: tuple[PlayerSkill, ...], *, weaker_weight: Ratio
+) -> tuple[Level, ...]:
+    """One Level per seated player: what would even the match beside *them*.
+
+    Three seated players admit three arrangements of the fourth seat — the joiner
+    partners one of the three and plays the other two — and each arrangement is
+    evened by its own Level. So the objective a seat target minimises, the gap the
+    *chosen* split would report, is the lowest of three piecewise-linear
+    functions of the joiner's Level, and each of the three touches zero exactly
+    once. Its minimum is therefore zero and the minimising set is these Levels:
+    there is no search, and there is nothing a finer grid would find.
+
+    Returned in seated order, and the caller chooses between them.
+    """
+
+    return tuple(
+        even_partner_level(
+            candidate.level,
+            side_of_two(*_others(seated, index), weaker_weight=weaker_weight).strength,
+            weaker_weight=weaker_weight,
+        )
+        for index, candidate in enumerate(seated)
+    )
+
+
+def _others(
+    seated: tuple[PlayerSkill, ...], index: int
+) -> tuple[PlayerSkill, PlayerSkill]:
+    """The two the joiner would be playing, if they partnered ``seated[index]``."""
+
+    first, second = (
+        player for position, player in enumerate(seated) if position != index
+    )
+    return first, second
+
+
+def middle_level(levels: tuple[Level, ...]) -> Level:
+    """The median of an odd number of Levels — which of several answers to give.
+
+    Every Level in ``evening_levels`` produces an exactly even match, so *as even
+    as possible* does not choose between them and something has to. The outer two
+    are the answers that require the joiner to be the odd one out: partnering the
+    **strongest** seated player needs somebody well below everybody there, and
+    partnering the **weakest** needs somebody well above. Only the middle answer
+    is guaranteed to fall inside the Levels already in the match, and that is what
+    is advertised — a seat aimed at a Level nobody in the match is near is a seat
+    nobody reading the card will recognise as theirs.
+
+    It is also the rule that has nothing to break: a median of three is defined
+    with duplicates and needs no anchor, no distance and no tie-break, so no part
+    of the answer is decided by seat order or by which end a scan started from.
+    The grid this replaces took the lowest of the tying candidates, which is the
+    *outer* answer and an artefact of scanning upwards.
+    """
+
+    invariant(len(levels) % 2 == 1, f"no middle of {len(levels)} levels")
+    return sorted(levels)[len(levels) // 2]
+
+
+def mean_level(levels: tuple[Level, ...]) -> Level:
+    """The mean of at least one Level, exactly. The centre of a target band."""
+
+    # `len(...) > 0` rather than the tuple itself: `invariant` breaks on `None`
+    # and `False` and on nothing else, deliberately, so an empty tuple sails
+    # straight through it and the division below is what fails instead.
+    invariant(len(levels) > 0, "the mean of no levels")
+    return Level(Ratio(sum(levels, ratio(0, 1)) / len(levels)))
 
 
 def combine_uncertainty(left: float, right: float) -> float:

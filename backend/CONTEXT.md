@@ -137,6 +137,19 @@ there; they are not repeated here.
   `split.side_a` and `split.forecast.side_a` are the same team by construction and no caller
   can pair a forecast with an arrangement it was not computed from.
   _Avoid_: pairing (that is the domain word for the whole question), team, line-up.
+- **Evening level** — the Level that, sat beside one named seated player, makes the two
+  sides exactly equal. `pairing/core.even_partner_level()` solves it by **inverting the team
+  strength**: a strength is piecewise-linear in the joiner's Level with one kink where the
+  joiner overtakes their partner, so the answer is one comparison and one division in exact
+  ratios. Three seated players give three of these, and the domain's **Seat target** is the
+  middle one — the code word and the domain word are deliberately different, because two of
+  the three are never advertised. _Avoid_: ideal level, optimal partner, best fit.
+- **Analysis decline** — each field of a `PairingAnalysis` answers or declines on its own,
+  as a `Result` with its own reason: `SidesNotFormed` (nobody to put on a side, or an arity
+  with no pairing rule), `SeatUnderDetermined` (not exactly one seat open) and
+  `NobodySeated`. So a forming match answers what it can, and *"no forecast"* is never
+  read as *"nothing to say"*. `SidesNotFormed` is deliberately shared by two fields: a sport
+  with no pairing rule has no sides **and** no seat to aim, and that is one fact.
 - **Read-model repository** — the port a use case reads *projected current state* through,
   e.g. `UserRepository`. It answers queries against a table, not by replaying a stream, and
   has no version bookkeeping. **The trap:** `UserRepository` is this kind despite its name

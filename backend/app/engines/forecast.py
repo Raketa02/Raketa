@@ -7,9 +7,16 @@ wiring change at the FastAPI boundary like any other port (``docs/adr/0015``).
 **One analysis object.** The engine returns a ``PairingAnalysis`` rather than a
 bare forecast, because a caller that needs the forecast almost always needs the
 seat target, the target band and the ranked splits too, and the four have to agree
-with each other (``docs/adr/0026``). Later slices fill the fields this one does
-not; the object is the shape from the start so lighting them up is a constant
-change and not a signature change.
+with each other (``docs/adr/0026``). All four are now carried; what a later slice
+still changes is *when* the forecast can answer, not the shape of the object.
+
+**A forming match answers what it can.** The four fields decline independently,
+because they need different things: a forecast needs every seat filled, a seat
+target needs the match to be exactly one seat from full, a band needs one seated
+player. So a padel court with three players advertises the Level its last seat is
+aimed at while honestly having no forecast at all, and every decline is a
+``Result`` carrying a machine code and a payload rather than a silence a caller
+has to interpret.
 
 **The chosen split and the forecast are one object, not two.** A card showing
 *you and Bo against Cy and Dee, 84% balanced* is showing one conclusion twice,
@@ -37,7 +44,7 @@ from enum import Enum
 from typing import Literal, Protocol, TypeAlias, final, runtime_checkable
 
 from app.engines.matchmaking import Level, MatchSnapshot, PlayerRef
-from app.kernel import Instant, Result
+from app.kernel import Instant, Ratio, Result
 
 
 class Certainty(Enum):
@@ -77,6 +84,83 @@ class SidesNotFormed:
 
 #: Every reason the pairing engine can give for having no forecast.
 NoForecast: TypeAlias = SidesNotFormed
+
+
+@final
+@dataclass(frozen=True)
+class SeatUnderDetermined:
+    """More than one seat is open, so *which Level is this seat aimed at* has no
+    answer — and none is invented.
+
+    With two seats open there are two Levels to choose and one equation between
+    them: every Level in a wide interval is the right answer for the last seat
+    given *some* answer for the other one. Naming one of them would be reporting
+    a preference as a calculation. A match in that state advertises its
+    ``TargetBand`` instead, which is a claim the roster actually supports.
+
+    Zero seats open reaches the same reason for the opposite cause: a full match
+    has no seat to aim.
+    """
+
+    sport: str
+    open_seats: int
+    sold: int
+    kind: Literal["seat_under_determined"] = "seat_under_determined"
+
+
+@final
+@dataclass(frozen=True)
+class NobodySeated:
+    """Nobody is on a seat, so the match is aimed at nothing yet.
+
+    A target band is the mean of the seated Levels, and the mean of no Levels is
+    not a wide band — it is no band. One seated player is enough and is the whole
+    requirement; this is the single case that cannot answer.
+    """
+
+    sport: str
+    sold: int
+    kind: Literal["nobody_seated"] = "nobody_seated"
+
+
+#: Every reason there is no seat target. ``SidesNotFormed`` is here because a
+#: doubles seat target is solved *through* the pairing: an arity this version has
+#: no pairing rule for has no sides to even up, so it has no seat to aim either,
+#: and that is the same fact rather than a second one.
+NoSeatTarget: TypeAlias = SeatUnderDetermined | SidesNotFormed
+
+#: Every reason there is no target band.
+NoTargetBand: TypeAlias = NobodySeated
+
+
+@final
+@dataclass(frozen=True)
+class TargetBand:
+    """The Level range a forming match is aimed at. **Blunt by design.**
+
+    Carried as a midpoint and a half width rather than as two edges, so the three
+    numbers cannot disagree: the midpoint is what the roster actually says — the
+    mean of the seated Levels — and the width is one constant applied to it.
+    ``low`` and ``high`` are properties for the same reason ``fit_to_print`` is.
+
+    **Not clamped to the rating scale.** 1,0–5,0 belongs to the rating context and
+    this engine does not restate it, exactly as ``level()`` declines to; a caller
+    drawing the band against a scale it owns is the one place that clamp means
+    anything. So a band around a Level near the bottom of the scale can reach
+    below it, and that is a true statement about a match, not a Level being
+    claimed about a player.
+    """
+
+    midpoint: Level
+    half_width: Ratio
+
+    @property
+    def low(self) -> Level:
+        return Level(Ratio(self.midpoint - self.half_width))
+
+    @property
+    def high(self) -> Level:
+        return Level(Ratio(self.midpoint + self.half_width))
 
 
 @final
@@ -160,6 +244,19 @@ class PairingAnalysis:
     singles has no pairing, and an empty tuple is how that is said rather than a
     one-element list implying an election nobody can make.
 
+    ``seat_target`` and ``target_band`` are what a match says about the seats it
+    has *not* filled, and they are two answers to one question at two
+    resolutions. The seat target is exact and needs the match to be one seat from
+    full; the band is blunt and needs one seated player. **The band is the
+    fallback whenever the seat target declines**, so a caller never has nothing to
+    say about a forming match, and the two are carried together precisely so that
+    falling back is a branch on a value rather than a second call.
+
+    The three answers are computed from one snapshot in one pass, which is the
+    whole reason they are one object: a card showing *this seat is aimed at 2,71*
+    beside a forecast drawn from a different roster would be two readings of a
+    match that only has one.
+
     ``engine_version`` travels on the result because every constant in the engine
     is an admitted hypothesis with a measurement that would falsify it, and you
     cannot falsify one you cannot attribute an answer back to. A Match Fit score
@@ -168,6 +265,8 @@ class PairingAnalysis:
 
     forecast: Result[BalanceForecast, NoForecast]
     splits: tuple[Split, ...]
+    seat_target: Result[Level, NoSeatTarget]
+    target_band: Result[TargetBand, NoTargetBand]
     engine_version: str
 
 

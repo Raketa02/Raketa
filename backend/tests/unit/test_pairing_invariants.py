@@ -18,9 +18,12 @@ from app.engines.forecast import (
     BalanceForecast,
     BalanceForecastEngine,
     Certainty,
+    NobodySeated,
     PairingAnalysis,
+    SeatUnderDetermined,
     SidesNotFormed,
     Split,
+    TargetBand,
 )
 from app.engines.matchmaking import (
     MatchSnapshot,
@@ -35,6 +38,8 @@ from app.engines.pairing.core import (
     as_float,
     combine_uncertainty,
     expected_absolute_gap,
+    mean_level,
+    middle_level,
     round_half_away_from_zero,
     side_of_two,
 )
@@ -233,10 +238,19 @@ def test_both_sports_carry_the_same_weight_at_v1_and_each_can_move_alone():
     assert retuned.weaker_partner_weight[Sport.BADMINTON] == badminton
 
 
-@pytest.mark.parametrize("weight", [ratio(50, 100), ratio(45, 100), ratio(0, 100)])
+@pytest.mark.parametrize(
+    "weight", [ratio(50, 100), ratio(45, 100), ratio(0, 100), ratio(100, 100)]
+)
 def test_a_weight_that_does_not_favour_the_weaker_partner_is_refused(weight):
     """At or below a half this is not a weaker-partner weighting; it is the model
-    inverted, with every percentage it produces still looking plausible."""
+    inverted, with every percentage it produces still looking plausible.
+
+    A weight of exactly one is refused at the other end, and for a reason the
+    seat target supplied: with the stronger partner contributing nothing, a team
+    can never be raised above its weaker member, so no Level in either direction
+    evens some matches and the seat has no target at all. The range is open at
+    both ends.
+    """
 
     with pytest.raises(InvariantViolated, match="does not weight the weaker partner"):
         replace(
@@ -456,6 +470,191 @@ def test_an_arity_this_version_has_no_pairing_rule_for_declines():
     result = ENGINE.analyse(snapshot=snapshot, now=NOW).forecast
     assert isinstance(result, Err)
     assert (result.reason.seated, result.reason.sold) == (6, 6)
+
+
+# --- The seat target ---------------------------------------------------------------
+
+
+def seat_target_of(*occupants, sport=Sport.PADEL):
+    """The seat target for a roster, through the Protocol and nothing else."""
+
+    snapshot = doubles(*occupants, sport=sport)
+    return ENGINE.analyse(snapshot=snapshot, now=NOW).seat_target
+
+
+@pytest.mark.parametrize("open_seats", [0, 2, 3])
+def test_a_seat_target_is_answered_only_when_exactly_one_seat_is_open(open_seats):
+    """With two seats open there are two Levels to choose and one equation
+    between them, so a whole interval of Levels evens the match given *some*
+    answer for the other seat. Naming one of them would be reporting a preference
+    as a calculation. With none open there is no seat to aim.
+    """
+
+    seated = [skill(NAMES[seat], 280 + 10 * seat, 20) for seat in range(4 - open_seats)]
+    result = seat_target_of(*seated, *([None] * open_seats))
+    assert isinstance(result, Err)
+    assert result.reason == SeatUnderDetermined(
+        sport="PADEL", open_seats=open_seats, sold=4
+    )
+
+
+def test_an_arity_with_no_pairing_rule_has_no_seat_to_aim_either():
+    """A doubles seat target is solved *through* the pairing, so a sport this
+    version cannot split has no seat target for the same reason it has no
+    forecast — which is why it is the same reason and not a second one."""
+
+    roster = tuple(skill(str(seat), 300 + 10 * seat, 20) for seat in range(5))
+    snapshot = _SixSeatSport(
+        sport=Sport.PADEL, occupants=roster, current_player=roster[0]
+    )
+    result = ENGINE.analyse(snapshot=snapshot, now=NOW).seat_target
+    assert isinstance(result, Err)
+    assert result.reason.kind == "sides_not_formed"
+    assert (result.reason.seated, result.reason.sold) == (5, 6)
+
+
+def test_for_a_two_player_sport_the_ideal_opponent_is_the_seated_players_level():
+    ada = skill("ada", 317, 20)
+    snapshot = MatchSnapshot(
+        sport=Sport.TENNIS,
+        seats=(SeatSnapshot(ada), SeatSnapshot()),
+        current_player=ada,
+    )
+    result = ENGINE.analyse(snapshot=snapshot, now=NOW).seat_target
+    assert isinstance(result, Ok)
+    assert result.value == ada.level
+
+
+@pytest.mark.parametrize("roster", DOUBLES_ROSTERS)
+def test_a_player_at_the_seat_target_makes_the_match_exactly_even(roster):
+    """The whole claim, asserted end to end rather than by reading the algebra:
+    take the seat target out of one analysis, seat a player at that Level in the
+    open seat, and run the engine again. Some arrangement of the four now has two
+    sides of **identical** strength — exactly, because a Level is a rational and
+    the seat target was solved rather than scanned.
+    """
+
+    seated = [skill(NAMES[seat], *rating) for seat, rating in enumerate(roster[:3])]
+    target = seat_target_of(*seated, None)
+    assert isinstance(target, Ok)
+
+    joiner = replace(seated[0], player=PlayerRef("new"), level=target.value)
+    filled = ENGINE.analyse(snapshot=doubles(*seated, joiner), now=NOW)
+    assert any(
+        option.forecast.side_a == option.forecast.side_b for option in filled.splits
+    )
+
+
+@pytest.mark.parametrize("roster", DOUBLES_ROSTERS)
+def test_the_seat_target_lies_inside_the_levels_already_in_the_match(roster):
+    """Three Levels even this match and the middle one is advertised, which is
+    the only one guaranteed to fall between the people already there. The outer
+    two ask for somebody well below or well above everybody in the match, and a
+    seat aimed at a Level nobody there is near is a seat nobody recognises as
+    theirs."""
+
+    seated = [skill(NAMES[seat], *rating) for seat, rating in enumerate(roster[:3])]
+    result = seat_target_of(*seated, None)
+    assert isinstance(result, Ok)
+    levels = [player.level for player in seated]
+    assert min(levels) <= result.value <= max(levels)
+
+
+# --- The target band ---------------------------------------------------------------
+
+
+def test_the_band_is_the_seated_mean_widened_by_the_constant():
+    seated = [skill("ada", 300, 20), skill("bo", 340, 20), skill("cy", 260, 20)]
+    result = ENGINE.analyse(snapshot=doubles(*seated, None), now=NOW).target_band
+    assert isinstance(result, Ok)
+    assert result.value.midpoint == skill("x", 300, 0).level
+    assert result.value.half_width == CONSTANTS.target_band_half_width
+    assert result.value.high - result.value.low == 2 * CONSTANTS.target_band_half_width
+
+
+def test_the_band_edges_are_derived_and_never_carried_beside_the_midpoint():
+    """One midpoint, one width, and the two edges read off them — the same
+    argument the balance floor and the favourite cap are derived by. Two carried
+    edges are two numbers a retune can leave disagreeing with the centre."""
+
+    band = TargetBand(
+        midpoint=skill("x", 312, 0).level, half_width=CONSTANTS.target_band_half_width
+    )
+    assert band.midpoint - band.low == band.half_width
+    assert band.high - band.midpoint == band.half_width
+    assert not any(
+        field in TargetBand.__dataclass_fields__ for field in ("low", "high")
+    )
+
+
+@pytest.mark.parametrize("seated_count", [1, 2, 3, 4])
+def test_one_seated_player_is_the_whole_requirement_for_a_band(seated_count):
+    """A band is answered in every state the seat target declines in except the
+    empty court, which is what makes it the fallback rather than a second
+    opinion — and it is answered for a full match too, so a caller ranking a full
+    match beside a forming one gets the same kind of statement from both."""
+
+    seated = [skill(NAMES[seat], 280 + 10 * seat, 20) for seat in range(seated_count)]
+    empty = [None] * (4 - seated_count)
+    result = ENGINE.analyse(snapshot=doubles(*seated, *empty), now=NOW).target_band
+    assert isinstance(result, Ok)
+
+
+def test_a_court_nobody_has_joined_is_aimed_at_nothing_and_says_so():
+    """The mean of no Levels is not a wide band; it is no band."""
+
+    result = ENGINE.analyse(snapshot=doubles(None, None, None, None), now=NOW)
+    assert isinstance(result.target_band, Err)
+    assert result.target_band.reason == NobodySeated(sport="PADEL", sold=4)
+    assert isinstance(result.seat_target, Err)
+
+
+@pytest.mark.parametrize("seated_count", [1, 2, 3, 4])
+def test_the_band_answers_wherever_the_seat_target_declines(seated_count):
+    """The stated fallback, asserted as the implication it is: with anybody
+    seated at all, a caller that cannot have the precise answer always has the
+    blunt one."""
+
+    seated = [skill(NAMES[seat], 260 + 20 * seat, 20) for seat in range(seated_count)]
+    analysis = ENGINE.analyse(
+        snapshot=doubles(*seated, *([None] * (4 - seated_count))), now=NOW
+    )
+    if isinstance(analysis.seat_target, Err):
+        assert isinstance(analysis.target_band, Ok)
+
+
+def test_the_two_selection_rules_refuse_the_inputs_they_have_no_answer_for():
+    """Both are reached only through the engine, which guards them by arity and
+    by an emptiness check, so nothing the Protocol can be handed gets here. They
+    are asserted directly for exactly that reason: a precondition no call site
+    can currently break is one a later slice breaks silently.
+
+    An even number of Levels has no middle — ``sorted(...)[n // 2]`` would answer
+    with the upper of the two and look right — and no Levels have no mean.
+    """
+
+    levels = tuple(skill(str(seat), 300 + seat, 0).level for seat in range(4))
+    with pytest.raises(InvariantViolated, match="no middle of 4 levels"):
+        middle_level(levels)
+    with pytest.raises(InvariantViolated, match="the mean of no levels"):
+        mean_level(())
+
+
+@pytest.mark.parametrize(
+    "reason",
+    [
+        SidesNotFormed(sport="PADEL", seated=4, sold=4),
+        SeatUnderDetermined(sport="PADEL", open_seats=2, sold=4),
+        NobodySeated(sport="PADEL", sold=4),
+    ],
+)
+def test_every_reason_is_a_machine_code_and_a_payload(reason):
+    """The clients own the words, for the two new reasons as for the first."""
+
+    assert reason.kind.islower() and " " not in reason.kind
+    assert not any(
+        isinstance(value, str) and " " in value for value in vars(reason).values()
+    )
 
 
 # --- The three splits ---------------------------------------------------------------
@@ -844,7 +1043,10 @@ def test_every_value_object_in_the_vocabulary_is_frozen_and_closed():
         MatchSnapshot,
         Side,
         SidesNotFormed,
+        SeatUnderDetermined,
+        NobodySeated,
         BalanceForecast,
+        TargetBand,
         Split,
         PairingAnalysis,
         PairingConstants,
@@ -975,6 +1177,34 @@ def test_every_constant_carries_the_measurement_that_would_falsify_it():
         if "Falsified by:" not in note:
             unfalsifiable.append(node.target.id)
     assert unfalsifiable == [], unfalsifiable
-    assert len([node for node in body if isinstance(node, ast.AnnAssign)]) == 5, (
+    assert len([node for node in body if isinstance(node, ast.AnnAssign)]) == 6, (
         "the constant count moved — read the new one's falsifying note first"
     )
+
+
+def test_nothing_in_the_engine_scans_a_grid():
+    """*Constant time* as something the source can be held to, not a claim.
+
+    The caller runs this across every candidate on every home-screen load, and
+    the seat target is the one answer here that a previous design reached by
+    walking 400 Levels and keeping the best. The replacement has no search in it:
+    the arrangements are the three written-out ``SPLITS`` and each one is evened
+    by one division. So the package contains no ``while`` and no ``range`` — the
+    two ways a scan would have to be spelled — and a future one that reintroduces
+    a sweep has to delete this test to do it.
+    """
+
+    walked = _modules_of(PAIRING)
+    scans = [
+        f"{path.relative_to(ROOT)}:{node.lineno}"
+        for path in walked
+        for node in ast.walk(_parsed(path))
+        if isinstance(node, ast.While)
+        or (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Name)
+            and node.func.id == "range"
+        )
+    ]
+    assert len(walked) >= 4, walked
+    assert scans == [], scans

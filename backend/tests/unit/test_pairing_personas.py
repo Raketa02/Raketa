@@ -292,6 +292,110 @@ def test_a_badminton_four_reaches_the_same_arithmetic_as_a_padel_four():
     assert padel.splits == badminton.splits
 
 
+# --- What a forming match says about the seats it has not filled --------------------
+
+
+def seat_target(*occupants, sport=Sport.PADEL):
+    result = ENGINE.analyse(
+        snapshot=doubles(*occupants, sport=sport), now=NOW
+    ).seat_target
+    assert isinstance(result, Ok), result
+    return as_float(result.value)
+
+
+def test_the_canonical_padel_roster_one_seat_short_says_what_it_is_aiming_at():
+    """ADR-0025's four, with the 2,92 not yet arrived.
+
+    The three seated Levels admit three Levels that would even the match — 2,42
+    partnered with the 2,80, **2,71 partnered with the 2,71**, and 3,52 partnered
+    with the 2,64 — and the middle one is what the card advertises. So the seat
+    reads *aimed at 2,71*, which is a Level a player can hold themselves up
+    against, and it is inside the three Levels already there rather than at either
+    extreme.
+
+    Read against the persona above, this is also what the seat target is *for*:
+    the player who actually took that seat was a 2,92, three tenths above what it
+    was aimed at, and that is exactly why the real match comes back 99% balanced
+    rather than exactly even.
+    """
+
+    ada, bo, cy = skill("ada", 271, 15), skill("bo", 280, 20), skill("cy", 264, 25)
+    assert seat_target(ada, bo, cy, None) == pytest.approx(2.7144, abs=5e-5)
+
+    analysis = ENGINE.analyse(snapshot=doubles(ada, bo, cy, None), now=NOW)
+    assert isinstance(analysis.target_band, Ok)
+    band = analysis.target_band.value
+    assert as_float(band.midpoint) == pytest.approx(2.7167, abs=5e-5)
+    assert (as_float(band.low), as_float(band.high)) == pytest.approx(
+        (2.2167, 3.2167), abs=5e-5
+    )
+
+
+def test_the_seat_target_a_scan_of_the_scale_would_have_got_wrong():
+    """A 2,00, a 3,00 and a 4,00, with one seat left.
+
+    Three Levels even this match: **1,18** beside the 4,00, **2,82** beside the
+    3,00, and **5,22** beside the 2,00 — every one of them a dead-level match on
+    paper, so *as even as possible* does not choose between them and something
+    has to. A scan walking the scale upwards keeps the first of the tying
+    candidates it meets and answers 1,18, which advertises a match of 2/3/4 to a
+    near-beginner. The middle answer is 2,82, and it is the only one of the three
+    that a player looking at those three Levels would recognise as being about
+    them.
+    """
+
+    roster = (skill("ada", 200, 0), skill("bo", 300, 0), skill("cy", 400, 0))
+    assert seat_target(*roster, None) == pytest.approx(2.8182, abs=5e-5)
+
+
+def test_a_singles_match_with_a_seat_open_aims_at_the_seated_players_own_level():
+    """No pairing, so no arrangement to choose and nothing to solve: the ideal
+    opponent for a 3,17 is a 3,17."""
+
+    ada = skill("ada", 317, 20)
+    result = ENGINE.analyse(snapshot=singles(ada, None), now=NOW).seat_target
+    assert isinstance(result, Ok)
+    assert as_float(result.value) == pytest.approx(3.17)
+
+
+def test_a_match_with_two_seats_open_advertises_a_band_instead():
+    """The question is under-determined with two Levels to choose and one
+    equation between them, so the precise answer is refused and the blunt one is
+    given: two players averaging 3,05 are looking for a 2,55 to 3,55."""
+
+    analysis = ENGINE.analyse(
+        snapshot=doubles(skill("ada", 290, 20), skill("bo", 320, 20), None, None),
+        now=NOW,
+    )
+    assert analysis.seat_target.reason.kind == "seat_under_determined"
+    assert analysis.seat_target.reason.open_seats == 2
+
+    assert isinstance(analysis.target_band, Ok)
+    band = analysis.target_band.value
+    assert as_float(band.midpoint) == pytest.approx(3.05)
+    assert (as_float(band.low), as_float(band.high)) == pytest.approx((2.55, 3.55))
+
+
+def test_the_band_is_as_wide_as_the_platform_said_a_match_could_be():
+    """The band's half width is not a second opinion about how far apart two
+    players can be. It is the reference scenario ``gap_coefficient`` was solved
+    from, pointed the other way: half a Level apart is 75% balanced, and 75% is
+    the edge of what the platform has said out loud is still a match. So the two
+    constants are checked against each other here, and a retune of either that
+    leaves them disagreeing turns this red.
+    """
+
+    half_width = CONSTANTS.target_band_half_width
+    assert 100 - CONSTANTS.gap_coefficient * half_width == 75
+
+    edge = ENGINE.analyse(
+        snapshot=singles(skill("ada", 300, 0), skill("bo", 350, 0)), now=NOW
+    ).forecast
+    assert isinstance(edge, Ok)
+    assert as_float(half_width) == pytest.approx(0.50)
+    assert edge.value.estimate == 75
+
+
 def test_a_squash_match_seen_by_the_player_on_the_second_seat():
     """Same arithmetic, sides the other way up.
 

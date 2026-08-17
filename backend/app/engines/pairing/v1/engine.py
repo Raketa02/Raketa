@@ -2,12 +2,18 @@
 
 This version forecasts a **full** match at either arity: tennis and squash, two
 seats and two sides of one player each; padel and badminton, four seats, three
-splits, ranked. The seat target, the target band and seat imputation extend this
-version rather than replacing it, because a shipped version is a directory that
-is never deleted — a forecast is interpretable only through the code that
-produced it.
+splits, ranked. Seat imputation extends this version rather than replacing it,
+because a shipped version is a directory that is never deleted — a forecast is
+interpretable only through the code that produced it.
 
-The whole calculation, in the order it happens:
+**A forming match is not silent.** The forecast is one of four answers on the
+analysis and it is the one that needs every seat filled; the seat target needs the
+match to be exactly one seat from full and the target band needs one seated
+player. So the three are computed independently from one snapshot in one pass,
+each declining on its own terms, and a padel court with three players says what
+Level its last seat is aimed at while honestly having no forecast at all.
+
+The whole balance calculation, in the order it happens:
 
 0. **In doubles, the pairing first**, because the same four Levels give a
    near-perfect match or a walkover depending entirely on how they are split —
@@ -46,24 +52,33 @@ from typing import final
 from app.engines.forecast import (
     BalanceForecast,
     Certainty,
+    NoForecast,
+    NoSeatTarget,
+    NobodySeated,
+    NoTargetBand,
     PairingAnalysis,
+    SeatUnderDetermined,
     SidesNotFormed,
     Split,
+    TargetBand,
 )
-from app.engines.matchmaking import MatchSnapshot, PlayerSkill
+from app.engines.matchmaking import Level, MatchSnapshot, PlayerSkill
 from app.engines.pairing.core import (
     SPLITS,
     Side,
     absolute_gap_deviation,
     as_float,
     combine_uncertainty,
+    evening_levels,
     expected_absolute_gap,
+    mean_level,
+    middle_level,
     round_half_away_from_zero,
     side_of_one,
     side_of_two,
 )
 from app.engines.pairing.v1.constants import CONSTANTS, ENGINE_VERSION
-from app.kernel import Err, Instant, Ok, Ratio, Sport, invariant
+from app.kernel import Err, Instant, Ok, Ratio, Result, Sport, invariant
 
 #: The two seat counts this version has a pairing rule for. Read from the
 #: snapshot's own sold count, which comes from the kernel registry, so an arity
@@ -105,26 +120,38 @@ class PairingEngineV1:
         )
 
         roster = snapshot.occupants
-        if len(roster) != snapshot.sold_seats:
-            return _declined(snapshot)
-        if snapshot.sold_seats == _SINGLES:
-            return _analysis(_singles_forecast(roster, snapshot.current_player), ())
-        if snapshot.sold_seats == _DOUBLES:
-            splits = _ranked_splits(roster, snapshot.sport, snapshot.current_player)
-            return _analysis(splits[0].forecast, splits)
-        return _declined(snapshot)
+        forecast, splits = _balance(snapshot, roster)
+        return PairingAnalysis(
+            forecast=forecast,
+            splits=splits,
+            seat_target=_seat_target(snapshot, roster),
+            target_band=_target_band(snapshot, roster),
+            engine_version=ENGINE_VERSION,
+        )
 
 
-def _analysis(forecast: BalanceForecast, splits: tuple[Split, ...]) -> PairingAnalysis:
-    """The one place a forecast becomes an analysis, so the winner and the
-    headline number are the same object and not two computations of it."""
+def _balance(
+    snapshot: MatchSnapshot, roster: tuple[PlayerSkill, ...]
+) -> tuple[Result[BalanceForecast, NoForecast], tuple[Split, ...]]:
+    """The forecast and the arrangements it was chosen from, together.
 
-    return PairingAnalysis(
-        forecast=Ok(forecast), splits=splits, engine_version=ENGINE_VERSION
-    )
+    Returned as a pair rather than assembled separately, so the winner and the
+    headline number are the same object and not two computations of it.
+    """
+
+    if len(roster) != snapshot.sold_seats:
+        return Err(_no_sides(snapshot, roster)), ()
+    if snapshot.sold_seats == _SINGLES:
+        return Ok(_singles_forecast(roster, snapshot.current_player)), ()
+    if snapshot.sold_seats == _DOUBLES:
+        splits = _ranked_splits(roster, snapshot.sport, snapshot.current_player)
+        return Ok(splits[0].forecast), splits
+    return Err(_no_sides(snapshot, roster)), ()
 
 
-def _declined(snapshot: MatchSnapshot) -> PairingAnalysis:
+def _no_sides(
+    snapshot: MatchSnapshot, roster: tuple[PlayerSkill, ...]
+) -> SidesNotFormed:
     """No sides can be made of this roster, so there is nothing to forecast.
 
     Two reasons reach here in this version and they are one reason: there is
@@ -133,18 +160,80 @@ def _declined(snapshot: MatchSnapshot) -> PairingAnalysis:
     for has no sides either. Until then the engine declines rather than guessing,
     because a forecast built on a player who is not there is the failure this
     whole spec exists to remove.
+
+    **Declining the forecast is not declining the analysis.** The same half-formed
+    roster that has no two sides still has a seat aimed somewhere and a band it is
+    aimed at, and those are answered beside this. The reason is built here and
+    wrapped at each caller, because it is one fact given as the answer to two
+    different questions.
     """
 
-    return PairingAnalysis(
-        forecast=Err(
-            SidesNotFormed(
+    return SidesNotFormed(
+        sport=snapshot.sport.value,
+        seated=len(roster),
+        sold=snapshot.sold_seats,
+    )
+
+
+def _seat_target(
+    snapshot: MatchSnapshot, roster: tuple[PlayerSkill, ...]
+) -> Result[Level, NoSeatTarget]:
+    """What Level the one open seat is aimed at — when there is exactly one.
+
+    **One open seat, or no answer.** With two open there are two Levels to choose
+    and one equation between them, so every Level across a wide interval evens the
+    match given some answer for the other seat; naming one would be reporting a
+    preference as a calculation. With none open there is no seat. Both decline,
+    and a caller falls back to the band.
+
+    Singles is the case with nothing to solve: the two sides are one player each,
+    so the Level that evens the match is the seated player's own. Doubles inverts
+    the team strength — see ``even_partner_level`` — once per arrangement, and
+    takes the middle of the three answers, which for any weighting above a half
+    and below one is the only one of the three guaranteed to land between the
+    Levels already seated. That is asserted over a sweep in both test suites
+    rather than guarded here, because it is a theorem about the weighting's range
+    and the constants refuse a weight outside it: a check here could not fire.
+    """
+
+    open_seats = snapshot.sold_seats - len(roster)
+    if open_seats != 1:
+        return Err(
+            SeatUnderDetermined(
                 sport=snapshot.sport.value,
-                seated=len(snapshot.occupants),
+                open_seats=open_seats,
                 sold=snapshot.sold_seats,
             )
-        ),
-        splits=(),
-        engine_version=ENGINE_VERSION,
+        )
+    if snapshot.sold_seats == _SINGLES:
+        return Ok(roster[0].level)
+    if snapshot.sold_seats == _DOUBLES:
+        weight = _weaker_weight(snapshot.sport)
+        return Ok(middle_level(evening_levels(roster, weaker_weight=weight)))
+    return Err(_no_sides(snapshot, roster))
+
+
+def _target_band(
+    snapshot: MatchSnapshot, roster: tuple[PlayerSkill, ...]
+) -> Result[TargetBand, NoTargetBand]:
+    """The Level range a forming match is aimed at — the blunt answer.
+
+    One seated player is the whole requirement, so this is answered in every state
+    the seat target declines in except the empty court, which is what makes it the
+    fallback rather than a second opinion. It is answered for a *full* match too:
+    the match is still aimed somewhere, and a caller ranking a full match beside a
+    forming one needs both to say the same kind of thing.
+    """
+
+    if not roster:
+        return Err(
+            NobodySeated(sport=snapshot.sport.value, sold=snapshot.sold_seats),
+        )
+    return Ok(
+        TargetBand(
+            midpoint=mean_level(tuple(player.level for player in roster)),
+            half_width=CONSTANTS.target_band_half_width,
+        )
     )
 
 

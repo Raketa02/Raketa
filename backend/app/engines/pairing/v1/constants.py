@@ -1,4 +1,4 @@
-"""Pairing v1's constants — five numbers, each an admitted hypothesis.
+"""Pairing v1's constants — six numbers, each an admitted hypothesis.
 
 Constants travel with the version as a frozen dataclass and every one of them
 carries, as its docstring, the measurement that would falsify it (``docs/adr/0015``,
@@ -111,6 +111,30 @@ class PairingConstants:
     routinely walkovers, it is too loose.
     """
 
+    target_band_half_width: Ratio = field(default_factory=lambda: ratio(50, 100))
+    """How far either side of the seated mean a forming match is aimed.
+
+    **Taken from the commitment ``gap_coefficient`` was solved from, not chosen
+    separately.** That reference scenario is *a singles match between 3,00 and
+    3,50 — half a Level apart — is 75% balanced*, so half a Level is the widest
+    difference the platform has said out loud is still a match worth playing. A
+    target band is exactly that claim pointed the other way: the Levels this match
+    is for. Picking a second number here would be the platform quietly holding two
+    opinions about how far apart two players can be.
+
+    Blunt on purpose, and a band rather than a point, because the mean of one, two
+    or three seated Levels is a much weaker statement than a full roster is and
+    should not be dressed as a precise one. The seat target is the precise answer
+    and it is available only when the match is one seat from full.
+
+    **Falsified by:** where the players who actually take the open seats fall.
+    Every fill records the joiner's Level against the band that was advertised at
+    the moment they joined. If nearly all of them land well inside it, the band is
+    wider than the match really was and it told nobody anything; if a large share
+    land outside it and those matches then played out balanced, it is narrower
+    than the truth and it was turning people away from matches that were for them.
+    """
+
     certain_margin: int = 8
     """The margin, in percentage points, up to which certainty is HIGH.
 
@@ -146,6 +170,14 @@ class PairingConstants:
         one home screen. A weight at or below a half is not a weaker-partner
         weighting at all; it is the model inverted, with every percentage still
         looking plausible.
+
+        **The open upper end is not decoration.** At a weight of exactly one the
+        stronger partner contributes nothing, so a team's strength can never be
+        raised above its weaker member by any partner at all — and then a seat
+        target does not exist for some rosters, because no Level in either
+        direction would even the match. The weighting has to leave the stronger
+        partner *some* share for the seat question to have an answer, so the range
+        is above a half and below one.
         """
 
         invariant(
@@ -155,7 +187,7 @@ class PairingConstants:
         )
         for sport, weight in self.weaker_partner_weight.items():
             invariant(
-                ratio(1, 2) < weight <= ratio(1, 1),
+                ratio(1, 2) < weight < ratio(1, 1),
                 f"{sport.value} does not weight the weaker partner: {weight}",
             )
 
