@@ -64,6 +64,7 @@ from typing import Literal, Protocol, TypeAlias, final, runtime_checkable
 
 from app.engines.forecast import PairingAnalysis
 from app.engines.matchmaking import (
+    CourtHold,
     HourWindow,
     LadderQualification,
     MatchSnapshot,
@@ -99,12 +100,13 @@ class TermCode(Enum):
 
     A client renders copy per code and the codes never change, which is what lets
     the wording of a reason change without a backend release. The enum lists the
-    terms that **exist**; the three the table still owes it are named in
+    terms that **exist**; the two the table still owes it are named in
     ``matchfit/v1/constants.py`` with their weights, because a code nothing can
     produce is a code a client could handle and never receive.
     """
 
     TIME_FIT = "time_fit"
+    MATCH_VIABILITY = "match_viability"
     GROUP_RELIABILITY = "group_reliability"
     TRAVEL = "travel"
     LADDER_QUALIFICATION = "ladder_qualification"
@@ -180,6 +182,34 @@ class TimeFact:
 
 @final
 @dataclass(frozen=True)
+class ViabilityFact:
+    """The four facts behind *will this match actually be played*.
+
+    Every one of them a quantity in the unit its own vocabulary keeps it in — two
+    seat counts, a rung of the hold ladder, elapsed minutes, a share — so a client
+    can write *"3 of 4 paid, court booked"* or *"nobody has joined and the club is
+    full"* from the same numbers the term was scored from.
+
+    ``paid_seats`` and ``sold_seats`` rather than the fraction between them,
+    because *three of four* and *seventy-five per cent* are the same number and not
+    the same sentence, and the one a card shows is the first.
+
+    ``minutes_to_cutoff`` is **signed**, as every ``Minutes`` is. It is negative for
+    a match whose cutoff has already passed, which candidate generation is supposed
+    to have filtered out before an engine ever sees it — reporting the number the
+    engine actually read is what lets a caller notice that it did not.
+    """
+
+    paid_seats: int
+    sold_seats: int
+    hold: CourtHold
+    minutes_to_cutoff: Minutes
+    crowding: Ratio
+    kind: Literal["match_viability"] = "match_viability"
+
+
+@final
+@dataclass(frozen=True)
 class TravelFact:
     """How far away it is and how far they said they would go, both in minutes."""
 
@@ -244,6 +274,7 @@ class FamiliarityFact:
 #: payload of numbers — never a sentence, never a formatted figure.
 TermFact: TypeAlias = (
     TimeFact
+    | ViabilityFact
     | PriceFact
     | TravelFact
     | MatchTypeFact

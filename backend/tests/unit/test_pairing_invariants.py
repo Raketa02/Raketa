@@ -1532,7 +1532,7 @@ def test_nothing_in_the_engine_scans_a_grid():
     assert scans == [], scans
 
 
-def test_the_pairing_engine_never_mentions_a_seat_state_at_all():
+def test_the_pairing_engine_never_mentions_a_commitment_fact_at_all():
     """*Attendance risk is not represented as Uncertainty anywhere*, as something
     the source can be held to rather than a claim a docstring makes.
 
@@ -1543,21 +1543,36 @@ def test_the_pairing_engine_never_mentions_a_seat_state_at_all():
     percentage, where nothing could tell it apart from *how good are they*. The
     package cannot name the enum, so it cannot read it.
 
-    ``paid_seats`` is on the snapshot for the viability term, which is a different
-    engine and is welcome to it.
+    **The court hold, the club's crowding and the join cutoff are on the same list**,
+    and for the same reason rather than for a similar one: every one of them is a fact
+    about whether the match will *happen*, and none is a fact about how even it will
+    be. A forecast that widened its margin because a court was only softly held would
+    be reporting viability in a balance percentage's units, which is the same defect
+    the seat states are kept out for. They are the viability term's, in the other
+    engine, and it is welcome to all of them.
     """
 
+    forbidden_names = {
+        "SeatState",
+        "paid_seats",
+        "CourtHold",
+        "HOLD_LADDER",
+        "MatchPhase",
+        "crowding",
+        "join_cutoff",
+    }
     walked = _modules_of(PAIRING)
     mentions = [
         f"{path.relative_to(ROOT)}:{node.lineno}"
         for path in walked
         for node in ast.walk(_parsed(path))
-        if (isinstance(node, ast.Name) and node.id in ("SeatState", "paid_seats"))
+        if (isinstance(node, ast.Name) and node.id in forbidden_names)
         or (
             isinstance(node, ast.Attribute)
-            and node.attr in ("HELD", "PAID", "paid_seats")
+            and node.attr
+            in ("HELD", "PAID", "paid_seats", "hold", "crowding", "join_cutoff")
         )
-        or (isinstance(node, ast.alias) and node.name in ("SeatState",))
+        or (isinstance(node, ast.alias) and node.name in forbidden_names)
     ]
     assert len(walked) >= 4, walked
     assert mentions == [], mentions

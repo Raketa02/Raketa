@@ -11,10 +11,10 @@ the specification for what the Matches aggregate will have to own.
 **The vocabulary is borrowed, never re-coined.** The ``Sport`` and its sold seat
 count come from the kernel registry and are read from it here rather than carried
 as a field, because *a sport's player count is never club-configurable* — a padel
-match divides by four wherever it is read. A seat's **paid / held / empty** state
-is here now and is spelled exactly as the commitment rules spell it; the match's
-phase, its court hold tier and its join cutoff land with the viability term that
-reads them. Renaming any of those here would fork the clock. Time is the kernel's
+match divides by four wherever it is read. A seat's **paid / held / empty** state,
+the match's **phase**, the **court hold** tier and the **join cutoff** are all
+spelled exactly as the clock and commitment rules spell them. Renaming any of them
+here would fork the clock. Time is the kernel's
 in the same way: a match carries its start as an ``Instant`` and its club carries
 a ``Zone``, and the only route from the two to a local weekday and minute is the
 kernel's own pair of readers — an engine that computed either half itself would be
@@ -377,8 +377,6 @@ class ClubSnapshot:
     is 20 minutes away from somebody. It is a club fact rather than a match fact
     because every match at that club shares it, and a match carrying its own copy
     would be the same number stored once per candidate.
-
-    The club's **crowding** lands with the viability term that reads it.
     """
 
     travel_minutes: Minutes
@@ -399,10 +397,32 @@ class ClubSnapshot:
     side of a Warsaw midnight would land on different days without a word.
     """
 
+    crowding: Ratio
+    """How much of this club's capacity is already committed, in 0..1.
+
+    The club's **saturation**, read by the viability term and by nothing else: a
+    match with no court held at a club with nothing left is a match that will not
+    be played, and one at a club with half its courts free will find one.
+
+    A share rather than a court count, because *how many courts a club has* is a
+    club fact an engine has no business scaling against — two free courts is
+    plenty at a two-court club and nothing at a twenty-court one. Resolved by the
+    assembler **for the time this match starts**, since a club is not crowded, it
+    is crowded on a Tuesday evening.
+
+    No default, for the same reason a price and a zone have none: a default of
+    nothing is an empty club, which is the most flattering answer available and
+    exactly the fabricated observation ``docs/adr/0027`` exists to remove.
+    """
+
     def __post_init__(self) -> None:
         invariant(
             self.travel_minutes >= 0,
             f"a negative travel time: {self.travel_minutes}",
+        )
+        invariant(
+            0 <= self.crowding <= 1,
+            f"a crowding outside 0..1: {self.crowding}",
         )
 
 
@@ -512,6 +532,69 @@ class SeatSnapshot:
         )
 
 
+class MatchPhase(Enum):
+    """Where a match is on the clock's own ladder. **Borrowed vocabulary.**
+
+    A match is **forming** while seats are open and the join cutoff is ahead of
+    it, **locked** once that cutoff has passed and the roster it will be played
+    with is fixed, and **cancelled** if it will not be played at all.
+
+    **Only a forming match reaches an engine, and that is checked rather than
+    assumed** (see ``MatchSnapshot``). Whether a match is joinable at all is a
+    *hard filter* and never a low score: ADR-0027 is explicit that candidate
+    generation excludes on facts — sport, seats remaining, the join cutoff — and
+    that only preferences reach the player as a lower score. So no term reads this
+    field: a cancelled match must not be ranked badly, it must not be there.
+
+    The run-up **to** the cutoff is a different question and is a matter of degree,
+    which is why the viability term reads how long is left while nothing reads the
+    phase: the filter removes the matches you cannot join, and the term grades how
+    likely the ones you can are to fill in time.
+
+    *Locked* deliberately covers a match being played and one already played.
+    Matchmaking cannot join either, and inventing members it can never tell apart
+    would be this file guessing at a lifecycle Matches will own.
+    """
+
+    FORMING = "forming"
+    LOCKED = "locked"
+    CANCELLED = "cancelled"
+
+
+class CourtHold(Enum):
+    """How firmly a court is held for this match. **Borrowed vocabulary.**
+
+    The clock's hold ladder (``docs/adr/0021``), in the three rungs a match can be
+    on: **none** — no court is held and one has still to be found; **soft** — a
+    court is held provisionally and can lapse; **hard** — a court is booked and
+    the club has committed it.
+
+    A ladder and not a bool, for the same reason ``LadderQualification`` is three
+    states: *nobody has looked for a court yet* and *a court is held and could
+    still be lost* are different facts about whether the match will be played, and
+    collapsing them would make the middle rung score like whichever end it was
+    folded into.
+
+    **Borrowed with no owner yet.** Courts are not a modelled context and the hold
+    ladder is specified in documents outside this repository, so the spelling is
+    fixed *here*, now, and whichever context ends up owning courts will define it —
+    the same standing as a seat's state and a ladder qualification.
+    """
+
+    NONE = "none"
+    SOFT = "soft"
+    HARD = "hard"
+
+
+#: The hold ladder in order, weakest first. **The vocabulary's, never a version's.**
+#:
+#: *A firmer hold never makes a match less likely to be played* is a claim about
+#: the domain, so the order it is checked against has to live where the domain word
+#: does. Read off a version's constants instead, a retune that reordered the rungs
+#: would leave every monotonicity test passing by walking its own new order.
+HOLD_LADDER: tuple[CourtHold, ...] = (CourtHold.NONE, CourtHold.SOFT, CourtHold.HARD)
+
+
 @final
 @dataclass(frozen=True)
 class MatchSnapshot:
@@ -579,6 +662,40 @@ class MatchSnapshot:
     ladder: LadderQualification
     """Whether this match counts towards the current player's ladder."""
 
+    phase: MatchPhase
+    """Where the match is on the clock's ladder. **Asserted, never read.**
+
+    An engine is only ever asked about a match a player could still join, so the
+    one legal value here today is ``FORMING`` and the invariant below says so. That
+    is the opposite of a field with one legal value and one silent bug: it is not a
+    conclusion this file derives, it is a fact the *assembler* states, and stating
+    it is what turns a cancelled match in a home list from a card nobody can join
+    into a loud failure at the point that assembled it.
+
+    No default, deliberately, and this is the field where a default would cost the
+    most: ``FORMING`` as a fallback is *assume it is joinable*, so the one bug this
+    guard exists to catch would be the one shape that never reached it.
+    """
+
+    hold: CourtHold
+    """How firmly a court is held for this match. Read by the viability term."""
+
+    join_cutoff: Instant
+    """The last moment a player can take a seat. **The clock's own word.**
+
+    An ``Instant`` and never a countdown, for the reason ADR-0021 gives for the
+    whole transition schedule: a duration is only true at the moment it was
+    computed, while an instant is true until the match changes. The engine is given
+    ``now`` beside it and does the subtraction itself, in the kernel's elapsed
+    minutes, so a cached score and a live one disagree about the clock rather than
+    about the rule.
+
+    Rounded to the minute for the same reason the start is, and never after the
+    start: a seat that could be taken after the match began is a state no clock
+    rule admits, and it would make the run-up to the cutoff — which the viability
+    term reads — a negative number nobody meant.
+    """
+
     history: PlayHistory | None = None
     """Who in this match the current player has played recently. **Ships dark.**
 
@@ -603,6 +720,24 @@ class MatchSnapshot:
         invariant(
             self.start.second == 0 and self.start.microsecond == 0,
             f"a start that is not rounded to the minute: {self.start!r}",
+        )
+        invariant(
+            self.join_cutoff.second == 0 and self.join_cutoff.microsecond == 0,
+            f"a join cutoff that is not rounded to the minute: {self.join_cutoff!r}",
+        )
+        invariant(
+            self.join_cutoff <= self.start,
+            f"a join cutoff at {self.join_cutoff!r} for a match starting "
+            f"{self.start!r}",
+        )
+        # *Whether a match is joinable at all is a hard filter* (`docs/adr/0027`),
+        # so a match in any other phase reaching an engine is the caller's bug and
+        # not a match to score badly — a cancelled card ranked last is still a
+        # cancelled card in a home list.
+        invariant(
+            self.phase is MatchPhase.FORMING,
+            f"a {self.phase.value} match reached an engine: only a forming match "
+            "is a candidate",
         )
         # The money kernel's own claim — *"a payable is never negative and never
         # exceeds its share"* — holds by construction for anything built through

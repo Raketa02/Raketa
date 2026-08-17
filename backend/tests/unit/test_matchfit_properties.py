@@ -9,10 +9,15 @@ and wrong in the middle.
 on Wednesday is not a property; ``random.Random(SEED)`` gives the same sweep on every
 machine and every run, and widening the sweep is a diff on a number here.
 
-The sweep is over *declarations, prices and start times*, never over ratings, because
-no term in this slice reads a Level. That is the honest shape of the thing being
-tested and it is why this file is shorter than the pairing engine's: three of Match
-Fit's ten terms are still owed (#85, #86).
+The sweep is over *declarations, prices, start times and the four facts viability
+reads*, never over ratings, because no term in this slice reads a Level. That is the
+honest shape of the thing being tested and it is why this file is shorter than the
+pairing engine's: two of Match Fit's ten terms are still owed (#86).
+
+**Viability's three monotonicities are asserted at every corner of the other two
+inputs**, rather than at a convenient one. A curve that rises with paid seats when the
+court is booked and not when it is unheld is not monotone, and one shape of match
+would have hidden that.
 """
 
 import random
@@ -24,17 +29,21 @@ from app.engines.fit import ExcludedTerm, ScoredTerm, TermCode, TermKind
 from app.engines.matchfit.core import measured_share, renormalise, whole_percent
 from app.engines.matchfit.v1 import CONSTANTS, MatchFitEngineV1
 from app.engines.matchmaking import (
+    HOLD_LADDER,
+    CourtHold,
     LadderQualification,
     MatchSnapshot,
     MatchTypePreference,
     PlayerProfile,
     PlayerRef,
     PlayHistory,
+    SeatState,
     Weekday,
 )
-from app.kernel import grosze, ratio
+from app.kernel import grosze, minutes, ratio, shifted
 from tests.unit.matchmaking_snapshots import (
     NOW,
+    START,
     WARSAW,
     analysis,
     doubles,
@@ -63,6 +72,12 @@ DEE = skill("dee", 330, 60)
 
 LADDERS = tuple(LadderQualification)
 PREFERENCES = (None, MatchTypePreference.COMPETITIVE, MatchTypePreference.SOCIAL)
+HOLDS = HOLD_LADDER
+
+#: How long before its own start each drawn match closes to joins, in minutes. Two of
+#: them are inside the fill window and two are outside it, so the run-up is crossed on
+#: both sides of the point where an unpaid seat's chances stop improving.
+LEADS = (0, 120, 720, 2880)
 
 #: Declarations of *when*, from silence to a single Tuesday morning. Drawn beside
 #: the prices and the distances so that the time term is crossed on both sides of
@@ -83,18 +98,36 @@ def scored(snapshot: MatchSnapshot, declaration: PlayerProfile):
     )
 
 
+def paid_states(count: int) -> tuple[SeatState, ...]:
+    """Four seated players, ``count`` of whom have paid and the rest merely holding.
+
+    The paid fraction varied **without** varying who is in the match, which is what
+    makes a viability sweep a sweep over viability: emptying seats instead would move
+    the roster, the familiarity term's company and the reliability term's records all
+    at once, and no property could then say which one it had measured.
+    """
+
+    return tuple(
+        SeatState.PAID if seat < count else SeatState.HELD for seat in range(4)
+    )
+
+
 def drawn(seed: int = SEED):
-    """A sweep of (match, declaration) pairs: prices, distances, kinds and ladders.
+    """A sweep of (match, declaration) pairs: prices, distances, kinds, ladders — and
+    the four facts viability reads.
 
     Prices run from free to five times the seat share and distances from next door
     to two hours, so every curve is crossed inside its limit, just past it, halfway
     down its span and floored — rather than at whichever point a hand-written case
-    happened to pick.
+    happened to pick. The cutoff is drawn as a lead **before the match's own start**,
+    which is the only way it can be drawn: a cutoff is a fact about one match, and a
+    fixed instant is refused by every match a sweep starts earlier than it.
     """
 
     rng = random.Random(seed)
     for _ in range(DRAWS):
         payable = rng.randrange(0, 11_000, 50)
+        start = starting(day=rng.randrange(0, 7), hour=rng.randrange(0, 24))
         snapshot = replace(
             doubles(
                 ADA,
@@ -104,7 +137,11 @@ def drawn(seed: int = SEED):
                 travel_minutes=rng.randrange(0, 120),
                 counted=rng.choice((True, False)),
                 ladder=rng.choice(LADDERS),
-                start=starting(day=rng.randrange(0, 7), hour=rng.randrange(0, 24)),
+                start=start,
+                states=paid_states(rng.randrange(0, 5)),
+                hold=rng.choice(HOLDS),
+                crowding=rng.randrange(0, 101, 10),
+                cutoff=shifted(start, minutes(-rng.choice(LEADS))),
             ),
             seat_share=grosze(max(payable, 2150)),
             payable=grosze(payable),
@@ -136,6 +173,7 @@ def test_the_sweep_reaches_every_branch_of_every_curve():
                 values[term.code].add("excluded")
 
     assert values[TermCode.TIME_FIT] == {"full", "part"}
+    assert values[TermCode.MATCH_VIABILITY] == {"full", "part", "zero"}
     assert values[TermCode.PRICE] == {"full", "part", "zero"}
     assert values[TermCode.TRAVEL] == {"full", "part", "zero"}
     assert values[TermCode.MATCH_TYPE] == {"full", "part"}
@@ -393,6 +431,181 @@ def test_the_whole_week_agrees_with_the_rule_written_out_independently(days, hou
             )
             assert isinstance(term, ScoredTerm)
             assert term.value == expected, (day, hour)
+
+
+# --- Viability: three monotonicities that survive any retune ----------------------
+
+
+def viability(snapshot: MatchSnapshot) -> ScoredTerm:
+    term = next(
+        item
+        for item in scored(snapshot, profile()).terms
+        if item.code is TermCode.MATCH_VIABILITY
+    )
+    assert isinstance(term, ScoredTerm)
+    return term
+
+
+#: Every shape the two halves of viability can be in, crossed. Each monotonicity below
+#: is asserted **at every one of them**, not at a convenient one: a curve that is
+#: monotone with a booked court and not with an unheld one is not monotone.
+CORNERS = [
+    (hold, crowded, lead)
+    for hold in HOLD_LADDER
+    for crowded in (0, 50, 100)
+    for lead in LEADS
+]
+
+
+@pytest.mark.parametrize("hold, crowded, lead", CORNERS)
+def test_a_seat_more_paid_for_never_lowers_viability(hold, crowded, lead):
+    """**Monotone non-decreasing in paid seats**, and true under any retune.
+
+    Money down is the strongest thing anybody has said about whether this match will
+    be played, so a seat moving from held to paid can never make the platform less
+    sure of it. It survives a retune because the only constant on this side is a
+    *ceiling* below one — the best an unpaid seat can be worth — and the guard on
+    the constants refuses one at or above full marks. At exactly one an unpaid seat
+    would be worth as much as a paid one and this curve would go flat, which is the
+    flattery the term exists to remove.
+    """
+
+    values = [
+        viability(
+            doubles(
+                ADA,
+                BO,
+                CY,
+                DEE,
+                states=paid_states(paid),
+                hold=hold,
+                crowding=crowded,
+                cutoff=shifted(START, minutes(-lead)),
+            )
+        ).value
+        for paid in range(5)
+    ]
+    assert values == sorted(values)
+
+
+@pytest.mark.parametrize("paid, crowded, lead", [(0, 0, 0), (2, 50, 720), (4, 100, 0)])
+def test_a_firmer_hold_never_lowers_viability(paid, crowded, lead):
+    """**Monotone non-decreasing in the hold tier**, and true under any retune.
+
+    Walked along ``HOLD_LADDER`` — the *vocabulary's* order, never the constants'
+    — which is what makes this survive a retune rather than move with one: the
+    constants' guard refuses a mapping that falls along that ladder, so a retune can
+    move the rungs apart and cannot swap them.
+    """
+
+    values = [
+        viability(
+            doubles(
+                ADA,
+                BO,
+                CY,
+                DEE,
+                states=paid_states(paid),
+                hold=hold,
+                crowding=crowded,
+                cutoff=shifted(START, minutes(-lead)),
+            )
+        ).value
+        for hold in HOLD_LADDER
+    ]
+    assert values == sorted(values)
+
+
+@pytest.mark.parametrize(
+    "hold, paid, lead", [(hold, paid, 0) for hold in HOLD_LADDER for paid in (0, 4)]
+)
+def test_a_more_crowded_club_never_raises_viability(hold, paid, lead):
+    """**Non-increasing in the club's saturation**, and true under any retune.
+
+    A club with less left to give is a match less likely to find a court, and no
+    constant here can invert that: crowding enters as the share of the *unheld* part
+    of the court side, and that part is never negative.
+
+    At a hard hold the curve is **flat**, which is the case worth reading rather than
+    the interesting one: a court you have booked cannot be taken by the club being
+    busy, so saturation stops mattering exactly when the court stops being at risk.
+    """
+
+    values = [
+        viability(
+            doubles(
+                ADA,
+                BO,
+                CY,
+                DEE,
+                states=paid_states(paid),
+                hold=hold,
+                crowding=crowded,
+                cutoff=shifted(START, minutes(-lead)),
+            )
+        ).value
+        for crowded in range(0, 101, 5)
+    ]
+    assert values == sorted(values, reverse=True)
+
+
+def test_less_time_to_the_cutoff_never_raises_viability():
+    """The run-up, which is the only place ``now`` enters a Match Fit score.
+
+    A seat nobody has taken is worth less the closer the cutoff gets, because there
+    is less time for anybody to take it — and at the cutoff it is worth nothing. A
+    *full* match does not move at all, which is the second half of the same claim:
+    there is nothing left to fill, so there is nothing for the clock to take away.
+    """
+
+    for paid, moves in ((0, True), (2, True), (4, False)):
+        values = [
+            viability(
+                doubles(
+                    ADA,
+                    BO,
+                    CY,
+                    DEE,
+                    states=paid_states(paid),
+                    hold=CourtHold.SOFT,
+                    cutoff=shifted(NOW, minutes(left)),
+                )
+            ).value
+            # Written as *minutes remaining* and not as a lead before the start,
+            # because that is the quantity the term reads and the direction the
+            # claim is made in — a lead grows as the time left shrinks, and a
+            # property asserted in the wrong direction is one that passes by
+            # measuring the opposite of its own docstring.
+            for left in range(0, 1_351, 60)
+        ]
+        assert values == sorted(values)
+        assert (values[0] < values[-1]) is moves
+
+
+def test_viability_is_never_excluded_and_never_lowers_coverage():
+    """**The evidence term that is always computable**, over the whole sweep.
+
+    Every other piece of evidence can be missing — and when they all are, an empty
+    court scores perfectly on the constraints it trivially satisfies. This one cannot
+    be missing, because every match has a phase, a hold, a seat count and a cutoff. It
+    is what makes *absence never flatters* true of a ranking rather than only of the
+    mechanism.
+    """
+
+    for snapshot, declaration in drawn():
+        result = scored(snapshot, declaration)
+        term = next(
+            item for item in result.terms if item.code is TermCode.MATCH_VIABILITY
+        )
+        assert isinstance(term, ScoredTerm)
+        assert term.kind is TermKind.EVIDENCE
+        assert term.code not in {excluded.code for excluded in result.excluded}
+        assert result.coverage >= whole_percent(
+            ratio(
+                CONSTANTS.weights[TermCode.MATCH_VIABILITY],
+                sum(CONSTANTS.weights.values()),
+            )
+        )
 
 
 # --- Absence, over the sweep ------------------------------------------------------

@@ -6,12 +6,21 @@ carries, as its docstring, the measurement that would falsify it (``docs/adr/001
 number's clothes, and retuning it is then taste rather than science.
 
 **The table is incomplete, and it says so in arithmetic rather than in a comment.**
-Three of the ten terms ADR-0027 specifies are not built yet, so their weights are
+Two of the ten terms ADR-0027 specifies are not built yet, so their weights are
 written out in ``PENDING_WEIGHTS`` with the issue that lands each one, and the
 constants refuse to be built unless the declared weights and the pending ones sum to
 **exactly 100**. So the spec's *"the weights sum to 100"* is enforced today, in the
 only form in which it can be true today, and completing the table is a diff that
 moves a line from one mapping to the other.
+
+**Viability is a probability, and the three constants below it are the parts of
+one.** *Will this match be played* is not a taste, a preference or a fit — it is a
+frequency, and the platform is right or wrong about it in a way that can be counted:
+take every match a player joined, bucket them by the viability the engine gave them,
+and measure the share that were actually played. That single measurement falsifies
+all three numbers at once and is what a blend of scores could never have offered,
+which is the reason the term composes as a product of two probabilities rather than
+as a weighted average of two marks.
 
 **Time fit and travel are two terms and used to be one number.** The source design
 labelled a single term *"Time and travel"* and then computed only the travel half,
@@ -35,13 +44,14 @@ from types import MappingProxyType
 from typing import Mapping, final
 
 from app.engines.fit import TermCode
+from app.engines.matchmaking import HOLD_LADDER, CourtHold
 from app.kernel import Minutes, Ratio, invariant, minutes, ratio
 
 #: This lineage, permanently. It travels on every score, because a constant below
 #: can only be falsified against results it can be attributed to.
 ENGINE_VERSION = "matchfit-v1"
 
-#: The three terms the table still owes, with the weights ADR-0027 assigns them and
+#: The two terms the table still owes, with the weights ADR-0027 assigns them and
 #: the issue that lands each. They are here rather than in ``weights`` because a
 #: weight with no term behind it is a denominator with nothing in the numerator: it
 #: would lower every Coverage figure by the same amount and say nothing about any
@@ -50,13 +60,10 @@ ENGINE_VERSION = "matchfit-v1"
 #: * ``skill_overlap`` 24 and ``predicted_balance`` 14 — #86. Both read the pairing
 #:   analysis this engine already takes, which is why the analysis is an input from
 #:   the first commit rather than an argument added later.
-#: * ``match_viability`` 12 — #85. Evidence, and the only evidence term that is
-#:   *always* computable, because every match has a phase and a court hold state.
 PENDING_WEIGHTS: Mapping[str, int] = MappingProxyType(
     {
         "skill_overlap": 24,
         "predicted_balance": 14,
-        "match_viability": 12,
     }
 )
 
@@ -68,13 +75,14 @@ WEIGHT_TOTAL = 100
 @final
 @dataclass(frozen=True)
 class MatchFitConstants:
-    """The v1 hypotheses: seven weights, two decay spans, three mismatch values, and
-    a threshold."""
+    """The v1 hypotheses: eight weights, two decay spans, three mismatch values, the
+    three parts of a viability, and a threshold."""
 
     weights: Mapping[TermCode, int] = field(
         default_factory=lambda: MappingProxyType(
             {
                 TermCode.TIME_FIT: 12,
+                TermCode.MATCH_VIABILITY: 12,
                 TermCode.GROUP_RELIABILITY: 11,
                 TermCode.TRAVEL: 8,
                 TermCode.LADDER_QUALIFICATION: 6,
@@ -192,6 +200,71 @@ class MatchFitConstants:
     almost never join outside their ladder, it should fall.
     """
 
+    hold_confidence: Mapping[CourtHold, Ratio] = field(
+        default_factory=lambda: MappingProxyType(
+            {
+                CourtHold.NONE: ratio(0, 1),
+                CourtHold.SOFT: ratio(50, 100),
+                CourtHold.HARD: ratio(100, 100),
+            }
+        )
+    )
+    """The chance each rung of the hold ladder still has a court at match time.
+
+    A probability, one per rung, and the three are chosen as the three answers to
+    *has the court been secured?* — **no** (nobody has one yet), **maybe** (a
+    provisional hold that can lapse), **yes** (booked, and the club has committed
+    it). A hard hold at one is the claim that a booking is kept, which is what makes
+    the club's crowding stop mattering the moment a court is actually yours: the
+    court you have cannot be taken by the club being busy.
+
+    **The ordering is guarded and the values are not.** *A firmer hold never makes a
+    match less likely* is the domain's claim and it survives any retune, because the
+    guard below walks ``HOLD_LADDER`` and refuses a mapping that falls; how far apart
+    the rungs sit is the hypothesis.
+
+    **Falsified by:** the share of matches at each rung, measured at the same point
+    in their run-up, that were played — and, for the middle rung specifically, the
+    share of soft holds that lapsed. If soft holds almost never lapse the middle rung
+    belongs near the top and the ladder is nearly a bool; if a hard hold is lost as
+    often as a soft one, the ladder is not the thing that predicts a court at all.
+    """
+
+    seat_fill_ceiling: Ratio = field(default_factory=lambda: ratio(50, 100))
+    """The best chance an unpaid seat has of being paid before the cutoff.
+
+    A ceiling, and **below one on purpose**: with all the time in the world, an
+    empty seat is a coin flip and never a certainty. Without it the arithmetic would
+    say that a match nobody has joined is as likely to be played as a full one so
+    long as it is early enough, which is *absence flattering* in a new suit — the
+    exact failure ADR-0027 exists to remove, reintroduced by the term that was
+    supposed to close it.
+
+    **Falsified by:** the share of unpaid seats that were eventually paid, measured
+    at more than a full ``fill_window`` before the cutoff so the run-up cannot
+    confound it. That share *is* this number; it is the one constant here whose
+    measurement needs no bucketing at all.
+    """
+
+    fill_window: Minutes = field(default_factory=lambda: minutes(720))
+    """How long an unpaid seat needs before the cutoff for its chances to be full.
+
+    Half a day. Inside it the chance an empty seat fills runs down to nothing at the
+    cutoff, on the same straight decay every other numeric term here uses, so *how
+    long is left* is a quantity rather than a cliff: a match at five minutes to the
+    cutoff with a seat open is not the same recommendation as one at five hours.
+
+    Absolute rather than a share of the time since the match was created, for
+    travel's reason pointed at the clock: a share would give a match posted a month
+    ahead a fill window of days and one posted this morning a window of minutes,
+    punishing hardest exactly the matches that are filling fastest.
+
+    **Falsified by:** unpaid seats bucketed by minutes remaining, against the share
+    of them that were eventually paid. The point where that curve flattens is where
+    this window belongs; if it is flat everywhere, the run-up does not predict
+    filling and the term should read the cutoff no further than as a filter.
+    """
+
     warning_threshold: Ratio = field(default_factory=lambda: ratio(40, 100))
     """The raw value below which the weakest contributor becomes a warning.
 
@@ -244,6 +317,7 @@ class MatchFitConstants:
             ("the match type mismatch", self.match_type_mismatch),
             ("the ladder outside value", self.ladder_outside),
             ("the warning threshold", self.warning_threshold),
+            ("the seat fill ceiling", self.seat_fill_ceiling),
         ):
             invariant(0 <= value < 1, f"{named} is not below full marks: {value}")
         invariant(
@@ -252,9 +326,34 @@ class MatchFitConstants:
         invariant(
             self.travel_decay_span > 0, f"a travel span of {self.travel_decay_span}"
         )
+        invariant(self.fill_window > 0, f"a fill window of {self.fill_window}")
         invariant(
             0 < self.reasons_returned, f"{self.reasons_returned} reasons returned"
         )
+        # The hold ladder, in the vocabulary's order and not in this mapping's.
+        # A retune is free to move the rungs and not free to let a firmer hold
+        # predict a match *less* likely to be played — which is the claim the
+        # viability property test asserts and which no retune may invert.
+        invariant(
+            set(HOLD_LADDER) == set(CourtHold) and len(HOLD_LADDER) == len(CourtHold),
+            f"the hold ladder {[rung.value for rung in HOLD_LADDER]} is not the "
+            f"vocabulary's {[rung.value for rung in CourtHold]}",
+        )
+        invariant(
+            set(self.hold_confidence) == set(CourtHold),
+            f"the ladder scores {sorted(rung.value for rung in self.hold_confidence)}, "
+            f"the vocabulary names {sorted(rung.value for rung in CourtHold)}",
+        )
+        rungs = [self.hold_confidence[rung] for rung in HOLD_LADDER]
+        for lower, higher in zip(rungs, rungs[1:], strict=False):
+            invariant(
+                lower <= higher,
+                f"the hold ladder falls: {rungs}",
+            )
+        for rung, chance in self.hold_confidence.items():
+            invariant(
+                0 <= chance <= 1, f"{rung.value} hold outside 0..1: {chance}"
+            )
 
 
 #: The v1 constants, frozen. One instance, so a caller cannot hold a retuned copy.

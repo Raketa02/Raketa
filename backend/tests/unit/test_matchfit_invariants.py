@@ -36,6 +36,7 @@ from app.engines.fit import (
     TermKind,
     TimeFact,
     TravelFact,
+    ViabilityFact,
 )
 from app.engines.matchfit.core import (
     FULL_MARKS,
@@ -60,15 +61,19 @@ from app.engines.matchfit.v1 import (
     MatchFitEngineV1,
 )
 from app.engines.matchmaking import (
+    HOLD_LADDER,
     ClubSnapshot,
+    CourtHold,
     HourWindow,
     LadderQualification,
+    MatchPhase,
     MatchSnapshot,
     MatchTypePreference,
     PlayerProfile,
     PlayerRef,
     PlayerScore,
     PlayHistory,
+    SeatState,
     Weekday,
 )
 from app.kernel import (
@@ -82,6 +87,7 @@ from app.kernel import (
     local_minute_of_day,
     minutes,
     ratio,
+    shifted,
 )
 from tests.unit.matchmaking_snapshots import (
     NOW,
@@ -182,6 +188,16 @@ CASES: tuple[tuple[str, MatchSnapshot, PlayerProfile], ...] = (
         profile(),
     ),
     (
+        "no court held at a club with nothing left",
+        doubles(ADA, BO, CY, None, hold=CourtHold.NONE, crowding=100),
+        profile(),
+    ),
+    (
+        "half an hour from the cutoff with three seats open",
+        doubles(ADA, None, None, None, cutoff=shifted(NOW, minutes(30))),
+        profile(),
+    ),
+    (
         "the dark terms lit",
         replace(
             with_records(doubles(ADA, BO, CY, DEE), None, 95, 80, 100),
@@ -231,11 +247,13 @@ def test_the_invariants_below_are_asserted_over_every_shape():
     """A sweep that has quietly lost half its inputs passes by finding nothing.
 
     Every branch of every term is in here: each constraint satisfied, breached
-    mildly, breached past its span and undeclared; both evidence terms absent, lit
-    well and lit badly.
+    mildly, breached past its span and undeclared; both dark evidence terms absent,
+    lit well and lit badly; and viability at both ends of both of its halves — a
+    booked court and none at a full club, a match a day from its cutoff and one half
+    an hour from it with three seats open.
     """
 
-    assert len(CASES) == 16, IDS
+    assert len(CASES) == 18, IDS
     assert len(set(IDS)) == len(IDS), IDS
 
 
@@ -411,7 +429,12 @@ def test_a_constraint_term_always_runs_and_an_absent_declaration_is_full_marks(c
     assert [term.code for term in constraints] == [
         code
         for code in CONSTANTS.weights
-        if code not in (TermCode.GROUP_RELIABILITY, TermCode.FAMILIARITY)
+        if code
+        not in (
+            TermCode.MATCH_VIABILITY,
+            TermCode.GROUP_RELIABILITY,
+            TermCode.FAMILIARITY,
+        )
     ]
     assert all(isinstance(term, ScoredTerm) for term in constraints)
 
@@ -440,7 +463,19 @@ def test_a_player_who_declared_nothing_has_the_same_coverage_as_one_who_declared
         match, profile(days=frozenset({Weekday.SUNDAY}), hours=(window(6, 9),))
     )
     assert silent.coverage == declared.coverage == breached.coverage
-    assert silent.fit == 100
+    # 100 no longer, and viability is why: this match is three-quarters paid, so the
+    # one evidence term that always runs scores below full marks and a player who
+    # declared nothing is told something true about the match rather than nothing at
+    # all. Read off the term rather than written down, because the figure is a
+    # constant's and this file is the one that must survive a retune.
+    viability = _term(silent, TermCode.MATCH_VIABILITY)
+    assert isinstance(viability, ScoredTerm)
+    assert viability.value < 1
+    assert all(
+        term.value == 1
+        for term in silent.scored
+        if term.code is not TermCode.MATCH_VIABILITY
+    )
 
 
 def test_an_evidence_term_with_nothing_observed_is_excluded_and_not_scored_well():
@@ -618,9 +653,20 @@ def test_the_same_inputs_produce_the_same_score(shape, case):
     )
 
 
-def test_the_score_does_not_depend_on_the_instant_it_is_asked_at(shape, case):
-    """No term here reads ``now``. The input is explicit anyway, because #84's and
-    #85's terms do, and because reproducibility is the point."""
+def test_only_the_viability_term_depends_on_the_instant_it_is_asked_at(shape, case):
+    """``now`` enters the score through **exactly one** term, and which one is the rule.
+
+    *When the match is* and *when you asked* are different questions. Time fit reads
+    the match's own start, so the same Tuesday evening scores the same at breakfast
+    and at midnight; viability reads the run-up to the join cutoff, which is measured
+    from the moment the question is asked and *should* move — a match with an unpaid
+    seat and five minutes left is a worse recommendation than the same match a day
+    out.
+
+    Asked a year later, every term but viability is the identical object. That is a
+    stronger statement than comparing values: a term rebuilt from a different instant
+    would compare equal on its value and differ on the payload beside it.
+    """
 
     _, snapshot, declaration = shape
     later = ENGINE.score(
@@ -629,8 +675,21 @@ def test_the_score_does_not_depend_on_the_instant_it_is_asked_at(shape, case):
         analysis=analysis(),
         now=NOW.replace(year=2027, month=1, day=1, hour=6, minute=45),
     )
-    assert later.fit == case.fit
-    assert later.terms == case.terms
+    unmoved = tuple(
+        term for term in case.terms if term.code is not TermCode.MATCH_VIABILITY
+    )
+    assert (
+        tuple(
+            term for term in later.terms if term.code is not TermCode.MATCH_VIABILITY
+        )
+        == unmoved
+    )
+    # A year past every cutoff in the suite, nothing can still be filled: the unpaid
+    # part of the roster is worth nothing and the court side is all that is left.
+    stale = _term(later, TermCode.MATCH_VIABILITY)
+    fresh = _term(case, TermCode.MATCH_VIABILITY)
+    assert isinstance(stale, ScoredTerm) and isinstance(fresh, ScoredTerm)
+    assert stale.value <= fresh.value
 
 
 # --- Price reads the payable, and travel never excludes --------------------------
@@ -856,6 +915,181 @@ def test_which_half_failed_is_reported_even_though_it_does_not_move_the_score():
     assert wrong_day.inside_a_declared_window and not wrong_day.on_a_declared_day
 
 
+# --- Viability: the evidence term that cannot go missing -------------------------
+
+
+def _viability(result: MatchFitScore) -> ScoredTerm:
+    term = _term(result, TermCode.MATCH_VIABILITY)
+    assert isinstance(term, ScoredTerm)
+    return term
+
+
+def test_viability_is_evidence_and_always_runs(case):
+    """**Evidence-typed but always computable**, which is the whole of its job.
+
+    Evidence, because whether a match will be played is something the platform
+    *observes* and never something the player declared — reading it as a constraint
+    would make a match with no court held score full marks for having no limit on it.
+
+    Always computable, because every match has a phase, a court hold, a seat count
+    and a cutoff. So it is the one evidence term that is never excluded, and it is
+    what makes *absence never flatters* true of a **ranking**: without it, a court
+    nobody has joined is scored on constraints alone and satisfies all of them.
+    """
+
+    term = _viability(case)
+    assert term.kind is TermKind.EVIDENCE
+    assert term.code not in {excluded.code for excluded in case.excluded}
+
+
+def test_viability_never_lowers_coverage(shape, case):
+    """*It is never excluded and never reduces Coverage*, measured rather than said.
+
+    The same match with every viability fact at its worst has exactly the coverage of
+    the same match at its best: the term ran in both, so the weight is in both
+    numerators. Coverage reports on what the platform **looked at**, never on what it
+    found.
+    """
+
+    _, snapshot, declaration = shape
+    hopeless = scored(
+        replace(
+            snapshot,
+            hold=CourtHold.NONE,
+            club=replace(snapshot.club, crowding=ratio(1, 1)),
+            join_cutoff=shifted(NOW, minutes(-1)),
+        ),
+        declaration,
+    )
+    assert hopeless.coverage == case.coverage
+    assert _viability(hopeless).value <= _viability(case).value
+
+
+def test_viability_reads_the_four_facts_and_reports_them(shape, case):
+    """The payload is the four quantities the term was scored from, not a summary.
+
+    Read back off the snapshot, so a term that scored one match and reported another
+    — the shape a refactor produces when a helper is handed the wrong argument —
+    fails here rather than on a card nobody is checking.
+    """
+
+    _, snapshot, _ = shape
+    fact = _viability(case).fact
+    assert isinstance(fact, ViabilityFact)
+    assert (fact.paid_seats, fact.sold_seats) == (
+        snapshot.paid_seats,
+        snapshot.sold_seats,
+    )
+    assert fact.hold is snapshot.hold
+    assert fact.crowding == snapshot.club.crowding
+    assert fact.minutes_to_cutoff == (snapshot.join_cutoff - NOW).total_seconds() // 60
+
+
+def test_viability_is_the_chance_of_people_times_the_chance_of_a_court(shape, case):
+    """The arithmetic, written out independently of the engine that ran it.
+
+    An oracle rather than a restatement: the two halves are spelled here from the
+    sentence the term's docstring makes — *what is already committed, plus what might
+    still be got, discounted* — and the two agree only if both are right. A term that
+    blended the halves instead of multiplying them, or that discounted the paid part
+    instead of the unpaid one, disagrees on the very first case.
+    """
+
+    _, snapshot, _ = shape
+    paid = ratio(snapshot.paid_seats, snapshot.sold_seats)
+    left = (snapshot.join_cutoff - NOW).total_seconds() // 60
+    window = CONSTANTS.fill_window
+    reachable = ratio(max(0, min(int(left), window)), 1) / window
+    people = paid + (1 - paid) * CONSTANTS.seat_fill_ceiling * reachable
+    held = CONSTANTS.hold_confidence[snapshot.hold]
+    court = held + (1 - held) * (1 - snapshot.club.crowding)
+    assert _viability(case).value == people * court
+
+
+def test_a_full_match_with_a_booked_court_is_the_only_way_to_reach_full_marks():
+    """Both halves at one, and nothing else gets there.
+
+    Worth pinning because it is the claim a card makes: *this match is happening*.
+    Every seat paid and a court booked is the only state that earns it — a held seat
+    does not, because attendance is exactly what a held seat has not committed to.
+    """
+
+    certain = doubles(ADA, BO, CY, DEE, hold=CourtHold.HARD, crowding=100)
+    assert _viability(scored(certain, profile())).value == 1
+
+    for lesser in (
+        doubles(ADA, BO, CY, DEE, hold=CourtHold.SOFT, crowding=100),
+        doubles(
+            ADA,
+            BO,
+            CY,
+            DEE,
+            states=(SeatState.PAID, SeatState.PAID, SeatState.PAID, SeatState.HELD),
+        ),
+        doubles(ADA, BO, CY, None),
+    ):
+        assert _viability(scored(lesser, profile())).value < 1
+
+
+def test_a_court_that_is_booked_is_untouched_by_how_busy_the_club_is():
+    """The one flat case, and it is a claim rather than an artefact.
+
+    A hard hold is a booking: the club has committed that court, so its being busy
+    cannot take it away. An arithmetic that let crowding bite a booked court would be
+    charging the match twice for a risk it has already retired.
+    """
+
+    scores = {
+        crowded: _viability(
+            scored(doubles(ADA, BO, CY, DEE, crowding=crowded), profile())
+        ).value
+        for crowded in (0, 50, 100)
+    }
+    assert len(set(scores.values())) == 1
+
+    unheld = {
+        crowded: _viability(
+            scored(
+                doubles(ADA, BO, CY, DEE, hold=CourtHold.NONE, crowding=crowded),
+                profile(),
+            )
+        ).value
+        for crowded in (0, 50, 100)
+    }
+    assert len(set(unheld.values())) == 3
+
+
+def test_a_match_past_its_cutoff_is_scored_and_not_refused():
+    """Past the cutoff there is nothing left to fill, and the floor answers.
+
+    A match this old should have been filtered out before an engine saw it, so this
+    is not a state to model — it is the state the arithmetic must not *explode* in,
+    since a caller's filtering bug should produce a bad score and a payload saying
+    why, rather than a stack trace in a home list.
+    """
+
+    stale = doubles(ADA, None, None, None, cutoff=shifted(NOW, minutes(-600)))
+    term = _viability(scored(stale, profile()))
+    fact = term.fact
+    assert isinstance(fact, ViabilityFact)
+    assert fact.minutes_to_cutoff == -600
+    assert term.value == ratio(1, 4)
+
+
+def test_a_match_in_a_phase_nobody_can_join_never_reaches_a_term(shape):
+    """The hard filter, enforced where an engine could otherwise be handed one.
+
+    A cancelled match ranked last is still a cancelled match in a home list, so the
+    snapshot refuses it outright and no term has to encode *is this joinable at all*
+    as a low number.
+    """
+
+    _, snapshot, _ = shape
+    for phase in (MatchPhase.LOCKED, MatchPhase.CANCELLED):
+        with pytest.raises(InvariantViolated, match="only a forming match"):
+            replace(snapshot, phase=phase)
+
+
 # --- The value object's own guards ----------------------------------------------
 
 
@@ -953,16 +1187,12 @@ def test_the_score_is_immutable(case):
 
 def test_the_declared_and_the_pending_weights_sum_to_a_hundred():
     """*The weights sum to 100*, enforced in the only form in which it can be true
-    today: six terms exist and four are named with the weight each will take."""
+    today: eight terms exist and two are named with the weight each will take."""
 
     assert sum(CONSTANTS.weights.values()) + sum(PENDING_WEIGHTS.values()) == 100
     assert WEIGHT_TOTAL == 100
-    assert set(PENDING_WEIGHTS) == {
-        "skill_overlap",
-        "predicted_balance",
-        "match_viability",
-    }
-    assert sum(CONSTANTS.weights.values()) == 50
+    assert set(PENDING_WEIGHTS) == {"skill_overlap", "predicted_balance"}
+    assert sum(CONSTANTS.weights.values()) == 62
 
 
 def test_a_table_that_does_not_sum_to_a_hundred_is_refused():
@@ -977,6 +1207,7 @@ def test_a_term_the_vocabulary_names_and_the_table_does_not_weight_is_refused():
                 code: weight
                 for code, weight in (
                     (TermCode.TIME_FIT, 12),
+                    (TermCode.MATCH_VIABILITY, 12),
                     (TermCode.GROUP_RELIABILITY, 11),
                     (TermCode.TRAVEL, 8),
                     (TermCode.LADDER_QUALIFICATION, 6),
@@ -987,14 +1218,77 @@ def test_a_term_the_vocabulary_names_and_the_table_does_not_weight_is_refused():
         )
 
 
+def test_a_hold_ladder_that_falls_is_refused():
+    """*A firmer hold never makes a match less likely to be played*, at the retune.
+
+    Checked when the constants are built and against ``HOLD_LADDER`` — the
+    vocabulary's order — so a retune that made a soft hold worth more than a booked
+    court fails at import rather than on one home screen. This is what makes the
+    monotonicity property true under **any** retune rather than under this one.
+    """
+
+    rungs = [CONSTANTS.hold_confidence[rung] for rung in HOLD_LADDER]
+    assert rungs == sorted(rungs)
+    with pytest.raises(InvariantViolated, match="hold ladder falls"):
+        MatchFitConstants(
+            hold_confidence={
+                CourtHold.NONE: ratio(0, 1),
+                CourtHold.SOFT: ratio(90, 100),
+                CourtHold.HARD: ratio(40, 100),
+            }
+        )
+
+
+def test_a_hold_the_vocabulary_names_and_the_ladder_does_not_score_is_refused():
+    """A rung with no confidence behind it is a hold the term cannot read at all,
+    and the failure would be a ``KeyError`` three frames down from the retune."""
+
+    with pytest.raises(InvariantViolated, match="the vocabulary names"):
+        MatchFitConstants(
+            hold_confidence={
+                CourtHold.NONE: ratio(0, 1),
+                CourtHold.HARD: ratio(100, 100),
+            }
+        )
+
+
+@pytest.mark.parametrize("chance", [Ratio(Fraction(-1, 10)), ratio(11, 10)])
+def test_a_hold_confidence_outside_nought_to_one_is_refused(chance):
+    """It is a probability, so it is bounded like one — and a rung above one would
+    push a viability above full marks, which the term's own value object refuses one
+    frame later and with a worse message."""
+
+    with pytest.raises(InvariantViolated, match="hold outside"):
+        MatchFitConstants(
+            hold_confidence={
+                CourtHold.NONE: chance,
+                CourtHold.SOFT: chance,
+                CourtHold.HARD: chance,
+            }
+        )
+
+
+def test_a_fill_window_of_nothing_is_refused():
+    """A window of zero is a cliff at the cutoff rather than a run-up to it, and it
+    would make *how long is left* a fact the term reads and never uses."""
+
+    with pytest.raises(InvariantViolated, match="fill window"):
+        MatchFitConstants(fill_window=minutes(0))
+
+
 @pytest.mark.parametrize("mismatch", [ratio(1, 1), ratio(3, 2)])
 def test_a_mismatch_worth_full_marks_or_more_is_refused(mismatch):
     """At full marks the term is not a constraint any more: a friendly and a rated
     match would score identically for somebody who asked for one of them.
 
-    All three mismatch values, because the guard is a loop over a written-out list
-    and a value left off it is a constant nothing checks — which is exactly what a
-    mutation run found the first time this list was one short.
+    All four of them, because the guard is a loop over a written-out list and a value
+    left off it is a constant nothing checks — which is exactly what a mutation run
+    found the first time this list was one short.
+
+    The seat fill ceiling is in the same family and is the one that matters most: at
+    full marks an unpaid seat would be worth exactly as much as a paid one given
+    enough time, so a match nobody has joined would score like a full one and the
+    term written to close *absence never flatters* would have reopened it.
     """
 
     with pytest.raises(InvariantViolated, match="not below full marks"):
@@ -1003,6 +1297,8 @@ def test_a_mismatch_worth_full_marks_or_more_is_refused(mismatch):
         MatchFitConstants(match_type_mismatch=mismatch)
     with pytest.raises(InvariantViolated, match="not below full marks"):
         MatchFitConstants(ladder_outside=mismatch)
+    with pytest.raises(InvariantViolated, match="not below full marks"):
+        MatchFitConstants(seat_fill_ceiling=mismatch)
 
 
 def test_a_span_of_nothing_is_refused():
@@ -1087,7 +1383,7 @@ def test_every_constant_carries_the_measurement_that_would_falsify_it():
         if "Falsified by:" not in note:
             unfalsifiable.append(node.target.id)
     assert unfalsifiable == [], unfalsifiable
-    assert len([node for node in body if isinstance(node, ast.AnnAssign)]) == 8, (
+    assert len([node for node in body if isinstance(node, ast.AnnAssign)]) == 11, (
         "the constant count moved — read the new one's falsifying note first"
     )
 
@@ -1189,8 +1485,9 @@ def test_the_score_carries_no_display_text():
         "ReliabilityFact.kind",
         "TimeFact.kind",
         "TravelFact.kind",
+        "ViabilityFact.kind",
     ]
-    assert len(fields) == 37, [name for name, _ in fields]
+    assert len(fields) == 43, [name for name, _ in fields]
 
 
 def test_no_match_fit_suite_reaches_for_the_pairing_engine():
@@ -1238,6 +1535,7 @@ def test_every_value_object_in_the_vocabulary_is_frozen_and_closed():
 
     vocabulary = (
         TimeFact,
+        ViabilityFact,
         PriceFact,
         TravelFact,
         MatchTypeFact,

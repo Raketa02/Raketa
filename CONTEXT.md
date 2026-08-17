@@ -268,28 +268,31 @@ ahead of the first club, which is the whole reason they could be built now.
 > rating at that sport, because both leave nothing for a stand-in to be drawn from.
 > **Match Fit** is most of the way built. `app/engines/matchfit/` holds the framework whole —
 > **Term** in both its kinds, the renormalisation, **Coverage** as its own number, **Reason**s
-> ranked by contribution and one warning — with seven of its ten terms: **time fit**, price,
-> travel, match type and ladder qualification, all reading the **Player profile**, plus group
-> reliability and familiarity, which are *present and absent* so that exclusion and Coverage
-> are exercised by every score rather than being untested machinery. Time fit is the term the
-> source design named and never computed: a match's start is read against the days and hours
-> the player declared, through the club's zone and the kernel's coordinates, and a match
-> outside them ranks lower without being hidden. The three still owed are named with their
-> weights in the engine's own constants: skill overlap and predicted balance, and
-> **Match viability** — which is the term that closes *absence never flatters* for ranking,
-> because it is the only evidence term that is always computable. Until it lands, an empty
-> court that satisfies every declaration still scores above a well-formed match on Fit alone,
-> at a quarter less Coverage, and a golden persona says so. **Match viability** and **At Stake**
-> are still words without code. The terms are committed ahead of them because the decisions
-> behind them are
+> ranked by contribution and one warning — with eight of its ten terms: **time fit**, price,
+> travel, match type and ladder qualification, all reading the **Player profile**, plus
+> **match viability**, plus group reliability and familiarity, which are *present and absent*
+> so that exclusion and Coverage are exercised by every score rather than being untested
+> machinery. Time fit is the term the source design named and never computed: a match's start
+> is read against the days and hours the player declared, through the club's zone and the
+> kernel's coordinates, and a match outside them ranks lower without being hidden.
+> **Match viability closes *absence never flatters* for a ranking**, which the mechanism alone
+> could not: it is the only evidence term that is *always* computable, so a court nobody has
+> joined is scored on being empty rather than excused from it, and an empty match that is
+> counted, cheap and nearby now scores 88 against a well-formed match's 95 where it used to
+> score 100 against 94. The two still owed are named with their weights in the engine's own
+> constants: skill overlap and predicted balance, which widen that gap rather than create it.
+> **At Stake** is still a word without code. The terms are committed ahead of them because the
+> decisions behind them are
 > ([ADR-0025](docs/adr/0025-binding-pairing-for-counted-matches.md),
 > [ADR-0026](docs/adr/0026-matchmaking-engines-snapshot-input-contract.md),
 > [ADR-0027](docs/adr/0027-fit-and-certainty-are-separate-ranking-is-policy.md)), and because
 > the engines cannot be written in vocabulary that does not exist. A **seat's state** — paid,
 > held, empty — is borrowed from the commitment rules and is read by the snapshot now, spelled
-> as they spell it; a match's **phase** and its **join cutoff** are still only words. All
-> three will be *defined* with Matches, not here — this section reads them, it does not own
-> them. **Ladder qualification** is read the same way and by nobody yet: the snapshot carries
+> as they spell it, and so are a match's **phase**, its **court hold** and its **join
+> cutoff** — all four read by the snapshot now. They will be *defined* with Matches and
+> Courts, not here: this section reads them, it does not own them. The phase is the one this
+> section reads and never *scores*, because whether a match can be joined at all is a hard
+> filter and not a low number. **Ladder qualification** is read the same way and by nobody yet: the snapshot carries
 > whether a match counts towards the current player's ladder, in three states because *not in
 > a ladder* and *in a ladder this does not count for* are different facts, and whichever
 > context ends up owning ladders will define the word.
@@ -368,7 +371,15 @@ forty minutes away at twice your ceiling is a good match in the abstract and a b
   any.
 - **Match viability** — how likely the match is to actually happen, as distinct from how good
   it would be. A match nobody has paid into, at a club with no court left to give, is a worse
-  recommendation than an identical one that is three-quarters paid.
+  recommendation than an identical one that is three-quarters paid. It is **evidence and yet
+  never absent**: every match has a phase, a court hold, a seat count and a join cutoff, so it
+  is the one term that can never be excluded — which is what makes *absence never flatters*
+  true of a ranking and not only of the mechanism. It is a **probability**, and the platform
+  is right or wrong about it in a way that can be counted: the share of joined matches that
+  were actually played, by viability decile. A **hard** court hold retires the club's crowding
+  entirely, because a court that has been booked cannot be taken by the club being busy; and
+  an unpaid seat is worth less the closer the **join cutoff** gets, on a slope rather than at
+  a cliff, because there is less time left for anybody to take it.
 - **Player profile** — what the player declared about how they want to play: days, hours,
   price ceiling, distance, appetite, competitive or social, and how far ahead they will
   commit. One declaration, read by every engine that needs it, never restated as a constant

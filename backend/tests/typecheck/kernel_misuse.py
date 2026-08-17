@@ -58,6 +58,9 @@ from app.engines.matchmaking import (
     PlayerSkill,
     SeatSnapshot,
     SeatState,
+    CourtHold,
+    HOLD_LADDER,
+    MatchPhase,
     Uncertainty,
     UnratedPlayer,
     Weekday,
@@ -74,6 +77,7 @@ from app.engines.fit import (
     TermCode,
     TermKind,
     TimeFact,
+    ViabilityFact,
 )
 from app.engines.matchfit.core import Observed, constraint_term, evidence_term
 from app.engines.pairing.core import Contender, Roster, Side, as_float, side_of_one
@@ -462,6 +466,16 @@ def a_minute_is_not_a_weekday() -> IsoWeekday:
     return local_minute_of_day(NOON, WARSAW)  # want-error: return-value
 
 
+#: A club a match can be at: twelve minutes away, in Warsaw, half its capacity taken
+#: at the hour in question. Written once because four snapshots below need one, and a
+#: club assembled four times is four chances to write a different crowding.
+A_CLUB = ClubSnapshot(travel_minutes=minutes(12), zone=WARSAW, crowding=percent(50))
+
+#: The last moment a seat can be taken. Two hours before `NOON`, which is what makes
+#: it a legal cutoff for a match starting then.
+A_CUTOFF = shifted(NOON, minutes(-120))
+
+
 def a_zone_is_not_its_name() -> ClubSnapshot:
     """A club carries the kernel's `Zone`, never the IANA string it was built from.
 
@@ -473,6 +487,7 @@ def a_zone_is_not_its_name() -> ClubSnapshot:
     return ClubSnapshot(
         travel_minutes=minutes(12),
         zone="Europe/Warsaw",  # want-error: arg-type
+        crowding=percent(50),
     )
 
 
@@ -491,8 +506,11 @@ def a_match_without_a_start_does_not_compile() -> MatchSnapshot:
         counted=True,
         seat_share=A_SEAT,
         payable=A_PAYABLE,
-        club=ClubSnapshot(travel_minutes=minutes(12), zone=WARSAW),
+        club=A_CLUB,
         ladder=LadderQualification.NOT_IN_A_LADDER,
+        phase=MatchPhase.FORMING,
+        hold=CourtHold.HARD,
+        join_cutoff=A_CUTOFF,
     )
 
 
@@ -813,8 +831,11 @@ def a_snapshot_holds_a_tuple_of_seats_and_not_a_list() -> MatchSnapshot:
         counted=True,
         seat_share=A_SEAT,
         payable=A_PAYABLE,
-        club=ClubSnapshot(travel_minutes=minutes(12), zone=WARSAW),
+        club=A_CLUB,
         ladder=LadderQualification.NOT_IN_A_LADDER,
+        phase=MatchPhase.FORMING,
+        hold=CourtHold.HARD,
+        join_cutoff=A_CUTOFF,
     )
 
 
@@ -1085,8 +1106,11 @@ def an_unrated_player_may_be_the_person_the_analysis_is_for() -> MatchSnapshot:
         counted=True,
         seat_share=A_SEAT,
         payable=A_PAYABLE,
-        club=ClubSnapshot(travel_minutes=minutes(12), zone=WARSAW),
+        club=A_CLUB,
         ladder=LadderQualification.NOT_IN_A_LADDER,
+        phase=MatchPhase.FORMING,
+        hold=CourtHold.HARD,
+        join_cutoff=A_CUTOFF,
     )
 
 
@@ -1300,6 +1324,161 @@ def every_way_a_term_can_be_absent_must_be_handled(term: Term) -> Ratio:
             exhaustive(term)  # want-error: arg-type
 
 
+# --- Viability: the clock's three words, and the four facts the term reads --------
+#
+# `MatchPhase` and `CourtHold` are enums with the same shape as every other enum
+# here, `crowding` is a `Ratio` like every other rate, and a join cutoff is an
+# `Instant` like every other moment. Swap any pair and the arithmetic still runs and
+# still returns a number — which is the whole reason these lines exist.
+
+
+class ASecondKindOfViabilityPayload(ViabilityFact):  # want-error: misc
+    """`TermFact` is closed by `@final` on each member. A subclass would be a payload
+    the union does not know about, carrying the same `Literal` and reaching every
+    reader that matches on it."""
+
+
+def a_viability_payload_is_immutable(fact: ViabilityFact) -> None:
+    fact.paid_seats = 4  # want-error: misc
+
+
+def a_hold_is_not_a_phase() -> MatchSnapshot:
+    """Two enums about the same match and about different questions.
+
+    *Where the match is on the clock* and *how firmly the court is held* are the two
+    facts that make viability always computable, and neither stands in for the other:
+    a match cannot be `FORMING` a court or hold a `HARD` phase.
+    """
+
+    return MatchSnapshot(
+        sport=Sport.TENNIS,
+        seats=(SeatSnapshot(), SeatSnapshot()),
+        current_player=UnratedPlayer(player=A_REF),
+        start=NOON,
+        counted=True,
+        seat_share=A_SEAT,
+        payable=A_PAYABLE,
+        club=A_CLUB,
+        ladder=LadderQualification.NOT_IN_A_LADDER,
+        phase=CourtHold.HARD,  # want-error: arg-type
+        hold=CourtHold.HARD,
+        join_cutoff=A_CUTOFF,
+    )
+
+
+def a_hold_is_not_the_word_it_is_spelled_with() -> MatchSnapshot:
+    """The vocabulary is borrowed *as an enum*, never as the string on the wire.
+
+    A client renders the rung; an engine reads the member. A `str` here would let an
+    assembler pass a spelling the ladder does not contain, and the failure would be a
+    `KeyError` inside a term rather than a refusal at the boundary.
+    """
+
+    return MatchSnapshot(
+        sport=Sport.TENNIS,
+        seats=(SeatSnapshot(), SeatSnapshot()),
+        current_player=UnratedPlayer(player=A_REF),
+        start=NOON,
+        counted=True,
+        seat_share=A_SEAT,
+        payable=A_PAYABLE,
+        club=A_CLUB,
+        ladder=LadderQualification.NOT_IN_A_LADDER,
+        phase=MatchPhase.FORMING,
+        hold="hard",  # want-error: arg-type
+        join_cutoff=A_CUTOFF,
+    )
+
+
+def a_match_without_a_join_cutoff_does_not_compile() -> MatchSnapshot:
+    """No default, for the reason the start has none: a cutoff of *the start* is a
+    match joinable up to the moment it begins, which is a wrong answer rather than a
+    loud one — and it is the most flattering wrong answer available, because it gives
+    every unpaid seat the longest possible run-up."""
+
+    return MatchSnapshot(  # want-error: call-arg
+        sport=Sport.TENNIS,
+        seats=(SeatSnapshot(), SeatSnapshot()),
+        current_player=UnratedPlayer(player=A_REF),
+        start=NOON,
+        counted=True,
+        seat_share=A_SEAT,
+        payable=A_PAYABLE,
+        club=A_CLUB,
+        ladder=LadderQualification.NOT_IN_A_LADDER,
+        phase=MatchPhase.FORMING,
+        hold=CourtHold.HARD,
+    )
+
+
+def a_join_cutoff_is_an_instant_and_not_a_countdown() -> MatchSnapshot:
+    """*Minutes remaining* is only true at the moment it was computed.
+
+    The engine is handed the cutoff and `now` and does the subtraction itself, which
+    is what makes a cached score wrong about the clock rather than wrong about the
+    rule (`docs/adr/0021`).
+    """
+
+    return MatchSnapshot(
+        sport=Sport.TENNIS,
+        seats=(SeatSnapshot(), SeatSnapshot()),
+        current_player=UnratedPlayer(player=A_REF),
+        start=NOON,
+        counted=True,
+        seat_share=A_SEAT,
+        payable=A_PAYABLE,
+        club=A_CLUB,
+        ladder=LadderQualification.NOT_IN_A_LADDER,
+        phase=MatchPhase.FORMING,
+        hold=CourtHold.HARD,
+        join_cutoff=minutes(120),  # want-error: arg-type
+    )
+
+
+def a_clubs_crowding_is_a_share_and_not_a_court_count() -> ClubSnapshot:
+    """*How many courts a club has* is a fact an engine has no business scaling
+    against — two free courts is plenty at a two-court club and nothing at a
+    twenty-court one. So the snapshot carries the share and never the count."""
+
+    return ClubSnapshot(
+        travel_minutes=minutes(12),
+        zone=WARSAW,
+        crowding=3,  # want-error: arg-type
+    )
+
+
+def a_travel_time_is_not_a_crowding() -> ClubSnapshot:
+    """Both are numbers about the same club and neither is the other's units."""
+
+    return ClubSnapshot(
+        travel_minutes=percent(50),  # want-error: arg-type
+        zone=WARSAW,
+        crowding=minutes(12),  # want-error: arg-type
+    )
+
+
+def a_payload_on_its_own_is_not_an_observation() -> Term:
+    """Even the term that can never be excluded goes through ``Observed``.
+
+    *A value and its payload, together or not at all.* A term always able to observe
+    something is exactly the one somebody would be tempted to hand its facts to
+    directly — and then the value would come from somewhere else, which is the pair
+    coming apart at the one call site where nothing else would notice.
+    """
+
+    return evidence_term(
+        TermCode.MATCH_VIABILITY,
+        12,
+        ViabilityFact(  # want-error: arg-type
+            paid_seats=3,
+            sold_seats=4,
+            hold=CourtHold.HARD,
+            minutes_to_cutoff=minutes(720),
+            crowding=percent(50),
+        ),
+    )
+
+
 # --- And the legitimate Match Fit uses beside them --------------------------------
 
 
@@ -1341,6 +1520,31 @@ def a_time_term_reads_a_clock_face_against_a_declaration() -> ScoredTerm:
             minute=local_minute_of_day(NOON, WARSAW),
             days=frozenset({Weekday.TUESDAY}),
             hours=(HourWindow(start=minute_of_day(1080), end=minute_of_day(1320)),),
+        ),
+    )
+
+
+def a_viability_term_reads_four_facts_and_reports_them() -> Term:
+    """The legitimate shape: evidence with an observation that is always there.
+
+    Beside it, the ladder walked in the vocabulary's order — which is the only place
+    that order lives, and the reason a monotonicity property can be asserted against
+    it rather than against a version's mapping.
+    """
+
+    rungs: tuple[CourtHold, ...] = HOLD_LADDER
+    return evidence_term(
+        TermCode.MATCH_VIABILITY,
+        12,
+        Observed(
+            value=A_RATE,
+            fact=ViabilityFact(
+                paid_seats=3,
+                sold_seats=4,
+                hold=rungs[-1],
+                minutes_to_cutoff=elapsed_minutes(NOON, A_CUTOFF),
+                crowding=percent(50),
+            ),
         ),
     )
 

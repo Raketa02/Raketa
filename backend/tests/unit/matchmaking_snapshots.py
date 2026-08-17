@@ -32,8 +32,10 @@ from app.engines.forecast import (
 )
 from app.engines.matchmaking import (
     ClubSnapshot,
+    CourtHold,
     HourWindow,
     LadderQualification,
+    MatchPhase,
     MatchSnapshot,
     MatchTypePreference,
     Occupant,
@@ -64,11 +66,13 @@ from app.kernel import (
     day_offset,
     divide_among_players,
     grosze,
+    hours,
     minute_of_day,
     minutes,
     invariant,
     payable_from,
     percent,
+    shifted,
     slot_start,
     zloty,
 )
@@ -114,6 +118,36 @@ def starting(
 #: Warsaw**. A weekday and an evening, so a declaration can be written that this
 #: satisfies and one it breaches, and neither is the same as declaring nothing.
 START = starting()
+
+#: How long before a match starts its last seat can be taken, in the harness.
+#: **Relative to the start and never a fixed instant**, which a first draft got
+#: wrong: a cutoff is a fact about *this* match, so a constant one is refused by
+#: every snapshot a suite starts earlier than it — including two thirds of the
+#: time-fit oracle's week.
+CUTOFF_LEAD = hours(2)
+
+
+def cutoff_before(start: Instant) -> Instant:
+    """The harness's join cutoff for a match starting at ``start``.
+
+    Two hours, in **elapsed** minutes through the kernel, so a cutoff either side
+    of a daylight-saving change is still two hours of court-release notice and not
+    two hours of clock face.
+
+    For the default ``START`` that is Tuesday 16:30 in Warsaw, twenty and a half
+    hours after ``NOW`` — comfortably more than a ``fill_window``, which is
+    deliberate: the default match is not in its run-up, so no persona is quietly
+    about the clock, and the ones that *are* pass a cutoff explicitly the way the
+    price personas pass a card.
+    """
+
+    return shifted(start, minutes(-CUTOFF_LEAD))
+
+#: How crowded the club is in every default snapshot: **half its capacity taken**, a
+#: normally busy Tuesday evening. It provably does not move the default score, since
+#: the default hold is hard and a booked court is untouched by crowding — which is
+#: what makes it safe as a default and is asserted as a persona rather than assumed.
+CROWDING = 50
 
 #: A 96 zł court at a 10% off-peak rate — **ADR-0023's own worked example**, which
 #: rounds to 86 zł and divides into four seats of exactly 21,50. Built through
@@ -189,6 +223,9 @@ def singles(
     history: PlayHistory | None = None,
     start: Instant = START,
     zone: Zone = WARSAW,
+    hold: CourtHold = CourtHold.HARD,
+    crowding: int = CROWDING,
+    cutoff: Instant | None = None,
 ) -> MatchSnapshot:
     """A two-seat match. ``None`` is an empty seat, as in ``doubles``.
 
@@ -211,8 +248,15 @@ def singles(
         counted=counted,
         seat_share=share,
         payable=payable,
-        club=ClubSnapshot(travel_minutes=minutes(travel_minutes), zone=zone),
+        club=ClubSnapshot(
+            travel_minutes=minutes(travel_minutes),
+            zone=zone,
+            crowding=percent(crowding),
+        ),
         ladder=ladder,
+        phase=MatchPhase.FORMING,
+        hold=hold,
+        join_cutoff=cutoff if cutoff is not None else cutoff_before(start),
         history=history,
     )
 
@@ -229,6 +273,9 @@ def doubles(
     history: PlayHistory | None = None,
     start: Instant = START,
     zone: Zone = WARSAW,
+    hold: CourtHold = CourtHold.HARD,
+    crowding: int = CROWDING,
+    cutoff: Instant | None = None,
 ) -> MatchSnapshot:
     """A four-seat match. ``None`` is an empty seat.
 
@@ -241,6 +288,12 @@ def doubles(
     now than it did: a viewer who is *not* seated joins the roster, so a helper
     that defaulted to a stranger would silently fill one of the empty seats every
     test thought it had left open.
+
+    ``hold``, ``crowding`` and ``cutoff`` default to a **well-formed** match: the
+    court is booked, the club is normally busy and the cutoff is a day away. That is
+    the right default for the same reason ``on_seat`` defaults to *paid* — a helper
+    whose default was a match in trouble would make every suite that does not care
+    about viability quietly about it.
     """
 
     filled = [player for player in occupants if player is not None]
@@ -257,8 +310,15 @@ def doubles(
         counted=counted,
         seat_share=share,
         payable=payable,
-        club=ClubSnapshot(travel_minutes=minutes(travel_minutes), zone=zone),
+        club=ClubSnapshot(
+            travel_minutes=minutes(travel_minutes),
+            zone=zone,
+            crowding=percent(crowding),
+        ),
         ladder=ladder,
+        phase=MatchPhase.FORMING,
+        hold=hold,
+        join_cutoff=cutoff if cutoff is not None else cutoff_before(start),
         history=history,
     )
 
@@ -287,8 +347,13 @@ def bare(
         counted=True,
         seat_share=share,
         payable=payable,
-        club=ClubSnapshot(travel_minutes=minutes(12), zone=WARSAW),
+        club=ClubSnapshot(
+            travel_minutes=minutes(12), zone=WARSAW, crowding=percent(CROWDING)
+        ),
         ladder=LadderQualification.NOT_IN_A_LADDER,
+        phase=MatchPhase.FORMING,
+        hold=CourtHold.HARD,
+        join_cutoff=cutoff_before(START),
     )
 
 

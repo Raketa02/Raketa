@@ -1,15 +1,23 @@
-"""Match Fit v1 — seven of the ten terms, and the whole of the mechanism.
+"""Match Fit v1 — eight of the ten terms, and the whole of the mechanism.
 
 This version scores every term that needs nothing but the **Player profile** and the
 match itself: the match's start against the days and hours the player declared, price
 against a declared ceiling, travel against a declared radius, the match's type against
-a declared preference, and a ladder the player entered. Beside them, the two terms
-that **ship dark** — group reliability and familiarity — whose snapshot fields are
-present and absent from the first commit, so exclusion, renormalisation and Coverage
-are exercised by every call rather than being untested machinery waiting for a context
-that does not exist.
+a declared preference, and a ladder the player entered. Beside them **match
+viability** — how likely the match is to actually be played — which is evidence and
+is *always computable*, and the two terms that **ship dark** — group reliability and
+familiarity — whose snapshot fields are present and absent from the first commit, so
+exclusion, renormalisation and Coverage are exercised by every call rather than being
+untested machinery waiting for a context that does not exist.
 
-The three terms still owed are named with their weights in
+**Viability is what stops absence flattering a ranking**, which is a stronger claim
+than the mechanism alone could make. Excluding a term already cannot beat scoring it
+at full marks; what it could not do was stop a match nobody has joined from scoring
+perfectly on the constraints it trivially satisfies, since every piece of evidence
+about it was missing for both. Viability cannot go missing, so an empty court is now
+*scored* on being empty rather than excused from it.
+
+The two terms still owed are named with their weights in
 ``constants.PENDING_WEIGHTS``.
 
 The whole score, in the order it happens:
@@ -56,6 +64,7 @@ from app.engines.fit import (
     TermFact,
     TimeFact,
     TravelFact,
+    ViabilityFact,
 )
 from app.engines.forecast import PairingAnalysis
 from app.engines.matchfit.core import (
@@ -72,6 +81,7 @@ from app.engines.matchfit.core import (
 )
 from app.engines.matchfit.v1.constants import CONSTANTS, ENGINE_VERSION
 from app.engines.matchmaking import (
+    CourtHold,
     LadderQualification,
     MatchSnapshot,
     MatchTypePreference,
@@ -82,7 +92,9 @@ from app.engines.matchmaking import (
 )
 from app.kernel import (
     Instant,
+    Minutes,
     Ratio,
+    elapsed_minutes,
     exhaustive,
     invariant,
     local_iso_weekday,
@@ -97,10 +109,11 @@ class Scoring:
     """Everything one score is computed from, bundled so a term reads one argument.
 
     Every term takes all four and reads the ones it needs, which is what lets the
-    table below be a mapping from a code to a function rather than six call sites
-    each assembling their own arguments. Adding an input — the club's crowding, when
-    viability lands — is then a field here instead of a signature change in six
-    places.
+    table below be a mapping from a code to a function rather than eight call sites
+    each assembling their own arguments. Adding an *input* is then a field here
+    rather than a signature change in eight places — while a new fact about the
+    match, like the court hold viability reads, is a field on the snapshot and needs
+    nothing here at all.
     """
 
     snapshot: MatchSnapshot
@@ -134,16 +147,17 @@ class MatchFitEngineV1:
         In this version it is read for the pairing version the score carries; the two
         terms that read its numbers are #86's.
 
-        ``now`` is unread by every term here — and it stays unread even now that one
-        of them is about time, because *when the match is* and *when you asked* are
-        different questions: the time fit term reads the match's own start, so the
-        same match scores the same at breakfast and at midnight. It is still an
-        explicit input, because the term this table still owes that measures the
-        run-up to the join cutoff does depend on it (#85) and because a score
-        reproducible from its stored inputs is the whole basis of the falsification
-        programme. That it is **rounded to the minute** is a precondition and is
-        checked as one: a score computed from an instant carrying seconds could never
-        be cached and never be replayed.
+        ``now`` is read by **exactly one term**, and which one is the whole of the
+        rule. Time fit does not read it: *when the match is* and *when you asked* are
+        different questions, so a match at Tuesday 18:30 scores the same at breakfast
+        and at midnight. Viability does read it, because the run-up to the join
+        cutoff is measured from the moment the question is asked — the same match
+        becomes a worse recommendation as its cutoff approaches with seats still
+        unpaid, and it should. So a score is reproducible from its stored inputs and
+        it is only true for the instant it names, both of which the falsification
+        programme depends on. That the instant is **rounded to the minute** is a
+        precondition and is checked as one: a score computed from an instant carrying
+        seconds could never be cached and never be replayed.
         """
 
         invariant(
@@ -203,6 +217,101 @@ def _time_fit(scoring: Scoring) -> Term:
     free = fact.on_a_declared_day and fact.inside_a_declared_window
     return _constraint(
         TermCode.TIME_FIT, FULL_MARKS if free else CONSTANTS.time_outside, fact
+    )
+
+
+def _viability(scoring: Scoring) -> Term:
+    """How likely this match is to actually be played. **Evidence, and never absent.**
+
+    The term that closes *absence never flatters* for a ranking. Every other piece
+    of evidence in the table can be missing — nobody has a reliability record, the
+    platform has never seen who plays with whom — and a match the platform knows
+    nothing about is then scored on constraints alone, which an empty court
+    satisfies perfectly. This one **cannot** be missing: a match always has a phase,
+    a court hold, a seat count and a cutoff, so a court nobody has joined is scored
+    on them and scores badly. It is never excluded and never lowers Coverage.
+
+    **A probability, composed as one.** *Will this be played* is a frequency, so it
+    is the chance there will be people times the chance there will be a court, and
+    both halves have the same shape — *what is already committed, plus what might
+    still be got, discounted by how likely getting it is*:
+
+        people = paid + (1 − paid) × ceiling × (time left, decayed to the cutoff)
+        court  = hold + (1 − hold) × (1 − crowding)
+
+    A weighted blend of the two was the alternative and is a worse fit for the same
+    facts: two halves that are close to independent multiply, and only a probability
+    admits the measurement all three constants are falsified by — the share of joined
+    matches that were actually played, by viability decile.
+
+    Each half degrades in exactly one direction. Unpaid seats are worth less as the
+    cutoff approaches, because there is less time for anybody to take them. An unheld
+    court is worth less as the club fills, because there is less left to give — and a
+    *held* court is untouched by crowding, because a court you have cannot be taken
+    by the club being busy. That is why a hard hold at a saturated club is the same
+    court as a hard hold at an empty one.
+
+    **The phase is not read here**, and that is deliberate: a match nobody can join
+    is a hard filter's business (``docs/adr/0027``), not a term's, and the snapshot
+    refuses one outright. What this reads is the *run-up* to the cutoff, which is a
+    matter of degree — five minutes to fill a seat and five hours are different
+    recommendations, and neither is a rejection.
+    """
+
+    code = TermCode.MATCH_VIABILITY
+    snapshot = scoring.snapshot
+    paid = ratio(snapshot.paid_seats, snapshot.sold_seats)
+    left = elapsed_minutes(scoring.now, snapshot.join_cutoff)
+    people = Ratio(paid + (1 - paid) * _still_fillable(left))
+    held = _hold_confidence(snapshot.hold)
+    court = Ratio(held + (1 - held) * (1 - snapshot.club.crowding))
+    return evidence_term(
+        code,
+        _weight(code),
+        Observed(
+            value=Ratio(people * court),
+            fact=ViabilityFact(
+                paid_seats=snapshot.paid_seats,
+                sold_seats=snapshot.sold_seats,
+                hold=snapshot.hold,
+                minutes_to_cutoff=left,
+                crowding=snapshot.club.crowding,
+            ),
+        ),
+    )
+
+
+def _still_fillable(left: Minutes) -> Ratio:
+    """The chance one unpaid seat is paid before the cutoff, given the time left.
+
+    The ceiling is what an empty seat is worth with all the time in the world, and
+    the decay is how that runs down to nothing at the cutoff. ``decayed`` is the same
+    curve price and travel use, pointed the other way round: the *shortfall* of time
+    is what this match is "beyond" by, so a match with more than a full window left
+    is inside the limit and reaches the ceiling, and one at or past the cutoff is
+    floored at nothing.
+
+    Past the cutoff ``left`` is negative and the shortfall is wider than the window,
+    so the floor answers — the arithmetic needs no case of its own for a match that
+    should never have reached an engine.
+    """
+
+    window = CONSTANTS.fill_window
+    shortfall = ratio(max(0, window - left), 1)
+    return Ratio(CONSTANTS.seat_fill_ceiling * decayed(shortfall, ratio(window, 1)))
+
+
+def _hold_confidence(hold: CourtHold) -> Ratio:
+    """This rung of the hold ladder, narrowed from the constants' mapping.
+
+    The mapping is proved to cover exactly the vocabulary's rungs when the constants
+    are built, so this cannot fail for a hold that got here — the ``invariant`` is
+    what turns *cannot fail* into a type the caller can rely on, and is the same
+    shape as ``_weight`` one screen down.
+    """
+
+    return invariant(
+        CONSTANTS.hold_confidence.get(hold), f"no confidence for a {hold.value} hold"
     )
 
 
@@ -310,7 +419,7 @@ def _group_reliability(scoring: Scoring) -> Term:
     Excluded whenever nobody else on a seat carries a record, which today is always:
     the field ships dark and is absent in every snapshot the platform can assemble.
     So this term is the live proof that exclusion works — it takes 11 of the table's
-    38 points out of the denominator on every score, and Coverage says so.
+    62 points out of the denominator on every score, and Coverage says so.
 
     **The current player's own record is not read.** You know whether you will turn
     up, and scoring your own reliability into a recommendation *to you* would make
@@ -387,6 +496,7 @@ def _familiarity(scoring: Scoring) -> Term:
 #: same key set is checking the same thing from the other side.
 _TABLE: Mapping[TermCode, Callable[[Scoring], Term]] = {
     TermCode.TIME_FIT: _time_fit,
+    TermCode.MATCH_VIABILITY: _viability,
     TermCode.GROUP_RELIABILITY: _group_reliability,
     TermCode.TRAVEL: _travel,
     TermCode.LADDER_QUALIFICATION: _ladder,

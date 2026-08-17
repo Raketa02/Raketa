@@ -202,11 +202,37 @@ there; they are not repeated here.
   string fields are legitimate. A `ScoredTerm` checks its payload's kind against its own code,
   because the two are the same machine key spelled twice. _Avoid_: reason text, message,
   description.
-- **Pending weights** (`matchfit/v1/constants.PENDING_WEIGHTS`) — the three terms the table
+- **Pending weights** (`matchfit/v1/constants.PENDING_WEIGHTS`) — the two terms the table
   still owes, written out with the weight each will take, and the constants refuse to be built
   unless the declared and the pending weights sum to a hundred. So *the weights sum to 100* is
   enforced in the only form in which it can be true today, and completing the table is a diff
   that moves a line from one mapping to the other.
+- **Court hold** (`matchmaking.CourtHold`) — how firmly a court is held for a match, as the
+  clock's own three-rung ladder: `NONE`, `SOFT`, `HARD`. Borrowed vocabulary with no owner
+  yet, like a seat's state and a ladder qualification — the documents that specify the hold
+  ladder are outside this repository, so the spelling is fixed here and whichever context
+  ends up owning courts will define it. **The order lives with the word**, as
+  `matchmaking.HOLD_LADDER`, never in a version's constants: *a firmer hold never makes a
+  match less likely to be played* is a claim about the domain, and a monotonicity test that
+  walked a version's own mapping would pass by walking whatever order a retune left.
+  _Avoid_: reservation, booking (that is the Bookings context's), lock, option.
+- **Match phase** (`matchmaking.MatchPhase`) — where a match is on the clock's ladder:
+  `FORMING`, `LOCKED`, `CANCELLED`. **Carried, asserted and never read by a term.** Whether
+  a match is joinable at all is a *hard filter* candidate generation applies before an
+  engine is called ([ADR-0027](../docs/adr/0027-fit-and-certainty-are-separate-ranking-is-policy.md)),
+  so `MatchSnapshot` refuses every phase but `FORMING`: a cancelled match ranked last is
+  still a cancelled match in a home list. The *run-up* to the join cutoff is the matter of
+  degree, and that is what the viability term reads. _Avoid_: status, state (that is a
+  seat's), stage.
+- **Viability's two halves** — `matchfit/v1`'s viability term is a **probability composed as
+  one**: the chance there will be people times the chance there will be a court. Both halves
+  have the same shape — what is already committed, plus what might still be got, discounted
+  by how likely getting it is — so the paid seats and the court hold are the committed parts,
+  and the run-up to the join cutoff and the club's `crowding` discount the rest. A weighted
+  blend of two marks was the alternative and is a worse fit for the same facts: only a
+  probability admits the measurement all three of its constants are falsified by, which is
+  the share of joined matches that were actually played, by viability decile. _Avoid_:
+  confidence (that is the rating context's), likelihood score, fill rate.
 - **Rounding, restated** — `matchfit/core.whole_percent()` rounds half away from zero, which
   is the rule `kernel/money` applies to grosze and `pairing/core` applies to a balance
   percentage. It is deliberately **not** imported from either: an engine whose arithmetic

@@ -14,10 +14,13 @@ from fractions import Fraction
 import pytest
 
 from app.engines.matchmaking import (
+    HOLD_LADDER,
     HUNDREDTHS,
     ClubSnapshot,
+    CourtHold,
     HourWindow,
     LadderQualification,
+    MatchPhase,
     PlayerProfile,
     PlayerScore,
     PlayHistory,
@@ -41,6 +44,8 @@ from app.kernel import (
     minute_of_day,
     minutes,
     percent,
+    ratio,
+    Ratio,
 )
 from tests.unit.matchmaking_snapshots import (
     START,
@@ -333,7 +338,42 @@ def test_the_three_ladder_states_are_three_facts_and_not_a_bool():
 
 def test_a_club_cannot_be_a_negative_distance_away():
     with pytest.raises(InvariantViolated, match="a negative travel time"):
-        ClubSnapshot(travel_minutes=minutes(-1), zone=WARSAW)
+        ClubSnapshot(travel_minutes=minutes(-1), zone=WARSAW, crowding=percent(50))
+
+
+@pytest.mark.parametrize(
+    "crowded",
+    [Ratio(Fraction(-1, 100)), ratio(101, 100)],
+    ids=["below empty", "above full"],
+)
+def test_a_club_cannot_be_more_or_less_crowded_than_its_own_capacity(crowded):
+    """Crowding is a share of what the club has, so 0..1 is the whole of it.
+
+    A figure outside it is an assembler that divided by the wrong thing — courts by
+    matches, say — and every viability score at that club would be wrong in the same
+    direction without a single term looking odd.
+
+    The negative case is built through ``Ratio(...)`` and not ``ratio(...)``, because
+    the kernel's constructor already refuses a negative numerator — and the brand
+    **erases**, so a caller assembling a ``Fraction`` itself is the one path here and
+    is exactly what this guard is for. Asserting it through the constructor that
+    cannot produce one would be testing the kernel instead.
+    """
+
+    with pytest.raises(InvariantViolated, match="crowding outside"):
+        ClubSnapshot(travel_minutes=minutes(12), zone=WARSAW, crowding=crowded)
+
+
+def test_a_club_carries_how_crowded_it_is_and_has_no_default_for_it():
+    """*A default of nothing is an empty club*, which is the most flattering answer.
+
+    The same rule as the price's and the zone's: a fact an engine scores on has no
+    default, so an assembler that forgets it fails to build rather than to be right.
+    """
+
+    assert doubles(skill("ada", 300, 20), None, None, None).club.crowding == ratio(1, 2)
+    with pytest.raises(TypeError, match="crowding"):
+        ClubSnapshot(travel_minutes=minutes(12), zone=WARSAW)  # type: ignore[call-arg]
 
 
 def test_a_club_carries_the_zone_its_matches_start_in():
@@ -363,6 +403,74 @@ def test_a_start_that_is_not_rounded_to_the_minute_is_refused():
             None,
             start=instant(START.replace(second=30)),
         )
+
+
+# --- The clock's three words: the phase, the hold ladder and the cutoff ----------
+
+
+def test_the_three_hold_tiers_are_the_clocks_own_three_rungs():
+    """**Borrowed vocabulary, spelled verbatim**, the way the seat states are.
+
+    No court held, a provisional hold that can lapse, a booked court the club has
+    committed. Three rungs and not a bool, because *nobody has looked yet* and *a
+    hold that could still be lost* are different facts about whether the match will
+    be played — and renaming any of them here would fork the clock.
+    """
+
+    assert [rung.value for rung in CourtHold] == ["none", "soft", "hard"]
+
+
+def test_the_hold_ladder_is_ordered_weakest_first_and_covers_the_vocabulary():
+    """The order lives with the word, never in a version's constants.
+
+    *A firmer hold never makes a match less likely to be played* is a claim about
+    the domain. Read off a version's mapping instead, a retune that reordered the
+    rungs would leave the monotonicity property passing by walking its own new
+    order.
+    """
+
+    assert HOLD_LADDER == (CourtHold.NONE, CourtHold.SOFT, CourtHold.HARD)
+    assert set(HOLD_LADDER) == set(CourtHold)
+    assert len(HOLD_LADDER) == len(CourtHold)
+
+
+def test_the_three_phases_are_the_clocks_own_and_only_one_reaches_an_engine():
+    """A phase is a hard filter's word, and the snapshot enforces the filter.
+
+    *Whether a match is joinable at all* is candidate generation's business
+    (``docs/adr/0027``), never a term's: a cancelled match ranked last is still a
+    cancelled match in a home list. So the snapshot refuses every phase but
+    ``FORMING`` — an assembler that let one through fails loudly at the point that
+    assembled it, which is the only place that can do anything about it.
+    """
+
+    assert [phase.value for phase in MatchPhase] == ["forming", "locked", "cancelled"]
+    assert doubles(skill("ada", 300, 20), None, None, None).phase is MatchPhase.FORMING
+    for phase in (MatchPhase.LOCKED, MatchPhase.CANCELLED):
+        with pytest.raises(InvariantViolated, match="only a forming match"):
+            replace(doubles(skill("ada", 300, 20), None, None, None), phase=phase)
+
+
+def test_a_join_cutoff_after_the_start_is_refused():
+    """A seat that could be taken after the match began is a state no clock admits.
+
+    It would also make the run-up the viability term reads a negative number nobody
+    meant — a match *more* joinable the longer it has been under way.
+    """
+
+    match = doubles(skill("ada", 300, 20), None, None, None)
+    assert match.join_cutoff < match.start
+    with pytest.raises(InvariantViolated, match="join cutoff at"):
+        replace(match, join_cutoff=instant(match.start.replace(hour=23)))
+
+
+def test_a_join_cutoff_that_is_not_rounded_to_the_minute_is_refused():
+    """The same precondition the start carries, for the same reason: a cutoff
+    carrying seconds makes the minutes remaining one minute short of the truth."""
+
+    match = doubles(skill("ada", 300, 20), None, None, None)
+    with pytest.raises(InvariantViolated, match="not rounded to the minute"):
+        replace(match, join_cutoff=instant(match.join_cutoff.replace(second=30)))
 
 
 # --- The money the snapshot carries, and the pair that cannot contradict itself ---
