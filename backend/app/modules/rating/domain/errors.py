@@ -9,7 +9,7 @@ questionnaire has stopped — and they ask the client for opposite recoveries.
 
 from __future__ import annotations
 
-from app.core.exception_handlers import (
+from app.shared.domain import (
     BadRequestError,
     ConflictError,
     NotFoundError,

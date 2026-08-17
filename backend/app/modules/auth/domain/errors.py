@@ -7,7 +7,7 @@ refresh → retry rotation is built on — without reading a message that will b
 reworded and localized.
 """
 
-from app.core.exception_handlers import UnauthorizedError
+from app.shared.domain import UnauthorizedError
 
 
 class InvalidCredentials(UnauthorizedError):

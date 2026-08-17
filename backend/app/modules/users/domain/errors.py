@@ -1,4 +1,4 @@
-from app.core.exception_handlers import ConflictError, UnauthorizedError
+from app.shared.domain import ConflictError, UnauthorizedError
 
 
 class EmailAlreadyRegistered(ConflictError):

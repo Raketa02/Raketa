@@ -55,14 +55,31 @@
 # silence. It is why scripts/test-purity-gates.sh drives a probe through *each* of
 # the four arms separately instead of through one and inferring the rest.
 #
-# `allow_indirect_imports = true` agrees with the contracts above, and here the
-# reason is specific rather than inherited. Strict transitive enforcement is green on
-# today's tree — measured — but it would fence the wrong thing: every module's
-# `domain/errors.py` takes its error base classes from `app.core.exception_handlers`,
-# so the day that module reads `DEBUG` to decide whether to serve a traceback, which
-# is a legitimate read at an HTTP boundary, the contract would go red naming a domain
-# module that had done nothing. The claim made here is the one that stays checkable:
-# no domain or application module *reads the settings module*.
+# `allow_indirect_imports = true` agrees with the contracts above. The specific
+# coupling this note used to cite — every module's `domain/errors.py` taking its error
+# base classes from `app.core.exception_handlers` — **is gone**: #101 split the taxonomy
+# into `app/shared/domain/errors.py`, and the contract below now forbids the chain
+# outright. What remains is the general form of the same argument, and it is why the
+# flag stays: a domain layer may legitimately import a module that is itself on the
+# outside of the configuration fence, and strict transitive enforcement would then go
+# red naming a domain module that had done nothing. The claim made here is the one that
+# stays checkable whatever the graph does: no domain or application module *reads the
+# settings module*.
+#
+# `sqlalchemy` is fenced beside the three web packages because `backend/CLAUDE.md`
+# forbids all four to a domain layer in one breath, and enforcing three of the four
+# would leave the rule looking checked when a quarter of it was not. It is green on
+# today's tree — persistence lives in `infrastructure/`, which is on the outside of
+# this fence — so it costs nothing to hold and catches the ORM model somebody will
+# one day reach for while writing an aggregate.
+#
+# The framework contract below is the opposite case to the configuration one, and sets
+# `allow_indirect_imports = false` deliberately. The violation it exists for was
+# **only ever indirect** — no domain module has ever imported `fastapi` directly, and
+# with the flag on this contract would have been green on the broken tree, which is
+# the same as not existing. `scripts/test-purity-gates.sh` therefore drives an
+# *indirect* probe through it as well as a direct one; the direct probe alone would
+# still pass if somebody flipped the flag.
 
 [importlinter]
 root_package = app
@@ -155,6 +172,19 @@ source_modules =
 forbidden_modules =
     app.engines.matchfit
 allow_indirect_imports = true
+
+[importlinter:contract:domain-does-not-know-the-framework-or-the-orm]
+name = No domain layer depends on a framework or the ORM, directly or through what it imports
+type = forbidden
+source_modules =
+    app.shared.domain
+    app.modules.*.domain
+forbidden_modules =
+    fastapi
+    starlette
+    pydantic
+    sqlalchemy
+allow_indirect_imports = false
 
 [importlinter:contract:configuration-cannot-reach-a-business-rule]
 name = The domain and application layers cannot read configuration

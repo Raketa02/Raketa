@@ -71,7 +71,9 @@ for f in app/shared/ids.py \
          app/engines/pairing/v1/__init__.py \
          app/engines/matchfit/v1/__init__.py \
          app/engines/forecast.py \
-         app/core/config.py; do
+         app/core/config.py \
+         app/core/exception_handlers.py \
+         app/shared/domain/errors.py; do
   [ -f "$ROOT/$f" ] || { echo "probed module is gone, so its probe proves nothing: $f" >&2; exit 2; }
 done
 
@@ -327,6 +329,91 @@ CANCELLATION_DEADLINE_HOURS = 1 if get_settings().DEBUG else 24
 expect red imports "a context created tomorrow is fenced without touching .importlinter" \
   "app.modules._purity_probe_context.domain is not allowed to import" \
   "app.modules._purity_probe_context.domain.rules -> app.core.config"
+clean
+
+# ---------------------------------------------------------------------------
+echo
+echo ".importlinter — the framework and the ORM fenced out of the domain layers"
+
+# backend/CLAUDE.md forbids a domain layer importing FastAPI, SQLAlchemy, Pydantic or
+# an external SDK. Nothing enforced it, and it was already broken: every module's
+# `domain/errors.py` took its error base classes from `app.core.exception_handlers`,
+# which imports all three of fastapi, starlette and pydantic (#101). The taxonomy now
+# lives in `app/shared/domain/errors.py` and imports nothing but stdlib.
+#
+# The violation was **only ever indirect** — no domain module has imported a framework
+# directly, before or since — so this contract sets `allow_indirect_imports = false`
+# and the indirect probe below is the one that matters. A direct probe alone would
+# still go red if somebody flipped that flag, and the fence would be decoration.
+probe "$MODULE_DOMAIN_PROBE" 'from app.core.exception_handlers import ErrorResponse
+
+SCHEMA = ErrorResponse
+'
+expect red imports "a domain layer reaching a framework *through another module* is refused" \
+  "app.modules.users.domain is not allowed to import fastapi" \
+  "app.modules.users.domain._purity_probe -> app.core.exception_handlers" \
+  "app.core.exception_handlers -> fastapi"
+clean
+
+probe "$MODULE_DOMAIN_PROBE" 'from pydantic import BaseModel
+
+
+class Rule(BaseModel):
+    limit: int
+'
+expect red imports "a domain layer importing pydantic directly is refused" \
+  "app.modules.users.domain is not allowed to import pydantic"
+clean
+
+# The fourth forbidden package, and the one that is not a web framework at all. It is
+# fenced because CLAUDE.md forbids all four to a domain layer in one breath — this is
+# the ORM model somebody reaches for while writing an aggregate, which is how
+# persistence gets into a domain object without anybody deciding it should.
+probe "$MODULE_DOMAIN_PROBE" 'from sqlalchemy import Column, Integer
+
+LIMIT = Column("limit", Integer)
+'
+expect red imports "a domain layer importing the ORM is refused" \
+  "app.modules.users.domain is not allowed to import sqlalchemy"
+clean
+
+# The second arm, and the one the error taxonomy itself now sits in — so the fence has
+# to hold there or the move has simply relocated the problem.
+probe "$SHARED_DOMAIN_PROBE" 'from fastapi import HTTPException
+
+Raised = HTTPException
+'
+expect red imports "the shared domain layer importing fastapi is refused" \
+  "app.shared.domain is not allowed to import fastapi" \
+  "app.shared.domain._purity_probe -> fastapi"
+clean
+
+# Same wildcard reasoning as the configuration contract: a context nobody has written
+# yet is fenced on the day it is created. Starlette, because a contract's third
+# forbidden module is exactly the one nobody probes.
+mkdir -p "$NEW_CONTEXT_DIR/domain"
+: >"$NEW_CONTEXT_DIR/__init__.py"
+: >"$NEW_CONTEXT_DIR/domain/__init__.py"
+probe "$NEW_CONTEXT_DIR/domain/rules.py" 'from starlette.responses import JSONResponse
+
+Response = JSONResponse
+'
+expect red imports "a context created tomorrow is fenced from the framework too" \
+  "app.modules._purity_probe_context.domain is not allowed to import" \
+  "app.modules._purity_probe_context.domain.rules -> starlette"
+clean
+
+# And the legitimate direction. The fence is around the domain layers, not the app: an
+# adapter and a route handler are where a framework belongs, and the transport half of
+# the error envelope still imports all three.
+probe "$MODULE_INFRA_PROBE" 'from fastapi import status
+from pydantic import BaseModel
+
+
+class Payload(BaseModel):
+    code: int = status.HTTP_200_OK
+'
+expect green imports "an infrastructure adapter importing the framework is allowed"
 clean
 
 # ---------------------------------------------------------------------------

@@ -7,7 +7,7 @@ from uuid import UUID
 import jwt
 import pytest
 
-from app.core.exception_handlers import UnauthorizedError
+from app.shared.domain import UnauthorizedError
 from app.modules.auth.domain.ports import IssuedToken
 from app.modules.users.application.get_current_user import GetCurrentUser
 from app.modules.users.application.resolve_current_user import (

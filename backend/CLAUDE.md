@@ -37,6 +37,8 @@ call for deploying, it doesn't — say so.
   `.env*.example` template instead. *(hook-enforced)*
 - Edit an already-applied Alembic migration. Add a new one.
 - Import FastAPI, SQLAlchemy, Pydantic or an external SDK into a `domain/` layer.
+  *(the first four are lint-enforced, including through a module that imports one —
+  which is how it was broken for months, see #101)*
 - Call an external side effect (email, webhook, provider API) directly from a use case —
   emit a domain event instead.
 - Change public API behavior without calling it out in the plan first. **Two client apps
@@ -67,6 +69,14 @@ Rules to preserve:
   *when* an adapter is built and how long it lives (`Annotated[Port, Depends(factory)]`),
   never what. `tests/unit/test_composition_root.py` walks those files and fails if one
   imports an adapter.
+- **A domain layer raises from `app/shared/domain/errors.py`**, which is pure stdlib.
+  The error *taxonomy* — `AppError` and the five status classes — lives there; the
+  envelope, the handlers and the OpenAPI schema live in `app/core/exception_handlers.py`,
+  which imports it. They shared a file until #101, and that made every module's
+  `domain/errors.py` import FastAPI transitively. An error class keeps its own
+  `status_code`, deliberately: a status held in a separate registry is one a new
+  subclass can be added without, and the miss is a 500 in production rather than a red
+  test.
 - **State changes emit domain events.** Use cases persist them through
   `DomainEventStore.append` and enqueue them on the transactional outbox in the same
   transaction; handlers perform side effects after commit.
