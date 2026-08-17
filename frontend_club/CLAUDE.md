@@ -65,6 +65,8 @@ Regenerate the API client whenever the backend contract changes, and **commit th
   JS-readable cookie, or a Client Component prop. *(§9.1)*
 - **Rename `BACKEND_API_URL` to `NEXT_PUBLIC_*`.** Anything `NEXT_PUBLIC_` is baked into
   the client bundle. *(§20.1)*
+- **Read `process.env` outside `src/platform/config/`, or read `NODE_ENV` at all.** The
+  build mode is not the environment. *(lint-enforced — see Configuration)*
 - **Build a catch-all proxy** — `/api/proxy?url=…`, `/api/backend/[...path]`. Generic
   forwarding is an SSRF hole. *(§8.2)*
 - **Import `src/generated/` outside the transport boundary.** Generated wire types stay in
@@ -79,6 +81,32 @@ Regenerate the API client whenever the backend contract changes, and **commit th
   mutation transport; a second one splits auth, errors, tests and observability. Needs an
   ADR. *(§7.3)*
 - **Create or edit a real `.env*` file, or run a deploy (`vercel`).** *(hook-enforced)*
+
+## Configuration *(§20)*
+
+One home: [`src/platform/config/`](src/platform/config/). Zod-validated, refused at server
+start, and the only place `process.env` is legitimate — `no-restricted-syntax` enforces
+both that and an outright ban on `NODE_ENV`.
+
+**Two schemas, never one.** `server.ts` holds the environment, `BACKEND_API_URL` and the
+session cookie policy, and carries `import "server-only"` so a Client Component importing it
+**fails to compile**. `public.ts` holds only `NEXT_PUBLIC_APP_URL`; what is absent from it —
+the FastAPI origin, the environment, the cookie policy — is the point.
+
+`APP_ENV` is one of `local` · `development` · `staging` · `production`, the same four names
+the backend and the player app use. `local` is reached over `http://`, the other three over
+`https://`, and that scheme rule is checked against the environment. Only `local` runs
+today; selecting another fails at start rather than falling back. **`NODE_ENV` is the build
+mode, not the environment** — one production build serves staging and production alike.
+
+The session cookie's `Secure` flag is **derived** from the environment (`false` only in
+`local`), never set independently; a leftover `SESSION_COOKIE_SECURE` stops the server.
+Refusals name the offending variable and **never its value** — config lands in logs, and a
+URL can carry credentials.
+
+`<EnvironmentBadge />` is a **Server Component** by design: it reads the server-only
+environment, so no public mirror of the name exists to drift. Mount it in the root layout
+when you scaffold; production is unbadged. Details: [`README.md`](README.md#environment).
 
 ## Architecture
 

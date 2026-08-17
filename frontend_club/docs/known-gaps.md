@@ -19,6 +19,21 @@ enforcement.** It needs:
 
 *(§34)*
 
+> Partly closed: the config boundary **is** enforced. `no-restricted-syntax` keeps
+> `process.env` inside `src/platform/config/` and bans `NODE_ENV` everywhere, and
+> `src/platform/config/server.ts` carries `import "server-only"` so a client import of the
+> FastAPI origin is a build error. The four bullets above are still open — a `server-only`
+> *lint* rule would catch the same mistake one step earlier, and would cover the modules
+> that have no `server-only` import of their own yet.
+
+## 1a. The club app ships untested in CI
+
+It has no committed `pnpm-lock.yaml`, so [`ci.yml`](../../.github/workflows/ci.yml) skips
+its whole job — see [#65](https://github.com/RobertConstantin02/rakieta/issues/65). Tests
+under `src/platform/config/` exist and pass locally (`pnpm check`), but **nothing runs them
+on a pull request**. They light up the moment the lockfile lands; until then, treat a green
+CI on a `frontend_club/**` change as saying nothing at all.
+
 ## 2. `tsconfig.json` is missing two strict flags
 
 `strict`, `noUncheckedIndexedAccess`, `noImplicitOverride` and `noFallthroughCasesInSwitch`
