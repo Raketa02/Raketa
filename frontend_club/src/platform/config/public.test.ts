@@ -15,9 +15,14 @@ describe("parsePublicConfig", () => {
     expect(() => parsePublicConfig({})).toThrow(/NEXT_PUBLIC_APP_URL/);
   });
 
-  it.each(["nonsense", "localhost:3000", "ftp://club.rakieta.app", ""])("rejects %p", (appUrl) => {
-    expect(() => parsePublicConfig({ NEXT_PUBLIC_APP_URL: appUrl })).toThrow(/NEXT_PUBLIC_APP_URL/);
-  });
+  it.each(["nonsense", "localhost:3000", "ftp://club.rakieta.example", ""])(
+    "rejects %p",
+    (appUrl) => {
+      expect(() => parsePublicConfig({ NEXT_PUBLIC_APP_URL: appUrl })).toThrow(
+        /NEXT_PUBLIC_APP_URL/,
+      );
+    },
+  );
 
   /**
    * The rejected value is an `ftp://` URL rather than a mangled `https://` one on purpose:
@@ -60,7 +65,7 @@ describe("what the browser is allowed to know", () => {
   it("does not carry the FastAPI origin, even when one is offered", () => {
     const raw = {
       ...valid,
-      NEXT_PUBLIC_BACKEND_API_URL: "https://api.rakieta.app",
+      NEXT_PUBLIC_BACKEND_API_URL: "https://api.rakieta.example",
     } as RawPublicEnv;
 
     expect(parsePublicConfig(raw)).toEqual({ appUrl: "http://localhost:3000" });

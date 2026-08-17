@@ -67,7 +67,19 @@ Design-system *terms* (token, soft/ink, eyebrow, hairline, severity rail, band i
 vs drawer) are technical vocabulary and live in that app's `CONTEXT.md`. A design system
 never settles a **domain** term — that happens in the root `CONTEXT.md` first.
 
-**One thing sits between the two and is shared:**
+**Two things sit between the two and are shared.**
+
+[`docs/environments.md`](docs/environments.md) — the four environment names, what each is,
+which variable carries it in each app, the refusals, the scheme rule, the test taxonomy, and
+the checklist for turning on a remote environment. Not domain language (no nouns a player
+would recognise) and not a design system: a **deployment contract**. It lives at the root
+because an environment name is the one piece of vocabulary all three apps must spell
+identically — `local`, `development`, `staging`, `production` — and a word defined three
+times drifts three ways. Decided by
+[ADR-0028](docs/adr/0028-four-environment-model-and-typed-configuration.md) and
+[ADR-0029](docs/adr/0029-seed-data-through-aggregates-never-in-production.md). Each app's
+`CONTEXT.md` may add how *it* reads the value; none of them redefines the names.
+
 [`docs/value-formatting.md`](docs/value-formatting.md) — the exact string a price, a level, a
 time or a duration becomes. Not a design system (no colour, no size), not domain language (no
 nouns): a rendering contract. The backend sends numbers and machine codes and never display
@@ -124,7 +136,9 @@ else lives one layer down. See
 │   └── skills/               ← cross-app procedures (write-adr, guardrails)
 ├── docs/
 │   ├── adr/                  ← system-wide decisions (0001…)
-│   └── agents/               ← ownership boundaries, domain-doc consumption
+│   ├── agents/               ← ownership boundaries, domain-doc consumption
+│   ├── environments.md       ← THE four environment names + deployment contract
+│   └── value-formatting.md   ← the one rendering table both clients implement
 ├── backend/                  ← FastAPI  (CLAUDE.md + CONTEXT.md + its own docs/)
 ├── frontend_player/          ← Expo     (CLAUDE.md + CONTEXT.md)
 │   ├── docs/architecture.md          ← the player app's runtime contract (ADR-0013)

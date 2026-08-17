@@ -43,7 +43,7 @@ naming it — that is the guardrail working, not a bug.
 
 `EXPO_PUBLIC_ENV` is `local | development | staging | production`, the same four the
 backend and the club app use, and **only `local` runs today.** The environment fixes the
-API URL's scheme — `http://` for `local`, `https://` for the three deployed ones — so a
+API URL's scheme — `https://` for the three deployed ones, either for `local` — so a
 laptop URL under a deployed name fails at launch naming both variables rather than
 shipping a build that points at nothing.
 

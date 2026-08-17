@@ -309,6 +309,16 @@ there; they are not repeated here.
   "somebody set it": there is nothing to compare a host against. _Avoid_: inventing
   `api-dev.…`; a config file naming a host that does not exist describes infrastructure
   that does not exist.
+- **Public-network scheme rule** — the platform rule that a URL a browser or a phone
+  reaches over the internet is `https://` in every deployed environment, and unconstrained
+  in `local`. The backend calls nothing over HTTP, so its only instance is `ALLOW_ORIGINS`:
+  a non-`https://` entry there while `APP_ENV` is deployed is a startup refusal, because a
+  credentialed CORS grant to a plaintext origin is the club console's session cookie in the
+  clear. The wildcard is not an origin and is skipped; it has its own refusal. Defined once
+  for all three apps in [`../docs/environments.md`](../docs/environments.md). _Avoid_:
+  extending it to a **server-to-server** address — `http://backend.svc.cluster.local:8000`
+  never crosses a public network, and whether that hop is encrypted is a
+  deployment-topology question no app can assert.
 - **Composition root** — `app/bootstrap/composition.py`, the one place an adapter is
   constructed. One plain function per port, taking a database session and the settings,
   with no web framework in it and no request anywhere near it. Before it, every adapter

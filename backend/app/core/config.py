@@ -109,6 +109,16 @@ ENCRYPTED_DB_SSL_MODES = frozenset({"require", "verify-ca", "verify-full"})
 #: mistake available: it is in this file, in both templates, and in git history.
 DEFAULT_JWT_SECRET_KEY = "change-me-in-production"
 
+#: The environments a browser reaches over a public network. `local` is not one of them,
+#: which is what makes `http://localhost:3000` a legal allowed origin on a laptop.
+DEPLOYED = frozenset(
+    {Environment.DEVELOPMENT, Environment.STAGING, Environment.PRODUCTION}
+)
+
+#: The CORS wildcard. Not an origin, so the scheme rule below has nothing to say about
+#: it — it is governed by its own refusal, in combination with `ALLOW_CREDENTIALS`.
+CORS_WILDCARD = "*"
+
 
 class Settings(BaseSettings):
     # --- app metadata
@@ -250,6 +260,36 @@ class Settings(BaseSettings):
                     f"defined but not provisioned. Falling back to the local default "
                     f"would point at a database that does not exist — set "
                     f"WRITER_DB_URL explicitly or use 'local'."
+                )
+
+        if env in DEPLOYED:
+            # The backend's instance of the platform's **public-network scheme rule**: a
+            # URL a browser reaches over the internet is `https://` in every deployed
+            # environment. The backend calls nothing over HTTP, so `ALLOW_ORIGINS` is
+            # the only such URL it holds — these are the origins a browser presents, and
+            # an `http://` one in a deployed environment means the club console is being
+            # served in the clear, which is a session cookie in the clear.
+            #
+            # #99 added this. Until then the rule was carried by the two clients and not
+            # by the backend, so "the three apps agree" was false in the one direction
+            # nobody was looking: a deployed backend would happily hand credentialed
+            # CORS permission to a plaintext origin.
+            #
+            # The wildcard is skipped deliberately — it is not an origin, and it has its
+            # own refusal below. `local` is exempt because `http://localhost:3000` is
+            # what the club app actually serves on a laptop.
+            insecure = [
+                origin
+                for origin in self.ALLOW_ORIGINS
+                if origin != CORS_WILDCARD
+                and not origin.lower().startswith("https://")
+            ]
+            if insecure:
+                raise ConfigurationError(
+                    f"ALLOW_ORIGINS contains {len(insecure)} origin(s) that are not "
+                    f"https://, and APP_ENV selects '{env}', which is deployed. A "
+                    f"browser origin reached over a public network must be https:// "
+                    f"there — an http:// one transmits the session cookie in the clear."
                 )
 
         if env is not Environment.PRODUCTION:

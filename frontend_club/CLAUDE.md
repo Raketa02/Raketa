@@ -32,12 +32,15 @@ ADR-0009's uniform layer set does **not** apply here — `domain/`, `use-cases/`
 
 ## Not scaffolded yet
 
-This directory holds architecture, config and rules — not a running app. `pnpm install`
-has not been run and there is no `src/app/layout.tsx`. If you are the first session here,
-read [`README.md`](README.md) and build in the standard's **§47 order**. Do not reach for
-`create-next-app`; its flat layout contradicts the structure below. The design system is
-already locked — the first `app/layout.tsx` must `import '@/shared/ui/tokens.css'` and load
-Archivo + IBM Plex Mono through `next/font/google` as `--font-sans` / `--font-mono`.
+This directory holds architecture, config and rules — not a running app. There is no
+committed lockfile, so its CI job is skipped (#65), and there is no `src/app/page.tsx`, so
+the app serves no route. What does exist is `src/app/layout.tsx`: the minimum root layout,
+which imports `@/shared/ui/tokens.css`, loads Archivo + IBM Plex Mono through
+`next/font/google` as `--font-sans` / `--font-mono`, and mounts `<EnvironmentBadge />`. It
+holds **no providers** — no Query client, no session boundary, no route groups — and those
+arrive with the features that need them. If you are the first session here, read
+[`README.md`](README.md) and build in the standard's **§47 order**. Do not reach for
+`create-next-app`; its flat layout contradicts the structure below.
 
 Outstanding gaps you must not assume are already handled — including the ESLint config
 still enforcing the old layer set — are in [`docs/known-gaps.md`](docs/known-gaps.md).
@@ -94,10 +97,13 @@ session cookie policy, and carries `import "server-only"` so a Client Component 
 the FastAPI origin, the environment, the cookie policy — is the point.
 
 `APP_ENV` is one of `local` · `development` · `staging` · `production`, the same four names
-the backend and the player app use. `local` is reached over `http://`, the other three over
-`https://`, and that scheme rule is checked against the environment. Only `local` runs
-today; selecting another fails at start rather than falling back. **`NODE_ENV` is the build
-mode, not the environment** — one production build serves staging and production alike.
+the backend and the player app use. The scheme rule governs a URL that **crosses a public
+network**: `NEXT_PUBLIC_APP_URL` must be `https://` in the three deployed environments, and
+`local` takes either. It deliberately does **not** govern `BACKEND_API_URL` — that is
+server-to-server, and a cluster-internal `http://backend.svc…` is legitimate. Only `local`
+runs today; selecting another fails at start rather than falling back. **`NODE_ENV` is the
+build mode, not the environment** — one production build serves staging and production
+alike. Cross-app rule: [`../docs/environments.md`](../docs/environments.md).
 
 The session cookie's `Secure` flag is **derived** from the environment (`false` only in
 `local`), never set independently; a leftover `SESSION_COOKIE_SECURE` stops the server.
@@ -105,8 +111,8 @@ Refusals name the offending variable and **never its value** — config lands in
 URL can carry credentials.
 
 `<EnvironmentBadge />` is a **Server Component** by design: it reads the server-only
-environment, so no public mirror of the name exists to drift. Mount it in the root layout
-when you scaffold; production is unbadged. Details: [`README.md`](README.md#environment).
+environment, so no public mirror of the name exists to drift. It is mounted in
+`src/app/layout.tsx`; production is unbadged. Details: [`README.md`](README.md#environment).
 
 ## Architecture
 

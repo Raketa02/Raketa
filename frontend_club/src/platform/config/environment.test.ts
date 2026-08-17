@@ -22,14 +22,17 @@ describe("the environment vocabulary", () => {
 });
 
 /**
- * `local` is a laptop over `http://`; the three deployed environments are reached over TLS.
- * Asserted as a table so a retune that quietly flipped one is a red test rather than a
- * cookie transmitted in clear.
+ * The scheme a **public-network** URL must use. Every deployed environment is reached over
+ * TLS; `local` is `null`, meaning either. Asserted as a table so a retune that quietly
+ * flipped one is a red test rather than a cookie transmitted in clear.
+ *
+ * `null` for `local` is not "unset": a laptop is legitimately reachable over either, and a
+ * tunnel — which is how a device reaches a laptop at all — hands back `https://`.
  */
-describe("the scheme rule", () => {
-  it("requires http:// for local and https:// for every deployed environment", () => {
+describe("the public-network scheme rule", () => {
+  it("requires https:// for every deployed environment and constrains local no further", () => {
     expect(REQUIRED_SCHEME).toEqual({
-      local: "http://",
+      local: null,
       development: "https://",
       staging: "https://",
       production: "https://",
@@ -38,6 +41,15 @@ describe("the scheme rule", () => {
 
   it("covers every environment", () => {
     expect(Object.keys(REQUIRED_SCHEME).sort()).toEqual([...ENVIRONMENTS].sort());
+  });
+
+  // The claim that makes the table a security rule rather than a convention: no deployed
+  // environment may be reached in the clear, whatever else is retuned.
+  it("leaves no deployed environment reachable over http://", () => {
+    for (const environment of ENVIRONMENTS) {
+      if (environment === "local") continue;
+      expect(REQUIRED_SCHEME[environment]).toBe("https://");
+    }
   });
 });
 

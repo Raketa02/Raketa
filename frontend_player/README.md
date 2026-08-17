@@ -62,8 +62,10 @@ tunnel — `localhost` on a phone means the phone.
 `EXPO_PUBLIC_ENV` is one of `local`, `development`, `staging`, `production` — the same
 four names the backend and the club app use. **Only `local` runs today**; the other three
 are validated but not provisioned. The environment decides the URL scheme, and that is
-validated too: `local` is reached over `http://`, the other three over `https://`. A
-laptop URL under a deployed name is a startup failure naming both variables.
+validated too: the three deployed ones must be `https://`, because this URL is reached
+from a phone over the internet. `local` takes either — a tunnel is how a physical device
+reaches a laptop, and every tunnel hands back `https://`. A laptop URL under a deployed
+name is a startup failure naming both variables. See [`../docs/environments.md`](../docs/environments.md).
 
 The environment also decides what the app calls itself. `app.config.ts` is a **function**
 of it — not a static `app.json` — and delegates the one decision to

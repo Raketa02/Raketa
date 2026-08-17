@@ -44,6 +44,15 @@ const ServerFields = z.object({
    * The FastAPI origin. **Never** rename this to `NEXT_PUBLIC_*` (ADR-0007, §4.1): the
    * browser must only ever talk to this app's own `/api/*`, and a public FastAPI origin
    * is an invitation to call it directly and bypass the BFF's session and CSRF handling.
+   *
+   * **Validated for shape and no further — it deliberately carries no scheme rule.** This
+   * is a *server-to-server* address: the club's own server tier calls it, and a browser
+   * never learns it. In a deployed environment that address is commonly cluster-internal —
+   * `http://backend.svc.cluster.local:8000` — which never crosses a public network and is
+   * entirely legitimate. #96 implemented the rule as its AC specified and reported that it
+   * refuses exactly that; #99 settles it. Whether this hop is encrypted is a
+   * deployment-topology question the app cannot answer, not a security invariant it can
+   * assert. See docs/environments.md.
    */
   BACKEND_API_URL: httpUrlField,
 
@@ -63,6 +72,11 @@ const ServerFields = z.object({
    * The club app's own public origin. Safe to expose, and it *is* exposed — `./public`
    * validates its shape for the browser. It is re-read here because only the server knows
    * the environment, and therefore only the server can enforce the scheme rule on it.
+   *
+   * **This is the one URL here the public-network scheme rule applies to**, and it is what
+   * carries the unprovisioned-environment refusal now that `BACKEND_API_URL` does not: a
+   * `local` configuration promoted to `staging` by changing one variable still fails at
+   * start, because a browser origin of `http://localhost:3000` is not a deployed one.
    */
   NEXT_PUBLIC_APP_URL: httpUrlField,
 
@@ -85,7 +99,7 @@ const ServerFields = z.object({
 });
 
 const ServerSchema = ServerFields.superRefine((raw, ctx) => {
-  requireScheme(ctx, raw.APP_ENV, "BACKEND_API_URL", raw.BACKEND_API_URL);
+  // Only the browser-facing origin. `BACKEND_API_URL` is server-to-server — see its field.
   requireScheme(ctx, raw.APP_ENV, "NEXT_PUBLIC_APP_URL", raw.NEXT_PUBLIC_APP_URL);
 });
 
@@ -102,7 +116,7 @@ export interface SessionCookieConfig {
 
 export interface ServerConfig {
   readonly environment: AppEnvironment;
-  /** FastAPI base URL. Server-only: `http://` in `local`, `https://` everywhere else. */
+  /** FastAPI base URL. Server-only, and server-to-server: either scheme, any environment. */
   readonly backendApiUrl: string;
   /** This app's own origin, as the server knows it. */
   readonly appUrl: string;

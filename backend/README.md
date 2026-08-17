@@ -239,7 +239,15 @@ aggregator.
 | `production` with the default `JWT_SECRET_KEY` | It is public in this repo's history, so every token it signs is forgeable. |
 | `production` with `DEBUG=true` | It serves verbose errors to callers. |
 | `production` with wildcard `ALLOW_ORIGINS` **and** `ALLOW_CREDENTIALS` | Browsers reject the combination anyway. |
+| a deployed environment with a non-`https://` entry in `ALLOW_ORIGINS` | A browser origin reached over a public network in the clear is a session cookie in the clear. |
 | `production` with a `DB_SSL_MODE` that does not encrypt | Transport security should not be something anyone has to remember. |
+
+The origin refusal is the backend's instance of the platform's **public-network scheme
+rule**, added by #99 so that all three apps carry it (`docs/environments.md`). The backend
+calls nothing over HTTP, so `ALLOW_ORIGINS` is the only public-network URL it holds. The
+wildcard is skipped — it is not an origin, and it has its own refusal above — and `local`
+is exempt, because `http://localhost:3000` is what the club app actually serves on a
+laptop. The message reports how many entries are wrong, never which.
 
 The checks live on the settings object, not in the application factory, so they hold
 for every construction path — a worker, a migration or a seed run, not only a process

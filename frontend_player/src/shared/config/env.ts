@@ -33,32 +33,48 @@ export type AppEnvironment = (typeof ENVIRONMENTS)[number];
 const ENVIRONMENT_NAMES = ENVIRONMENTS.join(', ');
 
 /**
- * The scheme each environment's API URL must use — part of the contract, not a
- * convention. `local` is a laptop, a LAN IP or a tunnel; the other three are deployed and
- * are reached over TLS.
+ * An absolute HTTP(S) URL.
+ *
+ * `.url()` alone is not enough: WHATWG parsing accepts `localhost:8000` as a URL whose
+ * *protocol* is `localhost:`, and that is precisely what someone types. It would pass
+ * validation and then fail on every request.
+ *
+ * Named rather than inlined so the cross-field rule below can ask whether the field itself
+ * already refused the value.
+ */
+const httpUrlField = z
+  .string()
+  .url()
+  .refine((value) => /^https?:\/\//i.test(value), {
+    message: 'must start with http:// or https://',
+  });
+
+/**
+ * The scheme the API URL must use, per environment — `null` where either is legitimate.
+ *
+ * This is the **public-network** form of the rule, and it is the strict one: this URL is
+ * reached from a phone, over the internet, so a deployed environment carrying it in the
+ * clear is a session and a bearer token on someone's café Wi-Fi. `https://` there is not a
+ * deployment-topology preference, it is the security invariant.
+ *
+ * `local` is `null`, and that is the correction #102 asked for. The rule used to require
+ * `http://` on the reasoning that `local` is "a laptop, a LAN IP or a tunnel" — but
+ * `expo start --tunnel`, `cloudflared` and `tailscale funnel` all hand back `https://`, so
+ * the one case a tunnel exists for (a physical phone that cannot reach the laptop's LAN IP)
+ * was refused at launch. Nothing about `local` is protected by forbidding TLS on it.
  *
  * Written out per environment rather than as `env === 'local' ? … : …` so that a fifth
  * environment fails to compile until somebody decides how it is reached.
  */
-const REQUIRED_SCHEME: Readonly<Record<AppEnvironment, 'http://' | 'https://'>> = {
-  local: 'http://',
+const REQUIRED_SCHEME: Readonly<Record<AppEnvironment, 'https://' | null>> = {
+  local: null,
   development: 'https://',
   staging: 'https://',
   production: 'https://',
 };
 
 const EnvFields = z.object({
-  /**
-   * `.url()` alone is not enough: WHATWG parsing accepts `localhost:8000` as a URL whose
-   * *protocol* is `localhost:`, and that is precisely what someone types. It would pass
-   * validation and then fail on every request.
-   */
-  EXPO_PUBLIC_API_URL: z
-    .string()
-    .url()
-    .refine((value) => /^https?:\/\//i.test(value), {
-      message: 'must start with http:// or https://',
-    }),
+  EXPO_PUBLIC_API_URL: httpUrlField,
   /**
    * The message is replaced rather than left to zod, whose `invalid_enum_value` text ends
    * `received '…'`. Config lands in logs and crash reports, and a variable's value is
@@ -71,15 +87,27 @@ const EnvFields = z.object({
 
 /**
  * The scheme rule is a claim about the two variables *together*, so it is checked on the
- * object rather than on either field. zod runs it only once both fields have parsed, so a
- * malformed URL is reported as a malformed URL and never as a scheme mismatch.
+ * object rather than on either field.
+ *
+ * **It stays silent when the field itself already refused the value**, and that guard is
+ * measured rather than assumed. The docstring here used to claim zod "runs it only once
+ * both fields have parsed"; that was false. A failing `.url()` or `.refine()` leaves zod's
+ * result *dirty* rather than aborting it, so this refinement still ran over the rejected
+ * string — `localhost:8000` was reported both as a malformed URL and as a scheme mismatch,
+ * two complaints for one typo, the second of them naming the environment rather than the
+ * missing scheme. Re-running the field is what makes "a malformed URL is reported as a
+ * malformed URL" true instead of merely intended.
  *
  * The issue is attached to `EXPO_PUBLIC_API_URL` — that is the value that has to change —
  * and names `EXPO_PUBLIC_ENV` as the reason. An environment name is not a secret and is
  * already on every log record; it is the *reason* here, never the offending value.
  */
 const EnvSchema = EnvFields.superRefine((env, ctx) => {
+  if (!httpUrlField.safeParse(env.EXPO_PUBLIC_API_URL).success) return;
+
   const scheme = REQUIRED_SCHEME[env.EXPO_PUBLIC_ENV];
+
+  if (scheme === null) return;
 
   if (!env.EXPO_PUBLIC_API_URL.toLowerCase().startsWith(scheme)) {
     ctx.addIssue({
@@ -92,7 +120,7 @@ const EnvSchema = EnvFields.superRefine((env, ctx) => {
 
 export interface Env {
   /** FastAPI base URL. On a physical device this is a LAN IP or tunnel — a phone's
-   *  `localhost` is the phone. `http://` in `local`, `https://` everywhere else. */
+   *  `localhost` is the phone. Either scheme in `local`, `https://` everywhere else. */
   readonly apiUrl: string;
   readonly environment: AppEnvironment;
 }

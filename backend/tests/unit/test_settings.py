@@ -246,6 +246,86 @@ def test_production_allows_a_wildcard_without_credentials(clean_env) -> None:
     assert settings.ALLOW_CREDENTIALS is False
 
 
+# --------------------------------------------------------------------------- #
+# The public-network scheme rule — the backend's instance of it
+# --------------------------------------------------------------------------- #
+#
+# A URL a browser reaches over a public network is `https://` in every deployed
+# environment. The two clients have carried that rule since #95 and #96; the backend
+# carried none, so "the three apps agree" was false in the direction nobody was
+# looking. `ALLOW_ORIGINS` is the only such URL the backend holds — it calls nothing
+# over HTTP — and an `http://` entry is a browser origin served in the clear, which is
+# the session cookie ADR-0007 puts in an httpOnly cookie travelling in the clear.
+
+
+@pytest.mark.parametrize("env", ["development", "staging", "production"])
+def test_a_deployed_environment_refuses_a_plaintext_browser_origin(
+    clean_env, env: str
+) -> None:
+    with pytest.raises(ConfigurationError) as exc:
+        settings_for(env, ALLOW_ORIGINS=["http://club.rakieta.example"])
+    assert "ALLOW_ORIGINS" in str(exc.value)
+
+
+@pytest.mark.parametrize("env", ["development", "staging", "production"])
+def test_a_deployed_environment_accepts_https_browser_origins(
+    clean_env, env: str
+) -> None:
+    """The other half. A guard that fires on everything is not a guard."""
+    origins = ["https://club.rakieta.example", "https://admin.rakieta.example"]
+    assert settings_for(env, ALLOW_ORIGINS=origins).ALLOW_ORIGINS == origins
+
+
+def test_one_plaintext_origin_among_several_is_enough_to_refuse(clean_env) -> None:
+    """The check is over every entry, not over the first one.
+
+    A list is exactly where this mistake hides: the reviewed line is `https://` and the
+    one appended underneath it a month later is not.
+    """
+    with pytest.raises(ConfigurationError) as exc:
+        production(
+            ALLOW_ORIGINS=[
+                "https://club.rakieta.example",
+                "http://staging-box.rakieta.example",
+            ]
+        )
+    assert "ALLOW_ORIGINS" in str(exc.value)
+
+
+def test_local_accepts_a_plaintext_browser_origin(clean_env) -> None:
+    """`http://localhost:3000` is what the club app actually serves on a laptop.
+
+    The rule is about a *public network*; `local` is not one, which is the same reason
+    both clients stopped constraining `local`'s scheme at all.
+    """
+    settings = build(APP_ENV="local", ALLOW_ORIGINS=["http://localhost:3000"])
+    assert settings.ALLOW_ORIGINS == ["http://localhost:3000"]
+
+
+def test_the_wildcard_is_not_read_as_a_plaintext_origin(clean_env) -> None:
+    """`*` is not a URL, so the scheme rule has nothing to say about it.
+
+    It has its own refusal — with credentials, in production — and reading it here as a
+    non-https origin would refuse the credential-free public API that refusal
+    deliberately permits.
+    """
+    settings = settings_for("staging", ALLOW_ORIGINS=["*"], ALLOW_CREDENTIALS=False)
+    assert settings.ALLOW_ORIGINS == ["*"]
+
+
+def test_the_scheme_refusal_does_not_echo_the_origin(clean_env) -> None:
+    """It reports how many are wrong, never which. An origin can carry a hostname an
+    operator would rather not have in a public crash report, and the rule the whole
+    module follows is that a refusal names the variable, never the value."""
+    origin = "http://internal-box.rakieta.example:8443"
+
+    with pytest.raises(ConfigurationError) as exc:
+        production(ALLOW_ORIGINS=[origin])
+
+    assert origin not in str(exc.value)
+    assert "ALLOW_ORIGINS" in str(exc.value)
+
+
 @pytest.mark.parametrize("mode", ["disable", "allow", ""])
 def test_production_refuses_an_unencrypted_database(clean_env, mode: str) -> None:
     """`allow` is in the list because the database engine treats it exactly as
@@ -302,11 +382,28 @@ REFUSALS = [
     ("JWT_SECRET_KEY", lambda: production(JWT_SECRET_KEY=DEFAULT_JWT_SECRET_KEY)),
     ("DEBUG", lambda: production(DEBUG=True)),
     ("ALLOW_ORIGINS", lambda: production(ALLOW_ORIGINS=["*"])),
+    (
+        "ALLOW_ORIGINS",
+        lambda: production(ALLOW_ORIGINS=[f"http://{POISON_PASSWORD}.example"]),
+    ),
     ("DB_SSL_MODE", lambda: production(DB_SSL_MODE="disable")),
 ]
 
+#: Two refusals name the same variable, so the ids are spelled rather than derived —
+#: `ALLOW_ORIGINS0` in a failure report tells a reader nothing about which fired.
+REFUSAL_IDS = [
+    "APP_ENV",
+    "APP_HOST",
+    "WRITER_DB_URL",
+    "JWT_SECRET_KEY",
+    "DEBUG",
+    "ALLOW_ORIGINS-wildcard-with-credentials",
+    "ALLOW_ORIGINS-plaintext-when-deployed",
+    "DB_SSL_MODE",
+]
 
-@pytest.mark.parametrize("variable, trigger", REFUSALS, ids=[r[0] for r in REFUSALS])
+
+@pytest.mark.parametrize("variable, trigger", REFUSALS, ids=REFUSAL_IDS)
 def test_every_refusal_names_its_variable(clean_env, variable, trigger) -> None:
     with pytest.raises(ConfigurationError) as exc:
         trigger()
@@ -316,7 +413,7 @@ def test_every_refusal_names_its_variable(clean_env, variable, trigger) -> None:
     )
 
 
-@pytest.mark.parametrize("variable, trigger", REFUSALS, ids=[r[0] for r in REFUSALS])
+@pytest.mark.parametrize("variable, trigger", REFUSALS, ids=REFUSAL_IDS)
 def test_no_refusal_echoes_a_value(clean_env, variable, trigger) -> None:
     with pytest.raises(ConfigurationError) as exc:
         trigger()

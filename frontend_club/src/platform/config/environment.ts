@@ -36,14 +36,26 @@ export type AppEnvironment = (typeof ENVIRONMENTS)[number];
 const ENVIRONMENT_NAMES = ENVIRONMENTS.join(", ");
 
 /**
- * The scheme each environment's URLs must use — part of the contract, not a convention.
- * `local` is a laptop over `http://`; the other three are deployed and reached over TLS.
+ * The scheme a **public-network** URL must use, per environment — `null` where either is
+ * legitimate. Part of the contract, not a convention.
+ *
+ * "Public-network" is load-bearing, and it is the distinction #99 settled across the three
+ * apps. This table governs a URL a *browser or a phone* reaches over the internet, where
+ * `http://` in a deployed environment means a session cookie in the clear. It does **not**
+ * govern a URL one server tier uses to reach another: `http://backend.svc.cluster.local:8000`
+ * never leaves the cluster, is entirely legitimate, and the rule as first written in #96
+ * refused it. So `BACKEND_API_URL` is validated for shape and no further, and this table is
+ * applied only to `NEXT_PUBLIC_APP_URL` — the origin a browser actually visits.
+ *
+ * `local` is `null` for the same reason the player app's is: a laptop can legitimately be
+ * reached over either, a tunnel hands back `https://`, and nothing about `local` is
+ * protected by forbidding TLS on it.
  *
  * Written out per environment rather than as `environment === "local" ? … : …` so that a
  * fifth environment fails to compile until somebody decides how it is reached.
  */
-export const REQUIRED_SCHEME: Readonly<Record<AppEnvironment, "http://" | "https://">> = {
-  local: "http://",
+export const REQUIRED_SCHEME: Readonly<Record<AppEnvironment, "https://" | null>> = {
+  local: null,
   development: "https://",
   staging: "https://",
   production: "https://",
@@ -103,7 +115,8 @@ export const httpUrlField = z
 
 /**
  * The scheme rule is a claim about a URL and the environment *together*, so it is checked
- * on the object rather than on either field.
+ * on the object rather than on either field. Apply it only to a URL that crosses a public
+ * network — see `REQUIRED_SCHEME`.
  *
  * **It stays silent when the field itself already refused the value**, and that guard is
  * measured rather than assumed. A failing `.url()` or `.refine()` leaves zod's result
@@ -126,6 +139,8 @@ export function requireScheme(
   if (!httpUrlField.safeParse(value).success) return;
 
   const scheme = REQUIRED_SCHEME[environment];
+
+  if (scheme === null) return;
 
   if (!value.toLowerCase().startsWith(scheme)) {
     ctx.addIssue({

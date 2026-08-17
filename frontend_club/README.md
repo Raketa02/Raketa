@@ -34,8 +34,9 @@ cd frontend_club
 pnpm install                 # installs what package.json already declares
 ```
 
-Then create the App Router entry points Next expects — `src/app/layout.tsx` and
-`src/app/page.tsx` — and build the foundations in the standard's **§47 order**:
+`src/app/layout.tsx` already exists — the minimum root layout, mounting the environment
+badge and binding the two fonts. Add the `src/app/page.tsx` Next expects, then build the
+foundations in the standard's **§47 order**:
 
 1. strict compiler, lint/import boundaries, `server-only` enforcement, CI baseline;
 2. the OpenAPI contract pipeline, FastAPI client, browser client, error model;
@@ -45,9 +46,9 @@ Then create the App Router entry points Next expects — `src/app/layout.tsx` an
 6. observability — structured logs, tracing, error reporting, Web Vitals;
 7. business features, each built vertically through the established path.
 
-`layout.tsx` must `import '@/shared/ui/tokens.css'` and load Archivo + IBM Plex Mono via
+`layout.tsx` does `import '@/shared/ui/tokens.css'` and loads Archivo + IBM Plex Mono via
 `next/font/google`, exposed as `--font-sans` / `--font-mono`. The design system is already
-locked — see below.
+locked — see below. It holds no providers: those arrive with the features that need them.
 
 > Deliberately **not** scaffolded with `create-next-app`: its default flat `app/` layout
 > contradicts the feature-oriented structure. Starting from the structure is cheaper than
@@ -75,15 +76,23 @@ the rest of the app.
 
 `APP_ENV` is one of four names, shared with the backend and the player app:
 
-| Environment | Scheme | State |
+| Environment | Scheme for a public-network URL | State |
 | --- | --- | --- |
-| `local` | `http://` | the only one that runs today |
+| `local` | either | the only one that runs today |
 | `development` | `https://` | defined and validated, **not provisioned** |
 | `staging` | `https://` | defined and validated, **not provisioned** |
 | `production` | `https://` | does not exist yet |
 
-Selecting an unprovisioned environment is a startup failure, not a silent fallback: the
-scheme rule requires `https://` there, and the only reachable backend is an `http://` one.
+The scheme rule governs a URL that **crosses a public network** — here, `NEXT_PUBLIC_APP_URL`,
+the origin a browser visits. It deliberately does **not** govern `BACKEND_API_URL`, which is
+server-to-server: a cluster-internal `http://backend.svc.cluster.local:8000` never leaves the
+cluster and is the ordinary deployed topology. Whether that hop is encrypted is a
+deployment-topology question, not one this app can assert. The cross-app rule is
+[`../docs/environments.md`](../docs/environments.md).
+
+Selecting an unprovisioned environment is a startup failure, not a silent fallback: the scheme
+rule requires `https://` for this app's own origin there, and its only origin today is
+`http://localhost:3000`.
 
 `APP_ENV` is **not** `NODE_ENV`. That has two values and describes how the app was
 *compiled* — one production build serves staging and production alike. Nothing reads it.
@@ -102,15 +111,15 @@ The session cookie's `Secure` flag is **derived** from the environment — `fals
 `local` — and can no longer be set by hand. A stale `SESSION_COOKIE_SECURE` in the
 environment stops the server rather than being ignored.
 
-Two things are wired but not yet mounted, because there is no `src/app/layout.tsx` to mount
-them in — do this when you scaffold the app:
+Both boot hooks are wired and live:
 
-- `src/instrumentation.ts` already validates the server config at boot. It runs as soon as
-  Next has an app to start.
+- `src/instrumentation.ts` validates the server config at boot, before the first request is
+  served.
 - `<EnvironmentBadge />` from `@/platform/config/EnvironmentBadge` renders the amber
-  environment pill. Mount it once in the root layout. It is a **Server Component** on
-  purpose: it reads the server-only environment, so no public mirror of the name exists.
-  Production is unbadged.
+  environment pill, and is **mounted** in [`src/app/layout.tsx`](src/app/layout.tsx). It is a
+  **Server Component** on purpose: it reads the server-only environment, so no public mirror
+  of the name exists. It renders `null` in production, which is why mounting it
+  unconditionally is right — the environment decides, not the caller.
 
 ## Architecture in one paragraph
 

@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { ConfigError, ENVIRONMENTS, type AppEnvironment } from "./environment";
 import { parseServerConfig, type RawServerEnv } from "./server";
 
-/** The only environment that runs today, and the only one an `http://` URL is legal in. */
+/** The only environment that runs today. */
 const valid = {
   APP_ENV: "local",
   BACKEND_API_URL: "http://localhost:8000",
@@ -27,9 +27,9 @@ function validFor(environment: AppEnvironment): RawServerEnv {
 
   return {
     APP_ENV: environment,
-    BACKEND_API_URL: "https://api.rakieta.app",
+    BACKEND_API_URL: "https://api.rakieta.example",
     SESSION_COOKIE_NAME: "rakieta_club_session",
-    NEXT_PUBLIC_APP_URL: "https://club.rakieta.app",
+    NEXT_PUBLIC_APP_URL: "https://club.rakieta.example",
   };
 }
 
@@ -151,44 +151,74 @@ describe("the environment names", () => {
 });
 
 /**
- * The scheme rule, in both directions and at every environment. `local` is a laptop over
- * `http://`; the three deployed environments are reached over TLS.
+ * The scheme rule applies to a URL that crosses a **public network**, and to no other.
  *
- * The consequence the ticket wants falls out of it rather than needing a check of its own:
- * with no domain registered, selecting `staging` today fails at start, because the only
- * reachable backend is an `http://` one.
+ * `NEXT_PUBLIC_APP_URL` is the origin a browser visits, so a deployed environment must be
+ * `https://` — `http://` there is a session cookie in the clear. `BACKEND_API_URL` is
+ * server-to-server and carries no scheme rule at all: a cluster-internal
+ * `http://backend.svc.cluster.local:8000` never leaves the cluster. #96 implemented the
+ * blanket rule its AC specified and reported that it refuses exactly that address; this is
+ * where #99 settles it, and it is the same settlement that lets the player app's `local`
+ * accept an https tunnel.
+ *
+ * `local` is `null` in the table: either scheme, on both URLs.
  */
-describe("the scheme rule", () => {
-  it("requires http:// for local", () => {
-    const raw = { ...valid, BACKEND_API_URL: "https://api.rakieta.app" };
-
-    expect(() => parseServerConfig(raw)).toThrow(/BACKEND_API_URL/);
-    expect(() => parseServerConfig(raw)).toThrow(/http:\/\//);
-  });
-
-  it.each(DEPLOYED)("requires https:// for %s", (environment) => {
-    const raw = { ...validFor(environment), BACKEND_API_URL: "http://localhost:8000" };
-
-    expect(() => parseServerConfig(raw)).toThrow(ConfigError);
-    expect(() => parseServerConfig(raw)).toThrow(/BACKEND_API_URL/);
-  });
-
-  it.each(DEPLOYED)("applies the same rule to the app's own origin in %s", (environment) => {
+describe("the public-network scheme rule", () => {
+  it.each(DEPLOYED)("requires https:// for the browser-facing origin in %s", (environment) => {
     const raw = { ...validFor(environment), NEXT_PUBLIC_APP_URL: "http://localhost:3000" };
 
+    expect(() => parseServerConfig(raw)).toThrow(ConfigError);
     expect(() => parseServerConfig(raw)).toThrow(/NEXT_PUBLIC_APP_URL/);
+  });
+
+  it("accepts either scheme for the browser-facing origin in local", () => {
+    const raw = { ...valid, NEXT_PUBLIC_APP_URL: "https://club.localhost.example" };
+
+    expect(parseServerConfig(raw).appUrl).toBe("https://club.localhost.example");
+  });
+
+  /**
+   * The reason the rule was widened. A server tier calling another over the cluster network
+   * is the ordinary deployed topology, and refusing it would push an operator into either
+   * terminating TLS they do not need or editing this schema.
+   */
+  it.each(DEPLOYED)("accepts a cluster-internal http:// backend origin in %s", (environment) => {
+    const raw = {
+      ...validFor(environment),
+      BACKEND_API_URL: "http://backend.svc.cluster.local:8000",
+    };
+
+    expect(parseServerConfig(raw).backendApiUrl).toBe("http://backend.svc.cluster.local:8000");
+  });
+
+  it("accepts an https:// backend origin in local", () => {
+    const raw = { ...valid, BACKEND_API_URL: "https://api.rakieta.example" };
+
+    expect(parseServerConfig(raw).backendApiUrl).toBe("https://api.rakieta.example");
   });
 
   it("names the environment as the reason and the URL as the problem", () => {
     try {
-      parseServerConfig({ ...validFor("staging"), BACKEND_API_URL: "http://api.rakieta.app" });
+      parseServerConfig({
+        ...validFor("staging"),
+        NEXT_PUBLIC_APP_URL: "http://club.rakieta.example",
+      });
       throw new Error("expected parseServerConfig to reject");
     } catch (error) {
       const { message } = error as ConfigError;
 
-      expect(message).toContain("BACKEND_API_URL");
+      expect(message).toContain("NEXT_PUBLIC_APP_URL");
       expect(message).toContain("staging");
     }
+  });
+
+  /**
+   * Dropping the rule from `BACKEND_API_URL` moved the unprovisioned-environment refusal
+   * onto one variable rather than two, so it is asserted directly rather than left to fall
+   * out. A `local` configuration whose `APP_ENV` alone is changed must still not start.
+   */
+  it.each(DEPLOYED)("still refuses a wholly local configuration relabelled %s", (environment) => {
+    expect(() => parseServerConfig({ ...valid, APP_ENV: environment })).toThrow(ConfigError);
   });
 
   /**
@@ -201,25 +231,29 @@ describe("the scheme rule", () => {
    * re-runs the field and stays silent unless it passes.
    */
   it.each(ENVIRONMENTS)("rejects a scheme-less host:port in %s", (environment) => {
-    const raw = { ...validFor(environment), BACKEND_API_URL: "localhost:8000" };
+    for (const field of ["BACKEND_API_URL", "NEXT_PUBLIC_APP_URL"] as const) {
+      const raw = { ...validFor(environment), [field]: "localhost:8000" };
 
-    expect(() => parseServerConfig(raw)).toThrow(/BACKEND_API_URL/);
-    expect(() => parseServerConfig(raw)).not.toThrow(/when APP_ENV/);
+      expect(() => parseServerConfig(raw)).toThrow(new RegExp(field));
+      expect(() => parseServerConfig(raw)).not.toThrow(/when APP_ENV/);
+    }
   });
 
   it.each(ENVIRONMENTS)("reports one problem, not two, for one typo in %s", (environment) => {
-    try {
-      parseServerConfig({ ...validFor(environment), BACKEND_API_URL: "localhost:8000" });
-      throw new Error("expected parseServerConfig to reject");
-    } catch (error) {
-      const { message } = error as ConfigError;
+    for (const field of ["BACKEND_API_URL", "NEXT_PUBLIC_APP_URL"] as const) {
+      try {
+        parseServerConfig({ ...validFor(environment), [field]: "localhost:8000" });
+        throw new Error("expected parseServerConfig to reject");
+      } catch (error) {
+        const { message } = error as ConfigError;
 
-      expect(message.match(/BACKEND_API_URL/g)).toHaveLength(1);
+        expect(message.match(new RegExp(field, "g"))).toHaveLength(1);
+      }
     }
   });
 
   it.each(ENVIRONMENTS)("rejects a non-HTTP scheme in %s", (environment) => {
-    const raw = { ...validFor(environment), BACKEND_API_URL: "ftp://api.rakieta.app" };
+    const raw = { ...validFor(environment), BACKEND_API_URL: "ftp://api.rakieta.example" };
 
     expect(() => parseServerConfig(raw)).toThrow(/BACKEND_API_URL/);
   });

@@ -51,10 +51,15 @@ schemas/ components/ hooks/ types.ts`). _Avoid_: module, screen-folder.
   now refuses, and a test run happens on a laptop or a CI runner, both of which are
   `local`. _Avoid also_: calling a laptop `development`, which is the name that means a
   shared remote deployment.
-- **Scheme rule** — the environment fixes the API URL's scheme: `http://` in `local`,
-  `https://` in the three deployed environments. Validated across both variables at
-  launch, so a laptop URL under a deployed name is a refusal naming both rather than a
-  build pointing at nothing.
+- **Scheme rule** — the environment fixes the API URL's scheme: `https://` in the three
+  deployed environments, either in `local`. Validated across both variables at launch, so
+  a laptop URL under a deployed name is a refusal naming both rather than a build pointing
+  at nothing. This is the **public-network** form of the platform's rule — the URL is
+  reached from a phone over the internet — and `local` is unconstrained because every
+  tunnel a physical device needs is `https://`. Defined once for all three apps in
+  [`../docs/environments.md`](../docs/environments.md). The rule stays silent when the URL
+  itself is malformed: a failed field leaves zod's result _dirty_ rather than aborting it,
+  so without that guard one typo produced two complaints.
 - **App identity** — what the app calls itself in a given environment: the display name
   under the icon, and the badge, as one pure function (`shared/config/appIdentity.ts`).
   One decision, because it is one sentence — _this build is not production_ — said in the

@@ -776,10 +776,16 @@ deployment. Naming a laptop `development` — which is what this app did before 
 names existed — makes a laptop and a shared remote deployment indistinguishable in a log
 line.
 
-**The URL scheme is part of the contract.** `local` is reached over `http://`;
-`development`, `staging` and `production` are deployed and must be `https://`. The rule
-is checked across the two variables together, so a laptop URL under a deployed name is a
-startup failure naming both — not a build that silently points at nothing.
+**The URL scheme is part of the contract.** `EXPO_PUBLIC_API_URL` is reached from a phone
+over the internet, so it takes the **public-network** form of the platform's scheme rule:
+`development`, `staging` and `production` must be `https://`. `local` takes either —
+`expo start --tunnel`, cloudflared and tailscale funnel all hand back `https://`, and a
+tunnel is precisely what a physical device that cannot reach the laptop's LAN IP needs.
+The rule is checked across the two variables together, so a laptop URL under a deployed
+name is a startup failure naming both — not a build that silently points at nothing. It
+stays silent when the URL is malformed, so one typo produces one complaint rather than a
+second one blaming the environment. The cross-app rule is
+[`../../docs/environments.md`](../../docs/environments.md).
 
 **The native config is a function of the environment.** `app.config.ts` replaced
 `app.json`, and holds no logic: `src/shared/config/appIdentity.ts` maps each environment

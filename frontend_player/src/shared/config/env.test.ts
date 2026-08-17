@@ -1,6 +1,6 @@
 import { ENVIRONMENTS, ConfigError, parseEnv, type AppEnvironment } from './env';
 
-/** The only environment that runs today, and the only one an `http://` URL is legal in. */
+/** The only environment that runs today. */
 const valid = {
   EXPO_PUBLIC_API_URL: 'http://localhost:8000',
   EXPO_PUBLIC_ENV: 'local',
@@ -53,7 +53,8 @@ describe('the environment names', () => {
   });
 
   it.each(ENVIRONMENTS)('accepts %s', (environment) => {
-    const apiUrl = environment === 'local' ? 'http://localhost:8000' : 'https://api.rakieta.app';
+    const apiUrl =
+      environment === 'local' ? 'http://localhost:8000' : 'https://api.rakieta.example';
 
     expect(parseEnv({ EXPO_PUBLIC_API_URL: apiUrl, EXPO_PUBLIC_ENV: environment })).toEqual({
       apiUrl,
@@ -91,29 +92,45 @@ describe('the environment names', () => {
 });
 
 /**
- * The URL scheme is part of the contract, not a convention. `local` is a laptop, a LAN IP
- * or a tunnel; the other three are deployed and are reached over TLS. Because no domain is
- * registered yet, selecting a deployed environment today fails at launch saying so — which
- * is the truth, and is better than silently pointing somewhere wrong.
+ * The URL scheme is part of the contract, not a convention — and it is the **public-network**
+ * form of the rule, because this URL is reached from a phone over the internet. The three
+ * deployed environments must be `https://`; `local` may be either.
+ *
+ * `local` accepting `https://` is the correction #102 asked for: every tunnel a physical
+ * device needs — `expo start --tunnel`, `cloudflared`, `tailscale funnel` — hands back an
+ * `https://` address, so requiring `http://` refused the one case a tunnel exists for. See
+ * docs/environments.md.
+ *
+ * Because no domain is registered yet, selecting a deployed environment today still fails at
+ * launch: the only reachable backend is an `http://` one.
  */
 describe('the per-environment URL scheme rule', () => {
-  it('accepts an http:// URL in local', () => {
+  it('accepts an http:// LAN URL in local', () => {
     expect(parseEnv({ ...valid, EXPO_PUBLIC_API_URL: 'http://192.168.1.20:8000' })).toEqual({
       apiUrl: 'http://192.168.1.20:8000',
       environment: 'local',
     });
   });
 
-  it('rejects an https:// URL in local', () => {
-    expect(() => parseEnv({ ...valid, EXPO_PUBLIC_API_URL: 'https://api.rakieta.app' })).toThrow(
-      ConfigError,
-    );
+  // The tunnel case. A phone that cannot reach the laptop's LAN IP is exactly why tunnels
+  // exist, and all three of them are https — so `local` constrains the scheme no further
+  // than "absolute http(s) URL".
+  it('accepts an https:// tunnel URL in local', () => {
+    expect(
+      parseEnv({ ...valid, EXPO_PUBLIC_API_URL: 'https://sunny-otter.trycloudflare.example' }),
+    ).toEqual({
+      apiUrl: 'https://sunny-otter.trycloudflare.example',
+      environment: 'local',
+    });
   });
 
   it.each(DEPLOYED)('accepts an https:// URL in %s', (environment) => {
     expect(
-      parseEnv({ EXPO_PUBLIC_API_URL: 'https://api.rakieta.app', EXPO_PUBLIC_ENV: environment }),
-    ).toEqual({ apiUrl: 'https://api.rakieta.app', environment });
+      parseEnv({
+        EXPO_PUBLIC_API_URL: 'https://api.rakieta.example',
+        EXPO_PUBLIC_ENV: environment,
+      }),
+    ).toEqual({ apiUrl: 'https://api.rakieta.example', environment });
   });
 
   it.each(DEPLOYED)('rejects an http:// URL in %s', (environment) => {
@@ -159,7 +176,63 @@ describe('the per-environment URL scheme rule', () => {
 
   it.each(ENVIRONMENTS)('rejects a scheme that is neither http nor https in %s', (environment) => {
     expect(() =>
-      parseEnv({ EXPO_PUBLIC_API_URL: 'ftp://api.rakieta.app', EXPO_PUBLIC_ENV: environment }),
+      parseEnv({ EXPO_PUBLIC_API_URL: 'ftp://api.rakieta.example', EXPO_PUBLIC_ENV: environment }),
     ).toThrow(/EXPO_PUBLIC_API_URL/);
+  });
+});
+
+/**
+ * One typo, one complaint.
+ *
+ * A failing `.url()` or `.refine()` leaves zod's result *dirty* rather than aborting it, so
+ * an object-level refinement still runs over the string the field just rejected. Before the
+ * guard, `localhost:8000` under `production` produced two: "must start with http:// or
+ * https://" **and** "must start with https:// when EXPO_PUBLIC_ENV is production". The
+ * second is not what is wrong — the URL has no scheme at all, and being told about the
+ * environment sends a reader looking in the wrong place.
+ *
+ * Counted rather than pattern-matched, because the defect is *an extra complaint*, and an
+ * assertion that merely names the variable passes just as happily with two of them.
+ */
+describe('one complaint per typo', () => {
+  const complaints = (raw: Parameters<typeof parseEnv>[0]): string[] => {
+    try {
+      parseEnv(raw);
+    } catch (error) {
+      return (error as ConfigError).message.split(';');
+    }
+
+    throw new Error('expected parseEnv to reject');
+  };
+
+  it.each(ENVIRONMENTS)('reports a scheme-less host:port once in %s', (environment) => {
+    expect(
+      complaints({ EXPO_PUBLIC_API_URL: 'localhost:8000', EXPO_PUBLIC_ENV: environment }),
+    ).toHaveLength(1);
+  });
+
+  it.each(ENVIRONMENTS)('reports a non-HTTP scheme once in %s', (environment) => {
+    expect(
+      complaints({
+        EXPO_PUBLIC_API_URL: 'ftp://api.rakieta.example',
+        EXPO_PUBLIC_ENV: environment,
+      }),
+    ).toHaveLength(1);
+  });
+
+  // A malformed URL is reported as a malformed URL, and the environment is not mentioned —
+  // it is not the reason this value is wrong.
+  it.each(ENVIRONMENTS)('does not blame the environment for a malformed URL in %s', (env) => {
+    const [only] = complaints({ EXPO_PUBLIC_API_URL: 'localhost:8000', EXPO_PUBLIC_ENV: env });
+
+    expect(only).toMatch(/must start with http:\/\/ or https:\/\//);
+    expect(only).not.toContain('EXPO_PUBLIC_ENV');
+  });
+
+  // The rule itself still fires — this guard suppresses a duplicate, never the refusal.
+  it('still reports a genuine scheme mismatch, once', () => {
+    expect(
+      complaints({ EXPO_PUBLIC_API_URL: 'http://localhost:8000', EXPO_PUBLIC_ENV: 'staging' }),
+    ).toHaveLength(1);
   });
 });
