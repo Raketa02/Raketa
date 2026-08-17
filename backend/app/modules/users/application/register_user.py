@@ -1,4 +1,5 @@
 from app.application.ports import DomainEventPublisher, DomainEventStore, UnitOfWork
+from app.kernel import Clock
 from app.modules.auth.domain.ports import PasswordHasher
 from app.modules.users.application.commands import RegisterUserCommand
 from app.modules.users.domain.errors import EmailAlreadyRegistered, NicknameAlreadyTaken
@@ -11,7 +12,6 @@ from app.modules.users.domain.value_objects import (
     Nickname,
     RawPassword,
 )
-from app.shared.clock import Clock
 from app.shared.ids import new_uuid
 
 

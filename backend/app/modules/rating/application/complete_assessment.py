@@ -32,6 +32,7 @@ from __future__ import annotations
 
 from app.application.ports import UnitOfWork
 from app.engines.assessment import AssessmentEngine
+from app.kernel import Clock
 from app.modules.rating.application.assessment_view import (
     current_step,
     questions_asked,
@@ -46,7 +47,6 @@ from app.modules.rating.domain.errors import AssessmentNotStopped
 from app.modules.rating.domain.ids import skill_rating_id
 from app.modules.rating.domain.ports import AssessmentRepository, SkillRatingRepository
 from app.modules.rating.domain.skill_rating import SkillRating
-from app.shared.clock import Clock
 
 
 class CompleteAssessment:

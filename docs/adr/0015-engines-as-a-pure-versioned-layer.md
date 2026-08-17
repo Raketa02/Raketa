@@ -1,7 +1,15 @@
 # ADR-0015 — Engines are a pure, versioned layer, not bounded contexts
 
-- **Status:** Accepted
+- **Status:** Accepted — **extended by
+  [ADR-0022](0022-kernel-negative-space-and-constant-homes.md)**
 - **Date:** 2026-08-13
+
+> **Scope note.** Nothing here is superseded. ADR-0022 adds what this record left open: the
+> kernel's *negative space* (no aggregate shapes, no tenant data, no presentation, no engine
+> hypotheses), the four homes a constant may have, and the `Result`-inside / exceptions-outside
+> split on this fence. It also closes a hole this ADR's own alternatives section warned about —
+> `app.shared` was on neither `.importlinter` forbidden list, so an engine could reach a wall
+> clock with CI green.
 
 ## Context
 
