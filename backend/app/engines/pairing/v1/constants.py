@@ -1,11 +1,11 @@
-"""Pairing v1's constants — four numbers, each an admitted hypothesis.
+"""Pairing v1's constants — five numbers, each an admitted hypothesis.
 
 Constants travel with the version as a frozen dataclass and every one of them
 carries, as its docstring, the measurement that would falsify it (``docs/adr/0015``,
 ``docs/adr/0022``). A constant with no such measurement is a preference wearing a
 number's clothes, and retuning it is then taste rather than science.
 
-**Two of the four are not here**, deliberately: the balance floor and the
+**Two more are not here**, deliberately: the balance floor and the
 favourite cap are *derived* from the clamp, as properties below. The source
 design clamped the percentage and the bar independently, and two independent
 clamps bind at two different gaps — which shows up as 35% balanced printed beside
@@ -17,9 +17,17 @@ unwritable rather than watched for.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import final
+from types import MappingProxyType
+from typing import Mapping, final
 
-from app.kernel import Ratio, invariant, ratio
+from app.kernel import SPORT_SPECS, Ratio, Sport, invariant, ratio
+
+#: The sports that have a pairing at all. Read from the kernel registry rather
+#: than listed, because *a sport's player count is never club-configurable* and a
+#: second list here is a second answer to how many people play padel.
+PAIRED_SPORTS = frozenset(
+    sport for sport, spec in SPORT_SPECS.items() if spec.players == 4
+)
 
 #: This lineage, permanently. It travels on every analysis, because a constant
 #: below can only be falsified against results it can be attributed to.
@@ -46,6 +54,42 @@ class PairingConstants:
     quoted at 75% are routinely won 6-1 6-1, half a Level costs more than a
     quarter of the scale and the coefficient is too shallow; if they are routinely
     decided in a tie-break, it is too steep.
+    """
+
+    weaker_partner_weight: Mapping[Sport, Ratio] = field(
+        default_factory=lambda: MappingProxyType(
+            {sport: ratio(55, 100) for sport in sorted(PAIRED_SPORTS)}
+        )
+    )
+    """How much of a team's strength its **weaker** partner accounts for.
+
+    A team is not the average of two Levels: the weaker side is attacked, so a
+    4,5 partnered with a 2,0 plays like whatever the 2,0 can return. Above a half
+    is what *weighted toward the weaker partner* means, and the guard below is
+    what stops a retune quietly inverting it.
+
+    **Solved from a document in this repository, not chosen.**
+    [ADR-0025](../../../../docs/adr/0025-binding-pairing-for-counted-matches.md)
+    records the canonical four-player padel roster — 2,71 / 2,80 / 2,64 / 2,92 —
+    and states two of its three split gaps, *0,0155* and *0,1825*. Each of those
+    is one linear equation in this weight, and both are solved by 0,55 and by
+    nothing else. So the persona in the golden suite is not a baseline copied off
+    a screen; it is the pair of figures this number was derived from.
+
+    **Per sport, both sports the same at v1**, so *is a padel partnership more
+    forgiving than a badminton one?* is a question the platform can answer by
+    measurement instead of by rewriting the arithmetic. Keyed over the registry's
+    own four-player sports, so a fifth one cannot be added without either a weight
+    or a build failure.
+
+    **Falsified by:** the elections ADR-0025 records. Every counted doubles match
+    keeps both the split the engine chose and the split the roster elected, and a
+    roster that consistently overrides in one direction is measuring this number
+    directly — overriding *toward* the stronger pairing says the weaker partner is
+    counted too heavily, and away from it says too lightly. Second, and slower:
+    bucket counted doubles results by the difference between the two team
+    strengths this weight produced, and check that the side the weight called
+    stronger actually wins at the rate the balance percentage claimed.
     """
 
     gap_clamp: Ratio = field(default_factory=lambda: ratio(130, 100))
@@ -92,6 +136,28 @@ class PairingConstants:
     the top of this band are followed by complaints about walkovers, it is
     printing one it cannot.
     """
+
+    def __post_init__(self) -> None:
+        """The two things a retune of the weighting could silently get wrong.
+
+        Both are checked here, once, at the moment the constants are built —
+        rather than at every call site that forms a team — because this is where
+        a retune happens and because failing at import is louder than failing on
+        one home screen. A weight at or below a half is not a weaker-partner
+        weighting at all; it is the model inverted, with every percentage still
+        looking plausible.
+        """
+
+        invariant(
+            set(self.weaker_partner_weight) == set(PAIRED_SPORTS),
+            f"weights cover {sorted(self.weaker_partner_weight)}, "
+            f"the registry pairs {sorted(PAIRED_SPORTS)}",
+        )
+        for sport, weight in self.weaker_partner_weight.items():
+            invariant(
+                ratio(1, 2) < weight <= ratio(1, 1),
+                f"{sport.value} does not weight the weaker partner: {weight}",
+            )
 
     @property
     def balance_floor(self) -> int:

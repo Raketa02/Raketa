@@ -7,7 +7,10 @@ retune that breaks one of these has broken the model, not the baseline.
 """
 
 import ast
+import itertools
+from dataclasses import dataclass, replace
 from pathlib import Path
+from typing import final
 
 import pytest
 
@@ -17,22 +20,32 @@ from app.engines.forecast import (
     Certainty,
     PairingAnalysis,
     SidesNotFormed,
+    Split,
 )
 from app.engines.matchmaking import (
     MatchSnapshot,
+    PlayerRef,
     PlayerSkill,
     SeatSnapshot,
 )
 from app.engines.pairing.core import (
+    SPLITS,
     Side,
     absolute_gap_deviation,
     as_float,
+    combine_uncertainty,
     expected_absolute_gap,
     round_half_away_from_zero,
+    side_of_two,
 )
-from app.engines.pairing.v1 import CONSTANTS, ENGINE_VERSION, PairingEngineV1
+from app.engines.pairing.v1 import (
+    CONSTANTS,
+    ENGINE_VERSION,
+    PAIRED_SPORTS,
+    PairingEngineV1,
+)
 from app.engines.pairing.v1.constants import PairingConstants
-from app.kernel import Err, InvariantViolated, Ok, Sport
+from app.kernel import SPORT_SPECS, Err, InvariantViolated, Ok, Sport, ratio
 from tests.unit.matchmaking_snapshots import NOW, doubles, singles, skill
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -52,6 +65,24 @@ ROSTERS = tuple(
     for other in (0, 20, 84)
 )
 
+#: The same spread at four seats. **Every invariant below is asserted over both**
+#: — the doubles path adds a pairing decision and a weighted team strength in
+#: front of the arithmetic, and none of them is licence for a card to contradict
+#: itself. Rosters are built so that the four Levels straddle rather than
+#: ascend, which is what makes the three splits genuinely different from each
+#: other rather than three orderings of the same near-tie.
+DOUBLES_ROSTERS = tuple(
+    (
+        (300, sigma),
+        (300 + apart, other),
+        (max(100, 300 - apart), other),
+        (min(500, 300 + 2 * apart), sigma),
+    )
+    for apart in (0, 5, 20, 50, 90, 130)
+    for sigma in (0, 15, 84)
+    for other in (0, 35, 120)
+)
+
 
 def forecast_of(
     level_a: int, level_b: int, sigma_a: int, sigma_b: int
@@ -64,9 +95,49 @@ def forecast_of(
     return result.forecast.value
 
 
+def analysis_of(*roster, viewer=None, sport=Sport.PADEL) -> PairingAnalysis:
+    """The whole analysis for a four-player roster, through the Protocol."""
+
+    players = [skill(NAMES[seat], *rating) for seat, rating in enumerate(roster)]
+    snapshot = doubles(*players, sport=sport, viewer=viewer)
+    return ENGINE.analyse(snapshot=snapshot, now=NOW)
+
+
+def doubles_forecast_of(*roster: tuple[int, int]) -> BalanceForecast:
+    """The *chosen* split's forecast — the one number a card would show."""
+
+    result = analysis_of(*roster).forecast
+    assert isinstance(result, Ok)
+    return result.value
+
+
+#: Seat names, so an assertion about who ended up with whom reads as people.
+NAMES = ("ada", "bo", "cy", "dee")
+
+
 @pytest.fixture(scope="module")
 def every_forecast() -> tuple[BalanceForecast, ...]:
-    return tuple(forecast_of(*roster) for roster in ROSTERS)
+    """Every forecast this engine can produce, at both arities.
+
+    One collection, so that the invariants below are literally the same
+    assertions over singles and doubles rather than two files' worth that can
+    drift apart.
+    """
+
+    return tuple(forecast_of(*roster) for roster in ROSTERS) + tuple(
+        doubles_forecast_of(*roster) for roster in DOUBLES_ROSTERS
+    )
+
+
+def test_the_invariants_below_are_asserted_over_both_arities(every_forecast):
+    """A sweep that has quietly lost half its inputs passes by finding nothing.
+
+    The doubles path is the one this slice adds, so it is the one that could be
+    dropped from the fixture and leave every assertion below green.
+    """
+
+    assert len(every_forecast) == len(ROSTERS) + len(DOUBLES_ROSTERS)
+    assert len(DOUBLES_ROSTERS) >= 40, len(DOUBLES_ROSTERS)
 
 
 # --- The identity between the percentage and the bar ----------------------------
@@ -123,12 +194,65 @@ def test_a_balance_floor_that_is_not_a_whole_percent_is_refused():
     """A floor of 34,5% would be a number no card can print, and half a point of
     drift between the percentage and the bar derived from it."""
 
-    from dataclasses import replace
-
-    from app.kernel import ratio
-
     with pytest.raises(InvariantViolated, match="not a whole percent"):
         assert replace(CONSTANTS, gap_clamp=ratio(131, 100)).balance_floor
+
+
+# --- The weighting constant, and the two ways a retune could invert it ---------------
+
+
+def test_the_weighting_covers_exactly_the_sports_that_have_a_pairing():
+    """Read off the kernel registry rather than listed, so a fifth sport played
+    by four cannot be added without either a weight or a build failure."""
+
+    assert set(CONSTANTS.weaker_partner_weight) == PAIRED_SPORTS
+    assert PAIRED_SPORTS == {Sport.PADEL, Sport.BADMINTON}
+    assert all(
+        spec.players == 4
+        for sport, spec in SPORT_SPECS.items()
+        if sport in PAIRED_SPORTS
+    )
+
+
+def test_both_sports_carry_the_same_weight_at_v1_and_each_can_move_alone():
+    """*Is a padel partnership more forgiving than a badminton one?* is a
+    question for measurement. The point of the mapping is that answering it is a
+    constant change rather than a rewrite, so the two are checked to be
+    separable, not merely equal."""
+
+    padel, badminton = (
+        CONSTANTS.weaker_partner_weight[sport]
+        for sport in (Sport.PADEL, Sport.BADMINTON)
+    )
+    assert padel == badminton
+
+    retuned = replace(
+        CONSTANTS,
+        weaker_partner_weight={Sport.PADEL: ratio(70, 100), Sport.BADMINTON: badminton},
+    )
+    assert retuned.weaker_partner_weight[Sport.BADMINTON] == badminton
+
+
+@pytest.mark.parametrize("weight", [ratio(50, 100), ratio(45, 100), ratio(0, 100)])
+def test_a_weight_that_does_not_favour_the_weaker_partner_is_refused(weight):
+    """At or below a half this is not a weaker-partner weighting; it is the model
+    inverted, with every percentage it produces still looking plausible."""
+
+    with pytest.raises(InvariantViolated, match="does not weight the weaker partner"):
+        replace(
+            CONSTANTS,
+            weaker_partner_weight={
+                Sport.PADEL: weight,
+                Sport.BADMINTON: ratio(55, 100),
+            },
+        )
+
+
+def test_a_paired_sport_left_without_a_weight_is_refused_when_the_constants_are_built():
+    """At import, over the whole map — louder than one home screen failing."""
+
+    with pytest.raises(InvariantViolated, match="the registry pairs"):
+        replace(CONSTANTS, weaker_partner_weight={Sport.PADEL: ratio(55, 100)})
 
 
 # --- The gap, and the one clamp on it -------------------------------------------
@@ -139,9 +263,10 @@ def test_the_reported_gap_is_never_below_the_absolute_expected_gap(every_forecas
     reported as a confident near-zero."""
 
     for forecast in every_forecast:
-        assert forecast.expected_gap >= abs(
-            as_float(forecast.side_a) - as_float(forecast.side_b)
-        ) - 1e-12
+        assert (
+            forecast.expected_gap
+            >= abs(as_float(forecast.side_a) - as_float(forecast.side_b)) - 1e-12
+        )
 
 
 def test_uncertainty_only_ever_widens_the_expected_gap():
@@ -288,15 +413,324 @@ def test_the_reason_is_a_machine_code_and_payload_never_a_sentence():
     )
 
 
-def test_a_sport_this_version_cannot_split_declines_with_the_same_reason():
-    """Four players admit three splits and this version enumerates none of them,
-    so it says so rather than forecasting a pairing it did not choose."""
+def test_a_four_seat_sport_with_a_seat_open_declines_with_the_same_reason():
+    """The assertion this test used to make was that a *full* padel court also
+    declined, because no version had enumerated the three splits yet. It does
+    not any more — that is this slice — and what survives is the half that was
+    never about arity: a seat with nobody on it has nobody to put on a side.
+    Imputation is the next slice; until then the engine declines.
+    """
 
-    snapshot = doubles(*[skill(str(i), 300 + 10 * i, 20) for i in range(4)])
-    result = ENGINE.analyse(snapshot=snapshot, now=NOW).forecast
+    seated = [skill(str(i), 300 + 10 * i, 20) for i in range(3)]
+    result = ENGINE.analyse(snapshot=doubles(*seated, None), now=NOW).forecast
     assert isinstance(result, Err)
     assert result.reason.kind == "sides_not_formed"
-    assert (result.reason.seated, result.reason.sold) == (4, 4)
+    assert (result.reason.seated, result.reason.sold) == (3, 4)
+
+
+@final
+@dataclass(frozen=True)
+class _SixSeatSport:
+    """What a registry gaining a six-player sport would look like to the engine.
+
+    Structural, and it has to be: ``MatchSnapshot`` reads its arity from the
+    kernel registry and refuses a seat count that disagrees with it, which is
+    exactly the guarantee that makes this case unreachable through the real
+    vocabulary. The engine has a pairing rule for two seats and for four, and
+    what it does about a third arity is a decision — it declines, so a sport
+    added without a pairing rule produces no forecast rather than a wrong one on
+    a home screen.
+    """
+
+    sport: Sport
+    occupants: tuple[PlayerSkill, ...]
+    current_player: PlayerSkill
+    sold_seats: int = 6
+
+
+def test_an_arity_this_version_has_no_pairing_rule_for_declines():
+    roster = tuple(skill(str(seat), 300 + 10 * seat, 20) for seat in range(6))
+    snapshot = _SixSeatSport(
+        sport=Sport.PADEL, occupants=roster, current_player=roster[0]
+    )
+    result = ENGINE.analyse(snapshot=snapshot, now=NOW).forecast
+    assert isinstance(result, Err)
+    assert (result.reason.seated, result.reason.sold) == (6, 6)
+
+
+# --- The three splits ---------------------------------------------------------------
+
+
+def test_four_players_admit_exactly_three_splits_and_the_engine_returns_them_all():
+    """The complete enumeration, derived here from scratch rather than read off
+    the list it is checking. There is no fourth arrangement to miss."""
+
+    every_partition = {
+        frozenset({frozenset(left), frozenset(set(range(4)) - set(left))})
+        for left in itertools.combinations(range(4), 2)
+    }
+    enumerated = {
+        frozenset({frozenset(left), frozenset(right)}) for left, right in SPLITS
+    }
+    assert enumerated == every_partition
+    assert len(SPLITS) == 3
+
+    analysis = analysis_of((300, 20), (340, 20), (310, 20), (360, 20))
+    assert len(analysis.splits) == 3
+
+
+def test_every_split_seats_every_player_exactly_once():
+    analysis = analysis_of((271, 15), (280, 20), (264, 25), (292, 18))
+    for option in analysis.splits:
+        assert len(option.side_a) == len(option.side_b) == 2
+        assert sorted(option.side_a + option.side_b) == sorted(NAMES)
+
+
+def test_the_three_splits_returned_are_three_different_arrangements():
+    """Ranked, not sampled: all three are there and no two are the same one."""
+
+    analysis = analysis_of((271, 15), (280, 20), (264, 25), (292, 18))
+    arrangements = {
+        frozenset({frozenset(option.side_a), frozenset(option.side_b)})
+        for option in analysis.splits
+    }
+    assert len(arrangements) == 3
+
+
+def test_the_splits_are_ranked_on_the_expected_gap_best_first():
+    for roster in DOUBLES_ROSTERS:
+        gaps = [option.forecast.expected_gap for option in analysis_of(*roster).splits]
+        assert gaps == sorted(gaps), roster
+
+
+def test_the_headline_forecast_is_the_winning_split_and_not_a_second_opinion():
+    """One conclusion, shown twice. A card saying *you and Dee against Bo and Cy,
+    76% balanced* cannot pair a forecast with an arrangement it was not computed
+    from, because they are the same object."""
+
+    for roster in DOUBLES_ROSTERS:
+        analysis = analysis_of(*roster)
+        assert isinstance(analysis.forecast, Ok)
+        assert analysis.forecast.value is analysis.splits[0].forecast, roster
+
+
+def test_no_other_split_would_have_scored_better_than_the_one_chosen():
+    for roster in DOUBLES_ROSTERS:
+        analysis = analysis_of(*roster)
+        estimates = [option.forecast.estimate for option in analysis.splits]
+        assert estimates[0] == max(estimates), roster
+
+
+def test_a_split_is_chosen_on_the_expected_gap_and_not_on_the_paper_gap():
+    """The selection bias that grows with Uncertainty, and the one case that
+    shows it.
+
+    Ada, Bo and Cy are known exactly; Dee answered a questionnaire yesterday and
+    nothing else. Pairing Dee with Ada — the weakest of the three — makes Dee the
+    *stronger* partner, so Dee's Uncertainty is carried at the lower weight; the
+    arrangement whose two paper strengths are closest is the one where it is
+    carried at the higher. So the engine chooses the split whose paper gap is
+    seven times wider, and it is right to: the other split is not more even, it
+    is merely less knowable, and its forecast comes back too uncertain to print
+    while the chosen one prints.
+
+    Ranking on the gap between the two strengths would take the flattering one
+    every time, and would do so most often on exactly the rosters the platform
+    knows least about.
+    """
+
+    analysis = analysis_of((300, 0), (320, 0), (340, 0), (310, 120))
+    chosen, *rest = analysis.splits
+
+    def paper_gap(option: Split) -> float:
+        return abs(as_float(option.forecast.side_a) - as_float(option.forecast.side_b))
+
+    assert set(chosen.side_a) == {"ada", "dee"}
+    assert paper_gap(chosen) == pytest.approx(0.245)
+    assert min(paper_gap(option) for option in rest) == pytest.approx(0.035)
+    assert chosen.forecast.expected_gap < min(o.forecast.expected_gap for o in rest)
+    assert chosen.forecast.fit_to_print is True
+    assert all(option.forecast.fit_to_print is False for option in rest)
+
+
+def test_ties_between_splits_keep_the_enumeration_order():
+    """Four identical players make the three arrangements genuinely the same
+    match. The sort is stable, so the answer is reproducible rather than
+    whatever the last comparison happened to leave behind."""
+
+    analysis = analysis_of(*[(300, 20)] * 4)
+    gaps = {option.forecast.expected_gap for option in analysis.splits}
+    assert len(gaps) == 1
+    assert [option.side_a for option in analysis.splits] == [
+        ("ada", "bo"),
+        ("ada", "cy"),
+        ("ada", "dee"),
+    ]
+
+
+def test_singles_carries_no_splits_at_all():
+    """Singles has no pairing. An empty tuple says that; a one-element list would
+    imply an election nobody can make."""
+
+    analysis = ENGINE.analyse(
+        snapshot=singles(skill("ada", 300, 20), skill("bo", 340, 20)), now=NOW
+    )
+    assert analysis.splits == ()
+
+
+def test_a_declined_analysis_carries_no_splits_either():
+    half_empty = doubles(skill("ada", 300, 20), skill("bo", 320, 20), None, None)
+    analysis = ENGINE.analyse(snapshot=half_empty, now=NOW)
+    assert isinstance(analysis.forecast, Err)
+    assert analysis.splits == ()
+
+
+def test_the_current_player_is_on_the_first_side_of_every_split():
+    """Not only of the winner. A player reading the two arrangements they did not
+    get needs *your side* to mean the same thing in all three."""
+
+    for seat, name in enumerate(NAMES):
+        roster = ((300, 15), (340, 20), (310, 25), (365, 18))
+        players = [skill(NAMES[i], *rating) for i, rating in enumerate(roster)]
+        analysis = analysis_of(*roster, viewer=players[seat])
+        for option in analysis.splits:
+            assert name in option.side_a, (name, option)
+
+
+def test_a_viewer_who_is_not_in_the_match_leaves_seat_order_alone_in_doubles():
+    watcher = skill("edie", 300, 15)
+    analysis = analysis_of((300, 15), (340, 20), (310, 25), (365, 18), viewer=watcher)
+    for option in analysis.splits:
+        assert option.side_a[0] == "ada"
+
+
+def test_orientation_does_not_move_the_prediction_in_doubles():
+    """Which side is yours is a rendering decision; how even the match is is not.
+
+    The three arrangements come back in the same order, forecast identically,
+    with only the two sides of each swapped — so a card cannot show two players
+    of the same match two different balance percentages.
+    """
+
+    roster = ((300, 15), (340, 20), (310, 25), (365, 18))
+    players = [skill(NAMES[i], *rating) for i, rating in enumerate(roster)]
+    seen_by_ada = analysis_of(*roster, viewer=players[0])
+    seen_by_bo = analysis_of(*roster, viewer=players[1])
+
+    for mine, theirs in zip(seen_by_ada.splits, seen_by_bo.splits, strict=True):
+        assert set(mine.side_a) == set(theirs.side_b) or set(mine.side_a) == set(
+            theirs.side_a
+        )
+        assert mine.forecast.estimate == theirs.forecast.estimate
+        assert mine.forecast.margin == theirs.forecast.margin
+        assert mine.forecast.expected_gap == pytest.approx(theirs.forecast.expected_gap)
+
+
+def test_a_split_carries_the_strengths_of_the_two_sides_it_names():
+    """Membership and strength are built together, so the pair on ``side_a`` and
+    the Level in ``forecast.side_a`` are the same team by construction."""
+
+    roster = ((271, 0), (280, 0), (264, 0), (292, 0))
+    players = [skill(NAMES[i], *rating) for i, rating in enumerate(roster)]
+    by_name = {player.player: player for player in players}
+    weight = CONSTANTS.weaker_partner_weight[Sport.PADEL]
+
+    for option in analysis_of(*roster).splits:
+        for names, strength in (
+            (option.side_a, option.forecast.side_a),
+            (option.side_b, option.forecast.side_b),
+        ):
+            first, second = (by_name[PlayerRef(name)] for name in names)
+            assert side_of_two(first, second, weaker_weight=weight).strength == strength
+
+
+# --- Team strength: not the average, and weighted the right way ----------------------
+
+
+def test_a_team_strength_lies_between_its_two_partners_and_below_their_mean():
+    """*Not the average*, and always on the weaker side of it — which is the
+    whole claim the weighting makes and the only one that survives a retune."""
+
+    weight = CONSTANTS.weaker_partner_weight[Sport.PADEL]
+    for weaker_level, stronger_level in ((200, 450), (300, 305), (100, 500)):
+        weaker = skill("weak", weaker_level, 20)
+        stronger = skill("strong", stronger_level, 20)
+        team = side_of_two(weaker, stronger, weaker_weight=weight)
+        assert weaker.level <= team.strength <= stronger.level
+        assert team.strength <= (weaker.level + stronger.level) / 2
+        assert (team.strength == stronger.level) == (weaker.level == stronger.level)
+
+
+def test_which_partner_is_the_weaker_one_does_not_depend_on_seat_order():
+    weight = CONSTANTS.weaker_partner_weight[Sport.PADEL]
+    ada, bo = skill("ada", 250, 40), skill("bo", 380, 10)
+    assert side_of_two(ada, bo, weaker_weight=weight) == side_of_two(
+        bo, ada, weaker_weight=weight
+    )
+
+
+def test_two_partners_at_exactly_the_same_level_break_the_tie_on_uncertainty():
+    """Seat order is who pressed join first, and a forecast that turns on it is
+    one where reseating the same four people changes the match.
+
+    So an exact tie goes to the player the platform is least sure of — the
+    assignment that gives the *wider* of the two available team σ, because when
+    it cannot tell which of two equal players is weaker it does not get to pick
+    the reading that flatters it. The strength is the same number either way,
+    which is what makes this a choice about certainty alone.
+    """
+
+    weight = CONSTANTS.weaker_partner_weight[Sport.PADEL]
+    settled, unsure = skill("settled", 300, 10), skill("unsure", 300, 120)
+    team = side_of_two(settled, unsure, weaker_weight=weight)
+
+    assert team == side_of_two(unsure, settled, weaker_weight=weight)
+    assert team.strength == settled.level == unsure.level
+
+    heavier, lighter = as_float(weight), 1 - as_float(weight)
+    candidates = (
+        combine_uncertainty(heavier * 1.20, lighter * 0.10),
+        combine_uncertainty(heavier * 0.10, lighter * 1.20),
+    )
+    assert team.sigma == pytest.approx(max(candidates))
+    assert max(candidates) > min(candidates)
+
+
+def test_two_partners_identical_in_both_have_no_tie_left_to_break():
+    weight = CONSTANTS.weaker_partner_weight[Sport.PADEL]
+    twin, other = skill("twin", 300, 35), skill("other", 300, 35)
+    assert side_of_two(twin, other, weaker_weight=weight) == side_of_two(
+        other, twin, weaker_weight=weight
+    )
+
+
+def test_a_team_is_never_less_certain_than_its_most_uncertain_member():
+    """Uncertainty propagates *through the weights*, which is averaging — so
+    forming a team can only ever narrow it. Summed across the roster instead, it
+    would grow with every player added, which is how a perfectly balanced padel
+    match came to read 46%."""
+
+    weight = CONSTANTS.weaker_partner_weight[Sport.PADEL]
+    for first_sigma, second_sigma in ((0, 120), (84, 84), (35, 15), (0, 0)):
+        team = side_of_two(
+            skill("a", 300, first_sigma),
+            skill("b", 340, second_sigma),
+            weaker_weight=weight,
+        )
+        assert team.sigma <= max(first_sigma, second_sigma) / 100 + 1e-12
+        assert team.sigma < (first_sigma + second_sigma) / 100 + 1e-12
+
+
+def test_doubles_is_forecast_more_confidently_than_singles_between_the_same_people():
+    """The consequence of propagating through the weights rather than across the
+    roster, stated where a reader can check it: four freshly-onboarded players
+    are a *narrower* claim than two, because a team strength is an average of two
+    independent estimates."""
+
+    four = doubles_forecast_of(*[(300, 84)] * 4)
+    two = forecast_of(300, 300, 84, 84)
+    assert four.margin < two.margin
+    assert four.estimate > two.estimate
 
 
 # --- The engine's own contract ----------------------------------------------------
@@ -343,9 +777,10 @@ def test_the_forecast_does_not_depend_on_the_instant_it_is_asked_at():
 
     snapshot = singles(skill("a", 300, 35), skill("b", 341, 22))
     later = NOW.replace(year=2031, month=1, day=2, hour=3, minute=4)
-    assert ENGINE.analyse(snapshot=snapshot, now=NOW).forecast == ENGINE.analyse(
-        snapshot=snapshot, now=later
-    ).forecast
+    assert (
+        ENGINE.analyse(snapshot=snapshot, now=NOW).forecast
+        == ENGINE.analyse(snapshot=snapshot, now=later).forecast
+    )
 
 
 @pytest.mark.parametrize("sport", [Sport.TENNIS, Sport.SQUASH])
@@ -410,6 +845,7 @@ def test_every_value_object_in_the_vocabulary_is_frozen_and_closed():
         Side,
         SidesNotFormed,
         BalanceForecast,
+        Split,
         PairingAnalysis,
         PairingConstants,
     )
@@ -539,6 +975,6 @@ def test_every_constant_carries_the_measurement_that_would_falsify_it():
         if "Falsified by:" not in note:
             unfalsifiable.append(node.target.id)
     assert unfalsifiable == [], unfalsifiable
-    assert (
-        len([node for node in body if isinstance(node, ast.AnnAssign)]) == 4
-    ), "the constant count moved — read the new one's falsifying note before pinning it"
+    assert len([node for node in body if isinstance(node, ast.AnnAssign)]) == 5, (
+        "the constant count moved — read the new one's falsifying note first"
+    )

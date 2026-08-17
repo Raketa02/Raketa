@@ -68,13 +68,22 @@ def singles(
 
 
 def doubles(
-    *occupants: PlayerSkill | None, sport: Sport = Sport.PADEL
+    *occupants: PlayerSkill | None,
+    sport: Sport = Sport.PADEL,
+    viewer: PlayerSkill | None = None,
 ) -> MatchSnapshot:
-    """A four-seat match. ``None`` is an empty seat."""
+    """A four-seat match. ``None`` is an empty seat.
+
+    ``viewer`` defaults to the player on the first occupied seat, the same
+    ordinary case ``singles`` defaults to: a player looking at a match they are
+    in. Pass one to look at the same four people through somebody else's eyes,
+    which is what moves the pairing's orientation and nothing else.
+    """
 
     seated = [player for player in occupants if player is not None]
+    fallback = seated[0] if seated else skill("nobody", 300, 84)
     return MatchSnapshot(
         sport=sport,
         seats=tuple(SeatSnapshot(player) for player in occupants),
-        current_player=seated[0] if seated else skill("nobody", 300, 84),
+        current_player=viewer if viewer is not None else fallback,
     )

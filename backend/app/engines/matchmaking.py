@@ -24,7 +24,7 @@ promoting ``Level`` and ``Sigma`` into the kernel is a *relocation* to be done w
 a second engine needs them as vocabulary, and doing it here would mean moving the
 rating engine's scale in the same commit as landing a forecast.
 
-Exactness earns its keep one slice from now: a doubles team strength is a
+Exactness earns its keep on the doubles path: a team strength is a
 ``Ratio``-weighted blend of two Levels, so the strength of a team is exact and the
 gap between two teams is exact, and the balance percentage derived from it does not
 depend on the order two multiplications happened in. It stops being exact the

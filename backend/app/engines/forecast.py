@@ -11,6 +11,13 @@ with each other (``docs/adr/0026``). Later slices fill the fields this one does
 not; the object is the shape from the start so lighting them up is a constant
 change and not a signature change.
 
+**The chosen split and the forecast are one object, not two.** A card showing
+*you and Bo against Cy and Dee, 84% balanced* is showing one conclusion twice,
+and the two could disagree only if a caller could pair a forecast with a
+different arrangement than the one it was computed from. It cannot: the winning
+``Split`` carries the forecast that ranked it, and ``PairingAnalysis.forecast``
+is that same object.
+
 **Numbers and machine codes, never words.** The engine emits no display text, no
 formatted Level and no formatted percentage. ``estimate`` is a whole percent and
 ``favourite_share`` a whole percent; how they are drawn, and in which language,
@@ -29,7 +36,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Literal, Protocol, TypeAlias, final, runtime_checkable
 
-from app.engines.matchmaking import Level, MatchSnapshot
+from app.engines.matchmaking import Level, MatchSnapshot, PlayerRef
 from app.kernel import Instant, Result
 
 
@@ -117,8 +124,41 @@ class BalanceForecast:
 
 @final
 @dataclass(frozen=True)
+class Split:
+    """One of the ways a four-player roster divides into two teams.
+
+    **Not the split bar.** That is ``favourite_share`` / ``underdog_share`` on the
+    forecast, and it says how lopsided a match is. A ``Split`` says *who is with
+    whom*, and the domain word for it is the glossary's: *four players admit
+    exactly three splits, and the engine searches all three.*
+
+    ``side_a`` and ``side_b`` are the two teams as player references, oriented so
+    the current player's team is ``side_a``. The strengths of those same two
+    teams, in the same order, are ``forecast.side_a`` and ``forecast.side_b`` —
+    membership and strength are built together and cannot be paired up wrongly by
+    a caller.
+
+    All three are returned ranked, not only the winner, because
+    ([ADR-0025](../../docs/adr/0025-binding-pairing-for-counted-matches.md)) the
+    roster of a counted match may elect a different one up to commitment, and an
+    election needs the arrangement it is electing.
+    """
+
+    side_a: tuple[PlayerRef, ...]
+    side_b: tuple[PlayerRef, ...]
+    forecast: BalanceForecast
+
+
+@final
+@dataclass(frozen=True)
 class PairingAnalysis:
     """Everything the pairing engine concluded about one match, together.
+
+    ``forecast`` is the *chosen* split's forecast in doubles and the only one
+    there is in singles, so a caller that wants one number never has to know
+    which sport it is looking at. ``splits`` is empty for a two-player sport —
+    singles has no pairing, and an empty tuple is how that is said rather than a
+    one-element list implying an election nobody can make.
 
     ``engine_version`` travels on the result because every constant in the engine
     is an admitted hypothesis with a measurement that would falsify it, and you
@@ -127,6 +167,7 @@ class PairingAnalysis:
     """
 
     forecast: Result[BalanceForecast, NoForecast]
+    splits: tuple[Split, ...]
     engine_version: str
 
 

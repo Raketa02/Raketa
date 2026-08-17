@@ -19,12 +19,21 @@ from app.engines.pairing.core import (
     as_float,
     combine_uncertainty,
     expected_absolute_gap,
+    side_of_two,
 )
 from app.engines.pairing.v1 import CONSTANTS, PairingEngineV1
 from app.kernel import Ok, Sport
-from tests.unit.matchmaking_snapshots import NOW, singles, skill
+from tests.unit.matchmaking_snapshots import NOW, doubles, singles, skill
 
 ENGINE = PairingEngineV1()
+
+#: Seat names, so that a failing roster prints as four people rather than four
+#: indices.
+NAMES = ("ada", "bo", "cy", "dee")
+
+#: The weight the doubles path runs under. Read from the constants rather than
+#: typed, because nothing in this file may move when it is retuned.
+WEIGHT = CONSTANTS.weaker_partner_weight[Sport.PADEL]
 
 #: The whole scale, in hundredths, plus the Uncertainties the platform actually
 #: produces: certain, settled, calibrating, and the onboarding floor.
@@ -58,6 +67,47 @@ def rosters(seed=SEED, count=ROSTERS):
             draw.randint(*LEVELS),
             draw.randint(*SIGMAS),
             draw.randint(*SIGMAS),
+        )
+
+
+def players_of(*roster):
+    """Four players from four (Level, σ) pairs. The name travels with the rating,
+    which is what makes reseating them a permutation of *people* rather than a
+    relabelling."""
+
+    return [skill(NAMES[seat], *rating) for seat, rating in enumerate(roster)]
+
+
+def seated(*players, sport=Sport.PADEL):
+    return ENGINE.analyse(snapshot=doubles(*players, sport=sport), now=NOW)
+
+
+def four(*roster, sport=Sport.PADEL):
+    """The whole analysis of one four-player roster, given as (Level, σ) pairs."""
+
+    return seated(*players_of(*roster), sport=sport)
+
+
+def foursomes(seed=SEED + 10, count=ROSTERS):
+    """Four-player rosters, a quarter of them drawn off a coarse grid.
+
+    The coarse ones are the point: a Level drawn from the whole scale ties with
+    another about once in four hundred, so a sweep over open draws alone would
+    almost never form a team of two players at exactly the same Level — the one
+    case where *which partner is the weaker one* has no answer and a rule has to
+    supply one. A grid of nine makes the tie ordinary instead of a coincidence.
+    """
+
+    draw = random.Random(seed)
+    grid = tuple(range(100, 501, 50))
+    for index in range(count):
+        levels = grid if index % 4 == 0 else None
+        yield tuple(
+            (
+                draw.choice(levels) if levels else draw.randint(*LEVELS),
+                draw.randint(*SIGMAS),
+            )
+            for _ in range(4)
         )
 
 
@@ -144,8 +194,10 @@ def test_a_wider_uncertainty_never_narrows_the_margin_around_any_gap():
     a retune of the coefficient cannot hide a break in the propagation."""
 
     for mean in (0.0, 0.05, 0.3, 0.9, 1.3, 2.5):
-        widening = [absolute_gap_deviation(mean, spread) for spread in
-                    (0.0, 0.05, 0.1, 0.2, 0.4, 0.6, 0.84, 1.2, 1.7)]
+        widening = [
+            absolute_gap_deviation(mean, spread)
+            for spread in (0.0, 0.05, 0.1, 0.2, 0.4, 0.6, 0.84, 1.2, 1.7)
+        ]
         assert widening == sorted(widening), mean
         assert widening[0] == 0.0
 
@@ -158,6 +210,113 @@ def test_combining_two_uncertainties_is_quadrature_and_not_a_sum():
     assert combine_uncertainty(0.3, 0.4) == pytest.approx(0.5)
     assert combine_uncertainty(0.84, 0.84) == pytest.approx(1.18794, abs=5e-5)
     assert combine_uncertainty(0.84, 0.84) < 0.84 + 0.84
+
+
+# --- Doubles: the same bounds, plus the ones the pairing decision adds ---------------
+
+
+def test_every_doubles_output_stays_inside_its_range():
+    """The singles bounds, unchanged, on the path that adds a pairing decision
+    and a weighted team strength in front of them."""
+
+    for roster in foursomes():
+        analysis = four(*roster)
+        assert isinstance(analysis.forecast, Ok), roster
+        assert len(analysis.splits) == 3, roster
+        for option in analysis.splits:
+            result = option.forecast
+            assert CONSTANTS.balance_floor <= result.estimate <= 100, roster
+            assert 50 <= result.favourite_share <= CONSTANTS.favourite_cap, roster
+            assert result.underdog_share == result.estimate // 2, roster
+            assert result.favourite_share + result.underdog_share == 100, roster
+            assert result.margin >= 0, roster
+            assert result.expected_gap >= 0.0, roster
+            assert result.certainty in CLAIMED, roster
+
+
+def test_the_winner_is_the_arrangement_with_the_smallest_expected_gap():
+    """Ranked, and the ranking is the selection. There is no separate choice of
+    winner that could disagree with the order the three are returned in."""
+
+    for roster in foursomes():
+        analysis = four(*roster)
+        gaps = [option.forecast.expected_gap for option in analysis.splits]
+        assert gaps[0] == min(gaps), roster
+        assert gaps == sorted(gaps), roster
+        assert analysis.forecast.value is analysis.splits[0].forecast, roster
+
+
+def test_every_player_is_seated_exactly_once_in_every_arrangement():
+    for roster in foursomes():
+        for option in four(*roster).splits:
+            assert sorted(option.side_a + option.side_b) == sorted(NAMES), roster
+
+
+def test_which_seat_a_player_sits_in_does_not_change_the_match():
+    """The three splits are a property of the four *people*, not of the order
+    they joined in. A roster dealt into different seats must produce the same
+    three arrangements with the same forecasts — otherwise the engine's answer
+    depends on who pressed join first."""
+
+    draw = random.Random(SEED + 11)
+    for roster in foursomes(count=80):
+        players = players_of(*roster)
+        order = list(range(4))
+        draw.shuffle(order)
+        reseated = [players[seat] for seat in order]
+
+        def arrangements(analysis):
+            return {
+                frozenset({frozenset(o.side_a), frozenset(o.side_b)}): o.forecast
+                for o in analysis.splits
+            }
+
+        as_joined = arrangements(seated(*players))
+        redealt = arrangements(seated(*reseated))
+        assert as_joined.keys() == redealt.keys(), (roster, order)
+        for arrangement, forecast in as_joined.items():
+            other = redealt[arrangement]
+            assert forecast.estimate == other.estimate, (roster, order)
+            assert forecast.margin == other.margin, (roster, order)
+            assert forecast.expected_gap == pytest.approx(other.expected_gap)
+
+
+def test_a_wider_uncertainty_never_raises_the_doubles_balance_or_certainty():
+    """*Absence never flatters*, on the arity where it would be easiest to hide:
+    a team strength averages two estimates, so it narrows — but it never narrows
+    below what the platform actually knows."""
+
+    draw = random.Random(SEED + 12)
+    for _ in range(30):
+        levels = [draw.randint(*LEVELS) for _ in range(4)]
+        walk = [
+            four(*[(level, sigma) for level in levels]).splits[0].forecast
+            for sigma in range(0, 130, 10)
+        ]
+        assert [f.estimate for f in walk] == sorted(
+            (f.estimate for f in walk), reverse=True
+        ), levels
+        assert [f.margin for f in walk] == sorted(f.margin for f in walk), levels
+        assert [CLAIMED.index(f.certainty) for f in walk] == sorted(
+            CLAIMED.index(f.certainty) for f in walk
+        ), levels
+
+
+def test_a_stronger_partner_never_weakens_a_team():
+    """Monotone in both partners' Levels, which is what stops a team strength
+    being a place a rating improvement could quietly cost a player."""
+
+    draw = random.Random(SEED + 13)
+    for _ in range(60):
+        partner = skill("partner", draw.randint(*LEVELS), draw.randint(*SIGMAS))
+        sigma = draw.randint(*SIGMAS)
+        walk = [
+            side_of_two(
+                skill("mover", level, sigma), partner, weaker_weight=WEIGHT
+            ).strength
+            for level in range(100, 501, 20)
+        ]
+        assert walk == sorted(walk), (partner, sigma)
 
 
 # --- The arithmetic underneath ------------------------------------------------------

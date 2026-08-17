@@ -10,17 +10,21 @@ for six characteristic rosters, written as whole numbers a person can read.
 
 Where these came from
 ---------------------
-The source engine documents are not in this repository, and they publish no
-worked singles forecast to reconcile against — what they publish is a canonical
-*four-player padel* roster, which arrives with the three splits and is not this
-slice's. So one persona is derived from a document that *is* here and the other
-five are this engine's, under the constants as written:
+The source engine documents are not in this repository. Two personas are
+therefore derived from documents that *are* here, and the rest are this engine's
+own, under the constants as written:
 
 * **The reference scenario** is not a baseline at all. ``gap_coefficient``'s own
   docstring commits the platform to *half a Level apart is 75% balanced*, and the
   coefficient is solved from that rather than chosen. This persona asserts the
   commitment end to end, so a retune that silently breaks the promise the constant
   was derived from cannot pass.
+* **The canonical padel roster** is the same shape one arity up.
+  [ADR-0025](../../../docs/adr/0025-binding-pairing-for-counted-matches.md)
+  records four Levels and two of the three gaps they split into, and those two
+  figures are the pair of linear equations ``weaker_partner_weight`` was solved
+  from. So this persona is not a screenshot; it is the derivation, asserted
+  through the engine.
 * **The onboarding pair** is pinned against ``racketskill/v3``'s σ floor rather
   than against a number typed here, because *"onboarding cannot produce confidence
   above 30%"* is the glossary's invariant and 0,84 is what it works out to. The
@@ -32,11 +36,12 @@ five are this engine's, under the constants as written:
 import pytest
 
 from app.engines.forecast import Certainty
+from app.engines.pairing.core import as_float
 from app.engines.pairing.v1 import CONSTANTS, PairingEngineV1
 from app.engines.racketskill.core import CONFIDENCE_SIGMA_CEILING
 from app.engines.racketskill.v3.engine import SIGMA_FLOOR
 from app.kernel import Ok, Sport
-from tests.unit.matchmaking_snapshots import NOW, singles, skill
+from tests.unit.matchmaking_snapshots import NOW, doubles, singles, skill
 
 ENGINE = PairingEngineV1()
 
@@ -52,6 +57,24 @@ def forecast(first, second, *, sport=Sport.TENNIS, viewer=None):
     ).forecast
     assert isinstance(result, Ok)
     return result.value
+
+
+def pairing(*players, sport=Sport.PADEL, viewer=None):
+    """The whole analysis of a four-player match: the ranked splits and the
+    winner's forecast, which is the one a card shows."""
+
+    return ENGINE.analyse(
+        snapshot=doubles(*players, sport=sport, viewer=viewer), now=NOW
+    )
+
+
+def paper_gap(option):
+    """The distance between the two team strengths, exactly. Levels are exact
+    ratios all the way through the weighted blend, so this is the figure a
+    document can state to four decimals and a test can assert to the hundredth of
+    a hundredth."""
+
+    return abs(as_float(option.forecast.side_a) - as_float(option.forecast.side_b))
 
 
 def test_the_reference_scenario_the_coefficient_was_solved_from():
@@ -149,6 +172,124 @@ def test_a_mismatch_reports_the_floor_and_says_the_scale_ran_out():
     assert result.beyond_scale is True
     assert result.expected_gap == pytest.approx(1.70)
     assert result.certainty is Certainty.MODERATE
+
+
+# --- Doubles: the three splits ------------------------------------------------------
+
+
+def test_the_canonical_padel_roster_the_weighting_was_solved_from():
+    """*2,71 / 2,80 / 2,64 / 2,92 split one way give a gap of 0,0155 between team
+    strengths and split another give 0,1825 — an order of magnitude apart, from
+    the same four people.*
+
+    ADR-0025's opening paragraph, asserted through the engine. Those two figures
+    are each one linear equation in ``weaker_partner_weight`` and both are solved
+    by 0,55; a retune moves them, which is the point of this file. The platform's
+    Uncertainty is set aside here — every player exact — so that the expected gap
+    collapses to the paper gap and the numbers on the page are the numbers the
+    document wrote down.
+
+    It is also the argument for choosing the split at all rather than letting
+    four adults sort it out: the same four people are a 99%-balanced match or a
+    91% one depending only on how they are arranged.
+    """
+
+    analysis = pairing(
+        skill("ada", 271, 0),
+        skill("bo", 280, 0),
+        skill("cy", 264, 0),
+        skill("dee", 292, 0),
+    )
+    best, middle, worst = analysis.splits
+
+    assert (best.side_a, best.side_b) == (("ada", "bo"), ("cy", "dee"))
+    assert paper_gap(best) == pytest.approx(0.0155)
+    assert (worst.side_a, worst.side_b) == (("ada", "cy"), ("bo", "dee"))
+    assert paper_gap(worst) == pytest.approx(0.1825)
+    assert (middle.side_a, middle.side_b) == (("ada", "dee"), ("bo", "cy"))
+    assert paper_gap(middle) == pytest.approx(0.0925)
+
+    assert [option.forecast.estimate for option in analysis.splits] == [99, 95, 91]
+    assert isinstance(analysis.forecast, Ok)
+    assert analysis.forecast.value is best.forecast
+    assert best.forecast.certainty is Certainty.HIGH
+    assert (best.forecast.favourite_share, best.forecast.underdog_share) == (51, 49)
+
+
+def test_the_same_roster_as_the_platform_actually_knows_it():
+    """The card a settled club four would really see, with the persona above's
+    Uncertainties put back.
+
+    Nobody is exact, so the estimate falls — 92 rather than 99 — and the margin
+    stops being zero, while the arrangement chosen and the order of the three do
+    not move. That separation is the design: Uncertainty reaches the percentage
+    only by widening the gap, and it reaches the *choice* only by making a split
+    the platform is unsure about less attractive than one it is sure of.
+    """
+
+    analysis = pairing(
+        skill("ada", 271, 15),
+        skill("bo", 280, 20),
+        skill("cy", 264, 25),
+        skill("dee", 292, 18),
+    )
+    best = analysis.splits[0]
+
+    assert (best.side_a, best.side_b) == (("ada", "bo"), ("cy", "dee"))
+    assert best.forecast.estimate == 92
+    assert best.forecast.margin == 6
+    assert best.forecast.certainty is Certainty.HIGH
+    assert (best.forecast.favourite_share, best.forecast.underdog_share) == (54, 46)
+    assert [option.forecast.estimate for option in analysis.splits] == [92, 91, 89]
+
+
+def test_four_freshly_onboarded_players_degrade_rather_than_look_perfect():
+    """The persona the whole treatment of Uncertainty exists for, in doubles.
+
+    Four people who have answered a questionnaire and played nothing. Their paper
+    Levels are within a third of a Level of each other and the best arrangement's
+    two team strengths are three hundredths apart — on paper a near-perfect
+    match, and a naive engine would quote it at 99% and mean nothing by it.
+
+    What comes back instead is 66% with a margin of 25 points, graded LOW and not
+    fit to print: *we expect the better part of a Level of daylight and we do not
+    know which way.* The estimate is still returned, because it still ranks, and
+    the ranking between the three arrangements is still made — the platform
+    simply declines to print a number it cannot stand behind.
+    """
+
+    analysis = pairing(
+        skill("ada", 300, ONBOARDING_SIGMA),
+        skill("bo", 312, ONBOARDING_SIGMA),
+        skill("cy", 295, ONBOARDING_SIGMA),
+        skill("dee", 325, ONBOARDING_SIGMA),
+    )
+    best = analysis.splits[0]
+
+    assert (best.side_a, best.side_b) == (("ada", "bo"), ("cy", "dee"))
+    assert paper_gap(best) == pytest.approx(0.031)
+    assert best.forecast.estimate == 66
+    assert best.forecast.margin == 25
+    assert best.forecast.certainty is Certainty.LOW
+    assert best.forecast.fit_to_print is False
+    assert best.forecast.beyond_scale is False
+    assert [option.forecast.estimate for option in analysis.splits] == [66, 66, 65]
+
+
+def test_a_badminton_four_reaches_the_same_arithmetic_as_a_padel_four():
+    """Both sports carry the same weight at v1, so the two answers are identical
+    today. They are computed through separate constants, which is what makes
+    *does a badminton partnership forgive differently?* a measurement."""
+
+    roster = (
+        skill("ada", 271, 15),
+        skill("bo", 280, 20),
+        skill("cy", 264, 25),
+        skill("dee", 292, 18),
+    )
+    padel = pairing(*roster, sport=Sport.PADEL)
+    badminton = pairing(*roster, sport=Sport.BADMINTON)
+    assert padel.splits == badminton.splits
 
 
 def test_a_squash_match_seen_by_the_player_on_the_second_seat():

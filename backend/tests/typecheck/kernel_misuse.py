@@ -33,7 +33,13 @@ from fractions import Fraction
 from typing import Literal
 from zoneinfo import ZoneInfo
 
-from app.engines.forecast import BalanceForecast, NoForecast, SidesNotFormed
+from app.engines.forecast import (
+    BalanceForecast,
+    NoForecast,
+    PairingAnalysis,
+    SidesNotFormed,
+    Split,
+)
 from app.engines.matchmaking import (
     Level,
     MatchSnapshot,
@@ -706,6 +712,54 @@ def a_forecast_is_immutable(forecast: BalanceForecast) -> None:
     forecast.estimate = 100  # want-error: misc
 
 
+class AFourthWayToArrangeFourPlayers(Split):  # want-error: misc
+    """Four players admit exactly three splits, and `@final` is what makes that a
+    statement about the type rather than about the current implementation."""
+
+
+def a_split_is_immutable(split: Split) -> None:
+    split.side_a = ()  # want-error: misc
+
+
+def a_side_of_a_split_is_who_is_on_it_and_not_what_they_play_like(
+    forecast: BalanceForecast,
+) -> Split:
+    """The two facets are deliberately different types. `Split.side_a` is the
+    people; `forecast.side_a` is the Level they play at together, and swapping
+    them is the one mistake a caller drawing a line-up could actually make."""
+
+    return Split(
+        side_a=(forecast.side_a,),  # want-error: arg-type
+        side_b=(A_REF,),
+        forecast=forecast,
+    )
+
+
+def a_name_is_not_a_player_ref_on_a_split_either(forecast: BalanceForecast) -> Split:
+    """Refused by `PlayerRef`'s brand alone: a side is a tuple of references the
+    Matches context handed over, not a tuple of whatever a caller can spell."""
+
+    return Split(
+        side_a=("ada", "bo"),  # want-error: arg-type
+        side_b=(A_REF,),
+        forecast=forecast,
+    )
+
+
+def the_three_splits_are_a_tuple_and_not_a_list(
+    forecast: Result[BalanceForecast, NoForecast],
+) -> PairingAnalysis:
+    """Fixed-arity collections are tuples, everywhere (`docs/adr/0022`) — and an
+    analysis a caller could append a fourth arrangement to is one that no longer
+    means *the complete enumeration*."""
+
+    return PairingAnalysis(
+        forecast=forecast,
+        splits=[],  # want-error: arg-type
+        engine_version="pairing-v1",
+    )
+
+
 def every_way_a_forecast_can_be_absent_must_be_handled(
     forecast: Result[BalanceForecast, NoForecast],
 ) -> int:
@@ -740,3 +794,13 @@ def a_level_goes_wherever_a_ratio_is_wanted() -> float:
 
 def a_side_is_a_strength_and_the_uncertainty_of_it() -> Side:
     return Side(strength=level(310), sigma=as_float(uncertainty(20)))
+
+
+def a_split_is_who_is_with_whom_and_what_that_plays_like(
+    forecast: BalanceForecast,
+) -> Split:
+    return Split(
+        side_a=(A_REF, PlayerRef("bo")),
+        side_b=(PlayerRef("cy"), PlayerRef("dee")),
+        forecast=forecast,
+    )

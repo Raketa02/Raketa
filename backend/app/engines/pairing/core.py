@@ -28,6 +28,15 @@ altogether and overstates doubles by roughly a factor of two — which is how th
 source documents arrived at a perfectly balanced padel match reading 46% and every
 forecast reading unsure, permanently.
 
+In doubles that propagation happens **twice, through the team weights**: a team
+strength is ``w·L_weak + (1−w)·L_strong``, so its uncertainty is
+``√((w·σ_weak)² + ((1−w)·σ_strong)²)`` — each partner's σ scaled by the weight
+their Level was actually given — and the two team uncertainties then combine into
+the gap. Both steps are the same one quadrature rule, applied to the quantity
+being formed rather than to the people in it. That is also why doubles is
+forecast *more* confidently than singles between the same players: averaging two
+independent estimates is what a team strength is.
+
 **The rating engine is not imported.** ``racketskill/core`` owns a σ-combination
 rule that is the same algebra, and it answers a different question: fusing several
 pieces of evidence about *one* player. Reaching for it would put this engine's
@@ -51,6 +60,19 @@ from app.kernel import Ratio
 #: because it is arithmetic rather than a hypothesis: retuning it would not
 #: retune a product decision, it would make the expectation wrong.
 _SQRT_TWO_OVER_PI = math.sqrt(2.0 / math.pi)
+
+#: The complete enumeration of the ways four seats divide into two pairs, as seat
+#: indices. **Three, and that is a proof rather than a list:** fix the player on
+#: the first seat, choose their partner from the remaining three, and the other
+#: two are decided by having nowhere else to go. So there is no fourth
+#: arrangement to miss, no heuristic, and no sampling — the engine searches all of
+#: them, in constant time, and ``test_pairing_invariants`` derives the same three
+#: partitions from scratch to keep this list honest.
+SPLITS: tuple[tuple[tuple[int, ...], tuple[int, ...]], ...] = (
+    ((0, 1), (2, 3)),
+    ((0, 2), (1, 3)),
+    ((0, 3), (1, 2)),
+)
 
 
 def as_float(value: Ratio) -> float:
@@ -95,6 +117,61 @@ def side_of_one(player: PlayerSkill) -> Side:
     """
 
     return Side(strength=player.level, sigma=as_float(player.uncertainty))
+
+
+def side_of_two(
+    first: PlayerSkill, second: PlayerSkill, *, weaker_weight: Ratio
+) -> Side:
+    """A team of two: **not the average of the two Levels.**
+
+    The blend is ``w·L_weak + (1−w)·L_strong`` with ``w`` above a half, because
+    the weaker side is attacked — a 4,5 partnered with a 2,0 does not play like a
+    3,25, it plays like whatever the 2,0 can return. ``w`` is the caller's, a
+    per-sport constant, so *how much* more the weaker partner counts is a
+    measurement rather than a rewrite.
+
+    The strength stays **exact**: two ``Ratio`` multiplications and one addition,
+    so the gap between two team strengths does not depend on the order the
+    multiplications happened in. The uncertainty does not, and the type says so —
+    each partner's σ is scaled by the weight their Level was given and the two are
+    combined in quadrature, which is ``Var(w·X + (1−w)·Y)`` for independent
+    estimates and is the same one rule the gap itself uses.
+
+    **Which partner is the weaker one is decided on Level, and an exact tie is
+    broken on Uncertainty rather than on seat order.** At equal Levels the blend
+    is the same number either way and only the σ weighting can differ — but *seat
+    order* is who pressed join first, and a team whose forecast depends on that is
+    one where reseating the same four people changes the match. The tie goes to
+    the player the platform is *least* sure of, which is the assignment that
+    produces the wider team σ of the two available: when it genuinely cannot tell
+    which of two equal players is the weaker one, it does not get to pick the
+    reading that makes it look more certain. Equal Levels *and* equal σ leaves
+    nothing to break, because both orderings then give the same side.
+    """
+
+    weaker, stronger = _weaker_first(first, second)
+    stronger_weight = Ratio(1 - weaker_weight)
+    return Side(
+        strength=Level(
+            Ratio(weaker_weight * weaker.level + stronger_weight * stronger.level)
+        ),
+        sigma=combine_uncertainty(
+            as_float(Ratio(weaker_weight * weaker.uncertainty)),
+            as_float(Ratio(stronger_weight * stronger.uncertainty)),
+        ),
+    )
+
+
+def _weaker_first(
+    first: PlayerSkill, second: PlayerSkill
+) -> tuple[PlayerSkill, PlayerSkill]:
+    """The two partners, weaker one first. See ``side_of_two`` for the tie."""
+
+    if first.level != second.level:
+        return (first, second) if first.level < second.level else (second, first)
+    return (
+        (first, second) if first.uncertainty >= second.uncertainty else (second, first)
+    )
 
 
 def combine_uncertainty(left: float, right: float) -> float:

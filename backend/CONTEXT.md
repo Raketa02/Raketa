@@ -129,6 +129,14 @@ there; they are not repeated here.
   ratios become floating point. Levels stay exact through subtraction and through a
   `Ratio`-weighted team strength; exactness ends at the first square root, so *where does
   this stop being exact* has one answer and a test walks the package to keep it one.
+- **Split** — one of the three arrangements four players admit, as a value object on
+  `PairingAnalysis`: the two sides as `PlayerRef`s plus the `BalanceForecast` computed from
+  them, all three returned ranked best-first. **Not the split bar** — that is
+  `favourite_share` / `underdog_share` on the forecast and says how lopsided a match is,
+  where a `Split` says who is with whom. Membership and team strength are built together, so
+  `split.side_a` and `split.forecast.side_a` are the same team by construction and no caller
+  can pair a forecast with an arrangement it was not computed from.
+  _Avoid_: pairing (that is the domain word for the whole question), team, line-up.
 - **Read-model repository** — the port a use case reads *projected current state* through,
   e.g. `UserRepository`. It answers queries against a table, not by replaying a stream, and
   has no version bookkeeping. **The trap:** `UserRepository` is this kind despite its name
