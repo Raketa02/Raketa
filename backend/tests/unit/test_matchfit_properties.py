@@ -9,10 +9,11 @@ and wrong in the middle.
 on Wednesday is not a property; ``random.Random(SEED)`` gives the same sweep on every
 machine and every run, and widening the sweep is a diff on a number here.
 
-The sweep is over *declarations, prices, start times and the four facts viability
-reads*, never over ratings, because no term in this slice reads a Level. That is the
-honest shape of the thing being tested and it is why this file is shorter than the
-pairing engine's: two of Match Fit's ten terms are still owed (#86).
+The sweep is over *declarations, prices, start times, the four facts viability reads
+and the pairing analysis* — which is now every input the ten terms read except the
+Levels of the players who are not the viewer, and those are deliberately absent
+because no term reads one: the target is the pairing engine's conclusion and this
+engine is forbidden to re-derive it, which is a property in the invariant suite.
 
 **Viability's three monotonicities are asserted at every corner of the other two
 inputs**, rather than at a convenient one. A curve that rises with paid seats when the
@@ -25,8 +26,21 @@ from dataclasses import replace
 
 import pytest
 
-from app.engines.fit import ExcludedTerm, ScoredTerm, TermCode, TermKind
-from app.engines.matchfit.core import measured_share, renormalise, whole_percent
+from app.engines.fit import (
+    ExcludedTerm,
+    ScoredTerm,
+    SkillOverlapFact,
+    Term,
+    TermCode,
+    TermKind,
+)
+from app.engines.forecast import Certainty, PairingAnalysis
+from app.engines.matchfit.core import (
+    measured_share,
+    renormalise,
+    weighted_value,
+    whole_percent,
+)
 from app.engines.matchfit.v1 import CONSTANTS, MatchFitEngineV1
 from app.engines.matchmaking import (
     HOLD_LADDER,
@@ -40,7 +54,7 @@ from app.engines.matchmaking import (
     SeatState,
     Weekday,
 )
-from app.kernel import grosze, minutes, ratio, shifted
+from app.kernel import Ok, Ratio, grosze, minutes, ratio, shifted
 from tests.unit.matchmaking_snapshots import (
     NOW,
     START,
@@ -74,6 +88,31 @@ LADDERS = tuple(LadderQualification)
 PREFERENCES = (None, MatchTypePreference.COMPETITIVE, MatchTypePreference.SOCIAL)
 HOLDS = HOLD_LADDER
 
+#: Which of the two resolutions the drawn analysis answers the seat question with, and
+#: the third case that is neither — a court with nothing to aim at. Drawn rather than
+#: fixed because *which field answered* is a branch in the overlap term and a sweep
+#: that only ever met one of them would test one of them.
+AIMS = ("nothing", "band", "seat")
+
+#: The Levels a drawn match is aimed at, in hundredths, around the viewer's own 3,00.
+#: Wide enough on both sides to reach a full span away — where the term floors — and
+#: it contains 300 exactly, which is the only place it reaches full marks.
+TARGETS = tuple(range(150, 451, 10))
+
+#: The balance percentages a drawn forecast can carry, plus the absence of one. From
+#: **35** rather than from zero, because 35 is where the pairing engine's scale stops:
+#: an estimate below the floor is a forecast no lineage emits, and drawing one would
+#: be sweeping a range the term can never be handed.
+ESTIMATES = (None, *range(35, 101, 5))
+
+#: The pairing analysis every property that builds its own match is scored against:
+#: aimed exactly at the viewer, forecast dead even, so both terms are at full marks
+#: and a property about travel is about travel.
+AIMED = analysis(estimate=100, band=300)
+
+#: And what a court nobody has joined gets, which is what excludes both of them.
+UNAIMED = analysis()
+
 #: How long before its own start each drawn match closes to joins, in minutes. Two of
 #: them are inside the fill window and two are outside it, so the run-up is crossed on
 #: both sides of the point where an unpaid seat's chances stop improving.
@@ -92,10 +131,16 @@ DAYS = (
 HOURS = (None, (window(6, 9),), (window(18, 22),), (window(6, 9), window(18, 22)))
 
 
-def scored(snapshot: MatchSnapshot, declaration: PlayerProfile):
-    return ENGINE.score(
-        snapshot=snapshot, profile=declaration, analysis=analysis(), now=NOW
-    )
+def scored(
+    snapshot: MatchSnapshot,
+    declaration: PlayerProfile,
+    aim: PairingAnalysis = AIMED,
+):
+    return ENGINE.score(snapshot=snapshot, profile=declaration, analysis=aim, now=NOW)
+
+
+def _term(result, code: TermCode) -> Term:
+    return next(item for item in result.terms if item.code is code)
 
 
 def paid_states(count: int) -> tuple[SeatState, ...]:
@@ -122,6 +167,11 @@ def drawn(seed: int = SEED):
     happened to pick. The cutoff is drawn as a lead **before the match's own start**,
     which is the only way it can be drawn: a cutoff is a fact about one match, and a
     fixed instant is refused by every match a sweep starts earlier than it.
+
+    The **analysis is drawn beside them**, in all three states the seat question has
+    and across the whole balance scale including its absence, so the two terms that
+    read it are crossed at full marks, part marks, floored and excluded rather than
+    only where a hand-written case looked.
     """
 
     rng = random.Random(seed)
@@ -153,7 +203,17 @@ def drawn(seed: int = SEED):
             days=rng.choice(DAYS),
             hours=rng.choice(HOURS),
         )
-        yield snapshot, declaration
+        aimed_by = rng.choice(AIMS)
+        target = rng.choice(TARGETS)
+        aim = analysis(
+            estimate=rng.choice(ESTIMATES),
+            margin=rng.choice((2, 10, 30)),
+            certainty=rng.choice(tuple(Certainty)),
+            imputed_seats=rng.randrange(0, 4),
+            band=target if aimed_by == "band" else None,
+            seat_target=target if aimed_by == "seat" else None,
+        )
+        yield snapshot, declaration, aim
 
 
 def test_the_sweep_reaches_every_branch_of_every_curve():
@@ -161,17 +221,24 @@ def test_the_sweep_reaches_every_branch_of_every_curve():
 
     Counted, so a narrowed draw range shows up as a red test rather than as a
     property that holds because it was never exercised.
+
+    Predicted balance never reaches **zero**, and that is a fact about the pairing
+    engine rather than a hole here: its scale floors at 35, so the lowest value this
+    term can ever be handed is 0,35. An engine that could produce a nought would be
+    one that had lost the floor.
     """
 
     values: dict[TermCode, set[str]] = {code: set() for code in CONSTANTS.weights}
-    for snapshot, declaration in drawn():
-        for term in scored(snapshot, declaration).terms:
+    for snapshot, declaration, aim in drawn():
+        for term in scored(snapshot, declaration, aim).terms:
             if isinstance(term, ScoredTerm):
                 edge = "full" if term.value == 1 else "part"
                 values[term.code].add("zero" if term.value == 0 else edge)
             else:
                 values[term.code].add("excluded")
 
+    assert values[TermCode.SKILL_OVERLAP] == {"full", "part", "zero", "excluded"}
+    assert values[TermCode.PREDICTED_BALANCE] == {"full", "part", "excluded"}
     assert values[TermCode.TIME_FIT] == {"full", "part"}
     assert values[TermCode.MATCH_VIABILITY] == {"full", "part", "zero"}
     assert values[TermCode.PRICE] == {"full", "part", "zero"}
@@ -186,8 +253,8 @@ def test_the_sweep_reaches_every_branch_of_every_curve():
 
 
 def test_every_figure_stays_inside_its_range():
-    for snapshot, declaration in drawn():
-        result = scored(snapshot, declaration)
+    for snapshot, declaration, aim in drawn():
+        result = scored(snapshot, declaration, aim)
         assert 0 <= result.fit <= 100
         assert 0 <= result.coverage <= 100
         assert all(0 <= term.value <= 1 for term in result.scored)
@@ -196,8 +263,8 @@ def test_every_figure_stays_inside_its_range():
 def test_the_score_is_always_the_weighted_average_of_the_terms_that_ran():
     """The identity, over the sweep rather than over the written-out shapes."""
 
-    for snapshot, declaration in drawn():
-        result = scored(snapshot, declaration)
+    for snapshot, declaration, aim in drawn():
+        result = scored(snapshot, declaration, aim)
         shares = renormalise(result.scored)
         pairs = zip(shares, result.scored, strict=True)
         expected = sum((share * term.value for share, term in pairs), ratio(0, 1))
@@ -299,18 +366,29 @@ def test_declaring_a_limit_never_raises_a_score():
     silent player still scores below full marks on a match outside their ladder.
     """
 
-    for snapshot, declaration in drawn():
-        assert scored(snapshot, declaration).fit <= scored(snapshot, profile()).fit
+    for snapshot, declaration, aim in drawn():
+        assert (
+            scored(snapshot, declaration, aim).fit
+            <= scored(snapshot, profile(), aim).fit
+        )
 
 
 def test_coverage_never_moves_with_a_declaration():
-    """*A missing declaration is not a missing measurement*, over the whole sweep."""
+    """*A missing declaration is not a missing measurement*, over the whole sweep.
 
-    baseline = None
-    for snapshot, declaration in drawn():
-        coverage = scored(snapshot, declaration).coverage
-        baseline = coverage if baseline is None else baseline
-        assert coverage == baseline
+    Asserted against the **same match and the same analysis** scored for a player who
+    declared nothing, rather than against one figure for the whole sweep: coverage now
+    legitimately varies with what the pairing engine could answer, and a test pinning
+    it to a constant would have been asserting that the analysis is not read.
+    """
+
+    moved = 0
+    for snapshot, declaration, aim in drawn():
+        declared = scored(snapshot, declaration, aim)
+        silent = scored(snapshot, profile(), aim)
+        assert declared.coverage == silent.coverage
+        moved += declared.coverage != 100
+    assert moved > 0
 
 
 def test_more_evidence_never_lowers_coverage():
@@ -381,8 +459,8 @@ def test_the_time_term_is_two_valued_and_never_decays():
     """
 
     seen = set()
-    for snapshot, declaration in drawn():
-        for term in scored(snapshot, declaration).terms:
+    for snapshot, declaration, aim in drawn():
+        for term in scored(snapshot, declaration, aim).terms:
             if term.code is TermCode.TIME_FIT:
                 assert isinstance(term, ScoredTerm)
                 seen.add(term.value)
@@ -592,8 +670,8 @@ def test_viability_is_never_excluded_and_never_lowers_coverage():
     mechanism.
     """
 
-    for snapshot, declaration in drawn():
-        result = scored(snapshot, declaration)
+    for snapshot, declaration, aim in drawn():
+        result = scored(snapshot, declaration, aim)
         term = next(
             item for item in result.terms if item.code is TermCode.MATCH_VIABILITY
         )
@@ -608,14 +686,117 @@ def test_viability_is_never_excluded_and_never_lowers_coverage():
         )
 
 
+# --- Skill overlap and predicted balance ------------------------------------------
+
+
+def _overlap(snapshot: MatchSnapshot, aim: PairingAnalysis) -> ScoredTerm:
+    term = _term(scored(snapshot, profile(), aim), TermCode.SKILL_OVERLAP)
+    assert isinstance(term, ScoredTerm)
+    return term
+
+
+def _aimed_at(target: int, aimed_by: str) -> PairingAnalysis:
+    return analysis(
+        estimate=100,
+        band=target if aimed_by == "band" else None,
+        seat_target=target if aimed_by == "seat" else None,
+    )
+
+
+@pytest.mark.parametrize("aimed_by", ["band", "seat"], ids=["band", "seat target"])
+@pytest.mark.parametrize("target", [200, 300, 420])
+def test_a_level_closer_to_the_target_never_scores_lower_on_overlap(target, aimed_by):
+    """**The monotonicity the spec names**, at both resolutions and three targets.
+
+    Sorted by distance from the target rather than by Level, which is the quantity the
+    claim is about: a term that read the *signed* difference would rise across the
+    whole scale and pass a test asserted on Levels alone. Both resolutions, because
+    which field answered is a branch — and a curve that is monotone off a band and not
+    off a seat target is not one curve.
+    """
+
+    aim = _aimed_at(target, aimed_by)
+    pairs = [
+        (
+            abs(hundredths - target),
+            _overlap(doubles(skill("ada", hundredths, 20), BO, CY, DEE), aim).value,
+        )
+        for hundredths in range(100, 501, 5)
+    ]
+    furthest_first = [value for _, value in sorted(pairs, key=lambda pair: -pair[0])]
+    assert furthest_first == sorted(furthest_first)
+    assert furthest_first[0] < furthest_first[-1]
+
+
+def test_the_overlap_curve_agrees_with_the_rule_written_out_independently():
+    """The oracle: *full marks at the target, straight down over a span, floored.*
+
+    Written out here in plain arithmetic from the term's own sentence, so the engine
+    and this file agree only if both are right. A term that decayed proportionally,
+    that measured the distance signed, that forgot the floor or that read the span
+    from the wrong end disagrees somewhere on this grid.
+    """
+
+    span = CONSTANTS.overlap_span
+    for target in TARGETS:
+        aim = _aimed_at(target, "band")
+        for hundredths in range(100, 501, 25):
+            distance = ratio(abs(hundredths - target), 100)
+            expected = ratio(0, 1) if distance >= span else Ratio(1 - distance / span)
+            term = _overlap(doubles(skill("ada", hundredths, 20), BO, CY, DEE), aim)
+            assert term.value == expected, (target, hundredths)
+            assert isinstance(term.fact, SkillOverlapFact)
+            assert term.fact.distance == distance
+
+
+def test_a_more_even_forecast_never_scores_lower_on_balance():
+    """Monotone in the estimate, over the whole scale the pairing engine can emit.
+
+    It is monotone because the estimate *is* the value — there is no curve between the
+    two to be non-monotone — which is the property that says the term acquired no
+    constant of its own while nobody was looking.
+    """
+
+    match = doubles(ADA, BO, CY, DEE)
+    values = []
+    for estimate in range(35, 101):
+        term = _term(
+            scored(match, profile(), analysis(estimate=estimate, band=300)),
+            TermCode.PREDICTED_BALANCE,
+        )
+        assert isinstance(term, ScoredTerm)
+        values.append(term.value)
+    assert values == sorted(values)
+    assert values[0] == ratio(35, 100) and values[-1] == 1
+
+
+def test_the_two_pairing_terms_are_excluded_exactly_when_the_analysis_declines():
+    """**Excluded on absence and on nothing else**, over the whole sweep.
+
+    The one thing that must never creep in is a second reason to drop a term — a
+    forecast excluded for being uncertain, an overlap dropped for being poor — because
+    that is how a low score and a missing measurement become the same number again.
+    Asserted as an *equivalence* rather than an implication: the term runs if and only
+    if the analysis answered.
+    """
+
+    for snapshot, declaration, aim in drawn():
+        result = scored(snapshot, declaration, aim)
+        balance = _term(result, TermCode.PREDICTED_BALANCE)
+        overlap = _term(result, TermCode.SKILL_OVERLAP)
+        assert isinstance(balance, ScoredTerm) is isinstance(aim.forecast, Ok)
+        aimed = isinstance(aim.seat_target, Ok) or isinstance(aim.target_band, Ok)
+        assert isinstance(overlap, ScoredTerm) is aimed
+
+
 # --- Absence, over the sweep ------------------------------------------------------
 
 
 def test_absence_never_beats_full_marks_anywhere_in_the_sweep():
     """**Absence never flatters**, asserted over 400 draws rather than four shapes."""
 
-    for snapshot, declaration in drawn():
-        dark = scored(snapshot, declaration)
+    for snapshot, declaration, aim in drawn():
+        dark = scored(snapshot, declaration, aim)
         lit = scored(
             replace(
                 with_records(snapshot, None, 100, 100, 100),
@@ -627,9 +808,89 @@ def test_absence_never_beats_full_marks_anywhere_in_the_sweep():
         assert dark.coverage < lit.coverage
 
 
+def _without(
+    snapshot: MatchSnapshot, aim: PairingAnalysis, code: TermCode
+) -> tuple[MatchSnapshot, PairingAnalysis]:
+    """The same match and analysis with **one** piece of evidence taken away.
+
+    One removal per evidence term the platform can be missing, each touching only the
+    input that term reads — a target stripped without touching the forecast, records
+    stripped without touching the history — so the comparison below is about one term
+    at a time rather than about four at once.
+
+    ``MATCH_VIABILITY`` is deliberately absent from the map and raises: it is the term
+    that *cannot* go missing, and a helper that quietly returned the snapshot
+    unchanged would let the property below pass by measuring nothing.
+    """
+
+    if code is TermCode.SKILL_OVERLAP:
+        return snapshot, replace(
+            aim,
+            seat_target=UNAIMED.seat_target,
+            target_band=UNAIMED.target_band,
+        )
+    if code is TermCode.PREDICTED_BALANCE:
+        return snapshot, replace(aim, forecast=UNAIMED.forecast)
+    if code is TermCode.GROUP_RELIABILITY:
+        return with_records(snapshot, *(None for _ in snapshot.seats)), aim
+    if code is TermCode.FAMILIARITY:
+        return replace(snapshot, history=None), aim
+    raise AssertionError(f"there is no way to take {code.value} away")
+
+
+def test_the_score_is_not_monotonically_increasing_in_missing_evidence():
+    """**Hiding a measurement is not a winning strategy**, and the rule is exact.
+
+    The failure ADR-0027 records is a score that rose with every fact the platform did
+    not have. Under renormalisation the truth is sharper than *"absence never helps"*,
+    which is false — a score is the weighted average of the terms that ran, so losing
+    a term takes the average **towards** the rest of the table. Removing evidence that
+    scored *below* the average raises the fit; removing evidence that scored *above*
+    it lowers the fit. That is the characterisation, asserted term by term over the
+    whole sweep with every evidence term lit, and it is what makes the score not
+    monotone in absence: the direction depends on the observation, not on its
+    presence.
+
+    Both directions are counted, so a sweep that only ever met one of them fails
+    rather than passing quietly — and the strict falls are counted separately, because
+    *at least one removal made the score worse* is the acceptance criterion's claim in
+    the smallest form that can be checked.
+
+    Coverage, by contrast, **is** monotone and is asserted here beside it. That is the
+    pair the engine reports and neither half of it is the other's summary.
+    """
+
+    lowered = raised = strictly_worse = 0
+    for snapshot, declaration, aim in drawn():
+        lit = replace(
+            with_records(snapshot, None, 90, 40, 100),
+            history=PlayHistory(played_recently=frozenset({PlayerRef("bo")})),
+        )
+        full = scored(lit, declaration, aim)
+        average = weighted_value(full.scored)
+        for term in full.scored:
+            if term.code is TermCode.MATCH_VIABILITY:
+                continue
+            if term.kind is TermKind.CONSTRAINT:
+                continue
+            thin_match, thin_aim = _without(lit, aim, term.code)
+            thinner = scored(thin_match, declaration, thin_aim)
+            assert isinstance(_term(thinner, term.code), ExcludedTerm)
+            assert thinner.coverage < full.coverage
+            if term.value < average:
+                raised += 1
+                assert thinner.fit >= full.fit
+            elif term.value > average:
+                lowered += 1
+                assert thinner.fit <= full.fit
+                strictly_worse += thinner.fit < full.fit
+    assert raised > 0 and lowered > 0
+    assert strictly_worse > 0
+
+
 def test_an_excluded_term_keeps_its_weight_and_never_gains_a_value():
-    for snapshot, declaration in drawn():
-        for term in scored(snapshot, declaration).terms:
+    for snapshot, declaration, aim in drawn():
+        for term in scored(snapshot, declaration, aim).terms:
             if isinstance(term, ExcludedTerm):
                 assert term.weight == CONSTANTS.weights[term.code]
                 assert term.kind is TermKind.EVIDENCE
@@ -637,8 +898,8 @@ def test_an_excluded_term_keeps_its_weight_and_never_gains_a_value():
 
 
 def test_a_constraint_never_drops_out_of_the_score():
-    for snapshot, declaration in drawn():
-        result = scored(snapshot, declaration)
+    for snapshot, declaration, aim in drawn():
+        result = scored(snapshot, declaration, aim)
         constraints = [
             term for term in result.terms if term.kind is TermKind.CONSTRAINT
         ]

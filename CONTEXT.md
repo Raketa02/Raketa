@@ -266,21 +266,26 @@ ahead of the first club, which is the whole reason they could be built now.
 > forecast rather than hidden and says how much of the answer was stood in for; the two
 > states that still decline are a court nobody has joined and one where nobody seated has a
 > rating at that sport, because both leave nothing for a stand-in to be drawn from.
-> **Match Fit** is most of the way built. `app/engines/matchfit/` holds the framework whole —
-> **Term** in both its kinds, the renormalisation, **Coverage** as its own number, **Reason**s
-> ranked by contribution and one warning — with eight of its ten terms: **time fit**, price,
-> travel, match type and ladder qualification, all reading the **Player profile**, plus
-> **match viability**, plus group reliability and familiarity, which are *present and absent*
-> so that exclusion and Coverage are exercised by every score rather than being untested
-> machinery. Time fit is the term the source design named and never computed: a match's start
-> is read against the days and hours the player declared, through the club's zone and the
-> kernel's coordinates, and a match outside them ranks lower without being hidden.
+> **Match Fit** is built, all ten terms of it. `app/engines/matchfit/` holds the framework
+> whole — **Term** in both its kinds, the renormalisation, **Coverage** as its own number,
+> **Reason**s ranked by contribution and one warning — and the table now sums to a hundred
+> with nothing pending: **skill overlap** and **predicted balance**, which read the pairing
+> analysis; **time fit**, price, travel, match type and ladder qualification, all reading the
+> **Player profile**; **match viability**; and group reliability and familiarity, which are
+> *present and absent* so that exclusion and Coverage are exercised by every score rather than
+> being untested machinery. Time fit is the term the source design named and never computed: a
+> match's start is read against the days and hours the player declared, through the club's zone
+> and the kernel's coordinates, and a match outside them ranks lower without being hidden.
 > **Match viability closes *absence never flatters* for a ranking**, which the mechanism alone
 > could not: it is the only evidence term that is *always* computable, so a court nobody has
 > joined is scored on being empty rather than excused from it, and an empty match that is
-> counted, cheap and nearby now scores 88 against a well-formed match's 95 where it used to
-> score 100 against 94. The two still owed are named with their weights in the engine's own
-> constants: skill overlap and predicted balance, which widen that gap rather than create it.
+> counted, cheap and nearby now scores 88 against a well-formed match's 97 where it used to
+> score 100 against 94. **Skill overlap and predicted balance did not widen that gap and could
+> not have**, which is worth knowing rather than guessing at: both are evidence an empty court
+> has none of, so both are excluded for it, and an excluded term cannot lower a score it is not
+> in. What they widen is Coverage — 48% for the empty court against the well-formed match's
+> 100% — which is the pair saying that less than half of the empty court's score was measured
+> at all. Only a term that *cannot go missing* can close an ordering regression.
 > **At Stake** is still a word without code. The terms are committed ahead of them because the
 > decisions behind them are
 > ([ADR-0025](docs/adr/0025-binding-pairing-for-counted-matches.md),
@@ -380,6 +385,27 @@ forty minutes away at twice your ceiling is a good match in the abstract and a b
   entirely, because a court that has been booked cannot be taken by the club being busy; and
   an unpaid seat is worth less the closer the **join cutoff** gets, on a slope rather than at
   a cliff, because there is less time left for anybody to take it.
+- **Skill overlap** — how close the player's own level is to the level the match is aimed at.
+  The largest term in Match Fit, and **evidence**: with nobody seated there is nothing to
+  overlap with, so it is excluded rather than scored against the player's own level — which
+  is a distance of zero and therefore full marks, and is most of why the source design ranked
+  an empty match above a well-formed one. A player the platform has never rated *at this
+  sport* is the same silence from the other side and gets the same answer. The target is the
+  **Seat target** where the match is one seat from full and the **Target band**'s midpoint
+  otherwise, and the term never re-derives which: it reads whichever answer the pairing
+  analysis gave. It decays over **a full band** — the widest plain-language band the rating
+  context prints — and is **symmetric**, because a level too strong for a match and a level
+  too weak are both *not the match you belong in*; which of the two it was is reported, and
+  is not encoded in the score.
+- **Predicted balance** — how even the match is forecast to be, read straight off the
+  **Balance forecast**'s estimate. The one term with no constant of its own: a balance
+  percentage is already a mark out of a hundred about the match, and fitting a curve to it
+  would be a second opinion about what one means. It reads the **point estimate even when the
+  margin is too wide to print**, because the best estimate remains the best estimate when it
+  is unfit to show — *suppression is presentation, not ranking* — and it is excluded only when
+  there is **no forecast at all**, never when there is merely an uncertain one. Uncertainty is
+  not charged twice: the estimate is the *expected* gap, so it has already been made worse on
+  the way in.
 - **Player profile** — what the player declared about how they want to play: days, hours,
   price ceiling, distance, appetite, competitive or social, and how far ahead they will
   commit. One declaration, read by every engine that needs it, never restated as a constant

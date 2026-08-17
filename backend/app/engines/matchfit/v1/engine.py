@@ -1,14 +1,16 @@
-"""Match Fit v1 — eight of the ten terms, and the whole of the mechanism.
+"""Match Fit v1 — **all ten terms**, and the whole of the mechanism.
 
-This version scores every term that needs nothing but the **Player profile** and the
-match itself: the match's start against the days and hours the player declared, price
-against a declared ceiling, travel against a declared radius, the match's type against
-a declared preference, and a ladder the player entered. Beside them **match
-viability** — how likely the match is to actually be played — which is evidence and
-is *always computable*, and the two terms that **ship dark** — group reliability and
-familiarity — whose snapshot fields are present and absent from the first commit, so
-exclusion, renormalisation and Coverage are exercised by every call rather than being
-untested machinery waiting for a context that does not exist.
+Five terms need nothing but the **Player profile** and the match itself: the match's
+start against the days and hours the player declared, price against a declared
+ceiling, travel against a declared radius, the match's type against a declared
+preference, and a ladder the player entered. Beside them **match viability** — how
+likely the match is to actually be played — which is evidence and is *always
+computable*; the two terms that read the **pairing analysis** — how well the player
+fits what the match is aimed at, and how even it is forecast to be, which together
+are 38 of the table's 100 points; and the two that **ship dark** — group reliability
+and familiarity — whose snapshot fields are present and absent from the first commit,
+so exclusion, renormalisation and Coverage are exercised by every call rather than
+being untested machinery waiting for a context that does not exist.
 
 **Viability is what stops absence flattering a ranking**, which is a stronger claim
 than the mechanism alone could make. Excluding a term already cannot beat scoring it
@@ -17,8 +19,13 @@ perfectly on the constraints it trivially satisfies, since every piece of eviden
 about it was missing for both. Viability cannot go missing, so an empty court is now
 *scored* on being empty rather than excused from it.
 
-The two terms still owed are named with their weights in
-``constants.PENDING_WEIGHTS``.
+**Skill overlap is what the source design got most wrong, and it is fixed by a
+type.** It scored full marks against the player's own Level when there was nobody to
+overlap with, which on the largest weight in the table is most of why an empty match
+outscored a well-formed one there. It is evidence here, so a match with nothing to
+aim at excludes it and reports the hole rather than filling it.
+
+``constants.PENDING_WEIGHTS`` is empty: the table owes nothing.
 
 The whole score, in the order it happens:
 
@@ -52,6 +59,7 @@ from dataclasses import dataclass
 from typing import Callable, Mapping, final
 
 from app.engines.fit import (
+    BalanceFact,
     FamiliarityFact,
     LadderFact,
     MatchFitScore,
@@ -59,6 +67,7 @@ from app.engines.fit import (
     PriceFact,
     ReliabilityFact,
     ScoredTerm,
+    SkillOverlapFact,
     Term,
     TermCode,
     TermFact,
@@ -83,16 +92,19 @@ from app.engines.matchfit.v1.constants import CONSTANTS, ENGINE_VERSION
 from app.engines.matchmaking import (
     CourtHold,
     LadderQualification,
+    Level,
     MatchSnapshot,
     MatchTypePreference,
     PlayerProfile,
     PlayerRef,
+    PlayerSkill,
     SeatSnapshot,
     Weekday,
 )
 from app.kernel import (
     Instant,
     Minutes,
+    Ok,
     Ratio,
     elapsed_minutes,
     exhaustive,
@@ -144,8 +156,9 @@ class MatchFitEngineV1:
         cannot construct a forecast and does not import the engine that can, so the
         score and the card drawn beside it are computed from the same pairing by
         construction rather than by a caller remembering to pass the same one twice.
-        In this version it is read for the pairing version the score carries; the two
-        terms that read its numbers are #86's.
+        Two terms now read its numbers — 38 of the table's 100 points — which is what
+        makes that guarantee worth having: a score built from one pairing and drawn
+        beside another would disagree with its own card on the largest thing it says.
 
         ``now`` is read by **exactly one term**, and which one is the whole of the
         rule. Time fit does not read it: *when the match is* and *when you asked* are
@@ -183,6 +196,127 @@ class MatchFitEngineV1:
             # forecast it was scored against.
             pairing_version=analysis.engine_version,
         )
+
+
+def _skill_overlap(scoring: Scoring) -> Term:
+    """The player's own Level against the Level this match is aimed at. **Evidence.**
+
+    **The reclassification that this whole spec turns on.** The source design scored
+    this term as a constraint, so a match with nobody in it had nothing to disagree
+    with the player about and took full marks on the largest weight in the table —
+    which on its own accounted for most of an empty match scoring 90,5 against 84 for
+    the design's own canonical well-formed one. There is no target to overlap with
+    until somebody is seated, and *"we do not know"* is not *"it is perfect for you"*:
+    with nothing to compare against, the term is excluded, the surviving weights carry
+    the score, and Coverage says a quarter of it was never measured.
+
+    **Two silences, and both are the same fact.** The match may have nothing to aim at
+    — nobody seated, or nobody seated the platform can place on the scale — and *the
+    player* may have nothing to be aimed at, because somebody browsing padel may only
+    ever have been rated at tennis. Neither is a bad match; both are a missing Level,
+    and a term that scored either would be inventing the one number it exists to
+    compare.
+
+    **The target is read off the analysis and never re-derived.** *Which* of the two
+    answers applies is the pairing engine's own conclusion — a Seat target exists
+    exactly when one seat is open and every seated player is rated, and a Target band
+    whenever anybody seated is rated — so this branches on which field answered rather
+    than counting open seats itself. Counting them here would be a second
+    implementation of *when is a seat target available*, in the engine that is
+    forbidden to hold the first.
+    """
+
+    code = TermCode.SKILL_OVERLAP
+    weight = _weight(code)
+    viewer = scoring.snapshot.current_player
+    if not isinstance(viewer, PlayerSkill):
+        return evidence_term(code, weight, None)
+    fact = _aimed_at(scoring.analysis, level=viewer.level)
+    if fact is None:
+        return evidence_term(code, weight, None)
+    return evidence_term(
+        code,
+        weight,
+        Observed(value=decayed(fact.distance, CONSTANTS.overlap_span), fact=fact),
+    )
+
+
+def _aimed_at(analysis: PairingAnalysis, *, level: Level) -> SkillOverlapFact | None:
+    """What this match says it is aimed at — the exact answer, then the blunt one.
+
+    The seat target first, because it is the *exact* Level that would even the match
+    and the pairing engine gives it only when it can be exact. The band's midpoint
+    otherwise, which is the fallback its own docstring describes: *the band is the
+    fallback whenever the seat target declines and the match has a Level in it at
+    all*. Nothing at all is the third case, and it is the empty court.
+
+    The half width travels with the second answer and not with the first, which is
+    what tells a client — and a reader of the payload — which of the two it is
+    looking at.
+    """
+
+    if isinstance(analysis.seat_target, Ok):
+        return SkillOverlapFact(
+            level=level, target=analysis.seat_target.value, band_half_width=None
+        )
+    if isinstance(analysis.target_band, Ok):
+        band = analysis.target_band.value
+        return SkillOverlapFact(
+            level=level, target=band.midpoint, band_half_width=band.half_width
+        )
+    return None
+
+
+def _predicted_balance(scoring: Scoring) -> Term:
+    """How even this match is forecast to be. **Evidence, and the estimate is it.**
+
+    The balance percentage *is* the value: 100 is dead even, so it is already a mark
+    out of a hundred about the match rather than a quantity needing a curve fitted to
+    it. That is why this term is the only one in the table with **no constant of its
+    own** — a span here would be a second opinion about what a balance percentage
+    means, and the first one is a product commitment the pairing engine's
+    ``gap_coefficient`` was solved from. It also means the floor of the balance scale
+    is the floor of this term: a mismatch scores what the scale says a mismatch is
+    worth, not zero, which is the same *conditions are never rejections* rule price
+    and travel follow.
+
+    **The point estimate is read whatever the margin is.** A forecast too uncertain to
+    print is still the best estimate available, and *suppression is presentation*: the
+    certainty grade travels on the payload so a card can decline to show the number,
+    and withholding it from the ranking would make an uncertain match unrankable
+    rather than honest. The margin needs no separate penalty for the reason the
+    pairing engine has none either — the estimate is the *expected absolute* gap, so
+    the platform's own uncertainty has already made it worse on the way in, and
+    subtracting for it again here would be counting it twice.
+
+    **Excluded only when there is no forecast at all**, never when there is merely an
+    uncertain one. The two cases the pairing engine declines on are a roster with
+    nobody in it and one with nobody it can place on the scale — the same two silences
+    skill overlap has, for the same reason.
+    """
+
+    code = TermCode.PREDICTED_BALANCE
+    weight = _weight(code)
+    forecast = scoring.analysis.forecast
+    if not isinstance(forecast, Ok):
+        return evidence_term(code, weight, None)
+    predicted = forecast.value
+    return evidence_term(
+        code,
+        weight,
+        Observed(
+            # Out of a hundred, because that is the unit a balance percentage is
+            # already in. `Observed` refuses a value outside 0..1, which is the guard
+            # against an assembler handing over a percentage from somewhere else.
+            value=ratio(predicted.estimate, 100),
+            fact=BalanceFact(
+                estimate=predicted.estimate,
+                margin=predicted.margin,
+                certainty=predicted.certainty,
+                imputed_seats=predicted.imputed_seats,
+            ),
+        ),
+    )
 
 
 def _time_fit(scoring: Scoring) -> Term:
@@ -419,7 +553,7 @@ def _group_reliability(scoring: Scoring) -> Term:
     Excluded whenever nobody else on a seat carries a record, which today is always:
     the field ships dark and is absent in every snapshot the platform can assemble.
     So this term is the live proof that exclusion works — it takes 11 of the table's
-    62 points out of the denominator on every score, and Coverage says so.
+    100 points out of the denominator on every score, and Coverage says so.
 
     **The current player's own record is not read.** You know whether you will turn
     up, and scoring your own reliability into a recommendation *to you* would make
@@ -495,6 +629,8 @@ def _familiarity(scoring: Scoring) -> Term:
 #: that *one term per code* is true by construction and the constants' guard over the
 #: same key set is checking the same thing from the other side.
 _TABLE: Mapping[TermCode, Callable[[Scoring], Term]] = {
+    TermCode.SKILL_OVERLAP: _skill_overlap,
+    TermCode.PREDICTED_BALANCE: _predicted_balance,
     TermCode.TIME_FIT: _time_fit,
     TermCode.MATCH_VIABILITY: _viability,
     TermCode.GROUP_RELIABILITY: _group_reliability,

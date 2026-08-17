@@ -23,6 +23,7 @@ from pathlib import Path
 import pytest
 
 from app.engines.fit import (
+    BalanceFact,
     ExcludedTerm,
     FamiliarityFact,
     LadderFact,
@@ -32,12 +33,14 @@ from app.engines.fit import (
     PriceFact,
     ReliabilityFact,
     ScoredTerm,
+    SkillOverlapFact,
     TermCode,
     TermKind,
     TimeFact,
     TravelFact,
     ViabilityFact,
 )
+from app.engines.forecast import Certainty, PairingAnalysis
 from app.engines.matchfit.core import (
     FULL_MARKS,
     NO_MARKS,
@@ -75,6 +78,7 @@ from app.engines.matchmaking import (
     PlayHistory,
     SeatState,
     Weekday,
+    level,
 )
 from app.kernel import (
     InvariantViolated,
@@ -98,6 +102,7 @@ from tests.unit.matchmaking_snapshots import (
     singles,
     skill,
     starting,
+    unrated,
     window,
     with_records,
 )
@@ -113,18 +118,29 @@ BO = skill("bo", 315, 25)
 CY = skill("cy", 285, 30)
 DEE = skill("dee", 330, 60)
 
+#: The three shapes a hand-built pairing analysis comes in, which is one per state
+#: the two terms that read it can be in: a full match with a band around it, a match
+#: one seat from full with that seat solved exactly, and a court with nothing in it
+#: to aim at. Every case below is paired with the one its match would actually have
+#: got, so no shape in the sweep describes a world the pairing engine cannot produce.
+AIMED = analysis(estimate=100, band=300)
+AIMED_AT_THE_SEAT = analysis(estimate=100, seat_target=300)
+UNAIMED = analysis()
+
 #: One well-formed padel match, one singles match, one court nobody has joined —
 #: crossed with declarations that satisfy, breach and omit every constraint the
-#: table has. Written out rather than drawn at random, because an invariant that
-#: only holds for the inputs a seed happened to pick is not an invariant.
-CASES: tuple[tuple[str, MatchSnapshot, PlayerProfile], ...] = (
-    ("declared nothing, full padel", doubles(ADA, BO, CY, DEE), profile()),
+#: table has, and with the pairing analysis each would have been given. Written out
+#: rather than drawn at random, because an invariant that only holds for the inputs
+#: a seed happened to pick is not an invariant.
+CASES: tuple[tuple[str, MatchSnapshot, PlayerProfile, PairingAnalysis], ...] = (
+    ("declared nothing, full padel", doubles(ADA, BO, CY, DEE), profile(), AIMED),
     (
         "declared nothing, empty court",
         doubles(None, None, None, None, viewer=ADA),
         profile(),
+        UNAIMED,
     ),
-    ("declared nothing, singles", singles(ADA, BO), profile()),
+    ("declared nothing, singles", singles(ADA, BO), profile(), AIMED),
     (
         "everything satisfied",
         doubles(ADA, BO, CY, None),
@@ -136,66 +152,79 @@ CASES: tuple[tuple[str, MatchSnapshot, PlayerProfile], ...] = (
             hours=(window(18, 22),),
             appetite=2,
         ),
+        AIMED_AT_THE_SEAT,
     ),
     (
         "on a day they did not declare",
         doubles(ADA, BO, CY, None),
         profile(days=frozenset({Weekday.SATURDAY, Weekday.SUNDAY})),
+        AIMED_AT_THE_SEAT,
     ),
     (
         "at an hour they did not declare",
         doubles(ADA, BO, CY, None),
         profile(days=frozenset({Weekday.TUESDAY}), hours=(window(6, 9),)),
+        AIMED_AT_THE_SEAT,
     ),
     (
         "over the ceiling",
         doubles(ADA, BO, CY, None),
         profile(ceiling=1800, radius=20),
+        AIMED_AT_THE_SEAT,
     ),
     (
         "far past the ceiling",
         doubles(ADA, BO, CY, None),
         profile(ceiling=500, radius=20),
+        AIMED_AT_THE_SEAT,
     ),
     (
         "beyond the radius",
         doubles(ADA, BO, CY, None, travel_minutes=35),
         profile(ceiling=2500, radius=20),
+        AIMED_AT_THE_SEAT,
     ),
     (
         "far beyond the radius",
         doubles(ADA, BO, CY, None, travel_minutes=90),
         profile(ceiling=2500, radius=5),
+        AIMED_AT_THE_SEAT,
     ),
     (
         "wanted social, got counted",
         doubles(ADA, BO, CY, None, counted=True),
         profile(match_type=MatchTypePreference.SOCIAL),
+        AIMED_AT_THE_SEAT,
     ),
     (
         "wanted counted, got a friendly",
         doubles(ADA, BO, CY, None, counted=False),
         profile(match_type=MatchTypePreference.COMPETITIVE),
+        AIMED_AT_THE_SEAT,
     ),
     (
         "in a ladder this does not count for",
         doubles(ADA, BO, CY, None, ladder=LadderQualification.OUTSIDE),
         profile(),
+        AIMED_AT_THE_SEAT,
     ),
     (
         "in a ladder and it counts",
         doubles(ADA, BO, CY, None, ladder=LadderQualification.QUALIFIES),
         profile(),
+        AIMED_AT_THE_SEAT,
     ),
     (
         "no court held at a club with nothing left",
         doubles(ADA, BO, CY, None, hold=CourtHold.NONE, crowding=100),
         profile(),
+        AIMED_AT_THE_SEAT,
     ),
     (
         "half an hour from the cutoff with three seats open",
         doubles(ADA, None, None, None, cutoff=shifted(NOW, minutes(30))),
         profile(),
+        AIMED,
     ),
     (
         "the dark terms lit",
@@ -204,6 +233,7 @@ CASES: tuple[tuple[str, MatchSnapshot, PlayerProfile], ...] = (
             history=PlayHistory(played_recently=frozenset({PlayerRef("bo")})),
         ),
         profile(ceiling=2500, radius=20),
+        AIMED,
     ),
     (
         "the dark terms lit and bad",
@@ -214,33 +244,72 @@ CASES: tuple[tuple[str, MatchSnapshot, PlayerProfile], ...] = (
             ),
         ),
         profile(),
+        AIMED,
+    ),
+    (
+        "aimed a whole band away",
+        doubles(ADA, BO, CY, DEE),
+        profile(),
+        analysis(estimate=100, band=410),
+    ),
+    (
+        "aimed from a band rather than a seat",
+        doubles(ADA, BO, CY, None),
+        profile(),
+        analysis(estimate=88, band=340),
+    ),
+    (
+        "forecast at the floor of the scale",
+        doubles(ADA, BO, CY, DEE),
+        profile(),
+        analysis(estimate=35, band=300),
+    ),
+    (
+        "forecast too uncertain to print",
+        doubles(ADA, BO, CY, DEE),
+        profile(),
+        analysis(
+            estimate=78,
+            margin=30,
+            certainty=Certainty.LOW,
+            imputed_seats=3,
+            band=300,
+        ),
+    ),
+    (
+        "a viewer this sport has never rated",
+        doubles(ADA, BO, CY, DEE, viewer=unrated("newcomer")),
+        profile(),
+        AIMED,
     ),
 )
 
-IDS = [name for name, _, _ in CASES]
+IDS = [name for name, _, _, _ in CASES]
 
 
-def scored(snapshot: MatchSnapshot, declaration: PlayerProfile) -> MatchFitScore:
-    return ENGINE.score(
-        snapshot=snapshot, profile=declaration, analysis=analysis(), now=NOW
-    )
+def scored(
+    snapshot: MatchSnapshot,
+    declaration: PlayerProfile,
+    aim: PairingAnalysis = AIMED,
+) -> MatchFitScore:
+    return ENGINE.score(snapshot=snapshot, profile=declaration, analysis=aim, now=NOW)
 
 
 @pytest.fixture(params=CASES, ids=IDS)
-def shape(request) -> tuple[str, MatchSnapshot, PlayerProfile]:
-    """One (match, declaration) pair from the sweep."""
+def shape(request) -> tuple[str, MatchSnapshot, PlayerProfile, PairingAnalysis]:
+    """One (match, declaration, analysis) triple from the sweep."""
 
     return request.param
 
 
 @pytest.fixture
 def case(shape) -> MatchFitScore:
-    """That pair, scored. Two fixtures rather than one, so the handful of tests
+    """That triple, scored. Two fixtures rather than one, so the handful of tests
     that need the *inputs* take ``shape`` beside it instead of reverse-engineering
     which case they were handed."""
 
-    _, snapshot, declaration = shape
-    return scored(snapshot, declaration)
+    _, snapshot, declaration, aim = shape
+    return scored(snapshot, declaration, aim)
 
 
 def test_the_invariants_below_are_asserted_over_every_shape():
@@ -248,12 +317,15 @@ def test_the_invariants_below_are_asserted_over_every_shape():
 
     Every branch of every term is in here: each constraint satisfied, breached
     mildly, breached past its span and undeclared; both dark evidence terms absent,
-    lit well and lit badly; and viability at both ends of both of its halves — a
-    booked court and none at a full club, a match a day from its cutoff and one half
-    an hour from it with three seats open.
+    lit well and lit badly; viability at both ends of both of its halves — a booked
+    court and none at a full club, a match a day from its cutoff and one half an
+    hour from it with three seats open; and the two terms that read the pairing
+    analysis at every state they have — aimed exactly, aimed from a band, aimed a
+    whole band away, forecast even, forecast at the floor, forecast too uncertain to
+    print, and both excluded for want of anything to aim at or anybody to aim.
     """
 
-    assert len(CASES) == 18, IDS
+    assert len(CASES) == 23, IDS
     assert len(set(IDS)) == len(IDS), IDS
 
 
@@ -326,9 +398,9 @@ def test_absence_never_scores_better_than_full_marks(shape):
     than argued once.
     """
 
-    _, snapshot, declaration = shape
-    absent = scored(_dark(snapshot), declaration)
-    present = scored(_lit(snapshot), declaration)
+    _, snapshot, declaration, aim = shape
+    absent = scored(_dark(snapshot), declaration, aim)
+    present = scored(_lit(snapshot), declaration, aim)
     assert absent.fit <= present.fit
     assert absent.coverage <= present.coverage
 
@@ -364,8 +436,8 @@ def test_excluding_a_term_can_raise_the_number_and_that_is_not_a_bug():
     assert knowing.coverage > not_knowing.coverage
 
 
-@pytest.mark.parametrize("name, snapshot, declaration", CASES, ids=IDS)
-def test_excluding_a_term_always_lowers_coverage(name, snapshot, declaration):
+@pytest.mark.parametrize("name, snapshot, declaration, aim", CASES, ids=IDS)
+def test_excluding_a_term_always_lowers_coverage(name, snapshot, declaration, aim):
     """The half of the guarantee that *is* monotone, and it has to be.
 
     Coverage is what makes a thin score legible, so it must fall whenever anything
@@ -373,7 +445,7 @@ def test_excluding_a_term_always_lowers_coverage(name, snapshot, declaration):
     fit happens to look fine.
     """
 
-    result = scored(snapshot, declaration)
+    result = scored(snapshot, declaration, aim)
     missing = sum(term.weight for term in result.excluded)
     if missing:
         assert result.coverage < 100
@@ -423,14 +495,14 @@ def test_a_constraint_term_always_runs_and_an_absent_declaration_is_full_marks(c
     exactly where it was.
     """
 
-    constraints = [
-        term for term in case.terms if term.kind is TermKind.CONSTRAINT
-    ]
+    constraints = [term for term in case.terms if term.kind is TermKind.CONSTRAINT]
     assert [term.code for term in constraints] == [
         code
         for code in CONSTANTS.weights
         if code
         not in (
+            TermCode.SKILL_OVERLAP,
+            TermCode.PREDICTED_BALANCE,
             TermCode.MATCH_VIABILITY,
             TermCode.GROUP_RELIABILITY,
             TermCode.FAMILIARITY,
@@ -481,8 +553,8 @@ def test_a_player_who_declared_nothing_has_the_same_coverage_as_one_who_declared
 def test_an_evidence_term_with_nothing_observed_is_excluded_and_not_scored_well():
     """The reclassification the whole spec turns on, at its smallest.
 
-    Both evidence terms in this table are dark, so on every snapshot the platform
-    can assemble today they are *excluded*: no value, no payload, weight still in
+    Both **dark** evidence terms are absent on every snapshot the platform can
+    assemble today, so they are *excluded*: no value, no payload, weight still in
     coverage's denominator. There is no field on an ``ExcludedTerm`` for a friendly
     default to be written into, which is the difference between this and a
     convention.
@@ -514,6 +586,55 @@ def test_only_evidence_is_ever_excluded():
     assert ExcludedTerm(code=TermCode.FAMILIARITY, weight=3).kind is TermKind.EVIDENCE
 
 
+def test_no_term_in_the_table_is_left_carrying_a_fabricated_default():
+    """**The table is complete and nothing in it invents an observation.**
+
+    The claim ADR-0027 exists for, at the only size it can be checked: for every
+    evidence term there is an input under which it comes back *excluded*, so no term
+    is quietly scoring a figure the platform never had. Written as a loop over the
+    table rather than as four named cases, because the failure mode is a *new* term
+    landing with a friendly fallback — and a loop notices that where a written-out
+    list does not.
+
+    **Viability is the one exception and is asserted as one.** It cannot be taken
+    away, because every match has a phase, a hold, a seat count and a cutoff — and
+    that is not a default, it is a measurement that is always available. A term that
+    could never be excluded *and* had no such fact behind it would be exactly the
+    fabrication this test is looking for, so the exception is named here rather than
+    left to be inferred from the loop's silence.
+    """
+
+    lit = replace(
+        with_records(doubles(ADA, BO, CY, DEE), None, 90, 90, 90),
+        history=PlayHistory(played_recently=frozenset()),
+    )
+    full = scored(lit, profile(), AIMED)
+    assert full.coverage == 100
+
+    strippable = {
+        TermCode.SKILL_OVERLAP: (lit, analysis(estimate=90)),
+        TermCode.PREDICTED_BALANCE: (lit, analysis(band=300)),
+        TermCode.GROUP_RELIABILITY: (
+            with_records(lit, None, None, None, None),
+            AIMED,
+        ),
+        TermCode.FAMILIARITY: (replace(lit, history=None), AIMED),
+    }
+    evidence = [term.code for term in full.terms if term.kind is TermKind.EVIDENCE]
+    assert set(evidence) == set(strippable) | {TermCode.MATCH_VIABILITY}
+
+    for code, (snapshot, aim) in strippable.items():
+        assert isinstance(_term(scored(snapshot, profile(), aim), code), ExcludedTerm)
+
+    # And the exception, stated rather than inferred: nothing about a match can take
+    # viability away, which is why it is the term that closes the ordering regression.
+    hopeless = doubles(None, None, None, None, viewer=ADA, hold=CourtHold.NONE)
+    assert isinstance(
+        _term(scored(hopeless, profile(), UNAIMED), TermCode.MATCH_VIABILITY),
+        ScoredTerm,
+    )
+
+
 def test_an_evidence_term_carries_its_observation_whole_or_not_at_all():
     """A value and its payload arrive together, the way a rating does."""
 
@@ -536,9 +657,7 @@ def test_every_term_carries_a_positive_weight_and_a_value_inside_its_range(case)
 
 def test_one_term_per_code_and_every_code_in_the_table(case):
     assert [term.code for term in case.terms] == list(CONSTANTS.weights)
-    assert all(
-        term.weight == CONSTANTS.weights[term.code] for term in case.terms
-    )
+    assert all(term.weight == CONSTANTS.weights[term.code] for term in case.terms)
 
 
 # --- Reasons and the one warning -------------------------------------------------
@@ -644,8 +763,8 @@ def test_an_instant_that_is_not_rounded_to_the_minute_is_refused(field_name):
 
 
 def test_the_same_inputs_produce_the_same_score(shape, case):
-    _, snapshot, declaration = shape
-    again = scored(snapshot, declaration)
+    _, snapshot, declaration, aim = shape
+    again = scored(snapshot, declaration, aim)
     assert (again.fit, again.coverage, again.terms) == (
         case.fit,
         case.coverage,
@@ -668,20 +787,18 @@ def test_only_the_viability_term_depends_on_the_instant_it_is_asked_at(shape, ca
     would compare equal on its value and differ on the payload beside it.
     """
 
-    _, snapshot, declaration = shape
+    _, snapshot, declaration, aim = shape
     later = ENGINE.score(
         snapshot=snapshot,
         profile=declaration,
-        analysis=analysis(),
+        analysis=aim,
         now=NOW.replace(year=2027, month=1, day=1, hour=6, minute=45),
     )
     unmoved = tuple(
         term for term in case.terms if term.code is not TermCode.MATCH_VIABILITY
     )
     assert (
-        tuple(
-            term for term in later.terms if term.code is not TermCode.MATCH_VIABILITY
-        )
+        tuple(term for term in later.terms if term.code is not TermCode.MATCH_VIABILITY)
         == unmoved
     )
     # A year past every cutoff in the suite, nothing can still be filled: the unpaid
@@ -773,9 +890,9 @@ def _time(snapshot: MatchSnapshot, declaration: PlayerProfile) -> ScoredTerm:
     return term
 
 
-@pytest.mark.parametrize("name, snapshot, declaration", CASES, ids=IDS)
+@pytest.mark.parametrize("name, snapshot, declaration, aim", CASES, ids=IDS)
 def test_the_time_term_reads_both_halves_through_the_kernel(
-    name, snapshot, declaration
+    name, snapshot, declaration, aim
 ):
     """*Never by ad-hoc date arithmetic*, as something a test can hold the term to.
 
@@ -852,9 +969,7 @@ def test_one_match_at_two_clubs_in_different_zones_scores_differently():
         club=replace(at_seven_thirty_in_london.club, zone=WARSAW),
     )
     assert _time(at_seven_thirty_in_london, declaration).value == 1
-    assert (
-        _time(at_eight_thirty_in_warsaw, declaration).value == CONSTANTS.time_outside
-    )
+    assert _time(at_eight_thirty_in_warsaw, declaration).value == CONSTANTS.time_outside
 
 
 def test_a_match_outside_the_declaration_ranks_lower_and_is_never_hidden():
@@ -951,7 +1066,7 @@ def test_viability_never_lowers_coverage(shape, case):
     found.
     """
 
-    _, snapshot, declaration = shape
+    _, snapshot, declaration, aim = shape
     hopeless = scored(
         replace(
             snapshot,
@@ -960,6 +1075,7 @@ def test_viability_never_lowers_coverage(shape, case):
             join_cutoff=shifted(NOW, minutes(-1)),
         ),
         declaration,
+        aim,
     )
     assert hopeless.coverage == case.coverage
     assert _viability(hopeless).value <= _viability(case).value
@@ -973,7 +1089,7 @@ def test_viability_reads_the_four_facts_and_reports_them(shape, case):
     fails here rather than on a card nobody is checking.
     """
 
-    _, snapshot, _ = shape
+    _, snapshot, _, _ = shape
     fact = _viability(case).fact
     assert isinstance(fact, ViabilityFact)
     assert (fact.paid_seats, fact.sold_seats) == (
@@ -995,7 +1111,7 @@ def test_viability_is_the_chance_of_people_times_the_chance_of_a_court(shape, ca
     instead of the unpaid one, disagrees on the very first case.
     """
 
-    _, snapshot, _ = shape
+    _, snapshot, _, _ = shape
     paid = ratio(snapshot.paid_seats, snapshot.sold_seats)
     left = (snapshot.join_cutoff - NOW).total_seconds() // 60
     window = CONSTANTS.fill_window
@@ -1084,10 +1200,228 @@ def test_a_match_in_a_phase_nobody_can_join_never_reaches_a_term(shape):
     as a low number.
     """
 
-    _, snapshot, _ = shape
+    _, snapshot, _, _ = shape
     for phase in (MatchPhase.LOCKED, MatchPhase.CANCELLED):
         with pytest.raises(InvariantViolated, match="only a forming match"):
             replace(snapshot, phase=phase)
+
+
+# --- The two terms that read the pairing analysis --------------------------------
+
+
+def _overlap(result: MatchFitScore):
+    return _term(result, TermCode.SKILL_OVERLAP)
+
+
+def _balance(result: MatchFitScore):
+    return _term(result, TermCode.PREDICTED_BALANCE)
+
+
+def test_both_pairing_terms_are_evidence_and_never_constraints(case):
+    """The reclassification, as the property that makes it structural.
+
+    ``TermKind`` is not a label somebody set: it is which of ``core``'s two builders
+    was called, and only one of them can produce an exclusion. So *skill overlap is
+    evidence* is checkable on every shape, including the ones where it happens to
+    score full marks — which is exactly where a constraint would be indistinguishable
+    from it by value alone.
+    """
+
+    for code in (TermCode.SKILL_OVERLAP, TermCode.PREDICTED_BALANCE):
+        assert _term(case, code).kind is TermKind.EVIDENCE
+
+
+def test_a_match_with_nothing_to_be_aimed_at_excludes_the_overlap_term():
+    """**The single reclassification the whole spec turns on**, and its counterfactual.
+
+    A court nobody has joined has no seat target and no band, so there is nothing for
+    the player's Level to overlap with. The term is excluded and 24 points leave the
+    denominator.
+
+    The counterfactual is written out beside it because it is the actual regression:
+    scoring the term against the *player's own Level* is a distance of zero and
+    therefore full marks, on the largest weight in the table, for the match the
+    platform knows least about. Asserted as an inequality against that alternative
+    rather than described — the excluded score must not be the one full marks would
+    have produced.
+    """
+
+    empty = doubles(None, None, None, None, viewer=ADA)
+    excluded = scored(empty, profile(), UNAIMED)
+    assert isinstance(_overlap(excluded), ExcludedTerm)
+    assert not hasattr(_overlap(excluded), "value")
+    assert excluded.coverage == 100 - sum(
+        CONSTANTS.weights[code]
+        for code in (
+            TermCode.SKILL_OVERLAP,
+            TermCode.PREDICTED_BALANCE,
+            TermCode.GROUP_RELIABILITY,
+            TermCode.FAMILIARITY,
+        )
+    )
+
+    # The source design's answer: aim the match at the player who is looking at it.
+    flattered = scored(empty, profile(), analysis(band=300))
+    assert _overlap(flattered).value == FULL_MARKS
+    assert flattered.coverage > excluded.coverage
+    assert flattered.fit > excluded.fit
+
+
+def test_a_viewer_the_platform_cannot_place_on_this_scale_excludes_it_too():
+    """The other half of the same silence, and it is not a bad match.
+
+    A player rated at tennis and never at padel is browsing padel. The match is well
+    aimed; half of the comparison simply does not exist, and *"we have never rated
+    you"* is not *"this is perfect for you"*. Predicted balance is untouched, because
+    how even a match will be is a fact about the match: the two are separate terms
+    precisely so one silence does not take the other with it.
+    """
+
+    stranger = scored(doubles(ADA, BO, CY, DEE, viewer=unrated("newcomer")), profile())
+    assert isinstance(_overlap(stranger), ExcludedTerm)
+    assert isinstance(_balance(stranger), ScoredTerm)
+    assert (
+        stranger.coverage
+        == scored(doubles(ADA, BO, CY, DEE), profile()).coverage
+        - CONSTANTS.weights[TermCode.SKILL_OVERLAP]
+    )
+
+
+def test_the_seat_target_answers_before_the_band_does():
+    """*Exact where the pairing engine could be exact, blunt otherwise.*
+
+    Both fields answering is the shape a match one seat from full is in, and the term
+    reads the seat target — which is the acceptance criterion's *"from the Seat target
+    where exactly one seat is open"*, expressed as the pairing engine's own condition
+    for answering rather than as a seat count this engine repeats.
+
+    ``band_half_width`` is what says which of the two it read, and it is asserted in
+    both directions: absent for the exact answer, and the band's own width for the
+    fallback. A term that read the band while reporting no width would be a payload
+    disagreeing with the score beside it.
+    """
+
+    match = doubles(ADA, BO, CY, None)
+    exact = _overlap(scored(match, profile(), analysis(band=340, seat_target=300)))
+    blunt = _overlap(scored(match, profile(), analysis(band=340)))
+    assert isinstance(exact, ScoredTerm) and isinstance(blunt, ScoredTerm)
+    assert isinstance(exact.fact, SkillOverlapFact)
+    assert isinstance(blunt.fact, SkillOverlapFact)
+    assert exact.fact.target == level(300) and exact.fact.band_half_width is None
+    assert blunt.fact.target == level(340)
+    assert blunt.fact.band_half_width == ratio(50, 100)
+    assert exact.value > blunt.value
+
+
+def test_the_target_is_read_off_the_analysis_and_never_off_the_snapshot():
+    """*The analysis is an input value, never a collaborator* — as a measurement.
+
+    Move a seated player's Level and the term does not budge, because the target is
+    the pairing engine's conclusion and this engine does not hold the arithmetic that
+    produces one. Move the *viewer's* Level and it does, because that half is the
+    snapshot's. An engine that quietly re-derived a target from the roster would move
+    on the first, and would then be scoring a match against a pairing nobody was
+    shown — the exact failure the import fence exists to prevent, in the one shape a
+    contract cannot see.
+    """
+
+    aim = analysis(estimate=90, band=300)
+    match = doubles(ADA, BO, CY, DEE, viewer=ADA)
+    reseated = replace(
+        match,
+        seats=(
+            match.seats[0],
+            match.seats[1],
+            match.seats[2],
+            replace(match.seats[3], occupant=skill("dee", 480, 60)),
+        ),
+    )
+    assert _overlap(scored(reseated, profile(), aim)) == _overlap(
+        scored(match, profile(), aim)
+    )
+
+    stronger = doubles(ADA, BO, CY, DEE, viewer=skill("ada", 380, 20))
+    assert (
+        _overlap(scored(stronger, profile(), aim)).value
+        < _overlap(scored(match, profile(), aim)).value
+    )
+
+
+def test_the_overlap_term_is_symmetric_about_the_target():
+    """A Level too strong and a Level too weak are the same distance from the match.
+
+    One value for both directions, deliberately, because an ordering between them is
+    a claim no measurement here could settle — the same argument ``time_outside``
+    makes for the wrong day and the wrong hour. What is *not* lost is which direction
+    it was: both Levels are on the payload, so a client says *above* or *below*
+    without the score having encoded it.
+    """
+
+    aim = analysis(estimate=90, band=300)
+    weaker = doubles(skill("ada", 260, 20), BO, CY, DEE)
+    stronger = doubles(skill("ada", 340, 20), BO, CY, DEE)
+    below = _overlap(scored(weaker, profile(), aim))
+    above = _overlap(scored(stronger, profile(), aim))
+    assert isinstance(below, ScoredTerm) and isinstance(above, ScoredTerm)
+    assert isinstance(below.fact, SkillOverlapFact)
+    assert isinstance(above.fact, SkillOverlapFact)
+    assert below.value == above.value
+    assert below.fact.distance == above.fact.distance == ratio(40, 100)
+    assert below.fact.level < below.fact.target < above.fact.level
+
+
+def test_the_balance_term_is_the_estimate_and_has_no_curve_of_its_own():
+    """**No constant, and that is the claim.**
+
+    A balance percentage is already a mark out of a hundred about the match, so
+    fitting a curve to it would be a second opinion about what one means — and the
+    first is a product commitment the pairing engine's ``gap_coefficient`` was solved
+    from. The term's value is therefore the estimate over a hundred at every point of
+    the scale, floor included, which is checkable without naming a single constant of
+    this engine's.
+    """
+
+    match = doubles(ADA, BO, CY, DEE)
+    for estimate in (35, 50, 78, 92, 100):
+        term = _balance(scored(match, profile(), analysis(estimate=estimate)))
+        assert isinstance(term, ScoredTerm)
+        assert term.value == ratio(estimate, 100)
+        assert whole_percent(term.value) == estimate
+
+
+def test_a_forecast_unfit_to_print_still_ranks_and_only_a_missing_one_is_excluded():
+    """*Suppression is presentation.* Excluded on **absence**, never on uncertainty.
+
+    The same estimate at a margin narrow enough to print and at one wide enough that
+    a card will show nothing scores identically — because the best estimate remains
+    the best estimate when it is unfit to print, and withholding it from the ranking
+    would make an uncertain match unrankable rather than honest.
+
+    The margin is not charged a second time either: the estimate is the *expected
+    absolute* gap, so uncertainty has already made it worse on the way in. What
+    excludes the term is having no forecast at all.
+    """
+
+    match = doubles(ADA, BO, CY, DEE)
+    unsure = scored(
+        match,
+        profile(),
+        analysis(estimate=78, margin=40, certainty=Certainty.LOW, band=300),
+    )
+    sure = scored(
+        match,
+        profile(),
+        analysis(estimate=78, margin=2, certainty=Certainty.HIGH, band=300),
+    )
+    assert (unsure.fit, unsure.coverage) == (sure.fit, sure.coverage)
+    assert _balance(unsure).value == _balance(sure).value
+
+    missing = scored(match, profile(), analysis(band=300))
+    assert isinstance(_balance(missing), ExcludedTerm)
+    assert (
+        missing.coverage
+        == sure.coverage - CONSTANTS.weights[TermCode.PREDICTED_BALANCE]
+    )
 
 
 # --- The value object's own guards ----------------------------------------------
@@ -1185,14 +1519,21 @@ def test_the_score_is_immutable(case):
 # --- The constants ---------------------------------------------------------------
 
 
-def test_the_declared_and_the_pending_weights_sum_to_a_hundred():
-    """*The weights sum to 100*, enforced in the only form in which it can be true
-    today: eight terms exist and two are named with the weight each will take."""
+def test_the_declared_weights_sum_to_a_hundred_and_nothing_is_pending():
+    """*The weights sum to 100*, now in the **unqualified** form.
+
+    ``PENDING_WEIGHTS`` existed to make *"the table is incomplete"* an arithmetic
+    statement rather than a comment, and completing the table was exactly the diff it
+    described: two lines moved from one mapping to the other. Both the mapping and
+    the guard that reads it survive it being empty, so an eleventh term declares its
+    debt the same way rather than by lowering every Coverage figure in silence.
+    """
 
     assert sum(CONSTANTS.weights.values()) + sum(PENDING_WEIGHTS.values()) == 100
     assert WEIGHT_TOTAL == 100
-    assert set(PENDING_WEIGHTS) == {"skill_overlap", "predicted_balance"}
-    assert sum(CONSTANTS.weights.values()) == 62
+    assert dict(PENDING_WEIGHTS) == {}
+    assert sum(CONSTANTS.weights.values()) == 100
+    assert len(CONSTANTS.weights) == len(TermCode) == 10
 
 
 def test_a_table_that_does_not_sum_to_a_hundred_is_refused():
@@ -1206,6 +1547,8 @@ def test_a_term_the_vocabulary_names_and_the_table_does_not_weight_is_refused():
             weights={
                 code: weight
                 for code, weight in (
+                    (TermCode.SKILL_OVERLAP, 24),
+                    (TermCode.PREDICTED_BALANCE, 14),
                     (TermCode.TIME_FIT, 12),
                     (TermCode.MATCH_VIABILITY, 12),
                     (TermCode.GROUP_RELIABILITY, 11),
@@ -1304,6 +1647,8 @@ def test_a_mismatch_worth_full_marks_or_more_is_refused(mismatch):
 def test_a_span_of_nothing_is_refused():
     with pytest.raises(InvariantViolated, match="price span"):
         MatchFitConstants(price_decay_span=ratio(0, 1))
+    with pytest.raises(InvariantViolated, match="overlap span"):
+        MatchFitConstants(overlap_span=ratio(0, 1))
 
 
 def test_the_time_and_travel_weight_is_now_two_terms_that_move_independently():
@@ -1383,7 +1728,7 @@ def test_every_constant_carries_the_measurement_that_would_falsify_it():
         if "Falsified by:" not in note:
             unfalsifiable.append(node.target.id)
     assert unfalsifiable == [], unfalsifiable
-    assert len([node for node in body if isinstance(node, ast.AnnAssign)]) == 11, (
+    assert len([node for node in body if isinstance(node, ast.AnnAssign)]) == 12, (
         "the constant count moved — read the new one's falsifying note first"
     )
 
@@ -1462,7 +1807,9 @@ def test_the_score_carries_no_display_text():
     enum — with exactly three exceptions, all of them written out: the two engine
     versions, which are identifiers, and each payload's ``kind``, which is a
     ``Literal`` and is the machine key itself. A formatted price, a rendered Level or
-    a sentence would show up here as a new ``str`` field.
+    a sentence would show up here as a new ``str`` field. A **Level** is the case
+    this most easily loses: ``SkillOverlapFact`` carries two of them, and both are
+    exact ratios rather than the *"3,00"* a card prints.
     """
 
     source = _parsed(FIT)
@@ -1478,16 +1825,18 @@ def test_the_score_carries_no_display_text():
         "MatchFitScore.pairing_version",
     ]
     assert sorted(name for name, kind in fields if kind.startswith("Literal[")) == [
+        "BalanceFact.kind",
         "FamiliarityFact.kind",
         "LadderFact.kind",
         "MatchTypeFact.kind",
         "PriceFact.kind",
         "ReliabilityFact.kind",
+        "SkillOverlapFact.kind",
         "TimeFact.kind",
         "TravelFact.kind",
         "ViabilityFact.kind",
     ]
-    assert len(fields) == 43, [name for name, _ in fields]
+    assert len(fields) == 52, [name for name, _ in fields]
 
 
 def test_no_match_fit_suite_reaches_for_the_pairing_engine():
@@ -1515,6 +1864,31 @@ def test_no_match_fit_suite_reaches_for_the_pairing_engine():
     assert offenders == [], offenders
 
 
+def test_the_engine_does_not_import_the_rating_engine_either():
+    """``overlap_span`` is a Band width **copied**, and this is what keeps it a copy.
+
+    The rating context owns the 1,0–5,0 scale, the four bands and the confidence
+    transform. Match Fit's largest constant is derived from the widest of those bands
+    and is written out here rather than read from there, for the reason the pairing
+    engine gives for the onboarding σ floor: a Match Fit score that moved because a
+    rating lineage retuned could not be attributed to one set of constants, and the
+    falsification programme is exactly that attribution.
+
+    What keeps the copy honest is the mirror in the persona suite — the file that is
+    *meant* to break on a retune. This walk is the other half: it says the shortcut
+    was not taken.
+    """
+
+    offenders = [
+        f"{path.relative_to(ROOT)}:{node.lineno}: {name}"
+        for path in _modules_of(MATCHFIT) + [FIT]
+        for node in ast.walk(_parsed(path))
+        for name in _imported_names(node)
+        if name.startswith("app.engines.racketskill")
+    ]
+    assert offenders == [], offenders
+
+
 def _imported_names(node: ast.AST) -> list[str]:
     if isinstance(node, ast.Import):
         return [alias.name for alias in node.names]
@@ -1534,6 +1908,8 @@ def test_every_value_object_in_the_vocabulary_is_frozen_and_closed():
     """
 
     vocabulary = (
+        SkillOverlapFact,
+        BalanceFact,
         TimeFact,
         ViabilityFact,
         PriceFact,

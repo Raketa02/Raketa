@@ -62,11 +62,12 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Literal, Protocol, TypeAlias, final, runtime_checkable
 
-from app.engines.forecast import PairingAnalysis
+from app.engines.forecast import Certainty, PairingAnalysis
 from app.engines.matchmaking import (
     CourtHold,
     HourWindow,
     LadderQualification,
+    Level,
     MatchSnapshot,
     MatchTypePreference,
     PlayerProfile,
@@ -100,11 +101,13 @@ class TermCode(Enum):
 
     A client renders copy per code and the codes never change, which is what lets
     the wording of a reason change without a backend release. The enum lists the
-    terms that **exist**; the two the table still owes it are named in
-    ``matchfit/v1/constants.py`` with their weights, because a code nothing can
-    produce is a code a client could handle and never receive.
+    terms that **exist**, and as of the two below it lists all ten of them:
+    ``matchfit/v1/constants.py``'s ``PENDING_WEIGHTS`` is empty, so there is no
+    longer a code a client could handle and never receive.
     """
 
+    SKILL_OVERLAP = "skill_overlap"
+    PREDICTED_BALANCE = "predicted_balance"
     TIME_FIT = "time_fit"
     MATCH_VIABILITY = "match_viability"
     GROUP_RELIABILITY = "group_reliability"
@@ -113,6 +116,76 @@ class TermCode(Enum):
     PRICE = "price"
     MATCH_TYPE = "match_type"
     FAMILIARITY = "familiarity"
+
+
+@final
+@dataclass(frozen=True)
+class SkillOverlapFact:
+    """The player's own Level, and the Level this match says it is aimed at.
+
+    Both exact ratios on the rating scale and neither of them rendered: *"3,00"*
+    is a formatting decision and the two clients do not share one.
+
+    ``band_half_width`` is **which of the two answers the target came from**,
+    carried as the quantity rather than as a label. Absent means the target is the
+    *Seat target* — the exact Level that would even this match, which the pairing
+    engine gives only when one seat is open — and present means it is the midpoint
+    of a *Target band* that wide either side. So a client writes *"this seat is
+    aimed at 3,10"* or *"this match is aimed at 2,60–3,60"* from the same payload,
+    and the same rule ``PriceFact.ceiling`` follows: an absent field is a fact
+    about what was available, not a zero.
+
+    ``distance`` is a property rather than a field, for the reason every derived
+    number here is one: a carried copy is a number a later edit can leave
+    disagreeing with the two it came from, and it is what the term's value was
+    actually computed from.
+    """
+
+    level: Level
+    target: Level
+    band_half_width: Ratio | None
+    kind: Literal["skill_overlap"] = "skill_overlap"
+
+    @property
+    def distance(self) -> Ratio:
+        """How far the player is from the target, in Level points. **Unsigned.**
+
+        The term is symmetric — being a Level too strong for a match and a Level
+        too weak are both *not the match you belong in* — so the direction is not
+        what the score reads. It is still recoverable from the two Levels beside
+        it, which is what lets a client say *"above"* or *"below"* without the
+        score having to encode which.
+        """
+
+        return Ratio(abs(self.target - self.level))
+
+
+@final
+@dataclass(frozen=True)
+class BalanceFact:
+    """The forecast this term read: the estimate, and how sure of it the platform is.
+
+    ``estimate`` is a whole percent where 100 is dead even, and ``margin`` is how
+    wrong it could be in the same units — the pair a card needs in order to say
+    *"84% balanced"* or to say nothing at all.
+
+    ``certainty`` is carried so that **suppression stays a presentation decision**.
+    The term scores on the estimate whatever the grade is, so a client that
+    declines to print a LOW forecast is hiding a number the ranking still used, and
+    it can only know to do that if the grade travels with it. Reading
+    ``BalanceForecast.fit_to_print`` is the same question asked of the same enum.
+
+    ``imputed_seats`` is how many of the roster's Levels were stood in for, and it
+    is the difference between *"we are unsure about these four people"* and *"three
+    of these four are nobody yet"* — two matches that can carry the same margin and
+    are not the same claim.
+    """
+
+    estimate: int
+    margin: int
+    certainty: Certainty
+    imputed_seats: int
+    kind: Literal["predicted_balance"] = "predicted_balance"
 
 
 @final
@@ -273,7 +346,9 @@ class FamiliarityFact:
 #: term that can score, each with the machine key its ``TermCode`` carries and a
 #: payload of numbers — never a sentence, never a formatted figure.
 TermFact: TypeAlias = (
-    TimeFact
+    SkillOverlapFact
+    | BalanceFact
+    | TimeFact
     | ViabilityFact
     | PriceFact
     | TravelFact

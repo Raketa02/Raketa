@@ -1,11 +1,11 @@
 """Match Fit, version 1.
 
-Six of the ten terms ADR-0027 specifies, and the whole of the mechanism they run
+**All ten terms ADR-0027 specifies**, and the whole of the mechanism they run
 through: term kinds, renormalisation over what actually ran, Coverage as its own
 number, reasons ranked by contribution, and one warning on the weakest contributor's
-own value. The four terms still owed are named with their weights in
-``constants.PENDING_WEIGHTS``, and the constants refuse to be built unless the
-declared and the pending weights sum to a hundred.
+own value. ``constants.PENDING_WEIGHTS`` is empty and the constants still refuse to
+be built unless the declared and the pending weights sum to a hundred — so the debt
+that guard existed to declare is discharged in arithmetic rather than in a comment.
 """
 
 from app.engines.matchfit.v1.constants import (

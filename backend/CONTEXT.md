@@ -202,11 +202,32 @@ there; they are not repeated here.
   string fields are legitimate. A `ScoredTerm` checks its payload's kind against its own code,
   because the two are the same machine key spelled twice. _Avoid_: reason text, message,
   description.
-- **Pending weights** (`matchfit/v1/constants.PENDING_WEIGHTS`) — the two terms the table
-  still owes, written out with the weight each will take, and the constants refuse to be built
-  unless the declared and the pending weights sum to a hundred. So *the weights sum to 100* is
-  enforced in the only form in which it can be true today, and completing the table is a diff
-  that moves a line from one mapping to the other.
+- **Pending weights** (`matchfit/v1/constants.PENDING_WEIGHTS`) — the terms the table still
+  owes, written out with the weight each will take, and the constants refuse to be built
+  unless the declared and the pending weights sum to a hundred. **Empty as of v1's tenth
+  term**, so *the weights sum to 100* now holds unqualified — and completing the table was
+  exactly the diff the mapping promised, two lines moved from one mapping to the other. Both
+  the mapping and its guard survive it being empty, so an eleventh term declares its debt in
+  arithmetic rather than in a comment.
+- **Aim resolution** (`matchfit/v1/engine._aimed_at`) — how the skill overlap term decides
+  what a match is aimed at: the `PairingAnalysis`'s `seat_target` if it answered, the
+  `target_band`'s midpoint otherwise, and nothing at all when neither did. It **branches on
+  which field answered** and never counts open seats, because *when is a seat target
+  available* is the pairing engine's rule and this engine is fenced from holding a second copy
+  of it. The band's `half_width` travels on the payload for the second case and is absent for
+  the first, which is how a client tells *"this seat is aimed at 3,00"* from *"this match is
+  aimed at 2,50–3,50"* — the quantity carrying the distinction rather than a label naming the
+  branch, the same shape as `PriceFact.ceiling`. _Avoid_: target resolution strategy, aim
+  mode.
+- **Borrowed constant** — a figure another lineage owns, written out in this engine's
+  constants with the derivation in its docstring, an AST walk asserting the package does not
+  import that lineage, and a mirrored assertion in the **persona** suite so a retune there
+  turns this red. `matchfit/v1`'s `overlap_span` is 1,10 because that is the widest band the
+  rating context prints; the pairing engine's `imputation_uncertainty` copies the same
+  context's onboarding σ floor the same way. The alternative — importing it — would let a
+  rating retune move a balance percentage or a Match Fit score, and the falsification
+  programme rests on being able to attribute a number to exactly one lineage. _Avoid_:
+  shared constant, cross-engine constant.
 - **Court hold** (`matchmaking.CourtHold`) — how firmly a court is held for a match, as the
   clock's own three-rung ladder: `NONE`, `SOFT`, `HARD`. Borrowed vocabulary with no owner
   yet, like a seat's state and a ladder qualification — the documents that specify the hold

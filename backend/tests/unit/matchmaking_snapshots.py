@@ -25,12 +25,16 @@ from dataclasses import replace
 from datetime import datetime, timezone
 
 from app.engines.forecast import (
+    BalanceForecast,
+    Certainty,
     NobodySeated,
     PairingAnalysis,
     SeatUnderDetermined,
     SidesNotFormed,
+    TargetBand,
 )
 from app.engines.matchmaking import (
+    HUNDREDTHS,
     ClubSnapshot,
     CourtHold,
     HourWindow,
@@ -72,6 +76,7 @@ from app.kernel import (
     invariant,
     payable_from,
     percent,
+    ratio,
     shifted,
     slot_start,
     zloty,
@@ -142,6 +147,7 @@ def cutoff_before(start: Instant) -> Instant:
     """
 
     return shifted(start, minutes(-CUTOFF_LEAD))
+
 
 #: How crowded the club is in every default snapshot: **half its capacity taken**, a
 #: normally busy Tuesday evening. It provably does not move the default score, since
@@ -421,26 +427,88 @@ def window(from_hour: int, to_hour: int) -> HourWindow:
     )
 
 
-def analysis(*, version: str = "pairing-v1") -> PairingAnalysis:
-    """A **hand-built** pairing analysis, declining on every field.
+def analysis(
+    *,
+    version: str = "pairing-v1",
+    estimate: int | None = None,
+    margin: int = 6,
+    certainty: Certainty = Certainty.HIGH,
+    imputed_seats: int = 0,
+    band: int | None = None,
+    half_width: int = 50,
+    seat_target: int | None = None,
+) -> PairingAnalysis:
+    """A **hand-built** pairing analysis. Every field declines unless asked for.
 
     Match Fit takes the analysis as an input value and never runs the pairing
     engine, so its suites build one by hand — there is no integration seam between
     the two engines and none is invented here (``docs/adr/0026``). An invariant test
     asserts that no Match Fit suite imports the pairing engine, because a helper
     that quietly did would turn every Fit assertion into an assertion about both.
+    That is also why nothing here is derived: the certainty is *passed* rather than
+    graded from the margin, because the grade boundaries are the pairing engine's
+    constants and restating them here would be the first step towards a second copy
+    of them.
 
-    Declining everywhere is the honest shape for this version: the two terms that
-    read a forecast's numbers are #86's, so a forecast built here would be an input
-    nothing reads dressed up as one that does. What *is* read is the version, which
-    every score carries because a Match Fit score has two producers.
+    **Declining on every field is the default because it is the shape a caller
+    cannot get wrong.** It is what the pairing engine returns for a court nobody has
+    joined, and a suite that forgets to say which world it is in then *excludes* the
+    two terms that read this — visibly, in a coverage figure — rather than quietly
+    scoring them from figures nobody chose. Ask for the figures and the terms run:
+    ``estimate`` lights predicted balance, ``band`` or ``seat_target`` lights skill
+    overlap, and each is written in the unit its vocabulary carries — a whole percent
+    for a balance, hundredths of a Level for a target.
+
+    ``band`` and ``seat_target`` are both offered because the two are the *two
+    resolutions of one question* and skill overlap prefers the exact one. A suite
+    passing both is asserting which one wins.
     """
 
     sport = Sport.PADEL.value
     return PairingAnalysis(
-        forecast=Err(SidesNotFormed(sport=sport, seated=0, sold=4)),
+        forecast=(
+            Err(SidesNotFormed(sport=sport, seated=0, sold=4))
+            if estimate is None
+            else Ok(
+                BalanceForecast(
+                    estimate=estimate,
+                    margin=margin,
+                    certainty=certainty,
+                    # The bar is a *rendering* of the percentage, so it is derived
+                    # here the one way the forecast vocabulary derives it: the
+                    # underdog holds half the estimate. A hand-built analysis whose
+                    # bar disagreed with its own percentage would be a shape the
+                    # pairing engine cannot produce.
+                    favourite_share=100 - estimate // 2,
+                    underdog_share=estimate // 2,
+                    beyond_scale=False,
+                    # The two strengths and the gap are **placeholders and say so**.
+                    # No Match Fit term reads one, and inverting the estimate to get
+                    # the gap it came from would need the pairing engine's own
+                    # coefficient — which is the constant this file is fenced from.
+                    # So they are left flat rather than fabricated into a consistency
+                    # only that engine can compute.
+                    side_a=level(300),
+                    side_b=level(300),
+                    expected_gap=0.0,
+                    imputed_seats=imputed_seats,
+                )
+            )
+        ),
         splits=(),
-        seat_target=Err(SeatUnderDetermined(sport=sport, open_seats=4, sold=4)),
-        target_band=Err(NobodySeated(sport=sport, sold=4)),
+        seat_target=(
+            Err(SeatUnderDetermined(sport=sport, open_seats=4, sold=4))
+            if seat_target is None
+            else Ok(level(seat_target))
+        ),
+        target_band=(
+            Err(NobodySeated(sport=sport, sold=4))
+            if band is None
+            else Ok(
+                TargetBand(
+                    midpoint=level(band), half_width=ratio(half_width, HUNDREDTHS)
+                )
+            )
+        ),
         engine_version=version,
     )

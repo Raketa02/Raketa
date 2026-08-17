@@ -5,13 +5,15 @@ carries, as its docstring, the measurement that would falsify it (``docs/adr/001
 ``docs/adr/0022``). A constant with no such measurement is a preference wearing a
 number's clothes, and retuning it is then taste rather than science.
 
-**The table is incomplete, and it says so in arithmetic rather than in a comment.**
-Two of the ten terms ADR-0027 specifies are not built yet, so their weights are
-written out in ``PENDING_WEIGHTS`` with the issue that lands each one, and the
-constants refuse to be built unless the declared weights and the pending ones sum to
-**exactly 100**. So the spec's *"the weights sum to 100"* is enforced today, in the
-only form in which it can be true today, and completing the table is a diff that
-moves a line from one mapping to the other.
+**The table is complete, and the arithmetic that said so while it was not is still
+here.** ``PENDING_WEIGHTS`` named the terms ADR-0027 specified and this engine had
+not built, and the constants refuse to be built unless the declared weights and the
+pending ones sum to **exactly 100**. Completing the table was exactly the diff that
+promise described: two lines moved from one mapping to the other, and
+``PENDING_WEIGHTS`` is now empty. It stays — as an empty mapping and a guard that
+still runs — because the next lineage that owes a term should owe it in arithmetic
+rather than in a comment, and because *the weights sum to 100* is now enforced in
+the unqualified form the spec asks for.
 
 **Viability is a probability, and the three constants below it are the parts of
 one.** *Will this match be played* is not a taste, a preference or a fit — it is a
@@ -30,11 +32,14 @@ split 12 to time and 8 to travel, as two terms that move independently, and the 
 halves of a decision that were never separable are separately falsifiable.
 
 **Coverage is measured against the declared weights alone**, never against 100.
-Weight belonging to a term nobody has built is not evidence the platform is missing
-about a match — a match cannot be blamed for an unwritten term — and counting it
-would turn Coverage into a report on the engine's completeness. The consequence is
-that Coverage means something slightly different before and after each of the four
-tickets below, which is why every score carries the engine version that produced it.
+That distinction is now invisible, because the declared weights *are* 100 — and it
+is the reason the rule was worth stating while they were not. Weight belonging to a
+term nobody has built is not evidence the platform is missing about a match, and
+counting it would have turned Coverage into a report on the engine's completeness.
+The consequence is that Coverage means something slightly different in this version
+than in the three before it: a score of 100% coverage here is a claim about ten
+terms and was a claim about six. That is what every score carrying its engine
+version is for, and it is why no historical score needs restating.
 """
 
 from __future__ import annotations
@@ -51,21 +56,16 @@ from app.kernel import Minutes, Ratio, invariant, minutes, ratio
 #: can only be falsified against results it can be attributed to.
 ENGINE_VERSION = "matchfit-v1"
 
-#: The two terms the table still owes, with the weights ADR-0027 assigns them and
-#: the issue that lands each. They are here rather than in ``weights`` because a
-#: weight with no term behind it is a denominator with nothing in the numerator: it
-#: would lower every Coverage figure by the same amount and say nothing about any
-#: match.
+#: The terms the table still owes, with the weight each will take. **Empty**, for
+#: the first time: every term ADR-0027 specifies is now built and weighted below.
 #:
-#: * ``skill_overlap`` 24 and ``predicted_balance`` 14 — #86. Both read the pairing
-#:   analysis this engine already takes, which is why the analysis is an input from
-#:   the first commit rather than an argument added later.
-PENDING_WEIGHTS: Mapping[str, int] = MappingProxyType(
-    {
-        "skill_overlap": 24,
-        "predicted_balance": 14,
-    }
-)
+#: A weight belongs here rather than in ``weights`` while the term behind it does
+#: not exist, because it would otherwise be a denominator with nothing in the
+#: numerator — lowering every Coverage figure by the same amount and saying nothing
+#: about any match. The mapping and the guard that reads it survive the table being
+#: complete, so a later lineage adding an eleventh term declares the debt in
+#: arithmetic rather than in a comment.
+PENDING_WEIGHTS: Mapping[str, int] = MappingProxyType({})
 
 #: What the ten weights must sum to. Not a hypothesis — it is what makes a weight
 #: readable as a share of the score rather than as an arbitrary magnitude.
@@ -75,12 +75,14 @@ WEIGHT_TOTAL = 100
 @final
 @dataclass(frozen=True)
 class MatchFitConstants:
-    """The v1 hypotheses: eight weights, two decay spans, three mismatch values, the
+    """The v1 hypotheses: ten weights, three decay spans, three mismatch values, the
     three parts of a viability, and a threshold."""
 
     weights: Mapping[TermCode, int] = field(
         default_factory=lambda: MappingProxyType(
             {
+                TermCode.SKILL_OVERLAP: 24,
+                TermCode.PREDICTED_BALANCE: 14,
                 TermCode.TIME_FIT: 12,
                 TermCode.MATCH_VIABILITY: 12,
                 TermCode.GROUP_RELIABILITY: 11,
@@ -105,6 +107,50 @@ class MatchFitConstants:
     over-weighted, and one that flips the decision on its own is under-weighted. The
     two dark terms below cannot be measured this way until the contexts that feed
     them exist, and their weights are therefore the least defended numbers here.
+    """
+
+    overlap_span: Ratio = field(default_factory=lambda: ratio(110, 100))
+    """How far from the Level a match is aimed at overlap decays to nothing, **in
+    Level points**.
+
+    **A full Band, and that is a claim borrowed rather than invented.** The rating
+    context prints four plain-language bands and the two widest — Established
+    2,7–3,8 and Advanced 3,9–5,0 — each span 1,10. So a player a span away from
+    what a match is aimed at is one the platform would describe with a *different
+    word*, and the point at which the word changes is the point at which *this
+    match is for you* has nothing left to say. It is the same argument the pairing
+    engine's ``gap_clamp`` makes about a gap between two sides, pointed at a
+    distance from a target instead.
+
+    **The band widths are the rating context's and are deliberately copied rather
+    than imported**, exactly as the pairing engine copies the onboarding σ floor: a
+    Match Fit score must not move because a rating lineage retuned, and the
+    falsification programme rests on being able to attribute a number to one
+    lineage. An AST walk keeps this package from reaching for that one, and a
+    mirrored assertion in the **persona** suite — where a literal belongs, beside
+    the pairing engine's copy of the onboarding σ floor — keeps the copy honest, so
+    a re-cut of the bands turns this derivation red instead of silently
+    invalidating it.
+
+    **Symmetric, and no second constant for the direction.** Being a Level too
+    strong for a match and a Level too weak are both *not the match you belong in*,
+    and splitting them would be a second number with an ordering between the two
+    that nothing here could settle. The payload carries both Levels, so a client
+    can say *above* or *below* without the score encoding it.
+
+    **One span for both resolutions**, whether the target came from the exact Seat
+    target or from a Target band's midpoint. A tolerance that widened with the band
+    was the alternative and is the failure this spec exists to remove wearing a new
+    suit: it would score a match with three seats open at full marks for everybody
+    and the same match with one seat open honestly, so the emptier match — the one
+    the platform knows least about — would win.
+
+    **Falsified by:** the Level of the players who actually join, against the target
+    that was advertised when they were shown the card. Bucket joins by distance from
+    the target; the distance at which the join rate reaches the rate for matches
+    nobody is aimed at is where this span belongs. Sharper, once matches have been
+    played: the same buckets against the result margin, which says whether a player
+    a span away actually had a bad evening or merely a different card.
     """
 
     price_decay_span: Ratio = field(default_factory=lambda: ratio(50, 100))
@@ -320,9 +366,8 @@ class MatchFitConstants:
             ("the seat fill ceiling", self.seat_fill_ceiling),
         ):
             invariant(0 <= value < 1, f"{named} is not below full marks: {value}")
-        invariant(
-            self.price_decay_span > 0, f"a price span of {self.price_decay_span}"
-        )
+        invariant(self.overlap_span > 0, f"an overlap span of {self.overlap_span}")
+        invariant(self.price_decay_span > 0, f"a price span of {self.price_decay_span}")
         invariant(
             self.travel_decay_span > 0, f"a travel span of {self.travel_decay_span}"
         )
@@ -351,9 +396,7 @@ class MatchFitConstants:
                 f"the hold ladder falls: {rungs}",
             )
         for rung, chance in self.hold_confidence.items():
-            invariant(
-                0 <= chance <= 1, f"{rung.value} hold outside 0..1: {chance}"
-            )
+            invariant(0 <= chance <= 1, f"{rung.value} hold outside 0..1: {chance}")
 
 
 #: The v1 constants, frozen. One instance, so a caller cannot hold a retuned copy.

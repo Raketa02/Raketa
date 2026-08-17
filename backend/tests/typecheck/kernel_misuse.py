@@ -35,6 +35,7 @@ from zoneinfo import ZoneInfo
 
 from app.engines.forecast import (
     BalanceForecast,
+    Certainty,
     NoForecast,
     NoSeatTarget,
     NoTargetBand,
@@ -68,11 +69,13 @@ from app.engines.matchmaking import (
     uncertainty,
 )
 from app.engines.fit import (
+    BalanceFact,
     ExcludedTerm,
     MatchFitScore,
     PriceFact,
     ReliabilityFact,
     ScoredTerm,
+    SkillOverlapFact,
     Term,
     TermCode,
     TermKind,
@@ -1479,7 +1482,161 @@ def a_payload_on_its_own_is_not_an_observation() -> Term:
     )
 
 
+# --- Skill overlap and predicted balance: two Levels, and a percentage ------------
+#
+# Both payloads are the shapes most easily filled with the nearest number to hand: a
+# `Level` and an `Uncertainty` are two brands over the same `Ratio`, an estimate and a
+# margin are two `int`s in the same units, and a band's half width is a `Ratio` beside
+# two Levels. Every one of those confusions produces a plausible card and a wrong one.
+
+
+def an_overlap_reads_two_levels_and_never_an_uncertainty() -> ScoredTerm:
+    """*A Level is not an Uncertainty*, at the payload that carries two of the first.
+
+    Both are branded over `Ratio` and both are carried in hundredths, so σ 0,84 and a
+    Level of 0,84 are the same number at runtime. A target filled in from the wrong
+    half of a rating would advertise a match aimed at somebody's *uncertainty*.
+    """
+
+    return ScoredTerm(
+        code=TermCode.SKILL_OVERLAP,
+        kind=TermKind.EVIDENCE,
+        weight=24,
+        value=A_RATE,
+        fact=SkillOverlapFact(
+            level=A_LEVEL,
+            target=uncertainty(84),  # want-error: arg-type
+            band_half_width=None,
+        ),
+    )
+
+
+def a_bare_ratio_is_not_a_level() -> SkillOverlapFact:
+    """The target is a *point on the scale*, and the brand is what says so.
+
+    **The other direction typechecks, and that is measured rather than assumed.** A
+    ``Level`` is a ``NewType`` over ``Ratio``, so it *is* a ratio and one written into
+    ``band_half_width`` would be accepted — the same refinement-chain fact the money
+    section records about a ``SeatShare`` reaching a price ceiling. What separates a
+    point on the scale from a distance along it is the field name, and the direction
+    the brand does bind is this one: a bare width can never be advertised as a target.
+    """
+
+    width = ratio(50, 100)
+    return SkillOverlapFact(
+        level=A_LEVEL,
+        target=width,  # want-error: arg-type
+        band_half_width=width,
+    )
+
+
+def an_overlap_distance_is_derived_and_cannot_be_asserted() -> SkillOverlapFact:
+    """The distance is the term's own arithmetic, so it is a property and not a field.
+
+    A carried copy is a number an edit can leave disagreeing with the two Levels it
+    came from — which is a payload contradicting the score computed beside it.
+    """
+
+    return SkillOverlapFact(  # want-error: call-arg
+        level=A_LEVEL,
+        target=A_LEVEL,
+        band_half_width=None,
+        distance=A_RATE,
+    )
+
+
+def a_balance_estimate_is_a_whole_percent_and_not_a_ratio() -> BalanceFact:
+    """The forecast reports whole percents and the term divides by a hundred once.
+
+    A ``Ratio`` accepted here would be 0,84 where 84 belongs, and the payload a card
+    renders would then disagree with the value the score used by two orders of
+    magnitude — while both stayed inside their ranges.
+    """
+
+    return BalanceFact(
+        estimate=A_RATE,  # want-error: arg-type
+        margin=6,
+        certainty=Certainty.HIGH,
+        imputed_seats=0,
+    )
+
+
+def a_certainty_is_the_forecasts_grade_and_not_its_margin() -> BalanceFact:
+    """*Suppression is presentation*, and the grade is what carries it.
+
+    The margin is the quantity and the grade is the decision read off it. A payload
+    that took an ``int`` here would let a caller invent a fourth grade, and the client
+    reading it would have no branch for it.
+    """
+
+    return BalanceFact(
+        estimate=84,
+        margin=6,
+        certainty=6,  # want-error: arg-type
+        imputed_seats=0,
+    )
+
+
+class ASecondKindOfSkillOverlapFact(SkillOverlapFact):  # want-error: misc
+    """The payload union is closed, so a tenth term's payload is a member here."""
+
+
+class ASecondKindOfBalanceFact(BalanceFact):  # want-error: misc
+    """And the same for the forecast's."""
+
+
+def a_balance_payload_is_immutable(fact: BalanceFact) -> None:
+    fact.estimate = 100  # want-error: misc
+
+
 # --- And the legitimate Match Fit uses beside them --------------------------------
+
+
+def a_skill_overlap_term_reads_the_target_the_analysis_gave_it() -> Term:
+    """The legitimate shape, at both resolutions.
+
+    The band's half width travels with the blunt answer and is absent for the exact
+    one, which is how a client tells *"this seat is aimed at 3,00"* from *"this match
+    is aimed at 2,50–3,50"* — and it is why the field is the quantity rather than a
+    label naming which branch ran.
+    """
+
+    return evidence_term(
+        TermCode.SKILL_OVERLAP,
+        24,
+        Observed(
+            value=A_RATE,
+            fact=SkillOverlapFact(
+                level=A_LEVEL, target=level(310), band_half_width=ratio(50, 100)
+            ),
+        ),
+    )
+
+
+def a_predicted_balance_term_reads_the_estimate_whatever_the_grade() -> Term:
+    """A forecast too uncertain to print is still the best estimate available.
+
+    The grade travels so a card can decline to show the number; the term scores on the
+    estimate either way, and nothing in the type lets one be read without the other.
+    """
+
+    return evidence_term(
+        TermCode.PREDICTED_BALANCE,
+        14,
+        Observed(
+            value=A_RATE,
+            fact=BalanceFact(
+                estimate=78, margin=30, certainty=Certainty.LOW, imputed_seats=2
+            ),
+        ),
+    )
+
+
+def an_exact_seat_target_carries_no_band_width() -> SkillOverlapFact:
+    return SkillOverlapFact(level=A_LEVEL, target=level(300), band_half_width=None)
+
+
+
 
 
 def a_scored_term_carries_its_own_payload() -> ScoredTerm:
