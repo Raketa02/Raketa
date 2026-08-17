@@ -59,6 +59,12 @@ on a startup screen naming whichever is missing or malformed, rather than failin
 inside a feature. On a **physical device**, `EXPO_PUBLIC_API_URL` must be a LAN IP or
 tunnel — `localhost` on a phone means the phone.
 
+`EXPO_PUBLIC_ENV` is one of `local`, `development`, `staging`, `production` — the same
+four names the backend and the club app use. **Only `local` runs today**; the other three
+are validated but not provisioned. The environment decides the URL scheme, and that is
+validated too: `local` is reached over `http://`, the other three over `https://`. A
+laptop URL under a deployed name is a startup failure naming both variables.
+
 Every `EXPO_PUBLIC_*` value ships inside the bundle and is readable from a released
 app. Config only, never secrets.
 

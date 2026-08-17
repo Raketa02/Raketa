@@ -765,18 +765,30 @@ sessions.
 ```ts
 const EnvSchema = z.object({
   EXPO_PUBLIC_API_URL: z.string().url(),
-  EXPO_PUBLIC_ENV: z.enum(['development', 'staging', 'production']),
+  EXPO_PUBLIC_ENV: z.enum(['local', 'development', 'staging', 'production']),
 });
 ```
+
+The four names are the platform's, shared verbatim with the backend and the club app.
+`local` is a developer's own machine and is the only one that runs today; `development`
+and `staging` are validated but **not provisioned**, and there is no production
+deployment. Naming a laptop `development` — which is what this app did before the four
+names existed — makes a laptop and a shared remote deployment indistinguishable in a log
+line.
+
+**The URL scheme is part of the contract.** `local` is reached over `http://`;
+`development`, `staging` and `production` are deployed and must be `https://`. The rule
+is checked across the two variables together, so a laptop URL under a deployed name is a
+startup failure naming both — not a build that silently points at nothing.
 
 **Nothing in the bundle is secret.** `EXPO_PUBLIC_*` values and `app.json` `extra` are
 extractable from a shipped binary — they are _public config_. Private API keys, backend
 credentials, signing secrets, encryption keys and privileged service credentials belong on
 a server. A secret the mobile client appears to need is a design error.
 
-Keep `development` / `staging` / `production` genuinely separate: API hosts, analytics and
-monitoring environments, EAS build profiles, update channels, and app identifiers where
-useful. **A production build must never point at staging** — validate it in CI.
+Keep the four genuinely separate: API hosts, analytics and monitoring environments, EAS
+build profiles, update channels, and app identifiers where useful. **A production build
+must never point at staging** — validate it in CI.
 
 Build-time secret ≠ safe to embed. If client JS reads it at runtime, assume the user can
 extract it. CI and EAS secret management hold signing credentials; they are never

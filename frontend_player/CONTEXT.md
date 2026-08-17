@@ -44,6 +44,17 @@ schemas/ components/ hooks/ types.ts`). _Avoid_: module, screen-folder.
 - **Public config** — any value in `app.json` `extra` or an `EXPO_PUBLIC_*` variable.
   It ships inside the bundle and is readable from a released app. _Avoid_: calling these
   "env secrets" — the word invites someone to put a real one there.
+- **Environment** — which deployment of the platform this build talks to:
+  `local | development | staging | production`, spelled identically in all three apps.
+  `local` is a developer's own machine and is the only one that runs today. _Avoid_:
+  `dev`, `prod`, `test` — the first two are the spellings the backend used to accept and
+  now refuses, and a test run happens on a laptop or a CI runner, both of which are
+  `local`. _Avoid also_: calling a laptop `development`, which is the name that means a
+  shared remote deployment.
+- **Scheme rule** — the environment fixes the API URL's scheme: `http://` in `local`,
+  `https://` in the three deployed environments. Validated across both variables at
+  launch, so a laptop URL under a deployed name is a refusal naming both rather than a
+  build pointing at nothing.
 - **Prebuild output** — the generated `android/` and `ios/` directories from
   `expo prebuild`. Build artifacts, not source; not committed.
 

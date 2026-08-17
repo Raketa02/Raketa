@@ -13,7 +13,41 @@
 
 import { z } from 'zod';
 
-const EnvSchema = z.object({
+/**
+ * The four environments, named identically by all three apps.
+ *
+ * `local` is a developer's own machine and is the only one that runs today.
+ * `development` and `staging` are defined and validated but **not provisioned** — no
+ * domain is registered — and `production` does not exist yet either. Selecting one is a
+ * startup failure rather than a silent fallback to whatever happens to be reachable.
+ *
+ * `local` is the name that was missing, and its absence was the bug: a developer's own
+ * laptop was called `development`, which is the name that will mean a shared remote
+ * deployment. The two would then be indistinguishable in a log line.
+ */
+export const ENVIRONMENTS = ['local', 'development', 'staging', 'production'] as const;
+
+export type AppEnvironment = (typeof ENVIRONMENTS)[number];
+
+/** Spelled once, for the refusal message and for the environment template. */
+const ENVIRONMENT_NAMES = ENVIRONMENTS.join(', ');
+
+/**
+ * The scheme each environment's API URL must use — part of the contract, not a
+ * convention. `local` is a laptop, a LAN IP or a tunnel; the other three are deployed and
+ * are reached over TLS.
+ *
+ * Written out per environment rather than as `env === 'local' ? … : …` so that a fifth
+ * environment fails to compile until somebody decides how it is reached.
+ */
+const REQUIRED_SCHEME: Readonly<Record<AppEnvironment, 'http://' | 'https://'>> = {
+  local: 'http://',
+  development: 'https://',
+  staging: 'https://',
+  production: 'https://',
+};
+
+const EnvFields = z.object({
   /**
    * `.url()` alone is not enough: WHATWG parsing accepts `localhost:8000` as a URL whose
    * *protocol* is `localhost:`, and that is precisely what someone types. It would pass
@@ -25,14 +59,40 @@ const EnvSchema = z.object({
     .refine((value) => /^https?:\/\//i.test(value), {
       message: 'must start with http:// or https://',
     }),
-  EXPO_PUBLIC_ENV: z.enum(['development', 'staging', 'production']),
+  /**
+   * The message is replaced rather than left to zod, whose `invalid_enum_value` text ends
+   * `received '…'`. Config lands in logs and crash reports, and a variable's value is
+   * never something a refusal echoes back — the same rule the URL follows.
+   */
+  EXPO_PUBLIC_ENV: z.enum(ENVIRONMENTS, {
+    errorMap: () => ({ message: `must be one of ${ENVIRONMENT_NAMES}` }),
+  }),
 });
 
-export type AppEnvironment = z.infer<typeof EnvSchema>['EXPO_PUBLIC_ENV'];
+/**
+ * The scheme rule is a claim about the two variables *together*, so it is checked on the
+ * object rather than on either field. zod runs it only once both fields have parsed, so a
+ * malformed URL is reported as a malformed URL and never as a scheme mismatch.
+ *
+ * The issue is attached to `EXPO_PUBLIC_API_URL` — that is the value that has to change —
+ * and names `EXPO_PUBLIC_ENV` as the reason. An environment name is not a secret and is
+ * already on every log record; it is the *reason* here, never the offending value.
+ */
+const EnvSchema = EnvFields.superRefine((env, ctx) => {
+  const scheme = REQUIRED_SCHEME[env.EXPO_PUBLIC_ENV];
+
+  if (!env.EXPO_PUBLIC_API_URL.toLowerCase().startsWith(scheme)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['EXPO_PUBLIC_API_URL'],
+      message: `must start with ${scheme} when EXPO_PUBLIC_ENV is ${env.EXPO_PUBLIC_ENV}`,
+    });
+  }
+});
 
 export interface Env {
   /** FastAPI base URL. On a physical device this is a LAN IP or tunnel — a phone's
-   *  `localhost` is the phone. */
+   *  `localhost` is the phone. `http://` in `local`, `https://` everywhere else. */
   readonly apiUrl: string;
   readonly environment: AppEnvironment;
 }
@@ -47,7 +107,7 @@ export class ConfigError extends Error {
 }
 
 /** The raw shape a build hands us: every variable present-or-absent, always a string. */
-export type RawEnv = Readonly<Partial<Record<keyof z.infer<typeof EnvSchema>, string>>>;
+export type RawEnv = Readonly<Partial<Record<keyof z.infer<typeof EnvFields>, string>>>;
 
 /**
  * Pure: validate a raw environment. Throws `ConfigError` naming the offending variables

@@ -41,6 +41,12 @@ for `create-expo-app` — its default template contradicts ADR-0009 — and copy
 `src/shared/config/env.ts`. A missing or malformed value stops the app on a startup screen
 naming it — that is the guardrail working, not a bug.
 
+`EXPO_PUBLIC_ENV` is `local | development | staging | production`, the same four the
+backend and the club app use, and **only `local` runs today.** The environment fixes the
+API URL's scheme — `http://` for `local`, `https://` for the three deployed ones — so a
+laptop URL under a deployed name fails at launch naming both variables rather than
+shipping a build that points at nothing.
+
 **Dependency versions target Expo SDK 52.** Expo pins React Native and its own packages
 tightly, so after changing dependencies run `npx expo install --check` and trust Expo's
 resolution over the pins in `package.json`. That pin is why `eslint.config.mjs` reaches
