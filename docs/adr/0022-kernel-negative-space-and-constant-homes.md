@@ -168,6 +168,34 @@ today:
 
 - The documents' Wave 0–5 build order no longer applies as written; it assumed a kernel
   answering questions this record moves out of it.
+
+## Applications
+
+Cases settled by the two questions above, recorded here so the next borderline one has
+precedent rather than a fresh argument. **The record stays `Accepted`** — these are the
+decision being applied, not revised.
+
+**Half away from zero, 2026-08-17** ([#88](https://github.com/RobertConstantin02/rakieta/issues/88)).
+The rounding rule had reached three implementations in two packages: private in
+`kernel/money.py` over a `Fraction`, in `engines/pairing/core.py` over a `float`, and in
+`engines/matchfit/core.py` over a `Ratio`. Both questions pointed the same way — it answers
+nothing about the domain, and a second implementation of it is a defect — so it was made
+public in the kernel and both engines now delegate. **A relocation, behaviour-identical, no
+number touched**, which is the same move this record reserves for `Level` and `Sigma`.
+
+The argument against was real enough to be worth writing down: [ADR-0026](0026-two-matchmaking-engines-one-snapshot-contract.md)
+fences the two engines from each other so that neither's arithmetic moves when the other's
+version moves, and a shared rule is shared. It does not apply here. That fence is
+engine↔engine, and both engines already stand on the kernel, which is what a kernel is for.
+The thing it protects against is a *retune* propagating across lineages — and this rule
+carries no version and no tuning knob. It is arithmetic, not a hypothesis. The test that
+separates the two cases is the one this record already states: **would a second
+implementation be a defect?** For a rounding rule, yes; for a gap coefficient, no, which is
+exactly why those stay in their engine version's frozen constants.
+
+What each engine kept is its own *crossing* into the rule's domain — `pairing/core` converts
+a float, `matchfit/core` scales a ratio by a hundred and guards its range — because those
+are engine vocabulary and the rounding underneath is not.
 - Nothing here decides how the kernel's money or time types are *shaped* — see
   [ADR-0023](0023-money-integer-grosze-gross-whole-zloty.md) and
   [ADR-0024](0024-instant-as-aware-datetime-minute-coordinates.md).

@@ -94,14 +94,27 @@ there; they are not repeated here.
   four boundaries and nothing else. It is a `NewType`, i.e. a **refinement** — an
   `Instant` goes wherever a `datetime` is wanted and a bare `datetime` does not go where
   an `Instant` is required. Built only through `instant()`, which rejects a naive value.
-- **Minute coordinates** — `MinuteOfDay`, `DayOffset` and `Minutes`, branded integers,
-  and what engines compute in: that is what makes an availability check integer
+- **Minute coordinates** — `MinuteOfDay`, `DayOffset`, `Minutes` and `IsoWeekday`, branded
+  integers, and what engines compute in: that is what makes an availability check integer
   comparisons rather than datetime arithmetic. `slot_start()` is the **single**
   conversion from coordinates to an `Instant`, so every timezone question has one place
   to be asked; `zoneinfo` is imported in one module and a test walks `app/` to keep it
   that way. **A `DayOffset` is never persisted and never serialised** — it is
-  anchor-relative, so a stored one silently changes meaning. _Avoid_: slot index, day
-  number, offset (unqualified).
+  anchor-relative, so a stored one silently changes meaning. An `IsoWeekday` is Monday 1
+  through Sunday 7 and is branded against the mistake that reads Wednesday as 00:03.
+  _Avoid_: slot index, day number, offset (unqualified).
+- **Local clock face** — `local_minute_of_day()` and `local_iso_weekday()`, the two halves
+  of reading an `Instant` back in a zone, and `slot_start()`'s inverse. Both take the zone,
+  because a weekday read off an instant's own UTC date is wrong for the two hours either
+  side of a local midnight — 22:30 UTC on a Sunday is already Monday in Warsaw — and wrong
+  silently. A **declaration** is a claim about a clock face and an `Instant` is UTC, so
+  these are the only place the two meet.
+- **Zone** — the kernel's alias for `zoneinfo.ZoneInfo`, exported so that a value object can
+  *hold* a zone without importing the module the walk allows in one file. Holding one is
+  legal everywhere; **building one is not legal in an engine**, because resolving an IANA
+  name reads the tz database, which is configuration and I/O — a separate walk over
+  `app/engines/` keeps it that way. An engine is given its zone exactly as it is given
+  `now`. _Avoid_: tz, timezone string, IANA name.
 - **Clock** — the `Protocol` in the kernel returning an `Instant`, **passed, never
   imported**. No module reads ambient time (ADR-0015's first purity rule), which is what
   makes scrubbing forwards and backwards, determinism and every fixed-`now` test
@@ -109,6 +122,151 @@ there; they are not repeated here.
   command can disagree. Its wall-clock adapter is `SystemClock` in
   `app/infrastructure/clock.py`, and only a composition root imports it — depending on
   *what a clock is* must not drag a live one into scope.
+- **Matchmaking brands** — `Level` and `Uncertainty`, both `NewType`s over the kernel's
+  `Ratio` and both carried in **hundredths** (`level(320)` is 3,20), plus `PlayerRef`.
+  They live in `app/engines/matchmaking.py`, not the kernel: ADR-0022 records that
+  promoting the scale is a *relocation* to be done when the rating core can import it
+  back, and until then the kernel is untouched. The brands are what stop a Level standing
+  in for how sure the platform is about it — the two are the same `Fraction` at runtime, so
+  the claim is worth exactly what `tests/typecheck/kernel_misuse.py` checks. **The scale's
+  upper bound is deliberately not restated here**; 1,0–5,0 belongs to `racketskill/core`.
+  _Avoid_: rating (that is the pair), skill (that is the aggregate), mu, sigma.
+- **Snapshot** — a frozen value object a calling module assembles and an engine reads:
+  `MatchSnapshot`, `SeatSnapshot`, `PlayerSkill`, `UnratedPlayer`, `ClubSnapshot`,
+  `PlayerProfile`, and the two that ship dark, `PlayerScore` and `PlayHistory`
+  ([ADR-0026](../docs/adr/0026-matchmaking-engines-snapshot-input-contract.md)). Never an
+  aggregate — engines may not import a module, and the contexts that own this data do not
+  exist yet, so the snapshot *is* the specification for what Matches will have to own. A
+  sport's sold seat count is **read from the kernel registry**, never carried as a field.
+  _Avoid_: DTO, view model, projection (that is a read model over a stream).
+- **Occupant** — who is on a seat, as a closed union of `PlayerSkill | UnratedPlayer`. The
+  second is somebody the platform has never rated *at this sport* and it carries a
+  `PlayerRef` and nothing else, because *a rating is never only a number*: the Level, the
+  Uncertainty and the Confidence arrive together or not at all, so the absence is a second
+  type rather than three nullable fields with an all-or-nothing rule between them. The
+  `current_player` is an `Occupant` too — a player rated at tennis alone still gets padel
+  cards. _Avoid_: unrated user, guest, provisional rating.
+- **Contender** — one place on a resolved `Roster`: a **definite** Level and Uncertainty,
+  the `PlayerRef` on that seat if anybody is on it, and whether the Level was stood in for.
+  The forecast arithmetic runs on these and never on snapshot seats, and only a `Contender`
+  or a `PlayerSkill` satisfies `pairing/core.Rated` — which is the fence that stops a seat
+  reaching a team strength before somebody has said where its Level came from. It carries
+  **no Confidence**, so the engine provably cannot compute with one. The domain word for
+  the whole tuple is **Roster**; this is one place on it. _Avoid_: participant, member,
+  slot, seat (that is the snapshot's).
+- **Exactness boundary** — `pairing/core.as_float()`, the one place matchmaking's exact
+  ratios become floating point. Levels stay exact through subtraction and through a
+  `Ratio`-weighted team strength; exactness ends at the first square root, so *where does
+  this stop being exact* has one answer and a test walks the package to keep it one.
+- **Split** — one of the three arrangements four players admit, as a value object on
+  `PairingAnalysis`: the two sides as `PlayerRef`s plus the `BalanceForecast` computed from
+  them, all three returned ranked best-first. **Not the split bar** — that is
+  `favourite_share` / `underdog_share` on the forecast and says how lopsided a match is,
+  where a `Split` says who is with whom. Membership and team strength are built together, so
+  `split.side_a` and `split.forecast.side_a` are the same team by construction and no caller
+  can pair a forecast with an arrangement it was not computed from.
+  _Avoid_: pairing (that is the domain word for the whole question), team, line-up.
+- **Evening level** — the Level that, sat beside one named seated player, makes the two
+  sides exactly equal. `pairing/core.even_partner_level()` solves it by **inverting the team
+  strength**: a strength is piecewise-linear in the joiner's Level with one kink where the
+  joiner overtakes their partner, so the answer is one comparison and one division in exact
+  ratios. Three seated players give three of these, and the domain's **Seat target** is the
+  middle one — the code word and the domain word are deliberately different, because two of
+  the three are never advertised. _Avoid_: ideal level, optimal partner, best fit.
+- **Analysis decline** — each field of a `PairingAnalysis` answers or declines on its own,
+  as a `Result` with its own reason: `SidesNotFormed` (nobody to put on a side, or an arity
+  with no pairing rule), `SeatUnderDetermined` (not exactly one seat open), `NobodySeated`,
+  and `UnratedSeat` (a seated player the platform cannot place on the scale). So a forming
+  match answers what it can, and *"no forecast"* is never read as *"nothing to say"*. Two
+  reasons are deliberately shared between fields, because each is one fact answering more
+  than one question: a sport with no pairing rule has no sides **and** no seat to aim, and
+  an unrated roster has no band, nothing to impute from **and** no exact seat target. The
+  thresholds differ and the payload is what distinguishes them — the band and the forecast
+  need *one* rated player, the seat target needs *all* of them.
+- **Term kinds** — `matchfit/core.constraint_term()` and `matchfit/core.evidence_term()`, and
+  the kind of a term is which one built it rather than a label anybody set. The first returns
+  a `ScoredTerm` and has no path to an exclusion; the second takes an **optional** observation
+  and returns an `ExcludedTerm` when there is none. So *a constraint is never excluded* and
+  *absent evidence never scores full marks* are unwritable rather than reviewed for, which is
+  ADR-0027's whole repair expressed as two return types. An `ExcludedTerm` has no `value`
+  field for a friendly default to be written into and derives its kind, since only evidence is
+  ever excluded. _Avoid_: optional term, soft/hard signal, nullable value.
+- **Observation** (`matchfit/core.Observed`) — a term value and the payload it was read from,
+  **together or not at all**, the same rule the rating context states as *a rating is never
+  only a number*. One optional argument rather than two makes *a score with no payload* and
+  *a payload with no score* unwritable instead of two invariants somebody has to keep.
+- **Term payload** (`fit.TermFact`) — one `@final` class per term that can score, each with a
+  `kind` `Literal` equal to its `TermCode` value and a body of integers, exact ratios and
+  enums. The engine emits **no display text**: a formatted price, a rendered Level or a
+  sentence would show up as a new `str` field, and a test over the source says which three
+  string fields are legitimate. A `ScoredTerm` checks its payload's kind against its own code,
+  because the two are the same machine key spelled twice. _Avoid_: reason text, message,
+  description.
+- **Pending weights** (`matchfit/v1/constants.PENDING_WEIGHTS`) — the terms the table still
+  owes, written out with the weight each will take, and the constants refuse to be built
+  unless the declared and the pending weights sum to a hundred. **Empty as of v1's tenth
+  term**, so *the weights sum to 100* now holds unqualified — and completing the table was
+  exactly the diff the mapping promised, two lines moved from one mapping to the other. Both
+  the mapping and its guard survive it being empty, so an eleventh term declares its debt in
+  arithmetic rather than in a comment.
+- **Aim resolution** (`matchfit/v1/engine._aimed_at`) — how the skill overlap term decides
+  what a match is aimed at: the `PairingAnalysis`'s `seat_target` if it answered, the
+  `target_band`'s midpoint otherwise, and nothing at all when neither did. It **branches on
+  which field answered** and never counts open seats, because *when is a seat target
+  available* is the pairing engine's rule and this engine is fenced from holding a second copy
+  of it. The band's `half_width` travels on the payload for the second case and is absent for
+  the first, which is how a client tells *"this seat is aimed at 3,00"* from *"this match is
+  aimed at 2,50–3,50"* — the quantity carrying the distinction rather than a label naming the
+  branch, the same shape as `PriceFact.ceiling`. _Avoid_: target resolution strategy, aim
+  mode.
+- **Borrowed constant** — a figure another lineage owns, written out in this engine's
+  constants with the derivation in its docstring, an AST walk asserting the package does not
+  import that lineage, and a mirrored assertion in the **persona** suite so a retune there
+  turns this red. `matchfit/v1`'s `overlap_span` is 1,10 because that is the widest band the
+  rating context prints; the pairing engine's `imputation_uncertainty` copies the same
+  context's onboarding σ floor the same way. The alternative — importing it — would let a
+  rating retune move a balance percentage or a Match Fit score, and the falsification
+  programme rests on being able to attribute a number to exactly one lineage. _Avoid_:
+  shared constant, cross-engine constant.
+- **Court hold** (`matchmaking.CourtHold`) — how firmly a court is held for a match, as the
+  clock's own three-rung ladder: `NONE`, `SOFT`, `HARD`. Borrowed vocabulary with no owner
+  yet, like a seat's state and a ladder qualification — the documents that specify the hold
+  ladder are outside this repository, so the spelling is fixed here and whichever context
+  ends up owning courts will define it. **The order lives with the word**, as
+  `matchmaking.HOLD_LADDER`, never in a version's constants: *a firmer hold never makes a
+  match less likely to be played* is a claim about the domain, and a monotonicity test that
+  walked a version's own mapping would pass by walking whatever order a retune left.
+  _Avoid_: reservation, booking (that is the Bookings context's), lock, option.
+- **Match phase** (`matchmaking.MatchPhase`) — where a match is on the clock's ladder:
+  `FORMING`, `LOCKED`, `CANCELLED`. **Carried, asserted and never read by a term.** Whether
+  a match is joinable at all is a *hard filter* candidate generation applies before an
+  engine is called ([ADR-0027](../docs/adr/0027-fit-and-certainty-are-separate-ranking-is-policy.md)),
+  so `MatchSnapshot` refuses every phase but `FORMING`: a cancelled match ranked last is
+  still a cancelled match in a home list. The *run-up* to the join cutoff is the matter of
+  degree, and that is what the viability term reads. _Avoid_: status, state (that is a
+  seat's), stage.
+- **Viability's two halves** — `matchfit/v1`'s viability term is a **probability composed as
+  one**: the chance there will be people times the chance there will be a court. Both halves
+  have the same shape — what is already committed, plus what might still be got, discounted
+  by how likely getting it is — so the paid seats and the court hold are the committed parts,
+  and the run-up to the join cutoff and the club's `crowding` discount the rest. A weighted
+  blend of two marks was the alternative and is a worse fit for the same facts: only a
+  probability admits the measurement all three of its constants are falsified by, which is
+  the share of joined matches that were actually played, by viability decile. _Avoid_:
+  confidence (that is the rating context's), likelihood score, fill rate.
+- **Rounding, in one place** — `kernel.round_half_away_from_zero()` over a `Fraction` is the
+  rule, and it is the only implementation of it. Both engines delegate: `matchfit/core.
+  whole_percent()` scales a `Ratio` by a hundred and guards its range, `pairing/core.
+  round_half_away_from_zero()` converts a float to the exact rational — each owns its own
+  *crossing* into the rule's domain, which is engine vocabulary, and neither owns the rule.
+  It reached three implementations in two packages first, and was promoted by ADR-0022's two
+  questions ([#88](https://github.com/RobertConstantin02/rakieta/issues/88)): it answers
+  nothing about the domain, and a second implementation of it is a defect. **This does not
+  breach the engine fence.** `.importlinter` forbids the two matchmaking packages from
+  importing each other in both directions, and still does; what that fence protects against
+  is one engine's arithmetic moving when the *other engine's version* moves, and a kernel
+  rule carries no version and no tuning knob. _Avoid_: restating it in a third engine —
+  reach for `app.kernel`.
 - **Read-model repository** — the port a use case reads *projected current state* through,
   e.g. `UserRepository`. It answers queries against a table, not by replaying a stream, and
   has no version bookkeeping. **The trap:** `UserRepository` is this kind despite its name
