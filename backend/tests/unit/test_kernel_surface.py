@@ -61,6 +61,7 @@ THE_SURFACE = (
     "payable_from",
     "percent",
     "ratio",
+    "round_half_away_from_zero",
     "subtract_grosze",
     "zloty",
     "MINUTES_PER_DAY",

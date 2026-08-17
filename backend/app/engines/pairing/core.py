@@ -71,6 +71,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
+from fractions import Fraction
 from typing import Protocol, TypeVar, final
 
 from app.engines.matchmaking import (
@@ -81,6 +82,7 @@ from app.engines.matchmaking import (
     Uncertainty,
 )
 from app.kernel import Ratio, invariant, ratio
+from app.kernel import round_half_away_from_zero as _round_exact
 
 #: ``√(2/π)``, the folded-normal mean's coefficient at a mean of zero. Named
 #: because it is arithmetic rather than a hypothesis: retuning it would not
@@ -469,16 +471,26 @@ def absolute_gap_deviation(mean: float, spread: float) -> float:
 
 
 def round_half_away_from_zero(value: float) -> int:
-    """The one rounding rule in the engine, stated once.
+    """This engine's one crossing out of float arithmetic, and the kernel's rule.
 
     Python's ``round`` is half-to-even, which sends 78,5 to 78 and 79,5 to 80 —
     two neighbouring forecasts rounded in opposite directions, for no reason a
     player could be told. Away from zero is symmetric in sign and gives the same
     answer for the same magnitude whichever way the gap runs.
+
+    **The rule itself is no longer written here** (#88). It was, in a third copy
+    beside the kernel's and Match Fit's, and ADR-0022's two questions both said
+    kernel: it answers nothing about the domain, and a second implementation of
+    it is a defect. What this function owns is the *crossing* — turning a float
+    quantity into the exact rational the rule is defined over — which is this
+    engine's business, because working in floats is.
+
+    ``Fraction`` of a float is its exact binary value, not an approximation of
+    the decimal someone typed, so this returns exactly what the hand-written
+    float comparison returned. That comparison was correct over the magnitudes
+    this engine produces — a percentage and a margin, where ``x - int(x)`` loses
+    nothing — rather than wrong; what it was not is correct *by construction*,
+    and the rule it was a copy of now has one home.
     """
 
-    magnitude = abs(value)
-    whole = int(magnitude)
-    if magnitude - whole >= 0.5:
-        whole += 1
-    return -whole if value < 0 else whole
+    return _round_exact(Fraction(value))

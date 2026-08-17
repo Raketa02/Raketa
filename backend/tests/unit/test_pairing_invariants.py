@@ -9,6 +9,7 @@ retune that breaks one of these has broken the model, not the baseline.
 import ast
 import itertools
 from dataclasses import dataclass, replace
+from fractions import Fraction
 from pathlib import Path
 from typing import final
 
@@ -59,6 +60,7 @@ from app.engines.pairing.v1 import (
 )
 from app.engines.pairing.v1.constants import PairingConstants
 from app.kernel import SPORT_SPECS, Err, InvariantViolated, Ok, Sport, ratio
+from app.kernel import round_half_away_from_zero as kernel_round
 from tests.unit.matchmaking_snapshots import (
     NOW,
     doubles,
@@ -348,6 +350,24 @@ def test_the_percentage_is_rounded_half_away_from_zero_and_not_half_to_even():
     assert round_half_away_from_zero(83.5) == 84
     assert round_half_away_from_zero(-2.5) == -3
     assert round_half_away_from_zero(2.4999) == 2
+
+
+def test_the_float_crossing_agrees_with_the_kernels_rounding():
+    """The mirror this engine did not have (#88), now that it can.
+
+    This function used to be a hand-written third copy of the rule and nothing
+    compared it to anything — Match Fit's copy was mirrored against the kernel and
+    this one was not, so it was the one free to drift. It now delegates, and what
+    remains worth asserting is the *crossing*: that ``Fraction`` of a float is the
+    exact binary value, so a half lands on a half rather than near one.
+
+    Sign is included deliberately. A margin is never negative but an estimate is a
+    subtraction, so the negative branch is reachable and half-to-even is not the
+    only way to get it wrong.
+    """
+
+    for value in (82.5, 83.5, -2.5, -83.5, 2.4999, 0.0, 100.0, 35.5, -0.5):
+        assert round_half_away_from_zero(value) == kernel_round(Fraction(value))
 
 
 def test_a_certain_roster_reports_the_gap_anybody_can_do_by_hand(every_forecast):

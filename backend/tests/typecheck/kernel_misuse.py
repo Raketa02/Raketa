@@ -131,6 +131,7 @@ from app.kernel import (
     payable_from,
     percent,
     ratio,
+    round_half_away_from_zero,
     shifted,
     slot_start,
     zloty,
@@ -690,6 +691,19 @@ def an_unbranded_fraction_is_not_a_multiplier_either() -> CourtPrice:
 
 def a_percentage_is_not_a_ratio() -> Grosze:
     return apply_fraction(A_SEAT, 50)  # want-error: arg-type
+
+
+def the_one_rounding_rule_does_not_take_a_float() -> int:
+    """The rule is exact, and a float is where the exactness would have leaked out.
+
+    Public since #88, so both engines delegate to it rather than restating it — and
+    the whole point of the `Fraction` signature is that the caller does the crossing
+    deliberately, at a line that says so, rather than passing a float that happens to
+    round the same way until the one time it does not. `pairing/core` writes exactly
+    that crossing; this refuses the version of it that skips the thought.
+    """
+
+    return round_half_away_from_zero(82.5)  # want-error: arg-type
 
 
 class FourthKindOfCard(NoCard):  # want-error: misc

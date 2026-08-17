@@ -43,6 +43,7 @@ from app.kernel.money import (
     payable_from,
     percent,
     ratio,
+    round_half_away_from_zero,
     subtract_grosze,
     zloty,
 )
@@ -110,6 +111,7 @@ __all__ = [
     "payable_from",
     "percent",
     "ratio",
+    "round_half_away_from_zero",
     "subtract_grosze",
     "zloty",
     # time — instants, the integer coordinates, and the one conversion

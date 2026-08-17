@@ -40,12 +40,13 @@ one rounding rule — stated once, here, rather than at the two call sites that 
 a percentage.
 
 **The pairing engine is not imported, in either direction.** ``.importlinter`` forbids
-it both ways and the purity-gate suite proves the contract fires. The rounding rule
-below is the same rule ``pairing/core`` states for floats and ``kernel/money`` states
-for grosze, and it is deliberately restated rather than reached for: a fence that
-lets one engine's arithmetic move when another engine's version changes is not a
-fence. What keeps the copies honest is a mirrored assertion against the kernel's own
-public rounding, in the invariant suite, so a retune of one turns the other red.
+it both ways and the purity-gate suite proves the contract fires. What this engine
+*does* import is the kernel, as every engine does — including, since #88, the one
+rounding rule, which lived here in a third copy until ADR-0022's two questions were
+put to it. The fence forbids this engine's arithmetic from moving when the *pairing
+version* moves; a kernel rule carries no version and no tuning knob, so there is no
+retune for it to transmit, and the alternative was a fourth copy the next time an
+engine needed a percentage.
 """
 
 from __future__ import annotations
@@ -62,7 +63,7 @@ from app.engines.fit import (
     TermFact,
     TermKind,
 )
-from app.kernel import Ratio, invariant, ratio
+from app.kernel import Ratio, invariant, ratio, round_half_away_from_zero
 
 #: A term with nothing held against it. What an **undeclared** limit scores, and
 #: the only value a constraint term reaches when the player said nothing at all.
@@ -261,14 +262,16 @@ def whole_percent(value: Ratio) -> int:
 
     Half away from zero rather than Python's half-to-even, which sends 78,5 to 78
     and 79,5 to 80 — two neighbouring scores rounded in opposite directions for no
-    reason a player could be told. The same rule ``kernel/money`` applies to grosze
-    and ``pairing/core`` applies to a balance percentage; restated rather than
-    imported, because an engine whose arithmetic moves when another engine's version
-    moves is not a separate lineage. The invariant suite mirrors this against the
-    kernel's own public rounding, so a retune there turns this red.
+    reason a player could be told. **The rule itself is the kernel's** (#88), not
+    restated here: what this function owns is the scaling and the range it will
+    accept, which is engine vocabulary, and the rounding underneath is arithmetic
+    that has exactly one home.
+
+    The range guard is not decoration. Every ratio reaching here is a renormalised
+    weighted average of values that are themselves in 0..1, so a value outside that
+    range means the renormalisation is wrong, and the caller would otherwise print
+    a fit of 104 rather than raise.
     """
 
     invariant(0 <= value <= 1, f"a percentage of {value}")
-    scaled = Fraction(value) * 100
-    whole = int(scaled)
-    return whole + 1 if scaled - whole >= Fraction(1, 2) else whole
+    return round_half_away_from_zero(Fraction(value) * 100)

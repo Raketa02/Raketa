@@ -254,14 +254,19 @@ there; they are not repeated here.
   probability admits the measurement all three of its constants are falsified by, which is
   the share of joined matches that were actually played, by viability decile. _Avoid_:
   confidence (that is the rating context's), likelihood score, fill rate.
-- **Rounding, restated** — `matchfit/core.whole_percent()` rounds half away from zero, which
-  is the rule `kernel/money` applies to grosze and `pairing/core` applies to a balance
-  percentage. It is deliberately **not** imported from either: an engine whose arithmetic
-  moves when another engine's version moves is not a separate lineage, and `.importlinter`
-  forbids the two matchmaking packages from importing each other in both directions. What
-  keeps the copies honest is a mirrored assertion against the kernel's *public*
-  `apply_fraction` — a hundred grosze is a hundred percent — so a retune of one turns the
-  other red instead of drifting.
+- **Rounding, in one place** — `kernel.round_half_away_from_zero()` over a `Fraction` is the
+  rule, and it is the only implementation of it. Both engines delegate: `matchfit/core.
+  whole_percent()` scales a `Ratio` by a hundred and guards its range, `pairing/core.
+  round_half_away_from_zero()` converts a float to the exact rational — each owns its own
+  *crossing* into the rule's domain, which is engine vocabulary, and neither owns the rule.
+  It reached three implementations in two packages first, and was promoted by ADR-0022's two
+  questions ([#88](https://github.com/RobertConstantin02/rakieta/issues/88)): it answers
+  nothing about the domain, and a second implementation of it is a defect. **This does not
+  breach the engine fence.** `.importlinter` forbids the two matchmaking packages from
+  importing each other in both directions, and still does; what that fence protects against
+  is one engine's arithmetic moving when the *other engine's version* moves, and a kernel
+  rule carries no version and no tuning knob. _Avoid_: restating it in a third engine —
+  reach for `app.kernel`.
 - **Read-model repository** — the port a use case reads *projected current state* through,
   e.g. `UserRepository`. It answers queries against a table, not by replaying a stream, and
   has no version bookkeeping. **The trap:** `UserRepository` is this kind despite its name

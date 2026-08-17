@@ -89,8 +89,8 @@ def _not_a_bool(value: int, named: str) -> int:
     return value
 
 
-def _round_half_away_from_zero(value: Fraction) -> int:
-    """The one rounding rule in the module, stated once.
+def round_half_away_from_zero(value: Fraction) -> int:
+    """The one rounding rule in the codebase, stated once.
 
     **Half away from zero, on the magnitude.** Plain rounding is wrong here in
     two separate ways: Python's `round` is half-to-even, so 5,625 zł becomes
@@ -102,7 +102,24 @@ def _round_half_away_from_zero(value: Fraction) -> int:
     Rounding on the magnitude makes the result symmetric in sign, and means a
     player receives at most one grosz *more* than the exact half. Rounding in
     the player's favour is the defensible direction, and it is decided here
-    rather than re-argued by each reader.
+    rather than re-argued by each reader. The same reasoning reads identically
+    for a percentage: 78,5 and 79,5 rounded in opposite directions is two
+    neighbouring forecasts differing for no reason a player could be told.
+
+    **Public, and the kernel's, because it had grown three implementations**
+    (#88) — here over a `Fraction`, in `pairing/core` over a `float`, in
+    `matchfit/core` over a `Ratio`. ADR-0022 settles a borderline case with two
+    questions, and both point the same way: this answers no question about the
+    domain, and a second implementation of it *was* a defect waiting to happen.
+    The relocation is behaviour-identical and no number moved.
+
+    **It does not weaken the fence between the two engines** (ADR-0026). That
+    fence forbids one engine's arithmetic from moving when the *other engine's
+    version* moves, and both engines already stand on the kernel — which is what
+    a kernel is for. Nothing here carries a version or a tuning knob: this is
+    arithmetic, not a hypothesis, so there is no retune for it to transmit. A
+    change to this function would be a defect fix, and one that should reach
+    every caller at once is exactly the argument for a single home.
     """
 
     magnitude = abs(value)
@@ -186,7 +203,7 @@ def court_price(base: Grosze, *multipliers: Ratio) -> CourtPrice:
     for multiplier in multipliers:
         product *= multiplier
 
-    whole_zloty = _round_half_away_from_zero(product / GROSZE_PER_ZLOTY)
+    whole_zloty = round_half_away_from_zero(product / GROSZE_PER_ZLOTY)
     invariant(whole_zloty >= 0, f"court price below zero: {whole_zloty} zł")
     return CourtPrice(zloty(whole_zloty))
 
@@ -295,11 +312,11 @@ def apply_fraction(amount: Grosze, fraction: Ratio) -> Grosze:
     """A fraction of an amount, rounded half away from zero on the magnitude.
 
     This is the refund path: refunds are percentages of a share, and half of an
-    odd share is not an integer. See `_round_half_away_from_zero` for why the
+    odd share is not an integer. See `round_half_away_from_zero` for why the
     direction is the one it is.
     """
 
-    return grosze(_round_half_away_from_zero(amount * fraction))
+    return grosze(round_half_away_from_zero(amount * fraction))
 
 
 def add_grosze(left: Grosze, right: Grosze) -> Grosze:

@@ -1745,13 +1745,16 @@ def _parsed(path: Path) -> ast.Module:
 
 
 def test_the_one_rounding_rule_agrees_with_the_kernels(case):
-    """The rounding is **restated** rather than imported, so it is mirrored.
+    """The rounding **is** the kernel's now (#88), and this pins the scaling.
 
-    ``kernel/money`` rounds a fraction of an amount half away from zero and keeps
-    that rule private; this engine needs the same rule for a percentage and may not
-    reach into another lineage for it. So the two are asserted equal through the
-    kernel's *public* ``apply_fraction`` — a hundred grosze is a hundred percent —
-    and a retune of either turns this red instead of drifting.
+    It used to mirror a restated copy against the kernel's rule. The copy is gone —
+    ``whole_percent`` delegates — so what is left to get wrong is the part this
+    function still owns: multiplying by a hundred before rounding rather than after,
+    which is the difference between 79 and 0 and is not otherwise asserted anywhere.
+
+    Routed through the kernel's ``apply_fraction`` rather than its rounding directly,
+    because a hundred grosze *is* a hundred percent and that spelling keeps the test
+    honest even if the delegation is later inlined.
     """
 
     for value in (
