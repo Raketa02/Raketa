@@ -45,18 +45,36 @@ from app.engines.forecast import (
     UnratedSeat,
 )
 from app.engines.matchmaking import (
+    ClubSnapshot,
+    HourWindow,
+    LadderQualification,
     Level,
+    MatchTypePreference,
     MatchSnapshot,
     Occupant,
     PlayerRef,
+    PlayerProfile,
+    PlayerScore,
     PlayerSkill,
     SeatSnapshot,
     SeatState,
     Uncertainty,
     UnratedPlayer,
+    Weekday,
     level,
     uncertainty,
 )
+from app.engines.fit import (
+    ExcludedTerm,
+    MatchFitScore,
+    PriceFact,
+    ReliabilityFact,
+    ScoredTerm,
+    Term,
+    TermCode,
+    TermKind,
+)
+from app.engines.matchfit.core import Observed, constraint_term, evidence_term
 from app.engines.pairing.core import Contender, Roster, Side, as_float, side_of_one
 from app.kernel import (
     SPORT_SPECS,
@@ -632,6 +650,12 @@ A_REF = PlayerRef("ada")
 A_LEVEL: Level = level(320)
 A_SIGMA: Uncertainty = uncertainty(15)
 
+#: A term value: a rate in 0..1, exact, the way every term carries one.
+A_RATE: Ratio = percent(80)
+
+#: What one player owes for a seat of `DISCOUNTED_COURT` above, with no club card.
+A_PAYABLE: Payable = payable_from(A_SEAT, NoCard())
+
 
 def a_level_is_not_an_uncertainty() -> PlayerSkill:
     """Refused by `Uncertainty`'s brand and by nothing else: a `Level` *is* a
@@ -700,6 +724,11 @@ def a_snapshot_holds_a_tuple_of_seats_and_not_a_list() -> MatchSnapshot:
         current_player=PlayerSkill(
             player=A_REF, level=A_LEVEL, uncertainty=A_SIGMA, confidence=30
         ),
+        counted=True,
+        seat_share=A_SEAT,
+        payable=A_PAYABLE,
+        club=ClubSnapshot(travel_minutes=minutes(12)),
+        ladder=LadderQualification.NOT_IN_A_LADDER,
     )
 
 
@@ -966,6 +995,11 @@ def an_unrated_player_may_be_the_person_the_analysis_is_for() -> MatchSnapshot:
         sport=Sport.TENNIS,
         seats=(SeatSnapshot(), SeatSnapshot()),
         current_player=UnratedPlayer(player=A_REF),
+        counted=True,
+        seat_share=A_SEAT,
+        payable=A_PAYABLE,
+        club=ClubSnapshot(travel_minutes=minutes(12)),
+        ladder=LadderQualification.NOT_IN_A_LADDER,
     )
 
 
@@ -985,3 +1019,230 @@ def a_split_may_have_an_open_seat_on_a_side(forecast: BalanceForecast) -> Split:
     return Split(
         side_a=(A_REF, None), side_b=(PlayerRef("cy"), None), forecast=forecast
     )
+
+
+# --- Match Fit: term kinds, the two states of a term, and the score ---------------
+#
+# Almost everything Match Fit claims erases. `Term` is a plain union, `TermKind` is
+# carried on one member and derived on the other, `Observed` pairs a value with its
+# payload, and `TermFact` is six `@final` classes that are structurally identical
+# apart from a `Literal`. Widen any of them and every number the engine produces is
+# unchanged — which is precisely why these lines are here.
+
+
+def an_excluded_term_has_no_value_to_default(term: ExcludedTerm) -> Ratio:
+    """The mechanism of ADR-0027, as a type error.
+
+    There is no field on an excluded term for a friendly default to be written into,
+    so *"we do not know"* cannot be spelled as a score. Give `ExcludedTerm` a
+    `value` and the whole repair is undone with no test able to notice.
+    """
+
+    return term.value  # want-error: attr-defined
+
+
+def an_excluded_terms_kind_is_derived_and_cannot_be_asserted() -> ExcludedTerm:
+    """Only evidence is ever excluded, so a carried kind would be a field with one
+    legal value and one silent bug."""
+
+    return ExcludedTerm(  # want-error: call-arg
+        code=TermCode.FAMILIARITY, weight=3, kind=TermKind.CONSTRAINT
+    )
+
+
+def a_terms_payload_must_match_the_term_it_is_on() -> ScoredTerm:
+    """`TermFact` is a closed union of six payloads, and the six are told apart by
+    their `kind` literal alone. A payload that is not one of them — a bare price, a
+    sentence — has no way in."""
+
+    return ScoredTerm(
+        code=TermCode.PRICE,
+        kind=TermKind.CONSTRAINT,
+        weight=6,
+        value=A_RATE,
+        fact="38 zł, under your ceiling",  # want-error: arg-type
+    )
+
+
+def a_reason_is_a_term_and_never_an_excluded_one(
+    term: ExcludedTerm,
+) -> tuple[ScoredTerm, ...]:
+    """A term that did not run has no contribution, so it cannot be ranked and
+    cannot be a reason. The tuple's element type is what says so."""
+
+    return (term,)  # want-error: return-value
+
+
+def a_warning_is_one_term_and_not_a_list(score: MatchFitScore) -> ScoredTerm | None:
+    """*One* warning, on the weakest contributor. A list would be a second ranking
+    with no rule behind it."""
+
+    return [score.warning]  # want-error: return-value
+
+
+def a_constraint_term_cannot_be_built_without_its_payload() -> ScoredTerm:
+    """A value with no quantities behind it is a number a card cannot explain."""
+
+    return constraint_term(TermCode.PRICE, 6, A_RATE)  # want-error: call-arg
+
+
+def an_observation_is_a_value_and_its_payload_together() -> Observed:
+    """*A rating is never only a number*, applied to evidence: an observation either
+    happened — and can say what it read — or did not, and then there is no value."""
+
+    return Observed(value=A_RATE)  # want-error: call-arg
+
+
+def a_score_carries_both_engine_versions() -> MatchFitScore:
+    """A Match Fit score has two producers, and a constant belonging to either can
+    only be falsified against results it can be attributed to."""
+
+    return MatchFitScore(  # want-error: call-arg
+        fit=84,
+        coverage=63,
+        terms=(),
+        reasons=(),
+        warning=None,
+        engine_version="matchfit-v1",
+    )
+
+
+def a_coverage_figure_is_not_a_fit_figure(score: MatchFitScore) -> Ratio:
+    """Both are whole percents and neither is a ratio, so a caller cannot quietly
+    multiply one into the other — which is what *never blended* means one layer
+    down from the docstring that says it."""
+
+    return score.coverage  # want-error: return-value
+
+
+class ASecondKindOfScoredTerm(ScoredTerm):  # want-error: misc
+    """`Term` is closed by `@final` on both members. A third state of a term would
+    have to be added to the union, where every reader can see it arrive."""
+
+
+class ASecondKindOfPriceFact(PriceFact):  # want-error: misc
+    """A payload is closed too: a client renders per `kind`, so a subclass would be
+    a payload with a code nobody can handle."""
+
+
+def a_score_is_immutable(score: MatchFitScore) -> None:
+    score.fit = 100  # want-error: misc
+
+
+def a_declaration_is_immutable(declaration: PlayerProfile) -> None:
+    declaration.maximum_per_seat = grosze(2500)  # want-error: misc
+
+
+def a_ceiling_is_money_and_not_a_length_of_time() -> PlayerProfile:
+    """The money and time brands are both `NewType`s over `int`, so this is the pair
+    of cases that keeps them apart — here, and in the radius below, pointed the
+    other way.
+
+    A ceiling is typed as a plain `Grosze` and **not** as a `Payable`, which means a
+    payable would typecheck here: the money brands are a refinement chain, so a
+    `Payable` *is* an amount. That distinction is semantic and the field name is what
+    carries it — a payable is what one player owes for one specific seat after their
+    card, and a ceiling is a standing declaration that outlives every match it is
+    compared against.
+    """
+
+    return PlayerProfile(maximum_per_seat=minutes(2500))  # want-error: arg-type
+
+
+def a_radius_is_in_minutes_and_a_price_is_not() -> PlayerProfile:
+    """Two `NewType`s over `int`, and a card that showed *12 zł away* would be the
+    reason both exist."""
+
+    return PlayerProfile(travel_radius=grosze(20))  # want-error: arg-type
+
+
+def a_declared_day_is_a_weekday_and_not_a_day_offset() -> PlayerProfile:
+    """A `DayOffset` is anchor-relative and in-memory only; a declared day is
+    Tuesday. Storing one as the other is how a declaration silently changes meaning
+    when the anchor moves."""
+
+    return PlayerProfile(days=frozenset({DayOffset(2)}))  # want-error: arg-type
+
+
+def a_window_runs_over_minutes_of_the_day_and_not_over_durations() -> HourWindow:
+    """`MinuteOfDay` is a coordinate and `Minutes` a length. *Three hours* is not a
+    time of day, and a window built from two of them would be an interval on a
+    clock face nobody has."""
+
+    return HourWindow(start=minutes(1080), end=minutes(1260))  # want-error: arg-type
+
+
+def every_way_a_term_can_be_absent_must_be_handled(term: Term) -> Ratio:
+    """The union is two members. A caller handling only the scored one leaves the
+    exclusion — the state the whole design turns on — unhandled at the tail."""
+
+    match term:
+        case ScoredTerm():
+            return term.value
+        case _:
+            exhaustive(term)  # want-error: arg-type
+
+
+# --- And the legitimate Match Fit uses beside them --------------------------------
+
+
+def a_scored_term_carries_its_own_payload() -> ScoredTerm:
+    return constraint_term(
+        TermCode.PRICE,
+        6,
+        A_RATE,
+        PriceFact(payable=payable_from(A_SEAT, NoCard()), ceiling=grosze(2500)),
+    )
+
+
+def an_evidence_term_is_excluded_by_handing_over_nothing() -> Term:
+    """The one call that produces an exclusion, and the only shape it has."""
+
+    return evidence_term(TermCode.FAMILIARITY, 3, None)
+
+
+def an_evidence_term_scores_when_something_was_observed() -> Term:
+    return evidence_term(
+        TermCode.GROUP_RELIABILITY,
+        11,
+        Observed(
+            value=A_RATE,
+            fact=ReliabilityFact(least_reliable=A_RATE, observed=3, seated=3),
+        ),
+    )
+
+
+def a_seat_may_carry_a_reliability_record() -> SeatSnapshot:
+    """Ships dark: present in the type, absent in every snapshot today."""
+
+    return SeatSnapshot(
+        state=SeatState.PAID,
+        occupant=PlayerSkill(
+            player=A_REF, level=A_LEVEL, uncertainty=A_SIGMA, confidence=30
+        ),
+        score=PlayerScore(reliability=A_RATE),
+    )
+
+
+def a_player_may_have_declared_everything_or_nothing() -> tuple[PlayerProfile, ...]:
+    return (
+        PlayerProfile(),
+        PlayerProfile(
+            days=frozenset({Weekday.TUESDAY, Weekday.THURSDAY}),
+            hours=(HourWindow(start=minute_of_day(1080), end=minute_of_day(1260)),),
+            maximum_per_seat=grosze(2500),
+            travel_radius=minutes(20),
+            match_type=MatchTypePreference.SOCIAL,
+            appetite=2,
+            commitment_horizon=minutes(10_080),
+        ),
+    )
+
+
+def both_terms_of_a_score_are_read_through_the_same_union(
+    score: MatchFitScore,
+) -> tuple[int, int]:
+    """The audit trail: every weight in the table, whichever state its term is in."""
+
+    ran = sum(term.weight for term in score.terms if isinstance(term, ScoredTerm))
+    return ran, sum(term.weight for term in score.terms)

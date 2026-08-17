@@ -266,8 +266,19 @@ ahead of the first club, which is the whole reason they could be built now.
 > forecast rather than hidden and says how much of the answer was stood in for; the two
 > states that still decline are a court nobody has joined and one where nobody seated has a
 > rating at that sport, because both leave nothing for a stand-in to be drawn from.
-> Everything under **Match Fit** and **Match viability** are still words without code. The
-> terms are committed ahead of them because the decisions behind them are
+> **Match Fit** is half built. `app/engines/matchfit/` holds the framework whole — **Term**
+> in both its kinds, the renormalisation, **Coverage** as its own number, **Reason**s ranked
+> by contribution and one warning — with six of its ten terms: price, travel, match type and
+> ladder qualification, all reading the **Player profile**, plus group reliability and
+> familiarity, which are *present and absent* so that exclusion and Coverage are exercised by
+> every score rather than being untested machinery. The four still owed are named with their
+> weights in the engine's own constants: skill overlap and predicted balance, time fit, and
+> **Match viability** — which is the term that closes *absence never flatters* for ranking,
+> because it is the only evidence term that is always computable. Until it lands, an empty
+> court that satisfies every declaration still scores above a well-formed match on Fit alone,
+> at a third less Coverage, and a golden persona says so. **Match viability** and **At Stake**
+> are still words without code. The terms are committed ahead of them because the decisions
+> behind them are
 > ([ADR-0025](docs/adr/0025-binding-pairing-for-counted-matches.md),
 > [ADR-0026](docs/adr/0026-matchmaking-engines-snapshot-input-contract.md),
 > [ADR-0027](docs/adr/0027-fit-and-certainty-are-separate-ranking-is-policy.md)), and because
@@ -275,7 +286,10 @@ ahead of the first club, which is the whole reason they could be built now.
 > held, empty — is borrowed from the commitment rules and is read by the snapshot now, spelled
 > as they spell it; a match's **phase** and its **join cutoff** are still only words. All
 > three will be *defined* with Matches, not here — this section reads them, it does not own
-> them.
+> them. **Ladder qualification** is read the same way and by nobody yet: the snapshot carries
+> whether a match counts towards the current player's ladder, in three states because *not in
+> a ladder* and *in a ladder this does not count for* are different facts, and whichever
+> context ends up owning ladders will define the word.
 
 Two engines, neither of them a bounded context, both pure and versioned
 ([ADR-0015](docs/adr/0015-engines-as-a-pure-versioned-layer.md)). **Pairing** asks whether a
@@ -325,17 +339,27 @@ forty minutes away at twice your ceiling is a good match in the abstract and a b
   explaining.
 - **Term** — one weighted component of Match Fit, and every signal is one; there are no
   bonuses applied outside the weighting. Each term is one of exactly two kinds, and the kind
-  decides what its **absence** means:
+  decides what its **absence** means. It is a fact about how a term was *built* rather than a
+  label on it: a constraint has no path to an exclusion and an evidence term has no field an
+  optimistic default could be written into.
   - **Constraint term** — a limit the player declared (price, distance, hours, match type).
     An undeclared limit is **no limit**: the term scores full marks and nothing is missing.
+    A term at **nothing** is not the same as an absent one: the platform looked and the
+    answer was bad, so the weight is still in the denominator and the quantities are still
+    reported. Price and distance are conditions, never rejections.
   - **Evidence term** — something the platform observes (balance, reliability, skill overlap,
     familiarity). Absent evidence is **not** a good score; the term is dropped and the
     remaining weights carry the whole score between them.
 - **Coverage** — how much of Match Fit's weight was actually computed. A thin score and a
   strong score are different facts and are reported as two numbers, never blended into one.
+  Measured against the weight that **exists**: a term nobody has built yet is not evidence
+  the platform is missing about a match, so Coverage reports on the match and never on the
+  engine's completeness.
 - **Reason** — a term's contribution stated in the player's terms, ranked by how much the term
-  actually contributed rather than by how well it scored. A **warning** is the same thing for
-  a term scoring badly.
+  actually contributed — weight times value — rather than by how well it scored. A **warning**
+  is the *lowest* contributor, and only when its own value is bad. That asymmetry is
+  deliberate: a term can be last by contribution while being perfectly fine in itself, and
+  warning about that would teach players to ignore warnings.
 - **At Stake** — the rating movement a win or a loss would produce, quoted **before** joining.
   Deliberately not part of Match Fit: Fit ranks, At Stake warns, and only counted matches have
   any.
@@ -343,8 +367,12 @@ forty minutes away at twice your ceiling is a good match in the abstract and a b
   it would be. A match nobody has paid into, at a club with no court left to give, is a worse
   recommendation than an identical one that is three-quarters paid.
 - **Player profile** — what the player declared about how they want to play: days, hours,
-  price ceiling, distance, appetite, competitive or social. One declaration, read by every
-  engine that needs it, never restated as a constant inside one.
+  price ceiling, distance, appetite, competitive or social, and how far ahead they will
+  commit. One declaration, read by every engine that needs it, never restated as a constant
+  inside one. **Every part of it is optional and absence means undeclared** — which is what
+  a constraint term reads as *no limit*. Distance is declared in **minutes**, because that is
+  what a card shows and comparing a radius in kilometres against it would mean inventing a
+  speed. Appetite and the commitment horizon are the ranking policy's; no term reads them.
 
 **Invariants**
 - **Fit and certainty are separate variables.** The same rule the rating context holds for

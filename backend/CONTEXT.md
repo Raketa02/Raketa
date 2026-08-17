@@ -119,7 +119,8 @@ there; they are not repeated here.
   upper bound is deliberately not restated here**; 1,0–5,0 belongs to `racketskill/core`.
   _Avoid_: rating (that is the pair), skill (that is the aggregate), mu, sigma.
 - **Snapshot** — a frozen value object a calling module assembles and an engine reads:
-  `MatchSnapshot`, `SeatSnapshot`, `PlayerSkill`, `UnratedPlayer`
+  `MatchSnapshot`, `SeatSnapshot`, `PlayerSkill`, `UnratedPlayer`, `ClubSnapshot`,
+  `PlayerProfile`, and the two that ship dark, `PlayerScore` and `PlayHistory`
   ([ADR-0026](../docs/adr/0026-matchmaking-engines-snapshot-input-contract.md)). Never an
   aggregate — engines may not import a module, and the contexts that own this data do not
   exist yet, so the snapshot *is* the specification for what Matches will have to own. A
@@ -169,6 +170,38 @@ there; they are not repeated here.
   an unrated roster has no band, nothing to impute from **and** no exact seat target. The
   thresholds differ and the payload is what distinguishes them — the band and the forecast
   need *one* rated player, the seat target needs *all* of them.
+- **Term kinds** — `matchfit/core.constraint_term()` and `matchfit/core.evidence_term()`, and
+  the kind of a term is which one built it rather than a label anybody set. The first returns
+  a `ScoredTerm` and has no path to an exclusion; the second takes an **optional** observation
+  and returns an `ExcludedTerm` when there is none. So *a constraint is never excluded* and
+  *absent evidence never scores full marks* are unwritable rather than reviewed for, which is
+  ADR-0027's whole repair expressed as two return types. An `ExcludedTerm` has no `value`
+  field for a friendly default to be written into and derives its kind, since only evidence is
+  ever excluded. _Avoid_: optional term, soft/hard signal, nullable value.
+- **Observation** (`matchfit/core.Observed`) — a term value and the payload it was read from,
+  **together or not at all**, the same rule the rating context states as *a rating is never
+  only a number*. One optional argument rather than two makes *a score with no payload* and
+  *a payload with no score* unwritable instead of two invariants somebody has to keep.
+- **Term payload** (`fit.TermFact`) — one `@final` class per term that can score, each with a
+  `kind` `Literal` equal to its `TermCode` value and a body of integers, exact ratios and
+  enums. The engine emits **no display text**: a formatted price, a rendered Level or a
+  sentence would show up as a new `str` field, and a test over the source says which three
+  string fields are legitimate. A `ScoredTerm` checks its payload's kind against its own code,
+  because the two are the same machine key spelled twice. _Avoid_: reason text, message,
+  description.
+- **Pending weights** (`matchfit/v1/constants.PENDING_WEIGHTS`) — the four terms the table
+  still owes, written out with the weight each will take, and the constants refuse to be built
+  unless the declared and the pending weights sum to a hundred. So *the weights sum to 100* is
+  enforced in the only form in which it can be true today, and completing the table is a diff
+  that moves a line from one mapping to the other.
+- **Rounding, restated** — `matchfit/core.whole_percent()` rounds half away from zero, which
+  is the rule `kernel/money` applies to grosze and `pairing/core` applies to a balance
+  percentage. It is deliberately **not** imported from either: an engine whose arithmetic
+  moves when another engine's version moves is not a separate lineage, and `.importlinter`
+  forbids the two matchmaking packages from importing each other in both directions. What
+  keeps the copies honest is a mirrored assertion against the kernel's *public*
+  `apply_fraction` — a hundred grosze is a hundred percent — so a retune of one turns the
+  other red instead of drifting.
 - **Read-model repository** — the port a use case reads *projected current state* through,
   e.g. `UserRepository`. It answers queries against a table, not by replaying a stream, and
   has no version bookkeeping. **The trap:** `UserRepository` is this kind despite its name

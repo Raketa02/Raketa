@@ -7,23 +7,46 @@ cannot carry: which values a constructor refuses, and which shapes a snapshot
 refuses to be built in.
 """
 
-from dataclasses import FrozenInstanceError
+from dataclasses import FrozenInstanceError, replace
+from datetime import date
 from fractions import Fraction
 
 import pytest
 
 from app.engines.matchmaking import (
     HUNDREDTHS,
-    MatchSnapshot,
+    ClubSnapshot,
+    HourWindow,
+    LadderQualification,
+    PlayerProfile,
+    PlayerScore,
+    PlayHistory,
     PlayerRef,
     SeatSnapshot,
     SeatState,
     UnratedPlayer,
+    Weekday,
     level,
     uncertainty,
 )
-from app.kernel import SPORT_SPECS, InvariantViolated, Sport
-from tests.unit.matchmaking_snapshots import doubles, on_seat, singles, skill, unrated
+from app.kernel import (
+    SPORT_SPECS,
+    CardAllowance,
+    InvariantViolated,
+    Sport,
+    grosze,
+    minute_of_day,
+    minutes,
+    percent,
+)
+from tests.unit.matchmaking_snapshots import (
+    bare,
+    doubles,
+    on_seat,
+    singles,
+    skill,
+    unrated,
+)
 
 
 # --- The two brands -------------------------------------------------------------
@@ -95,9 +118,7 @@ def test_the_sold_seat_count_is_read_from_the_registry_not_carried():
     assert doubles(*[skill(str(i), 300, 20) for i in range(4)]).sold_seats == 4
     for sport, spec in SPORT_SPECS.items():
         seats = tuple(SeatSnapshot() for _ in range(spec.players))
-        snapshot = MatchSnapshot(
-            sport=sport, seats=seats, current_player=skill("a", 300, 20)
-        )
+        snapshot = bare(sport, seats, skill("a", 300, 20))
         assert snapshot.sold_seats == spec.players
 
 
@@ -106,13 +127,10 @@ def test_a_snapshot_with_the_wrong_number_of_seats_is_refused():
     is a broken precondition — an assembler bug — rather than a domain state."""
 
     with pytest.raises(InvariantViolated, match="PADEL is sold in 4 seats"):
-        MatchSnapshot(
-            sport=Sport.PADEL,
-            seats=(
-                on_seat(skill("a", 300, 20)),
-                on_seat(skill("b", 300, 20)),
-            ),
-            current_player=skill("a", 300, 20),
+        bare(
+            Sport.PADEL,
+            (on_seat(skill("a", 300, 20)), on_seat(skill("b", 300, 20))),
+            skill("a", 300, 20),
         )
 
 
@@ -204,3 +222,153 @@ def test_a_player_is_identified_by_a_ref_the_engine_only_compares():
 
     ada = skill("ada", 320, 15)
     assert ada.player == PlayerRef("ada")
+
+
+# --- What the player declared, and what a snapshot refuses to claim ---------------
+
+
+def test_a_profile_that_declared_nothing_is_the_launch_state():
+    """``PlayerProfile()`` is somebody who has said nothing, and every field is
+    ``None`` — which a constraint term reads as *no limit* and never as *no
+    measurement*."""
+
+    silent = PlayerProfile()
+    assert set(vars(silent).values()) == {None}
+    assert len(vars(silent)) == 7
+
+
+def test_an_empty_declaration_is_refused_rather_than_read_as_absence():
+    """No declared day is silence; an empty *set* of days would mean *no day works*,
+    which is not a state anybody can be in and would score every match at nothing.
+    The two are one keystroke apart in an assembler."""
+
+    with pytest.raises(InvariantViolated, match="empty day declaration"):
+        PlayerProfile(days=frozenset())
+    with pytest.raises(InvariantViolated, match="empty hour declaration"):
+        PlayerProfile(hours=())
+
+
+@pytest.mark.parametrize(
+    "field_name, named",
+    [
+        ("maximum_per_seat", "maximum per seat"),
+        ("travel_radius", "travel radius"),
+        ("appetite", "appetite"),
+        ("commitment_horizon", "commitment horizon"),
+    ],
+)
+def test_a_negative_declaration_is_refused(field_name, named):
+    """A ceiling of minus five złoty and a radius of minus ten minutes are
+    assembler bugs, and every quantity derived from one would be quietly wrong."""
+
+    with pytest.raises(InvariantViolated, match=f"a negative {named}"):
+        PlayerProfile(**{field_name: -1})
+
+
+def test_a_declared_window_runs_forwards_and_never_wraps_midnight():
+    """A player who plays from 22:00 until 01:00 declares two windows, one either
+    side. A wrapping window makes *is this start inside it* two comparisons joined
+    by an ``or``, and leaves every reader to remember which kind they hold."""
+
+    evening = HourWindow(start=minute_of_day(18 * 60), end=minute_of_day(21 * 60))
+    assert (evening.start, evening.end) == (1080, 1260)
+    with pytest.raises(InvariantViolated, match="an hour window from 1320 to 60"):
+        HourWindow(start=minute_of_day(22 * 60), end=minute_of_day(60))
+    with pytest.raises(InvariantViolated, match="an hour window from 600 to 600"):
+        HourWindow(start=minute_of_day(600), end=minute_of_day(600))
+
+
+def test_a_declared_day_is_numbered_the_way_a_date_numbers_it():
+    """ISO numbering, so a match's local start day maps onto a declaration without
+    a second convention being invented between the two. **Not a start of week**: a
+    set of days has no first element and nothing here says a week begins on Monday."""
+
+    assert [day.value for day in Weekday] == [1, 2, 3, 4, 5, 6, 7]
+    assert Weekday(date(2026, 8, 17).isoweekday()) is Weekday.MONDAY
+
+
+def test_the_three_ladder_states_are_three_facts_and_not_a_bool():
+    """*Not in a ladder* and *in a ladder this match does not count for* are
+    different facts, and a bool collapses them into the same low score."""
+
+    assert [state.value for state in LadderQualification] == [
+        "qualifies",
+        "outside",
+        "not_in_a_ladder",
+    ]
+
+
+def test_a_club_cannot_be_a_negative_distance_away():
+    with pytest.raises(InvariantViolated, match="a negative travel time"):
+        ClubSnapshot(travel_minutes=minutes(-1))
+
+
+# --- The money the snapshot carries, and the pair that cannot contradict itself ---
+
+
+def test_a_payable_above_its_share_is_refused():
+    """The money kernel's own claim — *a payable is never negative and never exceeds
+    its share* — holds by construction for anything built through ``payable_from``,
+    and ``NewType`` erases. This is the one place that pair enters the engines, so it
+    is the one place to check it."""
+
+    match = doubles(*[skill(str(i), 300, 20) for i in range(4)])
+    assert (match.seat_share, match.payable) == (2150, 2150)
+    with pytest.raises(InvariantViolated, match="a payable of 3000"):
+        replace(match, payable=grosze(3000))
+    with pytest.raises(InvariantViolated, match="a payable of -1"):
+        replace(match, payable=grosze(-1))
+
+
+def test_a_club_card_lowers_the_payable_and_leaves_the_share_alone():
+    """What a card is *for*, and the reason the price term reads the payable."""
+
+    carded = doubles(
+        *[skill(str(i), 300, 20) for i in range(4)],
+        card=CardAllowance(amount=grosze(500)),
+    )
+    assert (carded.seat_share, carded.payable) == (2150, 1650)
+
+
+# --- The two fields that ship dark ------------------------------------------------
+
+
+def test_a_reliability_record_is_a_rate_and_lives_on_the_seat():
+    """On the seat rather than beside the roster, so it cannot name somebody who is
+    not in the match and needs no reference of its own to disagree with."""
+
+    ada = skill("ada", 320, 15)
+    seat = SeatSnapshot(
+        state=SeatState.PAID, occupant=ada, score=PlayerScore(percent(90))
+    )
+    assert seat.score == PlayerScore(reliability=percent(90))
+    for outside in (Fraction(-1, 100), Fraction(101, 100)):
+        with pytest.raises(InvariantViolated, match="reliability outside 0..1"):
+            PlayerScore(reliability=outside)
+
+
+def test_an_empty_seat_has_nobody_to_have_a_record():
+    """Otherwise a term reading it would be scoring a person who is not there."""
+
+    with pytest.raises(InvariantViolated, match="empty seat carrying the record"):
+        SeatSnapshot(state=SeatState.EMPTY, score=PlayerScore(percent(90)))
+
+
+def test_the_dark_fields_are_absent_on_every_snapshot_the_helpers_build():
+    """*Present and absent from day one*: the fields exist, and nothing the platform
+    can assemble today fills them, so both evidence terms are excluded and Coverage
+    says so. Lighting them up later is a constant change and not a signature one."""
+
+    match = doubles(*[skill(str(i), 300, 20) for i in range(4)])
+    assert match.history is None
+    assert [seat.score for seat in match.seats] == [None] * 4
+
+
+def test_no_play_history_and_an_empty_one_are_different_facts():
+    """Absent is *the platform has never observed who plays with whom*; empty is
+    *you have played none of these people*, which is an observation."""
+
+    assert PlayHistory(played_recently=frozenset()) is not None
+    assert PlayHistory(played_recently=frozenset({PlayerRef("bo")})) != PlayHistory(
+        played_recently=frozenset()
+    )

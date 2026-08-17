@@ -431,12 +431,7 @@ def test_a_seat_with_nobody_on_it_is_stood_in_for_rather_than_declined():
     """
 
     ada = skill("ada", 300, 20)
-    open_seat = MatchSnapshot(
-        sport=Sport.TENNIS,
-        seats=(on_seat(ada), on_seat(None)),
-        current_player=ada,
-    )
-    result = ENGINE.analyse(snapshot=open_seat, now=NOW).forecast
+    result = ENGINE.analyse(snapshot=singles(ada, None), now=NOW).forecast
     assert isinstance(result, Ok)
     assert result.value.imputed_seats == 1
     assert result.value.side_a == result.value.side_b == ada.level
@@ -580,12 +575,7 @@ def test_an_arity_with_no_pairing_rule_has_no_seat_to_aim_either():
 
 def test_for_a_two_player_sport_the_ideal_opponent_is_the_seated_players_level():
     ada = skill("ada", 317, 20)
-    snapshot = MatchSnapshot(
-        sport=Sport.TENNIS,
-        seats=(on_seat(ada), on_seat(None)),
-        current_player=ada,
-    )
-    result = ENGINE.analyse(snapshot=snapshot, now=NOW).seat_target
+    result = ENGINE.analyse(snapshot=singles(ada, None), now=NOW).seat_target
     assert isinstance(result, Ok)
     assert result.value == ada.level
 
