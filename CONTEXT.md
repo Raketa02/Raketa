@@ -255,7 +255,13 @@ ahead of the first club, which is the whole reason they could be built now.
 
 ### Matchmaking (`backend/app/engines/pairing/`, `backend/app/engines/matchfit/`)
 
-> **Words first, code second.** Nothing here is implemented yet. The terms are committed
+> **Words first, code second.** The first slice of code is in: `app/engines/pairing/`
+> holds the **Balance forecast** for a *singles* match — the estimate, the margin,
+> Certainty, the split bar, Beyond scale — over the shared snapshot vocabulary in
+> `app/engines/matchmaking.py`. **Team strength** exists only in its singles case (a team
+> of one is that player); the three splits, **Seat target**, **Target band**, **Roster**,
+> **Imputed seat**, everything under **Match Fit**, and **Match viability** are still words
+> without code. The terms are committed ahead of them
 > because the decisions behind them are
 > ([ADR-0025](docs/adr/0025-binding-pairing-for-counted-matches.md),
 > [ADR-0026](docs/adr/0026-matchmaking-engines-snapshot-input-contract.md),

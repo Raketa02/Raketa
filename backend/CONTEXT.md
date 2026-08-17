@@ -109,6 +109,26 @@ there; they are not repeated here.
   command can disagree. Its wall-clock adapter is `SystemClock` in
   `app/infrastructure/clock.py`, and only a composition root imports it — depending on
   *what a clock is* must not drag a live one into scope.
+- **Matchmaking brands** — `Level` and `Uncertainty`, both `NewType`s over the kernel's
+  `Ratio` and both carried in **hundredths** (`level(320)` is 3,20), plus `PlayerRef`.
+  They live in `app/engines/matchmaking.py`, not the kernel: ADR-0022 records that
+  promoting the scale is a *relocation* to be done when the rating core can import it
+  back, and until then the kernel is untouched. The brands are what stop a Level standing
+  in for how sure the platform is about it — the two are the same `Fraction` at runtime, so
+  the claim is worth exactly what `tests/typecheck/kernel_misuse.py` checks. **The scale's
+  upper bound is deliberately not restated here**; 1,0–5,0 belongs to `racketskill/core`.
+  _Avoid_: rating (that is the pair), skill (that is the aggregate), mu, sigma.
+- **Snapshot** — a frozen value object a calling module assembles and an engine reads:
+  `MatchSnapshot`, `SeatSnapshot`, `PlayerSkill`
+  ([ADR-0026](../docs/adr/0026-matchmaking-engines-snapshot-input-contract.md)). Never an
+  aggregate — engines may not import a module, and the contexts that own this data do not
+  exist yet, so the snapshot *is* the specification for what Matches will have to own. A
+  sport's sold seat count is **read from the kernel registry**, never carried as a field.
+  _Avoid_: DTO, view model, projection (that is a read model over a stream).
+- **Exactness boundary** — `pairing/core.as_float()`, the one place matchmaking's exact
+  ratios become floating point. Levels stay exact through subtraction and through a
+  `Ratio`-weighted team strength; exactness ends at the first square root, so *where does
+  this stop being exact* has one answer and a test walks the package to keep it one.
 - **Read-model repository** — the port a use case reads *projected current state* through,
   e.g. `UserRepository`. It answers queries against a table, not by replaying a stream, and
   has no version bookkeeping. **The trap:** `UserRepository` is this kind despite its name

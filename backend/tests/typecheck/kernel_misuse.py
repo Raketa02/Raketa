@@ -1,4 +1,8 @@
-"""Deliberately-wrong uses of the kernel, each one a constraint being claimed.
+"""Deliberately-wrong uses of the pure layer, each one a constraint being claimed.
+
+Named for the kernel because that is where it started, and it now covers the
+engines' branded vocabulary too — one subject file, so one ``mypy`` run answers
+for the whole fence rather than one per package.
 
 This file is **not run and not collected**. It is read by ``mypy``, driven from
 ``tests/unit/test_kernel_typing.py``, which asserts that every line marked with
@@ -29,6 +33,18 @@ from fractions import Fraction
 from typing import Literal
 from zoneinfo import ZoneInfo
 
+from app.engines.forecast import BalanceForecast, NoForecast, SidesNotFormed
+from app.engines.matchmaking import (
+    Level,
+    MatchSnapshot,
+    PlayerRef,
+    PlayerSkill,
+    SeatSnapshot,
+    Uncertainty,
+    level,
+    uncertainty,
+)
+from app.engines.pairing.core import Side, as_float
 from app.kernel import (
     SPORT_SPECS,
     CardAllowance,
@@ -70,6 +86,7 @@ from app.kernel import (
     minutes,
     payable_from,
     percent,
+    ratio,
     shifted,
     slot_start,
     zloty,
@@ -588,3 +605,138 @@ def all_three_cards_named(share: SeatShare, card: ClubCard) -> Grosze:
             return card_offset(share, card)
         case _:
             exhaustive(card)
+
+
+# --- The matchmaking brands: a Level is not an Uncertainty ---------------------
+#
+# `Level` and `Uncertainty` are both `NewType`s over the kernel's `Ratio`, so at
+# runtime they are the same `Fraction` and every case below runs perfectly well.
+# Collapse either brand to `Ratio` and the arithmetic is bit-identical, no test
+# breaks, and the diff reads like a simplification — which is the entire reason
+# these lines exist. Each brand has at least one case refused by *it alone*.
+
+A_REF = PlayerRef("ada")
+A_LEVEL: Level = level(320)
+A_SIGMA: Uncertainty = uncertainty(15)
+
+
+def a_level_is_not_an_uncertainty() -> PlayerSkill:
+    """Refused by `Uncertainty`'s brand and by nothing else: a `Level` *is* a
+    `Ratio`, so collapsing `Uncertainty` to `Ratio` would let a player's skill
+    stand in for how sure the platform is about it."""
+
+    return PlayerSkill(
+        player=A_REF,
+        level=A_LEVEL,
+        uncertainty=A_LEVEL,  # want-error: arg-type
+        confidence=30,
+    )
+
+
+def an_uncertainty_is_not_a_level() -> PlayerSkill:
+    """The same swap the other way, refused by `Level`'s brand alone."""
+
+    return PlayerSkill(
+        player=A_REF,
+        level=A_SIGMA,  # want-error: arg-type
+        uncertainty=A_SIGMA,
+        confidence=30,
+    )
+
+
+def a_ratio_is_not_a_level() -> Side:
+    """A rate multiplier and a rating are both exact ratios and are not the same
+    kind of thing. The constructor is the only way in, and it is what carries the
+    hundredths convention and the floor."""
+
+    return Side(strength=ratio(320, 100), sigma=0.2)  # want-error: arg-type
+
+
+def a_bare_fraction_is_not_an_uncertainty() -> PlayerSkill:
+    return PlayerSkill(
+        player=A_REF,
+        level=A_LEVEL,
+        uncertainty=Fraction(15, 100),  # want-error: arg-type
+        confidence=30,
+    )
+
+
+def a_name_is_not_a_player_ref() -> PlayerSkill:
+    """Refused by `PlayerRef`'s brand alone — the only line that catches it."""
+
+    return PlayerSkill(
+        player="ada",  # want-error: arg-type
+        level=A_LEVEL,
+        uncertainty=A_SIGMA,
+        confidence=30,
+    )
+
+
+def a_level_is_written_in_hundredths_not_in_levels() -> Level:
+    """3,20 is `level(320)`. A float has nowhere to enter the vocabulary."""
+
+    return level(3.20)  # want-error: arg-type
+
+
+def a_snapshot_holds_a_tuple_of_seats_and_not_a_list() -> MatchSnapshot:
+    """Fixed-arity collections are tuples, everywhere (`docs/adr/0022`)."""
+
+    return MatchSnapshot(
+        sport=Sport.TENNIS,
+        seats=[SeatSnapshot(), SeatSnapshot()],  # want-error: arg-type
+        current_player=PlayerSkill(
+            player=A_REF, level=A_LEVEL, uncertainty=A_SIGMA, confidence=30
+        ),
+    )
+
+
+class ASecondWayToHaveNoForecast(SidesNotFormed):  # want-error: misc
+    """The reason union is closed by `@final`, the way the kernel's is.
+
+    A subclass would be a member of `NoForecast` that nothing declared, so a
+    `match` over the union would still typecheck while silently not handling it —
+    the failure `exhaustive` exists to make loud."""
+
+
+def a_snapshot_is_immutable(snapshot: MatchSnapshot) -> None:
+    snapshot.seats = ()  # want-error: misc
+
+
+def a_forecast_is_immutable(forecast: BalanceForecast) -> None:
+    forecast.estimate = 100  # want-error: misc
+
+
+def every_way_a_forecast_can_be_absent_must_be_handled(
+    forecast: Result[BalanceForecast, NoForecast],
+) -> int:
+    """A forecast that is missing is a `Result`, so the caller branches. Handling
+    only the answer leaves the reason unhandled at the tail."""
+
+    match forecast:
+        case Ok(value):
+            return value.estimate
+        case _:
+            exhaustive(forecast)  # want-error: arg-type
+
+
+# --- And the legitimate uses beside them, which have to stay legitimate --------
+
+
+def a_rating_is_a_level_and_an_uncertainty_together() -> PlayerSkill:
+    return PlayerSkill(
+        player=PlayerRef("bo"),
+        level=level(285),
+        uncertainty=uncertainty(84),
+        confidence=30,
+    )
+
+
+def a_level_goes_wherever_a_ratio_is_wanted() -> float:
+    """The refinement is one-directional, which is the whole of the brand: a
+    `Level` is a `Ratio`, and `as_float` takes any of them."""
+
+    return as_float(A_LEVEL) - as_float(A_SIGMA)
+
+
+def a_side_is_a_strength_and_the_uncertainty_of_it() -> Side:
+    return Side(strength=level(310), sigma=as_float(uncertainty(20)))
