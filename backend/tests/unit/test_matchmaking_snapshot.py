@@ -17,11 +17,13 @@ from app.engines.matchmaking import (
     MatchSnapshot,
     PlayerRef,
     SeatSnapshot,
+    SeatState,
+    UnratedPlayer,
     level,
     uncertainty,
 )
 from app.kernel import SPORT_SPECS, InvariantViolated, Sport
-from tests.unit.matchmaking_snapshots import doubles, singles, skill
+from tests.unit.matchmaking_snapshots import doubles, on_seat, singles, skill, unrated
 
 
 # --- The two brands -------------------------------------------------------------
@@ -107,8 +109,8 @@ def test_a_snapshot_with_the_wrong_number_of_seats_is_refused():
         MatchSnapshot(
             sport=Sport.PADEL,
             seats=(
-                SeatSnapshot(skill("a", 300, 20)),
-                SeatSnapshot(skill("b", 300, 20)),
+                on_seat(skill("a", 300, 20)),
+                on_seat(skill("b", 300, 20)),
             ),
             current_player=skill("a", 300, 20),
         )
@@ -119,6 +121,75 @@ def test_occupants_are_the_seated_players_in_seat_order():
     assert singles(ada, bo).occupants == (ada, bo)
     assert doubles(ada, None, bo, None).occupants == (ada, bo)
     assert doubles(None, None, None, None).occupants == ()
+
+
+# --- Seat states: borrowed vocabulary, and the one thing they cannot say ----------
+
+
+def test_the_three_seat_states_are_the_commitment_rules_own_three_words():
+    """Spelled verbatim, because renaming one here would fork the clock.
+
+    The shared glossary's Roster entry is written in these three words — *the paid
+    seats*, *a held seat*, *an empty seat* — so a fourth state or a different
+    spelling is a change to a document, not to this file.
+    """
+
+    assert [state.value for state in SeatState] == ["paid", "held", "empty"]
+
+
+def test_a_seated_occupant_and_an_empty_state_cannot_both_be_claimed():
+    """An assembler that has lost track of a join, refused loudly.
+
+    Both directions, because both are reachable and each one breaks a different
+    count: an occupant on an empty seat inflates the roster, and an empty seat
+    holding nobody-but-paid inflates the paid fraction viability will read.
+    """
+
+    ada = skill("ada", 320, 15)
+    with pytest.raises(InvariantViolated, match="empty seat carrying occupant"):
+        SeatSnapshot(state=SeatState.EMPTY, occupant=ada)
+    with pytest.raises(InvariantViolated, match="paid seat carrying occupant None"):
+        SeatSnapshot(state=SeatState.PAID)
+
+
+def test_paid_and_held_seats_are_both_occupants_and_only_one_is_paid():
+    """The distinction the balance forecast cannot see and viability lives on.
+
+    ``occupants`` reads both, because a held seat's player is in the match and
+    contributes their Level; ``paid_seats`` reads one, because whether they turn
+    up is a different question and the only one the count is for.
+    """
+
+    ada, bo = skill("ada", 320, 15), skill("bo", 280, 40)
+    match = singles(ada, bo, states=(SeatState.PAID, SeatState.HELD))
+    assert match.occupants == (ada, bo)
+    assert match.paid_seats == 1
+    assert singles(ada, bo).paid_seats == 2
+    assert doubles(ada, None, None, None).paid_seats == 1
+
+
+# --- An occupant the platform cannot place on the scale ---------------------------
+
+
+def test_an_unrated_player_carries_a_reference_and_nothing_else():
+    """*A rating is never only a number*, so a player with none carries neither a
+    Level nor an Uncertainty — rather than a Level-shaped hole beside a σ that
+    would then be a σ of nothing."""
+
+    nobody = unrated("cy")
+    assert nobody == UnratedPlayer(player=PlayerRef("cy"))
+    assert set(vars(nobody)) == {"player"}
+
+
+def test_an_unrated_player_is_an_occupant_and_may_be_the_viewer():
+    """A player rated at tennis and not at padel is still in the padel match they
+    joined, and still the person a padel card is being drawn for."""
+
+    ada = skill("ada", 320, 15)
+    match = doubles(ada, unrated("cy"), None, None, viewer=unrated("dee"))
+    assert match.occupants == (ada, unrated("cy"))
+    assert match.current_player == unrated("dee")
+    assert match.paid_seats == 2
 
 
 def test_a_snapshot_is_frozen():

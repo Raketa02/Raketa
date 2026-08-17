@@ -33,10 +33,12 @@ own, under the constants as written:
   only mechanism available.
 """
 
+import math
+
 import pytest
 
 from app.engines.forecast import Certainty
-from app.engines.pairing.core import as_float
+from app.engines.pairing.core import as_float, round_half_away_from_zero
 from app.engines.pairing.v1 import CONSTANTS, PairingEngineV1
 from app.engines.racketskill.core import CONFIDENCE_SIGMA_CEILING
 from app.engines.racketskill.v3.engine import SIGMA_FLOOR
@@ -416,3 +418,146 @@ def test_a_squash_match_seen_by_the_player_on_the_second_seat():
     seen_by_ada = forecast(ada, bo, sport=Sport.SQUASH, viewer=ada)
     assert (seen_by_ada.side_a, seen_by_ada.side_b) == (ada.level, bo.level)
     assert seen_by_ada.estimate == seen_by_bo.estimate
+
+
+# --- Roster states: what a forming match now says, and how much less certainly ---
+
+
+#: ADR-0025's canonical padel four, at a σ the platform reaches after a handful of
+#: results rather than at the onboarding floor. Written here so the family below is
+#: literally one roster emptying, and not four rosters that resemble each other.
+CANONICAL = (
+    skill("ada", 271, 20),
+    skill("bo", 280, 20),
+    skill("cy", 292, 20),
+    skill("dee", 264, 20),
+)
+
+
+@pytest.mark.parametrize(
+    ("open_seats", "estimate", "margin", "certainty", "prints"),
+    [
+        (0, 92, 6, Certainty.HIGH, True),
+        (1, 81, 14, Certainty.MODERATE, True),
+        (2, 72, 21, Certainty.LOW, False),
+        (3, 65, 27, Certainty.LOW, False),
+    ],
+)
+def test_the_canonical_roster_emptying_one_seat_at_a_time(
+    open_seats, estimate, margin, certainty, prints
+):
+    """The persona family this slice exists for, as one roster losing players.
+
+    The same four people, and the card gets steadily less sure of itself: 92% at a
+    margin of 6 with everybody there, then 81 ± 14, then 72 ± 21, then 65 ± 27.
+    **Certainty falls monotonically and the print decision falls with it** — high,
+    moderate, then suppressed twice — and no rule anywhere makes that happen. The
+    margin widens because the roster's Uncertainty widened, the grade reads the
+    margin, and ``fit_to_print`` reads the grade. There is no third mechanism and
+    nothing that looks at ``imputed_seats``.
+
+    The estimate falls too, and that is a different fact rather than the same one:
+    a stand-in sits at the band's midpoint, so the *expected* gap it opens is the
+    platform's ignorance about who will take the seat and nothing else. It is not
+    asserted as an invariant, because it is not one — see
+    ``test_the_margin_is_not_a_monotone_function_of_how_empty_a_roster_is``.
+    """
+
+    seated = CANONICAL[: 4 - open_seats]
+    result = ENGINE.analyse(
+        snapshot=doubles(*seated, *([None] * open_seats)), now=NOW
+    ).forecast
+    assert isinstance(result, Ok)
+    assert result.value.imputed_seats == open_seats
+    assert result.value.estimate == estimate
+    assert result.value.margin == margin
+    assert result.value.certainty is certainty
+    assert result.value.fit_to_print is prints
+
+
+def test_the_same_three_players_seen_by_somebody_who_could_still_take_the_seat():
+    """*What would this match be like if I joined* — the question a player
+    scrolling a list is actually asking, and a different one from the persona
+    above.
+
+    Ada, Bo and Cy with one seat left. Seen by Ada, who is already in it, the
+    fourth place is a stand-in and the card reads 81% at a margin of 14. Seen by a
+    2,80 who is not in it, the roster is **complete** — they are the fourth player
+    — and the same three people become a 92% match at a margin of 6, with nothing
+    imputed at all. Forecasting the match without the reader in it would have shown
+    them somebody else's match and hidden their own.
+    """
+
+    seated = CANONICAL[:3]
+    from_inside = ENGINE.analyse(snapshot=doubles(*seated, None), now=NOW)
+    joining = ENGINE.analyse(
+        snapshot=doubles(*seated, None, viewer=skill("me", 280, 20)), now=NOW
+    )
+    assert isinstance(from_inside.forecast, Ok)
+    assert isinstance(joining.forecast, Ok)
+
+    inside, mine = from_inside.forecast.value, joining.forecast.value
+    assert (inside.imputed_seats, inside.estimate) == (1, 81)
+    assert inside.certainty is Certainty.MODERATE
+    assert None in from_inside.splits[0].side_a + from_inside.splits[0].side_b
+
+    assert (mine.imputed_seats, mine.estimate) == (0, 92)
+    assert mine.certainty is Certainty.HIGH
+    assert "me" in joining.splits[0].side_a
+
+
+def test_a_tennis_match_with_a_seat_open_is_not_a_number_anybody_should_print():
+    """Half the roster missing is half the forecast missing, and singles is where
+    that is starkest.
+
+    A 3,00 holding a court, looking at their own match: the opponent's place is
+    stood in for at the only Level the match says anything about — the 3,00's own —
+    so the two paper strengths are identical and the entire reported gap is the
+    platform not knowing who turns up. 60% at a margin of 30, graded LOW and not
+    printed. The estimate is still returned, because it still ranks.
+    """
+
+    result = ENGINE.analyse(
+        snapshot=singles(skill("ada", 300, 20), None), now=NOW
+    ).forecast
+    assert isinstance(result, Ok)
+    assert result.value.imputed_seats == 1
+    assert result.value.side_a == result.value.side_b
+    assert result.value.estimate == 60
+    assert result.value.margin == 30
+    assert result.value.certainty is Certainty.LOW
+    assert result.value.fit_to_print is False
+
+
+def test_the_imputation_uncertainty_is_still_the_two_figures_it_was_solved_from():
+    """The mirrored half of ``imputation_uncertainty``'s derivation.
+
+    It is not a chosen number: it is *where in the band the joiner lands* — the
+    band's own half width, read as a one-σ interval — combined in quadrature with
+    *whoever they turn out to be is themselves uncertain*, floored at the widest σ
+    the rating context publishes for a real player. ``√(0,50² + 0,84²) = 0,9775``,
+    which is 0,98 under the engine's own rounding.
+
+    Both inputs are asserted, and one of them belongs to another engine this one
+    must not import — so this is the same mechanism, and the same argument, as
+    ``test_the_onboarding_sigma_here_is_still_the_one_the_rating_engine_enforces``
+    above. A retune of the band's width or of the rating engine's σ floor turns
+    this red rather than quietly invalidating a docstring.
+
+    The floor is what makes the derivation more than arithmetic. The band's half
+    width alone is 0,50, which is *narrower* than a freshly-onboarded player's
+    0,84 — so a platform that used it would be claiming to know somebody it has
+    never met better than somebody it has, and it would claim that hardest about
+    the emptiest matches. That is absence flattering, which is the failure the
+    whole spec exists to remove.
+    """
+
+    half_width = as_float(CONSTANTS.target_band_half_width)
+    assert half_width == pytest.approx(0.50)
+    assert ONBOARDING_SIGMA / 100 == pytest.approx(SIGMA_FLOOR)
+
+    solved = math.sqrt(half_width**2 + SIGMA_FLOOR**2)
+    assert solved == pytest.approx(0.9775, abs=5e-5)
+    assert round_half_away_from_zero(solved * 100) == 98
+    assert as_float(CONSTANTS.imputation_uncertainty) == pytest.approx(0.98)
+    assert as_float(CONSTANTS.imputation_uncertainty) > SIGMA_FLOOR > half_width

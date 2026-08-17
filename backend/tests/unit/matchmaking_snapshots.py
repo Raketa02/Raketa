@@ -15,9 +15,12 @@ from datetime import datetime, timezone
 
 from app.engines.matchmaking import (
     MatchSnapshot,
+    Occupant,
     PlayerRef,
     PlayerSkill,
     SeatSnapshot,
+    SeatState,
+    UnratedPlayer,
     level,
     uncertainty,
 )
@@ -47,12 +50,34 @@ def skill(name: str, level_hundredths: int, sigma_hundredths: int) -> PlayerSkil
     )
 
 
+def unrated(name: str) -> UnratedPlayer:
+    """Somebody on a seat the platform has never rated at this sport."""
+
+    return UnratedPlayer(player=PlayerRef(name))
+
+
+def on_seat(
+    occupant: Occupant | None, *, state: SeatState | None = None
+) -> SeatSnapshot:
+    """One seat. ``None`` is an empty seat; anybody else has **paid** by default.
+
+    Paid rather than held, because paid is the ordinary state and a default that
+    was not would make every test that does not care about commitment quietly
+    about it. The held case is passed explicitly by the tests that are.
+    """
+
+    if occupant is None:
+        return SeatSnapshot(state=SeatState.EMPTY)
+    return SeatSnapshot(state=state or SeatState.PAID, occupant=occupant)
+
+
 def singles(
-    first: PlayerSkill,
-    second: PlayerSkill | None,
+    first: Occupant,
+    second: Occupant | None,
     *,
     sport: Sport = Sport.TENNIS,
-    viewer: PlayerSkill | None = None,
+    viewer: Occupant | None = None,
+    states: tuple[SeatState | None, ...] = (None, None),
 ) -> MatchSnapshot:
     """A two-seat match. ``None`` is an empty seat, as in ``doubles``.
 
@@ -62,15 +87,19 @@ def singles(
 
     return MatchSnapshot(
         sport=sport,
-        seats=(SeatSnapshot(first), SeatSnapshot(second)),
+        seats=(
+            on_seat(first, state=states[0]),
+            on_seat(second, state=states[1]),
+        ),
         current_player=viewer if viewer is not None else first,
     )
 
 
 def doubles(
-    *occupants: PlayerSkill | None,
+    *occupants: Occupant | None,
     sport: Sport = Sport.PADEL,
-    viewer: PlayerSkill | None = None,
+    viewer: Occupant | None = None,
+    states: tuple[SeatState | None, ...] = (None, None, None, None),
 ) -> MatchSnapshot:
     """A four-seat match. ``None`` is an empty seat.
 
@@ -78,12 +107,20 @@ def doubles(
     ordinary case ``singles`` defaults to: a player looking at a match they are
     in. Pass one to look at the same four people through somebody else's eyes,
     which is what moves the pairing's orientation and nothing else.
+
+    **The default viewer is somebody already in the match**, which matters more
+    now than it did: a viewer who is *not* seated joins the roster, so a helper
+    that defaulted to a stranger would silently fill one of the empty seats every
+    test thought it had left open.
     """
 
-    seated = [player for player in occupants if player is not None]
-    fallback = seated[0] if seated else skill("nobody", 300, 84)
+    filled = [player for player in occupants if player is not None]
+    fallback = filled[0] if filled else skill("nobody", 300, 84)
     return MatchSnapshot(
         sport=sport,
-        seats=tuple(SeatSnapshot(player) for player in occupants),
+        seats=tuple(
+            on_seat(player, state=state)
+            for player, state in zip(occupants, states, strict=True)
+        ),
         current_player=viewer if viewer is not None else fallback,
     )

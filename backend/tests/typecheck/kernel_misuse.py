@@ -42,18 +42,22 @@ from app.engines.forecast import (
     SidesNotFormed,
     Split,
     TargetBand,
+    UnratedSeat,
 )
 from app.engines.matchmaking import (
     Level,
     MatchSnapshot,
+    Occupant,
     PlayerRef,
     PlayerSkill,
     SeatSnapshot,
+    SeatState,
     Uncertainty,
+    UnratedPlayer,
     level,
     uncertainty,
 )
-from app.engines.pairing.core import Side, as_float
+from app.engines.pairing.core import Contender, Roster, Side, as_float, side_of_one
 from app.kernel import (
     SPORT_SPECS,
     CardAllowance,
@@ -804,14 +808,16 @@ def a_band_is_not_widened_by_a_bare_number() -> TargetBand:
 def every_way_a_seat_target_can_be_absent_must_be_handled(
     seat_target: Result[Level, NoSeatTarget],
 ) -> Level:
-    """Two reasons, not one: the seat is under-determined, or there are no sides
-    to even up at all. A caller handling only the first leaves the second
-    unhandled at the tail."""
+    """Three reasons, not one: the seat is under-determined, there are no sides to
+    even up at all, or a seated player has no rating at this sport. A caller
+    handling two of them leaves the third unhandled at the tail."""
 
     match seat_target:
         case Ok(value):
             return value
         case Err(SidesNotFormed()):
+            return level(300)
+        case Err(UnratedSeat()):
             return level(300)
         case _:
             exhaustive(seat_target)  # want-error: arg-type
@@ -860,4 +866,122 @@ def a_split_is_who_is_with_whom_and_what_that_plays_like(
         side_a=(A_REF, PlayerRef("bo")),
         side_b=(PlayerRef("cy"), PlayerRef("dee")),
         forecast=forecast,
+    )
+
+
+# --- Roster states, seat imputation, and the two brands that erase into nothing ---
+#
+# `SeatState` is an enum and `UnratedPlayer` a `@final` frozen class, so both are
+# real at runtime. What erases is everything *around* them: `Occupant` is a plain
+# union, `Contender.player` is optional, and `NoTargetBand` gained a second member.
+# Widen any of those and every test still passes.
+
+
+def an_unrated_occupant_is_not_a_rating(
+    forecast: BalanceForecast,
+) -> Side:
+    """A player with no rating at this sport carries no Level, so they cannot go
+    where a Level and an Uncertainty are wanted. This is the case `Rated` exists
+    to refuse — and the one that would let a caller skip imputation entirely,
+    forecasting a match on a player the platform cannot place on the scale."""
+
+    return side_of_one(UnratedPlayer(player=A_REF))  # want-error: arg-type
+
+
+def a_seat_state_is_not_a_seat(occupant: Occupant) -> SeatSnapshot:
+    """The state and the occupant are two fields, not one value doing both jobs."""
+
+    return SeatSnapshot(state=occupant, occupant=SeatState.PAID)  # want-error: arg-type
+
+
+class ASecondKindOfUnratedPlayer(UnratedPlayer):  # want-error: misc
+    """`Occupant` is closed by `@final` on both members, so a third kind of
+    occupant fails the build at every `match` that does not handle it rather than
+    silently falling through one."""
+
+
+class ASecondKindOfContender(Contender):  # want-error: misc
+    """A roster place is resolved or it is not; there is no third state, and a
+    subclass would be one nothing declared."""
+
+
+def a_contender_is_immutable(contender: Contender) -> None:
+    contender.level = level(300)  # want-error: misc
+
+
+def a_roster_is_a_tuple_of_contenders_and_not_of_snapshot_seats(
+    seats: tuple[SeatSnapshot, ...],
+) -> Roster:
+    """The fence in front of imputation, as a type error. A snapshot seat may have
+    nobody on it and may hold somebody unrated, so a roster built straight out of
+    seats is a roster with places that have no Level — which is exactly what the
+    resolution step exists to have already dealt with."""
+
+    return Roster(contenders=seats)  # want-error: arg-type
+
+
+def an_imputed_count_is_derived_and_cannot_be_asserted(
+    contenders: tuple[Contender, ...],
+) -> Roster:
+    """`imputed_seats` is a property. Carrying it beside the tuple would be a
+    second number a retune could leave disagreeing with the first."""
+
+    return Roster(contenders=contenders, imputed_seats=2)  # want-error: call-arg
+
+
+def every_way_a_band_can_be_absent_must_be_handled(
+    target_band: Result[TargetBand, NoTargetBand],
+) -> Level:
+    """The band's union shipped with one member and has two: nobody is on a seat,
+    or nobody on one has a Level here. They are different facts with different
+    payloads, and a caller handling one leaves the other unhandled at the tail."""
+
+    match target_band:
+        case Ok(value):
+            return value.midpoint
+        case Err(UnratedSeat()):
+            return level(300)
+        case _:
+            exhaustive(target_band)  # want-error: arg-type
+
+
+# --- And the legitimate roster uses beside them ----------------------------------
+
+
+def a_seat_may_be_paid_or_held_or_empty() -> tuple[SeatSnapshot, ...]:
+    return (
+        SeatSnapshot(
+            state=SeatState.PAID,
+            occupant=a_rating_is_a_level_and_an_uncertainty_together(),
+        ),
+        SeatSnapshot(state=SeatState.HELD, occupant=UnratedPlayer(player=A_REF)),
+        SeatSnapshot(),
+    )
+
+
+def an_unrated_player_may_be_the_person_the_analysis_is_for() -> MatchSnapshot:
+    """A player rated at tennis and not at padel still gets padel cards."""
+
+    return MatchSnapshot(
+        sport=Sport.TENNIS,
+        seats=(SeatSnapshot(), SeatSnapshot()),
+        current_player=UnratedPlayer(player=A_REF),
+    )
+
+
+def a_resolved_roster_place_goes_where_a_rating_goes() -> Side:
+    """The other half of the fence: a `Contender` satisfies `Rated`, so the
+    arithmetic takes one — and takes a `PlayerSkill` too, since both carry a
+    definite Level and a definite Uncertainty and that is all it reads."""
+
+    return side_of_one(
+        Contender(player=A_REF, level=A_LEVEL, uncertainty=A_SIGMA, imputed=True)
+    )
+
+
+def a_split_may_have_an_open_seat_on_a_side(forecast: BalanceForecast) -> Split:
+    """`None` is an imputed seat: a position on that team nobody holds yet."""
+
+    return Split(
+        side_a=(A_REF, None), side_b=(PlayerRef("cy"), None), forecast=forecast
     )

@@ -119,12 +119,27 @@ there; they are not repeated here.
   upper bound is deliberately not restated here**; 1,0–5,0 belongs to `racketskill/core`.
   _Avoid_: rating (that is the pair), skill (that is the aggregate), mu, sigma.
 - **Snapshot** — a frozen value object a calling module assembles and an engine reads:
-  `MatchSnapshot`, `SeatSnapshot`, `PlayerSkill`
+  `MatchSnapshot`, `SeatSnapshot`, `PlayerSkill`, `UnratedPlayer`
   ([ADR-0026](../docs/adr/0026-matchmaking-engines-snapshot-input-contract.md)). Never an
   aggregate — engines may not import a module, and the contexts that own this data do not
   exist yet, so the snapshot *is* the specification for what Matches will have to own. A
   sport's sold seat count is **read from the kernel registry**, never carried as a field.
   _Avoid_: DTO, view model, projection (that is a read model over a stream).
+- **Occupant** — who is on a seat, as a closed union of `PlayerSkill | UnratedPlayer`. The
+  second is somebody the platform has never rated *at this sport* and it carries a
+  `PlayerRef` and nothing else, because *a rating is never only a number*: the Level, the
+  Uncertainty and the Confidence arrive together or not at all, so the absence is a second
+  type rather than three nullable fields with an all-or-nothing rule between them. The
+  `current_player` is an `Occupant` too — a player rated at tennis alone still gets padel
+  cards. _Avoid_: unrated user, guest, provisional rating.
+- **Contender** — one place on a resolved `Roster`: a **definite** Level and Uncertainty,
+  the `PlayerRef` on that seat if anybody is on it, and whether the Level was stood in for.
+  The forecast arithmetic runs on these and never on snapshot seats, and only a `Contender`
+  or a `PlayerSkill` satisfies `pairing/core.Rated` — which is the fence that stops a seat
+  reaching a team strength before somebody has said where its Level came from. It carries
+  **no Confidence**, so the engine provably cannot compute with one. The domain word for
+  the whole tuple is **Roster**; this is one place on it. _Avoid_: participant, member,
+  slot, seat (that is the snapshot's).
 - **Exactness boundary** — `pairing/core.as_float()`, the one place matchmaking's exact
   ratios become floating point. Levels stay exact through subtraction and through a
   `Ratio`-weighted team strength; exactness ends at the first square root, so *where does
@@ -146,10 +161,14 @@ there; they are not repeated here.
   the three are never advertised. _Avoid_: ideal level, optimal partner, best fit.
 - **Analysis decline** — each field of a `PairingAnalysis` answers or declines on its own,
   as a `Result` with its own reason: `SidesNotFormed` (nobody to put on a side, or an arity
-  with no pairing rule), `SeatUnderDetermined` (not exactly one seat open) and
-  `NobodySeated`. So a forming match answers what it can, and *"no forecast"* is never
-  read as *"nothing to say"*. `SidesNotFormed` is deliberately shared by two fields: a sport
-  with no pairing rule has no sides **and** no seat to aim, and that is one fact.
+  with no pairing rule), `SeatUnderDetermined` (not exactly one seat open), `NobodySeated`,
+  and `UnratedSeat` (a seated player the platform cannot place on the scale). So a forming
+  match answers what it can, and *"no forecast"* is never read as *"nothing to say"*. Two
+  reasons are deliberately shared between fields, because each is one fact answering more
+  than one question: a sport with no pairing rule has no sides **and** no seat to aim, and
+  an unrated roster has no band, nothing to impute from **and** no exact seat target. The
+  thresholds differ and the payload is what distinguishes them — the band and the forecast
+  need *one* rated player, the seat target needs *all* of them.
 - **Read-model repository** — the port a use case reads *projected current state* through,
   e.g. `UserRepository`. It answers queries against a table, not by replaying a stream, and
   has no version bookkeeping. **The trap:** `UserRepository` is this kind despite its name

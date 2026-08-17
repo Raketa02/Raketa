@@ -7,16 +7,21 @@ wiring change at the FastAPI boundary like any other port (``docs/adr/0015``).
 **One analysis object.** The engine returns a ``PairingAnalysis`` rather than a
 bare forecast, because a caller that needs the forecast almost always needs the
 seat target, the target band and the ranked splits too, and the four have to agree
-with each other (``docs/adr/0026``). All four are now carried; what a later slice
-still changes is *when* the forecast can answer, not the shape of the object.
+with each other (``docs/adr/0026``).
 
 **A forming match answers what it can.** The four fields decline independently,
-because they need different things: a forecast needs every seat filled, a seat
-target needs the match to be exactly one seat from full, a band needs one seated
-player. So a padel court with three players advertises the Level its last seat is
-aimed at while honestly having no forecast at all, and every decline is a
-``Result`` carrying a machine code and a payload rather than a silence a caller
-has to interpret.
+because they need different things: a forecast needs one Level to stand its empty
+seats in from, a seat target needs the match to be exactly one seat from full and
+every seated player rated, a band needs one seated Level. So a padel court with
+three players forecasts the match it would be if you joined *and* advertises the
+Level its last seat is aimed at, while a court nobody has joined still declines
+both — and every decline is a ``Result`` carrying a machine code and a payload
+rather than a silence a caller has to interpret.
+
+**A thin forecast says so twice.** ``imputed_seats`` says how much of it was stood
+in for, and the margin says how little that leaves it certain of. Neither is a
+suppression rule: imputation widens the margin, the margin's grade decides whether
+a card prints, and there is no third mechanism.
 
 **The chosen split and the forecast are one object, not two.** A card showing
 *you and Bo against Cy and Dee, 84% balanced* is showing one conclusion twice,
@@ -82,8 +87,36 @@ class SidesNotFormed:
     kind: Literal["sides_not_formed"] = "sides_not_formed"
 
 
-#: Every reason the pairing engine can give for having no forecast.
-NoForecast: TypeAlias = SidesNotFormed
+@final
+@dataclass(frozen=True)
+class UnratedSeat:
+    """No seated player can be placed on the scale at this sport.
+
+    Somebody *is* in the match — this is not the empty court — but the platform
+    has never rated any of them here, so it has no Level to build anything from:
+    no band to advertise, and nothing for an imputed seat to be drawn from.
+
+    **One reason, three questions, two thresholds.** The band needs one Level and
+    the forecast draws its stand-ins from the band, so both decline only when
+    *nobody* seated is rated; the seat target is the exact answer and declines as
+    soon as *anybody* seated is unrated, because an exact answer computed from a
+    stand-in is not exact. ``unrated`` and ``seated`` are carried so a client can
+    tell those apart, which is what makes this one fact rather than three.
+    """
+
+    sport: str
+    unrated: int
+    seated: int
+    sold: int
+    kind: Literal["unrated_seat"] = "unrated_seat"
+
+
+#: Every reason the pairing engine can give for having no forecast. It shipped as
+#: a single member and is a union now, because imputation removed the *common*
+#: reason — a seat with nobody on it — and left the two that no stand-in can
+#: rescue: a roster with nobody in it at all, and one with nobody the platform can
+#: place on the scale.
+NoForecast: TypeAlias = SidesNotFormed | UnratedSeat
 
 
 @final
@@ -126,11 +159,15 @@ class NobodySeated:
 #: Every reason there is no seat target. ``SidesNotFormed`` is here because a
 #: doubles seat target is solved *through* the pairing: an arity this version has
 #: no pairing rule for has no sides to even up, so it has no seat to aim either,
-#: and that is the same fact rather than a second one.
-NoSeatTarget: TypeAlias = SeatUnderDetermined | SidesNotFormed
+#: and that is the same fact rather than a second one. ``UnratedSeat`` is here
+#: because the seat target is the *exact* answer, and it is solved from the Levels
+#: already seated — one the platform does not have cannot be stood in for without
+#: the answer quietly ceasing to be exact.
+NoSeatTarget: TypeAlias = SeatUnderDetermined | SidesNotFormed | UnratedSeat
 
-#: Every reason there is no target band.
-NoTargetBand: TypeAlias = NobodySeated
+#: Every reason there is no target band: nobody is on a seat, or nobody on one has
+#: a Level here. Both are *the mean of no Levels*, which is not a wide band.
+NoTargetBand: TypeAlias = NobodySeated | UnratedSeat
 
 
 @final
@@ -183,6 +220,21 @@ class BalanceForecast:
     ``beyond_scale`` distinguishes *this is a mismatch* from *this is the lowest
     number the scale prints*. Both show the floor; only one of them means the
     scale ran out.
+
+    ``imputed_seats`` is **how much of this forecast was stood in for**: how many
+    of the roster's Levels the platform did not have and drew from the target band
+    instead. It travels because a forecast of a half-formed match and a forecast of
+    a full one are different claims, and the margin alone does not say which is
+    which — a wide margin can equally mean four players nobody has watched. It
+    counts a seat with an *unrated* occupant too: a Level the platform does not
+    have is stood in for whether or not somebody is sitting on the seat, and a
+    count that ignored that case would understate how much of the number was
+    invented.
+
+    **It is a fact about the forecast and never an input to it.** Nothing here
+    reads it: imputation reaches the estimate through the roster's Uncertainties
+    and nowhere else, which is why there is no separate penalty for a thin roster
+    and no suppression rule beyond the margin's grade.
     """
 
     estimate: int
@@ -194,6 +246,7 @@ class BalanceForecast:
     side_a: Level
     side_b: Level
     expected_gap: float
+    imputed_seats: int
 
     @property
     def fit_to_print(self) -> bool:
@@ -222,14 +275,22 @@ class Split:
     membership and strength are built together and cannot be paired up wrongly by
     a caller.
 
+    **A ``None`` in a side is an imputed seat**: a position on that team that
+    nobody holds yet. It is spelled as an absent reference rather than left out of
+    the tuple, because *which* side the open seat is on is the useful part — a
+    player deciding whether to join needs to know they would be playing with Ada
+    and against Bo, and a side that silently had one member would leave them
+    inferring it. Inventing a reference for nobody was the alternative, and a
+    fabricated identity is the failure this whole spec exists to remove.
+
     All three are returned ranked, not only the winner, because
     ([ADR-0025](../../docs/adr/0025-binding-pairing-for-counted-matches.md)) the
     roster of a counted match may elect a different one up to commitment, and an
     election needs the arrangement it is electing.
     """
 
-    side_a: tuple[PlayerRef, ...]
-    side_b: tuple[PlayerRef, ...]
+    side_a: tuple[PlayerRef | None, ...]
+    side_b: tuple[PlayerRef | None, ...]
     forecast: BalanceForecast
 
 
@@ -247,10 +308,11 @@ class PairingAnalysis:
     ``seat_target`` and ``target_band`` are what a match says about the seats it
     has *not* filled, and they are two answers to one question at two
     resolutions. The seat target is exact and needs the match to be one seat from
-    full; the band is blunt and needs one seated player. **The band is the
-    fallback whenever the seat target declines**, so a caller never has nothing to
-    say about a forming match, and the two are carried together precisely so that
-    falling back is a branch on a value rather than a second call.
+    full; the band is blunt and needs one seated Level. **The band is the fallback
+    whenever the seat target declines and the match has a Level in it at all**, so
+    a caller has something to say about every forming match it could say anything
+    about, and the two are carried together precisely so that falling back is a
+    branch on a value rather than a second call.
 
     The three answers are computed from one snapshot in one pass, which is the
     whole reason they are one object: a card showing *this seat is aimed at 2,71*

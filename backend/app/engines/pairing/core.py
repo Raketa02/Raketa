@@ -37,6 +37,18 @@ being formed rather than to the people in it. That is also why doubles is
 forecast *more* confidently than singles between the same players: averaging two
 independent estimates is what a team strength is.
 
+**A roster is resolved before anything is forecast, and in one place.** Every place
+on it needs a Level, and only some seats bring one: a seat may be empty, and an
+occupant may be somebody the platform has never rated at this sport. Both are stood
+in for from the target band's midpoint, by the same function, because the platform
+lacks the same thing in both cases — a Level — and what differs is only whether a
+person will turn up, which belongs to the viability term. *Where a Level came from*
+therefore has one answer per place and one implementation, and ``Rated`` is the type
+that stops an unresolved seat reaching a team strength at all.
+
+Which band, and how wide a stand-in's Uncertainty is, are a version's; that they are
+drawn from the band is not, which is why the drawing is here and the numbers are not.
+
 **The seat target is solved, not searched.** A team strength is piecewise-linear
 in the joiner's Level with a single kink where the joiner overtakes their partner,
 so *which Level would even this match* is one comparison and one division per
@@ -59,9 +71,15 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import final
+from typing import Protocol, TypeVar, final
 
-from app.engines.matchmaking import Level, PlayerSkill
+from app.engines.matchmaking import (
+    Level,
+    Occupant,
+    PlayerRef,
+    PlayerSkill,
+    Uncertainty,
+)
 from app.kernel import Ratio, invariant, ratio
 
 #: ``√(2/π)``, the folded-normal mean's coefficient at a mean of zero. Named
@@ -81,6 +99,136 @@ SPLITS: tuple[tuple[tuple[int, ...], tuple[int, ...]], ...] = (
     ((0, 2), (1, 3)),
     ((0, 3), (1, 2)),
 )
+
+
+class Rated(Protocol):
+    """Anything carrying a definite Level and a definite Uncertainty.
+
+    What the arithmetic below actually needs, and **all** it needs: a team
+    strength is a function of two Levels and two Uncertainties, so nothing here
+    can read an identity, a Confidence or a seat. That is a guarantee rather than
+    a convenience — a forecast that could see who somebody *is* is a forecast that
+    could come to depend on it.
+
+    It is also the fence in front of imputation. A snapshot's occupant is a
+    ``PlayerSkill`` *or* an ``UnratedPlayer``, and only the first satisfies this,
+    so a caller cannot hand a seat's occupant straight to a team strength without
+    first saying where a Level for an unrated one came from.
+    """
+
+    @property
+    def level(self) -> Level: ...
+
+    @property
+    def uncertainty(self) -> Uncertainty: ...
+
+
+_Rated = TypeVar("_Rated", bound=Rated)
+
+
+@final
+@dataclass(frozen=True)
+class Contender:
+    """One place on a roster, resolved: a definite Level, and where it came from.
+
+    The forecast runs on these and never on snapshot seats, because *every* seat
+    has to have a Level before two sides exist and only some seats bring one.
+    ``imputed`` records which is which, so *how much of this was stood in for* is
+    read off the roster rather than recounted by whoever wants to know.
+
+    ``player`` is absent for an empty seat, because nobody is on it. It stays
+    absent rather than being filled with an invented reference: a fabricated
+    identity is the failure this spec exists to remove, and a card that showed one
+    would be naming somebody who does not exist. An **unrated** occupant is the
+    other way round — a real reference and an imputed Level — which is why the two
+    fields are independent rather than one flag.
+
+    **No Confidence.** A ``PlayerSkill`` carries one and nothing here wants it, so
+    it is not copied across, and the engine therefore provably cannot compute with
+    a number the rating context owns.
+    """
+
+    player: PlayerRef | None
+    level: Level
+    uncertainty: Uncertainty
+    imputed: bool
+
+
+@final
+@dataclass(frozen=True)
+class Roster:
+    """The people a forecast is about — the glossary's Roster, resolved.
+
+    *The paid seats, plus you if you could still join; a held seat contributes its
+    player's level but not their attendance; an empty seat is imputed.* By the time
+    it is one of these, all of that has happened: it is always exactly as long as
+    the sport is sold in, and every place on it has a Level.
+    """
+
+    contenders: tuple[Contender, ...]
+
+    @property
+    def imputed_seats(self) -> int:
+        """How many of these Levels were stood in for. Derived, never carried.
+
+        A count beside the tuple is a second number a retune can leave
+        disagreeing with the first, the same argument the band's edges and the
+        favourite cap are derived by.
+        """
+
+        return sum(1 for contender in self.contenders if contender.imputed)
+
+
+def seated_contender(occupant: PlayerSkill) -> Contender:
+    """A player the platform has rated, taken at their own Level."""
+
+    return Contender(
+        player=occupant.player,
+        level=occupant.level,
+        uncertainty=occupant.uncertainty,
+        imputed=False,
+    )
+
+
+def imputed_contender(
+    occupant: Occupant | None, *, stand_in: Level, spread: Uncertainty
+) -> Contender:
+    """A place on the roster the platform has no Level for, stood in for.
+
+    **One rule, two states, and that is the point.** An empty seat has nobody on
+    it; an unrated occupant is somebody the platform cannot place on the scale at
+    this sport. Neither brings a Level, so both are drawn from the same place —
+    the target band's midpoint, which is what the match says it is aimed at — with
+    the same wide ``spread``. What separates them is whether a person will turn up,
+    and attendance belongs to the viability term rather than to a σ.
+
+    ``stand_in`` is the caller's, because the band is the caller's; ``spread`` is
+    the caller's because *how unknown a stand-in is* is a version's constant. The
+    rule that they are drawn from the band at all is not, which is why it is here.
+    """
+
+    return Contender(
+        player=occupant.player if occupant is not None else None,
+        level=stand_in,
+        uncertainty=spread,
+        imputed=True,
+    )
+
+
+def contender_for(
+    occupant: Occupant | None, *, stand_in: Level, spread: Uncertainty
+) -> Contender:
+    """One roster place from one seat: their own rating, or a stand-in.
+
+    The **single** branch in the engine between *the platform knows this Level* and
+    *the platform is standing one in*. Written once so there is one answer to how
+    much of a forecast is real, and so that adding a third kind of occupant is a
+    change to one function rather than a hunt.
+    """
+
+    if isinstance(occupant, PlayerSkill):
+        return seated_contender(occupant)
+    return imputed_contender(occupant, stand_in=stand_in, spread=spread)
 
 
 def as_float(value: Ratio) -> float:
@@ -116,7 +264,7 @@ class Side:
     sigma: float
 
 
-def side_of_one(player: PlayerSkill) -> Side:
+def side_of_one(player: Rated) -> Side:
     """A team of one is that player.
 
     The singles path, and the base case doubles reduces to: nothing about a side
@@ -127,9 +275,7 @@ def side_of_one(player: PlayerSkill) -> Side:
     return Side(strength=player.level, sigma=as_float(player.uncertainty))
 
 
-def side_of_two(
-    first: PlayerSkill, second: PlayerSkill, *, weaker_weight: Ratio
-) -> Side:
+def side_of_two(first: Rated, second: Rated, *, weaker_weight: Ratio) -> Side:
     """A team of two: **not the average of the two Levels.**
 
     The blend is ``w·L_weak + (1−w)·L_strong`` with ``w`` above a half, because
@@ -170,9 +316,7 @@ def side_of_two(
     )
 
 
-def _weaker_first(
-    first: PlayerSkill, second: PlayerSkill
-) -> tuple[PlayerSkill, PlayerSkill]:
+def _weaker_first(first: _Rated, second: _Rated) -> tuple[_Rated, _Rated]:
     """The two partners, weaker one first. See ``side_of_two`` for the tie."""
 
     if first.level != second.level:
@@ -211,7 +355,7 @@ def even_partner_level(
 
 
 def evening_levels(
-    seated: tuple[PlayerSkill, ...], *, weaker_weight: Ratio
+    seated: tuple[Rated, ...], *, weaker_weight: Ratio
 ) -> tuple[Level, ...]:
     """One Level per seated player: what would even the match beside *them*.
 
@@ -236,9 +380,7 @@ def evening_levels(
     )
 
 
-def _others(
-    seated: tuple[PlayerSkill, ...], index: int
-) -> tuple[PlayerSkill, PlayerSkill]:
+def _others(seated: tuple[Rated, ...], index: int) -> tuple[Rated, Rated]:
     """The two the joiner would be playing, if they partnered ``seated[index]``."""
 
     first, second = (

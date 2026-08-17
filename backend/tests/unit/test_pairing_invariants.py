@@ -24,23 +24,31 @@ from app.engines.forecast import (
     SidesNotFormed,
     Split,
     TargetBand,
+    UnratedSeat,
 )
 from app.engines.matchmaking import (
     MatchSnapshot,
     PlayerRef,
     PlayerSkill,
     SeatSnapshot,
+    SeatState,
+    UnratedPlayer,
+    uncertainty,
 )
 from app.engines.pairing.core import (
     SPLITS,
+    Contender,
+    Roster,
     Side,
     absolute_gap_deviation,
     as_float,
     combine_uncertainty,
     expected_absolute_gap,
+    imputed_contender,
     mean_level,
     middle_level,
     round_half_away_from_zero,
+    seated_contender,
     side_of_two,
 )
 from app.engines.pairing.v1 import (
@@ -51,7 +59,14 @@ from app.engines.pairing.v1 import (
 )
 from app.engines.pairing.v1.constants import PairingConstants
 from app.kernel import SPORT_SPECS, Err, InvariantViolated, Ok, Sport, ratio
-from tests.unit.matchmaking_snapshots import NOW, doubles, singles, skill
+from tests.unit.matchmaking_snapshots import (
+    NOW,
+    doubles,
+    on_seat,
+    singles,
+    skill,
+    unrated,
+)
 
 ROOT = Path(__file__).resolve().parents[2]
 PAIRING = ROOT / "app" / "engines" / "pairing"
@@ -405,16 +420,27 @@ def test_a_wider_uncertainty_never_raises_certainty():
 # --- No forecast, and why ---------------------------------------------------------
 
 
-def test_a_seat_with_nobody_on_it_declines_rather_than_guessing():
+def test_a_seat_with_nobody_on_it_is_stood_in_for_rather_than_declined():
+    """The assertion this test used to make was that it declined, and closing that
+    gap is what this slice is.
+
+    A half-formed match now says something instead of nothing, and says honestly
+    how much less it knows: the stand-in's Level is the band's midpoint, so the
+    two paper strengths here are level and the *whole* of the reported gap is the
+    platform's own ignorance about who will take the seat.
+    """
+
     ada = skill("ada", 300, 20)
-    empty = MatchSnapshot(
+    open_seat = MatchSnapshot(
         sport=Sport.TENNIS,
-        seats=(SeatSnapshot(ada), SeatSnapshot()),
+        seats=(on_seat(ada), on_seat(None)),
         current_player=ada,
     )
-    result = ENGINE.analyse(snapshot=empty, now=NOW).forecast
-    assert isinstance(result, Err)
-    assert result.reason == SidesNotFormed(sport="TENNIS", seated=1, sold=2)
+    result = ENGINE.analyse(snapshot=open_seat, now=NOW).forecast
+    assert isinstance(result, Ok)
+    assert result.value.imputed_seats == 1
+    assert result.value.side_a == result.value.side_b == ada.level
+    assert result.value.expected_gap > 0
 
 
 def test_the_reason_is_a_machine_code_and_payload_never_a_sentence():
@@ -427,19 +453,45 @@ def test_the_reason_is_a_machine_code_and_payload_never_a_sentence():
     )
 
 
-def test_a_four_seat_sport_with_a_seat_open_declines_with_the_same_reason():
-    """The assertion this test used to make was that a *full* padel court also
-    declined, because no version had enumerated the three splits yet. It does
-    not any more — that is this slice — and what survives is the half that was
-    never about arity: a seat with nobody on it has nobody to put on a side.
-    Imputation is the next slice; until then the engine declines.
+def test_the_only_rosters_that_still_decline_are_the_two_with_no_level_in_them():
+    """What imputation did *not* rescue, and why it could not.
+
+    A stand-in is drawn from the target band; the band is the mean of the seated
+    Levels. So the two states that decline are exactly the two the band declines
+    for — nobody on a seat, and nobody on a seat the platform can place on the
+    scale — and they decline because there is nothing to draw from rather than
+    because a rule says so. Every other roster is forecast.
     """
 
-    seated = [skill(str(i), 300 + 10 * i, 20) for i in range(3)]
-    result = ENGINE.analyse(snapshot=doubles(*seated, None), now=NOW).forecast
-    assert isinstance(result, Err)
-    assert result.reason.kind == "sides_not_formed"
-    assert (result.reason.seated, result.reason.sold) == (3, 4)
+    empty = ENGINE.analyse(snapshot=doubles(None, None, None, None), now=NOW).forecast
+    assert isinstance(empty, Err)
+    assert empty.reason == SidesNotFormed(sport="PADEL", seated=0, sold=4)
+
+    nobody_rated = ENGINE.analyse(
+        snapshot=doubles(unrated("cy"), unrated("dee"), None, None), now=NOW
+    ).forecast
+    assert isinstance(nobody_rated, Err)
+    assert nobody_rated.reason == UnratedSeat(
+        sport="PADEL", unrated=2, seated=2, sold=4
+    )
+
+
+@pytest.mark.parametrize("open_seats", [1, 2, 3])
+def test_a_four_seat_sport_with_seats_open_is_forecast_and_says_how_thinly(open_seats):
+    """The regression this slice exists to close, at every roster size that has it.
+
+    The current player is one of the seated players here, so the open seats are
+    genuinely open and every one of them is stood in for. The count on the result
+    is the number of them, which is what lets a card say *based on two players*
+    rather than leaving a reader to infer it from a wide margin.
+    """
+
+    seated = [skill(NAMES[seat], 300 + 10 * seat, 20) for seat in range(4 - open_seats)]
+    result = ENGINE.analyse(
+        snapshot=doubles(*seated, *([None] * open_seats)), now=NOW
+    ).forecast
+    assert isinstance(result, Ok)
+    assert result.value.imputed_seats == open_seats
 
 
 @final
@@ -457,17 +509,33 @@ class _SixSeatSport:
     """
 
     sport: Sport
+    seats: tuple[SeatSnapshot, ...]
     occupants: tuple[PlayerSkill, ...]
     current_player: PlayerSkill
     sold_seats: int = 6
 
 
+def _six_seat_sport(*roster: PlayerSkill) -> _SixSeatSport:
+    """Six seats, with these people on the first of them.
+
+    ``seats`` is carried now because the roster is built by *walking the seats* —
+    which is what makes a roster exactly as long as the sport is sold in without a
+    length check anywhere. A six-player sport's snapshot would have six seats, so
+    the structural stand-in has six too, and the ones nobody is on are empty.
+    """
+
+    empty = [None] * (6 - len(roster))
+    return _SixSeatSport(
+        sport=Sport.PADEL,
+        seats=tuple(on_seat(player) for player in [*roster, *empty]),
+        occupants=roster,
+        current_player=roster[0],
+    )
+
+
 def test_an_arity_this_version_has_no_pairing_rule_for_declines():
     roster = tuple(skill(str(seat), 300 + 10 * seat, 20) for seat in range(6))
-    snapshot = _SixSeatSport(
-        sport=Sport.PADEL, occupants=roster, current_player=roster[0]
-    )
-    result = ENGINE.analyse(snapshot=snapshot, now=NOW).forecast
+    result = ENGINE.analyse(snapshot=_six_seat_sport(*roster), now=NOW).forecast
     assert isinstance(result, Err)
     assert (result.reason.seated, result.reason.sold) == (6, 6)
 
@@ -504,10 +572,7 @@ def test_an_arity_with_no_pairing_rule_has_no_seat_to_aim_either():
     forecast — which is why it is the same reason and not a second one."""
 
     roster = tuple(skill(str(seat), 300 + 10 * seat, 20) for seat in range(5))
-    snapshot = _SixSeatSport(
-        sport=Sport.PADEL, occupants=roster, current_player=roster[0]
-    )
-    result = ENGINE.analyse(snapshot=snapshot, now=NOW).seat_target
+    result = ENGINE.analyse(snapshot=_six_seat_sport(*roster), now=NOW).seat_target
     assert isinstance(result, Err)
     assert result.reason.kind == "sides_not_formed"
     assert (result.reason.seated, result.reason.sold) == (5, 6)
@@ -517,7 +582,7 @@ def test_for_a_two_player_sport_the_ideal_opponent_is_the_seated_players_level()
     ada = skill("ada", 317, 20)
     snapshot = MatchSnapshot(
         sport=Sport.TENNIS,
-        seats=(SeatSnapshot(ada), SeatSnapshot()),
+        seats=(on_seat(ada), on_seat(None)),
         current_player=ada,
     )
     result = ENGINE.analyse(snapshot=snapshot, now=NOW).seat_target
@@ -646,6 +711,7 @@ def test_the_two_selection_rules_refuse_the_inputs_they_have_no_answer_for():
         SidesNotFormed(sport="PADEL", seated=4, sold=4),
         SeatUnderDetermined(sport="PADEL", open_seats=2, sold=4),
         NobodySeated(sport="PADEL", sold=4),
+        UnratedSeat(sport="PADEL", unrated=2, seated=2, sold=4),
     ],
 )
 def test_every_reason_is_a_machine_code_and_a_payload(reason):
@@ -655,6 +721,245 @@ def test_every_reason_is_a_machine_code_and_a_payload(reason):
     assert not any(
         isinstance(value, str) and " " in value for value in vars(reason).values()
     )
+
+
+# --- The roster: who the forecast is about ------------------------------------------
+
+
+def test_a_roster_derives_its_imputed_count_rather_than_carrying_one():
+    """A count beside the tuple is a second number a retune can leave disagreeing
+    with the first — the same argument the band's edges are derived by."""
+
+    ada = seated_contender(skill("ada", 300, 20))
+    stood_in = imputed_contender(
+        None, stand_in=ada.level, spread=CONSTANTS.imputation_uncertainty
+    )
+    assert Roster(contenders=(ada, ada)).imputed_seats == 0
+    assert Roster(contenders=(ada, stood_in, stood_in)).imputed_seats == 2
+    assert "imputed_seats" not in Roster.__dataclass_fields__
+
+
+def test_a_stand_in_carries_no_player_and_a_seated_place_carries_no_confidence():
+    """Two absences, each deliberate.
+
+    Nobody is on an empty seat, so no reference is invented for one — a fabricated
+    identity is the failure this spec exists to remove. And a ``Contender`` has no
+    Confidence field at all, so the engine provably cannot compute with a number
+    the rating context owns, whatever a future version is tempted to do with it.
+    """
+
+    ada = skill("ada", 300, 20)
+    assert seated_contender(ada) == Contender(
+        player=ada.player, level=ada.level, uncertainty=ada.uncertainty, imputed=False
+    )
+    stood_in = imputed_contender(
+        None, stand_in=ada.level, spread=CONSTANTS.imputation_uncertainty
+    )
+    assert stood_in.player is None
+    assert stood_in.imputed is True
+    assert "confidence" not in Contender.__dataclass_fields__
+
+
+def test_an_unrated_occupant_keeps_their_reference_and_loses_only_their_level():
+    """The other way round from an empty seat, which is why the two fields are
+    independent rather than one flag: somebody real is on this seat, and what the
+    platform is standing in for is what they play like."""
+
+    stood_in = imputed_contender(
+        unrated("cy"), stand_in=skill("x", 300, 0).level, spread=uncertainty(98)
+    )
+    assert stood_in.player == PlayerRef("cy")
+    assert stood_in.imputed is True
+
+
+def test_the_roster_is_the_seated_players_plus_you_when_you_could_still_join():
+    """*"The paid seats, plus you if you could still join."*
+
+    Asserted through what a card can see: the split membership. Ada, Bo and Cy are
+    seated and the reader is not, so the reader is the fourth name and nothing is
+    stood in for. Reading the match without them would be showing them somebody
+    else's match.
+    """
+
+    seated = [skill(NAMES[seat], 300 + 10 * seat, 20) for seat in range(3)]
+    analysis = ENGINE.analyse(
+        snapshot=doubles(*seated, None, viewer=skill("me", 305, 20)), now=NOW
+    )
+    assert isinstance(analysis.forecast, Ok)
+    assert analysis.forecast.value.imputed_seats == 0
+    for option in analysis.splits:
+        assert sorted(option.side_a + option.side_b) == ["ada", "bo", "cy", "me"]
+        assert "me" in option.side_a
+
+
+def test_a_spectator_is_not_added_to_a_match_with_no_room_in_it():
+    """The other half of the rule: *and there is room.* A full match seen by
+    somebody outside it is somebody else's match, and adding them would make a
+    five-player padel roster out of a four-seat sport."""
+
+    seated = [skill(NAMES[seat], 300 + 10 * seat, 20) for seat in range(4)]
+    analysis = ENGINE.analyse(
+        snapshot=doubles(*seated, viewer=skill("watcher", 305, 20)), now=NOW
+    )
+    assert isinstance(analysis.forecast, Ok)
+    assert analysis.forecast.value.imputed_seats == 0
+    for option in analysis.splits:
+        assert sorted(option.side_a + option.side_b) == sorted(NAMES)
+
+
+def test_a_seated_player_is_not_added_to_their_own_match_a_second_time():
+    """*"If they are not already in it."* The ordinary case — a player looking at a
+    match they joined — and the one where double-counting would replace an open
+    seat with a duplicate of the reader."""
+
+    seated = [skill(NAMES[seat], 300 + 10 * seat, 20) for seat in range(3)]
+    analysis = ENGINE.analyse(
+        snapshot=doubles(*seated, None, viewer=seated[1]), now=NOW
+    )
+    assert isinstance(analysis.forecast, Ok)
+    assert analysis.forecast.value.imputed_seats == 1
+    for option in analysis.splits:
+        assert sorted(name for name in option.side_a + option.side_b if name) == [
+            "ada",
+            "bo",
+            "cy",
+        ]
+
+
+def test_a_held_seat_contributes_its_level_and_is_forecast_as_a_paid_one_is():
+    """*"A held seat contributes its player's level but not their attendance."*
+
+    Byte-identical analyses, not merely equal estimates: whether somebody has paid
+    or is holding the seat cannot move the percentage, the margin, the grade or the
+    pairing. **Attendance risk is not represented as Uncertainty anywhere** — a
+    held seat spent as extra σ would be indistinguishable from not knowing how good
+    somebody is, and it would make a held seat look like a worse *match* rather
+    than a less certain plan.
+    """
+
+    players = [skill(NAMES[seat], 300 + 10 * seat, 20) for seat in range(4)]
+    all_paid = doubles(*players)
+    mostly_held = doubles(
+        *players,
+        states=(SeatState.HELD, SeatState.HELD, SeatState.HELD, SeatState.PAID),
+    )
+    assert all_paid.paid_seats == 4
+    assert mostly_held.paid_seats == 1
+    assert ENGINE.analyse(snapshot=all_paid, now=NOW) == ENGINE.analyse(
+        snapshot=mostly_held, now=NOW
+    )
+
+
+def test_a_stand_in_is_drawn_from_the_band_the_same_card_advertises():
+    """One seated mean, two readers of it.
+
+    A card showing *aimed at 2,80 to 3,80* beside a forecast that quietly imputed
+    something else would be two readings of a match that only has one. So the
+    stand-in's Level is asserted to *be* the band's midpoint, through the two sides
+    of the forecast: with everybody seated at the same Level as the midpoint, both
+    paper strengths come back at exactly that Level however many seats are stood
+    in for.
+    """
+
+    for open_seats in (1, 2, 3):
+        seated = [skill(NAMES[seat], 320, 20) for seat in range(4 - open_seats)]
+        analysis = ENGINE.analyse(
+            snapshot=doubles(*seated, *([None] * open_seats)), now=NOW
+        )
+        assert isinstance(analysis.forecast, Ok)
+        assert isinstance(analysis.target_band, Ok)
+        midpoint = analysis.target_band.value.midpoint
+        assert analysis.forecast.value.side_a == midpoint, open_seats
+        assert analysis.forecast.value.side_b == midpoint, open_seats
+
+
+def test_a_stand_in_carries_the_versions_own_imputation_uncertainty():
+    """Read from the constant rather than typed, so a retune moves this with it.
+
+    A tennis player looking at their own open court: the stand-in sits at their own
+    Level, so the two strengths are equal and the whole spread of the gap is the
+    two Uncertainties — theirs and the constant's — in quadrature. That makes the
+    constant recoverable from the result, which is what turns *the stand-in is wide*
+    into an arithmetic identity rather than a claim.
+    """
+
+    ada = skill("ada", 300, 20)
+    result = ENGINE.analyse(snapshot=singles(ada, None), now=NOW).forecast
+    assert isinstance(result, Ok)
+    spread = combine_uncertainty(
+        as_float(ada.uncertainty), as_float(CONSTANTS.imputation_uncertainty)
+    )
+    assert result.value.expected_gap == pytest.approx(
+        expected_absolute_gap(0.0, spread)
+    )
+
+
+def test_an_unrated_occupant_is_forecast_exactly_as_an_empty_seat_is():
+    """A Level the platform does not have is a Level the platform does not have.
+
+    The two rosters here differ only in whether somebody is *sitting* on the place
+    being stood in for, and the forecast cannot tell them apart — deliberately, and
+    for the same reason a held seat is forecast as a paid one: what separates them
+    is whether a person turns up, and that is the viability term's question.
+    """
+
+    ada, bo = skill("ada", 300, 20), skill("bo", 330, 20)
+    filled_by_a_stranger = ENGINE.analyse(
+        snapshot=doubles(ada, bo, unrated("cy"), unrated("dee"), viewer=ada), now=NOW
+    ).forecast
+    still_empty = ENGINE.analyse(
+        snapshot=doubles(ada, bo, None, None, viewer=ada), now=NOW
+    ).forecast
+    assert isinstance(filled_by_a_stranger, Ok) and isinstance(still_empty, Ok)
+    assert filled_by_a_stranger.value.imputed_seats == 2
+    assert still_empty.value.imputed_seats == 2
+    assert filled_by_a_stranger.value.estimate == still_empty.value.estimate
+    assert filled_by_a_stranger.value.margin == still_empty.value.margin
+
+
+def test_a_court_of_players_nobody_has_rated_is_aimed_at_nothing_either():
+    """The band's second way of having no answer, and it is not the empty court.
+
+    Two people are in this match; the platform has simply never rated either of
+    them at this sport. The mean of no Levels is no band whether the reason is that
+    nobody is seated or that nobody seated has a Level — and the payload is what
+    tells a client which, because *nobody has joined yet* and *we do not know these
+    two players* are different things to say.
+
+    It is also the sole reason the forecast declines here: a stand-in is drawn from
+    the band, so no band means nothing to stand in with.
+    """
+
+    analysis = ENGINE.analyse(
+        snapshot=doubles(unrated("cy"), unrated("dee"), None, None), now=NOW
+    )
+    assert isinstance(analysis.target_band, Err)
+    assert analysis.target_band.reason == UnratedSeat(
+        sport="PADEL", unrated=2, seated=2, sold=4
+    )
+    assert isinstance(analysis.forecast, Err)
+    assert analysis.forecast.reason == analysis.target_band.reason
+    assert analysis.splits == ()
+
+
+def test_an_unrated_seated_player_costs_the_seat_target_its_exactness():
+    """The seat target is stricter than the forecast, and on purpose.
+
+    It is the *exact* answer, solved from the Levels already in the match, so one
+    the platform does not have cannot be stood in for without the answer quietly
+    ceasing to be exact — a seat target drawn off a band would carry a precision it
+    does not have. The band is the stated fallback, and it still answers here,
+    because it needs one Level rather than all of them.
+    """
+
+    seated = [skill("ada", 300, 20), skill("bo", 330, 20), unrated("cy")]
+    analysis = ENGINE.analyse(snapshot=doubles(*seated, None), now=NOW)
+    assert isinstance(analysis.seat_target, Err)
+    assert analysis.seat_target.reason == UnratedSeat(
+        sport="PADEL", unrated=1, seated=3, sold=4
+    )
+    assert isinstance(analysis.target_band, Ok)
+    assert isinstance(analysis.forecast, Ok)
 
 
 # --- The three splits ---------------------------------------------------------------
@@ -778,10 +1083,33 @@ def test_singles_carries_no_splits_at_all():
 
 
 def test_a_declined_analysis_carries_no_splits_either():
-    half_empty = doubles(skill("ada", 300, 20), skill("bo", 320, 20), None, None)
-    analysis = ENGINE.analyse(snapshot=half_empty, now=NOW)
+    """A half-empty court is no longer the example: it is forecast now, and it
+    carries all three arrangements of the roster it was forecast from. What is left
+    is the court nobody has joined, where there is nothing to arrange."""
+
+    analysis = ENGINE.analyse(snapshot=doubles(None, None, None, None), now=NOW)
     assert isinstance(analysis.forecast, Err)
     assert analysis.splits == ()
+
+
+def test_a_forecast_stood_in_for_still_carries_all_three_arrangements():
+    """Ranked, and with the open seat visible on the side it would sit on.
+
+    ``None`` on a side is that seat. It is carried rather than dropped because
+    *which team the vacancy is on* is the part a player deciding whether to join
+    needs — and a side that silently had one member would leave them inferring it.
+    """
+
+    half_empty = doubles(skill("ada", 300, 20), skill("bo", 320, 20), None, None)
+    analysis = ENGINE.analyse(snapshot=half_empty, now=NOW)
+    assert isinstance(analysis.forecast, Ok)
+    assert len(analysis.splits) == 3
+    assert analysis.forecast.value is analysis.splits[0].forecast
+    for option in analysis.splits:
+        assert sorted(
+            name for name in option.side_a + option.side_b if name is not None
+        ) == ["ada", "bo"]
+        assert (option.side_a + option.side_b).count(None) == 2
 
 
 def test_the_current_player_is_on_the_first_side_of_every_split():
@@ -1039,12 +1367,16 @@ def test_every_value_object_in_the_vocabulary_is_frozen_and_closed():
 
     vocabulary = (
         PlayerSkill,
+        UnratedPlayer,
         SeatSnapshot,
         MatchSnapshot,
         Side,
+        Contender,
+        Roster,
         SidesNotFormed,
         SeatUnderDetermined,
         NobodySeated,
+        UnratedSeat,
         BalanceForecast,
         TargetBand,
         Split,
@@ -1177,7 +1509,7 @@ def test_every_constant_carries_the_measurement_that_would_falsify_it():
         if "Falsified by:" not in note:
             unfalsifiable.append(node.target.id)
     assert unfalsifiable == [], unfalsifiable
-    assert len([node for node in body if isinstance(node, ast.AnnAssign)]) == 6, (
+    assert len([node for node in body if isinstance(node, ast.AnnAssign)]) == 7, (
         "the constant count moved — read the new one's falsifying note first"
     )
 
@@ -1208,3 +1540,34 @@ def test_nothing_in_the_engine_scans_a_grid():
     ]
     assert len(walked) >= 4, walked
     assert scans == [], scans
+
+
+def test_the_pairing_engine_never_mentions_a_seat_state_at_all():
+    """*Attendance risk is not represented as Uncertainty anywhere*, as something
+    the source can be held to rather than a claim a docstring makes.
+
+    A held seat and a paid seat are forecast identically today, and the assertion
+    above proves that for one roster. What it cannot prove is that a later version
+    will not reach for the distinction and spend it as σ — a change that would look
+    like a refinement and would put *will this person turn up* inside a balance
+    percentage, where nothing could tell it apart from *how good are they*. The
+    package cannot name the enum, so it cannot read it.
+
+    ``paid_seats`` is on the snapshot for the viability term, which is a different
+    engine and is welcome to it.
+    """
+
+    walked = _modules_of(PAIRING)
+    mentions = [
+        f"{path.relative_to(ROOT)}:{node.lineno}"
+        for path in walked
+        for node in ast.walk(_parsed(path))
+        if (isinstance(node, ast.Name) and node.id in ("SeatState", "paid_seats"))
+        or (
+            isinstance(node, ast.Attribute)
+            and node.attr in ("HELD", "PAID", "paid_seats")
+        )
+        or (isinstance(node, ast.alias) and node.name in ("SeatState",))
+    ]
+    assert len(walked) >= 4, walked
+    assert mentions == [], mentions

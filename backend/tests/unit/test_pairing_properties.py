@@ -481,9 +481,10 @@ def test_no_level_the_scan_visits_evens_the_match_better_than_the_answer():
         levels = [level / 100 for level, _ in roster]
         answer = objective(seat_target_of(roster), levels, weight)
         assert answer < 1e-9, roster
-        assert answer <= min(
-            objective(joiner, levels, weight) for joiner in scanned()
-        ) + 1e-12, roster
+        assert (
+            answer
+            <= min(objective(joiner, levels, weight) for joiner in scanned()) + 1e-12
+        ), roster
 
 
 def test_the_seat_target_always_lands_inside_the_levels_already_seated():
@@ -510,3 +511,154 @@ def test_the_band_is_centred_on_the_seated_mean_however_many_are_seated():
         assert as_float(result.value.midpoint) == pytest.approx(
             sum(level for level, _ in roster) / (100 * count)
         ), roster
+
+
+# --- Emptying a roster: what is monotone, and what provably cannot be -------------
+
+#: The widest σ a seated player may carry for the property below to mean anything.
+#: A stand-in drawn from the band is **not** the least the platform can know about
+#: somebody: a player it has watched and cannot make sense of carries a wider σ than
+#: that, and emptying *their* seat genuinely narrows the roster's uncertainty. Read
+#: from the constant, so a retune moves the boundary with it.
+KNOWN_AT_LEAST_AS_WELL_AS_NOBODY = int(
+    round(as_float(CONSTANTS.imputation_uncertainty) * 100)
+)
+
+#: Grades in order of how much they claim, low index first — the same ordering
+#: ``CLAIMED`` uses, restated here for the emptying sweep because that one is
+#: consumed by a different assertion.
+LESS_CERTAIN = {Certainty.HIGH: 0, Certainty.MODERATE: 1, Certainty.LOW: 2}
+
+
+def emptied(players):
+    """One roster, forecast at every size from full down to a single player.
+
+    The arity decides the builder, so the same sweep runs over tennis and padel
+    without a caller having to keep a sport and a seat count agreeing — the snapshot
+    reads its arity from the registry and refuses a pair that does not.
+    """
+
+    sold = len(players)
+    build = singles if sold == 2 else doubles
+    for count in reversed(range(1, sold + 1)):
+        analysis = ENGINE.analyse(
+            snapshot=build(*players[:count], *([None] * (sold - count))), now=NOW
+        )
+        assert isinstance(analysis.forecast, Ok), (players, count)
+        yield sold - count, analysis.forecast.value
+
+
+def level_rosters(seed=SEED + 30, count=ROSTERS, seats=4):
+    """Rosters where everybody sits at the **same** Level.
+
+    The controlled family, and the control is the point. A stand-in is placed at the
+    band's midpoint, which is the mean of the seated Levels — so on a roster that is
+    level, the midpoint is that Level whatever the roster size, both paper strengths
+    stay exactly equal at every size, and the *only* thing emptying a seat changes
+    is how much the platform knows. Every σ is drawn at or below the imputation σ,
+    for the reason ``KNOWN_AT_LEAST_AS_WELL_AS_NOBODY`` gives.
+    """
+
+    draw = random.Random(seed)
+    for _ in range(count):
+        shared = draw.randint(*LEVELS)
+        yield tuple(
+            (shared, draw.randint(0, KNOWN_AT_LEAST_AS_WELL_AS_NOBODY))
+            for _ in range(seats)
+        )
+
+
+def test_the_emptying_sweep_reaches_both_arities_and_every_roster_size():
+    """A sweep that has quietly lost its inputs passes by finding nothing."""
+
+    drawn = list(level_rosters(count=50))
+    assert len(drawn) == 50
+    assert len(set(drawn)) > 40
+    assert [open_seats for open_seats, _ in emptied(players_of(*drawn[0]))] == [
+        0,
+        1,
+        2,
+        3,
+    ]
+    assert [open_seats for open_seats, _ in emptied(players_of(*drawn[0][:2]))] == [
+        0,
+        1,
+    ]
+
+
+@pytest.mark.parametrize("seats", [2, 4])
+def test_emptying_a_seat_never_raises_certainty_when_the_level_cannot_move(seats):
+    """**The property this slice is for**, stated over the family that isolates it.
+
+    Every seated player is at the same Level, so the two paper strengths are equal
+    at every roster size and the mean of the gap is fixed at zero. What is left is
+    the spread, and a stand-in is at least as uncertain as anybody it replaces — so
+    the margin can only widen, the grade can only fall, and the estimate can only
+    fall with it.
+
+    All three are asserted, and the margin one is the strongest: the grade is a
+    coarsening of it, so a grade assertion alone would pass on a margin that had
+    moved the wrong way inside a band.
+    """
+
+    for roster in level_rosters(seats=seats):
+        seen = list(emptied(players_of(*roster[:seats])))
+        for (_, fuller), (open_seats, thinner) in zip(seen, seen[1:], strict=False):
+            assert thinner.margin >= fuller.margin, (roster, open_seats)
+            assert LESS_CERTAIN[thinner.certainty] >= LESS_CERTAIN[fuller.certainty], (
+                roster,
+                open_seats,
+            )
+            assert thinner.estimate <= fuller.estimate, (roster, open_seats)
+
+
+def test_the_margin_is_not_a_monotone_function_of_how_empty_a_roster_is():
+    """The bound on the property above, and it is structural rather than a retune
+    away from going away.
+
+    Emptying a seat moves **two** things, not one. It widens the roster's
+    Uncertainty, which widens the margin. It also replaces a real Level with the
+    band's midpoint — the most balancing Level available — which *narrows* the paper
+    gap. And the standard deviation of ``|X|`` grows with the gap as well as with
+    the spread: a lopsided match is a confident prediction of lopsidedness, because
+    ``|X|`` is nearly deterministic when the mean dwarfs the spread. So on a
+    lopsided roster the second effect can outrun the first.
+
+    This roster is one. Dee is a 2,32 the platform barely knows, on a court with a
+    4,71 and a 2,66 it knows exactly; emptying her seat halves the paper gap and the
+    margin comes *down*. No imputation Uncertainty makes this go away — the margin
+    is bounded above by the spread and below by roughly six tenths of it, so a full
+    roster's margin can always be pushed up into an emptier roster's range by
+    widening the gap instead of the spread.
+
+    Asserted as the two comparisons rather than as literals, so it survives a
+    retune of the coefficient and of both certainty boundaries. What it costs is
+    exactly what the docstring above says: the general *"emptying a seat never
+    raises certainty"* is not a property of this engine, and it is not one it could
+    be given.
+    """
+
+    players = players_of((471, 0), (266, 3), (320, 57), (232, 90))
+    full = ENGINE.analyse(snapshot=doubles(*players), now=NOW).forecast
+    thinner = ENGINE.analyse(snapshot=doubles(*players[:3], None), now=NOW).forecast
+    assert isinstance(full, Ok) and isinstance(thinner, Ok)
+
+    def paper_gap(forecast):
+        return abs(as_float(forecast.side_a) - as_float(forecast.side_b))
+
+    assert thinner.value.imputed_seats == 1
+    assert paper_gap(thinner.value) < paper_gap(full.value) / 2
+    assert thinner.value.margin < full.value.margin
+
+
+def test_the_imputed_count_is_always_the_number_of_seats_nobody_is_on():
+    """Over the whole sweep, at both arities, with the reader already seated so no
+    open seat is quietly taken by them."""
+
+    for roster in foursomes(count=120):
+        for open_seats, forecast in emptied(players_of(*roster)):
+            assert forecast.imputed_seats == open_seats, roster
+    for roster in rosters(count=120):
+        players = [skill("a", roster[0], roster[2]), skill("b", roster[1], roster[3])]
+        for open_seats, forecast in emptied(players):
+            assert forecast.imputed_seats == open_seats, roster

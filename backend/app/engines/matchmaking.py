@@ -11,10 +11,10 @@ the specification for what the Matches aggregate will have to own.
 **The vocabulary is borrowed, never re-coined.** The ``Sport`` and its sold seat
 count come from the kernel registry and are read from it here rather than carried
 as a field, because *a sport's player count is never club-configurable* — a padel
-match divides by four wherever it is read. Later slices add a seat's paid / held /
-empty state, the match's phase, its court hold tier and its join cutoff, and those
-are the clock and commitment rules' words spelled identically; renaming one here
-would fork the clock.
+match divides by four wherever it is read. A seat's **paid / held / empty** state
+is here now and is spelled exactly as the commitment rules spell it; the match's
+phase, its court hold tier and its join cutoff land with the viability term that
+reads them. Renaming any of those here would fork the clock.
 
 **A Level is exact, and it is not an Uncertainty.** Both are branded over the
 kernel's ``Ratio`` — an exact ``Fraction`` over two integers — and carried in
@@ -35,7 +35,8 @@ crossing has exactly one place, ``pairing/core.as_float``.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import NewType, final
+from enum import Enum
+from typing import NewType, TypeAlias, final
 
 from app.kernel import SPORT_SPECS, Ratio, Sport, invariant, ratio
 
@@ -125,16 +126,79 @@ class PlayerSkill:
 
 @final
 @dataclass(frozen=True)
-class SeatSnapshot:
-    """One seat of a match, and who is on it.
+class UnratedPlayer:
+    """Somebody on a seat whom the platform has never rated **at this sport**.
 
-    ``occupant`` is absent when nobody is on the seat. The paid / held / empty
-    distinction the roster rules turn on is the clock and commitment rules'
-    vocabulary and lands with the roster slice that reads it; until then a seat
-    is occupied or it is not.
+    A player can be Established at tennis and unrated at padel, so this is a fact
+    about a player at a sport rather than about a player, and it is an ordinary
+    state rather than an error: somebody who onboarded for one sport and joined a
+    match in another is in it.
+
+    **Its own type, not a nullable Level on ``PlayerSkill``**, because *a rating
+    is never only a number*: the Level, the Uncertainty and the Confidence arrive
+    together or not at all. Three nullable fields with an all-or-nothing rule
+    between them are three fields every reader has to defend against — the same
+    argument ``results.py`` makes for two ``@final`` classes over one pair with
+    two nullable ones.
+
+    It carries a reference and nothing else, because a reference is all there is.
+    An engine that wants a Level for this seat has to *say where it got one*.
     """
 
-    occupant: PlayerSkill | None = None
+    player: PlayerRef
+
+
+#: Somebody on a seat: either a rating, or a player the platform cannot place on
+#: the scale at this sport. Both members are ``@final``, so the union is closed and
+#: a third kind of occupant cannot be smuggled in by subclassing one of them — it
+#: has to be added here, where every reader of the union can see it arrive.
+Occupant: TypeAlias = PlayerSkill | UnratedPlayer
+
+
+class SeatState(Enum):
+    """A seat's commitment state. **Borrowed vocabulary, spelled verbatim.**
+
+    Paid, held and empty are the commitment rules' three words and the shared
+    glossary's, under **Roster**: *the paid seats, plus you if you could still
+    join; a held seat contributes its player's level but not their attendance; an
+    empty seat is imputed.* ADR-0026 requires the snapshot to spell them the same
+    way, because renaming one here would fork the clock. This engine reads them;
+    Matches will define them.
+
+    **Paid and held are the same fact to the balance forecast, deliberately.**
+    Both put a Level on a side. What separates them is whether the person will
+    actually turn up, and that is the viability term's question — a match's
+    likelihood of happening, not its evenness. Representing attendance risk as
+    extra Uncertainty here would bury it inside a balance percentage, where it
+    would be indistinguishable from not knowing how good somebody is and would
+    make a held seat look like a worse *match* rather than a less certain one.
+    """
+
+    PAID = "paid"
+    HELD = "held"
+    EMPTY = "empty"
+
+
+@final
+@dataclass(frozen=True)
+class SeatSnapshot:
+    """One seat of a match: its commitment state, and who is on it.
+
+    The two cannot disagree, and that is checked rather than trusted: an empty
+    seat is exactly a seat with nobody on it. A seat carrying a state that
+    contradicts its occupant is a caller's bug — an assembler that has lost track
+    of a join — and every count downstream, the paid fraction viability reads
+    included, would be quietly wrong rather than loudly.
+    """
+
+    state: SeatState = SeatState.EMPTY
+    occupant: Occupant | None = None
+
+    def __post_init__(self) -> None:
+        invariant(
+            (self.occupant is None) == (self.state is SeatState.EMPTY),
+            f"a {self.state.value} seat carrying occupant {self.occupant!r}",
+        )
 
 
 @final
@@ -146,12 +210,15 @@ class MatchSnapshot:
     answer is relative to somebody, and *"a perfectly balanced match forty minutes
     away at twice your ceiling"* is a good match and a bad recommendation at the
     same time. They may or may not be seated; sides are oriented so that when they
-    are, they come first.
+    are, they come first. They are an ``Occupant`` and not a ``PlayerSkill``,
+    because a player browsing padel matches may only ever have been rated at
+    tennis, and refusing to analyse a match for them would hide every padel match
+    from exactly the players most in need of one.
     """
 
     sport: Sport
     seats: tuple[SeatSnapshot, ...]
-    current_player: PlayerSkill
+    current_player: Occupant
 
     def __post_init__(self) -> None:
         invariant(
@@ -176,7 +243,27 @@ class MatchSnapshot:
         return spec.players
 
     @property
-    def occupants(self) -> tuple[PlayerSkill, ...]:
-        """Everybody on a seat, in seat order."""
+    def occupants(self) -> tuple[Occupant, ...]:
+        """Everybody on a seat, in seat order — **paid and held alike.**
+
+        The glossary's Roster is *the paid seats*, and a held seat *contributes
+        its player's level but not their attendance*, so both are here: the two
+        states differ in whether the person turns up, never in whether they count
+        towards how even the match will be. Reading only the paid ones would drop
+        a player who is in the match from the forecast of it.
+        """
 
         return tuple(seat.occupant for seat in self.seats if seat.occupant is not None)
+
+    @property
+    def paid_seats(self) -> int:
+        """How many seats are paid for, as distinct from merely held.
+
+        Not read by the balance forecast, which cannot tell the two apart on
+        purpose. It is here because the distinction has exactly one consumer —
+        the viability term, which asks how likely the match is to happen — and
+        because a snapshot that carried the state without ever counting it would
+        be carrying a field nothing reads.
+        """
+
+        return sum(1 for seat in self.seats if seat.state is SeatState.PAID)

@@ -255,24 +255,27 @@ ahead of the first club, which is the whole reason they could be built now.
 
 ### Matchmaking (`backend/app/engines/pairing/`, `backend/app/engines/matchfit/`)
 
-> **Words first, code second.** The first slices of code are in: `app/engines/pairing/`
-> holds the **Balance forecast** for a *full* match at either arity — the estimate, the
-> margin, Certainty, the split bar, Beyond scale — over the shared snapshot vocabulary in
-> `app/engines/matchmaking.py`, and **Pairing** and **Team strength** are built with it:
-> four players are enumerated into the three splits, each is forecast, and all three come
-> back ranked. **Seat target** and **Target band** are built too, so a match one seat from
-> full now says what Level that seat is aimed at, and any match with somebody on a seat says
-> what range it is aimed at. **Roster**, **Imputed seat**, everything under **Match Fit**,
-> and **Match viability** are still words without code — so a match with a seat still open
-> gets a target and no forecast. The terms are committed ahead of them
-> because the decisions behind them are
+> **Words first, code second.** The **Pairing** half is built. `app/engines/pairing/`
+> holds the **Balance forecast** at either arity for a full match *and a forming one* — the
+> estimate, the margin, Certainty, the split bar, Beyond scale — over the shared snapshot
+> vocabulary in `app/engines/matchmaking.py`, with **Pairing** and **Team strength**: four
+> players are enumerated into the three splits, each is forecast, and all three come back
+> ranked. **Seat target** and **Target band** are built, so a match one seat from full says
+> what Level that seat is aimed at and any match with a rated player on a seat says what
+> range it is aimed at. **Roster** and **Imputed seat** are built, so a half-formed match is
+> forecast rather than hidden and says how much of the answer was stood in for; the two
+> states that still decline are a court nobody has joined and one where nobody seated has a
+> rating at that sport, because both leave nothing for a stand-in to be drawn from.
+> Everything under **Match Fit** and **Match viability** are still words without code. The
+> terms are committed ahead of them because the decisions behind them are
 > ([ADR-0025](docs/adr/0025-binding-pairing-for-counted-matches.md),
 > [ADR-0026](docs/adr/0026-matchmaking-engines-snapshot-input-contract.md),
 > [ADR-0027](docs/adr/0027-fit-and-certainty-are-separate-ranking-is-policy.md)), and because
-> the engines cannot be written in vocabulary that does not exist. Terms describing a **seat's
-> state**, a match's **phase** and its **join cutoff** are borrowed from the clock and
-> commitment rules and will be *defined* with Matches, not here — this section reads them, it
-> does not own them.
+> the engines cannot be written in vocabulary that does not exist. A **seat's state** — paid,
+> held, empty — is borrowed from the commitment rules and is read by the snapshot now, spelled
+> as they spell it; a match's **phase** and its **join cutoff** are still only words. All
+> three will be *defined* with Matches, not here — this section reads them, it does not own
+> them.
 
 Two engines, neither of them a bounded context, both pure and versioned
 ([ADR-0015](docs/adr/0015-engines-as-a-pure-versioned-layer.md)). **Pairing** asks whether a
@@ -297,10 +300,18 @@ forty minutes away at twice your ceiling is a good match in the abstract and a b
   differently.
 - **Roster** — the people a forecast is about: the **paid** seats, plus **you** if you could
   still join. A **held** seat contributes its player's level but not their attendance. An
-  **empty** seat is imputed.
+  **empty** seat is imputed. You join the seat you would actually take, so the forecast
+  answers *what would this match be like if I joined* rather than what it is like without
+  you — and a match with no empty seat has nowhere to put you, so a full match stays
+  somebody else's.
 - **Imputed seat** — an empty seat stood in for by a hypothetical player drawn from the
   **target band**. It is what lets a half-formed match be forecast at all, and it is why the
-  margin widens as a match gets emptier rather than the forecast disappearing.
+  margin widens as a match gets emptier rather than the forecast disappearing. A player with
+  **no rating at that sport** is imputed the same way and for the same reason: what the
+  platform lacks is a level, and whether somebody is sitting on the seat is a question for
+  **match viability**. Imputation stands in for gaps in a roster and never for the whole
+  roster — a stand-in is drawn from the target band, and a match with nobody rated on a seat
+  has no band.
 - **Seat target** — the level that would make a match with **exactly one** seat open as even
   as possible. With more seats open the question is under-determined and the engine refuses it.
   In doubles *three* levels each make the match exactly even, one for each seated player the

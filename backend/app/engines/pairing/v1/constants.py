@@ -1,4 +1,4 @@
-"""Pairing v1's constants — six numbers, each an admitted hypothesis.
+"""Pairing v1's constants — seven numbers, each an admitted hypothesis.
 
 Constants travel with the version as a frozen dataclass and every one of them
 carries, as its docstring, the measurement that would falsify it (``docs/adr/0015``,
@@ -20,6 +20,7 @@ from dataclasses import dataclass, field
 from types import MappingProxyType
 from typing import Mapping, final
 
+from app.engines.matchmaking import Uncertainty, uncertainty
 from app.kernel import SPORT_SPECS, Ratio, Sport, invariant, ratio
 
 #: The sports that have a pairing at all. Read from the kernel registry rather
@@ -133,6 +134,50 @@ class PairingConstants:
     wider than the match really was and it told nobody anything; if a large share
     land outside it and those matches then played out balanced, it is narrower
     than the truth and it was turning people away from matches that were for them.
+    """
+
+    imputation_uncertainty: Uncertainty = field(default_factory=lambda: uncertainty(98))
+    """How unknown a seat nobody has taken is — the σ an imputed Level carries.
+
+    **Derived from two documents, and it has to be wider than the band alone.**
+    Two independent things are unknown about a seat the platform is standing in
+    for, and they combine through this engine's one quadrature rule:
+
+    1. *Which Level in the band the joiner lands at.* The target band is the
+       platform's own published statement of where an unknown joiner falls, so it
+       is read as a one-σ interval and its half width is taken as that σ — 0,50.
+       Inventing a second spread here would be holding two opinions about the same
+       question.
+    2. *Whoever they turn out to be, their own rating is uncertain.* The platform
+       has not merely failed to measure this person, it has not met them, so it may
+       not assume it will know them better than it knows somebody who has answered
+       the questionnaire and nothing else. The widest σ the rating context
+       publishes for a real player is its onboarding floor — 0,84.
+
+    ``√(0,50² + 0,84²) = 0,9775``, which is 0,98 under the engine's rounding.
+
+    **The second figure is the rating context's and is deliberately copied rather
+    than imported**, exactly as ``ONBOARDING_SIGMA`` is in the persona suite: this
+    engine must not restate the confidence transform or its ceiling, and importing
+    it would let a rating retune move a balance percentage. A mirrored assertion in
+    the invariant suite keeps the two honest, so a retune of the floor turns this
+    constant's derivation red instead of silently invalidating it.
+
+    Taking the band's half width alone would have been the tidier arithmetic and
+    the wrong answer: 0,50 is *narrower* than a freshly-onboarded player's 0,84, so
+    the platform would be claiming to know somebody it has never met better than
+    somebody it has. That is **absence flattering** — the one failure this whole
+    spec exists to remove — and it would have flattered the emptiest matches most.
+
+    **Falsified by:** where the players who actually take imputed seats land. Every
+    fill records the joiner's eventual Level against the band that was advertised
+    when the forecast was made, and the spread of those residuals *is* this number.
+    Second, and sharper: bucket half-formed matches by the forecast they were given
+    before filling up, and compare it against the forecast of the full roster they
+    became. If the two agree far more closely than the margin claimed, this is too
+    wide and the platform is suppressing cards it could have printed; if they
+    disagree by more, it is too narrow and it printed cards it could not stand
+    behind.
     """
 
     certain_margin: int = 8
