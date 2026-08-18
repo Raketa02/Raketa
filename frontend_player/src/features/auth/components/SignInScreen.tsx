@@ -54,7 +54,7 @@ export function SignInScreen() {
           keyboardDismissMode="on-drag"
         >
           <View style={s.header}>
-            <Text style={s.eyebrow}>Rakieta</Text>
+            <Text style={s.eyebrow}>Raketa</Text>
             <Text style={s.title}>Sign in</Text>
           </View>
 
@@ -98,7 +98,7 @@ export function SignInScreen() {
           />
 
           <View style={s.footer}>
-            <Text style={s.footerText}>New to Rakieta?</Text>
+            <Text style={s.footerText}>New to Raketa?</Text>
             <Link href="/sign-up" style={s.footerLink}>
               Create an account
             </Link>

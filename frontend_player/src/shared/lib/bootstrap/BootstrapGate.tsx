@@ -87,7 +87,7 @@ function StartupFailure({ reason }: { readonly reason: string }) {
   return (
     <View style={s.failure} accessibilityRole="alert">
       <Text style={s.eyebrow}>Startup failed</Text>
-      <Text style={s.title}>Rakieta could not start</Text>
+      <Text style={s.title}>Raketa could not start</Text>
       <View style={s.note}>
         <Text style={s.noteText}>{reason}</Text>
       </View>

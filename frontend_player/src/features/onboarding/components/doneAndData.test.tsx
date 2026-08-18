@@ -293,7 +293,7 @@ describe('after a result', () => {
     fireEvent.press(await screen.findByLabelText('Rate Tennis'));
 
     expect(
-      await screen.findByText("We couldn't reach Rakieta. Check your connection and try again."),
+      await screen.findByText("We couldn't reach Raketa. Check your connection and try again."),
     ).toBeTruthy();
     expect(screen.getByRole('alert')).toBeTruthy();
     // Still here. A failed start changed nothing, so the padel result is exactly as it
@@ -479,7 +479,7 @@ describe('the data screen', () => {
     // The invariant the whole rating context is built on, said plainly because the player
     // is entitled to know it.
     expect(screen.getByText('No one can hand-edit a Level')).toBeTruthy();
-    expect(screen.getByText(/not Rakieta staff/)).toBeTruthy();
+    expect(screen.getByText(/not Raketa staff/)).toBeTruthy();
     expect(screen.getByText(/proved, never declared/)).toBeTruthy();
 
     expect(screen.getByText('You can rate a sport again later')).toBeTruthy();
@@ -491,7 +491,7 @@ describe('the data screen', () => {
     // hook here, and an empty request list is the assertion that says so.
     await launchSignedIn('/data');
 
-    expect(await screen.findByText('What Rakieta keeps')).toBeTruthy();
+    expect(await screen.findByText('What Raketa keeps')).toBeTruthy();
     expect(transport.requests).toEqual([]);
   });
 

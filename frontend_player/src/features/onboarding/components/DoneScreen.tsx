@@ -92,7 +92,7 @@ export function DoneScreen() {
       {/* No progress bar. The bar measures which sport is being rated, and none is —
           claiming a full bar for a player who stopped after the first of two would be the
           one dishonest thing this screen could say about the run. */}
-      <OnboardingChrome eyebrow="Rakieta" title="Your starting ratings" />
+      <OnboardingChrome eyebrow="Raketa" title="Your starting ratings" />
 
       <ScrollView contentContainerStyle={s.content}>
         {rated.length === 0 ? (
@@ -122,7 +122,7 @@ export function DoneScreen() {
           label="Continue"
           size="lg"
           onPress={() => router.replace('/data')}
-          accessibilityHint="Shows what Rakieta keeps and what it never does with it"
+          accessibilityHint="Shows what Raketa keeps and what it never does with it"
         />
       </View>
     </SafeAreaView>

@@ -1,4 +1,4 @@
-# Rakieta Club Console — Design System
+# Raketa Club Console — Design System
 
 **Status: locked.** This is the club web app's visual and interaction contract. Every
 screen, component and stylesheet in `frontend_club/` conforms to it. Building a surface
@@ -6,7 +6,7 @@ that is not described here means extending the system deliberately (Part 13), no
 inventing beside it.
 
 - **Origin:** measured out of the v7 HTML prototype
-  (`rakieta-club-console-v7-intent-pool-2.0.html`, 36 570 bytes of CSS, 255 selectors,
+  (`raketa-club-console-v7-intent-pool-2.0.html`, 36 570 bytes of CSS, 255 selectors,
   34 tokens). The verbatim measurement is preserved at
   [`design-system-v7-prototype-audit.md`](design-system-v7-prototype-audit.md).
 - **Relationship to that audit:** the audit is *descriptive* — it recorded the prototype
@@ -627,7 +627,7 @@ title: display block; font-size 13px; margin-bottom 4px
 ```
 
 **Every empty state states value, never absence.** Not *"No data"* but *"No matches
-currently need rescue. Rakieta will show matches here when a cancellation puts a booking
+currently need rescue. Raketa will show matches here when a cancellation puts a booking
 at risk."* The 34px vertical padding gives the message presence rather than letting it
 look like an error.
 
@@ -1036,7 +1036,7 @@ when the underlying contexts are modelled, the domain terms are settled in the r
 **Every number gets a sentence.** The stat description is not optional. A tile that
 cannot justify itself in one line is a vanity metric and should be removed.
 
-**Automation is reported as: *Rakieta did X because Y, producing Z.***
+**Automation is reported as: *Raketa did X because Y, producing Z.***
 
 > *"Invited 3 players to Thu 13 21:00 — first wave · Kamil, Szymon, Filip · 25,25 zł a
 > seat, nobody charged."*

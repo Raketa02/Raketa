@@ -32,7 +32,7 @@ EOF
 echo "🔐 Generating Client Certificate..."
 openssl genrsa -out client.key 4096
 openssl req -new -key client.key -out client.csr \
-  -subj "/C=PL/ST=Malopolska/L=Cracow/O=MyOrg/OU=Dev/CN=rakieta_user"
+  -subj "/C=PL/ST=Malopolska/L=Cracow/O=MyOrg/OU=Dev/CN=raketa_user"
 
 openssl x509 -req -in client.csr -CA rootCA.crt -CAkey rootCA.key -CAcreateserial \
   -out client.crt -days $DAYS_VALID -sha256 \

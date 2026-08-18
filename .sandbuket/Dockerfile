@@ -12,7 +12,7 @@
 #     block every tool call.
 #
 # Build:
-#   docker build -t sandbuket:rakieta \
+#   docker build -t sandbuket:raketa \
 #     --build-arg AGENT_UID=$(id -u) --build-arg AGENT_GID=$(id -g) \
 #     -f .sandbuket/Dockerfile .sandbuket
 # The root Makefile `afk-build` target does this for you.

@@ -534,7 +534,7 @@ export interface components {
         };
         /**
          * Sport
-         * @description The four sports Rakieta rates, as a closed enum.
+         * @description The four sports Raketa rates, as a closed enum.
          * @enum {string}
          */
         Sport: "PADEL" | "TENNIS" | "SQUASH" | "BADMINTON";

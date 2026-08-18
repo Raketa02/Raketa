@@ -1,7 +1,7 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Rakieta Player API",
+    "title": "Raketa Player API",
     "version": "1.0.0"
   },
   "paths": {
@@ -1150,7 +1150,7 @@
           "BADMINTON"
         ],
         "title": "Sport",
-        "description": "The four sports Rakieta rates, as a closed enum."
+        "description": "The four sports Raketa rates, as a closed enum."
       },
       "SportResource": {
         "properties": {

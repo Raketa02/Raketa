@@ -16,9 +16,9 @@ name: Deploy backend to ECS  [DORMANT]
 #
 # To reactivate, once the AWS side is provisioned:
 #   gh variable set AWS_REGION --body eu-north-1
-#   gh variable set ECR_REPOSITORY     --body rakieta-api
-#   gh variable set ECS_CLUSTER        --body rakieta-cluster
-#   gh variable set ECS_SERVICE        --body rakieta-service
+#   gh variable set ECR_REPOSITORY     --body raketa-api
+#   gh variable set ECS_CLUSTER        --body raketa-cluster
+#   gh variable set ECS_SERVICE        --body raketa-service
 #   gh variable set ECS_CONTAINER_NAME --body api
 #   gh secret   set AWS_OIDC_ROLE_ARN  --body arn:aws:iam::<acct>:role/<role>
 # and restore the `push:` trigger below.
@@ -52,13 +52,13 @@ jobs:
       postgres:
         image: postgres:17
         env:
-          POSTGRES_DB: rakieta
-          POSTGRES_USER: rakieta_user
-          POSTGRES_PASSWORD: rakieta_pwd
+          POSTGRES_DB: raketa
+          POSTGRES_USER: raketa_user
+          POSTGRES_PASSWORD: raketa_pwd
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U rakieta_user -d rakieta"
+          --health-cmd "pg_isready -U raketa_user -d raketa"
           --health-interval 5s --health-timeout 3s --health-retries 10
     steps:
       - uses: actions/checkout@v4
@@ -75,8 +75,8 @@ jobs:
         run: poetry run ruff check .
       - name: Test
         env:
-          WRITER_DB_URL: postgresql+asyncpg://rakieta_user:rakieta_pwd@localhost:5432/rakieta
-          EVENT_TEST_DATABASE_URL: postgresql+asyncpg://rakieta_user:rakieta_pwd@localhost:5432/rakieta
+          WRITER_DB_URL: postgresql+asyncpg://raketa_user:raketa_pwd@localhost:5432/raketa
+          EVENT_TEST_DATABASE_URL: postgresql+asyncpg://raketa_user:raketa_pwd@localhost:5432/raketa
           DB_SSL_MODE: disable
           JWT_SECRET_KEY: ci-secret-do-not-use-in-prod
         run: poetry run pytest tests --cov=app --cov-report=xml -q

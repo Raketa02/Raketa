@@ -9,7 +9,7 @@
 //
 // These are config, never secrets: the app deliberately refuses to boot without them, and
 // CI has no .env file (nor may an agent create one).
-process.env.EXPO_PUBLIC_API_URL = 'https://api.test.rakieta.invalid';
+process.env.EXPO_PUBLIC_API_URL = 'https://api.test.raketa.invalid';
 process.env.EXPO_PUBLIC_ENV = 'development';
 
 module.exports = {

@@ -65,7 +65,7 @@ export function SportsPickerScreen() {
 
   return (
     <SafeAreaView style={s.screen} edges={['top', 'bottom']}>
-      <OnboardingChrome eyebrow="Rakieta" title="Which sports do you play?" />
+      <OnboardingChrome eyebrow="Raketa" title="Which sports do you play?" />
 
       <ScrollView contentContainerStyle={s.content}>
         <Note variant="info">

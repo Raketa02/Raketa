@@ -6,7 +6,7 @@
 ## Context
 
 The club web app was designed before it was built: a v7 HTML prototype
-(`rakieta-club-console-v7-intent-pool-2.0.html`) established the whole visual language —
+(`raketa-club-console-v7-intent-pool-2.0.html`) established the whole visual language —
 36 570 bytes of CSS, 255 selectors, 34 tokens — and it was audited value by value. We
 have the unusual luxury of a complete design system arriving *before* the first
 component.

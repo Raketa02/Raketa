@@ -1,4 +1,4 @@
-# Rakieta
+# Raketa
 
 A racket-sport platform. Players find and book courts; clubs manage those courts.
 

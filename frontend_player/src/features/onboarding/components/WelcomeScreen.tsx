@@ -35,7 +35,7 @@ export function WelcomeScreen() {
 
   return (
     <SafeAreaView style={s.screen} edges={['top', 'bottom']}>
-      <OnboardingChrome eyebrow="Rakieta" title="Let's find your level" />
+      <OnboardingChrome eyebrow="Raketa" title="Let's find your level" />
 
       <ScrollView contentContainerStyle={s.content}>
         {POINTS.map((point) => (

@@ -1,5 +1,5 @@
 # ---------------------------------------------------------------------------
-# Rakieta monorepo — root ignore rules.
+# Raketa monorepo — root ignore rules.
 # Each app may add its own .gitignore for stack-specific artifacts.
 # ---------------------------------------------------------------------------
 

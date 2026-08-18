@@ -1,4 +1,4 @@
-# Rakieta — Monorepo
+# Raketa — Monorepo
 
 A racket-sport platform: players find and book courts; clubs manage those courts.
 Three **independently deployable** apps share one repository and one domain language,

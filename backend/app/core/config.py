@@ -8,8 +8,8 @@ from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 class Settings(BaseSettings):
     # --- app metadata
-    TITLE: str = "Rakieta API"
-    DESCRIPTION: str = "Production-ready Rakieta backend with auth"
+    TITLE: str = "Raketa API"
+    DESCRIPTION: str = "Production-ready Raketa backend with auth"
     VERSION: str = "1.0.0"
 
     # --- environment
@@ -20,7 +20,7 @@ class Settings(BaseSettings):
 
     # --- database
     WRITER_DB_URL: str = (
-        "postgresql+asyncpg://rakieta_user:rakieta_pwd@db:5432/rakieta"
+        "postgresql+asyncpg://raketa_user:raketa_pwd@db:5432/raketa"
     )
     READER_DB_URL: Optional[str] = None
     DB_ECHO: bool = False
@@ -36,7 +36,7 @@ class Settings(BaseSettings):
     # --- JWT
     JWT_SECRET_KEY: str = "change-me-in-production"
     JWT_ALGORITHM: str = "HS256"
-    JWT_ISSUER: str = "rakieta"
+    JWT_ISSUER: str = "raketa"
     ACCESS_TOKEN_EXPIRE_SECONDS: int = 900
     REFRESH_TOKEN_EXPIRE_SECONDS: int = 86400
 

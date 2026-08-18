@@ -1,4 +1,4 @@
-# Rakieta Club Web App — Technical Vocabulary
+# Raketa Club Web App — Technical Vocabulary
 
 This file holds **club-app-only technical vocabulary**. It does **not** define domain
 language — those terms (User, Club, Court, Booking, statuses, events) live once in the

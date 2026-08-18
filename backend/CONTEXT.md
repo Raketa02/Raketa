@@ -1,4 +1,4 @@
-# Rakieta Backend — Technical Vocabulary
+# Raketa Backend — Technical Vocabulary
 
 This file holds **backend-only technical vocabulary**. It does **not** define domain
 language — those terms (User, Authority, Club, Court, Booking, statuses, events) live

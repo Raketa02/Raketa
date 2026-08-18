@@ -1,4 +1,4 @@
-# Rakieta Club Web App
+# Raketa Club Web App
 
 Next.js 15 (App Router) + React 19 + TypeScript. The web app clubs use to manage courts,
 availability, pricing and bookings. A feature-oriented modular frontend with a thin App

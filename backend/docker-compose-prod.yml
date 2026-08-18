@@ -3,7 +3,7 @@
 # All secrets are expected to come from the environment, not from this file.
 services:
   api:
-    image: ${API_IMAGE:-rakieta_api:prod}
+    image: ${API_IMAGE:-raketa_api:prod}
     restart: unless-stopped
     env_file:
       - .env.prod

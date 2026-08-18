@@ -1,4 +1,4 @@
-# Rakieta — Context Map
+# Raketa — Context Map
 
 A **polyglot monorepo** with three independently deployable apps that realize the
 **same** bounded contexts:

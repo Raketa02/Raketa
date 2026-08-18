@@ -1,6 +1,6 @@
 #!/bin/bash
 # ---------------------------------------------------------------------------
-# Bash guardrail for the Rakieta monorepo.
+# Bash guardrail for the Raketa monorepo.
 #
 # Covers what enforce-ownership.sh cannot: a shell command can deploy, clobber a
 # secret, or write into another app through a redirect without ever touching the

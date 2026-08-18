@@ -37,11 +37,11 @@ const POINTS = [
   },
   {
     title: 'What we never do with it',
-    body: 'Your answers stay between you and Rakieta. They are not shared with other players, and they are never sold.',
+    body: 'Your answers stay between you and Raketa. They are not shared with other players, and they are never sold.',
   },
   {
     title: 'No one can hand-edit a Level',
-    body: 'Not you, not another player, not Rakieta staff. A level is proved, never declared: it moves when real matches move it, and there is no way to type one in.',
+    body: 'Not you, not another player, not Raketa staff. A level is proved, never declared: it moves when real matches move it, and there is no way to type one in.',
   },
   {
     title: 'You can rate a sport again later',
@@ -54,7 +54,7 @@ export function DataScreen() {
 
   return (
     <SafeAreaView style={s.screen} edges={['top', 'bottom']}>
-      <OnboardingChrome eyebrow="Rakieta" title="What Rakieta keeps" />
+      <OnboardingChrome eyebrow="Raketa" title="What Raketa keeps" />
 
       <ScrollView contentContainerStyle={s.content}>
         {POINTS.map((point) => (
@@ -75,7 +75,7 @@ export function DataScreen() {
           label="Start playing"
           size="lg"
           onPress={() => router.replace('/')}
-          accessibilityHint="Finishes setting up and opens Rakieta"
+          accessibilityHint="Finishes setting up and opens Raketa"
         />
       </View>
     </SafeAreaView>

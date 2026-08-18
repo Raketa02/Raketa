@@ -1,6 +1,6 @@
-# Rakieta
+# Raketa
 
-Rakieta is a production-oriented FastAPI service for user registration,
+Raketa is a production-oriented FastAPI service for user registration,
 authentication, refresh-token rotation, and current-user resolution. The codebase
 is structured around Clean Architecture and ports-and-adapters boundaries, with a
 domain-event pipeline that combines an append-only event store and a transactional
@@ -225,7 +225,7 @@ docker compose -f docker-compose-dev.yml exec api alembic check
 The production image is built from `docker/api/Dockerfile.prod`.
 
 ```bash
-docker build -f docker/api/Dockerfile.prod -t rakieta_api:prod .
+docker build -f docker/api/Dockerfile.prod -t raketa_api:prod .
 ```
 
 The image uses:

@@ -1,11 +1,11 @@
 {
-  "family": "rakieta-task5",
+  "family": "raketa-task5",
   "networkMode": "awsvpc",
   "requiresCompatibilities": ["FARGATE"],
   "cpu": "512",
   "memory": "1024",
-  "executionRoleArn": "arn:aws:iam::422661068054:role/ecsTaskExecutionRole",
-  "taskRoleArn": "arn:aws:iam::422661068054:role/rakieta-task-role",
+  "executionRoleArn": "arn:aws:iam::<AWS_ACCOUNT_ID>:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::<AWS_ACCOUNT_ID>:role/raketa-task-role",
   "runtimePlatform": {
     "cpuArchitecture": "X86_64",
     "operatingSystemFamily": "LINUX"
@@ -32,9 +32,9 @@
         { "name": "RUN_MIGRATIONS_ON_STARTUP", "value": "true" }
       ],
       "secrets": [
-        { "name": "JWT_SECRET_KEY", "valueFrom": "arn:aws:secretsmanager:eu-central-1:422661068054:secret:rakieta/prod-MDnizO:JWT_SECRET_KEY::" },
-        { "name": "WRITER_DB_URL", "valueFrom": "arn:aws:secretsmanager:eu-central-1:422661068054:secret:rakieta/prod-MDnizO:WRITER_DB_URL::" },
-        { "name": "READER_DB_URL", "valueFrom": "arn:aws:secretsmanager:eu-central-1:422661068054:secret:rakieta/prod-MDnizO:READER_DB_URL::" }
+        { "name": "JWT_SECRET_KEY", "valueFrom": "arn:aws:secretsmanager:eu-central-1:<AWS_ACCOUNT_ID>:secret:raketa/prod-<SECRET_SUFFIX>:JWT_SECRET_KEY::" },
+        { "name": "WRITER_DB_URL", "valueFrom": "arn:aws:secretsmanager:eu-central-1:<AWS_ACCOUNT_ID>:secret:raketa/prod-<SECRET_SUFFIX>:WRITER_DB_URL::" },
+        { "name": "READER_DB_URL", "valueFrom": "arn:aws:secretsmanager:eu-central-1:<AWS_ACCOUNT_ID>:secret:raketa/prod-<SECRET_SUFFIX>:READER_DB_URL::" }
       ],
       "healthCheck": {
         "command": ["CMD-SHELL", "curl -fsS http://127.0.0.1:8000/health || exit 1"],
@@ -46,7 +46,7 @@
       "logConfiguration": {
         "logDriver": "awslogs",
         "options": {
-          "awslogs-group": "/ecs/rakieta",
+          "awslogs-group": "/ecs/raketa",
           "awslogs-region": "eu-central-1",
           "awslogs-stream-prefix": "api"
         }

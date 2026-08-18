@@ -32,7 +32,7 @@ export function AccountScreen() {
       <View style={s.content}>
         <View style={s.header}>
           <Text style={s.eyebrow}>Signed in</Text>
-          <Text style={s.title}>{user.data === undefined ? 'Rakieta' : user.data.nickname}</Text>
+          <Text style={s.title}>{user.data === undefined ? 'Raketa' : user.data.nickname}</Text>
           {user.data !== undefined ? <Text style={s.body}>{user.data.email}</Text> : null}
         </View>
 

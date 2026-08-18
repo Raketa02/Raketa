@@ -31,7 +31,7 @@ for the last seat — and it becomes a distributed transaction whose failure mod
 double-selling a court, which is the first problem the club console exists to solve.
 
 **The product's central engineering claim argues against it.** Microservices are a
-technique for letting parts of a system diverge safely. Rakieta's specifications are built
+technique for letting parts of a system diverge safely. Raketa's specifications are built
 around 40 cross-application assertions proving the two sides *never* diverge, and state the
 governing rule as *"there is exactly one implementation of each question."* Those are in
 tension, and the specifications pick a side.

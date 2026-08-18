@@ -1,4 +1,4 @@
-# Rakieta — Club web app
+# Raketa — Club web app
 
 The web application clubs use to manage their courts, availability, pricing and
 bookings. Next.js 15 (App Router) + React 19 + TypeScript, talking to the FastAPI backend

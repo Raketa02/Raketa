@@ -1,4 +1,4 @@
-# Rakieta Player App — Production Architecture
+# Raketa Player App — Production Architecture
 
 **Status: adopted.** This is the player app's runtime and engineering contract, the
 counterpart to the [design system](design-system.md). The design system says what a

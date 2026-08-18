@@ -20,7 +20,7 @@ import * as SecureStore from 'expo-secure-store';
 import type { Tokens } from './auth.types';
 
 /** One key, because the pair is one fact. See the note above. */
-const SESSION_KEY = 'rakieta.session.v1';
+const SESSION_KEY = 'raketa.session.v1';
 
 /**
  * The runtime copy. A module variable holding a credential is normally a bug; here it

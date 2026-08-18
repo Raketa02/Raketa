@@ -1,12 +1,12 @@
-# Rakieta Player App — Design System
+# Raketa Player App — Design System
 
 **Status: locked.** This is the player app's visual and interaction contract. Every
 screen and component in `frontend_player/` conforms to it. Building a surface that is not
 described here means extending the system deliberately (Part 15), not inventing beside it.
 
 - **Origin:** measured out of the v34 HTML prototype
-  (`rakieta-player-app-prototype-v34.html`, cross-checked against
-  `rakieta-player-deck-v34.html`). The verbatim measurement is preserved at
+  (`raketa-player-app-prototype-v34.html`, cross-checked against
+  `raketa-player-deck-v34.html`). The verbatim measurement is preserved at
   [`design-system-v34-prototype-audit.md`](design-system-v34-prototype-audit.md).
 - **Relationship to that audit:** the audit is _descriptive_ — it recorded the prototype
   including its inconsistencies (its Part 20) and its accessibility gaps (its Part 21).

@@ -66,7 +66,7 @@ export function SignUpScreen() {
           keyboardDismissMode="on-drag"
         >
           <View style={s.header}>
-            <Text style={s.eyebrow}>Rakieta</Text>
+            <Text style={s.eyebrow}>Raketa</Text>
             <Text style={s.title}>Create an account</Text>
           </View>
 

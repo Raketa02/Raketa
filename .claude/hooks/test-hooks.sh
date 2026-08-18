@@ -1,6 +1,6 @@
 #!/bin/bash
 # ---------------------------------------------------------------------------
-# Test suite for the Rakieta guardrail hooks.
+# Test suite for the Raketa guardrail hooks.
 #
 #   bash .claude/hooks/test-hooks.sh
 #

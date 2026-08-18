@@ -1,6 +1,6 @@
 > **Archived measurement — not the rules.**
 > This is the verbatim audit of the v7 HTML prototype
-> (`rakieta-club-console-v7-intent-pool-2.0.html`), preserved because the reason a value
+> (`raketa-club-console-v7-intent-pool-2.0.html`), preserved because the reason a value
 > was chosen is itself information. It is **descriptive**: it records the prototype
 > including its inconsistencies (Part 12 below).
 >
@@ -9,9 +9,9 @@
 
 ---
 
-# Rakieta Club Console v7 — Design System
+# Raketa Club Console v7 — Design System
 
-**Source of truth:** `rakieta-club-console-v7-intent-pool-2.0.html`
+**Source of truth:** `raketa-club-console-v7-intent-pool-2.0.html`
 **Total CSS across all layers:** 36 570 bytes · 255 selectors in the base sheet + 4 injected layers
 **Design tokens declared:** 34
 **Nature of this document:** descriptive first, prescriptive second. Every value below was read out of the built stylesheet. Where the implemented system is inconsistent, this document says so rather than describing the system as it was meant to be — those are collected in Part 12.
@@ -489,7 +489,7 @@ Header rule uses `--line`; body rules use `--line2`. `.win` highlights a recomme
 .empty b { display:block; font-size:13px; margin-bottom:5px }
 ```
 
-**Every empty state states value, never absence.** Not "No data" but *"No matches currently need rescue. Rakieta will show matches here when a cancellation puts a booking at risk."* The 34px vertical padding gives the message presence rather than letting it look like an error.
+**Every empty state states value, never absence.** Not "No data" but *"No matches currently need rescue. Raketa will show matches here when a cancellation puts a booking at risk."* The 34px vertical padding gives the message presence rather than letting it look like an error.
 
 ---
 
@@ -830,7 +830,7 @@ The copy is part of the design system and is governed by rules.
 
 **Every number gets a sentence.** `.stat .d` is not optional. A tile that cannot justify itself in one line is a vanity metric and should be removed.
 
-**Automation is reported in the form:** *Rakieta did X because Y, producing Z.*
+**Automation is reported in the form:** *Raketa did X because Y, producing Z.*
 > *"Invited 3 players to Thu 13 21:00 — first wave · Kamil, Szymon, Filip · 25,25 zł a seat, nobody charged."*
 
 **Empty states state value:** what will appear here, and when.

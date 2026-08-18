@@ -1,9 +1,9 @@
 {
-  "name": "@rakieta/frontend-player",
+  "name": "@raketa/frontend-player",
   "version": "0.1.0",
   "private": true,
   "main": "expo-router/entry",
-  "description": "Rakieta player app — React Native + Expo. Players find courts, book slots and organise matches.",
+  "description": "Raketa player app — React Native + Expo. Players find courts, book slots and organise matches.",
   "packageManager": "pnpm@9.15.0",
   "engines": {
     "node": ">=22"

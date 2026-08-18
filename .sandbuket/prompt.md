@@ -1,7 +1,7 @@
 # AFK Agent Prompt
 
 You are running unattended inside a sandbuket sandbox: a git worktree of the
-Rakieta monorepo — three independently deployable apps (`backend/`,
+Raketa monorepo — three independently deployable apps (`backend/`,
 `frontend_player/`, `frontend_club/`) that share no code and communicate only
 over HTTP. Each run you pick one task, implement it end to end, verify it,
 commit it, and update its GitHub issue. The orchestrator (`tools/afk/afk.py`)

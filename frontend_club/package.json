@@ -1,8 +1,8 @@
 {
-  "name": "@rakieta/frontend-club",
+  "name": "@raketa/frontend-club",
   "version": "0.1.0",
   "private": true,
-  "description": "Rakieta club web app — Next.js App Router. Clubs manage courts, schedules and bookings.",
+  "description": "Raketa club web app — Next.js App Router. Clubs manage courts, schedules and bookings.",
   "packageManager": "pnpm@9.15.0",
   "engines": {
     "node": ">=22"

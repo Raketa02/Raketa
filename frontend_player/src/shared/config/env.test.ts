@@ -19,8 +19,8 @@ describe('parseEnv', () => {
   });
 
   it('accepts an https API URL', () => {
-    expect(parseEnv({ ...valid, EXPO_PUBLIC_API_URL: 'https://api.rakieta.app' })).toEqual({
-      apiUrl: 'https://api.rakieta.app',
+    expect(parseEnv({ ...valid, EXPO_PUBLIC_API_URL: 'https://api.raketa.app' })).toEqual({
+      apiUrl: 'https://api.raketa.app',
       environment: 'development',
     });
   });

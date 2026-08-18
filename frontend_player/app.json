@@ -1,18 +1,18 @@
 {
   "expo": {
-    "name": "Rakieta",
-    "slug": "rakieta-player",
+    "name": "Raketa",
+    "slug": "raketa-player",
     "version": "0.1.0",
     "orientation": "portrait",
-    "scheme": "rakieta",
+    "scheme": "raketa",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.rakieta.player"
+      "bundleIdentifier": "com.raketa.player"
     },
     "android": {
-      "package": "com.rakieta.player",
+      "package": "com.raketa.player",
       "adaptiveIcon": {
         "backgroundColor": "#ffffff"
       }

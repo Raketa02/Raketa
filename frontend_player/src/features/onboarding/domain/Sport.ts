@@ -1,5 +1,5 @@
 /**
- * The four sports Rakieta rates.
+ * The four sports Raketa rates.
  *
  * A **closed set**, as it is on the backend: adding a sport is a code change and a
  * release, never a row in a table. The wire spells them `PADEL`; this app spells them

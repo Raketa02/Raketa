@@ -131,7 +131,7 @@ describe('signing in', () => {
     fireEvent.press(screen.getByLabelText('Sign in'));
 
     expect(
-      await screen.findByText("We couldn't reach Rakieta. Check your connection and try again."),
+      await screen.findByText("We couldn't reach Raketa. Check your connection and try again."),
     ).toBeTruthy();
   });
 

@@ -1,4 +1,4 @@
-# Rakieta — Player app (iOS + Android)
+# Raketa — Player app (iOS + Android)
 
 The native app players use to find courts, book slots and organise matches.
 React Native + Expo + TypeScript, rendering with real platform components — not a

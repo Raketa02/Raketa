@@ -666,7 +666,7 @@ describe('when a change does not go through', () => {
     // change still described — a dropped request must not cost the player the answers a
     // successful change would have kept.
     expect(
-      await screen.findByText("We couldn't reach Rakieta. Check your connection and try again."),
+      await screen.findByText("We couldn't reach Raketa. Check your connection and try again."),
     ).toBeTruthy();
     expect(screen.getByRole('header', { name: 'Change this answer?' })).toBeTruthy();
     expect(screen.getByText(/Changing it discards 2 later answers/)).toBeTruthy();
@@ -899,7 +899,7 @@ describe('when an answer does not go through', () => {
     fireEvent.press(screen.getByLabelText('Confirm answer'));
 
     expect(
-      await screen.findByText("We couldn't reach Rakieta. Check your connection and try again."),
+      await screen.findByText("We couldn't reach Raketa. Check your connection and try again."),
     ).toBeTruthy();
 
     // Still on the same question, with the answer they gave still chosen — a player on a

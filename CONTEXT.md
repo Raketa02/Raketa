@@ -1,11 +1,11 @@
-# Rakieta — Domain Context
+# Raketa — Domain Context
 
 The shared, ubiquitous language for the whole system. When you name a concept — in an
 issue, a test, a type, a refactor proposal — use the term as defined here. All three
 apps obey this file; see [`CONTEXT-MAP.md`](CONTEXT-MAP.md) for how the vocabulary is
 split, and [`docs/adr/`](docs/adr/) for the decisions behind these terms.
 
-Rakieta is a racket-sport platform. Players find and book courts through the
+Raketa is a racket-sport platform. Players find and book courts through the
 **player app**; clubs manage those courts through the **club web app**; both are served
 by one **backend** built on Clean Architecture (hexagonal ports & adapters), DDD, and
 event sourcing.

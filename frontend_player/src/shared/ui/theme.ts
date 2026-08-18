@@ -1,5 +1,5 @@
 /**
- * Rakieta Player App — design tokens.
+ * Raketa Player App — design tokens.
  *
  * THE source of colour, type, spacing, radius, elevation and motion values for
  * frontend_player. Components read from here; a literal hex, font size or gap in a
