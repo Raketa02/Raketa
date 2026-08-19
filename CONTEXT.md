@@ -456,9 +456,10 @@ forty minutes away at twice your ceiling is a good match in the abstract and a b
 
 ## Part 2 — Planned bounded contexts
 
-The racket-sport domain proper. **These are not modeled yet** — no code, no events, no
-committed terms. They are listed so that work lands in the right context from the first
-commit, and so nobody invents a fourth name for the same idea.
+The racket-sport domain proper. **These are not modeled yet** — no code, no events. Terms
+are uncommitted here **except** where an ADR has committed one ahead of the code; the Matches
+block below is the first such exception. They are listed so that work lands in the right
+context from the first commit, and so nobody invents a fourth name for the same idea.
 
 | Context | Intent | Likely home |
 | --- | --- | --- |
@@ -481,6 +482,32 @@ not silently assumed away:
 - Is availability a **projection** over bookings, or its own stored concept?
 - What is the **tenancy spine** — `Club → Court → Booking`? Where do players attach?
 - Which side owns **cancellation windows and pricing** — Club config or Booking policy?
+
+### Matches — terms committed ahead of the code
+
+Committed by [ADR-0030](docs/adr/0030-a-departure-is-an-audience-not-a-state.md). The code does
+not exist yet; these names do, and Matches must be built with them rather than around them.
+
+- **Departure** — a player vacating a seat they hold. It records the seat, the player, the time,
+  **the amount they paid**, and its outcome. A departure is a record in its own right, not a flag
+  on a seat.
+- **Vacancy** — the unfilled seat a departure leaves, and the thing the rescue cascade works. A
+  departure always exists; a vacancy exists only while the seat is unfilled — so a gifted seat
+  creates a departure and no vacancy at all. **Two players leaving produce two departures and two
+  vacancies**, which is the distinction a single scalar could not express.
+- **Leaver** — the player who made a departure. Not a state: a leaver sees the match's own state
+  rendered for somebody who used to hold a seat.
+- **Outcome** — a departure's settled result: *reversed*, *refunded in full*, *refunded half*, or
+  *forfeited*. On a private court only *refunded in full* and *forfeited* are reachable.
+- **Settlement** — the moment no further **seat** event can change an outcome. Monotonic upward
+  thereafter: a club-side failure may improve a settled outcome, nothing may reduce one.
+- **Guarantee** — a private-court owner's exposure: the court price minus the seats currently
+  funded, held against their account rather than paid to the club. A funded seat never becomes
+  unfunded, so a guarantee only ever decreases.
+
+**A seat vacated after commitment is still *funded*.** That one sentence is why the club is safe,
+why the other players' payments never change, and why a private-court owner is never re-exposed
+by somebody else leaving.
 
 ---
 
