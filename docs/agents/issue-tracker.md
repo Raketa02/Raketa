@@ -118,6 +118,16 @@ Used by `/wayfinder`. The **map** is a single issue with **child** issues as tic
               | select((.issue_dependencies_summary.blocked_by // 0) == 0)
               | "\(.number)\t\(.title)"'
   ```
+  `blocked_by` counts **open** blockers only — but GitHub recomputes that summary
+  asynchronously. For a few seconds after you close a blocker, the ticket it just
+  unblocked still reports `blocked_by: 1`, and this query still hides it. The symptom is
+  a ticket that should have joined the frontier and didn't. The edges themselves are
+  never stale, so confirm against them and re-run:
+
+  ```bash
+  gh api repos/Raketa02/Raketa/issues/<n>/dependencies/blocked_by \
+    --jq '.[] | "#\(.number) [\(.state)] \(.title)"'
+  ```
 - **Claim**: `gh issue edit <n> --add-assignee @me` — the session's first write.
 - **Resolve**: `gh issue comment <n> --body "<answer>"`, then `gh issue close <n>`, then
   append a context pointer (gist + link) to the map's Decisions-so-far.
