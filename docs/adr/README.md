@@ -65,3 +65,7 @@ If your work **contradicts** an existing ADR, surface it rather than silently ov
 - [0033 — A departure's settlement and its vacancy are independent](0033-settlement-and-occupancy-are-independent.md) — *amends 0030*
 - [0034 — The Matches context is a record and keeps no history](0034-matches-is-a-record-and-keeps-no-history.md) — *the first racket-sport context to answer 0002's per-context question the other way*
 - [0035 — A reservation is the only claim on a court, and it claims an interval](0035-a-reservation-claims-a-court-over-an-interval.md)
+- [0036 — A UI document is final on the screen, not on the arithmetic](0036-a-ui-document-is-final-on-the-screen-not-on-the-arithmetic.md)
+- [0037 — The fit badge shouts once, and only about a seat](0037-the-fit-badge-shouts-once-and-only-about-a-seat.md)
+- [0038 — Now is polled; the push is specified and deferred](0038-now-is-polled-the-push-is-specified-and-deferred.md) — *answers 0008's premise: no long-lived connection exists to outlive a token*
+- [0039 — The card projection rebuilds from the record, so its consumer needs no partition](0039-the-card-projection-rebuilds-from-the-record.md)
