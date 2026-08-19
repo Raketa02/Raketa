@@ -41,6 +41,7 @@ without the map still needs it.
 | [`5-now_screen_architecture_review.md`](5-now_screen_architecture_review.md) | **Normative** — 21 findings, 14 affirmations |
 | [`prototype-v37/`](prototype-v37/) | The running v37 prototype — the behavioural oracle. **Two builds; read the next section.** |
 | [`research/`](research/) | Findings produced *by* the map, not inputs to it |
+| [`deltas/`](deltas/) | **Amendments that govern over the documents above.** Where a document specifies a model, formula, weight or threshold inside the engines layer and shipped code disagrees, the code governs and the delta records it — the documents are never edited ([ADR-0036](../../adr/0036-a-ui-document-is-final-on-the-screen-not-on-the-arithmetic.md)). **A UI authority is final on the *screen*, not on the arithmetic.** |
 
 Two documents these cite live one directory over, because they are player-app-wide rather
 than Now-specific:
