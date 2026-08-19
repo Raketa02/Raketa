@@ -116,6 +116,12 @@ jobs:
         run: poetry run ruff check .
       - name: Import boundaries
         run: poetry run lint-imports
+      # `make check` has run mypy since long before this step existed, and CI did
+      # not — so the typecheck was a local courtesy, and the strict override
+      # pyproject.toml scopes to the kernel and the engines would have been
+      # enforced nowhere. A gate the pipeline does not run is not a gate.
+      - name: Typecheck
+        run: poetry run mypy app
       - name: Test
         env:
           WRITER_DB_URL: postgresql+asyncpg://raketa_user:raketa_pwd@localhost:5432/raketa
@@ -123,6 +129,12 @@ jobs:
           DB_SSL_MODE: disable
           JWT_SECRET_KEY: ci-secret-do-not-use-in-prod
         run: poetry run pytest tests --cov=app --cov-report=xml -q
+      # Last, and for the reason test-hooks.sh and test-contract-drift.sh exist:
+      # the three purity gates above were all added to a tree that already
+      # satisfied them, so none of them has ever been seen to fail. This drives
+      # each one against a deliberately impure tree and asserts it goes red.
+      - name: Purity gates still fire
+        run: bash scripts/test-purity-gates.sh
 
   club:
     name: Club web — lint, typecheck, test, build

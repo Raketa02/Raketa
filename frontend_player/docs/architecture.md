@@ -725,13 +725,13 @@ sessions.
 
 ## Part 13 — Native and platform
 
-- **New Architecture stays enabled** (`newArchEnabled: true` in `app.json`) unless a
+- **New Architecture stays enabled** (`newArchEnabled: true` in `app.config.ts`) unless a
   verified production dependency blocks it — and then that dependency is technical debt
   with a migration plan, not a permanent exemption.
 - **SDK 52 is an upgradeable baseline, not a destination.** Framework-specific code is
   concentrated in `src/app/`, `src/shared/lib/platform/`, `src/shared/lib/auth/`, the
   config files and config plugins, so an SDK upgrade never restructures a feature.
-- **Continuous Native Generation.** `app.config.ts`/`app.json` + config plugins +
+- **Continuous Native Generation.** `app.config.ts` + config plugins +
   dependencies → `expo prebuild` → `android/`, `ios/`. Those directories are build output
   and are not committed; hand-editing them loses the edit on the next prebuild. Native
   configuration is expressed as official or local config plugins.
@@ -765,18 +765,50 @@ sessions.
 ```ts
 const EnvSchema = z.object({
   EXPO_PUBLIC_API_URL: z.string().url(),
-  EXPO_PUBLIC_ENV: z.enum(['development', 'staging', 'production']),
+  EXPO_PUBLIC_ENV: z.enum(['local', 'development', 'staging', 'production']),
 });
 ```
 
-**Nothing in the bundle is secret.** `EXPO_PUBLIC_*` values and `app.json` `extra` are
+The four names are the platform's, shared verbatim with the backend and the club app.
+`local` is a developer's own machine and is the only one that runs today; `development`
+and `staging` are validated but **not provisioned**, and there is no production
+deployment. Naming a laptop `development` — which is what this app did before the four
+names existed — makes a laptop and a shared remote deployment indistinguishable in a log
+line.
+
+**The URL scheme is part of the contract.** `EXPO_PUBLIC_API_URL` is reached from a phone
+over the internet, so it takes the **public-network** form of the platform's scheme rule:
+`development`, `staging` and `production` must be `https://`. `local` takes either —
+`expo start --tunnel`, cloudflared and tailscale funnel all hand back `https://`, and a
+tunnel is precisely what a physical device that cannot reach the laptop's LAN IP needs.
+The rule is checked across the two variables together, so a laptop URL under a deployed
+name is a startup failure naming both — not a build that silently points at nothing. It
+stays silent when the URL is malformed, so one typo produces one complaint rather than a
+second one blaming the environment. The cross-app rule is
+[`../../docs/environments.md`](../../docs/environments.md).
+
+**The native config is a function of the environment.** `app.config.ts` replaced
+`app.json`, and holds no logic: `src/shared/config/appIdentity.ts` maps each environment
+to the app's display name and whether a badge shows, and the document calls it. Outside
+`production` the app is named for its environment and an amber badge sits over every
+screen; `production` is bare and unbadged. Expo evaluates the document in Node before
+Metro exists, so it reads `process.env` directly and refuses an unknown environment
+rather than defaulting — and it registers sucrase's TS require hook first, because Node
+cannot otherwise load the `.ts` identity module.
+
+**One installable variant.** One bundle identifier, one package name, one URL scheme, no
+build-profile configuration. Per-environment identifiers wait until a second backend
+exists to point them at; three installable apps that all reach the same laptop would be
+ceremony, and the badge already answers the question they would.
+
+**Nothing in the bundle is secret.** `EXPO_PUBLIC_*` values and `app.config.ts` `extra` are
 extractable from a shipped binary — they are _public config_. Private API keys, backend
 credentials, signing secrets, encryption keys and privileged service credentials belong on
 a server. A secret the mobile client appears to need is a design error.
 
-Keep `development` / `staging` / `production` genuinely separate: API hosts, analytics and
-monitoring environments, EAS build profiles, update channels, and app identifiers where
-useful. **A production build must never point at staging** — validate it in CI.
+Keep the four genuinely separate: API hosts, analytics and monitoring environments, EAS
+build profiles, update channels, and app identifiers where useful. **A production build
+must never point at staging** — validate it in CI.
 
 Build-time secret ≠ safe to embed. If client JS reads it at runtime, assume the user can
 extract it. CI and EAS secret management hold signing credentials; they are never

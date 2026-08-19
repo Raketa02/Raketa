@@ -41,9 +41,38 @@ schemas/ components/ hooks/ types.ts`). _Avoid_: module, screen-folder.
 - **Public surface** — a feature's `types.ts`. The only file another feature or a route
   may import from it. _Avoid_: "barrel", "index" — this app has no `index.ts`, and the
   word "barrel" suggests re-exporting everything, which is the opposite of the intent.
-- **Public config** — any value in `app.json` `extra` or an `EXPO_PUBLIC_*` variable.
-  It ships inside the bundle and is readable from a released app. _Avoid_: calling these
-  "env secrets" — the word invites someone to put a real one there.
+- **Public config** — any value in the native config's `extra` or an `EXPO_PUBLIC_*`
+  variable. It ships inside the bundle and is readable from a released app. _Avoid_:
+  calling these "env secrets" — the word invites someone to put a real one there.
+- **Environment** — which deployment of the platform this build talks to:
+  `local | development | staging | production`, spelled identically in all three apps.
+  `local` is a developer's own machine and is the only one that runs today. _Avoid_:
+  `dev`, `prod`, `test` — the first two are the spellings the backend used to accept and
+  now refuses, and a test run happens on a laptop or a CI runner, both of which are
+  `local`. _Avoid also_: calling a laptop `development`, which is the name that means a
+  shared remote deployment.
+- **Scheme rule** — the environment fixes the API URL's scheme: `https://` in the three
+  deployed environments, either in `local`. Validated across both variables at launch, so
+  a laptop URL under a deployed name is a refusal naming both rather than a build pointing
+  at nothing. This is the **public-network** form of the platform's rule — the URL is
+  reached from a phone over the internet — and `local` is unconstrained because every
+  tunnel a physical device needs is `https://`. Defined once for all three apps in
+  [`../docs/environments.md`](../docs/environments.md). The rule stays silent when the URL
+  itself is malformed: a failed field leaves zod's result _dirty_ rather than aborting it,
+  so without that guard one typo produced two complaints.
+- **App identity** — what the app calls itself in a given environment: the display name
+  under the icon, and the badge, as one pure function (`shared/config/appIdentity.ts`).
+  One decision, because it is one sentence — _this build is not production_ — said in the
+  two places a person looks. `production` is the only unbadged one and the only one whose
+  name is bare. _Avoid_: reading it from `expo-constants`; it is derived from the
+  environment, never stored.
+- **Environment badge** — the amber pill over every screen naming the environment,
+  absent entirely in `production`. It is a developer aid, so it never intercepts a touch
+  and it is never the thing a rule keys on. _Avoid_: treating its absence as proof of
+  production — the badge reads the environment, not the other way round.
+- **Installable variant** — one bundle identifier, one package name, one URL scheme, at
+  every environment. Per-environment identifiers wait until there is a second backend to
+  point them at; until then three installable apps would all reach the same laptop.
 - **Prebuild output** — the generated `android/` and `ios/` directories from
   `expo prebuild`. Build artifacts, not source; not committed.
 
@@ -152,8 +181,13 @@ player's decision to come back later. Both are modelled in
 - **New Architecture** — React Native's Fabric/TurboModules runtime, enabled
   (`newArchEnabled`). A dependency blocking it is technical debt with a plan, not an
   exemption.
-- **CNG (Continuous Native Generation)** — native projects generated from `app.json` +
-  config plugins + dependencies via `expo prebuild`, rather than maintained by hand.
+- **CNG (Continuous Native Generation)** — native projects generated from `app.config.ts`
+  - config plugins + dependencies via `expo prebuild`, rather than maintained by hand.
+- **Native config document** — `app.config.ts`, a **function of the environment** rather
+  than a static file. Expo evaluates it in Node before Metro exists, so it reads
+  `process.env` directly and refuses an unknown `EXPO_PUBLIC_ENV` rather than defaulting.
+  It holds no logic: the one decision is [app identity](#glossary--player-app-technical-terms).
+  _Avoid_: `app.json` — it was replaced, not supplemented.
 - **Config plugin** — the sanctioned way to express native configuration. _Avoid_: editing
   `android/`/`ios/`, which is [prebuild output](#glossary--player-app-technical-terms).
 - **Development build** — a real native build containing this app's native dependencies,

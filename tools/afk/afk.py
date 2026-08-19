@@ -17,6 +17,7 @@ import sys
 from pathlib import Path
 
 from sandbuket import claude_code, create_sandbox
+from sandbuket.errors import AgentError
 from sandbuket.sandboxes.docker import docker
 
 # --- workaround: sandbuket's 64 KiB stdout line cap --------------------------
@@ -58,6 +59,11 @@ DEFAULT_MODEL = "claude-opus-5"
 # an iteration's token spend is not buying quality.
 DEFAULT_EFFORT = "xhigh"
 DEFAULT_LABEL = "ready-for-agent"
+# How many iterations may fail back-to-back before the loop gives up. One is too
+# few — a dropped connection is transient far more often than not. Unbounded is
+# wrong too: a broken image or a bad credential fails identically every time, and
+# spinning the whole budget through it wastes the run and buries the real error.
+MAX_CONSECUTIVE_FAILURES = 3
 
 
 def _sh(args: list[str]) -> str:
@@ -102,6 +108,63 @@ def fetch_recent_commits(branch: str | None = None) -> str:
     return out or "(no previous AFK commits)"
 
 
+def worktree_for(branch: str) -> Path | None:
+    """The host worktree checked out on ``branch``, or None if there isn't one.
+
+    Read out of git rather than off the sandbox object. Sandbuket carries the
+    path on a private attribute, and a private attribute is a thing that moves
+    without a release note; `git worktree list` is a public contract.
+    """
+    try:
+        out = _sh(["git", "worktree", "list", "--porcelain"])
+    except subprocess.CalledProcessError:
+        return None
+    path: str | None = None
+    for line in out.splitlines():
+        if line.startswith("worktree "):
+            path = line.removeprefix("worktree ")
+        elif line == f"branch refs/heads/{branch}" and path:
+            return Path(path)
+    return None
+
+
+def quarantine_partial_work(branch: str, reason: str) -> None:
+    """Stash whatever a failed iteration left in the worktree, and say where.
+
+    A dropped iteration can leave a half-finished ticket behind. The next one
+    would inherit it *invisibly* — RECENT COMMITS only shows committed work, so
+    the agent sees a clean-looking start and a dirty tree it has no memory of,
+    and either builds on code no gate has seen or fights it.
+
+    Stashing, not discarding: the work cost real tokens and may be most of a
+    ticket. `git stash` is recoverable and, unlike `reset --hard` or `clean -f`,
+    is not one of the destructive commands this repo's guard blocks.
+    """
+    worktree = worktree_for(branch)
+    if worktree is None:
+        return
+    dirty = subprocess.run(
+        ["git", "status", "--porcelain"],
+        cwd=worktree,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    if not dirty:
+        return
+    subprocess.run(
+        ["git", "stash", "push", "-u", "-m", f"AFK partial work — {reason}"],
+        cwd=worktree,
+        capture_output=True,
+        text=True,
+    )
+    print(
+        f"  ! {len(dirty.splitlines())} uncommitted path(s) left behind; stashed "
+        f"so the next iteration starts clean.\n"
+        f"  ! recover with: git -C {worktree} stash pop",
+        file=sys.stderr,
+    )
+
+
 def build_prompt(label: str, branch: str | None = None) -> str:
     base = PROMPT_FILE.read_text()
     return (
@@ -132,14 +195,39 @@ async def afk(args: argparse.Namespace) -> int:
         cwd=str(REPO_ROOT),
         name="afk",
     ) as sb:
+        consecutive_failures = 0
         for i in range(1, args.iterations + 1):
             print(f"\n--- iteration {i}/{args.iterations} ---")
-            result = await sb.run(
-                agent=agent,
-                prompt=build_prompt(args.label, args.branch),
-                completion_signal=COMPLETION_SIGNAL,
-                max_iterations=1,
-            )
+            try:
+                result = await sb.run(
+                    agent=agent,
+                    prompt=build_prompt(args.label, args.branch),
+                    completion_signal=COMPLETION_SIGNAL,
+                    max_iterations=1,
+                )
+            except AgentError as exc:
+                # The agent process died — most often a connection lost
+                # mid-response, which is transient and says nothing about the
+                # work. Before this guard it tore the whole run down: one blip
+                # at iteration 2 of N cost the remaining budget and left a
+                # half-finished ticket dirty in the worktree.
+                #
+                # AgentError only, deliberately. The rest of the SandbuketError
+                # family is infrastructure — Docker missing, a sync failure, a
+                # bad cwd — and none of that gets better by being retried.
+                consecutive_failures += 1
+                print(f"  ! iteration {i} failed: {exc}", file=sys.stderr)
+                quarantine_partial_work(args.branch, f"iteration {i} of this run")
+                if consecutive_failures >= MAX_CONSECUTIVE_FAILURES:
+                    print(
+                        f"\n{consecutive_failures} iterations failed back to "
+                        f"back; stopping rather than burning the budget. Work "
+                        f"so far is on branch '{args.branch}'.",
+                        file=sys.stderr,
+                    )
+                    return 1
+                continue
+            consecutive_failures = 0
             if result.commits:
                 shas = [c.get("sha", "?")[:8] for c in result.commits]
                 print(f"  commits this pass: {shas}")

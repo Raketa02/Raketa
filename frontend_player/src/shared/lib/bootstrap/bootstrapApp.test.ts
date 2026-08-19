@@ -1,4 +1,6 @@
-import { bootstrapApp, type BootstrapSteps } from './bootstrapApp';
+import { loadEnv } from '@/shared/config/env';
+
+import { bootstrapApp, sharedBootstrapSteps, type BootstrapSteps } from './bootstrapApp';
 
 function deferred() {
   let resolve!: () => void;
@@ -113,5 +115,13 @@ describe('bootstrapApp', () => {
     );
 
     expect(order).toEqual(['credentials', 'session']);
+  });
+
+  // The order test above passes for any `validateConfig`, including one that only *reads*
+  // config. `loadEnv` is the function that parses; `getEnv` is the lazy read that throws
+  // only once somebody asks. Wiring the second is how eager validation becomes lazy
+  // validation without a single test noticing.
+  it('validates the config eagerly rather than reading it lazily', () => {
+    expect(sharedBootstrapSteps.validateConfig).toBe(loadEnv);
   });
 });

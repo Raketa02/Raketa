@@ -17,7 +17,9 @@ event sourcing.
 
 ## Part 1 — Implemented bounded contexts
 
-These exist in `backend/app/` today and are the authority for their terms.
+These exist in `backend/app/` today and are the authority for their terms — except
+**Matchmaking**, whose words are settled and whose code is not yet written; its section
+says so at the top.
 
 ### Skill rating (`backend/app/modules/rating/`)
 
@@ -215,6 +217,241 @@ none may redefine ([ADR-0015](docs/adr/0015-engines-as-a-pure-versioned-layer.md
   Its absence is deliberate and load-bearing: one rating per sport is what let onboarding
   drop cross-sport transfer and the singles/doubles link entirely.
 
+#### Money
+
+The words are settled ([ADR-0023](docs/adr/0023-money-integer-grosze-gross-whole-zloty.md))
+and `backend/app/kernel/money.py` implements them. No priced context exists yet, so the
+module has no production caller — the rounding order and the split are correct and finished
+ahead of the first club, which is the whole reason they could be built now.
+
+- **Grosze** — the unit every price is held in. Integer, never a float, never a decimal
+  string. One hundred grosze to the złoty.
+- **Every price in Raketa is gross** — VAT-inclusive, the number the player sees. `38,00 zł`
+  on a card is a gross figure. VAT decomposition is an invoicing concern, never a second kind
+  of money.
+- **CourtPrice** — what the whole court costs for one booked block, after every multiplier has
+  been applied. Always a **whole number of złoty**.
+- **SeatShare** — a `CourtPrice` divided by the sport's **sold** player count. The sold format,
+  not the current occupancy: a padel match with three players still divides by four, because
+  the court costs what it costs.
+- **Payable** — what one player actually owes: their `SeatShare` less any club card offset.
+  Never negative.
+- **Card offset** — a club's allowance against a seat, per sport. Either none, a capped
+  amount, or the whole share.
+
+**Invariants**
+- **A court price is a whole number of złoty.** This is marketplace law, not an observation.
+  It is what makes a seat share exact — a whole złoty is a multiple of 100 grosze, and both
+  100 ÷ 2 and 100 ÷ 4 are integers, so a split never rounds and never loses a grosz. A club
+  rate that would break it is rejected where the rate is configured.
+- **The rounding order is the rule, not a detail.** Multipliers compound, then one rounding to
+  whole złoty at the court, then the split. Dividing first gives a different — wrong — answer.
+- **A card can never produce a credit,** only reduce a payable to zero. A 15 zł allowance
+  against a 13 zł share yields a 13 zł offset.
+- **A seat share is written once, when the match is created, and is never re-priced.** It is
+  what makes a price guaranteeable before a court is assigned.
+- **The seat, not the court, is the unit of sale**, so nobody becomes financially responsible
+  for anybody else's money by joining a match.
+
+### Matchmaking (`backend/app/engines/pairing/`, `backend/app/engines/matchfit/`)
+
+> **Words first, code second.** The **Pairing** half is built. `app/engines/pairing/`
+> holds the **Balance forecast** at either arity for a full match *and a forming one* — the
+> estimate, the margin, Certainty, the split bar, Beyond scale — over the shared snapshot
+> vocabulary in `app/engines/matchmaking.py`, with **Pairing** and **Team strength**: four
+> players are enumerated into the three splits, each is forecast, and all three come back
+> ranked. **Seat target** and **Target band** are built, so a match one seat from full says
+> what Level that seat is aimed at and any match with a rated player on a seat says what
+> range it is aimed at. **Roster** and **Imputed seat** are built, so a half-formed match is
+> forecast rather than hidden and says how much of the answer was stood in for; the two
+> states that still decline are a court nobody has joined and one where nobody seated has a
+> rating at that sport, because both leave nothing for a stand-in to be drawn from.
+> **Match Fit** is built, all ten terms of it. `app/engines/matchfit/` holds the framework
+> whole — **Term** in both its kinds, the renormalisation, **Coverage** as its own number,
+> **Reason**s ranked by contribution and one warning — and the table now sums to a hundred
+> with nothing pending: **skill overlap** and **predicted balance**, which read the pairing
+> analysis; **time fit**, price, travel, match type and ladder qualification, all reading the
+> **Player profile**; **match viability**; and group reliability and familiarity, which are
+> *present and absent* so that exclusion and Coverage are exercised by every score rather than
+> being untested machinery. Time fit is the term the source design named and never computed: a
+> match's start is read against the days and hours the player declared, through the club's zone
+> and the kernel's coordinates, and a match outside them ranks lower without being hidden.
+> **Match viability closes *absence never flatters* for a ranking**, which the mechanism alone
+> could not: it is the only evidence term that is *always* computable, so a court nobody has
+> joined is scored on being empty rather than excused from it, and an empty match that is
+> counted, cheap and nearby now scores 88 against a well-formed match's 97 where it used to
+> score 100 against 94. **Skill overlap and predicted balance did not widen that gap and could
+> not have**, which is worth knowing rather than guessing at: both are evidence an empty court
+> has none of, so both are excluded for it, and an excluded term cannot lower a score it is not
+> in. What they widen is Coverage — 48% for the empty court against the well-formed match's
+> 100% — which is the pair saying that less than half of the empty court's score was measured
+> at all. Only a term that *cannot go missing* can close an ordering regression.
+> **At Stake** is still a word without code. The terms are committed ahead of them because the
+> decisions behind them are
+> ([ADR-0025](docs/adr/0025-binding-pairing-for-counted-matches.md),
+> [ADR-0026](docs/adr/0026-matchmaking-engines-snapshot-input-contract.md),
+> [ADR-0027](docs/adr/0027-fit-and-certainty-are-separate-ranking-is-policy.md)), and because
+> the engines cannot be written in vocabulary that does not exist. A **seat's state** — paid,
+> held, empty — is borrowed from the commitment rules and is read by the snapshot now, spelled
+> as they spell it, and so are a match's **phase**, its **court hold** and its **join
+> cutoff** — all four read by the snapshot now. They will be *defined* with Matches and
+> Courts, not here: this section reads them, it does not own them. The phase is the one this
+> section reads and never *scores*, because whether a match can be joined at all is a hard
+> filter and not a low number. **Ladder qualification** is read the same way and by nobody yet: the snapshot carries
+> whether a match counts towards the current player's ladder, in three states because *not in
+> a ladder* and *in a ladder this does not count for* are different facts, and whichever
+> context ends up owning ladders will define the word.
+
+Two engines, neither of them a bounded context, both pure and versioned
+([ADR-0015](docs/adr/0015-engines-as-a-pure-versioned-layer.md)). **Pairing** asks whether a
+match is *balanced*; **Match Fit** asks whether it is *for you*. A perfectly balanced match
+forty minutes away at twice your ceiling is a good match in the abstract and a bad one for you.
+
+- **Pairing** — which players form which team. Four players admit exactly three splits, and
+  the engine searches all three; there is no heuristic and no better split it could miss.
+- **Team strength** — what a pair plays like, which is **not the average of the two**. It is
+  weighted toward the **weaker partner**, because the weaker side is attacked. Singles has no
+  pairing, and a team of one is that player.
+- **Balance forecast** — the prediction of how close a match will be, for one roster. It is
+  never a bare number: it is an **estimate and a margin**, and everything the player sees —
+  the percentage, the split bar, the two team strengths — is one calculation viewed
+  differently, so a card cannot contradict itself.
+- **Balance margin** — how wrong the forecast could be, in the same units as the forecast. It
+  is what makes *"49/51"* and *"49/51, and we barely know these people"* different claims.
+- **Certainty** — the forecast's grade of its own margin. A statement about the platform's
+  knowledge, never about the players.
+- **Beyond scale** — the gap is past the point the scale still reports usefully. The honest
+  answer there is *this is a mismatch*, not a small percentage, and the two are said
+  differently.
+- **Roster** — the people a forecast is about: the **paid** seats, plus **you** if you could
+  still join. A **held** seat contributes its player's level but not their attendance. An
+  **empty** seat is imputed. You join the seat you would actually take, so the forecast
+  answers *what would this match be like if I joined* rather than what it is like without
+  you — and a match with no empty seat has nowhere to put you, so a full match stays
+  somebody else's.
+- **Imputed seat** — an empty seat stood in for by a hypothetical player drawn from the
+  **target band**. It is what lets a half-formed match be forecast at all, and it is why the
+  margin widens as a match gets emptier rather than the forecast disappearing. A player with
+  **no rating at that sport** is imputed the same way and for the same reason: what the
+  platform lacks is a level, and whether somebody is sitting on the seat is a question for
+  **match viability**. Imputation stands in for gaps in a roster and never for the whole
+  roster — a stand-in is drawn from the target band, and a match with nobody rated on a seat
+  has no band.
+- **Seat target** — the level that would make a match with **exactly one** seat open as even
+  as possible. With more seats open the question is under-determined and the engine refuses it.
+  In doubles *three* levels each make the match exactly even, one for each seated player the
+  joiner could partner; the platform advertises the **middle** of the three, because the outer
+  two ask for somebody well below or well above everybody already in the match.
+- **Target band** — the level range a forming match is aimed at: the mean of the seated levels,
+  widened either side. Blunt by design, needs only one seated player, and is the fallback
+  whenever a seat target cannot be answered.
+- **Match Fit** — how good one specific match is for one specific player, as a single
+  comparable score with its reasons attached. The score does the sorting; the reasons do the
+  explaining.
+- **Term** — one weighted component of Match Fit, and every signal is one; there are no
+  bonuses applied outside the weighting. Each term is one of exactly two kinds, and the kind
+  decides what its **absence** means. It is a fact about how a term was *built* rather than a
+  label on it: a constraint has no path to an exclusion and an evidence term has no field an
+  optimistic default could be written into.
+  - **Constraint term** — a limit the player declared (price, distance, hours, match type).
+    An undeclared limit is **no limit**: the term scores full marks and nothing is missing.
+    A term at **nothing** is not the same as an absent one: the platform looked and the
+    answer was bad, so the weight is still in the denominator and the quantities are still
+    reported. Price and distance are conditions, never rejections.
+  - **Evidence term** — something the platform observes (balance, reliability, skill overlap,
+    familiarity). Absent evidence is **not** a good score; the term is dropped and the
+    remaining weights carry the whole score between them.
+- **Coverage** — how much of Match Fit's weight was actually computed. A thin score and a
+  strong score are different facts and are reported as two numbers, never blended into one.
+  Measured against the weight that **exists**: a term nobody has built yet is not evidence
+  the platform is missing about a match, so Coverage reports on the match and never on the
+  engine's completeness.
+- **Reason** — a term's contribution stated in the player's terms, ranked by how much the term
+  actually contributed — weight times value — rather than by how well it scored. A **warning**
+  is the *lowest* contributor, and only when its own value is bad. That asymmetry is
+  deliberate: a term can be last by contribution while being perfectly fine in itself, and
+  warning about that would teach players to ignore warnings.
+- **At Stake** — the rating movement a win or a loss would produce, quoted **before** joining.
+  Deliberately not part of Match Fit: Fit ranks, At Stake warns, and only counted matches have
+  any.
+- **Match viability** — how likely the match is to actually happen, as distinct from how good
+  it would be. A match nobody has paid into, at a club with no court left to give, is a worse
+  recommendation than an identical one that is three-quarters paid. It is **evidence and yet
+  never absent**: every match has a phase, a court hold, a seat count and a join cutoff, so it
+  is the one term that can never be excluded — which is what makes *absence never flatters*
+  true of a ranking and not only of the mechanism. It is a **probability**, and the platform
+  is right or wrong about it in a way that can be counted: the share of joined matches that
+  were actually played, by viability decile. A **hard** court hold retires the club's crowding
+  entirely, because a court that has been booked cannot be taken by the club being busy; and
+  an unpaid seat is worth less the closer the **join cutoff** gets, on a slope rather than at
+  a cliff, because there is less time left for anybody to take it.
+- **Skill overlap** — how close the player's own level is to the level the match is aimed at.
+  The largest term in Match Fit, and **evidence**: with nobody seated there is nothing to
+  overlap with, so it is excluded rather than scored against the player's own level — which
+  is a distance of zero and therefore full marks, and is most of why the source design ranked
+  an empty match above a well-formed one. A player the platform has never rated *at this
+  sport* is the same silence from the other side and gets the same answer. The target is the
+  **Seat target** where the match is one seat from full and the **Target band**'s midpoint
+  otherwise, and the term never re-derives which: it reads whichever answer the pairing
+  analysis gave. It decays over **a full band** — the widest plain-language band the rating
+  context prints — and is **symmetric**, because a level too strong for a match and a level
+  too weak are both *not the match you belong in*; which of the two it was is reported, and
+  is not encoded in the score.
+- **Predicted balance** — how even the match is forecast to be, read straight off the
+  **Balance forecast**'s estimate. The one term with no constant of its own: a balance
+  percentage is already a mark out of a hundred about the match, and fitting a curve to it
+  would be a second opinion about what one means. It reads the **point estimate even when the
+  margin is too wide to print**, because the best estimate remains the best estimate when it
+  is unfit to show — *suppression is presentation, not ranking* — and it is excluded only when
+  there is **no forecast at all**, never when there is merely an uncertain one. Uncertainty is
+  not charged twice: the estimate is the *expected* gap, so it has already been made worse on
+  the way in.
+- **Player profile** — what the player declared about how they want to play: days, hours,
+  price ceiling, distance, appetite, competitive or social, and how far ahead they will
+  commit. One declaration, read by every engine that needs it, never restated as a constant
+  inside one. **Every part of it is optional and absence means undeclared** — which is what
+  a constraint term reads as *no limit*, and days and hours are two declarations rather than
+  one, so a player who named days and no hours has no hour problem. Distance is declared in
+  **minutes**, because that is what a card shows and comparing a radius in kilometres against
+  it would mean inventing a speed. **Days and hours are a clock face and never an instant**:
+  *"I play after work"* is a claim about the wall in the club, so a match's start is compared
+  against them in the club's own zone. A declared stretch of a day runs forwards, never wraps
+  midnight — 22:00 to 01:00 is two declarations — and **excludes its end**, so two stretches
+  declared back to back do not overlap. A match is inside a declared stretch when it
+  **starts** inside it, however long it runs. Appetite and the commitment horizon are the
+  ranking policy's; no term reads them.
+
+**Invariants**
+- **Fit and certainty are separate variables.** The same rule the rating context holds for
+  skill and confidence, for the same reason: collapsing them makes an unknown match
+  indistinguishable from a good one, and the platform would then recommend most confidently
+  the matches it understands least.
+- **Absence never flatters.** No match may score better because the platform knows less about
+  it. This is what the constraint/evidence split exists to guarantee, and it is checkable: a
+  term's exclusion must never raise a score.
+- **A missing declaration is not a missing measurement.** A player who set no price ceiling
+  has no price problem; a match with nobody in it has no reliability *reading*. Treating those
+  two silences the same way is the mistake the split is named after.
+- **The split bar is a rendering of the percentage, not a second opinion about it.** One
+  quantity is clamped and everything else is derived from the clamped value, so the bar and
+  the number cannot saturate at different moments and disagree in the gap.
+- **The estimate ranks; the card decides whether to print it.** A forecast too uncertain to
+  show is still the best guess available, and withholding it from the ranking would make an
+  uncertain match unrankable rather than honest.
+- **A counted match's pairing is elected before commitment and fixed after.** Otherwise At
+  Stake quotes a promise against teams that can silently change, and a rating moves on a
+  pairing nobody agreed to. Friendlies are free to rearrange
+  ([ADR-0025](docs/adr/0025-binding-pairing-for-counted-matches.md)).
+- **Rating movement has exactly one owner.** What a match is worth to a rating is the rating
+  context's arithmetic, and the number quoted before the match and the number applied after it
+  are the same function or the quote is not a promise.
+- **A score carries every engine version that produced it.** A Match Fit score has two
+  producers, and attributing it to one of them cannot falsify a constant belonging to the other.
+- **Ranking a list is not scoring a match.** Which matches a player is shown — the exploration,
+  the diversity, the impressions an unfilled match is owed — is policy, and it lives outside
+  the engines so that the engines stay pure, deterministic and reproducible
+  ([ADR-0027](docs/adr/0027-fit-and-certainty-are-separate-ranking-is-policy.md)).
+
 ---
 
 ## Part 2 — Planned bounded contexts
@@ -278,3 +515,11 @@ Both frontends describe the same nouns. A concept that exists in this glossary k
 its name in TypeScript: a `Court` is a `Court`, not a `Venue`, `Facility`, or `Pitch`.
 Client-only *technical* vocabulary (wire type, DTO, mapper, BFF route handler, secure
 store) belongs in that app's own `CONTEXT.md`, never here.
+
+Both frontends also **render** the same values. The backend sends numbers and machine codes
+and never display text ([ADR-0022](docs/adr/0022-kernel-negative-space-and-constant-homes.md)),
+so each client formats — and both implement one table, in
+[`docs/value-formatting.md`](docs/value-formatting.md). That is not a design system and holds
+no colour or size; it is the exact string a price, a level, a time or a duration becomes, so
+the two apps cannot drift into rendering `38.00 zł` and `38,00 zł` for one booking. **Copy is
+not formatting**: the sentence behind an unavailability code is each app's own.

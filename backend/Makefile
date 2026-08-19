@@ -4,7 +4,7 @@
 # Override any variable on the command line:
 #   make ecr-push AWS_REGION=us-east-1 ECR_REPOSITORY=my-repo
 # ----------------------------------------------------------------------------
-COMPOSE_DEV ?= docker compose -f docker-compose-dev.yml
+COMPOSE_LOCAL ?= docker compose -f docker-compose-local.yml
 IMAGE_NAME  ?= raketa_api
 TAG         ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo dev)
 
@@ -15,8 +15,8 @@ ECR_URI          ?= $(AWS_ACCOUNT_ID).dkr.ecr.$(AWS_REGION).amazonaws.com/$(ECR_
 ECS_CLUSTER      ?= raketa-cluster
 ECS_SERVICE      ?= raketa-service
 
-.PHONY: help install test lint lint-imports format typecheck check openapi \
-        build-dev up down logs ps shell migrate \
+.PHONY: help install test lint lint-imports format typecheck check test-gates openapi \
+        build-dev up down logs ps shell migrate seed seed-host \
         build-prod ecr-login ecr-push ecs-deploy
 
 help:
@@ -35,6 +35,9 @@ lint:              ## ruff check
 lint-imports:      ## enforce the engines/kernel import boundaries (.importlinter)
 	poetry run lint-imports
 
+test-gates:        ## verify the kernel/engines purity gates still fire
+	bash scripts/test-purity-gates.sh
+
 format:            ## ruff format
 	poetry run ruff format .
 
@@ -49,25 +52,36 @@ openapi:           ## emit the contract as two documents (player + club)
 
 ## ----- local docker
 build-dev:         ## build dev image
-	$(COMPOSE_DEV) build
+	$(COMPOSE_LOCAL) build
 
 up:                ## bring up the dev stack (Postgres 17 + API + Redis)
-	$(COMPOSE_DEV) up -d
+	$(COMPOSE_LOCAL) up -d
 
 down:              ## tear down the dev stack
-	$(COMPOSE_DEV) down
+	$(COMPOSE_LOCAL) down
 
 logs:              ## tail api logs
-	$(COMPOSE_DEV) logs -f api
+	$(COMPOSE_LOCAL) logs -f api
 
 ps:                ## list running services
-	$(COMPOSE_DEV) ps
+	$(COMPOSE_LOCAL) ps
 
 shell:             ## bash into the api container
-	$(COMPOSE_DEV) exec api bash
+	$(COMPOSE_LOCAL) exec api bash
 
 migrate:           ## run alembic upgrade head inside the api container
-	$(COMPOSE_DEV) exec api alembic upgrade head
+	$(COMPOSE_LOCAL) exec api alembic upgrade head
+
+## ----- seed data
+## Deterministic accounts, created by executing the same use cases a request
+## executes (app/seeds/). Needs the schema to exist — `make up` migrates on
+## start. The production guard is in the seed module and runs on import, not
+## here: a make target is not what runs inside a container.
+seed:              ## seed deterministic dev accounts into the running stack's database
+	$(COMPOSE_LOCAL) exec api python -m app.seeds
+
+seed-host:         ## the same seed from the host — needs .env, like host-run uvicorn
+	poetry run python -m app.seeds
 
 ## ----- production / ECR / ECS
 ## DORMANT — AWS deployment is not in use; development is entirely local

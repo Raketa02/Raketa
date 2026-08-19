@@ -5,13 +5,88 @@
 # nothing else. It may import the shared kernel and stdlib — never a module, never
 # FastAPI, SQLAlchemy, Pydantic or any I/O library. Modules may import engines
 # freely, so this is a one-directional fence.
+#
+# `app.shared` is forbidden to both, which is the hole ADR-0022 records: it was on
+# neither list, so a kernel or engine module could import `SystemClock` or
+# `new_uuid` with CI fully green. Ambience is forbidden with it — `random`, `uuid`,
+# `secrets` and `time` are the stdlib routes to the same thing, and ADR-0015's
+# three purity rules (no clock, no randomness, no hidden state) are worth exactly
+# what enforces them.
+#
+# The two matchmaking engines are fenced from each other in *both* directions
+# (docs/adr/0026). Match Fit consumes Pairing's *output* — it takes a
+# `PairingAnalysis` as an input value — and that vocabulary lives in
+# `app/engines/forecast.py`, which either side may import. What must not happen is
+# Match Fit reaching for the pairing *engine*: an engine free to construct its own
+# forecast can score a match against a pairing nobody was shown, which is two
+# implementations of one question inside one layer. The fence is drawn around the
+# whole packages rather than only the version directories, which is stricter than
+# the ticket asked for and simpler to state: neither engine's arithmetic may move
+# because the other's version moved. It is two contracts and not one because a
+# `forbidden` contract with overlapping source and forbidden lists would also
+# forbid each package from importing itself.
+#
+# `datetime` is forbidden to the **engines only**. The kernel's time module is its
+# one legitimate home; an engine receives an instant rather than constructing one.
+# `allow_indirect_imports = true` is what makes that expressible: an engine importing
+# the kernel, which imports `datetime`, is not an engine reading a clock. Module
+# granularity is also why this file cannot be the whole fence — `datetime` is legal
+# in the kernel while `datetime.now()` is not, and that half is an AST walk in
+# tests/unit/test_kernel_purity.py.
+#
+# Configuration is fenced out of the layers where business rules live. **The
+# environment may select configuration defaults; it may never select behaviour a
+# domain test could observe** — the rule `app/core/config.py`'s own docstring opens
+# with. A use case reading `settings.APP_ENV` to pick a deadline is a rule that is
+# true on a laptop and false in production, and the domain test suite cannot see the
+# difference. So the settings module is forbidden to the domain and application
+# layers outright, rather than trusted to be used carefully.
+#
+# `pydantic_settings` and `os` are forbidden beside it for the same reason ambience
+# is forbidden to the engines above: declaring a second `BaseSettings` or reading
+# `os.environ` directly is the same rule broken by a different import. Neither
+# appears anywhere in these four layers today, so this costs nothing to hold.
+#
+# The two `app.modules.*` arms are wildcards so that a context nobody has written yet
+# — Clubs, Courts, Bookings, Matches — is fenced on the day it is created rather than
+# on the day somebody remembers to come back here. That convenience carries a cost
+# worth knowing, and it was measured rather than assumed: **a wildcard matching
+# nothing is reported KEPT**, so an arm that stops matching becomes decoration in
+# silence. It is why scripts/test-purity-gates.sh drives a probe through *each* of
+# the four arms separately instead of through one and inferring the rest.
+#
+# `allow_indirect_imports = true` agrees with the contracts above. The specific
+# coupling this note used to cite — every module's `domain/errors.py` taking its error
+# base classes from `app.core.exception_handlers` — **is gone**: #101 split the taxonomy
+# into `app/shared/domain/errors.py`, and the contract below now forbids the chain
+# outright. What remains is the general form of the same argument, and it is why the
+# flag stays: a domain layer may legitimately import a module that is itself on the
+# outside of the configuration fence, and strict transitive enforcement would then go
+# red naming a domain module that had done nothing. The claim made here is the one that
+# stays checkable whatever the graph does: no domain or application module *reads the
+# settings module*.
+#
+# `sqlalchemy` is fenced beside the three web packages because `backend/CLAUDE.md`
+# forbids all four to a domain layer in one breath, and enforcing three of the four
+# would leave the rule looking checked when a quarter of it was not. It is green on
+# today's tree — persistence lives in `infrastructure/`, which is on the outside of
+# this fence — so it costs nothing to hold and catches the ORM model somebody will
+# one day reach for while writing an aggregate.
+#
+# The framework contract below is the opposite case to the configuration one, and sets
+# `allow_indirect_imports = false` deliberately. The violation it exists for was
+# **only ever indirect** — no domain module has ever imported `fastapi` directly, and
+# with the flag on this contract would have been green on the broken tree, which is
+# the same as not existing. `scripts/test-purity-gates.sh` therefore drives an
+# *indirect* probe through it as well as a direct one; the direct probe alone would
+# still pass if somebody flipped the flag.
 
 [importlinter]
 root_package = app
 include_external_packages = True
 
 [importlinter:contract:engines-are-pure]
-name = Engines import only the shared kernel — never a module, framework or I/O library
+name = Engines import only the shared kernel — never a module, framework, I/O library or ambience
 type = forbidden
 source_modules =
     app.engines
@@ -23,6 +98,7 @@ forbidden_modules =
     app.bootstrap
     app.core
     app.main
+    app.shared
     fastapi
     starlette
     sqlalchemy
@@ -37,10 +113,15 @@ forbidden_modules =
     celery
     jwt
     bcrypt
+    random
+    uuid
+    secrets
+    time
+    datetime
 allow_indirect_imports = true
 
 [importlinter:contract:kernel-is-innermost]
-name = The shared kernel depends on nothing in the app and no framework or I/O library
+name = The shared kernel depends on nothing in the app, no framework or I/O library, and no ambience
 type = forbidden
 source_modules =
     app.kernel
@@ -53,6 +134,7 @@ forbidden_modules =
     app.bootstrap
     app.core
     app.main
+    app.shared
     fastapi
     starlette
     sqlalchemy
@@ -67,4 +149,53 @@ forbidden_modules =
     celery
     jwt
     bcrypt
+    random
+    uuid
+    secrets
+    time
+allow_indirect_imports = true
+
+[importlinter:contract:matchfit-does-not-reach-the-pairing-engine]
+name = Match Fit reads the pairing engine's output vocabulary, never the engine
+type = forbidden
+source_modules =
+    app.engines.matchfit
+forbidden_modules =
+    app.engines.pairing
+allow_indirect_imports = true
+
+[importlinter:contract:pairing-does-not-reach-match-fit]
+name = The pairing engine does not know Match Fit exists
+type = forbidden
+source_modules =
+    app.engines.pairing
+forbidden_modules =
+    app.engines.matchfit
+allow_indirect_imports = true
+
+[importlinter:contract:domain-does-not-know-the-framework-or-the-orm]
+name = No domain layer depends on a framework or the ORM, directly or through what it imports
+type = forbidden
+source_modules =
+    app.shared.domain
+    app.modules.*.domain
+forbidden_modules =
+    fastapi
+    starlette
+    pydantic
+    sqlalchemy
+allow_indirect_imports = false
+
+[importlinter:contract:configuration-cannot-reach-a-business-rule]
+name = The domain and application layers cannot read configuration
+type = forbidden
+source_modules =
+    app.application
+    app.shared.domain
+    app.modules.*.domain
+    app.modules.*.application
+forbidden_modules =
+    app.core.config
+    pydantic_settings
+    os
 allow_indirect_imports = true

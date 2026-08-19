@@ -32,12 +32,13 @@ app/
   main.py                         FastAPI app factory and health endpoint
   api/
     v1/router.py                  API version router composition
-    dependencies.py               Dependency wiring from HTTP to application ports
+    dependencies.py               Request-scoped declarations over the factories
   core/                           Settings, lifespan, logging, middleware, errors
   application/
     ports/                        Protocols consumed by use cases
     events/                       Event catalog, codec contracts, dispatcher workflow
   bootstrap/
+    composition.py                Adapter factories — every port, no web framework
     events.py                     Runtime assembly for event catalog/dispatcher/worker
   infrastructure/
     database/                     SQLAlchemy engine, sessions, unit of work, ORM imports
@@ -68,8 +69,9 @@ Domain code does not import FastAPI, SQLAlchemy, Pydantic, or Docker-specific
 runtime concerns. Application services depend on protocols such as
 `UserRepository`, `RefreshTokenRepository`, `TokenService`,
 `DomainEventStore`, `DomainEventPublisher`, and `UnitOfWork`. Concrete adapters
-are selected at the boundary through FastAPI dependency functions and bootstrap
-code.
+are built by `app/bootstrap/composition.py` and declared to the framework by the
+dependency modules — the composition root is one root, and it does not need a
+request.
 
 ## Domain Model
 
@@ -141,9 +143,22 @@ The main ports are defined as Python protocols:
 | `PendingOutbox` | Fetch and mark outbox delivery rows | `SqlAlchemyOutboxRepository` |
 
 This keeps use cases testable without depending directly on infrastructure.
-FastAPI dependencies in `app/api/dependencies.py` are the composition boundary for
-HTTP requests, while `app/bootstrap/events.py` assembles event catalogs,
-dispatchers, codecs, publishers, stores, and workers.
+
+**Every adapter is constructed in `app/bootstrap/composition.py`** — one plain
+function per port, taking a database session and the settings. Nothing in it
+imports FastAPI and nothing in it reads a request, so anything that is not an
+HTTP request (a seed run, a worker, a management command) assembles a use case
+without booting the API. `app/bootstrap/events.py` assembles event catalogs,
+dispatchers, codecs, publishers, stores and workers, and `get_event_runtime()`
+hands back the process's runtime rather than one read off an application object.
+
+`app/api/dependencies.py` and each module's `presentation/dependencies.py` are
+thin callers over those factories. They decide *when* an adapter is built and how
+long it lives — one per request, cached by FastAPI for that request — and never
+what is built. The split is enforced by a walk, not by review:
+`tests/unit/test_composition_root.py` fails if a dependency declaration imports
+an adapter, because the alternative is one line of convenience inside a `Depends`
+callable, and nothing about a green suite would look different afterwards.
 
 ## API
 
@@ -164,16 +179,85 @@ curl -X POST http://localhost:8000/api/v1/auth/login \
   -d '{"email":"alice@example.com","password":"Password123"}'
 ```
 
-In production mode, OpenAPI docs are disabled unless `DEBUG=true`.
+In `production`, OpenAPI docs are disabled, with no way to re-enable them.
 
 ## Runtime Configuration
 
 Configuration is loaded with Pydantic Settings from environment variables and an
-optional `.env` file. Important settings include:
+optional `.env` file.
+
+### The four environments
+
+`APP_ENV` is a strict enum over **`local`**, **`development`**, **`staging`** and
+**`production`** — the same four spellings the player app and the club app use. A
+value outside that set fails at startup rather than being accepted silently.
+
+**Only `local` runs today.** `development` and `staging` are defined and validated
+but not provisioned: no domain is registered, so neither has a host or a database.
+Selecting one without setting `APP_HOST` and `WRITER_DB_URL` is a startup failure
+naming the missing variable — never a silent fallback.
+
+`APP_ENV` supplies the defaults for the three settings that always move together.
+Each stays overridable by setting it explicitly:
+
+| `APP_ENV` | `DEBUG` | `LOG_LEVEL` | `LOG_JSON` |
+|---|---|---|---|
+| `local` | `true` | `DEBUG` | `false` |
+| `development` | `false` | `DEBUG` | `true` |
+| `staging` | `false` | `INFO` | `true` |
+| `production` | `false` | `INFO` | `true` |
+
+The boundary that governs this: **the environment may select configuration defaults;
+it may never select behaviour a domain test could observe.** No business rule,
+threshold, validation, status code or response shape varies by `APP_ENV`.
+
+That boundary is enforced, not remembered. An `.importlinter` contract forbids
+`app.core.config` to the domain and application layers — `app/application/`,
+`app/shared/domain/`, and every `app/modules/*/domain` and `app/modules/*/application`
+— so configuration can only be read at the composition boundary and handed inward. A
+use case that needs a configured value takes it as a constructor argument.
+`pydantic_settings` and `os` are forbidden beside it, since declaring a second
+settings class or reading `os.environ` is the same rule broken by a different import.
+
+The two `app/modules/*` arms are wildcards, so a context created tomorrow is fenced
+without anybody editing `.importlinter`. `make check` runs the contract; `make
+test-gates` drives it against a deliberately-violating tree — one probe per arm,
+because **import-linter reports a wildcard matching nothing as KEPT**, and an arm
+that quietly stopped matching would read as a fence that held and checked nothing.
+
+### Refusing to start
+
+Configuration that is dangerous rather than merely wrong refuses to boot. Every
+refusal names the offending variable and the reason, and **never echoes its value** —
+a `WRITER_DB_URL` carries a password, and a refusal message ends up in a log
+aggregator.
+
+| Refused when | Because |
+|---|---|
+| `APP_ENV` is not one of the four | A typo must not silently change behaviour. |
+| `development`/`staging` with no `APP_HOST` or `WRITER_DB_URL` | Neither is provisioned; falling back points at a database that does not exist. |
+| `production` with the default `JWT_SECRET_KEY` | It is public in this repo's history, so every token it signs is forgeable. |
+| `production` with `DEBUG=true` | It serves verbose errors to callers. |
+| `production` with wildcard `ALLOW_ORIGINS` **and** `ALLOW_CREDENTIALS` | Browsers reject the combination anyway. |
+| a deployed environment with a non-`https://` entry in `ALLOW_ORIGINS` | A browser origin reached over a public network in the clear is a session cookie in the clear. |
+| `production` with a `DB_SSL_MODE` that does not encrypt | Transport security should not be something anyone has to remember. |
+
+The origin refusal is the backend's instance of the platform's **public-network scheme
+rule**, added by #99 so that all three apps carry it (`docs/environments.md`). The backend
+calls nothing over HTTP, so `ALLOW_ORIGINS` is the only public-network URL it holds. The
+wildcard is skipped — it is not an origin, and it has its own refusal above — and `local`
+is exempt, because `http://localhost:3000` is what the club app actually serves on a
+laptop. The message reports how many entries are wrong, never which.
+
+The checks live on the settings object, not in the application factory, so they hold
+for every construction path — a worker, a migration or a seed run, not only a process
+serving HTTP.
+
+### Settings
 
 | Setting | Purpose |
 |---|---|
-| `ENV` | `dev`, `test`, `staging`, or `prod`. |
+| `APP_ENV` | `local`, `development`, `staging`, or `production`. |
 | `WRITER_DB_URL` | Primary SQLAlchemy database URL. |
 | `READER_DB_URL` | Optional read database URL; defaults to writer. |
 | `DB_SSL_MODE` | `disable`, `require`, `verify-ca`, or `verify-full`. |
@@ -194,7 +278,7 @@ with an explicit asyncpg SSL context built from the `DB_SSL_*` settings.
 Start the full development stack:
 
 ```bash
-docker compose -f docker-compose-dev.yml up --build -d
+docker compose -f docker-compose-local.yml up --build -d
 ```
 
 The development compose file starts:
@@ -210,15 +294,15 @@ Useful commands:
 
 ```bash
 curl http://localhost:8000/health
-docker compose -f docker-compose-dev.yml logs -f api
-docker compose -f docker-compose-dev.yml exec api alembic current
-docker compose -f docker-compose-dev.yml exec api alembic check
+docker compose -f docker-compose-local.yml logs -f api
+docker compose -f docker-compose-local.yml exec api alembic current
+docker compose -f docker-compose-local.yml exec api alembic check
 ```
 
 ## Production Image
 
 > **Dormant.** There is no deployed environment — development is entirely local
-> (`docker-compose-dev.yml`). This section and `docker-compose-prod.yml` are kept
+> (`docker-compose-local.yml`). This section and `docker-compose-prod.yml` are kept
 > intact for when deployment resumes; see
 > [ADR-0010](../docs/adr/0010-local-first-development-aws-deferred.md).
 
@@ -258,6 +342,79 @@ Current migration sequence:
 `migrations/env.py` resolves the database URL from `Settings.WRITER_DB_URL` or
 `ALEMBIC_DATABASE_URL`, converts asyncpg URLs to sync psycopg URLs for Alembic,
 and imports all ORM models so schema checks see the full metadata.
+
+## Seed Data
+
+Deterministic development accounts, so a screen can be built against a fixed starting
+point rather than against whatever the database drifted into.
+
+```bash
+make seed        # into the running stack's database (needs `make up` first)
+make seed-host   # the same seed from the host — needs .env, like host-run uvicorn
+```
+
+Both run `python -m app.seeds`. The schema must already exist; `make up` migrates on
+container start.
+
+Every address is `<state>@raketa.example`, and the state is what the name says. The
+catalog is a list of **edges**, not of people: nothing yet, exactly one, the maximum, the
+failed case. A hundred average players is one scenario a hundred times, and no screen
+breaks on it.
+
+| Address | State |
+| --- | --- |
+| `brand-new-player@raketa.example` | Registered and nothing else — every empty state at once |
+| `assessment-in-progress@raketa.example` | Padel assessment open at its first question, no rating |
+| `assessment-abandoned@raketa.example` | Padel run ended without a rating; the sport is free to start again |
+| `assessment-completed@raketa.example` | One completed run and the rating it produced, band **New** |
+| `rating-barely-established@raketa.example` | Padel Level just inside **Established**, its range still reaching into Developing |
+| `rating-well-established@raketa.example` | Padel Level well inside **Established**, clear of the lower edge |
+| `rated-in-every-sport@raketa.example` | All four sports rated, one per band — the longest ratings list there is |
+
+The password for every seeded account is `raketa-seed1`, and it is public by
+construction — it is written in `app/seeds/catalog.py`.
+
+Scope is what is **modeled**: players, onboarding assessments and Skill ratings. Clubs,
+Courts, Bookings and Matches have no aggregates, so they have no scenarios; each adds its
+own when it exists. A walk over `app/seeds/` asserts the package imports those two
+contexts and no others.
+
+Four rules hold this together, and each exists because of a specific way seed data goes
+wrong:
+
+- **Seeds execute use cases; nothing writes a table.** These aggregates are event-sourced
+  with a transactional outbox, so a directly-inserted row is an aggregate with no history:
+  it reads correctly until something replays it. Wiring comes from
+  `app/bootstrap/composition.py` — the composition root the API uses, not a copy of it.
+  A structural walk over `app/seeds/` refuses a statement import, an ORM model and
+  `session.add`.
+- **A rated account answers the questionnaire.** The engine chooses each question from the
+  answers so far, so the only route to a Level near the bottom of Established is to answer
+  the way a player would. A scenario carries an `AnswerPolicy` — which option to pick,
+  counted from the weakest — and the transcript behind the rating is one a review screen
+  can render.
+- **Re-running changes nothing.** Registration is skipped when the address is already
+  there; starting an assessment needs no help, because `CreateAssessment` is already
+  idempotent per player and sport; and abandoning or completing looks at the run itself,
+  because *abandoned* and *never started* are the same answer from every finder. That last
+  probe is also what resumes a run an interrupted seed left half answered. A seeded
+  account's **address** is the stable handle — its uuid is minted by the write path, so a
+  fresh database yields a new one.
+- **A name that stops matching its state stops the seed.** Every rated scenario carries the
+  band it promises and where in that band the Level must sit; the runner checks it against
+  the **stored** rating on every run, including one that creates nothing. Retune the engine
+  so `rating-barely-established` lands in Developing and `make seed` says so by name — an
+  account whose name lies is worse than one that is missing, because nothing about the
+  screen it is developed against would look wrong.
+- **Production is refused, on import.** `app/seeds/__init__.py` calls the guard, so
+  importing anything in the package under `APP_ENV=production` raises `SeedRefused`
+  before a database is opened. The guard is not in the make target: a make target is not
+  what runs inside a container.
+
+Addresses are on `.example` — a TLD RFC 2606 reserves, so no registry can sell it and a
+run pointed at the wrong database cannot mail a stranger. Not the `.test` of the same
+sentence, because `EmailStr` at the HTTP boundary refuses that one and a seeded account
+nobody can sign in as is not an account.
 
 ## Testing And Quality
 

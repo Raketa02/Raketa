@@ -49,13 +49,30 @@ export async function endSession(reason: SignOutReason): Promise<void> {
   //    with a token that is supposed to be gone.
   await clear();
 
-  // 2. Stop work that is still running against the old session before dropping the
-  //    cache, or an in-flight response repopulates what was just cleared.
-  await queryClient.cancelQueries();
-
-  // 3. The privacy step.
-  queryClient.clear();
-
-  // 4. The status change, which the routing guard turns into a redirect.
+  // 2. The status change, and it may not wait for anything.
+  //
+  //    **This runs inside a query more often than not.** The ordinary way a session ends
+  //    is a 401 arriving in a `queryFn`, going to the refresh coordinator, and coming back
+  //    rejected — so the teardown executes while the query that triggered it is still in
+  //    flight, and step 3 cancels that very query. Awaiting the cancellation here would be
+  //    waiting for this function's own caller to return, which it cannot do until this
+  //    returns.
+  //
+  //    The state that left behind was worse than either end of the transition: no
+  //    credentials, but a status still saying `authenticated`. Every later request then
+  //    goes out with no `Authorization` header and is refused — and the rotation cannot
+  //    even classify that 401, because there is no credential for it to be about. The
+  //    player is shown a retry for a session that no longer exists, and pressing it
+  //    re-runs the same headerless request forever.
   setSessionStatus('unauthenticated');
+
+  // 3. Stop work still running against the old session, then drop the cache — the privacy
+  //    step, and the reason sign-out is not a `router.replace`. Ordered against each other
+  //    so an in-flight response cannot repopulate what was just cleared, and deliberately
+  //    **not awaited**, for the reason in step 2. The `catch` is what guarantees the clear
+  //    still happens when a cancellation rejects.
+  void queryClient
+    .cancelQueries()
+    .catch(() => undefined)
+    .then(() => queryClient.clear());
 }

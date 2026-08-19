@@ -20,6 +20,12 @@ that has to special-case ``detail`` for two statuses has no error model at all.
 ``ErrorResponse`` is the schema both OpenAPI documents publish *and* the model the
 handlers build their bodies from, so the type a client generates and the body it
 receives cannot drift apart.
+
+**The error classes themselves are not here.** They live in
+``app/shared/domain/errors.py``, which imports no framework, because a domain layer
+raises them and this module cannot be reached from one (#101). What remains here is
+everything that only makes sense once a failure is being *sent*: the envelope, the
+status→code table for responses no domain error authored, and the handlers.
 """
 
 from __future__ import annotations
@@ -35,6 +41,14 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.application.events.store import EventStreamVersionConflict
 from app.core.tracing import trace_id_for
+from app.shared.domain.errors import (
+    AppError,
+    BadRequestError,
+    ConflictError,
+    ForbiddenError,
+    NotFoundError,
+    UnauthorizedError,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -65,54 +79,6 @@ class ErrorResponse(BaseModel):
         default=None,
         description="Structured context for this code, when the code defines any.",
     )
-
-
-class AppError(Exception):
-    """Base for every domain / application error rendered as JSON over HTTP.
-
-    Subclasses override ``status_code`` and ``code``; FastAPI never sees these
-    classes — the registered handler maps them to the envelope above.
-
-    **A subclass that does not set its own ``code`` inherits an ambiguous one**,
-    which is how two errors demanding opposite client recoveries end up
-    indistinguishable on the wire. ``tests/unit/test_error_envelope.py`` fails
-    the build when that happens.
-    """
-
-    status_code: int = status.HTTP_500_INTERNAL_SERVER_ERROR
-    code: str = "internal_error"
-
-    def __init__(
-        self, message: str, *, details: Optional[Dict[str, Any]] = None
-    ) -> None:
-        super().__init__(message)
-        self.message = message
-        self.details = details or {}
-
-
-class BadRequestError(AppError):
-    status_code = status.HTTP_400_BAD_REQUEST
-    code = "bad_request"
-
-
-class UnauthorizedError(AppError):
-    status_code = status.HTTP_401_UNAUTHORIZED
-    code = "unauthorized"
-
-
-class ForbiddenError(AppError):
-    status_code = status.HTTP_403_FORBIDDEN
-    code = "forbidden"
-
-
-class NotFoundError(AppError):
-    status_code = status.HTTP_404_NOT_FOUND
-    code = "not_found"
-
-
-class ConflictError(AppError):
-    status_code = status.HTTP_409_CONFLICT
-    code = "conflict"
 
 
 #: The codes carried by responses no domain error authored: request validation,

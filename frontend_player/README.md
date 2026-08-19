@@ -59,6 +59,23 @@ on a startup screen naming whichever is missing or malformed, rather than failin
 inside a feature. On a **physical device**, `EXPO_PUBLIC_API_URL` must be a LAN IP or
 tunnel — `localhost` on a phone means the phone.
 
+`EXPO_PUBLIC_ENV` is one of `local`, `development`, `staging`, `production` — the same
+four names the backend and the club app use. **Only `local` runs today**; the other three
+are validated but not provisioned. The environment decides the URL scheme, and that is
+validated too: the three deployed ones must be `https://`, because this URL is reached
+from a phone over the internet. `local` takes either — a tunnel is how a physical device
+reaches a laptop, and every tunnel hands back `https://`. A laptop URL under a deployed
+name is a startup failure naming both variables. See [`../docs/environments.md`](../docs/environments.md).
+
+The environment also decides what the app calls itself. `app.config.ts` is a **function**
+of it — not a static `app.json` — and delegates the one decision to
+`src/shared/config/appIdentity.ts`: outside `production` the app is named for its
+environment (`Raketa local`) and wears an amber badge over every screen; `production` is
+`Raketa`, unbadged. There is one installable variant — one bundle identifier, one URL
+scheme — so today all four resolve to the same app pointed at the same laptop. That is
+the point: the machinery is exercised in the only environment that runs, so it will not
+be wrong the first time it matters.
+
 Every `EXPO_PUBLIC_*` value ships inside the bundle and is readable from a released
 app. Config only, never secrets.
 

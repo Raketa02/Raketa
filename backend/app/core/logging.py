@@ -3,17 +3,27 @@ import logging
 import sys
 from datetime import datetime, timezone
 
-from app.core.config import Settings
+from app.core.config import Environment, Settings
 
 
 class _JsonFormatter(logging.Formatter):
-    """Emits one JSON object per record — ideal for CloudWatch / Loki ingestion."""
+    """Emits one JSON object per record — ideal for CloudWatch / Loki ingestion.
+
+    Every record carries its environment. Without it a `development` crash and a
+    production incident are the same line in the same aggregator, and the difference
+    is only recoverable from whichever log stream it happened to arrive on.
+    """
+
+    def __init__(self, environment: Environment) -> None:
+        super().__init__()
+        self._environment = environment
 
     def format(self, record: logging.LogRecord) -> str:
         payload = {
             "ts": datetime.fromtimestamp(record.created, tz=timezone.utc).isoformat(),
             "level": record.levelname,
             "logger": record.name,
+            "env": self._environment,
             "msg": record.getMessage(),
         }
         if record.exc_info:
@@ -28,10 +38,13 @@ def configure_logging(settings: Settings) -> None:
     root.handlers.clear()
     handler = logging.StreamHandler(sys.stdout)
     if settings.LOG_JSON:
-        handler.setFormatter(_JsonFormatter())
+        handler.setFormatter(_JsonFormatter(settings.APP_ENV))
     else:
         handler.setFormatter(
-            logging.Formatter("%(asctime)s %(levelname)s %(name)s :: %(message)s")
+            logging.Formatter(
+                f"%(asctime)s %(levelname)s [{settings.APP_ENV}] %(name)s "
+                f":: %(message)s"
+            )
         )
     root.addHandler(handler)
     root.setLevel(settings.LOG_LEVEL.upper())

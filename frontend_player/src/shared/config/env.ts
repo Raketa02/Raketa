@@ -13,26 +13,114 @@
 
 import { z } from 'zod';
 
-const EnvSchema = z.object({
+/**
+ * The four environments, named identically by all three apps.
+ *
+ * `local` is a developer's own machine and is the only one that runs today.
+ * `development` and `staging` are defined and validated but **not provisioned** — no
+ * domain is registered — and `production` does not exist yet either. Selecting one is a
+ * startup failure rather than a silent fallback to whatever happens to be reachable.
+ *
+ * `local` is the name that was missing, and its absence was the bug: a developer's own
+ * laptop was called `development`, which is the name that will mean a shared remote
+ * deployment. The two would then be indistinguishable in a log line.
+ */
+export const ENVIRONMENTS = ['local', 'development', 'staging', 'production'] as const;
+
+export type AppEnvironment = (typeof ENVIRONMENTS)[number];
+
+/** Spelled once, for the refusal message and for the environment template. */
+const ENVIRONMENT_NAMES = ENVIRONMENTS.join(', ');
+
+/**
+ * An absolute HTTP(S) URL.
+ *
+ * `.url()` alone is not enough: WHATWG parsing accepts `localhost:8000` as a URL whose
+ * *protocol* is `localhost:`, and that is precisely what someone types. It would pass
+ * validation and then fail on every request.
+ *
+ * Named rather than inlined so the cross-field rule below can ask whether the field itself
+ * already refused the value.
+ */
+const httpUrlField = z
+  .string()
+  .url()
+  .refine((value) => /^https?:\/\//i.test(value), {
+    message: 'must start with http:// or https://',
+  });
+
+/**
+ * The scheme the API URL must use, per environment — `null` where either is legitimate.
+ *
+ * This is the **public-network** form of the rule, and it is the strict one: this URL is
+ * reached from a phone, over the internet, so a deployed environment carrying it in the
+ * clear is a session and a bearer token on someone's café Wi-Fi. `https://` there is not a
+ * deployment-topology preference, it is the security invariant.
+ *
+ * `local` is `null`, and that is the correction #102 asked for. The rule used to require
+ * `http://` on the reasoning that `local` is "a laptop, a LAN IP or a tunnel" — but
+ * `expo start --tunnel`, `cloudflared` and `tailscale funnel` all hand back `https://`, so
+ * the one case a tunnel exists for (a physical phone that cannot reach the laptop's LAN IP)
+ * was refused at launch. Nothing about `local` is protected by forbidding TLS on it.
+ *
+ * Written out per environment rather than as `env === 'local' ? … : …` so that a fifth
+ * environment fails to compile until somebody decides how it is reached.
+ */
+const REQUIRED_SCHEME: Readonly<Record<AppEnvironment, 'https://' | null>> = {
+  local: null,
+  development: 'https://',
+  staging: 'https://',
+  production: 'https://',
+};
+
+const EnvFields = z.object({
+  EXPO_PUBLIC_API_URL: httpUrlField,
   /**
-   * `.url()` alone is not enough: WHATWG parsing accepts `localhost:8000` as a URL whose
-   * *protocol* is `localhost:`, and that is precisely what someone types. It would pass
-   * validation and then fail on every request.
+   * The message is replaced rather than left to zod, whose `invalid_enum_value` text ends
+   * `received '…'`. Config lands in logs and crash reports, and a variable's value is
+   * never something a refusal echoes back — the same rule the URL follows.
    */
-  EXPO_PUBLIC_API_URL: z
-    .string()
-    .url()
-    .refine((value) => /^https?:\/\//i.test(value), {
-      message: 'must start with http:// or https://',
-    }),
-  EXPO_PUBLIC_ENV: z.enum(['development', 'staging', 'production']),
+  EXPO_PUBLIC_ENV: z.enum(ENVIRONMENTS, {
+    errorMap: () => ({ message: `must be one of ${ENVIRONMENT_NAMES}` }),
+  }),
 });
 
-export type AppEnvironment = z.infer<typeof EnvSchema>['EXPO_PUBLIC_ENV'];
+/**
+ * The scheme rule is a claim about the two variables *together*, so it is checked on the
+ * object rather than on either field.
+ *
+ * **It stays silent when the field itself already refused the value**, and that guard is
+ * measured rather than assumed. The docstring here used to claim zod "runs it only once
+ * both fields have parsed"; that was false. A failing `.url()` or `.refine()` leaves zod's
+ * result *dirty* rather than aborting it, so this refinement still ran over the rejected
+ * string — `localhost:8000` was reported both as a malformed URL and as a scheme mismatch,
+ * two complaints for one typo, the second of them naming the environment rather than the
+ * missing scheme. Re-running the field is what makes "a malformed URL is reported as a
+ * malformed URL" true instead of merely intended.
+ *
+ * The issue is attached to `EXPO_PUBLIC_API_URL` — that is the value that has to change —
+ * and names `EXPO_PUBLIC_ENV` as the reason. An environment name is not a secret and is
+ * already on every log record; it is the *reason* here, never the offending value.
+ */
+const EnvSchema = EnvFields.superRefine((env, ctx) => {
+  if (!httpUrlField.safeParse(env.EXPO_PUBLIC_API_URL).success) return;
+
+  const scheme = REQUIRED_SCHEME[env.EXPO_PUBLIC_ENV];
+
+  if (scheme === null) return;
+
+  if (!env.EXPO_PUBLIC_API_URL.toLowerCase().startsWith(scheme)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['EXPO_PUBLIC_API_URL'],
+      message: `must start with ${scheme} when EXPO_PUBLIC_ENV is ${env.EXPO_PUBLIC_ENV}`,
+    });
+  }
+});
 
 export interface Env {
   /** FastAPI base URL. On a physical device this is a LAN IP or tunnel — a phone's
-   *  `localhost` is the phone. */
+   *  `localhost` is the phone. Either scheme in `local`, `https://` everywhere else. */
   readonly apiUrl: string;
   readonly environment: AppEnvironment;
 }
@@ -47,7 +135,7 @@ export class ConfigError extends Error {
 }
 
 /** The raw shape a build hands us: every variable present-or-absent, always a string. */
-export type RawEnv = Readonly<Partial<Record<keyof z.infer<typeof EnvSchema>, string>>>;
+export type RawEnv = Readonly<Partial<Record<keyof z.infer<typeof EnvFields>, string>>>;
 
 /**
  * Pure: validate a raw environment. Throws `ConfigError` naming the offending variables

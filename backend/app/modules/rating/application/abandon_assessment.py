@@ -13,9 +13,9 @@ recorded nothing, so this use case does not check first.
 from __future__ import annotations
 
 from app.application.ports import UnitOfWork
+from app.kernel import Clock
 from app.modules.rating.application.commands import AbandonAssessmentCommand
 from app.modules.rating.domain.ports import AssessmentRepository
-from app.shared.clock import Clock
 
 
 class AbandonAssessment:

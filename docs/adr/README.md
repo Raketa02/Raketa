@@ -34,7 +34,7 @@ If your work **contradicts** an existing ADR, surface it rather than silently ov
 - [0002 — Event-sourced User aggregate](0002-event-sourced-user-aggregate.md)
 - [0003 — Transactional outbox for event delivery](0003-transactional-outbox-for-event-delivery.md)
 - [0004 — JWT access tokens with rotating refresh tokens](0004-jwt-access-with-rotating-refresh-tokens.md)
-- [0005 — Three-app monorepo with enforced ownership boundaries](0005-three-app-monorepo-ownership-boundaries.md)
+- [0005 — Three-app monorepo with enforced ownership boundaries](0005-three-app-monorepo-ownership-boundaries.md) — *re-examined and upheld by 0021*
 - [0006 — The backend owns the API contract](0006-backend-owns-api-contract.md) — *amended to two documents by 0016*
 - [0007 — Club web: BFF with an httpOnly-cookie session](0007-club-web-bff-httponly-cookie-session.md)
 - [0008 — Player mobile: secure-store tokens, direct to the API](0008-player-mobile-securestore-direct-api.md)
@@ -44,9 +44,18 @@ If your work **contradicts** an existing ADR, surface it rather than silently ov
 - [0012 — A locked design system for the player app](0012-player-app-design-system.md)
 - [0013 — Player app: the production runtime architecture](0013-player-app-runtime-architecture.md)
 - [0014 — The club console follows its production architecture standard](0014-club-console-production-architecture-standard.md)
-- [0015 — Engines as a pure, versioned layer](0015-engines-as-a-pure-versioned-layer.md)
+- [0015 — Engines as a pure, versioned layer](0015-engines-as-a-pure-versioned-layer.md) — *the kernel's negative space and constant homes added by 0022*
 - [0016 — A modular monolith with two API surfaces](0016-modular-monolith-two-api-surfaces.md)
 - [0017 — Assessment and SkillRating are event-sourced](0017-rating-context-event-sourced.md) — *its irreversibility rule superseded by 0020*
 - [0018 — Aggregate repositories over the event store](0018-aggregate-repositories-over-the-event-store.md)
 - [0019 — Assessment stream ids are derived from (player, sport, attempt)](0019-deterministic-assessment-stream-ids.md)
 - [0020 — Revising an assessment answer truncates the transcript and replays](0020-revisable-assessment-answers.md)
+- [0021 — The kernel lives in the backend; clients derive only by comparison](0021-kernel-in-backend-clients-derive-by-comparison.md)
+- [0022 — What the kernel is not, and where a constant lives](0022-kernel-negative-space-and-constant-homes.md)
+- [0023 — Money is integer grosze, gross, and a court price is a whole number of złoty](0023-money-integer-grosze-gross-whole-zloty.md)
+- [0024 — An Instant is an aware datetime; engines compute in integer minute coordinates](0024-instant-as-aware-datetime-minute-coordinates.md)
+- [0025 — A counted match's pairing is elected before commitment and fixed after](0025-binding-pairing-for-counted-matches.md)
+- [0026 — Two matchmaking engines, one snapshot input contract](0026-matchmaking-engines-snapshot-input-contract.md)
+- [0027 — Fit and certainty are separate numbers, and ranking a list is policy](0027-fit-and-certainty-are-separate-ranking-is-policy.md)
+- [0028 — Four environments, one typed configuration](0028-four-environment-model-and-typed-configuration.md) — *renames the dev compose file to `docker-compose-local.yml`; 0010 names the old filename and stands as written*
+- [0029 — Seed data goes through aggregates, and never runs in production](0029-seed-data-through-aggregates-never-in-production.md)

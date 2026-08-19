@@ -80,6 +80,45 @@ section references point there.
   before the first attempt and identical across retries of that intent — not per HTTP
   attempt. The only thing that makes retrying a create safe. *(§28.2)*
 
+## Glossary — environment and configuration
+
+- **Environment** — one of exactly four: `local`, `development`, `staging`, `production`.
+  The same four names the backend (`APP_ENV`) and the player app (`EXPO_PUBLIC_ENV`) use.
+  It answers *which infrastructure is in use*, never *whether a feature is on* — that is a
+  feature flag, and the two are never mixed. Only `local` runs today; the other three are
+  validated but unprovisioned, so selecting one fails at start rather than falling back.
+  _Avoid_: `dev`, `prod`, `stage`, `test`. *(§20.1)*
+- **Build mode** — `NODE_ENV`: two values, describing how the app was *compiled*. **Not
+  the environment** — one production build serves staging and production alike. Nothing
+  reads it to answer an environment question, and a lint rule enforces that. Named here so
+  it can be rejected by name in review.
+- **Scheme rule** — the contract that a **public-network URL** is `https://` in every
+  deployed environment, and either in `local`. A claim about a URL *and* the environment
+  together, so it is checked on the object rather than on either field alone — and it stays
+  silent when the field itself already refused the value, so one typo yields one complaint.
+- **Public-network URL vs server-to-server URL** — which of the two a variable is decides
+  whether the scheme rule applies to it. `NEXT_PUBLIC_APP_URL` is the origin a browser
+  visits, so `http://` in a deployed environment means a session cookie in the clear: the
+  rule applies. `BACKEND_API_URL` is called by this app's own server tier and a browser
+  never learns it, so a cluster-internal `http://backend.svc.cluster.local:8000` is
+  legitimate and the rule does not apply — whether that hop is encrypted is a
+  deployment-topology question this app cannot answer. Settled for all three apps in
+  [`../docs/environments.md`](../docs/environments.md).
+- **Server configuration** — `src/platform/config/server.ts`: the environment, the FastAPI
+  origin and the session cookie policy. Carries `server-only`, so importing it from a
+  Client Component is a build error rather than a runtime `undefined`. *(§19.1, §20.1)*
+- **Public configuration** — `src/platform/config/public.ts`: only what is deliberately
+  baked into the client bundle. What is *absent* is the point — no FastAPI origin, no
+  environment, no cookie policy. **Two schemas, never one.** *(§20.1)*
+- **Derived setting** — a configuration value computed from the environment rather than set
+  independently, because two settable values can disagree. The session cookie's `Secure`
+  flag is one: `false` only in `local`. Setting it by hand is refused, not ignored — a
+  variable that looks like it controls security and does not is worse than one that is
+  absent.
+- **Environment badge** — the amber `warn` Tag naming the current environment, rendered by
+  a **Server Component** reading the server-only value. Production is unbadged. It is a
+  Server Component precisely so no public mirror of the environment name exists to drift.
+
 ## Glossary — session and tenancy
 
 - **Session cookie** — the httpOnly/Secure/SameSite cookie(s) holding the access/refresh

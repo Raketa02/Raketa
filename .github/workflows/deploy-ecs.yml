@@ -4,7 +4,7 @@ name: Deploy backend to ECS  [DORMANT]
 # DORMANT — AWS deployment is deliberately not in use.
 #
 # Development is entirely local: local Postgres + local Docker
-# (backend/docker-compose-dev.yml). This pipeline is kept intact, and correct,
+# (backend/docker-compose-local.yml). This pipeline is kept intact, and correct,
 # so it can be switched back on without being rebuilt from memory.
 #
 # It is dormant in two independent ways, so neither alone can wake it by

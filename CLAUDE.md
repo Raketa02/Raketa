@@ -42,6 +42,11 @@ the hooks themselves, `make gen-api`.
   [`docs/agents/ownership-boundaries.md`](docs/agents/ownership-boundaries.md).
 - **Domain terms are defined once,** in [`CONTEXT.md`](CONTEXT.md). Each app's
   `CONTEXT.md` adds only its own *technical* vocabulary and never redefines a domain term.
+- **The four environment names are shared vocabulary** — `local`, `development`, `staging`,
+  `production`, spelled identically in all three apps
+  ([`docs/environments.md`](docs/environments.md)). **The environment may select
+  configuration defaults; it may never select behaviour a domain test could observe.** Only
+  `local` runs today; selecting another fails at start rather than falling back.
 - **The two clients do not share a shape.** `frontend_club/` follows its production
   architecture standard ([ADR-0014](docs/adr/0014-club-console-production-architecture-standard.md));
   `frontend_player/` follows feature-first Clean Architecture
@@ -68,7 +73,36 @@ guardrail doing its job.
   terms.** Much of the racket-sport domain is still unwritten; see
   [`docs/agents/domain.md`](docs/agents/domain.md) before naming something new.
 - [`CONTEXT-MAP.md`](CONTEXT-MAP.md) — topology: which file owns which vocabulary.
+- [`docs/environments.md`](docs/environments.md) — **the four environment names and the
+  deployment contract.** `local`, `development`, `staging`, `production`, spelled identically
+  by all three apps; the refusals, the scheme rule, the test taxonomy, feature flags vs
+  environment configuration, expand-and-contract, and the checklist for turning on a remote
+  environment. Only `local` runs. Decided by [ADR-0028](docs/adr/0028-four-environment-model-and-typed-configuration.md)
+  and [ADR-0029](docs/adr/0029-seed-data-through-aggregates-never-in-production.md).
 - [`docs/adr/`](docs/adr/) — decisions affecting the system or the contract between apps.
 
 After changing either hook, run `make test-hooks` (65 assertions). A guardrail that
 silently stops matching is worse than none, because you stop watching for it.
+
+## Agent skills
+
+### Issue tracker
+
+GitHub Issues on `Raketa02/Raketa`, via the `gh` CLI — **not** the dead
+`RobertConstantin02/rakieta` this repo detached from, whose issues are not this repo's.
+`gh` is authenticated for two accounts and does not stay switched; the symptom is
+"could not resolve to a Repository", never a 403. Blocking edges live in the issue body
+and a spec is labelled `prd`, not `ready-for-agent` — both are load-bearing for the AFK
+loop, while `/wayfinder` uses GitHub's native dependencies instead. See
+[`docs/agents/issue-tracker.md`](docs/agents/issue-tracker.md).
+
+### Triage labels
+
+The five canonical triage roles, each label string equal to its name. See
+[`docs/agents/triage-labels.md`](docs/agents/triage-labels.md).
+
+### Domain docs
+
+Multi-context: `CONTEXT-MAP.md` is the topology, the root `CONTEXT.md` owns the domain
+language, and each app's `CONTEXT.md` adds technical vocabulary only. See
+[`docs/agents/domain.md`](docs/agents/domain.md).

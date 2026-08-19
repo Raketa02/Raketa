@@ -1,7 +1,11 @@
 import os
 
 # Configure environment *before* importing application modules so settings pick it up.
-os.environ.setdefault("ENV", "test")
+# `local` — there is no `test` environment. A test run happens on a developer's own
+# machine or on a CI runner, both of which are somebody's laptop as far as this
+# application is concerned. Adding a fifth name would be a name for a *test suite*,
+# and the four names describe where the software runs.
+os.environ.setdefault("APP_ENV", "local")
 os.environ.setdefault("JWT_SECRET_KEY", "test-secret-do-not-use-in-prod")
 os.environ.setdefault("WRITER_DB_URL", "sqlite+aiosqlite:///:memory:")
 os.environ.setdefault("DB_SSL_MODE", "disable")

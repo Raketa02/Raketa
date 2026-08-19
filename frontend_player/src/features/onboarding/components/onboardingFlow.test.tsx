@@ -14,6 +14,7 @@
  */
 
 import { onlineManager } from '@tanstack/react-query';
+import { router } from 'expo-router';
 import { fireEvent, renderRouter, screen, waitFor } from 'expo-router/testing-library';
 
 import {
@@ -31,6 +32,7 @@ import {
   launchSignedIn,
   runInProgress,
   stubGate as stubGateWith,
+  stubRunsInProgress,
 } from '@/test-support/onboardingRouter';
 import {
   errorResponse,
@@ -41,6 +43,7 @@ import {
   type Wire,
 } from '@/test-support/transport';
 
+import { onboardingKeys } from '../hooks/onboardingKeys';
 import { useOnboardingPass } from '../store/onboardingPass.store';
 
 const ASSESSMENT_ID = '1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6';
@@ -136,7 +139,72 @@ describe('where a launch lands', () => {
 
     await launchSignedIn();
 
-    expect(await screen.findByText('ada')).toBeTruthy();
+    // A player who finished onboarding lands here on every later launch — the rating is
+    // what the gate reads, so this is also the proof that onboarding is not re-offered to
+    // someone who already proved a sport.
+    expect(await screen.findByText('Inside the app')).toBeTruthy();
+    expect(screen.getByText('ada · ada@example.com')).toBeTruthy();
+    expect(screen).toHavePathname('/');
+    // Not through onboarding, and not through the questionnaire it would have started.
+    expect(transport.requestsTo('POST', '/api/v1/assessments')).toEqual([]);
+  });
+
+  it('sends a registered player who has not been rated yet into onboarding', async () => {
+    // The other half of the same rule, and the case that makes it worth stating: signing
+    // up and closing the app leaves a player with an account and no rating, so the next
+    // launch owes them the questionnaire rather than the app.
+    stubGate({ ratings: [] });
+
+    await launchSignedIn();
+
+    await waitFor(() => expect(screen).toHavePathname('/welcome'));
+    expect(screen.queryByText('Inside the app')).toBeNull();
+  });
+
+  it('enters the app on finishing, not back into onboarding off a stale gate read', async () => {
+    // The launch that cached the answer "no ratings". It is correct at the time, it is
+    // fresh for 30s, and it stays in the cache for five minutes — while the player spends
+    // several of those minutes actually doing the questionnaire.
+    stubGate();
+    transport.on('GET', '/api/v1/users/me', () => json(USER));
+
+    await launchSignedIn();
+    await waitFor(() => expect(screen).toHavePathname('/welcome'));
+
+    // The run finishes: the server now holds a rating, and completion marks the gate's two
+    // reads stale — which is all it can do, because the gate's queries are unmounted for
+    // the whole of onboarding and an invalidated query with no observers does not refetch.
+    //
+    // The re-read is **held open**, which is the whole point. On a phone it takes a round
+    // trip, and the question is what the gate does in the meantime: the stale copy still
+    // says "no ratings", and acting on it redirects into `(onboarding)` — which unmounts
+    // this layout and its queries, so the corrected answer never arrives and the player is
+    // left in the questionnaire for good. A test that lets the redirect happen and then
+    // waits for it to be undone proves nothing, because on a device it is not undone.
+    let answerRatings = () => {};
+    const held = new Promise<void>((resolve) => {
+      answerRatings = resolve;
+    });
+    transport.on('GET', '/api/v1/ratings', async () => {
+      await held;
+      return json<Wire['RatingsResponse']>({ ratings: [RATING] });
+    });
+    stubRunsInProgress(transport, []);
+    queryClient.invalidateQueries({ queryKey: onboardingKeys.runInProgress() });
+    queryClient.invalidateQueries({ queryKey: onboardingKeys.ratings() });
+
+    // "Start playing".
+    router.replace('/');
+
+    // While the re-read is in flight the gate has no answer, and rendering nothing is the
+    // only honest thing to do with a question it cannot yet answer.
+    await waitFor(() => expect(transport.requestsTo('GET', '/api/v1/ratings')).toHaveLength(2));
+    expect(screen).not.toHavePathname('/welcome');
+    expect(screen.queryByText("Let's find your level")).toBeNull();
+
+    answerRatings();
+
+    expect(await screen.findByText('Inside the app')).toBeTruthy();
     expect(screen).toHavePathname('/');
   });
 
@@ -244,6 +312,44 @@ describe('where a launch lands', () => {
     fireEvent.press(screen.getByLabelText('Try again'));
 
     await waitFor(() => expect(screen).toHavePathname('/welcome'));
+  });
+
+  it('sends the player to sign in when the gate 401s and the refresh is rejected', async () => {
+    // Coming back to the app after long enough that the access token expired and the
+    // refresh token is spent. The session really is over, and "your session has ended"
+    // behind a Try again button is the one thing a retry cannot fix — every press
+    // re-reads with credentials that no longer exist.
+    stubGate();
+    transport.on('GET', '/api/v1/ratings', () => errorResponse(401, 'unauthorized'));
+    transport.on('GET', RUNS_IN_PROGRESS_PATH, () => errorResponse(401, 'unauthorized'));
+    transport.on('POST', '/api/v1/auth/refresh', () => errorResponse(401, 'invalid_refresh_token'));
+
+    await launchSignedIn();
+
+    await waitFor(() => expect(screen).toHavePathname('/sign-in'));
+    expect(screen.queryByText("We couldn't pick up where you left off")).toBeNull();
+  });
+
+  it('sends the player to sign in when the gate is refused and there is no credential to rotate', async () => {
+    // The state a half-finished teardown used to leave: the keychain empty while the
+    // session machine still said `authenticated`. Every gate read then goes out with no
+    // Authorization header and is refused — and a 401 about no credential is one the
+    // rotation cannot classify, so nothing rotates and nothing ends.
+    //
+    // What the player saw was "your session has ended" above a Try again button, on a
+    // screen whose retry re-sent the same headerless request. The recovery is not a
+    // retry; it is admitting the session is over.
+    stubGate();
+    transport.on('GET', '/api/v1/ratings', () => errorResponse(401, 'unauthorized'));
+    transport.on('GET', RUNS_IN_PROGRESS_PATH, () => errorResponse(401, 'unauthorized'));
+
+    renderRouter(ONBOARDING_ROUTES, { initialUrl: '/' });
+    setSessionStatus('authenticated');
+
+    await waitFor(() => expect(screen).toHavePathname('/sign-in'));
+    expect(screen.queryByText("We couldn't pick up where you left off")).toBeNull();
+    // Nothing was rotated, because there was nothing to rotate it with.
+    expect(transport.requestsTo('POST', '/api/v1/auth/refresh')).toEqual([]);
   });
 
   it('says the connection is out rather than rendering nothing, when launched offline', async () => {

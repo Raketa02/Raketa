@@ -34,8 +34,9 @@ cd frontend_club
 pnpm install                 # installs what package.json already declares
 ```
 
-Then create the App Router entry points Next expects — `src/app/layout.tsx` and
-`src/app/page.tsx` — and build the foundations in the standard's **§47 order**:
+`src/app/layout.tsx` already exists — the minimum root layout, mounting the environment
+badge and binding the two fonts. Add the `src/app/page.tsx` Next expects, then build the
+foundations in the standard's **§47 order**:
 
 1. strict compiler, lint/import boundaries, `server-only` enforcement, CI baseline;
 2. the OpenAPI contract pipeline, FastAPI client, browser client, error model;
@@ -45,9 +46,9 @@ Then create the App Router entry points Next expects — `src/app/layout.tsx` an
 6. observability — structured logs, tracing, error reporting, Web Vitals;
 7. business features, each built vertically through the established path.
 
-`layout.tsx` must `import '@/shared/ui/tokens.css'` and load Archivo + IBM Plex Mono via
+`layout.tsx` does `import '@/shared/ui/tokens.css'` and loads Archivo + IBM Plex Mono via
 `next/font/google`, exposed as `--font-sans` / `--font-mono`. The design system is already
-locked — see below.
+locked — see below. It holds no providers: those arrive with the features that need them.
 
 > Deliberately **not** scaffolded with `create-next-app`: its default flat `app/` layout
 > contradicts the feature-oriented structure. Starting from the structure is cheaper than
@@ -68,9 +69,57 @@ pnpm check        # lint + typecheck + test — the local gate
 
 ## Environment
 
-Copy `.env.example` → `.env.local`. `BACKEND_API_URL` is **server-only** and must never
-become `NEXT_PUBLIC_*` — anything so prefixed is public information baked into the client
-bundle.
+Copy `.env.example` → `.env.local`. Everything is read in exactly one place —
+[`src/platform/config/`](src/platform/config/) — which validates it with Zod and refuses to
+start the server on anything missing or malformed. A lint rule keeps `process.env` out of
+the rest of the app.
+
+`APP_ENV` is one of four names, shared with the backend and the player app:
+
+| Environment | Scheme for a public-network URL | State |
+| --- | --- | --- |
+| `local` | either | the only one that runs today |
+| `development` | `https://` | defined and validated, **not provisioned** |
+| `staging` | `https://` | defined and validated, **not provisioned** |
+| `production` | `https://` | does not exist yet |
+
+The scheme rule governs a URL that **crosses a public network** — here, `NEXT_PUBLIC_APP_URL`,
+the origin a browser visits. It deliberately does **not** govern `BACKEND_API_URL`, which is
+server-to-server: a cluster-internal `http://backend.svc.cluster.local:8000` never leaves the
+cluster and is the ordinary deployed topology. Whether that hop is encrypted is a
+deployment-topology question, not one this app can assert. The cross-app rule is
+[`../docs/environments.md`](../docs/environments.md).
+
+Selecting an unprovisioned environment is a startup failure, not a silent fallback: the scheme
+rule requires `https://` for this app's own origin there, and its only origin today is
+`http://localhost:3000`.
+
+`APP_ENV` is **not** `NODE_ENV`. That has two values and describes how the app was
+*compiled* — one production build serves staging and production alike. Nothing reads it.
+
+Two schemas, never one (§20.1):
+
+- **`server.ts`** — the environment, `BACKEND_API_URL` and the session cookie policy. It
+  carries `import "server-only"`, so a Client Component that imports it **fails to
+  compile** rather than shipping and reading `undefined`. `BACKEND_API_URL` must never
+  become `NEXT_PUBLIC_*`: anything so prefixed is public information baked into the client
+  bundle, and the browser must never learn the FastAPI origin ([ADR-0007](../docs/adr/0007-club-web-bff-httponly-cookie-session.md)).
+- **`public.ts`** — only `NEXT_PUBLIC_APP_URL`. What is *absent* is the point: no FastAPI
+  origin, no environment name, no cookie policy.
+
+The session cookie's `Secure` flag is **derived** from the environment — `false` only in
+`local` — and can no longer be set by hand. A stale `SESSION_COOKIE_SECURE` in the
+environment stops the server rather than being ignored.
+
+Both boot hooks are wired and live:
+
+- `src/instrumentation.ts` validates the server config at boot, before the first request is
+  served.
+- `<EnvironmentBadge />` from `@/platform/config/EnvironmentBadge` renders the amber
+  environment pill, and is **mounted** in [`src/app/layout.tsx`](src/app/layout.tsx). It is a
+  **Server Component** on purpose: it reads the server-only environment, so no public mirror
+  of the name exists. It renders `null` in production, which is why mounting it
+  unconditionally is right — the environment decides, not the caller.
 
 ## Architecture in one paragraph
 

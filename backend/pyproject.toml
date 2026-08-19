@@ -68,6 +68,35 @@ mypy_path = "."
 #disallow_untyped_defs = "True"
 plugins = ["sqlalchemy.ext.mypy.plugin", "pydantic.mypy"]
 
+# The kernel and the engines are typechecked strictly; the rest of the tree keeps
+# the settings above. Global strict would fail today, and a gate that cannot be
+# turned on is not a gate — so it is scoped to the two packages ADR-0015 makes
+# claims about, where an implicit `Any` is how a pure computation stops being one.
+#
+# `strict` itself is a global-only flag, so the flags it implies are listed. That
+# is also why they are worth reading: `warn_return_any` is the one that catches
+# `x ** 0.5` (typeshed returns `Any` for float ** float, since a negative base
+# gives a complex), and `warn_unused_ignores` is what stops a `# type: ignore`
+# being parked here and outliving the error it silenced.
+#
+# The bare-parent entries matter: mypy's `app.kernel.*` does NOT match
+# `app.kernel` itself, so without them the two package `__init__` files would be
+# the one place strict did not reach.
+[[tool.mypy.overrides]]
+module = ["app.kernel", "app.kernel.*", "app.engines", "app.engines.*"]
+warn_unused_ignores = true
+warn_return_any = true
+disallow_any_generics = true
+disallow_subclassing_any = true
+disallow_untyped_calls = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+extra_checks = true
+strict_equality = true
+no_implicit_reexport = true
+
 [tool.commitizen]
 name = "cz_conventional_commits"
 tag_format = "$version"

@@ -27,14 +27,16 @@ from fastapi.testclient import TestClient
 from app.application.events.store import EventStreamVersionConflict
 from app.core.exception_handlers import (
     CONCURRENT_MODIFICATION_CODE,
+    code_for_status,
+    register_exception_handlers,
+)
+from app.shared.domain.errors import (
     AppError,
     BadRequestError,
     ConflictError,
     ForbiddenError,
     NotFoundError,
     UnauthorizedError,
-    code_for_status,
-    register_exception_handlers,
 )
 
 # Imported for their side effect: every error module must be loaded before the

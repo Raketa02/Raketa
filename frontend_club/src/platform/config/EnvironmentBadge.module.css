@@ -1,0 +1,46 @@
+/*
+ * The environment badge — the design system's `warn` Tag (docs/design-system.md §5.3),
+ * anchored to the bottom-right of the viewport.
+ *
+ * `warn` is amber, which this system reads as *provisional*. The badge is not an error and
+ * not a settled state; it says the thing in front of you is not the real one.
+ *
+ * Written here rather than imported from a shared Tag primitive because that primitive
+ * does not exist yet — `shared/ui/` holds only `tokens.css` today. When it lands, this
+ * file's declarations are what it should look like, and this component should use it.
+ *
+ * The three literals — 19px, 700 and the `system-ui` fallback stack — are the ones the
+ * design system itself spells literally in §5.3; there is no token for a control height or
+ * a font weight. Every colour, size, space and radius comes from tokens.css, per CLAUDE.md.
+ */
+
+.anchor {
+  position: fixed;
+  right: var(--s-5);
+  bottom: var(--s-5);
+  /*
+   * Reuses the toast layer rather than adding a token: the design system is locked, and a
+   * bottom-centre toast cannot collide with a bottom-right badge.
+   */
+  z-index: var(--z-toast);
+  /*
+   * A developer aid that eats a click in the corner of every screen is worse than no aid.
+   */
+  pointer-events: none;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  height: 19px;
+  padding: 0 var(--s-3);
+  border-radius: var(--r-tag);
+  background: var(--amber-soft);
+  color: var(--amber);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-size: var(--t-label);
+  font-weight: 700;
+  line-height: var(--lh-tight);
+  letter-spacing: var(--tr-tag);
+  text-transform: uppercase;
+}

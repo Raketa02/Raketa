@@ -3,6 +3,12 @@
 - **Status:** Accepted
 - **Date:** 2026-08-09
 
+> **Scope note.** This decision stands unchanged.
+> [ADR-0021](0021-kernel-in-backend-clients-derive-by-comparison.md) re-examined it when a
+> shared computational core arrived — the case where a shared package is most tempting — and
+> kept the rejection, supplying an API-contract mechanism in place of the duplication this
+> record accepts under *Consequences → Harder*.
+
 ## Context
 
 Raketa is three deployables: a FastAPI backend, a React Native (Expo) player app, and a

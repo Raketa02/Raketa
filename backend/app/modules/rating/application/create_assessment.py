@@ -47,6 +47,7 @@ from __future__ import annotations
 from app.application.events.store import EventStreamVersionConflict
 from app.application.ports import UnitOfWork
 from app.engines.assessment import AskQuestion, AssessmentEngine
+from app.kernel import Clock
 from app.modules.rating.application.assessment_view import (
     current_step,
     questions_asked,
@@ -59,7 +60,6 @@ from app.modules.rating.application.commands import (
 from app.modules.rating.domain.assessment import Assessment
 from app.modules.rating.domain.errors import SportAlreadyRated
 from app.modules.rating.domain.ports import AssessmentRepository, SkillRatingRepository
-from app.shared.clock import Clock
 
 
 class CreateAssessment:

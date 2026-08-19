@@ -18,7 +18,7 @@ from app.infrastructure.events.json_event_codec import JsonEventCodec
 from app.infrastructure.events.transactional_publisher import (
     EventPublisher,
 )
-from app.shared.clock import Clock
+from app.kernel import Clock
 from app.shared.domain import EventRecorder
 
 
