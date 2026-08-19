@@ -12,7 +12,6 @@
  */
 
 import { QueryClientProvider } from '@tanstack/react-query';
-import { Slot } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback } from 'react';
 import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
@@ -21,6 +20,7 @@ import { authKeys, refreshTokens, restoreSession } from '@/features/auth/types';
 import { EnvironmentBadge } from '@/shared/config/EnvironmentBadge';
 import { wireHttpCredentials } from '@/shared/lib/auth';
 import { BootstrapGate, bootstrapApp, sharedBootstrapSteps } from '@/shared/lib/bootstrap';
+import { NowPrototypeScreen } from '@/prototype/now/NowPrototypeScreen';
 import { queryClient } from '@/shared/lib/query-client';
 
 /**
@@ -66,7 +66,11 @@ export default function RootLayout() {
       <StatusBar style="dark" />
       <QueryClientProvider client={queryClient}>
         <BootstrapGate run={run}>
-          <Slot />
+          {/* THROWAWAY PROTOTYPE — issue #11. `<Slot />` was here. The prototype is
+              mounted directly so it opens with no sign-in and no backend; the real route
+              tree lives behind `(app)/_layout.tsx`, which redirects to /sign-in. Deleted
+              with this branch. */}
+          <NowPrototypeScreen />
           {/*
            * A sibling of the route tree rather than part of it, so the badge is on every
            * screen without a screen having to know it exists — and inside the gate, so
