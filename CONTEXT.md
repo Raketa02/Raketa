@@ -485,7 +485,10 @@ not silently assumed away:
 
 ### Matches — terms committed ahead of the code
 
-Committed by [ADR-0030](docs/adr/0030-a-departure-is-an-audience-not-a-state.md). The code does
+Committed by [ADR-0030](docs/adr/0030-a-departure-is-an-audience-not-a-state.md),
+[ADR-0031](docs/adr/0031-hold-ladder-is-a-floor-at-a-level-of-certainty.md),
+[ADR-0032](docs/adr/0032-order-is-a-property-of-the-composed-screen.md) and
+[ADR-0033](docs/adr/0033-settlement-and-occupancy-are-independent.md). The code does
 not exist yet; these names do, and Matches must be built with them rather than around them.
 
 - **Departure** — a player vacating a seat they hold. It records the seat, the player, the time,
@@ -494,16 +497,39 @@ not exist yet; these names do, and Matches must be built with them rather than a
 - **Vacancy** — the unfilled seat a departure leaves, and the thing the rescue cascade works. A
   departure always exists; a vacancy exists only while the seat is unfilled — so a gifted seat
   creates a departure and no vacancy at all. **Two players leaving produce two departures and two
-  vacancies**, which is the distinction a single scalar could not express.
+  vacancies**, which is the distinction a single scalar could not express. A vacancy's existence
+  and its departure's **settlement** are independent facts and neither implies the other
+  ([ADR-0033](docs/adr/0033-settlement-and-occupancy-are-independent.md)): the resolution ladder
+  reads vacancy existence, the leaver's card reads settlement, and a filler closes the oldest
+  **open vacancy** while settling the oldest **unsettled departure** — not always the same one.
 - **Leaver** — the player who made a departure. Not a state: a leaver sees the match's own state
   rendered for somebody who used to hold a seat.
 - **Outcome** — a departure's settled result: *reversed*, *refunded in full*, *refunded half*, or
   *forfeited*. On a private court only *refunded in full* and *forfeited* are reachable.
 - **Settlement** — the moment no further **seat** event can change an outcome. Monotonic upward
-  thereafter: a club-side failure may improve a settled outcome, nothing may reduce one.
+  thereafter: a club-side failure may improve a settled outcome, nothing may reduce one. A
+  departure may be **born settled** — a pre-commitment reversal, a transfer, a gift — and still
+  leave a vacancy behind it.
+- **Quote** — the outcome **label** a player was shown before they chose to leave, carried on the
+  leave command. If the outcome recomputed at apply time is strictly worse than the quote, the
+  command is refused and the player is re-presented. The ordering is *refunded in full* >
+  *refunded half* > *forfeited* = *nothing returned*; forfeit ranks **equal** to a zero refund,
+  because the quote protects money and the money is identical.
 - **Guarantee** — a private-court owner's exposure: the court price minus the seats currently
   funded, held against their account rather than paid to the club. A funded seat never becomes
   unfunded, so a guarantee only ever decreases.
+
+- **Hold age** — how long a court has been **held**, measured from `heldSince` (written when a
+  hold is first granted, cleared when it lapses) — never from when the match was created. A club
+  cap on hold age may reclaim a low-certainty hold and may never touch one a seat short, and a
+  hold that regains certainty stops being stale
+  ([ADR-0031](docs/adr/0031-hold-ladder-is-a-floor-at-a-level-of-certainty.md)).
+- **Composed order** — the sequence of the enrolled strip. It belongs to the **composed screen**,
+  not to the matches in it: sorted by start time at composition, tie-broken on match id, shipped
+  in the payload, and recomputed only when the screen is composed — on open and on explicit
+  refresh, never on a live update
+  ([ADR-0032](docs/adr/0032-order-is-a-property-of-the-composed-screen.md)). A match's start time
+  stays mutable; a moved match is the same match.
 
 **A seat vacated after commitment is still *funded*.** That one sentence is why the club is safe,
 why the other players' payments never change, and why a private-court owner is never re-exposed

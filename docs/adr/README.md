@@ -59,4 +59,7 @@ If your work **contradicts** an existing ADR, surface it rather than silently ov
 - [0027 — Fit and certainty are separate numbers, and ranking a list is policy](0027-fit-and-certainty-are-separate-ranking-is-policy.md)
 - [0028 — Four environments, one typed configuration](0028-four-environment-model-and-typed-configuration.md) — *renames the dev compose file to `docker-compose-local.yml`; 0010 names the old filename and stands as written*
 - [0029 — Seed data goes through aggregates, and never runs in production](0029-seed-data-through-aggregates-never-in-production.md)
-- [0030 — A departure is an audience, not a state](0030-a-departure-is-an-audience-not-a-state.md)
+- [0030 — A departure is an audience, not a state](0030-a-departure-is-an-audience-not-a-state.md) — *its filler rule amended by 0033*
+- [0031 — The hold ladder is a floor at a given level of certainty](0031-hold-ladder-is-a-floor-at-a-level-of-certainty.md)
+- [0032 — Order is a property of the composed screen, not of the match](0032-order-is-a-property-of-the-composed-screen.md)
+- [0033 — A departure's settlement and its vacancy are independent](0033-settlement-and-occupancy-are-independent.md) — *amends 0030*

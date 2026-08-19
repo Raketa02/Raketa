@@ -2,6 +2,9 @@
 
 - **Status:** Accepted
 - **Date:** 2026-08-19
+- **Amended by:** [ADR-0033](0033-settlement-and-occupancy-are-independent.md) — the filler rule
+  below (*"FIFO by `vacatedAt` decides whose departure it settles"*) collapses two independent
+  facts into one. Read 0033 before implementing the cascade.
 
 ## Context
 
