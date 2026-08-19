@@ -637,11 +637,13 @@ The following are open, and this file deliberately does not close them:
 
 ### Provenance
 
-Sources read at `/Users/Robert.Dinescu/Desktop/rkta/resources/phase3/` on 2026-08-19:
+Sources read on 2026-08-19, now committed at [`docs/specs/now/`](..):
 `rakieta-now-section-ui-spec.md`, `rakieta-now-section-specification.md`,
 `now-section-domain-spec.md`, `3.1-enrolled_match_states_and_transitions.md`,
 `3-enrolled_match_engine_architecture.md`, `5-now_screen_architecture_review.md`, and
-`2-rakieta-player-app-v37-netlify (2).zip` → `netlify-deploy/index.html`
-(498 698 bytes, 7 334 lines; script block lines 398–7331). `1-now_screen_production_spec.md` was
+the v37 prototype zip → [`prototype-v37/netlify-deploy/index.html`](../prototype-v37/netlify-deploy/index.html)
+(498 698 bytes, 7 334 lines; script block lines 398–7331) — **the netlify build, not the 7 261-line
+`rakietaPlayerPrototype.html` the UI spec's line citations resolve against; see
+[the set's README](../README.md#the-prototype-two-builds-and-why-that-matters)**. `1-now_screen_production_spec.md` was
 present but is cited here only where `DOM` or `R5` quote it, consistent with `DOM` §A.0's
 `[GAP-0]`.

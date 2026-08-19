@@ -6,7 +6,7 @@ screen looks like; this says where its code lives, who owns its state, and how i
 in production.
 
 - **Origin:** distilled from
-  `resources/playerApp/general_architecture/react_native_expo_production_architecture.md`
+  [`docs/specs/player-app/react_native_expo_production_architecture.md`](../../docs/specs/player-app/react_native_expo_production_architecture.md)
   (147 sections), adapted to the structure this repo already committed to in
   [ADR-0009](../../docs/adr/0009-feature-first-clean-architecture-frontends.md) and
   [ADR-0008](../../docs/adr/0008-player-mobile-securestore-direct-api.md). The runtime

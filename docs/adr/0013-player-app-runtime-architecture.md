@@ -36,7 +36,7 @@ where the only signal is a support ticket saying "it logged me out again".
 
 A comprehensive external reference for React Native + Expo production architecture was
 adopted as the input for this decision
-(`resources/playerApp/general_architecture/react_native_expo_production_architecture.md`,
+([`docs/specs/player-app/react_native_expo_production_architecture.md`](../specs/player-app/react_native_expo_production_architecture.md),
 147 sections). It proposes a `core/` directory and a slightly different feature layer set
 from the one this repo already committed to, and that conflict had to be resolved rather
 than absorbed.
