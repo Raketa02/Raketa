@@ -63,3 +63,5 @@ If your work **contradicts** an existing ADR, surface it rather than silently ov
 - [0031 — The hold ladder is a floor at a given level of certainty](0031-hold-ladder-is-a-floor-at-a-level-of-certainty.md)
 - [0032 — Order is a property of the composed screen, not of the match](0032-order-is-a-property-of-the-composed-screen.md)
 - [0033 — A departure's settlement and its vacancy are independent](0033-settlement-and-occupancy-are-independent.md) — *amends 0030*
+- [0034 — The Matches context is a record and keeps no history](0034-matches-is-a-record-and-keeps-no-history.md) — *the first racket-sport context to answer 0002's per-context question the other way*
+- [0035 — A reservation is the only claim on a court, and it claims an interval](0035-a-reservation-claims-a-court-over-an-interval.md)

@@ -478,18 +478,66 @@ context from the first commit, and so nobody invents a fourth name for the same 
 Open questions that must be answered before Bookings exists — flagged here so they are
 not silently assumed away:
 
-- Is a **Booking** owned by the Court, the Club, or standing alone with references?
-- Is availability a **projection** over bookings, or its own stored concept?
-- What is the **tenancy spine** — `Club → Court → Booking`? Where do players attach?
+- ~~Is a **Booking** owned by the Court, the Club, or standing alone with references?~~
+  **Answered by [ADR-0035](docs/adr/0035-a-reservation-claims-a-court-over-an-interval.md):
+  none of the three — a Booking *holds* a Reservation.**
+- ~~Is availability a **projection** over bookings, or its own stored concept?~~
+  **Answered by [ADR-0035](docs/adr/0035-a-reservation-claims-a-court-over-an-interval.md):
+  a projection over reservations, never a stored number.**
+- ~~What is the **tenancy spine** — `Club → Court → Booking`?~~ **Answered by
+  [ADR-0035](docs/adr/0035-a-reservation-claims-a-court-over-an-interval.md): `Club → Court`,
+  with a Reservation referencing a court and held by exactly one holder.** Where players
+  attach is still open.
 - Which side owns **cancellation windows and pricing** — Club config or Booking policy?
+  **Still open.**
+
+Whether each context is **event-sourced** or **persisted-with-events** is answered for
+Matches and Courts by
+[ADR-0034](docs/adr/0034-matches-is-a-record-and-keeps-no-history.md): both are records
+with a version and an outbox, and **no aggregate in either keeps event history**. Clubs is
+still open.
+
+### Courts and Bookings — terms committed ahead of the code
+
+Committed by [ADR-0035](docs/adr/0035-a-reservation-claims-a-court-over-an-interval.md).
+
+- **Reservation** — one court, one time range, claimed. **The only thing that can make a court
+  unavailable.** Two reservations may never overlap on one court; that is the rule, and it is
+  about a *time range*, never a slot's start.
+- **Booking** — a player buying a court outright. A Booking **holds** a Reservation; it is not
+  one. On the private split-share path a Booking exists before any share is paid.
+- **Court hold** — a match's *speculative* Reservation, granted by the hold ladder and
+  withdrawn when the ladder is no longer satisfied. Nobody has bought anything.
+- **Category** — what is bought and priced. **The court is assigned, never chosen**, and may be
+  swapped for another of the same category until shortly before play; only then is a specific
+  court named to the player. This is what lets a seat price be quoted before a court exists and
+  stay fixed when one is assigned.
+
+**The private path starts with a Reservation and looks for players; the open path starts with
+players and looks for a Reservation.** That is the whole of the difference between the two
+match kinds, and it is why the private path has no commitment deadline
+([ADR-0030](docs/adr/0030-a-departure-is-an-audience-not-a-state.md)).
 
 ### Matches — terms committed ahead of the code
 
 Committed by [ADR-0030](docs/adr/0030-a-departure-is-an-audience-not-a-state.md),
 [ADR-0031](docs/adr/0031-hold-ladder-is-a-floor-at-a-level-of-certainty.md),
-[ADR-0032](docs/adr/0032-order-is-a-property-of-the-composed-screen.md) and
-[ADR-0033](docs/adr/0033-settlement-and-occupancy-are-independent.md). The code does
+[ADR-0032](docs/adr/0032-order-is-a-property-of-the-composed-screen.md),
+[ADR-0033](docs/adr/0033-settlement-and-occupancy-are-independent.md) and
+[ADR-0034](docs/adr/0034-matches-is-a-record-and-keeps-no-history.md). The code does
 not exist yet; these names do, and Matches must be built with them rather than around them.
+
+- **Paid · held · empty** — the three states of a seat, spelled as the commitment rules and
+  `backend/app/engines/matchmaking.py` already spell them. **Held** means a name on a seat and
+  no money — an invitation not yet paid — and **a held seat never holds a court**. Joining an
+  open match means paying: there is no window in which a seat is taken and unpaid by the
+  taker.
+- **Announcement** — the named, specific record that one thing changed, published once through
+  the outbox. Caches, refunds, notifications and the player's support timeline are all built
+  from announcements and never written alongside them. **Every change a support agent would
+  need to explain to a player is announced as its own named event**, never as a generic
+  "match updated"
+  ([ADR-0034](docs/adr/0034-matches-is-a-record-and-keeps-no-history.md)).
 
 - **Departure** — a player vacating a seat they hold. It records the seat, the player, the time,
   **the amount they paid**, and its outcome. A departure is a record in its own right, not a flag
