@@ -3,6 +3,11 @@
 - **Status:** Accepted
 - **Date:** 2026-08-16
 
+> **Scope note.** [ADR-0040](0040-one-ladder-resolves-a-situation.md) narrows this ADR on one
+> point: the *"cross-application contract suite"* named below presumes clients derive, and for
+> the match ladder they do not. The fence there is the generated enum and an exhaustive switch
+> in each client's own build. Everything else here stands as written.
+
 ## Context
 
 Three specification documents describe the computational core of Raketa — ten engines over

@@ -69,3 +69,5 @@ If your work **contradicts** an existing ADR, surface it rather than silently ov
 - [0037 — The fit badge shouts once, and only about a seat](0037-the-fit-badge-shouts-once-and-only-about-a-seat.md)
 - [0038 — Now is polled; the push is specified and deferred](0038-now-is-polled-the-push-is-specified-and-deferred.md) — *answers 0008's premise: no long-lived connection exists to outlive a token*
 - [0039 — The card projection rebuilds from the record, so its consumer needs no partition](0039-the-card-projection-rebuilds-from-the-record.md)
+- [0040 — One ladder resolves a situation; every other vocabulary projects off it](0040-one-ladder-resolves-a-situation.md) — *narrows 0021's cross-application contract suite: clients hold no ladder, so the generated enum is the fence*
+- [0041 — Tone is editorial, so the wire carries a situation and its facts](0041-tone-is-editorial-so-the-wire-carries-a-situation-and-its-facts.md)

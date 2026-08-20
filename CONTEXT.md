@@ -295,7 +295,10 @@ ahead of the first club, which is the whole reason they could be built now.
 > held, empty — is borrowed from the commitment rules and is read by the snapshot now, spelled
 > as they spell it, and so are a match's **phase**, its **court hold** and its **join
 > cutoff** — all four read by the snapshot now. They will be *defined* with Matches and
-> Courts, not here: this section reads them, it does not own them. The phase is the one this
+> Courts, not here: this section reads them, it does not own them. **The phase is defined**
+> now — [ADR-0040](docs/adr/0040-one-ladder-resolves-a-situation.md) makes it a *projection*
+> off a match's **Situation**, with the same three members; see the Matches block in Part 2.
+> The other three are still borrowed. The phase is the one this
 > section reads and never *scores*, because whether a match can be joined at all is a hard
 > filter and not a low number. **Ladder qualification** is read the same way and by nobody yet: the snapshot carries
 > whether a match counts towards the current player's ladder, in three states because *not in
@@ -523,9 +526,12 @@ match kinds, and it is why the private path has no commitment deadline
 Committed by [ADR-0030](docs/adr/0030-a-departure-is-an-audience-not-a-state.md),
 [ADR-0031](docs/adr/0031-hold-ladder-is-a-floor-at-a-level-of-certainty.md),
 [ADR-0032](docs/adr/0032-order-is-a-property-of-the-composed-screen.md),
-[ADR-0033](docs/adr/0033-settlement-and-occupancy-are-independent.md) and
-[ADR-0034](docs/adr/0034-matches-is-a-record-and-keeps-no-history.md). The code does
-not exist yet; these names do, and Matches must be built with them rather than around them.
+[ADR-0033](docs/adr/0033-settlement-and-occupancy-are-independent.md),
+[ADR-0034](docs/adr/0034-matches-is-a-record-and-keeps-no-history.md),
+[ADR-0040](docs/adr/0040-one-ladder-resolves-a-situation.md) and
+[ADR-0041](docs/adr/0041-tone-is-editorial-so-the-wire-carries-a-situation-and-its-facts.md). The
+code does not exist yet; these names do, and Matches must be built with them rather than around
+them.
 
 - **Paid · held · empty** — the three states of a seat, spelled as the commitment rules and
   `backend/app/engines/matchmaking.py` already spell them. **Held** means a name on a seat and
@@ -578,6 +584,28 @@ not exist yet; these names do, and Matches must be built with them rather than a
   refresh, never on a live update
   ([ADR-0032](docs/adr/0032-order-is-a-property-of-the-composed-screen.md)). A match's start time
   stays mutable; a moved match is the same match.
+
+- **Situation** — what a match is, said once: one of a single closed set of names, resolved by
+  one ordered ladder in which **the order is the specification** and the first matching rung
+  wins. The resolver takes an **optional viewer**; without one it yields the match's own
+  situation, and **`waitlisted` is the one situation only a viewer can be in**. Every other
+  difference an audience makes — a non-member's money line, a leaver's card, who is asked for a
+  score — is *rendering*, and leaves the situation alone
+  ([ADR-0040](docs/adr/0040-one-ladder-resolves-a-situation.md)). *Deliberately not called a
+  **context**: this repo spends that word on bounded contexts and cannot afford a second
+  meaning.*
+- **Projection** *(of a situation)* — a smaller vocabulary derived from Situation by a total
+  table, owned by the consumer that needs it and exhaustive over every situation. **Never a
+  second ladder over the record**: two derivations of one match are what let two apps describe
+  it differently at the same instant. **Match phase** — *forming · locked · cancelled* — is the
+  first, read by matchmaking as a hard filter, where *locked* covers a match being played and one
+  already played because matchmaking can join neither.
+- **The tag and the tone are not domain terms.** The short label above a match's card and how
+  alarmed it looks are **copy and editorial judgement**, owned by each client in its own voice
+  and never crossing the wire; a console watching forty matches is entitled to a different alarm
+  from a player watching one. What crosses is the situation and the quantities behind it
+  ([ADR-0041](docs/adr/0041-tone-is-editorial-so-the-wire-carries-a-situation-and-its-facts.md)).
+  Listed here so nobody helpfully adds them back.
 
 **A seat vacated after commitment is still *funded*.** That one sentence is why the club is safe,
 why the other players' payments never change, and why a private-court owner is never re-exposed
