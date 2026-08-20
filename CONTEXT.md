@@ -571,7 +571,34 @@ them.
   because the quote protects money and the money is identical.
 - **Guarantee** — a private-court owner's exposure: the court price minus the seats currently
   funded, held against their account rather than paid to the club. A funded seat never becomes
-  unfunded, so a guarantee only ever decreases.
+  unfunded, so **a guarantee only ever decreases while the match is alive** — the one moment it
+  moves the other way is terminal, not a fluctuation: a checkpoint that finds the court
+  unfillable settles it in a single step to the whole court price
+  ([ADR-0044](docs/adr/0044-a-marketplace-seat-is-a-promise-of-a-game.md)).
+- **Funder** *(of a seat)* — whoever last put money behind it. Exactly three are possible:
+  **nobody** (the owner's uncaptured hold stands for it), **a departed player**, or **the owner**,
+  where the court was bought outright. A paid share returns to the seat's funder — releasing a
+  hold, settling a departure at 100 %, or reimbursing an owner — which is one rule rather than
+  three special cases, and it is why a solo booking needs no separate money model
+  ([ADR-0042](docs/adr/0042-a-share-returns-to-the-seats-last-funder.md)). A seat's price is
+  always the court price divided by the sport's **sold** format and is never named by its owner.
+- **Opening** *(a court)* — the owner's act of letting anyone on Raketa buy a seat on a court
+  that was their own people's. It changes **who may buy in**, never **how the court was
+  obtained** — those are two axes and only the first can ever move, which is why an opened court
+  is still a private court when four strangers hold every seat, and why the open path's
+  commitment deadline and half-price rescue fill never follow it across. **Irreversible**: an
+  opened court can never be closed, a remaining vacancy can never be withdrawn, and a joiner can
+  never be removed. It is the private path's **commitment** — an act rather than a clock — and
+  from the first stranger's payment the owner is liable for the court whatever happens next
+  ([ADR-0043](docs/adr/0043-opening-a-court-is-the-private-paths-commitment.md)). Before a court
+  may be opened every seat is either paid or empty; a friend joining commits nobody, a stranger
+  commits the owner permanently.
+- **Marketplace seat** — a seat bought by somebody the owner did not bring. It is **a promise of
+  a game, not a share of a court**: if the sport's sold format cannot be met at the checkpoint it
+  is refunded in full and the owner carries the court, where a share paid before the court was
+  opened is not
+  ([ADR-0044](docs/adr/0044-a-marketplace-seat-is-a-promise-of-a-game.md)). Two payers may sit on
+  one court with different rights, and what separates them is which door they came through.
 
 - **Hold age** — how long a court has been **held**, measured from `heldSince` (written when a
   hold is first granted, cleared when it lapses) — never from when the match was created. A club
@@ -609,7 +636,11 @@ them.
 
 **A seat vacated after commitment is still *funded*.** That one sentence is why the club is safe,
 why the other players' payments never change, and why a private-court owner is never re-exposed
-by somebody else leaving.
+by somebody else leaving. **An owner may give up their seat; an owner may never give up the
+court** — handing a playing spot to a named person is the mechanism every participant already
+has, and it is the whole of what
+[ADR-0030](docs/adr/0030-a-departure-is-an-audience-not-a-state.md)'s refusal of an owner
+departure was ever protecting.
 
 ---
 

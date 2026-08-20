@@ -16,7 +16,7 @@ Issues and specs for this repo live as GitHub issues on **`Raketa02/Raketa`**. U
 > ```
 >
 > The symptom when it has flipped is **not** a 403. It is
-> `GraphQL: Could not resolve to a Repository with the name 'Raketa02/Raketa'` — this repo
+> `GraphQL: Could not resolve to a Repository with the namei  'Raketa02/Raketa'` — this repo
 > is private, so the wrong account cannot see that it exists at all. Treat that message as
 > "wrong account", never as "wrong repo name". Re-run the switch and retry.
 

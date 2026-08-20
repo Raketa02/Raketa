@@ -71,3 +71,6 @@ If your work **contradicts** an existing ADR, surface it rather than silently ov
 - [0039 — The card projection rebuilds from the record, so its consumer needs no partition](0039-the-card-projection-rebuilds-from-the-record.md)
 - [0040 — One ladder resolves a situation; every other vocabulary projects off it](0040-one-ladder-resolves-a-situation.md) — *narrows 0021's cross-application contract suite: clients hold no ladder, so the generated enum is the fence*
 - [0041 — Tone is editorial, so the wire carries a situation and its facts](0041-tone-is-editorial-so-the-wire-carries-a-situation-and-its-facts.md)
+- [0042 — A paid share returns to the seat's last funder](0042-a-share-returns-to-the-seats-last-funder.md)
+- [0043 — Opening a court to strangers is the private path's commitment](0043-opening-a-court-is-the-private-paths-commitment.md) — *narrows 0030: the private path has no commitment deadline, but it does have a commitment act*
+- [0044 — A marketplace seat is a promise of a game, not a share of a court](0044-a-marketplace-seat-is-a-promise-of-a-game.md) — *bounds the "a guarantee only ever decreases" invariant to the match's lifetime*
