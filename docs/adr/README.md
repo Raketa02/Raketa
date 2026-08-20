@@ -77,3 +77,5 @@ If your work **contradicts** an existing ADR, surface it rather than silently ov
 - [0045 — The owner's guarantee is the whole court, and a share is provisional coverage](0045-the-owners-guarantee-is-the-whole-court-and-never-shrinks.md) — *supersedes 0030's shrinking `guarantee`; dissolves the invariant 0044 was bounding*
 - [0046 — One reconciliation, two hours after the reservation ends](0046-one-reconciliation-two-hours-after-the-reservation-ends.md) — *moves 0044's money event off the T−2h checkpoint; a private court has no checkpoint at all*
 - [0047 — We hold no money, and a failed collection becomes a debt](0047-we-hold-no-money-and-a-failed-collection-is-a-debt.md) — *answers 0030's hold lifecycle by removing the hold*
+- [0048 — Silence confirms a result, and disagreement must carry a score](0048-silence-confirms-a-result-and-disagreement-carries-a-score.md) — *reverses `3.1` §1.4: an unanswered result now stands rather than being discarded*
+- [0049 — An unscored match is an evening, not evidence](0049-an-unscored-match-is-an-evening-not-evidence.md) — *withdraws every Player Score movement in the post-play group*

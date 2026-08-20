@@ -652,6 +652,25 @@ them.
   it differently at the same instant. **Match phase** — *forming · locked · cancelled* — is the
   first, read by matchmaking as a hard filter, where *locked* covers a match being played and one
   already played because matchmaking can join neither.
+- **Result** — the score of a match that was played, held as **one** score on the record with the
+  side that put it there, whether it is agreed, and how many proposals have been made. Not a list:
+  superseded scores are **Announcements**, never history on the match
+  ([ADR-0034](docs/adr/0034-matches-is-a-record-and-keeps-no-history.md)). *Never called an
+  **outcome** — that word belongs to a departure.*
+- **Proposal** *(of a result)* — one side putting a score forward. **Each side may propose once**,
+  and a proposal always carries a score: there is no way to reject a result without stating what it
+  was. A proposal its opposing side leaves unanswered for 24 hours **stands** — silence confirms —
+  but once both sides have proposed, only an explicit acceptance settles it
+  ([ADR-0048](docs/adr/0048-silence-confirms-a-result-and-disagreement-carries-a-score.md)).
+  **Accepting is opposing-side-only and one person suffices; countering is open to anyone who
+  played**, including the proposing side, because what makes a teammate's agreement worthless is
+  what makes their objection credible.
+- **Counted · unscored** — a match is created **counted** or a **friendly**, and that is what the
+  players chose. A counted match whose result never settles is **unscored**: it stays counted, is
+  never reclassified as a friendly, and **counts as an evening and never as evidence** — it is in
+  history and in how much somebody has played, and it moves nobody's level
+  ([ADR-0049](docs/adr/0049-an-unscored-match-is-an-evening-not-evidence.md)). **Nobody is
+  penalised for it**; playing and proving are separate facts about the same match.
 - **The tag and the tone are not domain terms.** The short label above a match's card and how
   alarmed it looks are **copy and editorial judgement**, owned by each client in its own voice
   and never crossing the wire; a console watching forty matches is entitled to a different alarm
