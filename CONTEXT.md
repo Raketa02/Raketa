@@ -556,6 +556,24 @@ them.
   ([ADR-0033](docs/adr/0033-settlement-and-occupancy-are-independent.md)): the resolution ladder
   reads vacancy existence, the leaver's card reads settlement, and a filler closes the oldest
   **open vacancy** while settling the oldest **unsettled departure** — not always the same one.
+- **Seat offer** — a vacancy put to one named player, with a clock on it. The thing the rescue
+  cascade produces once it has chosen somebody; a vacancy exists without one. Two kinds, chosen
+  by how far off the match is and never by judgement
+  ([ADR-0052](docs/adr/0052-a-vacancy-is-offered-not-announced.md)).
+- **Exclusive offer** — a seat offer that genuinely reserves the seat: nobody else may take it
+  while it stands. Reachable only more than 24 hours before the match. A player holds at most
+  **three** at once.
+- **Open call** — a seat offer that reserves nothing and is a race, made to several players at
+  once in widening **waves**. The only kind reachable inside 24 hours of the match. *Two names
+  because the two say different things to a player, and using the exclusive words for a race is
+  the one way this mechanism lies.*
+- **Withdrawal** *(of an offer)* — an offer ending because the seat went elsewhere. **Silent**:
+  the card and any delivered notification disappear, and nothing is sent to say so. *Never called
+  an **expiry** — an offer expires when its own clock runs out, which is a different fact and
+  passes the seat on.*
+- **Standby** — the players who asked to be told if a seat frees on a particular match. It confers
+  **priority, not a place**: the cascade offers to standby before anybody else, and orders within
+  standby by fit, so a standby **position** is not a fact the platform will show — it can rise.
 - **Leaver** — the player who made a departure. Not a state: a leaver sees the match's own state
   rendered for somebody who used to hold a seat.
 - **Outcome** — a departure's settled result: *reversed*, *refunded in full*, *refunded half*, or

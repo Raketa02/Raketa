@@ -79,3 +79,6 @@ If your work **contradicts** an existing ADR, surface it rather than silently ov
 - [0047 — We hold no money, and a failed collection becomes a debt](0047-we-hold-no-money-and-a-failed-collection-is-a-debt.md) — *answers 0030's hold lifecycle by removing the hold*
 - [0048 — Silence confirms a result, and disagreement must carry a score](0048-silence-confirms-a-result-and-disagreement-carries-a-score.md) — *reverses `3.1` §1.4: an unanswered result now stands rather than being discarded*
 - [0049 — An unscored match is an evening, not evidence](0049-an-unscored-match-is-an-evening-not-evidence.md) — *withdraws every Player Score movement in the post-play group*
+- [0050 — Below the strip, Now is shelves, and every shelf makes one claim](0050-now-below-the-strip-is-shelves.md) — *supersedes `1`'s Parts 5 and 6 as sections, and `4` §3.5's six-card cap*
+- [0051 — Now is ordered, never drawn: the list-builder's contract](0051-now-is-ordered-not-drawn.md) — *leaves 0027's licence to draw randomness unexercised; discharges 0037's open floor*
+- [0052 — A vacancy is offered, and how loudly depends on how soon the match is](0052-a-vacancy-is-offered-not-announced.md) — *supersedes 0038's deferral of push, against a requirement that expires inside a day*
