@@ -569,17 +569,42 @@ them.
   command is refused and the player is re-presented. The ordering is *refunded in full* >
   *refunded half* > *forfeited* = *nothing returned*; forfeit ranks **equal** to a zero refund,
   because the quote protects money and the money is identical.
-- **Guarantee** — a private-court owner's exposure: the court price minus the seats currently
-  funded, held against their account rather than paid to the club. A funded seat never becomes
-  unfunded, so **a guarantee only ever decreases while the match is alive** — the one moment it
-  moves the other way is terminal, not a fluctuation: a checkpoint that finds the court
-  unfillable settles it in a single step to the whole court price
-  ([ADR-0044](docs/adr/0044-a-marketplace-seat-is-a-promise-of-a-game.md)).
+- **Guarantee** — a private-court owner's exposure on a split-payment reservation: **the whole
+  court price**, constant from booking until the reservation is reconciled. It is not a
+  remainder and it does not shrink as seats fund
+  ([ADR-0045](docs/adr/0045-the-owners-guarantee-is-the-whole-court-and-never-shrinks.md)) —
+  what varies is how much of it somebody else's money is currently covering. An **invited**
+  player's share releases it permanently the moment it is paid, because those payers are never
+  refunded; a **marketplace** share is *provisional coverage* and releases nothing until
+  reconciliation, because until then the game may fail to fill and the money goes back. Raketa
+  holds no money behind it — the owner's card is saved with consent to charge unpaid shares
+  later ([ADR-0047](docs/adr/0047-we-hold-no-money-and-a-failed-collection-is-a-debt.md)).
+- **Provisional coverage** — a marketplace share that has been paid through to the club but has
+  not released any of the owner's guarantee, because it is still refundable. The distinction
+  that lets the number a card prints be the number Raketa stands behind.
+- **Reconciliation** — the single moment a split-payment reservation settles: **two hours after
+  the reservation ends**. Not to be confused with a departure's **Settlement**, which is about
+  one player's outcome; reconciliation is about one booking's money. The two hours are a stated
+  window in which a share may still be paid online or marked paid by the club, and at its close
+  exactly two movements are possible: every marketplace joiner is refunded in full if the sold
+  format was never met, and the owner is charged whatever is still outstanding
+  ([ADR-0046](docs/adr/0046-one-reconciliation-two-hours-after-the-reservation-ends.md)).
+  Nothing crystallises earlier — no pre-match cutoff kills a converted match, and the seat keeps
+  selling until match time.
+- **Debt** — what an owner owes Raketa when the charge at reconciliation fails. The club has been
+  paid throughout and is never at risk; Raketa carries the receivable. A debt blocks only acts
+  that create **new** liability — booking a court, starting a split — and never blocks paying
+  for a seat in someone else's match, which is money up front and carries no risk
+  ([ADR-0047](docs/adr/0047-we-hold-no-money-and-a-failed-collection-is-a-debt.md)).
+- **Booking horizon** — at most **two weeks** ahead, uniformly: solo bookings, split bookings and
+  open-match creation alike. The credit argument justifies only the split case; the horizon is
+  uniform so a player never has to learn it twice.
 - **Funder** *(of a seat)* — whoever last put money behind it. Exactly three are possible:
-  **nobody** (the owner's uncaptured hold stands for it), **a departed player**, or **the owner**,
-  where the court was bought outright. A paid share returns to the seat's funder — releasing a
-  hold, settling a departure at 100 %, or reimbursing an owner — which is one rule rather than
-  three special cases, and it is why a solo booking needs no separate money model
+  **nobody** (the owner's guarantee stands for it), **a departed player**, or **the owner**,
+  where the court was bought outright or where reconciliation has already charged them for the
+  seat. A paid share returns to the seat's funder — releasing part of a guarantee, settling a
+  departure at 100 %, or reimbursing an owner — which is one rule rather than three special
+  cases, and it is why a solo booking needs no separate money model
   ([ADR-0042](docs/adr/0042-a-share-returns-to-the-seats-last-funder.md)). A seat's price is
   always the court price divided by the sport's **sold** format and is never named by its owner.
 - **Opening** *(a court)* — the owner's act of letting anyone on Raketa buy a seat on a court

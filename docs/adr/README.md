@@ -74,3 +74,6 @@ If your work **contradicts** an existing ADR, surface it rather than silently ov
 - [0042 — A paid share returns to the seat's last funder](0042-a-share-returns-to-the-seats-last-funder.md)
 - [0043 — Opening a court to strangers is the private path's commitment](0043-opening-a-court-is-the-private-paths-commitment.md) — *narrows 0030: the private path has no commitment deadline, but it does have a commitment act*
 - [0044 — A marketplace seat is a promise of a game, not a share of a court](0044-a-marketplace-seat-is-a-promise-of-a-game.md) — *bounds the "a guarantee only ever decreases" invariant to the match's lifetime*
+- [0045 — The owner's guarantee is the whole court, and a share is provisional coverage](0045-the-owners-guarantee-is-the-whole-court-and-never-shrinks.md) — *supersedes 0030's shrinking `guarantee`; dissolves the invariant 0044 was bounding*
+- [0046 — One reconciliation, two hours after the reservation ends](0046-one-reconciliation-two-hours-after-the-reservation-ends.md) — *moves 0044's money event off the T−2h checkpoint; a private court has no checkpoint at all*
+- [0047 — We hold no money, and a failed collection becomes a debt](0047-we-hold-no-money-and-a-failed-collection-is-a-debt.md) — *answers 0030's hold lifecycle by removing the hold*
