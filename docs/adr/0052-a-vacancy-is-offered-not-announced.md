@@ -2,6 +2,12 @@
 
 - **Status:** Accepted
 - **Date:** 2026-08-20
+- **Amended by:** [ADR-0061](0061-the-invitation-ladder-is-an-order-and-one-open-call.md) —
+  the **exclusive offer does not ship**. The two modes, the one-hour hold, the three-offer cap,
+  the twelve-hour backstop and the *in context, not at launch* permission rule below are all
+  superseded; the ordering principle, the channel rules and the screen rules stand. Read 0061
+  before implementing the cascade — but read this one first, because it holds the reason the
+  open-call wording is not optional.
 
 ## Context
 

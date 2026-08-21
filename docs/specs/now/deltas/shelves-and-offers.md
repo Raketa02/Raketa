@@ -4,7 +4,9 @@
 empty state), **Part 6** (§6.2's qualification, §6.3's section), the Part 1 block table rows 4
 and 5, and acceptance-gate rows 9 and 10; over `4-match_recommendation_engine_architecture.md`
 §3.4's lane configs and §3.5's dedupe and six-card cap; and over
-`now-section-domain-spec.md` §C.4's cap/floor table, §D.3 and §D.4. Everything else in those
+`now-section-domain-spec.md` §C.4's cap/floor table, §D.3 and §D.4; and — from §5 — over
+`3.1-enrolled_match_states_and_transitions.md` §4.2's **Stages 1–2**, leaving its Stages 3–5
+untouched. Everything else in those
 documents stands unchanged, and the match card, the fit badge, the header, the sport bar and the
 enrolled strip remain **final** in the two UI documents.
 
@@ -12,8 +14,10 @@ enrolled strip remain **final** in the two UI documents.
 [ADR-0036](../../../adr/0036-a-ui-document-is-final-on-the-screen-not-on-the-arithmetic.md).
 **The decisions:** [ADR-0050](../../../adr/0050-now-below-the-strip-is-shelves.md),
 [ADR-0051](../../../adr/0051-now-is-ordered-not-drawn.md),
-[ADR-0052](../../../adr/0052-a-vacancy-is-offered-not-announced.md).
-**The reasoning:** [`Raketa02/Raketa#20`](https://github.com/Raketa02/Raketa/issues/20).
+[ADR-0052](../../../adr/0052-a-vacancy-is-offered-not-announced.md),
+[ADR-0061](../../../adr/0061-the-invitation-ladder-is-an-order-and-one-open-call.md).
+**The reasoning:** [`Raketa02/Raketa#20`](https://github.com/Raketa02/Raketa/issues/20),
+[`#27`](https://github.com/Raketa02/Raketa/issues/27).
 
 The source documents are **not edited**. 486 `[SRC: line N]` citations and 27 bare-filename
 cross-references resolve against their bytes.
@@ -108,21 +112,48 @@ gauge ADR-0037 refused. Ordered by **closeness to the viewer's Level**, never de
 
 ## 5. The offered seat — new, above everything
 
-Not in any source document. Full decision:
-[ADR-0052](../../../adr/0052-a-vacancy-is-offered-not-announced.md).
+Not in any source document. Full decisions:
+[ADR-0052](../../../adr/0052-a-vacancy-is-offered-not-announced.md), **amended by**
+[ADR-0061](../../../adr/0061-the-invitation-ladder-is-an-order-and-one-open-call.md), which
+**removes the exclusive offer** and settles who *"everyone else eligible"* is. Where the two
+differ, 0061 governs. **Governs also over `3.1` §4.2's Stages 1–2**; its Stages 3–5 (widen the
+band, shift the time, merge two matches) are untouched and stay unanimous-consent.
 
 | | |
 |---|---|
 | **Where** | Its own block above the shelves **and above the enrolled strip** |
-| **Mode** | Match > 24 h away → **exclusive**, one player at a time, *"a seat is being offered to you"*. Inside 24 h → **open call**, *"first to take it"*, in waves of 3 → +5 after 10 min → everyone |
-| **Clock** | Exclusive hold **1 h from delivery**; released to all at the latest **12 h before start** |
+| **Mode** | **One mode: the open call.** *"A seat just opened, first to take it"*, at every distance from the match. The exclusive offer, its wording, its one-hour hold, the three-offer cap and the twelve-hour backstop **do not ship** |
+| **Who** | Fact filters (sport · **a rating at that sport** · free seat · join cutoff · live inventory · no calendar conflict) **inside the match's level band**. Leaving the band is `3.1` Stage 3 and needs the remaining players' unanimous consent |
+| **Floor** | **> 24 h to the match → fit ≥ 70. Inside 24 h → no floor** |
+| **Order** | The **seven-rung invitation ladder** (§5.1), fit-ordered within a rung |
+| **Dispatch** | **Two steps**: rung 1 immediately, rungs 2–7 together **+10 min**. An empty rung is skipped instantly |
 | **Delivery** | Held to **08:00 local** unless the match starts within 12 h |
-| **Order offered** | Standby first, **fit-ordered within standby**; then everyone else eligible, fit-ordered |
-| **Position** | **Not shown.** *"You are on the standby list"*, never a number — a position that can rise reads as a broken promise |
-| **Several at once** | Side-scrolling row, **soonest-to-expire first**, uncapped; a player holds at most **3 exclusive** offers |
-| **Accept** | Accepting and paying are **two acts**: accept stops the offer clock, a short second window covers payment. Money mechanics are not settled here |
-| **Withdrawal** | **Silent** — the delivered notification is removed and the card disappears. No second buzz. A line is written to Inbox |
-| **Push** | In scope for **exactly one message**. Several offers → **one** notification. Says time and urgency, **never the venue**. Permission asked **in context** at first standby join; refused → **no offer at all**, the seat goes to the open pool |
+| **Price** | Full price from the vacancy; **50 %** from the rescue deadline. Same ladder in both phases |
+| **Position** | **Not shown.** *"You are on the standby list"*, never a number |
+| **Several at once** | Side-scrolling row, **soonest-to-expire first**, uncapped |
+| **Accept** | **First to accept wins**, and accepting **locks the seat for a short payment window** (5 min, a placeholder the money chain owns). **The card disappears for everyone else** for the duration and **returns if the payment lapses** |
+| **Withdrawal** | **Silent** — the card disappears from Now, a line is written to Inbox. What happens to the *delivered notification* is open: [#28](https://github.com/Raketa02/Raketa/issues/28), now at fan-out — one filled seat leaves **N−1** stale notifications |
+| **Push** | One message. **Opening clause per rung group** — *the seat you asked about* · *a match you looked at* · *a seat near you*. Carries **sport, time and travel time, never the venue**: *"A padel seat is free — Tue 19:00, 20 min away."* Several offers → **one** notification. **No frequency cap in v1** |
+| **Permission** | Explained **during onboarding**, *Turn on* / *Not now*; **only *Turn on* fires the OS prompt**, and *Not now* is asked again at first standby join. Refusing costs only *exclusive* offers, which no longer exist — the card still appears on Now |
+
+### 5.1 The invitation ladder
+
+Drawn by the prototype's `V.search` — *"Who is invited, in order"*, a card the **leaver** sees.
+
+| # | Rung | v1 |
+|---|---|---|
+| 1 | Standby — asked for **this** match | **Ships** |
+| 2 | Standing rules / last-minute availability switched on | **Dark.** Its own effort; a standing rule **auto-joins waitlists**, so it feeds rung 1 |
+| 3 | Asked for the seat before — offered an earlier vacancy on this match, did not get it | **Ships** |
+| 4 | Viewed or followed the match | **Ships as viewed** (48 h). *Follow* does not exist |
+| 5 | Compatible players who use this club often | **Ships** |
+| 6 | Nearby **reliable** players inside the level range | **Ships degraded** — level band only. *Reliable* is recorded and unused; *nearby* has no source ([#29](https://github.com/Raketa02/Raketa/issues/29)) |
+| 7 | Marked available at this hour | **Dark.** Same effort as rung 2 |
+
+**Superseded by ADR-0061 in the prototype:** the ladder card's *"ten minutes to accept, five to
+pay"* (the accept window is gone with the hold; the five minutes survive as the payment window's
+placeholder), and `V.search`'s *"wave 3 · wider level and distance"*, which fires automatically
+where `3.1` requires consent.
 
 **This supersedes the push rulings** on [#12](https://github.com/Raketa02/Raketa/issues/12) and
 [#19](https://github.com/Raketa02/Raketa/issues/19). What made deferral affordable was named

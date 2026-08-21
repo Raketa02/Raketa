@@ -561,24 +561,41 @@ them.
   ([ADR-0033](docs/adr/0033-settlement-and-occupancy-are-independent.md)): the resolution ladder
   reads vacancy existence, the leaver's card reads settlement, and a filler closes the oldest
   **open vacancy** while settling the oldest **unsettled departure** — not always the same one.
-- **Seat offer** — a vacancy put to one named player, with a clock on it. The thing the rescue
-  cascade produces once it has chosen somebody; a vacancy exists without one. Two kinds, chosen
-  by how far off the match is and never by judgement
-  ([ADR-0052](docs/adr/0052-a-vacancy-is-offered-not-announced.md)).
-- **Exclusive offer** — a seat offer that genuinely reserves the seat: nobody else may take it
-  while it stands. Reachable only more than 24 hours before the match. A player holds at most
-  **three** at once.
-- **Open call** — a seat offer that reserves nothing and is a race, made to several players at
-  once in widening **waves**. The only kind reachable inside 24 hours of the match. *Two names
-  because the two say different things to a player, and using the exclusive words for a race is
-  the one way this mechanism lies.*
+- **Seat offer** — a vacancy put to the players the **invitation ladder** picks, with a clock on
+  it. The thing the rescue cascade produces once it has searched; a vacancy exists without one.
+  **One kind: the open call** ([ADR-0061](docs/adr/0061-the-invitation-ladder-is-an-order-and-one-open-call.md),
+  amending [ADR-0052](docs/adr/0052-a-vacancy-is-offered-not-announced.md)).
+- **Open call** — a seat offer that reserves nothing and is a race: *a seat just opened, first to
+  take it*. The **only** kind. **First to accept wins**, and accepting **locks** the seat for a
+  short payment window during which the card disappears for everybody else — returning if the
+  payment lapses. *The wording is the discipline: a card that never claimed to be exclusive can
+  never be caught lying when the seat goes to somebody else.*
+- **Exclusive offer** — a seat genuinely reserved for one named player while their clock runs.
+  **Refused for v1** and named only so it is not reinvented: it needs a hold, a clock per
+  candidate, a per-player cap and a backstop, where an open call keeps every piece of state on
+  the **vacancy**. What buys it back is volume, not a change of mind.
+- **Invitation ladder** — the **order** in which a vacancy's eligible players are ranked: seven
+  rungs, standby first, fit-ordered within a rung. It is an ordering, not a queue — at launch
+  volume rung 1 is told immediately and every other rung ten minutes later, and rungs whose
+  feature does not exist yet are simply **empty**
+  ([ADR-0061](docs/adr/0061-the-invitation-ladder-is-an-order-and-one-open-call.md)). A player is
+  never offered a seat in a sport they hold **no rating** in, and the match's **level band** is a
+  wall: reaching outside it changes the game the players who stayed bought, and needs their
+  unanimous consent.
+- **Standing rule** — a player's declared conditions — sport, days, price, travel — that
+  **auto-join them to every matching standby list**. Not a notification setting and not a second
+  way into a vacancy: it is a machine that feeds **standby**, which is why it needs no consent
+  path of its own. Not built.
 - **Withdrawal** *(of an offer)* — an offer ending because the seat went elsewhere. **Silent**:
-  the card and any delivered notification disappear, and nothing is sent to say so. *Never called
-  an **expiry** — an offer expires when its own clock runs out, which is a different fact and
-  passes the seat on.*
+  the card disappears and nothing is sent to say so. *Never called an **expiry** — an offer
+  expires when the vacancy's own clock runs out, which is a different fact.* What becomes of a
+  notification already **delivered** is not settled; telling everyone at once means one filled
+  seat leaves one stale notification per person who was told.
 - **Standby** — the players who asked to be told if a seat frees on a particular match. It confers
   **priority, not a place**: the cascade offers to standby before anybody else, and orders within
   standby by fit, so a standby **position** is not a fact the platform will show — it can rise.
+  Priority is what standby **is**: told in the same breath as strangers, joining a list would buy
+  nothing.
 - **Leaver** — the player who made a departure. Not a state: a leaver sees the match's own state
   rendered for somebody who used to hold a seat.
 - **Outcome** — a departure's settled result: *reversed*, *refunded in full*, *refunded half*, or
