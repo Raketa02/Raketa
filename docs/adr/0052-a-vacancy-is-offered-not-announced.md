@@ -8,6 +8,12 @@
   superseded; the ordering principle, the channel rules and the screen rules stand. Read 0061
   before implementing the cascade — but read this one first, because it holds the reason the
   open-call wording is not optional.
+- **Amended by:** [ADR-0062](0062-a-notification-is-a-prompt-to-look-not-a-record.md) —
+  *"the delivered notification is removed from the lock screen"* **has no mechanism on any
+  platform**, and the **Inbox line** does not ship. The wording carries the retraction instead:
+  a notification says what happened, never what is, and one live message per player replaces
+  the previous one rather than stacking. Silence itself survives — nothing is ever sent to say
+  a seat is gone.
 
 ## Context
 

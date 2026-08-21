@@ -588,9 +588,16 @@ them.
   path of its own. Not built.
 - **Withdrawal** *(of an offer)* — an offer ending because the seat went elsewhere. **Silent**:
   the card disappears and nothing is sent to say so. *Never called an **expiry** — an offer
-  expires when the vacancy's own clock runs out, which is a different fact.* What becomes of a
-  notification already **delivered** is not settled; telling everyone at once means one filled
-  seat leaves one stale notification per person who was told.
+  expires when the vacancy's own clock runs out, which is a different fact.* A notification
+  already **delivered** is **left alone** — no platform can remove one, and the past-tense
+  wording means it never claimed anything that could go stale
+  ([ADR-0062](docs/adr/0062-a-notification-is-a-prompt-to-look-not-a-record.md)). So telling
+  everyone at once leaves one stale notification per person told, and it costs nothing.
+- **Prompt to look** — what a notification is. It carries **no truth**: a tap re-reads the
+  match's live state, and **Now** is the only surface that states what is currently the case.
+  The distinction is why a lock screen can never break the rule that a gone seat must not look
+  available — it is never allowed to say a seat *is* there, only that one *opened*
+  ([ADR-0062](docs/adr/0062-a-notification-is-a-prompt-to-look-not-a-record.md)).
 - **Standby** — the players who asked to be told if a seat frees on a particular match. It confers
   **priority, not a place**: the cascade offers to standby before anybody else, and orders within
   standby by fit, so a standby **position** is not a fact the platform will show — it can rise.

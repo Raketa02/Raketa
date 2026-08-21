@@ -7,6 +7,10 @@
   its clocks**, the **three-offer cap**, the **twelve-hour backstop** and its
   **permission-timing rule** do not. Read 0052 first: it holds the reasoning these rules rest
   on, and in particular the reason the open-call wording is not optional.
+- **Amended by:** [ADR-0062](0062-a-notification-is-a-prompt-to-look-not-a-record.md) — the
+  notification's wording becomes past tense (*"a padel seat **just opened**"*), *several offers
+  dispatch as one notification* widens to **one live message per player**, and only a seat the
+  player **asked for** may buzz. The ladder, the pool and the two dispatches are untouched.
 
 ## Context
 

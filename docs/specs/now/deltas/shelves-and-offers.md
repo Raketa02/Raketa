@@ -132,8 +132,8 @@ band, shift the time, merge two matches) are untouched and stay unanimous-consen
 | **Position** | **Not shown.** *"You are on the standby list"*, never a number |
 | **Several at once** | Side-scrolling row, **soonest-to-expire first**, uncapped |
 | **Accept** | **First to accept wins**, and accepting **locks the seat for a short payment window** (5 min, a placeholder the money chain owns). **The card disappears for everyone else** for the duration and **returns if the payment lapses** |
-| **Withdrawal** | **Silent** — the card disappears from Now, a line is written to Inbox. What happens to the *delivered notification* is open: [#28](https://github.com/Raketa02/Raketa/issues/28), now at fan-out — one filled seat leaves **N−1** stale notifications |
-| **Push** | One message. **Opening clause per rung group** — *the seat you asked about* · *a match you looked at* · *a seat near you*. Carries **sport, time and travel time, never the venue**: *"A padel seat is free — Tue 19:00, 20 min away."* Several offers → **one** notification. **No frequency cap in v1** |
+| **Withdrawal** | **Silent, and there is nothing to withdraw** ([ADR-0062](../../../adr/0062-a-notification-is-a-prompt-to-look-not-a-record.md)). The card disappears from Now; the delivered notification is **left alone** — no removal exists on any platform, and the past-tense wording means it never made a claim that goes stale. **No Inbox line.** The N−1 fan-out costs nothing because nothing is sent |
+| **Push** | **One live message per player**, replacing the previous one rather than stacking — the collapse *is* the frequency control, since there is no cap in v1. **Past tense, never present**: *"A padel seat **just opened** — Tue 19:00, 20 min away. First to take it."* Sport, time and travel time; **never the venue**. The line names **a seat the player asked for over one we chose for them**, soonest-to-expire inside each group, the rest a count (*"+2 more"*); the **opening clause** (*the seat you asked about* · *a match you looked at* · *a seat near you*) belongs to the named seat. **Only a standby seat buzzes** — rungs 3–7 update the line silently, *provisional on one device measurement* (below) |
 | **Permission** | Explained **during onboarding**, *Turn on* / *Not now*; **only *Turn on* fires the OS prompt**, and *Not now* is asked again at first standby join. Refusing costs only *exclusive* offers, which no longer exist — the card still appears on Now |
 
 ### 5.1 The invitation ladder
@@ -160,3 +160,29 @@ where `3.1` requires consent.
 there — *"the 24-hour deadline, not a claim that anything is fast"* — and an offered seat is the
 first thing on Now that expires inside a day and is contested. Both are new facts, not a change
 of mind about the old ones.
+
+### 5.2 The notification after the seat is gone
+
+Full decision: [ADR-0062](../../../adr/0062-a-notification-is-a-prompt-to-look-not-a-record.md).
+Resolves [#28](https://github.com/Raketa02/Raketa/issues/28) and supersedes ADR-0052's
+*"the delivered notification is removed from the lock screen"*, which has **no mechanism on any
+platform** — Apple documents replacement and never documents removal; the one path that removes
+is a silent push whose limits *"are disabled when testing your app from Xcode"*.
+
+**The notification is a prompt to look. Now is the only surface that states what is true.**
+
+| | |
+|---|---|
+| **The lock screen never claims** | Past tense — *"a padel seat **just opened**"* — true at 16:42, true at midnight, true after somebody else takes it. The retraction is carried by the **wording**, exactly as it is for the card |
+| **Nothing is ever removed** | Not on iOS (no mechanism), not on Android (declined: cancelling needs the app to post the message itself, which kills it on force-quit and triggers a 7-day deprioritisation). **One behaviour on both platforms** |
+| **Our messages accumulate** | Tuesday's line is still there on Wednesday, after the match. Known and accepted: sweeping it would cost one message per player per match. The collapse rule is the only cleanup |
+| **The tap re-reads live state** | The notification carries no truth. The seat is joinable or it is not |
+| **"That seat has gone"** | **One plain line at the top of Now, once** — not a card, no tap target, it fades. A card is what a takeable seat wears |
+| **One rule, every arrival** | *The first time a player lands on Now after a match they were told about has no room for them.* Notification tap, cold open, and the card evaporating mid-scroll are the same rule at different moments. A seat they were never told about produces nothing |
+| **Room, not a seat** | They were told the **match opened up**, not that Marek's particular seat did. If a second seat freed meanwhile they get the live card and **no line** — a disappointment stacked on a takeable seat is a lost fill |
+
+**The one thing measured before it ships.** Apple documents `interruption-level: passive` and
+documents `apns-collapse-id` and **never documents the two together**, so the silent update for
+rungs 3–7 is a fact about devices. Send one message to one real iPhone with both set and watch.
+**If it buzzes, the fallback is that every replacement buzzes.** Carried by
+[#26](https://github.com/Raketa02/Raketa/issues/26).
