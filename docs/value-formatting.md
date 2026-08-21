@@ -33,10 +33,24 @@ what proves they still agree.
 | Money, zero | `0,00 zł` | **A zero fee is a rendered row, never an omitted one** |
 | Level | `2,71` | Comma, always two decimals |
 | Percent | `89%` | No decimal, no space |
-| Time | `09:00` | 24-hour, zero-padded |
+| Time | `09:00` | 24-hour, zero-padded · **rendered in the zone the value names, never the device's** — see below |
 | Duration | `60 min` · `1 h 30 min` | **Space before the unit** |
 | Day, short | `Sat 8` | Grid headers |
 | Day, long | `Saturday 8 August` | Page subtitles |
+
+**A time is rendered in the zone its value names.** A match start crosses the wire as a UTC
+instant with **the club's zone beside it**
+([ADR-0070](adr/0070-now-is-three-regions-and-a-card-has-two-halves.md),
+[ADR-0024](adr/0024-instant-as-aware-datetime-minute-coordinates.md)): `19:00` is the clock on
+the wall at the club, and it reads `19:00` to a player sitting in London. **The one exception is
+a value about the player rather than about a club** — Now's header eyebrow, which is the device's
+own clock, because that line says *it is now 14:30 where you are*.
+
+**Money carries its currency, and `zł` is the only rendering defined here.** An amount crosses as
+integer grosze with a currency code beside it (ADR-0070,
+[ADR-0023](adr/0023-money-integer-grosze-gross-whole-zloty.md)). The currency exists so no reader
+may assume one market; the table above is PLN's rendering, and a second market adds a row rather
+than reinterpreting these.
 
 **Tabular numerals wherever numbers are compared.** A column of prices in proportional figures
 does not line up, and a grid of times is unreadable.
