@@ -9,6 +9,16 @@
   Also narrows [ADR-0052](0052-a-vacancy-is-offered-not-announced.md)'s treatment of
   notification permission as a **binary**.
 
+> **Scope note.** [ADR-0067](0067-the-quiet-replacement-is-evidenced-and-the-extra-message-waits.md)
+> narrows this record on two points. The *"Only the count changes"* row below conditions iOS's
+> quiet replacement on **[#26](https://github.com/Raketa02/Raketa/issues/26)'s** device
+> measurement; that measurement moved to
+> [#37](https://github.com/Raketa02/Raketa/issues/37) when #26 split, and the row is otherwise
+> unchanged — the extra message ships **off** until that ticket lands, even though the rule
+> behind it is now evidenced. And the stated cost — *"`+N more` undercounts on Android"* —
+> **understates it for v1**: with the iOS message off, it undercounts on both platforms until
+> the named seat changes. The count still prints. Everything else here stands as written.
+
 ## Context
 
 [ADR-0062](0062-a-notification-is-a-prompt-to-look-not-a-record.md) settled that a seat a

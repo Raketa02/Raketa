@@ -9,6 +9,19 @@
   notification **wording** and its *"several offers dispatch as one notification"* rule, which
   is widened from one dispatch to one **live** message per player.
 
+> **Scope note.** [ADR-0067](0067-the-quiet-replacement-is-evidenced-and-the-extra-message-waits.md)
+> **lifts the provisional rule below.** `passive` silencing a collapse *replacement* has since
+> been measured through the field Apple documents a remote `apns-collapse-id` becomes, and this
+> record is no longer conditional on anything. Read two corrections with the *"This is
+> provisional on one measurement"* paragraph: its recorded fallback — *"if it buzzes, every
+> replacement buzzes"* — was **replaced** by
+> [ADR-0065](0065-a-seat-you-asked-for-pierces-a-focus-and-we-send-only-when-the-named-seat-changes.md),
+> and its *"Apple switches that off during testing"* worry cites the **silent-push power
+> budget**, which has no `interruption-level` equivalent. The measurement it carries on
+> [#26](https://github.com/Raketa02/Raketa/issues/26) moved to
+> [#37](https://github.com/Raketa02/Raketa/issues/37) when that ticket split. Everything else
+> here stands as written.
+
 ## Context
 
 [ADR-0052](0052-a-vacancy-is-offered-not-announced.md) made withdrawal silent, and rested it
