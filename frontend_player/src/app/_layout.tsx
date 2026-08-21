@@ -21,6 +21,7 @@ import { authKeys, refreshTokens, restoreSession } from '@/features/auth/types';
 import { EnvironmentBadge } from '@/shared/config/EnvironmentBadge';
 import { wireHttpCredentials } from '@/shared/lib/auth';
 import { BootstrapGate, bootstrapApp, sharedBootstrapSteps } from '@/shared/lib/bootstrap';
+import { PrototypeScreen } from '@/prototype-tabbar/PrototypeScreen';
 import { queryClient } from '@/shared/lib/query-client';
 
 /**
@@ -48,13 +49,26 @@ async function restoreSessionStep(): Promise<void> {
   }
 }
 
+/* ------------------------------------------------------------------------- *
+ * PROTOTYPE — branch `prototype/tabbar-glyphs`, Raketa02/Raketa#49.
+ * Delete this block and restore `<Slot />` when the branch is thrown away.
+ *
+ * The tab bar is a design-system primitive, so it needs the real fonts and the real
+ * theme — but nothing behind the auth gate, and no backend. So the bootstrap sequence
+ * still runs (config, then Archivo and IBM Plex Mono) with the session step stubbed
+ * out, and the route tree is replaced by the prototype screen.
+ * ------------------------------------------------------------------------- */
+const PROTOTYPE_TAB_BAR = true;
+
+async function noRestoreStep(): Promise<void> {}
+
 export default function RootLayout() {
   const run = useCallback(
     () =>
       bootstrapApp({
         ...sharedBootstrapSteps,
         wireCredentials: wireCredentialsStep,
-        restoreSession: restoreSessionStep,
+        restoreSession: PROTOTYPE_TAB_BAR ? noRestoreStep : restoreSessionStep,
       }),
     [],
   );
@@ -66,7 +80,7 @@ export default function RootLayout() {
       <StatusBar style="dark" />
       <QueryClientProvider client={queryClient}>
         <BootstrapGate run={run}>
-          <Slot />
+          {PROTOTYPE_TAB_BAR ? <PrototypeScreen /> : <Slot />}
           {/*
            * A sibling of the route tree rather than part of it, so the badge is on every
            * screen without a screen having to know it exists — and inside the gate, so
