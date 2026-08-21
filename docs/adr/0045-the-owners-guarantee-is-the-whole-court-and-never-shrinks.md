@@ -4,6 +4,7 @@
 - **Date:** 2026-08-20
 - **Supersedes:** the `guarantee` money model in [ADR-0030](0030-a-departure-is-an-audience-not-a-state.md)
 - **Dissolves:** the bounded invariant in [ADR-0044](0044-a-marketplace-seat-is-a-promise-of-a-game.md)
+- **Scoped by [ADR-0056](0056-a-movement-has-two-parties-and-custody-follows-what-was-sold.md):** *"paid straight through to the club"* is the **private** path; an open match's seat money is held by Raketa until the match commits.
 
 ## Context
 

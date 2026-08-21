@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-08-20
+- **Corrected by [ADR-0056](0056-a-movement-has-two-parties-and-custody-follows-what-was-sold.md):** *"the club was paid at booking and keeps its money"* is loose — the club receives the owner's share at booking and each further share as it arrives. The argument above is unaffected.
 
 ## Context
 

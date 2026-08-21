@@ -4,6 +4,7 @@
 - **Date:** 2026-08-20
 - **Supersedes:** the checkpoint trigger in [ADR-0044](0044-a-marketplace-seat-is-a-promise-of-a-game.md)
 - **Narrows:** [ADR-0030](0030-a-departure-is-an-audience-not-a-state.md) — a private court has no checkpoint at all, not merely one that cannot cancel it
+- **Corrected by [ADR-0059](0059-the-clubs-cash-is-on-the-ledger-and-a-late-mark-is-refused.md):** *"a share reported after reconciliation reimburses the owner"* does not close — the club holds that cash and may never be debited. A late mark is refused instead.
 
 ## Context
 

@@ -3,6 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-08-20
 - **Answers:** the hold-lifecycle question left open by [ADR-0030](0030-a-departure-is-an-audience-not-a-state.md) — by removing the hold
+- **Narrowed by [ADR-0056](0056-a-movement-has-two-parties-and-custody-follows-what-was-sold.md):** *"we hold no money"* means no instrument stands behind an owner's liability; it does not abolish the open path's custody of seat payments. **Completed by [ADR-0058](0058-one-balance-and-it-never-goes-above-zero.md):** a debt is the ledger's derived per-player balance.
 
 ## Context
 

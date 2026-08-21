@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-08-19
+- **Discharged by [ADR-0055](0055-the-ledger-is-event-sourced-one-stream-per-player.md):** the ledger this record leans on now exists as a decision.
 
 ## Context
 

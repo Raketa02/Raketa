@@ -470,6 +470,7 @@ context from the first commit, and so nobody invents a fourth name for the same 
 | **Courts** | The bookable resource: surface, indoor/outdoor, sport, availability rules. | `backend/app/modules/courts/` |
 | **Bookings** | A player's reservation of a court for a time slot. Cancellation, no-shows, payment state. | `backend/app/modules/bookings/` |
 | **Matches** | Players organising play: open matches, joining, levels, results. | `backend/app/modules/matches/` |
+| **Money** | Every złoty that moves: who paid, who was paid, why, and what a player owes. | `backend/app/modules/money/` |
 
 > **Do not treat this table as settled design.** It records intent and naming, not
 > aggregates, invariants, or ownership. Before writing code in one of these, resolve
@@ -497,8 +498,12 @@ not silently assumed away:
 Whether each context is **event-sourced** or **persisted-with-events** is answered for
 Matches and Courts by
 [ADR-0034](docs/adr/0034-matches-is-a-record-and-keeps-no-history.md): both are records
-with a version and an outbox, and **no aggregate in either keeps event history**. Clubs is
-still open.
+with a version and an outbox, and **no aggregate in either keeps event history**. **Money is
+answered the other way** by
+[ADR-0055](docs/adr/0055-the-ledger-is-event-sourced-one-stream-per-player.md) — event-sourced,
+one stream per player — which is the mirror of ADR-0034's reasoning rather than an exception to
+it: Matches stores almost nothing and derives the rest, Money derives nothing and stores only
+what happened. Clubs is still open.
 
 ### Courts and Bookings — terms committed ahead of the code
 
@@ -705,6 +710,44 @@ has, and it is the whole of what
 departure was ever protecting.
 
 ---
+
+### Money — terms committed ahead of the code
+
+Committed by [ADR-0055](docs/adr/0055-the-ledger-is-event-sourced-one-stream-per-player.md),
+[ADR-0056](docs/adr/0056-a-movement-has-two-parties-and-custody-follows-what-was-sold.md),
+[ADR-0057](docs/adr/0057-every-movement-names-the-rule-that-caused-it.md),
+[ADR-0058](docs/adr/0058-one-balance-and-it-never-goes-above-zero.md) and
+[ADR-0059](docs/adr/0059-the-clubs-cash-is-on-the-ledger-and-a-late-mark-is-refused.md).
+
+- **Movement** — one money event: a **payer**, a **payee**, an amount, a seat, a reservation, a
+  reference and a **cause**. Immutable. It is never edited and never deleted; a wrong one is
+  corrected by a **compensating movement**.
+- **Party** — who a movement is between, from a closed set: **player · club · Raketa**. Every
+  movement has exactly one player party. **A club is only ever a payee, never a payer** — that is
+  a rule, and the nightly reconciliation asserts it.
+- **Cause** — the *rule that fired*, from a closed enumeration. Not a description of the movement
+  but the reason it was owed. Every terminal situation that moves money contributes exactly one.
+- **Ledger** — the fold over a player's movements. One event-sourced stream per player.
+- **Balance** — a player's derived position on the ledger. In v1 it is zero or negative; **there
+  is no wallet**, because stored value is a regulated product Raketa is not buying.
+- **Debt** — a balance below zero, created when a collection fails. It blocks booking a court and
+  starting a split reservation, never paying for somebody else's seat. It has **no line items**:
+  it is a number, and its provenance is read from the causes behind it.
+- **Held** — money Raketa has received and not yet passed on. **Derived, never stored** — a flag
+  on an immutable event would be a second version of the truth.
+- **Counter-paid share** — cash an invited player handed to a club, marked paid by the club. The
+  one movement that is `player → club` with Raketa as neither party. Available to invited players
+  only; a marketplace seat is always bought from Raketa, online.
+
+**Custody follows what was sold.** An open match's seat money is **held by Raketa** until the
+match commits, because no court exists yet and the money may have to come back whole. A private
+court is already bought, so a share is **paid through to the club** on arrival and Raketa holds
+nothing. Same 30 zł, two regimes, and the difference is invisible on the screen.
+
+**The ledger is downstream and one-way: Money reads Matches; Matches never reads Money.** Which
+door a payer came through lives on the *match record*, not the ledger, because it is an input to
+a rule the derivation kernel evaluates from the record and the clock alone. The ledger
+**references** a seat; it does not define one.
 
 ## Cross-cutting concepts
 
