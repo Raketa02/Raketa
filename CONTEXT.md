@@ -627,7 +627,15 @@ them.
   **priority, not a place**: the cascade offers to standby before anybody else, and orders within
   standby by fit, so a standby **position** is not a fact the platform will show — it can rise.
   Priority is what standby **is**: told in the same breath as strangers, joining a list would buy
-  nothing.
+  nothing. The third thing it buys is **loudness**: a standby seat is the only message
+  allowed to pierce a Focus, and on iOS it does
+  ([ADR-0065](docs/adr/0065-a-seat-you-asked-for-pierces-a-focus-and-we-send-only-when-the-named-seat-changes.md)).
+- **Named seat** — the one seat a lock-screen line actually names when several are live; the rest
+  are a count. Which one is **ranked over the whole live set every time we send** — a seat the
+  player asked for over one we chose, soonest-to-expire inside each group — so a lesser seat can
+  never take the line from a better one. It is also the **send condition**: a message goes out when
+  the named seat *changes*, and a change in the count alone is not worth an interruption
+  ([ADR-0065](docs/adr/0065-a-seat-you-asked-for-pierces-a-focus-and-we-send-only-when-the-named-seat-changes.md)).
 - **Leaver** — the player who made a departure. Not a state: a leaver sees the match's own state
   rendered for somebody who used to hold a seat.
 - **Outcome** — a departure's settled result: *reversed*, *refunded in full*, *refunded half*, or
