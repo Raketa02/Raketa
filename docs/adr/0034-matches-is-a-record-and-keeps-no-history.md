@@ -3,6 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-08-19
 - **Discharged by [ADR-0055](0055-the-ledger-is-event-sourced-one-stream-per-player.md):** the ledger this record leans on now exists as a decision.
+- **Narrowed for Courts by [ADR-0077](0077-a-club-is-a-record-and-history-is-a-property-of-three-facts.md):** *"no aggregate in either will keep event history"* holds for a court's **state**, and no longer for its **existence**. A court's catalogue row — that this court existed, in this category, between these instants — carries a validity interval, because a retirement shrinks availability and `inventoryLost` is terminal. Nothing else in this record changes; the argument here was about a court's reservations and state and never about whether a court exists.
 
 ## Context
 

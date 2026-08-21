@@ -543,7 +543,9 @@ not silently assumed away:
   with a Reservation referencing a court and held by exactly one holder.** Where players
   attach is still open.
 - Which side owns **cancellation windows and pricing** — Club config or Booking policy?
-  **Still open.**
+  **Still open.** [ADR-0077](docs/adr/0077-a-club-is-a-record-and-history-is-a-property-of-three-facts.md)
+  fixes only where a window that must be honoured **as booked** is kept: copied onto the match at
+  booking, never queried back out of the club as of a past instant.
 
 Whether each context is **event-sourced** or **persisted-with-events** is answered for
 Matches and Courts by
@@ -553,7 +555,35 @@ answered the other way** by
 [ADR-0055](docs/adr/0055-the-ledger-is-event-sourced-one-stream-per-player.md) — event-sourced,
 one stream per player — which is the mirror of ADR-0034's reasoning rather than an exception to
 it: Matches stores almost nothing and derives the rest, Money derives nothing and stores only
-what happened. Clubs is still open.
+what happened. **Clubs is answered a third way** by
+[ADR-0077](docs/adr/0077-a-club-is-a-record-and-history-is-a-property-of-three-facts.md): a
+record, like Matches and Courts — but three named facts on it are **never overwritten**, because
+a change to one of them retroactively alters an outcome that no other record explains. **All five
+contexts have now made ADR-0002's choice, and no two of them inherited it.**
+
+### Clubs — terms committed ahead of the code
+
+Committed by [ADR-0077](docs/adr/0077-a-club-is-a-record-and-history-is-a-property-of-three-facts.md).
+There is no Clubs code at all yet; these names exist first.
+
+- **Club policy** — the settings a club declares that the marketplace reads: the hold cap the
+  ladder is measured against, the cancellation window, and whatever else
+  [#47](https://github.com/Raketa02/Raketa/issues/47) settles. **A policy is changed as a whole,
+  never a field at a time** — *what this club's policy was on Friday at 16:00* is one question
+  with one answer, and it stays answerable, because a change opens a new policy and closes the
+  old one rather than overwriting it.
+- **Payout destination** — where a club is paid. Its own history, kept apart from the policy's,
+  because ops tuning a hold cap and finance changing a bank account are different acts with
+  different audiences.
+- **Court catalogue** — which courts a club has and what category each is in. **A court is
+  retired, never deleted**: availability is a question asked of reservations, and a court that
+  vanished would make *nothing was free* unexplainable on the one day it mattered.
+- **A club's policy is always read as it is now.** Nothing in the domain asks what it used to
+  be; that question is a human's, asked after something went wrong. A value that must hold
+  steady for a match already booked is copied onto the match instead.
+
+**A club is only ever a payee, never a payer** — that rule belongs to Money and is unchanged
+here ([ADR-0045](docs/adr/0045-the-owners-guarantee-is-the-whole-court-and-never-shrinks.md)).
 
 ### Courts and Bookings — terms committed ahead of the code
 
