@@ -360,7 +360,13 @@ forty minutes away at twice your ceiling is a good match in the abstract and a b
     An undeclared limit is **no limit**: the term scores full marks and nothing is missing.
     A term at **nothing** is not the same as an absent one: the platform looked and the
     answer was bad, so the weight is still in the denominator and the quantities are still
-    reported. Price and distance are conditions, never rejections.
+    reported. Price and distance are conditions, never rejections. **An undeclared limit and
+    an unmeasurable match are two different absences**: the first is *no limit* and scores
+    full marks, while a limit the platform cannot compare against anything — a Travel radius
+    with no Distance anchor to measure from — is **dropped like missing evidence**, so its
+    weight leaves the denominator and Coverage reports the shortfall. The term does not change
+    kind; the rule about absence is about the player's side of the comparison, and this is the
+    other side missing.
   - **Evidence term** — something the platform observes (balance, reliability, skill overlap,
     familiarity). Absent evidence is **not** a good score; the term is dropped and the
     remaining weights carry the whole score between them.
@@ -415,14 +421,33 @@ forty minutes away at twice your ceiling is a good match in the abstract and a b
   inside one. **Every part of it is optional and absence means undeclared** — which is what
   a constraint term reads as *no limit*, and days and hours are two declarations rather than
   one, so a player who named days and no hours has no hour problem. Distance is declared in
-  **minutes**, because that is what a card shows and comparing a radius in kilometres against
-  it would mean inventing a speed. **Days and hours are a clock face and never an instant**:
+  **kilometres**, as a **Travel radius** around a **Distance anchor** the player named, and is
+  compared against a club's distance in kilometres — never against a time, because that
+  mixture is what would mean inventing a speed. **Days and hours are a clock face and never an
+  instant**:
   *"I play after work"* is a claim about the wall in the club, so a match's start is compared
   against them in the club's own zone. A declared stretch of a day runs forwards, never wraps
   midnight — 22:00 to 01:00 is two declarations — and **excludes its end**, so two stretches
   declared back to back do not overlap. A match is inside a declared stretch when it
   **starts** inside it, however long it runs. Appetite and the commitment horizon are the
   ranking policy's; no term reads them.
+- **Where you play** — the **city and country** a player declared, and the only part of their
+  location any other player may see. **Compulsory and asked outside the Player profile**: it
+  is which market they are in, not a preference, and no feed can be composed without it. It is
+  what the Now header prints. A player who moves declares the move; it is never observed, and
+  it is a field from the first day even while there is one market.
+- **Distance anchor** — the finer place a player named — an **area** or a **postcode** — and
+  the only thing a distance is ever measured from. Optional, part of the Player profile, and
+  **never shown to another player**. A declaration about *where they play from*, never an
+  observation of where they are: a phone at a desk on Monday morning is precise about the
+  wrong moment. **Precision follows the anchor** — with only a city there is no distance at
+  all, and with an area or a postcode a distance is rounded to the kilometre and marked
+  approximate, never carrying a decimal a district's width cannot support.
+- **Travel radius** — how far a player said they will travel from their Distance anchor, in
+  kilometres. **It orders and never excludes** on any surface the platform composed — the
+  home list, and the order a free seat is offered in. A radius the player types into a
+  **search** is the one place it bounds, because narrowing is what they asked for there.
+  `anywhere` is a real answer and means no limit.
 
 **Invariants**
 - **Fit and certainty are separate variables.** The same rule the rating context holds for
