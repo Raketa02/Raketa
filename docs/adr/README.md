@@ -82,3 +82,5 @@ If your work **contradicts** an existing ADR, surface it rather than silently ov
 - [0050 — Below the strip, Now is shelves, and every shelf makes one claim](0050-now-below-the-strip-is-shelves.md) — *supersedes `1`'s Parts 5 and 6 as sections, and `4` §3.5's six-card cap*
 - [0051 — Now is ordered, never drawn: the list-builder's contract](0051-now-is-ordered-not-drawn.md) — *leaves 0027's licence to draw randomness unexercised; discharges 0037's open floor*
 - [0052 — A vacancy is offered, and how loudly depends on how soon the match is](0052-a-vacancy-is-offered-not-announced.md) — *supersedes 0038's deferral of push, against a requirement that expires inside a day*
+- [0053 — The phone holds no rules; its only power is subtracting](0053-the-phone-holds-no-rules-and-only-subtracts.md) — *0021's first concrete instance; refuses doc 5 A6's transition list and dissolves `3` §4.2's three-layer render*
+- [0054 — Now refreshes when it is asked, never on a timer](0054-now-refreshes-when-asked-never-on-a-timer.md) — *supersedes 0038's 30-second polling cadence; read the two together to know how Now is delivered*

@@ -2,6 +2,13 @@
 
 - **Status:** Accepted
 - **Date:** 2026-08-19
+- **Superseded in part by:** [ADR-0054](0054-now-refreshes-when-asked-never-on-a-timer.md) — the
+  30-second polling cadence below is withdrawn. Now refreshes only when it is asked: on arrival,
+  on pull, on an action, and when a countdown reaches zero. Everything else here — the deferred
+  frame protocol and the four forwards-compatibility fields — stands as written.
+- **Scope note:** [ADR-0053](0053-the-phone-holds-no-rules-and-only-subtracts.md) leaves
+  `nextTransition` and `serverTime` with **no reader and no prospect of one**. They survive on
+  this ADR's forwards-compatibility argument alone; read that before deleting them as dead weight.
 
 ## Context
 

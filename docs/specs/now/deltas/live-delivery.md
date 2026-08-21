@@ -5,6 +5,12 @@
 `5-now_screen_architecture_review.md`'s build-order row 7. Everything else in both documents
 stands unchanged.
 
+> **Amended.** §1's cadence — *"the client polls at 30 s while foregrounded"* — is **withdrawn**
+> by [`client-derivation-and-refresh.md`](client-derivation-and-refresh.md)
+> ([ADR-0054](../../../adr/0054-now-refreshes-when-asked-never-on-a-timer.md)). There is no timer
+> in the client; Now refreshes on arrival, on pull, on an action, and when a countdown reaches
+> zero. Everything else below — the frame protocol and its trigger — stands as written.
+
 **The decisions:** [ADR-0038](../../../adr/0038-now-is-polled-the-push-is-specified-and-deferred.md)
 — Now is polled; the push is specified and deferred. And
 [ADR-0039](../../../adr/0039-the-card-projection-rebuilds-from-the-record.md) — the projection
