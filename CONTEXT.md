@@ -366,7 +366,11 @@ forty minutes away at twice your ceiling is a good match in the abstract and a b
     with no Distance anchor to measure from — is **dropped like missing evidence**, so its
     weight leaves the denominator and Coverage reports the shortfall. The term does not change
     kind; the rule about absence is about the player's side of the comparison, and this is the
-    other side missing.
+    other side missing. **A declared limit is three-valued in the record and two-valued in the
+    snapshot** — `undeclared | none | <value>`. *Declined* and *undeclared* score **identically**
+    (both *no limit*, full marks, weight kept), so the snapshot collapses them; only the
+    Declaration meter can tell them apart, which is what lets a player who genuinely has no
+    ceiling be finished rather than permanently incomplete.
   - **Evidence term** — something the platform observes (balance, reliability, skill overlap,
     familiarity). Absent evidence is **not** a good score; the term is dropped and the
     remaining weights carry the whole score between them.
@@ -417,10 +421,18 @@ forty minutes away at twice your ceiling is a good match in the abstract and a b
   the way in.
 - **Player profile** — what the player declared about how they want to play: days, hours,
   price ceiling, distance, appetite, competitive or social, and how far ahead they will
-  commit. One declaration, read by every engine that needs it, never restated as a constant
-  inside one. **Every part of it is optional and absence means undeclared** — which is what
-  a constraint term reads as *no limit*, and days and hours are two declarations rather than
-  one, so a player who named days and no hours has no hour problem. Distance is declared in
+  commit. **One declaration per sport the player picked** — a padel player's hours and price
+  are not a tennis player's, and every surface that shows the profile is already filtered to
+  one sport, so the eight are never averaged across sports. Read by every engine that needs
+  it, never restated as a constant inside one. **One set, two readers**: Raketa's own ranking
+  reads it unconditionally, and the club console's intent pool reads it only behind the
+  Proposals opt-in. **Every part of it is optional, and every part can be explicitly
+  declined** — absence means undeclared, which is what a constraint term reads as *no limit*,
+  and a decline reads the same way to every engine while counting as an answer on the
+  Declaration meter. Where a blank would make the platform **assume** rather than drop a
+  limit — appetite and the commitment horizon — declining tells it to stop assuming. Days and
+  hours are two declarations rather than one, so a player who named days and no hours has no
+  hour problem. Distance is declared in
   **kilometres**, as a **Travel radius** around a **Distance anchor** the player named, and is
   compared against a club's distance in kilometres — never against a time, because that
   mixture is what would mean inventing a speed. **Days and hours are a clock face and never an
@@ -448,6 +460,19 @@ forty minutes away at twice your ceiling is a good match in the abstract and a b
   home list, and the order a free seat is offered in. A radius the player types into a
   **search** is the one place it bounds, because narrowing is what they asked for there.
   `anywhere` is a real answer and means no limit.
+- **Proposals opt-in** — the player's permission for the **club console's intent pool** to read
+  their Player profile and name them. **Not a declaration and never part of the Declaration
+  meter**: a completeness ring that rises when you consent is a ring that pays you to consent.
+  Asked once, on its own screen, with a table of what changes either way; **skipping is not
+  consent**, and an unanswered question resolves to off. Off, the player is still counted
+  anonymously in a club's demand and can never be named or contacted.
+- **Declaration meter** — how much of the Player profile a player has settled, for **one sport**.
+  Its denominator is the **eight** declarations the profile step asks — never the compulsory
+  sport, never the derived Level band, never the Proposals opt-in — and it counts a field
+  **answered or explicitly declined**, which is what makes 100 % reachable by a player who
+  genuinely has no limits. It is never averaged across sports. It is shown on **You**, one per
+  declared sport, and **never on Now**: the home screen states what a shelf is missing to order
+  well, or it says nothing.
 
 **Invariants**
 - **Fit and certainty are separate variables.** The same rule the rating context holds for
