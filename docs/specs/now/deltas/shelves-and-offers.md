@@ -147,7 +147,7 @@ Drawn by the prototype's `V.search` — *"Who is invited, in order"*, a card the
 | 3 | Asked for the seat before — offered an earlier vacancy on this match, did not get it | **Ships** |
 | 4 | Viewed or followed the match | **Ships as viewed** (48 h). *Follow* does not exist |
 | 5 | Compatible players who use this club often | **Ships** |
-| 6 | Nearby **reliable** players inside the level range | **Ships degraded** — level band only. *Reliable* is recorded and unused; *nearby* has no source ([#29](https://github.com/Raketa02/Raketa/issues/29)) |
+| 6 | Nearby **reliable** players inside the level range | **Ships degraded** — level band only. *Reliable* is recorded and unused; *nearby* has no source ([#30](https://github.com/Raketa02/Raketa/issues/30)) |
 | 7 | Marked available at this hour | **Dark.** Same effort as rung 2 |
 
 **Superseded by ADR-0061 in the prototype:** the ladder card's *"ten minutes to accept, five to
