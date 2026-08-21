@@ -3,6 +3,19 @@
 - **Status:** Accepted
 - **Date:** 2026-08-20
 
+> **Scope note.** [ADR-0075](0075-the-second-table-is-unpaid-and-the-first-ships-in-english.md)
+> **narrows this record on one word.** The decision below says the 33-row content contract becomes
+> a client copy table *"Polish first"*; the copy **ships in English**, and that clause is narrowed
+> to nothing. It was an aside inside a decision about copy's *home*, it was never argued, and the
+> shipped `frontend_player/` — ~30 onboarding screens of inline English — has contradicted it for
+> its whole life. Everything else here stands as written and is what ADR-0075 builds on: copy is
+> the client's, tone is editorial and goes to the same place, and the wire carries
+> `{situation, facts}`. Two later records extend rather than correct it —
+> [ADR-0072](0072-two-sentences-are-two-situations-and-a-leaver-is-a-third-audience.md) takes the
+> enumeration to **36** and adds the alert strip as a fourth column of the same table, and ADR-0075
+> adds the one exception: copy the server composes is copy the player reads **outside** the app.
+
+
 ## Context
 
 [ADR-0040](0040-one-ladder-resolves-a-situation.md) settles which vocabulary the ladder produces.
