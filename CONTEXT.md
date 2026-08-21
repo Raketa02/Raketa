@@ -483,6 +483,12 @@ forty minutes away at twice your ceiling is a good match in the abstract and a b
   genuinely has no limits. It is never averaged across sports. It is shown on **You**, one per
   declared sport, and **never on Now**: the home screen states what a shelf is missing to order
   well, or it says nothing.
+- **A sport a player plays** — a sport a **Skill rating exists** for, and nothing else. There
+  is no stored list of chosen sports: onboarding's sports picker orders that run's assessments
+  and its selection is discarded, so "which sports does this player play" is the same question
+  as "for which sports does a rating exist" — the reading the *Skill rating* invariants already
+  require. It follows that the set is **ordered only by when each rating came to exist**, and
+  that a player acquires a sport by being rated at it, never by naming it.
 
 **Invariants**
 - **Fit and certainty are separate variables.** The same rule the rating context holds for

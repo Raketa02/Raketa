@@ -3,6 +3,16 @@
 - **Status:** Accepted
 - **Date:** 2026-08-21
 
+> **Scope note.** [ADR-0084](0084-the-sport-bar-is-five-fixed-chips-and-an-unrated-sport-is-a-door.md)
+> narrows this ADR in three places, none of them superseded. The caption's *"currently
+> filtered sport"* gains its missing `All` case — silent, except where a sport the player
+> holds a rating at has **nothing** declared. The onboarding tail
+> `result → city → editor → opt-in → done` becomes `result → editor → back` for a sport
+> **added after onboarding**, since city and the opt-in are answered once per player. And
+> *"one card per declared sport, in sport-picker order"* is **not implementable as
+> written** — the sports picker's selection is never persisted, so the only durable order
+> is the one the ratings came to exist in.
+
 ## Context
 
 [ADR-0063](0063-where-a-player-plays-is-declared-and-precision-follows-the-anchor.md)
