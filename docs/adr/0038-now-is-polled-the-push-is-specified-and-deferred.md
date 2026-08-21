@@ -6,9 +6,16 @@
   30-second polling cadence below is withdrawn. Now refreshes only when it is asked: on arrival,
   on pull, on an action, and when a countdown reaches zero. Everything else here — the deferred
   frame protocol and the four forwards-compatibility fields — stands as written.
+- **Superseded in part by:** [ADR-0071](0071-two-fields-with-no-reader-are-not-forwards-compatibility.md)
+  — `serverTime` and `nextTransition` are **dropped**, and the forwards-compatibility rule below
+  is narrowed: the trigger is a **named future reader**, never *it might be expensive to add
+  later*. Adding a field is free, because neither client validates the wire at runtime.
+  `listVersion` and `cardVersion` stand, as increasing integers.
 - **Scope note:** [ADR-0053](0053-the-phone-holds-no-rules-and-only-subtracts.md) leaves
-  `nextTransition` and `serverTime` with **no reader and no prospect of one**. They survive on
-  this ADR's forwards-compatibility argument alone; read that before deleting them as dead weight.
+  `nextTransition` and `serverTime` with **no reader and no prospect of one**. They survived on
+  this ADR's forwards-compatibility argument alone until ADR-0071 removed them.
+- **Scope note:** the envelope this ADR names is drawn by
+  [ADR-0070](0070-now-is-three-regions-and-a-card-has-two-halves.md).
 
 ## Context
 
