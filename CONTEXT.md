@@ -233,11 +233,21 @@ ahead of the first club, which is the whole reason they could be built now.
   been applied. Always a **whole number of złoty**.
 - **SeatShare** — a `CourtPrice` divided by the sport's **sold** player count. The sold format,
   not the current occupancy: a padel match with three players still divides by four, because
-  the court costs what it costs.
+  the court costs what it costs. **Written when the match is made and never re-priced**: a club
+  may discount a **court** and may never price a **seat**, and a discount published afterwards
+  reaches the matches created after it and no others
+  ([ADR-0080](docs/adr/0080-a-payable-is-a-share-and-the-card-ships-supplying-nothing.md)). So two
+  matches on one court the same afternoon may carry different shares, and each is what its own
+  players paid.
 - **Payable** — what one player actually owes: their `SeatShare` less any club card offset.
-  Never negative.
+  Never negative. **In v1 it is always equal to the `SeatShare`**, because nothing supplies a
+  card ([ADR-0080](docs/adr/0080-a-payable-is-a-share-and-the-card-ships-supplying-nothing.md)).
+  The two stay separate names because they are separate kinds of fact — a share is a property of
+  the **match**, a payable of a **player against** it — and only one of them crosses the wire.
 - **Card offset** — a club's allowance against a seat, per sport. Either none, a capped
-  amount, or the whole share.
+  amount, or the whole share. **Ships with nothing supplying it**: the rule reads the club's half
+  of a MultiSport card and never asks whether the player holds one, so v1 passes it no card at
+  all. The kernel keeps the rule; no screen ever prints a reduced price.
 
 **Invariants**
 - **A court price is a whole number of złoty.** This is marketplace law, not an observation.
@@ -661,7 +671,9 @@ them.
   `backend/app/engines/matchmaking.py` already spell them. **Held** means a name on a seat and
   no money — an invitation not yet paid — and **a held seat never holds a court**. Joining an
   open match means paying: there is no window in which a seat is taken and unpaid by the
-  taker.
+  taker. *That sentence is why a payment window is a **seat claim** on the right to buy a seat,
+  and never a fourth state of one*
+  ([ADR-0081](docs/adr/0081-a-seat-is-never-taken-until-it-is-paid.md)).
 - **Announcement** — the named, specific record that one thing changed, published once through
   the outbox. Caches, refunds, notifications and the player's support timeline are all built
   from announcements and never written alongside them. **Every change a support agent would
@@ -680,6 +692,20 @@ them.
   ([ADR-0033](docs/adr/0033-settlement-and-occupancy-are-independent.md)): the resolution ladder
   reads vacancy existence, the leaver's card reads settlement, and a filler closes the oldest
   **open vacancy** while settling the oldest **unsettled departure** — not always the same one.
+- **Seat claim** — the exclusive right to buy **one** seat, held by one player for **five minutes**
+  while they pay. Its own short-lived record — match, seat, player, expiry — and **never a state of
+  a seat**: the seat stays `empty` throughout, absent from the fill count, holding no court, and
+  imputed by the forecast rather than lending the claimant's level to it. *Deliberately not called
+  a **lock** or a **hold**: both are taken, by the moment a private court stops being cancellable
+  and by an unpaid invitation — and **claim** alone is half of the assessment's
+  claim/demonstration pair, so the term is compounded the way **court hold** is.* Taking any seat opens one — offered or found — and a
+  player may hold **one at a time**, may not re-claim the same seat for thirty seconds after
+  lapsing, and is charged nothing else for a lapse. A running claim is honoured past the **join
+  cutoff**; none may be started after it. While one runs, the vacancy's pending sends go quiet, and
+  a lapse resumes them without telling anybody twice. It ends the same way whatever ended it — the
+  five minutes, the player, or the match dying underneath them — and money that arrives afterwards
+  is refunded under the cause `claimLapsed`
+  ([ADR-0081](docs/adr/0081-a-seat-is-never-taken-until-it-is-paid.md)).
 - **Seat offer** — a vacancy put to the players the **invitation ladder** picks, with a clock on
   it. The thing the rescue cascade produces once it has searched; a vacancy exists without one.
   **One kind: the open call** ([ADR-0061](docs/adr/0061-the-invitation-ladder-is-an-order-and-one-open-call.md),
