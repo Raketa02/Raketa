@@ -663,6 +663,10 @@ them.
   ([ADR-0065](docs/adr/0065-a-seat-you-asked-for-pierces-a-focus-and-we-send-only-when-the-named-seat-changes.md)).
 - **Leaver** — the player who made a departure. Not a state: a leaver sees the match's own state
   rendered for somebody who used to hold a seat.
+- **Audience** — who a card is rendered *for*. Three, and only three: a player **in** the match, a
+  player **looking in**, and a **leaver**. An audience changes a card's words and which money it
+  names; it never changes the **situation**, and it never changes a movement's **cause**
+  ([ADR-0072](docs/adr/0072-two-sentences-are-two-situations-and-a-leaver-is-a-third-audience.md)).
 - **Outcome** — a departure's settled result: *reversed*, *refunded in full*, *refunded half*, or
   *forfeited*. On a private court only *refunded in full* and *forfeited* are reachable.
 - **Settlement** — the moment no further **seat** event can change an outcome. Monotonic upward
