@@ -542,10 +542,14 @@ not silently assumed away:
   [ADR-0035](docs/adr/0035-a-reservation-claims-a-court-over-an-interval.md): `Club → Court`,
   with a Reservation referencing a court and held by exactly one holder.** Where players
   attach is still open.
-- Which side owns **cancellation windows and pricing** — Club config or Booking policy?
-  **Still open.** [ADR-0077](docs/adr/0077-a-club-is-a-record-and-history-is-a-property-of-three-facts.md)
-  fixes only where a window that must be honoured **as booked** is kept: copied onto the match at
-  booking, never queried back out of the club as of a past instant.
+- ~~Which side owns **cancellation windows and pricing** — Club config or Booking policy?~~
+  **Answered by [ADR-0078](docs/adr/0078-club-policy-is-eight-fields-and-two-of-them-ship-dark.md):
+  the club, and they are two different kinds of club fact.** The cancellation window is
+  `freeCancelHours`, one of the eight versioned policy fields; pricing (`pm`, `cardOffset[sport]`)
+  is on the club record and is **not** versioned, because a price that must hold as quoted is
+  copied onto the match at booking
+  ([ADR-0077](docs/adr/0077-a-club-is-a-record-and-history-is-a-property-of-three-facts.md)) and
+  nothing ever asks what it used to be.
 
 Whether each context is **event-sourced** or **persisted-with-events** is answered for
 Matches and Courts by
@@ -563,15 +567,45 @@ contexts have now made ADR-0002's choice, and no two of them inherited it.**
 
 ### Clubs — terms committed ahead of the code
 
-Committed by [ADR-0077](docs/adr/0077-a-club-is-a-record-and-history-is-a-property-of-three-facts.md).
+Committed by [ADR-0077](docs/adr/0077-a-club-is-a-record-and-history-is-a-property-of-three-facts.md)
+and [ADR-0078](docs/adr/0078-club-policy-is-eight-fields-and-two-of-them-ship-dark.md).
 There is no Clubs code at all yet; these names exist first.
 
-- **Club policy** — the settings a club declares that the marketplace reads: the hold cap the
-  ladder is measured against, the cancellation window, and whatever else
-  [#47](https://github.com/Raketa02/Raketa/issues/47) settles. **A policy is changed as a whole,
-  never a field at a time** — *what this club's policy was on Friday at 16:00* is one question
-  with one answer, and it stays answerable, because a change opens a new policy and closes the
-  old one rather than overwriting it.
+- **Club policy** — **exactly eight fields**, and the test for membership is one sentence: *a club
+  decision that changes what happens to a player inside a match.* `window`, `joinCut`,
+  `maxHoldAge`, `probHold`, `rebookingCredit`, `freeCancelHours`, `turnaroundMin`, `countsCash`.
+  Everything else a club declares is the **club record** and is not versioned. **A policy is
+  changed as a whole, never a field at a time** — *what this club's policy was on Friday at 16:00*
+  is one question with one answer, and it stays answerable, because a change opens a new policy and
+  closes the old one rather than overwriting it.
+- **Speculative holding is opt-out-able, and saying so is a value.** `maxHoldAge` is `null` (never
+  stale), a positive number of hours (honoured, with no platform floor), or **`0` — this club does
+  not hold a court speculatively at all**. There is no floor because Raketa cannot compel a club to
+  lend inventory to a match that may never form.
+- **Rebooking credit** — whether a club credits a committed-but-short match at the certainty
+  checkpoint. One boolean, named for the sentence the player is shown. It decides whether the
+  checkpoint cancels; what the credit *is* belongs to Money
+  ([ADR-0058](docs/adr/0058-one-balance-and-it-never-goes-above-zero.md): a club card entry, never
+  platform credit).
+- **Turnaround** — minutes a club needs between reservations. It **widens the claimed interval** of
+  a reservation Raketa creates; it is never a second concept checked beside the overlap rule, and
+  the player is always shown the **played** interval.
+- **Counter cash** — whether a club takes cash at its counter. Distinct from **whether Raketa
+  offers** *pay at the club*, which is gated on a surface existing that can mark a share paid
+  ([ADR-0059](docs/adr/0059-the-clubs-cash-is-on-the-ledger-and-a-late-mark-is-refused.md)). Two
+  facts, because a default can be overridden into the failure and a gate cannot.
+- **Card offset** — a club's standing per-sport allowance against a seat. **Pricing, not policy**,
+  and **not the same thing as a club card that receives a credit** — that is a Money record, per
+  player per club.
+- **A club carries an address, a geocoded point and an IANA timezone.** The point is what a
+  distance is measured to; `km` is derived at read time, never stored. Unlike a player's anchor
+  ([ADR-0063](docs/adr/0063-where-a-player-plays-is-declared-and-precision-follows-the-anchor.md)),
+  a club has no reason for imprecision — it is a public venue with a front door. The **zone** is a
+  field from day one rather than a constant, for ADR-0063's reason: nothing downstream may assume
+  one market.
+- **Raketa ops authors all of it in v1.** There is no console and no role concept on `User`, so
+  every history entry reads *changed by: system*. The console takes authorship later and nothing in
+  the model changes when it does.
 - **Payout destination** — where a club is paid. Its own history, kept apart from the policy's,
   because ops tuning a hold cap and finance changing a bank account are different acts with
   different audiences.
@@ -599,7 +633,12 @@ Committed by [ADR-0035](docs/adr/0035-a-reservation-claims-a-court-over-an-inter
 - **Category** — what is bought and priced. **The court is assigned, never chosen**, and may be
   swapped for another of the same category until shortly before play; only then is a specific
   court named to the player. This is what lets a seat price be quoted before a court exists and
-  stay fixed when one is assigned.
+  stay fixed when one is assigned. **The club authors it**
+  ([ADR-0079](docs/adr/0079-a-category-is-club-authored-and-it-is-the-priced-unit.md)): a category
+  is a **club-scoped named group of courts**, constrained by the platform to exactly one sport,
+  because interchangeability is a fact only the venue knows. **The price attaches to the category,
+  never to a court** — a court that costs differently *is* a different category — and a category,
+  like a court, is **retired, never deleted**. Categories are never compared across clubs.
 
 **The private path starts with a Reservation and looks for players; the open path starts with
 players and looks for a Reservation.** That is the whole of the difference between the two
