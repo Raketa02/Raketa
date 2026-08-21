@@ -778,7 +778,11 @@ them.
   leave command. If the outcome recomputed at apply time is strictly worse than the quote, the
   command is refused and the player is re-presented. The ordering is *refunded in full* >
   *refunded half* > *forfeited* = *nothing returned*; forfeit ranks **equal** to a zero refund,
-  because the quote protects money and the money is identical.
+  because the quote protects money and the money is identical. **It quotes the one outcome shown as
+  live, never the set of possibilities** — *reversed* before commitment, *refunded in full* while
+  the full-price search runs, *refunded half* once Rescue has opened. The other outcomes are shown
+  beside it as possibilities and are not quoted, because the ordering above is defined over single
+  labels ([ADR-0086](docs/adr/0086-a-departure-is-a-route-and-the-card-points-at-it-without-naming-it.md)).
 - **Guarantee** — a private-court owner's exposure on a split-payment reservation: **the whole
   court price**, constant from booking until the reservation is reconciled. It is not a
   remainder and it does not shrink as seats fund
