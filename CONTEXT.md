@@ -774,6 +774,16 @@ them.
   **Accepting is opposing-side-only and one person suffices; countering is open to anyone who
   played**, including the proposing side, because what makes a teammate's agreement worthless is
   what makes their objection credible.
+- **Acceptance grace** — the **30 minutes after a proposal was entered**, inside which a counter
+  beats a pending acceptance. An accepted result is not settled until it closes: in a four-player
+  match somebody is always slower to their phone, and without it a partner's fast tap shuts the
+  door on an opponent still in the shower
+  ([ADR-0048](docs/adr/0048-silence-confirms-a-result-and-disagreement-carries-a-score.md)). It is
+  **shown to the player** while it runs
+  ([ADR-0074](docs/adr/0074-the-result-route-reads-four-facts-and-an-action-off-now-hands-now-its-update.md)),
+  because a screen that says *settled* thirty minutes before it is true is the app lying about the
+  one thing it exists to state. *Not to be confused with a departure's **Settlement**, nor with
+  **Reconciliation**.*
 - **Counted · unscored** — a match is created **counted** or a **friendly**, and that is what the
   players chose. A counted match whose result never settles is **unscored**: it stays counted, is
   never reclassified as a friendly, and **counts as an evening and never as evidence** — it is in
