@@ -47,7 +47,9 @@ async def seeded(session_factory):
     """Every account, keyed by the slug that names its state."""
 
     async with session_factory() as session:
-        return {entry.account.slug: entry for entry in await seed(session)}
+        return {
+            entry.account.slug: entry for entry in (await seed(session)).accounts
+        }
 
 
 async def _sign_in(client, account: SeedAccount, password: str = SEED_PASSWORD) -> dict:
@@ -251,7 +253,9 @@ async def test_seeding_twice_leaves_one_account_and_one_run(
     """Idempotency as a developer meets it: run it again, nothing doubles."""
 
     async with session_factory() as session:
-        again = {entry.account.slug: entry for entry in await seed(session)}
+        again = {
+            entry.account.slug: entry for entry in (await seed(session)).accounts
+        }
 
     assert {slug: entry.player_id for slug, entry in again.items()} == {
         slug: entry.player_id for slug, entry in seeded.items()

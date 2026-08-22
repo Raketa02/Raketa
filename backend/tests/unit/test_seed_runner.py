@@ -65,8 +65,11 @@ from app.seeds.catalog import (
     RatingClaim,
     SeedAccount,
 )
+from app.seeds.clubs import NEVER_HOLDS, TIGHTENED_ITS_CAP
 from app.seeds.runner import (
+    Seeded,
     SeededAccount,
+    SeededClub,
     SeededScenario,
     SeedFailed,
     report,
@@ -84,10 +87,12 @@ SEED_MODULES = sorted((ROOT / "app" / "seeds").glob("*.py"))
 #: will sell a name under any of them.
 RFC2606_RESERVED_TLDS = frozenset({".test", ".example", ".invalid", ".localhost"})
 
-#: The bounded contexts that have aggregates. Clubs, Courts, Bookings and Matches
-#: are named in the glossary and modeled nowhere, so a seed for one of them would
-#: have to invent the aggregate first.
-MODELED_CONTEXTS = frozenset({"users", "rating"})
+#: The bounded contexts that have aggregates. Courts, Bookings and Matches are
+#: named in the glossary and modeled nowhere, so a seed for one of them would
+#: have to invent the aggregate first. Clubs joined the set with #64 — which is
+#: what the equality below is for: it grows deliberately, one context at a time,
+#: and it cannot silently fall behind either.
+MODELED_CONTEXTS = frozenset({"users", "rating", "clubs"})
 
 #: SQLAlchemy's statement constructors. Importing one into the seed path is how
 #: "just this once, it is only a fixture row" starts.
@@ -166,6 +171,7 @@ def test_the_walk_has_something_to_walk():
         "__init__.py",
         "__main__.py",
         "catalog.py",
+        "clubs.py",
         "guard.py",
         "runner.py",
     }
@@ -517,7 +523,7 @@ async def test_seeding_writes_an_event_stream_for_every_aggregate(session_factor
         seeded = await seed(session)
         streams = await _streams(session)
 
-    assert len(seeded) == len(ACCOUNTS)
+    assert len(seeded.accounts) == len(ACCOUNTS)
     assert streams.get("user", 0) == len(ACCOUNTS)
     assert streams.get("assessment", 0) >= sum(
         len(account.scenarios) for account in ACCOUNTS
@@ -660,14 +666,27 @@ async def test_re_running_leaves_the_same_state(session_factory):
         second = await seed(session)
         streams_after_second = await _streams(session)
 
-    assert [entry.player_id for entry in first] == [entry.player_id for entry in second]
+    assert [entry.player_id for entry in first.accounts] == [
+        entry.player_id for entry in second.accounts
+    ]
     assert [
-        [scenario.assessment_id for scenario in entry.scenarios] for entry in first
-    ] == [[scenario.assessment_id for scenario in entry.scenarios] for entry in second]
-    assert all(entry.registered for entry in first)
-    assert not any(entry.registered for entry in second)
-    assert not any(scenario.created for entry in second for scenario in entry.scenarios)
-    assert all(entry.already_present for entry in second)
+        [scenario.assessment_id for scenario in entry.scenarios]
+        for entry in first.accounts
+    ] == [
+        [scenario.assessment_id for scenario in entry.scenarios]
+        for entry in second.accounts
+    ]
+    assert all(entry.registered for entry in first.accounts)
+    assert not any(entry.registered for entry in second.accounts)
+    assert not any(
+        scenario.created for entry in second.accounts for scenario in entry.scenarios
+    )
+    assert all(entry.already_present for entry in second.accounts)
+    assert [entry.club_id for entry in first.clubs] == [
+        entry.club_id for entry in second.clubs
+    ]
+    assert all(entry.created for entry in first.clubs)
+    assert not any(entry.created for entry in second.clubs)
     assert streams_after_first == streams_after_second, "a re-run appended events"
 
 
@@ -677,20 +696,23 @@ def test_the_report_names_the_address_the_password_and_every_state():
 
     account = next(entry for entry in ACCOUNTS if entry.slug == "rated-in-every-sport")
     lines = report(
-        (
-            SeededAccount(
-                account=account,
-                player_id=UUID(int=1),
-                registered=True,
-                scenarios=tuple(
-                    SeededScenario(
-                        scenario=scenario,
-                        assessment_id=UUID(int=index + 2),
-                        created=True,
-                    )
-                    for index, scenario in enumerate(account.scenarios)
+        Seeded(
+            accounts=(
+                SeededAccount(
+                    account=account,
+                    player_id=UUID(int=1),
+                    registered=True,
+                    scenarios=tuple(
+                        SeededScenario(
+                            scenario=scenario,
+                            assessment_id=UUID(int=index + 2),
+                            created=True,
+                        )
+                        for index, scenario in enumerate(account.scenarios)
+                    ),
                 ),
             ),
+            clubs=(),
         )
     )
     text = "\n".join(lines)
@@ -710,33 +732,36 @@ def test_the_report_says_which_state_each_scenario_is_in():
     abandoned one, and a rating. All three are an address and an assessment id."""
 
     states = report(
-        (
-            SeededAccount(
-                account=SeedAccount(slug="probe", description="probe"),
-                player_id=UUID(int=1),
-                registered=False,
-                scenarios=(
-                    SeededScenario(
-                        scenario=OpenRun(sport=Sport.PADEL),
-                        assessment_id=UUID(int=2),
-                        created=False,
-                    ),
-                    SeededScenario(
-                        scenario=AbandonedRun(sport=Sport.TENNIS),
-                        assessment_id=UUID(int=3),
-                        created=False,
-                    ),
-                    SeededScenario(
-                        scenario=RatedRun(
-                            sport=Sport.SQUASH,
-                            answers=AnswerPolicy(claims=2, demonstrations=2),
-                            claim=RatingClaim(band=BAND_ESTABLISHED),
+        Seeded(
+            accounts=(
+                SeededAccount(
+                    account=SeedAccount(slug="probe", description="probe"),
+                    player_id=UUID(int=1),
+                    registered=False,
+                    scenarios=(
+                        SeededScenario(
+                            scenario=OpenRun(sport=Sport.PADEL),
+                            assessment_id=UUID(int=2),
+                            created=False,
                         ),
-                        assessment_id=UUID(int=4),
-                        created=False,
+                        SeededScenario(
+                            scenario=AbandonedRun(sport=Sport.TENNIS),
+                            assessment_id=UUID(int=3),
+                            created=False,
+                        ),
+                        SeededScenario(
+                            scenario=RatedRun(
+                                sport=Sport.SQUASH,
+                                answers=AnswerPolicy(claims=2, demonstrations=2),
+                                claim=RatingClaim(band=BAND_ESTABLISHED),
+                            ),
+                            assessment_id=UUID(int=4),
+                            created=False,
+                        ),
                     ),
                 ),
             ),
+            clubs=(),
         )
     )
     text = "\n".join(states)
@@ -744,6 +769,30 @@ def test_the_report_says_which_state_each_scenario_is_in():
     assert "PADEL in progress" in text
     assert "TENNIS abandoned" in text
     assert f"SQUASH rated ({BAND_ESTABLISHED})" in text
+    assert "already present" in text
+
+
+def test_the_report_names_every_club_and_what_state_it_is_in():
+    """A developer looking at a card wants to know which club it is about, and
+    a club is only useful here if its state is named beside it."""
+
+    lines = report(
+        Seeded(
+            accounts=(),
+            clubs=(
+                SeededClub(club=NEVER_HOLDS, club_id=UUID(int=9), created=True),
+                SeededClub(
+                    club=TIGHTENED_ITS_CAP, club_id=UUID(int=10), created=False
+                ),
+            ),
+        )
+    )
+    text = "\n".join(lines)
+
+    assert NEVER_HOLDS.slug in text
+    assert NEVER_HOLDS.description in text
+    assert str(UUID(int=9)) in text
+    assert TIGHTENED_ITS_CAP.slug in text
     assert "already present" in text
 
 

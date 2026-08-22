@@ -52,6 +52,10 @@ from app.modules.auth.infrastructure.password_hasher import BcryptPasswordHasher
 from app.modules.auth.infrastructure.sqlalchemy_refresh_token_repository import (
     SqlAlchemyRefreshTokenRepository,
 )
+from app.modules.clubs.domain.ports import ClubRepository
+from app.modules.clubs.infrastructure.sqlalchemy_club_repository import (
+    SqlAlchemyClubRepository,
+)
 from app.modules.rating.domain.ports import AssessmentRepository, SkillRatingRepository
 from app.modules.rating.infrastructure.event_sourced_assessment_repository import (
     EventSourcedAssessmentRepository,
@@ -166,3 +170,19 @@ def build_skill_rating_repository(
 ) -> SkillRatingRepository:
     """Per unit of work, for the same reason the assessment's is."""
     return EventSourcedSkillRatingRepository(event_store=event_store, events=events)
+
+
+# --------------------------------------------------------------------------
+# Clubs
+# --------------------------------------------------------------------------
+
+
+def build_club_repository(session: AsyncSession) -> ClubRepository:
+    """The record repository, over `session`.
+
+    Takes a session rather than its own ports because a club is rows rather than
+    a stream: there is no event store to share and no version bookkeeping to keep
+    per unit of work — the guard is a column, compared in the UPDATE that bumps
+    it.
+    """
+    return SqlAlchemyClubRepository(session)

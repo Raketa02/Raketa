@@ -4,19 +4,25 @@
 #
 #   bash scripts/test-postgres-gates.sh        # or: make test-pg-gates
 #
-# `tests/integration/` asserts two things SQLite cannot express: a reservation's
-# overlapping-interval exclusion, and the partial unique index that keeps exactly
-# one open row per club-policy series. Both assertions were written against a
-# schema that already satisfied them — so on the day they landed, neither had
-# ever been observed to fail, which is indistinguishable from not working.
+# `tests/integration/` asserts things SQLite cannot express: a reservation's
+# overlapping-interval exclusion, and the partial unique indexes that keep exactly
+# one open row per club series. Each assertion was written against a schema that
+# already satisfied it — so on the day it landed it had never been observed to
+# fail, which is indistinguishable from not working.
 #
 # This drives each one against a schema with its constraint removed or subtly
 # wrong and asserts the suite goes RED, then restores and asserts it goes GREEN
 # again. It also drives the harness's own guard: a pipeline with no database must
 # fail rather than skip, which is the failure mode #62 exists to remove.
 #
-# It edits `tests/integration/ddl.py` in place and restores it on exit —
-# including on failure or interrupt — so it is safe on a dirty tree.
+# **Two files are mutated**, and the difference matters. `tests/integration/ddl.py`
+# is the shape harness #62 landed — throwaway tables, with no application code
+# behind them. `app/modules/clubs/infrastructure/sqlalchemy_club_models.py` is the
+# real declaration the Clubs tables are created from, so a mutation against it
+# breaks the schema the application maps to, which is the stronger statement (#64).
+#
+# Both are edited in place and restored on exit — including on failure or
+# interrupt — so it is safe on a dirty tree.
 #
 # Not part of `make check`, for the same reason `make test-gates`,
 # `make test-hooks` and `make test-drift` are not: it shells out to the very
@@ -29,19 +35,29 @@ ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 cd "$ROOT" || exit 2
 
 DDL="tests/integration/ddl.py"
+CLUB_MODELS="app/modules/clubs/infrastructure/sqlalchemy_club_models.py"
 EXCLUSION_TESTS="tests/integration/test_interval_exclusion.py"
 UNIQUE_TESTS="tests/integration/test_partial_unique_index.py"
+CLUB_TESTS="tests/integration/test_club_series.py"
+DRIFT_TESTS="tests/unit/test_clubs_migration.py"
 GUARD_TESTS="tests/integration/test_harness_guard.py"
 OUT=$(mktemp)
-BACKUP=$(mktemp)
+DDL_BACKUP=$(mktemp)
+CLUB_BACKUP=$(mktemp)
 
-restore() { [ -f "$BACKUP" ] && cp "$BACKUP" "$DDL"; rm -f "$BACKUP" "$OUT"; }
+restore() {
+  [ -s "$DDL_BACKUP" ] && cp "$DDL_BACKUP" "$DDL"
+  [ -s "$CLUB_BACKUP" ] && cp "$CLUB_BACKUP" "$CLUB_MODELS"
+  rm -f "$DDL_BACKUP" "$CLUB_BACKUP" "$OUT"
+}
 trap restore EXIT INT TERM
 
-for f in "$DDL" "$EXCLUSION_TESTS" "$UNIQUE_TESTS" "$GUARD_TESTS"; do
+for f in "$DDL" "$CLUB_MODELS" "$EXCLUSION_TESTS" "$UNIQUE_TESTS" "$CLUB_TESTS" \
+         "$DRIFT_TESTS" "$GUARD_TESTS"; do
   [ -f "$f" ] || { echo "missing: $f" >&2; exit 2; }
 done
-cp "$DDL" "$BACKUP"
+cp "$DDL" "$DDL_BACKUP"
+cp "$CLUB_MODELS" "$CLUB_BACKUP"
 
 pass=0
 fail=0
@@ -93,15 +109,20 @@ expect_green() {
 }
 
 # mutate <old> <new> — always from the pristine backup, so mutations never stack.
-mutate() {
-  cp "$BACKUP" "$DDL"
-  poetry run python - "$DDL" "$1" "$2" <<'PY'
+mutate() { edit "$DDL" "$DDL_BACKUP" "$1" "$2"; }
+
+# mutate_club <old> <new> — the same, against the real Clubs declarations.
+mutate_club() { edit "$CLUB_MODELS" "$CLUB_BACKUP" "$1" "$2"; }
+
+edit() {
+  cp "$2" "$1"
+  poetry run python - "$1" "$3" "$4" <<'PY'
 import pathlib, sys
 path, old, new = sys.argv[1], sys.argv[2], sys.argv[3]
 p = pathlib.Path(path)
 s = p.read_text()
 if old not in s:
-    sys.exit(f"mutation did not match — ddl.py has been rewritten: {old!r}")
+    sys.exit(f"mutation did not match — {path} has been rewritten: {old!r}")
 p.write_text(s.replace(old, new, 1))
 PY
   return $?
@@ -144,12 +165,46 @@ mutate 'WHERE closed_at IS NULL' 'WHERE closed_at IS NOT NULL' &&
   expect_red "the partial index covering the closed rows, not the open one" \
     "$UNIQUE_TESTS"
 
-# --- 3. restored -----------------------------------------------------------
+# --- 3. the Clubs series, on the real declarations -------------------------
+# These edit `sqlalchemy_club_models.py`, which is what `Base.metadata` builds the
+# Clubs tables from — so a mutation here is the application's own schema being
+# wrong, not a copy of it. Each also reddens the migration-drift test, which is
+# that test's point: the two descriptions of one schema cannot move apart
+# silently, in either direction.
 
-cp "$BACKUP" "$DDL"
-expect_green "restored: the integration suite is green again" tests/integration
+mutate_club 'unique=True,' 'unique=False,' &&
+  expect_red "the club series index made non-unique" "$CLUB_TESTS" "$DRIFT_TESTS"
 
-# --- 4. the harness's own guard --------------------------------------------
+# Unique but not partial: history repeats, so a club that has changed its policy
+# twice cannot open a third version.
+mutate_club $'        postgresql_where=sa.text(where),\n        sqlite_where=sa.text(where),\n' '' &&
+  expect_red "the club series index no longer partial" "$CLUB_TESTS" "$DRIFT_TESTS"
+
+# Partial on the wrong side: it covers the closed rows instead of the open one.
+mutate_club 'OPEN_ROW = "valid_to IS NULL"' 'OPEN_ROW = "valid_to IS NOT NULL"' &&
+  expect_red "the club series index covering the closed rows" "$CLUB_TESTS" \
+    "$DRIFT_TESTS"
+
+# The catalogue keyed on the club rather than the court, so a club could publish
+# exactly one court.
+mutate_club $'    ClubCourtCatalogueORM.court_id,\n' $'    ClubCourtCatalogueORM.club_id,\n' &&
+  expect_red "the catalogue index keyed on the club, not the court" "$CLUB_TESTS" \
+    "$DRIFT_TESTS"
+
+# The category's liveness index made whole-table, so a retired name can never be
+# used again.
+mutate_club 'LIVE_CATEGORY = "retired_at IS NULL"' 'LIVE_CATEGORY = "1 = 1"' &&
+  expect_red "the category name index no longer keyed on liveness" "$CLUB_TESTS" \
+    "$DRIFT_TESTS"
+
+# --- 4. restored -----------------------------------------------------------
+
+cp "$DDL_BACKUP" "$DDL"
+cp "$CLUB_BACKUP" "$CLUB_MODELS"
+expect_green "restored: the integration suite is green again" tests/integration \
+  "$DRIFT_TESTS"
+
+# --- 5. the harness's own guard --------------------------------------------
 # The rule is: a pipeline with no database fails, a laptop with no database
 # skips. `test_harness_guard.py` asserts the *inputs* to that decision; this
 # drives the decision itself, as real pytest runs with every URL variable

@@ -303,6 +303,30 @@ there; they are not repeated here.
   the ladder and be missing from the schedule* true by construction rather than by two lists
   being kept in step ([ADR-0076](../docs/adr/0076-the-schedule-is-a-column-a-wake-is-a-look-and-there-is-no-list-of-boundaries.md)).
   Internal, and never serialised onto a card. _Avoid_: timer, schedule, transition.
+- **Effective-dated series** (`clubs.Series`) — the shape a fact that carries history
+  takes: an ordered tuple of versions, each with a value, a `validFrom`, a nullable
+  `validTo` and an actor, **at most one of them open, and it is the last**. A change closes
+  the row in force and opens a new one in one operation, so the two cannot be written apart
+  and get out of step. Intervals are half-open, the same convention a reservation's claimed
+  range uses, so *what was this on Friday at 16:00* has exactly one answer at the instant of
+  the change as well as either side of it. The fold is *the row whose interval contains
+  now*, not a replay — which is event sourcing's non-drift property without event sourcing's
+  machinery, because the current value is not a copy kept beside the history, it **is** the
+  open row. _Avoid_: an audit table beside a mutable row (two representations of one fact),
+  a `current` flag, updating a version in place.
+- **Open row** — the version of a series in force: `validTo IS NULL`. Guarded twice, and the
+  two guards answer different questions — a **partial unique index** stops a second one
+  reaching disk, and the `Series` type stops one being constructed. `app/modules/clubs/…
+  /sqlalchemy_club_models.py` declares the index for **both** engines, so the guarantee holds
+  in the fast SQLite suite as well as in production. _Avoid_: `WHERE` clauses spelled
+  differently per series; a whole-table unique index, which refuses history.
+- **Record repository** — the port a use case loads and saves a **record aggregate** through,
+  e.g. `ClubRepository`. Neither of the other two kinds: it is not an *aggregate repository*
+  (there is no stream to replay and no stream version) and not a *read-model repository*
+  (it writes). Its concurrency guard is a **version column**, compared in the same UPDATE
+  that bumps it, so a stale writer loses on `rowcount` rather than on whichever child table
+  it happened to touch. _Avoid_: reading the version and comparing it in Python; merging
+  two writers' changes.
 - **Read-model repository** — the port a use case reads *projected current state* through,
   e.g. `UserRepository`. It answers queries against a table, not by replaying a stream, and
   has no version bookkeeping. **The trap:** `UserRepository` is this kind despite its name
@@ -433,6 +457,22 @@ there; they are not repeated here.
   from a second copy, so a re-cut band moves the claim with it. _Avoid_: a claim written as
   literal Levels, a check that only runs on the account this run happened to create.
 
+- **Seed club** — a deterministic development club created by `app/seeds/clubs.py`, named
+  for the **state** it represents, with its name doubling as its natural key so the two
+  cannot drift. Six of them, one per edge the Clubs context exists to represent: a club that
+  never holds speculatively, one that tightened its cap, one whose sport is priced as two
+  categories, one that retired a court, one that retired a category, one that changed its
+  bank. Every payout destination carries an IBAN whose check digits are invalid on purpose —
+  the reserved-TLD argument, one context over. _Avoid_: nine plausible venues, which is one
+  scenario nine times.
+- **Club claim** — what a seeded club's *name* promises, as a predicate over the stored club
+  plus the sentence it is promising. Checked on every run, including one that created
+  nothing. Deliberately **not** shaped like a `Rating claim`: a rated player's band is
+  produced by an engine that can be retuned, where a club's state is exactly what the catalog
+  authored — so checking the authored numbers against themselves would be a tautology, and
+  what is worth checking is that the state the name *describes* is still there. _Avoid_:
+  asserting the catalog's own numbers back; a claim checked only on the run that created the
+  club.
 - **Postgres-only guarantee** — a rule the database enforces that SQLite cannot express,
   so a suite running on SQLite can state it in a comment and enforce nothing. Three exist:
   a reservation's overlapping-interval exclusion (`EXCLUDE USING gist`), the partial unique

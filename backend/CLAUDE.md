@@ -110,6 +110,16 @@ Rules to preserve:
   `Situation`**, asserted exhaustive at module load — never a second ladder over the record
   ([ADR-0040](../docs/adr/0040-one-ladder-resolves-a-situation.md)). `MatchPhase` in
   `app/engines/matchmaking.py` is the first and, today, the only one.
+- **History belongs to named facts, never to the aggregate.** A club is a *record*, not an
+  event-sourced stream, and three of its facts carry history as an **effective-dated series**
+  — policy, payout destination, court catalogue
+  ([ADR-0077](../docs/adr/0077-a-club-is-a-record-and-history-is-a-property-of-three-facts.md)). A change **closes the
+  row in force and opens a new one**, in one operation, and is never an update in place or a
+  row beside an audit table. At most one open row per series, guarded twice on purpose: a
+  partial unique index stops a second one reaching disk, and the `Series` type stops one being
+  constructed. A series is rebuilt from disk by **one** ordering function — `valid_from` alone
+  is ambiguous the moment two rows share an instant, and an ambiguous ORDER BY reads as a
+  broken database rather than as a bug.
 - **The kernel is one import path.** `app.kernel` re-exports its whole public API through
   an explicit `__all__`, and nothing outside the package — tests included — imports a
   submodule, so a definition can move between kernel files without touching a caller

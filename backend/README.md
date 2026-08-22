@@ -374,10 +374,28 @@ breaks on it.
 The password for every seeded account is `raketa-seed1`, and it is public by
 construction — it is written in `app/seeds/catalog.py`.
 
-Scope is what is **modeled**: players, onboarding assessments and Skill ratings. Clubs,
+Clubs are seeded too, in `app/seeds/clubs.py`, on the same rule — **a club is named for
+the state it represents**, and its name is its natural key so the two cannot drift. Six of
+them, one per edge:
+
+| Club | State |
+| --- | --- |
+| `club-that-never-holds` | `maxHoldAge = 0` — declines to hold a court speculatively at all |
+| `club-with-two-padel-categories` | One sport priced as two categories, ADR-0079's `ps` |
+| `club-that-retired-a-court` | A closed catalogue row: gone from availability, still named by history |
+| `club-that-retired-a-category` | A retired category and the courts that were in it |
+| `club-that-tightened-its-cap` | 48 h then 6 h — ADR-0077's motivating scenario, standing |
+| `club-that-changed-its-bank` | Two payout destinations and one policy |
+
+Every seeded payout destination carries an IBAN whose check digits are invalid on purpose,
+so a run pointed at the wrong database cannot pay a stranger — the reserved-TLD argument,
+one context over.
+
+Scope is what is **modeled**: players, onboarding assessments, Skill ratings and clubs.
 Courts, Bookings and Matches have no aggregates, so they have no scenarios; each adds its
-own when it exists. A walk over `app/seeds/` asserts the package imports those two
-contexts and no others.
+own when it exists. A walk over `app/seeds/` asserts the package imports **exactly** those
+three contexts — equality in both directions, so it grows deliberately and cannot silently
+fall behind.
 
 Four rules hold this together, and each exists because of a specific way seed data goes
 wrong:
@@ -405,7 +423,10 @@ wrong:
   the **stored** rating on every run, including one that creates nothing. Retune the engine
   so `rating-barely-established` lands in Developing and `make seed` says so by name — an
   account whose name lies is worse than one that is missing, because nothing about the
-  screen it is developed against would look wrong.
+  screen it is developed against would look wrong. A club carries the same kind of claim,
+  written as what its *name* promises — `club-that-never-holds` must still not hold
+  speculatively — because a club's numbers are exactly what the catalog authored and
+  checking those against themselves would prove nothing.
 - **Production is refused, on import.** `app/seeds/__init__.py` calls the guard, so
   importing anything in the package under `APP_ENV=production` raises `SeedRefused`
   before a database is opened. The guard is not in the make target: a make target is not
@@ -446,10 +467,20 @@ Postgres — an in-memory database per test is what keeps two thousand of them
 fast, and that is worth more than uniformity.
 
 Three guarantees live there today: a reservation's overlapping-interval exclusion
-(`EXCLUDE USING gist`, ADR-0035), the partial unique index that keeps exactly one
-open row per club-policy series, and `FOR UPDATE SKIP LOCKED` outbox claiming.
+(`EXCLUDE USING gist`, ADR-0035), the partial unique indexes that keep exactly one
+open row per club series, and `FOR UPDATE SKIP LOCKED` outbox claiming.
 The first has no SQLite equivalent at all; the second and third have shapes that
 resemble one and behave differently under concurrency.
+
+The Clubs indexes are the one case where the *same* guarantee is asserted twice on
+purpose, and the split is worth knowing. They are declared for both engines
+(`postgresql_where` **and** `sqlite_where`), so `tests/unit/test_club_repository.py`
+exercises them at millisecond cost on every `make check` — ADR-0077's own point, that
+this is the cheap case of ADR-0035's pattern. What SQLite cannot speak for is the DDL
+those declarations compile to *on PostgreSQL*, which is a different string built from a
+different keyword argument: a typo in one is invisible on the other.
+`tests/integration/test_club_series.py` creates the real tables from `Base.metadata` in a
+throwaway schema and reads the predicate back out of `pg_indexes`.
 
 Get a database and run them:
 
@@ -471,7 +502,21 @@ When you add a case there, add the constraint's *removal* to
 `scripts/test-postgres-gates.sh` as well (`make test-pg-gates`). A constraint
 test written against a schema that already satisfies it has never been seen to
 fail, which is indistinguishable from not working; that script breaks each
-constraint in turn and asserts the suite goes red. CI runs it.
+constraint in turn and asserts the suite goes red. CI runs it. It mutates two
+files: `tests/integration/ddl.py` for the throwaway shapes, and
+`app/modules/clubs/infrastructure/sqlalchemy_club_models.py` for the real Clubs
+declarations — where a mutation breaks the schema the application maps to rather
+than a copy of it.
+
+### The models and the migration say the same thing
+
+Two files describe the Clubs tables: `Base.metadata`, which the whole fast suite is
+tested against, and `migrations/versions/0007_clubs.py`, which is what a real database
+gets. `tests/unit/test_clubs_migration.py` runs the migration's `upgrade()` against a
+recorder standing in for `alembic.op` and compares the compiled PostgreSQL DDL, string
+for string. An index present in one and absent from the other would be a guarantee that
+holds in every test and nowhere else — worse than not having it, because the suite reads
+as though it were enforced. It needs no database, so it runs on every `make check`.
 
 Run linting:
 

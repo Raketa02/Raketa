@@ -69,6 +69,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.bootstrap.composition import (
     build_assessment_engine,
     build_assessment_repository,
+    build_club_repository,
     build_clock,
     build_domain_event_store,
     build_event_publisher,
@@ -80,6 +81,29 @@ from app.bootstrap.composition import (
 from app.core.config import Settings, get_settings
 from app.infrastructure.database.engine import create_engine
 from app.kernel import Sport, exhaustive
+from app.modules.clubs.application.add_court import AddCourt
+from app.modules.clubs.application.add_court_category import AddCourtCategory
+from app.modules.clubs.application.change_club_policy import ChangeClubPolicy
+from app.modules.clubs.application.change_payout_destination import (
+    ChangePayoutDestination,
+)
+from app.modules.clubs.application.commands import (
+    AddCourtCategoryCommand,
+    AddCourtCommand,
+    ChangeClubPolicyCommand,
+    ChangePayoutDestinationCommand,
+    RegisterClubCommand,
+    RetireCourtCategoryCommand,
+    RetireCourtCommand,
+)
+from app.modules.clubs.application.get_club import GetClub
+from app.modules.clubs.application.register_club import RegisterClub
+from app.modules.clubs.application.retire_court import RetireCourt
+from app.modules.clubs.application.retire_court_category import RetireCourtCategory
+from app.modules.clubs.domain.catalogue import Court, CourtCategory
+from app.modules.clubs.domain.club import Club
+from app.modules.clubs.domain.ports import ClubRepository
+from app.modules.clubs.domain.value_objects import CategoryName, CourtLabel
 from app.modules.rating.application.abandon_assessment import AbandonAssessment
 from app.modules.rating.application.commands import (
     AbandonAssessmentCommand,
@@ -108,6 +132,7 @@ from app.seeds.catalog import (
     Scenario,
     SeedAccount,
 )
+from app.seeds.clubs import CLUBS, KRAKOW, SeedCategory, SeedClub
 from app.seeds.guard import refuse_unless_seedable
 
 #: A questionnaire the seed can no longer finish is a hang, and a hang in a
@@ -159,6 +184,28 @@ class SeededAccount:
 
 
 @dataclass(frozen=True)
+class SeededClub:
+    """What one club is, after the run — and whether this run created it."""
+
+    club: SeedClub
+    club_id: UUID
+    created: bool
+
+
+@dataclass(frozen=True)
+class Seeded:
+    """Everything one run brought into being, per context.
+
+    A tuple per context rather than one flat list, because the two are read by
+    different people: a developer signs in as an account, and looks at a club to
+    understand why a card says what it says.
+    """
+
+    accounts: tuple[SeededAccount, ...]
+    clubs: tuple[SeededClub, ...]
+
+
+@dataclass(frozen=True)
 class _UseCases:
     """Everything one seed run drives, built once from one session.
 
@@ -172,11 +219,20 @@ class _UseCases:
     users: UserRepository
     assessments: AssessmentRepository
     ratings: SkillRatingRepository
+    clubs: ClubRepository
     register: RegisterUser
     create: CreateAssessment
     submit: SubmitAnswer
     complete: CompleteAssessment
     abandon: AbandonAssessment
+    register_club: RegisterClub
+    change_policy: ChangeClubPolicy
+    change_payout: ChangePayoutDestination
+    add_category: AddCourtCategory
+    retire_category: RetireCourtCategory
+    add_court: AddCourt
+    retire_court: RetireCourt
+    get_club: GetClub
 
 
 def _build(session: AsyncSession) -> _UseCases:
@@ -192,11 +248,21 @@ def _build(session: AsyncSession) -> _UseCases:
     assessments = build_assessment_repository(event_store=event_store, events=events)
     ratings = build_skill_rating_repository(event_store=event_store, events=events)
     users = build_user_repository(session)
+    clubs = build_club_repository(session)
 
     return _UseCases(
         users=users,
         assessments=assessments,
         ratings=ratings,
+        clubs=clubs,
+        register_club=RegisterClub(clubs, uow, clock),
+        change_policy=ChangeClubPolicy(clubs, uow, clock),
+        change_payout=ChangePayoutDestination(clubs, uow, clock),
+        add_category=AddCourtCategory(clubs, uow, clock),
+        retire_category=RetireCourtCategory(clubs, uow, clock),
+        add_court=AddCourt(clubs, uow, clock),
+        retire_court=RetireCourt(clubs, uow, clock),
+        get_club=GetClub(clubs),
         register=RegisterUser(
             users=users,
             event_store=event_store,
@@ -226,16 +292,23 @@ def _build(session: AsyncSession) -> _UseCases:
     )
 
 
-async def seed(session: AsyncSession) -> tuple[SeededAccount, ...]:
-    """Bring every account in the catalog into the state it names.
+async def seed(session: AsyncSession) -> Seeded:
+    """Bring every account and every club in the catalog into the state it names.
 
     Takes a session rather than opening one, so the API test suite can drive
     this against its own fixture database instead of standing up a second one.
     ``run`` below is what opens a session for a real command.
+
+    Clubs are seeded after the accounts, in the order the catalog lists them.
+    Nothing links the two — a club has no owner and a player has no membership —
+    so the order is only about which failure a half-finished run leaves behind,
+    and the accounts are what a developer signs in with.
     """
 
     use_cases = _build(session)
-    return tuple([await _seed_account(use_cases, account) for account in ACCOUNTS])
+    accounts = tuple([await _seed_account(use_cases, account) for account in ACCOUNTS])
+    clubs = tuple([await _seed_club(use_cases, club) for club in CLUBS])
+    return Seeded(accounts=accounts, clubs=clubs)
 
 
 async def _seed_account(use_cases: _UseCases, account: SeedAccount) -> SeededAccount:
@@ -417,6 +490,185 @@ async def _first_attempt(
         return None
 
 
+# ---------------------------------------------------------------------------
+# Clubs
+# ---------------------------------------------------------------------------
+
+
+async def _seed_club(use_cases: _UseCases, scenario: SeedClub) -> SeededClub:
+    """Bring one club into the state its name promises, from wherever it is.
+
+    **Every step is a question asked of what is stored**, not a script replayed
+    from the top, so a second run writes nothing and a run interrupted half way
+    through a club finishes it rather than starting a second one beside it. The
+    catalog declares the *whole* series — a club with two policies is one that
+    has changed its policy once — so *how far along is this club* is a length
+    comparison, which is the only shape that survives an interruption between
+    two versions of the same series.
+    """
+
+    existing = await use_cases.clubs.get_by_name(scenario.name)
+    created = existing is None
+    club = existing if existing is not None else await _register_club(
+        use_cases, scenario
+    )
+
+    club = await _catch_up_policies(use_cases, club, scenario)
+    club = await _catch_up_payouts(use_cases, club, scenario)
+    club = await _catch_up_catalogue(use_cases, club, scenario)
+
+    await _refuse_a_club_whose_name_lies(use_cases, club.id, scenario)
+    return SeededClub(club=scenario, club_id=club.id, created=created)
+
+
+async def _register_club(use_cases: _UseCases, scenario: SeedClub) -> Club:
+    return await use_cases.register_club.execute(
+        RegisterClubCommand(
+            name=scenario.name,
+            address=scenario.address,
+            point=KRAKOW,
+            timezone=scenario.timezone,
+            policy=scenario.policies[0],
+            payout=scenario.payouts[0],
+            pricing=scenario.pricing,
+        )
+    )
+
+
+async def _catch_up_policies(
+    use_cases: _UseCases, club: Club, scenario: SeedClub
+) -> Club:
+    for policy in scenario.policies[len(club.policy) :]:
+        club = await use_cases.change_policy.execute(
+            ChangeClubPolicyCommand(club_id=club.id, policy=policy)
+        )
+    return club
+
+
+async def _catch_up_payouts(
+    use_cases: _UseCases, club: Club, scenario: SeedClub
+) -> Club:
+    for destination in scenario.payouts[len(club.payout) :]:
+        club = await use_cases.change_payout.execute(
+            ChangePayoutDestinationCommand(club_id=club.id, destination=destination)
+        )
+    return club
+
+
+async def _catch_up_catalogue(
+    use_cases: _UseCases, club: Club, scenario: SeedClub
+) -> Club:
+    """Add what is missing, then retire what the catalog says is retired.
+
+    Two passes rather than one, and in that order, because retiring a category
+    retires the courts still in it — so a court declared retired *and* in a
+    retired category must exist before either retirement runs, or the second
+    pass has nothing to close and the history is one row short of the truth.
+    """
+
+    for category in scenario.categories:
+        club = await _ensure_category(use_cases, club, category)
+    for category in scenario.categories:
+        club = await _retire_what_is_retired(use_cases, club, category)
+    return club
+
+
+async def _ensure_category(
+    use_cases: _UseCases, club: Club, scenario: SeedCategory
+) -> Club:
+    name = CategoryName(scenario.name)
+    if _category_named(club, name) is None:
+        await use_cases.add_category.execute(
+            AddCourtCategoryCommand(
+                club_id=club.id,
+                name=name,
+                sport=scenario.sport,
+                rate=scenario.rate,
+            )
+        )
+        club = await use_cases.get_club.execute(club.id)
+
+    category = _category_named(club, name)
+    assert category is not None  # just added, or already there
+    for court in scenario.courts:
+        if _court_labelled(club, CourtLabel(court.label)) is None:
+            await use_cases.add_court.execute(
+                AddCourtCommand(
+                    club_id=club.id,
+                    category_id=category.id,
+                    label=CourtLabel(court.label),
+                )
+            )
+            club = await use_cases.get_club.execute(club.id)
+    return club
+
+
+async def _retire_what_is_retired(
+    use_cases: _UseCases, club: Club, scenario: SeedCategory
+) -> Club:
+    for court in scenario.courts:
+        stored = _court_labelled(club, CourtLabel(court.label))
+        if court.retired and stored is not None and not stored.is_retired:
+            await use_cases.retire_court.execute(
+                RetireCourtCommand(club_id=club.id, court_id=stored.id)
+            )
+            club = await use_cases.get_club.execute(club.id)
+
+    category = _category_named(club, CategoryName(scenario.name))
+    if scenario.retired and category is not None and not category.is_retired:
+        await use_cases.retire_category.execute(
+            RetireCourtCategoryCommand(club_id=club.id, category_id=category.id)
+        )
+        club = await use_cases.get_club.execute(club.id)
+    return club
+
+
+def _category_named(club: Club, name: CategoryName) -> CourtCategory | None:
+    """Matched across retired categories too, so a second run does not make a
+    second one under a name the partial unique index has since freed."""
+
+    for category in club.categories:
+        if category.name == name:
+            return category
+    return None
+
+
+def _court_labelled(club: Club, label: CourtLabel) -> Court | None:
+    """A court is found by the label on its **latest** catalogue row.
+
+    A retired court has no open row, so ``court.label`` is ``None`` for it — and
+    looking only at live courts would make a second run add a fresh court under
+    the same label, which is how a seeded catalogue quietly grows.
+    """
+
+    for court in club.courts:
+        versions = court.catalogue.versions
+        if versions and versions[-1].value.label == label:
+            return court
+    return None
+
+
+async def _refuse_a_club_whose_name_lies(
+    use_cases: _UseCases, club_id: UUID, scenario: SeedClub
+) -> None:
+    """Check the claim against the club that is **stored**, on every run.
+
+    Read back rather than taken from whatever the last use case returned, and
+    checked on a run that created nothing as well as on one that created
+    everything — a club seeded a month ago against a catalog that has since been
+    edited is exactly the case a check on the fresh result would miss.
+    """
+
+    club = await use_cases.get_club.execute(club_id)
+    if not scenario.claim.holds(club):
+        raise SeedFailed(
+            f"'{scenario.slug}' is named for {scenario.claim.promise} and is no "
+            f"longer one. Either the catalog or the name is now wrong — a club "
+            f"whose name lies is worse than one that is missing, because "
+            f"nothing about the screen it is developed against would look wrong."
+        )
+
+
 async def _refuse_a_name_that_lies(
     use_cases: _UseCases, player_id: UUID, account: SeedAccount
 ) -> None:
@@ -463,7 +715,7 @@ async def _refuse_a_name_that_lies(
             )
 
 
-async def run(settings: Settings | None = None) -> tuple[SeededAccount, ...]:
+async def run(settings: Settings | None = None) -> Seeded:
     """Open a connection of this command's own, seed, and close it.
 
     The guard is re-checked against the settings actually used. Importing this
@@ -504,14 +756,15 @@ def _state_of(scenario: Scenario) -> str:
             exhaustive(scenario)
 
 
-def report(seeded: tuple[SeededAccount, ...]) -> list[str]:
+def report(seeded: Seeded) -> list[str]:
     """The run, as lines a developer reads — address, password, state, id."""
 
     lines = [
-        f"Seeded {len(seeded)} account(s). Password for all of them: {SEED_PASSWORD}",
+        f"Seeded {len(seeded.accounts)} account(s). "
+        f"Password for all of them: {SEED_PASSWORD}",
         "",
     ]
-    for entry in seeded:
+    for entry in seeded.accounts:
         state = "already present" if entry.already_present else "created"
         lines.append(f"  {entry.account.email}  [{state}]")
         lines.append(f"      {entry.account.description}")
@@ -522,4 +775,13 @@ def report(seeded: tuple[SeededAccount, ...]) -> list[str]:
                 f"{_state_of(seeded_scenario.scenario)} · "
                 f"assessment {seeded_scenario.assessment_id}"
             )
+
+    lines.append("")
+    lines.append(f"Seeded {len(seeded.clubs)} club(s).")
+    lines.append("")
+    for club in seeded.clubs:
+        state = "created" if club.created else "already present"
+        lines.append(f"  {club.club.slug}  [{state}]")
+        lines.append(f"      {club.club.description}")
+        lines.append(f"      club {club.club_id}")
     return lines
