@@ -40,6 +40,27 @@ async def test_signup_writes_stable_event_delivery_contract(
 async def test_signup_event_is_delivered_by_embedded_worker(
     client, session_factory, valid_signup_payload
 ):
+    """The embedded worker publishes what a request enqueued.
+
+    **The request is served before the worker starts, and that ordering is the
+    test rather than an accident of writing.** The suite's engine is in-memory
+    SQLite on a `StaticPool`, which is one DBAPI connection handed to every
+    session — so a poll that opens a read transaction and closes it rolls back
+    whatever the request had in flight on the same connection. That is a
+    property of the harness and not of the worker: in a served process each
+    session takes its own connection from the pool, and a poller's rollback
+    reaches nothing but its own.
+
+    Running them concurrently was therefore never testing concurrency, only
+    losing a race often enough to matter — and it went unnoticed while the tick
+    ran one short query. It runs two now (ADR-0076's match wakes), and the
+    window is wide enough to lose most of the time. What this test claims is
+    that the worker delivers, and it claims it here without the race.
+    """
+
+    response = await client.post("/api/v1/users", json=valid_signup_payload)
+    assert response.status_code == 201
+
     settings = Settings(
         WRITER_DB_URL="sqlite+aiosqlite:///:memory:",
         EVENT_DELIVERY_POLL_INTERVAL_SECONDS=0.01,
@@ -51,9 +72,6 @@ async def test_signup_event_is_delivered_by_embedded_worker(
     )
     worker.start()
     try:
-        response = await client.post("/api/v1/users", json=valid_signup_payload)
-        assert response.status_code == 201
-
         row = None
         for _ in range(100):
             async with session_factory() as session:

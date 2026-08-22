@@ -130,7 +130,7 @@ class _World:
     def __init__(self, session, clock):
         clubs = build_club_repository(session)
         events = build_event_publisher(session)
-        matches = build_match_repository(session, events=events)
+        matches = build_match_repository(session, events=events, clock=clock)
         reservations = build_reservation_repository(session)
         uow = build_unit_of_work(session)
         holds = ResolveCourtHold(

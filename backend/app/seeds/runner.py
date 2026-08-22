@@ -318,11 +318,15 @@ def _build(session: AsyncSession) -> _UseCases:
     reservations = build_reservation_repository(session)
     bookings = build_booking_repository(session)
     claim_court = ClaimCourt(clubs, reservations, uow)
-    matches = build_match_repository(session, events=events)
-    court_holds = build_court_holds(claim_court, reservations)
     # Matches is the one context seeded on a clock the runner sets. See
     # `_SeededWeekClock` for why, and `app/seeds/matches.py` for what it buys.
     week = _SeededWeekClock()
+    # The repository is on the seeded week too, and for the same reason the
+    # ladder below is: it arms `next_wake_at` from the record it writes, and on
+    # the wall clock a seeded match's schedule would be relative to the day the
+    # seed happened to run rather than to the week it describes.
+    matches = build_match_repository(session, events=events, clock=week)
+    court_holds = build_court_holds(claim_court, reservations)
     # The ladder is on the seeded week's clock too, and it has to be: a hold is
     # granted at the instant a tier is entered, and on the wall clock every
     # seeded `held_since` would be the day the seed happened to run.

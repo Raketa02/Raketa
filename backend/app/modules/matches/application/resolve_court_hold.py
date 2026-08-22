@@ -94,12 +94,12 @@ class ResolveCourtHold:
         return move
 
     async def execute(self, command: ResolveCourtHoldCommand) -> Match:
-        """Look at one match and act on what is found.
+        """Look at one match and act on what is found, committing.
 
-        The entry point a wake takes (``Raketa02/Raketa#72``), and a wake is a
-        **look, not an instruction**: nothing is passed in about why we are
-        looking, and the answer comes from the record and the clock. A late look
-        changes *when* we look and never *what we find*.
+        The command form, for a caller holding an id and nothing else. **The
+        timekeeper does not take this door** — ``TakeMatchWake`` composes
+        ``apply`` instead, because a look that finds nothing still has to move
+        the schedule forward and this one, correctly, writes nothing at all.
         """
 
         match = await self._matches.get(command.match_id)

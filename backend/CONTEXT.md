@@ -325,13 +325,34 @@ there; they are not repeated here.
   ADR-0035's single story. `tests/unit/test_resolve_court_hold.py` walks the package and
   reddens when a Matches write saves without asking. _Avoid_: an event handler (it runs after
   commit), a scheduled reconciler.
-- **Wake** (`kernel.next_wake_at()`) — the next instant a match could resolve differently, or
-  `None`. **A wake is a look, not an instruction**: the handler re-derives from the record, so
-  a late wake changes *when* we look and never *what we find*. It sits beside the ladder
-  because both read one list of boundaries — which is what makes *a threshold cannot exist in
-  the ladder and be missing from the schedule* true by construction rather than by two lists
-  being kept in step ([ADR-0076](../docs/adr/0076-the-schedule-is-a-column-a-wake-is-a-look-and-there-is-no-list-of-boundaries.md)).
-  Internal, and never serialised onto a card. _Avoid_: timer, schedule, transition.
+- **Wake** (`kernel.next_wake()`, `kernel.next_wake_at()`) — the next instant a match could
+  resolve differently, or `None`. **A wake is a look, not an instruction**: the handler
+  re-derives from the record, so a late wake changes *when* we look and never *what we find*.
+  It sits beside the ladder because both read one list of boundaries — which is what makes *a
+  threshold cannot exist in the ladder and be missing from the schedule* true by construction
+  rather than by two lists being kept in step
+  ([ADR-0076](../docs/adr/0076-the-schedule-is-a-column-a-wake-is-a-look-and-there-is-no-list-of-boundaries.md)).
+  Internal, and never serialised onto a card. `next_wake_at` is the same answer with its name
+  dropped, for a caller that wants only a moment. _Avoid_: timer, schedule, transition.
+- **Boundary** (`kernel.Boundary`) — one instant a ladder compares the clock against, **and
+  which one it is**: a `WakeReason` and an `Instant`. The eleven reasons are the commitment
+  deadline, a hold tier lapsing, a hold going stale, a vacancy decaying, the rescue window,
+  the checkpoint, the join cutoff, the door code, the start, the end of play and the result
+  window. _Avoid_: threshold as a noun for the pair — a threshold is the moment alone.
+- **Wake reason** (`matches.next_wake_at` / `wake_reason` columns) — the label a scheduled look
+  is filed under, and **half of the idempotency key** `{matchId}:{threshold}:{scheduledFor}`.
+  **Nothing branches on it.** The tie-break between two boundaries on one instant is
+  `WakeReason`'s own declaration order, because a label chosen by construction order would
+  file one moment under two names. _Avoid_: wake type, wake kind, trigger.
+- **Re-arming** (`matches.MatchSchedule.re_arm`) — moving a match's `next_wake_at` forward
+  **without bumping its version and without announcing anything**, which is what a look that
+  found nothing still has to do. The schedule is derived, so moving it is not a change anybody
+  could ask to have explained; guarded on the version it was read at, so a real writer that
+  moved the match in between keeps its own answer. _Avoid_: rescheduling, touching.
+- **Take a wake** (`matches.TakeMatchWake`) — one look at one match: re-derive, act on whatever
+  the ladder now says, re-arm. **Taking the same wake twice is looking twice**, and the second
+  look finds a record the first already moved — which is why there is no table of handled keys
+  and no exactly-once guarantee to keep. _Avoid_: handle, process, fire.
 - **Effective-dated series** (`clubs.Series`) — the shape a fact that carries history
   takes: an ordered tuple of versions, each with a value, a `validFrom`, a nullable
   `validTo` and an actor, **at most one of them open, and it is the last**. A change closes

@@ -109,7 +109,7 @@ Rules to preserve:
   scopes **mypy strict** to those two packages. An engine takes `now` as an input.
 - **One ladder resolves a match, and every other state vocabulary projects off it.**
   `kernel.situation(record, viewer | None, now)` is the single resolver over 36 names, and
-  the order of its rungs *is* the specification. `kernel.next_wake_at()` lives beside it and
+  the order of its rungs *is* the specification. `kernel.next_wake()` lives beside it and
   reads the same boundaries, so a threshold cannot exist in the ladder and be missing from
   the schedule. A consumer that needs a coarser vocabulary writes a **total table off
   `Situation`**, asserted exhaustive at module load — never a second ladder over the record
@@ -154,6 +154,23 @@ Rules to preserve:
   is measured from it, so clearing it there would reset the clock that just fired and the court
   would flicker rather than go back on sale. Read *is a court kept aside* through
   `kernel.keeping_a_court`, never off either field alone.
+- **The schedule is a column, and a wake is a look.** A match carries `next_wake_at` and
+  `wake_reason`, **recomputed on every write** — in `SqlAlchemyMatchRepository._columns`, which
+  is the one door every write goes through, so the obligation is structural rather than a rule
+  N use cases have to remember. They are the **only** derived facts this table stores, and
+  [ADR-0076](../docs/adr/0076-the-schedule-is-a-column-a-wake-is-a-look-and-there-is-no-list-of-boundaries.md)
+  is the licence: *when does this match next change* is a function call, *which matches change
+  in the next second* is a scan, and a function cannot be indexed. The partial index is on
+  `next_wake_at IS NOT NULL` and **not** on the cancellation flags — that copy would be a
+  second ladder, in SQL, where nothing type-checks it. **The handler never branches on
+  `wake_reason`**: it re-derives, so a late look changes *when* we look and never *what we
+  find*, and taking the same wake twice is looking twice. There is therefore **no table of
+  handled keys** — the record's own schedule column is the ledger of what is outstanding, and
+  a look that finds nothing still **re-arms** it, or the tick picks the row up again a second
+  later for ever. **No list of boundaries exists in the timekeeper** and
+  `tests/unit/test_timekeeper_holds_no_thresholds.py` reddens on one appearing: the ticket that
+  specified this shipped its own boundary table and it was short by five, including the two
+  that release a club's court. `next_wake_at` is **never serialised onto a card** (ADR-0053).
 - **A court is claimed by a reservation, and the database is what refuses the second one.**
   A reservation is one court and one **time range**, and two may never overlap on one court —
   enforced by `EXCLUDE USING gist` over `tstzrange(claimed_from, claimed_to, '[)')`, partial

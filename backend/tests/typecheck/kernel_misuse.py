@@ -92,6 +92,7 @@ from app.kernel import (
     ClubCard,
     CourtPrice,
     DayOffset,
+    Boundary,
     Err,
     Grosze,
     Hold,
@@ -118,6 +119,7 @@ from app.kernel import (
     SportSpec,
     Unavailable,
     Viewer,
+    WakeReason,
     Zone,
     add_grosze,
     apply_fraction,
@@ -139,6 +141,7 @@ from app.kernel import (
     local_minute_of_day,
     minute_of_day,
     minutes,
+    next_wake,
     next_wake_at,
     payable_from,
     percent,
@@ -1839,6 +1842,39 @@ def a_wake_that_is_checked_composes(record: MatchRecord) -> Instant | None:
 
     wake = next_wake_at(record, A_START)
     return None if wake is None else shifted(wake, minutes(1))
+
+
+def a_named_wake_may_be_absent_too(record: MatchRecord) -> WakeReason:
+    """`next_wake` returns `Boundary | None`, and the reason is on the boundary."""
+
+    return next_wake(record, A_START).reason  # want-error: union-attr
+
+
+def a_named_wake_that_is_checked_composes(record: MatchRecord) -> WakeReason | None:
+    """The same call with the absence handled, pinned clean."""
+
+    wake = next_wake(record, A_START)
+    return None if wake is None else wake.reason
+
+
+class ABoundaryWithAnOpinion(Boundary):  # want-error: misc
+    """`Boundary` is `@final`: a subclass carrying its own tie-break would make
+    the same instant schedule under two names, which is half an idempotency key
+    decided by which class the caller happened to build."""
+
+
+def a_boundary_is_frozen(record: MatchRecord) -> None:
+    """Rewriting the reason on a boundary in flight is the same defect."""
+
+    wake = Boundary(WakeReason.PLAY, A_START)
+    wake.reason = WakeReason.COMMITMENT  # want-error: misc
+
+
+def a_wake_reason_is_not_a_string(record: MatchRecord) -> Boundary:
+    """The label crosses as a member, so a typo is a build error and not a wake
+    scheduled under a name nothing will ever match."""
+
+    return Boundary("holdlapse", A_START)  # want-error: arg-type
 
 
 def what_the_ladder_says_is_not_what_the_record_says(record: MatchRecord) -> bool:

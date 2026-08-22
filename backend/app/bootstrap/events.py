@@ -123,6 +123,13 @@ def build_event_delivery_worker(
     settings: Settings,
     clock: Clock | None = None,
 ) -> EventWorker:
+    # Imported here rather than at the top because `composition` imports this
+    # module for `EventRuntime`, and the cycle is real: the composition root has
+    # to know how to build an event publisher, and the worker has to know how to
+    # build a use case. One deferred import at the one call site is cheaper than
+    # a third bootstrap module holding two functions.
+    from app.bootstrap.composition import build_match_wake_batch
+
     processing_clock = clock or SystemClock()
     return EventWorker(
         session_factory=session_factory,
@@ -130,6 +137,12 @@ def build_event_delivery_worker(
             session=session,
             clock=processing_clock,
             batch_size=settings.EVENT_DELIVERY_BATCH_SIZE,
+        ),
+        # ADR-0076's second lookup, on the tick the outbox already runs.
+        wake_batch_factory=lambda session: build_match_wake_batch(
+            session=session,
+            event_runtime=event_runtime,
+            clock=processing_clock,
         ),
         poll_interval_seconds=settings.EVENT_DELIVERY_POLL_INTERVAL_SECONDS,
     )

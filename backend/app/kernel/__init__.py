@@ -33,6 +33,7 @@ from app.kernel.holds import (
 )
 from app.kernel.invariants import InvariantViolated, exhaustive, invariant
 from app.kernel.matches import (
+    Boundary,
     Deadlines,
     HoldPolicy,
     MatchKind,
@@ -42,6 +43,7 @@ from app.kernel.matches import (
     Seat,
     Vacancy,
     Viewer,
+    WakeReason,
     born_late,
     committed_on_fill,
     court_named_at,
@@ -87,6 +89,7 @@ from app.kernel.results import Err, Ok, Reason, Result
 from app.kernel.situations import (
     SITUATION_COUNT,
     Situation,
+    next_wake,
     next_wake_at,
     situation,
 )
@@ -178,6 +181,7 @@ __all__ = [
     "shifted",
     "slot_start",
     # matches — the facts one pure function reads, and the five deadlines
+    "Boundary",
     "Deadlines",
     "HoldPolicy",
     "MatchKind",
@@ -187,6 +191,7 @@ __all__ = [
     "Seat",
     "Vacancy",
     "Viewer",
+    "WakeReason",
     "born_late",
     "committed_on_fill",
     "court_named_at",
@@ -213,6 +218,7 @@ __all__ = [
     # situations — one ladder over thirty-six names, and the wake it agrees with
     "SITUATION_COUNT",
     "Situation",
+    "next_wake",
     "next_wake_at",
     "situation",
     # causes — why money moved, and why a match ended, in five closed names

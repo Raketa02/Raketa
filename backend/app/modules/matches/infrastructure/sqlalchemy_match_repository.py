@@ -38,6 +38,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.application.ports.events import DomainEventPublisher
 from app.kernel import (
+    Clock,
     HoldPolicy,
     Instant,
     MatchKind,
@@ -47,6 +48,7 @@ from app.kernel import (
     grosze,
     instant,
     minutes,
+    next_wake,
 )
 from app.shared.ids import new_uuid
 
@@ -92,10 +94,11 @@ class SqlAlchemyMatchRepository:
     """A record repository: rows in, rows out, a version and an outbox on the way."""
 
     def __init__(
-        self, session: AsyncSession, *, events: DomainEventPublisher
+        self, session: AsyncSession, *, events: DomainEventPublisher, clock: Clock
     ) -> None:
         self._session = session
         self._events = events
+        self._clock = clock
 
     # -- reads --------------------------------------------------------------
 
@@ -231,7 +234,30 @@ class SqlAlchemyMatchRepository:
     # -- rows ---------------------------------------------------------------
 
     def _columns(self, match: Match) -> dict[str, Any]:
+        """Every column, including the schedule — **because this is every write**.
+
+        ADR-0076 wants `next_wake_at` *"recomputed on every write"*, and the one
+        place that is structurally true is here: `add` and `save` both build
+        their values from this dict, and there is no third door into the table.
+        Computed in a use case instead, the obligation would be a rule N use
+        cases have to remember, and the miss would be a match that stops waking
+        — a club's court held past its lapse, invisible to every player.
+
+        The candidate set is a function of the seats and the clock, so it is not
+        enough to recompute it when a threshold moves: a match on two paid seats
+        wakes at T-12h and the same match after a third payment wakes at T-4h.
+
+        The clock is read here rather than passed in because the moment being
+        recorded is *when this row was written*, which is not a caller's fact.
+        `next_wake` is strictly later than what it is handed, so a boundary
+        falling exactly on the write is not scheduled — correctly: the row that
+        has just landed already resolves on the far side of it.
+        """
+
+        wake = next_wake(match.as_record(), instant(self._clock.now()))
         return {
+            "next_wake_at": None if wake is None else wake.at,
+            "wake_reason": None if wake is None else wake.reason.value,
             "club_id": match.club_id,
             "category_id": match.category_id,
             "sport": match.sport.value,

@@ -26,9 +26,10 @@ from __future__ import annotations
 from typing import Protocol, Sequence, runtime_checkable
 from uuid import UUID
 
-from app.kernel import Instant, Minutes
+from app.kernel import Boundary, Instant, Minutes
 
 from app.modules.matches.domain.match import Match
+from app.modules.matches.domain.wake import MatchWake
 
 
 @runtime_checkable
@@ -125,5 +126,54 @@ class CourtHolds(Protocol):
         A **release** and never a delete, because a court's booking history is a
         query over reservations — which is Courts' rule and the reason this is a
         method here rather than an obligation on the ladder to remember.
+        """
+        ...
+
+
+@runtime_checkable
+class MatchSchedule(Protocol):
+    """The timekeeper's two operations over the schedule columns.
+
+    Separate from ``MatchRepository`` on purpose. That port speaks in whole
+    matches — every seat and every vacancy, because a situation is a function of
+    the whole record — and the timekeeper's tick wants neither: it wants *which
+    ids are due* and, at the end, *put this one's moment back*. Loading the
+    aggregate to answer the first would be a scan reading three tables to
+    discover it has nothing to do.
+
+    **Neither method writes a fact about the match**, which is why neither
+    announces anything and why ``re_arm`` does not bump the version. The schedule
+    is derived — ``kernel.next_wake`` computes it from the row it sits on — so
+    moving it is not a change a support agent would ever need explained
+    (ADR-0034's obligation), and versioning it would make every scheduled look a
+    write that a player's own tap could lose a race to.
+    """
+
+    async def due(self, *, now: Instant, limit: int) -> list[MatchWake]:
+        """The matches whose moment has arrived, soonest first.
+
+        Late is not a special case: ``next_wake_at <= now`` stays true through a
+        restart, a crash and a redeploy, so a missed wake is simply taken later.
+        ADR-0076's *"a restart loses nothing"* is this comparison and nothing
+        else.
+        """
+        ...
+
+    async def re_arm(
+        self, *, match_id: UUID, version: int, wake: Boundary | None
+    ) -> bool:
+        """Point the schedule at the next moment, on the version it was read at.
+
+        **Needed because a look that finds nothing writes nothing.** The hold
+        ladder is deliberately silent when it has no move to make — saving anyway
+        would bump the version on every wake — and a row left naming a moment
+        that has passed is one the tick picks up again a second later, for ever.
+        So the schedule is re-armed even when the record did not move.
+
+        Guarded on the version and **not bumping it**: if a real writer moved the
+        match in between, it recomputed the schedule from the record it wrote and
+        its answer is the right one. Losing here is therefore not an error and
+        not a retry — it is somebody else having already done it. Answers whether
+        the row was ours to arm.
         """
         ...

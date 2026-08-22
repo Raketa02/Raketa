@@ -342,6 +342,79 @@ class MatchRecord:
         )
 
 
+class WakeReason(str, Enum):
+    """Which threshold a scheduled look is pointed at — a label, never an act.
+
+    ADR-0076: ``wake_reason`` *"is a label and half the idempotency key"*, and
+    **the handler never branches on it**. It was computed at a past write and
+    the match may have moved since, so acting on it would write a stale
+    intention into the record. What it is for is naming the look — in a log
+    line, and in ``{matchId}:{threshold}:{scheduledFor}``.
+
+    **The declaration order is the tie-break, and it is a decision rather than a
+    default.** Thresholds coincide: at a twelve-hour club the commitment deadline
+    and the two-seat hold lapse land on the same instant, and ADR-0076 records
+    T-12h as *"three rules on one instant"*. A ``min()`` over unnamed moments
+    still answers, and answers by whichever order the candidate list happened to
+    be built in — an ordering nobody wrote down, nothing tests, and any
+    rearranging of ``_boundaries`` changes in silence. Since the label is half an
+    idempotency key, that makes one instant filable under two names across a
+    refactor nobody thought was about scheduling. Ordered roughly as a match
+    lives, so the earlier and more consequential name wins a tie.
+    """
+
+    #: The commitment deadline: the earlier of the club's cancellation window
+    #: and the platform's twelve-hour backstop.
+    COMMITMENT = "commitment"
+    #: A speculative court hold's tier lapsing — T-12h on two paid seats, T-4h
+    #: on all but one. This is the boundary that **releases a club's court**.
+    HOLD_LAPSE = "holdLapse"
+    #: A hold reaching the club's own cap, measured from ``held_since``.
+    HOLD_STALE = "holdStale"
+    #: The newest open hole ageing out of the recovery group.
+    VACANCY_DECAY = "vacancyDecay"
+    #: The rescue window opening on a committed match that lost somebody.
+    RESCUE = "rescue"
+    #: The checkpoint — the last moment the roster can change.
+    CHECKPOINT = "checkpoint"
+    #: The join cutoff.
+    JOIN_CUT = "joinCut"
+    #: Fifteen minutes out: the court is named and the door code is worth showing.
+    DOOR_CODE = "doorCode"
+    #: The start.
+    PLAY = "play"
+    #: The court booking ending, which is when a result becomes askable.
+    MATCH_END = "matchEnd"
+    #: Twenty-four hours after that, when a score can no longer be entered.
+    RESULT_WINDOW = "resultWindow"
+
+
+#: Declaration order, as a rank. Derived from the enumeration rather than
+#: written out, so a twelfth reason cannot be added without a position.
+_WAKE_RANK: dict[WakeReason, int] = {
+    reason: rank for rank, reason in enumerate(WakeReason)
+}
+
+
+@final
+@dataclass(frozen=True)
+class Boundary:
+    """One instant a ladder compares the clock against, and which one it is.
+
+    Pure in the record, like everything beside it: *has it passed* belongs to
+    whoever holds a now.
+    """
+
+    reason: WakeReason
+    at: Instant
+
+    @property
+    def order(self) -> tuple[Instant, int]:
+        """Soonest first, and a tie broken by the reason's declaration order."""
+
+        return (self.at, _WAKE_RANK[self.reason])
+
+
 @final
 @dataclass(frozen=True)
 class Deadlines:

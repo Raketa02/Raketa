@@ -7,11 +7,17 @@ what a real database gets. Nothing else compares them, and a guarantee present i
 one and absent from the other is worse than not having it, because the suite
 reads as though it were enforced.
 
-**Nothing here is PostgreSQL-only**, which is the difference from `0008`. The
-partial unique index that keeps one player to one seat has a SQLite spelling and
-gets one, so the fast suite enforces the rule a real database enforces. That is
-also why the predicate is asserted directly: two files could agree perfectly
-about `match_seats` while the index was partial over the wrong rows in both.
+**Nothing here is PostgreSQL-only**, which is the difference from `0008`. Both
+partial indexes — one player to one seat, and the timekeeper's due rows — have a
+SQLite spelling and get one, so the fast suite enforces the rules a real database
+enforces. That is also why each predicate is asserted directly: two files could
+agree perfectly while an index was partial over the wrong rows in both.
+
+**Every migration that touches these tables is applied, in order**, because what
+is being compared against is `Base.metadata` at head. A file left off the list
+would make the models look as though they had drifted; worse, a *new* migration
+left off would compare head's models against a schema two versions old and pass
+by never seeing the difference.
 
 No database is touched, so this runs on every `make check`.
 """
@@ -33,7 +39,12 @@ from app.infrastructure.database.base import Base
 from app.modules.matches.infrastructure import sqlalchemy_match_models as declared
 
 ROOT = Path(__file__).resolve().parents[2]
-MIGRATION = ROOT / "migrations" / "versions" / "0009_matches.py"
+VERSIONS = ROOT / "migrations" / "versions"
+MIGRATION = VERSIONS / "0009_matches.py"
+SCHEDULE_MIGRATION = VERSIONS / "0010_match_schedule.py"
+
+#: In the order Alembic applies them.
+MIGRATIONS = (MIGRATION, SCHEDULE_MIGRATION)
 
 MATCH_TABLES = ("matches", "match_seats", "match_vacancies")
 
@@ -48,6 +59,7 @@ INDEXES = {
         True,
     ),
     "ix_match_vacancies_match_id": ("match_vacancies", ("match_id",), False),
+    "ix_matches_due_wake": ("matches", ("next_wake_at",), False),
 }
 
 
@@ -81,6 +93,9 @@ class _Recorder:
         sa.Table(name, self.metadata, *columns, **kw)
         self.created.append(name)
 
+    def add_column(self, table: str, column: sa.Column[Any]) -> None:
+        self.metadata.tables[table].append_column(column)
+
     def create_index(
         self,
         name: str,
@@ -111,26 +126,32 @@ class _Recorder:
         raise AssertionError("upgrade() must not drop a table")
 
 
-@pytest.fixture(scope="module")
-def migrated() -> _Recorder:
-    spec = importlib.util.spec_from_file_location("matches_migration", MIGRATION)
+def _loaded(path: Path, name: str) -> Any:
+    spec = importlib.util.spec_from_file_location(name, path)
     assert spec and spec.loader
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
+    return module
 
+
+@pytest.fixture(scope="module")
+def migrated() -> _Recorder:
     recorder = _Recorder()
-    module.op = recorder
-    module.upgrade()
+    for path in MIGRATIONS:
+        module = _loaded(path, f"migration_{path.stem}")
+        module.op = recorder
+        module.upgrade()
     return recorder
 
 
 @pytest.fixture(scope="module")
 def migration_module() -> Any:
-    spec = importlib.util.spec_from_file_location("matches_migration_raw", MIGRATION)
-    assert spec and spec.loader
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return _loaded(MIGRATION, "matches_migration_raw")
+
+
+@pytest.fixture(scope="module")
+def schedule_migration_module() -> Any:
+    return _loaded(SCHEDULE_MIGRATION, "match_schedule_migration_raw")
 
 
 def _table_ddl(table: sa.Table) -> str:
@@ -144,8 +165,11 @@ def _index_ddl(index: sa.Index) -> str:
 # --- the tables -------------------------------------------------------------
 
 
-def test_the_migration_creates_exactly_the_match_tables(migrated):
+def test_the_migrations_create_exactly_the_match_tables(migrated):
+    """Three tables across both files — `0010` adds columns and creates none."""
+
     assert set(migrated.created) == set(MATCH_TABLES)
+    assert len(migrated.created) == len(MATCH_TABLES)
 
 
 @pytest.mark.parametrize("name", MATCH_TABLES)
@@ -208,7 +232,16 @@ def test_a_seat_is_its_position(migrated):
 
 def test_the_match_row_stores_nothing_a_reader_could_derive(migrated):
     """The five kinds' own test, at the schema. No `filled`, no seat count, no
-    court, no situation, no phase."""
+    court, no situation, no phase.
+
+    **`next_wake_at` was on this list and has come off it**, which is a decision
+    and not a relaxation. It is derived — `kernel.next_wake` computes it from the
+    row it sits on — and ADR-0076 stores it anyway, because the question it
+    answers is asked the other way round: not *when does this match next change*
+    for one match in hand, but *which matches change in the next second* over the
+    whole table. A function cannot be indexed. Everything else on this list is
+    read one match at a time and stays derived.
+    """
 
     columns = set(migrated.metadata.tables["matches"].c.keys())
 
@@ -224,9 +257,43 @@ def test_the_match_row_stores_nothing_a_reader_could_derive(migrated):
         "court_id",
         "reservation_id",
         "hold_kind",
-        "next_wake_at",
     ):
         assert derived not in columns, f"`matches.{derived}` is derivable"
+
+
+def test_the_schedule_is_two_columns_and_neither_is_a_situation(migrated):
+    """A moment and a label. ADR-0076: the handler re-derives, so there is
+    nothing here to act on and nothing here that is an instruction."""
+
+    columns = migrated.metadata.tables["matches"].c
+
+    assert columns["next_wake_at"].nullable
+    assert columns["wake_reason"].nullable
+    assert isinstance(columns["next_wake_at"].type, sa.DateTime)
+    assert columns["next_wake_at"].type.timezone
+
+
+def test_the_due_index_is_partial_over_the_rows_that_have_a_moment(
+    migrated, schedule_migration_module
+):
+    """Partial on `next_wake_at IS NOT NULL`, and **not** on the four
+    cancellation flags.
+
+    Both spell *non-terminal* today. The second is a restatement of rungs 1-4 in
+    SQL — a second ladder (ADR-0040) in the one place nothing type-checks it —
+    and it fails silently: the predicate here over-covers by a page, while a
+    drifted copy of terminality leaves a due row unindexed and a club's court
+    held for ever.
+    """
+
+    assert schedule_migration_module.SCHEDULED == declared.SCHEDULED
+    index = next(i for i in migrated.indexes if i.name == declared.DUE_WAKE)
+    ddl = _index_ddl(index)
+
+    assert "UNIQUE" not in ddl
+    assert f"WHERE {declared.SCHEDULED}" in ddl
+    for flag in ("club_cancelled", "weather", "form_cancelled", "inventory_lost"):
+        assert flag not in ddl, "terminality is restated in SQL"
 
 
 def test_the_policy_snapshot_is_on_the_match(migrated):

@@ -61,7 +61,16 @@ from app.modules.courts.domain.ports import (
 from app.modules.courts.infrastructure.sqlalchemy_booking_repository import (
     SqlAlchemyBookingRepository,
 )
-from app.modules.matches.domain.ports import CourtHolds, MatchRepository
+from app.modules.matches.application.resolve_court_hold import ResolveCourtHold
+from app.modules.matches.application.take_match_wake import (
+    MatchWakeBatch,
+    TakeMatchWake,
+)
+from app.modules.matches.domain.ports import (
+    CourtHolds,
+    MatchRepository,
+    MatchSchedule,
+)
 from app.modules.now.domain.ports import RatedSports
 from app.modules.now.infrastructure.rating_sports import RatedSportsFromSkillRatings
 from app.modules.matches.infrastructure.court_holds import (
@@ -69,6 +78,9 @@ from app.modules.matches.infrastructure.court_holds import (
 )
 from app.modules.matches.infrastructure.sqlalchemy_match_repository import (
     SqlAlchemyMatchRepository,
+)
+from app.modules.matches.infrastructure.sqlalchemy_match_schedule import (
+    SqlAlchemyMatchSchedule,
 )
 from app.modules.courts.infrastructure.sqlalchemy_reservation_repository import (
     SqlAlchemyReservationRepository,
@@ -235,7 +247,7 @@ def build_booking_repository(session: AsyncSession) -> BookingRepository:
 
 
 def build_match_repository(
-    session: AsyncSession, *, events: DomainEventPublisher
+    session: AsyncSession, *, events: DomainEventPublisher, clock: Clock
 ) -> MatchRepository:
     """The record repository, over `session` — **and its publisher**.
 
@@ -250,7 +262,52 @@ def build_match_repository(
     one outbox writer across two contexts — which `Raketa02/Raketa#70` will do —
     passes it in rather than getting a second one by accident.
     """
-    return SqlAlchemyMatchRepository(session, events=events)
+    return SqlAlchemyMatchRepository(session, events=events, clock=clock)
+
+
+def build_match_schedule(session: AsyncSession) -> MatchSchedule:
+    """The timekeeper's two statements over `next_wake_at` and `wake_reason`.
+
+    Beside the repository rather than inside it, because they are two different
+    questions: one loads a whole match, the other asks which ids are due. Takes
+    no publisher and no clock — arming a schedule announces nothing, and the
+    instant it stores is computed by the caller from the record.
+    """
+
+    return SqlAlchemyMatchSchedule(session)
+
+
+def build_match_wake_batch(
+    *, session: AsyncSession, event_runtime: EventRuntime, clock: Clock
+) -> MatchWakeBatch:
+    """ADR-0076's timekeeper, wired from the same factories a request gets.
+
+    *"A wake is a look"* is what makes this ordinary: the look runs the same use
+    cases a tap runs, so there is no second wiring of the hold ladder and no
+    worker-only path through Matches for a rule to be true on one side of and
+    false on the other.
+    """
+
+    events = event_runtime.create_publisher_for(session=session)
+    uow = build_unit_of_work(session)
+    matches = build_match_repository(session, events=events, clock=clock)
+    reservations = build_reservation_repository(session)
+    schedule = build_match_schedule(session)
+    holds = build_court_holds(
+        ClaimCourt(build_club_repository(session), reservations, uow), reservations
+    )
+    return MatchWakeBatch(
+        schedule=schedule,
+        look=TakeMatchWake(
+            matches,
+            schedule,
+            ResolveCourtHold(matches, holds, uow, clock),
+            uow,
+            clock,
+        ),
+        uow=uow,
+        clock=clock,
+    )
 
 
 def build_court_holds(

@@ -19,7 +19,8 @@ ports, and Docker images are built separately for development and production.
 - Idempotent logout that does not leak token existence.
 - Authenticated `/users/me` endpoint backed by bearer access tokens.
 - Event-sourced `User` aggregate with durable event stream persistence.
-- Transactional outbox and embedded event-delivery worker.
+- Transactional outbox and embedded event-delivery worker — which is also **the
+  timekeeper**: one tick, two indexed lookups, and no second process.
 - `GET /api/v1/now` — the player's home screen composed in one request: three ordered
   regions, a card split into a spine and a situation half, and every code a generated enum.
 - Async SQLAlchemy persistence with Alembic migrations.
@@ -166,6 +167,63 @@ allows multiple workers or processes to share pending work without delivering th
 same row concurrently. Production starts one Gunicorn worker by default because
 one application process hosts one embedded event worker; the database locking
 keeps extra processes safe if the worker count is increased intentionally.
+
+### The timekeeper
+
+Now has moments nobody is looking at when they arrive: a commitment deadline passing, a
+court's soft hold lapsing. The schedule for them **is a column** — `matches.next_wake_at` and
+`matches.wake_reason`, under a partial index over the rows that have one
+([ADR-0076](../docs/adr/0076-the-schedule-is-a-column-a-wake-is-a-look-and-there-is-no-list-of-boundaries.md)).
+There is no queue table, no timer store, and Redis stays declared and unused.
+
+Three things are worth knowing before touching it.
+
+**It is recomputed on every write, and the one place that is structurally true is the
+repository.** `SqlAlchemyMatchRepository._columns` builds the values for both `add` and
+`save`, and there is no third door into the table, so a new use case cannot forget. It has to
+be every write rather than every write that moves a deadline: the candidate set is a function
+of the *record*, so a match on two paid seats wakes at T−12h and the same match after a third
+payment wakes at T−4h with nothing about its calendar having changed.
+
+**A wake is a look, not an instruction.** `TakeMatchWake` re-derives from the record and the
+clock and never reads the `wake_reason` it was handed — that reason was computed at a past
+write and the match may have moved since. Two consequences fall out. A **late** wake produces
+what an on-time one would have, which is what makes at-least-once scheduling affordable with
+no leader election and no distributed lock. And a **duplicate** wake is a no-op, because the
+first look already moved the record — so there is no table of handled keys anywhere, and the
+match's own schedule column is the ledger of what is outstanding.
+
+**A look that finds nothing still re-arms.** The hold ladder is deliberately silent when it
+has no move to make, and a row left naming a moment that has passed is one the tick picks up
+again a second later, for ever. `MatchSchedule.re_arm` writes the two columns **without
+bumping the version and without announcing anything** — the schedule is derived, so moving it
+is not a change a support agent would need explained — guarded on the version the row was read
+at, so a real writer that moved the match in between keeps its own, better answer.
+
+Two rules about where thresholds may live:
+
+- **The index predicate is `next_wake_at IS NOT NULL`**, not a SQL restatement of the four
+  cancellation flags. Both spell *non-terminal* today; the second is a second ladder
+  ([ADR-0040](../docs/adr/0040-one-ladder-resolves-a-situation.md)) in the one place nothing
+  type-checks it, and it fails silently — the predicate here over-covers by a page, while a
+  drifted copy of terminality leaves a due row unindexed and a club's court held for ever.
+- **No list of boundaries exists in the timekeeper**, and
+  `tests/unit/test_timekeeper_holds_no_thresholds.py` reddens on one appearing — a duration
+  written down, arithmetic on an instant, or a reach for a kernel function that *produces* a
+  boundary rather than the one that chooses between them. The ticket that specified this
+  shipped its own boundary table and it was short by five, including the two that release a
+  club's court. Nobody was careless: a hand-maintained table cannot track a set that is a
+  function of the record.
+
+`next_wake_at` is **internal and never serialised onto a card**. It is the earliest instant
+*anything* could differ, chosen by a `min()` over candidates the player is not being told
+about, and a countdown pointed at it drifts away from the words above it
+([ADR-0053](../docs/adr/0053-the-phone-holds-no-rules-and-only-subtracts.md)).
+
+The third of ADR-0076's *"three queries, one tick"* — the notification channel's scheduled
+sends — arrives with its queue (`Raketa02/Raketa#84`). Its table has no reader yet, and a
+table with no reader is not forwards-compatibility
+([ADR-0071](../docs/adr/0071-two-fields-with-no-reader-are-not-forwards-compatibility.md)).
 
 ## Ports And Adapters
 

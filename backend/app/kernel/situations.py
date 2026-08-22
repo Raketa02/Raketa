@@ -53,11 +53,13 @@ from app.kernel.holds import (
 )
 from app.kernel.invariants import InvariantViolated, invariant
 from app.kernel.matches import (
+    Boundary,
     MatchKind,
     MatchRecord,
     OfferKind,
     PayModel,
     Viewer,
+    WakeReason,
     born_late,
     committed_on_fill,
     deadlines,
@@ -197,8 +199,8 @@ def situation(
     return _amended(_ladder(record, viewer, now, hold), hold)
 
 
-def next_wake_at(record: MatchRecord, now: Instant) -> Instant | None:
-    """The next moment this match could resolve differently, or `None`.
+def next_wake(record: MatchRecord, now: Instant) -> Boundary | None:
+    """The next boundary this match could resolve differently at, or `None`.
 
     Beside the ladder deliberately, and this is the whole of the argument: **a
     threshold cannot exist in the ladder and be missing from the schedule** if
@@ -211,9 +213,11 @@ def next_wake_at(record: MatchRecord, now: Instant) -> Instant | None:
     at the same instant for ever.
 
     **A wake is a look, not an instruction.** The handler re-derives from the
-    record, so a late wake changes *when* we look and never *what we find* —
-    which is why nothing here is stored on the card and why this returns an
-    instant rather than a reason.
+    record, so a late wake changes *when* we look and never *what we find*. The
+    name this returns beside the moment is a **label** — half of
+    ``{matchId}:{threshold}:{scheduledFor}`` — and nothing branches on it: it was
+    computed at a past write, and the match may have moved since. Neither field
+    is ever serialised onto a card.
 
     The candidate set depends on the seat count, so it must be recomputed on
     every write: a match on two paid seats wakes at T-12h, and the same match
@@ -225,8 +229,20 @@ def next_wake_at(record: MatchRecord, now: Instant) -> Instant | None:
 
     if is_terminal(record):
         return None
-    ahead = [moment for moment in _boundaries(record) if moment > now]
-    return min(ahead) if ahead else None
+    ahead = [moment for moment in _boundaries(record) if moment.at > now]
+    return min(ahead, key=lambda moment: moment.order) if ahead else None
+
+
+def next_wake_at(record: MatchRecord, now: Instant) -> Instant | None:
+    """The same answer with its name dropped, for a caller that wants a moment.
+
+    Kept because the wake property suite reads it and because most callers do
+    not care which threshold it is. The timekeeper does: ``wake_reason`` is half
+    of ``{matchId}:{threshold}:{scheduledFor}``.
+    """
+
+    wake = next_wake(record, now)
+    return None if wake is None else wake.at
 
 
 def _ladder(
@@ -380,7 +396,7 @@ def _amended(base: Situation, hold: Hold) -> Situation:
     return base
 
 
-def _boundaries(record: MatchRecord) -> tuple[Instant, ...]:
+def _boundaries(record: MatchRecord) -> tuple[Boundary, ...]:
     """Every instant the ladder compares the clock against, plus the hold's own.
 
     Conditioned exactly as the rungs that read them are, so an ordinary match is
@@ -392,12 +408,12 @@ def _boundaries(record: MatchRecord) -> tuple[Instant, ...]:
     when = deadlines(record)
 
     candidates = [
-        when.check,
-        when.join_cut,
-        when.play,
-        door_code_at(record),
-        match_end(record),
-        result_window(record),
+        Boundary(WakeReason.CHECKPOINT, when.check),
+        Boundary(WakeReason.JOIN_CUT, when.join_cut),
+        Boundary(WakeReason.PLAY, when.play),
+        Boundary(WakeReason.DOOR_CODE, door_code_at(record)),
+        Boundary(WakeReason.MATCH_END, match_end(record)),
+        Boundary(WakeReason.RESULT_WINDOW, result_window(record)),
         *hold_boundaries(record),
     ]
 
@@ -405,15 +421,17 @@ def _boundaries(record: MatchRecord) -> tuple[Instant, ...]:
     # deadline: it is either complete or short a seat somebody vacated, and both
     # resolve above every rung that reads `commit`.
     if record.committed_at is None:
-        candidates.append(when.commit)
+        candidates.append(Boundary(WakeReason.COMMITMENT, when.commit))
 
     if record.open_vacancies:
         if record.committed_at is not None:
-            candidates.append(when.rescue)
+            candidates.append(Boundary(WakeReason.RESCUE, when.rescue))
         else:
             expires_at = vacancy_expires_at(record)
             if expires_at is not None:
-                candidates.append(expires_at)
+                candidates.append(
+                    Boundary(WakeReason.VACANCY_DECAY, expires_at)
+                )
 
     return tuple(candidates)
 

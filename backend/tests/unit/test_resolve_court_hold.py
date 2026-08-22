@@ -111,7 +111,9 @@ class _World:
     def __init__(self, session, clock) -> None:
         clubs = build_club_repository(session)
         reservations = build_reservation_repository(session)
-        matches = build_match_repository(session, events=build_event_publisher(session))
+        matches = build_match_repository(
+            session, events=build_event_publisher(session), clock=clock
+        )
         uow = build_unit_of_work(session)
         holds = ResolveCourtHold(
             matches,

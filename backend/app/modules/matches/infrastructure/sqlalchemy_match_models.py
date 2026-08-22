@@ -49,6 +49,20 @@ SEAT_OCCUPIED = "player_id IS NOT NULL"
 #: The name, so a test can drop it and get a real negative control.
 ONE_SEAT_PER_PLAYER = "uq_match_seats_one_per_player"
 
+#: A row is **due to be looked at** exactly when it names a moment. Written as
+#: the column being present rather than as a SQL restatement of *non-terminal*,
+#: which the four cancellation flags would be: that copy is a second ladder in
+#: the schema (ADR-0040), and it fails in the silent direction — indexing a row
+#: nothing will look at costs a page, while missing one means a court is never
+#: given back. A terminal match stores `NULL` because `next_wake` says `None`
+#: for one, so the narrower predicate is *implied* by the wider one rather than
+#: maintained beside it. It is also true of a settled match past its result
+#: window, which is not terminal and has nothing left to wake for.
+SCHEDULED = "next_wake_at IS NOT NULL"
+
+#: The name, so a test can drop it and get a real negative control.
+DUE_WAKE = "ix_matches_due_wake"
+
 
 class MatchORM(Base):
     """The record: what was posted, what has been declared, and a version."""
@@ -171,6 +185,42 @@ class MatchORM(Base):
     )
     created_at: Mapped[datetime] = mapped_column(
         sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+    )
+
+    # -- Schedule -----------------------------------------------------------
+    # Last, and physically so: migration `0010` adds them with `ALTER TABLE`,
+    # which appends, and `tests/unit/test_matches_migration.py` compares the two
+    # descriptions of this table DDL string for string.
+    #
+    #: **The one derived thing this table stores, and ADR-0076 is the licence.**
+    #: Every other column passes *a reader cannot derive this*; these two fail it
+    #: outright — `kernel.next_wake` computes them from the row they sit on. What
+    #: buys them their place is that the question they answer is asked the other
+    #: way round: not *when does this match next change* for one match in hand,
+    #: but *which matches change in the next second* over the whole table. A
+    #: function cannot be indexed; a column can, and a partial one over the rows
+    #: that have a moment is the whole timekeeper.
+    #:
+    #: **Never serialised onto a card.** ADR-0076 says so in terms: it is the
+    #: earliest instant *anything* could differ, chosen by a `min()` over
+    #: candidates the player is not being told about, and pointing a countdown at
+    #: it drifts the number away from the words above it (ADR-0053). It is
+    #: internal, and `tests/unit/test_now_contract_document.py` is what keeps it
+    #: off the wire.
+    next_wake_at: Mapped[Optional[datetime]] = mapped_column(
+        sa.DateTime(timezone=True), nullable=True
+    )
+    #: A label, and half of `{matchId}:{threshold}:{scheduledFor}`. **Nothing
+    #: branches on it** — a wake is a look, and the handler re-derives.
+    wake_reason: Mapped[Optional[str]] = mapped_column(sa.String(24), nullable=True)
+
+    __table_args__ = (
+        sa.Index(
+            DUE_WAKE,
+            "next_wake_at",
+            sqlite_where=sa.text(SCHEDULED),
+            postgresql_where=sa.text(SCHEDULED),
+        ),
     )
 
 

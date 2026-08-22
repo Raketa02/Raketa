@@ -26,6 +26,7 @@ import pytest
 from sqlalchemy import func, select
 
 from app.bootstrap.composition import (
+    build_clock,
     build_event_publisher,
     build_match_repository,
     build_reservation_repository,
@@ -182,7 +183,7 @@ async def test_every_seeded_match_resolves_to_the_situation_it_is_named_for(
 
     async with session_factory() as session:
         repository = build_match_repository(
-            session, events=build_event_publisher(session)
+            session, events=build_event_publisher(session), clock=build_clock()
         )
         for entry in seeded:
             stored = await repository.get(entry.match_id)
@@ -209,7 +210,7 @@ async def test_the_seeded_week_writes_the_instants_and_not_the_wall_clock(
     )
     async with session_factory() as session:
         repository = build_match_repository(
-            session, events=build_event_publisher(session)
+            session, events=build_event_publisher(session), clock=build_clock()
         )
         stored = await repository.get(committed.match_id)
 
@@ -240,7 +241,7 @@ async def test_the_seeded_accounts_fill_the_seats_in_catalog_order(
     first_player = run.accounts[0].player_id
     async with session_factory() as session:
         repository = build_match_repository(
-            session, events=build_event_publisher(session)
+            session, events=build_event_publisher(session), clock=build_clock()
         )
         held = [
             entry.match.slug
@@ -271,7 +272,7 @@ async def test_a_seeded_match_holds_a_court_exactly_when_the_ladder_says_so(
     async with session_factory() as session:
         run = await seed(session)
         repository = build_match_repository(
-            session, events=build_event_publisher(session)
+            session, events=build_event_publisher(session), clock=build_clock()
         )
         for entry in run.matches:
             stored = await repository.get(entry.match_id)
@@ -293,7 +294,9 @@ async def test_a_held_court_is_a_reservation_the_match_holds(session_factory):
 
     async with session_factory() as session:
         run = await seed(session)
-        matches = build_match_repository(session, events=build_event_publisher(session))
+        matches = build_match_repository(
+            session, events=build_event_publisher(session), clock=build_clock()
+        )
         reservations = build_reservation_repository(session)
 
         held, unheld = [], []

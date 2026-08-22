@@ -7,6 +7,7 @@ from app.application.ports.events import (
     OutboxWriter,
     PendingOutbox,
 )
+from app.application.ports.tick import TickWork
 from app.application.ports.unit_of_work import UnitOfWork
 
 __all__ = [
@@ -17,5 +18,6 @@ __all__ = [
     "EventDecodingError",
     "OutboxWriter",
     "PendingOutbox",
+    "TickWork",
     "UnitOfWork",
 ]

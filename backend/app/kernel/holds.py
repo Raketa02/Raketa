@@ -33,8 +33,10 @@ from typing import final
 
 from app.kernel.invariants import invariant
 from app.kernel.matches import (
+    Boundary,
     MatchKind,
     MatchRecord,
+    WakeReason,
     filled,
     is_full,
     is_terminal,
@@ -308,7 +310,7 @@ def _extension(record: MatchRecord, base: Hold) -> Hold | None:
     return Hold(HoldKind.SOFT, HoldReason.EXTENDED)
 
 
-def hold_boundaries(record: MatchRecord) -> tuple[Instant, ...]:
+def hold_boundaries(record: MatchRecord) -> tuple[Boundary, ...]:
     """Every instant *this* ladder compares the clock against, for this record.
 
     The hold ladder owns its own thresholds, so the wake function can ask for
@@ -337,7 +339,9 @@ def hold_boundaries(record: MatchRecord) -> tuple[Instant, ...]:
         return ()
 
     span = _HOLD_NEAR if filled(record) >= seat_count(record) - 1 else _HOLD_FAR
-    moments = [shifted(record.start, minutes(-span))]
+    moments = [
+        Boundary(WakeReason.HOLD_LAPSE, shifted(record.start, minutes(-span)))
+    ]
 
     # `held_since is not None`, and **not** `keeping_a_court`: `_staleness`
     # compares against this instant whenever the anchor exists, which includes a
@@ -347,7 +351,9 @@ def hold_boundaries(record: MatchRecord) -> tuple[Instant, ...]:
     # property test in `tests/unit/test_next_wake_at.py` is what found that.
     cap = record.policy.max_hold_age
     if cap is not None and record.held_since is not None:
-        moments.append(shifted(record.held_since, cap))
+        moments.append(
+            Boundary(WakeReason.HOLD_STALE, shifted(record.held_since, cap))
+        )
 
     return tuple(moments)
 
