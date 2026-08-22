@@ -405,8 +405,9 @@ there; they are not repeated here.
   domain suite cannot see the difference. `pydantic_settings` and `os` are forbidden beside
   it, because declaring a second settings class or reading `os.environ` is the same rule
   broken by a different import. The two `app/modules/*` arms are **wildcards**, so a
-  context created tomorrow is fenced the day it exists — Clubs, Courts, Bookings and
-  Matches are all named and none is modelled. A use case that needs a configured value
+  context created tomorrow is fenced the day it exists — it fenced Clubs, Courts, Bookings
+  and Matches before any of them had a line of code, and Money before it has one now. A use
+  case that needs a configured value
   takes it as a constructor argument. _Avoid_: importing settings "just for a default",
   a module-level `get_settings()` inside a business layer, an exemption.
 
@@ -527,9 +528,60 @@ there; they are not repeated here.
   named for the **state** it represents and checked against the stored reservation on every
   run. Its window is a **fixed absolute instant**, not an offset from now: *next Tuesday at
   18:00* computed at run time is a different Tuesday tomorrow, and the run that creates nothing
-  could never happen. Two of the three holders are seeded; a match-held claim would need a
-  match id, and Matches has no aggregate. _Avoid_: a uuid standing in for an aggregate, which
-  satisfies every import walk in the suite and is still an invented context.
+  could never happen. Two of the three holders are seeded; a match-held claim is a court the
+  **hold ladder** grants, and that ladder is not written yet, so seeding one would decide what
+  the ladder decides. _Avoid_: a uuid standing in for an aggregate, which satisfies every
+  import walk in the suite and is still an invented context.
+
+- **Match aggregate** (`matches.Match`) — **one** aggregate, a **record with a version and an
+  outbox**, and the only racket-sport context that is not event-sourced (ADR-0034). *Enrolled*
+  is a relationship and not an object: a seat names a player or it does not, and there is no
+  `Enrolment` with a lifecycle. Concurrency is a `version` column compared in the UPDATE that
+  bumps it — the guarantee ADR-0002 took from a stream, without the stream. `as_record()` hands
+  the kernel a `MatchRecord` and **needs no other read**, which is what makes *the busiest
+  object in the product the cheapest to read* true rather than aspirational. _Avoid_: a match
+  event store, an `Enrolment` aggregate, a `status` column.
+- **The five kinds** — how every stored fact on a match is classified, by the question *may a
+  reader derive this*: **Constitutive** (chosen at creation — sport, share, counted, created,
+  the category, the policy snapshot), **Occupancy** (seats, vacancies, transferring, seats
+  opened), **Allocation** (`held_since`, `released_at`, `inventory_lost`), **Crossing**
+  (`committed_at` — derivable once, then frozen), **Declaration** (the two cancellations, the
+  court lock, the extension, the no-show, the score's four facts). A new fact declares its kind
+  before it is added, and *a reader cannot derive this* has to be true of it. **Receipts are an
+  annotation, not a sixth kind**: `form_cancelled` and `checkpoint_cancelled` record only that
+  the refund, the court release and the notice completed, so a downed timekeeper delays the
+  money and never the truth. _Avoid_: a stored `filled`, a stored situation, a `phase` column.
+- **The policy snapshot** — the four hold-policy fields a match copies from its club **when it
+  is posted**, and reads for the rest of its life. ADR-0077 puts a club value that must be
+  honoured *as booked* on the match record as a Constitutive fact rather than in a temporal
+  query, and it is also what lets a situation be resolved from one row-set with no club fetch
+  on Now's path. The cost is stated rather than hidden: a club that tightens its cap does not
+  reach a match already posted, and if the hold ladder decides it must, the fix is a **write**
+  that refreshes the snapshot — never a club read on the compose path. _Avoid_: joining the
+  club's series to resolve a card.
+- **The announcement obligation** (`matches.events`) — ADR-0034's one non-ordinary rule: the
+  match keeps no history, so **every change a support agent would need to explain is its own
+  named event** and there is no generic *match updated*. Twenty-one names, registered under
+  durable strings, published onto the transactional outbox in the transaction that writes the
+  row. Nothing mechanical catches an event published too coarsely, so
+  `tests/unit/test_match_events.py` walks the aggregate and fails when a mutating method
+  announces nothing. _Avoid_: one `MatchChanged` carrying a reason enum, which is the forbidden
+  event wearing a disguise.
+- **Seat and vacancy** (`matches.Seat`, `matches.Vacancy`) — a seat is its **position** and is
+  never created or destroyed, only occupied and emptied; *taken* and *paid* are two facts, and
+  folding them is how a match reads full while a seat may still lapse. A vacancy is the hole a
+  departure left, **filled, never deleted**, carrying no amount and no outcome — settlement and
+  occupancy are independent axes (ADR-0033), and what a leaver recovered belongs to her
+  departure. Taking a seat closes the **oldest** open hole, so the newest still says when this
+  match last lost somebody. _Avoid_: a seat state enum with a third value, an amount on a hole.
+- **Seed match** — a deterministic development match created by `app/seeds/matches.py`, named
+  for the **`Situation` it resolves to** and checked by `kernel.situation` against the stored
+  record on every run, at the scenario's own fixed instant. The strongest name-check in the
+  seed system, because a match's state is derived: retune a threshold and the seed stops and
+  says which account's screen just moved. Written on the **seeded week's clock** rather than
+  the wall clock — a match *is* its clock, so `committed_at` from a wall clock would make the
+  name a claim about the day the seed ran. _Avoid_: a claim with no instant, which is not a
+  claim.
 
 - **Postgres-only guarantee** — a rule the database enforces that SQLite cannot express,
   so a suite running on SQLite can state it in a comment and enforce nothing. Three exist:

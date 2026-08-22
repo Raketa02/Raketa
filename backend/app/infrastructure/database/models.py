@@ -17,6 +17,11 @@ from app.modules.courts.infrastructure.sqlalchemy_court_models import (
     BookingORM,
     ReservationORM,
 )
+from app.modules.matches.infrastructure.sqlalchemy_match_models import (
+    MatchORM,
+    MatchSeatORM,
+    MatchVacancyORM,
+)
 from app.modules.users.infrastructure.sqlalchemy_user_model import UserORM
 
 __all__ = [
@@ -29,6 +34,9 @@ __all__ = [
     "ClubPolicyORM",
     "EventOutboxORM",
     "EventStoreORM",
+    "MatchORM",
+    "MatchSeatORM",
+    "MatchVacancyORM",
     "RefreshTokenORM",
     "ReservationORM",
     "UserORM",

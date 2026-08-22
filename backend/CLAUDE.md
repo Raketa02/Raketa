@@ -78,9 +78,10 @@ Rules to preserve:
   `status_code`, deliberately: a status held in a separate registry is one a new
   subclass can be added without, and the miss is a 500 in production rather than a red
   test.
-- **State changes emit domain events.** Use cases persist them through
-  `DomainEventStore.append` and enqueue them on the transactional outbox in the same
-  transaction; handlers perform side effects after commit.
+- **State changes emit domain events.** An event-sourced aggregate persists them through
+  `DomainEventStore.append`; a **record** aggregate has no stream and enqueues them straight
+  onto the transactional outbox. Either way it happens **in the same transaction as the state
+  change**, and handlers perform side effects after commit.
 - **Seeds execute use cases, never SQL.** `app/seeds/` creates deterministic development
   accounts through the same use cases a request runs, wired from the composition root, so
   a seeded aggregate has the event stream and the outbox rows a real one has. A structural
@@ -90,10 +91,11 @@ Rules to preserve:
 - **A seed account is named for a state, and the name is checked.** The catalog is a list
   of edges — nothing yet, one open run, one abandoned, a rating at the edge of its band —
   and a rated scenario carries the band it promises, checked against the stored rating on
-  every run. The same rule now covers clubs and court claims, each named for its own edge.
-  Seed only what is **modeled**: Matches has no aggregate, so nothing seeds a match-held
-  reservation — and a uuid standing in for one is the version of that creep no import walk
-  can see.
+  every run. The same rule now covers clubs, court claims and matches, each named for its own
+  edge — and a **seeded match names the `Situation` it resolves to**, checked by the kernel,
+  which is the strongest form of the rule available anywhere in the catalog. Seed only what is
+  **decided**: nothing seeds a match-held reservation, because *when* a court is held is the
+  hold ladder's call and that ladder is not written yet.
 - **New routes mount under `app/api/v1/router.py`;** keep the `/api/v1` prefix.
 - **Validate and normalize inside the value object**, not in the use case — see
   `app/modules/users/domain/value_objects.py`.
@@ -122,6 +124,20 @@ Rules to preserve:
   constructed. A series is rebuilt from disk by **one** ordering function — `valid_from` alone
   is ambiguous the moment two rows share an instant, and an ambiguous ORDER BY reads as a
   broken database rather than as a bug.
+- **A match is a record with a version, and every change announces itself by name.** Matches
+  is the one racket-sport context that is **not** event-sourced
+  ([ADR-0034](../docs/adr/0034-matches-is-a-record-and-keeps-no-history.md)): the concurrency
+  guard is a `version` column compared in the UPDATE that bumps it, and the history is the
+  **outbox trail** rather than a stream. That trades one obligation for another and the
+  obligation is not optional — *every change a support agent would one day need to explain to
+  a player is its own named event*, never a generic *match updated*. Nothing mechanical
+  catches an event published too coarsely, so `tests/unit/test_match_events.py` walks the
+  aggregate and reddens when a mutating method announces nothing. **Every stored fact declares
+  one of five kinds** — Constitutive, Occupancy, Allocation, Crossing, Declaration — and *a
+  reader cannot derive this* has to be true of it: `filled`, the situation, whether a court is
+  held and which court it is are all computed or answered elsewhere. The club's four
+  hold-policy fields are **copied at posting** and honoured as booked (ADR-0077), which is what
+  lets `Match.as_record()` resolve a situation with **no other read**.
 - **A court is claimed by a reservation, and the database is what refuses the second one.**
   A reservation is one court and one **time range**, and two may never overlap on one court —
   enforced by `EXCLUDE USING gist` over `tstzrange(claimed_from, claimed_to, '[)')`, partial
@@ -201,9 +217,14 @@ Conventional Commits, scoped `api` or the module: `feat(bookings): reject overla
 slots`. Run `make check` before pushing; CI runs the same gate for `backend/**` changes.
 
 The shared glossary is [`../CONTEXT.md`](../CONTEXT.md); backend-only technical vocabulary
-is in [`CONTEXT.md`](CONTEXT.md). Never redefine a domain term locally. **Matches is listed
-but not yet modeled** — before writing code in it, resolve its terms into the glossary and
-record the aggregate shape in an ADR, including whether it is event-sourced or
-persisted-with-events. Clubs, Courts and Bookings are modeled: all three are **records with
-a version**, decided by [ADR-0077](../docs/adr/0077-a-club-is-a-record-and-history-is-a-property-of-three-facts.md)
-and [ADR-0035](../docs/adr/0035-a-reservation-claims-a-court-over-an-interval.md).
+is in [`CONTEXT.md`](CONTEXT.md). Never redefine a domain term locally. **Money is listed but
+not yet modeled** — before writing code in it, resolve its terms into the glossary and record
+the aggregate shape in an ADR, including whether it is event-sourced or persisted-with-events.
+[ADR-0055](../docs/adr/0055-the-ledger-is-event-sourced-one-stream-per-player.md) has already
+answered that one: the ledger is event-sourced, and it is the first racket-sport context to go
+that way. Clubs, Courts, Bookings and Matches are modeled and all four are **records with a
+version**, decided by
+[ADR-0077](../docs/adr/0077-a-club-is-a-record-and-history-is-a-property-of-three-facts.md),
+[ADR-0035](../docs/adr/0035-a-reservation-claims-a-court-over-an-interval.md) and
+[ADR-0034](../docs/adr/0034-matches-is-a-record-and-keeps-no-history.md) — which is what a
+genuinely per-context choice looks like once five contexts have made it.

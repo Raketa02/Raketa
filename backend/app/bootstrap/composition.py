@@ -60,6 +60,10 @@ from app.modules.courts.domain.ports import (
 from app.modules.courts.infrastructure.sqlalchemy_booking_repository import (
     SqlAlchemyBookingRepository,
 )
+from app.modules.matches.domain.ports import MatchRepository
+from app.modules.matches.infrastructure.sqlalchemy_match_repository import (
+    SqlAlchemyMatchRepository,
+)
 from app.modules.courts.infrastructure.sqlalchemy_reservation_repository import (
     SqlAlchemyReservationRepository,
 )
@@ -217,3 +221,27 @@ def build_reservation_repository(session: AsyncSession) -> ReservationRepository
 
 def build_booking_repository(session: AsyncSession) -> BookingRepository:
     return SqlAlchemyBookingRepository(session)
+
+
+# --------------------------------------------------------------------------
+# Matches
+# --------------------------------------------------------------------------
+
+
+def build_match_repository(
+    session: AsyncSession, *, events: DomainEventPublisher
+) -> MatchRepository:
+    """The record repository, over `session` — **and its publisher**.
+
+    The only record repository here that takes a publisher, and ADR-0034 is why:
+    Matches keeps no history, so its announcements are the whole trail, and they
+    have to be written in the transaction that wrote the row. Clubs needs none
+    (nothing has to react to a policy change) and Courts needs none yet
+    (ADR-0071 narrows the pattern to *a named future reader*). This context has
+    a named future reader, and it is the planned playerEventsTracker.
+
+    The publisher is an argument rather than built here so that a caller sharing
+    one outbox writer across two contexts — which `Raketa02/Raketa#70` will do —
+    passes it in rather than getting a second one by accident.
+    """
+    return SqlAlchemyMatchRepository(session, events=events)

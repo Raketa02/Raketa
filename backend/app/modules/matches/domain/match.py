@@ -1,0 +1,768 @@
+"""The Match aggregate: a record with a version, an outbox, and no history.
+
+ADR-0034, and it is the fourth of ADR-0002's five per-context choices to be made
+— the first that has come out *against* event sourcing, which is what a genuinely
+per-context rule looks like when it is real. Not sourced, because *"almost
+nothing about a match is stored"* and the home screen reads several of them on
+every open: rebuilding each from a stream is the cost ADR-0017 warned about, and
+it buys nothing for concurrency that a version on a row does not already buy. Not
+a row plus an audit log either, which is the dual write ADR-0017 refused.
+
+**One aggregate.** *Enrolled* is a relationship and not an object: a seat names a
+player or it does not (``seat.py``). A second aggregate for the enrolled view
+would encode a fact about a player's relationship as a fact about the match,
+which is the mistake ADR-0030 named.
+
+**Five kinds of stored fact**, and every field below is filed under the question
+ADR-0034 classifies by — *may a reader derive this, or may only a writer produce
+it?* Nothing derived is stored: how full the match is, whether a court is held,
+whether it has been played and the situation itself are all computed from these
+facts and the clock, every time. A new fact has to declare its kind before it can
+be added, and *"a reader cannot derive this"* has to be true of it.
+
+**Two facts ADR-0034's table names and this record deliberately does not carry.**
+
+- ``courtId``. ADR-0035 landed after ADR-0034 and put the court on the
+  reservation, where a caller *"never learns how courts are organised"*: the
+  reservation already says ``MatchHeld(match_id)``, so a column here would be the
+  same arrow drawn twice and two places for it to disagree — the argument that
+  keeps a `padded` flag off a reservation and an interval off a booking. What is
+  the match's own is *whether* a court is being held, which is ``held_since`` and
+  ``released_at``, and that is what the ladder reads. *Which* court is a query
+  over reservations, and a reader can derive it, which is exactly the test the
+  five kinds apply.
+- ``holdKind`` and ``protectedAt``. The kernel **composes** a hold from the
+  record (``kernel.court_hold``), so storing its answer would be a second
+  spelling of a computation — and ADR-0071 is the rule that a field with no
+  reader is not forwards-compatibility, it is a field nobody maintains. The hold
+  ladder is ``Raketa02/Raketa#71``; when it needs a fact this record cannot
+  state, it adds it here with its kind declared.
+
+**The policy snapshot is Constitutive, and that is a decision worth reading.**
+ADR-0077 puts a club value that must be honoured *as booked* — the cancellation
+window in force when a player committed — *"on the match record as a Constitutive
+fact, not in a temporal query, so no state on Now inherits another aggregate's
+fold."* So the four fields the ladder reads are copied at posting and travel with
+the match, which is also what makes ``as_record`` need **no other read**: one
+row-set in, a situation out, no club fetch on the busiest path in the product.
+The cost is real and is stated rather than hidden — a club that tightens its cap
+does not reach a match already posted. If ``Raketa02/Raketa#71`` decides it must,
+the fix is a **write** that refreshes this snapshot, with an announcement of its
+own, and never a club read on the compose path.
+
+**Every change announces itself, specifically** (``events.py``). The match keeps
+no history, so the outbox trail *is* the record of what happened, and a generic
+*match updated* would be the one thing that makes it useless.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from typing import final
+from uuid import UUID, uuid5
+
+from app.kernel import (
+    SPORT_SPECS,
+    HoldPolicy,
+    Instant,
+    MatchKind,
+    MatchRecord,
+    Minutes,
+    PayModel,
+    SeatShare,
+    Sport,
+    committed_on_fill,
+    deadlines,
+    is_full,
+    is_terminal,
+    match_end,
+    result_window,
+)
+from app.shared.domain import DomainEvent, EventRecorder
+
+from app.modules.matches.domain.errors import (
+    CourtAlreadyHeld,
+    MatchAlreadySettled,
+    MatchAlreadyStarted,
+    MatchIsFull,
+    MatchNotPlayed,
+    MatchNotPrivate,
+    NoCourtHeld,
+    NoScoreOnTheTable,
+    PlayerAlreadyHoldsASeat,
+    ResultAlreadyAgreed,
+    ResultWindowClosed,
+    SeatNotFound,
+    SeatNotTaken,
+    StartMustBeInTheFuture,
+)
+from app.modules.matches.domain.events import (
+    CourtHeld,
+    CourtLocked,
+    CourtReleased,
+    HoldExtended,
+    InventoryLost,
+    MatchCancelledAtCheckpoint,
+    MatchCancelledByClub,
+    MatchCancelledForWeather,
+    MatchCancelledIncomplete,
+    MatchCommitted,
+    MatchPosted,
+    MatchStartMoved,
+    NoShowRecorded,
+    ResultAgreed,
+    ScoreProposed,
+    SeatPaid,
+    SeatsOpened,
+    SeatTaken,
+    SeatTransferEnded,
+    SeatTransferStarted,
+    SeatVacated,
+)
+from app.modules.matches.domain.score import Score
+from app.modules.matches.domain.seat import Seat
+from app.modules.matches.domain.vacancy import Vacancy
+
+
+@final
+@dataclass
+class Match:
+    """One match: what was posted, who is on it, and what has happened since.
+
+    ``version`` is the **stored** row version and is not touched here — the
+    repository compares it on the way out and bumps it, the same split ``Club``
+    and ``Reservation`` make. An aggregate that incremented its own would have
+    to be told what the store did next, and the two counters would be one fact
+    in two places.
+    """
+
+    id: UUID
+
+    # -- Constitutive · chosen at creation, never recomputed ----------------
+    # A reader cannot derive any of these because nobody computed them: they
+    # were *chosen*, by whoever posted the match.
+    club_id: UUID
+    category_id: UUID
+    sport: Sport
+    duration: Minutes
+    share: SeatShare
+    counted: bool
+    created: Instant
+    kind: MatchKind
+    pay_model: PayModel
+    policy: HoldPolicy
+
+    #: **Deliberately not constitutive.** ADR-0032 keeps it mutable and *"a
+    #: moved match is the same match"*; every deadline is relative to it, so
+    #: moving it moves all five at once.
+    start: Instant
+
+    # -- Occupancy · current state, freely reversible -----------------------
+    # Not derivable — but nothing derives *from* absence either, which is what
+    # makes them safe to move in both directions.
+    seats: list[Seat] = field(default_factory=list)
+    vacancies: list[Vacancy] = field(default_factory=list)
+    transferring: bool = False
+
+    #: How many of a private court's seats are on the marketplace. A Declaration
+    #: in effect — opening one takes unanimous consent from everybody already
+    #: paid (ADR-0030), and no reader can derive that a group agreed to sell.
+    open_seats: int = 0
+
+    # -- Allocation · a claim on contended inventory, and its failure -------
+    # A court is a scarce resource, not a computation.
+    held_since: Instant | None = None
+    released_at: Instant | None = None
+    inventory_lost: bool = False
+
+    # -- Crossing · a threshold irreversibly passed -------------------------
+    # Derivable **once**, then frozen, because the inputs stop supporting it:
+    # commitment needs the deadline passed *and* the match full, so re-deriving
+    # it would release three people the moment a fourth left.
+    committed_at: Instant | None = None
+
+    # -- Declaration · an outside actor's decision --------------------------
+    # No reader can derive any of these, by construction.
+    court_locked: bool = False
+    club_extended: bool = False
+    club_cancelled: bool = False
+    weather: bool = False
+    no_show: bool = False
+    score: Score | None = None
+    score_by: UUID | None = None
+    proposals: int = 0
+    result_agreed: bool = False
+
+    #: The two **receipts**, and they are an annotation rather than a sixth kind
+    #: (ADR-0034). The situation derives without them — a match short at its
+    #: checkpoint is cancelled whether or not anybody has processed it — and the
+    #: flag records only that the refund, the court release and the notice
+    #: completed. That is what makes a downed timekeeper delay the money and
+    #: never the truth.
+    form_cancelled: bool = False
+    checkpoint_cancelled: bool = False
+
+    version: int = 0
+
+    _events: EventRecorder = field(
+        default_factory=EventRecorder, init=False, repr=False, compare=False
+    )
+
+    def __post_init__(self) -> None:
+        players = SPORT_SPECS[self.sport].players
+        if len(self.seats) != players:
+            raise ValueError(
+                f"{self.sport.value} is sold in {players} seats, "
+                f"not {len(self.seats)}"
+            )
+        if [seat.index for seat in self.seats] != list(range(players)):
+            raise ValueError("seats are numbered 0..n-1 in a fixed order")
+        if not 0 <= self.open_seats <= players:
+            raise ValueError(f"{self.open_seats} seats opened of {players}")
+
+    # -- posting ------------------------------------------------------------
+
+    @classmethod
+    def post(
+        cls,
+        *,
+        match_id: UUID,
+        club_id: UUID,
+        category_id: UUID,
+        sport: Sport,
+        start: Instant,
+        duration: Minutes,
+        share: SeatShare,
+        policy: HoldPolicy,
+        at: Instant,
+        counted: bool = True,
+        kind: MatchKind = MatchKind.OPEN,
+        pay_model: PayModel = PayModel.SPLIT,
+        open_seats: int = 0,
+    ) -> "Match":
+        """A new match, with every seat the sport is sold for, all of them empty.
+
+        The seats exist from the first instant: the sport decides how many there
+        are, so they are never created or destroyed and *how full is this* is a
+        count over a fixed list rather than a stored number.
+        """
+
+        players = SPORT_SPECS[sport].players
+        match = cls(
+            id=match_id,
+            club_id=club_id,
+            category_id=category_id,
+            sport=sport,
+            duration=duration,
+            share=share,
+            counted=counted,
+            created=at,
+            kind=kind,
+            pay_model=pay_model,
+            policy=policy,
+            start=start,
+            seats=[Seat(index=index) for index in range(players)],
+            open_seats=open_seats,
+        )
+        match._record(
+            MatchPosted(
+                match_id=match.id,
+                club_id=club_id,
+                category_id=category_id,
+                sport=sport.value,
+                kind=kind.value,
+                pay_model=pay_model.value,
+                start=start,
+                duration_minutes=int(duration),
+                seats=players,
+                share_grosze=int(share),
+                counted=counted,
+                policy_window_minutes=int(policy.window),
+                policy_join_cut_minutes=int(policy.join_cut),
+                occurred_at=at,
+            )
+        )
+        return match
+
+    # -- the record the ladder reads ----------------------------------------
+
+    def as_record(self) -> MatchRecord:
+        """Every stored fact the kernel reads, and **no other read**.
+
+        This is the whole of ADR-0034's *"the busiest object in the product is
+        the cheapest to read"*: one row-set in, a `MatchRecord` out, and
+        `kernel.situation` answers from it with no club fetch, no reservation
+        lookup and no rehydration between the read and the answer.
+        """
+
+        return MatchRecord(
+            sport=self.sport,
+            start=self.start,
+            duration=self.duration,
+            created=self.created,
+            seats=tuple(seat.as_record() for seat in self.seats),
+            policy=self.policy,
+            kind=self.kind,
+            pay_model=self.pay_model,
+            open_seats=self.open_seats,
+            held_since=self.held_since,
+            released_at=self.released_at,
+            committed_at=self.committed_at,
+            open_vacancies=tuple(
+                vacancy.as_record() for vacancy in self.open_vacancies
+            ),
+            transferring=self.transferring,
+            court_locked=self.court_locked,
+            club_extended=self.club_extended,
+            inventory_lost=self.inventory_lost,
+            club_cancelled=self.club_cancelled,
+            weather=self.weather,
+            form_cancelled=self.form_cancelled,
+            checkpoint_cancelled=self.checkpoint_cancelled,
+            no_show=self.no_show,
+            score_proposed=self.score is not None and not self.result_agreed,
+            result_agreed=self.result_agreed,
+        )
+
+    @property
+    def open_vacancies(self) -> list[Vacancy]:
+        """The holes that are still holes, oldest first."""
+
+        return sorted(
+            (vacancy for vacancy in self.vacancies if vacancy.is_open),
+            key=lambda vacancy: vacancy.vacated_at,
+        )
+
+    @property
+    def is_settled(self) -> bool:
+        """Whether nothing further can happen — the five endings, via the kernel."""
+
+        return is_terminal(self.as_record())
+
+    def seat_of(self, player_id: UUID) -> Seat | None:
+        """The seat this player holds, if any. One player holds at most one."""
+
+        for seat in self.seats:
+            if seat.player_id == player_id:
+                return seat
+        return None
+
+    def seat_at(self, index: int) -> Seat:
+        for seat in self.seats:
+            if seat.index == index:
+                return seat
+        raise SeatNotFound()
+
+    # -- the mutable start --------------------------------------------------
+
+    def move_start(self, to: Instant, *, at: Instant) -> None:
+        """Move the match. An ordinary write, with an announcement of its own.
+
+        Every deadline is relative to ``start``, so all five move together and
+        none of them is stored — which is what makes this a one-field write
+        rather than a recomputation.
+        """
+
+        self._refuse_if_settled()
+        self._refuse_if_started(at)
+        if to <= at:
+            raise StartMustBeInTheFuture()
+        moved_from = self.start
+        if to == moved_from:
+            return
+        self.start = to
+        self._record(
+            MatchStartMoved(
+                match_id=self.id,
+                moved_from=moved_from,
+                moved_to=to,
+                occurred_at=at,
+            )
+        )
+
+    # -- occupancy ----------------------------------------------------------
+
+    def take_seat(self, player_id: UUID, *, at: Instant) -> Seat:
+        """A player takes the first free seat, holding it and owing for it.
+
+        **The join cutoff is not enforced here.** ``Raketa02/Raketa#68`` fixes
+        that a seat claim already running when ``joinCut`` passes is honoured to
+        completion and only a *new* one is refused — so the gate belongs to the
+        claim, and putting it here would make a deadline a trapdoor under a
+        player who is already paying.
+
+        Taking a seat closes the **oldest** open hole if there is one. Oldest
+        rather than newest on purpose: two departures thirty hours and one hour
+        ago, with one filler, is a match that lost somebody an hour ago and is
+        still short — and the newest vacancy is what says so.
+        """
+
+        self._refuse_if_settled()
+        self._refuse_if_started(at)
+        if self.seat_of(player_id) is not None:
+            raise PlayerAlreadyHoldsASeat()
+        free = [seat for seat in self.seats if seat.is_free]
+        if not free:
+            raise MatchIsFull()
+
+        seat = free[0]
+        seat.take(player_id, at=at)
+        holes = self.open_vacancies
+        filled_a_vacancy = bool(holes)
+        if filled_a_vacancy:
+            holes[0].fill(at=at)
+        self._record(
+            SeatTaken(
+                match_id=self.id,
+                seat_index=seat.index,
+                player_id=player_id,
+                filled_a_vacancy=filled_a_vacancy,
+                occurred_at=at,
+            )
+        )
+        return seat
+
+    def pay_seat(self, player_id: UUID, *, at: Instant) -> Seat:
+        """The money for this player's seat landed, and the match may now commit.
+
+        Commitment is checked here rather than left to the timekeeper because a
+        match that fills after its own deadline commits *the moment it fills*
+        (``kernel.committed_on_fill``) — and a match that is bound to four
+        people only once a scheduled job notices is the reassuring-direction
+        failure ADR-0034's five kinds exist to remove.
+        """
+
+        self._refuse_if_settled()
+        seat = self.seat_of(player_id)
+        if seat is None:
+            raise SeatNotTaken()
+        seat.pay()
+        self._record(
+            SeatPaid(
+                match_id=self.id,
+                seat_index=seat.index,
+                player_id=player_id,
+                share_grosze=int(self.share),
+                occurred_at=at,
+            )
+        )
+        self.commit_if_due(at=at)
+        return seat
+
+    def vacate_seat(self, player_id: UUID, *, at: Instant) -> Vacancy:
+        """A player gives up a seat, leaving a hole this match now carries.
+
+        What she recovers is her **departure's** answer and is settled on an
+        axis of its own (ADR-0033, ``Raketa02/Raketa#67``); nothing about it is
+        written here, which is what keeps a refill from mutating a settlement.
+        """
+
+        self._refuse_if_settled()
+        self._refuse_if_started(at)
+        seat = self.seat_of(player_id)
+        if seat is None:
+            raise SeatNotTaken()
+        was_paid = seat.paid
+        index = seat.index
+        seat.vacate()
+        vacancy = Vacancy(id=_vacancy_id(self.id, index, at), seat_index=index,
+                          vacated_at=at)
+        self.vacancies.append(vacancy)
+        self._record(
+            SeatVacated(
+                match_id=self.id,
+                seat_index=index,
+                player_id=player_id,
+                was_paid=was_paid,
+                occurred_at=at,
+            )
+        )
+        return vacancy
+
+    def open_seats_to_the_marketplace(self, count: int, *, at: Instant) -> None:
+        """A private court puts ``count`` of its seats on sale.
+
+        Unanimous among everybody already paid (ADR-0030) — that decision is the
+        caller's to have taken; what is recorded here is that it was taken.
+        """
+
+        self._refuse_if_settled()
+        if self.kind is not MatchKind.PRIVATE:
+            raise MatchNotPrivate()
+        if not 0 <= count <= len(self.seats):
+            raise ValueError(f"{count} seats opened of {len(self.seats)}")
+        if count == self.open_seats:
+            return
+        self.open_seats = count
+        self._record(
+            SeatsOpened(match_id=self.id, open_seats=count, occurred_at=at)
+        )
+
+    def begin_transfer(self, seat_index: int, *, at: Instant) -> None:
+        """A leaver named somebody to take her seat; the handover is running.
+
+        The **surface** for this does not exist in v1 — ``Raketa02/Raketa#91``
+        says the departure screen mentions nothing about transferring a seat,
+        because advertising a door that is not there is worse than the gap. The
+        *fact* is read by the ladder (``replacementTransfer``), so the record
+        can state it and this is how it comes to.
+        """
+
+        self._refuse_if_settled()
+        seat = self.seat_at(seat_index)
+        if not seat.is_taken:
+            raise SeatNotTaken()
+        if self.transferring:
+            return
+        self.transferring = True
+        self._record(
+            SeatTransferStarted(
+                match_id=self.id, seat_index=seat_index, occurred_at=at
+            )
+        )
+
+    def end_transfer(self, seat_index: int, *, at: Instant) -> None:
+        """The handover finished or fell through, either way it is over."""
+
+        self._refuse_if_settled()
+        self.seat_at(seat_index)
+        if not self.transferring:
+            return
+        self.transferring = False
+        self._record(
+            SeatTransferEnded(
+                match_id=self.id, seat_index=seat_index, occurred_at=at
+            )
+        )
+
+    # -- allocation ---------------------------------------------------------
+
+    def hold_court(self, *, at: Instant) -> None:
+        """A court is being kept aside for this match, from now.
+
+        **When** a hold is granted is the ladder's question (ADR-0031,
+        ``Raketa02/Raketa#71``); *that* one is held, and since when, is this
+        record's fact — and it cannot be reconstructed, because nothing in the
+        history distinguishes *the hold was granted at T* from *the second seat
+        was paid at T* once a seat has been vacated and refilled.
+
+        **Which** court is Courts' answer, keyed by ``MatchHeld(match_id)``.
+        """
+
+        self._refuse_if_settled()
+        if self.held_since is not None:
+            raise CourtAlreadyHeld()
+        self.held_since = at
+        self.released_at = None
+        self._record(CourtHeld(match_id=self.id, held_since=at, occurred_at=at))
+
+    def release_court(self, *, at: Instant) -> None:
+        """The court goes back on sale, and there is still a group to tell.
+
+        ``released_at`` is a **receipt** — the notification was sent — and never
+        the answer to *is a court held*, which the ladder computes.
+        """
+
+        self._refuse_if_settled()
+        if self.held_since is None:
+            raise NoCourtHeld()
+        self.held_since = None
+        self.released_at = at
+        self._record(
+            CourtReleased(match_id=self.id, released_at=at, occurred_at=at)
+        )
+
+    def lock_court(self, *, at: Instant) -> None:
+        """The club committed a court by hand, outside the ladder."""
+
+        self._refuse_if_settled()
+        if self.court_locked:
+            return
+        self.court_locked = True
+        self._record(CourtLocked(match_id=self.id, occurred_at=at))
+
+    def extend_hold(self, *, at: Instant) -> None:
+        """The club published an extension of a hold the ladder had lapsed."""
+
+        self._refuse_if_settled()
+        if self.club_extended:
+            return
+        self.club_extended = True
+        self._record(HoldExtended(match_id=self.id, occurred_at=at))
+
+    def lose_inventory(self, *, at: Instant) -> None:
+        """The last court of the category went to somebody else. Terminal.
+
+        One story and never *we raced somebody and lost*: ADR-0035 makes the
+        race structurally impossible, so losing inventory is a query result
+        (``Raketa02/Raketa#70``).
+        """
+
+        self._refuse_if_settled()
+        self.inventory_lost = True
+        self._record(InventoryLost(match_id=self.id, occurred_at=at))
+
+    # -- crossing -----------------------------------------------------------
+
+    def commit_if_due(self, *, at: Instant) -> bool:
+        """Bind everybody to this match, if it is full and its deadline has come.
+
+        Idempotent and one-directional: a match that has committed stays
+        committed, because *"a re-derivation would release three people the
+        moment a fourth left"*.
+        """
+
+        if self.committed_at is not None or self.is_settled:
+            return False
+        record = self.as_record()
+        if not is_full(record) or at < deadlines(record).commit:
+            return False
+        self.committed_at = at
+        self._record(
+            MatchCommitted(
+                match_id=self.id,
+                committed_at=at,
+                on_fill=committed_on_fill(self.as_record()),
+                occurred_at=at,
+            )
+        )
+        return True
+
+    # -- declaration --------------------------------------------------------
+
+    def cancel_by_club(self, *, at: Instant) -> None:
+        """A manager cancelled it. **No reader can derive that**, which is why
+        it is a Declaration and not one of the two receipts below."""
+
+        self._refuse_if_settled()
+        self.club_cancelled = True
+        self._record(MatchCancelledByClub(match_id=self.id, occurred_at=at))
+
+    def cancel_for_weather(self, *, at: Instant) -> None:
+        """The weather took it. Its own story, told with its own name."""
+
+        self._refuse_if_settled()
+        self.weather = True
+        self._record(MatchCancelledForWeather(match_id=self.id, occurred_at=at))
+
+    def settle_incomplete_cancellation(self, *, at: Instant) -> None:
+        """Record that a match which never filled has been refunded and released.
+
+        A **receipt**, not a decision: the situation already derives — the
+        deadline passed with the match short — and this says only that the money
+        moved, the court went back and the notice went out.
+        """
+
+        self._refuse_if_settled()
+        self.form_cancelled = True
+        self._record(MatchCancelledIncomplete(match_id=self.id, occurred_at=at))
+
+    def settle_checkpoint_cancellation(self, *, at: Instant) -> None:
+        """The same receipt, for a match still short at its checkpoint."""
+
+        self._refuse_if_settled()
+        self.checkpoint_cancelled = True
+        self._record(MatchCancelledAtCheckpoint(match_id=self.id, occurred_at=at))
+
+    def record_no_show(self, *, at: Instant) -> None:
+        """Somebody who paid did not turn up."""
+
+        self._refuse_if_settled()
+        self._require_played(at)
+        if self.no_show:
+            return
+        self.no_show = True
+        self._record(NoShowRecorded(match_id=self.id, occurred_at=at))
+
+    def propose_score(self, score: Score, *, by: UUID, at: Instant) -> None:
+        """Put a score on the table, replacing whatever was there.
+
+        Four facts and never a list (ADR-0034): the score on the table, who put
+        it there, whether it is agreed, and **how many** proposals there have
+        been. The conversation itself belongs to the announcements, which is the
+        shape a support agent reads it in.
+
+        Refused past ``kernel.result_window`` — the ladder answers
+        ``playedNoScore`` from there, and a score stored past it would be one
+        the screen cannot show. What the *route* asks and permits is
+        ``Raketa02/Raketa#79``'s, including the permissive validator: nothing
+        here judges whether 7-6 is a real set.
+        """
+
+        self._refuse_if_settled()
+        self._require_played(at)
+        if self.result_agreed:
+            raise ResultAlreadyAgreed()
+        if at >= result_window(self.as_record()):
+            raise ResultWindowClosed()
+        self.score = score
+        self.score_by = by
+        self.proposals += 1
+        self._record(
+            ScoreProposed(
+                match_id=self.id,
+                proposed_by=by,
+                sets=[[one.side_a, one.side_b] for one in score.sets],
+                proposals=self.proposals,
+                occurred_at=at,
+            )
+        )
+
+    def agree_result(self, *, at: Instant, by_silence: bool = False) -> None:
+        """The score settles — by agreement, or by the silence that confirms it.
+
+        ADR-0048 makes those one outcome and a support agent does not, so which
+        one it was rides on the announcement and nowhere else.
+        """
+
+        self._refuse_if_settled()
+        if self.result_agreed:
+            raise ResultAlreadyAgreed()
+        score = self.score
+        if score is None:
+            raise NoScoreOnTheTable()
+        self.result_agreed = True
+        self._record(
+            ResultAgreed(
+                match_id=self.id,
+                sets=[[one.side_a, one.side_b] for one in score.sets],
+                by_silence=by_silence,
+                occurred_at=at,
+            )
+        )
+
+    # -- events -------------------------------------------------------------
+
+    def pull_events(self) -> list[DomainEvent]:
+        """Everything this match has announced since it was last drained."""
+
+        return self._events.pull()
+
+    def _record(self, event: DomainEvent) -> None:
+        self._events.record(event)
+
+    # -- guards -------------------------------------------------------------
+
+    def _refuse_if_settled(self) -> None:
+        if self.is_settled:
+            raise MatchAlreadySettled()
+
+    def _refuse_if_started(self, at: Instant) -> None:
+        if at >= self.start:
+            raise MatchAlreadyStarted()
+
+    def _require_played(self, at: Instant) -> None:
+        if at < match_end(self.as_record()):
+            raise MatchNotPlayed()
+
+
+def _vacancy_id(match_id: UUID, seat_index: int, at: Instant) -> UUID:
+    """A vacancy's id, derived rather than minted.
+
+    Derived for the reason ADR-0019 derives an assessment's stream id: a
+    domain layer that mints identifiers reaches for ``uuid4``, and a pure
+    aggregate cannot. One match, one seat and one instant name one hole — the
+    same seat emptied twice at one clock reading is not two holes.
+    """
+
+    return uuid5(match_id, f"vacancy:{seat_index}:{at.isoformat()}")

@@ -525,10 +525,12 @@ forty minutes away at twice your ceiling is a good match in the abstract and a b
 
 ## Part 2 — Planned bounded contexts
 
-The racket-sport domain proper. **These are not modeled yet** — no code, no events. Terms
-are uncommitted here **except** where an ADR has committed one ahead of the code; the Matches
-block below is the first such exception. They are listed so that work lands in the right
-context from the first commit, and so nobody invents a fourth name for the same idea.
+The racket-sport domain proper. **Four of the five are now modeled** — Clubs, Courts,
+Bookings and Matches all have code, and their terms have moved into Part 1 of
+[`backend/CONTEXT.md`](backend/CONTEXT.md) as they landed. **Money is not**, and the terms
+below it are uncommitted **except** where an ADR has committed one ahead of the code. They are
+listed so that work lands in the right context from the first commit, and so nobody invents a
+fourth name for the same idea.
 
 | Context | Intent | Likely home |
 | --- | --- | --- |
@@ -673,7 +675,17 @@ players and looks for a Reservation.** That is the whole of the difference betwe
 match kinds, and it is why the private path has no commitment deadline
 ([ADR-0030](docs/adr/0030-a-departure-is-an-audience-not-a-state.md)).
 
-### Matches — terms committed ahead of the code
+### Matches — the vocabulary the aggregate was built with
+
+**Matches is modeled** (`backend/app/modules/matches/`): one `Match` aggregate, a record with
+a version and an outbox, no event history, and every change announced under its own name
+([ADR-0034](docs/adr/0034-matches-is-a-record-and-keeps-no-history.md)). These terms were
+committed ahead of the code and the code was built with them rather than around them; the
+backend's own technical vocabulary for the aggregate — the five kinds, the policy snapshot,
+the announcement obligation — is in
+[`backend/CONTEXT.md`](backend/CONTEXT.md). What is **not** built yet is named where it is
+named: the departure record (`#67`), seat claims (`#68`), the hold ladder that grants a court
+(`#71`) and the timekeeper (`#72`).
 
 Committed by [ADR-0030](docs/adr/0030-a-departure-is-an-audience-not-a-state.md),
 [ADR-0031](docs/adr/0031-hold-ladder-is-a-floor-at-a-level-of-certainty.md),
@@ -681,9 +693,7 @@ Committed by [ADR-0030](docs/adr/0030-a-departure-is-an-audience-not-a-state.md)
 [ADR-0033](docs/adr/0033-settlement-and-occupancy-are-independent.md),
 [ADR-0034](docs/adr/0034-matches-is-a-record-and-keeps-no-history.md),
 [ADR-0040](docs/adr/0040-one-ladder-resolves-a-situation.md) and
-[ADR-0041](docs/adr/0041-tone-is-editorial-so-the-wire-carries-a-situation-and-its-facts.md). The
-code does not exist yet; these names do, and Matches must be built with them rather than around
-them.
+[ADR-0041](docs/adr/0041-tone-is-editorial-so-the-wire-carries-a-situation-and-its-facts.md).
 
 - **Paid · held · empty** — the three states of a seat, spelled as the commitment rules and
   `backend/app/engines/matchmaking.py` already spell them. **Held** means a name on a seat and

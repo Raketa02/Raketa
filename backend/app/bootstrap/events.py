@@ -30,6 +30,10 @@ from app.modules.auth.application.event_subscriptions import (
     register_auth_events,
     subscribe_auth_handlers,
 )
+from app.modules.matches.application.event_subscriptions import (
+    register_match_events,
+    subscribe_match_handlers,
+)
 from app.modules.rating.application.event_subscriptions import (
     register_rating_events,
     subscribe_rating_handlers,
@@ -76,11 +80,13 @@ def build_event_runtime() -> EventRuntime:
     register_user_events(catalog)
     register_auth_events(catalog)
     register_rating_events(catalog)
+    register_match_events(catalog)
 
     dispatcher = EventDispatcher()
     subscribe_user_handlers(dispatcher)
     subscribe_auth_handlers(dispatcher)
     subscribe_rating_handlers(dispatcher)
+    subscribe_match_handlers(dispatcher)
 
     return EventRuntime(
         codec=JsonEventCodec(catalog),

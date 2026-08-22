@@ -74,6 +74,7 @@ from app.bootstrap.composition import (
     build_clock,
     build_domain_event_store,
     build_event_publisher,
+    build_match_repository,
     build_password_hasher,
     build_reservation_repository,
     build_skill_rating_repository,
@@ -82,7 +83,7 @@ from app.bootstrap.composition import (
 )
 from app.core.config import Settings, get_settings
 from app.infrastructure.database.engine import create_engine
-from app.kernel import Sport, exhaustive
+from app.kernel import Instant, Sport, exhaustive, situation
 from app.modules.clubs.application.add_court import AddCourt
 from app.modules.clubs.application.add_court_category import AddCourtCategory
 from app.modules.clubs.application.change_club_policy import ChangeClubPolicy
@@ -116,6 +117,19 @@ from app.modules.courts.application.commands import (
 from app.modules.courts.application.release_reservation import ReleaseReservation
 from app.modules.courts.domain.ports import BookingRepository, ReservationRepository
 from app.modules.courts.domain.reservation import ClubHeld, HolderKind, Reservation
+from app.modules.matches.application.cancel_match import CancelMatch
+from app.modules.matches.application.commands import (
+    CancellationCause,
+    CancelMatchCommand,
+    PaySeatCommand,
+    PostMatchCommand,
+    TakeSeatCommand,
+    VacateSeatCommand,
+)
+from app.modules.matches.application.post_match import PostMatch
+from app.modules.matches.application.seat_moves import PaySeat, TakeSeat, VacateSeat
+from app.modules.matches.domain.match import Match
+from app.modules.matches.domain.ports import MatchRepository
 from app.modules.rating.application.abandon_assessment import AbandonAssessment
 from app.modules.rating.application.commands import (
     AbandonAssessmentCommand,
@@ -146,6 +160,7 @@ from app.seeds.catalog import (
 )
 from app.seeds.clubs import CLUBS, KRAKOW, SeedCategory, SeedClub
 from app.seeds.courts import RESERVATIONS, SeedReservation
+from app.seeds.matches import MATCHES, SeedMatch
 from app.seeds.guard import refuse_unless_seedable
 
 #: A questionnaire the seed can no longer finish is a hang, and a hang in a
@@ -216,6 +231,15 @@ class SeededReservation:
 
 
 @dataclass(frozen=True)
+class SeededMatch:
+    """What one match is, after the run — and whether this run created it."""
+
+    match: SeedMatch
+    match_id: UUID
+    created: bool
+
+
+@dataclass(frozen=True)
 class Seeded:
     """Everything one run brought into being, per context.
 
@@ -228,6 +252,7 @@ class Seeded:
     accounts: tuple[SeededAccount, ...]
     clubs: tuple[SeededClub, ...]
     reservations: tuple[SeededReservation, ...]
+    matches: tuple[SeededMatch, ...]
 
 
 @dataclass(frozen=True)
@@ -247,6 +272,7 @@ class _UseCases:
     clubs: ClubRepository
     reservations: ReservationRepository
     bookings: BookingRepository
+    matches: MatchRepository
     register: RegisterUser
     create: CreateAssessment
     submit: SubmitAnswer
@@ -263,6 +289,13 @@ class _UseCases:
     claim_court: ClaimCourt
     book_court: BookCourt
     release_reservation: ReleaseReservation
+    post_match: PostMatch
+    take_seat: TakeSeat
+    pay_seat: PaySeat
+    vacate_seat: VacateSeat
+    cancel_match: CancelMatch
+    #: The clock the Matches use cases write with. See `_SeededWeekClock`.
+    week: "_SeededWeekClock"
 
 
 def _build(session: AsyncSession) -> _UseCases:
@@ -282,6 +315,10 @@ def _build(session: AsyncSession) -> _UseCases:
     reservations = build_reservation_repository(session)
     bookings = build_booking_repository(session)
     claim_court = ClaimCourt(clubs, reservations, uow)
+    matches = build_match_repository(session, events=events)
+    # Matches is the one context seeded on a clock the runner sets. See
+    # `_SeededWeekClock` for why, and `app/seeds/matches.py` for what it buys.
+    week = _SeededWeekClock()
 
     return _UseCases(
         users=users,
@@ -290,9 +327,16 @@ def _build(session: AsyncSession) -> _UseCases:
         clubs=clubs,
         reservations=reservations,
         bookings=bookings,
+        matches=matches,
         claim_court=claim_court,
         book_court=BookCourt(clubs, bookings, claim_court, uow, clock),
         release_reservation=ReleaseReservation(reservations, uow, clock),
+        post_match=PostMatch(matches, clubs, uow, week),
+        take_seat=TakeSeat(matches, uow, week),
+        pay_seat=PaySeat(matches, uow, week),
+        vacate_seat=VacateSeat(matches, uow, week),
+        cancel_match=CancelMatch(matches, uow, week),
+        week=week,
         register_club=RegisterClub(clubs, uow, clock),
         change_policy=ChangeClubPolicy(clubs, uow, clock),
         change_payout=ChangePayoutDestination(clubs, uow, clock),
@@ -347,6 +391,10 @@ async def seed(session: AsyncSession) -> Seeded:
     also the one context here whose scenarios can be refused by the *database*
     rather than by the catalog — two seeded claims overlapping on one court
     would be refused by the exclusion constraint, which is the system working.
+
+    Matches come last for the same reason and one more: a match reads its club's
+    policy at posting and carries it thereafter (ADR-0077), so the club has to be
+    in the state its own name promises before a match copies anything from it.
     """
 
     use_cases = _build(session)
@@ -358,7 +406,18 @@ async def seed(session: AsyncSession) -> Seeded:
             for reservation in RESERVATIONS
         ]
     )
-    return Seeded(accounts=accounts, clubs=clubs, reservations=reservations)
+    matches = tuple(
+        [
+            await _seed_match(use_cases, accounts, clubs, match)
+            for match in MATCHES
+        ]
+    )
+    return Seeded(
+        accounts=accounts,
+        clubs=clubs,
+        reservations=reservations,
+        matches=matches,
+    )
 
 
 async def _seed_account(use_cases: _UseCases, account: SeedAccount) -> SeededAccount:
@@ -977,6 +1036,209 @@ def _refuse_a_reservation_whose_name_lies(
         )
 
 
+# ---------------------------------------------------------------------------
+# Matches
+# ---------------------------------------------------------------------------
+
+
+class _SeededWeekClock:
+    """The clock the Matches use cases write with, set by the runner per step.
+
+    Every other seeded aggregate is timeless — an account is registered whenever
+    it is registered, and nothing about its name depends on when. A match **is**
+    its clock: whether it committed, when a seat was taken, when a hole opened
+    and whether the result window has closed are all comparisons against it, and
+    they are what the scenario's name promises. Left on the wall clock, a seeded
+    ``committed_at`` would say *the day somebody ran make seed* and the name
+    would be a claim about that day rather than about the state.
+
+    So this is a ``Clock`` port whose value the runner sets, which is what a port
+    is for. It is **not** a fake standing in for a real one: the instants it
+    hands out are written to the database and are the match's real facts.
+    """
+
+    def __init__(self) -> None:
+        self._now: Instant | None = None
+
+    def at(self, moment: Instant) -> None:
+        self._now = moment
+
+    def now(self) -> Instant:
+        """The instant the runner set, or a refusal.
+
+        A seeded write with no instant set is a bug, not a default of *now*:
+        falling back to the wall clock is exactly the failure this class exists
+        to remove, and it would be invisible — the run would succeed and the
+        match would carry the day it happened to run.
+        """
+
+        if self._now is None:
+            raise SeedFailed(
+                "a Matches seed write with no instant set. The seeded week's "
+                "clock is set per step; falling back to the wall clock would "
+                "make the scenario's name a claim about the day the seed ran."
+            )
+        return self._now
+
+
+async def _seed_match(
+    use_cases: _UseCases,
+    accounts: tuple[SeededAccount, ...],
+    clubs: tuple[SeededClub, ...],
+    scenario: SeedMatch,
+) -> SeededMatch:
+    """Bring one match into the state the scenario names, from wherever it is.
+
+    **The probe is a query over the club's matches**, keyed on the three facts a
+    scenario fixes and the write path does not choose: the sport, the hour and
+    whether the court is private. Not on an id — the id is minted by the write
+    path and a fresh database mints a different one.
+    """
+
+    club_id = _seeded_club_id_for_match(clubs, scenario)
+    existing = await _match_already_seeded(use_cases, club_id, scenario)
+    if existing is not None:
+        _refuse_a_match_whose_name_lies(scenario, existing)
+        return SeededMatch(match=scenario, match_id=existing.id, created=False)
+
+    match = await _write_the_match(use_cases, accounts, club_id, scenario)
+    stored = await use_cases.matches.get(match.id)
+    assert stored is not None  # just written, in this transaction
+    _refuse_a_match_whose_name_lies(scenario, stored)
+    return SeededMatch(match=scenario, match_id=stored.id, created=True)
+
+
+async def _write_the_match(
+    use_cases: _UseCases,
+    accounts: tuple[SeededAccount, ...],
+    club_id: UUID,
+    scenario: SeedMatch,
+) -> Match:
+    """Post it, seat the players, take the money, open the hole — in that order.
+
+    Every step through the use case a request runs, and every step on the
+    seeded week's clock rather than on the wall clock.
+    """
+
+    club = await use_cases.get_club.execute(club_id)
+    category = _seeded_category(club, scenario.category)
+
+    use_cases.week.at(scenario.posted_at)
+    match = await use_cases.post_match.execute(
+        PostMatchCommand(
+            club_id=club_id,
+            category_id=category.id,
+            sport=scenario.sport,
+            start=scenario.start,
+            duration=scenario.duration,
+            share=scenario.share,
+            kind=scenario.kind,
+            pay_model=scenario.pay_model,
+            open_seats=scenario.open_seats,
+        )
+    )
+
+    use_cases.week.at(scenario.joined_at)
+    seated = _players_for(accounts, scenario)
+    for index, player in enumerate(seated):
+        await use_cases.take_seat.execute(
+            TakeSeatCommand(match_id=match.id, player_id=player)
+        )
+        if index < scenario.paid:
+            await use_cases.pay_seat.execute(
+                PaySeatCommand(match_id=match.id, player_id=player)
+            )
+
+    if scenario.vacated:
+        assert scenario.vacated_at is not None  # `SeedMatch` refuses otherwise
+        use_cases.week.at(scenario.vacated_at)
+        for player in seated[: scenario.vacated]:
+            await use_cases.vacate_seat.execute(
+                VacateSeatCommand(match_id=match.id, player_id=player)
+            )
+
+    if scenario.cancelled is not None:
+        assert scenario.cancelled_at is not None  # `SeedMatch` refuses otherwise
+        use_cases.week.at(scenario.cancelled_at)
+        await use_cases.cancel_match.execute(
+            CancelMatchCommand(
+                match_id=match.id, cause=CancellationCause(scenario.cancelled)
+            )
+        )
+
+    return match
+
+
+def _players_for(
+    accounts: tuple[SeededAccount, ...], scenario: SeedMatch
+) -> list[UUID]:
+    """The seeded accounts, in catalog order, as many as the scenario seats.
+
+    In order rather than chosen, so that signing in as the first seeded account
+    shows a developer her own matches — and so that which player is on seat 2 is
+    the same on every run.
+    """
+
+    if scenario.taken > len(accounts):
+        raise SeedFailed(
+            f"'{scenario.slug}' seats {scenario.taken} players and the account "
+            f"catalog holds {len(accounts)}."
+        )
+    return [account.player_id for account in accounts[: scenario.taken]]
+
+
+async def _match_already_seeded(
+    use_cases: _UseCases, club_id: UUID, scenario: SeedMatch
+) -> Match | None:
+    for match in await use_cases.matches.for_club(club_id):
+        if (
+            match.sport is scenario.sport
+            and match.start == scenario.start
+            and match.kind is scenario.kind
+        ):
+            return match
+    return None
+
+
+def _seeded_club_id_for_match(
+    clubs: tuple[SeededClub, ...], scenario: SeedMatch
+) -> UUID:
+    for seeded in clubs:
+        if seeded.club.slug == scenario.club_slug:
+            return seeded.club_id
+    raise SeedFailed(
+        f"'{scenario.slug}' names the club '{scenario.club_slug}', which the "
+        f"club catalog does not hold. A match at a club that does not exist is "
+        f"a catalog that has been half-edited."
+    )
+
+
+def _refuse_a_match_whose_name_lies(scenario: SeedMatch, stored: Match) -> None:
+    """Ask the **kernel** whether the name still holds, every run.
+
+    The strongest form of this check in the whole seed system, and the cheapest:
+    a match's state is derived, so the name can be checked by the one function
+    that derives it. Retune a threshold, reorder a rung, or change what a paid
+    seat means, and the seed stops and says which account's screen just moved —
+    rather than a developer building against a card that quietly says something
+    else.
+
+    Checked against the **stored** match, including on a run that created
+    nothing, and at the scenario's own instant, because a situation is a
+    function of the record *and* the clock.
+    """
+
+    resolved = situation(stored.as_record(), None, scenario.claim.resolved_at)
+    if resolved is not scenario.claim.situation:
+        raise SeedFailed(
+            f"'{scenario.slug}' is named for {scenario.claim.promise} — "
+            f"{scenario.claim.situation.value} — and the kernel now resolves it "
+            f"to {resolved.value}. Either the ladder or the name is wrong: a "
+            f"match whose name lies is worse than one that is missing, because "
+            f"nothing about the card it is developed against would look wrong."
+        )
+
+
 def report(seeded: Seeded) -> list[str]:
     """The run, as lines a developer reads — address, password, state, id."""
 
@@ -1015,5 +1277,17 @@ def report(seeded: Seeded) -> list[str]:
         lines.append(f"      {claim.reservation.description}")
         lines.append(
             f"      reservation {claim.reservation_id} on court {claim.court_id}"
+        )
+
+    lines.append("")
+    lines.append(f"Seeded {len(seeded.matches)} match(es).")
+    lines.append("")
+    for match in seeded.matches:
+        state = "created" if match.created else "already present"
+        lines.append(f"  {match.match.slug}  [{state}]")
+        lines.append(f"      {match.match.description}")
+        lines.append(
+            f"      match {match.match_id} · "
+            f"{match.match.claim.situation.value}"
         )
     return lines

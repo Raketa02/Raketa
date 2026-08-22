@@ -87,13 +87,12 @@ SEED_MODULES = sorted((ROOT / "app" / "seeds").glob("*.py"))
 #: will sell a name under any of them.
 RFC2606_RESERVED_TLDS = frozenset({".test", ".example", ".invalid", ".localhost"})
 
-#: The bounded contexts that have aggregates. Matches is named in the glossary
-#: and modeled nowhere, so a seed for one of them would have to invent the
-#: aggregate first — which is why no seeded reservation is match-held. Clubs
-#: joined the set with #64 and Courts with #65, which is what the equality below
-#: is for: it grows deliberately, one context at a time, and it cannot silently
-#: fall behind either.
-MODELED_CONTEXTS = frozenset({"users", "rating", "clubs", "courts"})
+#: The bounded contexts that have aggregates. Clubs joined the set with #64,
+#: Courts with #65 and Matches with #66, which is what the equality below is
+#: for: it grows deliberately, one context at a time, and it cannot silently
+#: fall behind either. Every context the Now section names is now modeled, so
+#: the next addition is a genuinely new one rather than a gap being closed.
+MODELED_CONTEXTS = frozenset({"users", "rating", "clubs", "courts", "matches"})
 
 #: SQLAlchemy's statement constructors. Importing one into the seed path is how
 #: "just this once, it is only a fixture row" starts.
@@ -175,6 +174,7 @@ def test_the_walk_has_something_to_walk():
         "clubs.py",
         "courts.py",
         "guard.py",
+        "matches.py",
         "runner.py",
     }
 
@@ -511,11 +511,13 @@ def _only_this_catalog(monkeypatch) -> None:
     and a booking names a player, and the runner refuses a claim whose club or
     player is missing rather than skipping it — a half-edited catalog is a
     failure, not a smaller run. So a test that replaces `ACCOUNTS` with one
-    account has, by construction, deleted the buyer a seeded booking names, and
-    would otherwise fail on that instead of on what it is asking about.
+    account has, by construction, deleted the buyer a seeded booking names and
+    two of the players a seeded match seats, and would otherwise fail on that
+    instead of on what it is asking about.
     """
 
     monkeypatch.setattr("app.seeds.runner.RESERVATIONS", ())
+    monkeypatch.setattr("app.seeds.runner.MATCHES", ())
 
 
 def _rated_scenarios() -> list[tuple[SeedAccount, RatedRun]]:
@@ -716,6 +718,7 @@ def test_the_report_names_the_address_the_password_and_every_state():
     lines = report(
         Seeded(
             reservations=(),
+            matches=(),
             accounts=(
                 SeededAccount(
                     account=account,
@@ -753,6 +756,7 @@ def test_the_report_says_which_state_each_scenario_is_in():
     states = report(
         Seeded(
             reservations=(),
+            matches=(),
             accounts=(
                 SeededAccount(
                     account=SeedAccount(slug="probe", description="probe"),
@@ -799,6 +803,7 @@ def test_the_report_names_every_club_and_what_state_it_is_in():
     lines = report(
         Seeded(
             reservations=(),
+            matches=(),
             accounts=(),
             clubs=(
                 SeededClub(club=NEVER_HOLDS, club_id=UUID(int=9), created=True),

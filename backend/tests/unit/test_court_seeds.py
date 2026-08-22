@@ -83,14 +83,15 @@ def test_every_booking_names_an_account_the_account_catalog_holds():
 
 
 def test_no_seeded_claim_is_match_held():
-    """Matches has no aggregate (`Raketa02/Raketa#66`). A uuid standing in for
-    one would satisfy every walk in the suite and still be an invented
-    aggregate, so the catalog refuses it at construction."""
+    """A match hold is granted by the ladder (`Raketa02/Raketa#71`), and seeding
+    one here would decide what the ladder decides — leaving a seeded match with
+    a `heldSince` nobody derived. Matches has had an aggregate since `#66`; the
+    catalog still refuses this at construction, for the later reason."""
 
     for reservation in RESERVATIONS:
         assert reservation.held_by is not HolderKind.MATCH
 
-    with pytest.raises(ValueError, match="Matches has no aggregate"):
+    with pytest.raises(ValueError, match="the hold ladder"):
         replace(RESERVATIONS[0], held_by=HolderKind.MATCH)
 
 

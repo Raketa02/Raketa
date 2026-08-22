@@ -10,11 +10,12 @@ behind, and a claim wider than the game it is for.
 
 **Two of the three holders are seeded, and the third is deliberately absent.** A
 club block needs only Clubs; a booking needs a player, and players are modeled.
-A **match hold** would need a match id, and Matches has no aggregate
-(`Raketa02/Raketa#66`) — inventing one here is the scope creep
-`test_the_seed_path_touches_only_the_contexts_that_exist` refuses, and a uuid
-standing in for an aggregate is the version of that creep a walk cannot see. It
-arrives with the context that owns it.
+A **match hold** is a court the ladder is keeping aside for a match, and *when*
+one is granted is the hold ladder's decision (ADR-0031,
+`Raketa02/Raketa#71`) — seeding one here would decide what the ladder decides,
+and the seeded match would then carry a `heldSince` nobody derived. Matches has
+had an aggregate since `#66`; what it does not yet have is the ladder that grants
+this. It arrives with the ticket that owns it.
 
 **The window is a fixed absolute instant, not an offset from now.** A seed run
 is idempotent, and *"next Tuesday at 18:00"* computed at run time is a different
@@ -87,8 +88,8 @@ class SeedReservation:
     def __post_init__(self) -> None:
         if self.held_by is HolderKind.MATCH:
             raise ValueError(
-                f"'{self.slug}' is match-held, and Matches has no aggregate to "
-                "hold it (Raketa02/Raketa#66). Seed what is modeled."
+                f"'{self.slug}' is match-held, and the hold ladder that grants "
+                "a match its court is Raketa02/Raketa#71. Seed what is decided."
             )
         wants_player = self.held_by is HolderKind.BOOKING
         if wants_player != (self.player_slug is not None):

@@ -178,14 +178,16 @@ async def _seeded_clubs(session_factory):
 def _only_the_club_catalog(monkeypatch) -> None:
     """Narrow the court claims away while the club catalog is under test.
 
-    The catalogs are coupled on purpose: a court claim names a club's category,
-    and the runner refuses a claim whose club is missing rather than skipping it
-    — a half-edited catalog is a failure, not a smaller run. So a test that
-    replaces `CLUBS` with one club has, by construction, deleted the venue a
-    seeded claim names.
+    The catalogs are coupled on purpose: a court claim names a club's category
+    and a match names a club's category too, and the runner refuses either whose
+    club is missing rather than skipping it — a half-edited catalog is a
+    failure, not a smaller run. So a test that replaces `CLUBS` with one club
+    has, by construction, deleted the venue a seeded claim and a seeded match
+    both name.
     """
 
     monkeypatch.setattr("app.seeds.runner.RESERVATIONS", ())
+    monkeypatch.setattr("app.seeds.runner.MATCHES", ())
 
 
 

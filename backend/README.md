@@ -95,6 +95,43 @@ logout can verify, revoke, and rotate tokens safely. Auth domain events include:
 - `RefreshTokenRevoked`
 - `RefreshTokenRotated`
 
+The `matches` module models `Match` as a **record with a version and an outbox**, and it is
+the one racket-sport context that is deliberately **not** event-sourced
+([ADR-0034](../docs/adr/0034-matches-is-a-record-and-keeps-no-history.md)). Almost nothing
+about a match is stored — the state is recomputed from the record and the clock every time
+anybody looks — so there is little history to source, and the home screen reads several
+matches per open, which a replay per match would sit on top of. Concurrency comes from a
+`version` column compared in the UPDATE that bumps it, which is the identical guarantee
+`expected_version` gives a stream.
+
+Every stored fact declares one of **five kinds**, by the question *may a reader derive
+this*: **Constitutive**, **Occupancy**, **Allocation**, **Crossing** and **Declaration**. A
+new fact has to name its kind before it can be added, and a reviewer asking *can a reader
+derive this?* has a table to answer from. Two of the flags — `form_cancelled` and
+`checkpoint_cancelled` — are **receipts** on conclusions the clock already reached rather
+than a sixth kind: the situation derives without them, and they record only that the refund,
+the court release and the notice completed. So a downed timekeeper delays the money and never
+the truth.
+
+Because the match keeps no history, the outbox trail *is* the record of what happened, and
+ADR-0034 attaches one obligation that is not ordinary:
+
+> Every change a support agent would one day need to explain to a player is announced as its
+> own named event — never as a generic *match updated*.
+
+That is why `app/modules/matches/domain/events.py` holds twenty-one names rather than one.
+Nothing mechanical catches an event published too coarsely, so
+`tests/unit/test_match_events.py` walks the aggregate with an AST and fails when a mutating
+method announces nothing, and refuses a name that reads like *updated*.
+
+`Match.as_record()` hands the kernel a `MatchRecord` and **needs no other read**: the club's
+four hold-policy fields are copied at posting and honoured *as booked*
+([ADR-0077](../docs/adr/0077-a-club-is-a-record-and-history-is-a-property-of-three-facts.md)),
+so a situation is one row-set away with no club fetch on Now's path. The cost is real and is
+stated rather than hidden — a club that tightens its cap does not reach a match already
+posted, and if the hold ladder (`Raketa02/Raketa#71`) decides it must, the fix is a write that
+refreshes the snapshot rather than a club read on the compose path.
+
 ## Event Sourcing And Outbox
 
 The project uses two event-related persistence tables with different purposes:
@@ -406,12 +443,36 @@ now: *next Tuesday at 18:00* computed at run time is a different Tuesday tomorro
 second run would claim a second court. A week somebody can walk through arrives with the
 demo week (`Raketa02/Raketa#96`).
 
-Scope is what is **modeled**: players, onboarding assessments, Skill ratings, clubs, and
-court reservations and bookings. **Matches has no aggregate**, so nothing seeds a
-match-held reservation — a uuid standing in for a match would satisfy every walk in the
-suite and still be an invented context. A walk over `app/seeds/` asserts the package
-imports **exactly** the four contexts that exist — equality in both directions, so it grows
-deliberately and cannot silently fall behind.
+`app/seeds/matches.py` adds seven matches, and here the name is checked by the **kernel**:
+
+| Match | The situation its name promises |
+| --- | --- |
+| `match-forming` | `forming` — posted, nobody on it, deadline days away |
+| `match-with-a-seat-held-and-unpaid` | `formingHeld` — held and paid are two facts |
+| `match-past-its-commitment-deadline` | `formingLate` — short, with the deadline behind it |
+| `match-that-lost-a-player` | `replacement` — committed, and one seat short |
+| `match-played-and-unscored` | `needsResult` — played, waiting twenty-four hours for a score |
+| `match-private-with-seats-opened` | `privateOpen` — somebody's court, two seats for sale |
+| `match-the-club-cancelled` | `cancelledClub` — a decision, not a receipt |
+
+Every other catalog checks a property somebody wrote down. A match's state is *derived*, so a
+scenario names the `Situation` it must resolve to and the runner asks `kernel.situation`
+against the **stored** record on every run — at the scenario's own fixed instant, because a
+situation is a function of the record *and* the clock. Retune a threshold or reorder a rung
+and `make seed` stops and says which account's screen just moved.
+
+Matches is also the one context seeded on a clock the runner **sets**. Every other seeded
+aggregate is timeless; a match *is* its clock, so `committed_at` and a hole's `vacated_at`
+taken from the wall clock would make the scenario's name a claim about the day the seed ran.
+The `Clock` port is what makes that a configuration rather than a fake.
+
+Scope is what is **decided**: players, onboarding assessments, Skill ratings, clubs, court
+reservations and bookings, and matches. Nothing seeds a **match-held reservation** — *when* a
+court is held for a match is the hold ladder's decision (`Raketa02/Raketa#71`), and seeding
+one would decide what the ladder decides and leave a match carrying a `heldSince` nobody
+derived. A walk over `app/seeds/` asserts the package imports **exactly** the five contexts
+that exist — equality in both directions, so it grows deliberately and cannot silently fall
+behind.
 
 Four rules hold this together, and each exists because of a specific way seed data goes
 wrong:
