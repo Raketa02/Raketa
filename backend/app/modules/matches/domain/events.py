@@ -145,6 +145,71 @@ class SeatVacated:
 
 
 @dataclass(frozen=True)
+class PlayerDeparted:
+    """A player left, and this is what it was worth to her.
+
+    **Beside ``SeatVacated`` and not folded into it**, because they are two
+    facts (ADR-0033): that one is the *hole* the match now carries, this one is
+    the *money*, and a filler closes the oldest hole while settling the oldest
+    unsettled departure — not always the same one. Announcing them together
+    would be the single scalar the ADR replaced, wearing an event's clothes.
+
+    ``amount_grosze`` is **absent** rather than zero when nothing was taken:
+    ADR-0030 fixes that a pre-commitment leave clears the seat *and* the
+    payment, *"so the card can name no amount at all"*, and a zero would invite
+    a reader to interpret a blank.
+
+    ``quoted`` is the label she was shown and acted on, and it rides because
+    *what was she promised* is the first question a support agent asks and the
+    record stops being able to answer it the moment the match moves.
+    """
+
+    match_id: UUID
+    departure_id: UUID
+    seat_index: int
+    player_id: UUID
+    quoted: str
+    amount_grosze: int | None
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class DepartureSettled:
+    """Her money is decided: no further seat event can change this outcome.
+
+    A departure that took nothing is **born settled**, so this is announced in
+    the same breath as ``PlayerDeparted`` for a reversal, and much later — when
+    a filler pays, or when the match ends around her — for anybody who paid.
+    """
+
+    match_id: UUID
+    departure_id: UUID
+    player_id: UUID
+    outcome: str
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class DepartureOutcomeImproved:
+    """A settled outcome got better, which is the only way it may move.
+
+    ADR-0030: *"a club-side failure that refunds everybody may improve a settled
+    50 % to a full refund; nothing may reduce a settled outcome."* Its own name
+    rather than a second ``DepartureSettled``, because *you were refunded half
+    and now you are refunded in full* is a different sentence from *you were
+    refunded half*, and the ledger cause for it — ``settlementReopened`` — exists
+    for exactly this and reaches no card.
+    """
+
+    match_id: UUID
+    departure_id: UUID
+    player_id: UUID
+    improved_from: str
+    improved_to: str
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
 class SeatsOpened:
     """A private court put seats on the marketplace.
 

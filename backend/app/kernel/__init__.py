@@ -20,6 +20,17 @@ only runs in development is a guard that has never been run where it counts.
 """
 
 from app.kernel.causes import CAUSE_COUNT, Cause
+from app.kernel.departures import (
+    OUTCOME_COUNT,
+    LeaverMoney,
+    NothingTaken,
+    Outcome,
+    Recoverable,
+    live_outcome,
+    outcome_rank,
+    outcome_worse_than,
+    refill_outcome,
+)
 from app.kernel.holds import (
     Hold,
     HoldKind,
@@ -224,4 +235,14 @@ __all__ = [
     # causes — why money moved, and why a match ended, in five closed names
     "CAUSE_COUNT",
     "Cause",
+    # departures — what a leaver recovers, ranked, and the two money forms
+    "OUTCOME_COUNT",
+    "LeaverMoney",
+    "NothingTaken",
+    "Outcome",
+    "Recoverable",
+    "live_outcome",
+    "outcome_rank",
+    "outcome_worse_than",
+    "refill_outcome",
 ]

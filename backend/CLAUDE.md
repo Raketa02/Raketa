@@ -170,7 +170,29 @@ Rules to preserve:
   later for ever. **No list of boundaries exists in the timekeeper** and
   `tests/unit/test_timekeeper_holds_no_thresholds.py` reddens on one appearing: the ticket that
   specified this shipped its own boundary table and it was short by five, including the two
-  that release a club's court. `next_wake_at` is **never serialised onto a card** (ADR-0053).
+  that release a club's court. `next_wake_at` is **never serialised onto a card**
+  (ADR-0053). **Two actors are asked on
+  every look** — the hold ladder, and the departure settlement — in a line rather than in a
+  loop, and neither holds a threshold: both read theirs off `kernel.deadlines` from inside
+  the aggregate, so the walk above stays green.
+- **A departure and the hole it leaves are two records, and an outcome only goes up.** A
+  leaving writes a `Vacancy` — which seat, when, closed by whoever takes it — *and* a
+  `Departure`, which is whose money it is
+  ([ADR-0033](../docs/adr/0033-settlement-and-occupancy-are-independent.md)). A filler closes
+  the **oldest open vacancy** and settles the **oldest unsettled departure**, and those are
+  *not always the same one*: two FIFO traversals over one list, differing only in their
+  filter, and the ADR names the single-pass version as the hazard — the symptom is *one
+  player was never refunded*, months later, and never an error. Her money is **two payload
+  forms** and never one with an optional amount (ADR-0072): reading an amount off
+  `LeaverMoney` without narrowing does not typecheck, and the column is null rather than
+  zero. `Departure.raise_to` is the **only** mutator of an outcome and cannot lower one, so
+  *"nothing may reduce a settled outcome"* is a property of the type. The **quote** crosses on
+  the command as a **label**, and a strictly worse outcome at apply time is refused with the
+  new one; equal or better applies, which is why a forfeit quoted against a reversal goes
+  through. A departure nobody filled forfeits at the **start** — the instant the aggregate
+  refuses every seat move, and therefore derivably ADR-0030's *"no further seat event can
+  change it"*, where its own illustration (the join cutoff) stopped being that on the day
+  ADR-0081 made a running claim outlive it.
 - **A court is claimed by a reservation, and the database is what refuses the second one.**
   A reservation is one court and one **time range**, and two may never overlap on one court —
   enforced by `EXCLUDE USING gist` over `tstzrange(claimed_from, claimed_to, '[)')`, partial

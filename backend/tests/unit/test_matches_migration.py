@@ -42,11 +42,17 @@ ROOT = Path(__file__).resolve().parents[2]
 VERSIONS = ROOT / "migrations" / "versions"
 MIGRATION = VERSIONS / "0009_matches.py"
 SCHEDULE_MIGRATION = VERSIONS / "0010_match_schedule.py"
+DEPARTURES_MIGRATION = VERSIONS / "0011_match_departures.py"
 
 #: In the order Alembic applies them.
-MIGRATIONS = (MIGRATION, SCHEDULE_MIGRATION)
+MIGRATIONS = (MIGRATION, SCHEDULE_MIGRATION, DEPARTURES_MIGRATION)
 
-MATCH_TABLES = ("matches", "match_seats", "match_vacancies")
+MATCH_TABLES = (
+    "matches",
+    "match_seats",
+    "match_vacancies",
+    "match_departures",
+)
 
 INDEXES = {
     "ix_matches_club_id": ("matches", ("club_id",), False),
@@ -60,6 +66,12 @@ INDEXES = {
     ),
     "ix_match_vacancies_match_id": ("match_vacancies", ("match_id",), False),
     "ix_matches_due_wake": ("matches", ("next_wake_at",), False),
+    "ix_match_departures_match_id": ("match_departures", ("match_id",), False),
+    "ix_match_departures_player_id": (
+        "match_departures",
+        ("player_id",),
+        False,
+    ),
 }
 
 
@@ -154,6 +166,11 @@ def schedule_migration_module() -> Any:
     return _loaded(SCHEDULE_MIGRATION, "match_schedule_migration_raw")
 
 
+@pytest.fixture(scope="module")
+def departures_migration_module() -> Any:
+    return _loaded(DEPARTURES_MIGRATION, "match_departures_migration_raw")
+
+
 def _table_ddl(table: sa.Table) -> str:
     return str(CreateTable(table).compile(dialect=postgresql.dialect())).strip()
 
@@ -166,7 +183,7 @@ def _index_ddl(index: sa.Index) -> str:
 
 
 def test_the_migrations_create_exactly_the_match_tables(migrated):
-    """Three tables across both files — `0010` adds columns and creates none."""
+    """Four tables across three files — `0010` adds columns and creates none."""
 
     assert set(migrated.created) == set(MATCH_TABLES)
     assert len(migrated.created) == len(MATCH_TABLES)
@@ -324,6 +341,66 @@ def test_a_vacancy_carries_no_settlement(migrated):
     columns = set(migrated.metadata.tables["match_vacancies"].c.keys())
 
     assert columns == {"id", "match_id", "seat_index", "vacated_at", "filled_at"}
+
+
+def test_a_departure_carries_its_own_settlement(migrated):
+    """The other half of ADR-0033: the hole above holds no money, and the money
+    is here — with the seat as the only field the two share."""
+
+    columns = set(migrated.metadata.tables["match_departures"].c.keys())
+
+    assert columns == {
+        "id",
+        "match_id",
+        "seat_index",
+        "player_id",
+        "departed_at",
+        "quoted",
+        "amount_grosze",
+        "outcome",
+        "settled_at",
+    }
+
+
+def test_the_amount_is_nullable_because_a_reversal_names_none(migrated):
+    """ADR-0072's two payload forms, at the schema. Null is *nothing was taken*
+    and the domain refuses a zero, because *nothing was taken* and *nothing has
+    come back yet* are opposite sentences a blank cannot tell apart."""
+
+    columns = migrated.metadata.tables["match_departures"].c
+
+    assert columns["amount_grosze"].nullable
+    assert columns["amount_grosze"].server_default is None
+    assert not columns["quoted"].nullable
+    assert not columns["player_id"].nullable
+
+
+def test_an_unsettled_departure_has_no_outcome_and_no_moment(migrated):
+    """Both null together while her money is undecided, and the direction they
+    move in afterwards is the domain type's — a `CHECK` cannot see the old
+    value, so nothing here claims to enforce it."""
+
+    columns = migrated.metadata.tables["match_departures"].c
+
+    assert columns["outcome"].nullable
+    assert columns["settled_at"].nullable
+
+
+def test_a_player_may_leave_the_same_match_twice(migrated):
+    """No unique index on `(match_id, player_id)`: she may be talked back in and
+    leave again, and each leaving is its own money."""
+
+    for index in migrated.indexes:
+        if index.table.name != "match_departures":
+            continue
+        assert not index.unique
+
+
+def test_the_departures_migration_follows_the_schedule_one(
+    departures_migration_module,
+):
+    assert departures_migration_module.revision == "0011_match_departures"
+    assert departures_migration_module.down_revision == "0010_match_schedule"
 
 
 def test_the_migration_follows_the_courts_one(migration_module):

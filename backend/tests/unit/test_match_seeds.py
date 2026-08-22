@@ -34,6 +34,7 @@ from app.bootstrap.composition import (
 from app.kernel import (
     Instant,
     MatchKind,
+    Outcome,
     Situation,
     court_hold,
     is_held,
@@ -41,13 +42,20 @@ from app.kernel import (
 )
 from app.modules.courts.domain.reservation import MatchHeld
 from app.modules.matches.infrastructure.sqlalchemy_match_models import (
+    MatchDepartureORM,
     MatchORM,
     MatchSeatORM,
     MatchVacancyORM,
 )
 from app.seeds.catalog import ACCOUNTS
 from app.seeds.clubs import CLUBS
-from app.seeds.matches import MATCHES, SeedMatch, SituationClaim
+from app.seeds.matches import (
+    MATCHES,
+    DepartureClaim,
+    SeedMatch,
+    SituationClaim,
+    seed_moment,
+)
 from app.seeds.runner import SeedFailed, seed
 
 
@@ -148,6 +156,31 @@ def test_a_cancellation_with_no_moment_is_refused_by_the_catalog():
         replace(MATCHES[0], cancelled="club", cancelled_at=None)
 
 
+def test_a_hole_with_no_money_behind_it_is_refused_by_the_catalog():
+    """A vacancy and a departure are two facts, and the catalog names both."""
+
+    with pytest.raises(ValueError, match="two facts and both are seeded"):
+        replace(
+            MATCHES[0],
+            taken=1,
+            vacated=1,
+            vacated_at=seed_moment(day_offset=1),
+            departure=None,
+        )
+
+
+def test_a_departure_claim_on_a_match_that_loses_nobody_is_refused():
+    with pytest.raises(ValueError, match="two facts and both are seeded"):
+        replace(
+            MATCHES[0],
+            departure=DepartureClaim(
+                promise="a leaver who never left",
+                outcome=None,
+                names_an_amount=True,
+            ),
+        )
+
+
 # --- 2. the run, and the second run -----------------------------------------
 
 
@@ -228,6 +261,81 @@ async def test_the_hole_a_departure_left_is_a_row_of_its_own(session_factory):
 
     assert holes == 1
     assert await count(session_factory, MatchVacancyORM) == holes
+
+
+async def test_the_leaver_is_a_second_row_beside_the_hole(session_factory):
+    """Two facts, two tables (ADR-0033). The seeded week has one of each, and
+    the departure is the demo's whole leaver audience."""
+
+    async with session_factory() as session:
+        seeded = (await seed(session)).matches
+
+    leavers = sum(entry.match.vacated for entry in seeded)
+
+    assert await count(session_factory, MatchDepartureORM) == leavers
+    assert leavers == 1
+
+
+async def test_the_seeded_leaver_is_owed_something_nothing_has_decided(
+    session_factory,
+):
+    """The state a card renders as *not yet decided*, seeded rather than
+    described — and the outcome is what the rules composed, not what the
+    catalog wrote down."""
+
+    async with session_factory() as session:
+        await seed(session)
+        stored = await _stored_departures(session)
+
+    (departure,) = stored
+    assert departure.outcome is None
+    assert departure.settled_at is None
+    assert departure.amount_grosze == 3800
+
+
+async def test_a_departure_whose_money_no_longer_matches_stops_the_run(
+    session_factory, monkeypatch
+):
+    """The claim is checked, like every other name in the catalog. This one is
+    the only claim in the whole seed system that is about a **refund**."""
+
+    recovering = next(one for one in MATCHES if one.departure is not None)
+    lying = replace(
+        recovering,
+        departure=replace(
+            recovering.departure,
+            promise="a leaver who has been paid back in full",
+            outcome=Outcome.REFUNDED_IN_FULL,
+        ),
+    )
+    _only_the_match_catalog(monkeypatch, (lying,))
+
+    async with session_factory() as session:
+        with pytest.raises(SeedFailed, match="paid back in full"):
+            await seed(session)
+
+
+async def test_a_departure_whose_payload_form_no_longer_matches_stops_the_run(
+    session_factory, monkeypatch
+):
+    """*Nothing was taken* and *nothing has come back yet* are the two sentences
+    the forms exist to keep apart, and a seeded card must not blur them."""
+
+    recovering = next(one for one in MATCHES if one.departure is not None)
+    lying = replace(
+        recovering,
+        departure=replace(recovering.departure, names_an_amount=False),
+    )
+    _only_the_match_catalog(monkeypatch, (lying,))
+
+    async with session_factory() as session:
+        with pytest.raises(SeedFailed, match="opposite sentences"):
+            await seed(session)
+
+
+async def _stored_departures(session):
+    rows = await session.execute(select(MatchDepartureORM))
+    return list(rows.scalars().all())
 
 
 async def test_the_seeded_accounts_fill_the_seats_in_catalog_order(

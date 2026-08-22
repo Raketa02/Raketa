@@ -39,6 +39,7 @@ from app.kernel import (
     instant,
     is_full,
     keeping_a_court,
+    live_outcome,
     minutes,
     situation,
 )
@@ -59,6 +60,7 @@ from app.modules.matches.domain.errors import (
     SeatNotTaken,
     StartMustBeInTheFuture,
 )
+from app.modules.matches.domain.events import SeatVacated
 from app.modules.matches.domain.match import Match
 from app.modules.matches.domain.score import Score, SetScore
 
@@ -75,6 +77,17 @@ def at(day: int, hour: int = 12, minute: int = 0):
 
 POSTED = at(1)
 START = at(8, 18)
+
+
+def leaves(match, player, *, when):
+    """A departure quoted at whatever the record says it is worth right then.
+
+    The quote is the caller's (ADR-0033), and this suite is not about it — a
+    **stale** quote is `tests/unit/test_match_departures.py`'s subject. Read off
+    the live record here, which is what the route will do.
+    """
+
+    return match.depart(player, quote=live_outcome(match.as_record(), when), at=when)
 
 
 def a_match(**overrides):
@@ -305,7 +318,7 @@ def test_commitment_survives_the_fourth_player_leaving():
     match = a_full_match(when=late)
     leaver = match.seats[0].player_id
 
-    match.vacate_seat(leaver, at=at(8, 13))
+    leaves(match, leaver, when=at(8, 13))
 
     assert match.committed_at == late
     assert not is_full(match.as_record())
@@ -333,8 +346,10 @@ def test_leaving_a_seat_opens_a_hole_that_carries_no_amount():
     match = a_full_match(when=at(8, 12))
     leaver = match.seats[1].player_id
 
-    vacancy = match.vacate_seat(leaver, at=at(8, 13))
+    departure = leaves(match, leaver, when=at(8, 13))
+    vacancy = match.vacancies[-1]
 
+    assert departure.seat_index == vacancy.seat_index
     assert vacancy.is_open
     assert vacancy.seat_index == 1
     assert vacancy.vacated_at == at(8, 13)
@@ -347,8 +362,8 @@ def test_a_filler_closes_the_oldest_hole_and_the_newest_still_describes_the_matc
 
     match = a_full_match(when=at(1, 12))
     first, second = match.seats[0].player_id, match.seats[1].player_id
-    match.vacate_seat(first, at=at(2))
-    match.vacate_seat(second, at=at(6))
+    leaves(match, first, when=at(2))
+    leaves(match, second, when=at(6))
 
     match.take_seat(uuid4(), at=at(6, 12, 30))
 
@@ -362,7 +377,7 @@ def test_a_refilled_match_carries_no_open_hole_at_all():
 
     match = a_full_match(when=at(1, 12))
     leaver = match.seats[0].player_id
-    match.vacate_seat(leaver, at=at(2))
+    leaves(match, leaver, when=at(2))
 
     match.take_seat(uuid4(), at=at(3))
 
@@ -378,18 +393,20 @@ def test_a_leaver_who_had_paid_is_distinguishable_from_one_who_had_not():
     match.take_seat(held, at=POSTED)
     match.pull_events()
 
-    match.vacate_seat(paid, at=at(2))
-    match.vacate_seat(held, at=at(2))
+    leaves(match, paid, when=at(2))
+    leaves(match, held, when=at(2))
 
-    announced = match.pull_events()
-    assert [event.was_paid for event in announced] == [True, False]
+    vacated = [
+        event for event in match.pull_events() if isinstance(event, SeatVacated)
+    ]
+    assert [event.was_paid for event in vacated] == [True, False]
 
 
 def test_leaving_a_seat_nobody_holds_is_refused():
     match = a_match()
 
     with pytest.raises(SeatNotTaken):
-        match.vacate_seat(uuid4(), at=POSTED)
+        leaves(match, uuid4(), when=POSTED)
 
 
 # --- 6 · the four cancellations are four stories ----------------------------

@@ -44,6 +44,7 @@ from app.kernel import (
     hours,
     instant,
     keeping_a_court,
+    live_outcome,
     minutes,
     situation,
     zloty,
@@ -77,7 +78,7 @@ from app.modules.matches.application.commands import (
     PostMatchCommand,
     ResolveCourtHoldCommand,
     TakeSeatCommand,
-    VacateSeatCommand,
+    DepartCommand,
 )
 from app.modules.matches.application.post_match import PostMatch
 from app.modules.matches.application.resolve_court_hold import ResolveCourtHold
@@ -85,7 +86,7 @@ from app.modules.matches.application.seat_moves import (
     MoveMatchStart,
     PaySeat,
     TakeSeat,
-    VacateSeat,
+    Depart,
 )
 
 START = instant(datetime(2026, 9, 8, 18, tzinfo=timezone.utc))
@@ -133,8 +134,27 @@ class _World:
         self.move = MoveMatchStart(matches, holds, uow, clock)
         self.take = TakeSeat(matches, holds, uow, clock)
         self.pay = PaySeat(matches, holds, uow, clock)
-        self.vacate = VacateSeat(matches, holds, uow, clock)
+        self.depart = Depart(matches, holds, uow, clock)
         self.cancel = CancelMatch(matches, holds, uow, clock)
+
+    async def leave(self, match_id, player_id):
+        """A departure at whatever the record says leaving is worth right now.
+
+        The quote is the caller's (ADR-0033) and these suites are not about it,
+        so it is read off the live record — which is what the departure route
+        will do. ``tests/unit/test_match_departures.py`` is where a **stale**
+        quote is the subject.
+        """
+
+        current = await self.matches.get(match_id)
+        assert current is not None
+        return await self.depart.execute(
+            DepartCommand(
+                match_id=match_id,
+                player_id=player_id,
+                quote=live_outcome(current.as_record(), instant(self.clock.now())),
+            )
+        )
 
 
 @pytest.fixture
@@ -336,9 +356,7 @@ async def test_a_departure_that_leaves_the_tier_gives_the_court_back(world):
     match = await a_match(world)
     players = await seated(world, match, 2)
 
-    await world.vacate.execute(
-        VacateSeatCommand(match_id=match.id, player_id=players[0])
-    )
+    await world.leave(match.id, players[0])
 
     stored = await world.matches.get(match.id)
     assert stored is not None
@@ -355,9 +373,7 @@ async def test_the_released_reservation_keeps_its_row(world):
     reservation = await world.reservations.for_match(match.id)
     assert reservation is not None
 
-    await world.vacate.execute(
-        VacateSeatCommand(match_id=match.id, player_id=players[0])
-    )
+    await world.leave(match.id, players[0])
 
     history = await world.reservations.for_court(reservation.court_id)
     assert [one.id for one in history] == [reservation.id]
@@ -384,9 +400,7 @@ async def test_a_court_given_back_can_be_taken_again(world):
 
     match = await a_match(world)
     players = await seated(world, match, 2)
-    await world.vacate.execute(
-        VacateSeatCommand(match_id=match.id, player_id=players[0])
-    )
+    await world.leave(match.id, players[0])
 
     await seated(world, match, 1)
 

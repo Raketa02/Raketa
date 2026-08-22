@@ -84,7 +84,7 @@ from app.bootstrap.composition import (
 )
 from app.core.config import Settings, get_settings
 from app.infrastructure.database.engine import create_engine
-from app.kernel import Instant, Sport, exhaustive, situation
+from app.kernel import Instant, Sport, exhaustive, live_outcome, situation
 from app.modules.clubs.application.add_court import AddCourt
 from app.modules.clubs.application.add_court_category import AddCourtCategory
 from app.modules.clubs.application.change_club_policy import ChangeClubPolicy
@@ -125,11 +125,11 @@ from app.modules.matches.application.commands import (
     PaySeatCommand,
     PostMatchCommand,
     TakeSeatCommand,
-    VacateSeatCommand,
+    DepartCommand,
 )
 from app.modules.matches.application.post_match import PostMatch
 from app.modules.matches.application.resolve_court_hold import ResolveCourtHold
-from app.modules.matches.application.seat_moves import PaySeat, TakeSeat, VacateSeat
+from app.modules.matches.application.seat_moves import Depart, PaySeat, TakeSeat
 from app.modules.matches.domain.match import Match
 from app.modules.matches.domain.ports import MatchRepository
 from app.modules.rating.application.abandon_assessment import AbandonAssessment
@@ -294,7 +294,7 @@ class _UseCases:
     post_match: PostMatch
     take_seat: TakeSeat
     pay_seat: PaySeat
-    vacate_seat: VacateSeat
+    depart: Depart
     cancel_match: CancelMatch
     resolve_hold: ResolveCourtHold
     #: The clock the Matches use cases write with. See `_SeededWeekClock`.
@@ -346,7 +346,7 @@ def _build(session: AsyncSession) -> _UseCases:
         post_match=PostMatch(matches, clubs, resolve_hold, uow, week),
         take_seat=TakeSeat(matches, resolve_hold, uow, week),
         pay_seat=PaySeat(matches, resolve_hold, uow, week),
-        vacate_seat=VacateSeat(matches, resolve_hold, uow, week),
+        depart=Depart(matches, resolve_hold, uow, week),
         cancel_match=CancelMatch(matches, resolve_hold, uow, week),
         resolve_hold=resolve_hold,
         week=week,
@@ -1166,8 +1166,22 @@ async def _write_the_match(
         assert scenario.vacated_at is not None  # `SeedMatch` refuses otherwise
         use_cases.week.at(scenario.vacated_at)
         for player in seated[: scenario.vacated]:
-            await use_cases.vacate_seat.execute(
-                VacateSeatCommand(match_id=match.id, player_id=player)
+            # **The quote is the caller's, and here the seed is the caller.** It
+            # reads the live outcome off the record it is about to write
+            # against, which is what the departure route will do
+            # (``Raketa02/Raketa#80``). Read fresh each time rather than once:
+            # a scenario that loses two players loses the second one to a match
+            # the first has already changed, which is the concurrent-leave case
+            # quote-and-confirm exists for and the one place a stale quote would
+            # go unnoticed.
+            current = await use_cases.matches.get(match.id)
+            assert current is not None  # written above, in this transaction
+            match = await use_cases.depart.execute(
+                DepartCommand(
+                    match_id=match.id,
+                    player_id=player,
+                    quote=live_outcome(current.as_record(), scenario.vacated_at),
+                )
             )
 
     if scenario.cancelled is not None:
@@ -1250,6 +1264,47 @@ def _refuse_a_match_whose_name_lies(scenario: SeedMatch, stored: Match) -> None:
             f"match whose name lies is worse than one that is missing, because "
             f"nothing about the card it is developed against would look wrong."
         )
+    _refuse_a_departure_whose_name_lies(scenario, stored)
+
+
+def _refuse_a_departure_whose_name_lies(scenario: SeedMatch, stored: Match) -> None:
+    """The same check, for the leaver's money.
+
+    A vacancy and a departure are two facts (ADR-0033) and the seed names both.
+    This one is worth checking separately because it is the only seeded claim
+    that is about **a refund**: a card that says *not yet decided* when the money
+    has settled, or names an amount where nothing was taken, is a wrong answer
+    about somebody's money and nothing else in the run would notice.
+    """
+
+    claim = scenario.departure
+    if claim is None:
+        return
+
+    if len(stored.departures) != scenario.vacated:
+        raise SeedFailed(
+            f"'{scenario.slug}' loses {scenario.vacated} player(s) and the "
+            f"stored match carries {len(stored.departures)} departure(s). A "
+            "hole with no departure behind it is money nobody can account for."
+        )
+
+    undecided = "not yet decided"
+    promised = claim.outcome.value if claim.outcome else undecided
+    for departure in stored.departures:
+        if departure.outcome is not claim.outcome:
+            stored_as = departure.outcome.value if departure.outcome else undecided
+            raise SeedFailed(
+                f"'{scenario.slug}' promises {claim.promise} — outcome "
+                f"{promised} — and the stored departure says {stored_as}."
+            )
+        if departure.took_nothing is claim.names_an_amount:
+            named = "names an amount" if claim.names_an_amount else "names none"
+            raise SeedFailed(
+                f"'{scenario.slug}' promises a leaver's card that {named}, and "
+                "the stored departure disagrees. The two payload forms are the "
+                "difference between *nothing was taken* and *nothing has come "
+                "back yet*, which are opposite sentences."
+            )
 
 
 def report(seeded: Seeded) -> list[str]:

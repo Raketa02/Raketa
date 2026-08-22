@@ -4,7 +4,7 @@
 name — so every registration here is explicit about both the name and the
 version, and renaming a class cannot change what is already on the outbox.
 
-**Twenty-one names, and the length is the decision.** ADR-0034 costs event
+**Twenty-four names, and the length is the decision.** ADR-0034 costs event
 types now to buy the support timeline later: *"a longer, more specific event
 list is more to name, more to version, and more to keep faithful — and nothing
 mechanical catches an event that is published too coarsely."* Nothing is
@@ -22,6 +22,8 @@ from app.modules.matches.domain.events import (
     CourtHeld,
     CourtLocked,
     CourtReleased,
+    DepartureOutcomeImproved,
+    DepartureSettled,
     HoldExtended,
     InventoryLost,
     MatchCancelledAtCheckpoint,
@@ -32,6 +34,7 @@ from app.modules.matches.domain.events import (
     MatchPosted,
     MatchStartMoved,
     NoShowRecorded,
+    PlayerDeparted,
     ResultAgreed,
     ScoreProposed,
     SeatPaid,
@@ -51,6 +54,9 @@ MATCH_EVENTS: tuple[tuple[type, str], ...] = (
     (SeatTaken, "matches.seat_taken"),
     (SeatPaid, "matches.seat_paid"),
     (SeatVacated, "matches.seat_vacated"),
+    (PlayerDeparted, "matches.player_departed"),
+    (DepartureSettled, "matches.departure_settled"),
+    (DepartureOutcomeImproved, "matches.departure_outcome_improved"),
     (SeatsOpened, "matches.seats_opened"),
     (SeatTransferStarted, "matches.seat_transfer_started"),
     (SeatTransferEnded, "matches.seat_transfer_ended"),

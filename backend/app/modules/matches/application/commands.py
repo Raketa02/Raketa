@@ -21,7 +21,15 @@ from dataclasses import dataclass
 from enum import Enum
 from uuid import UUID
 
-from app.kernel import Instant, MatchKind, Minutes, PayModel, SeatShare, Sport
+from app.kernel import (
+    Instant,
+    MatchKind,
+    Minutes,
+    Outcome,
+    PayModel,
+    SeatShare,
+    Sport,
+)
 
 from app.modules.matches.domain.score import Score
 
@@ -90,16 +98,28 @@ class PaySeatCommand:
 
 
 @dataclass(frozen=True)
-class VacateSeatCommand:
-    """*This player is out*, leaving a hole the match now carries.
+class DepartCommand:
+    """*This player is out*, and this is the outcome she was looking at.
 
-    What she recovers is her departure's answer (``Raketa02/Raketa#67``), and
-    this command deliberately cannot express it: settlement and occupancy are
-    independent axes (ADR-0033).
+    **The quote is the one field a caller adds, and it is a label rather than an
+    amount** (ADR-0033). An amount moves for reasons that have nothing to do
+    with leaving — a discount landing, a club price change — and refusing on
+    those is noise; the label is what she was actually shown as the basis for
+    deciding. A strictly worse outcome at apply time is refused and she is
+    re-presented.
+
+    **It carries no amount and no outcome to settle at.** What she recovers is
+    the departure's own answer on an axis of its own, and a caller that could
+    state it would be the welding ADR-0033 exists to undo.
+
+    *The client generates an idempotency key and sends it too (ADR-0086); the
+    command log that consumes it is the route's* (``Raketa02/Raketa#80``)*, not
+    this context's, so nothing here holds one.*
     """
 
     match_id: UUID
     player_id: UUID
+    quote: Outcome
 
 
 @dataclass(frozen=True)

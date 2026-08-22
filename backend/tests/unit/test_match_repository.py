@@ -43,12 +43,16 @@ from app.bootstrap.composition import (
 from app.infrastructure.events.event_delivery_model import EventOutboxORM
 from app.kernel import (
     MatchKind,
+    NothingTaken,
+    Outcome,
+    Recoverable,
     SeatShare,
     Situation,
     Sport,
     grosze,
     hours,
     instant,
+    live_outcome,
     situation,
     zloty,
 )
@@ -81,7 +85,7 @@ from app.modules.matches.application.commands import (
     PostMatchCommand,
     ProposeScoreCommand,
     TakeSeatCommand,
-    VacateSeatCommand,
+    DepartCommand,
 )
 from app.modules.matches.application.post_match import PostMatch
 from app.modules.matches.application.resolve_court_hold import ResolveCourtHold
@@ -93,7 +97,7 @@ from app.modules.matches.application.seat_moves import (
     MoveMatchStart,
     PaySeat,
     TakeSeat,
-    VacateSeat,
+    Depart,
 )
 from app.modules.matches.domain.errors import (
     ConcurrentMatchModification,
@@ -152,10 +156,29 @@ class _World:
         self.move = MoveMatchStart(matches, holds, uow, clock)
         self.take = TakeSeat(matches, holds, uow, clock)
         self.pay = PaySeat(matches, holds, uow, clock)
-        self.vacate = VacateSeat(matches, holds, uow, clock)
+        self.depart = Depart(matches, holds, uow, clock)
         self.cancel = CancelMatch(matches, holds, uow, clock)
         self.propose = ProposeScore(matches, uow, clock)
         self.agree = AgreeResult(matches, uow, clock)
+
+    async def leave(self, match_id, player_id):
+        """A departure at whatever the record says leaving is worth right now.
+
+        The quote is the caller's (ADR-0033) and these suites are not about it,
+        so it is read off the live record — which is what the departure route
+        will do. ``tests/unit/test_match_departures.py`` is where a **stale**
+        quote is the subject.
+        """
+
+        current = await self.repository.get(match_id)
+        assert current is not None
+        return await self.depart.execute(
+            DepartCommand(
+                match_id=match_id,
+                player_id=player_id,
+                quote=live_outcome(current.as_record(), instant(self.clock.now())),
+            )
+        )
 
 
 @pytest.fixture
@@ -304,9 +327,7 @@ async def test_every_stored_fact_survives_the_round_trip(world):
     await world.take.execute(TakeSeatCommand(match_id=posted.id, player_id=alice))
     await world.pay.execute(PaySeatCommand(match_id=posted.id, player_id=alice))
     world.clock.advance_to(datetime(2026, 9, 2, 12, tzinfo=timezone.utc))
-    await world.vacate.execute(
-        VacateSeatCommand(match_id=posted.id, player_id=alice)
-    )
+    await world.leave(posted.id, alice)
 
     loaded = await world.repository.get(posted.id)
 
@@ -364,9 +385,7 @@ async def test_a_filled_hole_keeps_its_row(world):
     posted = await a_posted_match(world)
     alice = uuid4()
     await world.take.execute(TakeSeatCommand(match_id=posted.id, player_id=alice))
-    await world.vacate.execute(
-        VacateSeatCommand(match_id=posted.id, player_id=alice)
-    )
+    await world.leave(posted.id, alice)
     await world.take.execute(TakeSeatCommand(match_id=posted.id, player_id=uuid4()))
 
     loaded = await world.repository.get(posted.id)
@@ -374,6 +393,134 @@ async def test_a_filled_hole_keeps_its_row(world):
     assert loaded.open_vacancies == []
     assert len(loaded.vacancies) == 1
     assert loaded.vacancies[0].filled_at is not None
+
+
+async def test_a_departure_survives_the_round_trip_whole(world):
+    """The leaver's own record: her seat, her quote, her money, her outcome.
+
+    Committed, so she is owed something and comes back **unsettled** — the state
+    the schema spells as two nulls together, and the one a card reads as *not
+    yet decided* rather than as *nothing*.
+    """
+
+    posted = await a_posted_match(world)
+    players = [uuid4() for _ in range(4)]
+    world.clock.advance_to(datetime(2026, 9, 7, 20, tzinfo=timezone.utc))
+    for player in players:
+        await world.take.execute(
+            TakeSeatCommand(match_id=posted.id, player_id=player)
+        )
+        await world.pay.execute(
+            PaySeatCommand(match_id=posted.id, player_id=player)
+        )
+    world.clock.advance_to(datetime(2026, 9, 7, 21, tzinfo=timezone.utc))
+    await world.leave(posted.id, players[0])
+
+    loaded = await world.repository.get(posted.id)
+    departure = loaded.departure_of(players[0])
+
+    assert departure is not None
+    assert departure.seat_index == 0
+    assert departure.departed_at == instant(
+        datetime(2026, 9, 7, 21, tzinfo=timezone.utc)
+    )
+    assert departure.quoted is Outcome.REFUNDED_IN_FULL
+    assert departure.money == Recoverable(amount=grosze(3800))
+    assert departure.outcome is None
+    assert departure.settled_at is None
+
+
+async def test_a_reversal_comes_back_naming_no_amount(world):
+    """Null, and never a zero. *Nothing was taken* and *nothing has come back
+    yet* are opposite sentences a blank cannot tell apart (ADR-0072)."""
+
+    posted = await a_posted_match(world)
+    alice = uuid4()
+    await world.take.execute(TakeSeatCommand(match_id=posted.id, player_id=alice))
+    await world.pay.execute(PaySeatCommand(match_id=posted.id, player_id=alice))
+    await world.leave(posted.id, alice)
+
+    departure = (await world.repository.get(posted.id)).departure_of(alice)
+
+    assert departure.money == NothingTaken()
+    assert departure.outcome is Outcome.REVERSED
+    assert departure.settled_at is not None
+
+
+async def test_a_settlement_is_written_back_to_the_row(world):
+    """The two mutable columns, through the delta rather than through a rewrite:
+    a settlement that vanished and came back would be a refund nobody could
+    account for."""
+
+    posted = await a_posted_match(world)
+    players = [uuid4() for _ in range(4)]
+    world.clock.advance_to(datetime(2026, 9, 7, 20, tzinfo=timezone.utc))
+    for player in players:
+        await world.take.execute(
+            TakeSeatCommand(match_id=posted.id, player_id=player)
+        )
+        await world.pay.execute(
+            PaySeatCommand(match_id=posted.id, player_id=player)
+        )
+    world.clock.advance_to(datetime(2026, 9, 7, 21, tzinfo=timezone.utc))
+    await world.leave(posted.id, players[0])
+
+    world.clock.advance_to(datetime(2026, 9, 7, 22, tzinfo=timezone.utc))
+    await world.take.execute(TakeSeatCommand(match_id=posted.id, player_id=uuid4()))
+
+    departure = (await world.repository.get(posted.id)).departure_of(players[0])
+    assert departure.outcome is Outcome.REFUNDED_IN_FULL
+    assert departure.settled_at == instant(
+        datetime(2026, 9, 7, 22, tzinfo=timezone.utc)
+    )
+
+
+async def test_a_leaver_keeps_her_row_when_the_seat_refills(world):
+    """The other half of *filled, never deleted*: the hole closes, and the
+    person it was about is still there."""
+
+    posted = await a_posted_match(world)
+    alice = uuid4()
+    await world.take.execute(TakeSeatCommand(match_id=posted.id, player_id=alice))
+    await world.leave(posted.id, alice)
+    await world.take.execute(TakeSeatCommand(match_id=posted.id, player_id=uuid4()))
+
+    loaded = await world.repository.get(posted.id)
+
+    assert loaded.open_vacancies == []
+    assert len(loaded.departures) == 1
+    assert loaded.departure_of(alice) is not None
+
+
+async def test_three_leavers_come_back_oldest_first(world):
+    """An ambiguous ORDER BY over these rows would make *who has been waiting
+    longest* a coin flip — which is the FIFO the filler runs over.
+
+    **Three, and they leave in an order no seat ordering reproduces**: seat 1,
+    then seat 2, then seat 0. Two rows would not do it — with two leavers the
+    right answer and *by seat, either way* agree half the time, and the half
+    they agree on is whichever the fixture happened to pick.
+    """
+
+    posted = await a_posted_match(world)
+    seat_zero, seat_one, seat_two = uuid4(), uuid4(), uuid4()
+    for player in (seat_zero, seat_one, seat_two):
+        await world.take.execute(
+            TakeSeatCommand(match_id=posted.id, player_id=player)
+        )
+
+    for day, player in ((2, seat_one), (3, seat_two), (4, seat_zero)):
+        world.clock.advance_to(datetime(2026, 9, day, 12, tzinfo=timezone.utc))
+        await world.leave(posted.id, player)
+
+    loaded = await world.repository.get(posted.id)
+
+    assert [one.player_id for one in loaded.departures] == [
+        seat_one,
+        seat_two,
+        seat_zero,
+    ]
+    assert [one.seat_index for one in loaded.departures] == [1, 2, 0]
 
 
 async def test_a_missing_match_is_reported_as_missing(world):
@@ -535,9 +682,7 @@ async def test_every_write_puts_its_own_name_on_the_outbox(world, session_factor
             start=instant(datetime(2026, 9, 9, 18, tzinfo=timezone.utc)),
         )
     )
-    await world.vacate.execute(
-        VacateSeatCommand(match_id=posted.id, player_id=alice)
-    )
+    await world.leave(posted.id, alice)
     await world.cancel.execute(
         CancelMatchCommand(match_id=posted.id, cause=CancellationCause.WEATHER)
     )
@@ -547,7 +692,13 @@ async def test_every_write_puts_its_own_name_on_the_outbox(world, session_factor
         "matches.seat_taken",
         "matches.seat_paid",
         "matches.match_start_moved",
+        # One leaving, three names, because they are three facts a support
+        # agent asks about separately: the hole the match now carries, the
+        # departure it belongs to, and — because this match had not committed —
+        # a settlement born in the same breath (ADR-0033).
         "matches.seat_vacated",
+        "matches.player_departed",
+        "matches.departure_settled",
         "matches.match_cancelled_for_weather",
     ]
 

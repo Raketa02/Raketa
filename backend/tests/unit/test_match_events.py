@@ -34,6 +34,7 @@ from app.infrastructure.events.json_event_codec import JsonEventCodec
 from app.kernel import (
     HoldPolicy,
     MatchKind,
+    Outcome,
     SeatShare,
     Sport,
     grosze,
@@ -57,13 +58,13 @@ AGGREGATE = ROOT / "app" / "modules" / "matches" / "domain" / "match.py"
 #: judgement this walk exists to stop somebody making silently.
 READ_ONLY = frozenset(
     {"as_record", "open_vacancies", "is_settled", "seat_of", "seat_at",
-     "pull_events"}
+     "departure_of", "pull_events"}
 )
 
-#: Twenty-one changes and twenty-one names. Pinned, so that deleting an event
+#: Twenty-four changes and twenty-four names. Pinned, so that deleting an event
 #: is as loud as adding an unnamed write — a count that only ever goes up
 #: catches half of the rule.
-EXPECTED_EVENTS = 21
+EXPECTED_EVENTS = 24
 
 #: The many spellings of the one event ADR-0034 forbids.
 GENERIC = ("updated", "changed", "modified", "touched", "amended", "mutated")
@@ -82,12 +83,19 @@ def _announces(node: ast.FunctionDef) -> bool:
 
     An attribute call rather than ``self._record`` specifically, because
     ``post`` is a classmethod and announces through the instance it built.
+
+    ``commit_if_due`` and ``resolve_departures_to`` are the two public methods
+    that announce **on behalf of a caller**: a payment that fills a match past
+    its deadline commits it, and a cancellation reopens every settlement it
+    improves. Naming them here rather than inlining their ``_record`` calls is
+    what keeps one change one announcement.
     """
 
     return any(
         isinstance(inner, ast.Call)
         and isinstance(inner.func, ast.Attribute)
-        and inner.func.attr in {"_record", "commit_if_due"}
+        and inner.func.attr
+        in {"_record", "commit_if_due", "resolve_departures_to"}
         for inner in ast.walk(node)
     )
 
@@ -259,7 +267,10 @@ def _drive_every_write() -> list:
     for player in players:
         match.take_seat(player, at=at(7, 20))
         match.pay_seat(player, at=at(7, 20))
-    match.vacate_seat(players[0], at=at(7, 21))
+    # Committed, so this leaver is owed something and her departure is born
+    # **unsettled** — which is what makes the filler below produce
+    # `DepartureSettled` rather than the departure itself.
+    match.depart(players[0], quote=Outcome.REFUNDED_IN_FULL, at=at(7, 21))
     match.begin_transfer(1, at=at(7, 21))
     match.end_transfer(1, at=at(7, 21))
     match.take_seat(uuid4(), at=at(7, 22))
@@ -285,6 +296,28 @@ def _drive_every_write() -> list:
     private.open_seats_to_the_marketplace(2, at=at(1))
     private.lose_inventory(at=at(2))
     announced.extend(private.pull_events())
+
+    # A settled departure improving, which is the only way an outcome ever
+    # moves once it has landed: she recovered half, and then the club lost the
+    # court from under everybody.
+    improved = Match.post(
+        match_id=uuid4(),
+        club_id=uuid4(),
+        category_id=uuid4(),
+        sport=Sport.PADEL,
+        start=at(8, 18),
+        duration=hours(1),
+        share=SeatShare(grosze(3800)),
+        policy=HoldPolicy(window=hours(24), join_cut=minutes(30)),
+        at=at(1),
+    )
+    for player in (players := [uuid4() for _ in range(4)]):
+        improved.take_seat(player, at=at(7, 20))
+        improved.pay_seat(player, at=at(7, 20))
+    improved.depart(players[0], quote=Outcome.REFUNDED_HALF, at=at(8, 15))
+    improved.take_seat(uuid4(), at=at(8, 15))
+    improved.cancel_by_club(at=at(8, 16))
+    announced.extend(improved.pull_events())
 
     for cancel in (
         "cancel_by_club",

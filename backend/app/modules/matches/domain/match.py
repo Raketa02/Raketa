@@ -65,10 +65,14 @@ from app.kernel import (
     SPORT_SPECS,
     HoldPolicy,
     Instant,
+    LeaverMoney,
     MatchKind,
     MatchRecord,
     Minutes,
+    NothingTaken,
+    Outcome,
     PayModel,
+    Recoverable,
     SeatShare,
     Sport,
     committed_on_fill,
@@ -76,13 +80,22 @@ from app.kernel import (
     is_full,
     is_terminal,
     keeping_a_court,
+    live_outcome,
     match_end,
+    outcome_worse_than,
+    refill_outcome,
     result_window,
 )
 from app.shared.domain import DomainEvent, EventRecorder
 
+from app.modules.matches.domain.departure import (
+    Departure,
+    born_settled,
+    oldest_unsettled,
+)
 from app.modules.matches.domain.errors import (
     CourtAlreadyHeld,
+    DepartureOutcomeWorsened,
     MatchAlreadySettled,
     MatchAlreadyStarted,
     MatchIsFull,
@@ -101,6 +114,8 @@ from app.modules.matches.domain.events import (
     CourtHeld,
     CourtLocked,
     CourtReleased,
+    DepartureOutcomeImproved,
+    DepartureSettled,
     HoldExtended,
     InventoryLost,
     MatchCancelledAtCheckpoint,
@@ -111,6 +126,7 @@ from app.modules.matches.domain.events import (
     MatchPosted,
     MatchStartMoved,
     NoShowRecorded,
+    PlayerDeparted,
     ResultAgreed,
     ScoreProposed,
     SeatPaid,
@@ -163,6 +179,16 @@ class Match:
     # makes them safe to move in both directions.
     seats: list[Seat] = field(default_factory=list)
     vacancies: list[Vacancy] = field(default_factory=list)
+
+    #: The leavers. **Beside the vacancies and never folded into them** — a hole
+    #: and a settlement are two facts on two axes (ADR-0033), and the one field
+    #: they share is the seat. Occupancy by kind, because a departure is
+    #: underivable from every direction: the seat it emptied says nothing about
+    #: who left, and a refilled seat says nothing at all. Its ``outcome`` is the
+    #: exception and behaves like a Crossing — once it is decided it may only
+    #: improve, and ``Departure`` has no operation that lowers it.
+    departures: list[Departure] = field(default_factory=list)
+
     transferring: bool = False
 
     #: How many of a private court's seats are on the marketplace. A Declaration
@@ -354,6 +380,19 @@ class Match:
                 return seat
         raise SeatNotFound()
 
+    def departure_of(self, player_id: UUID) -> Departure | None:
+        """This player's departure, if she made one. The newest, if several.
+
+        A leaver's card is looked up by *her*, not by a seat: the seat she left
+        may be somebody else's by now, and ADR-0030's whole point is that her
+        card survives the refill.
+        """
+
+        hers = [one for one in self.departures if one.player_id == player_id]
+        if not hers:
+            return None
+        return max(hers, key=lambda one: (one.departed_at, one.seat_index))
+
     # -- the mutable start --------------------------------------------------
 
     def move_start(self, to: Instant, *, at: Instant) -> None:
@@ -396,6 +435,16 @@ class Match:
         rather than newest on purpose: two departures thirty hours and one hour
         ago, with one filler, is a match that lost somebody an hour ago and is
         still short — and the newest vacancy is what says so.
+
+        It also settles the **oldest unsettled departure**, and ADR-0033 is
+        emphatic that those are two traversals and not one: *"a filler closes
+        the oldest open vacancy and settles the oldest unsettled departure, and
+        those are not always the same departure."* The worked example is a
+        transfer — born settled, hole open — followed by an ordinary leave: one
+        sorted pass stopping at the first match hands the filler to the
+        departure with nothing to settle, and the only person waiting on money
+        is skipped. The symptom is *one player was never refunded*, months
+        later, and never an error.
         """
 
         self._refuse_if_settled()
@@ -421,6 +470,7 @@ class Match:
                 occurred_at=at,
             )
         )
+        self._settle_the_longest_wait(at=at)
         return seat
 
     def pay_seat(self, player_id: UUID, *, at: Instant) -> Seat:
@@ -450,12 +500,41 @@ class Match:
         self.commit_if_due(at=at)
         return seat
 
-    def vacate_seat(self, player_id: UUID, *, at: Instant) -> Vacancy:
-        """A player gives up a seat, leaving a hole this match now carries.
+    def depart(
+        self, player_id: UUID, *, quote: Outcome, at: Instant
+    ) -> Departure:
+        """A player leaves: one hole in the match, one departure of her own.
 
-        What she recovers is her **departure's** answer and is settled on an
-        axis of its own (ADR-0033, ``Raketa02/Raketa#67``); nothing about it is
-        written here, which is what keeps a refill from mutating a settlement.
+        **Two records because they are two facts** (ADR-0033). The hole is what
+        the ladder reads — *is this match short a player* — and it closes when
+        anybody takes the seat. The departure is what her card reads — *is my
+        money decided* — and it closes when no further seat event can change it.
+        Neither implies the other, and welding them is what a single ``vacated``
+        scalar did.
+
+        **The quote is checked here and it is a comparison of labels.** She was
+        shown what leaving is worth as the basis for the decision, so an outcome
+        that has become *strictly worse* between the tap and the apply is
+        refused and she is re-presented (``DepartureOutcomeWorsened``). Equal or
+        better applies, which is what makes a forfeit quoted against a reversal
+        pass: the quote protects money and in both cases the money is nothing.
+        This is the whole of how two concurrent leaves resolve — the sharp case
+        being the first leave dropping the match below its checkpoint threshold
+        and turning the second player's free reversal into a forfeit.
+
+        **Which money form she gets follows what she actually put in**, and it
+        is one of two payloads rather than one with an optional amount
+        (ADR-0072). A leave before the match committed clears the seat *and* the
+        payment, so nothing was taken and the card can name no amount at all; so
+        does a leave by somebody who held a seat and never paid for it. Either
+        way the departure is **born settled**, because there is no money whose
+        fate could still change.
+
+        *A player who paid nothing may be quoted a refund and settle as a
+        reversal, and that is not a contradiction: the quote is a fact about the
+        match's phase, which is what the route printed, and her outcome is a
+        fact about her money, which is nothing. The two agree about the only
+        thing that matters.*
         """
 
         self._refuse_if_settled()
@@ -463,12 +542,36 @@ class Match:
         seat = self.seat_of(player_id)
         if seat is None:
             raise SeatNotTaken()
+
+        live = live_outcome(self.as_record(), at)
+        if outcome_worse_than(live, quote):
+            raise DepartureOutcomeWorsened(outcome=live)
+
         was_paid = seat.paid
         index = seat.index
+        money: LeaverMoney = (
+            Recoverable(amount=self.share)
+            if was_paid and live is not Outcome.REVERSED
+            else NothingTaken()
+        )
         seat.vacate()
+
         vacancy = Vacancy(id=_vacancy_id(self.id, index, at), seat_index=index,
                           vacated_at=at)
         self.vacancies.append(vacancy)
+        settled = born_settled(money)
+        departure = Departure(
+            id=_departure_id(self.id, index, at),
+            seat_index=index,
+            player_id=player_id,
+            departed_at=at,
+            quoted=live,
+            money=money,
+            outcome=Outcome.REVERSED if settled else None,
+            settled_at=at if settled else None,
+        )
+        self.departures.append(departure)
+
         self._record(
             SeatVacated(
                 match_id=self.id,
@@ -478,7 +581,127 @@ class Match:
                 occurred_at=at,
             )
         )
-        return vacancy
+        self._record(
+            PlayerDeparted(
+                match_id=self.id,
+                departure_id=departure.id,
+                seat_index=index,
+                player_id=player_id,
+                quoted=live.value,
+                amount_grosze=(
+                    None if isinstance(money, NothingTaken) else int(money.amount)
+                ),
+                occurred_at=at,
+            )
+        )
+        if settled:
+            self._announce_settlement(departure, at=at)
+        return departure
+
+    def resolve_departures_to(self, outcome: Outcome, *, at: Instant) -> int:
+        """Move every departure to this outcome where that is **upward**.
+
+        The fan-out ADR-0030's *"a club-side failure that refunds everybody may
+        improve a settled 50 % to a full refund"* needs, and the only way an
+        already-settled outcome ever moves. It is deliberately not a refusal
+        when a departure is already at least this good: a cancellation reaches
+        settled and unsettled departures alike, and *"you are still refunded in
+        full"* is not a change anybody needs explained.
+
+        Nothing here can lower an outcome, because ``Departure`` has no
+        operation that does — the monotonicity is a property of the type rather
+        than a rule this loop remembers. Ordered oldest first so the
+        announcements a support agent reads are in the order the leavers left.
+
+        Returns how many actually moved.
+        """
+
+        moved = 0
+        for departure in sorted(
+            self.departures, key=lambda one: (one.departed_at, one.seat_index)
+        ):
+            before = departure.outcome
+            if not departure.raise_to(outcome, at=at):
+                continue
+            moved += 1
+            if before is None:
+                self._announce_settlement(departure, at=at)
+            else:
+                self._record(
+                    DepartureOutcomeImproved(
+                        match_id=self.id,
+                        departure_id=departure.id,
+                        player_id=departure.player_id,
+                        improved_from=before.value,
+                        improved_to=outcome.value,
+                        occurred_at=at,
+                    )
+                )
+        return moved
+
+    def settle_departures_if_closed(self, *, at: Instant) -> int:
+        """Forfeit whatever is still open once the roster can no longer change.
+
+        **The definition is taken over the examples, and that is a departure
+        from ADR-0030's wording worth reading.** It defines settlement as *"the
+        moment no further **seat** event can change it"* and then illustrates
+        that with *"at the checkpoint for a rebooking club, at the join cutoff
+        for a standard one, never at match end."* This settles at the **start**,
+        for two reasons.
+
+        The definition is answerable here and the examples are not. ``start`` is
+        the moment this aggregate refuses every seat move — ``_refuse_if_started``
+        guards taking, leaving and moving the hour — so it is *derivably* the
+        last instant a seat event can happen, where the join cutoff is a claim
+        about a rule that lives somewhere else. And ADR-0081 landed after
+        ADR-0030 and moved that rule: a seat claim already running when
+        ``joinCut`` passes *"is honoured to completion"*
+        (``Raketa02/Raketa#68``), so the cutoff stopped being the last seat
+        event on the day claims were decided. Settling there would take money
+        off a leaver whose seat was being paid for as the clock struck.
+
+        Nobody is settled early by this, which is the only direction that
+        matters: the start is later than both of ADR-0030's moments, an outcome
+        may only ever improve, and a rebooking club's checkpoint cancellation
+        forfeits its leavers earlier anyway through its own receipt. The club's
+        ``rebookingCredit`` is not on this record — one of the four
+        ``ClubPolicy`` fields the snapshot deliberately leaves behind — so the
+        earlier of the two examples was never available here in any case.
+
+        Forfeited rather than *whatever the phase says*: past the last seat
+        event nobody can take the seat, so there is no money coming, and the
+        phase agrees.
+
+        A no-op before the start, and a no-op for a departure that took nothing.
+        Returns how many moved.
+        """
+
+        if at < deadlines(self.as_record()).play:
+            return 0
+        return self.resolve_departures_to(Outcome.FORFEITED, at=at)
+
+    def _settle_the_longest_wait(self, *, at: Instant) -> None:
+        """The filler's half of ADR-0033's two queues. Never the same pass."""
+
+        waiting = oldest_unsettled(self.departures)
+        if waiting is None:
+            return
+        if waiting.raise_to(refill_outcome(self.as_record(), at), at=at):
+            self._announce_settlement(waiting, at=at)
+
+    def _announce_settlement(self, departure: Departure, *, at: Instant) -> None:
+        outcome = departure.outcome
+        if outcome is None:  # pragma: no cover - `raise_to` has just set it
+            return
+        self._record(
+            DepartureSettled(
+                match_id=self.id,
+                departure_id=departure.id,
+                player_id=departure.player_id,
+                outcome=outcome.value,
+                occurred_at=at,
+            )
+        )
 
     def open_seats_to_the_marketplace(self, count: int, *, at: Instant) -> None:
         """A private court puts ``count`` of its seats on sale.
@@ -654,16 +877,30 @@ class Match:
 
     def cancel_by_club(self, *, at: Instant) -> None:
         """A manager cancelled it. **No reader can derive that**, which is why
-        it is a Declaration and not one of the two receipts below."""
+        it is a Declaration and not one of the two receipts below.
+
+        It refunds everybody, and *everybody* includes the people who already
+        left: ADR-0030's own example of a settled outcome improving is *"a
+        club-side failure that refunds everybody may improve a settled 50 % to a
+        full refund."* A leaver settled at half whose match the club then lost
+        gets the rest of her money, and she is the one person no card would ever
+        have told.
+        """
 
         self._refuse_if_settled()
+        self.resolve_departures_to(Outcome.REFUNDED_IN_FULL, at=at)
         self.club_cancelled = True
         self._record(MatchCancelledByClub(match_id=self.id, occurred_at=at))
 
     def cancel_for_weather(self, *, at: Instant) -> None:
-        """The weather took it. Its own story, told with its own name."""
+        """The weather took it. Its own story, told with its own name.
+
+        Club-side in the sense that matters here — nobody who left caused it —
+        so it reopens a settlement the same way a manager's cancellation does.
+        """
 
         self._refuse_if_settled()
+        self.resolve_departures_to(Outcome.REFUNDED_IN_FULL, at=at)
         self.weather = True
         self._record(MatchCancelledForWeather(match_id=self.id, occurred_at=at))
 
@@ -673,6 +910,10 @@ class Match:
         A **receipt**, not a decision: the situation already derives — the
         deadline passed with the match short — and this says only that the money
         moved, the court went back and the notice went out.
+
+        It resolves no departure, and that is not an omission: a match that
+        never filled never committed, so every leave it saw was a reversal and
+        every reversal is born settled with nothing to return.
         """
 
         self._refuse_if_settled()
@@ -680,9 +921,17 @@ class Match:
         self._record(MatchCancelledIncomplete(match_id=self.id, occurred_at=at))
 
     def settle_checkpoint_cancellation(self, *, at: Instant) -> None:
-        """The same receipt, for a match still short at its checkpoint."""
+        """The same receipt, for a match still short at its checkpoint.
+
+        This is where a leaver forfeits, and it is the one outcome ADR-0030
+        names as *"the only outcome where a player **who stayed** loses money"*
+        having also been the one a leaver can land on. Nothing is lowered by it:
+        forfeited ranks at the bottom, so a departure a filler already settled
+        keeps whatever it settled at, and only the ones still open move.
+        """
 
         self._refuse_if_settled()
+        self.resolve_departures_to(Outcome.FORFEITED, at=at)
         self.checkpoint_cancelled = True
         self._record(MatchCancelledAtCheckpoint(match_id=self.id, occurred_at=at))
 
@@ -788,3 +1037,15 @@ def _vacancy_id(match_id: UUID, seat_index: int, at: Instant) -> UUID:
     """
 
     return uuid5(match_id, f"vacancy:{seat_index}:{at.isoformat()}")
+
+
+def _departure_id(match_id: UUID, seat_index: int, at: Instant) -> UUID:
+    """A departure's id, derived the same way and from a different name.
+
+    One match, one seat and one instant name one leaving — only one player can
+    hold a seat, so there is nothing else it could be. The prefix is what keeps
+    it distinct from the vacancy the same leaving opened: two records, two ids,
+    from one pair of facts.
+    """
+
+    return uuid5(match_id, f"departure:{seat_index}:{at.isoformat()}")

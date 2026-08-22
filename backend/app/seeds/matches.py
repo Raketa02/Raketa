@@ -46,10 +46,21 @@ row. That state is invisible on a card by construction, so the place it is
 checked is the ladder's own suite, where it can be asserted as *no hold* rather
 than as a name that does not mention one.
 
-**No leaver, no seat claim, no money.** A departure record is
-``Raketa02/Raketa#67``, a seat claim is ``#68`` and the ledger is ``#69``. A
-vacancy *is* seeded, because the hole is this record's own fact — what the leaver
-recovered is not, and this catalog deliberately cannot express it.
+**A leaver is seeded and her money is a checked claim too.** A vacancy and a
+departure are two facts (ADR-0033), so a scenario that loses a player says what
+that player's *money* is as well as what the match's state is — settled or open,
+and whether her card names an amount at all. It is checked against the stored
+departures on every run, for the same reason the situation is: a leaver's card
+is the one surface where a wrong answer is somebody's refund.
+
+**The outcome is not authored either.** Like the court hold, it is what the
+rules composed on the way through the same use cases a request runs — the seed
+passes the live quote and the aggregate decides. Writing an outcome into this
+catalog would be writing down the answer to the question the departure exists to
+compute.
+
+**No seat claim and no money movements.** A seat claim is ``Raketa02/Raketa#68``
+and the ledger is ``#69``.
 """
 
 from __future__ import annotations
@@ -61,6 +72,7 @@ from app.kernel import (
     Instant,
     MatchKind,
     Minutes,
+    Outcome,
     PayModel,
     SeatShare,
     Situation,
@@ -106,6 +118,26 @@ class SituationClaim:
 
 
 @dataclass(frozen=True)
+class DepartureClaim:
+    """What a seeded leaver's money is, checked against the stored departure.
+
+    ``outcome`` is ``None`` for a departure still waiting on a filler, which is
+    a claim in its own right and the most fragile one here: it is the state a
+    card renders as *not yet decided*, and it stops being true the moment
+    anything settles her.
+
+    ``names_an_amount`` is the two payload forms (ADR-0072) as a claim. It is
+    not derivable from the outcome for a reader of this file, which is exactly
+    why it is written down: *nothing was taken* and *nothing has come back yet*
+    are the two sentences a seeded card must be able to tell apart.
+    """
+
+    promise: str
+    outcome: Outcome | None
+    names_an_amount: bool
+
+
+@dataclass(frozen=True)
 class SeedMatch:
     """One deterministic match: whose club, when, and how far along it is.
 
@@ -135,6 +167,8 @@ class SeedMatch:
     joined_at: Instant = POSTED
     vacated: int = 0
     vacated_at: Instant | None = None
+    #: What the leavers' money is, when a scenario loses anybody.
+    departure: DepartureClaim | None = None
     kind: MatchKind = MatchKind.OPEN
     pay_model: PayModel = PayModel.SPLIT
     open_seats: int = 0
@@ -157,6 +191,12 @@ class SeedMatch:
         if self.vacated > self.taken:
             raise ValueError(
                 f"'{self.slug}' loses {self.vacated} of {self.taken} players"
+            )
+        if bool(self.vacated) != (self.departure is not None):
+            raise ValueError(
+                f"'{self.slug}': a scenario that loses a player says what that "
+                "player's money is, and one that loses nobody has none to say. "
+                "A vacancy and a departure are two facts and both are seeded."
             )
         if self.kind is MatchKind.OPEN and self.open_seats:
             raise ValueError(
@@ -260,6 +300,15 @@ RECOVERING = SeedMatch(
     joined_at=seed_moment(day_offset=4, hour=19),
     vacated=1,
     vacated_at=seed_moment(day_offset=4, hour=19, minute=30),
+    departure=DepartureClaim(
+        promise=(
+            "a leaver who paid, whose money nothing has decided yet — the "
+            "third audience, and the one whose card is about a refund rather "
+            "than about a game"
+        ),
+        outcome=None,
+        names_an_amount=True,
+    ),
 )
 
 NEEDS_RESULT = SeedMatch(

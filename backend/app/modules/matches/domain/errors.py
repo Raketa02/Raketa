@@ -18,6 +18,7 @@ wrong.
 
 from __future__ import annotations
 
+from app.kernel import Outcome
 from app.shared.domain import BadRequestError, ConflictError, NotFoundError
 
 
@@ -139,6 +140,34 @@ class VacancyAlreadyFilled(ConflictError):
 
     def __init__(self) -> None:
         super().__init__("That vacancy has already been filled.")
+
+
+class DepartureOutcomeWorsened(ConflictError):
+    """What leaving is worth fell below the label she was shown.
+
+    ADR-0033's quote-and-confirm, and the whole of how two concurrent
+    departures resolve: the command carries the **label** the player was looking
+    at, the outcome is recomputed at apply time, and a strictly worse one is
+    refused rather than silently applied. *"Correct for a machine and
+    indefensible at the till"* is the alternative it exists to refuse — she was
+    shown all four outcomes as the basis for the decision.
+
+    Equal or better applies, and a **forfeit quoted against a reversal** is
+    equal: the quote protects money, and in both cases the money is nothing.
+
+    It carries the new outcome, because the correction that matters is *what is
+    true now* rather than a sentence about a rule — the route re-presents it
+    (``Raketa02/Raketa#80``) and the refusal path returns what a success
+    returns.
+    """
+
+    code = "match_departure_outcome_worsened"
+
+    def __init__(self, *, outcome: Outcome) -> None:
+        self.outcome = outcome
+        super().__init__(
+            "What leaving this match is worth has changed since you were shown it."
+        )
 
 
 class CourtAlreadyHeld(ConflictError):

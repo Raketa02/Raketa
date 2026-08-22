@@ -46,6 +46,7 @@ from app.bootstrap.events import build_event_delivery_worker, build_event_runtim
 from app.core.config import Settings
 from app.infrastructure.events.event_delivery_model import EventOutboxORM
 from app.kernel import (
+    Outcome,
     SeatShare,
     Sport,
     WakeReason,
@@ -53,6 +54,7 @@ from app.kernel import (
     hours,
     instant,
     keeping_a_court,
+    live_outcome,
     zloty,
 )
 from app.modules.clubs.application.add_court import AddCourt
@@ -75,13 +77,14 @@ from app.modules.clubs.domain.value_objects import (
 )
 from app.modules.courts.application.claim_court import ClaimCourt
 from app.modules.matches.application.commands import (
+    DepartCommand,
     PaySeatCommand,
     PostMatchCommand,
     TakeSeatCommand,
 )
 from app.modules.matches.application.post_match import PostMatch
 from app.modules.matches.application.resolve_court_hold import ResolveCourtHold
-from app.modules.matches.application.seat_moves import PaySeat, TakeSeat
+from app.modules.matches.application.seat_moves import Depart, PaySeat, TakeSeat
 from app.modules.matches.application.take_match_wake import (
     MatchWakeBatch,
     TakeMatchWake,
@@ -141,6 +144,7 @@ class _World:
         self.post = PostMatch(matches, clubs, holds, uow, clock)
         self.take = TakeSeat(matches, holds, uow, clock)
         self.pay = PaySeat(matches, holds, uow, clock)
+        self.depart = Depart(matches, holds, uow, clock)
 
     async def announcements(self) -> int:
         counted = select(func.count()).select_from(EventOutboxORM)
@@ -231,6 +235,39 @@ async def a_match_holding_a_court(world, **overrides):
         await world.pay.execute(PaySeatCommand(match_id=match.id, player_id=player))
     assert keeping_a_court((await world.matches.get(match.id)).as_record())
     return match
+
+
+async def a_committed_match_that_lost_somebody(world, **overrides):
+    """Four paid seats past the deadline, then one player out — a leaver whose
+    money nothing has decided and a hole nobody has filled."""
+
+    match = await a_match(world, **overrides)
+    world.clock.set(INSIDE_COMMITMENT)
+    players = [uuid4() for _ in range(4)]
+    for player in players:
+        await world.take.execute(
+            TakeSeatCommand(match_id=match.id, player_id=player)
+        )
+        await world.pay.execute(PaySeatCommand(match_id=match.id, player_id=player))
+
+    stored = await world.matches.get(match.id)
+    assert stored is not None and stored.committed_at is not None
+    await world.depart.execute(
+        DepartCommand(
+            match_id=match.id,
+            player_id=players[0],
+            quote=live_outcome(stored.as_record(), instant(world.clock.now())),
+        )
+    )
+    return match, players[0]
+
+
+async def the_departure(world, match_id, player_id):
+    stored = await world.matches.get(match_id)
+    assert stored is not None
+    departure = stored.departure_of(player_id)
+    assert departure is not None
+    return departure
 
 
 # --- 1. the look re-derives -------------------------------------------------
@@ -512,6 +549,68 @@ def test_the_walk_can_tell_the_difference():
 
 
 # --- the wiring -------------------------------------------------------------
+
+
+async def test_a_wake_at_the_start_settles_a_leaver_nobody_replaced(world):
+    """The timekeeper's **second actor**, and the reason a leaver's card ever
+    stops saying *not yet decided*.
+
+    Nothing else in the system would ever settle her: no filler arrived, so no
+    seat event touched her departure, and the match was not cancelled. Without
+    this look her money stays open for ever on a match that has been played.
+    """
+
+    match, leaver = await a_committed_match_that_lost_somebody(world)
+    assert not (await the_departure(world, match.id, leaver)).is_settled
+
+    world.clock.set(START)
+    wake = await world.the_one_due_wake(START)
+    outcome = await world.look.execute(wake)
+
+    assert outcome is WakeOutcome.ACTED
+    settled = await the_departure(world, match.id, leaver)
+    assert settled.outcome is Outcome.FORFEITED
+    assert settled.settled_at == instant(START)
+
+
+async def test_a_wake_before_the_start_leaves_her_money_open(world):
+    """Every earlier wake belongs to the other actor, or to nobody.
+
+    A committed match one seat short wakes next when the rescue window opens,
+    and a filler could still arrive from there — so settling her then would take
+    money off somebody whose seat was about to sell.
+    """
+
+    match, leaver = await a_committed_match_that_lost_somebody(world)
+    rescue = START - timedelta(hours=4)
+    wake = await world.the_one_due_wake(rescue)
+    assert wake.reason is WakeReason.RESCUE
+
+    world.clock.set(rescue)
+    await world.look.execute(wake)
+
+    assert not (await the_departure(world, match.id, leaver)).is_settled
+
+
+async def test_settling_her_is_taken_twice_without_moving_anything(world):
+    """A duplicate look is looking twice: the second re-derives, finds her
+    already settled, and writes nothing."""
+
+    match, leaver = await a_committed_match_that_lost_somebody(world)
+    world.clock.set(START)
+    wake = await world.the_one_due_wake(START)
+    await world.look.execute(wake)
+    settled_at = (await the_departure(world, match.id, leaver)).settled_at
+    before = await world.announcements()
+    version = (await world.matches.get(match.id)).version
+
+    world.clock.set(START + timedelta(minutes=1))
+    outcome = await world.look.execute(wake)
+
+    assert outcome is not WakeOutcome.ACTED
+    assert (await the_departure(world, match.id, leaver)).settled_at == settled_at
+    assert await world.announcements() == before
+    assert (await world.matches.get(match.id)).version == version
 
 
 async def test_the_composed_timekeeper_gives_a_court_back(world):

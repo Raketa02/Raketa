@@ -124,6 +124,15 @@ THE_SURFACE = (
     "situation",
     "CAUSE_COUNT",
     "Cause",
+    "OUTCOME_COUNT",
+    "LeaverMoney",
+    "NothingTaken",
+    "Outcome",
+    "Recoverable",
+    "live_outcome",
+    "outcome_rank",
+    "outcome_worse_than",
+    "refill_outcome",
 )
 
 

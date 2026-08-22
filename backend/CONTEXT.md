@@ -624,14 +624,49 @@ there; they are not repeated here.
   occupancy are independent axes (ADR-0033), and what a leaver recovered belongs to her
   departure. Taking a seat closes the **oldest** open hole, so the newest still says when this
   match last lost somebody. _Avoid_: a seat state enum with a third value, an amount on a hole.
+- **Departure record** (`matches.Departure`) — the other half of a leaving, beside the hole:
+  whose seat, when, the **label she was shown** (`quoted`), her money, and the outcome. Its own
+  file and its own table, because a hole and a settlement have two lifecycles — a filler closes
+  the **oldest open vacancy** and settles the **oldest unsettled departure**, and ADR-0033 calls
+  those two traversals over one list *"a real implementation hazard"* whose symptom is *one
+  player was never refunded*, months later, and never an error. Found by the **player**, never
+  by the seat she left: the seat may be somebody else's by then, which is the whole point.
+  _Avoid_: one loop doing both queues, a departure keyed on a seat.
+- **Leaver money** (`kernel.NothingTaken`, `kernel.Recoverable`) — what a departure took, in
+  **two forms** rather than one with an optional amount (ADR-0072). `Recoverable` names what she
+  paid in; whether any of it comes back is the *outcome's* answer, so a forfeited departure still
+  carries the figure. `NothingTaken` has **no field that could hold an amount**, and reading one
+  off the union without narrowing does not typecheck — which is what makes the refusal bite.
+  Stored as a nullable column and **never a zero**: *nothing was taken* and *nothing has come
+  back yet* are opposite sentences a blank cannot tell apart. _Avoid_: `amount: Grosze | None`.
+- **Raising an outcome** (`matches.Departure.raise_to`) — the **only** operation that moves a
+  settlement, and it cannot lower one. ADR-0030's *"nothing may reduce a settled outcome"* is
+  therefore a property of the type rather than a rule its callers remember: an unsettled
+  departure settles, a settled one improves, and anything else moves nothing and announces
+  nothing. A departure that took nothing never moves at all — there is no money to return.
+- **The two questions** (`kernel.live_outcome`, `kernel.refill_outcome`) — *what do I get if I
+  leave now* and *what does somebody who has already left recover when a filler pays now*. They
+  agree everywhere except past the **checkpoint**, where leaving is quoted `forfeited` and a
+  filler still pays the rescue price — so a late filler **improves** what the leaver had. The
+  asymmetry is safe exactly because settlement is monotonic upward: a quote may under-promise
+  for ever and may never over-promise once. _Avoid_: one function answering both.
+- **Settling at the start** (`matches.Match.settle_departures_if_closed`) — a departure nobody
+  filled forfeits at `start`, which is where the timekeeper's `play` wake finds it. ADR-0030
+  *defines* settlement as *"the moment no further **seat** event can change it"* and illustrates
+  it with the join cutoff; ADR-0081 landed later and made a seat claim *"honoured to
+  completion"* past that cutoff, so the illustration stopped being the last seat event. `start`
+  is the instant this aggregate refuses every seat move, so it is **derivably** the definition's
+  answer. Nobody settles early, which is the only direction that matters.
 - **Seed match** — a deterministic development match created by `app/seeds/matches.py`, named
   for the **`Situation` it resolves to** and checked by `kernel.situation` against the stored
   record on every run, at the scenario's own fixed instant. The strongest name-check in the
   seed system, because a match's state is derived: retune a threshold and the seed stops and
   says which account's screen just moved. Written on the **seeded week's clock** rather than
   the wall clock — a match *is* its clock, so `committed_at` from a wall clock would make the
-  name a claim about the day the seed ran. _Avoid_: a claim with no instant, which is not a
-  claim.
+  name a claim about the day the seed ran. A scenario that loses a player also names what
+  that player's **money** is — settled or open, and whether her card names an amount — checked
+  against the stored departures, and the only claim in the seed system that is about a refund.
+  _Avoid_: a claim with no instant, which is not a claim.
 
 - **Composed screen** (`modules/now`) — a **read** with no aggregate behind it: Now owns no
   state, writes nothing and stores nothing, and what it does own is the *composition* —

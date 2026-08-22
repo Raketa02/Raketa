@@ -1,4 +1,4 @@
-"""Reading a match out of three tables, writing the delta back, and announcing it.
+"""Reading a match out of four tables, writing the delta back, and announcing it.
 
 **The version guard runs first, and in the same statement that bumps it**, so a
 second writer that read the same match loses on ``rowcount`` rather than on
@@ -18,7 +18,10 @@ match and thereafter only occupied and emptied, so their rows are found by
 ``(match_id, seat_index)`` and updated in place; a delete-and-reinsert would
 throw away the row identity the one-player-one-seat index is keyed on and would
 churn the table on every join. Vacancies are append-and-close: a new hole is an
-INSERT, a filled one is an UPDATE, and nothing is ever removed.
+INSERT, a filled one is an UPDATE, and nothing is ever removed. Departures are
+the same shape and for a stronger reason — a settlement that vanished and came
+back would be a refund nobody could account for — and their two mutable columns
+are the outcome and the moment it landed.
 
 Naive datetimes come back from SQLite, which drops the offset it was handed.
 They are re-attached to UTC on the way in, the same normalisation the Clubs
@@ -41,8 +44,12 @@ from app.kernel import (
     Clock,
     HoldPolicy,
     Instant,
+    LeaverMoney,
     MatchKind,
+    NothingTaken,
+    Outcome,
     PayModel,
+    Recoverable,
     SeatShare,
     Sport,
     grosze,
@@ -52,12 +59,14 @@ from app.kernel import (
 )
 from app.shared.ids import new_uuid
 
+from app.modules.matches.domain.departure import Departure
 from app.modules.matches.domain.errors import ConcurrentMatchModification
 from app.modules.matches.domain.match import Match
 from app.modules.matches.domain.score import Score, SetScore
 from app.modules.matches.domain.seat import Seat
 from app.modules.matches.domain.vacancy import Vacancy
 from app.modules.matches.infrastructure.sqlalchemy_match_models import (
+    MatchDepartureORM,
     MatchORM,
     MatchSeatORM,
     MatchVacancyORM,
@@ -80,6 +89,24 @@ def _score_of(raw: Any) -> Score | None:
     if not raw:
         return None
     return Score(tuple(SetScore(side_a=int(a), side_b=int(b)) for a, b in raw))
+
+
+def _leaver_money(amount: int | None) -> LeaverMoney:
+    """The stored amount back as one of the two forms, never an optional field.
+
+    ``None`` is *nothing was taken*, and it is the only spelling of it: the
+    domain refuses a reversal that names an amount and an amount that names no
+    reversal, so a row can only mean one of the two things (ADR-0072).
+    """
+
+    return NothingTaken() if amount is None else Recoverable(amount=grosze(amount))
+
+
+def _amount_column(money: LeaverMoney) -> int | None:
+    """Null where nothing was taken. **Never zero** — a zero is a blank a reader
+    would have to interpret, and the two sentences it would blur are opposites."""
+
+    return None if isinstance(money, NothingTaken) else int(money.amount)
 
 
 def _score_column(score: Score | None) -> list[list[int]] | None:
@@ -149,6 +176,8 @@ class SqlAlchemyMatchRepository:
             self._session.add(self._seat_row(match.id, seat))
         for vacancy in match.vacancies:
             self._session.add(self._vacancy_row(match.id, vacancy))
+        for departure in match.departures:
+            self._session.add(self._departure_row(match.id, departure))
         await self._session.flush()
         await self._announce(match)
         return match
@@ -174,6 +203,7 @@ class SqlAlchemyMatchRepository:
 
         await self._write_seats(match)
         await self._write_vacancies(match)
+        await self._write_departures(match)
         await self._session.flush()
         match.version += 1
         await self._announce(match)
@@ -229,6 +259,37 @@ class SqlAlchemyMatchRepository:
                 update(MatchVacancyORM)
                 .where(MatchVacancyORM.id == vacancy.id)
                 .values(filled_at=vacancy.filled_at)
+            )
+
+    async def _write_departures(self, match: Match) -> None:
+        """Append the new leavers, move the ones whose money settled.
+
+        The same append-and-update shape as the vacancies beside them, and the
+        two are written separately on purpose: one filler closes a hole and
+        settles a **different** departure, so a single loop over one list would
+        have to know which of the two it was doing.
+        """
+
+        stored = set(
+            await self._all(
+                select(MatchDepartureORM.id).where(
+                    MatchDepartureORM.match_id == match.id
+                )
+            )
+        )
+        for departure in match.departures:
+            if departure.id not in stored:
+                self._session.add(self._departure_row(match.id, departure))
+                continue
+            await self._session.execute(
+                update(MatchDepartureORM)
+                .where(MatchDepartureORM.id == departure.id)
+                .values(
+                    outcome=(
+                        None if departure.outcome is None else departure.outcome.value
+                    ),
+                    settled_at=departure.settled_at,
+                )
             )
 
     # -- rows ---------------------------------------------------------------
@@ -317,6 +378,23 @@ class SqlAlchemyMatchRepository:
             filled_at=vacancy.filled_at,
         )
 
+    def _departure_row(
+        self, match_id: UUID, departure: Departure
+    ) -> MatchDepartureORM:
+        return MatchDepartureORM(
+            id=departure.id,
+            match_id=match_id,
+            seat_index=departure.seat_index,
+            player_id=departure.player_id,
+            departed_at=departure.departed_at,
+            quoted=departure.quoted.value,
+            amount_grosze=_amount_column(departure.money),
+            outcome=(
+                None if departure.outcome is None else departure.outcome.value
+            ),
+            settled_at=departure.settled_at,
+        )
+
     # -- assembly -----------------------------------------------------------
 
     async def _rows(self, statement: Select[Any]) -> list[MatchORM]:
@@ -371,12 +449,48 @@ class SqlAlchemyMatchRepository:
                 )
             )
 
+        departures: dict[UUID, list[Departure]] = {row.id: [] for row in rows}
+        departure_rows = await self._session.execute(
+            select(MatchDepartureORM)
+            .where(MatchDepartureORM.match_id.in_(ids))
+            .order_by(
+                MatchDepartureORM.match_id,
+                MatchDepartureORM.departed_at,
+                MatchDepartureORM.seat_index,
+                MatchDepartureORM.id,
+            )
+        )
+        for departure_row in departure_rows.scalars().all():
+            departures[departure_row.match_id].append(
+                Departure(
+                    id=departure_row.id,
+                    seat_index=departure_row.seat_index,
+                    player_id=departure_row.player_id,
+                    departed_at=_as_instant(departure_row.departed_at),
+                    quoted=Outcome(departure_row.quoted),
+                    money=_leaver_money(departure_row.amount_grosze),
+                    outcome=(
+                        None
+                        if departure_row.outcome is None
+                        else Outcome(departure_row.outcome)
+                    ),
+                    settled_at=_optional_instant(departure_row.settled_at),
+                )
+            )
+
         return [
-            self._match_of(row, seats[row.id], vacancies[row.id]) for row in rows
+            self._match_of(
+                row, seats[row.id], vacancies[row.id], departures[row.id]
+            )
+            for row in rows
         ]
 
     def _match_of(
-        self, row: MatchORM, seats: list[Seat], vacancies: list[Vacancy]
+        self,
+        row: MatchORM,
+        seats: list[Seat],
+        vacancies: list[Vacancy],
+        departures: list[Departure],
     ) -> Match:
         return Match(
             id=row.id,
@@ -402,6 +516,7 @@ class SqlAlchemyMatchRepository:
             start=_as_instant(row.start),
             seats=seats,
             vacancies=vacancies,
+            departures=departures,
             transferring=row.transferring,
             open_seats=row.open_seats,
             held_since=_optional_instant(row.held_since),

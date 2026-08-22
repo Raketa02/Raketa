@@ -1,4 +1,4 @@
-"""Three tables: the match, its seats, and the holes departures left.
+"""Four tables: the match, its seats, the holes left, and the leavers.
 
 **No constraint here is a decision the way the exclusion constraint is** — a
 match contends for nothing that another match could take, because what is
@@ -21,7 +21,14 @@ reservation and an effective-dated series' closed row. *When did this match lose
 a player, and when did it get one back* is a support question, and a row that
 vanishes cannot answer it.
 
-**The score is a JSON column and not a fourth table.** It is a *value* — no
+**The departures are a fourth table and not two more columns on the third.** A
+hole and a settlement are two facts with two lifecycles (ADR-0033): the hole
+closes when anybody takes the seat, the settlement closes when nobody can any
+more, and a filler routinely closes one while settling a *different* leaver's
+money. Two rows are what makes that expressible; a single row would be the
+scalar the two ADRs were written to replace.
+
+**The score is a JSON column and not a fifth table.** It is a *value* — no
 identity, no lifecycle, never read or written apart from the match — and giving
 it row identity would be inventing one. The list of sets is stored as the pairs
 of integers it crosses the wire as (``Raketa02/Raketa#74``), never as a display
@@ -289,5 +296,62 @@ class MatchVacancyORM(Base):
         sa.DateTime(timezone=True), nullable=False
     )
     filled_at: Mapped[Optional[datetime]] = mapped_column(
+        sa.DateTime(timezone=True), nullable=True
+    )
+
+
+class MatchDepartureORM(Base):
+    """One leaver: what she was promised, what she paid, and what she got.
+
+    ``amount_grosze`` is **null when nothing was taken**, and that is the
+    storage half of ADR-0072's two payload forms rather than an optional field
+    smuggled back in. The domain reconstructs the union from it and refuses the
+    two rows that cannot mean anything — an amount on a reversal, and a reversal
+    with no amount is the only reversal there is. A zero was refused outright:
+    *nothing was taken* and *nothing has come back yet* are opposite sentences
+    and a zero cannot tell them apart.
+
+    ``outcome`` is null exactly while the departure is unsettled, and it only
+    ever moves **upward** thereafter. Nothing in the schema enforces that — a
+    ``CHECK`` cannot see the old value — so it is a property of the domain type,
+    which has no operation that lowers one.
+
+    ``quoted`` is stored rather than re-derived. Every deadline hangs off
+    ``matches.start`` and a consented shift moves all five, so *what was she
+    shown* stops being answerable from the record the moment the match moves.
+
+    No unique index on ``(match_id, player_id)``: a player may leave, be talked
+    back in, and leave again, and each of those is its own departure with its
+    own money. The primary key is derived from the match, the seat and the
+    instant, which is already exactly *one leaving*.
+    """
+
+    __tablename__ = "match_departures"
+
+    id: Mapped[UUID] = mapped_column(
+        UUIDType(binary=False), primary_key=True, default=uuid.uuid4
+    )
+    match_id: Mapped[UUID] = mapped_column(
+        UUIDType(binary=False),
+        sa.ForeignKey("matches.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    seat_index: Mapped[int] = mapped_column(sa.Integer, nullable=False)
+    #: Not a foreign key, for the reason ``match_seats.player_id`` is not one:
+    #: a player lives behind a projection in another context.
+    player_id: Mapped[UUID] = mapped_column(
+        UUIDType(binary=False), nullable=False, index=True
+    )
+    departed_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), nullable=False
+    )
+    #: The outcome label she acted on (ADR-0033's **Quote**).
+    quoted: Mapped[str] = mapped_column(sa.String(16), nullable=False)
+    #: What she paid in, or null because nothing was taken.
+    amount_grosze: Mapped[Optional[int]] = mapped_column(sa.Integer, nullable=True)
+    #: Null until settled. Monotonic upward thereafter.
+    outcome: Mapped[Optional[str]] = mapped_column(sa.String(16), nullable=True)
+    settled_at: Mapped[Optional[datetime]] = mapped_column(
         sa.DateTime(timezone=True), nullable=True
     )

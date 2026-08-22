@@ -30,10 +30,10 @@ from app.application.ports import UnitOfWork
 from app.kernel import Clock, instant
 
 from app.modules.matches.application.commands import (
+    DepartCommand,
     MoveMatchStartCommand,
     PaySeatCommand,
     TakeSeatCommand,
-    VacateSeatCommand,
 )
 from app.modules.matches.application.resolve_court_hold import ResolveCourtHold
 from app.modules.matches.domain.errors import MatchNotFound
@@ -107,18 +107,20 @@ class PaySeat(_MatchWrite):
         return stored
 
 
-class VacateSeat(_MatchWrite):
-    """A player leaves, and the match carries the hole.
+class Depart(_MatchWrite):
+    """A player leaves: one hole in the match, one departure of her own.
 
-    What she recovers is her **departure's** answer, on an axis of its own
-    (ADR-0033) — ``Raketa02/Raketa#67`` writes that record beside this one, and
-    it is deliberately not written here.
+    Both records are written in the transaction the seat is emptied in, which is
+    what stops a hole existing with nobody's money attached to it. The quote is
+    checked by the aggregate, against the outcome recomputed on the record this
+    load returned — so the refusal is taken on the same facts the write would
+    have used, and not on a read that has since gone stale.
     """
 
-    async def execute(self, command: VacateSeatCommand) -> Match:
+    async def execute(self, command: DepartCommand) -> Match:
         match = await self._load(command.match_id)
         at = instant(self._clock.now())
-        match.vacate_seat(command.player_id, at=at)
+        match.depart(command.player_id, quote=command.quote, at=at)
         await self._holds.apply(match, at=at)
         stored = await self._matches.save(match)
         await self._uow.commit()

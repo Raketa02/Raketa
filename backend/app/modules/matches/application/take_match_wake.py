@@ -15,13 +15,22 @@ for the timekeeper is a second ladder and should be deleted rather than
 reconciled."* ``tests/unit/test_timekeeper_holds_no_thresholds.py`` reddens on
 one appearing in this package.
 
-**Today the ladder is the only actor, and that is a fact about the build rather
-than about the design.** Eleven thresholds are scheduled; the hold ladder is the
-one thing that has landed which *does* anything at a threshold. A wake that
-crosses the commitment deadline underfull ought to cancel the match, and cannot
-yet, because nothing writes that cancellation on its own — ``CancelMatch`` is a
-command somebody sends. As those writers land they join this look, and the
-schedule already wakes for them.
+**Two actors now, and they are asked in a fixed order rather than in a loop.**
+The hold ladder decides what happens to the club's court; the departure
+settlement decides what happens to a leaver's money once the roster can no
+longer change. They read different facts — a departure is not in ``MatchRecord``
+at all — so neither can move what the other looks at, and a look that finds work
+for either one saves once. A third actor joins by being asked here, in a line,
+and the schedule already wakes for the thresholds it would need.
+
+**Neither actor holds a threshold, and that is enforced.** The moment this
+look settles against is read inside the aggregate, off ``kernel.deadlines``;
+nothing in this package names a duration or does arithmetic on an instant, and
+the walk above reddens when something does.
+
+A wake that crosses the commitment deadline underfull ought to cancel the match,
+and still cannot, because nothing writes that cancellation on its own —
+``CancelMatch`` is a command somebody sends.
 """
 
 from __future__ import annotations
@@ -97,7 +106,14 @@ class TakeMatchWake:
         as_read = match.version
 
         move = await self._holds.apply(match, at=now)
-        if move is not HoldMove.STAND:
+        # Asked unconditionally rather than only when the ladder stood: the two
+        # actors are independent, and a look that resolved a court and left a
+        # leaver's money undecided until the next threshold would be the same
+        # class of miss the schedule exists to remove. Both are no-ops when
+        # there is nothing to do, which is what makes asking always affordable.
+        settled = match.settle_departures_if_closed(at=now)
+
+        if move is not HoldMove.STAND or settled:
             # `save` recomputes the schedule from the record it is writing, so
             # the acting path arms itself and this one does not touch it.
             await self._matches.save(match)

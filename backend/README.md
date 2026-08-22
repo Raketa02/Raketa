@@ -122,10 +122,45 @@ ADR-0034 attaches one obligation that is not ordinary:
 > Every change a support agent would one day need to explain to a player is announced as its
 > own named event — never as a generic *match updated*.
 
-That is why `app/modules/matches/domain/events.py` holds twenty-one names rather than one.
+That is why `app/modules/matches/domain/events.py` holds twenty-four names rather than one.
 Nothing mechanical catches an event published too coarsely, so
 `tests/unit/test_match_events.py` walks the aggregate with an AST and fails when a mutating
 method announces nothing, and refuses a name that reads like *updated*.
+
+### A leaving is two records
+
+A player who leaves writes **a vacancy and a departure**, and they are two facts on two axes
+([ADR-0033](../docs/adr/0033-settlement-and-occupancy-are-independent.md)). The vacancy is the
+hole the match now carries and the resolution ladder reads it. The departure is whose money it
+is, and her card reads that.
+
+They do not move together, and the place it shows is the filler. Taking a seat closes the
+**oldest open vacancy** *and* settles the **oldest unsettled departure** — two traversals over
+one list, differing only in their filter. ADR-0033 calls the single-pass version a real
+implementation hazard, and the symptom is *one player was never refunded*, months later, and
+never an error.
+
+| Fact | Where | Closes when |
+| --- | --- | --- |
+| Vacancy | `match_vacancies` | anybody takes the seat |
+| Departure | `match_departures` | no further seat event can change the outcome |
+
+Four outcomes, ranked *refunded in full > refunded half > forfeited = reversed* — **forfeit
+ties with a reversal**, because the quote protects money and in both cases the money is
+nothing. Her money crosses in **two forms** rather than one with an optional amount
+([ADR-0072](../docs/adr/0072-two-sentences-are-two-situations-and-a-leaver-is-a-third-audience.md)):
+reading an amount off `LeaverMoney` without narrowing does not typecheck, and the column is
+null rather than zero.
+
+`Departure.raise_to` is the only thing that moves an outcome and **cannot lower one**, so
+ADR-0030's *"nothing may reduce a settled outcome"* is a property of the type rather than a
+rule its callers remember. Three things move one: a filler pays, a club-side cancellation
+refunds everybody, or the match reaches its **start** with the seat unfilled — which is the
+timekeeper's second actor, and the reason a leaver's card ever stops saying *not yet decided*.
+
+The **quote** is what makes two simultaneous leaves safe. The command carries the outcome
+**label** the player was shown; the outcome is recomputed at apply time, and a strictly worse
+one is refused with the new one attached. Equal or better applies.
 
 `Match.as_record()` hands the kernel a `MatchRecord` and **needs no other read**: the club's
 four hold-policy fields are copied at posting and honoured *as booked*
@@ -571,11 +606,17 @@ demo week (`Raketa02/Raketa#96`).
 | `match-forming` | `forming` — posted, nobody on it, deadline days away |
 | `match-with-a-seat-held-and-unpaid` | `formingHeld` — held and paid are two facts |
 | `match-past-its-commitment-deadline` | `formingLate` — short, with the deadline behind it |
-| `match-that-lost-a-player` | `replacement` — committed, and one seat short |
+| `match-that-lost-a-player` | `replacement` — committed, one seat short, and a leaver who is owed |
 | `match-played-and-unscored` | `needsResult` — played, waiting twenty-four hours for a score |
 | `match-private-with-seats-opened` | `privateOpen` — somebody's court, two seats for sale |
 | `match-holding-a-court-softly` | `heldSoft` — one seat from full, and a court kept aside |
 | `match-the-club-cancelled` | `cancelledClub` — a decision, not a receipt |
+
+A scenario that loses a player also names what that player's **money** is — settled or open,
+and whether her card names an amount at all — checked against the stored departures on every
+run. It is the only claim in the seed catalog that is about a refund, and the outcome itself is
+never authored: like the court hold, it is what the rules composed on the way through the same
+use cases a request runs.
 
 Every other catalog checks a property somebody wrote down. A match's state is *derived*, so a
 scenario names the `Situation` it must resolve to and the runner asks `kernel.situation`

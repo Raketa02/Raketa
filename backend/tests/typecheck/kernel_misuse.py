@@ -100,17 +100,21 @@ from app.kernel import (
     HoldPolicy,
     Instant,
     InvariantViolated,
+    LeaverMoney,
     IsoWeekday,
     MatchRecord,
     MinuteOfDay,
     Minutes,
     NoCard,
     NonexistentLocalTime,
+    NothingTaken,
     OfferKind,
     Ok,
+    Outcome,
     Payable,
     Ratio,
     Reason,
+    Recoverable,
     Result,
     Seat,
     SeatShare,
@@ -137,15 +141,19 @@ from app.kernel import (
     invariant,
     iso_weekday,
     keeping_a_court,
+    live_outcome,
     local_iso_weekday,
     local_minute_of_day,
     minute_of_day,
     minutes,
     next_wake,
     next_wake_at,
+    outcome_rank,
+    outcome_worse_than,
     payable_from,
     percent,
     ratio,
+    refill_outcome,
     round_half_away_from_zero,
     shifted,
     situation,
@@ -1914,3 +1922,90 @@ def a_reclaimed_holds_age_may_be_absent(record: MatchRecord) -> Minutes:
 def a_hold_that_is_checked_composes(record: MatchRecord) -> Minutes | None:
     age = court_hold(record, A_START).age
     return None if age is None else minutes(age + 1)
+
+
+# --- departures: four names, one ranking, and two money forms --------------
+
+
+def an_outcome_is_not_its_string(record: MatchRecord) -> int:
+    """The ranking is over the enumeration, so a typo is a build error.
+
+    `"forfieted"` ranked as zero by an index signature is the shape of bug the
+    whole enum discipline exists to make unreachable.
+    """
+
+    return outcome_rank("forfeited")  # want-error: arg-type
+
+
+def a_quote_is_compared_against_an_outcome(live: Outcome) -> bool:
+    """Never against a bare label off the wire."""
+
+    return outcome_worse_than(live, "refundedInFull")  # want-error: arg-type
+
+
+def the_clock_a_quote_is_taken_on_is_an_instant(record: MatchRecord) -> Outcome:
+    """A naive `datetime` is the bug `Instant` exists to make unwritable."""
+
+    return live_outcome(record, datetime(2026, 8, 22, 18, 30))  # want-error: arg-type
+
+
+def a_leavers_money_is_not_read_without_asking_which_form(
+    money: LeaverMoney,
+) -> Grosze:
+    """**The whole point of two payloads.** ADR-0072 refuses one payload with a
+    sometimes-absent amount, and this is what makes the refusal bite: reading
+    the amount off the union without narrowing does not compile, so a card
+    cannot print *nothing was taken* as an empty number by accident.
+    """
+
+    return money.amount  # want-error: union-attr
+
+
+def a_narrowed_leavers_money_composes(money: LeaverMoney) -> Grosze | None:
+    """The same read, asked correctly. Pinned clean, so a narrowing that stops
+    narrowing fails here as loudly as one that never did."""
+
+    return None if isinstance(money, NothingTaken) else money.amount
+
+
+def the_two_money_forms_are_closed(money: LeaverMoney) -> str:
+    """`match` over the union with both arms handled, and `exhaustive` proving
+    it — a third form added later fails at every reader rather than falling
+    through to a default nobody wrote."""
+
+    match money:
+        case NothingTaken():
+            return "nothing"
+        case Recoverable():
+            return "some"
+        case _:
+            exhaustive(money)
+
+
+class ARicherReversal(NothingTaken):  # want-error: misc
+    """`@final`: a subclass with a field is an optional amount smuggled back."""
+
+
+class ARicherRecoverable(Recoverable):  # want-error: misc
+    """The same, from the other side."""
+
+
+def what_she_paid_cannot_be_rewritten() -> Recoverable:
+    """Frozen: a settlement that edited the amount would be history rewritten
+    rather than recorded, which is the argument the whole record turns on."""
+
+    money = Recoverable(amount=grosze(3800))
+    money.amount = grosze(1900)  # want-error: misc
+    return money
+
+
+def the_two_questions_both_answer_an_outcome(record: MatchRecord) -> bool:
+    """Pinned clean. `live_outcome` and `refill_outcome` take the same arguments
+    and disagree past the checkpoint, so the compiler cannot tell them apart —
+    which is exactly why `tests/unit/test_kernel_departures.py` asserts the
+    disagreement behaviourally, and why it is written down here that it must.
+    """
+
+    return outcome_worse_than(
+        live_outcome(record, A_START), refill_outcome(record, A_START)
+    )

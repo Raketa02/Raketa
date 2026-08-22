@@ -684,10 +684,13 @@ committed ahead of the code and the code was built with them rather than around 
 backend's own technical vocabulary for the aggregate — the five kinds, the policy snapshot,
 the announcement obligation — is in
 [`backend/CONTEXT.md`](backend/CONTEXT.md). What is **not** built yet is named where it is
-named: the departure record (`#67`), seat claims (`#68`) and the timekeeper (`#72`). The
-**hold ladder** that grants and reclaims a court is built (`#71`): it runs inside the write
-that moved the match, and `heldSince` outlives the reclaim that ends it
-([ADR-0089](docs/adr/0089-held-since-outlives-the-reclaim-that-ends-it.md)).
+named: **seat claims** (`#68`). The **hold ladder** that grants and reclaims a court is built
+(`#71`): it runs inside the write that moved the match, and `heldSince` outlives the reclaim
+that ends it ([ADR-0089](docs/adr/0089-held-since-outlives-the-reclaim-that-ends-it.md)). The
+**timekeeper** is built (`#72`): the schedule is a column and a wake is a look. The
+**departure record** is built (`#67`): a leaving writes a vacancy *and* a departure, a filler
+closes the oldest **hole** while settling the oldest unsettled **departure**, and an outcome
+has no way down.
 
 Committed by [ADR-0030](docs/adr/0030-a-departure-is-an-audience-not-a-state.md),
 [ADR-0031](docs/adr/0031-hold-ladder-is-a-floor-at-a-level-of-certainty.md),
@@ -793,11 +796,17 @@ Committed by [ADR-0030](docs/adr/0030-a-departure-is-an-audience-not-a-state.md)
   names; it never changes the **situation**, and it never changes a movement's **cause**
   ([ADR-0072](docs/adr/0072-two-sentences-are-two-situations-and-a-leaver-is-a-third-audience.md)).
 - **Outcome** — a departure's settled result: *reversed*, *refunded in full*, *refunded half*, or
-  *forfeited*. On a private court only *refunded in full* and *forfeited* are reachable.
+  *forfeited*. On a private court only *refunded in full* and *forfeited* are reachable. **Absent
+  until it settles** — *not yet decided* is a state a card renders and never a blank — and a
+  leaver who put nothing in is *reversed* from the moment she leaves, because there is no money
+  whose fate could still change.
 - **Settlement** — the moment no further **seat** event can change an outcome. Monotonic upward
   thereafter: a club-side failure may improve a settled outcome, nothing may reduce one. A
   departure may be **born settled** — a pre-commitment reversal, a transfer, a gift — and still
-  leave a vacancy behind it.
+  leave a vacancy behind it. Where nobody fills the seat, it lands at the **start**: that is the
+  last instant a seat can move at all, and ADR-0030's own illustration — the join cutoff —
+  stopped being that when [ADR-0081](docs/adr/0081-a-seat-is-never-taken-until-it-is-paid.md)
+  made a running seat claim outlive it.
 - **Quote** — the outcome **label** a player was shown before they chose to leave, carried on the
   leave command. If the outcome recomputed at apply time is strictly worse than the quote, the
   command is refused and the player is re-presented. The ordering is *refunded in full* >

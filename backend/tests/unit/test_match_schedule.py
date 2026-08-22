@@ -44,6 +44,7 @@ from app.kernel import (
     grosze,
     hours,
     instant,
+    live_outcome,
     next_wake,
     zloty,
 )
@@ -74,7 +75,7 @@ from app.modules.matches.application.commands import (
     PaySeatCommand,
     PostMatchCommand,
     TakeSeatCommand,
-    VacateSeatCommand,
+    DepartCommand,
 )
 from app.modules.matches.application.post_match import PostMatch
 from app.modules.matches.application.resolve_court_hold import ResolveCourtHold
@@ -82,7 +83,7 @@ from app.modules.matches.application.seat_moves import (
     MoveMatchStart,
     PaySeat,
     TakeSeat,
-    VacateSeat,
+    Depart,
 )
 from app.modules.matches.infrastructure.sqlalchemy_match_models import MatchORM
 
@@ -129,8 +130,27 @@ class _World:
         self.move = MoveMatchStart(matches, holds, uow, clock)
         self.take = TakeSeat(matches, holds, uow, clock)
         self.pay = PaySeat(matches, holds, uow, clock)
-        self.vacate = VacateSeat(matches, holds, uow, clock)
+        self.depart = Depart(matches, holds, uow, clock)
         self.cancel = CancelMatch(matches, holds, uow, clock)
+
+    async def leave(self, match_id, player_id):
+        """A departure at whatever the record says leaving is worth right now.
+
+        The quote is the caller's (ADR-0033) and these suites are not about it,
+        so it is read off the live record — which is what the departure route
+        will do. ``tests/unit/test_match_departures.py`` is where a **stale**
+        quote is the subject.
+        """
+
+        current = await self.matches.get(match_id)
+        assert current is not None
+        return await self.depart.execute(
+            DepartCommand(
+                match_id=match_id,
+                player_id=player_id,
+                quote=live_outcome(current.as_record(), instant(self.clock.now())),
+            )
+        )
 
     async def stored_schedule(self, match_id) -> tuple[object, object]:
         """The two columns, straight off the row — never through the aggregate.
@@ -276,9 +296,7 @@ async def test_every_kind_of_write_leaves_the_schedule_agreeing_with_the_record(
     )
     await world.assert_armed_as_the_kernel_would(match.id)
 
-    await world.vacate.execute(
-        VacateSeatCommand(match_id=match.id, player_id=players[0])
-    )
+    await world.leave(match.id, players[0])
     await world.assert_armed_as_the_kernel_would(match.id)
 
 
