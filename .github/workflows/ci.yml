@@ -122,8 +122,15 @@ jobs:
       # enforced nowhere. A gate the pipeline does not run is not a gate.
       - name: Typecheck
         run: poetry run mypy app
+      # `WRITER_DB_URL` here does NOT put the API suite on Postgres — tests/conftest.py
+      # builds its own in-memory SQLite engine and always has. What reads these is
+      # tests/integration/, whose cases assert two guarantees SQLite cannot express.
+      # That suite requires a database when `CI` is set rather than when a variable
+      # below is set, so deleting the `postgres` service or these three lines turns it
+      # red instead of turning it off (#62, tests/integration/postgres.py).
       - name: Test
         env:
+          POSTGRES_TEST_URL: postgresql+asyncpg://raketa_user:raketa_pwd@localhost:5432/raketa
           WRITER_DB_URL: postgresql+asyncpg://raketa_user:raketa_pwd@localhost:5432/raketa
           EVENT_TEST_DATABASE_URL: postgresql+asyncpg://raketa_user:raketa_pwd@localhost:5432/raketa
           DB_SSL_MODE: disable
@@ -135,6 +142,16 @@ jobs:
       # each one against a deliberately impure tree and asserts it goes red.
       - name: Purity gates still fire
         run: bash scripts/test-purity-gates.sh
+      # Same argument, applied to the two constraints only Postgres enforces: both
+      # assertions were written against a schema that already satisfied them, so
+      # neither had ever been observed to fail. This breaks each constraint in turn
+      # and asserts the suite goes red.
+      - name: Postgres guarantee gates still fire
+        env:
+          POSTGRES_TEST_URL: postgresql+asyncpg://raketa_user:raketa_pwd@localhost:5432/raketa
+          DB_SSL_MODE: disable
+          JWT_SECRET_KEY: ci-secret-do-not-use-in-prod
+        run: bash scripts/test-postgres-gates.sh
 
   club:
     name: Club web — lint, typecheck, test, build

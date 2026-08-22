@@ -428,6 +428,7 @@ Test coverage is split by intent:
 - Unit tests cover domain value objects, event-sourced aggregate behavior,
   refresh-token rules, current-user resolution, event-store version conflicts,
   outbox delivery, and worker lifecycle.
+- **Integration tests are the ones that need a real PostgreSQL** — see below.
 
 Run tests:
 
@@ -435,6 +436,42 @@ Run tests:
 poetry install
 poetry run pytest
 ```
+
+### Which suite owns a Postgres-only case
+
+**`tests/integration/`, and nothing else.** If a guarantee cannot be expressed in
+SQLite, its test goes there; if it can, it stays in `tests/unit/` or `tests/api/`
+where it runs on every machine in milliseconds. The API suite is *not* moving to
+Postgres — an in-memory database per test is what keeps two thousand of them
+fast, and that is worth more than uniformity.
+
+Three guarantees live there today: a reservation's overlapping-interval exclusion
+(`EXCLUDE USING gist`, ADR-0035), the partial unique index that keeps exactly one
+open row per club-policy series, and `FOR UPDATE SKIP LOCKED` outbox claiming.
+The first has no SQLite equivalent at all; the second and third have shapes that
+resemble one and behave differently under concurrency.
+
+Get a database and run them:
+
+```bash
+make up                       # Postgres 17 on localhost:5432
+POSTGRES_TEST_URL=postgresql+asyncpg://raketa_user:raketa_pwd@localhost:5432/raketa \
+  poetry run pytest tests/integration
+```
+
+Without one, those cases **skip on a laptop and fail in CI**. The requirement is
+keyed on `CI` — which GitHub Actions sets — rather than on `POSTGRES_TEST_URL`,
+which the workflow sets. Keying it on the URL would be self-defeating: deleting
+the variable would delete the requirement to have it, and the pipeline would go
+green having asserted nothing. `tests/integration/postgres.py` is where that rule
+lives, and `tests/integration/test_harness_guard.py` checks it without needing a
+database.
+
+When you add a case there, add the constraint's *removal* to
+`scripts/test-postgres-gates.sh` as well (`make test-pg-gates`). A constraint
+test written against a schema that already satisfies it has never been seen to
+fail, which is indistinguishable from not working; that script breaks each
+constraint in turn and asserts the suite goes red. CI runs it.
 
 Run linting:
 

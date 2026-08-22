@@ -17,6 +17,7 @@ make lint        # ruff check .          make format → ruff format .
 make typecheck   # mypy app
 make check       # lint + lint-imports + typecheck + test — the same gate CI runs
 make test-gates  # prove the kernel/engines purity gates still fire (CI runs it)
+make test-pg-gates # prove the Postgres constraint gates still fire (needs a DB; CI runs it)
 make openapi     # emit openapi.player.json + openapi.club.json, one per client
 make up / down   # dev stack (Postgres 17 + API + Redis); make logs, make shell
 make migrate     # alembic upgrade head inside the API container
@@ -140,6 +141,14 @@ tests.
   classes implementing the `Protocol` (see `tests/unit/test_resolve_current_user.py`).
 - `tests/api/` — full HTTP flows via the `client` fixture (HTTPX ASGI + in-memory SQLite).
   Reuse fixtures from `tests/conftest.py` rather than standing up new app/db instances.
+- `tests/integration/` — **and only here** — cases needing a real Postgres, because the
+  guarantee has no SQLite equivalent: the interval-exclusion constraint, the partial unique
+  index on a versioned series' open row, `FOR UPDATE SKIP LOCKED`. Take `pg_engine` from
+  `tests/integration/conftest.py`. They **skip on a laptop and fail in CI**, keyed on `CI`
+  rather than on the URL variable the workflow sets — a requirement the workflow can switch
+  off is not one. Never `pytest.skip` on a missing database without that branch. Adding a
+  case means adding its constraint's removal to `scripts/test-postgres-gates.sh`, or nothing
+  has ever seen that assertion fail. See the README's *Which suite owns a Postgres-only case*.
 - Async by default (`asyncio_mode = "auto"`) — no `@pytest.mark.asyncio`.
 
 ## Environment gotchas

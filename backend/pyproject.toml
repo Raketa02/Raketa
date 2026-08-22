@@ -112,6 +112,11 @@ pythonpath = ["."]
 testpaths = ["tests"]
 asyncio_mode = "auto"
 env = { SQLALCHEMY_SILENCE_UBER_WARNING = "1" }
+# Postgres-only cases live in tests/integration/ and carry this marker, so
+# `-m "not postgres"` is available to anyone who wants the rest. It is not in
+# addopts: the default has to be *run them*, or the guarantees go unenforced by
+# the same silence #62 exists to remove.
+markers = ["postgres: needs a real PostgreSQL (see tests/integration/postgres.py)"]
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

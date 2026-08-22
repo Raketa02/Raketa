@@ -433,5 +433,21 @@ there; they are not repeated here.
   from a second copy, so a re-cut band moves the claim with it. _Avoid_: a claim written as
   literal Levels, a check that only runs on the account this run happened to create.
 
+- **Postgres-only guarantee** — a rule the database enforces that SQLite cannot express,
+  so a suite running on SQLite can state it in a comment and enforce nothing. Three exist:
+  a reservation's overlapping-interval exclusion (`EXCLUDE USING gist`), the partial unique
+  index keeping one open row per versioned series, and `FOR UPDATE SKIP LOCKED` outbox
+  claiming. Their tests live in `tests/integration/` and **nowhere else**; the API suite
+  stays on in-memory SQLite, which is what makes it fast. _Avoid_: asserting one of these
+  against SQLite, where the assertion passes and means nothing.
+- **The harness guard** — the rule that a Postgres-only case **skips on a laptop and fails
+  in a pipeline**. Keyed on `CI`, which the runner sets, rather than on `POSTGRES_TEST_URL`,
+  which `.github/workflows/ci.yml` sets: keying the requirement on a variable the workflow
+  owns means deleting the variable deletes the requirement, and the pipeline reports a
+  guarantee as enforced while enforcing nothing. Checked by
+  `tests/integration/test_harness_guard.py`, which needs no database and therefore runs on
+  every `make check`. _Avoid_: `pytest.skip` on a missing database with no `CI` branch —
+  the shape this replaced.
+
 Add backend-specific technical terms here as they are resolved. Anything describing the
 *domain* belongs in the shared glossary instead.

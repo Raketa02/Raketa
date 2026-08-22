@@ -15,7 +15,8 @@ ECR_URI          ?= $(AWS_ACCOUNT_ID).dkr.ecr.$(AWS_REGION).amazonaws.com/$(ECR_
 ECS_CLUSTER      ?= raketa-cluster
 ECS_SERVICE      ?= raketa-service
 
-.PHONY: help install test lint lint-imports format typecheck check test-gates openapi \
+.PHONY: help install test lint lint-imports format typecheck check test-gates \
+        test-pg-gates openapi \
         build-dev up down logs ps shell migrate seed seed-host \
         build-prod ecr-login ecr-push ecs-deploy
 
@@ -37,6 +38,11 @@ lint-imports:      ## enforce the engines/kernel import boundaries (.importlinte
 
 test-gates:        ## verify the kernel/engines purity gates still fire
 	bash scripts/test-purity-gates.sh
+
+## Needs a Postgres: `make up`, then POSTGRES_TEST_URL=... make test-pg-gates.
+## Skips loudly rather than silently when there is none. CI runs it.
+test-pg-gates:     ## verify the interval-exclusion / partial-index gates still fire
+	bash scripts/test-postgres-gates.sh
 
 format:            ## ruff format
 	poetry run ruff format .
