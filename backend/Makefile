@@ -18,6 +18,7 @@ ECS_SERVICE      ?= raketa-service
 .PHONY: help install test lint lint-imports format typecheck check test-gates \
         test-pg-gates openapi \
         build-dev up down logs ps shell migrate seed seed-host \
+        reconcile reconcile-host \
         build-prod ecr-login ecr-push ecs-deploy
 
 help:
@@ -88,6 +89,17 @@ seed:              ## seed deterministic dev accounts into the running stack's d
 
 seed-host:         ## the same seed from the host — needs .env, like host-run uvicorn
 	poetry run python -m app.seeds
+
+## ----- money
+## The nightly ledger reconciliation (app/reconciliation/). It asserts the three
+## standing invariants and writes nothing — a breach is an ERROR line and a
+## non-zero exit, which is what a scheduler pages on. There is no scheduler in
+## this repo; deployment is dormant.
+reconcile:         ## assert the ledger invariants against the running stack's database
+	$(COMPOSE_LOCAL) exec api python -m app.reconciliation
+
+reconcile-host:    ## the same reconciliation from the host — needs .env
+	poetry run python -m app.reconciliation
 
 ## ----- production / ECR / ECS
 ## DORMANT — AWS deployment is not in use; development is entirely local

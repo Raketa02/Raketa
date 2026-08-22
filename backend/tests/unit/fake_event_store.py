@@ -34,6 +34,7 @@ from app.application.events.store import (
     StoredDomainEvent,
 )
 from app.infrastructure.events.json_event_codec import JsonEventCodec
+from app.modules.money.application.event_subscriptions import register_money_events
 from app.modules.rating.application.event_subscriptions import register_rating_events
 from app.shared.domain import DomainEvent
 
@@ -43,6 +44,19 @@ def rating_event_codec() -> JsonEventCodec:
 
     catalog = EventCatalog()
     register_rating_events(catalog)
+    return JsonEventCodec(catalog)
+
+
+def money_event_codec() -> JsonEventCodec:
+    """The same, for the Money context's two events.
+
+    A second codec rather than one catalog holding both, because rule 2 above is
+    what makes this double faithful: a test that encodes through a catalog wider
+    than the one its context registers cannot notice an event nobody registered.
+    """
+
+    catalog = EventCatalog()
+    register_money_events(catalog)
     return JsonEventCodec(catalog)
 
 
@@ -61,8 +75,8 @@ class _Row:
 class InMemoryEventStore:
     """Append-only streams held in a dict, keyed as the real store keys them."""
 
-    def __init__(self) -> None:
-        self._codec = rating_event_codec()
+    def __init__(self, codec: JsonEventCodec | None = None) -> None:
+        self._codec = rating_event_codec() if codec is None else codec
         # Insertion-ordered: streams in the order they were opened, rows in the
         # order they were appended.
         self._streams: dict[tuple[str, UUID], list[_Row]] = {}

@@ -239,6 +239,36 @@ Rules to preserve:
   which is the one failure mode no typecheck can reach afterwards. And **no sentence is
   composed here** — an AST walk over the package reddens on any string literal that could be
   copy, with a negative control proving it can tell one from a code.
+- **The ledger is event-sourced, one stream per player, and it refuses to forget.** Money
+  is the first racket-sport context to answer ADR-0002's per-context question with *yes*
+  ([ADR-0055](../docs/adr/0055-the-ledger-is-event-sourced-one-stream-per-player.md)), and
+  it is the mirror image of Matches' *no*: nothing about a movement is derived, and there
+  is no current state of the money that is not a fold. The stream id is **derived** from
+  the player, never minted and stored. A movement is `payer → payee` with a **strictly
+  positive** amount — the direction is the parties, never the sign — and `balance`, `held`
+  and Raketa's float are all folds stored nowhere
+  ([ADR-0056](../docs/adr/0056-a-movement-has-two-parties-and-custody-follows-what-was-sold.md)
+  retires `held: true` by name). **Custody follows what was sold**: an open match's share
+  is held by Raketa until commit, a private court's passes through on arrival, and cash at
+  a counter is the one `player → club` movement Raketa was never party to (ADR-0059).
+  **Nothing is edited and nothing is deleted** — asserted by an AST walk
+  (`tests/unit/test_money_is_append_only.py`), because the behavioural tests provably do
+  not cover it: a prune dropping the oldest movements past a threshold no fixture reaches
+  passes all 3108 of them, and takes the balance, `held` and the float with it. The walk
+  refuses every write to the movement list but the one `append` that replays a stored
+  event. A wrong movement is compensated by a
+  second one under a `REV-` reference, carrying *its own* cause
+  ([ADR-0057](../docs/adr/0057-every-movement-names-the-rule-that-caused-it.md)), and
+  erasure replaces the player party on the way **out** rather than rewriting history. The
+  eighteen causes are a **wider** enum than `kernel.Cause`'s five, with the shared names
+  embedded by value and the inclusion asserted at module load: growing the kernel's would
+  put thirteen ledger-only names on a wire enum both clients build an exhaustive table
+  over. The three standing invariants live in `domain/invariants.py` and the nightly job
+  and the test suite call the same functions; **it reports and never repairs**, and
+  `ReconcileLedgers` takes no unit of work, so that is a property of its constructor rather
+  than a rule to remember. **Money reads Matches; Matches never reads Money** — a fence in
+  `.importlinter`, because a ledger read inside state derivation would make the situation
+  ladder depend on a second aggregate's fold.
 - **The kernel is one import path.** `app.kernel` re-exports its whole public API through
   an explicit `__all__`, and nothing outside the package — tests included — imports a
   submodule, so a definition can move between kernel files without touching a caller
@@ -305,12 +335,11 @@ Conventional Commits, scoped `api` or the module: `feat(bookings): reject overla
 slots`. Run `make check` before pushing; CI runs the same gate for `backend/**` changes.
 
 The shared glossary is [`../CONTEXT.md`](../CONTEXT.md); backend-only technical vocabulary
-is in [`CONTEXT.md`](CONTEXT.md). Never redefine a domain term locally. **Money is listed but
-not yet modeled** — before writing code in it, resolve its terms into the glossary and record
-the aggregate shape in an ADR, including whether it is event-sourced or persisted-with-events.
-[ADR-0055](../docs/adr/0055-the-ledger-is-event-sourced-one-stream-per-player.md) has already
-answered that one: the ledger is event-sourced, and it is the first racket-sport context to go
-that way. Clubs, Courts, Bookings and Matches are modeled and all four are **records with a
+is in [`CONTEXT.md`](CONTEXT.md). Never redefine a domain term locally. **Money is modeled**
+now, and it is event-sourced —
+[ADR-0055](../docs/adr/0055-the-ledger-is-event-sourced-one-stream-per-player.md), the first
+racket-sport context to go that way and so far the only one. Clubs, Courts, Bookings and
+Matches are modeled and all four are **records with a
 version**, decided by
 [ADR-0077](../docs/adr/0077-a-club-is-a-record-and-history-is-a-property-of-three-facts.md),
 [ADR-0035](../docs/adr/0035-a-reservation-claims-a-court-over-an-interval.md) and

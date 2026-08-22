@@ -75,6 +75,7 @@ from app.bootstrap.composition import (
     build_domain_event_store,
     build_event_publisher,
     build_court_holds,
+    build_ledger_repository,
     build_match_repository,
     build_password_hasher,
     build_reservation_repository,
@@ -132,6 +133,24 @@ from app.modules.matches.application.resolve_court_hold import ResolveCourtHold
 from app.modules.matches.application.seat_moves import Depart, PaySeat, TakeSeat
 from app.modules.matches.domain.match import Match
 from app.modules.matches.domain.ports import MatchRepository
+from app.modules.money.application.commands import (
+    Compensation,
+    HeldByRaketa,
+    NewMovement,
+    PaidAtTheCounter,
+    PassedToTheClub,
+    RecordMovementsCommand,
+    RecordShareCommand,
+)
+from app.modules.money.application.record_movements import RecordMovements
+from app.modules.money.application.record_share import RecordShare
+from app.modules.money.domain.causes import MovementCause
+from app.modules.money.domain.invariants import breaches_in
+from app.modules.money.domain.ledger import Ledger
+from app.modules.money.domain.movement import SeatRef
+from app.modules.money.domain.parties import PlayerParty, RaketaParty
+from app.modules.money.domain.ports import LedgerRepository
+from app.modules.money.domain.reference import Reference, ReferenceKind
 from app.modules.rating.application.abandon_assessment import AbandonAssessment
 from app.modules.rating.application.commands import (
     AbandonAssessmentCommand,
@@ -163,6 +182,7 @@ from app.seeds.catalog import (
 from app.seeds.clubs import CLUBS, KRAKOW, SeedCategory, SeedClub
 from app.seeds.courts import RESERVATIONS, SeedReservation
 from app.seeds.matches import MATCHES, SeedMatch
+from app.seeds.money import LEDGERS, Arrival, SeedLedger
 from app.seeds.guard import refuse_unless_seedable
 
 #: A questionnaire the seed can no longer finish is a hang, and a hang in a
@@ -242,6 +262,15 @@ class SeededMatch:
 
 
 @dataclass(frozen=True)
+class SeededLedger:
+    """What one ledger is, after the run — and whether this run wrote it."""
+
+    ledger: SeedLedger
+    player_id: UUID
+    created: bool
+
+
+@dataclass(frozen=True)
 class Seeded:
     """Everything one run brought into being, per context.
 
@@ -255,6 +284,7 @@ class Seeded:
     clubs: tuple[SeededClub, ...]
     reservations: tuple[SeededReservation, ...]
     matches: tuple[SeededMatch, ...]
+    ledgers: tuple[SeededLedger, ...]
 
 
 @dataclass(frozen=True)
@@ -275,6 +305,7 @@ class _UseCases:
     reservations: ReservationRepository
     bookings: BookingRepository
     matches: MatchRepository
+    ledgers: LedgerRepository
     register: RegisterUser
     create: CreateAssessment
     submit: SubmitAnswer
@@ -297,6 +328,8 @@ class _UseCases:
     depart: Depart
     cancel_match: CancelMatch
     resolve_hold: ResolveCourtHold
+    record_movements: RecordMovements
+    record_share: RecordShare
     #: The clock the Matches use cases write with. See `_SeededWeekClock`.
     week: "_SeededWeekClock"
 
@@ -331,6 +364,11 @@ def _build(session: AsyncSession) -> _UseCases:
     # granted at the instant a tier is entered, and on the wall clock every
     # seeded `held_since` would be the day the seed happened to run.
     resolve_hold = ResolveCourtHold(matches, court_holds, uow, week)
+    # Money is on the seeded week's clock too, and for the matches' own reason:
+    # a movement is about a seat on that week, and on the wall clock every
+    # seeded `occurred_at` would be the day the seed happened to run.
+    ledgers = build_ledger_repository(event_store=event_store, events=events)
+    record_movements = RecordMovements(ledgers, uow, week)
 
     return _UseCases(
         users=users,
@@ -340,6 +378,9 @@ def _build(session: AsyncSession) -> _UseCases:
         reservations=reservations,
         bookings=bookings,
         matches=matches,
+        ledgers=ledgers,
+        record_movements=record_movements,
+        record_share=RecordShare(record_movements),
         claim_court=claim_court,
         book_court=BookCourt(clubs, bookings, claim_court, uow, clock),
         release_reservation=ReleaseReservation(reservations, uow, clock),
@@ -408,6 +449,10 @@ async def seed(session: AsyncSession) -> Seeded:
     Matches come last for the same reason and one more: a match reads its club's
     policy at posting and carries it thereafter (ADR-0077), so the club has to be
     in the state its own name promises before a match copies anything from it.
+
+    **Ledgers are genuinely last**, because a movement references a seat and a
+    seat is a match's. Nothing in Matches reads a ledger, so the dependency runs
+    one way here exactly as it does in the code (ADR-0055).
     """
 
     use_cases = _build(session)
@@ -420,16 +465,21 @@ async def seed(session: AsyncSession) -> Seeded:
         ]
     )
     matches = tuple(
+        [await _seed_match(use_cases, accounts, clubs, match) for match in MATCHES]
+    )
+    ledgers = tuple(
         [
-            await _seed_match(use_cases, accounts, clubs, match)
-            for match in MATCHES
+            await _seed_ledger(use_cases, accounts, clubs, matches, ledger)
+            for ledger in LEDGERS
         ]
     )
+    await _refuse_a_ledger_set_that_breaks_an_invariant(use_cases)
     return Seeded(
         accounts=accounts,
         clubs=clubs,
         reservations=reservations,
         matches=matches,
+        ledgers=ledgers,
     )
 
 
@@ -631,8 +681,8 @@ async def _seed_club(use_cases: _UseCases, scenario: SeedClub) -> SeededClub:
 
     existing = await use_cases.clubs.get_by_name(scenario.name)
     created = existing is None
-    club = existing if existing is not None else await _register_club(
-        use_cases, scenario
+    club = (
+        existing if existing is not None else await _register_club(use_cases, scenario)
     )
 
     club = await _catch_up_policies(use_cases, club, scenario)
@@ -996,9 +1046,7 @@ async def _claim_already_seeded(
     return None
 
 
-def _seeded_club_id(
-    clubs: tuple[SeededClub, ...], scenario: SeedReservation
-) -> UUID:
+def _seeded_club_id(clubs: tuple[SeededClub, ...], scenario: SeedReservation) -> UUID:
     for seeded in clubs:
         if seeded.club.slug == scenario.club_slug:
             return seeded.club_id
@@ -1024,8 +1072,7 @@ def _seeded_player(accounts: tuple[SeededAccount, ...], slug: str) -> UUID:
         if account.account.slug == slug:
             return account.player_id
     raise SeedFailed(
-        f"a booking names the player '{slug}', which the account catalog does "
-        f"not hold."
+        f"a booking names the player '{slug}', which the account catalog does not hold."
     )
 
 
@@ -1355,7 +1402,243 @@ def report(seeded: Seeded) -> list[str]:
         lines.append(f"  {match.match.slug}  [{state}]")
         lines.append(f"      {match.match.description}")
         lines.append(
-            f"      match {match.match_id} · "
-            f"{match.match.claim.situation.value}"
+            f"      match {match.match_id} · {match.match.claim.situation.value}"
+        )
+
+    lines.append("")
+    lines.append(f"Seeded {len(seeded.ledgers)} ledger(s).")
+    lines.append("")
+    for ledger in seeded.ledgers:
+        state = "created" if ledger.created else "already present"
+        lines.append(f"  {ledger.ledger.slug}  [{state}]")
+        lines.append(f"      {ledger.ledger.description}")
+        lines.append(
+            f"      player {ledger.player_id} · "
+            f"{ledger.ledger.claim.movements} movement(s) · "
+            f"held {ledger.ledger.claim.held} · "
+            f"balance {ledger.ledger.claim.balance}"
         )
     return lines
+
+
+# ---------------------------------------------------------------------------
+# Money
+# ---------------------------------------------------------------------------
+
+
+async def _seed_ledger(
+    use_cases: _UseCases,
+    accounts: tuple[SeededAccount, ...],
+    clubs: tuple[SeededClub, ...],
+    matches: tuple[SeededMatch, ...],
+    scenario: SeedLedger,
+) -> SeededLedger:
+    """Bring one player's ledger into the state the scenario names.
+
+    **The probe is the reference**, which is what makes this idempotent without a
+    read-modify-write: a movement is filed under a fixed ``PAY-<token>`` and the
+    ledger refuses a second one under the same one, so finding it is finding that
+    this scenario has already run. An id would not do — the movement's id is
+    minted by the write path, and a fresh database mints a different one.
+    """
+
+    player_id = _seeded_player_for_ledger(accounts, scenario)
+    ledger = await use_cases.ledgers.load(player_id)
+    if ledger.movement_under(_payment(scenario)) is not None:
+        _refuse_a_ledger_whose_name_lies(scenario, ledger, _seat(matches, scenario))
+        return SeededLedger(ledger=scenario, player_id=player_id, created=False)
+
+    await _write_the_movements(use_cases, clubs, matches, scenario, player_id)
+    stored = await use_cases.ledgers.load(player_id)
+    _refuse_a_ledger_whose_name_lies(scenario, stored, _seat(matches, scenario))
+    return SeededLedger(ledger=scenario, player_id=player_id, created=True)
+
+
+async def _write_the_movements(
+    use_cases: _UseCases,
+    clubs: tuple[SeededClub, ...],
+    matches: tuple[SeededMatch, ...],
+    scenario: SeedLedger,
+    player_id: UUID,
+) -> None:
+    """Through the use cases a request runs, on the seeded week's clock.
+
+    The instant is the match's own ``joined_at`` — when the seat this money is
+    about was taken — so a movement is dated on the week it belongs to rather
+    than on the day somebody ran ``make seed``.
+    """
+
+    seeded_match = _seeded_match_for_ledger(matches, scenario)
+    use_cases.week.at(seeded_match.match.joined_at)
+    seat = _seat(matches, scenario)
+    club_id = _seeded_club_id_for_match(clubs, seeded_match.match)
+
+    if scenario.arrival is Arrival.HELD:
+        await use_cases.record_share.execute(
+            RecordShareCommand(
+                player_id=player_id,
+                seat=seat,
+                amount=scenario.amount,
+                reference=_payment(scenario),
+                arrival=HeldByRaketa(),
+            )
+        )
+    elif scenario.arrival is Arrival.PASSED_THROUGH:
+        await use_cases.record_share.execute(
+            RecordShareCommand(
+                player_id=player_id,
+                seat=seat,
+                amount=scenario.amount,
+                reference=_payment(scenario),
+                arrival=PassedToTheClub(
+                    club_id=club_id, settlement=_settlement(scenario)
+                ),
+            )
+        )
+    elif scenario.arrival is Arrival.AT_COUNTER:
+        await use_cases.record_share.execute(
+            RecordShareCommand(
+                player_id=player_id,
+                seat=seat,
+                amount=scenario.amount,
+                reference=_payment(scenario),
+                arrival=PaidAtTheCounter(club_id=club_id),
+            )
+        )
+    elif scenario.arrival is Arrival.CORRECTED:
+        # The share and its reversal in **one** write, so there is no instant at
+        # which the seeded ledger says Raketa kept the money.
+        await use_cases.record_movements.execute(
+            RecordMovementsCommand(
+                player_id=player_id,
+                drafts=(
+                    NewMovement(
+                        payer=PlayerParty(player_id),
+                        payee=RaketaParty(),
+                        amount=scenario.amount,
+                        cause=MovementCause.SHARE_ONLINE,
+                        reference=_payment(scenario),
+                        seat=seat,
+                    ),
+                    Compensation(
+                        original=_payment(scenario),
+                        reference=_reversal(scenario),
+                        cause=MovementCause.CLAIM_LAPSED,
+                    ),
+                ),
+            )
+        )
+    elif scenario.arrival is Arrival.COLLECTION_FAILED:
+        await use_cases.record_movements.execute(
+            RecordMovementsCommand(
+                player_id=player_id,
+                drafts=(
+                    NewMovement(
+                        payer=RaketaParty(),
+                        payee=PlayerParty(player_id),
+                        amount=scenario.amount,
+                        cause=MovementCause.COLLECTION_FAILED,
+                        reference=_payment(scenario),
+                        seat=seat,
+                    ),
+                ),
+            )
+        )
+    else:  # pragma: no cover — the enumeration is closed
+        exhaustive(scenario.arrival)
+
+
+def _payment(scenario: SeedLedger) -> Reference:
+    return Reference(ReferenceKind.PAYMENT, scenario.token)
+
+
+def _settlement(scenario: SeedLedger) -> Reference:
+    return Reference(ReferenceKind.PAYMENT, f"{scenario.token}s")
+
+
+def _reversal(scenario: SeedLedger) -> Reference:
+    return Reference(ReferenceKind.REVERSAL, scenario.token)
+
+
+def _seeded_match_for_ledger(
+    matches: tuple[SeededMatch, ...], scenario: SeedLedger
+) -> SeededMatch:
+    for seeded in matches:
+        if seeded.match.slug == scenario.match_slug:
+            return seeded
+    raise SeedFailed(
+        f"'{scenario.slug}' names the match '{scenario.match_slug}', which the "
+        f"match catalog does not hold. A movement about a seat on a match that "
+        f"does not exist is a catalog that has been half-edited."
+    )
+
+
+def _seat(matches: tuple[SeededMatch, ...], scenario: SeedLedger) -> SeatRef:
+    return SeatRef(
+        match_id=_seeded_match_for_ledger(matches, scenario).match_id,
+        index=scenario.seat_index,
+    )
+
+
+def _seeded_player_for_ledger(
+    accounts: tuple[SeededAccount, ...], scenario: SeedLedger
+) -> UUID:
+    for account in accounts:
+        if account.account.slug == scenario.account_slug:
+            return account.player_id
+    raise SeedFailed(
+        f"'{scenario.slug}' names the account '{scenario.account_slug}', which "
+        f"the account catalog does not hold."
+    )
+
+
+def _refuse_a_ledger_whose_name_lies(
+    scenario: SeedLedger, stored: Ledger, seat: SeatRef
+) -> None:
+    """Check the claim against the ledger that is **stored**, every run.
+
+    Every number here is a **fold** — nothing about a balance or a held amount is
+    written down anywhere — so this is the arithmetic a screen and a support
+    conversation both read, checked against the movements that produce it. Change
+    what a cause does to a balance and the seed stops and says whose money just
+    moved.
+    """
+
+    found = (
+        len(stored.movements),
+        int(stored.held_for(seat)),
+        int(stored.balance),
+    )
+    promised = (
+        scenario.claim.movements,
+        int(scenario.claim.held),
+        int(scenario.claim.balance),
+    )
+    if found != promised:
+        raise SeedFailed(
+            f"'{scenario.slug}' is named for {scenario.claim.promise} and is no "
+            f"longer one: it promises {promised} (movements, held, balance) and "
+            f"the stored ledger folds to {found}. A ledger whose name lies is "
+            f"worse than one that is missing — nothing about the screen it is "
+            f"developed against would look wrong."
+        )
+
+
+async def _refuse_a_ledger_set_that_breaks_an_invariant(
+    use_cases: _UseCases,
+) -> None:
+    """The three the nightly reconciliation asserts, over everything seeded.
+
+    Run on every seed, including one that creates nothing: a seeded database that
+    breaks a ledger invariant is one every future Money test is developed
+    against, and the invariants are cheap enough to check here that leaving it to
+    a job nobody runs locally would be a choice.
+    """
+
+    for ledger in await use_cases.ledgers.all_ledgers():
+        breaches = breaches_in(ledger)
+        if breaches:
+            raise SeedFailed(
+                "the seeded ledgers break "
+                f"{breaches[0].invariant}: {breaches[0].detail}"
+            )

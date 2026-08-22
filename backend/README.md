@@ -213,6 +213,59 @@ posted, and the hold ladder did **not** change that: the fix, if it is ever need
 that refreshes the snapshot with an announcement of its own rather than a club read on the
 compose path.
 
+### The ledger: one stream per player, and it refuses to forget
+
+Money is the **one racket-sport context that is event-sourced**
+([ADR-0055](../docs/adr/0055-the-ledger-is-event-sourced-one-stream-per-player.md)) — the
+mirror image of Matches' answer, on the same per-context question. Nothing about a movement
+is derived and there is no current state of the money that is not a fold, so a row with an
+`amount` that can be updated would be exactly the dual write ADR-0017 refused.
+
+**It adds no table.** A ledger *is* its stream: `app/modules/money/` has no ORM model and no
+migration, and the one cross-stream read it needs — every ledger, for the nightly assertion —
+is a scan the event store already answers. A projection is ADR-0018's escape hatch for the
+day tens of rows becomes thousands, not a default.
+
+| What | Where | Note |
+| --- | --- | --- |
+| The stream id | `money.ledger_stream_id` | `uuid5(namespace, player)` — derived, never stored |
+| A movement | `money.Movement` | `payer → payee`, **strictly positive** grosze, seat, reservation, reference, cause |
+| The parties | `money.Party` | `PlayerParty \| ClubParty \| RaketaParty`; a club is never a payer |
+| Why it moved | `money.MovementCause` | eighteen closed names, `kernel.Cause`'s five embedded by value |
+| What a cause decides | `money.CAUSE_RULES` | total table: *moves the balance?* · *names a seat?* |
+| The balance | `Ledger.balance` | zero or negative; two causes reach it and nothing clamps it |
+| Held, and the float | `Ledger.held_for`, `Ledger.raketa_float` | ADR-0056's own formula, stored nowhere |
+| The three invariants | `money.LEDGER_INVARIANTS` | the job and the suite call the same functions |
+
+**Custody follows what was sold**, and the two regimes are two different chains for the same
+30 zł:
+
+| Path | On arrival | `held_for(seat)` |
+| --- | --- | --- |
+| Open match | `player → Raketa` — nothing is booked yet | the share, until the match commits |
+| Private split court | `player → Raketa`, then `Raketa → club`, in one write | zero |
+| Cash at a counter | `player → club` — Raketa is neither party | zero |
+
+**Nothing is edited and nothing is deleted.** A wrong movement is corrected by a second one
+with the parties reversed, under a `REV-` reference, carrying *its own* cause — the reason the
+correction was needed is not the reason the original happened. Erasure appends
+`PlayerPseudonymised` and every movement the aggregate hands out thereafter names an opaque id
+in the player's place; the stored events are untouched, because rewriting them is the one
+thing an append-only store cannot do.
+
+**The reconciliation reports and never repairs.** `ReconcileLedgers` is constructed with the
+repository and a clock and **no unit of work**, so there is no transaction for it to commit —
+*"a ledger that repairs itself has destroyed the evidence of the bug that made the repair
+necessary."* A breach is one ERROR line naming the invariant, the ledger, the subject and the
+arithmetic; a sound run logs too, because a check that only speaks when something is wrong is
+indistinguishable from one that has stopped running.
+
+**`held` and the float can be negative on a seat**, and that is the working-capital position
+ADR-0045 names: a refund Raketa advanced on the private path, before the owner charge that
+recovers it. The seat-chain invariant is therefore *no seat settles more to a club than the
+player funded for it* — ADR-0056's *broken split* — and deliberately says nothing about the
+advance, which closes across a reservation once a movement no context writes yet lands.
+
 ## Event Sourcing And Outbox
 
 The project uses two event-related persistence tables with different purposes:
@@ -686,12 +739,35 @@ aggregate is timeless; a match *is* its clock, so `committed_at` and a hole's `v
 taken from the wall clock would make the scenario's name a claim about the day the seed ran.
 The `Clock` port is what makes that a configuration rather than a fake.
 
+`app/seeds/money.py` adds five ledgers, one per way money can have arrived, and here every
+number in the claim is a **fold**:
+
+| Ledger | State |
+| --- | --- |
+| `ledger-holding-a-share` | An open match's share, held by Raketa until the match commits |
+| `ledger-with-a-share-passed-through` | A private court's share, at the club the moment it arrived |
+| `ledger-with-a-counter-paid-share` | Cash the club took — the one movement Raketa was never party to |
+| `ledger-with-a-corrected-movement` | A share and its `REV-` reversal, both standing |
+| `ledger-in-debt` | We paid out and did not collect: a balance below zero |
+
+The claim is the movement count, `held` on the scenario's seat and the player's balance,
+checked against the **stored** ledger on every run — and then the whole seeded set is asserted
+against the same three invariants the nightly reconciliation calls. The reference is the
+idempotency probe: a movement is filed under a fixed `PAY-<token>`, and the ledger refuses a
+second one under it, so finding it is finding that the scenario has already run.
+
+**A paid seat does not write a movement yet, and none is authored here.** The eight seeded
+matches hold fourteen paid seats between them; the transaction that writes a seat, its
+reservation and both movements together is `Raketa02/Raketa#70`, and seeding that join would
+be writing down the answer the ticket exists to compute — the rule the court hold and the
+leaver's outcome are already seeded under.
+
 Scope is what is **decided**: players, onboarding assessments, Skill ratings, clubs, court
-reservations and bookings, and matches. Nothing **authors** a match-held reservation — a
+reservations and bookings, matches, and ledgers. Nothing **authors** a match-held reservation — a
 match's court is granted by the hold ladder (ADR-0031) as a consequence of its seats and its
 clock, so `app/seeds/courts.py` refuses one and `app/seeds/matches.py` gets them for free by
 running the real use cases. A walk over `app/seeds/` asserts the package imports **exactly**
-the five contexts
+the six contexts
 that exist — equality in both directions, so it grows deliberately and cannot silently fall
 behind.
 

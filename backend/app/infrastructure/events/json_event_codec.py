@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import types
 import typing
 from dataclasses import asdict, is_dataclass
 from datetime import datetime, timezone
@@ -57,6 +58,28 @@ class _DomainEventJSONEncoder(json.JSONEncoder):
         return super().default(obj)
 
 
+def _target_type(hint: Any) -> Any:
+    """The concrete type a field coerces to, looking through ``X | None``.
+
+    Without this, an **optional** UUID decodes as the string it was stored as —
+    `hint is UUID` is false for `UUID | None`, so the coercion below simply does
+    not fire. Nothing raises: the event reconstructs, and the field compares
+    unequal to the value it was written from, so a replayed aggregate quietly
+    disagrees with the one that wrote it. Money's movements are the first events
+    in the tree with an optional id on them, and they found it (#69).
+
+    Only a union of exactly one type with ``None`` resolves. A genuine union of
+    two concrete types has no single answer, and guessing one would be a worse
+    failure than not coercing.
+    """
+
+    origin = typing.get_origin(hint)
+    if origin is typing.Union or origin is types.UnionType:
+        concrete = [arg for arg in typing.get_args(hint) if arg is not type(None)]
+        return concrete[0] if len(concrete) == 1 else None
+    return hint
+
+
 @lru_cache(maxsize=None)
 def _resolve_hints(event_cls: Type[DomainEvent]) -> dict[str, Any]:
     try:
@@ -71,7 +94,7 @@ def _coerce_payload(
     hints = _resolve_hints(event_cls)
     coerced: dict[str, Any] = {}
     for key, value in payload.items():
-        hint = hints.get(key)
+        hint = _target_type(hints.get(key))
         if value is not None and hint is UUID and isinstance(value, str):
             value = UUID(value)
         elif value is not None and hint is datetime and isinstance(value, str):

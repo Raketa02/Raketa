@@ -72,6 +72,10 @@ from app.modules.matches.domain.ports import (
     MatchSchedule,
     SeatClaims,
 )
+from app.modules.money.domain.ports import LedgerRepository
+from app.modules.money.infrastructure.event_sourced_ledger_repository import (
+    EventSourcedLedgerRepository,
+)
 from app.modules.now.domain.ports import RatedSports
 from app.modules.now.infrastructure.rating_sports import RatedSportsFromSkillRatings
 from app.modules.matches.infrastructure.court_holds import (
@@ -355,3 +359,24 @@ def build_rated_sports(ratings: SkillRatingRepository) -> RatedSports:
     this faster than a replay does, only this line moves.
     """
     return RatedSportsFromSkillRatings(ratings=ratings)
+
+
+# --------------------------------------------------------------------------
+# Money
+# --------------------------------------------------------------------------
+
+
+def build_ledger_repository(
+    *,
+    event_store: DomainEventStore,
+    events: DomainEventPublisher,
+) -> LedgerRepository:
+    """Per unit of work, for the same reason the rating repository is.
+
+    It recovers a stream's version rather than being told it, so two use cases
+    sharing one transaction have to share one of these — otherwise the second
+    appends at a version the first has already passed. Under FastAPI that comes
+    free from per-request dependency caching; a seed run or a worker builds it
+    once and passes it on.
+    """
+    return EventSourcedLedgerRepository(event_store=event_store, events=events)

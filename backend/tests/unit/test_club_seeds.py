@@ -188,6 +188,8 @@ def _only_the_club_catalog(monkeypatch) -> None:
 
     monkeypatch.setattr("app.seeds.runner.RESERVATIONS", ())
     monkeypatch.setattr("app.seeds.runner.MATCHES", ())
+    # And a ledger names a seat on a seeded match, so it goes with them.
+    monkeypatch.setattr("app.seeds.runner.LEDGERS", ())
 
 
 

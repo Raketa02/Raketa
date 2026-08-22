@@ -88,11 +88,14 @@ SEED_MODULES = sorted((ROOT / "app" / "seeds").glob("*.py"))
 RFC2606_RESERVED_TLDS = frozenset({".test", ".example", ".invalid", ".localhost"})
 
 #: The bounded contexts that have aggregates. Clubs joined the set with #64,
-#: Courts with #65 and Matches with #66, which is what the equality below is
-#: for: it grows deliberately, one context at a time, and it cannot silently
-#: fall behind either. Every context the Now section names is now modeled, so
-#: the next addition is a genuinely new one rather than a gap being closed.
-MODELED_CONTEXTS = frozenset({"users", "rating", "clubs", "courts", "matches"})
+#: Courts with #65, Matches with #66 and Money with #69, which is what the
+#: equality below is for: it grows deliberately, one context at a time, and it
+#: cannot silently fall behind either. Every context the Now section names is
+#: now modeled, so the next addition is a genuinely new one rather than a gap
+#: being closed.
+MODELED_CONTEXTS = frozenset(
+    {"users", "rating", "clubs", "courts", "matches", "money"}
+)
 
 #: SQLAlchemy's statement constructors. Importing one into the seed path is how
 #: "just this once, it is only a fixture row" starts.
@@ -175,6 +178,7 @@ def test_the_walk_has_something_to_walk():
         "courts.py",
         "guard.py",
         "matches.py",
+        "money.py",
         "runner.py",
     }
 
@@ -518,6 +522,9 @@ def _only_this_catalog(monkeypatch) -> None:
 
     monkeypatch.setattr("app.seeds.runner.RESERVATIONS", ())
     monkeypatch.setattr("app.seeds.runner.MATCHES", ())
+    # A ledger names an account *and* a seat on a seeded match, so it is
+    # narrowed away with the matches it references.
+    monkeypatch.setattr("app.seeds.runner.LEDGERS", ())
 
 
 def _rated_scenarios() -> list[tuple[SeedAccount, RatedRun]]:
@@ -717,6 +724,7 @@ def test_the_report_names_the_address_the_password_and_every_state():
     account = next(entry for entry in ACCOUNTS if entry.slug == "rated-in-every-sport")
     lines = report(
         Seeded(
+            ledgers=(),
             reservations=(),
             matches=(),
             accounts=(
@@ -755,6 +763,7 @@ def test_the_report_says_which_state_each_scenario_is_in():
 
     states = report(
         Seeded(
+            ledgers=(),
             reservations=(),
             matches=(),
             accounts=(
@@ -802,6 +811,7 @@ def test_the_report_names_every_club_and_what_state_it_is_in():
 
     lines = report(
         Seeded(
+            ledgers=(),
             reservations=(),
             matches=(),
             accounts=(),

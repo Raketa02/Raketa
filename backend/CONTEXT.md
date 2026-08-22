@@ -774,5 +774,94 @@ there; they are not repeated here.
   every `make check`. _Avoid_: `pytest.skip` on a missing database with no `CI` branch —
   the shape this replaced.
 
+- **Ledger stream** (`money.ledger_stream_id`) — one event-sourced stream per player, its
+  id **derived** as `uuid5(namespace, player)` rather than minted and stored, on
+  ADR-0019's rule. A lookup table can be missing a row, and the miss is a second stream for
+  a player who already has one — after which her balance is the fold of whichever half was
+  read. Money is the first racket-sport context to be event-sourced, and the only one
+  (ADR-0055); Clubs, Courts, Bookings and Matches are all records with a version, which is
+  what a genuinely per-context choice looks like. _Avoid_: a `ledgers` table, and a stream
+  per reservation — a reservation protects no invariant.
+- **Movement** (`money.Movement`) — one money event: `payer → payee`, gross grosze, a seat,
+  a reservation, a reference and a cause. Frozen, never edited, never deleted. **The
+  direction is the parties and never the sign**: the amount is strictly positive and a
+  refund is `Raketa → player`, so a fold is three sums over positive numbers rather than
+  one over terms that already carry a sign. _Avoid_: a negative amount, and a `held` flag —
+  ADR-0056 retires it by name.
+- **Party** (`money.Party`) — `PlayerParty | ClubParty | RaketaParty`, three `@final`
+  members and a union rather than an enum beside a nullable id, so *Raketa with an id* and
+  *a player without one* are unwritable. **A club is never a payer** (ADR-0045), refused at
+  construction *and* asserted over what is stored — the door guards what was written after
+  the door existed. _Avoid_: a fourth party, and an enum plus `party_id`.
+- **One player per stream, at most one per movement** — how ADR-0055's *"every movement has
+  exactly one player party"* is read. Its own justification is *"so no movement is homeless
+  and none is written to two streams"*, and that is what is enforced: a movement lives on
+  exactly one player's ledger, and when it names a player it names **that** player. The
+  strict reading and ADR-0056 cannot both hold — an online share's `Raketa → club` half
+  names no player, and without it `held` is not derivable. _Avoid_: two player parties on
+  one movement, which is the half that *is* refused.
+- **Movement cause** (`money.MovementCause`) — eighteen closed names, the **wider**
+  enumeration with `kernel.Cause`'s five embedded **by value**, and the inclusion asserted
+  at module load. Wider rather than growing the kernel's, because `Cause` crosses the wire
+  as an OpenAPI enum both clients build an exhaustive table over, and thirteen ledger-only
+  names would be thirteen sentences no card can print. Same shape as `CARD_HOLD_REASON_OF`,
+  pointed the other way. _Avoid_: restating a shared name's string, and a free-text reason.
+- **Cause rules** (`money.CAUSE_RULES`) — one total table over `MovementCause`, asserted
+  exhaustive at module load, answering two questions per cause: *does it move the balance*
+  and *does it name a seat*. Exactly two move a balance (`collectionFailed`, `debtCleared`)
+  and exactly one names no seat (`debtCleared`). _Avoid_: a nineteenth cause added without
+  answering both — which is a build error here, deliberately.
+- **Balance** (`Ledger.balance`) — zero or negative, folded from the two balance-bearing
+  causes alone. An ordinary seat payment leaves it at zero, because paying for a court is
+  not owing for one; a half-refunded leaver is at zero too, because she lost half rather
+  than owing it. **Not clamped**: a positive balance is stored value, and clamping would
+  hide it from the one assertion that exists to find it. _Avoid_: a net of every movement,
+  which reads an ordinary payment as a 38 zł debt.
+- **Held, and the float** (`Ledger.held_for`, `Ledger.raketa_float`) — both derived and
+  stored nowhere. `held_for(seat)` is ADR-0056's own formula,
+  `Σ(player→Raketa) − Σ(Raketa→club) − Σ(Raketa→player)`. It goes **negative** on the
+  private path between a refund Raketa advanced and the owner charge that recovers it, and
+  that is the working-capital position ADR-0045 names rather than a defect. _Avoid_: a
+  stored figure, and an assertion that `held` is non-negative.
+- **Reference** (`money.Reference`) — a kind and a token, printed `PAY-…` / `REF-…` /
+  `REV-…`. The kind **is** the prefix rather than a field beside a free string, so the two
+  cannot disagree about whether a movement is a compensation — which the reconciliation
+  reads by kind. Unique within a ledger, which is the duplicate-webhook guard. _Avoid_: a
+  VAT invoice number, which is not a reference and not this context's.
+- **Compensation** (`Ledger.compensate`) — a correction is a **second** movement with the
+  parties reversed, the same amount, a `REV-` reference and **its own cause**: the reason
+  the correction was needed is not the reason the original happened. `shareOnline`
+  compensated by `claimLapsed` is ADR-0081's shape. _Avoid_: amending a movement, and a
+  compensation filed under `PAY-`.
+- **The append-only walk** (`tests/unit/test_money_is_append_only.py`) — an AST walk that
+  refuses every write to `Ledger._recorded` but the one `append` in `_apply` that replays a
+  stored event. It exists because the behavioural tests were **measured** not to cover the
+  rule: a `_prune` dropping the oldest movements past a threshold no fixture reaches passes
+  the whole unit suite, and silently takes the balance, `held` and the float with it. Public
+  or private — the realistic edit is a helper, not a method somebody names `forget`. Carries
+  a negative control per shape it refuses. _Avoid_: relying on the public-surface pin alone,
+  which catches a new method's **name** and not a write inside one that already exists.
+- **Pseudonymising a ledger** (`Ledger.pseudonymise`) — erasure as a **read-time
+  substitution**: an event is appended and every movement the aggregate hands out names an
+  opaque id in the player's place, with nothing about the amounts, causes or references
+  changed. The stored events are untouched, because rewriting them is the one thing an
+  append-only store cannot do — and ADR-0055 forbids it in the sentence that asks for the
+  pseudonym. The stream stays findable by player id; what identifies a person lives in
+  Users and is erased there. _Avoid_: deleting a movement, and a pseudonym derived from the
+  player id, which is a mapping table written as a formula.
+- **Ledger invariants** (`money.LEDGER_INVARIANTS`) — the three ADR-0055 names, as
+  functions the nightly job and the test suite both call: `no_club_is_a_payer`,
+  `no_balance_above_zero`, `every_seat_chain_closes`. The third is *no seat settles more to
+  a club than the player funded for it* — ADR-0056's *broken split*. **They report; they
+  never repair**, and `ReconcileLedgers` is built with **no unit of work**, so that is a
+  property of its constructor. _Avoid_: a second copy of an invariant, and a job that fixes
+  what it finds — the evidence of the bug is what the ledger is for.
+- **Seed ledger** — a seeded ledger is named for the state it represents and the name is a
+  checked claim: the movement count, `held` on its seat and the player's balance, all
+  **folds**, checked against the stored ledger on every run including one that creates
+  nothing. The reference is the idempotency probe. The whole seeded set is then asserted
+  against the three invariants. _Avoid_: seeding a movement for a paid seat — that join is
+  `Raketa02/Raketa#70`, and authoring it here would write down the answer it computes.
+
 Add backend-specific technical terms here as they are resolved. Anything describing the
 *domain* belongs in the shared glossary instead.

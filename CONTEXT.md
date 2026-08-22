@@ -525,12 +525,11 @@ forty minutes away at twice your ceiling is a good match in the abstract and a b
 
 ## Part 2 — Planned bounded contexts
 
-The racket-sport domain proper. **Four of the five are now modeled** — Clubs, Courts,
-Bookings and Matches all have code, and their terms have moved into Part 1 of
-[`backend/CONTEXT.md`](backend/CONTEXT.md) as they landed. **Money is not**, and the terms
-below it are uncommitted **except** where an ADR has committed one ahead of the code. They are
-listed so that work lands in the right context from the first commit, and so nobody invents a
-fourth name for the same idea.
+The racket-sport domain proper. **All five are now modeled** — Clubs, Courts, Bookings,
+Matches and Money all have code, and their terms have moved into Part 1 of
+[`backend/CONTEXT.md`](backend/CONTEXT.md) as they landed. What stays listed here is the
+*domain* language they share; the section headings still say *committed ahead of the code*
+where that was true when they were written, and each now names what the code answered.
 
 | Context | Intent | Likely home |
 | --- | --- | --- |
@@ -1010,7 +1009,7 @@ about it. Decided by [ADR-0070](docs/adr/0070-now-is-three-regions-and-a-card-ha
 
 ---
 
-### Money — terms committed ahead of the code
+### Money — terms, now with code behind them
 
 Committed by [ADR-0055](docs/adr/0055-the-ledger-is-event-sourced-one-stream-per-player.md),
 [ADR-0056](docs/adr/0056-a-movement-has-two-parties-and-custody-follows-what-was-sold.md),
@@ -1020,26 +1019,44 @@ Committed by [ADR-0055](docs/adr/0055-the-ledger-is-event-sourced-one-stream-per
 
 - **Movement** — one money event: a **payer**, a **payee**, an amount, a seat, a reservation, a
   reference and a **cause**. Immutable. It is never edited and never deleted; a wrong one is
-  corrected by a **compensating movement**.
-- **Party** — who a movement is between, from a closed set: **player · club · Raketa**. Every
-  movement has exactly one player party. **A club is only ever a payee, never a payer** — that is
-  a rule, and the nightly reconciliation asserts it.
+  corrected by a **compensating movement**. **The direction is the parties and never the sign**:
+  the amount is strictly positive, and a refund is `Raketa → player` rather than a negative
+  `player → Raketa`. A movement names **at most one** player and lives on exactly one player's
+  ledger — which is what ADR-0055's *"exactly one player party"* is for, and it is read that way
+  because an online share's `Raketa → club` half names none and ADR-0056 requires it.
+- **Party** — who a movement is between, from a closed set: **player · club · Raketa**. A
+  movement names **at most one** player party and never two — see **Movement** above for why the
+  *exactly* in ADR-0055 is read as *at most*, and what is enforced instead. **A club is only ever
+  a payee, never a payer** — that is a rule, and the nightly reconciliation asserts it.
 - **Cause** — the *rule that fired*, from a closed enumeration. Not a description of the movement
   but the reason it was owed. Every terminal situation that moves money contributes exactly one.
-  **This one is no longer ahead of the code:** the five — `inventoryLost · clubCancelled ·
-  formCancelled · checkpointCancelled · settlementReopened` — are `kernel.Cause`, put in the
-  shared kernel rather than in Money because Matches produces a cause, Money records it and Now
-  renders it, and a second implementation of it in any of the three would be a defect.
-  `settlementReopened` is in the enumeration and reaches no card, because by the time a settled
-  departure is reopened no card exists.
+  **It is two enumerations, one inside the other, and the split is deliberate.** The five a
+  *card* may carry — `inventoryLost · clubCancelled · formCancelled · checkpointCancelled ·
+  settlementReopened` — are `kernel.Cause`, in the shared kernel because Matches produces one,
+  Money records it and Now renders it, and a second implementation in any of the three would be
+  a defect. `settlementReopened` is among them and reaches no card, because by the time a
+  settled departure is reopened no card exists. The **ledger's** enumeration is wider —
+  eighteen, adding `shareOnline · shareAtCounter · claimLapsed · withdrawnBeforeLock ·
+  formatUnmetRefund · ownerReimbursed · leaverReversed · leaverFull · leaverRescue ·
+  leaverForfeit · reconciliationOwnerCharge · collectionFailed · debtCleared` — and embeds the
+  kernel's five **by value**, with the inclusion asserted at module load. It is wider rather
+  than the kernel's being grown because `Cause` crosses the wire as an OpenAPI enum both
+  clients build an exhaustive table over, and thirteen ledger-only names would be thirteen
+  sentences no card can ever print.
 - **Ledger** — the fold over a player's movements. One event-sourced stream per player.
 - **Balance** — a player's derived position on the ledger. In v1 it is zero or negative; **there
-  is no wallet**, because stored value is a regulated product Raketa is not buying.
+  is no wallet**, because stored value is a regulated product Raketa is not buying. It is the
+  fold of the two causes that bear on it — a failed collection creates a debt, clearing one
+  discharges it — and **not** a net of every movement: paying for a court is not owing for one,
+  and a half-refunded leaver lost half rather than owing it.
 - **Debt** — a balance below zero, created when a collection fails. It blocks booking a court and
   starting a split reservation, never paying for somebody else's seat. It has **no line items**:
   it is a number, and its provenance is read from the causes behind it.
 - **Held** — money Raketa has received and not yet passed on. **Derived, never stored** — a flag
-  on an immutable event would be a second version of the truth.
+  on an immutable event would be a second version of the truth. Per seat it is
+  `Σ(player→Raketa) − Σ(Raketa→club) − Σ(Raketa→player)`, and it goes **negative** between a
+  refund Raketa advanced on the private path and the owner charge that recovers it — the
+  working-capital position, readable rather than estimated.
 - **Counter-paid share** — cash an invited player handed to a club, marked paid by the club. The
   one movement that is `player → club` with Raketa as neither party. Available to invited players
   only; a marketplace seat is always bought from Raketa, online.
@@ -1052,7 +1069,13 @@ nothing. Same 30 zł, two regimes, and the difference is invisible on the screen
 **The ledger is downstream and one-way: Money reads Matches; Matches never reads Money.** Which
 door a payer came through lives on the *match record*, not the ledger, because it is an input to
 a rule the derivation kernel evaluates from the record and the clock alone. The ledger
-**references** a seat; it does not define one.
+**references** a seat; it does not define one. The fence is checked rather than trusted: an
+import contract forbids Matches to reach Money at all, directly or through anything else.
+
+**Erasure is a read-time substitution.** A ledger's movements survive an erasure request —
+accounting records carry a legal-obligation basis — so what changes is the **party every reader
+sees**, not what is stored. Rewriting the events is the one thing an append-only store cannot
+do. What identifies a person lives in the account, and is erased there.
 
 ## Cross-cutting concepts
 
