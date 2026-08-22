@@ -156,7 +156,7 @@ class CardHoldReason(str, Enum):
     — with a named reason plus the numbers it needs. The client writes all five
     sentences.
 
-    Five, not the kernel's twelve. The rest are diagnosis: *a card that is not
+    Five, not the kernel's thirteen. The rest are diagnosis: *a card that is not
     describing a court does not name one*, and shipping the diagnostic names
     would oblige every client to hold seven rows it can never render.
     """
@@ -171,7 +171,7 @@ class CardHoldReason(str, Enum):
 #: The projection off the kernel's own vocabulary, **total** and asserted
 #: exhaustive at module load — never a second ladder over the record. It is the
 #: same shape ``MATCH_PHASE_OF`` takes one ring out from here, and it is written
-#: out row by row rather than derived from a name prefix, so a thirteenth kernel
+#: out row by row rather than derived from a name prefix, so a fourteenth kernel
 #: reason cannot be silently absorbed into ``None``.
 CARD_HOLD_REASON_OF: Mapping[HoldReason, CardHoldReason | None] = MappingProxyType(
     {
@@ -194,6 +194,8 @@ CARD_HOLD_REASON_OF: Mapping[HoldReason, CardHoldReason | None] = MappingProxyTy
         HoldReason.FAR_LAPSED: None,
         HoldReason.THIN: None,
         HoldReason.NO_SPECULATIVE_HOLD: None,
+        # A cancelled card has a cancellation to say and no court to describe.
+        HoldReason.OVER: None,
     }
 )
 

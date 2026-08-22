@@ -26,7 +26,7 @@ from __future__ import annotations
 from typing import Protocol, Sequence, runtime_checkable
 from uuid import UUID
 
-from app.kernel import Instant
+from app.kernel import Instant, Minutes
 
 from app.modules.matches.domain.match import Match
 
@@ -79,5 +79,51 @@ class MatchRepository(Protocol):
         Raises ``ConcurrentMatchModification`` when the stored version has moved
         since the match was loaded — never a silent merge, because two writers
         interleaving on a seat would produce an occupancy nobody authored.
+        """
+        ...
+
+
+@runtime_checkable
+class CourtHolds(Protocol):
+    """Somewhere to keep a court aside for a match, and to give it back.
+
+    **Stated in Matches' words, not Courts'.** A ladder reaching into
+    ``ReservationRepository`` would put a reservation, a holder and two intervals
+    into its constructor, and the ladder would then have to change every time
+    Courts reshaped a read it never asked for. What the ladder knows is that a
+    match wants a court of its category for its hour, and that a match it has
+    given up on wants one no longer — which is ADR-0035's *"it asks for a court
+    of this category, for this window, and is given a reservation or refused. It
+    never learns how courts are organised"* seen from the asking side. The
+    adapter beside it is the one file that knows whose question it really is.
+    """
+
+    async def keep_aside(
+        self,
+        *,
+        match_id: UUID,
+        club_id: UUID,
+        category_id: UUID,
+        start: Instant,
+        duration: Minutes,
+    ) -> bool:
+        """Keep a court for this match, and say whether one was there to keep.
+
+        ``False`` is *nothing was free* and never *somebody beat us to it*: a
+        refused claim is re-asked with that court removed, so losing a race
+        never reaches this far (ADR-0035). It is therefore a fact about the
+        club's inventory, and the ladder's answer to it is a fact about the
+        match.
+
+        Idempotent: a match already keeping a court is kept, not doubled.
+        """
+        ...
+
+    async def give_back(self, *, match_id: UUID, at: Instant) -> None:
+        """Put this match's court back on sale. Does nothing if it holds none.
+
+        A **release** and never a delete, because a court's booking history is a
+        query over reservations — which is Courts' rule and the reason this is a
+        method here rather than an obligation on the ladder to remember.
         """
         ...

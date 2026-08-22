@@ -294,8 +294,37 @@ there; they are not repeated here.
 - **Court hold, composed** (`kernel.court_hold()`) — the hold ladder as a *computation*: the
   base tiers priced in paid seats, then the club's two amendments, and never a stored court
   id. **Staleness is not latched** — a third payment makes a stale hold live again, so a card
-  may go back from released to held. Distinct from `matchmaking.CourtHold`, which is the
-  three-rung *word* an engine reads. _Avoid_: reservation, lock.
+  may go back from released to held. **A match that is over is keeping nothing**, above the
+  base ladder and before any tier: a cancelled match on two paid seats would otherwise compose
+  a soft hold for a court that went back the moment it cancelled. Distinct from
+  `matchmaking.CourtHold`, which is the three-rung *word* an engine reads, and from
+  `keeping_a_court`, which is what the record says rather than what the ladder says.
+  _Avoid_: reservation, lock.
+- **Keeping a court** (`kernel.keeping_a_court()`) — whether a court is standing aside for
+  this match **on the record**, read from `heldSince` and `releasedAt` **together**. Not the
+  same question as the composed hold: that one is *should a court be kept aside*, computed
+  from the seats and the clock, and the whole of the ladder's decision is the gap between
+  them. `heldSince` **outlives the reclaim that ends it** — the club's cap is measured from
+  it, so a reclaim that also cleared it would reset the clock that had just fired, grant again
+  on the next look and reclaim again a cap later, for ever
+  ([ADR-0089](../docs/adr/0089-held-since-outlives-the-reclaim-that-ends-it.md), amending
+  ADR-0031). _Avoid_: reading either field alone, `isHeld` (that is the composed answer).
+- **Hold move** (`kernel.hold_move()`) — grant · withdraw · stand: the ladder's *act*, one
+  function away from its answer, and the only thing in the system allowed to move
+  `heldSince`. A match keeping no court is asked about **as though a hold were granted now** —
+  not a second ladder but the question a grant actually poses, and it is what lets the ladder
+  ask about a record in a soft tier under a club cap without tripping the invariant that
+  combination is refused by. The anchor is kept where one exists, so a reclaimed hold answers
+  *stand* rather than being granted again. _Avoid_: resolve, reconcile, sync.
+- **The hold ladder, acting** (`matches.ResolveCourtHold`) — the ladder as a *write*: it asks
+  `hold_move`, claims a court through Courts or gives one back, and it runs **inside the
+  transaction that moved the match** rather than after it. That is not caution — entering a
+  tier and being granted a court have to be one write, or a stored record sits in the
+  combination the kernel refuses and it arrives as a five-hundred on a home screen rather than
+  as a red test. A grant that finds no free court is an **inventory loss**, which is
+  ADR-0035's single story. `tests/unit/test_resolve_court_hold.py` walks the package and
+  reddens when a Matches write saves without asking. _Avoid_: an event handler (it runs after
+  commit), a scheduled reconciler.
 - **Wake** (`kernel.next_wake_at()`) — the next instant a match could resolve differently, or
   `None`. **A wake is a look, not an instruction**: the handler re-derives from the record, so
   a late wake changes *when* we look and never *what we find*. It sits beside the ladder
@@ -528,9 +557,9 @@ there; they are not repeated here.
   named for the **state** it represents and checked against the stored reservation on every
   run. Its window is a **fixed absolute instant**, not an offset from now: *next Tuesday at
   18:00* computed at run time is a different Tuesday tomorrow, and the run that creates nothing
-  could never happen. Two of the three holders are seeded; a match-held claim is a court the
-  **hold ladder** grants, and that ladder is not written yet, so seeding one would decide what
-  the ladder decides. _Avoid_: a uuid standing in for an aggregate, which satisfies every
+  could never happen. Two of the three holders are **authored** here; a match-held claim is a
+  court the **hold ladder** grants, so it is never written into this catalog and arrives
+  anyway, because the seeded matches run the same use cases a request runs. _Avoid_: a uuid standing in for an aggregate, which satisfies every
   import walk in the suite and is still an invented context.
 
 - **Match aggregate** (`matches.Match`) — **one** aggregate, a **record with a version and an

@@ -75,6 +75,7 @@ from app.kernel import (
     deadlines,
     is_full,
     is_terminal,
+    keeping_a_court,
     match_end,
     result_window,
 )
@@ -547,10 +548,15 @@ class Match:
         was paid at T* once a seat has been vacated and refilled.
 
         **Which** court is Courts' answer, keyed by ``MatchHeld(match_id)``.
+
+        Granting again after a reclaim is ordinary and not a mistake: staleness
+        is never latched, so a third payment closes the guard and the hold is
+        live again. What is refused is granting one on top of a court this match
+        is already keeping.
         """
 
         self._refuse_if_settled()
-        if self.held_since is not None:
+        if keeping_a_court(self.as_record()):
             raise CourtAlreadyHeld()
         self.held_since = at
         self.released_at = None
@@ -559,14 +565,30 @@ class Match:
     def release_court(self, *, at: Instant) -> None:
         """The court goes back on sale, and there is still a group to tell.
 
+        **``held_since`` is left standing**, and that is the decision to read.
+        The club's cap is measured from it, so a reclaim that also cleared it
+        would reset the clock that had just fired — the ladder would grant again
+        on the next look and reclaim again a cap later, for ever. ADR-0031 says
+        *"cleared when it lapses"*; that and its own *"staleness is evaluated on
+        the current facts, not latched"* cannot both hold of a stale reclaim, and
+        the ladder above already reads it this way: ``heldReleased`` rewrites to
+        ``heldStale``, which needs a court that has gone **and** a hold that
+        still has an age. Certainty rising is what ends staleness, not
+        forgetting how long we waited.
+
         ``released_at`` is a **receipt** — the notification was sent — and never
         the answer to *is a court held*, which the ladder computes.
+
+        **The one write a settled match still makes**, and the exception is the
+        rule working rather than a hole in it: the four cancellations each say in
+        their own docstring that the court goes back, and a match that cancelled
+        holding a court and could not release it would take that court out of the
+        club's inventory for ever. Everything else about a settled match is
+        refused, including holding a court in the first place.
         """
 
-        self._refuse_if_settled()
-        if self.held_since is None:
+        if not keeping_a_court(self.as_record()):
             raise NoCourtHeld()
-        self.held_since = None
         self.released_at = at
         self._record(
             CourtReleased(match_id=self.id, released_at=at, occurred_at=at)

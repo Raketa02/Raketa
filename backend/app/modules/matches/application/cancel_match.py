@@ -11,6 +11,12 @@ Two of the four are **receipts** rather than decisions (``INCOMPLETE``,
 ``CHECKPOINT``): the situation already derives from the clock and the record, and
 the flag records only that the refund, the court release and the notice
 completed. So a downed timekeeper delays the money and never the truth.
+
+**All four give the court back, in the same transaction and through the ladder.**
+A match that is over is keeping nothing aside — the kernel says so above its base
+rung — so the ladder answers *withdraw* whatever the seat count was, and the
+release the two receipts claim happened is the write that makes it true rather
+than a sentence about one.
 """
 
 from __future__ import annotations
@@ -22,6 +28,7 @@ from app.modules.matches.application.commands import (
     CancellationCause,
     CancelMatchCommand,
 )
+from app.modules.matches.application.resolve_court_hold import ResolveCourtHold
 from app.modules.matches.domain.errors import MatchNotFound
 from app.modules.matches.domain.match import Match
 from app.modules.matches.domain.ports import MatchRepository
@@ -52,9 +59,14 @@ def _record_the_cancellation(
 
 class CancelMatch:
     def __init__(
-        self, matches: MatchRepository, uow: UnitOfWork, clock: Clock
+        self,
+        matches: MatchRepository,
+        holds: ResolveCourtHold,
+        uow: UnitOfWork,
+        clock: Clock,
     ) -> None:
         self._matches = matches
+        self._holds = holds
         self._uow = uow
         self._clock = clock
 
@@ -63,9 +75,9 @@ class CancelMatch:
         if match is None:
             raise MatchNotFound()
 
-        _record_the_cancellation(
-            command.cause, on=match, at=instant(self._clock.now())
-        )
+        at = instant(self._clock.now())
+        _record_the_cancellation(command.cause, on=match, at=at)
+        await self._holds.apply(match, at=at)
         stored = await self._matches.save(match)
         await self._uow.commit()
         return stored

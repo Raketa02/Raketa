@@ -25,8 +25,20 @@ from dataclasses import replace
 import pytest
 from sqlalchemy import func, select
 
-from app.bootstrap.composition import build_event_publisher, build_match_repository
-from app.kernel import MatchKind, Situation, situation
+from app.bootstrap.composition import (
+    build_event_publisher,
+    build_match_repository,
+    build_reservation_repository,
+)
+from app.kernel import (
+    Instant,
+    MatchKind,
+    Situation,
+    court_hold,
+    is_held,
+    situation,
+)
+from app.modules.courts.domain.reservation import MatchHeld
 from app.modules.matches.infrastructure.sqlalchemy_match_models import (
     MatchORM,
     MatchSeatORM,
@@ -243,9 +255,18 @@ async def test_the_seeded_accounts_fill_the_seats_in_catalog_order(
     assert "match-that-lost-a-player" not in held
 
 
-async def test_no_seeded_match_holds_a_court(session_factory):
-    """Granting a hold is the ladder's decision (`Raketa02/Raketa#71`), and
-    seeding one here would decide what the ladder decides."""
+async def test_a_seeded_match_holds_a_court_exactly_when_the_ladder_says_so(
+    session_factory,
+):
+    """The catalog never says whether a court is held; the ladder does.
+
+    Asserted against the kernel rather than against a list, and at the instant
+    the *last write* happened rather than at the scenario's own claim instant —
+    a hold is granted when a tier is entered and taken back on the next look, so
+    a tier that has since lapsed leaves `held_since` standing until a wake
+    (`Raketa02/Raketa#72`). What may never differ is the answer at the moment the
+    ladder last ran, which is what this reads.
+    """
 
     async with session_factory() as session:
         run = await seed(session)
@@ -255,8 +276,58 @@ async def test_no_seeded_match_holds_a_court(session_factory):
         for entry in run.matches:
             stored = await repository.get(entry.match_id)
             assert stored is not None
-            assert stored.held_since is None
-            assert stored.released_at is None
+            wrote_at = _last_write(entry.match)
+            wanted = is_held(court_hold(stored.as_record(), wrote_at))
+            assert (stored.held_since is not None) is wanted, entry.match.slug
+
+
+async def test_a_held_court_is_a_reservation_the_match_holds(session_factory):
+    """`held_since` is the match's fact; the court itself is Courts'.
+
+    The match stores no `reservation_id` — the reservation already says
+    `MatchHeld(match_id)`, and a column here would be the same arrow drawn twice
+    (ADR-0034, ADR-0035). So *which* court a seeded match holds is answered by
+    asking Courts, and this is the assertion that the ladder actually went and
+    got one rather than writing an instant onto a record.
+    """
+
+    async with session_factory() as session:
+        run = await seed(session)
+        matches = build_match_repository(session, events=build_event_publisher(session))
+        reservations = build_reservation_repository(session)
+
+        held, unheld = [], []
+        for entry in run.matches:
+            stored = await matches.get(entry.match_id)
+            assert stored is not None
+            reservation = await reservations.for_match(entry.match_id)
+            (held if stored.held_since is not None else unheld).append(entry.match.slug)
+            assert (reservation is not None) is (stored.held_since is not None)
+            if reservation is not None:
+                assert reservation.holder == MatchHeld(match_id=entry.match_id)
+                assert reservation.club_id == stored.club_id
+                assert reservation.category_id == stored.category_id
+
+        # Both sides are non-empty, or the assertion above is vacuous on one of
+        # them and would pass with the ladder deleted.
+        assert held and unheld
+        assert "match-holding-a-court-softly" in held
+        assert "match-forming" in unheld
+
+
+def _last_write(scenario) -> Instant:
+    """When the ladder last ran for this scenario, which is its last write."""
+
+    return max(
+        moment
+        for moment in (
+            scenario.posted_at,
+            scenario.joined_at if scenario.taken else None,
+            scenario.vacated_at,
+            scenario.cancelled_at,
+        )
+        if moment is not None
+    )
 
 
 # --- 3. a name that lies stops the run --------------------------------------

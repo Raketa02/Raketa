@@ -23,10 +23,13 @@ from app.kernel.causes import CAUSE_COUNT, Cause
 from app.kernel.holds import (
     Hold,
     HoldKind,
+    HoldMove,
     HoldReason,
     court_hold,
     hold_boundaries,
+    hold_move,
     is_held,
+    keeping_a_court,
 )
 from app.kernel.invariants import InvariantViolated, exhaustive, invariant
 from app.kernel.matches import (
@@ -200,10 +203,13 @@ __all__ = [
     # holds — is a court being kept aside, on what terms, and until when
     "Hold",
     "HoldKind",
+    "HoldMove",
     "HoldReason",
     "court_hold",
     "hold_boundaries",
+    "hold_move",
     "is_held",
+    "keeping_a_court",
     # situations — one ladder over thirty-six names, and the wake it agrees with
     "SITUATION_COUNT",
     "Situation",

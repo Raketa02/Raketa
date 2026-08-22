@@ -81,7 +81,7 @@ def test_the_five_causes_include_the_one_that_never_reaches_a_card() -> None:
     assert Cause.SETTLEMENT_REOPENED in set(Cause)
 
 
-def test_a_card_names_five_hold_reasons_and_the_kernel_knows_twelve() -> None:
+def test_a_card_names_five_hold_reasons_and_the_kernel_knows_thirteen() -> None:
     assert {reason.value for reason in CardHoldReason} == {
         "committed",
         "far",
@@ -89,7 +89,7 @@ def test_a_card_names_five_hold_reasons_and_the_kernel_knows_twelve() -> None:
         "stale",
         "extended",
     }
-    assert len(HoldReason) == 12
+    assert len(HoldReason) == 13
 
 
 def test_the_hold_projection_is_total_over_the_kernel() -> None:

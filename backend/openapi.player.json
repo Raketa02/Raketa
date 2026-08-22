@@ -782,7 +782,7 @@
           "extended"
         ],
         "title": "CardHoldReason",
-        "description": "Why a court is being kept aside, in the five reasons that reach a card.\n\nADR-0073 replaced ``hold.note`` \u2014 a sentence the server wrote, which would\nhave been the single precedent for server-held copy anywhere in the contract\n\u2014 with a named reason plus the numbers it needs. The client writes all five\nsentences.\n\nFive, not the kernel's twelve. The rest are diagnosis: *a card that is not\ndescribing a court does not name one*, and shipping the diagnostic names\nwould oblige every client to hold seven rows it can never render."
+        "description": "Why a court is being kept aside, in the five reasons that reach a card.\n\nADR-0073 replaced ``hold.note`` \u2014 a sentence the server wrote, which would\nhave been the single precedent for server-held copy anywhere in the contract\n\u2014 with a named reason plus the numbers it needs. The client writes all five\nsentences.\n\nFive, not the kernel's thirteen. The rest are diagnosis: *a card that is not\ndescribing a court does not name one*, and shipping the diagnostic names\nwould oblige every client to hold seven rows it can never render."
       },
       "Cause": {
         "type": "string",

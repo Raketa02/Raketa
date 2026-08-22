@@ -116,6 +116,19 @@ class CancelMatchCommand:
 
 
 @dataclass(frozen=True)
+class ResolveCourtHoldCommand:
+    """*Look at this match's court and do what the ladder says.*
+
+    One field, and it carries no reason: a wake is a look and the handler
+    re-derives (ADR-0076, ``Raketa02/Raketa#72``). A command naming the threshold
+    it thinks was crossed would let a late look act on a fact that has since
+    stopped being true.
+    """
+
+    match_id: UUID
+
+
+@dataclass(frozen=True)
 class ProposeScoreCommand:
     """*This is what we played.* The route that asks is ``Raketa02/Raketa#79``."""
 

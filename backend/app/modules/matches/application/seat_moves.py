@@ -9,6 +9,17 @@ kernel is; what is here is the transaction.
 announcements into the same transaction and does not commit, so
 ``Raketa02/Raketa#70`` — a seat payment, the court it earns, and both outbox
 rows in one write — composes over these rather than around them.
+
+**Every one of them ends in the hold ladder, before the save and inside the same
+transaction.** Three of the four move what the ladder says — a payment enters a
+tier, a departure leaves one, and moving the hour moves the instant a tier lapses
+— and the ladder is the only thing allowed to move ``held_since`` to match. Run
+afterwards instead, or on the outbox, there is a window in which the stored
+record is in the one combination the kernel refuses to read
+(``resolve_court_hold.py``). ``TakeSeat`` runs it too and will almost always be
+told *stand*: taking a seat is not paying for one, so it changes no count the
+ladder reads — but *almost always* is not a reason for a write path to be the one
+that does not ask.
 """
 
 from __future__ import annotations
@@ -24,18 +35,24 @@ from app.modules.matches.application.commands import (
     TakeSeatCommand,
     VacateSeatCommand,
 )
+from app.modules.matches.application.resolve_court_hold import ResolveCourtHold
 from app.modules.matches.domain.errors import MatchNotFound
 from app.modules.matches.domain.match import Match
 from app.modules.matches.domain.ports import MatchRepository
 
 
 class _MatchWrite:
-    """Load, mutate, save, commit — the shape all four share."""
+    """Load, mutate, resolve the hold, save, commit — the shape all four share."""
 
     def __init__(
-        self, matches: MatchRepository, uow: UnitOfWork, clock: Clock
+        self,
+        matches: MatchRepository,
+        holds: ResolveCourtHold,
+        uow: UnitOfWork,
+        clock: Clock,
     ) -> None:
         self._matches = matches
+        self._holds = holds
         self._uow = uow
         self._clock = clock
 
@@ -51,7 +68,9 @@ class MoveMatchStart(_MatchWrite):
 
     async def execute(self, command: MoveMatchStartCommand) -> Match:
         match = await self._load(command.match_id)
-        match.move_start(command.start, at=instant(self._clock.now()))
+        at = instant(self._clock.now())
+        match.move_start(command.start, at=at)
+        await self._holds.apply(match, at=at)
         stored = await self._matches.save(match)
         await self._uow.commit()
         return stored
@@ -62,7 +81,9 @@ class TakeSeat(_MatchWrite):
 
     async def execute(self, command: TakeSeatCommand) -> Match:
         match = await self._load(command.match_id)
-        match.take_seat(command.player_id, at=instant(self._clock.now()))
+        at = instant(self._clock.now())
+        match.take_seat(command.player_id, at=at)
+        await self._holds.apply(match, at=at)
         stored = await self._matches.save(match)
         await self._uow.commit()
         return stored
@@ -78,7 +99,9 @@ class PaySeat(_MatchWrite):
 
     async def execute(self, command: PaySeatCommand) -> Match:
         match = await self._load(command.match_id)
-        match.pay_seat(command.player_id, at=instant(self._clock.now()))
+        at = instant(self._clock.now())
+        match.pay_seat(command.player_id, at=at)
+        await self._holds.apply(match, at=at)
         stored = await self._matches.save(match)
         await self._uow.commit()
         return stored
@@ -94,7 +117,9 @@ class VacateSeat(_MatchWrite):
 
     async def execute(self, command: VacateSeatCommand) -> Match:
         match = await self._load(command.match_id)
-        match.vacate_seat(command.player_id, at=instant(self._clock.now()))
+        at = instant(self._clock.now())
+        match.vacate_seat(command.player_id, at=at)
+        await self._holds.apply(match, at=at)
         stored = await self._matches.save(match)
         await self._uow.commit()
         return stored

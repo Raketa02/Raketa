@@ -38,6 +38,7 @@ from app.kernel import (
     hours,
     instant,
     is_full,
+    keeping_a_court,
     minutes,
     situation,
 )
@@ -498,14 +499,37 @@ def test_a_second_hold_is_refused_and_a_release_needs_one():
         match.hold_court(at=at(3))
 
 
-def test_releasing_a_court_keeps_the_receipt_and_stops_the_hold():
+def test_releasing_a_court_keeps_the_receipt_and_the_age_it_was_reclaimed_on():
+    """The court has gone; the hold's age has not.
+
+    The club's cap is measured from `held_since`, so clearing it here would reset
+    the clock that had just fired — the ladder would grant again on the next look
+    and reclaim again a cap later, for ever. `keeping_a_court` is what says a
+    court has gone back, and it reads the two fields together.
+    """
+
     match = a_match()
     match.hold_court(at=at(2))
 
     match.release_court(at=at(3))
 
-    assert match.held_since is None
+    assert match.held_since == at(2)
     assert match.released_at == at(3)
+    assert not keeping_a_court(match.as_record())
+
+
+def test_a_court_can_be_held_again_after_it_was_given_back():
+    """Staleness is never latched, so a re-grant is ordinary and not a mistake."""
+
+    match = a_match()
+    match.hold_court(at=at(2))
+    match.release_court(at=at(3))
+
+    match.hold_court(at=at(4))
+
+    assert keeping_a_court(match.as_record())
+    assert match.held_since == at(4)
+    assert match.released_at is None
 
 
 # --- private courts ---------------------------------------------------------

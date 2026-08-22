@@ -53,6 +53,7 @@ from app.modules.auth.infrastructure.sqlalchemy_refresh_token_repository import 
     SqlAlchemyRefreshTokenRepository,
 )
 from app.modules.clubs.domain.ports import ClubRepository
+from app.modules.courts.application.claim_court import ClaimCourt
 from app.modules.courts.domain.ports import (
     BookingRepository,
     ReservationRepository,
@@ -60,9 +61,12 @@ from app.modules.courts.domain.ports import (
 from app.modules.courts.infrastructure.sqlalchemy_booking_repository import (
     SqlAlchemyBookingRepository,
 )
-from app.modules.matches.domain.ports import MatchRepository
+from app.modules.matches.domain.ports import CourtHolds, MatchRepository
 from app.modules.now.domain.ports import RatedSports
 from app.modules.now.infrastructure.rating_sports import RatedSportsFromSkillRatings
+from app.modules.matches.infrastructure.court_holds import (
+    CourtHoldsThroughReservations,
+)
 from app.modules.matches.infrastructure.sqlalchemy_match_repository import (
     SqlAlchemyMatchRepository,
 )
@@ -247,6 +251,20 @@ def build_match_repository(
     passes it in rather than getting a second one by accident.
     """
     return SqlAlchemyMatchRepository(session, events=events)
+
+
+def build_court_holds(
+    claim: ClaimCourt, reservations: ReservationRepository
+) -> CourtHolds:
+    """The hold ladder's way of asking Courts for a court, and giving it back.
+
+    Takes the Courts context's own claim **use case** rather than rebuilding its
+    scan: ADR-0035's re-ask loop is the answer to *which court*, and a second one
+    here would be a second answer that agrees only until one of them is fixed.
+    `ClaimCourt.claim` deliberately does not commit, which is what lets a seat
+    payment, the court it earns and both outbox rows be one write.
+    """
+    return CourtHoldsThroughReservations(claim=claim, reservations=reservations)
 
 
 # --------------------------------------------------------------------------

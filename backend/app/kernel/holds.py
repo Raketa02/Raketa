@@ -27,7 +27,7 @@ between held and released on every recomputation, and re-notifies each time.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import Enum
 from typing import final
 
@@ -37,6 +37,7 @@ from app.kernel.matches import (
     MatchRecord,
     filled,
     is_full,
+    is_terminal,
     seat_count,
 )
 from app.kernel.time import Instant, Minutes, elapsed_minutes, hours, minutes, shifted
@@ -94,6 +95,8 @@ class HoldReason(Enum):
     EXTENDED = "extended"
     #: The club does not hold speculatively at all.
     NO_SPECULATIVE_HOLD = "noSpeculativeHold"
+    #: The match is over, and nothing is being kept aside for one that is.
+    OVER = "over"
 
 
 @final
@@ -117,6 +120,28 @@ class Hold:
     """
 
 
+def keeping_a_court(record: MatchRecord) -> bool:
+    """Whether a court is standing aside for this match **on the record**.
+
+    Two fields and not one, and the second is the reason. ``held_since`` is when
+    the hold that is being aged was granted, and it **survives the reclaim that
+    ends it** — because the club's cap is measured from it, and a reclaim that
+    also cleared it would reset the very clock that fired, grant again on the
+    next look, and reclaim again forty-eight hours later for ever. ADR-0031 says
+    *"cleared when it lapses"*; that cannot be true of a stale reclaim and
+    *"staleness is evaluated on the current facts, not latched"* both, and the
+    ladder above it already assumes this reading — ``heldReleased`` is in
+    ``_STALE_REWRITES``, which is a rewrite that can only fire on a record whose
+    court has gone back **and** whose hold still has an age.
+
+    So ``released_at`` is what says the court has gone, and *not stale any more*
+    is bought by certainty rising — a third payment closes the ``filled < n-1``
+    guard — rather than by forgetting how long we waited.
+    """
+
+    return record.held_since is not None and record.released_at is None
+
+
 def is_held(hold: Hold) -> bool:
     """Whether a court is being kept aside at all.
 
@@ -130,6 +155,18 @@ def is_held(hold: Hold) -> bool:
 
 def court_hold(record: MatchRecord, now: Instant) -> Hold:
     """The composed hold: the base ladder, then the club's two amendments."""
+
+    # **A match that is over is keeping nothing aside**, and this is above the
+    # base ladder rather than inside it because it is a fact about the match and
+    # not about certainty. Without it a cancelled match on two paid seats still
+    # composes a *soft* hold from its seat count, and the record then has to
+    # carry a `held_since` for a court that went back on sale the moment it
+    # cancelled — the combination `_staleness` refuses outright. It changes no
+    # situation: `is_terminal` is exactly rungs 1-4, so `_ladder` answers with a
+    # cancellation before any rung reads the hold, and neither `_STALE_REWRITES`
+    # nor `_EXTENDED_REWRITES` holds a cancelled name.
+    if is_terminal(record):
+        return Hold(HoldKind.NONE, HoldReason.OVER)
 
     base = _base_hold(record, now)
 
@@ -288,7 +325,8 @@ def hold_boundaries(record: MatchRecord) -> tuple[Instant, ...]:
     """
 
     if (
-        record.kind is MatchKind.PRIVATE
+        is_terminal(record)
+        or record.kind is MatchKind.PRIVATE
         or record.court_locked
         or record.committed_at is not None
         or is_full(record)
@@ -301,8 +339,86 @@ def hold_boundaries(record: MatchRecord) -> tuple[Instant, ...]:
     span = _HOLD_NEAR if filled(record) >= seat_count(record) - 1 else _HOLD_FAR
     moments = [shifted(record.start, minutes(-span))]
 
+    # `held_since is not None`, and **not** `keeping_a_court`: `_staleness`
+    # compares against this instant whenever the anchor exists, which includes a
+    # record whose court has already gone back — that is precisely the
+    # `heldReleased` → `heldStale` rewrite, and conditioning the wake on the
+    # court still being kept drops the boundary that rewrite fires on. The wake
+    # property test in `tests/unit/test_next_wake_at.py` is what found that.
     cap = record.policy.max_hold_age
     if cap is not None and record.held_since is not None:
         moments.append(shifted(record.held_since, cap))
 
     return tuple(moments)
+
+
+class HoldMove(Enum):
+    """What the ladder should do about this match's court, right now.
+
+    The ladder's *answer* is `court_hold`; this is the ladder's *act*, and the
+    two are one function apart on purpose. A caller that compared `is_held`
+    against `held_since` itself would be a second reading of the same
+    thresholds, which is the thing ADR-0040 forbids one rung down.
+    """
+
+    #: The ladder wants a court kept aside and this match is keeping none.
+    GRANT = "grant"
+    #: This match is keeping a court the ladder no longer wants kept.
+    WITHDRAW = "withdraw"
+    #: The record already says what the ladder says. Most reads land here.
+    STAND = "stand"
+
+
+def hold_move(record: MatchRecord, now: Instant) -> HoldMove:
+    """Grant, withdraw, or leave alone — the whole of the ladder's decision.
+
+    **Two facts, and only one of them is stored.** Whether a court *should* be
+    kept aside is composed from the seats and the clock every time (`court_hold`);
+    *since when* one has been is `held_since`, which cannot be derived — nothing
+    in the history distinguishes *the hold was granted at T* from *the second
+    seat was paid at T* once a seat has been vacated and refilled (ADR-0031).
+    Keeping the two in step is this function's whole job, and the ladder that
+    acts on it is the only thing in the system allowed to.
+
+    **A match keeping no court is asked about as though one were granted now.**
+    That is not a second ladder and it is not a special case: the question at a
+    grant is *would a hold granted at this instant be a live one*, and a hold
+    granted at `now` is `now - now` old, so the club's cap cannot bind on it.
+    Asking `court_hold` about the record as it stands instead would put it in
+    the one combination `_staleness` refuses — a soft tier under a club cap with
+    no `held_since` to age from — which is exactly the state a grant exists to
+    leave. The club's cap is untouched by this: it binds from the next read
+    onward, against the `held_since` the grant wrote.
+    """
+
+    holds = keeping_a_court(record)
+    wants = is_held(court_hold(_as_if_granted_now(record, now), now))
+
+    if wants and not holds:
+        return HoldMove.GRANT
+    if holds and not wants:
+        return HoldMove.WITHDRAW
+    return HoldMove.STAND
+
+
+def _as_if_granted_now(record: MatchRecord, now: Instant) -> MatchRecord:
+    """The record it would be with a hold granted now, if it keeps no court.
+
+    **The age anchor is kept, and only invented where there has never been
+    one.** A match whose hold the club reclaimed still carries the `held_since`
+    it was reclaimed on, so asking *would a hold granted now be live* answers
+    **no** — it is stale, and it is stale for the reason it was taken back. Reset
+    the anchor to `now` here instead and the ladder grants again on the very next
+    look, reclaims a cap later, and does it for ever: the club's instrument would
+    become a court flickering on and off rather than one that went back on sale.
+
+    What ends staleness is certainty rising — a third payment closes the
+    `filled < n-1` guard and this returns a live near-tier hold with the old
+    anchor untouched, which is ADR-0031's *"it re-earns the hold rather than
+    arriving too late for one."*
+    """
+
+    if keeping_a_court(record):
+        return record
+    anchor = record.held_since if record.held_since is not None else now
+    return replace(record, held_since=anchor, released_at=None)

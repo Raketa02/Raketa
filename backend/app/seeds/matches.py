@@ -29,14 +29,22 @@ instants, which is a port doing what a port is for. Left on the wall clock,
 ``committed_at`` would be *the day the seed happened to run* and the name would
 be a claim about that day.
 
-**No match holds a court**, and that is deliberate rather than missing. Granting
-a speculative hold is the ladder's decision (ADR-0031, ``Raketa02/Raketa#71``),
-and seeding one here would decide what the ladder decides. Every scenario is
-therefore chosen so the kernel composes **no** hold at the instant it is checked
-— which the ladder does from paid seats and the clock, so it is a property of the
-scenario rather than a flag. Two consequences worth knowing: a club with a
-``maxHoldAge`` and a match on two paid seats needs ``held_since`` on the record or
-the kernel refuses it, so those scenarios live at uncapped clubs until #71 lands.
+**No scenario says whether a court is held, and none may.** The hold ladder
+decides that (ADR-0031), and it runs inside the same use cases the runner drives
+— so a seeded match holds a court exactly when its seats and its clock say it
+should, and ``held_since`` is the instant the seed's own week entered the tier.
+Writing a hold into this catalog would be writing down the answer to the one
+question the ladder exists to compute, and the seeded state would then agree with
+the ladder only until somebody retuned a rung.
+
+One scenario exists **for** the hold rather than beside it — ``HELD_SOFT``, a
+court kept aside on the premise that certainty will rise. There is deliberately
+no scenario for the club that holds nothing speculatively: its match resolves to
+``forming``, which this catalog already names, and *"two matches saying the same
+thing would be one scenario twice"* is a rule worth more than a second seeded
+row. That state is invisible on a card by construction, so the place it is
+checked is the ladder's own suite, where it can be asserted as *no hold* rather
+than as a name that does not mention one.
 
 **No leaver, no seat claim, no money.** A departure record is
 ``Raketa02/Raketa#67``, a seat claim is ``#68`` and the ledger is ``#69``. A
@@ -329,6 +337,32 @@ CANCELLED_BY_CLUB = SeedMatch(
     cancelled_at=seed_moment(day_offset=1, hour=8),
 )
 
+HELD_SOFT = SeedMatch(
+    slug="match-holding-a-court-softly",
+    description=(
+        "Three of four seats paid, a day out, and a court kept aside on the "
+        "premise that the fourth will come. **Soft is the whole point**: the "
+        "club may still sell this court to somebody who wants the whole thing, "
+        "and the ladder is holding it only while the match keeps earning it "
+        "(ADR-0031). Nothing here was seeded — the hold is what the ladder "
+        "composed from the seats and the clock, and `heldSince` is the instant "
+        "the third payment landed."
+    ),
+    claim=SituationClaim(
+        promise="a court held softly, one seat from full",
+        situation=Situation.HELD_SOFT,
+        resolved_at=seed_moment(day_offset=3, hour=12),
+    ),
+    club_slug="club-that-needs-a-turnaround",
+    category="Padel · indoor",
+    sport=Sport.PADEL,
+    start=seed_slot(20, day_offset=5).start,
+    duration=hours(1),
+    taken=3,
+    paid=3,
+    joined_at=seed_moment(day_offset=1, hour=9),
+)
+
 MATCHES: tuple[SeedMatch, ...] = (
     FORMING,
     HELD_SEAT,
@@ -336,5 +370,6 @@ MATCHES: tuple[SeedMatch, ...] = (
     RECOVERING,
     NEEDS_RESULT,
     PRIVATE_OPEN,
+    HELD_SOFT,
     CANCELLED_BY_CLUB,
 )

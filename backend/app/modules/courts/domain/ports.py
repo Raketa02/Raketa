@@ -55,6 +55,23 @@ class ReservationRepository(Protocol):
         """
         ...
 
+    async def for_match(self, match_id: UUID) -> Reservation | None:
+        """The **live** court this match is holding, if it is holding one.
+
+        The hold ladder's read, and the reason the match stores no
+        ``reservation_id``: the reservation already says ``MatchHeld(match_id)``,
+        so a column on the match would be the same arrow drawn twice and two
+        places for it to disagree (ADR-0034, ADR-0035). Withdrawing a hold means
+        asking this context which court the match holds, and this is the asking.
+
+        Live only, and at most one: a released row is history, and a match holds
+        one court at a time because the ladder is the only thing that grants it.
+        Should a second ever exist it is a defect, so the adapter orders
+        deterministically rather than returning whichever row the engine
+        happened to reach first — the ambiguity `#64` and `#65` each measured.
+        """
+        ...
+
     async def add(self, reservation: Reservation) -> Reservation:
         """Claim the court, or refuse with ``CourtAlreadyClaimed``.
 

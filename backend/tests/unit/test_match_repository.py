@@ -34,8 +34,10 @@ from sqlalchemy.exc import IntegrityError
 
 from app.bootstrap.composition import (
     build_club_repository,
+    build_court_holds,
     build_event_publisher,
     build_match_repository,
+    build_reservation_repository,
     build_unit_of_work,
 )
 from app.infrastructure.events.event_delivery_model import EventOutboxORM
@@ -50,9 +52,11 @@ from app.kernel import (
     situation,
     zloty,
 )
+from app.modules.clubs.application.add_court import AddCourt
 from app.modules.clubs.application.add_court_category import AddCourtCategory
 from app.modules.clubs.application.commands import (
     AddCourtCategoryCommand,
+    AddCourtCommand,
     RegisterClubCommand,
 )
 from app.modules.clubs.application.register_club import RegisterClub
@@ -60,11 +64,13 @@ from app.modules.clubs.domain.policy import ClubPolicy
 from app.modules.clubs.domain.value_objects import (
     CategoryName,
     ClubName,
+    CourtLabel,
     ClubPricing,
     GeoPoint,
     PayoutDestination,
     StreetAddress,
 )
+from app.modules.courts.application.claim_court import ClaimCourt
 from app.modules.matches.application.cancel_match import CancelMatch
 from app.modules.matches.application.commands import (
     AgreeResultCommand,
@@ -78,6 +84,7 @@ from app.modules.matches.application.commands import (
     VacateSeatCommand,
 )
 from app.modules.matches.application.post_match import PostMatch
+from app.modules.matches.application.resolve_court_hold import ResolveCourtHold
 from app.modules.matches.application.record_result import (
     AgreeResult,
     ProposeScore,
@@ -124,19 +131,29 @@ class _World:
         clubs = build_club_repository(session)
         events = build_event_publisher(session)
         matches = build_match_repository(session, events=events)
+        reservations = build_reservation_repository(session)
         uow = build_unit_of_work(session)
+        holds = ResolveCourtHold(
+            matches,
+            build_court_holds(ClaimCourt(clubs, reservations, uow), reservations),
+            uow,
+            clock,
+        )
 
         self.clock = clock
         self.repository = matches
+        self.reservations = reservations
         self.uow = uow
+        self.holds = holds
         self.register_club = RegisterClub(clubs, uow, clock)
         self.add_category = AddCourtCategory(clubs, uow, clock)
-        self.post = PostMatch(matches, clubs, uow, clock)
-        self.move = MoveMatchStart(matches, uow, clock)
-        self.take = TakeSeat(matches, uow, clock)
-        self.pay = PaySeat(matches, uow, clock)
-        self.vacate = VacateSeat(matches, uow, clock)
-        self.cancel = CancelMatch(matches, uow, clock)
+        self.add_court = AddCourt(clubs, uow, clock)
+        self.post = PostMatch(matches, clubs, holds, uow, clock)
+        self.move = MoveMatchStart(matches, holds, uow, clock)
+        self.take = TakeSeat(matches, holds, uow, clock)
+        self.pay = PaySeat(matches, holds, uow, clock)
+        self.vacate = VacateSeat(matches, holds, uow, clock)
+        self.cancel = CancelMatch(matches, holds, uow, clock)
         self.propose = ProposeScore(matches, uow, clock)
         self.agree = AgreeResult(matches, uow, clock)
 
@@ -176,6 +193,16 @@ async def a_club_with_a_category(world, *, policy=None):
             rate=zloty(120),
         )
     )
+    # **Two courts, because the hold ladder is now part of every write.** A club
+    # whose category has no court has no inventory, so a match reaching a hold
+    # tier loses it — which is right, and which would make every case below a
+    # test about an empty club rather than about the thing it names.
+    for label in ("1", "2"):
+        await world.add_court.execute(
+            AddCourtCommand(
+                club_id=club.id, category_id=category.id, label=CourtLabel(label)
+            )
+        )
     return club, category
 
 

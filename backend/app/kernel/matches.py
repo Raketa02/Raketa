@@ -266,15 +266,21 @@ class MatchRecord:
     inviting a named person takes none and opens nothing."""
 
     held_since: Instant | None = None
-    """When the current speculative hold was granted, or `None` if none is held.
+    """When the hold being aged was granted, or `None` if none ever was.
 
     A new stored fact, and it cannot be reconstructed: nothing in the history
     distinguishes *the hold was granted at T* from *the second seat was paid at
-    T* once a seat has been vacated and refilled (ADR-0031)."""
+    T* once a seat has been vacated and refilled (ADR-0031).
+
+    **It outlives the reclaim that ends it**, so it is not on its own the answer
+    to *is a court being kept aside* — `keeping_a_court` reads it with
+    `released_at` beside it. The club's cap is measured from this instant, and a
+    reclaim that cleared it would reset the clock that had just fired."""
 
     released_at: Instant | None = None
-    """When the court went back on sale. A receipt — the notification was sent —
-    and never the answer to *is a court held*, which is the ladder's."""
+    """When the court went back on sale, and therefore that it has. A receipt —
+    the notification was sent — and never the answer to *should a court be held*,
+    which is the ladder's."""
 
     committed_at: Instant | None = None
     """When the match bound everybody to it. Irreversible, and **not derivable**:

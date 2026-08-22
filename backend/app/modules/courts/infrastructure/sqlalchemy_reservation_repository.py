@@ -234,6 +234,18 @@ class SqlAlchemyReservationRepository:
         )
         return [_reservation_of(row) for row in rows]
 
+    async def for_match(self, match_id: UUID) -> Reservation | None:
+        rows = await self._all(
+            select(ReservationORM)
+            .where(
+                ReservationORM.holder_kind == HolderKind.MATCH.value,
+                ReservationORM.match_id == match_id,
+                ReservationORM.released_at.is_(None),
+            )
+            .order_by(*_history_order())
+        )
+        return _reservation_of(rows[0]) if rows else None
+
     async def _all(self, statement: Select[Any]) -> Sequence[Any]:
         return (await self._session.execute(statement)).scalars().all()
 

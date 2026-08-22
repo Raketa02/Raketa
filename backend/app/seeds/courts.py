@@ -8,14 +8,16 @@ this is a list of them: a block the club published and we must not pad, a court
 a player bought outright, a claim that was given back and left its history
 behind, and a claim wider than the game it is for.
 
-**Two of the three holders are seeded, and the third is deliberately absent.** A
+**Two of the three holders are authored here, and the third never can be.** A
 club block needs only Clubs; a booking needs a player, and players are modeled.
-A **match hold** is a court the ladder is keeping aside for a match, and *when*
-one is granted is the hold ladder's decision (ADR-0031,
-`Raketa02/Raketa#71`) — seeding one here would decide what the ladder decides,
-and the seeded match would then carry a `heldSince` nobody derived. Matches has
-had an aggregate since `#66`; what it does not yet have is the ladder that grants
-this. It arrives with the ticket that owns it.
+A **match hold** is a court the ladder is keeping aside for a match, and it is
+not authored at all — it is *granted*, by the ladder, as a consequence of a
+match's seats and its clock (ADR-0031, `Raketa02/Raketa#71`). Match-held
+reservations therefore do appear in a seeded database, and none of them is in
+this list: `app/seeds/matches.py` seeds the matches, and the ladder gives them
+their courts on the way through. Writing one here would be writing down the
+answer to the question the ladder computes, and the two would agree only until
+somebody retuned a rung.
 
 **The window is a fixed absolute instant, not an offset from now.** A seed run
 is idempotent, and *"next Tuesday at 18:00"* computed at run time is a different
@@ -88,8 +90,8 @@ class SeedReservation:
     def __post_init__(self) -> None:
         if self.held_by is HolderKind.MATCH:
             raise ValueError(
-                f"'{self.slug}' is match-held, and the hold ladder that grants "
-                "a match its court is Raketa02/Raketa#71. Seed what is decided."
+                f"'{self.slug}' is match-held, and a match's court is granted "
+                "by the hold ladder rather than authored — seed the match."
             )
         wants_player = self.held_by is HolderKind.BOOKING
         if wants_player != (self.player_slug is not None):

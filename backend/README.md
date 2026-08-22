@@ -131,8 +131,9 @@ four hold-policy fields are copied at posting and honoured *as booked*
 ([ADR-0077](../docs/adr/0077-a-club-is-a-record-and-history-is-a-property-of-three-facts.md)),
 so a situation is one row-set away with no club fetch on Now's path. The cost is real and is
 stated rather than hidden — a club that tightens its cap does not reach a match already
-posted, and if the hold ladder (`Raketa02/Raketa#71`) decides it must, the fix is a write that
-refreshes the snapshot rather than a club read on the compose path.
+posted, and the hold ladder did **not** change that: the fix, if it is ever needed, is a write
+that refreshes the snapshot with an announcement of its own rather than a club read on the
+compose path.
 
 ## Event Sourcing And Outbox
 
@@ -505,7 +506,7 @@ now: *next Tuesday at 18:00* computed at run time is a different Tuesday tomorro
 second run would claim a second court. A week somebody can walk through arrives with the
 demo week (`Raketa02/Raketa#96`).
 
-`app/seeds/matches.py` adds seven matches, and here the name is checked by the **kernel**:
+`app/seeds/matches.py` adds eight matches, and here the name is checked by the **kernel**:
 
 | Match | The situation its name promises |
 | --- | --- |
@@ -515,6 +516,7 @@ demo week (`Raketa02/Raketa#96`).
 | `match-that-lost-a-player` | `replacement` — committed, and one seat short |
 | `match-played-and-unscored` | `needsResult` — played, waiting twenty-four hours for a score |
 | `match-private-with-seats-opened` | `privateOpen` — somebody's court, two seats for sale |
+| `match-holding-a-court-softly` | `heldSoft` — one seat from full, and a court kept aside |
 | `match-the-club-cancelled` | `cancelledClub` — a decision, not a receipt |
 
 Every other catalog checks a property somebody wrote down. A match's state is *derived*, so a
@@ -523,16 +525,24 @@ against the **stored** record on every run — at the scenario's own fixed insta
 situation is a function of the record *and* the clock. Retune a threshold or reorder a rung
 and `make seed` stops and says which account's screen just moved.
 
+**No scenario says whether a court is held, and none may.** The hold ladder decides that
+(ADR-0031), and it runs inside the same use cases the runner drives — so five of the eight
+seeded matches end up holding a real reservation whose holder is `MatchHeld(match_id)`, and
+`held_since` is the instant the seeded week entered the tier. That is why
+`app/seeds/courts.py` refuses a match-held claim outright: a match's court is *granted*, not
+authored, and writing one there would be writing down the answer the ladder computes.
+
 Matches is also the one context seeded on a clock the runner **sets**. Every other seeded
 aggregate is timeless; a match *is* its clock, so `committed_at` and a hole's `vacated_at`
 taken from the wall clock would make the scenario's name a claim about the day the seed ran.
 The `Clock` port is what makes that a configuration rather than a fake.
 
 Scope is what is **decided**: players, onboarding assessments, Skill ratings, clubs, court
-reservations and bookings, and matches. Nothing seeds a **match-held reservation** — *when* a
-court is held for a match is the hold ladder's decision (`Raketa02/Raketa#71`), and seeding
-one would decide what the ladder decides and leave a match carrying a `heldSince` nobody
-derived. A walk over `app/seeds/` asserts the package imports **exactly** the five contexts
+reservations and bookings, and matches. Nothing **authors** a match-held reservation — a
+match's court is granted by the hold ladder (ADR-0031) as a consequence of its seats and its
+clock, so `app/seeds/courts.py` refuses one and `app/seeds/matches.py` gets them for free by
+running the real use cases. A walk over `app/seeds/` asserts the package imports **exactly**
+the five contexts
 that exist — equality in both directions, so it grows deliberately and cannot silently fall
 behind.
 

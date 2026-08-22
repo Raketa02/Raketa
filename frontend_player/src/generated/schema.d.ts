@@ -379,7 +379,7 @@ export interface components {
          *     — with a named reason plus the numbers it needs. The client writes all five
          *     sentences.
          *
-         *     Five, not the kernel's twelve. The rest are diagnosis: *a card that is not
+         *     Five, not the kernel's thirteen. The rest are diagnosis: *a card that is not
          *     describing a court does not name one*, and shipping the diagnostic names
          *     would oblige every client to hold seven rows it can never render.
          * @enum {string}

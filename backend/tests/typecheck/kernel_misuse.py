@@ -95,6 +95,7 @@ from app.kernel import (
     Err,
     Grosze,
     Hold,
+    HoldMove,
     HoldPolicy,
     Instant,
     InvariantViolated,
@@ -121,16 +122,19 @@ from app.kernel import (
     add_grosze,
     apply_fraction,
     card_offset,
+    court_hold,
     court_price,
     day_offset,
     divide_among_players,
     elapsed_minutes,
     exhaustive,
     grosze,
+    hold_move,
     hours,
     instant,
     invariant,
     iso_weekday,
+    keeping_a_court,
     local_iso_weekday,
     local_minute_of_day,
     minute_of_day,
@@ -1835,3 +1839,42 @@ def a_wake_that_is_checked_composes(record: MatchRecord) -> Instant | None:
 
     wake = next_wake_at(record, A_START)
     return None if wake is None else shifted(wake, minutes(1))
+
+
+def what_the_ladder_says_is_not_what_the_record_says(record: MatchRecord) -> bool:
+    """Two questions one letter apart, and confusing them is the ladder's bug.
+
+    `court_hold` composes *what should be kept aside*; `keeping_a_court` reads
+    *what is*. The whole of `hold_move` is the difference between them, so a
+    caller that hands one to the other has written a ladder that always agrees
+    with itself and never grants or reclaims anything.
+    """
+
+    return keeping_a_court(court_hold(record, A_START))  # want-error: arg-type
+
+
+def the_clock_the_ladder_acts_on_is_an_instant(record: MatchRecord) -> HoldMove:
+    """A naive `datetime` is the bug `Instant` exists to make unwritable."""
+
+    naive = datetime(2026, 8, 22, 18, 30)
+    return hold_move(record, naive)  # want-error: arg-type
+
+
+def a_hold_move_that_is_matched_composes(record: MatchRecord) -> bool:
+    """The same two questions asked correctly, pinned clean."""
+
+    return hold_move(record, A_START) is HoldMove.GRANT and keeping_a_court(record)
+
+
+def a_reclaimed_holds_age_may_be_absent(record: MatchRecord) -> Minutes:
+    """`Hold.age` is `Minutes | None`: only a hold just taken back carries one.
+
+    Reading it unchecked is how a card comes to print *held for None hours*.
+    """
+
+    return court_hold(record, A_START).age  # want-error: return-value
+
+
+def a_hold_that_is_checked_composes(record: MatchRecord) -> Minutes | None:
+    age = court_hold(record, A_START).age
+    return None if age is None else minutes(age + 1)

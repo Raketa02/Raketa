@@ -94,8 +94,9 @@ Rules to preserve:
   every run. The same rule now covers clubs, court claims and matches, each named for its own
   edge — and a **seeded match names the `Situation` it resolves to**, checked by the kernel,
   which is the strongest form of the rule available anywhere in the catalog. Seed only what is
-  **decided**: nothing seeds a match-held reservation, because *when* a court is held is the
-  hold ladder's call and that ladder is not written yet.
+  **decided** — and a match's court is not seeded at all: it is *granted*, by the ladder, on the
+  way through the same use cases a request runs, so a seeded match holds a court exactly when
+  its seats and its clock say it should.
 - **New routes mount under `app/api/v1/router.py`;** keep the `/api/v1` prefix.
 - **Validate and normalize inside the value object**, not in the use case — see
   `app/modules/users/domain/value_objects.py`.
@@ -138,6 +139,21 @@ Rules to preserve:
   held and which court it is are all computed or answered elsewhere. The club's four
   hold-policy fields are **copied at posting** and honoured as booked (ADR-0077), which is what
   lets `Match.as_record()` resolve a situation with **no other read**.
+- **The hold ladder is a write, and it runs inside the write that moved the match.** Whether
+  a court *should* be kept aside is composed from the seats and the clock on every read
+  (`kernel.court_hold`); *since when* one has been is `held_since`, which is stored because it
+  cannot be derived ([ADR-0031](../docs/adr/0031-hold-ladder-is-a-floor-at-a-level-of-certainty.md)).
+  `kernel.hold_move` is the only thing that may move them apart or back together, and
+  `matches.ResolveCourtHold` is the only caller — **before the save, in the same transaction**,
+  on every Matches write, enforced by an AST walk. Run afterwards or on the outbox and there is
+  a window in which a stored record sits in the one combination the kernel refuses to read, and
+  it arrives as a 500 on a home screen rather than as a red test. A grant that finds no free
+  court records an **inventory loss** — ADR-0035's single story — rather than a hold with
+  nothing behind it. `held_since` **outlives the reclaim that ends it**
+  ([ADR-0089](../docs/adr/0089-held-since-outlives-the-reclaim-that-ends-it.md)): the club's cap
+  is measured from it, so clearing it there would reset the clock that just fired and the court
+  would flicker rather than go back on sale. Read *is a court kept aside* through
+  `kernel.keeping_a_court`, never off either field alone.
 - **A court is claimed by a reservation, and the database is what refuses the second one.**
   A reservation is one court and one **time range**, and two may never overlap on one court —
   enforced by `EXCLUDE USING gist` over `tstzrange(claimed_from, claimed_to, '[)')`, partial

@@ -74,6 +74,7 @@ from app.bootstrap.composition import (
     build_clock,
     build_domain_event_store,
     build_event_publisher,
+    build_court_holds,
     build_match_repository,
     build_password_hasher,
     build_reservation_repository,
@@ -127,6 +128,7 @@ from app.modules.matches.application.commands import (
     VacateSeatCommand,
 )
 from app.modules.matches.application.post_match import PostMatch
+from app.modules.matches.application.resolve_court_hold import ResolveCourtHold
 from app.modules.matches.application.seat_moves import PaySeat, TakeSeat, VacateSeat
 from app.modules.matches.domain.match import Match
 from app.modules.matches.domain.ports import MatchRepository
@@ -294,6 +296,7 @@ class _UseCases:
     pay_seat: PaySeat
     vacate_seat: VacateSeat
     cancel_match: CancelMatch
+    resolve_hold: ResolveCourtHold
     #: The clock the Matches use cases write with. See `_SeededWeekClock`.
     week: "_SeededWeekClock"
 
@@ -316,9 +319,14 @@ def _build(session: AsyncSession) -> _UseCases:
     bookings = build_booking_repository(session)
     claim_court = ClaimCourt(clubs, reservations, uow)
     matches = build_match_repository(session, events=events)
+    court_holds = build_court_holds(claim_court, reservations)
     # Matches is the one context seeded on a clock the runner sets. See
     # `_SeededWeekClock` for why, and `app/seeds/matches.py` for what it buys.
     week = _SeededWeekClock()
+    # The ladder is on the seeded week's clock too, and it has to be: a hold is
+    # granted at the instant a tier is entered, and on the wall clock every
+    # seeded `held_since` would be the day the seed happened to run.
+    resolve_hold = ResolveCourtHold(matches, court_holds, uow, week)
 
     return _UseCases(
         users=users,
@@ -331,11 +339,12 @@ def _build(session: AsyncSession) -> _UseCases:
         claim_court=claim_court,
         book_court=BookCourt(clubs, bookings, claim_court, uow, clock),
         release_reservation=ReleaseReservation(reservations, uow, clock),
-        post_match=PostMatch(matches, clubs, uow, week),
-        take_seat=TakeSeat(matches, uow, week),
-        pay_seat=PaySeat(matches, uow, week),
-        vacate_seat=VacateSeat(matches, uow, week),
-        cancel_match=CancelMatch(matches, uow, week),
+        post_match=PostMatch(matches, clubs, resolve_hold, uow, week),
+        take_seat=TakeSeat(matches, resolve_hold, uow, week),
+        pay_seat=PaySeat(matches, resolve_hold, uow, week),
+        vacate_seat=VacateSeat(matches, resolve_hold, uow, week),
+        cancel_match=CancelMatch(matches, resolve_hold, uow, week),
+        resolve_hold=resolve_hold,
         week=week,
         register_club=RegisterClub(clubs, uow, clock),
         change_policy=ChangeClubPolicy(clubs, uow, clock),

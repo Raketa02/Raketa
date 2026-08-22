@@ -684,8 +684,10 @@ committed ahead of the code and the code was built with them rather than around 
 backend's own technical vocabulary for the aggregate — the five kinds, the policy snapshot,
 the announcement obligation — is in
 [`backend/CONTEXT.md`](backend/CONTEXT.md). What is **not** built yet is named where it is
-named: the departure record (`#67`), seat claims (`#68`), the hold ladder that grants a court
-(`#71`) and the timekeeper (`#72`).
+named: the departure record (`#67`), seat claims (`#68`) and the timekeeper (`#72`). The
+**hold ladder** that grants and reclaims a court is built (`#71`): it runs inside the write
+that moved the match, and `heldSince` outlives the reclaim that ends it
+([ADR-0089](docs/adr/0089-held-since-outlives-the-reclaim-that-ends-it.md)).
 
 Committed by [ADR-0030](docs/adr/0030-a-departure-is-an-audience-not-a-state.md),
 [ADR-0031](docs/adr/0031-hold-ladder-is-a-floor-at-a-level-of-certainty.md),
@@ -862,10 +864,14 @@ Committed by [ADR-0030](docs/adr/0030-a-departure-is-an-audience-not-a-state.md)
   one court with different rights, and what separates them is which door they came through.
 
 - **Hold age** — how long a court has been **held**, measured from `heldSince` (written when a
-  hold is first granted, cleared when it lapses) — never from when the match was created. A club
-  cap on hold age may reclaim a low-certainty hold and may never touch one a seat short, and a
-  hold that regains certainty stops being stale
+  hold is granted) — never from when the match was created. A club cap on hold age may reclaim a
+  low-certainty hold and may never touch one a seat short, and a hold that regains certainty
+  stops being stale
   ([ADR-0031](docs/adr/0031-hold-ladder-is-a-floor-at-a-level-of-certainty.md)).
+  **`heldSince` outlives the reclaim that ends it**, so a reclaimed hold keeps ageing and its
+  card keeps saying how long it really sat; *is a court being kept aside* is `heldSince` and
+  `releasedAt` read together, never either alone
+  ([ADR-0089](docs/adr/0089-held-since-outlives-the-reclaim-that-ends-it.md)).
 - **Composed order** — the sequence of the enrolled strip. It belongs to the **composed screen**,
   not to the matches in it: sorted by start time at composition, tie-broken on match id, shipped
   in the payload, and recomputed only when the screen is composed — on open and on explicit
