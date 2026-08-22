@@ -90,8 +90,10 @@ Rules to preserve:
 - **A seed account is named for a state, and the name is checked.** The catalog is a list
   of edges — nothing yet, one open run, one abandoned, a rating at the edge of its band —
   and a rated scenario carries the band it promises, checked against the stored rating on
-  every run. Seed only what is **modeled**: Clubs, Courts, Bookings and Matches have no
-  aggregates, so they get no scenarios and no invented ones.
+  every run. The same rule now covers clubs and court claims, each named for its own edge.
+  Seed only what is **modeled**: Matches has no aggregate, so nothing seeds a match-held
+  reservation — and a uuid standing in for one is the version of that creep no import walk
+  can see.
 - **New routes mount under `app/api/v1/router.py`;** keep the `/api/v1` prefix.
 - **Validate and normalize inside the value object**, not in the use case — see
   `app/modules/users/domain/value_objects.py`.
@@ -120,6 +122,19 @@ Rules to preserve:
   constructed. A series is rebuilt from disk by **one** ordering function — `valid_from` alone
   is ambiguous the moment two rows share an instant, and an ambiguous ORDER BY reads as a
   broken database rather than as a bug.
+- **A court is claimed by a reservation, and the database is what refuses the second one.**
+  A reservation is one court and one **time range**, and two may never overlap on one court —
+  enforced by `EXCLUDE USING gist` over `tstzrange(claimed_from, claimed_to, '[)')`, partial
+  over the live rows, never by read ordering
+  ([ADR-0035](../docs/adr/0035-a-reservation-claims-a-court-over-an-interval.md)). A caller
+  asks for **a category and a window**, never for a court. Losing inventory is therefore a
+  **query result and never a race outcome**: a refused claim is re-asked with that court
+  removed, and only *nothing was free* reaches a player. The refusal arrives as one of two
+  SQLSTATEs — `23P01` and, when the writers are exactly simultaneous, `40P01` — so the adapter
+  catches `DBAPIError` rather than `IntegrityError`. **Availability is a projection over
+  reservations and no count is stored anywhere.** A reservation is **released, never
+  deleted**, because a court's booking history is a query over reservations. SQLite has none
+  of this: the ordinary path is tested fast and the race lives in `tests/integration/`.
 - **The kernel is one import path.** `app.kernel` re-exports its whole public API through
   an explicit `__all__`, and nothing outside the package — tests included — imports a
   submodule, so a definition can move between kernel files without touching a caller
@@ -186,7 +201,9 @@ Conventional Commits, scoped `api` or the module: `feat(bookings): reject overla
 slots`. Run `make check` before pushing; CI runs the same gate for `backend/**` changes.
 
 The shared glossary is [`../CONTEXT.md`](../CONTEXT.md); backend-only technical vocabulary
-is in [`CONTEXT.md`](CONTEXT.md). Never redefine a domain term locally. **Clubs, Courts,
-Bookings and Matches are listed but not yet modeled** — before writing code in one, resolve
-its terms into the glossary and record the aggregate shape in an ADR, including whether it
-is event-sourced or persisted-with-events.
+is in [`CONTEXT.md`](CONTEXT.md). Never redefine a domain term locally. **Matches is listed
+but not yet modeled** — before writing code in it, resolve its terms into the glossary and
+record the aggregate shape in an ADR, including whether it is event-sourced or
+persisted-with-events. Clubs, Courts and Bookings are modeled: all three are **records with
+a version**, decided by [ADR-0077](../docs/adr/0077-a-club-is-a-record-and-history-is-a-property-of-three-facts.md)
+and [ADR-0035](../docs/adr/0035-a-reservation-claims-a-court-over-an-interval.md).

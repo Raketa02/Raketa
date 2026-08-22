@@ -534,9 +534,17 @@ context from the first commit, and so nobody invents a fourth name for the same 
 | --- | --- | --- |
 | **Clubs** | The tenant: a venue that owns courts, staff, opening hours, pricing. | `backend/app/modules/clubs/` |
 | **Courts** | The bookable resource: surface, indoor/outdoor, sport, availability rules. | `backend/app/modules/courts/` |
-| **Bookings** | A player's reservation of a court for a time slot. Cancellation, no-shows, payment state. | `backend/app/modules/bookings/` |
+| **Bookings** | A player's reservation of a court for a time slot. Cancellation, no-shows, payment state. | `backend/app/modules/courts/` — **built together with Courts**, see below |
 | **Matches** | Players organising play: open matches, joining, levels, results. | `backend/app/modules/matches/` |
 | **Money** | Every złoty that moves: who paid, who was paid, why, and what a player owes. | `backend/app/modules/money/` |
+
+**Bookings shares a module with Courts**, which is a departure from the row above and is
+recorded rather than left to be noticed. A Booking has one field the Reservation does not
+imply — the price the buyer was quoted — and is otherwise defined entirely in terms of the
+claim it holds; the two are written in **one transaction** by
+[ADR-0035](docs/adr/0035-a-reservation-claims-a-court-over-an-interval.md), which makes them
+one consistency boundary in the write path. It stays cheap to reverse: `Booking` imports
+nothing from `Reservation`, so splitting it out is a file move rather than a redesign.
 
 > **Do not treat this table as settled design.** It records intent and naming, not
 > aggregates, invariants, or ownership. Before writing code in one of these, resolve
@@ -635,9 +643,13 @@ There is no Clubs code at all yet; these names exist first.
 **A club is only ever a payee, never a payer** — that rule belongs to Money and is unchanged
 here ([ADR-0045](docs/adr/0045-the-owners-guarantee-is-the-whole-court-and-never-shrinks.md)).
 
-### Courts and Bookings — terms committed ahead of the code
+### Courts and Bookings
 
-Committed by [ADR-0035](docs/adr/0035-a-reservation-claims-a-court-over-an-interval.md).
+Committed by [ADR-0035](docs/adr/0035-a-reservation-claims-a-court-over-an-interval.md), and
+**built**: `backend/app/modules/courts/`. The exclusion constraint is real
+(`ex_reservations_no_overlapping_claim`), availability is a query, and a court's booking
+history is a query over reservations — see `backend/CONTEXT.md` for the technical terms the
+implementation added.
 
 - **Reservation** — one court, one time range, claimed. **The only thing that can make a court
   unavailable.** Two reservations may never overlap on one court; that is the rule, and it is

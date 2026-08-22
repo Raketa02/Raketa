@@ -459,10 +459,11 @@ there; they are not repeated here.
 
 - **Seed club** — a deterministic development club created by `app/seeds/clubs.py`, named
   for the **state** it represents, with its name doubling as its natural key so the two
-  cannot drift. Six of them, one per edge the Clubs context exists to represent: a club that
+  cannot drift. Seven of them, one per edge the Clubs context exists to represent: a club that
   never holds speculatively, one that tightened its cap, one whose sport is priced as two
   categories, one that retired a court, one that retired a category, one that changed its
-  bank. Every payout destination carries an IBAN whose check digits are invalid on purpose —
+  bank, and one that needs a turnaround between bookings. Every payout destination carries an
+  IBAN whose check digits are invalid on purpose —
   the reserved-TLD argument, one context over. _Avoid_: nine plausible venues, which is one
   scenario nine times.
 - **Club claim** — what a seeded club's *name* promises, as a predicate over the stored club
@@ -473,11 +474,69 @@ there; they are not repeated here.
   what is worth checking is that the state the name *describes* is still there. _Avoid_:
   asserting the catalog's own numbers back; a claim checked only on the run that created the
   club.
+- **Reservation record** (`courts.Reservation`) — one court, one time range, claimed, with a
+  version and a `releasedAt`. Two intervals, and they are different facts: **played** is what
+  the players get and the only one anybody is shown, **claimed** is what excludes everybody
+  else. A record rather than a stream (ADR-0034 one context over), so a court's booking
+  history is a query over reservations rather than a fold. _Avoid_: one interval; a
+  reservation deleted rather than released; a claim narrower than the play it is for.
+- **Holder** (`courts.Holder`) — who a reservation is claimed for, as a closed union of three:
+  a **Booking** (a player bought the court), a **court hold** (a match's speculative claim,
+  granted and withdrawn by the hold ladder), and a **club block** (the venue's own — a league
+  night, a lesson, a walk-in). Whether the club's `turnaroundMin` widens the claim is read off
+  the holder and stored nowhere, because the holder already says it. _Avoid_: a `padded` or
+  `origin` column beside the holder — one fact spelled twice, and the day they disagree the
+  turnaround is applied to a block that was already padded.
+- **Claimed vs played** — `claimed = played` for a club block, and `played` widened at the
+  **tail** by `turnaroundMin` for anything Raketa creates. The tail alone, because padding
+  both ends charges the gap twice; and it composes only because intervals are half-open, so
+  the next claim may begin the instant this one ends. _Avoid_: padding a club-published block,
+  which double-books the gap it already contains.
+- **The exclusion constraint** (`ex_reservations_no_overlapping_claim`) — `EXCLUDE USING gist
+  (court_id WITH =, tstzrange(claimed_from, claimed_to, '[)') WITH &&) WHERE (released_at IS
+  NULL)`. The whole of ADR-0035 as one line of DDL, and the reason double-booking is
+  structurally impossible rather than unlikely. Four properties, each a different constraint if
+  it moves: keyed on the court, testing **overlap** rather than adjacency, half-open, and
+  partial over the live rows. Declared by a dialect-scoped `after_create` listener, because an
+  `ExcludeConstraint` in the metadata would break `create_all` on SQLite. _Avoid_: a unique
+  index on a slot's start, which lets 14:00–15:30 and 14:30–16:00 share a court.
+- **Losing inventory** (`courts.InventoryLost`) — *no court of this category is free for this
+  window*. **Always a query result, never a race outcome**: the constraint makes the race
+  impossible rather than detectable, so there is exactly one story to tell the player. A
+  retired category answers the same way as a fully-booked one. _Avoid_: telling a player
+  anything about a race; `CourtAlreadyClaimed` reaching a caller outside the context.
+- **The court is taken** (`courts.COURT_IS_TAKEN`) — the two SQLSTATEs that mean *somebody
+  else reached this court*: `23P01` (`exclusion_violation`) and `40P01` (`deadlock_detected`).
+  The second arrives when two writers are exactly simultaneous — a GiST exclusion index
+  inserts its entry before it scans for a conflict, so each can wait on the other — and it is
+  **not** an `IntegrityError`, which is why the adapter catches `DBAPIError`. Both mean *look
+  again*, and the use case re-asks with that court removed. _Avoid_: catching `IntegrityError`
+  alone, which lets the closest race of all escape as a 500.
+- **Availability, projected** (`courts.free_courts`) — *is a court of this category free for
+  this window*, computed from reservations on every ask. **No availability number is stored
+  anywhere**, so there is nothing beside the rows to drift from — and a club's own block takes
+  a court out of inventory without anything having to remember to decrement it. _Avoid_: a
+  counter against `(club, category, interval)`, which is the same defect as a uniqueness rule
+  on a slot's start.
+- **Published court** (`courts.PublishedCourt`) — what a reader outside the context may be
+  told: the **category** always, and the **court** only from `kernel.court_named_at(start)` —
+  fifteen minutes before play, the same constant the door code reads. That is what lets a seat
+  price be quoted before a court exists and stay fixed when one is assigned. _Avoid_: naming a
+  court on a card, which promises something the club never sold and may reassign.
+- **Seed reservation** — a deterministic development claim created by `app/seeds/courts.py`,
+  named for the **state** it represents and checked against the stored reservation on every
+  run. Its window is a **fixed absolute instant**, not an offset from now: *next Tuesday at
+  18:00* computed at run time is a different Tuesday tomorrow, and the run that creates nothing
+  could never happen. Two of the three holders are seeded; a match-held claim would need a
+  match id, and Matches has no aggregate. _Avoid_: a uuid standing in for an aggregate, which
+  satisfies every import walk in the suite and is still an invented context.
+
 - **Postgres-only guarantee** — a rule the database enforces that SQLite cannot express,
   so a suite running on SQLite can state it in a comment and enforce nothing. Three exist:
   a reservation's overlapping-interval exclusion (`EXCLUDE USING gist`), the partial unique
   index keeping one open row per versioned series, and `FOR UPDATE SKIP LOCKED` outbox
-  claiming. Their tests live in `tests/integration/` and **nowhere else**; the API suite
+  claiming. The first is now on a real table — see **The exclusion constraint** above. Their
+  tests live in `tests/integration/` and **nowhere else**; the API suite
   stays on in-memory SQLite, which is what makes it fast. _Avoid_: asserting one of these
   against SQLite, where the assertion passes and means nothing.
 - **The harness guard** — the rule that a Postgres-only case **skips on a laptop and fails

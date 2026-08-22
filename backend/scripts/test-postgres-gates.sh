@@ -15,13 +15,15 @@
 # again. It also drives the harness's own guard: a pipeline with no database must
 # fail rather than skip, which is the failure mode #62 exists to remove.
 #
-# **Two files are mutated**, and the difference matters. `tests/integration/ddl.py`
+# **Three files are mutated**, and the difference matters. `tests/integration/ddl.py`
 # is the shape harness #62 landed — throwaway tables, with no application code
-# behind them. `app/modules/clubs/infrastructure/sqlalchemy_club_models.py` is the
-# real declaration the Clubs tables are created from, so a mutation against it
-# breaks the schema the application maps to, which is the stronger statement (#64).
+# behind them. `app/modules/clubs/infrastructure/sqlalchemy_club_models.py` and
+# `app/modules/courts/infrastructure/sqlalchemy_court_models.py` are the real
+# declarations the Clubs and Courts tables are created from, so a mutation against
+# either breaks the schema the application maps to, which is the stronger
+# statement (#64, #65).
 #
-# Both are edited in place and restored on exit — including on failure or
+# All three are edited in place and restored on exit — including on failure or
 # interrupt — so it is safe on a dirty tree.
 #
 # Not part of `make check`, for the same reason `make test-gates`,
@@ -36,28 +38,35 @@ cd "$ROOT" || exit 2
 
 DDL="tests/integration/ddl.py"
 CLUB_MODELS="app/modules/clubs/infrastructure/sqlalchemy_club_models.py"
+COURT_MODELS="app/modules/courts/infrastructure/sqlalchemy_court_models.py"
 EXCLUSION_TESTS="tests/integration/test_interval_exclusion.py"
 UNIQUE_TESTS="tests/integration/test_partial_unique_index.py"
 CLUB_TESTS="tests/integration/test_club_series.py"
+COURT_TESTS="tests/integration/test_reservation_exclusion.py"
 DRIFT_TESTS="tests/unit/test_clubs_migration.py"
+COURT_DRIFT_TESTS="tests/unit/test_courts_migration.py"
 GUARD_TESTS="tests/integration/test_harness_guard.py"
 OUT=$(mktemp)
 DDL_BACKUP=$(mktemp)
 CLUB_BACKUP=$(mktemp)
+COURT_BACKUP=$(mktemp)
 
 restore() {
   [ -s "$DDL_BACKUP" ] && cp "$DDL_BACKUP" "$DDL"
   [ -s "$CLUB_BACKUP" ] && cp "$CLUB_BACKUP" "$CLUB_MODELS"
-  rm -f "$DDL_BACKUP" "$CLUB_BACKUP" "$OUT"
+  [ -s "$COURT_BACKUP" ] && cp "$COURT_BACKUP" "$COURT_MODELS"
+  rm -f "$DDL_BACKUP" "$CLUB_BACKUP" "$COURT_BACKUP" "$OUT"
 }
 trap restore EXIT INT TERM
 
-for f in "$DDL" "$CLUB_MODELS" "$EXCLUSION_TESTS" "$UNIQUE_TESTS" "$CLUB_TESTS" \
-         "$DRIFT_TESTS" "$GUARD_TESTS"; do
+for f in "$DDL" "$CLUB_MODELS" "$COURT_MODELS" "$EXCLUSION_TESTS" "$UNIQUE_TESTS" \
+         "$CLUB_TESTS" "$COURT_TESTS" "$DRIFT_TESTS" "$COURT_DRIFT_TESTS" \
+         "$GUARD_TESTS"; do
   [ -f "$f" ] || { echo "missing: $f" >&2; exit 2; }
 done
 cp "$DDL" "$DDL_BACKUP"
 cp "$CLUB_MODELS" "$CLUB_BACKUP"
+cp "$COURT_MODELS" "$COURT_BACKUP"
 
 pass=0
 fail=0
@@ -113,6 +122,9 @@ mutate() { edit "$DDL" "$DDL_BACKUP" "$1" "$2"; }
 
 # mutate_club <old> <new> — the same, against the real Clubs declarations.
 mutate_club() { edit "$CLUB_MODELS" "$CLUB_BACKUP" "$1" "$2"; }
+
+# mutate_court <old> <new> — the same, against the real Courts declarations.
+mutate_court() { edit "$COURT_MODELS" "$COURT_BACKUP" "$1" "$2"; }
 
 edit() {
   cp "$2" "$1"
@@ -197,14 +209,60 @@ mutate_club 'LIVE_CATEGORY = "retired_at IS NULL"' 'LIVE_CATEGORY = "1 = 1"' &&
   expect_red "the category name index no longer keyed on liveness" "$CLUB_TESTS" \
     "$DRIFT_TESTS"
 
-# --- 4. restored -----------------------------------------------------------
+# --- 4. the reservation exclusion, on the real declarations ----------------
+# ADR-0035's constraint, and the reason `sqlalchemy_court_models.py` assembles it
+# from four named constants rather than writing one literal: four separate
+# properties are load-bearing, and each has to be breakable **on its own** for
+# these to mean anything. Each also reddens the Courts migration-drift test,
+# which compares the two copies of the string and then asserts what the string
+# *says* — two files agreeing on the wrong constraint is the one thing a
+# comparison between them cannot catch.
+
+# Gone entirely. The table is created and nothing stops a court being sold twice
+# — C1's defect, restored: expensive, silent and terminal.
+mutate_court $'sa.event.listen(\n    ReservationORM.__table__,\n    "after_create",\n    sa.DDL(RESERVATION_EXCLUSION_DDL).execute_if(dialect="postgresql"),\n)' '' &&
+  expect_red "the reservation exclusion constraint removed" "$COURT_TESTS"
+
+# Testing adjacency rather than overlap, which is the same constraint meaning the
+# opposite thing: back-to-back claims would collide and overlapping ones would
+# not.
+mutate_court 'OVERLAPS = "WITH &&"' 'OVERLAPS = "WITH -|-"' &&
+  expect_red "the reservation exclusion testing adjacency instead of overlap" \
+    "$COURT_TESTS" "$COURT_DRIFT_TESTS"
+
+# No longer keyed on the court, so one club sells one hour a day site-wide.
+mutate_court 'ONE_COURT = "court_id WITH ="' 'ONE_COURT = "TRUE WITH ="' &&
+  expect_red "the reservation exclusion no longer keyed on the court" \
+    "$COURT_TESTS" "$COURT_DRIFT_TESTS"
+
+# Closed at both ends: a court freed at 19:00 could no longer be taken at 19:00,
+# so every back-to-back booking in the product would be refused — and
+# `turnaroundMin` would stop being expressible as padding.
+mutate_court 'RANGE_BOUNDS = "[)"' 'RANGE_BOUNDS = "[]"' &&
+  expect_red "the claimed range closed at both ends" "$COURT_TESTS" \
+    "$COURT_DRIFT_TESTS"
+
+# No longer partial: a released claim keeps blocking the court for ever, so a
+# withdrawn hold takes the slot out of inventory permanently.
+mutate_court 'LIVE_CLAIM = "released_at IS NULL"' 'LIVE_CLAIM = "1 = 1"' &&
+  expect_red "the reservation exclusion no longer partial over live claims" \
+    "$COURT_TESTS" "$COURT_DRIFT_TESTS"
+
+# The `btree_gist` extension not created: `court_id WITH =` has no operator class
+# without it, so the constraint cannot be built at all on a fresh database.
+mutate_court 'BTREE_GIST_DDL = "CREATE EXTENSION IF NOT EXISTS btree_gist"' \
+  'BTREE_GIST_DDL = "SELECT 1"' &&
+  expect_red "btree_gist no longer created with the table" "$COURT_DRIFT_TESTS"
+
+# --- 5. restored -----------------------------------------------------------
 
 cp "$DDL_BACKUP" "$DDL"
 cp "$CLUB_BACKUP" "$CLUB_MODELS"
+cp "$COURT_BACKUP" "$COURT_MODELS"
 expect_green "restored: the integration suite is green again" tests/integration \
-  "$DRIFT_TESTS"
+  "$DRIFT_TESTS" "$COURT_DRIFT_TESTS"
 
-# --- 5. the harness's own guard --------------------------------------------
+# --- 6. the harness's own guard --------------------------------------------
 # The rule is: a pipeline with no database fails, a laptop with no database
 # skips. `test_harness_guard.py` asserts the *inputs* to that decision; this
 # drives the decision itself, as real pytest runs with every URL variable

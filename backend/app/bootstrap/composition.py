@@ -53,6 +53,16 @@ from app.modules.auth.infrastructure.sqlalchemy_refresh_token_repository import 
     SqlAlchemyRefreshTokenRepository,
 )
 from app.modules.clubs.domain.ports import ClubRepository
+from app.modules.courts.domain.ports import (
+    BookingRepository,
+    ReservationRepository,
+)
+from app.modules.courts.infrastructure.sqlalchemy_booking_repository import (
+    SqlAlchemyBookingRepository,
+)
+from app.modules.courts.infrastructure.sqlalchemy_reservation_repository import (
+    SqlAlchemyReservationRepository,
+)
 from app.modules.clubs.infrastructure.sqlalchemy_club_repository import (
     SqlAlchemyClubRepository,
 )
@@ -186,3 +196,24 @@ def build_club_repository(session: AsyncSession) -> ClubRepository:
     it.
     """
     return SqlAlchemyClubRepository(session)
+
+
+# --------------------------------------------------------------------------
+# Courts and Bookings
+# --------------------------------------------------------------------------
+
+
+def build_reservation_repository(session: AsyncSession) -> ReservationRepository:
+    """The record repository, over `session`.
+
+    A session rather than its own ports, for the reason the club's takes one: a
+    reservation is rows, the concurrency guard is a column, and there is no
+    event store to share. What this adapter *does* need a session for beyond the
+    obvious is the savepoint it opens around every claim — the exclusion
+    constraint's refusal has to be scoped so the caller can look again.
+    """
+    return SqlAlchemyReservationRepository(session)
+
+
+def build_booking_repository(session: AsyncSession) -> BookingRepository:
+    return SqlAlchemyBookingRepository(session)

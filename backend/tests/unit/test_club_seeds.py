@@ -175,6 +175,20 @@ async def _seeded_clubs(session_factory):
         return (await seed(session)).clubs
 
 
+def _only_the_club_catalog(monkeypatch) -> None:
+    """Narrow the court claims away while the club catalog is under test.
+
+    The catalogs are coupled on purpose: a court claim names a club's category,
+    and the runner refuses a claim whose club is missing rather than skipping it
+    — a half-edited catalog is a failure, not a smaller run. So a test that
+    replaces `CLUBS` with one club has, by construction, deleted the venue a
+    seeded claim names.
+    """
+
+    monkeypatch.setattr("app.seeds.runner.RESERVATIONS", ())
+
+
+
 async def test_every_club_reaches_the_state_its_name_promises(session_factory):
     """The claims, met by the use cases the API actually serves. This is what
     makes the names mean something."""
@@ -274,6 +288,7 @@ async def test_a_name_that_stops_matching_its_state_stops_the_seed(
         NEVER_HOLDS, policies=(ClubPolicy(max_hold_age=hours(6)),)
     )
     monkeypatch.setattr("app.seeds.runner.CLUBS", (lying,))
+    _only_the_club_catalog(monkeypatch)
 
     async with session_factory() as session:
         with pytest.raises(SeedFailed, match="never holds a court speculatively"):
@@ -298,6 +313,7 @@ async def test_a_claim_is_checked_on_a_run_that_creates_nothing(
         payouts=NEVER_HOLDS.payouts,
     )
     monkeypatch.setattr("app.seeds.runner.CLUBS", (impossible,))
+    _only_the_club_catalog(monkeypatch)
 
     async with session_factory() as session:
         with pytest.raises(SeedFailed, match="no courts at all"):
@@ -318,6 +334,7 @@ async def test_an_interrupted_club_is_finished_rather_than_duplicated(
         claim=ClubClaim(promise="a club part-way through", holds=lambda c: True),
     )
     monkeypatch.setattr("app.seeds.runner.CLUBS", (half_done,))
+    _only_the_club_catalog(monkeypatch)
     async with session_factory() as session:
         await seed(session)
 

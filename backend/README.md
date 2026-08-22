@@ -375,8 +375,8 @@ The password for every seeded account is `raketa-seed1`, and it is public by
 construction — it is written in `app/seeds/catalog.py`.
 
 Clubs are seeded too, in `app/seeds/clubs.py`, on the same rule — **a club is named for
-the state it represents**, and its name is its natural key so the two cannot drift. Six of
-them, one per edge:
+the state it represents**, and its name is its natural key so the two cannot drift. Seven
+of them, one per edge:
 
 | Club | State |
 | --- | --- |
@@ -386,16 +386,32 @@ them, one per edge:
 | `club-that-retired-a-category` | A retired category and the courts that were in it |
 | `club-that-tightened-its-cap` | 48 h then 6 h — ADR-0077's motivating scenario, standing |
 | `club-that-changed-its-bank` | Two payout destinations and one policy |
+| `club-that-needs-a-turnaround` | A quarter of an hour between bookings, so a claim is wider than the game |
 
 Every seeded payout destination carries an IBAN whose check digits are invalid on purpose,
 so a run pointed at the wrong database cannot pay a stranger — the reserved-TLD argument,
 one context over.
 
-Scope is what is **modeled**: players, onboarding assessments, Skill ratings and clubs.
-Courts, Bookings and Matches have no aggregates, so they have no scenarios; each adds its
-own when it exists. A walk over `app/seeds/` asserts the package imports **exactly** those
-three contexts — equality in both directions, so it grows deliberately and cannot silently
-fall behind.
+Court claims are seeded too, in `app/seeds/courts.py`, on the same rule:
+
+| Claim | State |
+| --- | --- |
+| `court-the-club-blocked` | A block the venue published — takes the court, and is never padded |
+| `court-claimed-past-the-game` | A claim Raketa created, widened by the club's turnaround |
+| `court-given-back` | Released, never deleted: the row stays and blocks nobody |
+| `court-bought-outright` | A Booking holding a claim, with the price the player was quoted |
+
+Their windows are **fixed absolute instants** on Monday 7 September 2026, not offsets from
+now: *next Tuesday at 18:00* computed at run time is a different Tuesday tomorrow, and a
+second run would claim a second court. A week somebody can walk through arrives with the
+demo week (`Raketa02/Raketa#96`).
+
+Scope is what is **modeled**: players, onboarding assessments, Skill ratings, clubs, and
+court reservations and bookings. **Matches has no aggregate**, so nothing seeds a
+match-held reservation — a uuid standing in for a match would satisfy every walk in the
+suite and still be an invented context. A walk over `app/seeds/` asserts the package
+imports **exactly** the four contexts that exist — equality in both directions, so it grows
+deliberately and cannot silently fall behind.
 
 Four rules hold this together, and each exists because of a specific way seed data goes
 wrong:
@@ -471,6 +487,18 @@ Three guarantees live there today: a reservation's overlapping-interval exclusio
 open row per club series, and `FOR UPDATE SKIP LOCKED` outbox claiming.
 The first has no SQLite equivalent at all; the second and third have shapes that
 resemble one and behave differently under concurrency.
+
+The reservation exclusion is where the split costs the most, and the line is worth
+knowing before writing a Courts test. The **ordinary** path — scan the category's
+courts, pick the first free one, write the claim — has no constraint in it and runs
+on SQLite in milliseconds (`tests/unit/test_court_reservations.py`); so does the
+*handling* of a refusal, driven by a stub that raises what the constraint raises.
+What only PostgreSQL can produce is the refusal itself and the race that causes it,
+and that is `tests/integration/test_reservation_exclusion.py` — including two real
+`ClaimCourt` calls racing on one court, which is the acceptance criterion in its own
+words. A useful thing that file measured: the loser gets `23P01` about three times in
+four and `40P01` — a deadlock, because a GiST exclusion index inserts before it scans
+— the rest of the time, and only one of the two is an `IntegrityError`.
 
 The Clubs indexes are the one case where the *same* guarantee is asserted twice on
 purpose, and the split is worth knowing. They are declared for both engines

@@ -13,9 +13,14 @@ from app.modules.clubs.infrastructure.sqlalchemy_club_models import (
     ClubPayoutDestinationORM,
     ClubPolicyORM,
 )
+from app.modules.courts.infrastructure.sqlalchemy_court_models import (
+    BookingORM,
+    ReservationORM,
+)
 from app.modules.users.infrastructure.sqlalchemy_user_model import UserORM
 
 __all__ = [
+    "BookingORM",
     "ClubCardOffsetORM",
     "ClubCourtCatalogueORM",
     "ClubCourtCategoryORM",
@@ -25,5 +30,6 @@ __all__ = [
     "EventOutboxORM",
     "EventStoreORM",
     "RefreshTokenORM",
+    "ReservationORM",
     "UserORM",
 ]

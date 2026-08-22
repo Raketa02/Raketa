@@ -18,6 +18,7 @@ from app.kernel import (
     Vacancy,
     born_late,
     committed_on_fill,
+    court_named_at,
     deadlines,
     door_code_at,
     filled,
@@ -109,6 +110,23 @@ def test_the_door_code_and_the_two_moments_after_the_last_point() -> None:
     assert door_code_at(played) == at(-15)
     assert match_end(played) == at(DURATION)
     assert result_window(played) == at(DURATION + 24 * 60)
+
+
+def test_the_court_is_named_at_the_same_moment_the_door_code_is() -> None:
+    """One constant, two readers. `courtAssigned` — the only state that names a
+    specific court (ADR-0035) — and *ready to play* are the same instant seen
+    from Courts and from Matches, so computing `start - 15min` twice is the
+    failure this layer exists to make unreachable.
+
+    `court_named_at` takes a **start** rather than a record, because Courts has
+    no `MatchRecord` to hand: a club's own block on a Tuesday morning is a
+    reservation with a start and no match behind it at all.
+    """
+
+    played = a_match(paid=4)
+
+    assert court_named_at(START) == at(-15)
+    assert court_named_at(played.start) == door_code_at(played)
 
 
 def test_committing_on_the_spot_is_told_apart_from_committing_at_the_deadline() -> None:

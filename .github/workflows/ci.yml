@@ -142,10 +142,11 @@ jobs:
       # each one against a deliberately impure tree and asserts it goes red.
       - name: Purity gates still fire
         run: bash scripts/test-purity-gates.sh
-      # Same argument, applied to the two constraints only Postgres enforces: both
-      # assertions were written against a schema that already satisfied them, so
-      # neither had ever been observed to fail. This breaks each constraint in turn
-      # and asserts the suite goes red.
+      # Same argument, applied to the constraints only Postgres enforces — the
+      # reservation exclusion and the partial unique indexes on the club series:
+      # every one of those assertions was written against a schema that already
+      # satisfied it, so none had ever been observed to fail. This breaks each
+      # constraint in turn and asserts the suite goes red.
       - name: Postgres guarantee gates still fire
         env:
           POSTGRES_TEST_URL: postgresql+asyncpg://raketa_user:raketa_pwd@localhost:5432/raketa

@@ -87,12 +87,13 @@ SEED_MODULES = sorted((ROOT / "app" / "seeds").glob("*.py"))
 #: will sell a name under any of them.
 RFC2606_RESERVED_TLDS = frozenset({".test", ".example", ".invalid", ".localhost"})
 
-#: The bounded contexts that have aggregates. Courts, Bookings and Matches are
-#: named in the glossary and modeled nowhere, so a seed for one of them would
-#: have to invent the aggregate first. Clubs joined the set with #64 — which is
-#: what the equality below is for: it grows deliberately, one context at a time,
-#: and it cannot silently fall behind either.
-MODELED_CONTEXTS = frozenset({"users", "rating", "clubs"})
+#: The bounded contexts that have aggregates. Matches is named in the glossary
+#: and modeled nowhere, so a seed for one of them would have to invent the
+#: aggregate first — which is why no seeded reservation is match-held. Clubs
+#: joined the set with #64 and Courts with #65, which is what the equality below
+#: is for: it grows deliberately, one context at a time, and it cannot silently
+#: fall behind either.
+MODELED_CONTEXTS = frozenset({"users", "rating", "clubs", "courts"})
 
 #: SQLAlchemy's statement constructors. Importing one into the seed path is how
 #: "just this once, it is only a fixture row" starts.
@@ -172,6 +173,7 @@ def test_the_walk_has_something_to_walk():
         "__main__.py",
         "catalog.py",
         "clubs.py",
+        "courts.py",
         "guard.py",
         "runner.py",
     }
@@ -502,6 +504,20 @@ async def _streams(session) -> dict[str, int]:
     return {aggregate: count for aggregate, count in rows.all()}
 
 
+def _only_this_catalog(monkeypatch) -> None:
+    """Narrow the *other* catalogs away while one is under test.
+
+    The catalogs are coupled on purpose: a court claim names a club's category
+    and a booking names a player, and the runner refuses a claim whose club or
+    player is missing rather than skipping it — a half-edited catalog is a
+    failure, not a smaller run. So a test that replaces `ACCOUNTS` with one
+    account has, by construction, deleted the buyer a seeded booking names, and
+    would otherwise fail on that instead of on what it is asking about.
+    """
+
+    monkeypatch.setattr("app.seeds.runner.RESERVATIONS", ())
+
+
 def _rated_scenarios() -> list[tuple[SeedAccount, RatedRun]]:
     return [
         (account, scenario)
@@ -594,6 +610,7 @@ async def test_a_name_that_stops_matching_its_state_stops_the_seed(
             ),
         ),
     )
+    _only_this_catalog(monkeypatch)
 
     async with session_factory() as session:
         with pytest.raises(SeedFailed, match="named for a state it no longer"):
@@ -615,6 +632,7 @@ async def test_the_claim_is_checked_on_a_run_that_creates_nothing(
     monkeypatch.setattr(
         "app.seeds.runner.ACCOUNTS", (replace(account, scenarios=(scenario,)),)
     )
+    _only_this_catalog(monkeypatch)
 
     async with session_factory() as session:
         await seed(session)
@@ -697,6 +715,7 @@ def test_the_report_names_the_address_the_password_and_every_state():
     account = next(entry for entry in ACCOUNTS if entry.slug == "rated-in-every-sport")
     lines = report(
         Seeded(
+            reservations=(),
             accounts=(
                 SeededAccount(
                     account=account,
@@ -733,6 +752,7 @@ def test_the_report_says_which_state_each_scenario_is_in():
 
     states = report(
         Seeded(
+            reservations=(),
             accounts=(
                 SeededAccount(
                     account=SeedAccount(slug="probe", description="probe"),
@@ -778,6 +798,7 @@ def test_the_report_names_every_club_and_what_state_it_is_in():
 
     lines = report(
         Seeded(
+            reservations=(),
             accounts=(),
             clubs=(
                 SeededClub(club=NEVER_HOLDS, club_id=UUID(int=9), created=True),

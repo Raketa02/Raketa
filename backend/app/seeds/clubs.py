@@ -314,6 +314,31 @@ CHANGED_ITS_BANK = SeedClub(
     ),
 )
 
+NEEDS_A_TURNAROUND = SeedClub(
+    slug="club-that-needs-a-turnaround",
+    description=(
+        "A quarter of an hour between bookings, and the only seeded club with "
+        "one. `turnaroundMin` widens the **claimed** interval of a reservation "
+        "Raketa creates and never pads one the club publishes, so this club is "
+        "where the two intervals on a reservation are visibly different things "
+        "(ADR-0035). The player is always shown the played one."
+    ),
+    claim=ClubClaim(
+        promise="a club that needs time between bookings",
+        holds=lambda club: club.policy_now.turnaround_min > 0,
+    ),
+    policies=(ClubPolicy(turnaround_min=minutes(15)),),
+    payouts=_payouts(UNROUTABLE_IBAN),
+    categories=(
+        SeedCategory(
+            name="Padel · indoor",
+            sport=Sport.PADEL,
+            rate=zloty(140),
+            courts=(SeedCourt("Court 1"), SeedCourt("Court 2")),
+        ),
+    ),
+)
+
 #: Every club this system creates, in the order a run walks them: simplest first,
 #: so a run interrupted half way leaves the plain states done.
 CLUBS: tuple[SeedClub, ...] = (
@@ -323,6 +348,7 @@ CLUBS: tuple[SeedClub, ...] = (
     RETIRED_A_CATEGORY,
     TIGHTENED_ITS_CAP,
     CHANGED_ITS_BANK,
+    NEEDS_A_TURNAROUND,
 )
 
 

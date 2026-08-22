@@ -69,11 +69,13 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.bootstrap.composition import (
     build_assessment_engine,
     build_assessment_repository,
+    build_booking_repository,
     build_club_repository,
     build_clock,
     build_domain_event_store,
     build_event_publisher,
     build_password_hasher,
+    build_reservation_repository,
     build_skill_rating_repository,
     build_unit_of_work,
     build_user_repository,
@@ -104,6 +106,16 @@ from app.modules.clubs.domain.catalogue import Court, CourtCategory
 from app.modules.clubs.domain.club import Club
 from app.modules.clubs.domain.ports import ClubRepository
 from app.modules.clubs.domain.value_objects import CategoryName, CourtLabel
+from app.modules.courts.application.book_court import BookCourt
+from app.modules.courts.application.claim_court import ClaimCourt
+from app.modules.courts.application.commands import (
+    BookCourtCommand,
+    ClaimCourtCommand,
+    ReleaseReservationCommand,
+)
+from app.modules.courts.application.release_reservation import ReleaseReservation
+from app.modules.courts.domain.ports import BookingRepository, ReservationRepository
+from app.modules.courts.domain.reservation import ClubHeld, HolderKind, Reservation
 from app.modules.rating.application.abandon_assessment import AbandonAssessment
 from app.modules.rating.application.commands import (
     AbandonAssessmentCommand,
@@ -133,6 +145,7 @@ from app.seeds.catalog import (
     SeedAccount,
 )
 from app.seeds.clubs import CLUBS, KRAKOW, SeedCategory, SeedClub
+from app.seeds.courts import RESERVATIONS, SeedReservation
 from app.seeds.guard import refuse_unless_seedable
 
 #: A questionnaire the seed can no longer finish is a hang, and a hang in a
@@ -193,16 +206,28 @@ class SeededClub:
 
 
 @dataclass(frozen=True)
+class SeededReservation:
+    """What one claim is, after the run — and whether this run created it."""
+
+    reservation: SeedReservation
+    reservation_id: UUID
+    court_id: UUID
+    created: bool
+
+
+@dataclass(frozen=True)
 class Seeded:
     """Everything one run brought into being, per context.
 
-    A tuple per context rather than one flat list, because the two are read by
-    different people: a developer signs in as an account, and looks at a club to
-    understand why a card says what it says.
+    A tuple per context rather than one flat list, because they are read by
+    different people: a developer signs in as an account, looks at a club to
+    understand why a card says what it says, and looks at a reservation to
+    understand why a court is not on offer.
     """
 
     accounts: tuple[SeededAccount, ...]
     clubs: tuple[SeededClub, ...]
+    reservations: tuple[SeededReservation, ...]
 
 
 @dataclass(frozen=True)
@@ -220,6 +245,8 @@ class _UseCases:
     assessments: AssessmentRepository
     ratings: SkillRatingRepository
     clubs: ClubRepository
+    reservations: ReservationRepository
+    bookings: BookingRepository
     register: RegisterUser
     create: CreateAssessment
     submit: SubmitAnswer
@@ -233,6 +260,9 @@ class _UseCases:
     add_court: AddCourt
     retire_court: RetireCourt
     get_club: GetClub
+    claim_court: ClaimCourt
+    book_court: BookCourt
+    release_reservation: ReleaseReservation
 
 
 def _build(session: AsyncSession) -> _UseCases:
@@ -249,12 +279,20 @@ def _build(session: AsyncSession) -> _UseCases:
     ratings = build_skill_rating_repository(event_store=event_store, events=events)
     users = build_user_repository(session)
     clubs = build_club_repository(session)
+    reservations = build_reservation_repository(session)
+    bookings = build_booking_repository(session)
+    claim_court = ClaimCourt(clubs, reservations, uow)
 
     return _UseCases(
         users=users,
         assessments=assessments,
         ratings=ratings,
         clubs=clubs,
+        reservations=reservations,
+        bookings=bookings,
+        claim_court=claim_court,
+        book_court=BookCourt(clubs, bookings, claim_court, uow, clock),
+        release_reservation=ReleaseReservation(reservations, uow, clock),
         register_club=RegisterClub(clubs, uow, clock),
         change_policy=ChangeClubPolicy(clubs, uow, clock),
         change_payout=ChangePayoutDestination(clubs, uow, clock),
@@ -303,12 +341,24 @@ async def seed(session: AsyncSession) -> Seeded:
     Nothing links the two — a club has no owner and a player has no membership —
     so the order is only about which failure a half-finished run leaves behind,
     and the accounts are what a developer signs in with.
+
+    Reservations come last, and that order **is** a dependency: a claim names a
+    club's category and a booking names a player, so both have to exist. It is
+    also the one context here whose scenarios can be refused by the *database*
+    rather than by the catalog — two seeded claims overlapping on one court
+    would be refused by the exclusion constraint, which is the system working.
     """
 
     use_cases = _build(session)
     accounts = tuple([await _seed_account(use_cases, account) for account in ACCOUNTS])
     clubs = tuple([await _seed_club(use_cases, club) for club in CLUBS])
-    return Seeded(accounts=accounts, clubs=clubs)
+    reservations = tuple(
+        [
+            await _seed_reservation(use_cases, accounts, clubs, reservation)
+            for reservation in RESERVATIONS
+        ]
+    )
+    return Seeded(accounts=accounts, clubs=clubs, reservations=reservations)
 
 
 async def _seed_account(use_cases: _UseCases, account: SeedAccount) -> SeededAccount:
@@ -756,6 +806,177 @@ def _state_of(scenario: Scenario) -> str:
             exhaustive(scenario)
 
 
+# ---------------------------------------------------------------------------
+# Courts and Bookings
+# ---------------------------------------------------------------------------
+
+
+async def _seed_reservation(
+    use_cases: _UseCases,
+    accounts: tuple[SeededAccount, ...],
+    clubs: tuple[SeededClub, ...],
+    scenario: SeedReservation,
+) -> SeededReservation:
+    """Bring one court into the state the scenario names, from wherever it is.
+
+    **The probe is a query over reservations**, which is the same sentence
+    ADR-0035 uses about availability and for the same reason: there is nothing
+    beside the rows to ask, so a second run cannot disagree with the first about
+    what it already did.
+
+    A claim is found by the window it plays and the court it is on, across the
+    club's whole live catalogue — *not* by an id, because the id is minted by the
+    write path and a fresh database mints a different one. Released rows are
+    matched too: the scenario named *a claim that was given back* is satisfied
+    by exactly one released row, and looking only at live ones would claim a
+    second court on every run.
+    """
+
+    club = await use_cases.get_club.execute(_seeded_club_id(clubs, scenario))
+    category = _seeded_category(club, scenario.category)
+    existing = await _claim_already_seeded(use_cases, club, category, scenario)
+    if existing is not None:
+        _refuse_a_reservation_whose_name_lies(scenario, existing)
+        return SeededReservation(
+            reservation=scenario,
+            reservation_id=existing.id,
+            court_id=existing.court_id,
+            created=False,
+        )
+
+    reservation = await _write_the_claim(use_cases, club, category, accounts, scenario)
+    if scenario.released:
+        reservation = await use_cases.release_reservation.execute(
+            ReleaseReservationCommand(reservation_id=reservation.id)
+        )
+
+    stored = await use_cases.reservations.get(reservation.id)
+    assert stored is not None  # just written, in this transaction
+    _refuse_a_reservation_whose_name_lies(scenario, stored)
+    return SeededReservation(
+        reservation=scenario,
+        reservation_id=stored.id,
+        court_id=stored.court_id,
+        created=True,
+    )
+
+
+async def _write_the_claim(
+    use_cases: _UseCases,
+    club: Club,
+    category: CourtCategory,
+    accounts: tuple[SeededAccount, ...],
+    scenario: SeedReservation,
+) -> Reservation:
+    """Through `BookCourt` or `ClaimCourt` — never a row, never a court id.
+
+    Which court is picked is the funnel's answer, not the catalog's. A seed that
+    named a court would be a seed that could not be refused by the exclusion
+    constraint, and the constraint is the thing this context exists for.
+    """
+
+    if scenario.held_by is HolderKind.BOOKING:
+        assert scenario.player_slug is not None  # `SeedReservation` refuses otherwise
+        booking = await use_cases.book_court.execute(
+            BookCourtCommand(
+                club_id=club.id,
+                category_id=category.id,
+                played=scenario.played,
+                player_id=_seeded_player(accounts, scenario.player_slug),
+            )
+        )
+        claimed = await use_cases.reservations.get(booking.reservation_id)
+        assert claimed is not None  # written in the same transaction
+        return claimed
+
+    return await use_cases.claim_court.execute(
+        ClaimCourtCommand(
+            club_id=club.id,
+            category_id=category.id,
+            played=scenario.played,
+            holder=ClubHeld(),
+        )
+    )
+
+
+async def _claim_already_seeded(
+    use_cases: _UseCases,
+    club: Club,
+    category: CourtCategory,
+    scenario: SeedReservation,
+) -> Reservation | None:
+    """Has this scenario already been written — asked of the courts themselves.
+
+    Every court of the category is walked rather than only the live ones,
+    because a court retired since the seed ran still carries the claim that was
+    made on it, and re-claiming would put a second one on a live court.
+    """
+
+    for court in club.courts:
+        for reservation in await use_cases.reservations.for_court(court.id):
+            if (
+                reservation.category_id == category.id
+                and reservation.played == scenario.played
+                and reservation.kind is scenario.held_by
+                and reservation.is_live is not scenario.released
+            ):
+                return reservation
+    return None
+
+
+def _seeded_club_id(
+    clubs: tuple[SeededClub, ...], scenario: SeedReservation
+) -> UUID:
+    for seeded in clubs:
+        if seeded.club.slug == scenario.club_slug:
+            return seeded.club_id
+    raise SeedFailed(
+        f"'{scenario.slug}' names the club '{scenario.club_slug}', which the "
+        f"club catalog does not hold. A claim on a club that does not exist is "
+        f"a catalog that has been half-edited."
+    )
+
+
+def _seeded_category(club: Club, name: str) -> CourtCategory:
+    category = _category_named(club, CategoryName(name))
+    if category is None:
+        raise SeedFailed(
+            f"a reservation names the category '{name}' at "
+            f"'{club.name.value}', which that club does not have."
+        )
+    return category
+
+
+def _seeded_player(accounts: tuple[SeededAccount, ...], slug: str) -> UUID:
+    for account in accounts:
+        if account.account.slug == slug:
+            return account.player_id
+    raise SeedFailed(
+        f"a booking names the player '{slug}', which the account catalog does "
+        f"not hold."
+    )
+
+
+def _refuse_a_reservation_whose_name_lies(
+    scenario: SeedReservation, stored: Reservation
+) -> None:
+    """Check the claim against the reservation that is **stored**, every run.
+
+    Including a run that created nothing — a seed written a month ago against a
+    catalog that has since had its turnaround edited is exactly the case a check
+    on the fresh result would miss.
+    """
+
+    if not scenario.claim.holds(stored):
+        raise SeedFailed(
+            f"'{scenario.slug}' is named for {scenario.claim.promise} and is no "
+            f"longer one. Either the catalog or the name is now wrong — a "
+            f"reservation whose name lies is worse than one that is missing, "
+            f"because nothing about the screen it is developed against would "
+            f"look wrong."
+        )
+
+
 def report(seeded: Seeded) -> list[str]:
     """The run, as lines a developer reads — address, password, state, id."""
 
@@ -784,4 +1005,15 @@ def report(seeded: Seeded) -> list[str]:
         lines.append(f"  {club.club.slug}  [{state}]")
         lines.append(f"      {club.club.description}")
         lines.append(f"      club {club.club_id}")
+
+    lines.append("")
+    lines.append(f"Seeded {len(seeded.reservations)} court claim(s).")
+    lines.append("")
+    for claim in seeded.reservations:
+        state = "created" if claim.created else "already present"
+        lines.append(f"  {claim.reservation.slug}  [{state}]")
+        lines.append(f"      {claim.reservation.description}")
+        lines.append(
+            f"      reservation {claim.reservation_id} on court {claim.court_id}"
+        )
     return lines

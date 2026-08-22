@@ -429,10 +429,29 @@ def is_terminal(record: MatchRecord) -> bool:
     )
 
 
+def court_named_at(start: Instant) -> Instant:
+    """When the specific court stops being ours and becomes the player's to know.
+
+    The same fifteen minutes as the door code, from the same constant and
+    computed once, because they are one moment seen from two contexts: a match
+    becomes *ready to play* and a reservation names its court. ADR-0035 fixes
+    the second — *"`courtAssigned`, fifteen minutes before play, is the only
+    state that names a specific court"* — and everywhere earlier the card says
+    the **category**, because the court is assigned and may be reassigned.
+
+    Takes a start rather than a record, because Courts has no ``MatchRecord`` to
+    hand: a club's own block on a Tuesday morning is a reservation with a start
+    and no match behind it at all. That is also why this is the function and
+    ``door_code_at`` is the wrapper, rather than the other way round.
+    """
+
+    return shifted(start, _before(_DOOR_CODE_LEAD))
+
+
 def door_code_at(record: MatchRecord) -> Instant:
     """When a full match becomes *ready to play*, fifteen minutes before it."""
 
-    return shifted(record.start, _before(_DOOR_CODE_LEAD))
+    return court_named_at(record.start)
 
 
 def vacancy_expires_at(record: MatchRecord) -> Instant | None:
