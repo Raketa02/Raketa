@@ -85,6 +85,43 @@ class TakeSeatCommand:
 
 
 @dataclass(frozen=True)
+class ClaimSeatCommand:
+    """*This player is buying a seat here* — the tap, not the money.
+
+    **No seat.** Which one she gets is the match's answer, exactly as it is for
+    ``TakeSeatCommand``: a caller that could name a seat could name one somebody
+    else is already buying, and *which seat* is not a fact any screen is
+    developed against.
+
+    **No idempotency key**, and that is a decision rather than an omission. A
+    replayed tap inside the five minutes finds her own live claim and is refused
+    by name, which is the honest answer — she *is* already buying a seat. What
+    an idempotency key would add is returning the first claim silently, and that
+    would make a double tap indistinguishable from a genuine second attempt.
+    """
+
+    match_id: UUID
+    player_id: UUID
+
+
+@dataclass(frozen=True)
+class RedeemSeatClaimCommand:
+    """*The money landed; the seat she was buying is hers.*
+
+    One command for both halves, because they are one moment: a redeemed claim
+    takes the seat **and** pays for it, and a version of this that only took it
+    would produce the taken-and-unpaid window the whole record exists to
+    prevent.
+
+    Where the money went is Money's (``Raketa02/Raketa#69``), and the
+    transaction that joins this to the court it earns is ``#70``.
+    """
+
+    match_id: UUID
+    player_id: UUID
+
+
+@dataclass(frozen=True)
 class PaySeatCommand:
     """*The money for this player's seat landed.*
 

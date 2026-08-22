@@ -103,6 +103,15 @@ there; they are not repeated here.
   anchor-relative, so a stored one silently changes meaning. An `IsoWeekday` is Monday 1
   through Sunday 7 and is branded against the mistake that reads Wednesday as 00:03.
   _Avoid_: slot index, day number, offset (unqualified).
+- **Seconds** (`kernel.Seconds`, `kernel.moved`) — a length of time in whole seconds, and **a
+  separate brand rather than a finer spelling of `Minutes`**: a `Minutes` handed to something
+  expecting a `Seconds` is a sixtyfold error that reads perfectly, and the compiler is what
+  refuses it. It exists because exactly one rule in the system is measured below a minute —
+  a seat claim's thirty-second cooldown (ADR-0081) — and rounding that up to a minute would
+  be the rule told as a lie. `moved()` is the **one** place an instant is moved at all, with
+  `shifted()` as its minutes-shaped wrapper, so there is a single construction of a
+  `timedelta` and a single answer to the elapsed-versus-wall-clock question.
+  _Avoid_: a bare `timedelta(seconds=…)` at a call site, and a float duration.
 - **Local clock face** — `local_minute_of_day()` and `local_iso_weekday()`, the two halves
   of reading an `Instant` back in a zone, and `slot_start()`'s inverse. Both take the zone,
   because a weekday read off an instant's own UTC date is wrong for the two hours either
@@ -657,6 +666,39 @@ there; they are not repeated here.
   completion"* past that cutoff, so the illustration stopped being the last seat event. `start`
   is the instant this aggregate refuses every seat move, so it is **derivably** the definition's
   answer. Nobody settles early, which is the only direction that matters.
+- **Seat claim** (`matches.SeatClaim`, `kernel.SeatClaim`) — five minutes of exclusive right
+  to buy **one seat**, and **not a seat state** (ADR-0081). The seat below it is untouched:
+  still empty, still absent from the fill count, still earning the match no court and still
+  imputed by the forecast rather than carrying the claimant's level — which is what keeps the
+  glossary's *"there is no window in which a seat is taken and unpaid by the taker"* true word
+  for word. Its own table, **ended and never deleted**, because the thirty-second cooldown is
+  measured from `ended_at`. **Live is composed** — unended *and* not yet expired — so it is
+  over at its own instant whether or not any look has written the receipt, exactly as a stale
+  court hold is. _Avoid_: widening *held*, a fourth seat state, a thirty-seventh situation.
+- **One rule ends a claim** (`matches.SeatClaim.end`) — one mutator for all three endings:
+  the five minutes running out, the seat being bought, and the match dying underneath it.
+  `min(at, expires_at)`, so a reaper arriving late dates the lapse when it **happened** rather
+  than when it noticed — a worker that was down for an hour must not extend anybody's thirty
+  seconds by an hour. Which of the three it was rides on the announcement, never on the row.
+  _Avoid_: an `ending` column, and a second rule for a match that dies.
+- **Reaping** (`matches.Match.reap_lapsed_claims`) — writing the receipt for a claim whose
+  window has run out. It **changes nothing and records something**, which is why the timekeeper
+  can ask on every look and why asking twice is free. Asked by two callers: the wake, and
+  `open_claim`, which reaps **before** it decides — the write a stale row would block is the
+  write that clears it, so a player never waits on a scheduled look to be allowed to tap.
+  _Avoid_: dating the receipt at the reap.
+- **Exclusivity** (`kernel.claimed_seats`, `matches.Match.seats_under_claim`) — *is this seat
+  spoken for*, composed from the claims and the clock. Read by three: the aggregate refusing a
+  second claim or an invitation onto the same seat, the invitation cascade deciding whether to
+  offer it at all (`Raketa02/Raketa#82`), and the card deciding whether to draw an exit. **A
+  lapse resumes the offers with no write at all** — the answer simply changes — and nobody is
+  told twice, because nothing was retracted and the cascade keeps its own record of who it
+  reached. _Avoid_: a `suppressed` flag on anything.
+- **A deadline and not a trapdoor** — `joinCut` is read by `open_claim` and by nothing else. A
+  claim already running when it passes is **honoured to completion** (ADR-0081), so somebody
+  who tapped at 13:29 against a 13:30 cutoff pays at 13:33 and plays; what is refused is
+  *starting* one. It is also why settlement lands at `start` rather than at the cutoff — see
+  **Settling at the start**. _Avoid_: the cutoff in `redeem_claim`.
 - **Seed match** — a deterministic development match created by `app/seeds/matches.py`, named
   for the **`Situation` it resolves to** and checked by `kernel.situation` against the stored
   record on every run, at the scenario's own fixed instant. The strongest name-check in the

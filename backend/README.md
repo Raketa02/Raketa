@@ -162,6 +162,48 @@ The **quote** is what makes two simultaneous leaves safe. The command carries th
 **label** the player was shown; the outcome is recomputed at apply time, and a strictly worse
 one is refused with the new one attached. Equal or better applies.
 
+### Buying a seat: five minutes, and never a fourth seat state
+
+A seat is **never taken until it is paid**. What a player takes while she pays is a **seat
+claim** — five minutes of exclusive right to buy one seat
+([ADR-0081](../docs/adr/0081-a-seat-is-never-taken-until-it-is-paid.md)) — and it is its own
+short-lived record in `match_seat_claims`, never a state on the seat. The seat below a live
+claim is still `empty`: absent from the fill count, earning the match no court, imputed by the
+forecast rather than carrying the claimant's level. That is what keeps the glossary's *"there
+is no window in which a seat is taken and unpaid by the taker"* true word for word — nobody
+has taken a seat, they have taken the place in the queue in front of it.
+
+| Rule | Where it lives | Why there |
+| --- | --- | --- |
+| Five minutes from the tap | `kernel.claim_expires_at` | three readers: the aggregate, the card's countdown, the schedule |
+| Thirty seconds on the same seat | `kernel.claim_reopens_at` | the first rule in the system below a minute — see `Seconds` |
+| One live claim in **this** match | `Match.open_claim` | a function of the record |
+| One live claim **anywhere** | `SeatClaims.live_for` | no aggregate can see another one |
+| A seat is spoken for | `kernel.claimed_seats` | the aggregate, the offer cascade and the card all ask |
+| The expiry | `next_wake_at` | *"an expiry is a match wake, not a channel send"* |
+
+**Live is composed, never latched** — unended *and* not yet expired — so a claim is over at its
+own instant whether or not any look has written the receipt. Three consequences follow, and
+each is the reason something is shaped the way it is:
+
+- The cross-match rule is a **query**, not a unique index. A unique index would have to spell
+  *live* as *unended*, and would refuse a player on the strength of a row nobody had closed.
+- `open_claim` **reaps first**: the write a stale row would block is the write that clears it,
+  so nobody waits on a scheduled look to be allowed to tap.
+- A **lapse resumes the offer waves with no write at all**. The cascade's question about that
+  seat simply gets a different answer, and nobody is told twice because nothing was retracted.
+
+**One rule ends a claim, whatever ended it** — `SeatClaim.end` takes `min(at, expires_at)`, so
+a reaper arriving late dates the lapse when it *happened*. A terminal match never wakes again,
+so all five endings call `end_claims_with_the_match` rather than leaving a row nobody reaps.
+
+`joinCut` is read by `open_claim` and by **nothing else**. A claim already running when the
+cutoff passes is honoured to completion — somebody who tapped at 13:29 against a 13:30 cutoff
+pays at 13:33 and plays — and only *starting* one is refused. That is the difference between a
+deadline and a trapdoor, and it costs one comparison. Redeeming takes **and pays** the seat in
+one move; a redemption that left a held-and-unpaid seat behind would open, at the last step,
+the window this whole record exists to close.
+
 `Match.as_record()` hands the kernel a `MatchRecord` and **needs no other read**: the club's
 four hold-policy fields are copied at posting and honoured *as booked*
 ([ADR-0077](../docs/adr/0077-a-club-is-a-record-and-history-is-a-property-of-three-facts.md)),
@@ -611,6 +653,14 @@ demo week (`Raketa02/Raketa#96`).
 | `match-private-with-seats-opened` | `privateOpen` — somebody's court, two seats for sale |
 | `match-holding-a-court-softly` | `heldSoft` — one seat from full, and a court kept aside |
 | `match-the-club-cancelled` | `cancelledClub` — a decision, not a receipt |
+
+**No scenario carries a seat claim, and that is now a decision rather than a gap.** ADR-0081
+refuses a thirty-seventh situation, so a claim moves no name in this catalog at all: a
+scenario with one would resolve to `forming`, which the first row already names, and *two
+matches saying the same thing would be one scenario twice*. It would also have lapsed by the
+time anybody signed in — five minutes measured from a fixed instant on a fixed week — so the
+seeded card would say nothing. A claim is checked in its own suite, where it can be asserted
+as *this seat is spoken for* rather than as a name that does not mention one.
 
 A scenario that loses a player also names what that player's **money** is — settled or open,
 and whether her card names an amount at all — checked against the stored departures on every

@@ -61,6 +61,7 @@ from app.kernel.matches import (
     Viewer,
     WakeReason,
     born_late,
+    claim_boundaries,
     committed_on_fill,
     deadlines,
     door_code_at,
@@ -415,6 +416,11 @@ def _boundaries(record: MatchRecord) -> tuple[Boundary, ...]:
         Boundary(WakeReason.MATCH_END, match_end(record)),
         Boundary(WakeReason.RESULT_WINDOW, result_window(record)),
         *hold_boundaries(record),
+        # Asked for rather than restated, exactly like the hold ladder's tiers.
+        # A claim's five minutes are the one boundary here that is not relative
+        # to `start`, which is why the record has to carry the moment: it cannot
+        # be recomputed from the match, only from the tap that opened it.
+        *claim_boundaries(record),
     ]
 
     # A committed match never compares the clock against its own commitment

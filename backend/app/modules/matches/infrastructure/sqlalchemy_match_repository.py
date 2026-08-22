@@ -1,4 +1,4 @@
-"""Reading a match out of four tables, writing the delta back, and announcing it.
+"""Reading a match out of five tables, writing the delta back, and announcing it.
 
 **The version guard runs first, and in the same statement that bumps it**, so a
 second writer that read the same match loses on ``rowcount`` rather than on
@@ -21,7 +21,10 @@ churn the table on every join. Vacancies are append-and-close: a new hole is an
 INSERT, a filled one is an UPDATE, and nothing is ever removed. Departures are
 the same shape and for a stronger reason — a settlement that vanished and came
 back would be a refund nobody could account for — and their two mutable columns
-are the outcome and the moment it landed.
+are the outcome and the moment it landed. Seat claims are the same shape again
+with one mutable column: a claim is **ended, never deleted**, because the
+thirty-second cooldown is measured from the instant it ended and a row that
+vanished would take the cooldown with it.
 
 Naive datetimes come back from SQLite, which drops the offset it was handed.
 They are re-attached to UTC on the way in, the same normalisation the Clubs
@@ -59,6 +62,7 @@ from app.kernel import (
 )
 from app.shared.ids import new_uuid
 
+from app.modules.matches.domain.claim import SeatClaim
 from app.modules.matches.domain.departure import Departure
 from app.modules.matches.domain.errors import ConcurrentMatchModification
 from app.modules.matches.domain.match import Match
@@ -68,6 +72,7 @@ from app.modules.matches.domain.vacancy import Vacancy
 from app.modules.matches.infrastructure.sqlalchemy_match_models import (
     MatchDepartureORM,
     MatchORM,
+    MatchSeatClaimORM,
     MatchSeatORM,
     MatchVacancyORM,
 )
@@ -178,6 +183,8 @@ class SqlAlchemyMatchRepository:
             self._session.add(self._vacancy_row(match.id, vacancy))
         for departure in match.departures:
             self._session.add(self._departure_row(match.id, departure))
+        for claim in match.claims:
+            self._session.add(self._claim_row(match.id, claim))
         await self._session.flush()
         await self._announce(match)
         return match
@@ -204,6 +211,7 @@ class SqlAlchemyMatchRepository:
         await self._write_seats(match)
         await self._write_vacancies(match)
         await self._write_departures(match)
+        await self._write_claims(match)
         await self._session.flush()
         match.version += 1
         await self._announce(match)
@@ -290,6 +298,32 @@ class SqlAlchemyMatchRepository:
                     ),
                     settled_at=departure.settled_at,
                 )
+            )
+
+    async def _write_claims(self, match: Match) -> None:
+        """Append the new claims, close the ones that closed. Nothing is removed.
+
+        One mutable column, and it is the only one: a claim's seat, its player
+        and its deadline are all fixed at the tap, and the five minutes are not
+        extendable by anybody — which is what makes *"a claim it cannot extend"*
+        the shape ADR-0081 fixes for a payment provider that answers late.
+        """
+
+        stored = set(
+            await self._all(
+                select(MatchSeatClaimORM.id).where(
+                    MatchSeatClaimORM.match_id == match.id
+                )
+            )
+        )
+        for claim in match.claims:
+            if claim.id not in stored:
+                self._session.add(self._claim_row(match.id, claim))
+                continue
+            await self._session.execute(
+                update(MatchSeatClaimORM)
+                .where(MatchSeatClaimORM.id == claim.id)
+                .values(ended_at=claim.ended_at)
             )
 
     # -- rows ---------------------------------------------------------------
@@ -395,6 +429,17 @@ class SqlAlchemyMatchRepository:
             settled_at=departure.settled_at,
         )
 
+    def _claim_row(self, match_id: UUID, claim: SeatClaim) -> MatchSeatClaimORM:
+        return MatchSeatClaimORM(
+            id=claim.id,
+            match_id=match_id,
+            seat_index=claim.seat_index,
+            player_id=claim.player_id,
+            claimed_at=claim.claimed_at,
+            expires_at=claim.expires_at,
+            ended_at=claim.ended_at,
+        )
+
     # -- assembly -----------------------------------------------------------
 
     async def _rows(self, statement: Select[Any]) -> list[MatchORM]:
@@ -478,9 +523,36 @@ class SqlAlchemyMatchRepository:
                 )
             )
 
+        claims: dict[UUID, list[SeatClaim]] = {row.id: [] for row in rows}
+        claim_rows = await self._session.execute(
+            select(MatchSeatClaimORM)
+            .where(MatchSeatClaimORM.match_id.in_(ids))
+            .order_by(
+                MatchSeatClaimORM.match_id,
+                MatchSeatClaimORM.claimed_at,
+                MatchSeatClaimORM.seat_index,
+                MatchSeatClaimORM.id,
+            )
+        )
+        for claim_row in claim_rows.scalars().all():
+            claims[claim_row.match_id].append(
+                SeatClaim(
+                    id=claim_row.id,
+                    seat_index=claim_row.seat_index,
+                    player_id=claim_row.player_id,
+                    claimed_at=_as_instant(claim_row.claimed_at),
+                    expires_at=_as_instant(claim_row.expires_at),
+                    ended_at=_optional_instant(claim_row.ended_at),
+                )
+            )
+
         return [
             self._match_of(
-                row, seats[row.id], vacancies[row.id], departures[row.id]
+                row,
+                seats[row.id],
+                vacancies[row.id],
+                departures[row.id],
+                claims[row.id],
             )
             for row in rows
         ]
@@ -491,6 +563,7 @@ class SqlAlchemyMatchRepository:
         seats: list[Seat],
         vacancies: list[Vacancy],
         departures: list[Departure],
+        claims: list[SeatClaim],
     ) -> Match:
         return Match(
             id=row.id,
@@ -517,6 +590,7 @@ class SqlAlchemyMatchRepository:
             seats=seats,
             vacancies=vacancies,
             departures=departures,
+            claims=claims,
             transferring=row.transferring,
             open_seats=row.open_seats,
             held_since=_optional_instant(row.held_since),

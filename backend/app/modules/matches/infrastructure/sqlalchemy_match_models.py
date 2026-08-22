@@ -1,4 +1,4 @@
-"""Four tables: the match, its seats, the holes left, and the leavers.
+"""Five tables: the match, its seats, the holes left, the leavers, and the claims.
 
 **No constraint here is a decision the way the exclusion constraint is** — a
 match contends for nothing that another match could take, because what is
@@ -28,7 +28,14 @@ more, and a filler routinely closes one while settling a *different* leaver's
 money. Two rows are what makes that expressible; a single row would be the
 scalar the two ADRs were written to replace.
 
-**The score is a JSON column and not a fifth table.** It is a *value* — no
+**A seat claim is a fifth table and not three columns on the second.** It is
+deliberately *not* a fact about a seat (ADR-0081): the seat is untouched while
+somebody is buying it, and columns on ``match_seats`` would be that decision
+reversed in the schema. It is also many-to-one over time — a seat can be claimed,
+let go and claimed again, and each of those has its own five minutes and its own
+receipt — which is a shape a row per seat cannot hold at all.
+
+**The score is a JSON column and not a sixth table.** It is a *value* — no
 identity, no lifecycle, never read or written apart from the match — and giving
 it row identity would be inventing one. The list of sets is stored as the pairs
 of integers it crosses the wire as (``Raketa02/Raketa#74``), never as a display
@@ -55,6 +62,23 @@ SEAT_OCCUPIED = "player_id IS NOT NULL"
 
 #: The name, so a test can drop it and get a real negative control.
 ONE_SEAT_PER_PLAYER = "uq_match_seats_one_per_player"
+
+#: A claim nobody has written a receipt for. The narrow index over these is what
+#: answers *is this player already buying a seat*, and it is partial for the
+#: reason every other partial index here is: the ended rows are the overwhelming
+#: majority within minutes of a busy evening, and none of them is ever an answer.
+#:
+#: **It says `ended_at IS NULL` and the query says more.** *Live* is unended
+#: **and** not yet expired, and the second half cannot be an index predicate
+#: because it needs a clock. That asymmetry is the right way round: the index
+#: over-covers by the rows a reaper has not reached yet, and the query composes
+#: the truth on top of it — where a *unique* index on the same predicate would
+#: have to spell *live* as *unended* and would refuse a player on the strength of
+#: a row nobody had got round to closing.
+CLAIM_UNENDED = "ended_at IS NULL"
+
+#: The name, so a test can drop it and get a real negative control.
+UNENDED_CLAIMS = "ix_match_seat_claims_unended"
 
 #: A row is **due to be looked at** exactly when it names a moment. Written as
 #: the column being present rather than as a SQL restatement of *non-terminal*,
@@ -354,4 +378,71 @@ class MatchDepartureORM(Base):
     outcome: Mapped[Optional[str]] = mapped_column(sa.String(16), nullable=True)
     settled_at: Mapped[Optional[datetime]] = mapped_column(
         sa.DateTime(timezone=True), nullable=True
+    )
+
+
+class MatchSeatClaimORM(Base):
+    """One player's five minutes in front of one seat, and whether they are over.
+
+    **Ended, never deleted**, like every other child here: the thirty-second
+    cooldown is measured from ``ended_at``, so a row that vanished would take the
+    cooldown with it — and *why could I not take that seat at 18:03* is a support
+    question a missing row cannot answer.
+
+    ``ended_at`` is **when the claim stopped being live**, which for an expiry is
+    the moment its five minutes ran out and not the moment a scheduled look
+    noticed. A worker that was down for an hour must not extend anybody's thirty
+    seconds by an hour, so the domain dates the receipt at the expiry rather than
+    at the write.
+
+    **No unique index on ``(match_id, seat_index)`` over the unended rows.** Two
+    claims on one seat are impossible, and what makes them impossible is the
+    version column on ``matches``: both writers read the same version and the
+    second loses on ``rowcount``, which is ADR-0034's concurrency answer doing
+    the job it was chosen for. A partial unique index would additionally refuse
+    the *legitimate* second claim on a seat whose previous claim expired and has
+    not been reaped — and the write that would be refused is the one that reaps
+    it.
+
+    ``expires_at`` is stored rather than recomputed from ``claimed_at``: it is
+    the fact the match's schedule is armed against and the moment a client counts
+    down to, and recomputing it would let a change to the five minutes silently
+    move a deadline already announced.
+    """
+
+    __tablename__ = "match_seat_claims"
+
+    id: Mapped[UUID] = mapped_column(
+        UUIDType(binary=False), primary_key=True, default=uuid.uuid4
+    )
+    match_id: Mapped[UUID] = mapped_column(
+        UUIDType(binary=False),
+        sa.ForeignKey("matches.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    seat_index: Mapped[int] = mapped_column(sa.Integer, nullable=False)
+    #: Not a foreign key, for the reason ``match_seats.player_id`` is not one:
+    #: a player lives behind a projection in another context.
+    player_id: Mapped[UUID] = mapped_column(
+        UUIDType(binary=False), nullable=False
+    )
+    claimed_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), nullable=False
+    )
+    expires_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), nullable=False
+    )
+    ended_at: Mapped[Optional[datetime]] = mapped_column(
+        sa.DateTime(timezone=True), nullable=True
+    )
+
+    __table_args__ = (
+        sa.Index(
+            UNENDED_CLAIMS,
+            "player_id",
+            "expires_at",
+            sqlite_where=sa.text(CLAIM_UNENDED),
+            postgresql_where=sa.text(CLAIM_UNENDED),
+        ),
     )

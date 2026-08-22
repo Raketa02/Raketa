@@ -70,6 +70,7 @@ from app.modules.matches.domain.ports import (
     CourtHolds,
     MatchRepository,
     MatchSchedule,
+    SeatClaims,
 )
 from app.modules.now.domain.ports import RatedSports
 from app.modules.now.infrastructure.rating_sports import RatedSportsFromSkillRatings
@@ -81,6 +82,9 @@ from app.modules.matches.infrastructure.sqlalchemy_match_repository import (
 )
 from app.modules.matches.infrastructure.sqlalchemy_match_schedule import (
     SqlAlchemyMatchSchedule,
+)
+from app.modules.matches.infrastructure.sqlalchemy_seat_claims import (
+    SqlAlchemySeatClaims,
 )
 from app.modules.courts.infrastructure.sqlalchemy_reservation_repository import (
     SqlAlchemyReservationRepository,
@@ -275,6 +279,20 @@ def build_match_schedule(session: AsyncSession) -> MatchSchedule:
     """
 
     return SqlAlchemyMatchSchedule(session)
+
+
+def build_seat_claims(session: AsyncSession) -> SeatClaims:
+    """*Is this player already buying a seat, anywhere* — one indexed read.
+
+    A third port over the Matches tables, beside the repository and the
+    schedule, for the same reason the schedule is one: the question is narrow
+    and crosses matches, and answering it through the repository would mean
+    loading a whole aggregate to discover a boolean. Takes no publisher and no
+    clock — it writes nothing, and the instant it compares against is the
+    caller's.
+    """
+
+    return SqlAlchemySeatClaims(session)
 
 
 def build_match_wake_batch(

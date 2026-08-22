@@ -59,8 +59,18 @@ passes the live quote and the aggregate decides. Writing an outcome into this
 catalog would be writing down the answer to the question the departure exists to
 compute.
 
-**No seat claim and no money movements.** A seat claim is ``Raketa02/Raketa#68``
-and the ledger is ``#69``.
+**Still no seat claim, and now for a reason rather than because it does not
+exist.** ADR-0081 refuses a thirty-seventh situation, so a claim moves no name
+in this catalog at all: a scenario carrying one would resolve to ``forming``,
+which the first entry already names, and *"two matches saying the same thing
+would be one scenario twice"* is the rule ``HELD_SOFT`` was written under. It
+would also be a claim that has certainly lapsed by the time anybody signs in —
+five minutes measured from a fixed instant on a fixed week — so the seeded card
+would say nothing. The place a claim is checked is its own suite, where it can
+be asserted as *this seat is spoken for* rather than as a name that does not
+mention one.
+
+**And no money movements.** The ledger is ``Raketa02/Raketa#69``.
 """
 
 from __future__ import annotations

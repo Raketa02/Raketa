@@ -75,6 +75,9 @@ from app.kernel import (
     Recoverable,
     SeatShare,
     Sport,
+    claim_expires_at,
+    claim_reopens_at,
+    claimed_seats,
     committed_on_fill,
     deadlines,
     is_full,
@@ -88,24 +91,31 @@ from app.kernel import (
 )
 from app.shared.domain import DomainEvent, EventRecorder
 
+from app.modules.matches.domain.claim import SeatClaim
 from app.modules.matches.domain.departure import (
     Departure,
     born_settled,
     oldest_unsettled,
 )
 from app.modules.matches.domain.errors import (
+    ClaimCoolingDown,
     CourtAlreadyHeld,
     DepartureOutcomeWorsened,
+    JoiningClosed,
     MatchAlreadySettled,
     MatchAlreadyStarted,
     MatchIsFull,
     MatchNotPlayed,
     MatchNotPrivate,
     NoCourtHeld,
+    NoLiveSeatClaim,
     NoScoreOnTheTable,
+    PlayerAlreadyClaiming,
     PlayerAlreadyHoldsASeat,
     ResultAlreadyAgreed,
     ResultWindowClosed,
+    SeatAlreadyClaimed,
+    SeatAlreadyTaken,
     SeatNotFound,
     SeatNotTaken,
     StartMustBeInTheFuture,
@@ -129,6 +139,9 @@ from app.modules.matches.domain.events import (
     PlayerDeparted,
     ResultAgreed,
     ScoreProposed,
+    SeatClaimLapsed,
+    SeatClaimOpened,
+    SeatClaimRedeemed,
     SeatPaid,
     SeatsOpened,
     SeatTaken,
@@ -188,6 +201,19 @@ class Match:
     #: exception and behaves like a Crossing — once it is decided it may only
     #: improve, and ``Departure`` has no operation that lowers it.
     departures: list[Departure] = field(default_factory=list)
+
+    #: The seat claims, live and spent. **Occupancy by kind and yet not
+    #: occupancy at all** (ADR-0081): a claim changes who *may* take a seat and
+    #: never who is on one, which is why it sits here beside the seats rather
+    #: than on them. Underivable from every direction — nothing about an empty
+    #: seat says somebody is three minutes into paying for it — and freely
+    #: reversible, because a claim ends and the seat goes back to the race.
+    #:
+    #: **Ended, never removed**, the same shape as a filled vacancy and a
+    #: released reservation: the thirty-second cooldown is measured from the
+    #: instant a claim ended, so a row that vanished would take the cooldown
+    #: with it.
+    claims: list[SeatClaim] = field(default_factory=list)
 
     transferring: bool = False
 
@@ -338,6 +364,7 @@ class Match:
             open_vacancies=tuple(
                 vacancy.as_record() for vacancy in self.open_vacancies
             ),
+            claims=tuple(claim.as_record() for claim in self.unended_claims),
             transferring=self.transferring,
             court_locked=self.court_locked,
             club_extended=self.club_extended,
@@ -359,6 +386,50 @@ class Match:
             (vacancy for vacancy in self.vacancies if vacancy.is_open),
             key=lambda vacancy: vacancy.vacated_at,
         )
+
+    @property
+    def unended_claims(self) -> list[SeatClaim]:
+        """The claims nobody has written a receipt for, oldest first.
+
+        **Unended rather than live**, because that is what the record carries
+        and what the wake function reads: whether a claim is still *running* is
+        a comparison against a clock, and this property does not hold one. A
+        claim whose five minutes ran out an hour ago and which no look has
+        reaped is in here, contributes no future wake, and is spoken for by
+        nobody.
+        """
+
+        return sorted(
+            (claim for claim in self.claims if not claim.is_ended),
+            key=lambda claim: (claim.claimed_at, claim.seat_index),
+        )
+
+    def live_claim_of(self, player_id: UUID, at: Instant) -> SeatClaim | None:
+        """The seat this player is buying in this match, if she is buying one.
+
+        One live claim per player is the rule *across* matches (ADR-0081), and
+        this answers only for this one — the cross-match half is a narrow read
+        no aggregate can take, and it belongs to the ``SeatClaims`` port.
+        """
+
+        for claim in self.unended_claims:
+            if claim.player_id == player_id and claim.is_live(at):
+                return claim
+        return None
+
+    def seats_under_claim(self, at: Instant) -> frozenset[int]:
+        """Which seats somebody is alone with right now.
+
+        **The offer cascade's question** (``Raketa02/Raketa#82``): a seat under
+        a live claim is not offered to anybody, which is the whole of *"a live
+        claim silences the offer's pending waves"* — and it needs no write,
+        because when the five minutes run out this answer changes on its own and
+        the waves resume. Nobody is told twice by that, because nothing was
+        retracted and nothing is re-sent: the cascade keeps its own record of
+        who it has already reached.
+        """
+
+        return claimed_seats(self.as_record(), at)
 
     @property
     def is_settled(self) -> bool:
@@ -422,14 +493,237 @@ class Match:
 
     # -- occupancy ----------------------------------------------------------
 
-    def take_seat(self, player_id: UUID, *, at: Instant) -> Seat:
-        """A player takes the first free seat, holding it and owing for it.
+    def open_claim(self, player_id: UUID, *, at: Instant) -> SeatClaim:
+        """A player takes the exclusive right to buy a seat, for five minutes.
 
-        **The join cutoff is not enforced here.** ``Raketa02/Raketa#68`` fixes
-        that a seat claim already running when ``joinCut`` passes is honoured to
-        completion and only a *new* one is refused — so the gate belongs to the
-        claim, and putting it here would make a deadline a trapdoor under a
-        player who is already paying.
+        ADR-0081, and it is how **any** seat is taken from the marketplace: a
+        seat offered to her and a seat she found herself are the same race when
+        it is the last one, and *offered seats behave differently* is a second
+        rule nobody would remember. Paying is a bank round trip — a six-digit
+        code typed into another app — so without this window two players race
+        through that and one loses **after** entering their details.
+
+        **The join cutoff is enforced here and nowhere else**, which is the
+        whole of *a deadline and not a trapdoor*: nobody may **start** buying a
+        seat once joining has closed, and a claim already running is honoured to
+        its end by ``redeem_claim``, which does not look at the cutoff at all.
+
+        **The lapsed claims are reaped first, and that is load-bearing rather
+        than tidy.** Exclusivity is composed against the clock, so a claim whose
+        five minutes ran out is over — but its row is still unended until
+        somebody writes the receipt, and the record refuses two unended claims
+        on one seat. The write that would be blocked by a stale row is therefore
+        the write that clears it, and a player never waits on a scheduled look
+        to be allowed to tap.
+
+        **Which seat is the match's answer and not the caller's**, exactly as it
+        is for ``take_seat``: the first free seat nobody else is buying and
+        nothing of hers is cooling on. Refused four different ways, because the
+        four are four different sentences on a card — the match is full, the
+        seat is spoken for, she is already buying one somewhere, or she has just
+        let this one go.
+        """
+
+        self._refuse_if_settled()
+        self._refuse_if_started(at)
+        if at >= deadlines(self.as_record()).join_cut:
+            raise JoiningClosed()
+        if self.seat_of(player_id) is not None:
+            raise PlayerAlreadyHoldsASeat()
+
+        self.reap_lapsed_claims(at=at)
+        if self.live_claim_of(player_id, at) is not None:
+            raise PlayerAlreadyClaiming()
+
+        free = [seat for seat in self.seats if seat.is_free]
+        if not free:
+            raise MatchIsFull()
+        spoken_for = self.seats_under_claim(at)
+        available = [seat for seat in free if seat.index not in spoken_for]
+        if not available:
+            raise SeatAlreadyClaimed()
+        cooling = self._seats_cooling_for(player_id, at)
+        hers_to_take = [seat for seat in available if seat.index not in cooling]
+        if not hers_to_take:
+            raise ClaimCoolingDown()
+
+        seat = hers_to_take[0]
+        claim = SeatClaim(
+            id=_claim_id(self.id, seat.index, at),
+            seat_index=seat.index,
+            player_id=player_id,
+            claimed_at=at,
+            expires_at=claim_expires_at(at),
+        )
+        self.claims.append(claim)
+        self._record(
+            SeatClaimOpened(
+                match_id=self.id,
+                claim_id=claim.id,
+                seat_index=claim.seat_index,
+                player_id=player_id,
+                expires_at=claim.expires_at,
+                occurred_at=at,
+            )
+        )
+        return claim
+
+    def redeem_claim(self, player_id: UUID, *, at: Instant) -> Seat:
+        """The claim is spent: the seat is taken **and** paid, in one move.
+
+        **The join cutoff is deliberately not read here.** A claim already
+        running when it passes is honoured to completion (ADR-0081), so somebody
+        who tapped at 13:29 against a 13:30 cutoff pays at 13:33 and plays. The
+        start still bars it, because past that the aggregate refuses every seat
+        move.
+
+        Taken and paid together, never one and then the other: *"there is no
+        window in which a seat is taken and unpaid by the taker"* is the
+        glossary sentence this whole record exists to keep true, and a redeemed
+        claim that left a held-and-unpaid seat behind would break it at the last
+        step. The held-and-unpaid state is an **invitation** — hours long, given
+        by a person — and reaching it from here would be the collision ADR-0081
+        refuses.
+
+        The claim is closed **before** the seat is taken, so that the record is
+        never momentarily carrying an unended claim over an occupied seat, which
+        is a combination the kernel refuses outright.
+        """
+
+        self._refuse_if_settled()
+        self._refuse_if_started(at)
+        claim = self.live_claim_of(player_id, at)
+        if claim is None:
+            raise NoLiveSeatClaim()
+
+        claim.end(at=at)
+        self._record(
+            SeatClaimRedeemed(
+                match_id=self.id,
+                claim_id=claim.id,
+                seat_index=claim.seat_index,
+                player_id=player_id,
+                occurred_at=at,
+            )
+        )
+        seat = self.take_seat(player_id, at=at, seat_index=claim.seat_index)
+        self.pay_seat(player_id, at=at)
+        return seat
+
+    def reap_lapsed_claims(self, *, at: Instant) -> int:
+        """Write the receipt for every claim whose five minutes have run out.
+
+        **It changes nothing and records something**, which is why it is safe to
+        ask on every look and safe to ask twice: the claim was already over at
+        its own expiry — `is_live` says so without reading this — so what the
+        write adds is the row a support agent reads and the cooldown's anchor.
+        A second call finds nothing and announces nothing.
+
+        Dated at the expiry rather than at `at`, by `SeatClaim.end`: a worker
+        that was down for an hour must not extend anybody's thirty seconds by an
+        hour.
+
+        **No settled guard**, and for the reason `release_court` has none: the
+        four cancellations end their own claims on the way past, so this finds
+        nothing on a terminal match — but a receipt is not a change to a match,
+        and refusing to write one would be refusing to tidy up after an ending.
+
+        Returns how many were reaped.
+        """
+
+        reaped = 0
+        for claim in list(self.unended_claims):
+            if claim.is_live(at):
+                continue
+            claim.end(at=at)
+            reaped += 1
+            self._record(self._lapse_of(claim, at=at))
+        return reaped
+
+    def end_claims_with_the_match(self, *, at: Instant) -> int:
+        """Every claim still open ends, because the match did.
+
+        The third of ADR-0081's three endings — *"the match itself ends
+        underneath it"* — and there is **no second rule for it**: it is the same
+        `end`, announced under the same name, and a payment that lands
+        afterwards is refunded with cause ``claimLapsed`` exactly as it would be
+        after an ordinary expiry. Which of the two happened is answered by what
+        else is on the outbox at that instant, because a cancellation announces
+        itself.
+
+        It has to exist, and be called by all five endings, because a terminal
+        match never wakes again: a claim on one would otherwise be a row nobody
+        ever writes a receipt for. ADR-0081 asks for a record that *"must be
+        reaped, must not leak"*, and this is the half a schedule cannot reach.
+
+        Returns how many were still open.
+        """
+
+        ended = 0
+        for claim in list(self.unended_claims):
+            claim.end(at=at)
+            ended += 1
+            self._record(self._lapse_of(claim, at=at))
+        return ended
+
+    def _lapse_of(self, claim: SeatClaim, *, at: Instant) -> SeatClaimLapsed:
+        """The announcement, built once and made from two places.
+
+        ``ended_at`` is read off the claim rather than taken from `at`, because
+        the two differ exactly when the reaper is late — which is the case the
+        field exists for.
+        """
+
+        assert claim.ended_at is not None  # `end` has just been called
+        return SeatClaimLapsed(
+            match_id=self.id,
+            claim_id=claim.id,
+            seat_index=claim.seat_index,
+            player_id=claim.player_id,
+            ended_at=claim.ended_at,
+            occurred_at=at,
+        )
+
+    def _seats_cooling_for(self, player_id: UUID, at: Instant) -> frozenset[int]:
+        """Seats this player let go of less than thirty seconds ago.
+
+        Per seat and per player, which is the rule as written: she may take a
+        different seat at once, and anybody else may take this one at once. What
+        is being broken is a tap-loop, and nothing more is charged for a lapse —
+        the mechanism that would have charged more is the player score, whose
+        payment-failure strand is deliberately dark (ADR-0049).
+        """
+
+        return frozenset(
+            claim.seat_index
+            for claim in self.claims
+            if claim.player_id == player_id
+            and claim.ended_at is not None
+            and at < claim_reopens_at(claim.ended_at)
+        )
+
+    def take_seat(
+        self, player_id: UUID, *, at: Instant, seat_index: int | None = None
+    ) -> Seat:
+        """A player takes a seat, holding it and owing for it.
+
+        **The join cutoff is not enforced here.** ADR-0081 fixes that a seat
+        claim already running when ``joinCut`` passes is honoured to completion
+        and only a *new* one is refused — so the gate belongs to ``open_claim``,
+        and putting it here would make a deadline a trapdoor under a player who
+        is already paying.
+
+        **A seat somebody else is buying is not free**, however empty it looks.
+        The seat is genuinely still ``empty`` — that is the whole of ADR-0081 —
+        but the five minutes in front of it are somebody's, and skipping that
+        check would make the exclusivity a claim the record does not keep. The
+        refusal is its own name: *taken* and *being bought* are two different
+        sentences on a card.
+
+        ``seat_index`` names a seat rather than asking for the first free one,
+        and it has exactly one caller: ``redeem_claim``, which has already
+        closed the claim that reserved it. Every other path leaves it absent,
+        because *which* seat is the match's answer and not the caller's.
 
         Taking a seat closes the **oldest** open hole if there is one. Oldest
         rather than newest on purpose: two departures thirty hours and one hour
@@ -451,11 +745,23 @@ class Match:
         self._refuse_if_started(at)
         if self.seat_of(player_id) is not None:
             raise PlayerAlreadyHoldsASeat()
-        free = [seat for seat in self.seats if seat.is_free]
-        if not free:
-            raise MatchIsFull()
+        spoken_for = self.seats_under_claim(at)
 
-        seat = free[0]
+        if seat_index is None:
+            free = [seat for seat in self.seats if seat.is_free]
+            if not free:
+                raise MatchIsFull()
+            available = [one for one in free if one.index not in spoken_for]
+            if not available:
+                raise SeatAlreadyClaimed()
+            seat = available[0]
+        else:
+            seat = self.seat_at(seat_index)
+            if seat.is_taken:
+                raise SeatAlreadyTaken()
+            if seat.index in spoken_for:
+                raise SeatAlreadyClaimed()
+
         seat.take(player_id, at=at)
         holes = self.open_vacancies
         filled_a_vacancy = bool(holes)
@@ -844,6 +1150,7 @@ class Match:
         """
 
         self._refuse_if_settled()
+        self.end_claims_with_the_match(at=at)
         self.inventory_lost = True
         self._record(InventoryLost(match_id=self.id, occurred_at=at))
 
@@ -888,6 +1195,7 @@ class Match:
         """
 
         self._refuse_if_settled()
+        self.end_claims_with_the_match(at=at)
         self.resolve_departures_to(Outcome.REFUNDED_IN_FULL, at=at)
         self.club_cancelled = True
         self._record(MatchCancelledByClub(match_id=self.id, occurred_at=at))
@@ -900,6 +1208,7 @@ class Match:
         """
 
         self._refuse_if_settled()
+        self.end_claims_with_the_match(at=at)
         self.resolve_departures_to(Outcome.REFUNDED_IN_FULL, at=at)
         self.weather = True
         self._record(MatchCancelledForWeather(match_id=self.id, occurred_at=at))
@@ -917,6 +1226,7 @@ class Match:
         """
 
         self._refuse_if_settled()
+        self.end_claims_with_the_match(at=at)
         self.form_cancelled = True
         self._record(MatchCancelledIncomplete(match_id=self.id, occurred_at=at))
 
@@ -931,6 +1241,7 @@ class Match:
         """
 
         self._refuse_if_settled()
+        self.end_claims_with_the_match(at=at)
         self.resolve_departures_to(Outcome.FORFEITED, at=at)
         self.checkpoint_cancelled = True
         self._record(MatchCancelledAtCheckpoint(match_id=self.id, occurred_at=at))
@@ -1037,6 +1348,18 @@ def _vacancy_id(match_id: UUID, seat_index: int, at: Instant) -> UUID:
     """
 
     return uuid5(match_id, f"vacancy:{seat_index}:{at.isoformat()}")
+
+
+def _claim_id(match_id: UUID, seat_index: int, at: Instant) -> UUID:
+    """A claim's id, derived from the third name over the same three facts.
+
+    One match, one seat and one instant name one claim: exclusivity means the
+    seat is one player's for those five minutes, so there is nothing else it
+    could be. The prefix is what keeps it distinct from the vacancy and the
+    departure the same triple could name.
+    """
+
+    return uuid5(match_id, f"claim:{seat_index}:{at.isoformat()}")
 
 
 def _departure_id(match_id: UUID, seat_index: int, at: Instant) -> UUID:

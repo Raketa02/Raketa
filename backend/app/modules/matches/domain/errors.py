@@ -133,6 +133,100 @@ class MatchIsFull(ConflictError):
         super().__init__("This match is full.")
 
 
+class SeatAlreadyClaimed(ConflictError):
+    """Somebody is buying that seat right now.
+
+    **Not *taken*, and the difference is the point** (ADR-0081): the seat is
+    still empty, still absent from the fill count and still doing nothing for
+    the hold ladder. What is spoken for is the five minutes in front of it.
+
+    A player finds this out **from the screen rather than from an error** — the
+    offers region re-renders the corrected card and no dialog appears
+    (``Raketa02/Raketa#83``, ``#89``). This is what the route maps to that, and
+    a conflict rather than a not-found because the seat is genuinely there.
+    """
+
+    code = "match_seat_already_claimed"
+
+    def __init__(self) -> None:
+        super().__init__("Somebody is buying that seat right now.")
+
+
+class PlayerAlreadyClaiming(ConflictError):
+    """This player is already buying a seat, and may only buy one at a time.
+
+    One live claim per player, so nobody parks three seats across three matches
+    while deciding (ADR-0081). It is one of only two structural limits on a
+    serial claimant — the other is the thirty seconds — and they are the whole
+    defence until the player score exists.
+    """
+
+    code = "match_player_already_claiming"
+
+    def __init__(self) -> None:
+        super().__init__("You are already buying a seat. Finish that one first.")
+
+
+class ClaimCoolingDown(ConflictError):
+    """Thirty seconds have not passed since this player's last claim on this seat.
+
+    *"Enough to break a tap-loop, not enough to cost a mistyped PIN a Saturday
+    game"* (ADR-0081). It is per **seat**: she may claim a different seat at
+    once, and anybody else may claim this one at once.
+    """
+
+    code = "match_claim_cooling_down"
+
+    def __init__(self) -> None:
+        super().__init__("Give that seat a moment before trying again.")
+
+
+class NoLiveSeatClaim(ConflictError):
+    """This player is not buying a seat in this match, or her five minutes are up.
+
+    The refusal a late bank confirmation lands on. The money genuinely moved, so
+    Money records it and gives it back — a ``shareOnline`` movement compensated
+    by a ``REV-`` one with cause ``claimLapsed`` (``Raketa02/Raketa#69``,
+    ``#70``). What is refused here is the **seat**: holding the claim open until
+    the bank answers would make five minutes mean *five minutes, or longer if
+    your bank is slow*.
+    """
+
+    code = "match_no_live_seat_claim"
+
+    def __init__(self) -> None:
+        super().__init__("You are not buying a seat in this match.")
+
+
+class SeatClaimAlreadyEnded(ConflictError):
+    """That claim is already closed, and closing it twice would move when it was.
+
+    The same argument that refuses a vacancy being filled twice: the instant a
+    claim ended is what the thirty seconds are measured from, so rewriting it is
+    history rewritten rather than recorded.
+    """
+
+    code = "match_seat_claim_already_ended"
+
+    def __init__(self) -> None:
+        super().__init__("That seat claim has already ended.")
+
+
+class JoiningClosed(ConflictError):
+    """The join cutoff has passed and nobody new may start buying a seat.
+
+    **A deadline and not a trapdoor** (ADR-0081): a claim already running when
+    the cutoff passes is honoured to its end, so somebody who tapped at 13:29
+    against a 13:30 cutoff pays at 13:33 and plays. What is refused is
+    *starting* one, which is one comparison and the whole of the distinction.
+    """
+
+    code = "match_joining_closed"
+
+    def __init__(self) -> None:
+        super().__init__("This match has stopped accepting players.")
+
+
 class VacancyAlreadyFilled(ConflictError):
     """That hole has already been closed."""
 

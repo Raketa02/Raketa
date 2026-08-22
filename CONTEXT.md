@@ -738,7 +738,11 @@ Committed by [ADR-0030](docs/adr/0030-a-departure-is-an-audience-not-a-state.md)
   a lapse resumes them without telling anybody twice. It ends the same way whatever ended it — the
   five minutes, the player, or the match dying underneath them — and money that arrives afterwards
   is refunded under the cause `claimLapsed`
-  ([ADR-0081](docs/adr/0081-a-seat-is-never-taken-until-it-is-paid.md)).
+  ([ADR-0081](docs/adr/0081-a-seat-is-never-taken-until-it-is-paid.md)). *Built (`#68`), and one
+  word of it is worth reading twice: **live** is composed rather than stored — unended and not
+  yet expired — so a claim is over at its own instant whether or not anything has written the
+  receipt. Abandonment has no v1 surface (`#89` removes the exit control from a card under a
+  live claim), so the player's own ending is not built; the other two are.*
 - **Seat offer** — a vacancy put to the players the **invitation ladder** picks, with a clock on
   it. The thing the rescue cascade produces once it has searched; a vacancy exists without one.
   **One kind: the open call** ([ADR-0061](docs/adr/0061-the-invitation-ladder-is-an-order-and-one-open-call.md),

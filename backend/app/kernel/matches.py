@@ -30,7 +30,16 @@ from typing import final
 from app.kernel.invariants import invariant
 from app.kernel.money import SOLD_FORMATS
 from app.kernel.sports import SPORT_SPECS, Sport
-from app.kernel.time import Instant, Minutes, hours, minutes, shifted
+from app.kernel.time import (
+    Instant,
+    Minutes,
+    Seconds,
+    hours,
+    minutes,
+    moved,
+    seconds,
+    shifted,
+)
 
 #: The commitment floor: whatever a club's own cancellation window says, a match
 #: commits no later than twelve hours before it is played. `commit` is the
@@ -61,6 +70,19 @@ _RESULT_WINDOW = hours(24)
 #: How long a hole left by a departure keeps the match in the recovery group
 #: before the card goes back to describing an ordinary forming match.
 _VACANCY_DECAY = hours(24)
+
+#: How long a seat claim runs: five minutes from the tap
+#: (``docs/adr/0081-a-seat-is-never-taken-until-it-is-paid.md``). Long enough for
+#: somebody who is driving, in a shop or on another court; short enough that a
+#: seat offered hours before the match loses nothing meaningful while nobody is
+#: buying it.
+_CLAIM_WINDOW = minutes(5)
+
+#: How long the same player must wait before re-claiming the **same seat** after
+#: one of hers ended. Thirty seconds — *"enough to break a tap-loop, not enough
+#: to cost a mistyped PIN a Saturday game"* — and the one rule in the system
+#: measured below a minute, which is why `Seconds` exists at all.
+_CLAIM_COOLDOWN: Seconds = seconds(30)
 
 #: The tolerance that separates *committed at the deadline* from *committed on
 #: the spot*: a match whose last seat was paid after the deadline had already
@@ -156,6 +178,36 @@ class Vacancy:
     """
 
     vacated_at: Instant
+
+
+@final
+@dataclass(frozen=True)
+class SeatClaim:
+    """Somebody's exclusive right to buy one seat, and when it runs out.
+
+    **Not a seat state, and the seat below it is untouched** (ADR-0081): still
+    empty, still absent from the fill count, still doing nothing for the hold
+    ladder and still imputed by the forecast rather than carrying the
+    claimant's level. The glossary's *"there is no window in which a seat is
+    taken and unpaid by the taker"* survives word for word, because nobody has
+    taken a seat — they have taken the place in the queue in front of it.
+
+    **No rung reads this and none may.** A claim is about the *viewer* — Kuba
+    has one, Zofia does not, on the same match — and ADR-0040 fixes that
+    ``waitlisted`` is *the one* situation only a viewer can be in. A second
+    would make that sentence a coincidence, so ADR-0081 refuses a thirty-seventh
+    name and puts the claim in the composed screen's spine instead. What the
+    record carries it for is the **wake**: the moment it lapses is a moment this
+    match resolves differently, and `next_wake` is the only thing here that
+    looks.
+
+    **No player identity crosses**, like everything else in this module. Whose
+    claim it is belongs to the aggregate; what the wake function needs is which
+    seat is spoken for and until when.
+    """
+
+    seat_index: int
+    expires_at: Instant
 
 
 @final
@@ -290,6 +342,16 @@ class MatchRecord:
     open_vacancies: tuple[Vacancy, ...] = ()
     """Holes left by departures, while they are still holes."""
 
+    claims: tuple[SeatClaim, ...] = ()
+    """Seat claims nobody has ended yet, live or merely unreaped.
+
+    **Unended rather than live**, because *live* is a comparison against a clock
+    this record does not hold — the same reason `court_hold` composes a hold
+    from `held_since` rather than storing one. A claim whose five minutes ran
+    out an hour ago and which no wake has yet written a receipt for is still in
+    here, and contributes nothing: `next_wake` only ever looks ahead of `now`,
+    and `claimed_seats` composes liveness itself."""
+
     transferring: bool = False
     """A leaver has named somebody to take the seat and the handover is running."""
 
@@ -340,6 +402,25 @@ class MatchRecord:
             f"{len(self.open_vacancies)} open vacancies with "
             f"{sum(1 for s in self.seats if s.taken)} of {players} seats taken",
         )
+        # A claim is the right to buy **a free seat**, so an unended one over a
+        # seat somebody is already on, and two unended ones over one seat, are
+        # both callers having lost track of a claim rather than states. Refused
+        # at the door for the reason a paid seat with nobody on it is: the
+        # count downstream cannot then be quietly wrong, and the way a writer
+        # avoids this is by ending a claim in the same breath as redeeming it.
+        for claim in self.claims:
+            invariant(
+                0 <= claim.seat_index < players,
+                f"a claim on seat {claim.seat_index} of {players}",
+            )
+            invariant(
+                not self.seats[claim.seat_index].taken,
+                f"a claim on seat {claim.seat_index}, which is taken",
+            )
+        invariant(
+            len({claim.seat_index for claim in self.claims}) == len(self.claims),
+            "two unended claims on one seat",
+        )
 
 
 class WakeReason(str, Enum):
@@ -363,6 +444,14 @@ class WakeReason(str, Enum):
     lives, so the earlier and more consequential name wins a tie.
     """
 
+    #: A seat claim's five minutes running out. **First, and therefore the
+    #: winner of every tie it is in.** It is the only threshold here that is not
+    #: measured from `start` at all — it runs from a tap — so it has no natural
+    #: place in a sequence ordered by how a match lives; and when it does land on
+    #: one of the others it is the newer, shorter and more surprising of the two,
+    #: which is what the tie-break is for. It also hands a seat back to the race,
+    #: which is the most consequential thing a boundary this small can do.
+    CLAIM_LAPSE = "claimLapse"
     #: The commitment deadline: the earlier of the club's cancellation window
     #: and the platform's twelve-hour backstop.
     COMMITMENT = "commitment"
@@ -549,6 +638,80 @@ def vacancy_expires_at(record: MatchRecord) -> Instant | None:
         return None
     newest = max(vacancy.vacated_at for vacancy in record.open_vacancies)
     return shifted(newest, _VACANCY_DECAY)
+
+
+def claim_expires_at(taken_at: Instant) -> Instant:
+    """When a claim opened at `taken_at` stops being the right to buy the seat.
+
+    Takes an instant rather than a record, and for the same reason
+    `court_named_at` does: it is the first threshold in Matches that is not a
+    property of the match at all. A claim's five minutes hang off the tap, so
+    the record cannot answer it and does not pretend to — what the record
+    carries is the answer, once a writer has computed it.
+    """
+
+    return shifted(taken_at, _CLAIM_WINDOW)
+
+
+def claim_reopens_at(ended_at: Instant) -> Instant:
+    """When the same player may claim the same seat again after one of hers ended.
+
+    Thirty seconds, and the seat is part of the sentence: she may claim a
+    *different* seat immediately, and somebody else may claim this one
+    immediately. What is being broken is a tap-loop on one seat, not her
+    afternoon (ADR-0081).
+    """
+
+    return moved(ended_at, _CLAIM_COOLDOWN)
+
+
+def claim_is_live(claim: SeatClaim, now: Instant) -> bool:
+    """Whether this claim is still the right to buy its seat.
+
+    **Composed, never latched**, exactly like staleness: a claim whose five
+    minutes have run out is over whether or not anybody has written the receipt
+    yet, so nothing downstream depends on the reaper having got there. Strictly
+    before, so a claim expiring at `now` is over — which is the same strictness
+    `next_wake` uses, and it is what stops a wake armed at the expiry finding it
+    still running.
+    """
+
+    return now < claim.expires_at
+
+
+def claimed_seats(record: MatchRecord, now: Instant) -> frozenset[int]:
+    """Which seats somebody is buying right now, and is therefore alone with.
+
+    **The one answer to *is this seat spoken for***, and the reason it is here
+    rather than in Matches: the aggregate reads it to refuse a second claim, the
+    invitation cascade reads it to decide whether a seat may be offered at all
+    (``Raketa02/Raketa#82``), and the composed screen reads it to know whether a
+    card shows an exit. Three readers of one rule is ADR-0022's own test for
+    what belongs in the kernel.
+    """
+
+    return frozenset(
+        claim.seat_index for claim in record.claims if claim_is_live(claim, now)
+    )
+
+
+def claim_boundaries(record: MatchRecord) -> tuple[Boundary, ...]:
+    """Every moment a claim on this match runs out.
+
+    Asked for by `next_wake` rather than restated there, the same way the hold
+    ladder's tiers are — a threshold cannot exist in one and be missing from the
+    other if both read one list.
+
+    ADR-0081: *"An expiry is a match wake, not a channel send. It changes who
+    may take a seat, so it belongs on the record that owns seats."* That is also
+    the distinction from an **offer's** own expiry, which belongs to the cascade
+    that made it: an offer ending changes what one player was told, and a claim
+    ending changes what everybody may do.
+    """
+
+    return tuple(
+        Boundary(WakeReason.CLAIM_LAPSE, claim.expires_at) for claim in record.claims
+    )
 
 
 def deadlines(record: MatchRecord) -> Deadlines:

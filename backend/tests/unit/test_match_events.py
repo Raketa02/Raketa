@@ -58,13 +58,14 @@ AGGREGATE = ROOT / "app" / "modules" / "matches" / "domain" / "match.py"
 #: judgement this walk exists to stop somebody making silently.
 READ_ONLY = frozenset(
     {"as_record", "open_vacancies", "is_settled", "seat_of", "seat_at",
-     "departure_of", "pull_events"}
+     "departure_of", "pull_events", "unended_claims", "live_claim_of",
+     "seats_under_claim"}
 )
 
-#: Twenty-four changes and twenty-four names. Pinned, so that deleting an event
+#: Twenty-seven changes and twenty-seven names. Pinned, so that deleting an event
 #: is as loud as adding an unnamed write — a count that only ever goes up
 #: catches half of the rule.
-EXPECTED_EVENTS = 24
+EXPECTED_EVENTS = 27
 
 #: The many spellings of the one event ADR-0034 forbids.
 GENERIC = ("updated", "changed", "modified", "touched", "amended", "mutated")
@@ -296,6 +297,31 @@ def _drive_every_write() -> list:
     private.open_seats_to_the_marketplace(2, at=at(1))
     private.lose_inventory(at=at(2))
     announced.extend(private.pull_events())
+
+    # The three claim announcements, and each arrives a different way: one is
+    # redeemed inside its five minutes, one runs out and is reaped, and one is
+    # ended by the match dying underneath it. The third produces the same name
+    # as the second, which is ADR-0081's *"one rule ends a claim, whatever ended
+    # it"* — so the set below is three names from four writes.
+    claimed = Match.post(
+        match_id=uuid4(),
+        club_id=uuid4(),
+        category_id=uuid4(),
+        sport=Sport.PADEL,
+        start=at(8, 18),
+        duration=hours(1),
+        share=SeatShare(grosze(3800)),
+        policy=HoldPolicy(window=hours(24), join_cut=minutes(30)),
+        at=at(1),
+    )
+    buyer, dawdler, latecomer = uuid4(), uuid4(), uuid4()
+    claimed.open_claim(buyer, at=at(7, 20))
+    claimed.redeem_claim(buyer, at=at(7, 20))
+    claimed.open_claim(dawdler, at=at(7, 20))
+    claimed.reap_lapsed_claims(at=at(7, 21))
+    claimed.open_claim(latecomer, at=at(7, 21))
+    claimed.cancel_for_weather(at=at(7, 21))
+    announced.extend(claimed.pull_events())
 
     # A settled departure improving, which is the only way an outcome ever
     # moves once it has landed: she recovered half, and then the club lost the

@@ -171,10 +171,10 @@ Rules to preserve:
   `tests/unit/test_timekeeper_holds_no_thresholds.py` reddens on one appearing: the ticket that
   specified this shipped its own boundary table and it was short by five, including the two
   that release a club's court. `next_wake_at` is **never serialised onto a card**
-  (ADR-0053). **Two actors are asked on
-  every look** — the hold ladder, and the departure settlement — in a line rather than in a
-  loop, and neither holds a threshold: both read theirs off `kernel.deadlines` from inside
-  the aggregate, so the walk above stays green.
+  (ADR-0053). **Three actors are asked on
+  every look** — the hold ladder, the departure settlement, and the seat-claim reaper — in a
+  line rather than in a loop, and none holds a threshold: all three read theirs off the kernel
+  from inside the aggregate, so the walk above stays green.
 - **A departure and the hole it leaves are two records, and an outcome only goes up.** A
   leaving writes a `Vacancy` — which seat, when, closed by whoever takes it — *and* a
   `Departure`, which is whose money it is
@@ -193,6 +193,23 @@ Rules to preserve:
   refuses every seat move, and therefore derivably ADR-0030's *"no further seat event can
   change it"*, where its own illustration (the join cutoff) stopped being that on the day
   ADR-0081 made a running claim outlive it.
+- **A seat is never taken until it is paid, and what a player takes while she pays is a seat
+  claim.** Five minutes of exclusive right to buy **one seat**, and **its own record rather
+  than a fourth seat state** ([ADR-0081](../docs/adr/0081-a-seat-is-never-taken-until-it-is-paid.md)):
+  the seat below a live claim is still `empty`, still absent from the fill count, still earning
+  the match no court. That is what keeps the glossary's *"there is no window in which a seat is
+  taken and unpaid by the taker"* true word for word — and `redeem_claim` takes and pays in
+  **one** move, because a redemption that left a held-and-unpaid seat would open that window at
+  the last step. **Live is composed, never latched**: unended *and* not yet expired, so a claim
+  is over at its own instant whether or not a look has written the receipt — which is why the
+  cross-match *one live claim per player* rule is a **query** and not a unique index, and why
+  `open_claim` **reaps before it decides** (the write a stale row would block is the write that
+  clears it). Its expiry is a **match wake** under `next_wake_at`, never a channel send, and
+  `claimLapse` is first in `WakeReason` because it is the only threshold not measured from
+  `start`. `joinCut` is read by `open_claim` and by nothing else: a running claim is honoured
+  past it, which is the difference between a deadline and a trapdoor and costs one comparison.
+  A **terminal** match never wakes, so all five endings call `end_claims_with_the_match` — one
+  rule ends a claim, whatever ended it.
 - **A court is claimed by a reservation, and the database is what refuses the second one.**
   A reservation is one court and one **time range**, and two may never overlap on one court —
   enforced by `EXCLUDE USING gist` over `tstzrange(claimed_from, claimed_to, '[)')`, partial

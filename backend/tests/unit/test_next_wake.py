@@ -38,6 +38,8 @@ from app.kernel import (
     MatchKind,
     MatchRecord,
     PayModel,
+    Seat,
+    SeatClaim,
     Sport,
     Vacancy,
     WakeReason,
@@ -59,6 +61,7 @@ _HOLD_FAR = 12 * 60
 _HOLD_NEAR = 4 * 60
 _RESULT_WINDOW = 24 * 60
 _VACANCY_DECAY = 24 * 60
+_CLAIM_WINDOW = 5
 
 _STRIDE = 97
 
@@ -73,18 +76,28 @@ SAMPLE = _sample()
 # --- the eleven names -------------------------------------------------------
 
 
-def test_the_enumeration_is_closed_at_eleven() -> None:
-    """Pinned, the same way `SITUATION_COUNT` is. A twelfth reason is a decision
-    about where it sorts, and the tie-break is the enumeration's own order."""
+def test_the_enumeration_is_closed_at_twelve() -> None:
+    """Pinned, the same way `SITUATION_COUNT` is. A thirteenth reason is a
+    decision about where it sorts, and the tie-break is the enumeration's own
+    order."""
 
-    assert len(WakeReason) == 11
-    assert len({reason.value for reason in WakeReason}) == 11
+    assert len(WakeReason) == 12
+    assert len({reason.value for reason in WakeReason}) == 12
 
 
 #: One record and one clock per reason, each built so that the named threshold is
 #: the soonest one strictly ahead. Written as *what the match is* rather than as
 #: *what the kernel should answer*, so a rung moving is caught here.
 _REACHES = {
+    WakeReason.CLAIM_LAPSE: (
+        # Nothing paid and a fortnight out, so nothing else is within five
+        # minutes of anything: the claim is unambiguously next.
+        a_match(
+            paid=0,
+            claims=(SeatClaim(seat_index=1, expires_at=at(-4000)),),
+        ),
+        at(-4000 - 1),
+    ),
     WakeReason.COMMITMENT: (
         # Nothing paid, so no tier to lapse. The club's own window is narrower
         # than the backstop, so `commit` is the **earlier** of the two — the
@@ -181,6 +194,7 @@ def test_the_named_moment_is_the_moment_the_rule_names(reason: WakeReason) -> No
     assert wake is not None
 
     expected = {
+        WakeReason.CLAIM_LAPSE: at(-4000),
         WakeReason.COMMITMENT: at(-_COMMITMENT_BACKSTOP),
         WakeReason.HOLD_LAPSE: at(-_HOLD_FAR),
         WakeReason.HOLD_STALE: at(-4320 + 24 * 60),
@@ -207,6 +221,70 @@ def test_the_near_tier_is_named_the_same_as_the_far_one() -> None:
     assert wake is not None
     assert wake.reason is WakeReason.HOLD_LAPSE
     assert wake.at == at(-_HOLD_NEAR)
+
+
+def test_a_claim_lapse_wins_a_tie_against_every_start_relative_threshold() -> None:
+    """`claimLapse` is first in the enumeration, so it wins every tie it is in.
+
+    It is the only boundary here **not** measured from `start` — five minutes
+    from a tap — so it has no place in a sequence ordered by how a match lives.
+    Landing it on the join cutoff is the tie a real evening produces: somebody
+    taps at 13:25 against a 13:30 cutoff, and both moments are 13:30.
+    """
+
+    join_cut = at(-30)
+    tapped_five_minutes_before = a_match(
+        paid=2,
+        court_locked=True,
+        claims=(SeatClaim(seat_index=3, expires_at=join_cut),),
+    )
+
+    wake = next_wake(tapped_five_minutes_before, at(-31))
+
+    assert wake is not None
+    assert wake.at == join_cut
+    assert wake.reason is WakeReason.CLAIM_LAPSE
+
+
+def test_two_claims_on_one_match_name_the_sooner_deadline() -> None:
+    """Two people paying at once is ordinary — exclusivity is per seat — and the
+    schedule points at whichever runs out first, because a wake is a look and
+    the second one is still due when it arrives."""
+
+    both = a_match(
+        paid=0,
+        claims=(
+            SeatClaim(seat_index=0, expires_at=at(-4000)),
+            SeatClaim(seat_index=2, expires_at=at(-3998)),
+        ),
+    )
+
+    wake = next_wake(both, at(-4001))
+
+    assert wake is not None
+    assert wake.reason is WakeReason.CLAIM_LAPSE
+    assert wake.at == at(-4000)
+
+
+def test_a_claim_on_a_full_match_is_still_a_boundary() -> None:
+    """A seat that frees and is claimed on a match that has since refilled is
+    not a state anybody can reach — but the claim on a match whose *other* seats
+    filled while she paid is, and her five minutes still have to be looked at."""
+
+    filling = MatchRecord(
+        sport=Sport.PADEL,
+        start=START,
+        duration=DURATION,
+        created=at(-4320),
+        seats=(Seat(True, True), Seat(True, True), Seat(True, True), Seat()),
+        claims=(SeatClaim(seat_index=3, expires_at=at(-4000)),),
+        held_since=at(-4320),
+    )
+
+    wake = next_wake(filling, at(-4001))
+
+    assert wake is not None
+    assert wake.reason is WakeReason.CLAIM_LAPSE
 
 
 # --- the tie-break ----------------------------------------------------------

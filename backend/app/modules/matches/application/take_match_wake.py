@@ -15,13 +15,15 @@ for the timekeeper is a second ladder and should be deleted rather than
 reconciled."* ``tests/unit/test_timekeeper_holds_no_thresholds.py`` reddens on
 one appearing in this package.
 
-**Two actors now, and they are asked in a fixed order rather than in a loop.**
+**Three actors now, and they are asked in a fixed order rather than in a loop.**
 The hold ladder decides what happens to the club's court; the departure
 settlement decides what happens to a leaver's money once the roster can no
-longer change. They read different facts — a departure is not in ``MatchRecord``
-at all — so neither can move what the other looks at, and a look that finds work
-for either one saves once. A third actor joins by being asked here, in a line,
-and the schedule already wakes for the thresholds it would need.
+longer change; the claim reaper writes the receipt for a payment window that ran
+out, which is what puts a seat back in front of everybody else. They read
+different facts — a departure is not in ``MatchRecord`` at all, and a claim is in
+it only as a moment — so none can move what another looks at, and a look that
+finds work for any of them saves once. A fourth joins by being asked here, in a
+line, and the schedule already wakes for the thresholds it would need.
 
 **Neither actor holds a threshold, and that is enforced.** The moment this
 look settles against is read inside the aggregate, off ``kernel.deadlines``;
@@ -112,8 +114,14 @@ class TakeMatchWake:
         # class of miss the schedule exists to remove. Both are no-ops when
         # there is nothing to do, which is what makes asking always affordable.
         settled = match.settle_departures_if_closed(at=now)
+        # The third actor, and the only one whose threshold is not relative to
+        # the match's start: a claim's five minutes run from a tap. It writes a
+        # receipt rather than a change — `is_live` already says the claim is
+        # over — and what the receipt buys is the row a support agent reads and
+        # the anchor the thirty-second cooldown is measured from.
+        reaped = match.reap_lapsed_claims(at=now)
 
-        if move is not HoldMove.STAND or settled:
+        if move is not HoldMove.STAND or settled or reaped:
             # `save` recomputes the schedule from the record it is writing, so
             # the acting path arms itself and this one does not touch it.
             await self._matches.save(match)

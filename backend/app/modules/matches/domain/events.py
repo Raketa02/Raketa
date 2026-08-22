@@ -113,6 +113,68 @@ class SeatTaken:
 
 
 @dataclass(frozen=True)
+class SeatClaimOpened:
+    """A player took the exclusive right to buy a seat, for five minutes.
+
+    **Not a seat event**, and it is here beside them because it is what a
+    support agent will reach for when somebody asks *why could I not take that
+    seat at 18:03* (ADR-0081). The seat itself is untouched — still empty, still
+    absent from the fill count — so nothing about occupancy is announced.
+
+    ``expires_at`` rides on it because the deadline is the fact, not the
+    duration: a change to the five minutes must not retroactively move a
+    deadline already announced.
+    """
+
+    match_id: UUID
+    claim_id: UUID
+    seat_index: int
+    player_id: UUID
+    expires_at: datetime
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class SeatClaimLapsed:
+    """A claim ended without the seat being bought, and the seat is on offer again.
+
+    One name for two arrivals, and deliberately: the five minutes running out
+    and the match dying underneath the claim are *"one rule ends a claim,
+    whatever ended it"* (ADR-0081), and downstream they are one thing — a
+    payment that lands afterwards is refunded with cause ``claimLapsed`` either
+    way. Which of the two happened is answered by what else is on the outbox at
+    the same instant: a cancellation announces itself.
+
+    ``ended_at`` is when the claim stopped being live, which for an expiry is
+    the moment its five minutes ran out and **not** the moment a wake noticed —
+    a downed worker must not extend anybody's thirty-second cooldown.
+    """
+
+    match_id: UUID
+    claim_id: UUID
+    seat_index: int
+    player_id: UUID
+    ended_at: datetime
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class SeatClaimRedeemed:
+    """The claim was spent: the seat is bought, taken and paid in one move.
+
+    Its own name rather than being read off the ``SeatTaken`` beside it,
+    because *she bought the seat she was holding* and *somebody was invited onto
+    a seat* are two different stories that leave the same occupancy behind.
+    """
+
+    match_id: UUID
+    claim_id: UUID
+    seat_index: int
+    player_id: UUID
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
 class SeatPaid:
     """The money for a seat landed.
 

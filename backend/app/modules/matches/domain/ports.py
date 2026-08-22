@@ -131,6 +131,38 @@ class CourtHolds(Protocol):
 
 
 @runtime_checkable
+class SeatClaims(Protocol):
+    """The one question about claims that no single match can answer.
+
+    **One live claim per player, across every match** (ADR-0081), so nobody
+    parks three seats in three matches while deciding. The aggregate can see
+    its own claims and cannot see anybody else's, so this is a third port over
+    the same tables, in the shape ``MatchSchedule`` already established: that
+    one asks *which ids are due*, this one asks *is she already buying
+    something*, and neither wants a whole match.
+
+    **It is a query and never a write**, which is what makes the rule survive a
+    downed reaper. *Live* is composed — unended **and** not yet expired — so a
+    player whose last claim ran out is free the instant it did, without waiting
+    for anybody to write the receipt. A unique index would have to spell *live*
+    as *unended*, and would then refuse her on the strength of a row nobody had
+    got round to closing.
+
+    **The residual race is real and is stated rather than papered over.** Two
+    taps in two matches inside the same instant can both see nothing and both
+    open a claim, because no version guard spans two matches. What that costs is
+    five minutes in which one player holds two queue places; it cannot produce
+    two seats, because a seat is taken and paid in one write and one player
+    holds at most one seat in a match. The structural limits are the whole
+    defence until the player score exists, and ADR-0081 says so.
+    """
+
+    async def live_for(self, player_id: UUID, *, at: Instant) -> UUID | None:
+        """The match this player is already buying a seat in, or nothing."""
+        ...
+
+
+@runtime_checkable
 class MatchSchedule(Protocol):
     """The timekeeper's two operations over the schedule columns.
 

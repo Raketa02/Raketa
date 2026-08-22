@@ -117,7 +117,9 @@ from app.kernel import (
     Recoverable,
     Result,
     Seat,
+    SeatClaim,
     SeatShare,
+    Seconds,
     Situation,
     Sport,
     SportSpec,
@@ -128,6 +130,10 @@ from app.kernel import (
     add_grosze,
     apply_fraction,
     card_offset,
+    claim_expires_at,
+    claim_is_live,
+    claim_reopens_at,
+    claimed_seats,
     court_hold,
     court_price,
     day_offset,
@@ -146,6 +152,7 @@ from app.kernel import (
     local_minute_of_day,
     minute_of_day,
     minutes,
+    moved,
     next_wake,
     next_wake_at,
     outcome_rank,
@@ -155,6 +162,7 @@ from app.kernel import (
     ratio,
     refill_outcome,
     round_half_away_from_zero,
+    seconds,
     shifted,
     situation,
     slot_start,
@@ -2009,3 +2017,101 @@ def the_two_questions_both_answer_an_outcome(record: MatchRecord) -> bool:
     return outcome_worse_than(
         live_outcome(record, A_START), refill_outcome(record, A_START)
     )
+
+
+# ---------------------------------------------------------------------------
+# Seat claims. Two brands and one union arrive with ADR-0081: `Seconds`, which
+# is the first sub-minute duration in the system, and `SeatClaim`, which is a
+# fact the ladder must never learn to read.
+# ---------------------------------------------------------------------------
+
+
+class ASecondIdeaOfAClaim(SeatClaim):  # want-error: misc
+    """`SeatClaim` is `@final`. A subclass carrying *whose* claim it is would put
+    a player identity into the record the ladder reads, which is the one thing
+    nothing in that module holds."""
+
+
+def a_claim_cannot_be_repainted_after_it_is_read(claim: SeatClaim) -> None:
+    """Frozen: a deadline that moved under the schedule armed against it is a
+    wake pointed at an instant that no longer means anything. ADR-0081 fixes
+    that the five minutes are *"a claim it cannot extend"*, and this is the half
+    of that a payment provider cannot argue with."""
+
+    claim.expires_at = A_START  # want-error: misc
+
+
+def a_claim_is_read_as_a_claim_and_not_as_a_seat(record: MatchRecord) -> bool:
+    """Pinned clean, and the pinning is the point: `claimed_seats` answers with
+    seat *indices*, so a caller cannot mistake a claim for occupancy — the
+    seats themselves are somewhere else entirely."""
+
+    return 0 in claimed_seats(record, A_START)
+
+
+def the_seats_being_bought_are_not_the_seats(record: MatchRecord) -> frozenset[int]:
+    """A `frozenset[int]`, not a set of `Seat`s: *which position is spoken for*
+    and *who is on which seat* are two questions, and ADR-0081 turns on their
+    being kept apart."""
+
+    return claimed_seats(record, A_START)
+
+
+def a_claims_liveness_is_asked_against_an_instant(claim: SeatClaim) -> bool:
+    return claim_is_live(claim, A_START)
+
+
+def a_claims_liveness_cannot_be_asked_against_a_bare_datetime(
+    claim: SeatClaim,
+) -> bool:
+    """The naive-datetime bug the `Instant` brand exists to make unwritable,
+    asserted at the newest call site in the kernel."""
+
+    return claim_is_live(claim, datetime(2026, 8, 22, 18, 30))  # want-error: arg-type
+
+
+def five_minutes_from_a_tap_is_an_instant() -> Instant:
+    return claim_expires_at(A_START)
+
+
+def thirty_seconds_is_not_thirty_minutes() -> Instant:
+    """Pinned clean. Both thresholds take and return an `Instant`, so nothing
+    here can tell them apart — which is why `tests/unit/test_kernel_seat_claims.py`
+    asserts the two durations behaviourally, and why it is written down here
+    that it must."""
+
+    return claim_reopens_at(claim_expires_at(A_START))
+
+
+def a_second_is_not_a_minute() -> Instant:
+    """The brand that makes the thirty seconds writable at all, and the reason
+    it is a separate type: a `Minutes` handed to `moved` is a sixtyfold error
+    that reads perfectly."""
+
+    return moved(A_START, minutes(30))  # want-error: arg-type
+
+
+def a_minute_is_not_a_second() -> Instant:
+    """And the other way round, because a `Seconds` handed to `shifted` is the
+    same error divided rather than multiplied."""
+
+    return shifted(A_START, seconds(30))  # want-error: arg-type
+
+
+def an_instant_is_moved_by_branded_seconds() -> Instant:
+    """Pinned clean: the legitimate call, which is what makes the two above
+    claims about the brands rather than about the signature."""
+
+    return moved(A_START, seconds(30))
+
+
+def seconds_are_not_a_bare_number() -> Instant:
+    return moved(A_START, 30)  # want-error: arg-type
+
+
+def a_duration_in_seconds_is_a_length_and_not_a_moment() -> Seconds:
+    """`Seconds` is signed and is a *length*; an `Instant` is a point. Handing
+    one where the other belongs is the confusion `elapsed_minutes` and `moved`
+    exist on opposite sides of."""
+
+    return seconds(A_START)  # want-error: arg-type

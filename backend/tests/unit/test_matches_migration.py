@@ -43,15 +43,22 @@ VERSIONS = ROOT / "migrations" / "versions"
 MIGRATION = VERSIONS / "0009_matches.py"
 SCHEDULE_MIGRATION = VERSIONS / "0010_match_schedule.py"
 DEPARTURES_MIGRATION = VERSIONS / "0011_match_departures.py"
+CLAIMS_MIGRATION = VERSIONS / "0012_match_seat_claims.py"
 
 #: In the order Alembic applies them.
-MIGRATIONS = (MIGRATION, SCHEDULE_MIGRATION, DEPARTURES_MIGRATION)
+MIGRATIONS = (
+    MIGRATION,
+    SCHEDULE_MIGRATION,
+    DEPARTURES_MIGRATION,
+    CLAIMS_MIGRATION,
+)
 
 MATCH_TABLES = (
     "matches",
     "match_seats",
     "match_vacancies",
     "match_departures",
+    "match_seat_claims",
 )
 
 INDEXES = {
@@ -70,6 +77,23 @@ INDEXES = {
     "ix_match_departures_player_id": (
         "match_departures",
         ("player_id",),
+        False,
+    ),
+    "ix_match_seat_claims_match_id": (
+        "match_seat_claims",
+        ("match_id",),
+        False,
+    ),
+    #: **Not unique**, on either shape somebody might reach for. Over
+    #: `(player_id)` a unique index would have to spell *live* as *unended* and
+    #: would refuse a player on the strength of a row nobody had closed; over
+    #: `(match_id, seat_index)` it would refuse the legitimate second claim on a
+    #: seat whose previous claim expired — and the write it would refuse is the
+    #: one that reaps it. Two claims on one seat are impossible already, and the
+    #: `version` column on `matches` is what makes them so.
+    "ix_match_seat_claims_unended": (
+        "match_seat_claims",
+        ("player_id", "expires_at"),
         False,
     ),
 }
@@ -171,6 +195,11 @@ def departures_migration_module() -> Any:
     return _loaded(DEPARTURES_MIGRATION, "match_departures_migration_raw")
 
 
+@pytest.fixture(scope="module")
+def claims_migration_module() -> Any:
+    return _loaded(CLAIMS_MIGRATION, "match_seat_claims_migration_raw")
+
+
 def _table_ddl(table: sa.Table) -> str:
     return str(CreateTable(table).compile(dialect=postgresql.dialect())).strip()
 
@@ -183,7 +212,7 @@ def _index_ddl(index: sa.Index) -> str:
 
 
 def test_the_migrations_create_exactly_the_match_tables(migrated):
-    """Four tables across three files — `0010` adds columns and creates none."""
+    """Five tables across four files — `0010` adds columns and creates none."""
 
     assert set(migrated.created) == set(MATCH_TABLES)
     assert len(migrated.created) == len(MATCH_TABLES)
@@ -311,6 +340,43 @@ def test_the_due_index_is_partial_over_the_rows_that_have_a_moment(
     assert f"WHERE {declared.SCHEDULED}" in ddl
     for flag in ("club_cancelled", "weather", "form_cancelled", "inventory_lost"):
         assert flag not in ddl, "terminality is restated in SQL"
+
+
+def test_the_unended_claims_index_is_partial_and_not_unique(
+    migrated, claims_migration_module
+):
+    """Partial over `ended_at IS NULL`, and deliberately **not** unique.
+
+    *Live* is unended **and** not yet expired, and the second half cannot be an
+    index predicate because it needs a clock. That asymmetry is the right way
+    round — the index over-covers by the rows a reaper has not reached, which
+    costs a page — where a *unique* index over the same predicate would have to
+    spell *live* as *unended* and would refuse a player on the strength of a row
+    nobody had got round to closing.
+    """
+
+    assert claims_migration_module.CLAIM_UNENDED == declared.CLAIM_UNENDED
+    index = next(i for i in migrated.indexes if i.name == declared.UNENDED_CLAIMS)
+    ddl = _index_ddl(index)
+
+    assert "UNIQUE" not in ddl
+    assert f"WHERE {declared.CLAIM_UNENDED}" in ddl
+
+
+def test_a_claim_names_a_seat_and_never_touches_the_seat_row(migrated):
+    """ADR-0081 in the schema: the seat under a live claim is untouched.
+
+    `match_seats` gains nothing at all here — no `claimed_by`, no `claimed_until`
+    — because a claim is not a seat state and columns there would be that
+    decision reversed where nothing would ever re-argue it.
+    """
+
+    seats = migrated.metadata.tables["match_seats"]
+
+    assert "claim" not in " ".join(seats.c.keys())
+    assert set(seats.c.keys()) == {
+        "id", "match_id", "seat_index", "player_id", "paid", "taken_at",
+    }
 
 
 def test_the_policy_snapshot_is_on_the_match(migrated):

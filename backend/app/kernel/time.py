@@ -51,6 +51,7 @@ from app.kernel.results import Err, Ok, Result
 MINUTES_PER_DAY = 1440
 
 _MINUTES_PER_HOUR = 60
+_SECONDS_PER_MINUTE = 60
 
 #: A moment in time: a timezone-aware `datetime` normalised to UTC.
 Instant = NewType("Instant", datetime)
@@ -64,6 +65,20 @@ DayOffset = NewType("DayOffset", int)
 
 #: A length of time in whole minutes. Signed: negative runs backwards.
 Minutes = NewType("Minutes", int)
+
+#: A length of time in whole seconds. Signed, like `Minutes`, and **a separate
+#: brand rather than a finer spelling of it**: the two are not interchangeable,
+#: and a `Minutes` handed to something expecting a `Seconds` is a sixtyfold
+#: error that reads perfectly.
+#:
+#: It exists because one rule in the system is measured below a minute — a seat
+#: claim's thirty-second cooldown
+#: (``docs/adr/0081-a-seat-is-never-taken-until-it-is-paid.md``),
+#: which is *"enough to break a tap-loop, not enough to cost a mistyped PIN a
+#: Saturday game."* Rounding it up to a minute would be that rule told as a lie,
+#: and writing it as a bare `timedelta` at its call site would reach past the
+#: validating constructor, which is exactly what a brand is for.
+Seconds = NewType("Seconds", int)
 
 #: A day of the local week, ISO-numbered: Monday 1 through Sunday 7.
 IsoWeekday = NewType("IsoWeekday", int)
@@ -169,6 +184,12 @@ def hours(count: int) -> Minutes:
     """
 
     return minutes(_not_a_bool(count, "hours") * _MINUTES_PER_HOUR)
+
+
+def seconds(value: int) -> Seconds:
+    """A length of time in whole seconds; negative runs backwards."""
+
+    return Seconds(_not_a_bool(value, "seconds"))
 
 
 @dataclass(frozen=True)
@@ -287,6 +308,21 @@ def elapsed_minutes(start: Instant, end: Instant) -> Minutes:
     return minutes(delta.days * MINUTES_PER_DAY + delta.seconds // _MINUTES_PER_HOUR)
 
 
+def moved(moment: Instant, by: Seconds) -> Instant:
+    """`moment` moved by `by` **elapsed** seconds; negative moves backwards.
+
+    **The one place an instant is moved at all**, with `shifted` as its wrapper
+    rather than the other way round — the same relationship `court_named_at` has
+    to `door_code_at`, and for the same reason. Minutes are the currency of
+    almost every rule in the system, so `shifted` is what nearly every caller
+    wants; but a rule measured in seconds cannot be spelled in minutes at all,
+    and two constructions of a `timedelta` would be two places for the
+    elapsed-versus-wall-clock question to be answered.
+    """
+
+    return instant(moment + timedelta(seconds=by))
+
+
 def shifted(moment: Instant, by: Minutes) -> Instant:
     """`moment` moved by `by` **elapsed** minutes; negative moves backwards.
 
@@ -295,7 +331,7 @@ def shifted(moment: Instant, by: Minutes) -> Instant:
     court is booked for an hour and a half, not until a particular clock face.
     """
 
-    return instant(moment + timedelta(minutes=by))
+    return moved(moment, seconds(by * _SECONDS_PER_MINUTE))
 
 
 @runtime_checkable

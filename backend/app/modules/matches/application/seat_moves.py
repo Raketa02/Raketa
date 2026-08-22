@@ -1,9 +1,14 @@
-"""The three writes that change who is on a court, and one that moves the hour.
+"""The writes that change who is on a court, and one that moves the hour.
 
-Four small use cases in one module because they are one shape — load, ask the
-aggregate, save, commit — and splitting them into four files would say they were
-four different things. Each one's *rule* lives on the aggregate, where the
+Six small use cases in one module because they are one shape — load, ask the
+aggregate, save, commit — and splitting them into six files would say they were
+six different things. Each one's *rule* lives on the aggregate, where the
 kernel is; what is here is the transaction.
+
+**A seat claim is one of them and not a context of its own.** It changes who may
+take a seat, which is what this module is about, and it is written to the match's
+own tables in the match's own transaction — ADR-0081 puts its expiry under the
+match's `next_wake_at` for exactly that reason.
 
 **None of them commits anything the caller cannot join.** ``save`` publishes the
 announcements into the same transaction and does not commit, so
@@ -30,15 +35,17 @@ from app.application.ports import UnitOfWork
 from app.kernel import Clock, instant
 
 from app.modules.matches.application.commands import (
+    ClaimSeatCommand,
     DepartCommand,
     MoveMatchStartCommand,
     PaySeatCommand,
+    RedeemSeatClaimCommand,
     TakeSeatCommand,
 )
 from app.modules.matches.application.resolve_court_hold import ResolveCourtHold
-from app.modules.matches.domain.errors import MatchNotFound
+from app.modules.matches.domain.errors import MatchNotFound, PlayerAlreadyClaiming
 from app.modules.matches.domain.match import Match
-from app.modules.matches.domain.ports import MatchRepository
+from app.modules.matches.domain.ports import MatchRepository, SeatClaims
 
 
 class _MatchWrite:
@@ -83,6 +90,68 @@ class TakeSeat(_MatchWrite):
         match = await self._load(command.match_id)
         at = instant(self._clock.now())
         match.take_seat(command.player_id, at=at)
+        await self._holds.apply(match, at=at)
+        stored = await self._matches.save(match)
+        await self._uow.commit()
+        return stored
+
+
+class ClaimSeat(_MatchWrite):
+    """A player takes the five minutes in front of a seat (ADR-0081).
+
+    **Two rules and two places they can live.** Everything about *this* match —
+    the join cutoff, whether a seat is free, whether one is spoken for, whether
+    thirty seconds have passed — is the aggregate's, because it is a function of
+    the record. *Is she already buying a seat somewhere else* is not: no
+    aggregate can see another one, so it is a narrow read through a port of its
+    own, taken here, before the match is touched.
+
+    Asked in that order deliberately. The cross-match question is one indexed
+    query and the aggregate's are free, but a player who is mid-payment
+    elsewhere should be told *that* rather than told this match is full — the
+    first refusal she gets should be the one that explains what to do.
+    """
+
+    def __init__(
+        self,
+        matches: MatchRepository,
+        holds: ResolveCourtHold,
+        uow: UnitOfWork,
+        clock: Clock,
+        claims: SeatClaims,
+    ) -> None:
+        super().__init__(matches, holds, uow, clock)
+        self._claims = claims
+
+    async def execute(self, command: ClaimSeatCommand) -> Match:
+        match = await self._load(command.match_id)
+        at = instant(self._clock.now())
+        if await self._claims.live_for(command.player_id, at=at) is not None:
+            raise PlayerAlreadyClaiming()
+        match.open_claim(command.player_id, at=at)
+        await self._holds.apply(match, at=at)
+        stored = await self._matches.save(match)
+        await self._uow.commit()
+        return stored
+
+
+class RedeemSeatClaim(_MatchWrite):
+    """The money landed inside the five minutes: the seat is taken **and** paid.
+
+    One write, because a redeemed claim that left a held-and-unpaid seat behind
+    would open the very window ADR-0081 exists to close. The commitment check
+    rides along inside ``pay_seat``, so a match this payment fills past its own
+    deadline commits in the same transaction.
+
+    **This is the seam ``Raketa02/Raketa#70`` widens**, not replaces: the court
+    the payment earns and the two movements it writes join *this* transaction,
+    which is why nothing here commits anything a caller cannot compose over.
+    """
+
+    async def execute(self, command: RedeemSeatClaimCommand) -> Match:
+        match = await self._load(command.match_id)
+        at = instant(self._clock.now())
+        match.redeem_claim(command.player_id, at=at)
         await self._holds.apply(match, at=at)
         stored = await self._matches.save(match)
         await self._uow.commit()
