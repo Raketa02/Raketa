@@ -151,6 +151,22 @@ Rules to preserve:
   reservations and no count is stored anywhere.** A reservation is **released, never
   deleted**, because a court's booking history is a query over reservations. SQLite has none
   of this: the ordinary path is tested fast and the race lives in `tests/integration/`.
+- **Now is a composition, not a context, and the phone holds no rules.**
+  `app/modules/now/` owns no aggregate and writes nothing; what it owns is the shape of the
+  answer ([ADR-0070](../docs/adr/0070-now-is-three-regions-and-a-card-has-two-halves.md)).
+  One request returns **three ordered regions**, and the asymmetry between them is
+  load-bearing: a **region** with nothing in it is present and empty, a **shelf** with
+  nothing in it is absent. A card is **two nested halves** — a spine every phone draws and a
+  situation half only a current one does — so an unknown situation costs a sentence and never
+  a card. Everything a client could be asked to *derive* is composed here instead: the act
+  code, the one clock slot, the emphasis flag, the fit badge already clamped. **The tag, the
+  tone and the alert cross no wire at all** — all three are total functions of the situation
+  and belong to the client's own table, and a flag would let the server and the phone
+  disagree about whether a card is urgent. Every code crosses as an **OpenAPI enum**: a bare
+  string degrades the client's exhaustive `Record` into an index signature that never fires,
+  which is the one failure mode no typecheck can reach afterwards. And **no sentence is
+  composed here** — an AST walk over the package reddens on any string literal that could be
+  copy, with a negative control proving it can tell one from a code.
 - **The kernel is one import path.** `app.kernel` re-exports its whole public API through
   an explicit `__all__`, and nothing outside the package — tests included — imports a
   submodule, so a definition can move between kernel files without touching a caller

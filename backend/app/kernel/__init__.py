@@ -19,6 +19,7 @@ tuples, everywhere, with no development-versus-production split — a guard that
 only runs in development is a guard that has never been run where it counts.
 """
 
+from app.kernel.causes import CAUSE_COUNT, Cause
 from app.kernel.holds import (
     Hold,
     HoldKind,
@@ -208,4 +209,7 @@ __all__ = [
     "Situation",
     "next_wake_at",
     "situation",
+    # causes — why money moved, and why a match ended, in five closed names
+    "CAUSE_COUNT",
+    "Cause",
 ]

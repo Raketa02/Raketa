@@ -61,6 +61,8 @@ from app.modules.courts.infrastructure.sqlalchemy_booking_repository import (
     SqlAlchemyBookingRepository,
 )
 from app.modules.matches.domain.ports import MatchRepository
+from app.modules.now.domain.ports import RatedSports
+from app.modules.now.infrastructure.rating_sports import RatedSportsFromSkillRatings
 from app.modules.matches.infrastructure.sqlalchemy_match_repository import (
     SqlAlchemyMatchRepository,
 )
@@ -245,3 +247,18 @@ def build_match_repository(
     passes it in rather than getting a second one by accident.
     """
     return SqlAlchemyMatchRepository(session, events=events)
+
+
+# --------------------------------------------------------------------------
+# Now
+# --------------------------------------------------------------------------
+
+
+def build_rated_sports(ratings: SkillRatingRepository) -> RatedSports:
+    """`Now`'s answer to *which sports does this player hold a rating at*.
+
+    Takes the rating context's **port** rather than a session: what backs a
+    rating is the rating context's business, and the day a projection answers
+    this faster than a replay does, only this line moves.
+    """
+    return RatedSportsFromSkillRatings(ratings=ratings)

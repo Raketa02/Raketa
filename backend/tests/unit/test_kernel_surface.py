@@ -116,6 +116,8 @@ THE_SURFACE = (
     "Situation",
     "next_wake_at",
     "situation",
+    "CAUSE_COUNT",
+    "Cause",
 )
 
 

@@ -934,6 +934,63 @@ departure was ever protecting.
 
 ---
 
+### Now — the composed screen (`backend/app/modules/now/`)
+
+The one request that returns the player's home screen, and the words all three apps use
+about it. Decided by [ADR-0070](docs/adr/0070-now-is-three-regions-and-a-card-has-two-halves.md),
+[ADR-0072](docs/adr/0072-two-sentences-are-two-situations-and-a-leaver-is-a-third-audience.md),
+[ADR-0073](docs/adr/0073-a-card-counts-money-and-counts-down-to-what-happens-anyway.md),
+[ADR-0083](docs/adr/0083-a-card-names-one-act-and-twenty-seven-name-none.md) and
+[ADR-0087](docs/adr/0087-leaving-standby-is-the-seventh-act.md).
+
+- **Region** — one of Now's three ordered lists of cards: **offers**, **your matches**,
+  **shelves**, in that order and always all three. A region **with nothing in it is present
+  and empty**, because a region makes no claim, and because *not there* and *there and
+  empty* handled in one place and not the other is the most productive bug in this class.
+- **Shelf** — one titled row inside the shelves region, making exactly **one claim**. A
+  shelf **with nothing in it is absent**: a row appearing every week to say *nothing worth
+  waiting for* is a row players learn to scroll past. It crosses as a **shelf code** and an
+  optional **caption code**, never a title — the words were never the part that needed to
+  move without a client release; shelf *presence* and shelf *order* were.
+- **Card** — one thing on the screen, of exactly three kinds: **match**, **person**, **club**.
+  **Identified by the thing it is about**, never by its position or by the shelf it sits in —
+  one match may appear on more than one shelf, and under thing identity one answer corrects
+  every copy of it.
+- **Spine** — the half of a card every phone can draw: which thing, the one moment, where,
+  how much, the fit badge, the emphasis flag, the act code, whether she may leave, the seat
+  claim, the card stamp. *Avoid: calling it the header — the screen has one of those and it
+  is somewhere else.*
+- **Situation half** — the other half, `{situation, facts}`, read **only by a client that
+  knows the name**. A phone meeting an unknown situation draws the spine and drops the status
+  line; it never skips the card, because an app hiding a match the player has paid for reads
+  as *your app lost my booking*.
+- **Act** — the single thing a card invites, from a **closed set of seven**: `takeSeat ·
+  finishPaying · enterResult · answerResult · seeAlternatives · gettingIn · leaveStandby`.
+  **Twenty-six of the thirty-six situations name none**, and such a card has no button and no
+  tappable body. A card names an act **when the viewer can take it now and a v1 surface can
+  receive it**, so an eighth arrives *with* the surface that receives it and never ahead of it.
+- **Clock slot** — the card's one moment, and which moment fills it is a rule rather than
+  thirty-six judgements: **the next moment at which something happens to the viewer whether
+  they act or not**. A card that is over or cancelled counts to nothing and the slot is empty.
+  *The clock is the app's warning, not its to-do list.*
+- **Emphasis** — the at-most-one card on the whole screen that shouts. A property of the
+  **composed screen** and never of a card, so the server ships the flag and the client never
+  recomputes it; any offer on screen silences it entirely.
+- **Stamp** — the monotonically increasing integer carried once per region and once per card,
+  so a late compose racing an action can be ordered against it. There is **no screen-level
+  stamp**.
+- **Compose vs update** — a **compose** is the whole screen; an **update** is the one card
+  that changed plus any of the two viewer-owned regions whose contents or order changed,
+  **whole**. The shelves are never in an update. **A refusal returns what a success returns**:
+  tapping an offer somebody already took comes back as what is true now, and the player *sees*
+  the seat is gone rather than being told by a dialog.
+- **Debt line** — the one fact about the viewer that rides on the envelope: an amount, a
+  currency, and **one boolean** meaning *this player may not create a match or book a court*.
+  Not the amount alone, which would make the phone conclude the rule; not a list of blocked
+  acts, which invents a vocabulary nothing else would read.
+
+---
+
 ### Money — terms committed ahead of the code
 
 Committed by [ADR-0055](docs/adr/0055-the-ledger-is-event-sourced-one-stream-per-player.md),
@@ -950,6 +1007,12 @@ Committed by [ADR-0055](docs/adr/0055-the-ledger-is-event-sourced-one-stream-per
   a rule, and the nightly reconciliation asserts it.
 - **Cause** — the *rule that fired*, from a closed enumeration. Not a description of the movement
   but the reason it was owed. Every terminal situation that moves money contributes exactly one.
+  **This one is no longer ahead of the code:** the five — `inventoryLost · clubCancelled ·
+  formCancelled · checkpointCancelled · settlementReopened` — are `kernel.Cause`, put in the
+  shared kernel rather than in Money because Matches produces a cause, Money records it and Now
+  renders it, and a second implementation of it in any of the three would be a defect.
+  `settlementReopened` is in the enumeration and reaches no card, because by the time a settled
+  departure is reopened no card exists.
 - **Ledger** — the fold over a player's movements. One event-sourced stream per player.
 - **Balance** — a player's derived position on the ledger. In v1 it is zero or negative; **there
   is no wallet**, because stored value is a regulated product Raketa is not buying.

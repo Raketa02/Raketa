@@ -1,0 +1,209 @@
+"""The codes Now composes, and the one projection it makes off the kernel.
+
+Everything here is a **closed enumeration that crosses the wire**, and each is
+closed for the same reason: a client renders copy per code through a total table
+(``docs/adr/0041-tone-is-editorial-so-the-wire-carries-a-situation-and-its-facts.md``),
+and a bare string degrades that table into an index signature that never fires.
+The words themselves are the client's and are never here — this module holds no
+sentence, in any language.
+
+What is *not* here, deliberately: the **tag**, the **tone** and the **alert**.
+All three are total functions of the situation, so ADR-0072 puts them in the
+client's own thirty-six-row table and they cross no wire. A flag would let the
+server and the phone disagree about whether a card is urgent, which is exactly
+the two-derivations failure ADR-0040 exists to make unreachable.
+"""
+
+from __future__ import annotations
+
+from enum import Enum
+from types import MappingProxyType
+from typing import Mapping
+
+from app.kernel import HoldReason, invariant
+
+
+class CardType(str, Enum):
+    """Three card types, not one with holes.
+
+    ADR-0070: a person and a club have no situation, no clock, no price and no
+    emphasis, so one union type would give every person card four permanently
+    empty fields and nothing preventing a later session filling one in. The
+    discriminator rides on the card itself and never on the shelf that holds it,
+    because a card is identified by *the thing it is about*.
+    """
+
+    MATCH = "match"
+    PERSON = "person"
+    CLUB = "club"
+
+
+class ActCode(str, Enum):
+    """The one act a card may name, from a closed set of seven.
+
+    ADR-0083 opened the set at six and fixed the rule that governs it — *a card
+    names an act when the viewer can take it now and a v1 surface can receive
+    it* — and ADR-0087 exercised that rule once, adding ``leaveStandby`` **with**
+    the write that receives it. That is the only way an eighth arrives.
+
+    Twenty-six of the thirty-six situations name none, and that is not a hole to
+    be patched with a button that opens something irrelevant: ``Open match`` died
+    with its destination when the match-detail screen went out of scope.
+
+    The act rides in the **spine**, as a code alone and with no target beside it.
+    Each code determines its own destination and the card already identifies the
+    thing it is about, so a target would be a second answer to one question. It
+    is in the spine rather than the situation half because it is the
+    composition's judgement about *this viewer* — and because a phone that cannot
+    name a new situation must still be able to take the seat.
+    """
+
+    TAKE_SEAT = "takeSeat"
+    FINISH_PAYING = "finishPaying"
+    ENTER_RESULT = "enterResult"
+    ANSWER_RESULT = "answerResult"
+    SEE_ALTERNATIVES = "seeAlternatives"
+    GETTING_IN = "gettingIn"
+    LEAVE_STANDBY = "leaveStandby"
+
+
+#: Pinned rather than counted. ADR-0083 closed the enumeration and ADR-0087 is
+#: the one addition made since; an eighth is a decision somebody made in a diff.
+ACT_COUNT = 7
+
+invariant(
+    len(ActCode) == ACT_COUNT,
+    f"the enumeration names {len(ActCode)} acts, not {ACT_COUNT}",
+)
+
+
+class ShelfCode(str, Enum):
+    """Which claim a shelf makes, as a code and never as a title string.
+
+    ADR-0070 put shelf **presence** and shelf **order** on the server precisely
+    so both can change without an app release, and left the words with the
+    client: *"the words were never the part that needed to move without a client
+    release; shelf presence and shelf order were."*
+
+    ``BEST_FIT`` and ``SAME_LEVEL`` are two codes for one shelf — the second is
+    what shelf 1 is retitled to when nothing clears its floor, which is how it
+    never goes silent. ``RECENTLY_VIEWED`` ships **dark**: ADR-0085 keeps the
+    code in the enum and never composes it, so the shelf's return is a server
+    change rather than a client release.
+    """
+
+    BEST_FIT = "bestFit"
+    SAME_LEVEL = "sameLevel"
+    FULL_WORTH_WAITING = "fullWorthWaiting"
+    RECENTLY_VIEWED = "recentlyViewed"
+    NEW_PLAYERS = "newPlayers"
+    NEW_CLUBS = "newClubs"
+
+
+class CaptionCode(str, Enum):
+    """Which one-line caption a shelf carries, when it carries one.
+
+    A code and not a sentence, on ADR-0070's rule. ADR-0066 requires the caption
+    to be *composed by the server* and the client to *evaluate nothing*: both
+    hold, because the server decides whether a caption fires and which one it
+    is, and the phone draws the one it was handed.
+
+    There is exactly one in v1, and it fires only when a term the ranking
+    **actually reads** is undeclared — hours, price, radius-and-anchor,
+    competitive or social. A player who declined all four sees nothing on Now,
+    forever, at whatever percentage.
+    """
+
+    UNDECLARED_PREFERENCES = "undeclaredPreferences"
+
+
+class Cover(str, Enum):
+    """Indoor or outdoor, as a fact about *where* rather than about state.
+
+    ADR-0073 moved it onto the spine of every card: it behaves like place, not
+    like state, and leaving it on six situations failed the player at the exact
+    moment they were choosing — in November in Kraków it is the most important
+    fact about a padel court, and it was absent from every shelf.
+    """
+
+    INDOOR = "indoor"
+    OUTDOOR = "outdoor"
+
+
+class Currency(str, Enum):
+    """The currency an amount is in, beside the amount and never inside it.
+
+    ADR-0023 already fixes the integer; the comma in *38,00 zł* is formatting and
+    formatting is the client's. The currency ships even though there is one
+    market, for ADR-0063's own reason: a city field exists precisely so no reader
+    may assume one market, and a hard-coded currency beside it would assume the
+    thing the city field exists to prevent. **This does not make Raketa
+    multi-currency. It stops the contract claiming Raketa never can be.**
+
+    An enum rather than a bare ISO-4217 string, on the same rule as every other
+    code here: the client formats per currency, and a total table over one member
+    is a table that keeps working when there are two.
+    """
+
+    PLN = "PLN"
+
+
+class CardHoldReason(str, Enum):
+    """Why a court is being kept aside, in the five reasons that reach a card.
+
+    ADR-0073 replaced ``hold.note`` — a sentence the server wrote, which would
+    have been the single precedent for server-held copy anywhere in the contract
+    — with a named reason plus the numbers it needs. The client writes all five
+    sentences.
+
+    Five, not the kernel's twelve. The rest are diagnosis: *a card that is not
+    describing a court does not name one*, and shipping the diagnostic names
+    would oblige every client to hold seven rows it can never render.
+    """
+
+    COMMITTED = "committed"
+    FAR = "far"
+    NEAR = "near"
+    STALE = "stale"
+    EXTENDED = "extended"
+
+
+#: The projection off the kernel's own vocabulary, **total** and asserted
+#: exhaustive at module load — never a second ladder over the record. It is the
+#: same shape ``MATCH_PHASE_OF`` takes one ring out from here, and it is written
+#: out row by row rather than derived from a name prefix, so a thirteenth kernel
+#: reason cannot be silently absorbed into ``None``.
+CARD_HOLD_REASON_OF: Mapping[HoldReason, CardHoldReason | None] = MappingProxyType(
+    {
+        # The five a card names.
+        HoldReason.COMMITTED: CardHoldReason.COMMITTED,
+        HoldReason.FAR: CardHoldReason.FAR,
+        HoldReason.NEAR: CardHoldReason.NEAR,
+        HoldReason.STALE: CardHoldReason.STALE,
+        HoldReason.EXTENDED: CardHoldReason.EXTENDED,
+        # A private court belongs to whoever bought it, and a club-committed
+        # court is the club's own decision: both are already the card's
+        # situation, so naming them again as a hold reason would be one fact
+        # spelled twice.
+        HoldReason.PRIVATE: None,
+        HoldReason.CLUB: None,
+        # Diagnosis. A full match's card is not describing a court, and the four
+        # below describe the *absence* of a hold, which the situation states.
+        HoldReason.FULL: None,
+        HoldReason.NEAR_LAPSED: None,
+        HoldReason.FAR_LAPSED: None,
+        HoldReason.THIN: None,
+        HoldReason.NO_SPECULATIVE_HOLD: None,
+    }
+)
+
+invariant(
+    set(CARD_HOLD_REASON_OF) == set(HoldReason),
+    "the card's hold-reason projection is not total over the kernel's reasons",
+)
+
+invariant(
+    {reason for reason in CARD_HOLD_REASON_OF.values() if reason is not None}
+    == set(CardHoldReason),
+    "a card hold reason exists that nothing projects onto",
+)

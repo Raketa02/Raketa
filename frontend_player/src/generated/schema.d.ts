@@ -263,10 +263,49 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/now": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The Now screen: offers, your matches, and the shelves */
+        get: operations["compose_now_api_v1_now_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * ActCode
+         * @description The one act a card may name, from a closed set of seven.
+         *
+         *     ADR-0083 opened the set at six and fixed the rule that governs it — *a card
+         *     names an act when the viewer can take it now and a v1 surface can receive
+         *     it* — and ADR-0087 exercised that rule once, adding ``leaveStandby`` **with**
+         *     the write that receives it. That is the only way an eighth arrives.
+         *
+         *     Twenty-six of the thirty-six situations name none, and that is not a hole to
+         *     be patched with a button that opens something irrelevant: ``Open match`` died
+         *     with its destination when the match-detail screen went out of scope.
+         *
+         *     The act rides in the **spine**, as a code alone and with no target beside it.
+         *     Each code determines its own destination and the card already identifies the
+         *     thing it is about, so a target would be a second answer to one question. It
+         *     is in the spine rather than the situation half because it is the
+         *     composition's judgement about *this viewer* — and because a phone that cannot
+         *     name a new situation must still be able to take the seat.
+         * @enum {string}
+         */
+        ActCode: "takeSeat" | "finishPaying" | "enterResult" | "answerResult" | "seeAlternatives" | "gettingIn" | "leaveStandby";
         /** AnswerOptionResponse */
         AnswerOptionResponse: {
             /** Id */
@@ -316,6 +355,70 @@ export interface components {
             upper: number;
         };
         /**
+         * CaptionCode
+         * @description Which one-line caption a shelf carries, when it carries one.
+         *
+         *     A code and not a sentence, on ADR-0070's rule. ADR-0066 requires the caption
+         *     to be *composed by the server* and the client to *evaluate nothing*: both
+         *     hold, because the server decides whether a caption fires and which one it
+         *     is, and the phone draws the one it was handed.
+         *
+         *     There is exactly one in v1, and it fires only when a term the ranking
+         *     **actually reads** is undeclared — hours, price, radius-and-anchor,
+         *     competitive or social. A player who declined all four sees nothing on Now,
+         *     forever, at whatever percentage.
+         * @enum {string}
+         */
+        CaptionCode: "undeclaredPreferences";
+        /**
+         * CardHoldReason
+         * @description Why a court is being kept aside, in the five reasons that reach a card.
+         *
+         *     ADR-0073 replaced ``hold.note`` — a sentence the server wrote, which would
+         *     have been the single precedent for server-held copy anywhere in the contract
+         *     — with a named reason plus the numbers it needs. The client writes all five
+         *     sentences.
+         *
+         *     Five, not the kernel's twelve. The rest are diagnosis: *a card that is not
+         *     describing a court does not name one*, and shipping the diagnostic names
+         *     would oblige every client to hold seven rows it can never render.
+         * @enum {string}
+         */
+        CardHoldReason: "committed" | "far" | "near" | "stale" | "extended";
+        /**
+         * Cause
+         * @description The rule that fired, never who was watching.
+         *
+         *     A cause is the same cause for all three of a card's audiences
+         *     (``docs/adr/0072-two-sentences-are-two-situations-and-a-leaver-is-a-third-audience.md``):
+         *     it names what happened to the *match*, and the sentence each audience reads
+         *     about it is the client's.
+         * @enum {string}
+         */
+        Cause: "inventoryLost" | "clubCancelled" | "formCancelled" | "checkpointCancelled" | "settlementReopened";
+        /**
+         * ClubCardResponse
+         * @description A club that has just joined. No situation, no clock, no price.
+         */
+        ClubCardResponse: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            card_type: "club";
+            /**
+             * Club Id
+             * Format: uuid
+             */
+            club_id: string;
+            /** Stamp */
+            stamp: number;
+            /** Name */
+            name: string;
+            /** Distance Km */
+            distance_km?: number | null;
+        };
+        /**
          * ConfidenceReasonResponse
          * @description Why confidence landed where it did: a stable key and the sentence shown.
          */
@@ -325,9 +428,60 @@ export interface components {
             /** Sentence */
             sentence: string;
         };
+        /**
+         * Cover
+         * @description Indoor or outdoor, as a fact about *where* rather than about state.
+         *
+         *     ADR-0073 moved it onto the spine of every card: it behaves like place, not
+         *     like state, and leaving it on six situations failed the player at the exact
+         *     moment they were choosing — in November in Kraków it is the most important
+         *     fact about a padel court, and it was absent from every shelf.
+         * @enum {string}
+         */
+        Cover: "indoor" | "outdoor";
         /** CreateAssessmentRequest */
         CreateAssessmentRequest: {
             sport: components["schemas"]["Sport"];
+        };
+        /**
+         * Currency
+         * @description The currency an amount is in, beside the amount and never inside it.
+         *
+         *     ADR-0023 already fixes the integer; the comma in *38,00 zł* is formatting and
+         *     formatting is the client's. The currency ships even though there is one
+         *     market, for ADR-0063's own reason: a city field exists precisely so no reader
+         *     may assume one market, and a hard-coded currency beside it would assume the
+         *     thing the city field exists to prevent. **This does not make Raketa
+         *     multi-currency. It stops the contract claiming Raketa never can be.**
+         *
+         *     An enum rather than a bare ISO-4217 string, on the same rule as every other
+         *     code here: the client formats per currency, and a total table over one member
+         *     is a table that keeps working when there are two.
+         * @enum {string}
+         */
+        Currency: "PLN";
+        /**
+         * DebtLineResponse
+         * @description What is owed, and the one consequence of owing it.
+         *
+         *     ``blocked`` means *this player may not create a match or book a court*. She
+         *     may still pay for a seat in somebody else's match: being cut off must not make
+         *     her less likely to pay.
+         */
+        DebtLineResponse: {
+            owed: components["schemas"]["MoneyResponse"];
+            /** Blocked */
+            blocked: boolean;
+        };
+        /**
+         * EnrolledRegionResponse
+         * @description The matches this viewer is committed to, chronological.
+         */
+        EnrolledRegionResponse: {
+            /** Stamp */
+            stamp: number;
+            /** Cards */
+            cards: components["schemas"]["MatchCardResponse"][];
         };
         /**
          * ErrorResponse
@@ -378,10 +532,36 @@ export interface components {
             /** Level */
             level: number;
         };
+        /**
+         * FitReasonResponse
+         * @description One reason behind the badge, as a machine code. No weight, no sentence.
+         */
+        FitReasonResponse: {
+            code: components["schemas"]["TermCode"];
+        };
+        /**
+         * FitResponse
+         * @description The badge and up to three reasons. Coverage is not here and never is.
+         */
+        FitResponse: {
+            /** Score */
+            score: number;
+            /** Unsure */
+            unsure: boolean;
+            /** Reasons */
+            reasons: components["schemas"]["FitReasonResponse"][];
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /**
+         * HoldNoteResponse
+         * @description Why a court is held, as one of five reasons. Never free text.
+         */
+        HoldNoteResponse: {
+            reason: components["schemas"]["CardHoldReason"];
         };
         /**
          * InProgressAssessmentResponse
@@ -433,6 +613,113 @@ export interface components {
              * @default Logged out successfully
              */
             message: string;
+        };
+        /**
+         * MatchCardResponse
+         * @description A match card: the spine every phone draws, and the situation half.
+         */
+        MatchCardResponse: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            card_type: "match";
+            /**
+             * Match Id
+             * Format: uuid
+             */
+            match_id: string;
+            /** Stamp */
+            stamp: number;
+            /** Clock */
+            clock?: string | null;
+            where: components["schemas"]["PlaceResponse"];
+            price: components["schemas"]["MoneyResponse"];
+            fit?: components["schemas"]["FitResponse"] | null;
+            /**
+             * Emphasis
+             * @default false
+             */
+            emphasis: boolean;
+            act?: components["schemas"]["ActCode"] | null;
+            /**
+             * May Depart
+             * @default false
+             */
+            may_depart: boolean;
+            seat_claim?: components["schemas"]["SeatClaimResponse"] | null;
+            situation: components["schemas"]["SituationHalfResponse"];
+        };
+        /**
+         * MoneyResponse
+         * @description Integer grosze, with a currency beside it. The comma is the client's.
+         */
+        MoneyResponse: {
+            /** Amount */
+            amount: number;
+            currency: components["schemas"]["Currency"];
+        };
+        /**
+         * NowResponse
+         * @description The whole screen: three regions, and the one fact about the viewer.
+         *
+         *     There is **no screen-level stamp** and no ``server_time``. A screen is never
+         *     replaced as a unit except by a compose, and a compose is three stamped regions
+         *     arriving together.
+         */
+        NowResponse: {
+            offers: components["schemas"]["OffersRegionResponse"];
+            your_matches: components["schemas"]["EnrolledRegionResponse"];
+            shelves: components["schemas"]["ShelvesRegionResponse"];
+            debt?: components["schemas"]["DebtLineResponse"] | null;
+        };
+        /**
+         * OffersRegionResponse
+         * @description Seats offered to this viewer, soonest-to-expire first.
+         */
+        OffersRegionResponse: {
+            /** Stamp */
+            stamp: number;
+            /** Cards */
+            cards: components["schemas"]["MatchCardResponse"][];
+        };
+        /**
+         * PersonCardResponse
+         * @description A player who has just arrived. No situation, no clock, no price.
+         */
+        PersonCardResponse: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            card_type: "person";
+            /**
+             * Player Id
+             * Format: uuid
+             */
+            player_id: string;
+            /** Stamp */
+            stamp: number;
+            /** Nickname */
+            nickname: string;
+        };
+        /**
+         * PlaceResponse
+         * @description Where: the club, its IANA zone, whether there is a roof, and how far.
+         */
+        PlaceResponse: {
+            /**
+             * Club Id
+             * Format: uuid
+             */
+            club_id: string;
+            /** Club Name */
+            club_name: string;
+            /** Zone */
+            zone: string;
+            cover: components["schemas"]["Cover"];
+            /** Distance Km */
+            distance_km?: number | null;
         };
         /**
          * QuestionResponse
@@ -533,11 +820,103 @@ export interface components {
             uncertainty_factors?: components["schemas"]["UncertaintyFactorResponse"][];
         };
         /**
+         * SeatClaimResponse
+         * @description A live claim on this card's seat, and when it lapses.
+         */
+        SeatClaimResponse: {
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+        };
+        /**
+         * ShelfCode
+         * @description Which claim a shelf makes, as a code and never as a title string.
+         *
+         *     ADR-0070 put shelf **presence** and shelf **order** on the server precisely
+         *     so both can change without an app release, and left the words with the
+         *     client: *"the words were never the part that needed to move without a client
+         *     release; shelf presence and shelf order were."*
+         *
+         *     ``BEST_FIT`` and ``SAME_LEVEL`` are two codes for one shelf — the second is
+         *     what shelf 1 is retitled to when nothing clears its floor, which is how it
+         *     never goes silent. ``RECENTLY_VIEWED`` ships **dark**: ADR-0085 keeps the
+         *     code in the enum and never composes it, so the shelf's return is a server
+         *     change rather than a client release.
+         * @enum {string}
+         */
+        ShelfCode: "bestFit" | "sameLevel" | "fullWorthWaiting" | "recentlyViewed" | "newPlayers" | "newClubs";
+        /**
+         * ShelfResponse
+         * @description A code, an optional caption code, and cards. No title, and no tail card.
+         */
+        ShelfResponse: {
+            code: components["schemas"]["ShelfCode"];
+            caption?: components["schemas"]["CaptionCode"] | null;
+            /** Cards */
+            cards: (components["schemas"]["MatchCardResponse"] | components["schemas"]["PersonCardResponse"] | components["schemas"]["ClubCardResponse"])[];
+        };
+        /**
+         * ShelvesRegionResponse
+         * @description The shelves, in the server's order. A shelf with nothing in it is absent.
+         */
+        ShelvesRegionResponse: {
+            /** Stamp */
+            stamp: number;
+            /** Shelves */
+            shelves: components["schemas"]["ShelfResponse"][];
+        };
+        /**
+         * Situation
+         * @description What a match is doing, in thirty-six sentences and no more.
+         *
+         *     Written in ladder order, so that reading the enumeration is reading the
+         *     specification. The values cross the wire as a generated union
+         *     (``docs/adr/0006-backend-owns-api-contract.md``), which is what makes a
+         *     client missing a row a compile error in that client's own build rather than
+         *     something a cross-application suite has to go looking for.
+         * @enum {string}
+         */
+        Situation: "inventoryLost" | "cancelledClub" | "cancelledIncomplete" | "cancelledCheckpoint" | "playedNoShow" | "playedShort" | "completed" | "playedNoScore" | "confirmResult" | "needsResult" | "seatOffered" | "seatOpened" | "waitlisted" | "privateOpen" | "privateFull" | "privatePartial" | "privateReserved" | "replacementTransfer" | "rescueLate" | "rescue" | "replacement" | "protectedBack" | "formingBack" | "ready" | "confirmedOnFill" | "confirmed" | "full" | "formingLateHeld" | "clubHeld" | "heldSoft" | "heldReleased" | "formingHeld" | "formingLate" | "forming" | "heldStale" | "heldExtended";
+        /**
+         * SituationFactsResponse
+         * @description The facts the situation's sentence prints.
+         */
+        SituationFactsResponse: {
+            hold?: components["schemas"]["HoldNoteResponse"] | null;
+            cause?: components["schemas"]["Cause"] | null;
+        };
+        /**
+         * SituationHalfResponse
+         * @description The half a client reads only when it knows the name.
+         *
+         *     A phone that does not recognise ``situation`` draws the spine and omits the
+         *     status line. It never skips the card, and it never asks the server for a
+         *     compatibility map: losing the sentence loses exactly the thing that is
+         *     actually missing.
+         */
+        SituationHalfResponse: {
+            situation: components["schemas"]["Situation"];
+            facts: components["schemas"]["SituationFactsResponse"];
+        };
+        /**
          * Sport
          * @description The four sports Raketa rates, as a closed enum.
          * @enum {string}
          */
         Sport: "PADEL" | "TENNIS" | "SQUASH" | "BADMINTON";
+        /**
+         * SportFilter
+         * @description The sport bar's five fixed chips, as the one value the request carries.
+         *
+         *     Four sports and ``all``. The four keep the sport registry's own spelling
+         *     rather than gaining a second, lower-cased one — one name for one sport, and
+         *     the client sends back the value it already holds. ``all`` is lower-case
+         *     because it is not a sport, which is the distinction the case is carrying.
+         * @enum {string}
+         */
+        SportFilter: "all" | "PADEL" | "TENNIS" | "SQUASH" | "BADMINTON";
         /**
          * SportResource
          * @description One sport as served: how many play it and the durations it is sold in.
@@ -567,6 +946,18 @@ export interface components {
             /** Option Id */
             option_id: string;
         };
+        /**
+         * TermCode
+         * @description The stable machine key of every term the engine can emit.
+         *
+         *     A client renders copy per code and the codes never change, which is what lets
+         *     the wording of a reason change without a backend release. The enum lists the
+         *     terms that **exist**, and as of the two below it lists all ten of them:
+         *     ``matchfit/v1/constants.py``'s ``PENDING_WEIGHTS`` is empty, so there is no
+         *     longer a code a client could handle and never receive.
+         * @enum {string}
+         */
+        TermCode: "skill_overlap" | "predicted_balance" | "time_fit" | "match_viability" | "group_reliability" | "travel" | "ladder_qualification" | "price" | "match_type" | "familiarity";
         /** TokenResponse */
         TokenResponse: {
             /** Access Token */
@@ -1093,6 +1484,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RatingsResponse"];
+                };
+            };
+        };
+    };
+    compose_now_api_v1_now_get: {
+        parameters: {
+            query?: {
+                /** @description The selected chip on the sport bar. `all` means the sports this player holds a rating at. */
+                sport?: components["schemas"]["SportFilter"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NowResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

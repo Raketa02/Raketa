@@ -20,6 +20,8 @@ ports, and Docker images are built separately for development and production.
 - Authenticated `/users/me` endpoint backed by bearer access tokens.
 - Event-sourced `User` aggregate with durable event stream persistence.
 - Transactional outbox and embedded event-delivery worker.
+- `GET /api/v1/now` — the player's home screen composed in one request: three ordered
+  regions, a card split into a spine and a situation half, and every code a generated enum.
 - Async SQLAlchemy persistence with Alembic migrations.
 - Dockerized local development and production runtime images.
 
@@ -207,6 +209,7 @@ callable, and nothing about a green suite would look different afterwards.
 | `POST` | `/api/v1/auth/refresh` | Refresh token body | Rotate token pair. |
 | `POST` | `/api/v1/auth/logout` | Refresh token body | Revoke refresh token, idempotently. |
 | `GET` | `/api/v1/users/me` | Bearer access token | Return the current authenticated user. |
+| `GET` | `/api/v1/now` | Bearer access token | The whole Now screen, composed for this viewer. |
 
 Example login request:
 
@@ -215,6 +218,65 @@ curl -X POST http://localhost:8000/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"alice@example.com","password":"Password123"}'
 ```
+
+(The assessment and rating routes are documented in the emitted contract rather than
+repeated here; `make openapi` is the source of truth for all of them.)
+
+### `GET /api/v1/now`
+
+One request returns the whole screen. It takes **the selected sport and nothing else** —
+no stamp of what the phone is holding, no conditional header — and the server never
+answers *nothing has changed*: Now is asked for only when the player is explicitly asking,
+and pull-to-refresh carries a promise a `304` would break.
+
+```bash
+curl -H "Authorization: Bearer $TOKEN" \
+  'http://localhost:8000/api/v1/now?sport=all'
+```
+
+`sport` is one of `all · PADEL · TENNIS · SQUASH · BADMINTON`, and `all` means **the sports
+this player holds a rating at** — a rating rather than a declaration, because the sports
+picker persists nothing and a rating is the only durable record that somebody plays a sport.
+
+The answer is three ordered regions and one fact about the viewer:
+
+| Field | Holds | Empty means |
+|---|---|---|
+| `offers` | seats offered to her, soonest-to-expire | present, `cards: []` |
+| `your_matches` | the matches she is in, chronological | present, `cards: []` |
+| `shelves` | the server's fixed list of shelves | present, `shelves: []` |
+| `debt` | what she owes, and the one consequence | **absent** (`null`) |
+
+That asymmetry is the rule, not an accident. A **region** with nothing in it is present and
+empty; a **shelf** with nothing in it is **absent**, because a shelf makes a claim and a row
+appearing every week to say *nothing worth waiting for* is a row players learn to scroll
+past. The debt line is absent rather than zero, so the client never compares an amount to
+decide whether to draw it.
+
+**The regions are empty in v1.** The route ships before anything fills them, deliberately:
+it unblocks both clients against a *compiled* contract, and each later ticket fills one
+region without touching the envelope.
+
+### What the Now contract will not carry
+
+Enforced by `tests/unit/test_now_contract_document.py`, which reads the emitted document
+back rather than reading the source:
+
+- `server_time` and `next_transition` — two fields with no reader are not
+  forwards-compatibility (ADR-0071).
+- A degrade marker — a fact about our infrastructure printed on a player's home screen.
+- A policy version — support is us, reading our own logs, and a screenshot has a timestamp.
+- `tone`, `tag` and `alert` — total functions of the situation, so they belong to the
+  client's own thirty-six-row table and a flag would let the two disagree.
+- `phase` — refused on the result route and refused here.
+- Free text of any kind. No `title`, `label`, `note`, `message` or `sentence`; a shelf
+  carries a **code** and an optional **caption code**, and the client writes the words.
+
+Everything that *is* a code crosses as an **OpenAPI enum** — `situation`, the act code,
+`TermCode`, the card's hold reason, the cause, the shelf code, the caption code, the cover
+and the currency. That is what lets each client write an exhaustive `Record` over a
+generated union, so a missing sentence is a build error in the client's own build. A bare
+string degrades that `Record` into an index signature, and an index signature never fires.
 
 In `production`, OpenAPI docs are disabled, with no way to re-enable them.
 

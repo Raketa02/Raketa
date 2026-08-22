@@ -583,6 +583,53 @@ there; they are not repeated here.
   name a claim about the day the seed ran. _Avoid_: a claim with no instant, which is not a
   claim.
 
+- **Composed screen** (`modules/now`) — a **read** with no aggregate behind it: Now owns no
+  state, writes nothing and stores nothing, and what it does own is the *composition* —
+  which regions exist, in what order, and what a card carries. It reaches every other
+  context through a port of its own (`now.domain.ports`) rather than through that context's
+  repository, so another context reshaping a read Now never asked for does not reach the
+  composer. _Avoid_: calling it a context — it makes no decision that could be wrong.
+- **Region vs shelf** — a **region** is one of Now's three ordered lists and is **present
+  and empty** when it holds nothing; a **shelf** is one row inside the shelves region and
+  is **absent** when it holds nothing. The asymmetry is the whole rule: a shelf makes a
+  *claim*, and a row appearing every week to say *nothing worth waiting for* is a row
+  players learn to scroll past. A region makes none. _Avoid_: an empty shelf, and an absent
+  region — the two spellings of the same bug in opposite directions.
+- **Spine and situation half** — the two nested halves of a card. The **spine** is read by
+  every phone that has ever shipped; the **situation half** (`{situation, facts}`) is read
+  only by one that knows the name. A client meeting an unknown situation draws the spine
+  and drops the status line — it never skips the card. That is a **shape** rather than a
+  discipline: a flat card would let the first situation-dependent field added at the top
+  level break it in silence. _Avoid_: a situation-dependent field on the spine.
+- **Stamp** — one monotonically increasing integer per region and one per card, and **no
+  screen-level stamp**. Derived from **when the answer was composed** (`stamp_at`, whole
+  milliseconds since the epoch), not from a record's version: the race it arbitrates is a
+  pull and a tap racing, where both answers read the same version, and a card whose
+  situation moved because a threshold passed has no version change at all. _Avoid_: an
+  opaque string, which cannot answer *is this newer than what I hold*.
+- **Act code** (`now.vocabulary.ActCode`) — the one act a card may name, from a closed set
+  of seven, **composed by the server** and carried in the spine as a code alone with no
+  target beside it. Twenty-six of the thirty-six situations name none, and that is not a
+  hole to patch: `Open match` died with its destination. An eighth arrives **with the
+  surface that receives it**, never ahead of it. _Avoid_: `{label, target}`, and a fallback.
+- **Card hold reason** (`now.vocabulary.CARD_HOLD_REASON_OF`) — the five of the kernel's
+  twelve `HoldReason`s that reach a card, as a **total table** off the kernel's own
+  vocabulary, asserted exhaustive at module load. The second such projection in the tree
+  after `MATCH_PHASE_OF`, and the same rule: a consumer needing a coarser vocabulary writes
+  a table off the kernel's, never a second ladder. _Avoid_: deriving it from a name prefix,
+  which absorbs a thirteenth kernel reason into *no reason at all*.
+- **Cause** (`kernel.Cause`) — why money moved and why a match ended, in five closed names.
+  In the kernel because Matches produces it, Money records it and Now renders it, and a
+  second implementation of any of the three would be a defect — ADR-0022's own test.
+  `settlementReopened` is in the enumeration and reaches no card. _Avoid_: a per-context
+  copy, and a free-text reason beside it.
+- **The no-sentence walk** (`tests/unit/test_now_vocabulary.py`) — the AST walk asserting
+  that nothing under `app/modules/now/` composes a phrase a player could read. Three kinds
+  are exempt by name and for a stated reason: a docstring, an `invariant()` message, and a
+  `summary=`/`description=` keyword. It carries its own negative control, because a guard
+  nobody has seen fire is one nobody should watch. _Avoid_: exempting a string for being
+  short.
+
 - **Postgres-only guarantee** — a rule the database enforces that SQLite cannot express,
   so a suite running on SQLite can state it in a comment and enforce nothing. Three exist:
   a reservation's overlapping-interval exclusion (`EXCLUDE USING gist`), the partial unique
