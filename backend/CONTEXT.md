@@ -243,8 +243,17 @@ there; they are not repeated here.
   engine is called ([ADR-0027](../docs/adr/0027-fit-and-certainty-are-separate-ranking-is-policy.md)),
   so `MatchSnapshot` refuses every phase but `FORMING`: a cancelled match ranked last is
   still a cancelled match in a home list. The *run-up* to the join cutoff is the matter of
-  degree, and that is what the viability term reads. _Avoid_: status, state (that is a
-  seat's), stage.
+  degree, and that is what the viability term reads. It is no longer borrowed: it is the
+  first **situation projection**, and `matchmaking.MATCH_PHASE_OF` is the table.
+  _Avoid_: status, state (that is a seat's), stage.
+- **Situation projection** — a smaller state vocabulary derived from `kernel.Situation` by a
+  **total table**, owned by the consumer that needs it and asserted exhaustive **at module
+  load** so a rung added to the ladder fails the import rather than one branch of one call
+  ([ADR-0040](../docs/adr/0040-one-ladder-resolves-a-situation.md)). It reads the situation
+  and nothing else: a projection that reached for the record or the clock would be a second
+  derivation of what a match is doing, which is the failure the single ladder exists to make
+  unreachable. `matchmaking.match_phase()` is the first and only one today. _Avoid_: mapper,
+  adapter, second ladder.
 - **Viability's two halves** — `matchfit/v1`'s viability term is a **probability composed as
   one**: the chance there will be people times the chance there will be a court. Both halves
   have the same shape — what is already committed, plus what might still be got, discounted
@@ -267,6 +276,33 @@ there; they are not repeated here.
   is one engine's arithmetic moving when the *other engine's version* moves, and a kernel
   rule carries no version and no tuning knob. _Avoid_: restating it in a third engine —
   reach for `app.kernel`.
+- **Match record** (`kernel.MatchRecord`) — the closed set of stored facts the resolution
+  ladder and the wake function read, and **not the Matches aggregate**. It stands to a match
+  as `MatchSnapshot` stands to one for an engine: a narrow input contract published to be
+  resolved, holding nothing derived and no player identity. `filled()` counts seats **paid**
+  and `held_unpaid()` counts seats somebody holds and nobody has paid for — two numbers,
+  never one, because folding them tells four people a match is complete while a seat may
+  still lapse. _Avoid_: match aggregate, match entity, match DTO.
+- **Situation ladder** (`kernel.situation()`) — the one resolver, over one closed enumeration
+  of **thirty-six** names, in which **the order is the specification** and the first matching
+  rung wins. Pure in the record and the clock, with an **optional viewer**: called with one it
+  may answer `SEAT_OFFERED`, `SEAT_OPENED` or `WAITLISTED`, and called without it cannot. The
+  absolute form is the same function with the parameter absent, never a second derivation.
+  Everything else an audience changes — a non-member's money line, a leaver's card, who is
+  asked for a score — is rendering downstream. _Avoid_: state machine, status resolver,
+  context key (this repo spends *context* on bounded contexts).
+- **Court hold, composed** (`kernel.court_hold()`) — the hold ladder as a *computation*: the
+  base tiers priced in paid seats, then the club's two amendments, and never a stored court
+  id. **Staleness is not latched** — a third payment makes a stale hold live again, so a card
+  may go back from released to held. Distinct from `matchmaking.CourtHold`, which is the
+  three-rung *word* an engine reads. _Avoid_: reservation, lock.
+- **Wake** (`kernel.next_wake_at()`) — the next instant a match could resolve differently, or
+  `None`. **A wake is a look, not an instruction**: the handler re-derives from the record, so
+  a late wake changes *when* we look and never *what we find*. It sits beside the ladder
+  because both read one list of boundaries — which is what makes *a threshold cannot exist in
+  the ladder and be missing from the schedule* true by construction rather than by two lists
+  being kept in step ([ADR-0076](../docs/adr/0076-the-schedule-is-a-column-a-wake-is-a-look-and-there-is-no-list-of-boundaries.md)).
+  Internal, and never serialised onto a card. _Avoid_: timer, schedule, transition.
 - **Read-model repository** — the port a use case reads *projected current state* through,
   e.g. `UserRepository`. It answers queries against a table, not by replaying a stream, and
   has no version bookkeeping. **The trap:** `UserRepository` is this kind despite its name

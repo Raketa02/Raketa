@@ -19,7 +19,38 @@ tuples, everywhere, with no development-versus-production split — a guard that
 only runs in development is a guard that has never been run where it counts.
 """
 
+from app.kernel.holds import (
+    Hold,
+    HoldKind,
+    HoldReason,
+    court_hold,
+    hold_boundaries,
+    is_held,
+)
 from app.kernel.invariants import InvariantViolated, exhaustive, invariant
+from app.kernel.matches import (
+    Deadlines,
+    HoldPolicy,
+    MatchKind,
+    MatchRecord,
+    OfferKind,
+    PayModel,
+    Seat,
+    Vacancy,
+    Viewer,
+    born_late,
+    committed_on_fill,
+    deadlines,
+    door_code_at,
+    filled,
+    held_unpaid,
+    is_full,
+    is_terminal,
+    match_end,
+    result_window,
+    seat_count,
+    vacancy_expires_at,
+)
 from app.kernel.money import (
     GROSZE_PER_ZLOTY,
     SOLD_FORMATS,
@@ -48,6 +79,12 @@ from app.kernel.money import (
     zloty,
 )
 from app.kernel.results import Err, Ok, Reason, Result
+from app.kernel.situations import (
+    SITUATION_COUNT,
+    Situation,
+    next_wake_at,
+    situation,
+)
 from app.kernel.sports import SPORT_SPECS, Sport, SportSpec
 from app.kernel.time import (
     MINUTES_PER_DAY,
@@ -135,4 +172,38 @@ __all__ = [
     "minutes",
     "shifted",
     "slot_start",
+    # matches — the facts one pure function reads, and the five deadlines
+    "Deadlines",
+    "HoldPolicy",
+    "MatchKind",
+    "MatchRecord",
+    "OfferKind",
+    "PayModel",
+    "Seat",
+    "Vacancy",
+    "Viewer",
+    "born_late",
+    "committed_on_fill",
+    "deadlines",
+    "door_code_at",
+    "filled",
+    "held_unpaid",
+    "is_full",
+    "is_terminal",
+    "match_end",
+    "result_window",
+    "seat_count",
+    "vacancy_expires_at",
+    # holds — is a court being kept aside, on what terms, and until when
+    "Hold",
+    "HoldKind",
+    "HoldReason",
+    "court_hold",
+    "hold_boundaries",
+    "is_held",
+    # situations — one ladder over thirty-six names, and the wake it agrees with
+    "SITUATION_COUNT",
+    "Situation",
+    "next_wake_at",
+    "situation",
 ]

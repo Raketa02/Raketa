@@ -53,6 +53,7 @@ crossing has exactly one place, ``pairing/core.as_float``.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from collections.abc import Mapping
 from enum import Enum
 from typing import NewType, TypeAlias, final
 
@@ -65,6 +66,7 @@ from app.kernel import (
     Payable,
     Ratio,
     SeatShare,
+    Situation,
     Sport,
     Zone,
     invariant,
@@ -533,11 +535,20 @@ class SeatSnapshot:
 
 
 class MatchPhase(Enum):
-    """Where a match is on the clock's own ladder. **Borrowed vocabulary.**
+    """Where a match is on the clock's own ladder. **A projection, and the first.**
 
     A match is **forming** while seats are open and the join cutoff is ahead of
     it, **locked** once that cutoff has passed and the roster it will be played
     with is fixed, and **cancelled** if it will not be played at all.
+
+    It was borrowed vocabulary awaiting an owner, and
+    ``docs/adr/0040-one-ladder-resolves-a-situation.md`` gave it one: the kernel's
+    ``Situation`` is the single ladder over a match record, and every other state
+    vocabulary is a **total projection off it**, owned by the consumer that needs
+    it and asserted exhaustive at module load. ``MATCH_PHASE_OF`` below is that
+    table. It is never a second ladder over the record: nothing here reads the
+    clock, the seats or the club, because a second derivation of one question is
+    the failure ADR-0040 exists to make unreachable.
 
     **Only a forming match reaches an engine, and that is checked rather than
     assumed** (see ``MatchSnapshot``). Whether a match is joinable at all is a
@@ -559,6 +570,88 @@ class MatchPhase(Enum):
     FORMING = "forming"
     LOCKED = "locked"
     CANCELLED = "cancelled"
+
+
+#: Every situation a match can be in, in the three words matchmaking has for
+#: them. **Total, and checked at import.**
+#:
+#: Written out rather than derived from a rule about the names, because the point
+#: of a projection is that somebody decided each row. Two of the rows are the
+#: whole reason the table is a decision and not a mapping:
+#:
+#: * ``RESCUE`` and ``REPLACEMENT`` are **forming** — a committed match short a
+#:   player is a match with a seat genuinely for sale, and it is the one the
+#:   cascade most wants ranked. ``RESCUE_LATE`` is **locked**, because it is past
+#:   the checkpoint, which is the last moment the roster can change at all, and
+#:   ``REPLACEMENT_TRANSFER`` is locked because a named person is already taking
+#:   the seat.
+#: * The three viewer-relative names — ``SEAT_OFFERED``, ``SEAT_OPENED`` and
+#:   ``WAITLISTED`` — say what is true for *one reader*, and ADR-0040 records that
+#:   for ``waitlisted`` the key alone *"is not well-defined, because the key alone
+#:   does not say what the match is doing."* An assembler resolves a candidate
+#:   **absolutely**, so it can never hand one of the three here. They are mapped
+#:   anyway, because a total table with a hole is not total: an offered seat is a
+#:   seat on the table, and standby is where a player waits precisely because she
+#:   cannot take one.
+MATCH_PHASE_OF: Mapping[Situation, MatchPhase] = {
+    Situation.INVENTORY_LOST: MatchPhase.CANCELLED,
+    Situation.CANCELLED_CLUB: MatchPhase.CANCELLED,
+    Situation.CANCELLED_INCOMPLETE: MatchPhase.CANCELLED,
+    Situation.CANCELLED_CHECKPOINT: MatchPhase.CANCELLED,
+    Situation.PLAYED_NO_SHOW: MatchPhase.LOCKED,
+    Situation.PLAYED_SHORT: MatchPhase.LOCKED,
+    Situation.COMPLETED: MatchPhase.LOCKED,
+    Situation.PLAYED_NO_SCORE: MatchPhase.LOCKED,
+    Situation.CONFIRM_RESULT: MatchPhase.LOCKED,
+    Situation.NEEDS_RESULT: MatchPhase.LOCKED,
+    Situation.SEAT_OFFERED: MatchPhase.FORMING,
+    Situation.SEAT_OPENED: MatchPhase.FORMING,
+    Situation.WAITLISTED: MatchPhase.LOCKED,
+    Situation.PRIVATE_OPEN: MatchPhase.FORMING,
+    Situation.PRIVATE_FULL: MatchPhase.LOCKED,
+    Situation.PRIVATE_PARTIAL: MatchPhase.LOCKED,
+    Situation.PRIVATE_RESERVED: MatchPhase.LOCKED,
+    Situation.REPLACEMENT_TRANSFER: MatchPhase.LOCKED,
+    Situation.RESCUE_LATE: MatchPhase.LOCKED,
+    Situation.RESCUE: MatchPhase.FORMING,
+    Situation.REPLACEMENT: MatchPhase.FORMING,
+    Situation.PROTECTED_BACK: MatchPhase.FORMING,
+    Situation.FORMING_BACK: MatchPhase.FORMING,
+    Situation.READY: MatchPhase.LOCKED,
+    Situation.CONFIRMED_ON_FILL: MatchPhase.LOCKED,
+    Situation.CONFIRMED: MatchPhase.LOCKED,
+    Situation.FULL: MatchPhase.LOCKED,
+    Situation.FORMING_LATE_HELD: MatchPhase.FORMING,
+    Situation.CLUB_HELD: MatchPhase.FORMING,
+    Situation.HELD_SOFT: MatchPhase.FORMING,
+    Situation.HELD_RELEASED: MatchPhase.FORMING,
+    Situation.FORMING_HELD: MatchPhase.FORMING,
+    Situation.FORMING_LATE: MatchPhase.FORMING,
+    Situation.FORMING: MatchPhase.FORMING,
+    Situation.HELD_STALE: MatchPhase.FORMING,
+    Situation.HELD_EXTENDED: MatchPhase.FORMING,
+}
+
+# Exhaustive **at module load**, so a situation added to the ladder fails the
+# import of every consumer rather than one branch of one call. A projection with
+# a hole is the two-vocabularies failure back again, arriving as a `KeyError` on
+# whichever screen happened to meet the new name first.
+invariant(
+    set(MATCH_PHASE_OF) == set(Situation),
+    "the match-phase projection does not cover "
+    f"{sorted(s.value for s in set(Situation) - set(MATCH_PHASE_OF))}",
+)
+
+
+def match_phase(of: Situation) -> MatchPhase:
+    """Matchmaking's word for what this match is doing.
+
+    A lookup and never a computation. The subscript cannot raise — the assertion
+    above ran at import — and writing it as a function rather than exposing the
+    table for indexing is what keeps the projection one-directional.
+    """
+
+    return MATCH_PHASE_OF[of]
 
 
 class CourtHold(Enum):

@@ -101,6 +101,14 @@ Rules to preserve:
   the engines, whose one legitimate home is the kernel; `tests/unit/test_kernel_purity.py`
   walks the source for the clock reads module granularity cannot see; and `pyproject.toml`
   scopes **mypy strict** to those two packages. An engine takes `now` as an input.
+- **One ladder resolves a match, and every other state vocabulary projects off it.**
+  `kernel.situation(record, viewer | None, now)` is the single resolver over 36 names, and
+  the order of its rungs *is* the specification. `kernel.next_wake_at()` lives beside it and
+  reads the same boundaries, so a threshold cannot exist in the ladder and be missing from
+  the schedule. A consumer that needs a coarser vocabulary writes a **total table off
+  `Situation`**, asserted exhaustive at module load — never a second ladder over the record
+  ([ADR-0040](../docs/adr/0040-one-ladder-resolves-a-situation.md)). `MatchPhase` in
+  `app/engines/matchmaking.py` is the first and, today, the only one.
 - **The kernel is one import path.** `app.kernel` re-exports its whole public API through
   an explicit `__all__`, and nothing outside the package — tests included — imports a
   submodule, so a definition can move between kernel files without touching a caller

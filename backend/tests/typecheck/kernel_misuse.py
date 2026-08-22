@@ -94,22 +94,29 @@ from app.kernel import (
     DayOffset,
     Err,
     Grosze,
+    Hold,
+    HoldPolicy,
     Instant,
     InvariantViolated,
     IsoWeekday,
+    MatchRecord,
     MinuteOfDay,
     Minutes,
     NoCard,
     NonexistentLocalTime,
+    OfferKind,
     Ok,
     Payable,
     Ratio,
     Reason,
     Result,
+    Seat,
     SeatShare,
+    Situation,
     Sport,
     SportSpec,
     Unavailable,
+    Viewer,
     Zone,
     add_grosze,
     apply_fraction,
@@ -128,11 +135,13 @@ from app.kernel import (
     local_minute_of_day,
     minute_of_day,
     minutes,
+    next_wake_at,
     payable_from,
     percent,
     ratio,
     round_half_away_from_zero,
     shifted,
+    situation,
     slot_start,
     zloty,
 )
@@ -1754,3 +1763,75 @@ def both_terms_of_a_score_are_read_through_the_same_union(
 
     ran = sum(term.weight for term in score.terms if isinstance(term, ScoredTerm))
     return ran, sum(term.weight for term in score.terms)
+
+
+# ---------------------------------------------------------------------------
+# The ladder's input contract. `MatchRecord` is the closed set of facts one pure
+# function reads, so what it refuses is as load-bearing as what it accepts: a
+# subclass carrying a second idea of what a match is would resolve through the
+# same ladder and answer about facts the ladder cannot see.
+# ---------------------------------------------------------------------------
+
+A_START = instant(datetime(2026, 8, 22, 18, 30, tzinfo=timezone.utc))
+
+
+def a_match_record_is_the_whole_input(record: MatchRecord) -> Situation:
+    """The legitimate call, pinned clean: three arguments and one name back."""
+
+    return situation(record, Viewer(offer=OfferKind.OPEN), A_START)
+
+
+def a_record_may_be_resolved_with_no_viewer_at_all(record: MatchRecord) -> Situation:
+    """The absolute form is the same function with the parameter absent."""
+
+    return situation(record, None, A_START)
+
+
+class ASecondIdeaOfAMatch(MatchRecord):  # want-error: misc
+    """`MatchRecord` is `@final`, and the ladder is the only reader of it."""
+
+
+class ASecondIdeaOfASeat(Seat):  # want-error: misc
+    """Taken and paid are the two facts; a third would be counted by nobody."""
+
+
+class ASecondIdeaOfAHold(Hold):  # want-error: misc
+    """The composed answer, and never a base class for a club's own."""
+
+
+def a_hold_policy_is_not_a_bag_of_integers() -> HoldPolicy:
+    """Minutes are branded, so a bare `24` cannot be a cancellation window."""
+
+    return HoldPolicy(window=24)  # want-error: arg-type
+
+
+def a_cap_of_no_minutes_is_still_minutes() -> HoldPolicy:
+    return HoldPolicy(max_hold_age=0)  # want-error: arg-type
+
+
+def a_seat_cannot_be_repainted_after_it_is_read(seat: Seat) -> None:
+    """Frozen: a seat that changed under the ladder is a count that changed."""
+
+    seat.paid = True  # want-error: misc
+
+
+def the_clock_the_ladder_reads_is_an_instant(record: MatchRecord) -> Situation:
+    """A naive `datetime` is the bug `Instant` exists to make unwritable."""
+
+    naive = datetime(2026, 8, 22, 18, 30)
+    return situation(record, None, naive)  # want-error: arg-type
+
+
+def a_wake_may_be_absent_and_the_caller_has_to_say_so(
+    record: MatchRecord,
+) -> Instant:
+    """`next_wake_at` returns `Instant | None`; a terminal match has no next."""
+
+    return shifted(next_wake_at(record, A_START), minutes(1))  # want-error: arg-type
+
+
+def a_wake_that_is_checked_composes(record: MatchRecord) -> Instant | None:
+    """The same call with the absence handled, pinned clean."""
+
+    wake = next_wake_at(record, A_START)
+    return None if wake is None else shifted(wake, minutes(1))
