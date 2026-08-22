@@ -184,7 +184,7 @@ pydantic = "^2.0"
 type = "git"
 url = "https://github.com/RobertConstantin02/sandbuket.git"
 reference = "main"
-resolved_reference = "f842ad584a046bad786198d75c3a9ef0a049e52e"
+resolved_reference = "c536688d91b24583f972f1b1996b15fb1dd402e4"
 
 [[package]]
 name = "typing-extensions"
