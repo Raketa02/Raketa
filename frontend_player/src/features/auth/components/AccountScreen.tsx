@@ -34,7 +34,11 @@ export function AccountScreen() {
   const signOut = useSignOut();
 
   return (
-    <SafeAreaView style={s.screen} edges={['top', 'bottom']}>
+    // `top` only, since the tab bar landed: the bar is a sibling *below* this screen and
+    // already spends the bottom inset clearing the home indicator, so claiming it here
+    // too leaves a band of dead paper between the sign-out button and the bar. Now has
+    // been `['top']` since it became the home screen, for the same reason.
+    <SafeAreaView style={s.screen} edges={['top']}>
       <View style={s.content}>
         <View style={s.header}>
           <Text style={s.eyebrow}>Signed in</Text>

@@ -165,6 +165,14 @@ const type = {
   /** EYEBROW — labels a region you are READING. Not interchangeable with flab. */
   eyebrow: { fontFamily: font.sans[700], fontSize: 9.5, letterSpacing: 1.43, lineHeight: 12 },
   tag: { fontFamily: font.sans[700], fontSize: 9.5, lineHeight: 12 },
+  /** TAB LABEL — the smallest type in the app, and the only role below the tag.
+   *  `UI` §B13 fixes it at 8.5/600 and
+   *  [ADR-0082](../../../../docs/adr/0082-the-tab-bar-is-one-outline-family-and-coral-is-the-only-selected-cue.md)
+   *  keeps it there: the labels-only tab bar was legible only after 11pt, and growing it
+   *  is an amendment to the type scale rather than a tab-bar decision. It is a role here
+   *  because a component may hold no font size — that rule is what puts the value
+   *  somewhere a re-tune can find it. */
+  tabLabel: { fontFamily: font.sans[600], fontSize: 8.5 },
 } as const;
 
 /**
@@ -179,6 +187,12 @@ const num = {
   m: { fontFamily: font.mono[600], fontSize: 17, letterSpacing: -0.6, lineHeight: 17 },
   s: { fontFamily: font.mono[500], fontSize: 14, letterSpacing: -0.49, lineHeight: 18 },
   xs: { fontFamily: font.mono[500], fontSize: 13, letterSpacing: -0.46, lineHeight: 17 },
+  /** The Inbox badge's numeral. `UI` §B13 draws it at **700**; IBM Plex Mono's heaviest
+   *  loaded face is 600 (`src/shared/lib/bootstrap/fonts.ts`), and weight is a family
+   *  name — a `fontWeight: '700'` beside a custom family is ignored on Android, so a 700
+   *  here would be a weight one platform draws and the other does not. 600 is the app's
+   *  bold mono. */
+  tabBadge: { fontFamily: font.mono[600], fontSize: 9, letterSpacing: -0.32, lineHeight: 9 },
 } as const;
 
 /**
@@ -315,6 +329,11 @@ const size = {
   infoGlyph: 14,
   tabIcon: 16,
   fab: 28,
+  /** The Inbox badge — its height, and the floor under its width, so a two-digit count
+   *  grows sideways and a one-digit count is still round. Its radius is this over two,
+   *  which is the system's own instruction for a pill and lands within half a point of
+   *  `UI` §B13's stated 8. */
+  tabBadge: 15,
   grabber: { width: 36, height: 4 },
   sheetClose: 28,
   popoverWidth: 250,

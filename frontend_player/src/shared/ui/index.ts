@@ -26,6 +26,16 @@ export { InfoMark, Popover, type InfoMarkProps, type PopoverProps } from './Popo
 export { QuestionNavigator, type QuestionNavigatorProps } from './QuestionNavigator';
 export { Row, type RowProps, type RowVariant } from './Row';
 export { ScreenHeader, type ScreenHeaderProps } from './ScreenHeader';
+export {
+  TabBar,
+  TAB_BADGE_ID,
+  TAB_BAR_ID,
+  TAB_CIRCLE_ID,
+  tabIconId,
+  tabId,
+  type TabBarProps,
+  type TabKey,
+} from './TabBar';
 export { Tag, type TagProps, type TagVariant } from './Tag';
 export { behindOverlay, type FocusTarget } from './overlay';
 export { theme, type BandKey, type SportKey, type Theme } from './theme';

@@ -31,8 +31,19 @@ screens a player leaves through).
 
 `features/now/` is **Now, the app's home** — the screen `(app)/(tabs)/index` renders and the
 one onboarding lands on. Three regions (offers · the enrolled strip · the shelves), the sport
-bar, `ADR-0054`'s four asks, and the match card's **action row**. The account placeholder moved
-to `(app)/(tabs)/account`, which nothing reaches until the tab bar lands.
+bar, `ADR-0054`'s four asks, and the match card's **action row**.
+
+**`(app)/(tabs)/` is a real tab navigator now, with five destinations**
+([ADR-0082](../docs/adr/0082-the-tab-bar-is-one-outline-family-and-coral-is-the-only-selected-cue.md)):
+Now · Find · create · Inbox · You. `shared/ui/TabBar` draws it — five Feather glyphs at
+`size.tabIcon`, a flat coral circle for create, an `ink` numeral on the Inbox pill — and holds
+**no navigation**: it takes the active key and hands back the pressed one, so
+`(app)/(tabs)/_layout.tsx` is the only file that knows a tab key is a route. Three of the five
+are placeholder route files that their own feature deletes; `account` is reachable at last.
+**Selection is coral alone and knowingly fails WCAG 1.4.1** — sighted-only, remedy priced in
+the ADR (a 3pt coral dot under the selected label). Do not add a _different_ second cue without
+amending it. **The bar spends the bottom safe-area inset**, so every screen under `(tabs)` takes
+`edges={['top']}` — a screen claiming `bottom` too puts a band of dead paper above the bar.
 
 **The action row is one row of three optional slots and has zero variants**
 ([ADR-0088](../docs/adr/0088-the-action-row-is-three-slots-and-the-clock-takes-the-first.md)):

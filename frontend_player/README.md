@@ -120,6 +120,15 @@ oversight. The countdown **repaints** every second inside ten minutes and every 
 above, from one screen-wide clock; repainting is drawing and is never a fifth occasion to
 fetch.
 
+Under all of it is the **tab bar** — five destinations, five Feather glyphs, and a flat
+coral circle in the middle for creating a match
+([ADR-0082](../docs/adr/0082-the-tab-bar-is-one-outline-family-and-coral-is-the-only-selected-cue.md)).
+Three of the five are placeholder screens their own feature will replace; the fifth is the
+account screen, which nothing could reach until the bar landed. **Which tab you are on is
+carried by colour alone**, which does not meet WCAG 1.4.1 — a knowing, sighted-only failure
+with its remedy already costed in the ADR, and every tab announces its selected state to a
+screen reader regardless.
+
 ## Design system
 
 The visual language was designed and audited before the app existed, and is **locked**:

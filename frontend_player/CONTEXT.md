@@ -118,6 +118,17 @@ review comment and a test description all use the same word.
   "onboarded flag" — there is no such thing, because a rating is per sport.
 - **Untrusted route input** — any param from a deep link, push payload, universal link,
   App Link or QR code. Zod-validated in the feature's `schemas/` before use.
+- **Tab key** — one of `now` · `find` · `create` · `msg` · `you`, the bar's own five names,
+  taken from `UI` §B13. **Not** a route: `(app)/(tabs)/_layout.tsx` holds the one mapping
+  from a key to a route file, which is why `you` reaches `account`. _Avoid_: treating the
+  key and the route name as interchangeable — two of them differ.
+- **Placeholder route** — a route file that exists because the tab bar reaches it and its
+  feature does not exist yet (`find`, `create`, `inbox`). It says what it is and what it is
+  not, and the ticket that builds the feature deletes it. Distinct from a **stub**: nothing
+  here pretends to work.
+- **Who spends the inset** — the tab bar takes the bottom safe-area inset, so every screen
+  under `(tabs)` declares `edges={['top']}`. `BottomTabView` hands the bar its own insets
+  and leaves the screens' inset context untouched, so both claiming it is both padding it.
 
 ### The onboarding flow
 
@@ -196,8 +207,9 @@ Four copy tables and three lookups, colocated under `features/now/` and **not** 
 
 The player app's home. `features/now/` grew from a vocabulary into a screen with
 [#86](https://github.com/Raketa02/Raketa/issues/86) and gained the match card's action row
-with [#87](https://github.com/Raketa02/Raketa/issues/87); the shelves' tail card, the fit
-badge and the tab bar are separate tickets that land on top of it.
+with [#87](https://github.com/Raketa02/Raketa/issues/87); the tab bar under it landed with
+[#93](https://github.com/Raketa02/Raketa/issues/93), and the shelves' tail card and the fit
+badge are separate tickets that land on top of it.
 
 - **Composed screen** — the whole answer to one `GET /api/v1/now`: three regions and one
   fact about the viewer. The client's own domain object, in `domain/ComposedScreen.ts`.
@@ -341,6 +353,11 @@ comment and a commit message all use the same word.
   whenever white text sits on top (**Rule C**), `Line` is the soft's border.
 - **Rule C** — white text never sits on `coral` or `mint`; it needs `coralInk` or
   `mintInk`. `ink` is the only dark permitted on `coral`.
+- **Text against non-text** — the distinction Rule C turns on, and the reason the tab bar's
+  plus is white on `coral` while its badge numeral is `ink`. A glyph is non-text content
+  under WCAG 1.4.11 and needs 3:1; a numeral is read, so 1.4.3 applies and needs 4.5:1.
+  White on `coral` is 3.89:1 — it clears one and not the other. _Avoid_: reading the plus
+  as a Rule C exception; it is the same rule answering a different question.
 - **Card / dark card** — the light workhorse and the `night`-filled variant that **repaints
   its children**. _Avoid_: "inverted card".
 - **Hairline** — the 1pt `line2` divider inside a card, with a 9pt top margin.

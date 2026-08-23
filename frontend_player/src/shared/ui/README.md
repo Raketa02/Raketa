@@ -74,7 +74,7 @@ components from the start. The prototype maintained a second copy of each in its
 recorded that they had drifted — one implementation, used everywhere.
 
 Built so far, by the onboarding slice: `Button`, `Card` (+ `PressableCard`), `Note`,
-`Bar`, `ScreenHeader`, `Tag`, `Hairline`, `BottomSheet`, `CloseControl`, `DarkCard`,
+`Bar`, `ScreenHeader`, `TabBar`, `Tag`, `Hairline`, `BottomSheet`, `CloseControl`, `DarkCard`,
 `Row`, `LevelBar`, `ConfidenceRing`, `Popover` (+ `InfoMark`) and `InfoGlyph`. Import them
 from `@/shared/ui`.
 

@@ -17,6 +17,9 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import AccountRoute from '@/app/(app)/(tabs)/account';
 import AppLayout from '@/app/(app)/_layout';
+import CreateRoute from '@/app/(app)/(tabs)/create';
+import FindRoute from '@/app/(app)/(tabs)/find';
+import InboxRoute from '@/app/(app)/(tabs)/inbox';
 import TabsLayout from '@/app/(app)/(tabs)/_layout';
 import HomeRoute from '@/app/(app)/(tabs)/index';
 import AuthLayout from '@/app/(auth)/_layout';
@@ -40,6 +43,11 @@ export const ONBOARDING_ROUTES = {
   '(app)/_layout': AppLayout,
   '(app)/(tabs)/_layout': TabsLayout,
   '(app)/(tabs)/index': HomeRoute,
+  // The tab bar reaches all five, so all five are in the tree a test drives — a bar drawn
+  // over a tree that holds one of them is a bar whose presses cannot be exercised.
+  '(app)/(tabs)/find': FindRoute,
+  '(app)/(tabs)/create': CreateRoute,
+  '(app)/(tabs)/inbox': InboxRoute,
   '(app)/(tabs)/account': AccountRoute,
   '(auth)/_layout': AuthLayout,
   '(auth)/sign-in': SignInRoute,
@@ -53,6 +61,19 @@ export const ONBOARDING_ROUTES = {
   '(onboarding)/data': DataRoute,
 };
 
+/** A phone with no notch and no home indicator — every suite's default. */
+const FLAT_INSETS = { top: 0, left: 0, right: 0, bottom: 0 } as const;
+
+/**
+ * The insets the next launch renders under.
+ *
+ * Module state rather than an argument threaded through `renderRouter`, because the
+ * provider is inside the route tree the router builds and there is nothing to pass it
+ * through. `launchSignedIn` resets it, so a suite that sets it cannot leak into one that
+ * does not.
+ */
+let launchInsets: { top: number; left: number; right: number; bottom: number } = FLAT_INSETS;
+
 /**
  * The providers the real root layout composes, without the bootstrap sequence — fonts, the
  * splash screen and config validation are the launch path's business and have their own
@@ -63,7 +84,7 @@ function TestRoot() {
     <SafeAreaProvider
       initialMetrics={{
         frame: { x: 0, y: 0, width: 390, height: 844 },
-        insets: { top: 0, left: 0, right: 0, bottom: 0 },
+        insets: launchInsets,
       }}
     >
       <QueryClientProvider client={queryClient}>
@@ -133,8 +154,19 @@ export function runInProgress(
   return { assessment_id: assessmentId, sport };
 }
 
-/** A cold launch with credentials already in the keychain. */
-export async function launchSignedIn(initialUrl = '/') {
+/**
+ * A cold launch with credentials already in the keychain.
+ *
+ * `insets` is how a suite asks for a phone with a home indicator. It defaults to a flat
+ * one, which is what every suite but the tab bar's wants — and the tab bar's wants the
+ * other because the bottom inset is the one thing the bar and the screen above it can
+ * both claim.
+ */
+export async function launchSignedIn(
+  initialUrl = '/',
+  insets: { top: number; left: number; right: number; bottom: number } = FLAT_INSETS,
+) {
+  launchInsets = insets;
   await beginSession({ accessToken: 'access-1', refreshToken: 'refresh-1' });
   renderRouter(ONBOARDING_ROUTES, { initialUrl });
 }
