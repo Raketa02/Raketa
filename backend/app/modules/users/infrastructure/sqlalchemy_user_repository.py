@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Optional
+from datetime import datetime
+from typing import Optional, Sequence
 from uuid import UUID
 
 from sqlalchemy import select
@@ -86,6 +87,24 @@ class SqlAlchemyUserRepository:
         await self._session.flush()
         await self._session.refresh(row)
         return _to_domain(row)
+
+    async def find_registered_since(self, moment: datetime) -> list[User]:
+        result = await self._session.execute(
+            select(UserORM)
+            .where(UserORM.created_at >= moment)
+            .order_by(UserORM.created_at.desc(), UserORM.nickname)
+        )
+        return [_to_domain(row) for row in result.scalars().all()]
+
+    async def find_by_ids(self, user_ids: Sequence[UUID]) -> list[User]:
+        if not user_ids:
+            # `IN ()` is not portable and a round trip to learn nothing is a
+            # round trip on the busiest read in the product.
+            return []
+        result = await self._session.execute(
+            select(UserORM).where(UserORM.id.in_(list(user_ids)))
+        )
+        return [_to_domain(row) for row in result.scalars().all()]
 
     async def project_registered(self, event: UserRegistered) -> User:
         row = _projection_from_registered(event)

@@ -77,7 +77,17 @@ from app.modules.money.infrastructure.event_sourced_ledger_repository import (
     EventSourcedLedgerRepository,
 )
 from app.modules.money.infrastructure.seats_through_matches import SeatsThroughMatches
-from app.modules.now.domain.ports import RatedSports
+from app.modules.now.application.new_arrivals import ComposeNewArrivals
+from app.modules.now.domain.ports import (
+    ArrivalRows,
+    ArrivalSets,
+    Levels,
+    NewArrivals,
+    RatedSports,
+)
+from app.modules.now.infrastructure.arrival_sets import InMemoryArrivalSets
+from app.modules.now.infrastructure.levels import LevelsFromSkillRatings
+from app.modules.now.infrastructure.new_arrivals import ArrivalsFromUsersAndClubs
 from app.modules.now.infrastructure.rating_sports import RatedSportsFromSkillRatings
 from app.modules.matches.infrastructure.court_holds import (
     CourtHoldsThroughReservations,
@@ -361,6 +371,49 @@ def build_rated_sports(ratings: SkillRatingRepository) -> RatedSports:
     this faster than a replay does, only this line moves.
     """
     return RatedSportsFromSkillRatings(ratings=ratings)
+
+
+def build_arrivals(
+    *,
+    users: UserRepository,
+    ratings: SkillRatingRepository,
+    clubs: ClubRepository,
+) -> ArrivalsFromUsersAndClubs:
+    """Who arrived recently, and the rows their two inert cards print.
+
+    One object answering **two** ports, for the reason its own docstring gives:
+    they are the same eligibility rules asked at two depths, and a second class
+    would be a second copy of *what counts as new here*. It takes three ports
+    rather than a session, on the precedent `build_rated_sports` set.
+    """
+    return ArrivalsFromUsersAndClubs(users=users, ratings=ratings, clubs=clubs)
+
+
+def build_levels(ratings: SkillRatingRepository) -> Levels:
+    """Each player's Level at one sport, and whether answers are all of it."""
+    return LevelsFromSkillRatings(ratings=ratings)
+
+
+def build_arrival_sets(*, clock: Clock) -> ArrivalSets:
+    """The new-arrivals cache — **not** per request, and not per session.
+
+    Its whole value is being shared, so its lifetime is the application's: the
+    caller holds one and hands it to every compose. There is no invalidation
+    method to build here because the port has none, which is ADR-0068's design
+    rather than an omission.
+    """
+    return InMemoryArrivalSets(clock=clock)
+
+
+def build_compose_new_arrivals(
+    *,
+    arrivals: NewArrivals,
+    rows: ArrivalRows,
+    levels: Levels,
+    sets: ArrivalSets,
+) -> ComposeNewArrivals:
+    """Shelves 4 and 5 — a shared set, and a per-viewer order."""
+    return ComposeNewArrivals(arrivals=arrivals, rows=rows, levels=levels, sets=sets)
 
 
 # --------------------------------------------------------------------------

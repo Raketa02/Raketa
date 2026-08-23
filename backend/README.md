@@ -23,6 +23,8 @@ ports, and Docker images are built separately for development and production.
   timekeeper**: one tick, two indexed lookups, and no second process.
 - `GET /api/v1/now` — the player's home screen composed in one request: three ordered
   regions, a card split into a spine and a situation half, and every code a generated enum.
+  Its two light shelves — *New on Raketa* and *New clubs* — compose today, off a shared set
+  cached for fifteen minutes and a row that never is.
 - Async SQLAlchemy persistence with Alembic migrations.
 - Dockerized local development and production runtime images.
 
@@ -470,9 +472,54 @@ appearing every week to say *nothing worth waiting for* is a row players learn t
 past. The debt line is absent rather than zero, so the client never compares an amount to
 decide whether to draw it.
 
-**The regions are empty in v1.** The route ships before anything fills them, deliberately:
-it unblocks both clients against a *compiled* contract, and each later ticket fills one
-region without touching the envelope.
+**The regions fill one ticket at a time and the envelope never moves.** The route shipped
+with all three empty so both clients could compile against it. What composes today is the
+shelves region's last two shelves — the two that do not run through the ranked funnel.
+
+#### *New on Raketa* and *New clubs*
+
+| Shelf | Holds | Window | Cap | Floor | Order |
+|---|---|---|---|---|---|
+| `newPlayers` | players rated at the selected sport | 30 days | 8 | none | closeness to the viewer's Level |
+| `newClubs` | clubs with a live court in a live category for it | 60 days | 6 | none | newest first, distance breaking ties |
+
+Both orders are claims about the shelf's own title. *New on Raketa* is ordered by
+**closeness and never descending by Level**: descending makes the shelf a leaderboard,
+telling every new player where they rank on the home screen of every stranger in the city.
+*New clubs* is **newest first and never nearest**, because a shelf saying *this is new*
+must not answer *this is near*. Neither has a floor — there is no such thing as a player
+who is insufficiently new — so a viewer the platform cannot compare anybody against still
+gets a shelf, with the incomparable at the back.
+
+A person card carries a **Level and one boolean**. The boolean means *a questionnaire is
+the whole evidence behind this*, and it is a boolean rather than a second number because
+onboarding cannot produce Confidence above 30 % and a 3,2 from six questions is visually
+identical to a 3,4 from eleven matches.
+
+**The membership is cached and the row is not** (ADR-0068). *Who is new here* is the same
+answer for everybody in a city looking at one sport, so it is stored as a set of ids under
+`city : sport : kind` for **fifteen minutes**; what a card prints is read live, so a
+renamed club reaches the next screen. That split is a type — the store holds
+`tuple[UUID, ...]` — rather than a rule somebody has to remember.
+
+The cache **has no invalidation path at all**, and that is the design. Against shelf clocks
+of thirty and sixty *days*, a quarter of an hour of lag is imperceptible, and a cache with
+nothing to invalidate is the one shape that cannot go wrong. Its visible cost is asserted
+rather than left implicit: `tests/api/test_now_shelves.py` has a club that registers after
+a compose and waits for the TTL.
+
+It lives **in this process**, on `app.state`, which is a deviation from ADR-0068's *"Redis
+and Celery are already backend dependencies, so both caches have a home"*. Redis has no
+importer anywhere in this tree, so a Redis adapter would arrive with a client, a connection
+lifetime, a failure policy and a serialisation format that no test run can exercise. What
+ships is the port and a store that is correct: N workers pay N misses instead of one, and
+each answers from a real query. The seam is one line in the composition root.
+
+**The key's city component has no source yet.** ADR-0063 makes *where you play* a declared
+fact about the player and no context stores one (`Raketa02/Raketa#102`), so every compose
+files under `CITY_UNKNOWN`. The component stays in the key rather than being added the day
+the fact lands — a key that *gains* a component is a key whose old entries answer the wrong
+city for fifteen minutes.
 
 ### What the Now contract will not carry
 

@@ -70,6 +70,7 @@ from app.engines.assessment import (
     FACTOR_DIRECTION_DOWN,
     FACTOR_DIRECTION_NEUTRAL,
     FACTOR_DIRECTION_UP,
+    STATUS_INITIAL_ESTIMATE,
     AnsweredQuestion,
     AskQuestion,
     AssessmentResult,
@@ -305,8 +306,10 @@ STOP_MARGINAL = "marginal-value-below-threshold"
 
 TIE_BREAKER_REASON = "contradiction-tie-breaker"
 
-# Every onboarding rating is a hypothesis, not a verdict.
-RESULT_STATUS = "Initial Estimate"
+# Every onboarding rating is a hypothesis, not a verdict. The string is the
+# shared vocabulary's rather than this version's own, so a reader outside the
+# engines can name the status without naming an engine version.
+RESULT_STATUS = STATUS_INITIAL_ESTIMATE
 
 
 class UnknownAnswer(ValueError):

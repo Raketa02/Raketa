@@ -1102,6 +1102,25 @@
         "title": "InProgressAssessmentsResponse",
         "description": "Every unfinished run this player holds \u2014 empty when they hold none.\n\nEmpty is the ordinary answer for a new account and for a player who has\nfinished everything they started, so it is a 200 with an empty list rather\nthan a 404 or the singular form's 204.\n\nOrdered by the sport registry, so a caller that wants one run can take the\nfirst entry."
       },
+      "LevelResponse": {
+        "properties": {
+          "value": {
+            "type": "number",
+            "title": "Value"
+          },
+          "provisional": {
+            "type": "boolean",
+            "title": "Provisional"
+          }
+        },
+        "type": "object",
+        "required": [
+          "value",
+          "provisional"
+        ],
+        "title": "LevelResponse",
+        "description": "A Level on the fixed 1,0-5,0 scale, and the quiet marker beside it.\n\n``provisional`` is a **boolean and never a second number**. A rating that has\nseen no counted match cannot exceed 30 % Confidence, and a 3,2 from six\nquestions is visually identical to a 3,4 from eleven matches \u2014 so the card\nsays *this is an estimate* and stops there. Printing the percentage would be\nthe second gauge ADR-0037 refused; printing nothing would claim a certainty\nthe platform does not have.\n\n``value`` crosses as a number. The comma is the client's, like every other\nvalue in ``docs/value-formatting.md``."
+      },
       "LoginRequest": {
         "properties": {
           "email": {
@@ -1329,16 +1348,20 @@
           "nickname": {
             "type": "string",
             "title": "Nickname"
+          },
+          "level": {
+            "$ref": "#/components/schemas/LevelResponse"
           }
         },
         "type": "object",
         "required": [
           "player_id",
           "stamp",
-          "nickname"
+          "nickname",
+          "level"
         ],
         "title": "PersonCardResponse",
-        "description": "A player who has just arrived. No situation, no clock, no price."
+        "description": "A player who has just arrived. No situation, no clock, no price.\n\n``level`` is **required**: a player reaches this shelf only through a rating\nat the shelf's sport, so an optional Level would be a hole for a state the\nretrieval cannot produce \u2014 the same defect one card type with holes has."
       },
       "PlaceResponse": {
         "properties": {

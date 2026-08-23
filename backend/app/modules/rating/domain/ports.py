@@ -93,12 +93,12 @@ class SkillRatingRepository(Protocol):
     assessment writes this stream and the assessment's inside one transaction,
     so the boundary belongs to the use case.
 
-    **There is no ``load``.** Nothing reads a single rating by id — the one read
-    is "every rating this player holds", and a rating's stream id is derived from
+    **There is still no by-id ``load``.** A rating's stream id is derived from
     the player and the sport rather than looked up, so a by-id port would be a
-    member no caller could want. Add it when something wants it, with the
-    ownership argument ``AssessmentRepository.load`` makes; a rating loaded
-    without saying whose it is has the same hazard.
+    member no caller could want. What did arrive, on that paragraph's own
+    invitation, is ``find_for`` — the by-**pair** read, which names whose rating
+    it is in its signature and therefore carries the ownership argument
+    ``AssessmentRepository.load`` makes rather than sidestepping it.
     """
 
     async def save(self, rating: SkillRating) -> None:
@@ -121,6 +121,20 @@ class SkillRatingRepository(Protocol):
         by-id ``load`` this port still lacks stays unwritten until something
         wants to transition a rating — which is the match-update engine's
         problem, not this one's.
+        """
+        ...
+
+    async def find_for(self, *, player_id: UUID, sport: Sport) -> SkillRating | None:
+        """This player's rating at one sport, or nothing.
+
+        The by-pair read the module docstring above kept unwritten until
+        something wanted it, and what wants it is Now's *New on Raketa* shelf:
+        its whole order is one subtraction between two Levels at one sport, and
+        ``find_all_for`` replays every rating a player holds to answer it.
+
+        Ownership is in the signature for the reason ``AssessmentRepository.load``
+        gives, and here it is not even a check — the stream id **is** the pair, so
+        a rating cannot be reached without saying whose it is.
         """
         ...
 

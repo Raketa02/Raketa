@@ -86,6 +86,13 @@ class Club:
 
     version: int = 0
 
+    #: When this club's row was written, read back from the store and never set
+    #: here. It is a fact about the record rather than about the venue — a club
+    #: that has traded for forty years is *new on Raketa* the week it registers —
+    #: and it is `None` on a club that has not been through the store yet, which
+    #: is the only state in which nothing can have stamped it.
+    created_at: Instant | None = None
+
     # -- the record ---------------------------------------------------------
 
     @classmethod

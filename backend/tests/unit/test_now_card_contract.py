@@ -13,6 +13,8 @@ from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 from zoneinfo import ZoneInfo
 
+import pytest
+
 from app.engines.fit import TermCode
 from app.kernel import Cause, Situation, grosze
 from app.modules.now.domain.screen import (
@@ -22,6 +24,7 @@ from app.modules.now.domain.screen import (
     Fit,
     FitReason,
     HoldNote,
+    Level,
     MatchCard,
     Money,
     NowScreen,
@@ -52,6 +55,11 @@ from app.modules.now.presentation.schemas import (
 
 AT = datetime(2026, 8, 22, 17, 30, tzinfo=timezone.utc)
 WARSAW = ZoneInfo("Europe/Warsaw")
+
+#: Every person card carries one — a player reaches that shelf only through a
+#: rating at the shelf's sport, so there is no such thing as a person card with
+#: no Level on it.
+A_LEVEL = Level(value=2.7, provisional=True)
 
 
 def a_place(**kwargs) -> Place:
@@ -236,11 +244,31 @@ def test_the_hold_reason_crosses_as_one_of_five_and_never_as_a_sentence() -> Non
 
 def test_a_person_card_has_no_situation_no_clock_and_no_price() -> None:
     rendered = PersonCardResponse.from_domain(
-        PersonCard(player_id=uuid4(), stamp=1, nickname="kuba")
+        PersonCard(player_id=uuid4(), stamp=1, nickname="kuba", level=A_LEVEL)
     ).model_dump()
 
-    assert set(rendered) == {"card_type", "player_id", "stamp", "nickname"}
+    assert set(rendered) == {
+        "card_type",
+        "player_id",
+        "stamp",
+        "nickname",
+        "level",
+    }
     assert rendered["card_type"] == "person"
+    # A Level and the quiet marker, never a second number: onboarding cannot
+    # produce Confidence above 30 %, and printing that percentage beside the
+    # Level is the second gauge ADR-0037 refused.
+    assert rendered["level"] == {"value": 2.7, "provisional": True}
+    assert "confidence" not in rendered["level"]
+
+
+def test_a_person_card_cannot_be_built_without_a_Level() -> None:
+    # **Required**, and asserted structurally because every construction in the
+    # suite supplies one — an optional Level would compile, stay green, and be a
+    # hole for a state the retrieval cannot produce, which is exactly the defect
+    # one card type with holes would have had.
+    with pytest.raises(TypeError):
+        PersonCard(player_id=uuid4(), stamp=1, nickname="kuba")  # type: ignore[call-arg]
 
 
 def test_a_club_card_has_no_situation_no_clock_and_no_price() -> None:
@@ -257,7 +285,10 @@ def test_a_shelf_carries_a_code_a_caption_code_and_cards_and_no_title() -> None:
         Shelf(
             code=ShelfCode.BEST_FIT,
             caption=CaptionCode.UNDECLARED_PREFERENCES,
-            cards=(a_card(), PersonCard(player_id=uuid4(), stamp=1, nickname="ola")),
+            cards=(
+                a_card(),
+                PersonCard(player_id=uuid4(), stamp=1, nickname="ola", level=A_LEVEL),
+            ),
         )
     ).model_dump()
 
@@ -276,7 +307,7 @@ def test_a_shelf_discriminates_its_cards_by_the_thing_they_are_about() -> None:
             code=ShelfCode.NEW_PLAYERS,
             cards=(
                 a_card(),
-                PersonCard(player_id=uuid4(), stamp=1, nickname="ola"),
+                PersonCard(player_id=uuid4(), stamp=1, nickname="ola", level=A_LEVEL),
                 ClubCard(club_id=uuid4(), stamp=1, name="Padel Kraków"),
             ),
         )

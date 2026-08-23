@@ -239,6 +239,29 @@ Rules to preserve:
   which is the one failure mode no typecheck can reach afterwards. And **no sentence is
   composed here** — an AST walk over the package reddens on any string literal that could be
   copy, with a negative control proving it can tell one from a code.
+- **Shelves 4 and 5 cache the membership and never the row.** *New on Raketa* (30 days,
+  cap 8) and *New clubs* (60 days, cap 6) are the only part of Now that does not run through
+  the ranked funnel, and
+  [ADR-0068](../docs/adr/0068-now-is-one-request-and-the-caches-serve-the-screens-two-clocks.md)
+  splits them on one line: *who is new here* is the same answer for everybody in a city
+  looking at one sport and is cached under `city : sport : kind`; *what a card prints* is
+  read live. That is a **type** rather than a discipline — `ArrivalSets` holds
+  `tuple[UUID, ...]`, so a nickname could not be cached by somebody widening a signature.
+  The cache **expires after fifteen minutes and has no invalidation path at all**, which is
+  the design and not a gap: against shelf clocks of 30 and 60 *days* the lag is
+  imperceptible, and a `forget` is a second thing to keep in step with the truth. It is
+  in-process and hangs off `app.state` — the one adapter in this app whose lifetime is the
+  application's — because a Redis adapter would arrive with a client, a connection lifetime,
+  a failure policy and a serialisation format that no test run can exercise. **Neither shelf
+  has a floor** and both are ordered by a rule that is a claim about the shelf's own title:
+  *New on Raketa* by **closeness to the viewer's Level and never descending** (descending is
+  a leaderboard on a stranger's home screen), *New clubs* **newest first with distance
+  breaking ties** (by distance, a shelf saying *this is new* would answer *this is near*). A
+  questionnaire-derived Level carries **one boolean** and never a second number — the
+  Confidence percentage on a card is the gauge ADR-0037 refused. The **city component of the
+  key has no source yet** (`Raketa02/Raketa#102`) and resolves to `CITY_UNKNOWN`; it stays in
+  the key rather than being added later, because a key that gains a component answers the
+  wrong city for fifteen minutes on the day it lands.
 - **The ledger is event-sourced, one stream per player, and it refuses to forget.** Money
   is the first racket-sport context to answer ADR-0002's per-context question with *yes*
   ([ADR-0055](../docs/adr/0055-the-ledger-is-event-sourced-one-stream-per-player.md)), and

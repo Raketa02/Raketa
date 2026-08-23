@@ -16,7 +16,7 @@ nothing about that one.
 
 from __future__ import annotations
 
-from typing import Protocol, runtime_checkable
+from typing import Protocol, Sequence, runtime_checkable
 from uuid import UUID
 
 from app.modules.clubs.domain.club import Club
@@ -46,6 +46,14 @@ class ClubRepository(Protocol):
         default and every club written in one transaction shares it — a tie
         breaking on a random uuid is an order that changes between runs, which
         is exactly what a seed report must not have.
+        """
+        ...
+
+    async def find_by_ids(self, club_ids: Sequence[UUID]) -> list[Club]:
+        """The clubs these ids name, by name, silently short on a stranger.
+
+        By name for the reason ``find_all`` gives, and short rather than raising
+        because the caller may hold a set minutes older than the store.
         """
         ...
 

@@ -87,6 +87,20 @@ class EventSourcedSkillRatingRepository:
         )
         return bool(stored)
 
+    async def find_for(self, *, player_id: UUID, sport: Sport) -> SkillRating | None:
+        # One stream load and no index read: the id is derived from the pair, so
+        # the question is whether that stream exists. Remembered like any read
+        # aggregate, for the reason `find_all_for` gives.
+        stored = await self._event_store.load_stream(
+            aggregate_type=RATING_AGGREGATE,
+            aggregate_id=skill_rating_id(player_id, sport),
+        )
+        if not stored:
+            return None
+        rating = SkillRating.from_history(record.event for record in stored)
+        self._remember(rating)
+        return rating
+
     async def find_all_for(self, *, player_id: UUID) -> list[SkillRating]:
         rating_ids = await self._event_store.find_aggregate_ids_by_first_event(
             aggregate_type=RATING_AGGREGATE,

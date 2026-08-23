@@ -255,6 +255,33 @@ class MatchCard:
 
 @final
 @dataclass(frozen=True)
+class Level:
+    """A player's Level, and whether a questionnaire is all that is behind it.
+
+    ``value`` is the glossary's **Level (μ)** on the fixed 1,0-5,0 scale, sent as
+    the number and never as ``2,71`` — the comma is the client's, like every
+    other value in ``docs/value-formatting.md``.
+
+    ``provisional`` is the **quiet marker**, and it is a boolean because the
+    alternative was a second number. A rating that has seen no counted match is
+    the glossary's *Initial Estimate*, and onboarding cannot exceed 30 %
+    confidence; printing that 30 % beside the Level is the gauge ADR-0037
+    refused, and printing nothing at all claims a certainty the platform does not
+    have. So the card says *this is an estimate* and stops there.
+
+    Not the Rating status itself. *Initial Estimate*, *Calibrating* and *Stable*
+    are a three-value vocabulary the client would have to hold a row for, and a
+    person card has one thing to say about it: whether a questionnaire is the
+    whole evidence. The day the middle one means something to a reader, this
+    becomes a code and the boolean goes.
+    """
+
+    value: float
+    provisional: bool
+
+
+@final
+@dataclass(frozen=True)
 class PersonCard:
     """A player who has just arrived. Inert in v1 — no act, no clock, no price.
 
@@ -262,11 +289,17 @@ class PersonCard:
     every person card an always-empty situation half, an always-empty clock, an
     always-empty price and an emphasis flag that can never be set, with nothing
     preventing a later session filling one in.
+
+    ``level`` is **required**, because a person reaches this shelf only through a
+    rating at the shelf's sport. An optional Level would be a hole for a state
+    the retrieval cannot produce, which is the same defect one card type with
+    holes would have been.
     """
 
     player_id: UUID
     stamp: Stamp
     nickname: str
+    level: Level
 
     card_type: CardType = CardType.PERSON
 

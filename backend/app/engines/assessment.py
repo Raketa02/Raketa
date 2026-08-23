@@ -65,6 +65,16 @@ class BandView:
     upper: float
 
 
+# The Rating status a questionnaire alone can produce, and the only one any live
+# engine emits: the glossary's **Initial Estimate**, before a counted match has
+# moved anything. It lives here rather than inside an engine version because it
+# is *read* outside the engines — Now's *New on Raketa* shelf prints a quiet
+# marker exactly when a Level rests on nothing but answers (ADR-0051) — and a
+# reader holding its own copy of the string is comparing against a value nothing
+# keeps honest, which is the argument `confidence_ceiling` below already makes
+# for travelling with the result.
+STATUS_INITIAL_ESTIMATE = "Initial Estimate"
+
 # How urgently the rating wants real matches to calibrate it. Raised when the
 # assessment ended with answers that still disagreed, because the estimate then
 # rests on evidence the questionnaire could not settle.

@@ -84,8 +84,12 @@ export function matchCard({
   };
 }
 
-export function personCard(playerId: string, nickname: string): Wire['PersonCardResponse'] {
-  return { card_type: 'person', player_id: playerId, stamp: 1, nickname };
+export function personCard(
+  playerId: string,
+  nickname: string,
+  level: Wire['LevelResponse'] = { value: 2.7, provisional: true },
+): Wire['PersonCardResponse'] {
+  return { card_type: 'person', player_id: playerId, stamp: 1, nickname, level };
 }
 
 export function clubCard(clubId: string, name: string): Wire['ClubCardResponse'] {

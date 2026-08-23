@@ -1,9 +1,11 @@
-"""Composing Now: what `all` resolves to, and what a stamp is.
+"""Composing Now: what `all` resolves to, what a stamp is, and what it reaches.
 
-Two behaviours are real in this ticket and both are asserted here rather than
-inferred from a shape. The regions ship **empty** — later tickets fill them — so
-what is genuinely under test is the envelope's shape, the resolution of the sport
-filter, and the stamps.
+What is under test here is the envelope's shape, the resolution of the sport
+filter, and the stamps. The offers region and the enrolled strip still ship empty
+— later tickets fill them — while the shelves region carries whatever shelves 4
+and 5 composed, so this file also asserts the *reach*: the resolved sports, the
+one clock reading and the one stamp all arrive at the arrivals composer, and the
+region's emptiness is now a fact about the city rather than about the ticket.
 """
 
 from datetime import datetime, timedelta, timezone
@@ -14,7 +16,10 @@ import pytest
 from app.kernel import Instant, Sport
 from app.modules.now.application.commands import ComposeNowQuery, SportFilter
 from app.modules.now.application.compose_now import ComposeNow, stamp_at
+from app.modules.now.application.new_arrivals import ComposeNewArrivals
 from app.modules.now.domain.ports import RatedSports
+from app.modules.now.domain.screen import Shelf, Stamp
+from app.modules.now.domain.vocabulary import ShelfCode
 
 AT = datetime(2026, 8, 22, 17, 30, tzinfo=timezone.utc)
 
@@ -44,8 +49,47 @@ class SteppingClock:
         return moment
 
 
-def _compose(rated: RatedSports, clock) -> ComposeNow:
-    return ComposeNow(rated_sports=rated, clock=clock)
+class RecordingNewArrivals(ComposeNewArrivals):
+    """Shelves 4 and 5, recorded rather than composed.
+
+    Subclasses the real collaborator rather than duplicating its signature: the
+    thing worth catching is a call whose arguments have drifted, and a
+    hand-written double with its own signature is the one shape that could not.
+    """
+
+    def __init__(self, *shelves: Shelf) -> None:
+        self._shelves = shelves
+        self.calls: list[dict] = []
+
+    async def compose(
+        self,
+        *,
+        viewer: UUID,
+        sports: frozenset[Sport],
+        now: Instant,
+        stamp: Stamp,
+        city: str | None = None,
+    ) -> tuple[Shelf, ...]:
+        self.calls.append(
+            {
+                "viewer": viewer,
+                "sports": sports,
+                "now": now,
+                "stamp": stamp,
+                "city": city,
+            }
+        )
+        return self._shelves
+
+
+def _compose(
+    rated: RatedSports, clock, arrivals: ComposeNewArrivals | None = None
+) -> ComposeNow:
+    return ComposeNow(
+        rated_sports=rated,
+        new_arrivals=arrivals or RecordingNewArrivals(),
+        clock=clock,
+    )
 
 
 async def test_all_is_the_sports_the_player_holds_a_rating_at() -> None:
@@ -119,6 +163,54 @@ async def test_all_three_regions_are_present_and_empty() -> None:
     assert screen.offers.cards == ()
     assert screen.your_matches.cards == ()
     assert screen.shelves.shelves == ()
+
+
+async def test_the_shelves_region_carries_whatever_composed() -> None:
+    arrivals = RecordingNewArrivals(Shelf(code=ShelfCode.NEW_CLUBS))
+    screen = await _compose(FakeRatedSports(), SteppingClock(AT), arrivals).execute(
+        ComposeNowQuery(player_id=uuid4())
+    )
+
+    assert [shelf.code for shelf in screen.shelves.shelves] == [ShelfCode.NEW_CLUBS]
+
+
+async def test_the_arrivals_composer_is_asked_with_the_resolved_sports() -> None:
+    # Not with the chip: `all` is *the sports she holds a rating at*, and a shelf
+    # composed against the four the registry knows would introduce her to squash
+    # players she can never be ranked against.
+    player = uuid4()
+    rated = FakeRatedSports(**{str(player): frozenset({Sport.PADEL})})
+    arrivals = RecordingNewArrivals()
+    await _compose(rated, SteppingClock(AT), arrivals).execute(
+        ComposeNowQuery(player_id=player, sport=SportFilter.ALL)
+    )
+
+    assert arrivals.calls[0]["sports"] == frozenset({Sport.PADEL})
+    assert arrivals.calls[0]["viewer"] == player
+
+
+async def test_the_arrivals_composer_shares_the_composes_one_clock_reading() -> None:
+    arrivals = RecordingNewArrivals()
+    clock = SteppingClock(AT, AT + timedelta(seconds=5))
+    screen = await _compose(FakeRatedSports(), clock, arrivals).execute(
+        ComposeNowQuery(player_id=uuid4())
+    )
+
+    assert clock.reads == 1
+    assert arrivals.calls[0]["now"] == AT
+    assert arrivals.calls[0]["stamp"] == screen.shelves.stamp
+
+
+async def test_no_compose_can_name_the_viewers_city_yet() -> None:
+    # ADR-0063 makes *where you play* a declared fact about the player and no
+    # context stores one (#102). It is threaded as `None` rather than invented
+    # downstream, so the day the fact has a source this is the whole change.
+    arrivals = RecordingNewArrivals()
+    await _compose(FakeRatedSports(), SteppingClock(AT), arrivals).execute(
+        ComposeNowQuery(player_id=uuid4())
+    )
+
+    assert arrivals.calls[0]["city"] is None
 
 
 async def test_a_player_who_owes_nothing_has_no_debt_line_rather_than_a_zero() -> None:

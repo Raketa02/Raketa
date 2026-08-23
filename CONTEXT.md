@@ -975,6 +975,21 @@ about it. Decided by [ADR-0070](docs/adr/0070-now-is-three-regions-and-a-card-ha
   **Identified by the thing it is about**, never by its position or by the shelf it sits in —
   one match may appear on more than one shelf, and under thing identity one answer corrects
   every copy of it.
+- **New on Raketa** — the shelf of **people** who joined in the last 30 days and hold a rating
+  at the selected sport. Ordered by **closeness to the viewer's own Level, never descending**:
+  descending makes it a leaderboard, telling every new player where they rank on the home
+  screen of every stranger in the city, and puts the players the viewer can least enjoy a game
+  with at the front. **No floor** — there is no such thing as a player who is insufficiently
+  new — so a viewer the platform cannot rank anybody against still gets the shelf. A player
+  whose Level is still **questionnaire-derived carries a quiet marker, not a second number**:
+  onboarding cannot produce Confidence above 30 %, and a 3,2 from six questions is visually
+  identical to a 3,4 from eleven matches.
+- **New clubs** — the shelf of **clubs** that joined in the last 60 days and sell the selected
+  sport. Ordered **newest first, with distance breaking ties**, because a shelf whose title
+  says *this is new* must not answer *this is near*; a club with no distance sorts after one
+  with a distance, since **absent is not nearest**. No floor either. Both shelves are the
+  editorial answer to a thin city — a match from a new district is on the screen because the
+  district is new, which is a sentence.
 - **Spine** — the half of a card every phone can draw: which thing, the one moment, where,
   how much, the fit badge, the emphasis flag, the act code, whether she may leave, the seat
   claim, the card stamp. *Avoid: calling it the header — the screen has one of those and it

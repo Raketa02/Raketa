@@ -4,11 +4,11 @@
 comes from that one reading, which is what makes a compose a single statement
 about a single instant rather than three regions that half-disagree.
 
-**This ships the route with the regions empty**, and that is deliberate rather
-than unfinished: it unblocks the client against a *compiled* contract, and every
-later ticket fills a region without touching the envelope. What is real here and
-not a placeholder is the shape of the answer, the resolution of ``all``, and the
-stamps.
+**Regions are filled one ticket at a time and the envelope never moves.** The
+route shipped with all three empty so the client could compile against it; what
+is real here today is the shape of the answer, the resolution of ``all``, the
+stamps, and **shelves 4 and 5** — the two shelves that do not run through the
+ranked funnel and therefore do not wait on it.
 
 **Every ask pays the full funnel.** There is no player feed cache — it was the
 answer to a load shape that no longer exists, and it is the only place on this
@@ -20,6 +20,7 @@ from __future__ import annotations
 from app.kernel import Clock, Instant, Sport
 
 from app.modules.now.application.commands import ComposeNowQuery
+from app.modules.now.application.new_arrivals import ComposeNewArrivals
 from app.modules.now.domain.ports import RatedSports
 from app.modules.now.domain.screen import (
     EnrolledRegion,
@@ -59,8 +60,15 @@ def stamp_at(moment: Instant) -> Stamp:
 class ComposeNow:
     """Compose the whole of Now for one viewer, at one instant."""
 
-    def __init__(self, *, rated_sports: RatedSports, clock: Clock) -> None:
+    def __init__(
+        self,
+        *,
+        rated_sports: RatedSports,
+        new_arrivals: ComposeNewArrivals,
+        clock: Clock,
+    ) -> None:
         self._rated_sports = rated_sports
+        self._new_arrivals = new_arrivals
         self._clock = clock
 
     async def execute(self, query: ComposeNowQuery) -> NowScreen:
@@ -71,7 +79,25 @@ class ComposeNow:
         return NowScreen(
             offers=OffersRegion(stamp=stamp),
             your_matches=EnrolledRegion(stamp=stamp),
-            shelves=ShelvesRegion(stamp=stamp),
+            shelves=ShelvesRegion(
+                stamp=stamp,
+                # The ranked shelves are not built yet, so the server's fixed
+                # order is satisfied here by the only two shelves there are. The
+                # order itself is composition's (#77) and lands with the funnel;
+                # what this ticket owes is that these two are *behind* it, which
+                # they are for as long as this is the whole list.
+                shelves=await self._new_arrivals.compose(
+                    viewer=query.player_id,
+                    sports=sports,
+                    now=now,
+                    stamp=stamp,
+                    # Nobody stores a player's city (#102, ADR-0063), so every
+                    # compose files under the unknown one. It is threaded rather
+                    # than invented downstream so that the day the fact has a
+                    # source, this line is the whole change.
+                    city=None,
+                ),
+            ),
             sports=sports,
             # Money is not modelled yet, so nothing can owe anything and the line
             # is absent rather than present at zero. When the ledger lands, the

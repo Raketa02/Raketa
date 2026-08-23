@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 
 from app.api.v1.router import api_router
+from app.bootstrap.composition import build_arrival_sets, build_clock
 from app.bootstrap.events import get_event_runtime
 from app.core.config import Environment, Settings, get_settings
 from app.core.exception_handlers import register_exception_handlers
@@ -34,6 +35,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     # than the requests that wrote the events is a failure with no symptom until
     # an event goes undelivered.
     app.state.event_runtime = get_event_runtime()
+
+    # The new-arrivals cache (ADR-0068). One per application rather than one per
+    # request, because a cache nobody shares is a cache with no hits — and one
+    # per *application* rather than a module singleton, so two apps in one
+    # process (which is what a test run is) never answer from each other's
+    # database. It expires and never invalidates, so there is nothing to reset.
+    app.state.arrival_sets = build_arrival_sets(clock=build_clock())
 
     register_middleware(app, settings)
     register_exception_handlers(app)

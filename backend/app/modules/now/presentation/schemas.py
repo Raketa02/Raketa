@@ -36,6 +36,7 @@ from app.modules.now.domain.screen import (
     Fit,
     FitReason,
     HoldNote,
+    Level,
     MatchCard,
     Money,
     NowScreen,
@@ -221,17 +222,50 @@ class MatchCardResponse(BaseModel):
         )
 
 
+class LevelResponse(BaseModel):
+    """A Level on the fixed 1,0-5,0 scale, and the quiet marker beside it.
+
+    ``provisional`` is a **boolean and never a second number**. A rating that has
+    seen no counted match cannot exceed 30 % Confidence, and a 3,2 from six
+    questions is visually identical to a 3,4 from eleven matches — so the card
+    says *this is an estimate* and stops there. Printing the percentage would be
+    the second gauge ADR-0037 refused; printing nothing would claim a certainty
+    the platform does not have.
+
+    ``value`` crosses as a number. The comma is the client's, like every other
+    value in ``docs/value-formatting.md``.
+    """
+
+    value: float
+    provisional: bool
+
+    @classmethod
+    def from_domain(cls, level: Level) -> "LevelResponse":
+        return cls(value=level.value, provisional=level.provisional)
+
+
 class PersonCardResponse(BaseModel):
-    """A player who has just arrived. No situation, no clock, no price."""
+    """A player who has just arrived. No situation, no clock, no price.
+
+    ``level`` is **required**: a player reaches this shelf only through a rating
+    at the shelf's sport, so an optional Level would be a hole for a state the
+    retrieval cannot produce — the same defect one card type with holes has.
+    """
 
     card_type: Literal[CardType.PERSON] = CardType.PERSON
     player_id: UUID
     stamp: int
     nickname: str
+    level: LevelResponse
 
     @classmethod
     def from_domain(cls, card: PersonCard) -> "PersonCardResponse":
-        return cls(player_id=card.player_id, stamp=card.stamp, nickname=card.nickname)
+        return cls(
+            player_id=card.player_id,
+            stamp=card.stamp,
+            nickname=card.nickname,
+            level=LevelResponse.from_domain(card.level),
+        )
 
 
 class ClubCardResponse(BaseModel):

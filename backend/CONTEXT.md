@@ -750,6 +750,50 @@ there; they are not repeated here.
   second implementation of any of the three would be a defect — ADR-0022's own test.
   `settlementReopened` is in the enumeration and reaches no card. _Avoid_: a per-context
   copy, and a free-text reason beside it.
+- **Membership against row** (`now.NewArrivals`, `now.ArrivalRows`) — the split shelves 4
+  and 5 are built on: *who is new here* is the same answer for everybody in a city looking
+  at one sport and is **cached**; *what a card prints* is read live and is **not**. Two
+  ports rather than four methods on one, because that is what makes the split structural —
+  the cache's value type is `tuple[UUID, ...]`, so *the set and not the row* is a type
+  error rather than a rule. One implementation answers both: they are the same eligibility
+  asked at two depths. _Avoid_: caching a nickname or a club's name, which is fifteen
+  minutes of telling a player about a venue that no longer goes by that name.
+- **New-arrivals set** (`now.ArrivalKey`, `now.ArrivalSets`, `InMemoryArrivalSets`) — Now's
+  only cache today, keyed `city : sport : kind`, holding identifiers, expiring after
+  **fifteen minutes** and **never invalidated**. The absence of an invalidation path is the
+  decision, not an omission: the shelves' own clocks are 30 and 60 **days**, so a quarter
+  of an hour of lag is invisible against them, and a cache with nothing to invalidate is the
+  one shape that cannot go wrong. In-process and hung off `app.state` rather than in Redis —
+  a Redis adapter would arrive with a client, a connection lifetime, a failure policy and a
+  serialisation format, none of which a test run can exercise. _Avoid_: a `forget`, and a
+  module-level singleton, which survives from one test's database into another's.
+- **The unknown city** (`now.CITY_UNKNOWN`) — what the key's city component reads as while
+  no context stores a player's city (`Raketa02/Raketa#102`). The component stays in the key
+  rather than being dropped until it has a source: a key that *gains* a component later is
+  a key whose old entries answer the wrong city for fifteen minutes on the day it lands.
+  _Avoid_: keying on sport and kind alone and adding the city afterwards.
+- **Level and the quiet marker** (`now.screen.Level`) — what a person card prints: μ on the
+  1,0–5,0 scale, and **one boolean** meaning *a questionnaire is the whole evidence behind
+  this*. A boolean because the alternative was a second number — onboarding cannot exceed
+  30 % Confidence, and printing that percentage beside the Level is the gauge ADR-0037
+  refused, while printing nothing claims a certainty the platform does not have. Derived
+  from the Rating status against `engines.assessment.STATUS_INITIAL_ESTIMATE`, which lives
+  in the shared engine vocabulary so no reader holds its own copy of the string. _Avoid_:
+  shipping the three-value Rating status, which is a table the client would hold for one
+  question, and a Level a rating does not exist for.
+- **Closeness, never descending** (`now.by_closeness`) — *New on Raketa* is ordered by the
+  absolute gap between an arrival's Level and the viewer's **at the same sport**. Descending
+  by Level makes the shelf a leaderboard: it tells every new player where they rank on the
+  home screen of every stranger in the city, and puts the players the viewer can least enjoy
+  a game with at the front. A viewer the platform cannot compare anybody against still gets
+  a shelf — those fall to the back, newest first — because **neither shelf has a floor**:
+  there is no such thing as a player who is insufficiently new. _Avoid_: dropping somebody
+  for being far, and breaking a tie on an id, which a shared creation stamp makes random.
+- **Newest first, never nearest** (`now.by_arrival`) — *New clubs* is ordered by arrival with
+  distance breaking ties, because the shelf's title is its claim and ordering by distance
+  would make a shelf that says *this is new* answer *this is near*. A club whose distance is
+  unknown sorts **after** one whose distance is known: absent is not nearest. _Avoid_: a zero
+  where there is no Distance anchor.
 - **The no-sentence walk** (`tests/unit/test_now_vocabulary.py`) — the AST walk asserting
   that nothing under `app/modules/now/` composes a phrase a player could read. Three kinds
   are exempt by name and for a stated reason: a docstring, an `invariant()` message, and a

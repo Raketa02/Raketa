@@ -298,6 +298,16 @@ class SqlAlchemyClubRepository:
         rows = await self._all(select(ClubORM).order_by(ClubORM.name))
         return [await self._hydrate(row) for row in rows]
 
+    async def find_by_ids(self, club_ids: Sequence[UUID]) -> list[Club]:
+        if not club_ids:
+            # `IN ()` is not portable, and a round trip to learn nothing is a
+            # round trip on the busiest read in the product.
+            return []
+        rows = await self._all(
+            select(ClubORM).where(ClubORM.id.in_(list(club_ids))).order_by(ClubORM.name)
+        )
+        return [await self._hydrate(row) for row in rows]
+
     async def _all(self, statement: Select[Any]) -> Sequence[Any]:
         return (await self._session.execute(statement)).scalars().all()
 
@@ -367,6 +377,7 @@ class SqlAlchemyClubRepository:
                 for court_id, versions in by_court.items()
             ],
             version=row.version,
+            created_at=_as_instant(row.created_at),
         )
 
     # -- writing -------------------------------------------------------------

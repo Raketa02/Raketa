@@ -591,6 +591,26 @@ export interface components {
             /** Assessments */
             assessments: components["schemas"]["InProgressAssessmentResponse"][];
         };
+        /**
+         * LevelResponse
+         * @description A Level on the fixed 1,0-5,0 scale, and the quiet marker beside it.
+         *
+         *     ``provisional`` is a **boolean and never a second number**. A rating that has
+         *     seen no counted match cannot exceed 30 % Confidence, and a 3,2 from six
+         *     questions is visually identical to a 3,4 from eleven matches — so the card
+         *     says *this is an estimate* and stops there. Printing the percentage would be
+         *     the second gauge ADR-0037 refused; printing nothing would claim a certainty
+         *     the platform does not have.
+         *
+         *     ``value`` crosses as a number. The comma is the client's, like every other
+         *     value in ``docs/value-formatting.md``.
+         */
+        LevelResponse: {
+            /** Value */
+            value: number;
+            /** Provisional */
+            provisional: boolean;
+        };
         /** LoginRequest */
         LoginRequest: {
             /**
@@ -686,6 +706,10 @@ export interface components {
         /**
          * PersonCardResponse
          * @description A player who has just arrived. No situation, no clock, no price.
+         *
+         *     ``level`` is **required**: a player reaches this shelf only through a rating
+         *     at the shelf's sport, so an optional Level would be a hole for a state the
+         *     retrieval cannot produce — the same defect one card type with holes has.
          */
         PersonCardResponse: {
             /**
@@ -702,6 +726,7 @@ export interface components {
             stamp: number;
             /** Nickname */
             nickname: string;
+            level: components["schemas"]["LevelResponse"];
         };
         /**
          * PlaceResponse
