@@ -15,6 +15,7 @@ import { Slot } from 'expo-router';
 import { renderRouter } from 'expo-router/testing-library';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import AccountRoute from '@/app/(app)/(tabs)/account';
 import AppLayout from '@/app/(app)/_layout';
 import TabsLayout from '@/app/(app)/(tabs)/_layout';
 import HomeRoute from '@/app/(app)/(tabs)/index';
@@ -31,6 +32,7 @@ import WelcomeRoute from '@/app/(onboarding)/welcome';
 import { beginSession } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 
+import { stubNow } from './now';
 import { json, type Transport, type Wire } from './transport';
 
 export const ONBOARDING_ROUTES = {
@@ -38,6 +40,7 @@ export const ONBOARDING_ROUTES = {
   '(app)/_layout': AppLayout,
   '(app)/(tabs)/_layout': TabsLayout,
   '(app)/(tabs)/index': HomeRoute,
+  '(app)/(tabs)/account': AccountRoute,
   '(auth)/_layout': AuthLayout,
   '(auth)/sign-in': SignInRoute,
   '(onboarding)/_layout': OnboardingLayout,
@@ -97,6 +100,11 @@ export interface GateStub {
  *
  * The second is **one** request covering every sport. An empty list is the answer for a
  * player with nothing outstanding — a 200, not a 204 and not a failure.
+ *
+ * **Now is stubbed here too, empty.** The gate's `app` outcome lands on Now, so every
+ * suite that walks a player past onboarding reaches a screen that composes — and an
+ * unstubbed route throws by design. A suite that cares what Now shows stubs it again
+ * with a screen of its own; a later `transport.on` for the same path replaces this one.
  */
 export function stubGate(transport: Transport, { ratings = [], runs = [] }: GateStub = {}) {
   transport.on('GET', '/api/v1/ratings', () =>
@@ -104,6 +112,7 @@ export function stubGate(transport: Transport, { ratings = [], runs = [] }: Gate
   );
 
   stubRunsInProgress(transport, runs);
+  stubNow(transport);
 }
 
 /** Replace the gate's unfinished-run answer — what the server says *now*. */

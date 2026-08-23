@@ -89,6 +89,14 @@ const USER: Wire['UserResponse'] = {
   created_at: '2026-08-13T10:00:00Z',
 };
 
+/**
+ * What a player sees once the gate lets her through: **Now**, not the account
+ * placeholder. The strip's own heading, which is present whether or not she is in
+ * anything — `ADR-0070` sends every region always, so *present and empty* is the
+ * one code path and the heading is always drawn.
+ */
+const ON_NOW = 'Your matches';
+
 let transport: Transport;
 
 const stubGate = (options?: Parameters<typeof stubGateWith>[1]) => stubGateWith(transport, options);
@@ -142,8 +150,10 @@ describe('where a launch lands', () => {
     // A player who finished onboarding lands here on every later launch — the rating is
     // what the gate reads, so this is also the proof that onboarding is not re-offered to
     // someone who already proved a sport.
-    expect(await screen.findByText('Inside the app')).toBeTruthy();
-    expect(screen.getByText('ada · ada@example.com')).toBeTruthy();
+    expect(await screen.findByText(ON_NOW)).toBeTruthy();
+    // Now greets by name, from the *who am I* answer the app already holds — which is
+    // also how you tell *which* player the gate let through.
+    expect(screen.getByText('Hi, ada')).toBeTruthy();
     expect(screen).toHavePathname('/');
     // Not through onboarding, and not through the questionnaire it would have started.
     expect(transport.requestsTo('POST', '/api/v1/assessments')).toEqual([]);
@@ -158,7 +168,7 @@ describe('where a launch lands', () => {
     await launchSignedIn();
 
     await waitFor(() => expect(screen).toHavePathname('/welcome'));
-    expect(screen.queryByText('Inside the app')).toBeNull();
+    expect(screen.queryByText(ON_NOW)).toBeNull();
   });
 
   it('enters the app on finishing, not back into onboarding off a stale gate read', async () => {
@@ -204,7 +214,11 @@ describe('where a launch lands', () => {
 
     answerRatings();
 
-    expect(await screen.findByText('Inside the app')).toBeTruthy();
+    // Two round trips separate the tap from the screen — the gate's held re-read, and
+    // then Now's own compose behind it — so the landing is awaited rather than asserted
+    // on the next frame. One compose, not a retry loop.
+    expect(await screen.findByText(ON_NOW, undefined, { timeout: 3000 })).toBeTruthy();
+    expect(transport.requestsTo('GET', '/api/v1/now?sport=all')).toHaveLength(1);
     expect(screen).toHavePathname('/');
   });
 

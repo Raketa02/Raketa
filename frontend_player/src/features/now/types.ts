@@ -8,6 +8,11 @@
  *
  * Nothing else in this feature is public. A screen reaches the tables through
  * here, and never through a deep import — ESLint blocks the deep import anyway.
+ *
+ * `NowScreen` is the screen `src/app/(app)/(tabs)/index.tsx` renders, and
+ * `nowKeys` is how an action elsewhere reaches it — `ADR-0054`'s third ask. The
+ * hooks, the store and the regions are internal: a caller that wanted one of them
+ * would be building a second Now.
  */
 
 export type {
@@ -52,3 +57,24 @@ export {
   type SituationContext,
   type SituationEntry,
 } from './mappers/situations';
+
+export { NowScreen } from './components/NowScreen';
+export { nowKeys } from './hooks/nowKeys';
+
+export type {
+  ClubCard,
+  ComposedScreen,
+  Cover,
+  DebtLine,
+  EnrolledRegion,
+  MatchCard,
+  Moment,
+  NowCard,
+  OffersRegion,
+  PersonCard,
+  Place,
+  Shelf,
+  ShelvesRegion,
+} from './domain/ComposedScreen';
+
+export { DEFAULT_SPORT_FILTER, SPORT_BAR, SPORT_CHIP_COPY } from './mappers/sportBar';

@@ -130,3 +130,22 @@ export interface ShelfCopy {
   readonly title: string;
   readonly claim: FindClaim;
 }
+
+/**
+ * The sport bar's swatch key.
+ *
+ * The same four names `theme.sport` is keyed on, restated here because
+ * `domain/` may not read the design system and a chip's swatch is a fact about
+ * the *sport*, not about the theme. `SportBar` indexes the theme with it, so the
+ * two disagreeing is a compile error rather than a missing dot.
+ *
+ * `All` has none — `ADR-0084`: a swatch on the four sports and none on `All`,
+ * because `All` is not a sport, which is the distinction the whole bar carries.
+ */
+export type SportSwatch = 'padel' | 'tennis' | 'squash' | 'badminton';
+
+/** One chip on the sport bar: what it filters to, what it says, and its dot. */
+export interface SportChipCopy {
+  readonly label: string;
+  readonly swatch: SportSwatch | undefined;
+}

@@ -29,10 +29,24 @@ rotation, the `AppError` family, `shared/lib/auth` over the keychain, and two fe
 sports picker, the adaptive question loop, the explained result, and the summary and data
 screens a player leaves through).
 
-`features/now/` holds the Now section's **vocabulary and nothing else yet** — no screen, no
-`api/`, no hooks. Four copy tables (36 situations · 10 term codes · 5 hold reasons · 7 acts),
-the shelf-code → Find pre-filter map and the caption codes, all keyed on unions generated from
-`openapi.player.json`. **Completeness is a typecheck, not a test**
+`features/now/` is **Now, the app's home** — the screen `(app)/(tabs)/index` renders and the
+one onboarding lands on. Three regions (offers · the enrolled strip · the shelves), the sport
+bar, and `ADR-0054`'s four asks. The account placeholder moved to `(app)/(tabs)/account`,
+which nothing reaches until the tab bar lands.
+
+**Three rules on that feature are walked over its own source** in
+`components/nowDiscipline.test.ts`, because each is a rule about what the code does _not_ do
+and no green assertion can carry one. **The phone holds no rules** ([ADR-0053](../docs/adr/0053-the-phone-holds-no-rules-and-only-subtracts.md)):
+`Date.parse` appears in `domain/countdown.ts` and nowhere else, so the only derivation is
+subtracting a card's moment from now. **Nothing refreshes on a timer**
+([ADR-0054](../docs/adr/0054-now-refreshes-when-asked-never-on-a-timer.md)): no interval, no
+`refetchInterval`, and one `setTimeout` — the wake at a moment the _server_ named. **The screen
+never admits staleness**: no marker, no banner, no _"can't reach Raketa"_. Each guard carries a
+negative control; do not add an exemption to a walk, narrow the rule instead.
+
+It also holds the section's **vocabulary**: four copy tables (36 situations · 10 term codes ·
+5 hold reasons · 7 acts), the shelf-code → Find pre-filter map and the caption codes, all keyed
+on unions generated from `openapi.player.json`. **Completeness is a typecheck, not a test**
 ([ADR-0075](../docs/adr/0075-the-second-table-is-unpaid-and-the-first-ships-in-english.md)): a
 contract value added without its sentence fails `pnpm typecheck`. That only holds while the key
 is a closed union — a code crossing as a bare `string` turns the `Record` into an index
@@ -43,7 +57,13 @@ a diff. The three guards catch three different edits; do not collapse them.
 **The tables live in `mappers/`.** They key on `@/generated`, which only `api/` and `mappers/`
 may read, and mapping a wire code to a value object `domain/` owns is what a mapper is. The half
 of each entry the wire has no opinion about — tone, tag, the act's surface — is in
-`domain/presentation.ts`.
+`domain/presentation.ts`. **The mapper resolves a code to its copy**, so a component never
+holds a table and never sees a wire union.
+
+**How a value becomes a string is `shared/lib/formatting/`,** implementing the repo-wide
+[`docs/value-formatting.md`](../docs/value-formatting.md) so that `38,00 zł` is the same
+characters here and in the club console. Neither `Intl.NumberFormat` nor `toFixed` — both are
+refusals that file states, with reasons.
 
 `src/shared/ui/` holds the design-system primitives built so far — the cards, note, row,
 hairline, button, tag, bar, header, and the overlays and drawn objects the result screen

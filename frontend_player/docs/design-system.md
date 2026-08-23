@@ -896,6 +896,24 @@ Strip       horizontal, snapToInterval = contentWidth + 9, decelerationRate="fas
 **The strip's negative margin is what lets it bleed to the screen edge** while its content
 still aligns to the 15pt gutter.
 
+**The strip's peek is `gutter − gap`, and it is a consequence rather than a number.** The
+child is the whole content width, so the next card shows by the difference between the
+gutter and the gap — **15 − 9 = 6pt, identical at 320pt and at 430pt**. It does not depend
+on the card width at all, which is why it survives the narrowest phone untouched while a
+ratio-sized rail does not.
+
+`docs/specs/now/deltas/native-kit.md` §2 writes that number as **5**, computing `15 − 10`
+from the prototype's CSS gap. Part 0.2 normalised the prototype's 5,6,7,9,10,…,15 onto the
+3pt grid when this system was written, and 10 became `space.sm` = 9; the delta's own
+instruction is that the peek _"is a consequence of the gutter and the gap rather than a
+number of its own"_, and the consequence of **this** grid is 6. Recorded here rather than
+resolved by putting an off-grid 10 back into a locked system.
+
+**`size.railCardRatio` (0,74) is the rail's and must not be applied to a strip.** On a strip
+it produces a child ~94pt narrower than the column at 430pt, showing a quarter of the _next
+card's contents_ — its alert box, its fact lines — which reads as two cards rather than as a
+peek. Now's enrolled strip is a strip; Now's shelves are rails and do take the ratio.
+
 **Scroll position must survive a re-render.** The prototype preserves `scrollLeft` on every
 rail because the screen re-renders on every interaction; in RN the equivalent is keeping
 the rail's data identity stable and never remounting the `ScrollView` — a rail that snaps

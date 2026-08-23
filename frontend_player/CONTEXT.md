@@ -192,6 +192,50 @@ Four copy tables and three lookups, colocated under `features/now/` and **not** 
   wall. Held as a value object, because Find does not exist yet and a URL shape decided here
   would be decided in the wrong place.
 
+### The Now screen
+
+The player app's home. `features/now/` grew from a vocabulary into a screen with
+[#86](https://github.com/Raketa02/Raketa/issues/86); the match card's action row, the
+shelves' tail card and the tab bar are separate tickets that land on top of it.
+
+- **Composed screen** — the whole answer to one `GET /api/v1/now`: three regions and one
+  fact about the viewer. The client's own domain object, in `domain/ComposedScreen.ts`.
+  _Avoid_: "the feed" — the feed is one region of three.
+- **Present and empty** — what a region with nothing is, never absent
+  ([ADR-0070](../docs/adr/0070-now-is-three-regions-and-a-card-has-two-halves.md)). One
+  code path instead of two, and the reason a player with nothing gets a shape she
+  recognises. A **shelf** with nothing is the opposite: absent, because a shelf makes a
+  claim and a region does not.
+- **The four asks** — arrival · pull · an action · a countdown reaching zero
+  ([ADR-0054](../docs/adr/0054-now-refreshes-when-asked-never-on-a-timer.md)). The only
+  four things that refresh Now, expressed as Query options on `useNow` rather than as
+  machinery: `refetchOnWindowFocus: 'always'` is arrival, and `staleTime: Infinity` with
+  `refetchOnMount: false` is what stops a screen becoming visible being a fifth.
+  **Arrival is the app foregrounding**, never a screen mounting.
+- **The one derivation** — subtracting a card's moment from the current time,
+  `domain/countdown.ts` and nowhere else
+  ([ADR-0053](../docs/adr/0053-the-phone-holds-no-rules-and-only-subtracts.md)). No kernel
+  on the phone, nothing provisional, nothing to reconcile. `nowDiscipline.test.ts` walks
+  the feature's source for `Date.parse` and finds one file.
+- **The deadline ask** — one `setTimeout`, at a moment the **server** named, re-armed when
+  the screen changes. Not a timer: there is no interval anywhere in the feature, and
+  `refetchInterval` is walked for by name because it is the poll most likely to grow back.
+- **Shimmer vs pull indicator** — the two ways loading is shown, and neither is a staleness
+  marker. A shimmer says _there is nothing here yet_ and belongs to a **cold open**; the
+  pull indicator says _this is real and I am checking_ and keeps the screen where it is.
+- **Staleness** — what this screen never admits. No marker, no dot, no banner, no
+  _"can't reach Raketa"_. A failed refresh over a populated screen changes nothing on it.
+  The word `stale` is still legitimate about a **hold** — a court the club has capped — and
+  the walk is written to allow exactly that.
+- **Visit** — how long a sport-bar selection lasts: until thirty minutes **away**, measured
+  from the app backgrounding
+  ([ADR-0084](../docs/adr/0084-the-sport-bar-is-five-fixed-chips-and-an-unrated-sport-is-a-door.md)).
+  A cold start is not the boundary, because phones do not close apps.
+- **The strip** — the enrolled region's `.hstrip`: one card at a time, the full content
+  width, bled to the screen edge, peeking by `gutter − gap`. **Not the rail**, whose
+  `railCardRatio` belongs to a shelf and would show a quarter of the next card's contents
+  here. See `docs/design-system.md` Part 8.
+
 ### Data and errors
 
 - **Query key factory** — the per-feature object in `hooks/` defining every key, with

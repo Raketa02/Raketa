@@ -97,6 +97,20 @@ refresh, the error taxonomy, Query defaults, native and delivery policy — is
 [ADR-0013](../docs/adr/0013-player-app-runtime-architecture.md). **Read it before writing
 a feature.**
 
+## The home screen
+
+`/` is **Now**: offers, the matches you are in, and five shelves of suggestions, under a
+five-chip sport bar. It is a status surface before a search box, and it is the first
+screen after onboarding.
+
+It refreshes on **four occasions and no others** — the app coming to the foreground, a
+pull, an action, and a countdown reaching zero
+([ADR-0054](../docs/adr/0054-now-refreshes-when-asked-never-on-a-timer.md)). There is no
+timer in this app. The phone derives one thing: how long is left until a moment the server
+named ([ADR-0053](../docs/adr/0053-the-phone-holds-no-rules-and-only-subtracts.md)). All
+three of those rules are walked over the feature's own source, because each is a rule
+about what the code does _not_ do.
+
 ## Design system
 
 The visual language was designed and audited before the app existed, and is **locked**:
