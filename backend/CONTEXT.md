@@ -379,6 +379,44 @@ there; they are not repeated here.
   /sqlalchemy_club_models.py` declares the index for **both** engines, so the guarantee holds
   in the fast SQLite suite as well as in production. _Avoid_: `WHERE` clauses spelled
   differently per series; a whole-table unique index, which refuses history.
+- **Cover** (`kernel.Cover`) — whether a court has a roof: `indoor` or `outdoor`, and no
+  third value in v1. It is the **kernel's** rather than Now's, because Clubs authors it and
+  Now renders it on the spine of every card, and a closed two-value set declared in two
+  contexts is a mapper between two spellings of one fact. A roof is `indoor`: the question
+  the card answers is *will I be rained on*, and a canopy answers that the way a wall does —
+  what it does not answer is *will I be cold*, which is the loss ADR-0090 takes knowingly.
+  `COVER_COUNT` is pinned, so a third value is a decision in a diff **and** a client release,
+  because each client holds an exhaustive table over these names. _Avoid_: a boolean
+  `is_indoor`; a second copy in a module's own vocabulary; *covered* as a third value nobody
+  authored.
+- **The two facts a category is constrained on** (`clubs.CourtCategory`) — its **sport** and
+  its **cover**, both required at construction with no default, and everything else about a
+  category is the club's. The two constraints are one argument: a category spanning two sports
+  makes a seat share undefined, and one spanning two roofs makes the card lie, because a
+  player swapped onto the other court in November has been sold something else. It is the same
+  argument ADR-0079 used to move the price off a court. Nothing enforces that a club authored
+  honestly — only the venue knows, which is why the category is club-authored at all. _Avoid_:
+  a platform enum of surfaces; a per-court cover, which no card composed before match day
+  could read.
+- **A roof is a move, not an edit** — a category's cover **never changes**, and there is no
+  operation that changes one. A club that roofs a court has changed the *court*, so the court
+  **moves category**, which closes its catalogue row and opens a new one — the history is
+  ADR-0077's series, already built, rather than a fourth versioned fact. `_update_categories`
+  writes a category's name, rate and retirement in place and writes neither constrained fact,
+  and that absence is asserted. Note that a cover is read **live** where a rate is **copied
+  onto the match at booking**, and both are right: the price was agreed when the match was
+  posted, and the roof is a fact about the evening she is walking into. _Avoid_: a
+  `reprice_category`-shaped setter for the cover; effective-dating the category.
+- **The one-off backfill** (`migrations/…/0013_category_cover.py`) — where a category's cover
+  came from for rows that already existed: its own free-text **name**, parsed once, in a
+  migration, in a diff somebody reviewed. That is the whole distinction from the thing the
+  product refuses — parsing it on the compose path would be deriving a domain fact from copy
+  on the busiest read there is. A name containing *indoor* becomes `indoor` and **everything
+  else becomes `outdoor`**, because the answer that never claims shelter a club did not
+  declare is the one that costs a player a match rather than a soaking. Three statements
+  rather than one, so the constraint is honest: an added column with **no server default**, a
+  backfill, then `NOT NULL`. _Avoid_: a server default; `LIKE` without `lower()`, which is
+  case-insensitive on SQLite and case-sensitive on the only database this runs against.
 - **Record repository** — the port a use case loads and saves a **record aggregate** through,
   e.g. `ClubRepository`. Neither of the other two kinds: it is not an *aggregate repository*
   (there is no stream to replay and no stream version) and not a *read-model repository*

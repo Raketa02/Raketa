@@ -20,7 +20,7 @@ from uuid import uuid4
 
 import pytest
 
-from app.kernel import Sport, zloty
+from app.kernel import Cover, Sport, zloty
 from app.modules.clubs.domain.club import Club
 from app.modules.clubs.domain.policy import ClubPolicy
 from app.modules.clubs.domain.value_objects import (
@@ -120,6 +120,7 @@ async def _write_club(session_factory, *, name: str, sport: Sport, courts: int =
         category_id=uuid4(),
         name=CategoryName(f"{sport.value} · hall"),
         sport=sport,
+        cover=Cover.INDOOR,
         rate=zloty(80),
     )
     for index in range(courts):

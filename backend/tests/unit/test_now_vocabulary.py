@@ -17,7 +17,8 @@ from pathlib import Path
 
 import pytest
 
-from app.kernel import CAUSE_COUNT, Cause, HoldReason
+from app.kernel import CAUSE_COUNT, COVER_COUNT, Cause, Cover, HoldReason
+from app.modules.now.domain import vocabulary
 from app.modules.now.domain.vocabulary import (
     ACT_COUNT,
     CARD_HOLD_REASON_OF,
@@ -27,7 +28,6 @@ from app.modules.now.domain.vocabulary import (
     CaptionCode,
     CardHoldReason,
     CardType,
-    Cover,
     Currency,
     DoorCode,
     ShelfCode,
@@ -157,9 +157,23 @@ def test_the_diagnostic_reasons_reach_no_card() -> None:
 
 def test_the_three_card_types_and_the_two_small_closed_sets() -> None:
     assert {t.value for t in CardType} == {"match", "person", "club"}
-    assert {c.value for c in Cover} == {"indoor", "outdoor"}
     assert {c.value for c in Currency} == {"PLN"}
     assert {c.value for c in CaptionCode} == {"undeclaredPreferences"}
+
+
+def test_cover_is_the_kernel_s_and_this_module_does_not_redeclare_it() -> None:
+    """ADR-0090 moved it: a club authors a roof and Now renders one.
+
+    Asserted from here rather than only from the kernel's own suite, because the
+    failure this guards is a *second* declaration — somebody adding two values
+    back to this module so Now stops importing them. That reads as tidy and is
+    the mapper-between-two-spellings the innermost ring exists to refuse, and no
+    test in `tests/unit/test_kernel_*` can see it.
+    """
+
+    assert not hasattr(vocabulary, "Cover")
+    assert {c.value for c in Cover} == {"indoor", "outdoor"}
+    assert len(Cover) == COVER_COUNT
 
 
 def _exempt_strings(tree: ast.AST) -> set[int]:

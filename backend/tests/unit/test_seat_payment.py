@@ -53,6 +53,7 @@ from app.bootstrap.composition import (
 )
 from app.infrastructure.events.event_delivery_model import EventOutboxORM
 from app.kernel import (
+    Cover,
     Grosze,
     InvariantViolated,
     MatchKind,
@@ -256,6 +257,7 @@ async def a_club(world, *, courts: int = 2):
             club_id=club.id,
             name=CategoryName("Padel · indoor"),
             sport=Sport.PADEL,
+            cover=Cover.INDOOR,
             rate=zloty(120),
         )
     )

@@ -18,6 +18,13 @@ It covers **only the Clubs tables**, deliberately: migrations 0001–0006 predat
 the models they created in one case and were hand-edited in others, and asserting
 about them here would be asserting somebody else's history is tidy. The rule this
 states is for the tables it created.
+
+**It replays every migration that touches them, in order, and not just the one
+that created them.** A migration is a chain and the models are its head, so
+comparing 0007 alone would go red the first time a later revision added a column
+— which is what ADR-0090 did — and the only way to make it green again would be
+to edit an applied migration. The list below is the chain; a fourteenth revision
+touching a club table adds a line to it.
 """
 
 from __future__ import annotations
@@ -35,7 +42,12 @@ from app.infrastructure.database.base import Base
 from app.infrastructure.database import models as _models  # noqa: F401  (registers)
 
 ROOT = Path(__file__).resolve().parents[2]
-MIGRATION = ROOT / "migrations" / "versions" / "0007_clubs.py"
+#: Every revision that touches a club table, oldest first. The head of this
+#: chain is what a real database has, and what `Base.metadata` must equal.
+MIGRATIONS = (
+    "0007_clubs.py",
+    "0013_category_cover.py",
+)
 
 CLUB_TABLES = (
     "clubs",
@@ -96,20 +108,50 @@ class _Recorder:
             )
         )
 
+    def add_column(self, table: str, column: sa.Column) -> None:
+        """A later revision widening a table this chain already created.
+
+        Appended to the recorded table, which is what makes the comparison below
+        about the schema a real database ends up with rather than about the one
+        revision 0007 left behind.
+        """
+
+        self.metadata.tables[table].append_column(column)
+
+    def alter_column(self, table: str, name: str, **kw: Any) -> None:
+        """Only what this chain actually uses: the nullability of a column.
+
+        Narrow on purpose. A recorder that silently accepted every `alter_column`
+        keyword would report agreement about a type change it had ignored, and
+        that is the failure this whole module exists to prevent.
+        """
+
+        unknown = set(kw) - {"existing_type", "nullable"}
+        assert not unknown, f"the recorder does not model {sorted(unknown)}"
+        if "nullable" in kw:
+            self.metadata.tables[table].c[name].nullable = kw["nullable"]
+
+    def execute(self, statement: Any) -> None:
+        """A backfill moves rows and not DDL, so there is nothing to record."""
+
+    def drop_column(self, table: str, name: str) -> None:  # pragma: no cover
+        raise AssertionError("upgrade() must not drop a column")
+
     def drop_table(self, name: str) -> None:  # pragma: no cover - upgrade only
         raise AssertionError("upgrade() must not drop a table")
 
 
 @pytest.fixture(scope="module")
 def migrated() -> _Recorder:
-    spec = importlib.util.spec_from_file_location("clubs_migration", MIGRATION)
-    assert spec and spec.loader
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-
     recorder = _Recorder()
-    module.op = recorder
-    module.upgrade()
+    for index, filename in enumerate(MIGRATIONS):
+        path = ROOT / "migrations" / "versions" / filename
+        spec = importlib.util.spec_from_file_location(f"clubs_migration_{index}", path)
+        assert spec and spec.loader
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        module.op = recorder
+        module.upgrade()
     return recorder
 
 

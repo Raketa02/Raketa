@@ -26,6 +26,7 @@ from sqlalchemy.exc import IntegrityError
 from app.bootstrap.composition import build_club_repository, build_unit_of_work
 from app.infrastructure.clock import SystemClock
 from app.kernel import (
+    Cover,
     CardAllowance,
     CardCoversShare,
     NoCard,
@@ -348,6 +349,7 @@ async def test_every_versioned_row_carries_an_actor_and_it_reads_system(
             club_id=created.id,
             name=CategoryName("Padel · Mondo, indoor"),
             sport=Sport.PADEL,
+            cover=Cover.INDOOR,
             rate=zloty(120),
         )
     )
@@ -416,6 +418,7 @@ async def a_padel_club(clubs):
             club_id=created.id,
             name=CategoryName("Padel · Mondo, indoor"),
             sport=Sport.PADEL,
+            cover=Cover.INDOOR,
             rate=zloty(120),
         )
     )
@@ -424,6 +427,7 @@ async def a_padel_club(clubs):
             club_id=created.id,
             name=CategoryName("Padel · Wall, outdoor"),
             sport=Sport.PADEL,
+            cover=Cover.OUTDOOR,
             rate=zloty(108),
         )
     )
@@ -459,6 +463,79 @@ async def test_the_catalogue_reads_back_with_its_categories_and_courts(clubs):
         "Court 2",
         "Court 3",
     }
+
+
+async def test_a_category_reads_back_under_the_roof_it_was_authored_with(clubs):
+    """ADR-0090's whole point: the fact is stored, not spelled in a name.
+
+    Two categories at one club, one of each cover, so a store that wrote a
+    constant — or that read every row back as the first one it saw — is red
+    rather than accidentally right about a single-valued fixture.
+    """
+
+    club_id, mondo, wall, _ = await a_padel_club(clubs)
+
+    club = await clubs.get.execute(club_id)
+
+    assert club.category(mondo.id).cover is Cover.INDOOR
+    assert club.category(wall.id).cover is Cover.OUTDOOR
+
+
+async def test_the_stored_cover_is_the_authored_one_and_never_read_off_the_name(
+    clubs,
+):
+    """The name and the fact are allowed to disagree, and the fact wins.
+
+    A club may call a category anything (ADR-0079), so a store that fell back to
+    parsing the name would be right about every category in the seeds and wrong
+    about the first one a real club authors. Named to say the opposite of what
+    it is, which is the only way to tell the two readings apart.
+    """
+
+    created = await clubs.register.execute(a_command())
+    misleading = await clubs.add_category.execute(
+        AddCourtCategoryCommand(
+            club_id=created.id,
+            name=CategoryName("Padel · indoor"),
+            sport=Sport.PADEL,
+            cover=Cover.OUTDOOR,
+            rate=zloty(120),
+        )
+    )
+
+    club = await clubs.get.execute(created.id)
+
+    assert club.category(misleading.id).cover is Cover.OUTDOOR
+
+
+async def test_a_cover_cannot_be_changed_by_saving_the_club_again(
+    clubs, session_factory
+):
+    """ADR-0090: the cover never changes; a court that gains a roof **moves**.
+
+    `_update_categories` writes a category's name, rate and retirement in place
+    and deliberately writes neither of the two facts the platform constrains. So
+    a category mutated in memory and saved comes back as it was authored — which
+    is what makes *the club roofed Court 3* impossible to spell as *every court
+    in this category has always had a roof*.
+
+    Reached through the aggregate's own field rather than through an operation,
+    because there is no operation: this asserts that adding one to the writer
+    without adding one to the model is not enough.
+    """
+
+    club_id, mondo, _, _ = await a_padel_club(clubs)
+
+    club = await clubs.repository.get(club_id)
+    assert club is not None
+    club.category(mondo.id).cover = Cover.OUTDOOR
+    club.reprice_category(mondo.id, zloty(130))
+    await clubs.repository.save(club)
+    await clubs.uow.commit()
+
+    reread = await clubs.get.execute(club_id)
+    assert reread.category(mondo.id).rate == zloty(130)
+    assert reread.category(mondo.id).cover is Cover.INDOOR
 
 
 async def test_a_retired_court_keeps_its_history_and_leaves_the_live_set(
@@ -690,6 +767,7 @@ async def test_the_same_holds_for_the_payout_and_catalogue_series(
             club_id=created.id,
             name=CategoryName("Padel · indoor"),
             sport=Sport.PADEL,
+            cover=Cover.INDOOR,
             rate=zloty(120),
         )
     )

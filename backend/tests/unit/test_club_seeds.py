@@ -21,7 +21,7 @@ from dataclasses import replace
 import pytest
 
 from app.bootstrap.composition import build_club_repository
-from app.kernel import Sport, hours, minutes
+from app.kernel import Cover, Sport, hours, minutes, zloty
 from app.modules.clubs.domain.policy import ClubPolicy
 from app.modules.clubs.domain.value_objects import ClubName, PayoutDestination
 from app.seeds import clubs as club_catalog
@@ -134,8 +134,14 @@ def test_a_court_label_is_unique_within_a_club():
             lambda: replace(
                 NEVER_HOLDS,
                 categories=(
-                    SeedCategory("Hall A", Sport.PADEL, minutes(1), (SeedCourt("C1"),)),
-                    SeedCategory("Hall A", Sport.PADEL, minutes(1)),
+                    SeedCategory(
+                        "Hall A",
+                        Sport.PADEL,
+                        Cover.INDOOR,
+                        minutes(1),
+                        (SeedCourt("C1"),),
+                    ),
+                    SeedCategory("Hall A", Sport.PADEL, Cover.INDOOR, minutes(1)),
                 ),
             ),
             "two categories called",
@@ -144,8 +150,20 @@ def test_a_court_label_is_unique_within_a_club():
             lambda: replace(
                 NEVER_HOLDS,
                 categories=(
-                    SeedCategory("Hall A", Sport.PADEL, minutes(1), (SeedCourt("C1"),)),
-                    SeedCategory("Hall B", Sport.PADEL, minutes(1), (SeedCourt("C1"),)),
+                    SeedCategory(
+                        "Hall A",
+                        Sport.PADEL,
+                        Cover.INDOOR,
+                        minutes(1),
+                        (SeedCourt("C1"),),
+                    ),
+                    SeedCategory(
+                        "Hall B",
+                        Sport.PADEL,
+                        Cover.INDOOR,
+                        minutes(1),
+                        (SeedCourt("C1"),),
+                    ),
                 ),
             ),
             "two courts called",
@@ -159,6 +177,36 @@ def test_an_impossible_catalog_is_refused_at_import(monkeypatch, broken, complai
     monkeypatch.setattr(club_catalog, "CLUBS", (broken(),))
     with pytest.raises(RuntimeError, match=complaint):
         club_catalog._refuse_an_impossible_catalog()
+
+
+def test_a_seed_category_cannot_be_written_without_a_cover():
+    """The third door ADR-0090 keeps shut, and the one that authors every
+    category the system has.
+
+    A default here would make the next scenario's roof a guess rather than a
+    decision — the one thing this catalog refuses — and it would do it silently,
+    because every row below already passes one.
+    """
+
+    with pytest.raises(TypeError):
+        SeedCategory("Hall A", Sport.PADEL, zloty(80))  # type: ignore[call-arg]
+
+
+def test_every_seeded_category_declares_a_roof():
+    """Named for what it asserts rather than for the type that guarantees it.
+
+    Three of the nine name no roof at all — a squash court and two badminton
+    halls — so the covers below are genuinely authored rather than a re-reading
+    of the names, which is the whole distinction ADR-0090 draws.
+    """
+
+    categories = [
+        category for club in club_catalog.CLUBS for category in club.categories
+    ]
+
+    assert categories
+    assert all(isinstance(category.cover, Cover) for category in categories)
+    assert {category.cover for category in categories} == set(Cover)
 
 
 def test_two_clubs_with_one_name_are_refused_at_import(monkeypatch):
@@ -190,7 +238,6 @@ def _only_the_club_catalog(monkeypatch) -> None:
     monkeypatch.setattr("app.seeds.runner.MATCHES", ())
     # And a ledger names a seat on a seeded match, so it goes with them.
     monkeypatch.setattr("app.seeds.runner.LEDGERS", ())
-
 
 
 async def test_every_club_reaches_the_state_its_name_promises(session_factory):
@@ -229,9 +276,7 @@ async def test_the_retired_court_and_category_survive_as_history(session_factory
 
     async with session_factory() as session:
         repository = build_club_repository(session)
-        court_club = await repository.get_by_name(
-            ClubName("club-that-retired-a-court")
-        )
+        court_club = await repository.get_by_name(ClubName("club-that-retired-a-court"))
         category_club = await repository.get_by_name(
             ClubName("club-that-retired-a-category")
         )
@@ -288,9 +333,7 @@ async def test_a_name_that_stops_matching_its_state_stops_the_seed(
     stops instead of quietly renaming it.
     """
 
-    lying = replace(
-        NEVER_HOLDS, policies=(ClubPolicy(max_hold_age=hours(6)),)
-    )
+    lying = replace(NEVER_HOLDS, policies=(ClubPolicy(max_hold_age=hours(6)),))
     monkeypatch.setattr("app.seeds.runner.CLUBS", (lying,))
     _only_the_club_catalog(monkeypatch)
 
@@ -366,9 +409,7 @@ async def test_every_versioned_row_a_seed_writes_reads_system(session_factory):
             assert all(version.changed_by.is_system for version in club.policy)
             assert all(version.changed_by.is_system for version in club.payout)
             for court in club.courts:
-                assert all(
-                    version.changed_by.is_system for version in court.catalogue
-                )
+                assert all(version.changed_by.is_system for version in court.catalogue)
 
 
 async def test_a_seeded_club_is_paid_where_its_catalog_says(session_factory):

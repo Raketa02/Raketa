@@ -34,7 +34,7 @@ from dataclasses import dataclass, field
 from typing import final
 from uuid import UUID
 
-from app.kernel import Grosze, Instant, Sport, Zone
+from app.kernel import Cover, Grosze, Instant, Sport, Zone
 
 from app.modules.clubs.domain.catalogue import Court, CourtCategory
 from app.modules.clubs.domain.errors import (
@@ -237,13 +237,14 @@ class Club:
         category_id: UUID,
         name: CategoryName,
         sport: Sport,
+        cover: Cover,
         rate: Grosze,
     ) -> CourtCategory:
         for existing in self.live_categories:
             if existing.name == name:
                 raise CategoryNameAlreadyUsed()
         category = CourtCategory(
-            id=category_id, name=name, sport=sport, rate=rate
+            id=category_id, name=name, sport=sport, cover=cover, rate=rate
         )
         self.categories.append(category)
         return category

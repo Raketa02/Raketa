@@ -33,7 +33,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 from typing import Callable
 
-from app.kernel import Grosze, Sport, hours, minutes, zloty
+from app.kernel import Cover, Grosze, Sport, hours, minutes, zloty
 from app.modules.clubs.domain.club import Club
 from app.modules.clubs.domain.policy import ClubPolicy
 from app.modules.clubs.domain.value_objects import (
@@ -81,8 +81,18 @@ class SeedCourt:
 
 @dataclass(frozen=True)
 class SeedCategory:
+    """One category. ``cover`` has **no default**, like the rest of the catalog.
+
+    A default here would be the fabricated observation ADR-0090 removed from the
+    product, reintroduced in the one place that authors every category the
+    system has. Three of the nine below name no roof at all — a squash court and
+    two badminton halls — and those are the rows that prove the field is a
+    decision rather than a re-reading of the name.
+    """
+
     name: str
     sport: Sport
+    cover: Cover
     rate: Grosze
     courts: tuple[SeedCourt, ...] = ()
     retired: bool = False
@@ -146,6 +156,7 @@ NEVER_HOLDS = SeedClub(
         SeedCategory(
             name="Padel · indoor",
             sport=Sport.PADEL,
+            cover=Cover.INDOOR,
             rate=zloty(120),
             courts=(SeedCourt("Court 1"),),
         ),
@@ -180,6 +191,7 @@ TIGHTENED_ITS_CAP = SeedClub(
         SeedCategory(
             name="Tennis · outdoor",
             sport=Sport.TENNIS,
+            cover=Cover.OUTDOOR,
             rate=zloty(90),
             courts=(SeedCourt("Court 1"), SeedCourt("Court 2")),
         ),
@@ -192,14 +204,25 @@ TWO_PADEL_CATEGORIES = SeedClub(
         "ADR-0079's `ps`, seeded the way the model requires: two padel "
         "categories at two prices rather than three flat courts with a "
         "per-court multiplier. The price attaches to the category, so a court "
-        "swapped in after the quote costs what was quoted."
+        "swapped in after the quote costs what was quoted — and so does the "
+        "roof (ADR-0090), which is why the Mondo courts and the wall court "
+        "cannot be one category however alike they are priced."
     ),
     claim=ClubClaim(
-        promise="two live categories of one sport at two different prices",
+        promise=(
+            "two live categories of one sport, at two prices and under two "
+            "different roofs"
+        ),
         holds=lambda club: (
             len(club.live_categories) == 2
             and len({c.sport for c in club.live_categories}) == 1
             and len({c.rate for c in club.live_categories}) == 2
+            # ADR-0090's own argument, standing in the catalog: a roof is a
+            # difference that makes two courts not interchangeable, so it is a
+            # difference between categories rather than inside one. Claimed
+            # here, so a stored row that has drifted off its name is refused on
+            # a run that creates nothing.
+            and len({c.cover for c in club.live_categories}) == 2
         ),
     ),
     policies=(ClubPolicy(),),
@@ -208,12 +231,14 @@ TWO_PADEL_CATEGORIES = SeedClub(
         SeedCategory(
             name="Padel · Mondo, indoor",
             sport=Sport.PADEL,
+            cover=Cover.INDOOR,
             rate=zloty(120),
             courts=(SeedCourt("Court 1"), SeedCourt("Court 2")),
         ),
         SeedCategory(
             name="Padel · Wall, outdoor",
             sport=Sport.PADEL,
+            cover=Cover.OUTDOOR,
             rate=zloty(108),
             courts=(SeedCourt("Court 3"),),
         ),
@@ -247,6 +272,7 @@ RETIRED_A_COURT = SeedClub(
         SeedCategory(
             name="Squash · glass back",
             sport=Sport.SQUASH,
+            cover=Cover.INDOOR,
             rate=zloty(60),
             courts=(SeedCourt("Court 1"), SeedCourt("Court 2", retired=True)),
         ),
@@ -278,12 +304,14 @@ RETIRED_A_CATEGORY = SeedClub(
         SeedCategory(
             name="Badminton · hall A",
             sport=Sport.BADMINTON,
+            cover=Cover.INDOOR,
             rate=zloty(50),
             courts=(SeedCourt("Court 1"),),
         ),
         SeedCategory(
             name="Badminton · hall B",
             sport=Sport.BADMINTON,
+            cover=Cover.INDOOR,
             rate=zloty(45),
             courts=(SeedCourt("Court 2"),),
             retired=True,
@@ -308,6 +336,7 @@ CHANGED_ITS_BANK = SeedClub(
         SeedCategory(
             name="Padel · indoor",
             sport=Sport.PADEL,
+            cover=Cover.INDOOR,
             rate=zloty(130),
             courts=(SeedCourt("Court 1"),),
         ),
@@ -333,6 +362,7 @@ NEEDS_A_TURNAROUND = SeedClub(
         SeedCategory(
             name="Padel · indoor",
             sport=Sport.PADEL,
+            cover=Cover.INDOOR,
             rate=zloty(140),
             courts=(SeedCourt("Court 1"), SeedCourt("Court 2")),
         ),

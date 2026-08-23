@@ -34,7 +34,7 @@ from dataclasses import dataclass, field
 from typing import final
 from uuid import UUID
 
-from app.kernel import Grosze, Instant, Sport
+from app.kernel import Cover, Grosze, Instant, Sport
 
 from app.modules.clubs.domain.series import Series
 from app.modules.clubs.domain.value_objects import (
@@ -69,11 +69,34 @@ class CourtCategory:
     club's own multipliers, in grosze. It is deliberately not a ``CourtPrice``:
     that brand means *after every multiplier, rounded once to whole złoty*, and
     this is the input to that rounding.
+
+    **The platform constrains two things here and no more** (ADR-0090): one
+    sport, because a category spanning two makes a seat share undefined, and one
+    ``Cover``, because a category spanning two makes the card lie. Both are the
+    same argument ADR-0079 used to move the price off a court — a court that
+    costs differently is a different category, and so is one with a roof over
+    it, because a player swapped onto the other one in November has been sold
+    something else. Nothing enforces that a club authored honestly; only the
+    venue knows, which is exactly why the category is club-authored.
+
+    **The cover never changes and there is no operation to change it.** A club
+    that roofs a court has changed the *court*, and ``Club.move_court`` already
+    expresses that — it closes the court's catalogue row and opens a new one
+    under the new category, so *this court gained a roof in October* reads back
+    off the series ADR-0077 built. ``reprice_category`` is not the precedent it
+    looks like: a price change is a club's decision about the same courts.
     """
 
     id: UUID
     name: CategoryName
     sport: Sport
+
+    #: Whether there is a roof. **Required, with no default** (ADR-0090): a
+    #: default of *outdoor* is a fabricated observation, and the one place this
+    #: reaches a player is the spine of every card, where it is what she is
+    #: choosing on in November.
+    cover: Cover
+
     rate: Grosze
     retired_at: Instant | None = None
 

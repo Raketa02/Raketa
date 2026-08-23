@@ -46,6 +46,7 @@ from app.bootstrap.events import build_event_delivery_worker, build_event_runtim
 from app.core.config import Settings
 from app.infrastructure.events.event_delivery_model import EventOutboxORM
 from app.kernel import (
+    Cover,
     Outcome,
     SeatShare,
     Sport,
@@ -198,6 +199,7 @@ async def a_match(world, *, courts: int = 2, policy=None, **overrides):
             club_id=club.id,
             name=CategoryName("Padel · indoor"),
             sport=Sport.PADEL,
+            cover=Cover.INDOOR,
             rate=zloty(120),
         )
     )

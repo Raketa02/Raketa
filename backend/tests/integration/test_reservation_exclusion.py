@@ -41,7 +41,7 @@ from app.bootstrap.composition import (
     build_unit_of_work,
 )
 from app.infrastructure.clock import SystemClock
-from app.kernel import Sport, hours, instant, zloty
+from app.kernel import Cover, Sport, hours, instant, zloty
 from app.modules.clubs.application.add_court import AddCourt
 from app.modules.clubs.application.add_court_category import AddCourtCategory
 from app.modules.clubs.application.commands import (
@@ -595,6 +595,7 @@ async def _a_venue_through_the_use_cases(sessions, *, courts: int):
                 club_id=club.id,
                 name=CategoryName("Padel · Mondo, indoor"),
                 sport=Sport.PADEL,
+                cover=Cover.INDOOR,
                 rate=zloty(120),
             )
         )

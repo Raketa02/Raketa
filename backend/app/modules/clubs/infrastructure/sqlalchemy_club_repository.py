@@ -48,6 +48,7 @@ from app.kernel import (
     CardAllowance,
     CardCoversShare,
     ClubCard,
+    Cover,
     Instant,
     NoCard,
     Ratio,
@@ -367,6 +368,7 @@ class SqlAlchemyClubRepository:
                     id=category.id,
                     name=CategoryName(category.name),
                     sport=Sport(category.sport),
+                    cover=Cover(category.cover),
                     rate=grosze(category.rate_grosze),
                     retired_at=_optional_instant(category.retired_at),
                 )
@@ -498,6 +500,7 @@ class SqlAlchemyClubRepository:
                         club_id=club.id,
                         name=category.name.value,
                         sport=category.sport.value,
+                        cover=category.cover.value,
                         rate_grosze=int(category.rate),
                         retired_at=category.retired_at,
                     )
@@ -539,6 +542,14 @@ class SqlAlchemyClubRepository:
         history for the same reason ADR-0078 keeps `pm` out of the policy row:
         the price quoted is copied onto the match at booking, so nothing ever
         asks what a category cost last Friday.
+
+        **``sport`` and ``cover`` are absent from the update, and neither is an
+        oversight.** They are the two facts the platform constrains, and both
+        are fixed at construction: a category that changed either would be a
+        different category, and a court that gains a roof **moves** rather than
+        having one edited on to it (ADR-0090). Adding them here is how *the
+        club roofed Court 3* would silently become *every court in this
+        category has always had a roof*.
         """
 
         for category in club.categories:

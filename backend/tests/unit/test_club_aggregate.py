@@ -16,6 +16,7 @@ from decimal import Decimal
 import pytest
 
 from app.kernel import (
+    Cover,
     CardAllowance,
     NoCard,
     Sport,
@@ -25,6 +26,8 @@ from app.kernel import (
     percent,
     zloty,
 )
+from app.modules.clubs.application.commands import AddCourtCategoryCommand
+from app.modules.clubs.domain.catalogue import CourtCategory
 from app.modules.clubs.domain.club import Club
 from app.modules.clubs.domain.errors import (
     CategoryAlreadyRetired,
@@ -216,12 +219,14 @@ def a_padel_club() -> tuple[Club, object, object]:
         category_id=new_uuid(),
         name=CategoryName("Padel · Mondo, indoor"),
         sport=Sport.PADEL,
+        cover=Cover.INDOOR,
         rate=zloty(120),
     )
     wall = club.add_category(
         category_id=new_uuid(),
         name=CategoryName("Padel · Wall, outdoor"),
         sport=Sport.PADEL,
+        cover=Cover.OUTDOOR,
         rate=zloty(108),
     )
     club.add_court(
@@ -330,6 +335,7 @@ def test_two_live_categories_may_not_share_a_name():
             category_id=new_uuid(),
             name=CategoryName("Padel · Mondo, indoor"),
             sport=Sport.PADEL,
+            cover=Cover.INDOOR,
             rate=zloty(120),
         )
 
@@ -342,6 +348,7 @@ def test_a_retired_name_may_be_used_again():
         category_id=new_uuid(),
         name=CategoryName("Padel · Mondo, indoor"),
         sport=Sport.PADEL,
+        cover=Cover.INDOOR,
         rate=zloty(130),
     )
 
@@ -405,3 +412,61 @@ def test_the_three_series_move_independently():
     assert len(club.policy) == 1
     assert len(club.payout) == 1
     assert len(court.catalogue) == 1 and court.is_retired
+
+
+def test_a_category_cannot_be_authored_without_a_cover():
+    """**Required, with no default** (ADR-0090), asserted structurally.
+
+    Every construction in the suite supplies one, so a default would compile,
+    stay green, and silently answer *outdoor* for the first category a real club
+    authors — which is the fabricated observation the field exists to remove,
+    arriving through the signature instead of through the absence.
+
+    Pinned in three places because there are three doors: the aggregate's, the
+    command a caller fills in, and the seed catalog's own row.
+    """
+
+    club = a_club()
+
+    with pytest.raises(TypeError):
+        club.add_category(  # type: ignore[call-arg]
+            category_id=new_uuid(),
+            name=CategoryName("Padel · indoor"),
+            sport=Sport.PADEL,
+            rate=zloty(120),
+        )
+    with pytest.raises(TypeError):
+        CourtCategory(  # type: ignore[call-arg]
+            id=new_uuid(),
+            name=CategoryName("Padel · indoor"),
+            sport=Sport.PADEL,
+            rate=zloty(120),
+        )
+    with pytest.raises(TypeError):
+        AddCourtCategoryCommand(  # type: ignore[call-arg]
+            club_id=club.id,
+            name=CategoryName("Padel · indoor"),
+            sport=Sport.PADEL,
+            rate=zloty(120),
+        )
+
+
+def test_a_category_holds_the_cover_it_was_authored_with_and_the_name_is_free():
+    """A club may call a category anything (ADR-0079); the fact is the field.
+
+    So the two are allowed to disagree, and a reader that fell back to the name
+    would be right about every category in the seeds and wrong about the first
+    one a real club authors.
+    """
+
+    club = a_club()
+
+    category = club.add_category(
+        category_id=new_uuid(),
+        name=CategoryName("Padel · indoor"),
+        sport=Sport.PADEL,
+        cover=Cover.OUTDOOR,
+        rate=zloty(120),
+    )
+
+    assert category.cover is Cover.OUTDOOR

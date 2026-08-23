@@ -20,6 +20,7 @@ only runs in development is a guard that has never been run where it counts.
 """
 
 from app.kernel.causes import CAUSE_COUNT, Cause
+from app.kernel.courts import COVER_COUNT, Cover
 from app.kernel.departures import (
     OUTCOME_COUNT,
     LeaverMoney,
@@ -253,6 +254,9 @@ __all__ = [
     # causes — why money moved, and why a match ended, in five closed names
     "CAUSE_COUNT",
     "Cause",
+    # courts — what the platform fixes about the place the game is played in
+    "COVER_COUNT",
+    "Cover",
     # departures — what a leaver recovers, ranked, and the two money forms
     "OUTCOME_COUNT",
     "LeaverMoney",

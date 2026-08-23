@@ -125,6 +125,22 @@ Rules to preserve:
   constructed. A series is rebuilt from disk by **one** ordering function — `valid_from` alone
   is ambiguous the moment two rows share an instant, and an ambiguous ORDER BY reads as a
   broken database rather than as a bug.
+- **A category names its roof, and a court that gains one moves category.** The platform
+  constrains **two** facts about a club-authored `CourtCategory` — its sport and its `Cover` —
+  both required at construction with no default
+  ([ADR-0090](../docs/adr/0090-a-category-names-its-roof-and-a-court-that-gains-one-moves-category.md),
+  narrowing [ADR-0079](../docs/adr/0079-a-category-is-club-authored-and-it-is-the-priced-unit.md)).
+  It is on the category and not on a court because `kernel.court_named_at` does not assign one
+  until fifteen minutes before play, so a card composed on Monday for Thursday has no court to
+  read a roof off. **The cover never changes and there is no operation that changes one**: a
+  club that roofs a court has changed the *court*, so `move_court` closes its catalogue row and
+  opens a new one, and the history #98 asked for is ADR-0077's series rather than a fourth
+  versioned fact. `Cover` is **`kernel.Cover`**, because Clubs authors it and Now renders it and
+  two declarations of a closed two-value set is a mapper between two spellings. Rows that
+  predate the column were backfilled from the category's own **name**, once, in
+  `0013_category_cover` — the one place the product may read a domain fact out of copy,
+  precisely because it happens once and never on a read path; a silent name becomes `outdoor`,
+  because that is the answer that never claims shelter a club did not declare.
 - **A match is a record with a version, and every change announces itself by name.** Matches
   is the one racket-sport context that is **not** event-sourced
   ([ADR-0034](../docs/adr/0034-matches-is-a-record-and-keeps-no-history.md)): the concurrency

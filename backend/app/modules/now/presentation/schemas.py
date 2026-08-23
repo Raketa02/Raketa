@@ -27,7 +27,7 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 from app.engines.fit import TermCode
-from app.kernel import Cause, Situation
+from app.kernel import Cause, Cover, Situation
 
 from app.modules.now.domain.screen import (
     Block,
@@ -58,7 +58,6 @@ from app.modules.now.domain.vocabulary import (
     CaptionCode,
     CardHoldReason,
     CardType,
-    Cover,
     Currency,
     DoorCode,
     ShelfCode,

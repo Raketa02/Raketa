@@ -19,7 +19,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from uuid import UUID
 
-from app.kernel import Grosze, Sport
+from app.kernel import Cover, Grosze, Sport
 
 from app.modules.clubs.domain.policy import ClubPolicy
 from app.modules.clubs.domain.value_objects import (
@@ -63,6 +63,9 @@ class AddCourtCategoryCommand:
     club_id: UUID
     name: CategoryName
     sport: Sport
+    #: Whether there is a roof. No default here either — a caller that does not
+    #: know is a caller that must ask the club (ADR-0090).
+    cover: Cover
     #: What one booked block costs before the club's own multipliers, in grosze.
     rate: Grosze
 

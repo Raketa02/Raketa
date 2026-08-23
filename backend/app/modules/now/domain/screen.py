@@ -39,7 +39,7 @@ from typing import final
 from uuid import UUID
 
 from app.engines.fit import TermCode
-from app.kernel import Cause, Grosze, Instant, Situation, Sport, Zone
+from app.kernel import Cause, Cover, Grosze, Instant, Situation, Sport, Zone
 
 from app.modules.now.domain.vocabulary import (
     ActCode,
@@ -47,7 +47,6 @@ from app.modules.now.domain.vocabulary import (
     CaptionCode,
     CardHoldReason,
     CardType,
-    Cover,
     Currency,
     DoorCode,
     ShelfCode,

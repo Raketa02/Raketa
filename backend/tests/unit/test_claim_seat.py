@@ -35,7 +35,7 @@ from app.bootstrap.composition import (
     build_seat_claims,
     build_unit_of_work,
 )
-from app.kernel import SeatShare, Sport, filled, grosze, hours, instant, zloty
+from app.kernel import Cover, SeatShare, Sport, filled, grosze, hours, instant, zloty
 from app.modules.clubs.application.add_court import AddCourt
 from app.modules.clubs.application.add_court_category import AddCourtCategory
 from app.modules.clubs.application.commands import (
@@ -184,6 +184,7 @@ async def a_match(world, **overrides):
             club_id=club.id,
             name=CategoryName("Padel · indoor"),
             sport=Sport.PADEL,
+            cover=Cover.INDOOR,
             rate=zloty(120),
         )
     )

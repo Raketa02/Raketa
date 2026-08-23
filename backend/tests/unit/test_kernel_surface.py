@@ -133,6 +133,8 @@ THE_SURFACE = (
     "situation",
     "CAUSE_COUNT",
     "Cause",
+    "COVER_COUNT",
+    "Cover",
     "OUTCOME_COUNT",
     "LeaverMoney",
     "NothingTaken",

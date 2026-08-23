@@ -12,6 +12,12 @@ All three are total functions of the situation, so ADR-0072 puts them in the
 client's own thirty-six-row table and they cross no wire. A flag would let the
 server and the phone disagree about whether a card is urgent, which is exactly
 the two-derivations failure ADR-0040 exists to make unreachable.
+
+**``Cover`` is not here either, and it used to be.** It was Now's while Now was
+its only reader; ADR-0090 gave it an author — a club authors it on a court
+category — and a closed set two contexts read verbatim belongs in the innermost
+ring on ADR-0022's own test. It is ``kernel.Cover``, imported by the two files
+below that draw a card's ``where``, and the wire is unchanged.
 """
 
 from __future__ import annotations
@@ -163,19 +169,6 @@ class CaptionCode(str, Enum):
     """
 
     UNDECLARED_PREFERENCES = "undeclaredPreferences"
-
-
-class Cover(str, Enum):
-    """Indoor or outdoor, as a fact about *where* rather than about state.
-
-    ADR-0073 moved it onto the spine of every card: it behaves like place, not
-    like state, and leaving it on six situations failed the player at the exact
-    moment they were choosing — in November in Kraków it is the most important
-    fact about a padel court, and it was absent from every shelf.
-    """
-
-    INDOOR = "indoor"
-    OUTDOOR = "outdoor"
 
 
 class Currency(str, Enum):

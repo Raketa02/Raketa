@@ -45,7 +45,7 @@ from app.bootstrap.composition import (
 )
 from app.infrastructure.database import models as _models  # noqa: F401  (registers)
 from app.infrastructure.database.base import Base
-from app.kernel import Grosze, SeatShare, Sport, grosze, hours, instant, zloty
+from app.kernel import Cover, Grosze, SeatShare, Sport, grosze, hours, instant, zloty
 from app.modules.clubs.application.add_court import AddCourt
 from app.modules.clubs.application.add_court_category import AddCourtCategory
 from app.modules.clubs.application.commands import (
@@ -214,6 +214,7 @@ async def _a_match_one_payment_short_of_a_court(world):
             club_id=club.id,
             name=CategoryName("Padel · indoor"),
             sport=Sport.PADEL,
+            cover=Cover.INDOOR,
             rate=zloty(120),
         )
     )

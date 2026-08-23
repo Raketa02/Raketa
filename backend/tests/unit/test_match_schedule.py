@@ -37,6 +37,7 @@ from app.bootstrap.composition import (
     build_unit_of_work,
 )
 from app.kernel import (
+    Cover,
     Boundary,
     SeatShare,
     Sport,
@@ -218,6 +219,7 @@ async def a_match(world, *, courts: int = 2, policy=None, **overrides):
             club_id=club.id,
             name=CategoryName("Padel · indoor"),
             sport=Sport.PADEL,
+            cover=Cover.INDOOR,
             rate=zloty(120),
         )
     )

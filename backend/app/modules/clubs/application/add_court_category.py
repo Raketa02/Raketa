@@ -13,12 +13,14 @@ from app.shared.ids import new_uuid
 
 
 class AddCourtCategory:
-    """The club groups its own courts; the platform constrains one sport.
+    """The club groups its own courts; the platform constrains two facts.
 
-    That constraint is not arbitrary (ADR-0079): a sport's player count is read
-    from exactly one place everywhere, and a category spanning two sports would
-    make a seat share undefined. It is expressed in the type — a category has one
-    ``Sport`` and no way to hold two.
+    Neither constraint is arbitrary. A sport's player count is read from exactly
+    one place everywhere, and a category spanning two sports would make a seat
+    share undefined (ADR-0079); a category spanning two roofs would make the
+    spine of every card at that club lie about the fact a player is choosing on
+    in November (ADR-0090). Both are expressed in the type — a category has one
+    ``Sport`` and one ``Cover``, and no way to hold two of either.
     """
 
     def __init__(
@@ -37,6 +39,7 @@ class AddCourtCategory:
             category_id=new_uuid(),
             name=command.name,
             sport=command.sport,
+            cover=command.cover,
             rate=command.rate,
         )
         await self._clubs.save(club)

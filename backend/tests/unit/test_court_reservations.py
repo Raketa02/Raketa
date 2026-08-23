@@ -33,7 +33,7 @@ from app.bootstrap.composition import (
     build_unit_of_work,
 )
 from app.infrastructure.clock import SystemClock
-from app.kernel import Sport, hours, instant, minutes, percent, zloty
+from app.kernel import Cover, Sport, hours, instant, minutes, percent, zloty
 from app.modules.clubs.application.add_court import AddCourt
 from app.modules.clubs.application.add_court_category import AddCourtCategory
 from app.modules.clubs.application.commands import (
@@ -154,6 +154,7 @@ class _Courts:
                 club_id=club.id,
                 name=CategoryName("Padel · Mondo, indoor"),
                 sport=Sport.PADEL,
+                cover=Cover.INDOOR,
                 rate=zloty(120),
             )
         )
@@ -572,6 +573,7 @@ async def test_reassigning_into_another_category_is_refused(courts):
             club_id=club.id,
             name=CategoryName("Tennis · clay, outdoor"),
             sport=Sport.TENNIS,
+            cover=Cover.OUTDOOR,
             rate=zloty(80),
         )
     )

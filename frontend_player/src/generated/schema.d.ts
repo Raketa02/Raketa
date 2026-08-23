@@ -436,6 +436,14 @@ export interface components {
          *     like state, and leaving it on six situations failed the player at the exact
          *     moment they were choosing — in November in Kraków it is the most important
          *     fact about a padel court, and it was absent from every shelf.
+         *
+         *     **Two values in v1, and a roof is ``INDOOR``** (ADR-0090). *Covered but
+         *     open-sided* is a real padel configuration and reads as neither; the question
+         *     the card answers is *will I be rained on*, and a canopy answers that the way
+         *     a wall does. What it does not answer is *will I be cold*, which is the loss
+         *     this takes knowingly — a third value is an additive member here **and a
+         *     client release for its copy**, and no document in the specification set has
+         *     asked for one.
          * @enum {string}
          */
         Cover: "indoor" | "outdoor";

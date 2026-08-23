@@ -16,7 +16,7 @@ from zoneinfo import ZoneInfo
 import pytest
 
 from app.engines.fit import TermCode
-from app.kernel import Cause, Situation, grosze
+from app.kernel import Cause, Cover, Situation, grosze
 from app.modules.now.domain.screen import (
     ClubCard,
     DebtLine,
@@ -41,7 +41,6 @@ from app.modules.now.domain.vocabulary import (
     ActCode,
     CaptionCode,
     CardHoldReason,
-    Cover,
     Currency,
     ShelfCode,
 )

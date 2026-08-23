@@ -129,6 +129,41 @@ Nothing mechanical catches an event published too coarsely, so
 `tests/unit/test_match_events.py` walks the aggregate with an AST and fails when a mutating
 method announces nothing, and refuses a name that reads like *updated*.
 
+### A category names its roof
+
+ADR-0073 put indoor-or-outdoor **on the spine of every card**, and `#73` shipped it as a
+required field of `PlaceResponse`. Nothing in the system could answer it: whether there was a
+roof lived inside a category's free-text *name* — `Padel · indoor`, `Padel · Wall, outdoor` —
+and a convention in a display string is not a fact. That blocked every ticket that composes a
+match card.
+
+`CourtCategory` now carries a `Cover`, **required, with no default**
+([ADR-0090](../docs/adr/0090-a-category-names-its-roof-and-a-court-that-gains-one-moves-category.md)).
+Three things about it are worth knowing:
+
+- **It is on the category rather than on the court**, because `kernel.court_named_at` does not
+  assign a court until fifteen minutes before play, so a card composed on Monday for Thursday
+  has none to read. The category is already the priced unit and the thing a caller asks for,
+  and ADR-0079 put the price there on the same argument: a court that costs differently is a
+  different category, and so is one with a roof.
+- **There is no operation to change it.** A club that roofs a court has changed the *court*, so
+  the court **moves category** — `move_court` closes its catalogue row and opens a new one, and
+  *this court gained a roof in October* reads back off the series ADR-0077 already built. So
+  the category needs no history of its own, and `_update_categories` deliberately writes
+  neither of the two facts the platform constrains.
+- **`Cover` is the kernel's**, not Now's, because Clubs authors it and Now renders it. Two
+  declarations of a closed two-value set is a mapper between two spellings of one fact.
+
+Two values in v1, and a roof is `indoor`. *Covered but open-sided* reads as neither; the
+question a card answers is *will I be rained on*, and a canopy answers it the way a wall does.
+What it does not answer is *will I be cold* — a real loss, taken knowingly, because a third
+value is an additive enum member **and a client release for its copy**.
+
+Rows that predate the column were backfilled from the category's own name, once, in
+`0013_category_cover`. That is the one place the product may read a domain fact out of copy,
+precisely because it happens once and never on a read path; a name that declares nothing
+becomes `outdoor`, because that is the answer that never claims shelter a club did not declare.
+
 ### A leaving is two records
 
 A player who leaves writes **a vacancy and a departure**, and they are two facts on two axes
@@ -782,7 +817,7 @@ of them, one per edge:
 | Club | State |
 | --- | --- |
 | `club-that-never-holds` | `maxHoldAge = 0` — declines to hold a court speculatively at all |
-| `club-with-two-padel-categories` | One sport priced as two categories, ADR-0079's `ps` |
+| `club-with-two-padel-categories` | One sport priced as two categories under two roofs, ADR-0079's `ps` |
 | `club-that-retired-a-court` | A closed catalogue row: gone from availability, still named by history |
 | `club-that-retired-a-category` | A retired category and the courts that were in it |
 | `club-that-tightened-its-cap` | 48 h then 6 h — ADR-0077's motivating scenario, standing |

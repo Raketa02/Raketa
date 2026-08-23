@@ -15,7 +15,7 @@ from typing import Optional, Sequence
 from uuid import UUID, uuid4
 
 from app.engines.assessment import STATUS_INITIAL_ESTIMATE
-from app.kernel import Instant, Sport, instant, zloty
+from app.kernel import Cover, Instant, Sport, instant, zloty
 from app.modules.clubs.domain.club import Club
 from app.modules.clubs.domain.policy import ClubPolicy
 from app.modules.clubs.domain.value_objects import (
@@ -185,6 +185,7 @@ def a_club(
             category_id=uuid4(),
             name=CategoryName(f"{sport.value} {index}"),
             sport=sport,
+            cover=Cover.INDOOR,
             rate=zloty(80),
         )
         if courts:

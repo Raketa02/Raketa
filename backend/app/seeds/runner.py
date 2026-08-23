@@ -755,6 +755,7 @@ async def _ensure_category(
                 club_id=club.id,
                 name=name,
                 sport=scenario.sport,
+                cover=scenario.cover,
                 rate=scenario.rate,
             )
         )

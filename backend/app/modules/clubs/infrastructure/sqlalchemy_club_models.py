@@ -245,6 +245,17 @@ class ClubCourtCategoryORM(Base):
     created_at: Mapped[datetime] = mapped_column(
         sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
     )
+    #: Whether there is a roof. The second thing the platform constrains about a
+    #: club-authored category, and it is here rather than on a court because the
+    #: specific court is not assigned until fifteen minutes before play, so a
+    #: card composed on Monday has none to read (ADR-0090).
+    #:
+    #: **Declared last rather than beside `sport`, which is where it belongs by
+    #: meaning.** `ALTER TABLE ADD COLUMN` appends, so last is where a migrated
+    #: database actually has it, and `tests/unit/test_clubs_migration.py`
+    #: compares the two DDLs string for string. A model that read better and
+    #: described a different table would make that comparison a formality.
+    cover: Mapped[str] = mapped_column(sa.String(16), nullable=False)
 
 
 class ClubCourtCatalogueORM(Base):

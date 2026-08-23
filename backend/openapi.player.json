@@ -864,7 +864,7 @@
           "outdoor"
         ],
         "title": "Cover",
-        "description": "Indoor or outdoor, as a fact about *where* rather than about state.\n\nADR-0073 moved it onto the spine of every card: it behaves like place, not\nlike state, and leaving it on six situations failed the player at the exact\nmoment they were choosing \u2014 in November in Krak\u00f3w it is the most important\nfact about a padel court, and it was absent from every shelf."
+        "description": "Indoor or outdoor, as a fact about *where* rather than about state.\n\nADR-0073 moved it onto the spine of every card: it behaves like place, not\nlike state, and leaving it on six situations failed the player at the exact\nmoment they were choosing \u2014 in November in Krak\u00f3w it is the most important\nfact about a padel court, and it was absent from every shelf.\n\n**Two values in v1, and a roof is ``INDOOR``** (ADR-0090). *Covered but\nopen-sided* is a real padel configuration and reads as neither; the question\nthe card answers is *will I be rained on*, and a canopy answers that the way\na wall does. What it does not answer is *will I be cold*, which is the loss\nthis takes knowingly \u2014 a third value is an additive member here **and a\nclient release for its copy**, and no document in the specification set has\nasked for one."
       },
       "CreateAssessmentRequest": {
         "properties": {

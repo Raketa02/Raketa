@@ -539,6 +539,13 @@ where that was true when they were written, and each now names what the code ans
 | **Matches** | Players organising play: open matches, joining, levels, results. | `backend/app/modules/matches/` |
 | **Money** | Every złoty that moves: who paid, who was paid, why, and what a player owes. | `backend/app/modules/money/` |
 
+**The Courts row's *indoor/outdoor* is now the Clubs row's**, and that is the second departure
+from the table. ADR-0079 put the court catalogue in Clubs and
+[ADR-0090](docs/adr/0090-a-category-names-its-roof-and-a-court-that-gains-one-moves-category.md)
+put the roof on a **category**, which is where the catalogue lives; `backend/app/modules/courts/`
+owns reservations and nothing about what a court *is*. The table describes intent from before
+the code, and this row is corrected rather than followed.
+
 **Bookings shares a module with Courts**, which is a departure from the row above and is
 recorded rather than left to be noticed. A Booking has one field the Reservation does not
 imply — the price the buyer was quoted — and is otherwise defined entirely in terms of the
@@ -668,6 +675,16 @@ implementation added.
   because interchangeability is a fact only the venue knows. **The price attaches to the category,
   never to a court** — a court that costs differently *is* a different category — and a category,
   like a court, is **retired, never deleted**. Categories are never compared across clubs.
+- **Cover** — whether a court has a roof: **indoor** or **outdoor**, and there is no third value.
+  It is a fact about the **category**, which is the second and last thing the platform constrains
+  about one ([ADR-0090](docs/adr/0090-a-category-names-its-roof-and-a-court-that-gains-one-moves-category.md)) —
+  a category spanning two roofs makes a card lie, exactly as one spanning two sports makes a
+  seat share undefined, and a player swapped onto the other court in November has been sold
+  something else. It is not on a court, because no court is named until shortly before play and
+  a card is composed days earlier. **A roof is *indoor***: the question the card answers is
+  *will I be rained on*, and a canopy answers it the way a wall does. **A category's cover never
+  changes** — a club that roofs a court has changed the court, so the **court moves category**,
+  and the court's own catalogue history is what records that it did.
 
 **The private path starts with a Reservation and looks for players; the open path starts with
 players and looks for a Reservation.** That is the whole of the difference between the two
