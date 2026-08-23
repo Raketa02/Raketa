@@ -22,7 +22,17 @@ import pytest
 
 from app.kernel import Instant, Sport
 from app.modules.now.application.commands import ComposeNowQuery, SportFilter
+from app.engines.matchfit.v1 import MatchFitEngineV1
+from app.engines.pairing.v1 import PairingEngineV1
 from app.modules.now.application.compose_enrolled import ComposeEnrolled
+from app.modules.now.application.compose_shelves import ComposeShelves
+from app.modules.now.application.scoring import MatchScorer
+from tests.unit.shelf_doubles import (
+    FakeCityMatches,
+    FakeCommitments,
+    FakeRatings,
+    FakeStandbyPlaces,
+)
 from app.modules.now.application.compose_now import ComposeNow, stamp_at
 from app.modules.now.application.new_arrivals import ComposeNewArrivals
 from app.modules.now.domain.enrolled import Enrolment
@@ -132,17 +142,38 @@ class RecordingEnrolled(EnrolledMatches):
         return ()
 
 
+def _empty_shelves() -> ComposeShelves:
+    """The ranked funnel over an empty city, which composes nothing at all.
+
+    This file's subject is the envelope and the reach — which viewer, which
+    sport, which clock reading, and which blocks come back in which order — and
+    the funnel's own answers are `tests/unit/test_compose_shelves.py`'s. An empty
+    city is the cheapest way to have a real one here rather than a stand-in, so
+    a signature change reaches this file rather than passing it.
+    """
+
+    return ComposeShelves(
+        city=FakeCityMatches(),
+        commitments=FakeCommitments(),
+        standby=FakeStandbyPlaces(),
+        ratings=FakeRatings(),
+        scorer=MatchScorer(pairing=PairingEngineV1(), matchfit=MatchFitEngineV1()),
+    )
+
+
 def _compose(
     rated: RatedSports,
     clock,
     arrivals: ComposeNewArrivals | None = None,
     parked: ParkedRuns | None = None,
     enrolled: EnrolledMatches | None = None,
+    shelves: ComposeShelves | None = None,
 ) -> ComposeNow:
     return ComposeNow(
         rated_sports=rated,
         parked_runs=parked or FakeParkedRuns(),
         new_arrivals=arrivals or RecordingNewArrivals(),
+        shelves=shelves or _empty_shelves(),
         enrolled=ComposeEnrolled(enrolled=enrolled or RecordingEnrolled()),
         clock=clock,
     )

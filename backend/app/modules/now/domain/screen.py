@@ -38,7 +38,7 @@ from dataclasses import dataclass
 from typing import final
 from uuid import UUID
 
-from app.engines.fit import TermCode
+from app.engines.fit import SkillOverlapFact, TermCode, TermFact
 from app.kernel import (
     Cause,
     Cover,
@@ -59,6 +59,7 @@ from app.modules.now.domain.vocabulary import (
     Currency,
     DepartureForm,
     DoorCode,
+    FitSide,
     RefundDestination,
     ShelfCode,
 )
@@ -127,15 +128,52 @@ class Place:
 @final
 @dataclass(frozen=True)
 class FitReason:
-    """One reason behind the badge: a machine code, and never a sentence.
+    """One reason behind the badge: a code, its quantities, and no sentence.
 
     Up to three ride on a card. The code is the stable key a client renders copy
     for, which is what lets the wording of a reason change without a backend
-    release. **No weight ever crosses** — a weight is the engine's arithmetic and
-    a player cannot act on it.
+    release. **No weight, no value and no contribution ever crosses** — all
+    three are the engine's arithmetic, a player cannot act on any of them, and a
+    number that ranks is not a number that explains.
+
+    ``fact`` is the term's own payload, carried whole and in the units the
+    kernel keeps them in: grosze, minutes, exact ratios, a weekday, a Level. It
+    is what turns *"price"* into *"38 zł, under your 45 zł ceiling"* on a phone
+    that was never sent either sentence. The specification's `reasons: string[]`
+    was three sentences the server wrote; this is the same three reasons with
+    the words left to the client, which is where the two clients' shapes diverge
+    anyway.
+
+    The fact is the engine's object rather than a copy of it — the same
+    ``ScoredTerm.fact`` the score was computed from, so a card can never show a
+    reason drawn from arithmetic other than the badge beside it.
     """
 
     code: TermCode
+    fact: TermFact
+
+    @property
+    def side(self) -> FitSide | None:
+        """Which side of the aim she fell on, for the one term that has sides.
+
+        Derived and never carried, for the reason every derived number in this
+        map is: a stored copy is a value a later edit can leave disagreeing with
+        the two Levels it came from. The skill-overlap term is symmetric — a
+        Level too strong and a Level too weak are both *not the match you belong
+        in* — so the side is recoverable from the payload and unreadable from
+        the score.
+
+        ``None`` for every other term, because no other term has two sides to
+        fall on.
+        """
+
+        if not isinstance(self.fact, SkillOverlapFact):
+            return None
+        if self.fact.target > self.fact.level:
+            return FitSide.STRETCHED
+        if self.fact.target < self.fact.level:
+            return FitSide.STRONGEST
+        return FitSide.EVEN
 
 
 @final
@@ -149,10 +187,15 @@ class Fit:
     100 because certainty is never warranted.
 
     ``unsure`` is the warning that replaces the number's confidence when the
-    engine has too little to go on. **Coverage never crosses this wire in any
-    form**: it ranks, it gates emphasis, and it may become words in a reason
-    line. It never becomes a second gauge on the card, because a card must be
-    decidable at a glance and two numbers are harder to explain than one.
+    engine has too little to go on. It is the engine's own warning restated as a
+    boolean — the threshold (0,40, on the *raw* value of the lowest contributor)
+    lives in ``matchfit/v1/constants.py`` and is never spelled again here, or the
+    card and the score would stop agreeing the day it is retuned.
+
+    **Coverage never crosses this wire in any form**: it ranks, it gates
+    emphasis, and it may become words in a reason line. It never becomes a
+    second gauge on the card, because a card must be decidable at a glance and
+    two numbers are harder to explain than one.
 
     The whole sub-object is optional: it is omitted for a viewer with no rating
     in that sport, and under degrade. Printing 91 to a player the platform cannot
@@ -162,6 +205,19 @@ class Fit:
     score: int
     unsure: bool = False
     reasons: tuple[FitReason, ...] = ()
+
+    #: The Level this match is aimed at, **only when it is precise**.
+    #:
+    #: The pairing engine answers at two resolutions: a *seat target*, which is
+    #: the exact Level that would even the match and exists only while one seat
+    #: is open, and a *target band*, which is blunt. Only the first crosses. A
+    #: band is nearly always the viewer's own band restated, so printing it
+    #: would be the card telling her what she already knows in a voice that
+    #: sounds like a measurement.
+    #:
+    #: A number and never ``2,71``: the comma is the client's, like every other
+    #: value in ``docs/value-formatting.md``.
+    target: float | None = None
 
 
 @final

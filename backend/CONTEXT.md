@@ -1076,5 +1076,91 @@ there; they are not repeated here.
   paid. _Avoid_: the other order, which records money against a seat she never got; and
   one commit, which is a match rolled back because a bank was slow.
 
+- **The ranked funnel** (`now.ComposeShelves`) — retrieve → eligibility → score → floor →
+  order → diversity → cap, for **both** ranked shelves, because what separates them is one
+  eligibility rule, one floor and one cap. Shelf 1 and shelf 2 may never be merged into one
+  ordered list: a full match **outranks the joinable version of itself** (viability is the
+  one term that can never be excluded), so a single list would be topped by matches nobody
+  can join. _Avoid_: a second pipeline for the second shelf; a lane is data, not a branch.
+- **Exclusion** (`now.Exclusion`, `now.exclusions`) — the set of eligibility rules a
+  candidate **failed**, answered instead of a boolean, which is what makes *evaluate all,
+  never short-circuit* a property of the shape rather than a rule somebody remembers. Eight
+  common rules plus one seat rule per shelf; `WithinTravelCeiling` is in **neither**, and
+  `NotSuppressed` is a v2 slot that runs and passes rather than one waiting to be added.
+  A diagnosis vocabulary that crosses **no wire** — *"seven of them already full"* is an
+  operational sentence, not a player's. _Avoid_: `a and b and c`, which throws away the
+  difference between *seven were full* and *seven were too far*.
+- **`FEED_ORDER`** (`now.feed_key`) — `[desc(fit), asc(start), asc(dist), asc(id)]`, the
+  **total** base order, with every later pass expressed as a named delta over it. The
+  fourth comparator is load-bearing and not decoration: without a guaranteed-total final
+  key the order falls back on retrieval order, which is the query plan, and two identical
+  requests reshuffle the shelf under the player's thumb. An unknown distance sorts **last**
+  — a club the platform cannot place is not thereby the nearest one.
+- **Diversity defers, never drops** (`now.diversify`) — at most two cards from one club in
+  one hour sit together, and the third goes to the **back of the shelf** rather than out of
+  it. The pass is a permutation, asserted as one; the cap is the only thing in the funnel
+  that removes a card. _Avoid_: the prototype's `continue`, which returned fewer than the
+  cap with cards still waiting.
+- **The retitle** (`now.code_for`, `now.floor_for`) — when nothing clears 70, shelf 1 keeps
+  its cards, drops its floor and becomes `sameLevel`. That is what *"shelf 1 never goes
+  silent"* means, and it is why a floor is affordable at all: an unfillable shelf is
+  **absent** rather than empty, so no card claims the city is empty. The **order does not
+  change with the title** — closeness to her Level is what `desc(fit)` already leads on,
+  and a second order computed from one term of a ten-term score would disagree with the
+  badge beside it.
+- **Match scoring context** (`now.MatchScoringContext`, `ScoringContexts`) — one match as
+  **everybody** looking at it sees it: the record, the club's facts, its saturation and the
+  seated players' ratings. Cached under `matchId : recordVersion` and therefore **never
+  stale** — a seat payment bumps the version and the next ask files under a key nobody
+  wrote. No TTL, no reverse index, no `forget`. What is *not* in it is everything the
+  viewer supplies. It lives **behind `CityMatches`** and not in front of it, which is the
+  opposite of where ADR-0068 puts the new-arrivals cache — and that ADR's own line is why:
+  *"the key is a fact about the viewer and the port's question is not"* holds there and
+  inverts here. Above the port it would assemble every context and then throw it away for
+  the copy already held. _Avoid_: putting the distance or her own rating on it; a
+  viewer-relative field on a shared value is one player's answer with everybody else's name
+  on it.
+- **The travel sentinel** (`now.TRAVEL_UNMEASURED`) — `ClubSnapshot.travel_minutes` is
+  required with no default and the platform holds no player location (`#102`, ADR-0063).
+  Travel is a **constraint** term, so an undeclared radius is *no limit* and the term
+  scores full marks whatever the minutes are; no player can declare a radius (`#105`), so
+  the sentinel provably moves no score and no order, which is asserted as a property rather
+  than argued. **It may rank and it may never be printed**: a travel *reason* is withheld
+  from the badge, because *"20 minutes away"* drawn from a sentinel is a claim about a
+  journey nobody measured. _Avoid_: zero, which is the one value that would flatter.
+- **Crowding is computed** (`CityMatchesFromMatches`) — the club's live courts against the
+  reservations touching the match's window, keyed per club **and hour** because a club is
+  not crowded, it is crowded on a Tuesday evening. Unlike travel it is **evidence** and
+  multiplies straight into the score, so a default of nothing is an empty club — the most
+  flattering answer available.
+- **The phase is stated and the guard moves** (`now.snapshot_for`) — `MatchSnapshot`
+  refuses anything but `FORMING` and `MATCH_PHASE_OF` maps a **full** match to `LOCKED`, so
+  deriving the phase would make shelf 2 unbuildable. The projection asks *is this roster
+  fixed*; the guard asks *is this a candidate*. The assembler states `FORMING` and
+  **reinstates the guard it gave up**, refusing a terminal or already-started match through
+  `invariant` — so the loud failure the field exists for still happens, one layer up, where
+  eligibility has already made it unreachable.
+- **`Unscorable`, and degrade** (`now.MatchScorer`) — any engine failure becomes one
+  exception, caught **once per screen**: a shelf ordered from a pass that half ran is a
+  shelf whose order means nothing. Shelf 1 falls back to soonest-first with no badge under
+  the `sameLevel` code — the thin-week fallback, so the degraded screen is one players have
+  seen — and shelf 2 is **dropped**, because an 80 floor with no scorer is not a claim we
+  can make. **No marker crosses the wire.**
+- **The engines are given the minute** (`now.MatchScorer`) — both refuse a `now` carrying
+  seconds, and a composed screen's clock is `SystemClock`. Left alone every live compose
+  raised, every raise was an `Unscorable`, and **every screen degraded** with nothing on the
+  wire saying so — invisible to a unit suite whose fixtures are all minute-aligned. The
+  kernel keeps the true instant; only the two engine calls get the truncation.
+- **A reason is quantities** (`now.FitReason`, `FitReasonPayload`) — a term code and its
+  **typed fact payload**, in the units the kernel keeps them in, and never a weight, a
+  value, a contribution or a sentence. The fact is the engine's own object, passed by
+  identity, so a card cannot show a reason computed from anything but the badge beside it.
+  `FitSide` is derived from the two Levels rather than carried, and crosses because
+  choosing a sentence from the sign of a subtraction is a rule the phone does not hold.
+- **The aim crosses only when precise** (`now.Fit.target`) — the pairing engine's *seat
+  target*, which exists only while exactly one seat is open. A target **band** is nearly
+  always the viewer's own band restated, so printing it would be the card telling her what
+  she already knows in the voice of a measurement.
+
 Add backend-specific technical terms here as they are resolved. Anything describing the
 *domain* belongs in the shared glossary instead.

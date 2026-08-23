@@ -6,11 +6,14 @@ files and reddens if one imports an adapter, because the failure mode is one lin
 of convenience inside a ``Depends`` callable and nothing about a green suite would
 look different afterwards.
 
-**One of these lifetimes is not the request's**, and it is the only one in the
-app: the new-arrivals cache is shared by everybody in a city looking at one
-sport, so a per-request instance would be a cache that is cold on every request
-— an object with a TTL and no hits. It is built once in ``create_app`` and read
-off ``app.state`` here, which is the same shape the event runtime already uses.
+**Two of these lifetimes are not the request's**, and they are the only two in
+the app: both of Now's caches are shared across viewers, so a per-request
+instance would be a cache that is cold on every request. They are built once in
+``create_app`` and read off ``app.state`` here, which is the same shape the event
+runtime already uses. The new-arrivals cache is shared by everybody in a city
+looking at one sport; the scoring context cache is shared by everybody looking at
+one match, and it has no TTL at all because its key carries the record's
+version.
 """
 
 from __future__ import annotations
@@ -29,22 +32,36 @@ from app.api.dependencies import (
 from app.bootstrap.composition import (
     build_arrivals,
     build_assessment_repository,
+    build_city_matches,
     build_club_repository,
+    build_commitments,
     build_compose_enrolled,
     build_compose_new_arrivals,
+    build_compose_shelves,
     build_enrolled_matches,
     build_ledger_repository,
     build_levels,
     build_match_repository,
+    build_match_scorer,
     build_parked_runs,
     build_rated_sports,
+    build_ratings,
     build_reservation_repository,
     build_skill_rating_repository,
+    build_standby_places,
 )
 from app.modules.now.application.compose_enrolled import ComposeEnrolled
 from app.modules.now.application.compose_now import ComposeNow
+from app.modules.now.application.compose_shelves import ComposeShelves
 from app.modules.now.application.new_arrivals import ComposeNewArrivals
-from app.modules.now.domain.ports import ArrivalSets, Levels, ParkedRuns, RatedSports
+from app.modules.now.domain.ports import (
+    ArrivalSets,
+    Levels,
+    ParkedRuns,
+    RatedSports,
+    Ratings,
+    ScoringContexts,
+)
 from app.modules.rating.domain.ports import (
     AssessmentRepository,
     SkillRatingRepository,
@@ -168,10 +185,71 @@ def get_compose_enrolled(
 EnrolledDep = Annotated[ComposeEnrolled, Depends(get_compose_enrolled)]
 
 
+def get_ratings(ratings: SkillRatingsDep) -> Ratings:
+    return build_ratings(ratings)
+
+
+RatingsDep = Annotated[Ratings, Depends(get_ratings)]
+
+
+def get_scoring_contexts(request: Request) -> ScoringContexts:
+    """The second adapter whose lifetime is the **application's**.
+
+    Read off ``app.state`` for the same reason ``get_arrival_sets`` is: a
+    module-level singleton would carry one test's contexts into another's
+    database. It differs from that one in having no TTL — its key is
+    ``matchId : recordVersion``, so an entry cannot be stale, and there is
+    nothing for a clock to decide.
+    """
+
+    contexts: ScoringContexts = request.app.state.scoring_contexts
+    return contexts
+
+
+ScoringContextsDep = Annotated[ScoringContexts, Depends(get_scoring_contexts)]
+
+
+def get_compose_shelves(
+    db: DbSession,
+    ratings: RatingsDep,
+    contexts: ScoringContextsDep,
+    events: EventPublisherDep,
+    clock: ClockDep,
+) -> ComposeShelves:
+    """The ranked funnel's four reads, plus the shared cache and two engines.
+
+    The match repository is built with the publisher and the clock every other
+    caller gets, and it is a **read** here: Now writes nothing, so nothing this
+    request does can reach the outbox through it. It is built once and handed to
+    both ``CityMatches`` and ``Commitments``, which ask it two different
+    questions — the city's matches and this player's — so they share one replay
+    rather than opening two.
+    """
+
+    matches = build_match_repository(db, events=events, clock=clock)
+    return build_compose_shelves(
+        city=build_city_matches(
+            matches=matches,
+            clubs=build_club_repository(db),
+            reservations=build_reservation_repository(db),
+            ratings=ratings,
+            contexts=contexts,
+        ),
+        commitments=build_commitments(matches),
+        standby=build_standby_places(),
+        ratings=ratings,
+        scorer=build_match_scorer(),
+    )
+
+
+ShelvesDep = Annotated[ComposeShelves, Depends(get_compose_shelves)]
+
+
 def get_compose_now(
     rated_sports: RatedSportsDep,
     parked_runs: ParkedRunsDep,
     new_arrivals: NewArrivalsDep,
+    shelves: ShelvesDep,
     enrolled: EnrolledDep,
     clock: ClockDep,
 ) -> ComposeNow:
@@ -179,6 +257,7 @@ def get_compose_now(
         rated_sports=rated_sports,
         parked_runs=parked_runs,
         new_arrivals=new_arrivals,
+        shelves=shelves,
         enrolled=enrolled,
         clock=clock,
     )

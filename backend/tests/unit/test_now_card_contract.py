@@ -10,13 +10,14 @@ region.
 """
 
 from datetime import datetime, timedelta, timezone
+from fractions import Fraction
 from uuid import uuid4
 from zoneinfo import ZoneInfo
 
 import pytest
 
-from app.engines.fit import TermCode
-from app.kernel import Cause, Cover, Situation, grosze
+from app.engines.fit import SkillOverlapFact, TermCode, TravelFact
+from app.kernel import Cause, Cover, Ratio, Situation, grosze, minutes
 from app.modules.now.domain.screen import (
     ClubCard,
     DebtLine,
@@ -43,6 +44,7 @@ from app.modules.now.domain.vocabulary import (
     CaptionCode,
     CardHoldReason,
     Currency,
+    FitSide,
     ShelfCode,
 )
 from app.modules.now.presentation.schemas import (
@@ -191,14 +193,20 @@ def test_money_is_integer_grosze_with_a_currency_beside_it() -> None:
     assert isinstance(rendered["price"]["amount"], int)
 
 
+A_SKILL_FACT = SkillOverlapFact(
+    level=Ratio(Fraction(3, 1)), target=Ratio(Fraction(7, 2)), band_half_width=None
+)
+A_TRAVEL_FACT = TravelFact(minutes=minutes(20), radius=None)
+
+
 def test_the_badge_carries_reasons_as_codes_and_no_coverage() -> None:
     rendered = MatchCardResponse.from_domain(
         a_card(
             fit=Fit(
                 score=87,
                 reasons=(
-                    FitReason(code=TermCode.SKILL_OVERLAP),
-                    FitReason(code=TermCode.TRAVEL),
+                    FitReason(code=TermCode.SKILL_OVERLAP, fact=A_SKILL_FACT),
+                    FitReason(code=TermCode.TRAVEL, fact=A_TRAVEL_FACT),
                 ),
             )
         )
@@ -213,6 +221,75 @@ def test_the_badge_carries_reasons_as_codes_and_no_coverage() -> None:
     # never becomes a second gauge on the card.
     assert "coverage" not in rendered["fit"]
     assert "weight" not in str(rendered["fit"])
+
+
+def test_a_reason_carries_its_terms_own_quantities_and_never_its_arithmetic() -> None:
+    """The delta's §3: the term code and its typed fact payload, and no more.
+
+    Not the weight, not the value, not the contribution — all three are the
+    engine's arithmetic and a player cannot act on any of them. The
+    specification's `reasons: string[]` was three sentences the server wrote, and
+    that was the single precedent for server-held copy anywhere in this contract.
+    """
+
+    rendered = MatchCardResponse.from_domain(
+        a_card(
+            fit=Fit(
+                score=87,
+                reasons=(FitReason(code=TermCode.TRAVEL, fact=A_TRAVEL_FACT),),
+            )
+        )
+    ).model_dump()
+    fact = rendered["fit"]["reasons"][0]["fact"]
+
+    assert fact["code"] == TermCode.TRAVEL
+    assert fact["minutes"] == 20
+    # Absent because she declared none, which is what lets a client say *"20
+    # minutes away"* rather than *"20 minutes away, inside your radius"*.
+    assert fact["radius"] is None
+    assert not {"weight", "value", "contribution"} & set(fact)
+
+
+def test_a_skill_overlap_reason_names_the_side_she_fell_on() -> None:
+    """*You would be the strongest here* and *you would be stretched* differ.
+
+    The term is symmetric, so its own value cannot say which — and choosing a
+    sentence from the sign of a subtraction is a rule, which the phone does not
+    hold (ADR-0053).
+    """
+
+    stretched = MatchCardResponse.from_domain(
+        a_card(
+            fit=Fit(
+                score=87,
+                reasons=(FitReason(code=TermCode.SKILL_OVERLAP, fact=A_SKILL_FACT),),
+            )
+        )
+    ).model_dump()["fit"]["reasons"][0]["fact"]
+
+    assert stretched["side"] == FitSide.STRETCHED
+    assert stretched["level"] == 3.0
+    assert stretched["target"] == 3.5
+    # Absent means the target is the exact *seat target* rather than the midpoint
+    # of a band, which is what lets one payload write both sentences.
+    assert stretched["band_half_width"] is None
+
+
+def test_the_aimed_at_level_crosses_only_when_it_is_precise() -> None:
+    """A target band is nearly always the viewer's own band restated.
+
+    Printing it would be the card telling her what she already knows in the voice
+    of a measurement, so only the seat target — which exists while exactly one
+    seat is open — reaches the wire.
+    """
+
+    precise = MatchCardResponse.from_domain(
+        a_card(fit=Fit(score=87, target=3.1))
+    ).model_dump()
+    blunt = MatchCardResponse.from_domain(a_card(fit=Fit(score=87))).model_dump()
+
+    assert precise["fit"]["target"] == 3.1
+    assert blunt["fit"]["target"] is None
 
 
 def test_a_card_with_no_rating_in_that_sport_has_no_badge_at_all() -> None:

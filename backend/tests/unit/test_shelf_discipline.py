@@ -1,0 +1,160 @@
+"""Two rules the ranked funnel keeps by *not* doing something.
+
+Neither can be asserted by a green behavioural test, because both are satisfied
+by an empty file and broken by the line somebody adds next week. So they are
+walks over the feature's own source, each with a negative control proving the
+detector can tell the offending shape from an innocent one.
+
+* **Nothing is random.** ADR-0051 drops exploration: no seed, no draw, nothing
+  recorded for replay. A shelf that shuffled would be a screen that reshuffles
+  between two identical requests, which looks broken and is.
+* **There is no player feed cache.** ADR-0068 deletes it by name — *"every ask
+  pays the full funnel"* — because it was the only store on this screen keyed on
+  the person asking, and therefore the only one that could hand her a stale
+  answer to a direct question. The two that stay are keyed on a city and on a
+  match, and the walk reads that off their signatures rather than their names.
+"""
+
+from __future__ import annotations
+
+import ast
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+NOW = ROOT / "app" / "modules" / "now"
+
+#: Every way a Python file reaches a random number, by the name that would
+#: appear in the source. Written out rather than matched by prefix, so a reader
+#: can see what is refused and a fourteenth spelling has to be added on purpose.
+DICE = frozenset(
+    {
+        "random",
+        "shuffle",
+        "sample",
+        "choice",
+        "choices",
+        "randint",
+        "randrange",
+        "uniform",
+        "getrandbits",
+        "secrets",
+        "SystemRandom",
+    }
+)
+
+
+def _names(tree: ast.AST) -> set[str]:
+    """Every identifier the module imports or calls, by the name it wrote."""
+
+    found: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                found.add(alias.name.split(".")[0])
+        elif isinstance(node, ast.ImportFrom):
+            if node.module:
+                found.add(node.module.split(".")[0])
+            for alias in node.names:
+                found.add(alias.name)
+        elif isinstance(node, ast.Attribute):
+            found.add(node.attr)
+        elif isinstance(node, ast.Name):
+            found.add(node.id)
+    return found
+
+
+def test_nothing_in_now_draws_a_random_number() -> None:
+    """Exploration is dropped, and discovery is shelves 4 and 5.
+
+    The prototype's list builder recorded its dice for replay. There is nothing
+    to record, because nothing is drawn: the order is a total function of the
+    candidates, so two identical requests answer identically and *"why is this
+    card third?"* has one answer rather than a seed.
+    """
+
+    offenders: list[str] = []
+    for path in sorted(NOW.rglob("*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        for name in sorted(_names(tree) & DICE):
+            offenders.append(f"{path.relative_to(ROOT)}: {name}")
+
+    assert offenders == []
+
+
+def test_the_dice_walk_can_see_one() -> None:
+    """The negative control, driven both ways."""
+
+    caught = ast.parse(
+        "import random\n\ndef pick(cards):\n    return random.choice(cards)\n"
+    )
+    missed = ast.parse("def pick(cards):\n    return cards[0]\n")
+
+    assert _names(caught) & DICE
+    assert not (_names(missed) & DICE)
+
+
+def _stores() -> dict[str, set[str]]:
+    """Every port in Now that **writes**, and the parameters it is keyed on.
+
+    A store is what a cache is, and a port that stores is the one shape in this
+    module that returns nothing: every other port answers with a value. So the
+    set is read off the return annotations rather than off the names, which is
+    what stops a `PlayerFeedCache` from being missed for spelling itself
+    differently.
+    """
+
+    from typing import get_type_hints
+
+    from app.modules.now.domain import ports
+
+    found: dict[str, set[str]] = {}
+    for name in dir(ports):
+        port = getattr(ports, name)
+        if not isinstance(port, type) or not name[0].isupper():
+            continue
+        keys: set[str] = set()
+        writes = False
+        for method in dir(port):
+            attribute = getattr(port, method, None)
+            if method.startswith("_") or not callable(attribute):
+                continue
+            try:
+                hints = get_type_hints(attribute)
+            except (TypeError, NameError):
+                continue
+            if hints.get("return") is type(None):
+                writes = True
+                keys |= {key for key in hints if key != "return"}
+        if writes:
+            found[name] = keys
+    return found
+
+
+def test_the_only_two_stores_in_now_are_the_two_caches_adr_0068_keeps() -> None:
+    """ADR-0068 deletes the **player feed** cache by name and keeps two others.
+
+    *"Every ask pays the full funnel"*: the deleted one is the only place on this
+    screen that could serve a stale answer to a direct question, because it was
+    the only one keyed on the person asking. A third store appearing here is
+    that one returning, whatever it is called.
+    """
+
+    assert set(_stores()) == {"ArrivalSets", "ScoringContexts"}
+
+
+def test_neither_store_is_keyed_on_a_player() -> None:
+    """Which is the property that makes them safe rather than their names.
+
+    The new-arrivals set is filed under `city : sport : kind` and the scoring
+    context under `matchId : recordVersion`. Neither can hold one player's
+    answer, so neither can hand it to another.
+    """
+
+    for name, keys in _stores().items():
+        assert not any("player" in key.lower() for key in keys), (name, keys)
+
+
+def test_the_walk_reaches_the_tree_it_is_claiming_about() -> None:
+    # A glob matching nothing passes silently; the count is asserted rather than
+    # trusted.
+    assert len(list(NOW.rglob("*.py"))) >= 20

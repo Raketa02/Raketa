@@ -405,6 +405,15 @@ FORBIDDEN = (
     # beside a set would be a shape claiming they are.
     "tiebreak",
     "tie_break",
+    # ADR-0037: Coverage ranks, it gates emphasis and it may become *words* in a
+    # reason line. It never becomes a second gauge, and the way that is
+    # guaranteed is that it does not cross in any form.
+    "coverage",
+    # A reason carries the term's own quantities and never the engine's
+    # arithmetic. A weight is not something a player can act on, and a
+    # contribution is a number about the model rather than about the match.
+    "weight",
+    "contribution",
 )
 
 
@@ -454,6 +463,16 @@ def test_the_walk_reaches_the_schemas_it_is_claiming_about(player_spec: dict) ->
         "RefundResponse",
         "OwnerExposureResponse",
         "ScoreLineResponse",
+    } <= reachable
+    # And every fit-reason payload, so a term that started carrying a sentence
+    # would be caught by the free-text walk rather than by a reader.
+    assert {
+        "FitResponse",
+        "FitReasonResponse",
+        "SkillOverlapPayload",
+        "TravelPayload",
+        "ViabilityPayload",
+        "TimePayload",
     } <= reachable
     assert len(reachable) >= 20
     # And it is a walk over *Now*, not over the whole document: the rating

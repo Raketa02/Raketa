@@ -162,8 +162,14 @@ async def _a_category(pg_engine, schema, club_id, name="Padel · Mondo, indoor")
     await _run(
         pg_engine,
         schema,
-        "INSERT INTO club_court_categories (id, club_id, name, sport, "
-        "rate_grosze, retired_at) VALUES (:i, :c, :n, 'PADEL', 12000, NULL)",
+        # `cover` is NOT NULL as of `0013_category_cover` (ADR-0090). A raw
+        # INSERT is not the ORM and gains no column by itself, so it is named
+        # here — these two suites are the only writers in the tree that bypass
+        # `Club.add_category`, and they went red on the first PostgreSQL run
+        # after that migration landed.
+        "INSERT INTO club_court_categories (id, club_id, name, sport, cover, "
+        "rate_grosze, retired_at) "
+        "VALUES (:i, :c, :n, 'PADEL', 'indoor', 12000, NULL)",
         i=category_id,
         c=club_id,
         n=name,

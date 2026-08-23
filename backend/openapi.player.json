@@ -741,6 +741,40 @@
         "title": "AssessmentStepResponse",
         "description": "The server-driven step: at most one of `question` / `result` is set, and\n`transcript` is everything already answered behind it. Neither means the run\nis not asking and has not been rated \u2014 see `status`."
       },
+      "BalancePayload": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "const": "predicted_balance",
+            "title": "Code",
+            "default": "predicted_balance"
+          },
+          "estimate": {
+            "type": "integer",
+            "title": "Estimate"
+          },
+          "margin": {
+            "type": "integer",
+            "title": "Margin"
+          },
+          "certainty": {
+            "$ref": "#/components/schemas/Certainty"
+          },
+          "imputed_seats": {
+            "type": "integer",
+            "title": "Imputed Seats"
+          }
+        },
+        "type": "object",
+        "required": [
+          "estimate",
+          "margin",
+          "certainty",
+          "imputed_seats"
+        ],
+        "title": "BalancePayload",
+        "description": "The forecast this term read, and how sure of it the platform is.\n\n``certainty`` crosses so that **suppression stays a presentation decision**:\nthe term scores on the estimate whatever the grade is, and a client that\ndeclines to print a LOW forecast can only know to do that if the grade\ntravels with it."
+      },
       "BandResponse": {
         "properties": {
           "name": {
@@ -795,6 +829,16 @@
         ],
         "title": "Cause",
         "description": "The rule that fired, never who was watching.\n\nA cause is the same cause for all three of a card's audiences\n(``docs/adr/0072-two-sentences-are-two-situations-and-a-leaver-is-a-third-audience.md``):\nit names what happened to the *match*, and the sentence each audience reads\nabout it is the client's."
+      },
+      "Certainty": {
+        "type": "string",
+        "enum": [
+          "high",
+          "moderate",
+          "low"
+        ],
+        "title": "Certainty",
+        "description": "The forecast's grade of its own margin.\n\nA statement about the platform's knowledge and never about the players: two\nmatches can both be forecast at 78% balanced, one between players it has\nwatched for a season and one between two people who answered a questionnaire\nyesterday, and they are not the same claim."
       },
       "ClubCardResponse": {
         "properties": {
@@ -856,6 +900,16 @@
         ],
         "title": "ConfidenceReasonResponse",
         "description": "Why confidence landed where it did: a stable key and the sentence shown."
+      },
+      "CourtHold": {
+        "type": "string",
+        "enum": [
+          "none",
+          "soft",
+          "hard"
+        ],
+        "title": "CourtHold",
+        "description": "How firmly a court is held for this match. **Borrowed vocabulary.**\n\nThe clock's hold ladder (``docs/adr/0021``), in the three rungs a match can be\non: **none** \u2014 no court is held and one has still to be found; **soft** \u2014 a\ncourt is held provisionally and can lapse; **hard** \u2014 a court is booked and\nthe club has committed it.\n\nA ladder and not a bool, for the same reason ``LadderQualification`` is three\nstates: *nobody has looked for a court yet* and *a court is held and could\nstill be lost* are different facts about whether the match will be played, and\ncollapsing them would make the middle rung score like whichever end it was\nfolded into.\n\n**Borrowed with no owner yet.** Courts are not a modelled context and the hold\nladder is specified in documents outside this repository, so the spelling is\nfixed *here*, now, and whichever context ends up owning courts will define it \u2014\nthe same standing as a seat's state and a ladder qualification."
       },
       "Cover": {
         "type": "string",
@@ -1069,18 +1123,94 @@
         "title": "FactorResponse",
         "description": "One evidence category's row: what it says, and which way it pulled.\n\n``direction`` is one of ``up`` / ``down`` / ``neutral``, computed by the\nengine from that category's own evidence against the final estimate. The\nclient never derives it \u2014 a client-side arrow is a second opinion about the\narithmetic, and two clients would eventually hold two of them."
       },
-      "FitReasonResponse": {
+      "FamiliarityPayload": {
         "properties": {
           "code": {
-            "$ref": "#/components/schemas/TermCode"
+            "type": "string",
+            "const": "familiarity",
+            "title": "Code",
+            "default": "familiarity"
+          },
+          "new_faces": {
+            "type": "integer",
+            "title": "New Faces"
+          },
+          "others": {
+            "type": "integer",
+            "title": "Others"
           }
         },
         "type": "object",
         "required": [
-          "code"
+          "new_faces",
+          "others"
+        ],
+        "title": "FamiliarityPayload",
+        "description": "How many of the others are new to her, out of how many."
+      },
+      "FitReasonResponse": {
+        "properties": {
+          "code": {
+            "$ref": "#/components/schemas/TermCode"
+          },
+          "fact": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/SkillOverlapPayload"
+              },
+              {
+                "$ref": "#/components/schemas/BalancePayload"
+              },
+              {
+                "$ref": "#/components/schemas/TimePayload"
+              },
+              {
+                "$ref": "#/components/schemas/ViabilityPayload"
+              },
+              {
+                "$ref": "#/components/schemas/PricePayload"
+              },
+              {
+                "$ref": "#/components/schemas/TravelPayload"
+              },
+              {
+                "$ref": "#/components/schemas/MatchTypePayload"
+              },
+              {
+                "$ref": "#/components/schemas/LadderPayload"
+              },
+              {
+                "$ref": "#/components/schemas/ReliabilityPayload"
+              },
+              {
+                "$ref": "#/components/schemas/FamiliarityPayload"
+              }
+            ],
+            "title": "Fact",
+            "discriminator": {
+              "propertyName": "code",
+              "mapping": {
+                "familiarity": "#/components/schemas/FamiliarityPayload",
+                "group_reliability": "#/components/schemas/ReliabilityPayload",
+                "ladder_qualification": "#/components/schemas/LadderPayload",
+                "match_type": "#/components/schemas/MatchTypePayload",
+                "match_viability": "#/components/schemas/ViabilityPayload",
+                "predicted_balance": "#/components/schemas/BalancePayload",
+                "price": "#/components/schemas/PricePayload",
+                "skill_overlap": "#/components/schemas/SkillOverlapPayload",
+                "time_fit": "#/components/schemas/TimePayload",
+                "travel": "#/components/schemas/TravelPayload"
+              }
+            }
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "fact"
         ],
         "title": "FitReasonResponse",
-        "description": "One reason behind the badge, as a machine code. No weight, no sentence."
+        "description": "One reason behind the badge: a code, its quantities, and no sentence.\n\n**No weight, no value and no contribution.** All three are the engine's\narithmetic and a player cannot act on any of them; a number that ranks is\nnot a number that explains. What crosses is the term's own payload in the\nunits the kernel keeps them in \u2014 grosze, minutes, exact ratios as decimals,\na weekday, a Level \u2014 and the client writes the sentence.\n\nThe specification had ``reasons: string[]``, three sentences the server\nwrote. That was the single precedent for server-held copy anywhere in this\ncontract, and the two clients do not share a shape, a language or a currency\nsymbol."
       },
       "FitResponse": {
         "properties": {
@@ -1100,6 +1230,17 @@
             },
             "type": "array",
             "title": "Reasons"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target"
           }
         },
         "type": "object",
@@ -1109,7 +1250,17 @@
           "reasons"
         ],
         "title": "FitResponse",
-        "description": "The badge and up to three reasons. Coverage is not here and never is."
+        "description": "The badge, up to three reasons, and the aim. Coverage is never here.\n\n``target`` is the Level this match is aimed at and crosses **only when it is\nprecise** \u2014 the seat target, which exists only while exactly one seat is\nopen. A target *band* is nearly always the viewer's own band restated, so\nprinting it would be the card telling her what she already knows in the voice\nof a measurement."
+      },
+      "FitSide": {
+        "type": "string",
+        "enum": [
+          "stretched",
+          "strongest",
+          "even"
+        ],
+        "title": "FitSide",
+        "description": "Which side of the match's aim the viewer fell on, when she is not on it.\n\n*\"You would be the strongest here\"* and *\"you would be stretched\"* are\ndifferent sentences, and the badge's largest term already knows which \u2014 the\nskill-overlap term is **symmetric**, so its own value cannot say. The delta\nasks for the side to be carried for exactly that reason.\n\nIt crosses as a code rather than being left for the phone to work out from\nthe two Levels beside it. Choosing a sentence from the sign of a subtraction\nis a rule, and the phone holds none (ADR-0053) \u2014 the same argument ADR-0084\nmakes for the door's two codes.\n\n``EVEN`` is the third member and not a rounding of one of the other two: two\nplayers at 3,00 is an ordinary state, and a vocabulary with two members would\nhave to call it one of them."
       },
       "HTTPValidationError": {
         "properties": {
@@ -1148,6 +1299,25 @@
         "title": "HoldNoteResponse",
         "description": "Why a court is held, as one of five reasons. Never free text.\n\n``age_minutes`` is the hold's **real** age and rides only on one the club has\ntaken back \u2014 never the club's threshold, because the card weakening the\nmarketplace's promise is the last place to print a number that is not the\none meant."
       },
+      "HourWindowResponse": {
+        "properties": {
+          "start": {
+            "type": "integer",
+            "title": "Start"
+          },
+          "end": {
+            "type": "integer",
+            "title": "End"
+          }
+        },
+        "type": "object",
+        "required": [
+          "start",
+          "end"
+        ],
+        "title": "HourWindowResponse",
+        "description": "One stretch of a clock face a player said she can play, in minutes."
+      },
       "InProgressAssessmentResponse": {
         "properties": {
           "assessment_id": {
@@ -1182,6 +1352,35 @@
         ],
         "title": "InProgressAssessmentsResponse",
         "description": "Every unfinished run this player holds \u2014 empty when they hold none.\n\nEmpty is the ordinary answer for a new account and for a player who has\nfinished everything they started, so it is a 200 with an empty list rather\nthan a 404 or the singular form's 204.\n\nOrdered by the sport registry, so a caller that wants one run can take the\nfirst entry."
+      },
+      "LadderPayload": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "const": "ladder_qualification",
+            "title": "Code",
+            "default": "ladder_qualification"
+          },
+          "qualification": {
+            "$ref": "#/components/schemas/LadderQualification"
+          }
+        },
+        "type": "object",
+        "required": [
+          "qualification"
+        ],
+        "title": "LadderPayload",
+        "description": "Which of the three ladder states this match is in for her."
+      },
+      "LadderQualification": {
+        "type": "string",
+        "enum": [
+          "qualifies",
+          "outside",
+          "not_in_a_ladder"
+        ],
+        "title": "LadderQualification",
+        "description": "Whether this match counts towards the current player's ladder.\n\n**Three states rather than a bool**, because *not in a ladder* and *in a\nladder this match does not count for* are different facts, and a bool\ncollapses them into the same low score. Entering a ladder is a declaration \u2014\nit is the player saying which counted matches they are playing for \u2014 so a\nplayer in none has no ladder problem, which is exactly the constraint rule,\nand ``NOT_IN_A_LADDER`` is how an absent declaration is spelled for a fact the\n*match* carries rather than the profile.\n\nIt is on the match and not on the profile because it is a joint fact: whether\n*this* match qualifies for *this* player's ladder is resolved by the assembler\nthat can see both, and an engine given the two halves separately would be the\nsecond implementation of that resolution.\n\n**Borrowed vocabulary with no owner yet.** Ladders are not a modelled context\nand the word is not in the shared glossary; this reads it, the way it reads a\nseat's state, and whichever context ends up owning ladders will define it."
       },
       "LevelResponse": {
         "properties": {
@@ -1337,6 +1536,45 @@
         ],
         "title": "MatchCardResponse",
         "description": "A match card: the spine every phone draws, and the situation half."
+      },
+      "MatchTypePayload": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "const": "match_type",
+            "title": "Code",
+            "default": "match_type"
+          },
+          "counted": {
+            "type": "boolean",
+            "title": "Counted"
+          },
+          "preference": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MatchTypePreference"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "counted"
+        ],
+        "title": "MatchTypePayload",
+        "description": "Whether the match is counted, and what she asked for.\n\n``preference`` is the enum and not a rendered word, for the same reason\n``counted`` is a bool: *\"a friendly, and you asked for counted matches\"* is a\nsentence the client owns, assembled from two machine values."
+      },
+      "MatchTypePreference": {
+        "type": "string",
+        "enum": [
+          "competitive",
+          "social"
+        ],
+        "title": "MatchTypePreference",
+        "description": "Whether the player declared for **counted** matches or for social ones.\n\nThe glossary's *competitive or social*, and it is **read rather than assumed**:\nthe source design hard-coded a preference for counted matches, which is the\nsame fact invented a second time and invented wrongly for everybody who signed\nup to hit balls with friends.\n\n**Absence is not a member.** A player who declared nothing has no match-type\nproblem, and that is spelled as ``None`` on the profile, the way every other\ndeclaration spells it. An ``EITHER`` member would make *undeclared* into a\ndeclaration and would put the constraint rule's decision inside the enum,\nwhere a term reading it could not tell a stated indifference from a silence."
       },
       "MoneyResponse": {
         "properties": {
@@ -1511,6 +1749,37 @@
         ],
         "title": "PlaceResponse",
         "description": "Where: the club, its IANA zone, whether there is a roof, and how far."
+      },
+      "PricePayload": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "const": "price",
+            "title": "Code",
+            "default": "price"
+          },
+          "payable": {
+            "type": "integer",
+            "title": "Payable"
+          },
+          "ceiling": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ceiling"
+          }
+        },
+        "type": "object",
+        "required": [
+          "payable"
+        ],
+        "title": "PricePayload",
+        "description": "What she owes for the seat, and the ceiling she declared, both in grosze.\n\n``ceiling`` is absent when she declared none, which is what a client needs in\norder to say *\"38 z\u0142\"* rather than *\"38 z\u0142, under your ceiling\"* \u2014 the second\nsentence is a claim about a declaration that does not exist."
       },
       "QuestionResponse": {
         "properties": {
@@ -1692,6 +1961,36 @@
         ],
         "title": "RefundResponse",
         "description": "What a cancellation returns, and where it went.\n\nThe destination fixes the tense, so it crosses rather than being derived\nfrom the cause on the phone: a card refund is never claimed to have landed,\nand a club credit is definite because it genuinely is instant."
+      },
+      "ReliabilityPayload": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "const": "group_reliability",
+            "title": "Code",
+            "default": "group_reliability"
+          },
+          "least_reliable": {
+            "type": "number",
+            "title": "Least Reliable"
+          },
+          "observed": {
+            "type": "integer",
+            "title": "Observed"
+          },
+          "seated": {
+            "type": "integer",
+            "title": "Seated"
+          }
+        },
+        "type": "object",
+        "required": [
+          "least_reliable",
+          "observed",
+          "seated"
+        ],
+        "title": "ReliabilityPayload",
+        "description": "The reliability the term scored on, and how many records it read.\n\n``observed`` against ``seated`` is the difference between *\"this group turns\nup\"* and *\"one of these four has a record and the rest are strangers\"*, which\nthe term's value alone cannot separate."
       },
       "ResultResponse": {
         "properties": {
@@ -2158,6 +2457,46 @@
         "title": "SituationHalfResponse",
         "description": "The half a client reads only when it knows the name.\n\nA phone that does not recognise ``situation`` draws the spine and omits the\nstatus line. It never skips the card, and it never asks the server for a\ncompatibility map: losing the sentence loses exactly the thing that is\nactually missing."
       },
+      "SkillOverlapPayload": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "const": "skill_overlap",
+            "title": "Code",
+            "default": "skill_overlap"
+          },
+          "level": {
+            "type": "number",
+            "title": "Level"
+          },
+          "target": {
+            "type": "number",
+            "title": "Target"
+          },
+          "band_half_width": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Band Half Width"
+          },
+          "side": {
+            "$ref": "#/components/schemas/FitSide"
+          }
+        },
+        "type": "object",
+        "required": [
+          "level",
+          "target",
+          "side"
+        ],
+        "title": "SkillOverlapPayload",
+        "description": "Her Level, the Level this match is aimed at, and which side she is on.\n\n``band_half_width`` is **which of the two answers the target came from**,\ncarried as the quantity rather than as a label: absent means the target is\nthe exact *seat target*, present means it is the midpoint of a band that wide\neither side. So a client writes *\"this seat is aimed at 3,10\"* or *\"this\nmatch is aimed at 2,60\u20133,60\"* from one payload.\n\n``side`` is the delta's *\"which side a skill mismatch fell on\"*. The term is\nsymmetric \u2014 a Level too strong and a Level too weak are both *not the match\nyou belong in* \u2014 so the score cannot say, and *\"you would be the strongest\nhere\"* and *\"you would be stretched\"* are different sentences."
+      },
       "Sport": {
         "type": "string",
         "enum": [
@@ -2262,6 +2601,58 @@
         "title": "TermCode",
         "description": "The stable machine key of every term the engine can emit.\n\nA client renders copy per code and the codes never change, which is what lets\nthe wording of a reason change without a backend release. The enum lists the\nterms that **exist**, and as of the two below it lists all ten of them:\n``matchfit/v1/constants.py``'s ``PENDING_WEIGHTS`` is empty, so there is no\nlonger a code a client could handle and never receive."
       },
+      "TimePayload": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "const": "time_fit",
+            "title": "Code",
+            "default": "time_fit"
+          },
+          "weekday": {
+            "$ref": "#/components/schemas/Weekday"
+          },
+          "minute": {
+            "type": "integer",
+            "title": "Minute"
+          },
+          "days": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Weekday"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Days"
+          },
+          "hours": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/HourWindowResponse"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hours"
+          }
+        },
+        "type": "object",
+        "required": [
+          "weekday",
+          "minute"
+        ],
+        "title": "TimePayload",
+        "description": "When the match starts on the club's clock face, and when she said.\n\nBoth halves in the vocabulary the declaration is made in \u2014 a weekday number\nand a minute of the day \u2014 so the client owns the words and the locale, and\nthe two are the **club's** local day and minute rather than anything read off\na UTC instant.\n\n``days`` and ``hours`` are the declaration itself and are absent when she\nmade none, which is what lets a client say *\"Tuesday 18:30\"* rather than\n*\"Tuesday 18:30, outside the hours you gave\"* to somebody who gave none."
+      },
       "TokenResponse": {
         "properties": {
           "access_token": {
@@ -2307,6 +2698,37 @@
         ],
         "title": "TranscriptEntryResponse",
         "description": "One answered question: the question as it was asked, and what was chosen."
+      },
+      "TravelPayload": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "const": "travel",
+            "title": "Code",
+            "default": "travel"
+          },
+          "minutes": {
+            "type": "integer",
+            "title": "Minutes"
+          },
+          "radius": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Radius"
+          }
+        },
+        "type": "object",
+        "required": [
+          "minutes"
+        ],
+        "title": "TravelPayload",
+        "description": "How far away it is and how far she said she would go, both in minutes."
       },
       "UncertaintyFactorResponse": {
         "properties": {
@@ -2464,6 +2886,59 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "ViabilityPayload": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "const": "match_viability",
+            "title": "Code",
+            "default": "match_viability"
+          },
+          "paid_seats": {
+            "type": "integer",
+            "title": "Paid Seats"
+          },
+          "sold_seats": {
+            "type": "integer",
+            "title": "Sold Seats"
+          },
+          "hold": {
+            "$ref": "#/components/schemas/CourtHold"
+          },
+          "minutes_to_cutoff": {
+            "type": "integer",
+            "title": "Minutes To Cutoff"
+          },
+          "crowding": {
+            "type": "number",
+            "title": "Crowding"
+          }
+        },
+        "type": "object",
+        "required": [
+          "paid_seats",
+          "sold_seats",
+          "hold",
+          "minutes_to_cutoff",
+          "crowding"
+        ],
+        "title": "ViabilityPayload",
+        "description": "The four facts behind *will this match actually be played*.\n\n``paid_seats`` and ``sold_seats`` rather than the fraction between them,\nbecause *three of four* and *seventy-five per cent* are the same number and\nnot the same sentence, and the one a card shows is the first."
+      },
+      "Weekday": {
+        "type": "integer",
+        "enum": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "title": "Weekday",
+        "description": "A day of the week, as a player declares one.\n\nNumbered exactly as ``date.isoweekday()`` numbers them \u2014 Monday 1 through\nSunday 7 \u2014 so a match's local start day maps onto a declaration without a\nsecond convention being invented between the two. The time fit term reads\nthis; nothing in this slice does.\n\n**Not a start of week.** The kernel deliberately has none (``docs/adr/0024``\nleft start-of-week out for want of an owner) and a *set* of days has no first\nelement, so nothing here says which day a week begins on."
       }
     },
     "securitySchemes": {

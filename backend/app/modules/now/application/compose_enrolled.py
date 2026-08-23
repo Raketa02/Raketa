@@ -44,25 +44,22 @@ from app.kernel import (
     Sport,
     Viewer,
     card_clock,
-    court_hold,
     court_named_at,
     filled,
     grosze,
-    held_unpaid,
     hours,
     is_terminal,
     match_end,
     seat_count,
     shifted,
     situation,
-    turned_up,
 )
 
+from app.modules.now.domain.cards import counts_of, hold_note
 from app.modules.now.domain.enrolled import Enrolment, PlayedScore
 from app.modules.now.domain.ports import EnrolledMatches
 from app.modules.now.domain.screen import (
     EnrolledRegion,
-    HoldNote,
     MatchCard,
     Money,
     OwnerExposure,
@@ -70,7 +67,6 @@ from app.modules.now.domain.screen import (
     ScoreLine,
     ScoreSide,
     SeatClaim,
-    SeatCounts,
     SetScore,
     SituationFacts,
     SituationHalf,
@@ -78,7 +74,6 @@ from app.modules.now.domain.screen import (
 )
 from app.modules.now.domain.vocabulary import (
     CANCELLATION_CAUSE_OF,
-    CARD_HOLD_REASON_OF,
     REFUND_DESTINATION_OF,
 )
 
@@ -191,44 +186,15 @@ def _facts(row: Enrolment, *, now: Instant) -> SituationFacts:
     record = row.record
     cause = _cause(record, now)
     return SituationFacts(
-        counts=_counts(record, now=now),
+        counts=counts_of(record, now=now),
         court_total=row.court_total,
-        hold=_hold(record, now=now),
+        hold=hold_note(record, now=now),
         cause=cause,
         court=_court(row, now=now),
         refund=_refund(row, cause=cause),
         owner=_owner(row),
         score=_score(row.score),
         departure=row.departure,
-    )
-
-
-def _counts(record: MatchRecord, *, now: Instant) -> SeatCounts:
-    """Seats paid, seats merely held, and — once it has been played — who came."""
-
-    return SeatCounts(
-        seats=seat_count(record),
-        paid=filled(record),
-        held=held_unpaid(record),
-        turned_up=turned_up(record) if now >= match_end(record) else None,
-    )
-
-
-def _hold(record: MatchRecord, *, now: Instant) -> HoldNote | None:
-    """Why a court is being kept aside, in the five reasons a card names.
-
-    Composed off the ladder every time and never read off ``held_since``: the
-    two disagree for the whole window between a threshold crossing and the next
-    write, and the ladder is the one that is right.
-    """
-
-    hold = court_hold(record, now)
-    reason = CARD_HOLD_REASON_OF[hold.why]
-    if reason is None:
-        return None
-    return HoldNote(
-        reason=reason,
-        age_minutes=None if hold.age is None else int(hold.age),
     )
 
 

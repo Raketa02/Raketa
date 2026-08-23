@@ -38,6 +38,8 @@ from app.application.ports import DomainEventPublisher, DomainEventStore, UnitOf
 from app.bootstrap.events import EventRuntime, get_event_runtime
 from app.core.config import Settings
 from app.engines.assessment import AssessmentEngine
+from app.engines.matchfit.v1 import MatchFitEngineV1
+from app.engines.pairing.v1 import PairingEngineV1
 from app.engines.racketskill.v3 import RacketSkillEngineV3
 from app.infrastructure.clock import SystemClock
 from app.infrastructure.database.unit_of_work import AsyncSqlAlchemyUnitOfWork
@@ -78,22 +80,34 @@ from app.modules.money.infrastructure.event_sourced_ledger_repository import (
 )
 from app.modules.money.infrastructure.seats_through_matches import SeatsThroughMatches
 from app.modules.now.application.compose_enrolled import ComposeEnrolled
+from app.modules.now.application.compose_shelves import ComposeShelves
 from app.modules.now.application.new_arrivals import ComposeNewArrivals
+from app.modules.now.application.scoring import MatchScorer
 from app.modules.now.domain.ports import (
     ArrivalRows,
     ArrivalSets,
+    CityMatches,
+    Commitments,
     EnrolledMatches,
     Levels,
     NewArrivals,
     ParkedRuns,
     RatedSports,
+    Ratings,
+    ScoringContexts,
+    StandbyPlaces,
 )
 from app.modules.now.infrastructure.arrival_sets import InMemoryArrivalSets
+from app.modules.now.infrastructure.city_matches import CityMatchesFromMatches
+from app.modules.now.infrastructure.commitments import CommitmentsFromMatches
 from app.modules.now.infrastructure.enrolled_matches import EnrolledFromMatches
 from app.modules.now.infrastructure.levels import LevelsFromSkillRatings
 from app.modules.now.infrastructure.new_arrivals import ArrivalsFromUsersAndClubs
 from app.modules.now.infrastructure.parked_runs import ParkedRunsFromAssessments
 from app.modules.now.infrastructure.rating_sports import RatedSportsFromSkillRatings
+from app.modules.now.infrastructure.ratings import RatingsFromSkillRatings
+from app.modules.now.infrastructure.scoring_contexts import InMemoryScoringContexts
+from app.modules.now.infrastructure.standby_places import NoStandbyPlaces
 from app.modules.matches.infrastructure.court_holds import (
     CourtHoldsThroughReservations,
 )
@@ -462,6 +476,107 @@ def build_enrolled_matches(
 def build_compose_enrolled(*, enrolled: EnrolledMatches) -> ComposeEnrolled:
     """The enrolled region — chronological, counted in money, one clock a card."""
     return ComposeEnrolled(enrolled=enrolled)
+
+
+def build_ratings(ratings: SkillRatingRepository) -> Ratings:
+    """One player's rating at one sport, in the **engines'** vocabulary.
+
+    A second adapter over the same repository as `build_levels`, and deliberately
+    not one object answering both ports the way `build_arrivals` does: those two
+    are the same eligibility asked at two depths, where these two are two
+    different facts — a card's Level and its quiet marker against an engine's
+    Level, Uncertainty and Confidence. One object would be a class with two
+    unrelated methods that happen to share a constructor.
+    """
+    return RatingsFromSkillRatings(ratings=ratings)
+
+
+def build_city_matches(
+    *,
+    matches: MatchRepository,
+    clubs: ClubRepository,
+    reservations: ReservationRepository,
+    ratings: Ratings,
+    contexts: ScoringContexts,
+) -> CityMatches:
+    """Every suggestible match in the window, and what scoring one needs.
+
+    Five **ports** rather than a session, on the precedent `build_arrivals` set.
+    One is Now's own `Ratings` and not the rating repository, so the one crossing
+    from a stored float μ into the engines' exact ratio happens in a single place
+    for the whole screen.
+
+    The context cache is a collaborator here rather than a decorator above the
+    port, because its key is a fact about the **match**: assembling every context
+    and then discarding it for the copy already held is a cache that saves
+    nothing. ADR-0068 puts the new-arrivals cache the other way round for the
+    complementary reason — its key carries the viewer's city.
+    """
+    return CityMatchesFromMatches(
+        matches=matches,
+        clubs=clubs,
+        reservations=reservations,
+        ratings=ratings,
+        contexts=contexts,
+    )
+
+
+def build_commitments(matches: MatchRepository) -> Commitments:
+    """What the viewer is already doing, as three columns and nothing more."""
+    return CommitmentsFromMatches(matches)
+
+
+def build_standby_places() -> StandbyPlaces:
+    """Which matches the viewer is queued for. **Nowhere records that yet.**
+
+    Takes nothing, because there is nothing to take: standby has no table, no
+    port of its own and no join operation anywhere in the product
+    (`Raketa02/Raketa#81`, `#82`). The rule above it is written, evaluated and
+    tested, and this is the one line that changes the day the store lands.
+    """
+    return NoStandbyPlaces()
+
+
+def build_scoring_contexts() -> ScoringContexts:
+    """The match scoring context cache — **not** per request, like the other one.
+
+    Its whole value is being shared across viewers, so its lifetime is the
+    application's. It takes no clock, because it has no TTL: ADR-0068 keys it
+    `matchId : recordVersion`, so it is never stale and the invalidation is
+    already in the key.
+    """
+    return InMemoryScoringContexts()
+
+
+def build_match_scorer() -> MatchScorer:
+    """Pairing, then Match Fit, on the two **abstractions** and never a version.
+
+    The one place either engine is named, which is what makes swapping
+    `matchfit/v1` for a later lineage — or for an implementation behind HTTP — a
+    line here rather than an edit in the application layer (ADR-0015). The
+    caller runs Pairing and hands the analysis to Match Fit, so the score and the
+    aimed-at Level printed beside it come from one analysis by construction
+    (ADR-0026).
+    """
+    return MatchScorer(pairing=PairingEngineV1(), matchfit=MatchFitEngineV1())
+
+
+def build_compose_shelves(
+    *,
+    city: CityMatches,
+    commitments: Commitments,
+    standby: StandbyPlaces,
+    ratings: Ratings,
+    scorer: MatchScorer,
+) -> ComposeShelves:
+    """Shelves 1 and 2 — the ranked funnel, and the only judged part of Now."""
+    return ComposeShelves(
+        city=city,
+        commitments=commitments,
+        standby=standby,
+        ratings=ratings,
+        scorer=scorer,
+    )
 
 
 # --------------------------------------------------------------------------

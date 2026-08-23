@@ -21,13 +21,32 @@ which is the one failure mode a typecheck cannot reach afterwards.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Annotated, Literal
+from typing import Annotated, Literal, get_args
 from uuid import UUID
 
 from pydantic import BaseModel, Field
 
-from app.engines.fit import TermCode
-from app.kernel import Cause, Cover, Outcome, Situation
+from app.engines.fit import (
+    BalanceFact,
+    FamiliarityFact,
+    LadderFact,
+    MatchTypeFact,
+    PriceFact,
+    ReliabilityFact,
+    SkillOverlapFact,
+    TermCode,
+    TimeFact,
+    TravelFact,
+    ViabilityFact,
+)
+from app.engines.forecast import Certainty
+from app.engines.matchmaking import (
+    CourtHold,
+    LadderQualification,
+    MatchTypePreference,
+    Weekday,
+)
+from app.kernel import Cause, Cover, Outcome, Situation, exhaustive, invariant
 
 from app.modules.now.domain.screen import (
     Block,
@@ -68,6 +87,7 @@ from app.modules.now.domain.vocabulary import (
     CardType,
     Currency,
     DepartureForm,
+    FitSide,
     DoorCode,
     RefundDestination,
     ShelfCode,
@@ -110,22 +130,307 @@ class PlaceResponse(BaseModel):
         )
 
 
+class HourWindowResponse(BaseModel):
+    """One stretch of a clock face a player said she can play, in minutes."""
+
+    start: int
+    end: int
+
+
+class SkillOverlapPayload(BaseModel):
+    """Her Level, the Level this match is aimed at, and which side she is on.
+
+    ``band_half_width`` is **which of the two answers the target came from**,
+    carried as the quantity rather than as a label: absent means the target is
+    the exact *seat target*, present means it is the midpoint of a band that wide
+    either side. So a client writes *"this seat is aimed at 3,10"* or *"this
+    match is aimed at 2,60–3,60"* from one payload.
+
+    ``side`` is the delta's *"which side a skill mismatch fell on"*. The term is
+    symmetric — a Level too strong and a Level too weak are both *not the match
+    you belong in* — so the score cannot say, and *"you would be the strongest
+    here"* and *"you would be stretched"* are different sentences.
+    """
+
+    code: Literal[TermCode.SKILL_OVERLAP] = TermCode.SKILL_OVERLAP
+    level: float
+    target: float
+    band_half_width: float | None = None
+    side: FitSide
+
+
+class BalancePayload(BaseModel):
+    """The forecast this term read, and how sure of it the platform is.
+
+    ``certainty`` crosses so that **suppression stays a presentation decision**:
+    the term scores on the estimate whatever the grade is, and a client that
+    declines to print a LOW forecast can only know to do that if the grade
+    travels with it.
+    """
+
+    code: Literal[TermCode.PREDICTED_BALANCE] = TermCode.PREDICTED_BALANCE
+    estimate: int
+    margin: int
+    certainty: Certainty
+    imputed_seats: int
+
+
+class TimePayload(BaseModel):
+    """When the match starts on the club's clock face, and when she said.
+
+    Both halves in the vocabulary the declaration is made in — a weekday number
+    and a minute of the day — so the client owns the words and the locale, and
+    the two are the **club's** local day and minute rather than anything read off
+    a UTC instant.
+
+    ``days`` and ``hours`` are the declaration itself and are absent when she
+    made none, which is what lets a client say *"Tuesday 18:30"* rather than
+    *"Tuesday 18:30, outside the hours you gave"* to somebody who gave none.
+    """
+
+    code: Literal[TermCode.TIME_FIT] = TermCode.TIME_FIT
+    weekday: Weekday
+    minute: int
+    days: list[Weekday] | None = None
+    hours: list[HourWindowResponse] | None = None
+
+
+class ViabilityPayload(BaseModel):
+    """The four facts behind *will this match actually be played*.
+
+    ``paid_seats`` and ``sold_seats`` rather than the fraction between them,
+    because *three of four* and *seventy-five per cent* are the same number and
+    not the same sentence, and the one a card shows is the first.
+    """
+
+    code: Literal[TermCode.MATCH_VIABILITY] = TermCode.MATCH_VIABILITY
+    paid_seats: int
+    sold_seats: int
+    hold: CourtHold
+    minutes_to_cutoff: int
+    crowding: float
+
+
+class PricePayload(BaseModel):
+    """What she owes for the seat, and the ceiling she declared, both in grosze.
+
+    ``ceiling`` is absent when she declared none, which is what a client needs in
+    order to say *"38 zł"* rather than *"38 zł, under your ceiling"* — the second
+    sentence is a claim about a declaration that does not exist.
+    """
+
+    code: Literal[TermCode.PRICE] = TermCode.PRICE
+    payable: int
+    ceiling: int | None = None
+
+
+class TravelPayload(BaseModel):
+    """How far away it is and how far she said she would go, both in minutes."""
+
+    code: Literal[TermCode.TRAVEL] = TermCode.TRAVEL
+    minutes: int
+    radius: int | None = None
+
+
+class MatchTypePayload(BaseModel):
+    """Whether the match is counted, and what she asked for.
+
+    ``preference`` is the enum and not a rendered word, for the same reason
+    ``counted`` is a bool: *"a friendly, and you asked for counted matches"* is a
+    sentence the client owns, assembled from two machine values.
+    """
+
+    code: Literal[TermCode.MATCH_TYPE] = TermCode.MATCH_TYPE
+    counted: bool
+    preference: MatchTypePreference | None = None
+
+
+class LadderPayload(BaseModel):
+    """Which of the three ladder states this match is in for her."""
+
+    code: Literal[TermCode.LADDER_QUALIFICATION] = TermCode.LADDER_QUALIFICATION
+    qualification: LadderQualification
+
+
+class ReliabilityPayload(BaseModel):
+    """The reliability the term scored on, and how many records it read.
+
+    ``observed`` against ``seated`` is the difference between *"this group turns
+    up"* and *"one of these four has a record and the rest are strangers"*, which
+    the term's value alone cannot separate.
+    """
+
+    code: Literal[TermCode.GROUP_RELIABILITY] = TermCode.GROUP_RELIABILITY
+    least_reliable: float
+    observed: int
+    seated: int
+
+
+class FamiliarityPayload(BaseModel):
+    """How many of the others are new to her, out of how many."""
+
+    code: Literal[TermCode.FAMILIARITY] = TermCode.FAMILIARITY
+    new_faces: int
+    others: int
+
+
+#: What a reason says about itself, in quantities. **One member per term the
+#: engine can emit**, discriminated on the same ``TermCode`` the reason carries.
+#:
+#: All ten are here and two of them cannot be produced today — group reliability
+#: and familiarity are evidence terms whose sources ship dark, so they are
+#: *excluded* rather than scored and an excluded term is never a reason. They are
+#: modelled anyway, and that is the opposite of #98's defect rather than a repeat
+#: of it: ``TermCode`` **already** crosses with all ten names, so a client already
+#: holds ten rows, and the failure mode of leaving two out is a reason with no
+#: payload the day a Player Score arrives — a screen that breaks on new data
+#: rather than a field nobody fills.
+FitReasonPayload = (
+    SkillOverlapPayload
+    | BalancePayload
+    | TimePayload
+    | ViabilityPayload
+    | PricePayload
+    | TravelPayload
+    | MatchTypePayload
+    | LadderPayload
+    | ReliabilityPayload
+    | FamiliarityPayload
+)
+
+FitReasonFact = Annotated[FitReasonPayload, Field(discriminator="code")]
+
+#: Every code the payload union covers, read **off the union itself** rather
+#: than restated. Adding an eleventh ``TermCode`` without a payload class for it
+#: fails at import, which is the only moment anybody would notice.
+_PAYLOAD_CODES = {
+    member.model_fields["code"].default for member in get_args(FitReasonPayload)
+}
+
+invariant(
+    _PAYLOAD_CODES == set(TermCode),
+    "a term the engine can emit has no payload on the wire",
+)
+
+
+def _payload(reason: FitReason) -> FitReasonPayload:
+    """One term's quantities, in the shape its own code discriminates.
+
+    An ``isinstance`` chain closed with ``exhaustive``, so a member added to the
+    engine's ``TermFact`` union is a **type error here** rather than a fall
+    through to a payload it is not. The set comparison above catches the other
+    half of the same mistake — a code with no payload class — and neither guard
+    sees what the other does.
+    """
+
+    fact = reason.fact
+    if isinstance(fact, SkillOverlapFact):
+        return SkillOverlapPayload(
+            level=float(fact.level),
+            target=float(fact.target),
+            band_half_width=(
+                None if fact.band_half_width is None else float(fact.band_half_width)
+            ),
+            # Read off the domain reason, whose ``side`` is derived from the two
+            # Levels the term scored on. Recomputing the comparison here would
+            # be the second implementation of one subtraction's sign.
+            side=reason.side or FitSide.EVEN,
+        )
+    if isinstance(fact, BalanceFact):
+        return BalancePayload(
+            estimate=fact.estimate,
+            margin=fact.margin,
+            certainty=fact.certainty,
+            imputed_seats=fact.imputed_seats,
+        )
+    if isinstance(fact, TimeFact):
+        return TimePayload(
+            weekday=fact.weekday,
+            minute=int(fact.minute),
+            days=(
+                None
+                if fact.days is None
+                else sorted(fact.days, key=lambda day: day.value)
+            ),
+            hours=(
+                None
+                if fact.hours is None
+                else [
+                    HourWindowResponse(start=int(one.start), end=int(one.end))
+                    for one in fact.hours
+                ]
+            ),
+        )
+    if isinstance(fact, ViabilityFact):
+        return ViabilityPayload(
+            paid_seats=fact.paid_seats,
+            sold_seats=fact.sold_seats,
+            hold=fact.hold,
+            minutes_to_cutoff=int(fact.minutes_to_cutoff),
+            crowding=float(fact.crowding),
+        )
+    if isinstance(fact, PriceFact):
+        return PricePayload(
+            payable=int(fact.payable),
+            ceiling=None if fact.ceiling is None else int(fact.ceiling),
+        )
+    if isinstance(fact, TravelFact):
+        return TravelPayload(
+            minutes=int(fact.minutes),
+            radius=None if fact.radius is None else int(fact.radius),
+        )
+    if isinstance(fact, MatchTypeFact):
+        return MatchTypePayload(counted=fact.counted, preference=fact.preference)
+    if isinstance(fact, LadderFact):
+        return LadderPayload(qualification=fact.qualification)
+    if isinstance(fact, ReliabilityFact):
+        return ReliabilityPayload(
+            least_reliable=float(fact.least_reliable),
+            observed=fact.observed,
+            seated=fact.seated,
+        )
+    if isinstance(fact, FamiliarityFact):
+        return FamiliarityPayload(new_faces=fact.new_faces, others=fact.others)
+    exhaustive(fact)
+
+
 class FitReasonResponse(BaseModel):
-    """One reason behind the badge, as a machine code. No weight, no sentence."""
+    """One reason behind the badge: a code, its quantities, and no sentence.
+
+    **No weight, no value and no contribution.** All three are the engine's
+    arithmetic and a player cannot act on any of them; a number that ranks is
+    not a number that explains. What crosses is the term's own payload in the
+    units the kernel keeps them in — grosze, minutes, exact ratios as decimals,
+    a weekday, a Level — and the client writes the sentence.
+
+    The specification had ``reasons: string[]``, three sentences the server
+    wrote. That was the single precedent for server-held copy anywhere in this
+    contract, and the two clients do not share a shape, a language or a currency
+    symbol.
+    """
 
     code: TermCode
+    fact: FitReasonFact
 
     @classmethod
     def from_domain(cls, reason: FitReason) -> "FitReasonResponse":
-        return cls(code=reason.code)
+        return cls(code=reason.code, fact=_payload(reason))
 
 
 class FitResponse(BaseModel):
-    """The badge and up to three reasons. Coverage is not here and never is."""
+    """The badge, up to three reasons, and the aim. Coverage is never here.
+
+    ``target`` is the Level this match is aimed at and crosses **only when it is
+    precise** — the seat target, which exists only while exactly one seat is
+    open. A target *band* is nearly always the viewer's own band restated, so
+    printing it would be the card telling her what she already knows in the voice
+    of a measurement.
+    """
 
     score: int = Field(ge=20, le=99)
     unsure: bool
     reasons: list[FitReasonResponse]
+    target: float | None = None
 
     @classmethod
     def from_domain(cls, fit: Fit) -> "FitResponse":
@@ -133,6 +438,7 @@ class FitResponse(BaseModel):
             score=fit.score,
             unsure=fit.unsure,
             reasons=[FitReasonResponse.from_domain(r) for r in fit.reasons],
+            target=fit.target,
         )
 
 

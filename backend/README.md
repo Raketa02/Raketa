@@ -594,6 +594,91 @@ The rating is asked **by pair** — `RatedSports.holds`, over the rating context
 being drawn**. A named chip is the busiest path on the sport bar and pays one lookup for
 the door rather than a replay of every rating she holds.
 
+#### The ranked funnel: *Best fit for you* and *Full, but worth waiting for*
+
+| Shelf | Holds | Floor | Cap | Seat rule |
+|---|---|---|---|---|
+| `bestFit` / `sameLevel` | open matches the viewer could join | **70** (none when retitled) | **6** | `HasFreeSeat` |
+| `fullWorthWaiting` | full future matches | **80** | **3** | `IsFull` |
+
+**One pipeline, two shelves**: retrieve → eligibility → score → floor → `FEED_ORDER` →
+diversity → cap. What separates them is one eligibility rule, one floor and one cap, which
+is ADR-0051's *a lane is data, not a branch*. They may **never** be merged into one ordered
+list — a full match outranks the joinable version of itself, because being full is the
+strongest available evidence the match will be played and viability is the one term that
+can never be excluded, so the merged list would be topped by matches nobody can join.
+
+**Eligibility is exhaustive.** `exclusions()` answers the set of rules a candidate
+*failed*, not a boolean, so nothing can be written as a chain that stops at the first
+`False` — and the operational difference between *seven of them already full* and *seven of
+them already mine* survives. The eight common rules are `NotAlreadyMine`, `StartsInFuture`,
+`BeforeJoinCutoff`, `NotCancelled`, `SportMatchesFilter`, `NoScheduleConflict`,
+`NotSuppressed` and `NotOnStandby`. `WithinTravelCeiling` is in **neither** set: travel is
+a weight-8 term that never excludes at any distance. `NotSuppressed` is a v2 slot that
+**runs and passes** rather than one waiting to be added, and `NotOnStandby` tests against a
+port that answers empty for every player, because standby has no store anywhere in the
+product yet (`Raketa02/Raketa#81`, `#82`).
+
+**`FEED_ORDER` is `[desc(fit), asc(start), asc(dist), asc(id)]`**, the total base order,
+with every later pass a named delta over it. The fourth comparator is not decoration:
+without a guaranteed-total final key the order falls back on retrieval order, which is the
+query plan, and two identical requests reshuffle the shelf under the player's thumb. An
+unknown distance — which is every viewer's today — sorts **last** rather than first.
+
+**Diversity defers and never drops.** At most two cards from one club in one hour sit
+together; the third goes to the back of the shelf. The prototype dropped it, and could
+return fewer than the cap with cards still waiting.
+
+**Shelf 1 never goes silent.** When nothing clears 70 it keeps its cards, drops its floor
+and becomes `sameLevel`. That is what makes a floor affordable at all: an unfillable shelf
+is *absent* rather than empty, so no card claims the city is empty.
+
+**One cache, and it cannot be stale.** The *match scoring context* — the record, the club's
+facts, its saturation and the seated players' ratings — is everything that is expensive
+*and* the same for everybody looking at that match, filed under `matchId : recordVersion`.
+A seat payment bumps the version and the next ask files under a key nobody wrote, so there
+is no TTL, no reverse index and no `forget`. Every viewer-relative fact stays outside it.
+
+It sits **behind** the retrieval port and not in front of it, which is the opposite of where
+ADR-0068 puts the new-arrivals cache — and that ADR's own line is the reason: *"the key is a
+fact about the viewer and the port's question is not."* That holds for a set filed under a
+city and inverts for a context filed under a match, and it is not a stylistic choice — above
+the port the adapter would run every reservation query and every rating replay and the
+composer would then discard the result for the copy already held, which is a cache that
+saves nothing at all. Asked before anything expensive happens, a warm screen pays the club
+lookup and stops.
+
+**There is no player feed cache** (ADR-0068): every ask pays the full funnel, because that
+was the only store on this screen keyed on the person asking.
+
+**Travel is a sentinel and crowding is computed**, and the asymmetry is the point.
+`ClubSnapshot` requires both with no default. Travel is a *constraint* term, so an
+undeclared radius is genuinely no limit and the term scores full marks whatever the minutes
+are — and no player can declare a radius, because the preferences editor has no screen and
+no contract (`#105`). So the sentinel provably moves no score and no order, which is
+asserted as a property rather than argued. It **may rank and may never be printed**: a
+travel *reason* is withheld from the badge, since *"20 minutes away"* drawn from a sentinel
+is a claim about a journey nobody measured. Crowding is *evidence* and multiplies straight
+into the score, so it is a real query — the club's live courts against the reservations
+touching the match's window, paid once per club and hour.
+
+**Degrade is caught once per screen.** Any engine failure becomes one `Unscorable`; shelf 1
+falls back to soonest-first with no badge under the `sameLevel` code — the thin-week
+fallback, so the degraded screen is one players have already seen — and shelf 2 is dropped,
+because an 80 floor with no scorer is not a claim we can make. **No degrade marker crosses
+the wire**: a flag would be a fact about our infrastructure printed on a player's home
+screen.
+
+**The badge** always carries a number clamped to 20–99 at display time, up to three reasons
+as term codes with their **typed fact payloads**, a warning boolean read off the engine's
+own threshold, and the aimed-at Level **only when it is precise** — the seat target, which
+exists while exactly one seat is open. Coverage never crosses in any form. The badge is
+withheld entirely from a viewer with no rating at that sport, and her list is still ranked
+by the score.
+
+**Nothing is random.** No seed, no draw, nothing recorded for replay — asserted by a walk
+over the feature's own source with a negative control.
+
 #### *New on Raketa* and *New clubs*
 
 | Shelf | Holds | Window | Cap | Floor | Order |

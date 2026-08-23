@@ -17,10 +17,12 @@ from __future__ import annotations
 from typing import Mapping, Protocol, Sequence, runtime_checkable
 from uuid import UUID
 
+from app.engines.matchmaking import Occupant
 from app.kernel import Instant, Sport
 
 from app.modules.now.domain.arrivals import ArrivalKey, NewClub, NewPlayer
 from app.modules.now.domain.enrolled import Enrolment
+from app.modules.now.domain.funnel import MatchScoringContext
 from app.modules.now.domain.screen import Level
 
 
@@ -38,8 +40,7 @@ class RatedSports(Protocol):
     and a list would invite one.
     """
 
-    async def for_player(self, player_id: UUID) -> frozenset[Sport]:
-        ...
+    async def for_player(self, player_id: UUID) -> frozenset[Sport]: ...
 
     async def holds(self, *, player_id: UUID, sport: Sport) -> bool:
         """Whether this player holds a rating at **one** sport.
@@ -201,4 +202,126 @@ class ArrivalSets(Protocol):
 
     async def put(self, key: ArrivalKey, ids: tuple[UUID, ...]) -> None:
         """Store a set under a key, replacing whatever was there."""
+        ...
+
+
+@runtime_checkable
+class CityMatches(Protocol):
+    """The matches a viewer could be shown, and everything scoring one needs.
+
+    **Retrieval, and the whole of it.** The delta's stage ① is *index only* —
+    predicates a database can answer, high recall, low precision — so this port
+    takes a window and a sport filter and nothing about the viewer at all. Every
+    judgement about *this* player is eligibility's and scoring's, one layer up,
+    where it can be exercised without a database.
+
+    What comes back is the **scoring context**, not the match: the club's
+    saturation and the seated players' ratings are the expensive half, they are
+    the same for everybody looking at the match, and ADR-0068 files them under
+    ``matchId : recordVersion``. **The cache is behind this port**, which is the
+    opposite of where that ADR puts the new-arrivals one — and its own line is
+    why: *"the key is a fact about the viewer and the port's question is not"*
+    holds there and inverts here, because this key carries nothing about the
+    asker. Above the port it would mean building every context and then throwing
+    it away for the copy already held.
+    """
+
+    async def contexts(
+        self, *, sports: frozenset[Sport], window_from: Instant, window_to: Instant
+    ) -> tuple[MatchScoringContext, ...]:
+        """Contexts for every match in the window, in any order.
+
+        Silently short on a club this read cannot see, the way ``ArrivalRows``
+        is: a candidate whose venue is unknown could only become a card naming a
+        place it cannot name.
+        """
+        ...
+
+
+@runtime_checkable
+class ScoringContexts(Protocol):
+    """The context cache: one entry per ``matchId : recordVersion``.
+
+    **Never stale, and that is a property of the key rather than of a policy.**
+    A seat payment bumps the match's version, so the next ask files under a key
+    that was never written and pays a real read. There is no TTL, no reverse
+    index and no ``forget`` — the invalidation ADR-0068 asks for is the version
+    already in the key.
+
+    It is the one cache on this screen that can be *asked for the whole batch*,
+    because retrieval knows every candidate's version before it needs any
+    context: ``known`` is one call for a screen rather than one per card, and it
+    is asked **before** anything expensive happens — a warm ask pays no
+    reservation query and no rating replay at all.
+    """
+
+    async def known(
+        self, keys: Sequence[tuple[UUID, int]]
+    ) -> Mapping[tuple[UUID, int], MatchScoringContext]:
+        """Whatever of these is already held. Absent keys are simply missing."""
+        ...
+
+    async def remember(self, contexts: Sequence[MatchScoringContext]) -> None:
+        """File each context under its own match and version."""
+        ...
+
+
+@runtime_checkable
+class Commitments(Protocol):
+    """What the viewer is already doing — the two facts eligibility reads.
+
+    Her own matches as *identity* and as *hours*, which are two different rules:
+    ``NotAlreadyMine`` keeps a match she has left off the shelf, and
+    ``NoScheduleConflict`` keeps a different match at the same hour off it. A
+    match she left is hers by the first and its hours are hers by the second.
+
+    A second port beside ``EnrolledMatches`` rather than a widening of it, on the
+    membership-against-row split ADR-0068 already draws twice: that one answers
+    *what a card prints* and pays five contexts for it, and this one answers
+    three columns. The cost is stated rather than hidden — a compose reads her
+    own matches twice — and it is the cheaper of the two reads, over a set
+    bounded by a player's own diary.
+    """
+
+    async def held_by(
+        self, player_id: UUID
+    ) -> tuple[tuple[UUID, Instant, Instant], ...]:
+        """``(match_id, start, end)`` for every match she holds or has left."""
+        ...
+
+
+@runtime_checkable
+class StandbyPlaces(Protocol):
+    """Which matches this viewer is queued for. **Ships dark.**
+
+    ``NotOnStandby`` is one of the delta's eight common rules and it needs a set
+    to test against. Standby has no store anywhere in the product — the queue is
+    a membership the departure cascade will create (``Raketa02/Raketa#81``,
+    ``#82``) — so today every answer is empty and the rule passes for every
+    candidate.
+
+    It is a **port with an empty answer** rather than a rule left out, because
+    the two are different the day the store lands: a missing rule is a screen
+    suggesting a player the match she is already queued for, found by somebody
+    reading the pipeline, and an empty port is one line in the composition root.
+    """
+
+    async def for_player(self, player_id: UUID) -> frozenset[UUID]:
+        """Empty for every player today, and honestly so."""
+        ...
+
+
+@runtime_checkable
+class Ratings(Protocol):
+    """One player's rating at one sport, in the engines' own vocabulary.
+
+    Distinct from ``Levels``, which answers the **card's** Level and its quiet
+    marker: this answers the *engine's* ``Occupant`` — a Level, an Uncertainty
+    and a Confidence arriving together or not at all — because a forecast reads
+    σ and a card never does. Two shapes of one stored fact, and neither is
+    derivable from the other without inventing the half it drops.
+    """
+
+    async def occupant(self, *, player_id: UUID, sport: Sport) -> Occupant | None:
+        """Her rating at that sport, or nothing at all."""
         ...

@@ -1072,6 +1072,46 @@ about it. Decided by [ADR-0070](docs/adr/0070-now-is-three-regions-and-a-card-ha
   **Identified by the thing it is about**, never by its position or by the shelf it sits in —
   one match may appear on more than one shelf, and under thing identity one answer corrects
   every copy of it.
+- **Best fit for you** / **Same level** — the shelf of **open matches the viewer could
+  join**, ranked. Floor **70**, cap **6**. It **never goes silent**: when nothing clears the
+  floor it keeps its cards, drops the floor and is retitled *Same level*, which is what makes
+  a floor affordable at all — an unfillable shelf is *absent* rather than empty, so no card
+  claims the city is empty. The two are one shelf with two codes, and the client's table turns
+  each into its title.
+- **Full, but worth waiting for** — the shelf of **full future matches**. Floor **80**, cap
+  **3**, and **absent** whenever nothing clears the floor, because *wait for this* is a claim
+  that cannot be softened: asking somebody to wait is a bigger ask than asking her to join.
+  It can never be merged with the shelf above into one ordered list — being full is the
+  strongest available evidence a match will be played, so a full match **outranks the joinable
+  version of itself** and the merged list would be topped by matches nobody can join.
+- **Eligibility** — the rules a match must pass to be *suggested* to one player: not already
+  hers, in the future, before the join cutoff, not cancelled, in the sport she asked for, not
+  clashing with a match she already holds, not suppressed, not one she is queued for, plus the
+  shelf's own seat rule. **Every rule is evaluated for every candidate** and the answer is the
+  set that failed — *seven of them were already full* and *seven of them clash with her
+  Thursday* are different stories about a thin screen, and a chain that stopped at the first
+  failure would throw the difference away. **How far away it is, is not one of them**: travel
+  is a term that scores, never a wall.
+- **Feed order** — the total base order every ranked shelf is in before any other pass:
+  **best fit, then soonest, then nearest, then by identifier**. The last is not decoration —
+  without an order that can never tie, two identical asks come back in whatever order the
+  database happened to answer, and the shelf reshuffles under her thumb. Every pass above it
+  is a **named delta**, so *why is this card third* has one answer.
+- **Diversity** — the pass that stops one club's Tuesday evening filling a shelf: at most two
+  of its cards sit together and the rest go to the **back of the shelf**, never out of it. A
+  variety rule that also shortened the shelf would be taking a card away twice.
+- **Fit badge** — the number on a suggested card, always printed, **clamped to 20–99** at
+  display: a 3 is not more useful than a 20 — both mean no — and never 100, because certainty
+  is never warranted. Up to **three reasons** ride behind it as machine codes with the
+  **quantities** each was scored from, never sentences and never weights, so the words are the
+  client's. An unsure estimate becomes a **warning and never a percentage**. **Coverage is
+  never a number the player sees.** The badge is **withheld entirely** from a viewer the
+  platform cannot place at that sport — her list is still ranked by the score, and only the
+  claim is withheld.
+- **Aimed at** — the Level a match is looking for, printed on a card **only when it is
+  precise**: the exact Level that would even the match, which exists only while one seat is
+  open. The blunter answer — a band — is nearly always the viewer's own band restated, and
+  printing it is the app telling her what she already knows in the voice of a measurement.
 - **New on Raketa** — the shelf of **people** who joined in the last 30 days and hold a rating
   at the selected sport. Ordered by **closeness to the viewer's own Level, never descending**:
   descending makes it a leaderboard, telling every new player where they rank on the home

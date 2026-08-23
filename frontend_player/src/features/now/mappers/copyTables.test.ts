@@ -36,7 +36,19 @@ import {
   shelfTitle,
   situationCopy,
 } from '../types';
-import type { SituationContext, Tag, Tone } from '../types';
+import type { FitReason, SituationContext, Tag, Tone } from '../types';
+
+/**
+ * A reason as it now crosses: a code **and** its typed fact payload.
+ *
+ * `Raketa02/Raketa#75` put the quantities beside the code, so the table's
+ * entries take the whole reason rather than the code alone — which is the shape
+ * they were already written in. Drawing them is `#88`'s; what this file needs is
+ * a payload that satisfies the contract, and the travel term's is the smallest
+ * one there is.
+ */
+const aReason = (code: string): FitReason =>
+  ({ code, fact: { code: 'travel', minutes: 20, radius: null } }) as FitReason;
 
 import type { ActCode, AssertTrue, CaptionCode, CardHoldReason, IsClosedUnion } from './codes';
 import type { DoorCode, ShelfCode, Situation, SituationFacts, TermCode } from './codes';
@@ -302,7 +314,7 @@ describe('a name this build has never heard of costs one sentence and nothing el
   });
 
   it('returns nothing for an unknown term, shelf, caption or hold reason', () => {
-    expect(fitReasonSentence({ code: 'coverage' as TermCode })).toBeUndefined();
+    expect(fitReasonSentence(aReason('coverage'))).toBeUndefined();
     expect(shelfTitle('somethingNew')).toBeUndefined();
     expect(findPreFilter('somethingNew', 'all')).toBeUndefined();
     expect(captionCopy('somethingNew')).toBeUndefined();
@@ -344,7 +356,7 @@ describe('acts, shelves, fit reasons and captions', () => {
   });
 
   it.each(TERM_CODES)('%s reads as a reason a player could act on', (code) => {
-    expect(fitReasonSentence({ code })?.trim().length).toBeGreaterThan(0);
+    expect(fitReasonSentence(aReason(code))?.trim().length).toBeGreaterThan(0);
   });
 
   it('warns rather than printing a number when the estimate is unsure', () => {

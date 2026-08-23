@@ -7,9 +7,14 @@ about a single instant rather than three regions that half-disagree.
 **Regions are filled one ticket at a time and the envelope never moves.** The
 route shipped with all three empty so the client could compile against it; what
 is real here today is the shape of the answer, the resolution of ``all``, the
-stamps, **the enrolled strip** and **shelves 4 and 5** — the parts that do not
-run through the ranked funnel and therefore do not wait on it. The offers region
-is the cascade's (``Raketa02/Raketa#83``).
+stamps, **the enrolled strip**, **the ranked shelves** and **shelves 4 and 5**.
+The offers region is the cascade's (``Raketa02/Raketa#83``).
+
+**The shelves are emitted in the server's fixed order** and nothing about that
+order is a fact about the viewer: the ranked pair first, then the two arrival
+shelves, with the door taking the ranked pair's position when she holds no
+rating at the sport she named. ADR-0070 put shelf presence and shelf order on the
+server precisely so both can move without a client release.
 
 **Every ask pays the full funnel.** There is no player feed cache — it was the
 answer to a load shape that no longer exists, and it is the only place on this
@@ -28,6 +33,7 @@ from app.kernel import Clock, Instant, Sport
 
 from app.modules.now.application.commands import ComposeNowQuery
 from app.modules.now.application.compose_enrolled import ComposeEnrolled
+from app.modules.now.application.compose_shelves import ComposeShelves
 from app.modules.now.application.new_arrivals import ComposeNewArrivals
 from app.modules.now.domain.ports import ParkedRuns, RatedSports
 from app.modules.now.domain.screen import (
@@ -76,12 +82,14 @@ class ComposeNow:
         rated_sports: RatedSports,
         parked_runs: ParkedRuns,
         new_arrivals: ComposeNewArrivals,
+        shelves: ComposeShelves,
         enrolled: ComposeEnrolled,
         clock: Clock,
     ) -> None:
         self._rated_sports = rated_sports
         self._parked_runs = parked_runs
         self._new_arrivals = new_arrivals
+        self._shelves = shelves
         self._enrolled = enrolled
         self._clock = clock
 
@@ -178,21 +186,31 @@ class ComposeNow:
         stamp: Stamp,
         door: Door | None,
     ) -> tuple[Block, ...]:
-        """The shelves list: the door where the ranked shelves would be, then them.
+        """The server's fixed order: the ranked pair, then the two arrival shelves.
 
-        The ranked shelves are not built yet (#75), so the server's fixed order is
-        satisfied here by the door and the only two shelves there are. **The door
-        occupies their position rather than sitting above them**, which is the
-        distinction that matters the day they land: a door means those two shelves
-        are *absent*, not empty and not beneath it — a player with no rating at
+        **The door takes the ranked shelves' position rather than sitting above
+        them**, and that is the distinction that matters now they exist: a door
+        means *Best fit for you* / *Same level* and *Full, but worth waiting for*
+        are **absent**, not empty and not beneath it — a player with no rating at
         squash cannot be ranked against squash matches, so there is nothing for
-        them to hold. The order itself is composition's (#77).
+        them to hold. The door and the ranked pair are therefore alternatives and
+        never neighbours, which is what makes composing the ranked pair
+        unconditional here safe: ``ComposeShelves`` answers nothing at all for a
+        sport she cannot be ranked at, so the two can never both appear.
 
         *New on Raketa* and *New clubs* compose either way, and under a door that
         is the point rather than a leftover: the clubs are the argument for
         spending the two minutes, so they belong under the ask.
+
+        **Composition's own passes — the repeat guard and emphasis — are not
+        here.** Both read across shelves rather than within one, so they run over
+        this list once it exists (``Raketa02/Raketa#77``), which is the same
+        argument ADR-0032 makes for order and ADR-0037 for emphasis.
         """
 
+        ranked = await self._shelves.compose(
+            viewer=query.player_id, sports=sports, now=now, stamp=stamp
+        )
         arrivals = await self._new_arrivals.compose(
             viewer=query.player_id,
             sports=sports,
@@ -204,6 +222,6 @@ class ComposeNow:
             # whole change.
             city=None,
         )
-        if door is None:
-            return arrivals
-        return (door, *arrivals)
+        if door is not None:
+            return (door, *arrivals)
+        return (*ranked, *arrivals)

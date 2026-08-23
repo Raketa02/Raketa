@@ -1,7 +1,11 @@
 from fastapi import FastAPI
 
 from app.api.v1.router import api_router
-from app.bootstrap.composition import build_arrival_sets, build_clock
+from app.bootstrap.composition import (
+    build_arrival_sets,
+    build_clock,
+    build_scoring_contexts,
+)
 from app.bootstrap.events import get_event_runtime
 from app.core.config import Environment, Settings, get_settings
 from app.core.exception_handlers import register_exception_handlers
@@ -42,6 +46,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     # process (which is what a test run is) never answer from each other's
     # database. It expires and never invalidates, so there is nothing to reset.
     app.state.arrival_sets = build_arrival_sets(clock=build_clock())
+
+    # The match scoring context cache (ADR-0068), on the same lifetime and for
+    # the same reason — its value is being shared across every viewer looking at
+    # one match. It takes no clock, because it has no TTL: the key is
+    # `matchId : recordVersion`, so an entry is never stale and there is nothing
+    # to expire. It is bounded by size instead, or a match played on Tuesday
+    # would sit in memory until the process restarted.
+    app.state.scoring_contexts = build_scoring_contexts()
 
     register_middleware(app, settings)
     register_exception_handlers(app)

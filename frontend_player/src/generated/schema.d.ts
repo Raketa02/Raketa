@@ -345,6 +345,29 @@ export interface components {
             question?: components["schemas"]["QuestionResponse"] | null;
             result?: components["schemas"]["ResultResponse"] | null;
         };
+        /**
+         * BalancePayload
+         * @description The forecast this term read, and how sure of it the platform is.
+         *
+         *     ``certainty`` crosses so that **suppression stays a presentation decision**:
+         *     the term scores on the estimate whatever the grade is, and a client that
+         *     declines to print a LOW forecast can only know to do that if the grade
+         *     travels with it.
+         */
+        BalancePayload: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            code: "predicted_balance";
+            /** Estimate */
+            estimate: number;
+            /** Margin */
+            margin: number;
+            certainty: components["schemas"]["Certainty"];
+            /** Imputed Seats */
+            imputed_seats: number;
+        };
         /** BandResponse */
         BandResponse: {
             /** Name */
@@ -397,6 +420,17 @@ export interface components {
          */
         Cause: "inventoryLost" | "clubCancelled" | "formCancelled" | "checkpointCancelled" | "settlementReopened";
         /**
+         * Certainty
+         * @description The forecast's grade of its own margin.
+         *
+         *     A statement about the platform's knowledge and never about the players: two
+         *     matches can both be forecast at 78% balanced, one between players it has
+         *     watched for a season and one between two people who answered a questionnaire
+         *     yesterday, and they are not the same claim.
+         * @enum {string}
+         */
+        Certainty: "high" | "moderate" | "low";
+        /**
          * ClubCardResponse
          * @description A club that has just joined. No situation, no clock, no price.
          */
@@ -428,6 +462,28 @@ export interface components {
             /** Sentence */
             sentence: string;
         };
+        /**
+         * CourtHold
+         * @description How firmly a court is held for this match. **Borrowed vocabulary.**
+         *
+         *     The clock's hold ladder (``docs/adr/0021``), in the three rungs a match can be
+         *     on: **none** — no court is held and one has still to be found; **soft** — a
+         *     court is held provisionally and can lapse; **hard** — a court is booked and
+         *     the club has committed it.
+         *
+         *     A ladder and not a bool, for the same reason ``LadderQualification`` is three
+         *     states: *nobody has looked for a court yet* and *a court is held and could
+         *     still be lost* are different facts about whether the match will be played, and
+         *     collapsing them would make the middle rung score like whichever end it was
+         *     folded into.
+         *
+         *     **Borrowed with no owner yet.** Courts are not a modelled context and the hold
+         *     ladder is specified in documents outside this repository, so the spelling is
+         *     fixed *here*, now, and whichever context ends up owning courts will define it —
+         *     the same standing as a seat's state and a ladder qualification.
+         * @enum {string}
+         */
+        CourtHold: "none" | "soft" | "hard";
         /**
          * Cover
          * @description Indoor or outdoor, as a fact about *where* rather than about state.
@@ -609,15 +665,49 @@ export interface components {
             level: number;
         };
         /**
+         * FamiliarityPayload
+         * @description How many of the others are new to her, out of how many.
+         */
+        FamiliarityPayload: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            code: "familiarity";
+            /** New Faces */
+            new_faces: number;
+            /** Others */
+            others: number;
+        };
+        /**
          * FitReasonResponse
-         * @description One reason behind the badge, as a machine code. No weight, no sentence.
+         * @description One reason behind the badge: a code, its quantities, and no sentence.
+         *
+         *     **No weight, no value and no contribution.** All three are the engine's
+         *     arithmetic and a player cannot act on any of them; a number that ranks is
+         *     not a number that explains. What crosses is the term's own payload in the
+         *     units the kernel keeps them in — grosze, minutes, exact ratios as decimals,
+         *     a weekday, a Level — and the client writes the sentence.
+         *
+         *     The specification had ``reasons: string[]``, three sentences the server
+         *     wrote. That was the single precedent for server-held copy anywhere in this
+         *     contract, and the two clients do not share a shape, a language or a currency
+         *     symbol.
          */
         FitReasonResponse: {
             code: components["schemas"]["TermCode"];
+            /** Fact */
+            fact: components["schemas"]["SkillOverlapPayload"] | components["schemas"]["BalancePayload"] | components["schemas"]["TimePayload"] | components["schemas"]["ViabilityPayload"] | components["schemas"]["PricePayload"] | components["schemas"]["TravelPayload"] | components["schemas"]["MatchTypePayload"] | components["schemas"]["LadderPayload"] | components["schemas"]["ReliabilityPayload"] | components["schemas"]["FamiliarityPayload"];
         };
         /**
          * FitResponse
-         * @description The badge and up to three reasons. Coverage is not here and never is.
+         * @description The badge, up to three reasons, and the aim. Coverage is never here.
+         *
+         *     ``target`` is the Level this match is aimed at and crosses **only when it is
+         *     precise** — the seat target, which exists only while exactly one seat is
+         *     open. A target *band* is nearly always the viewer's own band restated, so
+         *     printing it would be the card telling her what she already knows in the voice
+         *     of a measurement.
          */
         FitResponse: {
             /** Score */
@@ -626,7 +716,29 @@ export interface components {
             unsure: boolean;
             /** Reasons */
             reasons: components["schemas"]["FitReasonResponse"][];
+            /** Target */
+            target?: number | null;
         };
+        /**
+         * FitSide
+         * @description Which side of the match's aim the viewer fell on, when she is not on it.
+         *
+         *     *"You would be the strongest here"* and *"you would be stretched"* are
+         *     different sentences, and the badge's largest term already knows which — the
+         *     skill-overlap term is **symmetric**, so its own value cannot say. The delta
+         *     asks for the side to be carried for exactly that reason.
+         *
+         *     It crosses as a code rather than being left for the phone to work out from
+         *     the two Levels beside it. Choosing a sentence from the sign of a subtraction
+         *     is a rule, and the phone holds none (ADR-0053) — the same argument ADR-0084
+         *     makes for the door's two codes.
+         *
+         *     ``EVEN`` is the third member and not a rounding of one of the other two: two
+         *     players at 3,00 is an ordinary state, and a vocabulary with two members would
+         *     have to call it one of them.
+         * @enum {string}
+         */
+        FitSide: "stretched" | "strongest" | "even";
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -645,6 +757,16 @@ export interface components {
             reason: components["schemas"]["CardHoldReason"];
             /** Age Minutes */
             age_minutes?: number | null;
+        };
+        /**
+         * HourWindowResponse
+         * @description One stretch of a clock face a player said she can play, in minutes.
+         */
+        HourWindowResponse: {
+            /** Start */
+            start: number;
+            /** End */
+            end: number;
         };
         /**
          * InProgressAssessmentResponse
@@ -674,6 +796,41 @@ export interface components {
             /** Assessments */
             assessments: components["schemas"]["InProgressAssessmentResponse"][];
         };
+        /**
+         * LadderPayload
+         * @description Which of the three ladder states this match is in for her.
+         */
+        LadderPayload: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            code: "ladder_qualification";
+            qualification: components["schemas"]["LadderQualification"];
+        };
+        /**
+         * LadderQualification
+         * @description Whether this match counts towards the current player's ladder.
+         *
+         *     **Three states rather than a bool**, because *not in a ladder* and *in a
+         *     ladder this match does not count for* are different facts, and a bool
+         *     collapses them into the same low score. Entering a ladder is a declaration —
+         *     it is the player saying which counted matches they are playing for — so a
+         *     player in none has no ladder problem, which is exactly the constraint rule,
+         *     and ``NOT_IN_A_LADDER`` is how an absent declaration is spelled for a fact the
+         *     *match* carries rather than the profile.
+         *
+         *     It is on the match and not on the profile because it is a joint fact: whether
+         *     *this* match qualifies for *this* player's ladder is resolved by the assembler
+         *     that can see both, and an engine given the two halves separately would be the
+         *     second implementation of that resolution.
+         *
+         *     **Borrowed vocabulary with no owner yet.** Ladders are not a modelled context
+         *     and the word is not in the shared glossary; this reads it, the way it reads a
+         *     seat's state, and whichever context ends up owning ladders will define it.
+         * @enum {string}
+         */
+        LadderQualification: "qualifies" | "outside" | "not_in_a_ladder";
         /**
          * LevelResponse
          * @description A Level on the fixed 1,0-5,0 scale, and the quiet marker beside it.
@@ -753,6 +910,41 @@ export interface components {
             seat_claim?: components["schemas"]["SeatClaimResponse"] | null;
             situation: components["schemas"]["SituationHalfResponse"];
         };
+        /**
+         * MatchTypePayload
+         * @description Whether the match is counted, and what she asked for.
+         *
+         *     ``preference`` is the enum and not a rendered word, for the same reason
+         *     ``counted`` is a bool: *"a friendly, and you asked for counted matches"* is a
+         *     sentence the client owns, assembled from two machine values.
+         */
+        MatchTypePayload: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            code: "match_type";
+            /** Counted */
+            counted: boolean;
+            preference?: components["schemas"]["MatchTypePreference"] | null;
+        };
+        /**
+         * MatchTypePreference
+         * @description Whether the player declared for **counted** matches or for social ones.
+         *
+         *     The glossary's *competitive or social*, and it is **read rather than assumed**:
+         *     the source design hard-coded a preference for counted matches, which is the
+         *     same fact invented a second time and invented wrongly for everybody who signed
+         *     up to hit balls with friends.
+         *
+         *     **Absence is not a member.** A player who declared nothing has no match-type
+         *     problem, and that is spelled as ``None`` on the profile, the way every other
+         *     declaration spells it. An ``EITHER`` member would make *undeclared* into a
+         *     declaration and would put the constraint rule's decision inside the enum,
+         *     where a term reading it could not tell a stated indifference from a silence.
+         * @enum {string}
+         */
+        MatchTypePreference: "competitive" | "social";
         /**
          * MoneyResponse
          * @description Integer grosze, with a currency beside it. The comma is the client's.
@@ -849,6 +1041,25 @@ export interface components {
             cover: components["schemas"]["Cover"];
             /** Distance Km */
             distance_km?: number | null;
+        };
+        /**
+         * PricePayload
+         * @description What she owes for the seat, and the ceiling she declared, both in grosze.
+         *
+         *     ``ceiling`` is absent when she declared none, which is what a client needs in
+         *     order to say *"38 zł"* rather than *"38 zł, under your ceiling"* — the second
+         *     sentence is a claim about a declaration that does not exist.
+         */
+        PricePayload: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            code: "price";
+            /** Payable */
+            payable: number;
+            /** Ceiling */
+            ceiling?: number | null;
         };
         /**
          * QuestionResponse
@@ -949,6 +1160,27 @@ export interface components {
         RefundResponse: {
             amount: components["schemas"]["MoneyResponse"];
             destination: components["schemas"]["RefundDestination"];
+        };
+        /**
+         * ReliabilityPayload
+         * @description The reliability the term scored on, and how many records it read.
+         *
+         *     ``observed`` against ``seated`` is the difference between *"this group turns
+         *     up"* and *"one of these four has a record and the rest are strangers"*, which
+         *     the term's value alone cannot separate.
+         */
+        ReliabilityPayload: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            code: "group_reliability";
+            /** Least Reliable */
+            least_reliable: number;
+            /** Observed */
+            observed: number;
+            /** Seated */
+            seated: number;
         };
         /** ResultResponse */
         ResultResponse: {
@@ -1141,6 +1373,35 @@ export interface components {
             facts: components["schemas"]["SituationFactsResponse"];
         };
         /**
+         * SkillOverlapPayload
+         * @description Her Level, the Level this match is aimed at, and which side she is on.
+         *
+         *     ``band_half_width`` is **which of the two answers the target came from**,
+         *     carried as the quantity rather than as a label: absent means the target is
+         *     the exact *seat target*, present means it is the midpoint of a band that wide
+         *     either side. So a client writes *"this seat is aimed at 3,10"* or *"this
+         *     match is aimed at 2,60–3,60"* from one payload.
+         *
+         *     ``side`` is the delta's *"which side a skill mismatch fell on"*. The term is
+         *     symmetric — a Level too strong and a Level too weak are both *not the match
+         *     you belong in* — so the score cannot say, and *"you would be the strongest
+         *     here"* and *"you would be stretched"* are different sentences.
+         */
+        SkillOverlapPayload: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            code: "skill_overlap";
+            /** Level */
+            level: number;
+            /** Target */
+            target: number;
+            /** Band Half Width */
+            band_half_width?: number | null;
+            side: components["schemas"]["FitSide"];
+        };
+        /**
          * Sport
          * @description The four sports Raketa rates, as a closed enum.
          * @enum {string}
@@ -1198,6 +1459,33 @@ export interface components {
          * @enum {string}
          */
         TermCode: "skill_overlap" | "predicted_balance" | "time_fit" | "match_viability" | "group_reliability" | "travel" | "ladder_qualification" | "price" | "match_type" | "familiarity";
+        /**
+         * TimePayload
+         * @description When the match starts on the club's clock face, and when she said.
+         *
+         *     Both halves in the vocabulary the declaration is made in — a weekday number
+         *     and a minute of the day — so the client owns the words and the locale, and
+         *     the two are the **club's** local day and minute rather than anything read off
+         *     a UTC instant.
+         *
+         *     ``days`` and ``hours`` are the declaration itself and are absent when she
+         *     made none, which is what lets a client say *"Tuesday 18:30"* rather than
+         *     *"Tuesday 18:30, outside the hours you gave"* to somebody who gave none.
+         */
+        TimePayload: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            code: "time_fit";
+            weekday: components["schemas"]["Weekday"];
+            /** Minute */
+            minute: number;
+            /** Days */
+            days?: components["schemas"]["Weekday"][] | null;
+            /** Hours */
+            hours?: components["schemas"]["HourWindowResponse"][] | null;
+        };
         /** TokenResponse */
         TokenResponse: {
             /** Access Token */
@@ -1220,6 +1508,21 @@ export interface components {
             question: components["schemas"]["QuestionResponse"];
             /** Option Id */
             option_id: string;
+        };
+        /**
+         * TravelPayload
+         * @description How far away it is and how far she said she would go, both in minutes.
+         */
+        TravelPayload: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            code: "travel";
+            /** Minutes */
+            minutes: number;
+            /** Radius */
+            radius?: number | null;
         };
         /**
          * UncertaintyFactorResponse
@@ -1285,6 +1588,45 @@ export interface components {
             /** Context */
             ctx?: Record<string, never>;
         };
+        /**
+         * ViabilityPayload
+         * @description The four facts behind *will this match actually be played*.
+         *
+         *     ``paid_seats`` and ``sold_seats`` rather than the fraction between them,
+         *     because *three of four* and *seventy-five per cent* are the same number and
+         *     not the same sentence, and the one a card shows is the first.
+         */
+        ViabilityPayload: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            code: "match_viability";
+            /** Paid Seats */
+            paid_seats: number;
+            /** Sold Seats */
+            sold_seats: number;
+            hold: components["schemas"]["CourtHold"];
+            /** Minutes To Cutoff */
+            minutes_to_cutoff: number;
+            /** Crowding */
+            crowding: number;
+        };
+        /**
+         * Weekday
+         * @description A day of the week, as a player declares one.
+         *
+         *     Numbered exactly as ``date.isoweekday()`` numbers them — Monday 1 through
+         *     Sunday 7 — so a match's local start day maps onto a declaration without a
+         *     second convention being invented between the two. The time fit term reads
+         *     this; nothing in this slice does.
+         *
+         *     **Not a start of week.** The kernel deliberately has none (``docs/adr/0024``
+         *     left start-of-week out for want of an owner) and a *set* of days has no first
+         *     element, so nothing here says which day a week begins on.
+         * @enum {integer}
+         */
+        Weekday: 1 | 2 | 3 | 4 | 5 | 6 | 7;
     };
     responses: never;
     parameters: never;

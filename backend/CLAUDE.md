@@ -294,6 +294,44 @@ Rules to preserve:
   exists — ADR-0083's rule is *and a v1 surface can receive it*, and a door that will not
   open is worse than the gap. One consequence to know rather than discover: `playedNoScore`
   begins exactly where the tail ends, so **it never appears on Now**.
+- **The ranked funnel is one pipeline and eligibility is exhaustive.** Shelves 1 and 2 run
+  through retrieve → eligibility → score → floor → `FEED_ORDER` → diversity → cap
+  ([ADR-0051](../docs/adr/0051-now-is-ordered-not-drawn.md), ADR-0036/0037), and the only
+  thing separating them is one rule, one floor and one cap — *a lane is data, not a
+  branch*. They may **never** be merged into one ordered list: a full match outranks the
+  joinable version of itself, so the merged list would be topped by matches nobody can
+  join. `exclusions()` answers the **set of rules a candidate failed**, so *evaluate all,
+  never short-circuit* is the shape rather than a discipline; `WithinTravelCeiling` is in
+  neither set and `NotSuppressed` is a v2 slot that runs and passes. `FEED_ORDER` is
+  `[desc(fit), asc(start), asc(dist), asc(id)]` and its fourth comparator is load-bearing —
+  without a total final key the order is the query plan, and two identical requests
+  reshuffle the shelf under her thumb. **Diversity defers and never drops**; the cap is the
+  only pass that removes a card. Floors 70 and 80, caps 6 and 3 — which is the 23 cards
+  across four lanes both budgets are measured against (ADR-0085). Shelf 1 never goes
+  silent: nothing over 70 **retitles** it to `sameLevel` and drops the floor, and the order
+  does not change with the title, because closeness to her Level is what `desc(fit)`
+  already leads on. **Nothing is random** — no seed, no draw, nothing recorded for replay —
+  and there is **no player feed cache**, both asserted by walks with negative controls.
+- **A snapshot is assembled here and nothing in `app/engines/` moves.** The shipped
+  `matchfit` engine with its ten `TermCode`s is the fixed point (ADR-0036). What is decided
+  on this side of the input contract: the **context cache**, keyed
+  `matchId : recordVersion` and therefore never stale — no TTL, no `forget`, because the
+  invalidation is already in the key — holding only what is expensive *and* viewer-
+  independent, and living **behind** `CityMatches` rather than in front of it, since
+  ADR-0068's *"the key is a fact about the viewer and the port's question is not"* inverts
+  for a key filed under a match, and a cache above the port would build every context and
+  then throw it away for the copy already held; a **travel sentinel** for a player the platform cannot locate
+  (`Raketa02/Raketa#102`, ADR-0063), which is safe only because travel is a **constraint**
+  term and nobody can declare a radius (`#105`), asserted as a property and **withheld from
+  the badge's reasons**, since a number that ranks identically for every candidate is not a
+  number that may be printed; **crowding computed** rather than defaulted, because it is
+  *evidence* and multiplies into the score; and `phase=FORMING` **stated** with the guard it
+  gives up reinstated through `invariant`, since `MATCH_PHASE_OF` calls a full match
+  `LOCKED` and deriving it would make shelf 2 unbuildable. **Both engines are handed a
+  minute-truncated `now`** — they refuse seconds, `SystemClock` reads microseconds, and
+  before the truncation every live compose degraded silently. A scorer failure is one
+  `Unscorable`, caught **once per screen**: shelf 1 falls back to soonest-first with no
+  badge under `sameLevel`, shelf 2 is dropped, and **no marker crosses the wire**.
 - **Shelves 4 and 5 cache the membership and never the row.** *New on Raketa* (30 days,
   cap 8) and *New clubs* (60 days, cap 6) are the only part of Now that does not run through
   the ranked funnel, and

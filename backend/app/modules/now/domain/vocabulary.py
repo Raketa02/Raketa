@@ -154,6 +154,29 @@ class ShelfCode(str, Enum):
     NEW_CLUBS = "newClubs"
 
 
+class FitSide(str, Enum):
+    """Which side of the match's aim the viewer fell on, when she is not on it.
+
+    *"You would be the strongest here"* and *"you would be stretched"* are
+    different sentences, and the badge's largest term already knows which — the
+    skill-overlap term is **symmetric**, so its own value cannot say. The delta
+    asks for the side to be carried for exactly that reason.
+
+    It crosses as a code rather than being left for the phone to work out from
+    the two Levels beside it. Choosing a sentence from the sign of a subtraction
+    is a rule, and the phone holds none (ADR-0053) — the same argument ADR-0084
+    makes for the door's two codes.
+
+    ``EVEN`` is the third member and not a rounding of one of the other two: two
+    players at 3,00 is an ordinary state, and a vocabulary with two members would
+    have to call it one of them.
+    """
+
+    STRETCHED = "stretched"
+    STRONGEST = "strongest"
+    EVEN = "even"
+
+
 class CaptionCode(str, Enum):
     """Which one-line caption a shelf carries, when it carries one.
 
