@@ -255,6 +255,19 @@ class Match:
     form_cancelled: bool = False
     checkpoint_cancelled: bool = False
 
+    #: When this match stopped being a game anybody was going to play. A
+    #: **Crossing** — derivable at the instant it happens and never afterwards —
+    #: and the fact ADR-0073 narrowed a card's lifetime onto: *"a card lives 24
+    #: hours from the moment it closed"*, not from when the match would have
+    #: ended, or a match killed on Thursday for a Saturday game sits on a
+    #: player's home screen until Sunday.
+    #:
+    #: **Only the five endings write it.** A played match closed when it was
+    #: played, which is ``match_end`` and derivable from the record, so nothing
+    #: writes this for one; the ladder's five terminal names are exactly the
+    #: closings a reader cannot date.
+    closed_at: Instant | None = None
+
     version: int = 0
 
     _events: EventRecorder = field(
@@ -1149,8 +1162,7 @@ class Match:
         (``Raketa02/Raketa#70``).
         """
 
-        self._refuse_if_settled()
-        self.end_claims_with_the_match(at=at)
+        self._close(at)
         self.inventory_lost = True
         self._record(InventoryLost(match_id=self.id, occurred_at=at))
 
@@ -1194,8 +1206,7 @@ class Match:
         have told.
         """
 
-        self._refuse_if_settled()
-        self.end_claims_with_the_match(at=at)
+        self._close(at)
         self.resolve_departures_to(Outcome.REFUNDED_IN_FULL, at=at)
         self.club_cancelled = True
         self._record(MatchCancelledByClub(match_id=self.id, occurred_at=at))
@@ -1207,8 +1218,7 @@ class Match:
         so it reopens a settlement the same way a manager's cancellation does.
         """
 
-        self._refuse_if_settled()
-        self.end_claims_with_the_match(at=at)
+        self._close(at)
         self.resolve_departures_to(Outcome.REFUNDED_IN_FULL, at=at)
         self.weather = True
         self._record(MatchCancelledForWeather(match_id=self.id, occurred_at=at))
@@ -1225,8 +1235,7 @@ class Match:
         every reversal is born settled with nothing to return.
         """
 
-        self._refuse_if_settled()
-        self.end_claims_with_the_match(at=at)
+        self._close(at)
         self.form_cancelled = True
         self._record(MatchCancelledIncomplete(match_id=self.id, occurred_at=at))
 
@@ -1240,8 +1249,7 @@ class Match:
         keeps whatever it settled at, and only the ones still open move.
         """
 
-        self._refuse_if_settled()
-        self.end_claims_with_the_match(at=at)
+        self._close(at)
         self.resolve_departures_to(Outcome.FORFEITED, at=at)
         self.checkpoint_cancelled = True
         self._record(MatchCancelledAtCheckpoint(match_id=self.id, occurred_at=at))
@@ -1324,6 +1332,24 @@ class Match:
         self._events.record(event)
 
     # -- guards -------------------------------------------------------------
+
+    def _close(self, at: Instant) -> None:
+        """What every one of the five endings does before it tells its story.
+
+        Three obligations in one place rather than five: refuse a match that is
+        already over, end every claim with it — *"one rule ends a claim, whatever
+        ended it"* — and **date the closing**, which is what a card's
+        twenty-four-hour tail is measured from (ADR-0073).
+
+        Structural rather than remembered. A sixth ending is a method that has
+        to open with this line, and the two facts it writes are then the sixth
+        ending's by construction; the version that set ``closed_at`` in each of
+        the five is the version where the seventh forgets.
+        """
+
+        self._refuse_if_settled()
+        self.end_claims_with_the_match(at=at)
+        self.closed_at = at
 
     def _refuse_if_settled(self) -> None:
         if self.is_settled:

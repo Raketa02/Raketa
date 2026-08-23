@@ -509,8 +509,54 @@ decide whether to draw it.
 
 **The regions fill one ticket at a time and the envelope never moves.** The route shipped
 with all three empty so both clients could compile against it. What composes today is the
-shelves region's last two shelves — the two that do not run through the ranked funnel —
-and, for a sport the viewer holds no rating at, the door.
+**enrolled strip**, the shelves region's last two shelves — the two that do not run through
+the ranked funnel — and, for a sport the viewer holds no rating at, the door. The offers
+region is the invitation cascade's.
+
+#### The enrolled strip: her own matches, counted in money
+
+The region a player is **committed** to, above the suggestions and never ordered by
+quality. Four rules run over it, and each is *one* rule rather than a table of thirty-six
+judgements (ADR-0073):
+
+| Rule | What it says |
+|---|---|
+| **Order** | Chronological, and fixed at composition, so a card never moves as she reaches for it |
+| **Counting** | Seats **paid**, with a held-and-unpaid seat as **its own number** beside that count |
+| **Clock** | *The next moment at which something happens to the viewer whether they act or not* |
+| **Tail** | A card lives **24 hours from the moment it closed**, not from when the match would have ended |
+
+**Enrolment is a relationship, not an object.** There is no enrolment row: her matches are
+a seat that names her, *or a departure that does*. ADR-0030's leaver is an audience of the
+same card — *"the leaver's card is the match's card rendered for somebody who used to hold
+a seat"* — so she keeps a card, and it keeps showing the match's progress, because a refill
+is the only thing that decides her refund. Her money rides beside the situation in **two
+payload forms**, `recoverable` and `nothingTaken`, and never as one with an amount that is
+sometimes absent.
+
+**The clock is `kernel.card_clock`**, and it is the soonest boundary **the ladder itself
+reads** ahead of now. That is `next_wake` minus exactly one thing — a seat claim's expiry,
+which no rung reads — because a stranger's five minutes are not this viewer's; her own
+claim is passed in and wins outright. A terminal match has no boundaries at all, so *over
+or cancelled counts to nothing* is a consequence rather than a case.
+
+**The tail needs a stored fact.** A played match closed at `match_end` and a reader can
+derive that; a cancelled one closed when somebody cancelled it and no reader can, so all
+five endings write `Match.closed_at`. One consequence is worth knowing rather than
+discovering: `playedNoScore` begins exactly at `matchEnd + 24 h`, so it **never appears on
+Now** — it is the result route's rendering.
+
+Everything else a card carries is composed **exactly when the fact exists**, so no
+situation is named anywhere in the composition: the hold and its age, the specific court
+(only from fifteen minutes before play), the cancellation's cause, a refund with the
+destination that fixes its tense, a private court's two figures, and the score with both
+sides named and the viewer's first.
+
+**The strip names no act and offers no exit**, deliberately. ADR-0083's rule is *a card
+names an act when the viewer can take it now **and a v1 surface can receive it***, and
+none of the six receiving surfaces exists yet — the seat claim (`#89`), the result route
+(`#79`), the departure route (`#80`) and leaving standby (`#81`). A door offered that will
+not open is worse than the gap.
 
 #### The door into a sport you have no rating at
 
@@ -609,9 +655,14 @@ back rather than reading the source:
   carries a **code** and an optional **caption code**, a door carries a **code**, and the
   client writes the words.
 
+- A **level movement** beside a settled score, and a **tiebreak** field beside a set. No
+  engine updates a rating from a result and a tiebreak's own points are not modelled, so
+  both would be shapes claiming a number the platform does not have.
+
 Everything that *is* a code crosses as an **OpenAPI enum** — `situation`, the act code,
 `TermCode`, the card's hold reason, the cause, the shelf code, the caption code, the door
-code, the block type, the cover and the currency. That is what lets each client write an exhaustive `Record` over a
+code, the block type, the cover, the currency, the refund destination and the departure's
+outcome. That is what lets each client write an exhaustive `Record` over a
 generated union, so a missing sentence is a build error in the client's own build. A bare
 string degrades that `Record` into an index signature, and an index signature never fires.
 

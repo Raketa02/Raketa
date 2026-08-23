@@ -32,6 +32,7 @@ from app.modules.now.domain.screen import (
     PersonCard,
     Place,
     SeatClaim,
+    SeatCounts,
     Shelf,
     ShelvesRegion,
     SituationFacts,
@@ -73,6 +74,23 @@ def a_place(**kwargs) -> Place:
     )
 
 
+def some_facts(**kwargs) -> SituationFacts:
+    """The two facts every card carries, plus whatever the case is about.
+
+    Counting is by money and the court's total has no audience, so both are on
+    every card there is — a builder that let them be left out would be building
+    a card the composition cannot produce.
+    """
+
+    return SituationFacts(
+        **{
+            "counts": SeatCounts(seats=4, paid=2, held=1),
+            "court_total": Money(amount=grosze(15200)),
+            **kwargs,
+        }
+    )
+
+
 def a_card(**kwargs) -> MatchCard:
     return MatchCard(
         **{
@@ -80,7 +98,7 @@ def a_card(**kwargs) -> MatchCard:
             "stamp": 1_771_000_000_000,
             "where": a_place(),
             "price": Money(amount=grosze(3800)),
-            "situation": SituationHalf(situation=Situation.FORMING),
+            "situation": SituationHalf(situation=Situation.FORMING, facts=some_facts()),
             **kwargs,
         }
     )
@@ -150,7 +168,7 @@ def test_the_zone_survives_a_card_whose_clock_is_empty() -> None:
             clock=None,
             situation=SituationHalf(
                 situation=Situation.CANCELLED_CLUB,
-                facts=SituationFacts(cause=Cause.CLUB_CANCELLED),
+                facts=some_facts(cause=Cause.CLUB_CANCELLED),
             ),
         )
     ).model_dump()
@@ -232,13 +250,101 @@ def test_the_hold_reason_crosses_as_one_of_five_and_never_as_a_sentence() -> Non
         a_card(
             situation=SituationHalf(
                 situation=Situation.HELD_SOFT,
-                facts=SituationFacts(hold=HoldNote(reason=CardHoldReason.FAR)),
+                facts=some_facts(hold=HoldNote(reason=CardHoldReason.FAR)),
             )
         )
     ).model_dump()
 
-    assert rendered["situation"]["facts"]["hold"] == {"reason": CardHoldReason.FAR}
+    assert rendered["situation"]["facts"]["hold"] == {
+        "reason": CardHoldReason.FAR,
+        # The hold's own age, and only a reclaimed hold has one. A far-tier hold
+        # that is still being kept has not aged out of anything.
+        "age_minutes": None,
+    }
     assert "note" not in rendered["situation"]["facts"]["hold"]
+
+
+def test_a_reclaimed_hold_names_its_real_age_and_never_the_clubs_cap() -> None:
+    """`heldStale` carries `now - heldSince`, which is the number that is true.
+
+    A hold that has sat seventy-one hours under a forty-eight-hour cap says
+    seventy-one: the card is where the marketplace's promise is being weakened,
+    and it is the last place to print a number that is not the one meant.
+    """
+
+    rendered = MatchCardResponse.from_domain(
+        a_card(
+            situation=SituationHalf(
+                situation=Situation.HELD_STALE,
+                facts=some_facts(
+                    hold=HoldNote(reason=CardHoldReason.STALE, age_minutes=71 * 60)
+                ),
+            )
+        )
+    ).model_dump()
+
+    assert rendered["situation"]["facts"]["hold"]["age_minutes"] == 71 * 60
+
+
+def test_every_card_counts_in_money_and_the_numbers_reach_the_wire() -> None:
+    """The counting is the situation half's largest fact and it is sent, whole.
+
+    Asserted on the rendered document rather than on the domain value: a
+    ``from_domain`` that dropped a number, or built one of its own, is a card
+    telling four people a match is a quarter full while a seat may still lapse
+    — and nothing about the composed screen would look different.
+    """
+
+    rendered = MatchCardResponse.from_domain(
+        a_card(
+            situation=SituationHalf(
+                situation=Situation.FORMING_HELD,
+                facts=some_facts(counts=SeatCounts(seats=4, paid=2, held=1)),
+            )
+        )
+    ).model_dump()
+
+    assert rendered["situation"]["facts"]["counts"] == {
+        "seats": 4,
+        "paid": 2,
+        "held": 1,
+        # Nobody has played yet, and a number here would be a claim about the
+        # future rather than a count of anything.
+        "turned_up": None,
+    }
+
+
+def test_a_played_card_sends_who_turned_up_as_its_own_number() -> None:
+    rendered = MatchCardResponse.from_domain(
+        a_card(
+            situation=SituationHalf(
+                situation=Situation.PLAYED_NO_SHOW,
+                facts=some_facts(
+                    counts=SeatCounts(seats=4, paid=4, held=0, turned_up=3)
+                ),
+            )
+        )
+    ).model_dump()
+
+    counts = rendered["situation"]["facts"]["counts"]
+    assert (counts["turned_up"], counts["seats"]) == (3, 4)
+
+
+def test_the_courts_total_crosses_beside_the_viewers_own_share() -> None:
+    """One is the court's and has no audience; the other is written for her."""
+
+    rendered = MatchCardResponse.from_domain(
+        a_card(
+            price=Money(amount=grosze(3800)),
+            situation=SituationHalf(
+                situation=Situation.CONFIRMED,
+                facts=some_facts(court_total=Money(amount=grosze(15200))),
+            ),
+        )
+    ).model_dump()
+
+    assert rendered["price"]["amount"] == 3800
+    assert rendered["situation"]["facts"]["court_total"]["amount"] == 15200
 
 
 def test_a_person_card_has_no_situation_no_clock_and_no_price() -> None:

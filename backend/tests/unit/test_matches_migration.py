@@ -44,6 +44,7 @@ MIGRATION = VERSIONS / "0009_matches.py"
 SCHEDULE_MIGRATION = VERSIONS / "0010_match_schedule.py"
 DEPARTURES_MIGRATION = VERSIONS / "0011_match_departures.py"
 CLAIMS_MIGRATION = VERSIONS / "0012_match_seat_claims.py"
+CLOSED_AT_MIGRATION = VERSIONS / "0014_match_closed_at.py"
 
 #: In the order Alembic applies them.
 MIGRATIONS = (
@@ -51,6 +52,9 @@ MIGRATIONS = (
     SCHEDULE_MIGRATION,
     DEPARTURES_MIGRATION,
     CLAIMS_MIGRATION,
+    # `0013` is Clubs' and touches none of these tables; the chain still applies
+    # it, and this list is only the migrations that describe *this* schema.
+    CLOSED_AT_MIGRATION,
 )
 
 MATCH_TABLES = (

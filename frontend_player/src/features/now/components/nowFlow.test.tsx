@@ -165,7 +165,12 @@ describe('Now is the app’s home', () => {
             ...matchCard({ matchId: 'mine-1' }),
             situation: {
               situation: 'seatTransferred' as Wire['Situation'],
-              facts: { hold: null, cause: null },
+              facts: {
+                counts: { seats: 4, paid: 2, held: 0, turned_up: null },
+                court_total: { amount: 15200, currency: 'PLN' },
+                hold: null,
+                cause: null,
+              },
             },
           },
         ],
@@ -295,7 +300,12 @@ describe('the action row', () => {
       ...matchCard({ matchId: 'mine-1', act: 'takeSeat', mayDepart: true }),
       situation: {
         situation: 'seatTransferred' as Wire['Situation'],
-        facts: { hold: null, cause: null },
+        facts: {
+          counts: { seats: 4, paid: 2, held: 0, turned_up: null },
+          court_total: { amount: 15200, currency: 'PLN' },
+          hold: null,
+          cause: null,
+        },
       },
     });
 

@@ -245,6 +245,22 @@ class MatchORM(Base):
     #: branches on it** — a wake is a look, and the handler re-derives.
     wake_reason: Mapped[Optional[str]] = mapped_column(sa.String(24), nullable=True)
 
+    # -- Crossing, added after the schedule ---------------------------------
+    # Declared last for the reason the two above are: migration `0014` adds it
+    # with `ALTER TABLE`, which appends, and `tests/unit/test_matches_migration.py`
+    # compares the two descriptions of this table DDL string for string. A
+    # column that read better beside `committed_at` would describe a different
+    # table and make that comparison a formality.
+    #
+    #: When the match stopped being a game anybody was going to play — the five
+    #: endings and nothing else. **Nullable with no server default**, because a
+    #: default would date every future row's closing to whenever it was inserted,
+    #: and a row that predates this column has a closing nobody recorded rather
+    #: than one that happened at some particular time.
+    closed_at: Mapped[Optional[datetime]] = mapped_column(
+        sa.DateTime(timezone=True), nullable=True
+    )
+
     __table_args__ = (
         sa.Index(
             DUE_WAKE,

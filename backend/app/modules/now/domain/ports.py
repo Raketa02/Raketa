@@ -20,6 +20,7 @@ from uuid import UUID
 from app.kernel import Instant, Sport
 
 from app.modules.now.domain.arrivals import ArrivalKey, NewClub, NewPlayer
+from app.modules.now.domain.enrolled import Enrolment
 from app.modules.now.domain.screen import Level
 
 
@@ -51,6 +52,37 @@ class RatedSports(Protocol):
         question to ask — *is she rated here, or is she owed a door* — which it
         should not pay a full replay to answer.
         """
+        ...
+
+
+@runtime_checkable
+class EnrolledMatches(Protocol):
+    """The matches this viewer is committed to, and what each card prints.
+
+    One port and one method, where shelves 4 and 5 took two: the split there is
+    ADR-0068's cache boundary — *who is new here* is the same answer for a whole
+    city and *what a card prints* is not — and there is no such boundary here.
+    An enrolled strip is **one player's own matches**, so nothing about it is
+    shared with anybody and there is nothing to cache; ADR-0068 deletes the
+    player feed cache by name, and *"every ask pays the full funnel"* is the
+    same sentence read from this side.
+
+    **Ordered by ``start``, which the composer relies on and does not redo.**
+    A chronological region whose order is fixed at composition is the whole
+    point of the region: a card that moved as the player reached for it is the
+    one defect it exists to avoid.
+
+    The cost is stated rather than hidden, on the precedent ``ArrivalRows`` set:
+    the rows are bounded by *this player's own matches*, which is a handful, and
+    the adapter pays a reservation read per row to learn which court a match
+    holds. A player who outgrows that wants a projection, and this port is where
+    one lands.
+    """
+
+    async def for_player(
+        self, *, player_id: UUID, now: Instant
+    ) -> tuple[Enrolment, ...]:
+        """Her matches, soonest first, including the ones she has left."""
         ...
 
 

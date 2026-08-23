@@ -74,6 +74,7 @@ from app.kernel.matches import (
     match_end,
     result_window,
     seat_count,
+    turned_up,
     vacancy_expires_at,
 )
 from app.kernel.money import (
@@ -107,6 +108,7 @@ from app.kernel.results import Err, Ok, Reason, Result
 from app.kernel.situations import (
     SITUATION_COUNT,
     Situation,
+    card_clock,
     next_wake,
     next_wake_at,
     situation,
@@ -234,6 +236,7 @@ __all__ = [
     "match_end",
     "result_window",
     "seat_count",
+    "turned_up",
     "vacancy_expires_at",
     # holds — is a court being kept aside, on what terms, and until when
     "Hold",
@@ -248,6 +251,7 @@ __all__ = [
     # situations — one ladder over thirty-six names, and the wake it agrees with
     "SITUATION_COUNT",
     "Situation",
+    "card_clock",
     "next_wake",
     "next_wake_at",
     "situation",

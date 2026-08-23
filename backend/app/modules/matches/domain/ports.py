@@ -55,6 +55,28 @@ class MatchRepository(Protocol):
         """
         ...
 
+    async def for_player(self, player_id: UUID) -> list[Match]:
+        """Every match this player is enrolled in, soonest first.
+
+        **Enrolment is a relationship and not an object** (``seat.py``), so this
+        is the query that stands in for the enrolment row Matches deliberately
+        does not keep: a seat that names her, *or* a departure that does. Two
+        sources and one answer, because ADR-0030's leaver is an audience of the
+        same card rather than a different kind of membership — *"the leaver's
+        card is the match's card rendered for somebody who used to hold a
+        seat"*, and a strip that dropped her would hide the only thing that
+        decides her refund.
+
+        Whole matches, like ``get``: the composed screen resolves a situation
+        per match and a situation is a function of the whole record.
+
+        Ordered by ``start`` and broken by id, which is what lets the enrolled
+        strip be chronological with its order **fixed at composition** — a card
+        that moved as the player reached for it would be the one defect a
+        chronological region exists to avoid.
+        """
+        ...
+
     async def starting_between(
         self, *, club_ids: Sequence[UUID], window_from: Instant, window_to: Instant
     ) -> list[Match]:

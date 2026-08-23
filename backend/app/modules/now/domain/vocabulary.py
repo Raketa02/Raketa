@@ -26,7 +26,7 @@ from enum import Enum
 from types import MappingProxyType
 from typing import Mapping
 
-from app.kernel import HoldReason, invariant
+from app.kernel import Cause, HoldReason, Situation, invariant
 
 
 class CardType(str, Enum):
@@ -189,6 +189,44 @@ class Currency(str, Enum):
     PLN = "PLN"
 
 
+class RefundDestination(str, Enum):
+    """Where a cancellation's money went, which is what fixes the tense.
+
+    ADR-0073: *"A cancellation names the amount **and where it went**, and the
+    destination fixes the tense"* — *on its way back to your card* against
+    *credit at Sport Club Kraków*. A card refund is **never** claimed to have
+    landed, because a card lives twenty-four hours and a refund rarely arrives
+    inside one; a club credit is definite because it genuinely is instant
+    (ADR-0058 makes it a club card entry rather than a payment).
+
+    It is a **total function of the cause** — the three refunds return money to
+    the method it came from and the checkpoint ending issues credit — and it
+    crosses anyway, because deriving it is a rule and the phone holds none
+    (ADR-0053). The server applying it once is what stops thirty-six client
+    tables each having to know which cancellation pays which way.
+    """
+
+    CARD = "card"
+    CLUB_CREDIT = "clubCredit"
+
+
+class DepartureForm(str, Enum):
+    """Which of a leaver's **two payload forms** her card carries.
+
+    ADR-0072 refuses one payload holding an amount that is sometimes absent:
+    *nothing was taken* and *nothing has come back yet* are opposite sentences
+    and a blank cannot tell them apart. So the discriminator rides on the
+    payload, the same way ``CardType`` rides on a card — and reading an amount
+    off the wrong form is then a narrowing error rather than a blank line.
+    """
+
+    #: She paid, and whether any of it comes back is the outcome's answer.
+    RECOVERABLE = "recoverable"
+    #: Her money never left. There is no amount, so the payload holds no field
+    #: that could carry one.
+    NOTHING_TAKEN = "nothingTaken"
+
+
 class CardHoldReason(str, Enum):
     """Why a court is being kept aside, in the five reasons that reach a card.
 
@@ -249,4 +287,57 @@ invariant(
     {reason for reason in CARD_HOLD_REASON_OF.values() if reason is not None}
     == set(CardHoldReason),
     "a card hold reason exists that nothing projects onto",
+)
+
+
+#: Which cancellation a card is describing, as a **cause**, projected off the
+#: ladder's first four rungs rather than re-read off the record's flags.
+#:
+#: Four rows and not thirty-six: a cause is a fact about a match that **ended**,
+#: and a table with thirty-two ``None``s in it would be thirty-two rows nobody
+#: could ever get wrong. What keeps it honest instead is the assertion below —
+#: the four names it produces are exactly the enumeration's own, less the one
+#: ADR-0073 says *"never appears on a card"* — so a sixth cause that belongs on a
+#: card cannot be added without this table being the place it is noticed.
+CANCELLATION_CAUSE_OF: Mapping[Situation, Cause] = MappingProxyType(
+    {
+        Situation.INVENTORY_LOST: Cause.INVENTORY_LOST,
+        # One name for two flags, and it is the ladder's own reading: a club
+        # cancelling and the weather taking it resolve to one sentence, and a
+        # cause names the rule that fired rather than the meteorology.
+        Situation.CANCELLED_CLUB: Cause.CLUB_CANCELLED,
+        Situation.CANCELLED_INCOMPLETE: Cause.FORM_CANCELLED,
+        Situation.CANCELLED_CHECKPOINT: Cause.CHECKPOINT_CANCELLED,
+    }
+)
+
+invariant(
+    set(CANCELLATION_CAUSE_OF.values()) == set(Cause) - {Cause.SETTLEMENT_REOPENED},
+    "the card's causes are not the enumeration less the ledger-only one",
+)
+
+
+#: Where a cancellation's money goes, per cause. **Total over the enumeration**,
+#: so a sixth cause is a build error here rather than a silent card refund.
+#:
+#: Three of the four are one arithmetic and four names (ADR-0073) — money back to
+#: the method it came from — and the checkpoint ending is club credit (ADR-0058).
+#: ``SETTLEMENT_REOPENED`` is a ledger cause that reaches no card, and it is in
+#: the table anyway rather than beside it: a cause the ledger may write and this
+#: table may not name is the same defect in the other direction.
+REFUND_DESTINATION_OF: Mapping[Cause, RefundDestination] = MappingProxyType(
+    {
+        Cause.INVENTORY_LOST: RefundDestination.CARD,
+        Cause.CLUB_CANCELLED: RefundDestination.CARD,
+        Cause.FORM_CANCELLED: RefundDestination.CARD,
+        Cause.CHECKPOINT_CANCELLED: RefundDestination.CLUB_CREDIT,
+        # Reopening a settlement returns money the way the original did, which
+        # is the card. It reaches no card, so nothing renders this row.
+        Cause.SETTLEMENT_REOPENED: RefundDestination.CARD,
+    }
+)
+
+invariant(
+    set(REFUND_DESTINATION_OF) == set(Cause),
+    "a cause exists with nowhere for its money to go",
 )

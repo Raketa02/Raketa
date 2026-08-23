@@ -872,6 +872,67 @@ there; they are not repeated here.
   would make a shelf that says *this is new* answer *this is near*. A club whose distance is
   unknown sorts **after** one whose distance is known: absent is not nearest. _Avoid_: a zero
   where there is no Distance anchor.
+- **Enrolment** (`now.Enrolment`, `EnrolledFromMatches`) — one match the viewer holds a
+  seat in **or has left**, and everything five contexts say about it: the kernel record, the
+  club's name/zone/roof, her share, the whole court, the reserved court, the score with its
+  players named, her departure and what she has actually funded. There is no enrolment row
+  to read — *enrolment is a relationship* — so the port stands in for one, over a seat that
+  names her or a departure that does. It answers **facts and decides nothing**: the court is
+  returned whether or not it may be printed, and the score in the order it was stored.
+  _Avoid_: applying a rule in the adapter, which puts it in two places.
+- **The card's tail** (`now.CARD_TAIL`, `Match.closed_at`) — a card lives **twenty-four
+  hours from the moment it closed**, and never from when the match would have ended
+  (ADR-0073, narrowing ADR-0048). A played match closed at `match_end` and a reader can
+  derive that; a cancelled one closed when somebody cancelled it and no reader can, so the
+  five endings store the instant. One consequence is worth knowing rather than discovering:
+  `playedNoScore` begins exactly at `matchEnd + 24 h`, so **it never appears on Now** — it is
+  the result route's rendering. _Avoid_: `matchEnd + 24 h` on a cancellation, which leaves a
+  Thursday cancellation on a home screen until Sunday.
+- **The card's clock** (`kernel.card_clock`) — *the next moment at which something happens to
+  the viewer whether they act or not*, composed as **the soonest boundary the ladder itself
+  reads** ahead of now. One rule and not thirty-six judgements: a boundary is by definition
+  an instant at which the card's sentence changes. It is `next_wake` minus one thing —
+  **a claim's expiry, which no rung reads** — because a stranger's five minutes are not the
+  viewer's; her own claim is passed in and wins outright. A terminal match has no boundaries
+  at all, so *over or cancelled counts to nothing* falls out rather than being a case beside
+  it. _Avoid_: serialising `next_wake_at`, which is a `min()` over candidates the player is
+  not being told about (ADR-0053).
+- **Counting is by money** (`now.SeatCounts`, `kernel.turned_up`) — `paid`, `held` and
+  `turned_up` are three numbers and never one with arithmetic on the phone. A held seat is a
+  name with no money behind it, so folding it into the count says *full* while a seat may
+  lapse; and **every number a sentence prints is sent as that number**, because *one less
+  than the seats* stops being minus one the moment a doubles match loses two people.
+  `turned_up` is present exactly once the match has been played — a clock condition, not a
+  per-situation judgement. _Avoid_: deriving attendance from `filled` anywhere downstream.
+- **A fact per rule, never a table of thirty-six** (`now.compose_enrolled`) — a hold, a
+  court's name, a refund, an owner's exposure, a score and a departure are each composed
+  **exactly when the fact exists**, and no situation is named anywhere in the composition.
+  The counting and the court's total are unconditional because every match has them.
+  _Avoid_: a `Situation → which facts` table, which is the maintenance failure ADR-0073
+  names by name.
+- **The court's total against her share** (`now.SituationFacts.court_total`) — two money
+  numbers on one card, on purpose. `price` is the spine's and is *written for whoever is
+  looking*; `court_total` is the subject of `{price} settled to the club` and is **the same
+  number for every audience**, because what that sentence tells the viewer is *this game is
+  happening*. _Avoid_: reusing the share there — her money left days ago.
+- **Refund destination** (`now.vocabulary.RefundDestination`, `REFUND_DESTINATION_OF`) —
+  `card` or `clubCredit`, a **total** table over `Cause`. The destination fixes the tense: a
+  card refund is never claimed to have landed, and a club credit is definite because it
+  genuinely is instant. It crosses even though it is a function of the cause, because
+  deriving it is a rule and the phone holds none. _Avoid_: an *arrived* flag, which would
+  ship on every cancellation card and never render.
+- **A leaver's two payload forms** (`now.CardDeparture`, `now.vocabulary.DepartureForm`) —
+  `recoverable` names what she paid and what became of it; `nothingTaken` has **no field that
+  could hold an amount**. Never one payload with an optional figure: *nothing was taken* and
+  *nothing has come back yet* are opposite sentences and a blank cannot tell them apart. Her
+  card keeps the **match's** own progress beside it, because a refill is the only thing that
+  decides her outcome. _Avoid_: dropping a leaver from the strip.
+- **A private owner's two figures** (`now.OwnerExposure`) — what the marketplace has
+  **recovered** and the **whole court** she still guarantees, and they disagree on purpose:
+  every marketplace payer is refunded in full if the format is unmet, so her exposure does
+  not move until it fills. Both are facts about the **court** and not about the viewer,
+  because the record carries no owner (`Raketa02/Raketa#99`); every private situation in v1
+  arrives from seed. _Avoid_: showing the guarantee alone, which reads as broken.
 - **The no-sentence walk** (`tests/unit/test_now_vocabulary.py`) — the AST walk asserting
   that nothing under `app/modules/now/` composes a phrase a player could read. Three kinds
   are exempt by name and for a stated reason: a docstring, an `invariant()` message, and a

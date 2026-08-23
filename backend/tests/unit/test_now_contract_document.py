@@ -248,6 +248,11 @@ def test_the_situation_half_is_the_situation_and_its_facts(player_spec: dict) ->
         ("DoorCode", {"noRunYet", "runParked"}),
         ("Cover", {"indoor", "outdoor"}),
         ("Currency", {"PLN"}),
+        ("RefundDestination", {"card", "clubCredit"}),
+        (
+            "Outcome",
+            {"reversed", "refundedInFull", "refundedHalf", "forfeited"},
+        ),
     ],
 )
 def test_every_code_crosses_as_a_generated_union(
@@ -257,6 +262,111 @@ def test_every_code_crosses_as_a_generated_union(
 
     assert "enum" in emitted, f"{schema} crosses as a bare string"
     assert set(emitted["enum"]) == expected
+
+
+def test_the_facts_are_two_that_are_always_there_and_seven_that_are_not(
+    player_spec: dict,
+) -> None:
+    """Present exactly when the fact exists — a rule per fact, not a table of 36.
+
+    The two that are always there are the two every card has: counting is by
+    money and every card counts, and the court's total is a fact about the
+    court rather than about the viewer. Each of the other seven exists in some
+    states and not in others.
+    """
+
+    facts = player_spec["components"]["schemas"]["SituationFactsResponse"]
+
+    assert set(facts["properties"]) == {
+        "counts",
+        "court_total",
+        "hold",
+        "cause",
+        "court",
+        "refund",
+        "owner",
+        "score",
+        "departure",
+    }
+    assert set(facts["required"]) == {"counts", "court_total"}
+
+
+def test_the_counting_is_four_numbers_and_three_of_them_are_always_sent(
+    player_spec: dict,
+) -> None:
+    counts = player_spec["components"]["schemas"]["SeatCountsResponse"]
+
+    assert set(counts["properties"]) == {"seats", "paid", "held", "turned_up"}
+    # Nobody has played a match that has not been played, so that one number is
+    # absent rather than zero.
+    assert set(counts["required"]) == {"seats", "paid", "held"}
+
+
+def test_a_leaver_crosses_in_one_of_two_forms_discriminated_on_itself(
+    player_spec: dict,
+) -> None:
+    """Never one payload with an amount that is sometimes absent (ADR-0072).
+
+    *Nothing was taken* and *nothing has come back yet* are opposite sentences
+    and a blank cannot tell them apart — so the form is on the payload and the
+    amount is only on the form that has one.
+    """
+
+    schemas = player_spec["components"]["schemas"]
+    facts = schemas["SituationFactsResponse"]["properties"]["departure"]
+    reachable = _reachable(player_spec, "NowResponse")
+
+    assert "anyOf" in facts or "oneOf" in facts
+    assert {
+        "DepartureRecoverableResponse",
+        "DepartureNothingTakenResponse",
+    } <= reachable
+
+    recoverable = schemas["DepartureRecoverableResponse"]["properties"]
+    nothing = schemas["DepartureNothingTakenResponse"]["properties"]
+    # The discriminator is a `const` on each form rather than a shared enum, the
+    # same shape `card_type` takes one ring out — which is what makes a client
+    # that fails to narrow a type error rather than a blank line.
+    assert recoverable["form"]["const"] == "recoverable"
+    assert nothing["form"]["const"] == "nothingTaken"
+    assert "paid" in recoverable
+    assert "paid" not in nothing
+
+
+def test_a_score_crosses_as_sets_of_two_integers_and_names_two_sides(
+    player_spec: dict,
+) -> None:
+    """Never a display string, and no tiebreak field in v1."""
+
+    schemas = player_spec["components"]["schemas"]
+
+    assert set(schemas["ScoreLineResponse"]["properties"]) == {"sides", "sets"}
+    assert set(schemas["SetScoreResponse"]["properties"]) == {"first", "second"}
+    assert schemas["SetScoreResponse"]["properties"]["first"]["type"] == "integer"
+    assert set(schemas["ScoreSideResponse"]["properties"]) == {"players"}
+
+
+def test_a_private_owner_carries_two_figures_and_they_are_two_fields(
+    player_spec: dict,
+) -> None:
+    owner = player_spec["components"]["schemas"]["OwnerExposureResponse"]
+
+    assert set(owner["properties"]) == {"recovered", "guaranteed"}
+    assert set(owner["required"]) == {"recovered", "guaranteed"}
+
+
+def test_a_refund_names_an_amount_and_a_destination_and_asserts_no_arrival(
+    player_spec: dict,
+) -> None:
+    """A card lives 24 hours and a card refund rarely arrives inside one.
+
+    An *arrived* flag would be built, shipped on every cancellation card, and
+    never rendered — so the tense is carried by the destination instead.
+    """
+
+    refund = player_spec["components"]["schemas"]["RefundResponse"]
+
+    assert set(refund["properties"]) == {"amount", "destination"}
 
 
 def test_the_situation_union_is_the_whole_ladder(player_spec: dict) -> None:
@@ -285,6 +395,16 @@ FORBIDDEN = (
     "alert",
     # ADR-0074 refused it on the result route and it is refused here too.
     "phase",
+    # ADR-0073 withdrew the Player Score line: no engine updates a rating from a
+    # result, so a card must not carry a number nothing produced.
+    "level_movement",
+    "levelMovement",
+    "rating_change",
+    "ratingChange",
+    # A tiebreak's own points are not modelled, and a third integer smuggled
+    # beside a set would be a shape claiming they are.
+    "tiebreak",
+    "tie_break",
 )
 
 
@@ -328,6 +448,13 @@ def test_the_walk_reaches_the_schemas_it_is_claiming_about(player_spec: dict) ->
     # The door is reachable from the envelope, so the forbidden-field and
     # free-text walks above are claiming about it too rather than around it.
     assert {"DoorResponse", "DoorCode"} <= reachable
+    # And the strip's own schemas, so the two walks above claim about them too.
+    assert {
+        "SeatCountsResponse",
+        "RefundResponse",
+        "OwnerExposureResponse",
+        "ScoreLineResponse",
+    } <= reachable
     assert len(reachable) >= 20
     # And it is a walk over *Now*, not over the whole document: the rating
     # context's schemas carry `label` and `text` legitimately and are not here.

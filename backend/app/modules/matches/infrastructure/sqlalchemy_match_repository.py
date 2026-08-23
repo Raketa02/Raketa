@@ -150,6 +150,25 @@ class SqlAlchemyMatchRepository:
             )
         )
 
+    async def for_player(self, player_id: UUID) -> list[Match]:
+        # A seat that names her, or a departure that does — one `IN` over the
+        # union of two indexed columns rather than two round trips and a merge
+        # in Python, which would have to re-sort and would make the tie-break a
+        # second implementation of the one below.
+        seated = select(MatchSeatORM.match_id).where(
+            MatchSeatORM.player_id == player_id
+        )
+        left = select(MatchDepartureORM.match_id).where(
+            MatchDepartureORM.player_id == player_id
+        )
+        return await self._assembled(
+            await self._rows(
+                select(MatchORM)
+                .where(MatchORM.id.in_(seated.union(left)))
+                .order_by(MatchORM.start, MatchORM.id)
+            )
+        )
+
     async def starting_between(
         self,
         *,
@@ -388,6 +407,7 @@ class SqlAlchemyMatchRepository:
             "score_by": match.score_by,
             "proposals": match.proposals,
             "result_agreed": match.result_agreed,
+            "closed_at": match.closed_at,
         }
 
     def _row(self, match: Match, *, version: int) -> MatchORM:
@@ -608,5 +628,6 @@ class SqlAlchemyMatchRepository:
             score_by=row.score_by,
             proposals=row.proposals,
             result_agreed=row.result_agreed,
+            closed_at=_optional_instant(row.closed_at),
             version=row.version,
         )

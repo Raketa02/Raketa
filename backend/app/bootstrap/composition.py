@@ -77,16 +77,19 @@ from app.modules.money.infrastructure.event_sourced_ledger_repository import (
     EventSourcedLedgerRepository,
 )
 from app.modules.money.infrastructure.seats_through_matches import SeatsThroughMatches
+from app.modules.now.application.compose_enrolled import ComposeEnrolled
 from app.modules.now.application.new_arrivals import ComposeNewArrivals
 from app.modules.now.domain.ports import (
     ArrivalRows,
     ArrivalSets,
+    EnrolledMatches,
     Levels,
     NewArrivals,
     ParkedRuns,
     RatedSports,
 )
 from app.modules.now.infrastructure.arrival_sets import InMemoryArrivalSets
+from app.modules.now.infrastructure.enrolled_matches import EnrolledFromMatches
 from app.modules.now.infrastructure.levels import LevelsFromSkillRatings
 from app.modules.now.infrastructure.new_arrivals import ArrivalsFromUsersAndClubs
 from app.modules.now.infrastructure.parked_runs import ParkedRunsFromAssessments
@@ -426,6 +429,39 @@ def build_compose_new_arrivals(
 ) -> ComposeNewArrivals:
     """Shelves 4 and 5 — a shared set, and a per-viewer order."""
     return ComposeNewArrivals(arrivals=arrivals, rows=rows, levels=levels, sets=sets)
+
+
+def build_enrolled_matches(
+    *,
+    matches: MatchRepository,
+    clubs: ClubRepository,
+    reservations: ReservationRepository,
+    users: UserRepository,
+    ledgers: LedgerRepository,
+) -> EnrolledMatches:
+    """A player's own matches, and what five contexts say about each.
+
+    Five **ports** rather than a session, on the precedent `build_arrivals` set:
+    what backs a match, a club, a reservation, a user or a ledger belongs to
+    those contexts, and the enrolled strip only needs to be told.
+
+    It is the widest reach in the app and it earns it: the strip is the region a
+    player is committed to, and a card there prints where the game is, whether
+    there is a roof, which court, what it cost, what she paid and what she is
+    owed. Every one of those lives somewhere else.
+    """
+    return EnrolledFromMatches(
+        matches=matches,
+        clubs=clubs,
+        reservations=reservations,
+        users=users,
+        ledgers=ledgers,
+    )
+
+
+def build_compose_enrolled(*, enrolled: EnrolledMatches) -> ComposeEnrolled:
+    """The enrolled region — chronological, counted in money, one clock a card."""
+    return ComposeEnrolled(enrolled=enrolled)
 
 
 # --------------------------------------------------------------------------

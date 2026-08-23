@@ -458,6 +458,41 @@ def test_the_four_cancellations_are_four_different_flags():
     assert len(flags) == 4
 
 
+@pytest.mark.parametrize(
+    "ending",
+    [
+        "cancel_by_club",
+        "cancel_for_weather",
+        "settle_incomplete_cancellation",
+        "settle_checkpoint_cancellation",
+        "lose_inventory",
+    ],
+)
+def test_every_ending_dates_the_closing(ending):
+    """A card lives twenty-four hours **from the moment it closed** (ADR-0073).
+
+    Which is a moment no reader can reconstruct: the five flags say *that* the
+    match ended and the announcement carrying *when* is the support trail, not a
+    read path. So the instant is stored, by every one of the five, and it is the
+    only thing between a Thursday cancellation and a corpse on somebody's home
+    screen until Sunday.
+    """
+
+    match = a_match()
+
+    getattr(match, ending)(at=at(2))
+
+    assert match.closed_at == at(2)
+
+
+def test_a_match_that_is_still_a_game_has_not_closed():
+    """Not a default: `None` is *nothing closed this*, and it has a reader."""
+
+    match = a_full_match()
+
+    assert match.closed_at is None
+
+
 def test_losing_inventory_ends_the_match_too():
     match = a_match()
 

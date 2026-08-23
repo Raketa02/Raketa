@@ -562,6 +562,97 @@ async def test_a_clubs_matches_come_back_soonest_first(world):
     assert [one.id for one in listed] == [sooner.id, later.id]
 
 
+async def test_a_players_own_matches_come_back_soonest_first(world):
+    """Enrolment is a relationship, so *her* matches are a query over two tables.
+
+    A seat that names her, or a departure that does. There is no enrolment row
+    to read, and inventing one would encode a fact about her relationship as a
+    fact about the match — the mistake ADR-0030 names.
+    """
+
+    club, category = await a_club_with_a_category(world)
+
+    async def posted(when):
+        return await world.post.execute(
+            PostMatchCommand(
+                club_id=club.id,
+                category_id=category.id,
+                sport=Sport.PADEL,
+                start=when,
+                duration=hours(1),
+                share=SeatShare(grosze(3800)),
+            )
+        )
+
+    later = await posted(instant(datetime(2026, 9, 9, 18, tzinfo=timezone.utc)))
+    sooner = await posted(START)
+    somebody_elses = await posted(
+        instant(datetime(2026, 9, 10, 18, tzinfo=timezone.utc))
+    )
+
+    alice, bob = uuid4(), uuid4()
+    for match in (later, sooner):
+        await world.take.execute(TakeSeatCommand(match_id=match.id, player_id=alice))
+    await world.take.execute(TakeSeatCommand(match_id=somebody_elses.id, player_id=bob))
+
+    hers = await world.repository.for_player(alice)
+
+    assert [one.id for one in hers] == [sooner.id, later.id]
+
+
+async def test_a_leaver_is_still_one_of_her_matches(world):
+    """Her card survives the refill, so the read that finds it has to as well."""
+
+    posted = await a_posted_match(world)
+    alice = uuid4()
+    await world.take.execute(TakeSeatCommand(match_id=posted.id, player_id=alice))
+    world.clock.advance_to(datetime(2026, 9, 2, 12, tzinfo=timezone.utc))
+    await world.leave(posted.id, alice)
+
+    hers = await world.repository.for_player(alice)
+
+    assert [one.id for one in hers] == [posted.id]
+    assert hers[0].seat_of(alice) is None
+    assert hers[0].departure_of(alice) is not None
+
+
+async def test_a_seat_somebody_else_took_over_does_not_list_her_twice(world):
+    """One row per match, however many ways she is attached to it."""
+
+    posted = await a_posted_match(world)
+    alice = uuid4()
+    await world.take.execute(TakeSeatCommand(match_id=posted.id, player_id=alice))
+    world.clock.advance_to(datetime(2026, 9, 2, 12, tzinfo=timezone.utc))
+    await world.leave(posted.id, alice)
+    await world.take.execute(TakeSeatCommand(match_id=posted.id, player_id=alice))
+
+    hers = await world.repository.for_player(alice)
+
+    assert [one.id for one in hers] == [posted.id]
+
+
+async def test_a_player_with_nothing_gets_nothing_rather_than_everything(world):
+    await a_posted_match(world)
+
+    assert await world.repository.for_player(uuid4()) == []
+
+
+async def test_the_moment_a_match_closed_survives_the_round_trip(world):
+    """A card lives twenty-four hours from it, and no reader can rebuild it."""
+
+    posted = await a_posted_match(world)
+    match = await world.repository.get(posted.id)
+    assert match.closed_at is None
+
+    cancelled_at = instant(datetime(2026, 9, 2, 9, tzinfo=timezone.utc))
+    world.clock.advance_to(datetime(2026, 9, 2, 9, tzinfo=timezone.utc))
+    match.cancel_by_club(at=cancelled_at)
+    await world.repository.save(match)
+    await world.uow.commit()
+
+    assert (await world.repository.get(posted.id)).closed_at == cancelled_at
+
+
 async def test_a_window_narrows_to_the_matches_inside_it(world):
     club, category = await a_club_with_a_category(world)
     inside = await world.post.execute(

@@ -274,6 +274,26 @@ Rules to preserve:
   (`RatedSports.holds` → `SkillRatingRepository.exists_for`) and never as the set, and the
   parked-run read happens **only when a door is being drawn**, so the busiest path on the
   sport bar pays one lookup rather than a replay.
+- **The enrolled strip is four rules and a fact per card, never a table of thirty-six.**
+  The region a player is **committed** to
+  ([ADR-0073](../docs/adr/0073-a-card-counts-money-and-counts-down-to-what-happens-anyway.md)):
+  chronological with its order **fixed at composition**; **counting by money**, so seats
+  *paid* and a held-and-unpaid seat are two numbers and every number a sentence prints is
+  sent as that number; **one clock**, `kernel.card_clock`, which is *the next moment at which
+  something happens to the viewer whether they act or not* — composed as the soonest boundary
+  **the ladder itself reads**, which is `next_wake` minus the one boundary no rung reads, a
+  claim's expiry, because a stranger's five minutes are not the viewer's; and a card that
+  **lives twenty-four hours from the moment it closed**, which is `match_end` for a played
+  match and `Match.closed_at` for the five endings, since no reader can date a cancellation.
+  Everything else — a hold, a court's name, a refund, an owner's exposure, a score, a
+  departure — is composed **exactly when the fact exists**, so no situation is named anywhere
+  in the composition. A leaver is on the strip and **her departure is two payload forms**
+  rather than one with a blank amount (ADR-0072). The **court's total** rides beside the
+  spine's price because `{price} settled to the club` is the court's and has no audience.
+  The strip names **no act and offers no exit** while none of the six receiving surfaces
+  exists — ADR-0083's rule is *and a v1 surface can receive it*, and a door that will not
+  open is worse than the gap. One consequence to know rather than discover: `playedNoScore`
+  begins exactly where the tail ends, so **it never appears on Now**.
 - **Shelves 4 and 5 cache the membership and never the row.** *New on Raketa* (30 days,
   cap 8) and *New clubs* (60 days, cap 6) are the only part of Now that does not run through
   the ranked funnel, and

@@ -30,12 +30,18 @@ from app.bootstrap.composition import (
     build_arrivals,
     build_assessment_repository,
     build_club_repository,
+    build_compose_enrolled,
     build_compose_new_arrivals,
+    build_enrolled_matches,
+    build_ledger_repository,
     build_levels,
+    build_match_repository,
     build_parked_runs,
     build_rated_sports,
+    build_reservation_repository,
     build_skill_rating_repository,
 )
+from app.modules.now.application.compose_enrolled import ComposeEnrolled
 from app.modules.now.application.compose_now import ComposeNow
 from app.modules.now.application.new_arrivals import ComposeNewArrivals
 from app.modules.now.domain.ports import ArrivalSets, Levels, ParkedRuns, RatedSports
@@ -134,16 +140,46 @@ def get_new_arrivals(
 NewArrivalsDep = Annotated[ComposeNewArrivals, Depends(get_new_arrivals)]
 
 
+def get_compose_enrolled(
+    db: DbSession,
+    users: UserRepositoryDep,
+    event_store: DomainEventStoreDep,
+    events: EventPublisherDep,
+    clock: ClockDep,
+) -> ComposeEnrolled:
+    """The enrolled strip's five reads, all of them per request.
+
+    The match repository is built with the publisher and the clock every other
+    caller gets, and it is a **read** here — Now writes nothing, so nothing this
+    request does can reach the outbox through it.
+    """
+
+    return build_compose_enrolled(
+        enrolled=build_enrolled_matches(
+            matches=build_match_repository(db, events=events, clock=clock),
+            clubs=build_club_repository(db),
+            reservations=build_reservation_repository(db),
+            users=users,
+            ledgers=build_ledger_repository(event_store=event_store, events=events),
+        )
+    )
+
+
+EnrolledDep = Annotated[ComposeEnrolled, Depends(get_compose_enrolled)]
+
+
 def get_compose_now(
     rated_sports: RatedSportsDep,
     parked_runs: ParkedRunsDep,
     new_arrivals: NewArrivalsDep,
+    enrolled: EnrolledDep,
     clock: ClockDep,
 ) -> ComposeNow:
     return ComposeNow(
         rated_sports=rated_sports,
         parked_runs=parked_runs,
         new_arrivals=new_arrivals,
+        enrolled=enrolled,
         clock=clock,
     )
 

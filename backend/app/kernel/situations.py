@@ -397,6 +397,57 @@ def _amended(base: Situation, hold: Hold) -> Situation:
     return base
 
 
+def card_clock(
+    record: MatchRecord,
+    now: Instant,
+    *,
+    claim_expires_at: Instant | None = None,
+) -> Instant | None:
+    """The one moment a card counts down to, or nothing.
+
+    ADR-0073 gives a card **exactly one clock slot** and fixes which moment
+    fills it with a rule rather than with thirty-six judgements:
+
+        *The clock is the next moment at which something happens to the viewer
+        whether they act or not.*
+
+    That is the soonest boundary **the ladder itself reads**, ahead of now — a
+    boundary is by definition an instant at which this match resolves to a
+    different sentence, and a sentence changing under the player is exactly
+    something happening to her. So the rule is one line over the list
+    ``next_wake`` already reads, and a threshold cannot be in the ladder and
+    missing from the countdown for the same reason it cannot be missing from
+    the schedule.
+
+    **It is not ``next_wake``, and the one difference is the whole difference.**
+    A seat claim's five minutes are in the schedule and are *not* a boundary any
+    rung reads (ADR-0081 refuses a thirty-seventh situation for it), so a
+    stranger's claim lapsing would otherwise point this viewer's countdown at
+    five minutes that are about somebody else. What replaces it is
+    ``claim_expires_at`` — **the viewer's own** claim, which is about her and
+    not about the match, and which wins outright when she holds one because a
+    claim lapsing in five minutes is the next thing that happens to her whether
+    she acts or not.
+
+    **A card that is over or cancelled counts to nothing.** A terminal match has
+    no boundaries at all, and a played one runs out of them at its result
+    window, so the empty slot falls out of the same rule rather than being a
+    case beside it.
+
+    Always-the-start-time was refused because it ticks five hundred hours down
+    to a game nobody is worried about while the hold expires in silence; the
+    next-moment-you-can-still-act was refused for the opposite reason — a seat
+    being rescued is precisely when a player can do nothing and precisely when
+    she most needs to see the deadline. **The clock is the app's warning, not
+    its to-do list.**
+    """
+
+    if claim_expires_at is not None and now < claim_expires_at:
+        return claim_expires_at
+    ahead = [moment for moment in _ladder_boundaries(record) if moment.at > now]
+    return min(ahead, key=lambda moment: moment.order).at if ahead else None
+
+
 def _boundaries(record: MatchRecord) -> tuple[Boundary, ...]:
     """Every instant the ladder compares the clock against, plus the hold's own.
 
@@ -404,7 +455,33 @@ def _boundaries(record: MatchRecord) -> tuple[Boundary, ...]:
     not woken for a threshold no rung will look at — and the hold ladder is
     *asked* for its thresholds rather than having them restated here, which is
     the half that would otherwise drift.
+
+    **A claim's expiry is here and not in ``_ladder_boundaries``**, and that
+    split is the one thing separating the schedule from the countdown: the
+    reaper has to be woken for a claim nobody's card mentions, and no card may
+    count down to a claim that is not the viewer's.
     """
+
+    return (*_ladder_boundaries(record), *claim_boundaries(record))
+
+
+def _ladder_boundaries(record: MatchRecord) -> tuple[Boundary, ...]:
+    """Every instant a **rung** compares the clock against, plus the hold's own.
+
+    Conditioned exactly as the rungs that read them are, so an ordinary match is
+    not woken for a threshold no rung will look at — and the hold ladder is
+    *asked* for its thresholds rather than having them restated here, which is
+    the half that would otherwise drift.
+
+    **A terminal match has none**, which is a fact about the ladder rather than
+    a short cut: rungs 1-4 answer before any rung reads a clock, so no later
+    threshold can change what a cancelled match says. ``next_wake`` states the
+    same thing for itself, and ``card_clock`` gets *"a card that is over or
+    cancelled counts to nothing"* from here instead of from a case of its own.
+    """
+
+    if is_terminal(record):
+        return ()
 
     when = deadlines(record)
 
@@ -415,12 +492,9 @@ def _boundaries(record: MatchRecord) -> tuple[Boundary, ...]:
         Boundary(WakeReason.DOOR_CODE, door_code_at(record)),
         Boundary(WakeReason.MATCH_END, match_end(record)),
         Boundary(WakeReason.RESULT_WINDOW, result_window(record)),
+        # Asked for rather than restated, exactly like the ladder's own tiers,
+        # so a tier cannot exist in one and be missing from the other.
         *hold_boundaries(record),
-        # Asked for rather than restated, exactly like the hold ladder's tiers.
-        # A claim's five minutes are the one boundary here that is not relative
-        # to `start`, which is why the record has to carry the moment: it cannot
-        # be recomputed from the match, only from the tap that opened it.
-        *claim_boundaries(record),
     ]
 
     # A committed match never compares the clock against its own commitment

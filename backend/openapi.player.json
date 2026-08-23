@@ -904,6 +904,48 @@
         "title": "DebtLineResponse",
         "description": "What is owed, and the one consequence of owing it.\n\n``blocked`` means *this player may not create a match or book a court*. She\nmay still pay for a seat in somebody else's match: being cut off must not make\nher less likely to pay."
       },
+      "DepartureNothingTakenResponse": {
+        "properties": {
+          "form": {
+            "type": "string",
+            "const": "nothingTaken",
+            "title": "Form",
+            "default": "nothingTaken"
+          }
+        },
+        "type": "object",
+        "title": "DepartureNothingTakenResponse",
+        "description": "A leaver whose money never left, and so a payload with no amount at all."
+      },
+      "DepartureRecoverableResponse": {
+        "properties": {
+          "form": {
+            "type": "string",
+            "const": "recoverable",
+            "title": "Form",
+            "default": "recoverable"
+          },
+          "paid": {
+            "$ref": "#/components/schemas/MoneyResponse"
+          },
+          "outcome": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Outcome"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "paid"
+        ],
+        "title": "DepartureRecoverableResponse",
+        "description": "A leaver who paid: what she paid, and what became of it.\n\n``outcome`` is absent while nothing has decided it \u2014 whether the money comes\nback depends entirely on her seat refilling, which is why her card keeps the\nmatch's own progress beside this."
+      },
       "DoorCode": {
         "type": "string",
         "enum": [
@@ -1086,6 +1128,17 @@
         "properties": {
           "reason": {
             "$ref": "#/components/schemas/CardHoldReason"
+          },
+          "age_minutes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Age Minutes"
           }
         },
         "type": "object",
@@ -1093,7 +1146,7 @@
           "reason"
         ],
         "title": "HoldNoteResponse",
-        "description": "Why a court is held, as one of five reasons. Never free text."
+        "description": "Why a court is held, as one of five reasons. Never free text.\n\n``age_minutes`` is the hold's **real** age and rides only on one the club has\ntaken back \u2014 never the club's threshold, because the card weakening the\nmarketplace's promise is the last place to print a number that is not the\none meant."
       },
       "InProgressAssessmentResponse": {
         "properties": {
@@ -1356,6 +1409,34 @@
         "title": "OffersRegionResponse",
         "description": "Seats offered to this viewer, soonest-to-expire first."
       },
+      "Outcome": {
+        "type": "string",
+        "enum": [
+          "reversed",
+          "refundedInFull",
+          "refundedHalf",
+          "forfeited"
+        ],
+        "title": "Outcome",
+        "description": "A departure's result: what the leaver got back, or will.\n\nOrdered here by how good they are for the player, which is **not** the\nranking below \u2014 two of them tie, and an enumeration cannot express a tie."
+      },
+      "OwnerExposureResponse": {
+        "properties": {
+          "recovered": {
+            "$ref": "#/components/schemas/MoneyResponse"
+          },
+          "guaranteed": {
+            "$ref": "#/components/schemas/MoneyResponse"
+          }
+        },
+        "type": "object",
+        "required": [
+          "recovered",
+          "guaranteed"
+        ],
+        "title": "OwnerExposureResponse",
+        "description": "A private court's two figures, which disagree on purpose.\n\nWhat has come back, and the whole court still guaranteed until the sold\nformat is met. The gap between them **is** the product fact: she watches\nmoney arrive while owing exactly what she owed at the start."
+      },
       "PersonCardResponse": {
         "properties": {
           "card_type": {
@@ -1586,6 +1667,32 @@
         ],
         "title": "RefreshRequest"
       },
+      "RefundDestination": {
+        "type": "string",
+        "enum": [
+          "card",
+          "clubCredit"
+        ],
+        "title": "RefundDestination",
+        "description": "Where a cancellation's money went, which is what fixes the tense.\n\nADR-0073: *\"A cancellation names the amount **and where it went**, and the\ndestination fixes the tense\"* \u2014 *on its way back to your card* against\n*credit at Sport Club Krak\u00f3w*. A card refund is **never** claimed to have\nlanded, because a card lives twenty-four hours and a refund rarely arrives\ninside one; a club credit is definite because it genuinely is instant\n(ADR-0058 makes it a club card entry rather than a payment).\n\nIt is a **total function of the cause** \u2014 the three refunds return money to\nthe method it came from and the checkpoint ending issues credit \u2014 and it\ncrosses anyway, because deriving it is a rule and the phone holds none\n(ADR-0053). The server applying it once is what stops thirty-six client\ntables each having to know which cancellation pays which way."
+      },
+      "RefundResponse": {
+        "properties": {
+          "amount": {
+            "$ref": "#/components/schemas/MoneyResponse"
+          },
+          "destination": {
+            "$ref": "#/components/schemas/RefundDestination"
+          }
+        },
+        "type": "object",
+        "required": [
+          "amount",
+          "destination"
+        ],
+        "title": "RefundResponse",
+        "description": "What a cancellation returns, and where it went.\n\nThe destination fixes the tense, so it crosses rather than being derived\nfrom the cause on the phone: a card refund is never claimed to have landed,\nand a club credit is definite because it genuinely is instant."
+      },
       "ResultResponse": {
         "properties": {
           "mu": {
@@ -1673,6 +1780,48 @@
         ],
         "title": "ResultResponse"
       },
+      "ScoreLineResponse": {
+        "properties": {
+          "sides": {
+            "items": {
+              "$ref": "#/components/schemas/ScoreSideResponse"
+            },
+            "type": "array",
+            "title": "Sides"
+          },
+          "sets": {
+            "items": {
+              "$ref": "#/components/schemas/SetScoreResponse"
+            },
+            "type": "array",
+            "title": "Sets"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sides",
+          "sets"
+        ],
+        "title": "ScoreLineResponse",
+        "description": "The score as sets of two integers, never a display string.\n\n``sides[0]`` is the viewer's when she played, and ``first`` in every set is\nthat side's games. **No level movement** rides beside it: no engine produces\none, and a card must not invent a number nothing computed."
+      },
+      "ScoreSideResponse": {
+        "properties": {
+          "players": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Players"
+          }
+        },
+        "type": "object",
+        "required": [
+          "players"
+        ],
+        "title": "ScoreSideResponse",
+        "description": "One side of the net, named by the players who were on it."
+      },
       "SeatClaimResponse": {
         "properties": {
           "expires_at": {
@@ -1687,6 +1836,60 @@
         ],
         "title": "SeatClaimResponse",
         "description": "A live claim on this card's seat, and when it lapses."
+      },
+      "SeatCountsResponse": {
+        "properties": {
+          "seats": {
+            "type": "integer",
+            "title": "Seats"
+          },
+          "paid": {
+            "type": "integer",
+            "title": "Paid"
+          },
+          "held": {
+            "type": "integer",
+            "title": "Held"
+          },
+          "turned_up": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Turned Up"
+          }
+        },
+        "type": "object",
+        "required": [
+          "seats",
+          "paid",
+          "held"
+        ],
+        "title": "SeatCountsResponse",
+        "description": "What a counting sentence counts. **Counting is by money.**\n\n``paid`` and ``held`` are two numbers and never one: a held-and-unpaid seat\nis a name with no money behind it and can lapse, so folding it into the\ncount tells four people a match is complete while a seat may still go.\n\n``turned_up`` is present once the match has been played and absent before \u2014\nit is the third thing ``{f} of {n}`` counts, and it is **sent** rather than\nderived, because *one less than the seats* stops being minus one the moment\na doubles match loses two people."
+      },
+      "SetScoreResponse": {
+        "properties": {
+          "first": {
+            "type": "integer",
+            "title": "First"
+          },
+          "second": {
+            "type": "integer",
+            "title": "Second"
+          }
+        },
+        "type": "object",
+        "required": [
+          "first",
+          "second"
+        ],
+        "title": "SetScoreResponse",
+        "description": "One set, two integers, and no tiebreak field in v1."
       },
       "ShelfCode": {
         "type": "string",
@@ -1837,6 +2040,12 @@
       },
       "SituationFactsResponse": {
         "properties": {
+          "counts": {
+            "$ref": "#/components/schemas/SeatCountsResponse"
+          },
+          "court_total": {
+            "$ref": "#/components/schemas/MoneyResponse"
+          },
           "hold": {
             "anyOf": [
               {
@@ -1856,11 +2065,81 @@
                 "type": "null"
               }
             ]
+          },
+          "court": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Court"
+          },
+          "refund": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RefundResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "owner": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OwnerExposureResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "score": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ScoreLineResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "departure": {
+            "anyOf": [
+              {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/DepartureRecoverableResponse"
+                  },
+                  {
+                    "$ref": "#/components/schemas/DepartureNothingTakenResponse"
+                  }
+                ],
+                "discriminator": {
+                  "propertyName": "form",
+                  "mapping": {
+                    "nothingTaken": "#/components/schemas/DepartureNothingTakenResponse",
+                    "recoverable": "#/components/schemas/DepartureRecoverableResponse"
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Departure"
           }
         },
         "type": "object",
+        "required": [
+          "counts",
+          "court_total"
+        ],
         "title": "SituationFactsResponse",
-        "description": "The facts the situation's sentence prints."
+        "description": "The facts the situation's sentence prints.\n\nTwo are always here \u2014 the counting and the court's total \u2014 and the rest are\npresent exactly when the fact exists. That is a rule per fact rather than a\ntable of thirty-six judgements: no situation is named anywhere in the\ncomposition, and a client reading a field that is absent has met a state\nwhere the fact does not exist rather than a state somebody forgot."
       },
       "SituationHalfResponse": {
         "properties": {

@@ -482,6 +482,34 @@ export interface components {
             blocked: boolean;
         };
         /**
+         * DepartureNothingTakenResponse
+         * @description A leaver whose money never left, and so a payload with no amount at all.
+         */
+        DepartureNothingTakenResponse: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            form: "nothingTaken";
+        };
+        /**
+         * DepartureRecoverableResponse
+         * @description A leaver who paid: what she paid, and what became of it.
+         *
+         *     ``outcome`` is absent while nothing has decided it — whether the money comes
+         *     back depends entirely on her seat refilling, which is why her card keeps the
+         *     match's own progress beside this.
+         */
+        DepartureRecoverableResponse: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            form: "recoverable";
+            paid: components["schemas"]["MoneyResponse"];
+            outcome?: components["schemas"]["Outcome"] | null;
+        };
+        /**
          * DoorCode
          * @description Which sentence the door shows, as a code and never as the sentence.
          *
@@ -607,9 +635,16 @@ export interface components {
         /**
          * HoldNoteResponse
          * @description Why a court is held, as one of five reasons. Never free text.
+         *
+         *     ``age_minutes`` is the hold's **real** age and rides only on one the club has
+         *     taken back — never the club's threshold, because the card weakening the
+         *     marketplace's promise is the last place to print a number that is not the
+         *     one meant.
          */
         HoldNoteResponse: {
             reason: components["schemas"]["CardHoldReason"];
+            /** Age Minutes */
+            age_minutes?: number | null;
         };
         /**
          * InProgressAssessmentResponse
@@ -752,6 +787,27 @@ export interface components {
             cards: components["schemas"]["MatchCardResponse"][];
         };
         /**
+         * Outcome
+         * @description A departure's result: what the leaver got back, or will.
+         *
+         *     Ordered here by how good they are for the player, which is **not** the
+         *     ranking below — two of them tie, and an enumeration cannot express a tie.
+         * @enum {string}
+         */
+        Outcome: "reversed" | "refundedInFull" | "refundedHalf" | "forfeited";
+        /**
+         * OwnerExposureResponse
+         * @description A private court's two figures, which disagree on purpose.
+         *
+         *     What has come back, and the whole court still guaranteed until the sold
+         *     format is met. The gap between them **is** the product fact: she watches
+         *     money arrive while owing exactly what she owed at the start.
+         */
+        OwnerExposureResponse: {
+            recovered: components["schemas"]["MoneyResponse"];
+            guaranteed: components["schemas"]["MoneyResponse"];
+        };
+        /**
          * PersonCardResponse
          * @description A player who has just arrived. No situation, no clock, no price.
          *
@@ -863,6 +919,37 @@ export interface components {
             /** Refresh Token */
             refresh_token: string;
         };
+        /**
+         * RefundDestination
+         * @description Where a cancellation's money went, which is what fixes the tense.
+         *
+         *     ADR-0073: *"A cancellation names the amount **and where it went**, and the
+         *     destination fixes the tense"* — *on its way back to your card* against
+         *     *credit at Sport Club Kraków*. A card refund is **never** claimed to have
+         *     landed, because a card lives twenty-four hours and a refund rarely arrives
+         *     inside one; a club credit is definite because it genuinely is instant
+         *     (ADR-0058 makes it a club card entry rather than a payment).
+         *
+         *     It is a **total function of the cause** — the three refunds return money to
+         *     the method it came from and the checkpoint ending issues credit — and it
+         *     crosses anyway, because deriving it is a rule and the phone holds none
+         *     (ADR-0053). The server applying it once is what stops thirty-six client
+         *     tables each having to know which cancellation pays which way.
+         * @enum {string}
+         */
+        RefundDestination: "card" | "clubCredit";
+        /**
+         * RefundResponse
+         * @description What a cancellation returns, and where it went.
+         *
+         *     The destination fixes the tense, so it crosses rather than being derived
+         *     from the cause on the phone: a card refund is never claimed to have landed,
+         *     and a club credit is definite because it genuinely is instant.
+         */
+        RefundResponse: {
+            amount: components["schemas"]["MoneyResponse"];
+            destination: components["schemas"]["RefundDestination"];
+        };
         /** ResultResponse */
         ResultResponse: {
             /** Mu */
@@ -893,6 +980,28 @@ export interface components {
             uncertainty_factors?: components["schemas"]["UncertaintyFactorResponse"][];
         };
         /**
+         * ScoreLineResponse
+         * @description The score as sets of two integers, never a display string.
+         *
+         *     ``sides[0]`` is the viewer's when she played, and ``first`` in every set is
+         *     that side's games. **No level movement** rides beside it: no engine produces
+         *     one, and a card must not invent a number nothing computed.
+         */
+        ScoreLineResponse: {
+            /** Sides */
+            sides: components["schemas"]["ScoreSideResponse"][];
+            /** Sets */
+            sets: components["schemas"]["SetScoreResponse"][];
+        };
+        /**
+         * ScoreSideResponse
+         * @description One side of the net, named by the players who were on it.
+         */
+        ScoreSideResponse: {
+            /** Players */
+            players: string[];
+        };
+        /**
          * SeatClaimResponse
          * @description A live claim on this card's seat, and when it lapses.
          */
@@ -902,6 +1011,39 @@ export interface components {
              * Format: date-time
              */
             expires_at: string;
+        };
+        /**
+         * SeatCountsResponse
+         * @description What a counting sentence counts. **Counting is by money.**
+         *
+         *     ``paid`` and ``held`` are two numbers and never one: a held-and-unpaid seat
+         *     is a name with no money behind it and can lapse, so folding it into the
+         *     count tells four people a match is complete while a seat may still go.
+         *
+         *     ``turned_up`` is present once the match has been played and absent before —
+         *     it is the third thing ``{f} of {n}`` counts, and it is **sent** rather than
+         *     derived, because *one less than the seats* stops being minus one the moment
+         *     a doubles match loses two people.
+         */
+        SeatCountsResponse: {
+            /** Seats */
+            seats: number;
+            /** Paid */
+            paid: number;
+            /** Held */
+            held: number;
+            /** Turned Up */
+            turned_up?: number | null;
+        };
+        /**
+         * SetScoreResponse
+         * @description One set, two integers, and no tiebreak field in v1.
+         */
+        SetScoreResponse: {
+            /** First */
+            first: number;
+            /** Second */
+            second: number;
         };
         /**
          * ShelfCode
@@ -965,10 +1107,25 @@ export interface components {
         /**
          * SituationFactsResponse
          * @description The facts the situation's sentence prints.
+         *
+         *     Two are always here — the counting and the court's total — and the rest are
+         *     present exactly when the fact exists. That is a rule per fact rather than a
+         *     table of thirty-six judgements: no situation is named anywhere in the
+         *     composition, and a client reading a field that is absent has met a state
+         *     where the fact does not exist rather than a state somebody forgot.
          */
         SituationFactsResponse: {
+            counts: components["schemas"]["SeatCountsResponse"];
+            court_total: components["schemas"]["MoneyResponse"];
             hold?: components["schemas"]["HoldNoteResponse"] | null;
             cause?: components["schemas"]["Cause"] | null;
+            /** Court */
+            court?: string | null;
+            refund?: components["schemas"]["RefundResponse"] | null;
+            owner?: components["schemas"]["OwnerExposureResponse"] | null;
+            score?: components["schemas"]["ScoreLineResponse"] | null;
+            /** Departure */
+            departure?: (components["schemas"]["DepartureRecoverableResponse"] | components["schemas"]["DepartureNothingTakenResponse"]) | null;
         };
         /**
          * SituationHalfResponse

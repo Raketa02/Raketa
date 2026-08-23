@@ -22,9 +22,11 @@ import pytest
 
 from app.kernel import Instant, Sport
 from app.modules.now.application.commands import ComposeNowQuery, SportFilter
+from app.modules.now.application.compose_enrolled import ComposeEnrolled
 from app.modules.now.application.compose_now import ComposeNow, stamp_at
 from app.modules.now.application.new_arrivals import ComposeNewArrivals
-from app.modules.now.domain.ports import ParkedRuns, RatedSports
+from app.modules.now.domain.enrolled import Enrolment
+from app.modules.now.domain.ports import EnrolledMatches, ParkedRuns, RatedSports
 from app.modules.now.domain.screen import Block, Door, Shelf, Stamp
 from app.modules.now.domain.vocabulary import BlockType, DoorCode, ShelfCode
 
@@ -111,16 +113,37 @@ class RecordingNewArrivals(ComposeNewArrivals):
         return self._shelves
 
 
+class RecordingEnrolled(EnrolledMatches):
+    """The strip's port, answering nothing and remembering what it was asked.
+
+    A player with no matches is the ordinary case and it is the one this file
+    wants: what is under test here is the *reach* — which viewer, which sport
+    and which clock reading arrive — where the cards themselves are
+    `tests/unit/test_compose_enrolled.py`'s subject.
+    """
+
+    def __init__(self) -> None:
+        self.calls: list[dict[str, object]] = []
+
+    async def for_player(
+        self, *, player_id: UUID, now: Instant
+    ) -> tuple[Enrolment, ...]:
+        self.calls.append({"player_id": player_id, "now": now})
+        return ()
+
+
 def _compose(
     rated: RatedSports,
     clock,
     arrivals: ComposeNewArrivals | None = None,
     parked: ParkedRuns | None = None,
+    enrolled: EnrolledMatches | None = None,
 ) -> ComposeNow:
     return ComposeNow(
         rated_sports=rated,
         parked_runs=parked or FakeParkedRuns(),
         new_arrivals=arrivals or RecordingNewArrivals(),
+        enrolled=ComposeEnrolled(enrolled=enrolled or RecordingEnrolled()),
         clock=clock,
     )
 

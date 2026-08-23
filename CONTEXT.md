@@ -811,10 +811,18 @@ Committed by [ADR-0030](docs/adr/0030-a-departure-is-an-audience-not-a-state.md)
   the named seat *changes*, and a change in the count alone is not worth an interruption
   ([ADR-0065](docs/adr/0065-a-seat-you-asked-for-pierces-a-focus-and-we-send-only-when-the-named-seat-changes.md)).
 - **Leaver** — the player who made a departure. Not a state: a leaver sees the match's own state
-  rendered for somebody who used to hold a seat.
+  rendered for somebody who used to hold a seat. Her card **keeps the match's own facts**,
+  because whether her money comes back depends entirely on her seat refilling — a card that hid
+  the match's progress would hide the only thing that decides her outcome — and her departure
+  rides beside the situation in **two payload forms**, *she paid and it may come back* and
+  *nothing was taken*, never one payload holding an amount that is sometimes absent.
 - **Audience** — who a card is rendered *for*. Three, and only three: a player **in** the match, a
   player **looking in**, and a **leaver**. An audience changes a card's words and which money it
-  names; it never changes the **situation**, and it never changes a movement's **cause**
+  names; it never changes the **situation**, and it never changes a movement's **cause**. One
+  money line has **no audience at all**: `{price} settled to the club` names the **court's**
+  total for everybody, because its subject is the court and what it tells the viewer is *this
+  game is happening* — her own share answers a question she did not ask, and answers it worse,
+  since her money left days ago
   ([ADR-0072](docs/adr/0072-two-sentences-are-two-situations-and-a-leaver-is-a-third-audience.md)).
 - **Outcome** — a departure's settled result: *reversed*, *refunded in full*, *refunded half*, or
   *forfeited*. On a private court only *refunded in full* and *forfeited* are reachable. **Absent
@@ -850,6 +858,20 @@ Committed by [ADR-0030](docs/adr/0030-a-departure-is-an-audience-not-a-state.md)
 - **Provisional coverage** — a marketplace share that has been paid through to the club but has
   not released any of the owner's guarantee, because it is still refundable. The distinction
   that lets the number a card prints be the number Raketa stands behind.
+- **Refund destination** — where a cancellation's money went, and it is the destination that
+  fixes the sentence's tense: *on its way back to your card* against *credit at Sport Club
+  Kraków*. **A card refund is never claimed to have landed** — a card lives 24 hours and a
+  refund rarely arrives inside one — and a club credit is definite because it genuinely is
+  instant. Three of the four cancellations return money to the method it came from and the
+  checkpoint ending issues credit; four names, three arithmetics, because they are four
+  different sentences to the player.
+- **The owner's two figures** — a private court's card carries **what has been recovered** and
+  **the whole court still guaranteed**, and they disagree on purpose. It is the most surprising
+  thing in the private-court model: she watches money come back while owing exactly what she
+  owed at the start, because every marketplace payer is refunded in full if the sold format is
+  never met. Showing the guarantee alone reads as broken — thirty złoty just landed and the
+  card acts as though nothing happened — and showing the recovery alone tells her she is
+  covered when she is not. **The gap between them is the fact.**
 - **Reconciliation** — the single moment a split-payment reservation settles: **two hours after
   the reservation ends**. Not to be confused with a departure's **Settlement**, which is about
   one player's outcome; reconciliation is about one booking's money. The two hours are a stated
@@ -909,6 +931,31 @@ Committed by [ADR-0030](docs/adr/0030-a-departure-is-an-audience-not-a-state.md)
   ([ADR-0032](docs/adr/0032-order-is-a-property-of-the-composed-screen.md)). A match's start time
   stays mutable; a moved match is the same match.
 
+- **Card lifetime** — a card stays on Now for **24 hours from the moment its match closed**,
+  and never from when the match would have ended
+  ([ADR-0073](docs/adr/0073-a-card-counts-money-and-counts-down-to-what-happens-anyway.md),
+  narrowing [ADR-0048](docs/adr/0048-silence-confirms-a-result-and-disagreement-carries-a-score.md)).
+  Cancelled Thursday 09:00, gone Friday 09:00; played Tuesday 20:30, gone Wednesday 20:30. The
+  two moments coincide for every played ending, and for a cancellation they do not — which is
+  why the rule it replaces left the corpse of a match booked far ahead on a home screen for
+  longer the further ahead it was booked.
+- **The card's clock** — a card has **exactly one** countdown, and which moment fills it is a
+  rule rather than a judgement per situation: *the next moment at which something happens to
+  the viewer whether they act or not*. A forming match counts to the court locking in, a full
+  one to settlement, a match about to start to the start, one wanting a score to the 24 hours,
+  an offer to its expiry — and **a card that is over or cancelled counts to nothing**.
+  *Always the start time* was refused because it ticks five hundred hours down to a game
+  nobody is worried about while the hold expires in silence; *the next moment you can still
+  act* was refused for the opposite reason, because a seat being rescued is precisely when a
+  player can do nothing and most needs to see the deadline. **The clock is the app's warning,
+  not its to-do list.**
+- **Counting is by money** — every card counts seats that are **paid**, and a **held** seat is
+  its own number beside that count, never folded into it: a seat somebody holds and nobody has
+  paid for can lapse, so counting people says *full* about a match that is not. **Every number
+  a sentence prints is sent as that number** — the sentences reading one less than the seats
+  carry three and four, never *four, now take one off*, because it is only minus one until a
+  doubles match loses two people. The cost, stated: *3 of 4* no longer means one thing across
+  the screen, so the copy names what it counts — **seats paid**, **shares paid**, **played**.
 - **Situation** — what a match is, said once: one of a single closed set of names, resolved by
   one ordered ladder in which **the order is the specification** and the first matching rung
   wins. The resolver takes an **optional viewer**; without one it yields the match's own
@@ -928,7 +975,13 @@ Committed by [ADR-0030](docs/adr/0030-a-departure-is-an-audience-not-a-state.md)
   side that put it there, whether it is agreed, and how many proposals have been made. Not a list:
   superseded scores are **Announcements**, never history on the match
   ([ADR-0034](docs/adr/0034-matches-is-a-record-and-keeps-no-history.md)). *Never called an
-  **outcome** — that word belongs to a departure.*
+  **outcome** — that word belongs to a departure.* On a card it prints as **sets of two
+  integers with both sides named and the viewer's first**, never as a display string and with
+  **no tiebreak field** in v1. A bare *6-4, 3-6, 6-2* was refused: with four cards from four
+  evenings on one screen it prints a number that is true of **somebody**, which is the same
+  defect as deriving *n − 1*. The cost is that a card carries a **person**, which is the first
+  time one does. **No level movement rides beside it** — no engine updates a rating from a
+  result, and a card must not invent a number nothing produced.
 - **Proposal** *(of a result)* — one side putting a score forward. **Each side may propose once**,
   and a proposal always carries a score: there is no way to reject a result without stating what it
   was. A proposal its opposing side leaves unanswered for 24 hours **stands** — silence confirms —

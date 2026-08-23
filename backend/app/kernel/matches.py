@@ -543,6 +543,26 @@ def held_unpaid(record: MatchRecord) -> int:
     return sum(1 for seat in record.seats if seat.taken and not seat.paid)
 
 
+def turned_up(record: MatchRecord) -> int:
+    """How many of the paid seats had somebody on the court.
+
+    ``{f} of {n}`` counts four different things across the thirty-six cards, and
+    this is the one the played sentences count (ADR-0073). It is a **third**
+    number rather than a rule the reader applies to ``filled``: *"the seven
+    sentences reading one less than the seats send three and four, never four,
+    now take one off"*, and it is only ever minus one until a doubles match
+    loses two people — at which point the phone would confidently print *3 of 4*
+    and the player would believe three people played.
+
+    ``no_show`` is one person, which is the record's own word for it: *"somebody
+    who paid did not turn up"*. A second absentee is a second fact the record
+    does not carry, and inventing a count for it here would be the fabricated
+    observation the flag's singular already refuses.
+    """
+
+    return filled(record) - 1 if record.no_show else filled(record)
+
+
 def is_full(record: MatchRecord) -> bool:
     """Every seat taken and paid."""
 

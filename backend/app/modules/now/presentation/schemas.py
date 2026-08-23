@@ -27,12 +27,14 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 from app.engines.fit import TermCode
-from app.kernel import Cause, Cover, Situation
+from app.kernel import Cause, Cover, Outcome, Situation
 
 from app.modules.now.domain.screen import (
     Block,
+    CardDeparture,
     ClubCard,
     DebtLine,
+    DepartureNothingTaken,
     Door,
     EnrolledRegion,
     Fit,
@@ -43,9 +45,15 @@ from app.modules.now.domain.screen import (
     Money,
     NowScreen,
     OffersRegion,
+    OwnerExposure,
     PersonCard,
     Place,
+    Refund,
+    ScoreLine,
+    ScoreSide,
     SeatClaim,
+    SeatCounts,
+    SetScore,
     Shelf,
     ShelfCard,
     ShelvesRegion,
@@ -59,7 +67,9 @@ from app.modules.now.domain.vocabulary import (
     CardHoldReason,
     CardType,
     Currency,
+    DepartureForm,
     DoorCode,
+    RefundDestination,
     ShelfCode,
 )
 
@@ -137,30 +147,220 @@ class SeatClaimResponse(BaseModel):
 
 
 class HoldNoteResponse(BaseModel):
-    """Why a court is held, as one of five reasons. Never free text."""
+    """Why a court is held, as one of five reasons. Never free text.
+
+    ``age_minutes`` is the hold's **real** age and rides only on one the club has
+    taken back — never the club's threshold, because the card weakening the
+    marketplace's promise is the last place to print a number that is not the
+    one meant.
+    """
 
     reason: CardHoldReason
+    age_minutes: int | None = None
 
     @classmethod
     def from_domain(cls, note: HoldNote) -> "HoldNoteResponse":
-        return cls(reason=note.reason)
+        return cls(reason=note.reason, age_minutes=note.age_minutes)
+
+
+class SeatCountsResponse(BaseModel):
+    """What a counting sentence counts. **Counting is by money.**
+
+    ``paid`` and ``held`` are two numbers and never one: a held-and-unpaid seat
+    is a name with no money behind it and can lapse, so folding it into the
+    count tells four people a match is complete while a seat may still go.
+
+    ``turned_up`` is present once the match has been played and absent before —
+    it is the third thing ``{f} of {n}`` counts, and it is **sent** rather than
+    derived, because *one less than the seats* stops being minus one the moment
+    a doubles match loses two people.
+    """
+
+    seats: int
+    paid: int
+    held: int
+    turned_up: int | None = None
+
+    @classmethod
+    def from_domain(cls, counts: SeatCounts) -> "SeatCountsResponse":
+        return cls(
+            seats=counts.seats,
+            paid=counts.paid,
+            held=counts.held,
+            turned_up=counts.turned_up,
+        )
+
+
+class RefundResponse(BaseModel):
+    """What a cancellation returns, and where it went.
+
+    The destination fixes the tense, so it crosses rather than being derived
+    from the cause on the phone: a card refund is never claimed to have landed,
+    and a club credit is definite because it genuinely is instant.
+    """
+
+    amount: MoneyResponse
+    destination: RefundDestination
+
+    @classmethod
+    def from_domain(cls, refund: Refund) -> "RefundResponse":
+        return cls(
+            amount=MoneyResponse.from_domain(refund.amount),
+            destination=refund.destination,
+        )
+
+
+class OwnerExposureResponse(BaseModel):
+    """A private court's two figures, which disagree on purpose.
+
+    What has come back, and the whole court still guaranteed until the sold
+    format is met. The gap between them **is** the product fact: she watches
+    money arrive while owing exactly what she owed at the start.
+    """
+
+    recovered: MoneyResponse
+    guaranteed: MoneyResponse
+
+    @classmethod
+    def from_domain(cls, owner: OwnerExposure) -> "OwnerExposureResponse":
+        return cls(
+            recovered=MoneyResponse.from_domain(owner.recovered),
+            guaranteed=MoneyResponse.from_domain(owner.guaranteed),
+        )
+
+
+class ScoreSideResponse(BaseModel):
+    """One side of the net, named by the players who were on it."""
+
+    players: list[str]
+
+    @classmethod
+    def from_domain(cls, side: ScoreSide) -> "ScoreSideResponse":
+        return cls(players=list(side.players))
+
+
+class SetScoreResponse(BaseModel):
+    """One set, two integers, and no tiebreak field in v1."""
+
+    first: int
+    second: int
+
+    @classmethod
+    def from_domain(cls, one: SetScore) -> "SetScoreResponse":
+        return cls(first=one.first, second=one.second)
+
+
+class ScoreLineResponse(BaseModel):
+    """The score as sets of two integers, never a display string.
+
+    ``sides[0]`` is the viewer's when she played, and ``first`` in every set is
+    that side's games. **No level movement** rides beside it: no engine produces
+    one, and a card must not invent a number nothing computed.
+    """
+
+    sides: list[ScoreSideResponse]
+    sets: list[SetScoreResponse]
+
+    @classmethod
+    def from_domain(cls, score: ScoreLine) -> "ScoreLineResponse":
+        return cls(
+            sides=[ScoreSideResponse.from_domain(side) for side in score.sides],
+            sets=[SetScoreResponse.from_domain(one) for one in score.sets],
+        )
+
+
+class DepartureRecoverableResponse(BaseModel):
+    """A leaver who paid: what she paid, and what became of it.
+
+    ``outcome`` is absent while nothing has decided it — whether the money comes
+    back depends entirely on her seat refilling, which is why her card keeps the
+    match's own progress beside this.
+    """
+
+    form: Literal[DepartureForm.RECOVERABLE] = DepartureForm.RECOVERABLE
+    paid: MoneyResponse
+    outcome: Outcome | None = None
+
+
+class DepartureNothingTakenResponse(BaseModel):
+    """A leaver whose money never left, and so a payload with no amount at all."""
+
+    form: Literal[DepartureForm.NOTHING_TAKEN] = DepartureForm.NOTHING_TAKEN
+
+
+#: Two forms, discriminated, and never one payload with a sometimes-absent
+#: amount (ADR-0072): *nothing was taken* and *nothing has come back yet* are
+#: opposite sentences and a blank cannot tell them apart.
+DepartureResponse = Annotated[
+    DepartureRecoverableResponse | DepartureNothingTakenResponse,
+    Field(discriminator="form"),
+]
+
+
+def _departure(
+    departure: CardDeparture,
+) -> DepartureRecoverableResponse | DepartureNothingTakenResponse:
+    if isinstance(departure, DepartureNothingTaken):
+        return DepartureNothingTakenResponse()
+    return DepartureRecoverableResponse(
+        paid=MoneyResponse.from_domain(departure.paid),
+        outcome=departure.outcome,
+    )
 
 
 class SituationFactsResponse(BaseModel):
-    """The facts the situation's sentence prints."""
+    """The facts the situation's sentence prints.
 
+    Two are always here — the counting and the court's total — and the rest are
+    present exactly when the fact exists. That is a rule per fact rather than a
+    table of thirty-six judgements: no situation is named anywhere in the
+    composition, and a client reading a field that is absent has met a state
+    where the fact does not exist rather than a state somebody forgot.
+    """
+
+    counts: SeatCountsResponse
+    # The court's total, for **every** audience. The subject of `{price} settled
+    # to the club` is the court, and what it tells the viewer is *this game is
+    # happening*; her own share is on the spine beside it.
+    court_total: MoneyResponse
     hold: HoldNoteResponse | None = None
     cause: Cause | None = None
+    # The specific court, drawn only shortly before play. Everywhere earlier the
+    # card says the category, because a court is assigned and may be reassigned.
+    court: str | None = None
+    refund: RefundResponse | None = None
+    owner: OwnerExposureResponse | None = None
+    score: ScoreLineResponse | None = None
+    departure: DepartureResponse | None = None
 
     @classmethod
     def from_domain(cls, facts: SituationFacts) -> "SituationFactsResponse":
         return cls(
+            counts=SeatCountsResponse.from_domain(facts.counts),
+            court_total=MoneyResponse.from_domain(facts.court_total),
             hold=(
-                None
-                if facts.hold is None
-                else HoldNoteResponse.from_domain(facts.hold)
+                None if facts.hold is None else HoldNoteResponse.from_domain(facts.hold)
             ),
             cause=facts.cause,
+            court=facts.court,
+            refund=(
+                None
+                if facts.refund is None
+                else RefundResponse.from_domain(facts.refund)
+            ),
+            owner=(
+                None
+                if facts.owner is None
+                else OwnerExposureResponse.from_domain(facts.owner)
+            ),
+            score=(
+                None
+                if facts.score is None
+                else ScoreLineResponse.from_domain(facts.score)
+            ),
+            departure=(
+                None if facts.departure is None else _departure(facts.departure)
+            ),
         )
 
 

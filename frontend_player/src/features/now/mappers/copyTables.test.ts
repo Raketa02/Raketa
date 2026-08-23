@@ -39,7 +39,7 @@ import {
 import type { SituationContext, Tag, Tone } from '../types';
 
 import type { ActCode, AssertTrue, CaptionCode, CardHoldReason, IsClosedUnion } from './codes';
-import type { DoorCode, ShelfCode, Situation, TermCode } from './codes';
+import type { DoorCode, ShelfCode, Situation, SituationFacts, TermCode } from './codes';
 
 /**
  * The five guards a `Record` cannot carry, in the one place they are read
@@ -153,8 +153,22 @@ const TAGS: readonly Tag[] = [
   'Seat open',
 ];
 
+/**
+ * The two facts every card carries, so an override only says what it is about.
+ *
+ * `counts` and `court_total` are required on the wire — counting is by money
+ * and every card counts — and a fixture that could leave them out would be
+ * exercising a payload the server cannot compose.
+ */
+const FACTS: SituationFacts = {
+  counts: { seats: 4, paid: 2, held: 0, turned_up: null },
+  court_total: { amount: 15200, currency: 'PLN' },
+  hold: null,
+  cause: null,
+};
+
 const context = (over: Partial<SituationContext> = {}): SituationContext => ({
-  facts: { hold: null, cause: null },
+  facts: FACTS,
   clubName: 'Kortowo',
   price: '38,00 zł',
   ...over,
@@ -251,8 +265,10 @@ describe('every situation says something', () => {
   });
 
   it('composes the hold reason into the sentence rather than printing free text', () => {
-    const near = SITUATION_COPY.heldSoft(context({ facts: { hold: { reason: 'near' } } }));
-    const far = SITUATION_COPY.heldSoft(context({ facts: { hold: { reason: 'far' } } }));
+    const near = SITUATION_COPY.heldSoft(
+      context({ facts: { ...FACTS, hold: { reason: 'near' } } }),
+    );
+    const far = SITUATION_COPY.heldSoft(context({ facts: { ...FACTS, hold: { reason: 'far' } } }));
 
     expect(near.line).toContain('one seat short');
     expect(far.line).toContain('twelve hours');
@@ -261,7 +277,7 @@ describe('every situation says something', () => {
 
   it('still says the court is held when the hold reason is one it cannot name', () => {
     const unknown = SITUATION_COPY.heldSoft(
-      context({ facts: { hold: { reason: 'invented' as CardHoldReason } } }),
+      context({ facts: { ...FACTS, hold: { reason: 'invented' as CardHoldReason } } }),
     );
 
     expect(unknown.line).toBe('Held for this match.');

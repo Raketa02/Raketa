@@ -50,6 +50,15 @@ export interface MatchCardOptions {
   readonly act?: Wire['ActCode'] | null;
   /** `ADR-0086`'s spine boolean: whether this viewer may leave. */
   readonly mayDepart?: boolean;
+  /**
+   * The situation half's facts, over the two every card carries.
+   *
+   * `counts` and `court_total` are **required on the wire** — counting is by
+   * money and every card counts, and the court's total is the one money line
+   * with no audience at all — so a builder that let them be left out would
+   * build a card the server cannot compose.
+   */
+  readonly facts?: Partial<Wire['SituationFactsResponse']>;
 }
 
 export function matchCard({
@@ -61,6 +70,7 @@ export function matchCard({
   seatClaimExpiresAt,
   act = null,
   mayDepart = false,
+  facts = {},
 }: MatchCardOptions): Wire['MatchCardResponse'] {
   return {
     card_type: 'match',
@@ -80,7 +90,16 @@ export function matchCard({
     act,
     may_depart: mayDepart,
     seat_claim: seatClaimExpiresAt === undefined ? null : { expires_at: seatClaimExpiresAt },
-    situation: { situation, facts: { hold: null, cause: null } },
+    situation: {
+      situation,
+      facts: {
+        counts: { seats: 4, paid: 2, held: 0, turned_up: null },
+        court_total: { amount: amount * 4, currency: 'PLN' },
+        hold: null,
+        cause: null,
+        ...facts,
+      },
+    },
   };
 }
 

@@ -34,12 +34,21 @@ the last four are the client's own tables.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import final
 from uuid import UUID
 
 from app.engines.fit import TermCode
-from app.kernel import Cause, Cover, Grosze, Instant, Situation, Sport, Zone
+from app.kernel import (
+    Cause,
+    Cover,
+    Grosze,
+    Instant,
+    Outcome,
+    Situation,
+    Sport,
+    Zone,
+)
 
 from app.modules.now.domain.vocabulary import (
     ActCode,
@@ -48,7 +57,9 @@ from app.modules.now.domain.vocabulary import (
     CardHoldReason,
     CardType,
     Currency,
+    DepartureForm,
     DoorCode,
+    RefundDestination,
     ShelfCode,
 )
 
@@ -181,9 +192,186 @@ class HoldNote:
     contract. Dropping the reason entirely was the serious alternative and is the
     worse of the two losing options: *why* a court is held is the difference
     between relaxing and chasing friends for the last seat.
+
+    ``age_minutes`` is *"the hold's real age"* and rides only on a hold the club
+    has taken back — ``now - held_since``, and the **hold's** age rather than the
+    club's threshold. A hold that has sat seventy-one hours under a
+    forty-eight-hour cap says seventy-one: a card weakening the marketplace's
+    promise is the last place to print a number that is not the one meant.
+
+    It is an elapsed span and not the instant to subtract from, which is the one
+    place on this screen ADR-0053's *the phone only subtracts* does not apply —
+    because the hold is **over**. A card counting up from a reclaim that has
+    already happened would tick a number nothing is waiting for.
     """
 
     reason: CardHoldReason
+    age_minutes: int | None = None
+
+
+@final
+@dataclass(frozen=True)
+class SeatCounts:
+    """What a counting sentence counts, sent as the numbers it prints.
+
+    **Counting is by money** (ADR-0073). ``paid`` is seats somebody has paid
+    for, which is the only count that means anything; ``held`` is a name with no
+    money behind it and is **its own number beside that count, never folded into
+    it** — counting people would tell a player a match is full while a seat may
+    still lapse, and suppressing holds produces the same lie in reverse.
+
+    **Every number the sentence prints is sent as that number.** The sentences
+    reading *one less than the seats* get three and four, never *four, now take
+    one off*: it is only ever minus one until a doubles match loses two people,
+    at which point the phone would confidently print *3 of 4* and the player
+    would believe three people played.
+
+    ``turned_up`` is present exactly while the match has been played, which is a
+    fact about the clock rather than a judgement about a situation. Before that
+    nobody has played and a number would be a claim about the future; the cost
+    of sending ``paid`` there instead would be a card that counts attendance at
+    a match nobody has been to.
+
+    ``{f} of {n}`` no longer means one thing across the screen, so the copy says
+    what it counts — **seats paid**, **shares paid**, **played** — and every one
+    of those nouns is the client's.
+    """
+
+    seats: int
+    paid: int
+    held: int
+    turned_up: int | None = None
+
+
+@final
+@dataclass(frozen=True)
+class Refund:
+    """What a cancellation returned, and where it went.
+
+    Two fields and both load-bearing: the amount is what she is owed, and the
+    destination is what makes the sentence's tense honest. Neither is derivable
+    from the other, and the destination is not derivable on the phone at all
+    without the phone holding a rule about which cancellation pays which way.
+    """
+
+    amount: Money
+    destination: RefundDestination
+
+
+@final
+@dataclass(frozen=True)
+class OwnerExposure:
+    """A private court's two money figures, which disagree on purpose.
+
+    ADR-0073 calls this *"the most surprising thing in the private-court
+    model"*: an owner watches money come back while owing exactly what she owed
+    at the start. ``recovered`` is what the marketplace has paid in;
+    ``guaranteed`` is the **whole court**, which ADR-0045 says never shrinks —
+    ADR-0044 refunds every marketplace payer in full when the sold format is
+    unmet, so her exposure does not move until it fills.
+
+    Showing the guarantee alone looks broken — thirty złoty just landed and the
+    card acts as though nothing happened — and showing the recovery alone tells
+    her she is covered when she is not. The **gap between them** is the fact.
+
+    **Neither figure is about the viewer**, and that is a limitation stated
+    rather than hidden: the record carries no owner (``Raketa02/Raketa#99``), so
+    a private card composes the court's two figures and the copy addressing them
+    to *you* is the client's. Every private situation in v1 arrives from seed
+    (ADR-0086), so nobody meets the gap outside the seeded demo.
+    """
+
+    recovered: Money
+    guaranteed: Money
+
+
+@final
+@dataclass(frozen=True)
+class ScoreSide:
+    """One side of the net, named by the players who were on it.
+
+    ADR-0073: a bare *6-4, 3-6, 6-2* was refused because with four cards from
+    four evenings on one screen it prints a number that is true of **somebody**
+    — the same class of defect as deriving *n − 1*. The cost is that a card
+    carries a **person**, which is the first time one does.
+    """
+
+    players: tuple[str, ...]
+
+
+@final
+@dataclass(frozen=True)
+class SetScore:
+    """One set, as games won by each side, and never a display string.
+
+    Two integers. **No tiebreak field in v1** and none smuggled in as a third
+    integer: a real 7-6 is two integers and the tiebreak's own points are not
+    modelled.
+    """
+
+    first: int
+    second: int
+
+
+@final
+@dataclass(frozen=True)
+class ScoreLine:
+    """The score, both sides named, **the viewer's first**.
+
+    ``sides[0]`` is the side the viewer played on when she played at all, and
+    ``first`` in each set is that side's games. A viewer looking in has no side,
+    and then the order is the match's own — which is what the stored score
+    already means, so nothing is invented for her.
+
+    **No level movement.** ADR-0073 withdrew the Player Score line because no
+    engine produces one: ``app/engines/`` holds seven engines and not one
+    updates a rating from a result. The card prints the thing that actually
+    happened instead of a number the app would have had to invent.
+    """
+
+    sides: tuple[ScoreSide, ScoreSide]
+    sets: tuple[SetScore, ...]
+
+
+@final
+@dataclass(frozen=True)
+class DepartureRecoverable:
+    """A leaver who paid: what she paid, and what became of it.
+
+    ``outcome`` is ``None`` while nothing has decided it — she left, and whether
+    the money comes back depends **entirely** on her seat refilling. That is why
+    her card keeps the match's own facts: a card that hid the match's progress
+    would hide the only thing that determines her outcome.
+
+    A settled ``FORFEITED`` still carries the amount, because *you paid 38,00 zł
+    and got none of it back* is the sentence and a payload that dropped the
+    figure could not say it.
+    """
+
+    paid: Money
+    outcome: Outcome | None = None
+
+    form: DepartureForm = DepartureForm.RECOVERABLE
+
+
+@final
+@dataclass(frozen=True)
+class DepartureNothingTaken:
+    """A leaver whose money never left, and therefore a payload with no amount.
+
+    ADR-0030: before commitment the seat is cleared *and* unpaid, *"so there is
+    nothing left to derive from and the card can name no amount at all."* It
+    carries no outcome either — nothing taken is born settled as a reversal, so
+    an outcome here would be a constant with a field around it.
+    """
+
+    form: DepartureForm = DepartureForm.NOTHING_TAKEN
+
+
+#: A leaver's departure, in **two forms** and never one with a sometimes-absent
+#: amount (ADR-0072). Reading ``paid`` without narrowing does not typecheck,
+#: which is the same guarantee ``LeaverMoney`` gives the aggregate one ring in.
+CardDeparture = DepartureRecoverable | DepartureNothingTaken
 
 
 @final
@@ -191,15 +379,36 @@ class HoldNote:
 class SituationFacts:
     """The numbers and names the situation's sentence prints.
 
-    Thin on purpose today: this ticket ships the envelope with its regions empty,
-    and the facts each of the thirty-six situations carries are the enrolled
-    strip's to fill. What is here is what the *contract* owes now — the two closed
-    enumerations that would otherwise reach the client as bare strings, degrading
-    its exhaustive table into an index signature that never fires.
+    **Two are always here and the rest arrive when the fact exists.** Counting
+    and the court's total are properties of every match, so they are composed
+    unconditionally; a hold, a court's name, a refund, an owner's exposure, a
+    score and a departure each exist in some states and not in others, and each
+    is present exactly when it exists. That is a rule per fact rather than
+    ADR-0073's *"table of 36 judgements nobody can maintain"* — no situation is
+    named anywhere in the composition.
+
+    ``court_total`` is *"the court's total, for every audience"*. The subject of
+    ``{price} settled to the club`` is the **court**, and what it tells the
+    viewer is *this game is happening*; her own share answers a question she did
+    not ask and answers it worse, because her money left days ago. It is the one
+    money line on the screen that needs no audience at all — which is why it is
+    beside the spine's ``price`` rather than replacing it.
+
+    ``court`` is the specific court, and it is here rather than on the spine
+    because it is *usually unassigned*: ``kernel.court_named_at`` does not name
+    one until fifteen minutes before play, and a spine field that is empty
+    almost always is one somebody eventually fills with something else.
     """
 
+    counts: SeatCounts
+    court_total: Money
     hold: HoldNote | None = None
     cause: Cause | None = None
+    court: str | None = None
+    refund: Refund | None = None
+    owner: OwnerExposure | None = None
+    score: ScoreLine | None = None
+    departure: CardDeparture | None = None
 
 
 @final
@@ -214,7 +423,12 @@ class SituationHalf:
     """
 
     situation: Situation
-    facts: SituationFacts = field(default_factory=SituationFacts)
+
+    #: **Required**, and it used to have an empty default. Every card counts —
+    #: seats paid, the held seat beside them, the court's total — so a facts
+    #: object that could be left out would be a card that says nothing about the
+    #: match it is describing, which is not a state the composition can produce.
+    facts: SituationFacts
 
 
 @final

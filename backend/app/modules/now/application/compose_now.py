@@ -7,8 +7,9 @@ about a single instant rather than three regions that half-disagree.
 **Regions are filled one ticket at a time and the envelope never moves.** The
 route shipped with all three empty so the client could compile against it; what
 is real here today is the shape of the answer, the resolution of ``all``, the
-stamps, and **shelves 4 and 5** — the two shelves that do not run through the
-ranked funnel and therefore do not wait on it.
+stamps, **the enrolled strip** and **shelves 4 and 5** — the parts that do not
+run through the ranked funnel and therefore do not wait on it. The offers region
+is the cascade's (``Raketa02/Raketa#83``).
 
 **Every ask pays the full funnel.** There is no player feed cache — it was the
 answer to a load shape that no longer exists, and it is the only place on this
@@ -26,12 +27,12 @@ from __future__ import annotations
 from app.kernel import Clock, Instant, Sport
 
 from app.modules.now.application.commands import ComposeNowQuery
+from app.modules.now.application.compose_enrolled import ComposeEnrolled
 from app.modules.now.application.new_arrivals import ComposeNewArrivals
 from app.modules.now.domain.ports import ParkedRuns, RatedSports
 from app.modules.now.domain.screen import (
     Block,
     Door,
-    EnrolledRegion,
     NowScreen,
     OffersRegion,
     ShelvesRegion,
@@ -75,11 +76,13 @@ class ComposeNow:
         rated_sports: RatedSports,
         parked_runs: ParkedRuns,
         new_arrivals: ComposeNewArrivals,
+        enrolled: ComposeEnrolled,
         clock: Clock,
     ) -> None:
         self._rated_sports = rated_sports
         self._parked_runs = parked_runs
         self._new_arrivals = new_arrivals
+        self._enrolled = enrolled
         self._clock = clock
 
     async def execute(self, query: ComposeNowQuery) -> NowScreen:
@@ -90,7 +93,16 @@ class ComposeNow:
 
         return NowScreen(
             offers=OffersRegion(stamp=stamp),
-            your_matches=EnrolledRegion(stamp=stamp),
+            your_matches=await self._enrolled.compose(
+                viewer=query.player_id,
+                # The **named chip**, not the resolved set. ADR-0084 filters the
+                # strip along with the shelves and `all` hides nothing; passing
+                # `sports` here would hide a match she has paid for the moment
+                # she is unrated at its sport.
+                sport=query.sport.sport,
+                now=now,
+                stamp=stamp,
+            ),
             shelves=ShelvesRegion(
                 stamp=stamp,
                 shelves=await self._blocks(
@@ -98,10 +110,13 @@ class ComposeNow:
                 ),
             ),
             sports=sports,
-            # Money is not modelled yet, so nothing can owe anything and the line
-            # is absent rather than present at zero. When the ledger lands, the
-            # only change here is where the amount comes from — the *shape* of a
-            # player who owes nothing is already correct.
+            # The ledger is modelled and this line still has no composer, which
+            # is a gap named rather than filled: the debt line's own ticket is
+            # `Raketa02/Raketa#92`, and composing it here would be writing the
+            # answer that ticket exists to decide — in particular *blocked* is a
+            # server boolean about acts nothing in v1 can yet refuse. The
+            # *shape* of a player who owes nothing is already correct, so the
+            # day it lands the change is where the amount comes from.
             debt=None,
         )
 
