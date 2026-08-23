@@ -12,6 +12,8 @@ holds no rating at answers with a block in the shelves list rather than with a
 blank screen, and which sentence it shows is whether a run is already parked.
 """
 
+import json
+
 import pytest
 
 ALICE = {
@@ -252,3 +254,30 @@ async def test_two_players_get_their_own_screens(client) -> None:
         response = await client.get("/api/v1/now", headers=headers)
         assert response.status_code == 200, response.text
         assert response.json()["your_matches"]["cards"] == []
+
+
+async def test_the_body_is_the_bytes_the_payload_budget_is_measured_in(
+    client,
+) -> None:
+    """Compact, unescaped, and every absent field present as ``null``.
+
+    ADR-0069's ceiling is *150 KB uncompressed for the whole composed envelope*,
+    and `tests/unit/test_now_budgets.py` weighs that envelope through
+    ``NowResponse``'s own serialiser rather than over HTTP — a 23-card screen
+    needs 500 city matches and there is no database in that suite. This is the
+    assertion that lets it: what the route renders is byte-for-byte what the
+    model renders, so the two cannot drift into measuring different documents.
+
+    A route that started excluding nulls would make the budget measure *more*
+    than the wire, which is the safe direction — and it would still be a
+    contract change, because a client's generated type reads an absent field
+    differently from a null one.
+    """
+
+    headers = await _auth_headers(client)
+    body = (await client.get("/api/v1/now", headers=headers)).content
+
+    assert body == json.dumps(
+        json.loads(body), separators=(",", ":"), ensure_ascii=False
+    ).encode("utf-8")
+    assert b'"debt":null' in body

@@ -312,6 +312,31 @@ Rules to preserve:
   does not change with the title, because closeness to her Level is what `desc(fit)`
   already leads on. **Nothing is random** — no seed, no draw, nothing recorded for replay —
   and there is **no player feed cache**, both asserted by walks with negative controls.
+- **Two passes run over the composed screen, and both are about relationships between
+  rows.** Shelf order → **repeat guard** → **emphasis**
+  ([ADR-0032](../docs/adr/0032-now-is-one-screen.md), ADR-0037), in
+  `now/domain/composition.py`, over the whole `NowScreen` and never inside `_blocks` —
+  emphasis has to see the offers region and a list of blocks does not contain it. The guard
+  drops a shelf only when **every** card on it is on the nearest shelf **still standing**;
+  partial overlap is allowed, because two shelves make two different claims about one match.
+  Emphasis is **at most one card on the whole screen**, the first in final composed order
+  clearing fit ≥ 90 **and** coverage ≥ 80 % **and** a seat open, and **any offer silences it
+  entirely**. The cap is the guarantee, not the thresholds. Only a ranked card can carry it,
+  which falls out of `ComposeShelves` answering `Ranked` — shelves *and* the scores behind
+  the cards they kept — rather than out of a rule; a degraded screen carries no scores and
+  therefore no loud card, which is one fact and not two. The two passes **commute today**
+  and that is asserted by exhaustive search rather than assumed, because it is a property of
+  the drop condition and not of the passes.
+- **Now has two budgets and they are not the same kind of thing**
+  ([ADR-0069](../docs/adr/0069-the-budget-is-two-budgets-and-both-fail-the-build.md),
+  ADR-0085), both in `tests/unit/test_now_budgets.py` and both measured on the fullest
+  realistic screen — **23 cards across four lanes**, asserted rather than described.
+  **Payload is a gate**: 150 KB uncompressed for the whole composed envelope, and going over
+  **fails the build**; the answer to a red one is an ADR or a smaller card, never a bigger
+  number. **Latency is reported and never asserted on**, with its conditions in the line —
+  warm cache, 500 live city matches, 300 retrieved, 23 cards, and whether coverage was
+  tracing, which moves the figure by more than a factor of two. The **cold** ceiling is not
+  measurable from that suite at all, because the cold cost is the adapter's.
 - **A snapshot is assembled here and nothing in `app/engines/` moves.** The shipped
   `matchfit` engine with its ten `TermCode`s is the fixed point (ADR-0036). What is decided
   on this side of the input contract: the **context cache**, keyed

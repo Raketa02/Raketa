@@ -1162,5 +1162,55 @@ there; they are not repeated here.
   always the viewer's own band restated, so printing it would be the card telling her what
   she already knows in the voice of a measurement.
 
+- **The two passes over the screen** (`now.without_repeats`, `now.emphasised`) — everything
+  else composes *one* region or *one* shelf and can be right about it alone; these two
+  cannot, so they run last, over the composed `NowScreen`, in the order **repeat guard →
+  emphasis**. Neither composes anything: both answer a screen, rebuilding only what they
+  changed. The order is not observable today and the equivalence is asserted by exhaustive
+  search rather than argued — it belongs to the guard's **drop condition**, so it stops
+  holding the day that widens. _Avoid_: running either inside `_blocks`, where emphasis
+  cannot see the offers region.
+- **The repeat guard** (`now.without_repeats`) — a shelf is dropped when **every** card on
+  it is already on the nearest shelf **still standing**. Partial overlap is allowed and a
+  match may sit on two shelves: two shelves make two different claims about one match, and
+  hiding a good match for having been mentioned is a worse screen than mentioning it twice.
+  A door is stepped over rather than compared, and an empty shelf is **kept** — *every one
+  of no cards is a repeat* is vacuously true, so a guard that did not say so would delete
+  the one shape that should never have existed. It **cannot fire on today's four lanes**
+  and is written for `recentlyViewed`, which is reserved with no producer and arrives as a
+  server change (ADR-0085). _Avoid_: comparing against the shelf that *preceded* it in the
+  composer's list, which is a row nobody scrolls past.
+- **Emphasis** (`now.emphasised`, `EMPHASIS_FIT_FLOOR`, `EMPHASIS_COVERAGE_FLOOR`) — **at
+  most one card on the whole screen**, the first in **final composed order** clearing all
+  three of fit ≥ 90, coverage ≥ 80 % and a seat open; **any offer on screen silences it
+  entirely**. The cap is the guarantee and the thresholds are not: whatever real scores do,
+  the screen's one loud colour cannot become wallpaper, which is what lets ADR-0037 keep
+  *coral is never decorative*. Only a **ranked** card can carry it, and that falls out of
+  the funnel answering `Ranked.scores` rather than out of a rule — the strip and the
+  arrival shelves have no score, and a degraded screen has none either. _Avoid_: re-ranking
+  here; the card that shouts is the first she would reach, so *why that one* has an answer
+  she can see.
+- **`Ranked`** (`now.Ranked`) — what `ComposeShelves` answers: its shelves **and** the
+  `Scored` rows behind the cards they kept. Emphasis gates on `fit`, `coverage` and
+  `has_free_seat`, all three of which the funnel has already computed, so stopping them at
+  the composer's edge would mean scoring twice on the one screen whose whole cost is
+  scoring. Only what a shelf **kept** rides out: a candidate the floor, the cap or a lane
+  rule removed is not on the screen and may not be shouted about.
+- **The payload ceiling** (`tests/unit/test_now_budgets.py`) — **150 KB uncompressed for
+  the whole composed envelope at 23 cards, and it fails the build** (ADR-0069, ADR-0085).
+  A gate rather than a log line, because a ceiling that only advises is one that can be
+  reasoned past a defensible field at a time. Measured through `NowResponse`'s own
+  serialiser, which `tests/api/test_now.py` asserts is byte-for-byte what the route
+  renders. If it goes red the answer is an ADR or a smaller card — never a bigger number.
+- **The reported p99** (`tests/unit/test_now_budgets.py`) — the latency figure is
+  **reported with its conditions named and never asserted on**: warm context cache, 500
+  live city matches, the soonest 300 retrieved, 23 cards, and whether coverage was tracing,
+  which alone moves it by more than a factor of two. Naming the cache state is the
+  load-bearing half — *a p99 measured against a cold cache is measuring the cache* — and
+  the **cold ceiling cannot be measured from this suite at all**, because the cold cost is
+  the adapter's and there is no database. _Avoid_: turning it into a gate before there is
+  something profileable to gate; a build that fails on which machine ran it teaches people
+  to re-run the build.
+
 Add backend-specific technical terms here as they are resolved. Anything describing the
 *domain* belongs in the shared glossary instead.

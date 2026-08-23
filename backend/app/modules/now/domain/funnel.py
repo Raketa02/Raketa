@@ -61,7 +61,7 @@ from app.kernel import (
     match_end,
 )
 
-from app.modules.now.domain.screen import Fit, Money
+from app.modules.now.domain.screen import Fit, Money, Shelf
 from app.modules.now.domain.vocabulary import ShelfCode
 
 #: How far ahead retrieval looks. A ranking-layer policy and deliberately not a
@@ -473,3 +473,27 @@ def keep(candidates: Iterable[Scored], *, cap: int) -> tuple[Scored, ...]:
     """The cap, and the only pass in the funnel that removes a card."""
 
     return tuple(candidates)[:cap]
+
+
+@final
+@dataclass(frozen=True)
+class Ranked:
+    """What the ranked funnel answers: its shelves, and what it knew about them.
+
+    The shelves are the region's; ``scores`` is what the funnel already computed
+    and would otherwise throw away at its own edge. Emphasis reads ``fit``,
+    ``coverage`` and ``has_free_seat``, and all three are on ``Scored`` — so the
+    alternative to carrying them out was recomputing a score the composer had
+    just discarded, on a screen whose whole cost is scoring.
+
+    Only the cards a shelf **kept** are here. A candidate the floor, the cap or a
+    lane rule removed is not on the screen, so it cannot be the emphatic card,
+    and carrying it would let a later pass emphasise something nobody can see.
+
+    ``scores`` is empty under degrade, and that is the honest shape rather than a
+    marker: the scorer answered nothing, so there is nothing to emphasise, and a
+    degraded screen loses its badges and its one loud card together.
+    """
+
+    shelves: tuple[Shelf, ...] = ()
+    scores: tuple[Scored, ...] = ()

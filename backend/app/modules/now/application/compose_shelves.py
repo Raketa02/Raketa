@@ -59,6 +59,7 @@ from app.modules.now.domain.funnel import (
     CANDIDATE_HORIZON_DAYS,
     Lane,
     MatchScoringContext,
+    Ranked,
     Scored,
     Viewer,
     cap_for,
@@ -111,7 +112,7 @@ class ComposeShelves:
         sports: frozenset[Sport],
         now: Instant,
         stamp: Stamp,
-    ) -> tuple[Shelf, ...]:
+    ) -> Ranked:
         """Shelf 1 and shelf 2, in the server's order, absent when empty.
 
         **Shelf 1 is never absent for a viewer with any eligible match**, which
@@ -125,20 +126,29 @@ class ComposeShelves:
         takes these two shelves' position precisely because there is nothing for
         them to hold. Composing a ranked shelf for her would print an order
         computed from a Level nobody holds.
+
+        **The scores come out with the shelves.** Emphasis is a property of the
+        composed *screen* and gates on three numbers this funnel has already
+        computed, so stopping them at this edge would mean scoring twice on the
+        one screen whose whole cost is scoring. Only what a shelf **kept** is
+        carried: a candidate the floor, the cap or a lane rule removed is not on
+        the screen, and a pass that could reach it would be flagging a card
+        nobody can see.
         """
 
         rankable = await self._rankable(viewer, sports)
         if not rankable:
-            return ()
+            return Ranked()
 
         candidates = await self._candidates(sports=rankable, now=now)
         if not candidates:
-            return ()
+            return Ranked()
 
         who = await self._viewer(viewer)
         shelves: list[Shelf] = []
+        scores: list[Scored] = []
         for lane in Lane:
-            shelf = await self._shelf(
+            one = await self._shelf(
                 lane=lane,
                 candidates=candidates,
                 who=who,
@@ -146,9 +156,11 @@ class ComposeShelves:
                 now=now,
                 stamp=stamp,
             )
-            if shelf is not None:
-                shelves.append(shelf)
-        return tuple(shelves)
+            if one is None:
+                continue
+            shelves.extend(one.shelves)
+            scores.extend(one.scores)
+        return Ranked(shelves=tuple(shelves), scores=tuple(scores))
 
     async def _rankable(
         self, viewer: UUID, sports: frozenset[Sport]
@@ -204,7 +216,7 @@ class ComposeShelves:
         sports: frozenset[Sport],
         now: Instant,
         stamp: Stamp,
-    ) -> Shelf | None:
+    ) -> Ranked | None:
         eligible = tuple(
             one
             for one in candidates
@@ -270,7 +282,7 @@ class ComposeShelves:
 
     def _ranked(
         self, lane: Lane, scored: Sequence[Scored], *, now: Instant, stamp: Stamp
-    ) -> Shelf | None:
+    ) -> Ranked | None:
         """Floor → ``FEED_ORDER`` → diversity → cap, in that order and no other.
 
         The floor runs **before** the order, so a shelf that has to be retitled
@@ -298,12 +310,17 @@ class ComposeShelves:
         varied = diversify(ordered) if lane is Lane.OPEN else tuple(ordered)
         kept = keep(varied, cap=cap_for(lane))
 
-        return Shelf(
-            code=code_for(lane, retitled=retitled),
-            cards=tuple(
-                _card(one.context, badge=one.badge, now=now, stamp=stamp)
-                for one in kept
+        return Ranked(
+            shelves=(
+                Shelf(
+                    code=code_for(lane, retitled=retitled),
+                    cards=tuple(
+                        _card(one.context, badge=one.badge, now=now, stamp=stamp)
+                        for one in kept
+                    ),
+                ),
             ),
+            scores=kept,
         )
 
     def _degraded(
@@ -313,7 +330,7 @@ class ComposeShelves:
         *,
         now: Instant,
         stamp: Stamp,
-    ) -> Shelf | None:
+    ) -> Ranked | None:
         """What a shelf is when the scorer could not answer.
 
         Shelf 1 keeps its cards, loses every badge and takes the ``sameLevel``
@@ -325,6 +342,12 @@ class ComposeShelves:
         **Nothing says so on the wire.** The card carries no badge, which is what
         an unrated viewer's card also carries, and that is the whole of the
         client's experience of a degrade.
+
+        **And no score comes out**, so the degraded screen has no emphatic card
+        either. That is one consequence rather than a second decision: emphasis
+        gates on a fit and a coverage, and a screen that could not compute a
+        badge cannot have computed the two numbers that would license shouting
+        about one.
         """
 
         if lane is Lane.FULL:
@@ -332,11 +355,15 @@ class ComposeShelves:
         soonest = sorted(
             eligible, key=lambda one: (one.record.start, str(one.match_id))
         )
-        return Shelf(
-            code=code_for(lane, retitled=True),
-            cards=tuple(
-                _card(one, badge=None, now=now, stamp=stamp)
-                for one in soonest[: cap_for(lane)]
+        return Ranked(
+            shelves=(
+                Shelf(
+                    code=code_for(lane, retitled=True),
+                    cards=tuple(
+                        _card(one, badge=None, now=now, stamp=stamp)
+                        for one in soonest[: cap_for(lane)]
+                    ),
+                ),
             ),
         )
 

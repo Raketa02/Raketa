@@ -1100,6 +1100,19 @@ about it. Decided by [ADR-0070](docs/adr/0070-now-is-three-regions-and-a-card-ha
 - **Diversity** — the pass that stops one club's Tuesday evening filling a shelf: at most two
   of its cards sit together and the rest go to the **back of the shelf**, never out of it. A
   variety rule that also shortened the shelf would be taking a card away twice.
+- **Repeat guard** — the pass that drops a shelf when **every** card on it is already on
+  the shelf above. Partial overlap is allowed and one match may appear on more than one
+  shelf: two shelves make two different claims about it, and hiding a good match for having
+  been mentioned is a worse screen than mentioning it twice. What it exists to stop is the
+  row that adds *nothing* — six cards under a second title, which teaches a player that
+  scrolling is not worth it.
+- **Emphasis** — **at most one card on the whole screen** is loud, and it is the first she
+  would reach that clears all three of a fit of 90, coverage of 80 % and a seat open. **Any
+  offer on the screen silences it entirely**: an offer is a seat with a clock on it, and a
+  suggestion shouting underneath would be two things competing to be the one thing she does
+  next. The cap is the guarantee rather than the thresholds — the one loud colour cannot
+  become wallpaper whatever real scores turn out to do — and a card she is already in, a
+  person, a club, or any card on a screen the scorer could not answer for is never the one.
 - **Fit badge** — the number on a suggested card, always printed, **clamped to 20–99** at
   display: a 3 is not more useful than a 20 — both mean no — and never 100, because certainty
   is never warranted. Up to **three reasons** ride behind it as machine codes with the

@@ -28,16 +28,28 @@ from app.modules.now.application.compose_enrolled import ComposeEnrolled
 from app.modules.now.application.compose_shelves import ComposeShelves
 from app.modules.now.application.scoring import MatchScorer
 from tests.unit.shelf_doubles import (
+    STAMP as STAMP_FOR_ARRIVALS,
     FakeCityMatches,
     FakeCommitments,
     FakeRatings,
     FakeStandbyPlaces,
+    a_context,
+    a_match,
+    rated,
 )
 from app.modules.now.application.compose_now import ComposeNow, stamp_at
 from app.modules.now.application.new_arrivals import ComposeNewArrivals
 from app.modules.now.domain.enrolled import Enrolment
 from app.modules.now.domain.ports import EnrolledMatches, ParkedRuns, RatedSports
-from app.modules.now.domain.screen import Block, Door, Shelf, Stamp
+from app.modules.now.domain.screen import (
+    Block,
+    ClubCard,
+    Door,
+    Level,
+    PersonCard,
+    Shelf,
+    Stamp,
+)
 from app.modules.now.domain.vocabulary import BlockType, DoorCode, ShelfCode
 
 AT = datetime(2026, 8, 22, 17, 30, tzinfo=timezone.utc)
@@ -464,3 +476,123 @@ def test_a_stamp_stays_inside_what_a_javascript_number_holds_exactly() -> None:
     # years, which is what makes an integer stamp safe to ship.
     far_future = datetime(2500, 1, 1, tzinfo=timezone.utc)
     assert stamp_at(far_future) < 2**53
+
+
+# --- the two passes over the composed screen --------------------------------
+
+
+def _shelves_over(*contexts, level: int = 240) -> ComposeShelves:
+    """The real funnel over a city, so the scores emphasis reads are real ones.
+
+    A stub answering a hand-made `Ranked` would let this file assert that a
+    number reached the pass without ever asserting that the funnel produced one,
+    which is the half `#77` inherits rather than owns.
+    """
+
+    return ComposeShelves(
+        city=FakeCityMatches(*contexts),
+        commitments=FakeCommitments(),
+        standby=FakeStandbyPlaces(),
+        ratings=FakeRatings(PADEL=rated(level)),
+        scorer=MatchScorer(pairing=PairingEngineV1(), matchfit=MatchFitEngineV1()),
+    )
+
+
+def _emphatic(screen) -> list[UUID]:
+    found: list[UUID] = []
+    for block in screen.shelves.shelves:
+        if not isinstance(block, Shelf):
+            continue
+        found.extend(card.match_id for card in block.cards if card.emphasis)
+    return found
+
+
+async def test_the_composed_screen_carries_at_most_one_emphatic_card() -> None:
+    """Three matches that each clear all three gates, one flag between them.
+
+    The cap is the guarantee ADR-0037 rests the screen's one loud colour on, and
+    it is a property of the *screen* — so it is asserted where a screen exists
+    rather than where a shelf does.
+    """
+
+    player = uuid4()
+    rated_at = FakeRatedSports(**{str(player): frozenset({Sport.PADEL})})
+    contexts = [
+        a_context(record=a_match(paid=3, starts=n * 180)) for n in range(3)
+    ]
+    screen = await _compose(
+        rated_at, SteppingClock(AT), shelves=_shelves_over(*contexts)
+    ).execute(ComposeNowQuery(player_id=player, sport=SportFilter.PADEL))
+
+    assert len(_emphatic(screen)) == 1
+
+
+async def test_a_screen_with_nothing_over_the_gates_shouts_about_nothing() -> None:
+    # A quiet screen is the ordinary one: 4,3 % of realistic scores reach 90, and
+    # emphasis means something only because it is rare.
+    player = uuid4()
+    rated_at = FakeRatedSports(**{str(player): frozenset({Sport.PADEL})})
+    screen = await _compose(
+        rated_at,
+        SteppingClock(AT),
+        shelves=_shelves_over(a_context(record=a_match(paid=1)), level=300),
+    ).execute(ComposeNowQuery(player_id=player, sport=SportFilter.PADEL))
+
+    assert _emphatic(screen) == []
+
+
+async def test_the_repeat_guard_runs_over_the_composed_list() -> None:
+    """Two arrival shelves saying the same thing, and the lower one goes.
+
+    Composed rather than hand-built, so the pass is asserted where it actually
+    runs: a session that dropped the call from `execute` fails here and nowhere
+    in `test_now_composition.py`.
+    """
+
+    twice = PersonCard(
+        player_id=uuid4(),
+        stamp=STAMP_FOR_ARRIVALS,
+        nickname="ala",
+        level=Level(value=2.7, provisional=True),
+    )
+    arrivals = RecordingNewArrivals(
+        Shelf(code=ShelfCode.NEW_PLAYERS, cards=(twice,)),
+        Shelf(code=ShelfCode.NEW_CLUBS, cards=(twice,)),
+    )
+    screen = await _compose(FakeRatedSports(), SteppingClock(AT), arrivals).execute(
+        ComposeNowQuery(player_id=uuid4(), sport=SportFilter.ALL)
+    )
+
+    assert [block.code for block in screen.shelves.shelves] == [ShelfCode.NEW_PLAYERS]
+
+
+async def test_two_arrival_shelves_that_differ_both_stand() -> None:
+    arrivals = RecordingNewArrivals(
+        Shelf(
+            code=ShelfCode.NEW_PLAYERS,
+            cards=(
+                PersonCard(
+                    player_id=uuid4(),
+                    stamp=STAMP_FOR_ARRIVALS,
+                    nickname="ala",
+                    level=Level(value=2.7, provisional=True),
+                ),
+            ),
+        ),
+        Shelf(
+            code=ShelfCode.NEW_CLUBS,
+            cards=(
+                ClubCard(
+                    club_id=uuid4(), stamp=STAMP_FOR_ARRIVALS, name="Sport Club"
+                ),
+            ),
+        ),
+    )
+    screen = await _compose(FakeRatedSports(), SteppingClock(AT), arrivals).execute(
+        ComposeNowQuery(player_id=uuid4(), sport=SportFilter.ALL)
+    )
+
+    assert [block.code for block in screen.shelves.shelves] == [
+        ShelfCode.NEW_PLAYERS,
+        ShelfCode.NEW_CLUBS,
+    ]

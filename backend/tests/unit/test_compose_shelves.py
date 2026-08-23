@@ -22,6 +22,7 @@ from app.modules.now.domain.funnel import (
     CANDIDATE_HORIZON_DAYS,
     FULL_CAP,
     MatchScoringContext,
+    Ranked,
 )
 from app.modules.now.domain.screen import MatchCard, Shelf
 from app.modules.now.domain.vocabulary import ShelfCode
@@ -80,16 +81,31 @@ def _shelves(
     )
 
 
-async def compose(
+async def ranked(
     *contexts: MatchScoringContext,
     viewer: UUID | None = None,
     sports: frozenset[Sport] = PADEL,
     now: Instant = NOW,
     **kwargs,
-) -> tuple[Shelf, ...]:
+) -> Ranked:
     return await _shelves(*contexts, **kwargs).compose(
         viewer=viewer or uuid4(), sports=sports, now=now, stamp=STAMP
     )
+
+
+async def compose(
+    *contexts: MatchScoringContext,
+    **kwargs,
+) -> tuple[Shelf, ...]:
+    """The shelves alone, which is what most of this file is about.
+
+    The funnel answers a `Ranked` — its shelves *and* the scores emphasis gates
+    on — because the composed screen needs both and only the funnel has computed
+    either. This file's subject is what a shelf holds; the scores' own claims are
+    the four cases at the end.
+    """
+
+    return (await ranked(*contexts, **kwargs)).shelves
 
 
 def _by_code(shelves: tuple[Shelf, ...]) -> dict[ShelfCode, Shelf]:
@@ -522,6 +538,72 @@ async def test_each_shelf_is_capped_at_its_own_number() -> None:
 
     shelves = _by_code(await compose(*opens, *fulls))
 
-    ranked = shelves.get(ShelfCode.BEST_FIT) or shelves[ShelfCode.SAME_LEVEL]
-    assert len(ranked.cards) <= BEST_FIT_CAP
+    best_fit = shelves.get(ShelfCode.BEST_FIT) or shelves[ShelfCode.SAME_LEVEL]
+    assert len(best_fit.cards) <= BEST_FIT_CAP
     assert len(shelves[ShelfCode.FULL_WORTH_WAITING].cards) <= FULL_CAP
+
+
+# --- 7 · what comes out beside the shelves ----------------------------------
+
+
+async def test_the_funnel_answers_the_scores_the_screen_will_gate_emphasis_on() -> None:
+    """Emphasis reads three numbers, and this is the only place they exist.
+
+    ``fit`` and ``coverage`` are the engine's true 0-100 values rather than the
+    badge's clamped one, and ``has_free_seat`` is the third gate. Stopping them
+    at the composer's edge would mean the emphasis pass scoring the screen a
+    second time.
+    """
+
+    answer = await ranked(a_context(record=a_match(paid=1)))
+
+    assert len(answer.scores) == 1
+    scored = answer.scores[0]
+    assert 0 <= scored.fit <= 100
+    assert 0 <= scored.coverage <= 100
+    assert scored.has_free_seat is True
+
+
+async def test_only_the_cards_a_shelf_kept_come_out_with_it() -> None:
+    """A card the cap removed is not on the screen and may not be shouted about.
+
+    Nine joinable matches, a cap of six: the three the cap dropped are gone from
+    the scores as well as from the shelf, so a later pass cannot emphasise a card
+    nobody can see.
+    """
+
+    answer = await ranked(
+        *(a_context(record=a_match(paid=1, starts=n * 30)) for n in range(9))
+    )
+
+    shelf = _by_code(answer.shelves)
+    cards = (shelf.get(ShelfCode.BEST_FIT) or shelf[ShelfCode.SAME_LEVEL]).cards
+    assert len(answer.scores) == len(cards) == BEST_FIT_CAP
+    assert {one.match_id for one in answer.scores} == {
+        card.match_id for card in cards if isinstance(card, MatchCard)
+    }
+
+
+async def test_both_lanes_scores_come_out_together() -> None:
+    answer = await ranked(
+        a_context(record=a_match(paid=1)),
+        a_context(record=a_match(paid=4)),
+    )
+
+    assert len(answer.shelves) == 2
+    assert {one.has_free_seat for one in answer.scores} == {True, False}
+
+
+async def test_a_degraded_screen_carries_no_scores_at_all() -> None:
+    """So it has no emphatic card either, and that is one fact rather than two.
+
+    A screen that could not compute a badge cannot have computed the fit and the
+    coverage that would license shouting about one.
+    """
+
+    answer = await ranked(
+        a_context(record=a_match(paid=1)), scorer=ExplodingScorer()
+    )
+
+    assert answer.shelves != ()
+    assert answer.scores == ()

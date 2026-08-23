@@ -16,6 +16,13 @@ shelves, with the door taking the ranked pair's position when she holds no
 rating at the sport she named. ADR-0070 put shelf presence and shelf order on the
 server precisely so both can move without a client release.
 
+**Two passes then run over the whole screen, in this order: the repeat guard,
+then emphasis.** Both are about relationships between rows rather than about a
+row, so neither could be decided where its subject was composed — a shelf cannot
+know it repeats the shelf above it, and a card cannot know it is the only one
+allowed to shout. They are the last thing that happens to a screen, and they are
+the reason ``execute`` builds one and then answers a different one.
+
 **Every ask pays the full funnel.** There is no player feed cache — it was the
 answer to a load shape that no longer exists, and it is the only place on this
 screen that could serve a stale answer to a direct question.
@@ -35,6 +42,8 @@ from app.modules.now.application.commands import ComposeNowQuery
 from app.modules.now.application.compose_enrolled import ComposeEnrolled
 from app.modules.now.application.compose_shelves import ComposeShelves
 from app.modules.now.application.new_arrivals import ComposeNewArrivals
+from app.modules.now.domain.composition import emphasised, without_repeats
+from app.modules.now.domain.funnel import Ranked
 from app.modules.now.domain.ports import ParkedRuns, RatedSports
 from app.modules.now.domain.screen import (
     Block,
@@ -98,8 +107,9 @@ class ComposeNow:
         stamp = stamp_at(now)
         sports = await self._resolve(query)
         door = await self._door(query)
+        ranked = await self._ranked(query=query, sports=sports, now=now, stamp=stamp)
 
-        return NowScreen(
+        screen = NowScreen(
             offers=OffersRegion(stamp=stamp),
             your_matches=await self._enrolled.compose(
                 viewer=query.player_id,
@@ -114,7 +124,12 @@ class ComposeNow:
             shelves=ShelvesRegion(
                 stamp=stamp,
                 shelves=await self._blocks(
-                    query=query, sports=sports, now=now, stamp=stamp, door=door
+                    query=query,
+                    sports=sports,
+                    now=now,
+                    stamp=stamp,
+                    door=door,
+                    ranked=ranked,
                 ),
             ),
             sports=sports,
@@ -127,6 +142,14 @@ class ComposeNow:
             # day it lands the change is where the amount comes from.
             debt=None,
         )
+
+        # **Shelf order → repeat guard → emphasis** (`Raketa02/Raketa#77`,
+        # ADR-0032, ADR-0037). The last two commute on today's drop condition
+        # and the equivalence is recorded rather than relied on: it belongs to
+        # *entirely repeats of the shelf above* rather than to either pass, and
+        # a guard that ever dropped a row for partial overlap would put the flag
+        # on a shelf nobody sees.
+        return emphasised(without_repeats(screen), scores=ranked.scores)
 
     async def _resolve(self, query: ComposeNowQuery) -> frozenset[Sport]:
         """What the filter names, in sports.
@@ -177,6 +200,26 @@ class ComposeNow:
         )
         return Door(code=DoorCode.RUN_PARKED if parked else DoorCode.NO_RUN_YET)
 
+    async def _ranked(
+        self,
+        *,
+        query: ComposeNowQuery,
+        sports: frozenset[Sport],
+        now: Instant,
+        stamp: Stamp,
+    ) -> Ranked:
+        """The ranked pair, and the three numbers emphasis will gate on.
+
+        Composed here rather than inside ``_blocks`` because two passes need two
+        different halves of one answer: the shelves go into the list, and the
+        scores go past it to a pass that runs over the whole screen. Splitting
+        the call would mean running the funnel twice.
+        """
+
+        return await self._shelves.compose(
+            viewer=query.player_id, sports=sports, now=now, stamp=stamp
+        )
+
     async def _blocks(
         self,
         *,
@@ -185,6 +228,7 @@ class ComposeNow:
         now: Instant,
         stamp: Stamp,
         door: Door | None,
+        ranked: Ranked,
     ) -> tuple[Block, ...]:
         """The server's fixed order: the ranked pair, then the two arrival shelves.
 
@@ -204,13 +248,12 @@ class ComposeNow:
 
         **Composition's own passes — the repeat guard and emphasis — are not
         here.** Both read across shelves rather than within one, so they run over
-        this list once it exists (``Raketa02/Raketa#77``), which is the same
-        argument ADR-0032 makes for order and ADR-0037 for emphasis.
+        the composed *screen* rather than over this list, which is the same
+        argument ADR-0032 makes for order and ADR-0037 for emphasis. Emphasis in
+        particular has to see the offers region, and a list of blocks does not
+        contain it.
         """
 
-        ranked = await self._shelves.compose(
-            viewer=query.player_id, sports=sports, now=now, stamp=stamp
-        )
         arrivals = await self._new_arrivals.compose(
             viewer=query.player_id,
             sports=sports,
@@ -224,4 +267,4 @@ class ComposeNow:
         )
         if door is not None:
             return (door, *arrivals)
-        return (*ranked, *arrivals)
+        return (*ranked.shelves, *arrivals)

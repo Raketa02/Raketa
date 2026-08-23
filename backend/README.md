@@ -724,6 +724,50 @@ files under `CITY_UNKNOWN`. The component stays in the key rather than being add
 the fact lands — a key that *gains* a component is a key whose old entries answer the wrong
 city for fifteen minutes.
 
+#### Composition: two passes over the screen, and two budgets over the answer
+
+Once every region and every shelf exists, two passes run over the whole composed screen —
+**shelf order → repeat guard → emphasis** — because neither question can be answered where
+its subject was built. A shelf cannot know it repeats the shelf above it, and a card cannot
+know it is the only one allowed to shout.
+
+**The repeat guard** drops a shelf when **every** card on it is already on the nearest
+shelf still standing. Partial overlap is allowed and a match may sit on two shelves: two
+shelves make two different claims about one match, and hiding a good match for having been
+mentioned is worse than mentioning it twice. It cannot fire on today's four lanes — a free
+seat against full is one exclusive rule, and people against clubs are two card types — so
+it is written for `recentlyViewed`, which is reserved with no producer and would arrive as
+a *server* change (ADR-0085), with no chance to add the guard on the way in.
+
+**Emphasis is at most one card on the whole screen**: the first in final composed order
+clearing fit ≥ 90 **and** coverage ≥ 80 % **and** a seat open, and **any offer on the screen
+silences it entirely**. The cap is the guarantee rather than the thresholds — whatever real
+scores turn out to do, the one loud colour cannot become wallpaper, which is what keeps
+ADR-0037's *coral is never decorative* true without amendment. Only a ranked card can carry
+it, and that is a consequence rather than a rule: `ComposeShelves` answers a `Ranked` — its
+shelves **and** the scores behind the cards they kept — so the strip, the arrival shelves
+and a degraded screen have nothing to gate on.
+
+**The payload budget fails the build.** 150 KB uncompressed for the whole composed
+envelope, measured on the fullest realistic screen at **23 cards across four lanes**
+(ADR-0069, ADR-0085). It is a gate rather than a log line for the reason the ceiling exists
+at all: one that only advises can be reasoned past a defensible field at a time. The
+envelope is weighed through `NowResponse`'s own serialiser, and `tests/api/test_now.py`
+asserts that what the route renders is byte-for-byte what that serialiser renders.
+
+**The latency figure is reported and does not fail.** p99 ≤ 150 ms warm and 250 ms cold are
+ADR-0069's stated gate; what the build prints is a measurement **with its conditions beside
+it** — warm context cache, 500 live city matches of which retrieval answers the soonest 300,
+23 cards, the sample count, and whether coverage was tracing. Naming the conditions is the
+load-bearing half: a p99 against a cold cache measures the cache, and the same suite under
+`--cov` and under `--no-cov` reports numbers that differ by more than the gate's headroom.
+The **cold** figure is not measured at all, because the cold cost is the context adapter's
+and that suite has no database. It becomes a gate when there is something profileable to
+gate.
+
+Every number in ADR-0069's table is modelled and none has ever been measured. This is the
+first measurement, and it is allowed to find the shape wrong rather than the numbers.
+
 ### What the Now contract will not carry
 
 Enforced by `tests/unit/test_now_contract_document.py`, which reads the emitted document
