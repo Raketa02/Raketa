@@ -904,6 +904,34 @@
         "title": "DebtLineResponse",
         "description": "What is owed, and the one consequence of owing it.\n\n``blocked`` means *this player may not create a match or book a court*. She\nmay still pay for a seat in somebody else's match: being cut off must not make\nher less likely to pay."
       },
+      "DoorCode": {
+        "type": "string",
+        "enum": [
+          "noRunYet",
+          "runParked"
+        ],
+        "title": "DoorCode",
+        "description": "Which sentence the door shows, as a code and never as the sentence.\n\nADR-0084 gives the door two sentences \u2014 one for a player who has never\nstarted this sport's questionnaire, one for a player whose run is parked \u2014\nand makes them **one block type** so the client never learns the difference.\nWhat the block carries is which of the two it is.\n\nNamed for the **fact** rather than for the words, like every other code here:\nthe copy is the client's and changes without a backend release, where *has\nshe started* is the thing the server actually knows. A run parks however old\nit is and never expires, so these two are exhaustive over a player the door\nis drawn for at all."
+      },
+      "DoorResponse": {
+        "properties": {
+          "block_type": {
+            "type": "string",
+            "const": "door",
+            "title": "Block Type",
+            "default": "door"
+          },
+          "code": {
+            "$ref": "#/components/schemas/DoorCode"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code"
+        ],
+        "title": "DoorResponse",
+        "description": "The way into a sport's questionnaire, where its shelves would have been.\n\nOne code and nothing else. **Not the sport** \u2014 the client named it on the\nrequest and still holds it, and a second copy on the answer is a second thing\nthat can disagree; the tail card into Find is composed by the client from the\nsame two halves for the same reason. **Not a destination** either: the code\ndetermines one, exactly as an act code does.\n\nIt is a block in the shelves list rather than a field beside it, so an old\nbuild that has never heard of it drops one entry from a list it already\niterates, and every client that draws Now decides what to do with it rather\nthan inferring it from absent shelves (ADR-0084)."
+      },
       "EnrolledRegionResponse": {
         "properties": {
           "stamp": {
@@ -1675,6 +1703,12 @@
       },
       "ShelfResponse": {
         "properties": {
+          "block_type": {
+            "type": "string",
+            "const": "shelf",
+            "title": "Block Type",
+            "default": "shelf"
+          },
           "code": {
             "$ref": "#/components/schemas/ShelfCode"
           },
@@ -1730,7 +1764,21 @@
           },
           "shelves": {
             "items": {
-              "$ref": "#/components/schemas/ShelfResponse"
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/ShelfResponse"
+                },
+                {
+                  "$ref": "#/components/schemas/DoorResponse"
+                }
+              ],
+              "discriminator": {
+                "propertyName": "block_type",
+                "mapping": {
+                  "door": "#/components/schemas/DoorResponse",
+                  "shelf": "#/components/schemas/ShelfResponse"
+                }
+              }
             },
             "type": "array",
             "title": "Shelves"
@@ -1742,7 +1790,7 @@
           "shelves"
         ],
         "title": "ShelvesRegionResponse",
-        "description": "The shelves, in the server's order. A shelf with nothing in it is absent."
+        "description": "The shelves, in the server's order. A shelf with nothing in it is absent.\n\nThe list may also carry **the door**, in the position the ranked shelves would\noccupy. The field keeps its name: renaming it would break every client reading\na region that has not otherwise changed, for a word, on a screen whose list is\nshelves in every case but one."
       },
       "Situation": {
         "type": "string",

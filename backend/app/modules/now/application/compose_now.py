@@ -13,6 +13,12 @@ ranked funnel and therefore do not wait on it.
 **Every ask pays the full funnel.** There is no player feed cache — it was the
 answer to a load shape that no longer exists, and it is the only place on this
 screen that could serve a stale answer to a direct question.
+
+**A sport the viewer holds no rating at is a door and never an empty screen.**
+It is composed here, into the shelves list, in the position the ranked shelves
+would occupy — never inferred by the phone from what is missing, which would
+fire wrongly on any day the city genuinely has nothing in a sport she is rated
+at (ADR-0084).
 """
 
 from __future__ import annotations
@@ -21,14 +27,17 @@ from app.kernel import Clock, Instant, Sport
 
 from app.modules.now.application.commands import ComposeNowQuery
 from app.modules.now.application.new_arrivals import ComposeNewArrivals
-from app.modules.now.domain.ports import RatedSports
+from app.modules.now.domain.ports import ParkedRuns, RatedSports
 from app.modules.now.domain.screen import (
+    Block,
+    Door,
     EnrolledRegion,
     NowScreen,
     OffersRegion,
     ShelvesRegion,
     Stamp,
 )
+from app.modules.now.domain.vocabulary import DoorCode
 
 #: Milliseconds, which is enough resolution that two composes a player could tell
 #: apart never tie, and coarse enough to stay a comfortable integer in every
@@ -64,10 +73,12 @@ class ComposeNow:
         self,
         *,
         rated_sports: RatedSports,
+        parked_runs: ParkedRuns,
         new_arrivals: ComposeNewArrivals,
         clock: Clock,
     ) -> None:
         self._rated_sports = rated_sports
+        self._parked_runs = parked_runs
         self._new_arrivals = new_arrivals
         self._clock = clock
 
@@ -75,27 +86,15 @@ class ComposeNow:
         now = self._clock.now()
         stamp = stamp_at(now)
         sports = await self._resolve(query)
+        door = await self._door(query)
 
         return NowScreen(
             offers=OffersRegion(stamp=stamp),
             your_matches=EnrolledRegion(stamp=stamp),
             shelves=ShelvesRegion(
                 stamp=stamp,
-                # The ranked shelves are not built yet, so the server's fixed
-                # order is satisfied here by the only two shelves there are. The
-                # order itself is composition's (#77) and lands with the funnel;
-                # what this ticket owes is that these two are *behind* it, which
-                # they are for as long as this is the whole list.
-                shelves=await self._new_arrivals.compose(
-                    viewer=query.player_id,
-                    sports=sports,
-                    now=now,
-                    stamp=stamp,
-                    # Nobody stores a player's city (#102, ADR-0063), so every
-                    # compose files under the unknown one. It is threaded rather
-                    # than invented downstream so that the day the fact has a
-                    # source, this line is the whole change.
-                    city=None,
+                shelves=await self._blocks(
+                    query=query, sports=sports, now=now, stamp=stamp, door=door
                 ),
             ),
             sports=sports,
@@ -125,3 +124,71 @@ class ComposeNow:
         if one is not None:
             return frozenset({one})
         return await self._rated_sports.for_player(query.player_id)
+
+    async def _door(self, query: ComposeNowQuery) -> Door | None:
+        """The way into a questionnaire, when the filter names a sport she lacks.
+
+        **Only a named chip can produce one.** ``all`` is *the sports she holds a
+        rating at*, so it names no sport she is unrated at and there is nothing
+        for a door to be about — including for a player holding no rating at all,
+        whose screen is empty because her city is not the subject. ADR-0084 puts
+        her in the run itself rather than on Now.
+
+        The rating is asked **at the one sport**, not as the set: a named chip is
+        the busiest path on the sport bar, and it should not pay a replay of
+        every rating she holds to learn whether she holds this one.
+
+        The parked-run read happens **only when a door is being drawn**. A player
+        rated at the sport is answered and gone before the second read exists,
+        which is why the two are sequential here rather than gathered.
+        """
+
+        sport = query.sport.sport
+        if sport is None:
+            return None
+        if await self._rated_sports.holds(player_id=query.player_id, sport=sport):
+            return None
+
+        parked = await self._parked_runs.parked_at(
+            player_id=query.player_id, sport=sport
+        )
+        return Door(code=DoorCode.RUN_PARKED if parked else DoorCode.NO_RUN_YET)
+
+    async def _blocks(
+        self,
+        *,
+        query: ComposeNowQuery,
+        sports: frozenset[Sport],
+        now: Instant,
+        stamp: Stamp,
+        door: Door | None,
+    ) -> tuple[Block, ...]:
+        """The shelves list: the door where the ranked shelves would be, then them.
+
+        The ranked shelves are not built yet (#75), so the server's fixed order is
+        satisfied here by the door and the only two shelves there are. **The door
+        occupies their position rather than sitting above them**, which is the
+        distinction that matters the day they land: a door means those two shelves
+        are *absent*, not empty and not beneath it — a player with no rating at
+        squash cannot be ranked against squash matches, so there is nothing for
+        them to hold. The order itself is composition's (#77).
+
+        *New on Raketa* and *New clubs* compose either way, and under a door that
+        is the point rather than a leftover: the clubs are the argument for
+        spending the two minutes, so they belong under the ask.
+        """
+
+        arrivals = await self._new_arrivals.compose(
+            viewer=query.player_id,
+            sports=sports,
+            now=now,
+            stamp=stamp,
+            # Nobody stores a player's city (#102, ADR-0063), so every compose
+            # files under the unknown one. It is threaded rather than invented
+            # downstream so that the day the fact has a source, this line is the
+            # whole change.
+            city=None,
+        )
+        if door is None:
+            return arrivals
+        return (door, *arrivals)

@@ -1,11 +1,15 @@
 """``GET /api/v1/now`` over HTTP: one request, one answer, three regions.
 
-The regions are empty in v1 and that is the point of the ticket — the client is
-unblocked against a *compiled* contract before anything fills them. So what these
-assert is the envelope: that it is present and shaped, that the sport rides on the
-request and nothing else does, that the server never says *nothing has changed*,
-and that a player with nothing gets a shape she recognises rather than an absence
-to interpret.
+Two regions are empty in v1 and that is the point of the ticket that shipped this
+— the client is unblocked against a *compiled* contract before anything fills
+them. So what these assert is the envelope: that it is present and shaped, that
+the sport rides on the request and nothing else does, that the server never says
+*nothing has changed*, and that a player with nothing gets a shape she recognises
+rather than an absence to interpret.
+
+**And the door**, end to end, over the real rating store: a chip for a sport she
+holds no rating at answers with a block in the shelves list rather than with a
+blank screen, and which sentence it shows is whether a run is already parked.
 """
 
 import pytest
@@ -129,6 +133,67 @@ async def test_all_reads_the_ratings_the_player_holds(client) -> None:
 
     response = await client.get("/api/v1/now?sport=all", headers=headers)
     assert response.status_code == 200, response.text
+
+
+def _blocks(body, kind: str) -> list[dict]:
+    return [b for b in body["shelves"]["shelves"] if b["block_type"] == kind]
+
+
+async def test_an_unrated_chip_answers_with_a_door_rather_than_a_blank_screen(
+    client,
+) -> None:
+    headers = await _auth_headers(client)
+    body = (await client.get("/api/v1/now?sport=SQUASH", headers=headers)).json()
+
+    assert _blocks(body, "door") == [{"block_type": "door", "code": "noRunYet"}]
+
+
+async def test_a_chip_she_is_rated_at_answers_with_no_door(client) -> None:
+    headers = await _auth_headers(client)
+    await _rate_as_beginner(client, headers, "PADEL")
+
+    body = (await client.get("/api/v1/now?sport=PADEL", headers=headers)).json()
+
+    assert _blocks(body, "door") == []
+
+
+async def test_a_started_run_changes_the_doors_sentence(client) -> None:
+    """The run is real: started through the assessment route and left unfinished.
+
+    Which of the two sentences the door shows is the one thing the server knows
+    that the phone cannot, so it is worth asserting against the store that holds
+    it rather than against a stub.
+    """
+
+    headers = await _auth_headers(client)
+    started = await client.post(
+        "/api/v1/assessments", json={"sport": "SQUASH"}, headers=headers
+    )
+    assert started.status_code in (200, 201), started.text
+
+    body = (await client.get("/api/v1/now?sport=SQUASH", headers=headers)).json()
+
+    assert _blocks(body, "door") == [{"block_type": "door", "code": "runParked"}]
+
+
+async def test_all_answers_with_no_door_for_a_player_holding_no_rating(client) -> None:
+    # `all` names no sport she is unrated at, so there is nothing for a door to be
+    # about — and ADR-0084 puts a player with no rating at all into the run
+    # itself rather than onto Now.
+    headers = await _auth_headers(client)
+    body = (await client.get("/api/v1/now?sport=all", headers=headers)).json()
+
+    assert _blocks(body, "door") == []
+
+
+async def test_the_ranked_shelves_are_absent_beside_a_door_rather_than_empty(
+    client,
+) -> None:
+    headers = await _auth_headers(client)
+    body = (await client.get("/api/v1/now?sport=SQUASH", headers=headers)).json()
+
+    codes = {shelf["code"] for shelf in _blocks(body, "shelf")}
+    assert codes.isdisjoint({"bestFit", "sameLevel", "fullWorthWaiting"})
 
 
 async def test_the_server_never_answers_nothing_has_changed(client) -> None:

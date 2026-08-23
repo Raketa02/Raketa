@@ -187,6 +187,23 @@ describe('a shelf', () => {
     );
   });
 
+  it('drops the door rather than drawing it as a shelf with no cards', () => {
+    // ADR-0084 puts the door *in* the shelves list so that a build which has
+    // never heard of it loses one entry from a list it already iterates. This
+    // build draws nothing for it (`Raketa02/Raketa#94`); what it must not do is
+    // map it to a row with a blank heading and nothing under it.
+    const shelves = toComposedScreen({
+      ...emptyNow(),
+      shelves: {
+        stamp: 1,
+        shelves: [{ block_type: 'door', code: 'noRunYet' }, shelf('newClubs', [])],
+      },
+    }).shelves.shelves;
+
+    expect(shelves).toHaveLength(1);
+    expect(nth(shelves, 0).code).toBe('newClubs');
+  });
+
   it('has no title for a code this build has never heard of', () => {
     const shelves = toComposedScreen({
       ...emptyNow(),

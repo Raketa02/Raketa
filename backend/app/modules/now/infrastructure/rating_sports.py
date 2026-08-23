@@ -25,3 +25,14 @@ class RatedSportsFromSkillRatings(RatedSports):
     async def for_player(self, player_id: UUID) -> frozenset[Sport]:
         held = await self._ratings.find_all_for(player_id=player_id)
         return frozenset(rating.sport for rating in held)
+
+    async def holds(self, *, player_id: UUID, sport: Sport) -> bool:
+        """One lookup, through the by-pair question the rating context already has.
+
+        ``exists_for`` rather than ``sport in await self.for_player(...)``: the
+        stream is keyed by the pair, so the question is one read where the set is
+        a replay of every rating she holds. Its own docstring names this as the
+        reason it is a question and not an aggregate.
+        """
+
+        return await self._ratings.exists_for(player_id=player_id, sport=sport)

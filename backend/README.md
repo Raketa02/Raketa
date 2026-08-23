@@ -463,7 +463,7 @@ The answer is three ordered regions and one fact about the viewer:
 |---|---|---|
 | `offers` | seats offered to her, soonest-to-expire | present, `cards: []` |
 | `your_matches` | the matches she is in, chronological | present, `cards: []` |
-| `shelves` | the server's fixed list of shelves | present, `shelves: []` |
+| `shelves` | the server's fixed list of **blocks** | present, `shelves: []` |
 | `debt` | what she owes, and the one consequence | **absent** (`null`) |
 
 That asymmetry is the rule, not an accident. A **region** with nothing in it is present and
@@ -474,7 +474,44 @@ decide whether to draw it.
 
 **The regions fill one ticket at a time and the envelope never moves.** The route shipped
 with all three empty so both clients could compile against it. What composes today is the
-shelves region's last two shelves — the two that do not run through the ranked funnel.
+shelves region's last two shelves — the two that do not run through the ranked funnel —
+and, for a sport the viewer holds no rating at, the door.
+
+#### The door into a sport you have no rating at
+
+A player who taps a chip for a sport she holds no rating at gets a **door** into that
+sport's questionnaire, in the position the ranked shelves would occupy — so the app
+answers *how do I get squash matches* instead of showing her a blank screen (ADR-0084).
+
+```json
+{ "block_type": "door", "code": "noRunYet" }
+```
+
+Each entry in `shelves` therefore carries `block_type`, one of `shelf · door`, and the
+list is a **discriminated union** — the same shape a card's `card_type` takes one ring in.
+
+- **The door is a block the server composed**, never a flag and never an inference the
+  phone draws from absent shelves. An inference would fire wrongly on any day the city
+  genuinely has nothing in a sport she *is* rated at, and the phone holds no rules.
+- **It takes those shelves' position rather than sitting above them.** Unrated means
+  `bestFit` / `sameLevel` and `fullWorthWaiting` are **absent**: she cannot be ranked
+  against matches in a sport the platform holds no Level for her at.
+- **`newPlayers` and `newClubs` still compose beneath it**, and that is the point rather
+  than a leftover — the clubs are the argument for spending the two minutes, so they
+  belong under the ask.
+- **`code` names which sentence**, in two members: `noRunYet` and `runParked`. One block
+  type, so the client holds one row per sentence and never learns that two states produced
+  them. A parked run never expires, so this is existence and never freshness.
+- **Neither the sport nor a destination crosses**: she named the sport on the request and
+  still holds it, and the code determines the destination exactly as an act code does.
+- **Only a named chip produces one.** `all` means the sports she holds a rating at, so it
+  names none she is unrated at; a player holding no rating at all belongs in the run
+  itself rather than on Now.
+
+The rating is asked **by pair** — `RatedSports.holds`, over the rating context's
+`exists_for` — and never as the set, and the parked-run read happens **only when a door is
+being drawn**. A named chip is the busiest path on the sport bar and pays one lookup for
+the door rather than a replay of every rating she holds.
 
 #### *New on Raketa* and *New clubs*
 
@@ -534,11 +571,12 @@ back rather than reading the source:
   client's own thirty-six-row table and a flag would let the two disagree.
 - `phase` — refused on the result route and refused here.
 - Free text of any kind. No `title`, `label`, `note`, `message` or `sentence`; a shelf
-  carries a **code** and an optional **caption code**, and the client writes the words.
+  carries a **code** and an optional **caption code**, a door carries a **code**, and the
+  client writes the words.
 
 Everything that *is* a code crosses as an **OpenAPI enum** — `situation`, the act code,
-`TermCode`, the card's hold reason, the cause, the shelf code, the caption code, the cover
-and the currency. That is what lets each client write an exhaustive `Record` over a
+`TermCode`, the card's hold reason, the cause, the shelf code, the caption code, the door
+code, the block type, the cover and the currency. That is what lets each client write an exhaustive `Record` over a
 generated union, so a missing sentence is a build error in the client's own build. A bare
 string degrades that `Record` into an index signature, and an index signature never fires.
 

@@ -40,6 +40,41 @@ class RatedSports(Protocol):
     async def for_player(self, player_id: UUID) -> frozenset[Sport]:
         ...
 
+    async def holds(self, *, player_id: UUID, sport: Sport) -> bool:
+        """Whether this player holds a rating at **one** sport.
+
+        The same subject asked at one sport rather than at all of them, and it is
+        a second method rather than a caller filtering ``for_player`` because the
+        cost is not the same: a rating stream is keyed by ``(player, sport)``, so
+        this is one lookup where the set is a replay of every rating she holds.
+        The sport bar's busiest path is a named chip, and that path now has a
+        question to ask — *is she rated here, or is she owed a door* — which it
+        should not pay a full replay to answer.
+        """
+        ...
+
+
+@runtime_checkable
+class ParkedRuns(Protocol):
+    """Whether a sport's questionnaire is already part-answered and waiting.
+
+    The one thing the door needs beyond the absence of a rating: ADR-0084 gives
+    it two sentences, and which one it shows is *has she started this already*.
+
+    A boolean and not the run itself. Now composes a code from it and could do
+    nothing with an aggregate — and a port answering with one would invite a
+    later session to read a transcript on the home screen's path.
+
+    **A parked run never expires**, so this is a question about existence and
+    never about freshness: the questionnaire carries its own control for walking
+    back through answers (ADR-0020), so a run stopped on a tram in March is still
+    the run the door reopens in August.
+    """
+
+    async def parked_at(self, *, player_id: UUID, sport: Sport) -> bool:
+        """False for a player who has never started this sport's run."""
+        ...
+
 
 @runtime_checkable
 class NewArrivals(Protocol):

@@ -147,9 +147,42 @@ def test_a_stamp_per_region_and_per_card_and_none_on_the_screen(
 def test_a_shelf_carries_a_code_and_an_optional_caption_code(player_spec: dict) -> None:
     shelf = player_spec["components"]["schemas"]["ShelfResponse"]
 
-    assert set(shelf["properties"]) == {"code", "caption", "cards"}
+    assert set(shelf["properties"]) == {"block_type", "code", "caption", "cards"}
     assert "code" in shelf["required"]
     assert "caption" not in shelf["required"]
+
+
+def test_the_shelves_list_is_discriminated_on_the_blocks_own_type(
+    player_spec: dict,
+) -> None:
+    blocks = player_spec["components"]["schemas"]["ShelvesRegionResponse"][
+        "properties"
+    ]["shelves"]
+    union = blocks["items"]
+
+    assert union["discriminator"]["propertyName"] == "block_type"
+    assert set(union["discriminator"]["mapping"]) == {"shelf", "door"}
+
+
+def test_the_door_carries_one_code_and_neither_a_sport_nor_a_destination(
+    player_spec: dict,
+) -> None:
+    door = player_spec["components"]["schemas"]["DoorResponse"]
+
+    # The client named the sport on the request and still holds it; a second copy
+    # on the answer is a second thing that can disagree. The code determines the
+    # destination, exactly as an act code does.
+    assert set(door["properties"]) == {"block_type", "code"}
+    assert "code" in door["required"]
+
+
+def test_the_door_has_no_cards_no_caption_and_no_stamp(player_spec: dict) -> None:
+    door = player_spec["components"]["schemas"]["DoorResponse"]
+
+    # A door and a shelf are two types rather than one shelf with a nullable door
+    # code, on ADR-0070's *three card types, not one with holes*.
+    for absent in ("cards", "caption", "stamp"):
+        assert absent not in door["properties"]
 
 
 def test_a_card_is_one_of_three_types_discriminated_on_itself(
@@ -212,6 +245,7 @@ def test_the_situation_half_is_the_situation_and_its_facts(player_spec: dict) ->
             },
         ),
         ("CaptionCode", {"undeclaredPreferences"}),
+        ("DoorCode", {"noRunYet", "runParked"}),
         ("Cover", {"indoor", "outdoor"}),
         ("Currency", {"PLN"}),
     ],
@@ -291,7 +325,10 @@ def test_the_walk_reaches_the_schemas_it_is_claiming_about(player_spec: dict) ->
     assert "MatchCardResponse" in reachable
     assert "SituationHalfResponse" in reachable
     assert "Situation" in reachable
-    assert len(reachable) >= 18
+    # The door is reachable from the envelope, so the forbidden-field and
+    # free-text walks above are claiming about it too rather than around it.
+    assert {"DoorResponse", "DoorCode"} <= reachable
+    assert len(reachable) >= 20
     # And it is a walk over *Now*, not over the whole document: the rating
     # context's schemas carry `label` and `text` legitimately and are not here.
     assert "QuestionResponse" not in reachable

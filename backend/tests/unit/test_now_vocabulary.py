@@ -21,12 +21,15 @@ from app.kernel import CAUSE_COUNT, Cause, HoldReason
 from app.modules.now.domain.vocabulary import (
     ACT_COUNT,
     CARD_HOLD_REASON_OF,
+    DOOR_CODE_COUNT,
     ActCode,
+    BlockType,
     CaptionCode,
     CardHoldReason,
     CardType,
     Cover,
     Currency,
+    DoorCode,
     ShelfCode,
 )
 
@@ -65,6 +68,33 @@ def test_the_shelf_codes_carry_both_titles_of_shelf_one_and_the_dark_shelf() -> 
         "newPlayers",
         "newClubs",
     }
+
+
+def test_the_shelves_list_holds_two_kinds_of_block() -> None:
+    # ADR-0084 puts the door *in* the list, so the list stops being homogeneous
+    # and one field tells the two apart — on the same rule `card_type` follows.
+    assert {block.value for block in BlockType} == {"shelf", "door"}
+
+
+def test_the_door_shows_one_of_two_sentences() -> None:
+    # Named for the fact rather than for the words: the copy is the client's and
+    # changes without a backend release, where *has she started* is what the
+    # server knows. A third is a copy decision somebody makes in a diff.
+    assert [code.value for code in DoorCode] == ["noRunYet", "runParked"]
+    assert len(DoorCode) == DOOR_CODE_COUNT == 2
+
+
+def test_the_door_code_count_is_a_literal_and_not_its_own_length() -> None:
+    """`DOOR_CODE_COUNT = len(DoorCode)` satisfies its own invariant for ever.
+
+    The defect `OUTCOME_COUNT` and `MOVEMENT_CAUSE_COUNT` each shipped with, read
+    the same way both times: from the source, because a pin that computes itself
+    is green on the day somebody adds a member and green afterwards.
+    """
+
+    source = (NOW / "domain" / "vocabulary.py").read_text(encoding="utf-8")
+    assert "DOOR_CODE_COUNT = 2" in source
+    assert "DOOR_CODE_COUNT = len(" not in source
 
 
 def test_the_five_causes_include_the_one_that_never_reaches_a_card() -> None:

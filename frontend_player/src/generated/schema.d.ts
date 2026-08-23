@@ -474,6 +474,46 @@ export interface components {
             blocked: boolean;
         };
         /**
+         * DoorCode
+         * @description Which sentence the door shows, as a code and never as the sentence.
+         *
+         *     ADR-0084 gives the door two sentences — one for a player who has never
+         *     started this sport's questionnaire, one for a player whose run is parked —
+         *     and makes them **one block type** so the client never learns the difference.
+         *     What the block carries is which of the two it is.
+         *
+         *     Named for the **fact** rather than for the words, like every other code here:
+         *     the copy is the client's and changes without a backend release, where *has
+         *     she started* is the thing the server actually knows. A run parks however old
+         *     it is and never expires, so these two are exhaustive over a player the door
+         *     is drawn for at all.
+         * @enum {string}
+         */
+        DoorCode: "noRunYet" | "runParked";
+        /**
+         * DoorResponse
+         * @description The way into a sport's questionnaire, where its shelves would have been.
+         *
+         *     One code and nothing else. **Not the sport** — the client named it on the
+         *     request and still holds it, and a second copy on the answer is a second thing
+         *     that can disagree; the tail card into Find is composed by the client from the
+         *     same two halves for the same reason. **Not a destination** either: the code
+         *     determines one, exactly as an act code does.
+         *
+         *     It is a block in the shelves list rather than a field beside it, so an old
+         *     build that has never heard of it drops one entry from a list it already
+         *     iterates, and every client that draws Now decides what to do with it rather
+         *     than inferring it from absent shelves (ADR-0084).
+         */
+        DoorResponse: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            block_type: "door";
+            code: components["schemas"]["DoorCode"];
+        };
+        /**
          * EnrolledRegionResponse
          * @description The matches this viewer is committed to, chronological.
          */
@@ -877,6 +917,11 @@ export interface components {
          * @description A code, an optional caption code, and cards. No title, and no tail card.
          */
         ShelfResponse: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            block_type: "shelf";
             code: components["schemas"]["ShelfCode"];
             caption?: components["schemas"]["CaptionCode"] | null;
             /** Cards */
@@ -885,12 +930,17 @@ export interface components {
         /**
          * ShelvesRegionResponse
          * @description The shelves, in the server's order. A shelf with nothing in it is absent.
+         *
+         *     The list may also carry **the door**, in the position the ranked shelves would
+         *     occupy. The field keeps its name: renaming it would break every client reading
+         *     a region that has not otherwise changed, for a word, on a screen whose list is
+         *     shelves in every case but one.
          */
         ShelvesRegionResponse: {
             /** Stamp */
             stamp: number;
             /** Shelves */
-            shelves: components["schemas"]["ShelfResponse"][];
+            shelves: (components["schemas"]["ShelfResponse"] | components["schemas"]["DoorResponse"])[];
         };
         /**
          * Situation

@@ -292,7 +292,9 @@ def test_a_shelf_carries_a_code_a_caption_code_and_cards_and_no_title() -> None:
         )
     ).model_dump()
 
-    assert set(rendered) == {"code", "caption", "cards"}
+    assert set(rendered) == {"block_type", "code", "caption", "cards"}
+    # The shelves list may also hold a door, so each entry says which it is.
+    assert rendered["block_type"] == "shelf"
     assert rendered["code"] == "bestFit"
     assert rendered["caption"] == "undeclaredPreferences"
     # No title string, and no tail card — the client appends that and routes on

@@ -43,11 +43,13 @@ from app.kernel import Cause, Grosze, Instant, Situation, Sport, Zone
 
 from app.modules.now.domain.vocabulary import (
     ActCode,
+    BlockType,
     CaptionCode,
     CardHoldReason,
     CardType,
     Cover,
     Currency,
+    DoorCode,
     ShelfCode,
 )
 
@@ -342,6 +344,44 @@ class Shelf:
     cards: tuple[ShelfCard, ...] = ()
     caption: CaptionCode | None = None
 
+    block_type: BlockType = BlockType.SHELF
+
+
+@final
+@dataclass(frozen=True)
+class Door:
+    """The way into a sport's questionnaire, where its shelves would have been.
+
+    ADR-0084: a player who taps a chip for a sport she holds no rating at is
+    owed a destination rather than a better sentence, and the destination goes
+    **in the shelves list, in order** — not beside it, and not as a flag. An
+    inference drawn from absent shelves would fire wrongly on any day the city
+    genuinely has no matches in a sport she *is* rated at, and the phone holds no
+    rules to draw one with.
+
+    It carries **which sentence** and nothing else. Not the sport: the client
+    asked for one and still holds it, and a second copy on the answer is a second
+    thing that can disagree — the same reason a shelf's tail card into Find is
+    the client's own composition of *this shelf's code* and *the sport I hold*.
+    And not a destination either, because the code determines one, exactly as an
+    act code does.
+
+    A door and a shelf are two types rather than one shelf with a nullable door
+    code, on ADR-0070's *three card types, not one with holes* — a shelf has
+    cards and a caption and a claim, and a door has none of the three.
+    """
+
+    code: DoorCode
+
+    block_type: BlockType = BlockType.DOOR
+
+
+#: What the shelves list may hold. A **door** takes the position the ranked
+#: shelves would occupy and the two arrival shelves still compose beneath it, so
+#: the list is heterogeneous by design rather than by accident — and a union
+#: makes a client that fails to narrow a type error rather than a blank row.
+Block = Shelf | Door
+
 
 @final
 @dataclass(frozen=True)
@@ -382,10 +422,15 @@ class ShelvesRegion:
     """The server's fixed list of shelves, in the server's order.
 
     Empty when nothing composed — present and empty, like the other two.
+
+    The name stays ``shelves`` now that the list may also hold a door. ADR-0084
+    puts the door *in* this list rather than beside it, and renaming the field
+    would break every client reading a region that has not otherwise changed —
+    for a word, on a screen whose list is shelves in every case but one.
     """
 
     stamp: Stamp
-    shelves: tuple[Shelf, ...] = ()
+    shelves: tuple[Block, ...] = ()
 
 
 @final

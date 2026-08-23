@@ -971,6 +971,24 @@ about it. Decided by [ADR-0070](docs/adr/0070-now-is-three-regions-and-a-card-ha
   waiting for* is a row players learn to scroll past. It crosses as a **shelf code** and an
   optional **caption code**, never a title — the words were never the part that needed to
   move without a client release; shelf *presence* and shelf *order* were.
+- **Block** — one entry in the shelves region: a **shelf**, or **the door**. Each carries a
+  block type, because the list stopped being homogeneous the day the door went into it — the
+  same rule a card follows, where a thing is identified by what it *is* and never by where
+  it sits.
+- **The door** — the way into a sport's questionnaire, composed into the shelves region **in
+  the position the ranked shelves would occupy** for a player who holds no rating at the sport
+  she asked for. It answers *how do I get squash matches* where the alternative was a blank
+  screen, and it is a **block the server put there** rather than an inference the phone draws
+  from absent shelves — an inference would fire wrongly on any day the city genuinely has
+  nothing in a sport she *is* rated at. It **takes those shelves' position rather than sitting
+  above them**: unrated means they are absent, because she cannot be ranked against matches in
+  a sport nobody holds a Level for her at. **New on Raketa and New clubs still compose beneath
+  it** — the clubs are the argument for spending the two minutes, so they belong under the ask.
+  The block carries **which sentence** it shows — *you have not started this* against *pick up
+  where you left off* — as one block type with two codes, so the client never learns the
+  difference. It carries neither the sport nor a destination: she named the sport in the ask
+  and still holds it, and the code determines where the tap goes. Only a **named sport** can
+  produce one; *all* means the sports she is rated at, so it names none she is not.
 - **Card** — one thing on the screen, of exactly three kinds: **match**, **person**, **club**.
   **Identified by the thing it is about**, never by its position or by the shelf it sits in —
   one match may appear on more than one shelf, and under thing identity one answer corrects

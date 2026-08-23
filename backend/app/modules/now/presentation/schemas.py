@@ -30,8 +30,10 @@ from app.engines.fit import TermCode
 from app.kernel import Cause, Situation
 
 from app.modules.now.domain.screen import (
+    Block,
     ClubCard,
     DebtLine,
+    Door,
     EnrolledRegion,
     Fit,
     FitReason,
@@ -52,11 +54,13 @@ from app.modules.now.domain.screen import (
 )
 from app.modules.now.domain.vocabulary import (
     ActCode,
+    BlockType,
     CaptionCode,
     CardHoldReason,
     CardType,
     Cover,
     Currency,
+    DoorCode,
     ShelfCode,
 )
 
@@ -310,6 +314,7 @@ def _shelf_card(card: ShelfCard) -> AnyCardResponse:
 class ShelfResponse(BaseModel):
     """A code, an optional caption code, and cards. No title, and no tail card."""
 
+    block_type: Literal[BlockType.SHELF] = BlockType.SHELF
     code: ShelfCode
     caption: CaptionCode | None = None
     cards: list[ShelfCardResponse]
@@ -321,6 +326,45 @@ class ShelfResponse(BaseModel):
             caption=shelf.caption,
             cards=[_shelf_card(card) for card in shelf.cards],
         )
+
+
+class DoorResponse(BaseModel):
+    """The way into a sport's questionnaire, where its shelves would have been.
+
+    One code and nothing else. **Not the sport** — the client named it on the
+    request and still holds it, and a second copy on the answer is a second thing
+    that can disagree; the tail card into Find is composed by the client from the
+    same two halves for the same reason. **Not a destination** either: the code
+    determines one, exactly as an act code does.
+
+    It is a block in the shelves list rather than a field beside it, so an old
+    build that has never heard of it drops one entry from a list it already
+    iterates, and every client that draws Now decides what to do with it rather
+    than inferring it from absent shelves (ADR-0084).
+    """
+
+    block_type: Literal[BlockType.DOOR] = BlockType.DOOR
+    code: DoorCode
+
+    @classmethod
+    def from_domain(cls, door: Door) -> "DoorResponse":
+        return cls(code=door.code)
+
+
+#: Discriminated on the block's own type, on the rule ``ShelfCardResponse``
+#: follows one ring in: a shelf and a door are two shapes with nothing in common
+#: but their position, so a union makes a client that fails to narrow a type error
+#: rather than a row it draws blank.
+BlockResponse = Annotated[
+    ShelfResponse | DoorResponse,
+    Field(discriminator="block_type"),
+]
+
+
+def _block(block: Block) -> ShelfResponse | DoorResponse:
+    if isinstance(block, Shelf):
+        return ShelfResponse.from_domain(block)
+    return DoorResponse.from_domain(block)
 
 
 class OffersRegionResponse(BaseModel):
@@ -352,16 +396,22 @@ class EnrolledRegionResponse(BaseModel):
 
 
 class ShelvesRegionResponse(BaseModel):
-    """The shelves, in the server's order. A shelf with nothing in it is absent."""
+    """The shelves, in the server's order. A shelf with nothing in it is absent.
+
+    The list may also carry **the door**, in the position the ranked shelves would
+    occupy. The field keeps its name: renaming it would break every client reading
+    a region that has not otherwise changed, for a word, on a screen whose list is
+    shelves in every case but one.
+    """
 
     stamp: int
-    shelves: list[ShelfResponse]
+    shelves: list[BlockResponse]
 
     @classmethod
     def from_domain(cls, region: ShelvesRegion) -> "ShelvesRegionResponse":
         return cls(
             stamp=region.stamp,
-            shelves=[ShelfResponse.from_domain(s) for s in region.shelves],
+            shelves=[_block(block) for block in region.shelves],
         )
 
 

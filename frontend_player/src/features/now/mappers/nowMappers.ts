@@ -46,6 +46,7 @@ type MatchCardResponse = components['schemas']['MatchCardResponse'];
 type PersonCardResponse = components['schemas']['PersonCardResponse'];
 type ClubCardResponse = components['schemas']['ClubCardResponse'];
 type ShelfResponse = components['schemas']['ShelfResponse'];
+type ShelvesRegionResponse = components['schemas']['ShelvesRegionResponse'];
 type PlaceResponse = components['schemas']['PlaceResponse'];
 type MoneyResponse = components['schemas']['MoneyResponse'];
 type DebtLineResponse = components['schemas']['DebtLineResponse'];
@@ -54,9 +55,24 @@ export function toComposedScreen(wire: NowResponse): ComposedScreen {
   return {
     offers: { cards: wire.offers.cards.map(toMatchCard) },
     yourMatches: { cards: wire.your_matches.cards.map(toMatchCard) },
-    shelves: { shelves: wire.shelves.shelves.map(toShelf) },
+    shelves: { shelves: wire.shelves.shelves.filter(isShelf).map(toShelf) },
     debt: wire.debt == null ? undefined : toDebtLine(wire.debt),
   };
+}
+
+/**
+ * The shelves list also carries the **door** into an unrated sport's
+ * questionnaire, and this build draws nothing for it (`Raketa02/Raketa#94`).
+ *
+ * Dropped rather than mapped to a blank row: `ADR-0084` puts the door in the
+ * list precisely so that a build which has never heard of it loses one entry
+ * from a list it already iterates. Until #94 lands, tapping a chip for a sport
+ * this player holds no rating at renders the two light shelves and no ask —
+ * which is the failure that ADR names as the cost of shipping the block first,
+ * and it is bounded by one client release.
+ */
+function isShelf(block: ShelvesRegionResponse['shelves'][number]): block is ShelfResponse {
+  return block.block_type === 'shelf';
 }
 
 /**

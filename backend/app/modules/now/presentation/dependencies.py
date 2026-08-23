@@ -28,16 +28,21 @@ from app.api.dependencies import (
 )
 from app.bootstrap.composition import (
     build_arrivals,
+    build_assessment_repository,
     build_club_repository,
     build_compose_new_arrivals,
     build_levels,
+    build_parked_runs,
     build_rated_sports,
     build_skill_rating_repository,
 )
 from app.modules.now.application.compose_now import ComposeNow
 from app.modules.now.application.new_arrivals import ComposeNewArrivals
-from app.modules.now.domain.ports import ArrivalSets, Levels, RatedSports
-from app.modules.rating.domain.ports import SkillRatingRepository
+from app.modules.now.domain.ports import ArrivalSets, Levels, ParkedRuns, RatedSports
+from app.modules.rating.domain.ports import (
+    AssessmentRepository,
+    SkillRatingRepository,
+)
 
 
 def get_skill_ratings(
@@ -62,6 +67,26 @@ def get_rated_sports(ratings: SkillRatingsDep) -> RatedSports:
 
 
 RatedSportsDep = Annotated[RatedSports, Depends(get_rated_sports)]
+
+
+def get_assessments(
+    event_store: DomainEventStoreDep,
+    events: EventPublisherDep,
+) -> AssessmentRepository:
+    # Declared here rather than borrowed from the rating module's own dependency
+    # file, on the same rule `get_skill_ratings` above states: one module reaching
+    # into another's presentation layer is a coupling neither asked for.
+    return build_assessment_repository(event_store=event_store, events=events)
+
+
+AssessmentsDep = Annotated[AssessmentRepository, Depends(get_assessments)]
+
+
+def get_parked_runs(assessments: AssessmentsDep) -> ParkedRuns:
+    return build_parked_runs(assessments)
+
+
+ParkedRunsDep = Annotated[ParkedRuns, Depends(get_parked_runs)]
 
 
 def get_levels(ratings: SkillRatingsDep) -> Levels:
@@ -111,10 +136,16 @@ NewArrivalsDep = Annotated[ComposeNewArrivals, Depends(get_new_arrivals)]
 
 def get_compose_now(
     rated_sports: RatedSportsDep,
+    parked_runs: ParkedRunsDep,
     new_arrivals: NewArrivalsDep,
     clock: ClockDep,
 ) -> ComposeNow:
-    return ComposeNow(rated_sports=rated_sports, new_arrivals=new_arrivals, clock=clock)
+    return ComposeNow(
+        rated_sports=rated_sports,
+        parked_runs=parked_runs,
+        new_arrivals=new_arrivals,
+        clock=clock,
+    )
 
 
 ComposeNowDep = Annotated[ComposeNow, Depends(get_compose_now)]

@@ -136,9 +136,11 @@ async def _write_club(session_factory, *, name: str, sport: Sport, courts: int =
 
 
 def _shelf(body, code: str):
-    for shelf in body["shelves"]["shelves"]:
-        if shelf["code"] == code:
-            return shelf
+    # Narrowed on the block type rather than on the code alone: the list may also
+    # hold a door, which carries a `code` of its own.
+    for block in body["shelves"]["shelves"]:
+        if block["block_type"] == "shelf" and block["code"] == code:
+            return block
     return None
 
 
@@ -321,6 +323,31 @@ async def test_new_players_is_composed_before_new_clubs(
     ]
 
 
+async def test_the_door_sits_above_the_two_light_shelves(
+    client, session_factory
+) -> None:
+    """The whole of #78's composition, over HTTP and against real stores.
+
+    She taps squash and holds no squash rating: the door takes the position the
+    ranked shelves would occupy, and *New on Raketa* and *New clubs* compose
+    beneath it — which is the argument for spending the two minutes, so it
+    belongs under the ask rather than instead of it.
+    """
+
+    await _write_club(session_factory, name="Kazimierz Squash", sport=Sport.SQUASH)
+    _, alice = await _join(client, ALICE)
+    _, bob = await _join(client, BOB)
+    await _rate_as_beginner(client, alice, "PADEL")
+    await _rate_as_beginner(client, bob, "SQUASH")
+
+    body = (await client.get("/api/v1/now?sport=SQUASH", headers=alice)).json()
+    blocks = body["shelves"]["shelves"]
+
+    assert [block["block_type"] for block in blocks] == ["door", "shelf", "shelf"]
+    assert blocks[0]["code"] == "noRunYet"
+    assert [block["code"] for block in blocks[1:]] == ["newPlayers", "newClubs"]
+
+
 async def test_no_shelf_carries_a_title_or_a_tail_card(client, session_factory) -> None:
     await _write_club(session_factory, name="Zabłocie Padel", sport=Sport.PADEL)
     _, alice = await _join(client, ALICE)
@@ -328,7 +355,8 @@ async def test_no_shelf_carries_a_title_or_a_tail_card(client, session_factory) 
     body = (await client.get("/api/v1/now?sport=PADEL", headers=alice)).json()
     shelf = _shelf(body, "newClubs")
 
-    assert set(shelf) == {"code", "caption", "cards"}
+    assert set(shelf) == {"block_type", "code", "caption", "cards"}
+    assert shelf["block_type"] == "shelf"
     assert shelf["caption"] is None
 
 
@@ -422,3 +450,66 @@ async def test_two_players_in_one_city_share_the_set_and_not_the_screen(
         "alice",
         "clara",
     }
+
+
+# -- the door, against these two shelves -------------------------------------
+#
+# That a door crosses at all, and which sentence it carries, is asserted in
+# `test_now.py` beside the rest of the envelope. What belongs here is the half
+# that needs this file's clubs and players: where the door sits *relative to
+# these two shelves*, and that a run parked at one sport does not answer for
+# another.
+
+
+async def _start_a_run(client, headers, sport: str) -> None:
+    """A run begun and left unfinished — the parked run the door reopens."""
+
+    started = await client.post(
+        "/api/v1/assessments", json={"sport": sport}, headers=headers
+    )
+    assert started.status_code in (200, 201), started.text
+
+
+def _door(body):
+    for block in body["shelves"]["shelves"]:
+        if block["block_type"] == "door":
+            return block
+    return None
+
+
+async def test_the_door_stands_above_the_two_light_shelves_on_the_wire(
+    client, session_factory
+) -> None:
+    # ADR-0084: the clubs are the argument for spending the two minutes, so they
+    # belong under the ask. Asserted with both shelves genuinely full, which is
+    # the only arrangement in which *beneath* means anything.
+    await _write_club(session_factory, name="Zabłocie Squash", sport=Sport.SQUASH)
+    _, alice = await _join(client, ALICE)
+    _, bob = await _join(client, BOB)
+    await _rate_as_beginner(client, alice, "PADEL")
+    await _rate_as_beginner(client, bob, "SQUASH")
+
+    body = (await client.get("/api/v1/now?sport=SQUASH", headers=alice)).json()
+    blocks = body["shelves"]["shelves"]
+
+    assert [block["block_type"] for block in blocks] == ["door", "shelf", "shelf"]
+    assert [block["code"] for block in blocks] == [
+        "noRunYet",
+        "newPlayers",
+        "newClubs",
+    ]
+
+
+async def test_a_run_parked_at_another_sport_does_not_answer_for_this_one(
+    client,
+) -> None:
+    # The adapter asks by pair. A tennis run half-answered on a tram says nothing
+    # about squash, and reading it as though it did would offer her *pick up where
+    # you left off* into a questionnaire she has never opened.
+    _, alice = await _join(client, ALICE)
+    await _rate_as_beginner(client, alice, "PADEL")
+    await _start_a_run(client, alice, "TENNIS")
+
+    body = (await client.get("/api/v1/now?sport=SQUASH", headers=alice)).json()
+
+    assert _door(body) == {"block_type": "door", "code": "noRunYet"}

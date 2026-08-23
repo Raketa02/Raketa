@@ -77,6 +77,54 @@ invariant(
 )
 
 
+class BlockType(str, Enum):
+    """What one entry in the shelves list is: a shelf, or the door.
+
+    ADR-0084 puts the door **in the list, in order** rather than beside it, so
+    the list stops being homogeneous and the client needs one field to tell the
+    two apart. The discriminator rides on the block itself, on the same rule
+    ``CardType`` follows: an entry is identified by what it *is*, never by its
+    position, so one reader narrows once and the server may reorder freely.
+
+    Two members and not a boolean. A third block is a decision somebody makes in
+    a diff, where ``is_door: true`` would make the third one either a lie or a
+    second boolean beside the first.
+    """
+
+    SHELF = "shelf"
+    DOOR = "door"
+
+
+class DoorCode(str, Enum):
+    """Which sentence the door shows, as a code and never as the sentence.
+
+    ADR-0084 gives the door two sentences — one for a player who has never
+    started this sport's questionnaire, one for a player whose run is parked —
+    and makes them **one block type** so the client never learns the difference.
+    What the block carries is which of the two it is.
+
+    Named for the **fact** rather than for the words, like every other code here:
+    the copy is the client's and changes without a backend release, where *has
+    she started* is the thing the server actually knows. A run parks however old
+    it is and never expires, so these two are exhaustive over a player the door
+    is drawn for at all.
+    """
+
+    NO_RUN_YET = "noRunYet"
+    RUN_PARKED = "runParked"
+
+
+#: Pinned rather than counted, on ``ACT_COUNT``'s rule. ADR-0084 names two
+#: sentences; a third is a copy decision, and a copy decision arriving as a
+#: silent enum member is one no client is holding a row for.
+DOOR_CODE_COUNT = 2
+
+invariant(
+    len(DoorCode) == DOOR_CODE_COUNT,
+    f"the enumeration names {len(DoorCode)} door codes, not {DOOR_CODE_COUNT}",
+)
+
+
 class ShelfCode(str, Enum):
     """Which claim a shelf makes, as a code and never as a title string.
 

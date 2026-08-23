@@ -101,7 +101,7 @@ export function shelf(
   cards: Wire['ShelfResponse']['cards'],
   caption: Wire['CaptionCode'] | null = null,
 ): Wire['ShelfResponse'] {
-  return { code, caption, cards };
+  return { block_type: 'shelf', code, caption, cards };
 }
 
 /**

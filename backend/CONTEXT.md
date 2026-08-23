@@ -722,6 +722,46 @@ there; they are not repeated here.
   *claim*, and a row appearing every week to say *nothing worth waiting for* is a row
   players learn to scroll past. A region makes none. _Avoid_: an empty shelf, and an absent
   region — the two spellings of the same bug in opposite directions.
+- **Block** (`now.screen.Block`, `now.vocabulary.BlockType`) — one entry in the shelves
+  region, which is a **shelf** or **the door**. The list stopped being homogeneous when
+  ADR-0084 put the door *in* it, so each entry carries `block_type` — the same rule
+  `card_type` follows one ring in: an entry is identified by what it *is*, never by its
+  position, so a client narrows once and the server may reorder freely. The field is named
+  `shelves` still, because renaming it would break every client reading a region that has
+  not otherwise changed, for a word. _Avoid_: `is_door`, which makes a third block either
+  a lie or a second boolean beside the first.
+- **The door** (`now.screen.Door`) — the way into a sport's questionnaire, composed into
+  the shelves list **in the position the ranked shelves would occupy** for a viewer who
+  holds no rating at the sport she asked for. It is a block the **server** put there and
+  never an inference the phone draws from absent shelves, which would fire wrongly on any
+  day the city genuinely has nothing in a sport she *is* rated at. It occupies those
+  shelves' position rather than sitting above them: unrated means they are **absent**, not
+  empty. *New on Raketa* and *New clubs* still compose **beneath** it — the clubs are the
+  argument for spending the two minutes. _Avoid_: a flag, an empty ranked shelf beside it,
+  and a door on `all` — which names only sports she is rated at, so it names none she is
+  not.
+- **Door code** (`now.vocabulary.DoorCode`) — which of the door's two sentences it shows:
+  `noRunYet` for a player who has never started this sport's questionnaire, `runParked`
+  for one whose run is waiting. **One block type, two codes**, so the client holds one row
+  per sentence and never learns that two states produced them. Named for the fact rather
+  than for the words, like every code here. A parked run **never expires** (ADR-0020's own
+  control walks back through answers), so this is existence and never freshness. _Avoid_:
+  the sport or a destination beside it — she named the sport on the request and still holds
+  it, and the code determines the destination exactly as an act code does.
+- **Parked run** (`now.ParkedRuns`, `ParkedRunsFromAssessments`) — whether this sport's
+  questionnaire is already part-answered, which is the one fact deciding which of the
+  door's two sentences shows. A **boolean and not the run**: Now composes a code from it,
+  and a port answering with an aggregate would invite a later session to read a transcript
+  on the home screen's path. Asked **only when a door is being drawn**, so a chip the
+  viewer is rated at never pays for it. _Avoid_: reading a run parked at another sport as
+  an answer for this one — the question is asked by pair, and *pick up where you left off*
+  into a questionnaire she has never opened is worse than the honest ask.
+- **Rated at one sport** (`now.RatedSports.holds`) — the by-pair question beside
+  `for_player`'s whole-set replay. A rating stream is keyed by `(player, sport)`, so this
+  is one lookup where the set replays every rating she holds — and a named chip, the sport
+  bar's busiest path, now has exactly this question to ask before it knows whether a door
+  is owed. _Avoid_: filtering `for_player` in the caller, which pays the replay to answer
+  a question about one sport.
 - **Spine and situation half** — the two nested halves of a card. The **spine** is read by
   every phone that has ever shipped; the **situation half** (`{situation, facts}`) is read
   only by one that knows the name. A client meeting an unknown situation draws the spine

@@ -83,11 +83,13 @@ from app.modules.now.domain.ports import (
     ArrivalSets,
     Levels,
     NewArrivals,
+    ParkedRuns,
     RatedSports,
 )
 from app.modules.now.infrastructure.arrival_sets import InMemoryArrivalSets
 from app.modules.now.infrastructure.levels import LevelsFromSkillRatings
 from app.modules.now.infrastructure.new_arrivals import ArrivalsFromUsersAndClubs
+from app.modules.now.infrastructure.parked_runs import ParkedRunsFromAssessments
 from app.modules.now.infrastructure.rating_sports import RatedSportsFromSkillRatings
 from app.modules.matches.infrastructure.court_holds import (
     CourtHoldsThroughReservations,
@@ -371,6 +373,16 @@ def build_rated_sports(ratings: SkillRatingRepository) -> RatedSports:
     this faster than a replay does, only this line moves.
     """
     return RatedSportsFromSkillRatings(ratings=ratings)
+
+
+def build_parked_runs(assessments: AssessmentRepository) -> ParkedRuns:
+    """`Now`'s answer to *has she already started this sport's questionnaire*.
+
+    Takes the rating context's **port**, on the precedent `build_rated_sports`
+    set: what backs a run is that context's business, and the door only needs to
+    know whether one is waiting.
+    """
+    return ParkedRunsFromAssessments(assessments=assessments)
 
 
 def build_arrivals(

@@ -239,6 +239,25 @@ Rules to preserve:
   which is the one failure mode no typecheck can reach afterwards. And **no sentence is
   composed here** — an AST walk over the package reddens on any string literal that could be
   copy, with a negative control proving it can tell one from a code.
+- **A sport she holds no rating at is a door, and the door is a block on the wire.**
+  ADR-0084 closes the sport bar's one open cost: three of five chips lie to a one-sport
+  player until she taps one, and *"the door is not a follow-up to the fixed row, it is the
+  condition on it."* It is composed into the shelves list **in the position the ranked
+  shelves would occupy** — never a flag, and never an inference the phone draws from absent
+  shelves, which would fire wrongly on any day the city genuinely has nothing in a sport
+  she *is* rated at. It occupies those shelves' position rather than sitting above them:
+  unrated means `bestFit` / `sameLevel` and `fullWorthWaiting` are **absent**, because a
+  player with no rating cannot be ranked. *New on Raketa* and *New clubs* still compose
+  **beneath** it, which is the point rather than a leftover — the clubs are the argument
+  for spending the two minutes. The block carries **which sentence** (`DoorCode`, two
+  members) and neither the sport nor a destination: she named the sport on the request and
+  still holds it, and the code determines the destination exactly as an act code does.
+  Only a **named chip** produces one — `all` is *the sports she holds a rating at*, so it
+  names none she is unrated at, and ADR-0084 puts a player holding no rating at all into
+  the run itself rather than onto Now. The rating is asked **by pair**
+  (`RatedSports.holds` → `SkillRatingRepository.exists_for`) and never as the set, and the
+  parked-run read happens **only when a door is being drawn**, so the busiest path on the
+  sport bar pays one lookup rather than a replay.
 - **Shelves 4 and 5 cache the membership and never the row.** *New on Raketa* (30 days,
   cap 8) and *New clubs* (60 days, cap 6) are the only part of Now that does not run through
   the ranked funnel, and
