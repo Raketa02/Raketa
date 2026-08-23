@@ -44,7 +44,30 @@ export interface RatedRun {
   readonly sport: Sport;
 }
 
+/**
+ * Where a walk began, which is the only thing that decides where it ends.
+ *
+ * `ADR-0084` narrows the onboarding tail for **a sport added later**: the first
+ * walk closes with an account of itself, and a single sport taken up from Now
+ * goes back to Now filtered to it. Those two tails cannot be told apart from the
+ * queue, from the ratings, or from anything else a pass holds — the same
+ * one-sport pass is produced by a run resumed at launch and by a tap on the door.
+ *
+ * **Not derived from whether the player already holds a rating.** That reading is
+ * right in the common case and wrong in the one that matters: a player who
+ * finished padel first and then tennis, in one walk, holds a rating by the time
+ * the second result screen asks — and she is owed the account of the whole walk,
+ * not a filtered home screen. Where she started is a fact; how many ratings she
+ * has is a coincidence.
+ */
+export type PassOrigin =
+  /** The picker, or a run resumed at launch: the first walk through onboarding. */
+  | 'onboarding'
+  /** Now's door into one sport she holds no rating at (`ADR-0084`). */
+  | 'door';
+
 export interface OnboardingPass {
+  readonly origin: PassOrigin;
   /**
    * The sports chosen, in the order they were chosen.
    *
@@ -65,8 +88,8 @@ export interface OnboardingPass {
  * A *new* queue is a new pass: whatever an earlier walk produced belongs to that walk,
  * and the closing screens account for this one.
  */
-export function begin(queue: readonly Sport[]): OnboardingPass {
-  return { queue, rated: [] };
+export function begin(queue: readonly Sport[], origin: PassOrigin): OnboardingPass {
+  return { origin, queue, rated: [] };
 }
 
 /**
@@ -173,6 +196,16 @@ export type PassDestination =
   | { readonly kind: 'rate'; readonly sport: Sport }
   /** The closing screens: the summary of what this pass produced, then what is kept. */
   | { readonly kind: 'closing' }
+  /**
+   * Now, filtered to the sport this walk produced (`ADR-0084`).
+   *
+   * The tail for a sport added later: `result → editor → back`, never the city
+   * screen and never the Proposals opt-in, both of which are answered once per
+   * player and asking again is the app forgetting them. It is also never the
+   * closing screens — those account for a **walk**, and one sport picked up from
+   * the home screen is not one.
+   */
+  | { readonly kind: 'now'; readonly sport: Sport }
   /** Straight into the app. */
   | { readonly kind: 'app' };
 
@@ -186,7 +219,17 @@ export type PassDestination =
  * anything to account for*.
  */
 export function stopDestination(pass: OnboardingPass | undefined): PassDestination {
-  return pass !== undefined && pass.rated.length > 0 ? { kind: 'closing' } : { kind: 'app' };
+  if (pass === undefined) return { kind: 'app' };
+
+  const last = pass.rated[pass.rated.length - 1];
+  // Nothing was produced, so there is nothing to account for and nothing to
+  // filter to — for either origin. A player who abandoned the door's run holds no
+  // rating at that sport, and sending her back to the chip she came from would be
+  // showing her the same door as though it were an answer.
+  if (last === undefined) return { kind: 'app' };
+
+  if (pass.origin === 'door') return { kind: 'now', sport: last.sport };
+  return { kind: 'closing' };
 }
 
 /**

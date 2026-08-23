@@ -18,7 +18,9 @@
 
 import { z } from 'zod';
 
+import type { Sport } from '../domain/Sport';
 import { SPORTS } from '../domain/Sport';
+import { toSport } from '../mappers/onboardingMappers';
 
 export const assessmentRouteParams = z.object({
   assessmentId: z.string().uuid(),
@@ -44,4 +46,25 @@ export function parseAssessmentRouteParams(
 ): AssessmentRouteParams | undefined {
   const result = assessmentRouteParams.safeParse(params);
   return result.success ? result.data : undefined;
+}
+
+/**
+ * The one param the door's route carries: which sport to rate.
+ *
+ * It arrives in the **registry's** spelling (`SQUASH`), not the app's, because
+ * the value Now holds is the sport bar's chip and that is a wire value —
+ * `ADR-0070` puts the same spelling on `GET /now?sport=`. Turning it into this
+ * app's `Sport` is `mappers/`' job and only `mappers/`': *"the two spellings meet
+ * in mappers, and only there"*, so this calls that map rather than growing a
+ * third copy of it.
+ *
+ * `undefined` when the link names nothing this build can rate — including `all`,
+ * which the sport bar can hold and which is not a sport. The caller decides where
+ * that goes, exactly as it does for the assessment params above.
+ */
+export function parseSportRouteParam(
+  params: Record<string, string | string[] | undefined>,
+): Sport | undefined {
+  const result = z.object({ sport: z.string() }).safeParse(params);
+  return result.success ? toSport(result.data.sport) : undefined;
 }

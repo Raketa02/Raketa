@@ -257,9 +257,18 @@ export function ResultScreen({ assessmentId, sport }: ResultScreenProps) {
 
           {next === undefined ? (
             // Stopping here is an outcome, not an abandonment: nothing is discarded and
-            // nothing is sent. Where it leads is the pass's answer — the closing screens,
-            // since this run just produced a rating.
-            <Button label="See your ratings" size="lg" onPress={onwards.advance} />
+            // nothing is sent. Where it leads is the pass's answer — the closing screens
+            // for a walk through onboarding, and **Now filtered to this sport** for a
+            // sport picked up at Now's door (`ADR-0084`).
+            //
+            // The label follows the destination rather than the other way round: *See
+            // your ratings* on a button that lands on the home screen is the app telling
+            // her where she is going and then going somewhere else.
+            <Button
+              label={onwards.destination.kind === 'now' ? 'See what’s on' : 'See your ratings'}
+              size="lg"
+              onPress={onwards.advance}
+            />
           ) : (
             <>
               <Button

@@ -19,5 +19,10 @@ export interface ComposeNowOptions {
 }
 
 export function composeNow({ sport, signal }: ComposeNowOptions): Promise<ComposedScreen> {
-  return fetchNow({ sport, signal }).then(toComposedScreen);
+  // The sport goes out on the request and comes back into the mapper, because the
+  // one block that has no sport of its own — the door — is worded with it. It is
+  // the request's own value rather than a second read of the store: the answer
+  // being mapped is the answer to *this* ask, and a chip changed while it was in
+  // flight must not word it.
+  return fetchNow({ sport, signal }).then((wire) => toComposedScreen(wire, sport));
 }

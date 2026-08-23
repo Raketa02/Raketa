@@ -416,7 +416,7 @@ describe('abandoning a sport', () => {
     // resumed tennis run then borrowed whatever pass was lying around. It no longer is,
     // and that is the point: an earlier walk's ratings do not follow a player into a run
     // they resumed after it — see the two-passes test below for that case.
-    useOnboardingPass.getState().begin(['padel', 'tennis']);
+    useOnboardingPass.getState().begin(['padel', 'tennis'], 'onboarding');
     useOnboardingPass.getState().record({ assessmentId: PADEL_RUN, sport: 'padel' });
 
     stubGate({ runs: [runInProgress('TENNIS', TENNIS_RUN)] });
@@ -458,11 +458,16 @@ describe('abandoning a sport', () => {
 
   it("touches no other sport's assessment", async () => {
     // Rated at padel already, and half way through a tennis run that is not this one.
+    //
+    // Reached by a link, because `ADR-0084` stopped the entry gate resuming a run for a
+    // player who already holds a rating — it parks, and Now's door is the way back in.
+    // Which door she came through is not what this test is about; what leaves the device
+    // when she stops is.
     stubGate({ ratings: [PADEL_RATING], runs: [runInProgress('TENNIS', TENNIS_RUN)] });
     transport.on('GET', stepPath(TENNIS_RUN), () => json(TENNIS_OPENING));
     stubAbandonment(TENNIS_RUN);
 
-    await launchSignedIn();
+    await launchSignedIn(`/question/${TENNIS_RUN}?sport=tennis`);
     await waitFor(() => expect(screen).toHavePathname(`/question/${TENNIS_RUN}`));
 
     openTheConfirm();

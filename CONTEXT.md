@@ -989,6 +989,15 @@ about it. Decided by [ADR-0070](docs/adr/0070-now-is-three-regions-and-a-card-ha
   difference. It carries neither the sport nor a destination: she named the sport in the ask
   and still holds it, and the code determines where the tap goes. Only a **named sport** can
   produce one; *all* means the sports she is rated at, so it names none she is not.
+- **Parked run** — a questionnaire left unfinished by a player who **already holds a rating
+  at some sport**. It is not a stored state and nothing expires: it is what an unfinished run
+  *is*, now that a run in progress takes the screen at launch only for a player holding no
+  rating at all. Four squash questions answered on a tram must never stand between her and the
+  padel match she has paid for, so the run parks and **the door is the way back into it**,
+  continuing where it stopped **however old** — the transcript is the server's and no age is
+  read anywhere. Taking the door is one **start**, which is idempotent per player and sport and
+  answers with the parked run's outstanding question, so *start* and *resume* are one act with
+  two sentences.
 - **Card** — one thing on the screen, of exactly three kinds: **match**, **person**, **club**.
   **Identified by the thing it is about**, never by its position or by the shelf it sits in —
   one match may appear on more than one shelf, and under thing identity one answer corrects

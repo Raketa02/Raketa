@@ -96,6 +96,11 @@ export function clubCard(clubId: string, name: string): Wire['ClubCardResponse']
   return { card_type: 'club', club_id: clubId, stamp: 1, name, distance_km: 1.2 };
 }
 
+/** The door into a sport this viewer holds no rating at (`ADR-0084`). */
+export function door(code: Wire['DoorCode']): Wire['DoorResponse'] {
+  return { block_type: 'door', code };
+}
+
 export function shelf(
   code: Wire['ShelfCode'],
   cards: Wire['ShelfResponse']['cards'],

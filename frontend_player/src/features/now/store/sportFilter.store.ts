@@ -49,3 +49,20 @@ export const useSportFilterStore = create<SportFilterState>((set, get) => ({
   },
   reset: () => set({ selected: DEFAULT_SPORT_FILTER, leftAt: undefined }),
 }));
+
+/**
+ * Select a chip from outside the screen.
+ *
+ * One caller, and it is the reason this exists: a questionnaire begun at Now's
+ * door ends **back on Now, filtered to the sport it produced** (`ADR-0084`), and
+ * the flow that lands her there is onboarding's. Exposed as a function rather
+ * than as the store, so the only thing another feature can do to this selection
+ * is set it — it cannot read it, subscribe to it, or reset the visit clock.
+ *
+ * A route param was the alternative and is worse: *"a route param is not app
+ * state"*, and the selection would then be re-read on every navigation to `/`
+ * rather than held for the visit the way `ADR-0084` measures it.
+ */
+export function selectSportFilter(sport: SportFilter): void {
+  useSportFilterStore.getState().select(sport);
+}

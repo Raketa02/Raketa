@@ -142,15 +142,32 @@ player's decision to come back later. Both are modelled in
   progress bar measures, what decides which sport comes next, and what the closing screens
   account for. Client-only, in-memory, never persisted. It **begins** explicitly — at the
   picker with the queue that was chosen, or at the question route for a run resumed
-  straight from the entry gate, which is a genuine pass of one sport — and it **ends** in
-  one place, when the player reaches the app. Between passes there is **no pass**, and
+  straight from the entry gate, which is a genuine pass of one sport, or at the door's
+  route for a sport taken up from Now — and it **ends** in one place, when the player
+  reaches the app. Between passes there is **no pass**, and
   that absence is load-bearing: it is what lets a resumed run begin one without adopting a
   finished walk's queue. **Onboarding happens once, at the beginning** — there is no
-  re-take from inside the app — so a link naming a sport outside the running pass is sent
+  re-take from inside the app, and Now's door is the one exception, which is why it begins
+  its own pass — so a link naming a sport outside the running pass is sent
   to welcome rather than into the middle of a flow. _Avoid_: **"run"** — that is one
   Assessment, and a pass is a
   sequence of them; **"session"** — that is the auth session, and the two have different
   lifetimes; also "onboarding state", "wizard".
+- **Pass origin** — where a walk **began**, which is the only thing that decides where it
+  **ends** (`onboarding` · `door`). A walk begun at the picker, or at a run resumed on
+  launch, closes with the account of itself — the done screen, then the data screen. A walk
+  begun at Now's **door** goes back to Now filtered to the sport it produced, and passes
+  neither
+  ([ADR-0084](../docs/adr/0084-the-sport-bar-is-five-fixed-chips-and-an-unrated-sport-is-a-door.md)).
+  **Never derived from whether the player already holds a rating**: she holds one by the
+  second result screen of an ordinary two-sport walk, and is owed the account of that walk.
+  Where she started is a fact; how many ratings she has is a coincidence.
+- **A parked run** — an Assessment left unfinished by a player who **already holds a
+  rating**. It is not a state anything stores: it is what an unfinished run _is_ now that
+  the entry gate no longer resumes one for her. Nothing is stranded, because the door is the
+  way back in, and it continues where it stopped **however old** — the server replays the
+  transcript, so no client reads an age. _Avoid_: "deferred run" — that is her explicit
+  _later_, lasts one app session, and exists for the player who has no other way out.
 - **Deferred run** — an Assessment the player asked to **continue later**. Unfinished on
   the server with every answer intact, and held on the client only so the entry gate stops
   resuming it. It lasts the **app session**, deliberately outliving the pass: a pass ends
@@ -273,6 +290,22 @@ badge are separate tickets that land on top of it.
   from the app backgrounding
   ([ADR-0084](../docs/adr/0084-the-sport-bar-is-five-fixed-chips-and-an-unrated-sport-is-a-door.md)).
   A cold start is not the boundary, because phones do not close apps.
+- **The door** — the block Now composes where a sport's **ranked shelves** would be, for a
+  chip the viewer holds no rating at. It is **in the shelves list, in order**, never a flag
+  and never an inference the phone draws from shelves that are missing — that inference is
+  wrong on any day the city genuinely has nothing in a sport she _is_ rated at, and the
+  phone holds no rules
+  ([ADR-0084](../docs/adr/0084-the-sport-bar-is-five-fixed-chips-and-an-unrated-sport-is-a-door.md),
+  [ADR-0053](../docs/adr/0053-the-phone-holds-no-rules-and-only-subtracts.md)). _New on
+  Raketa_ and _New clubs_ draw **beneath** it, which is the argument for spending the two
+  minutes rather than a leftover.
+- **Two sentences, one behaviour** — the door's two codes (`noRunYet` · `runParked`) differ
+  in their **words** and in nothing else. The tap is one `POST /assessments`, which is
+  idempotent per player and sport and hands back a parked run's outstanding question, so the
+  phone never learns which case it is in and holds no rule about resuming.
+- **Block** — what the shelves list holds: a shelf, or a door. The domain calls the field
+  `blocks` where the wire keeps `shelves`; the wire keeps its name because renaming it
+  breaks every shipped client reading a region that has not otherwise changed.
 - **The strip** — the enrolled region's `.hstrip`: one card at a time, the full content
   width, bled to the screen edge, peeking by `gutter − gap`. **Not the rail**, whose
   `railCardRatio` belongs to a shelf and would show a quarter of the next card's contents

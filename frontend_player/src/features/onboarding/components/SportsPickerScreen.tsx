@@ -53,7 +53,7 @@ export function SportsPickerScreen() {
     // The pass begins here, with the queue that was chosen. It no longer *clears* an
     // earlier walk — the entry gate ended that one when the player reached the app — so
     // this is a beginning rather than a reset that happened to double as one.
-    beginPass(queue);
+    beginPass(queue, 'onboarding');
     start.mutate(first, {
       onSuccess: (step) =>
         router.replace({

@@ -43,14 +43,14 @@ function screen(overrides: Partial<ComposedScreen> = {}): ComposedScreen {
   return {
     offers: { cards: [] },
     yourMatches: { cards: [] },
-    shelves: { shelves: [] },
+    shelves: { blocks: [] },
     debt: undefined,
     ...overrides,
   };
 }
 
 function shelf(cards: Shelf['cards']): Shelf {
-  return { code: 'bestFit', title: 'Best fit for you', caption: undefined, cards };
+  return { kind: 'shelf', code: 'bestFit', title: 'Best fit for you', caption: undefined, cards };
 }
 
 describe('subtracting a moment from the current time', () => {
@@ -80,7 +80,7 @@ describe('the moments a screen carries', () => {
           }),
         ],
       },
-      shelves: { shelves: [shelf([matchCard({ clock: '2026-08-23T13:00:00Z' })])] },
+      shelves: { blocks: [shelf([matchCard({ clock: '2026-08-23T13:00:00Z' })])] },
     });
 
     expect([...momentsOnScreen(composed)].sort()).toEqual([
@@ -94,7 +94,10 @@ describe('the moments a screen carries', () => {
   it('has nothing to collect from a person or a club card', () => {
     const composed = screen({
       shelves: {
-        shelves: [
+        blocks: [
+          // A door holds no cards and no moment of its own, so a screen showing one
+          // still arms nothing.
+          { kind: 'door', code: 'noRunYet', copy: { line: 'x', action: 'y' } },
           shelf([
             { kind: 'person', playerId: 'p-1', nickname: 'ada' },
             { kind: 'club', clubId: 'c-2', name: 'Kraków Padel', distanceKm: 2 },

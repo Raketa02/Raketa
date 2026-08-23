@@ -63,13 +63,30 @@ describe('where a player belongs on launch', () => {
     ).toEqual({ kind: 'resume', run: RUN });
   });
 
-  it('resumes an unfinished run even when the player is already rated elsewhere', () => {
-    // The case the ordering exists for: rated at padel, half way through tennis. Reading
-    // ratings first would drop them into the app with those tennis answers stranded, and
-    // nothing would ever offer them the rest of the questionnaire.
+  it('parks an unfinished run when the player is already rated elsewhere', () => {
+    // **This reverses the original order, and the argument it reversed is still right
+    // about its own player.** Resuming whatever else she held was written so that a padel
+    // player half way through tennis would not have those answers stranded — and nothing
+    // is stranded now, because `ADR-0084` gives Now a door back into a parked run. What
+    // the old order cost is the case that decides it: four squash questions answered on a
+    // tram standing between her and the padel match she has paid for.
     expect(
       entryDestination({
         ratings: [rating('padel')],
+        runInProgress: RUN,
+        deferredRunIds: NONE_DEFERRED,
+      }),
+    ).toEqual({ kind: 'app' });
+  });
+
+  it('resumes it for a player holding no rating at all, however old the run', () => {
+    // The first walk through onboarding, for whom there is no app to be kept out of and
+    // no door to be shown. Age is not an input here and is not one on the server either:
+    // a parked run continues where it stopped, and the questionnaire's own control walks
+    // back through the answers (`ADR-0020`).
+    expect(
+      entryDestination({
+        ratings: [],
         runInProgress: RUN,
         deferredRunIds: NONE_DEFERRED,
       }),
@@ -90,7 +107,7 @@ describe('a run the player asked to come back to later', () => {
     ).toEqual({ kind: 'welcome' });
   });
 
-  it('lets a player rated elsewhere reach the app', () => {
+  it('lets a player rated elsewhere reach the app, deferral or no deferral', () => {
     expect(
       entryDestination({
         ratings: [rating('padel')],

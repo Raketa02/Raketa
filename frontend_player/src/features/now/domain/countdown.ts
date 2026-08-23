@@ -47,7 +47,8 @@ export function momentsOnScreen(screen: ComposedScreen): readonly Moment[] {
   const cards = [
     ...screen.offers.cards,
     ...screen.yourMatches.cards,
-    ...screen.shelves.shelves.flatMap((shelf) => shelf.cards),
+    // A door holds no cards and no moment, so it contributes nothing to watch.
+    ...screen.shelves.blocks.flatMap((block) => (block.kind === 'shelf' ? block.cards : [])),
   ];
 
   return cards.flatMap((card) => {

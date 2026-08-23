@@ -120,6 +120,15 @@ oversight. The countdown **repaints** every second inside ten minutes and every 
 above, from one screen-wide clock; repainting is drawing and is never a fifth occasion to
 fetch.
 
+Tapping a chip for a sport you have no level at does not answer _nothing open in Squash_. It
+opens a **door**: the honest sentence, a way into that sport's questionnaire, and the new
+clubs and new players beneath it, so you can see there is squash here before spending two
+minutes ([ADR-0084](../docs/adr/0084-the-sport-bar-is-five-fixed-chips-and-an-unrated-sport-is-a-door.md)).
+Finishing lands you back on Now, filtered to the sport you just took up. A questionnaire left
+half-answered **parks** rather than taking the screen at launch — it will never stand between
+you and the match you have paid for — and the door picks it up where you left it, however long
+ago that was.
+
 Under all of it is the **tab bar** — five destinations, five Feather glyphs, and a flat
 coral circle in the middle for creating a match
 ([ADR-0082](../docs/adr/0082-the-tab-bar-is-one-outline-family-and-coral-is-the-only-selected-cue.md)).

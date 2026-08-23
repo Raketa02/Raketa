@@ -33,6 +33,20 @@ screens a player leaves through).
 one onboarding lands on. Three regions (offers · the enrolled strip · the shelves), the sport
 bar, `ADR-0054`'s four asks, and the match card's **action row**.
 
+**A chip for a sport she holds no rating at draws a door, and the door is a route**
+([ADR-0084](../docs/adr/0084-the-sport-bar-is-five-fixed-chips-and-an-unrated-sport-is-a-door.md)).
+The block arrives **in the shelves list, in order** — where the ranked shelves would be, with
+_New on Raketa_ and _New clubs_ beneath it — and the phone never concludes one from shelves
+that are missing, because that inference is wrong on any day the city genuinely has nothing in
+a sport she _is_ rated at. Its two codes differ in their **words and in nothing else**: the tap
+is `/rate/[sport]`, one `POST /assessments`, which is idempotent per player and sport and hands
+back a parked run's outstanding question — so **Now imports nothing from onboarding**, and no
+rule about resuming lives on the phone. `entryDestination` no longer resumes a run for a player
+who already holds a rating: it **parks**, and the door is the way back into it, however old.
+A walk begun at the door carries `origin: 'door'` and ends **back on Now filtered to that
+sport**, passing neither closing screen — never derived from _does she already hold a rating_,
+which is true of every ordinary two-sport walk by its second result screen.
+
 **`(app)/(tabs)/` is a real tab navigator now, with five destinations**
 ([ADR-0082](../docs/adr/0082-the-tab-bar-is-one-outline-family-and-coral-is-the-only-selected-cue.md)):
 Now · Find · create · Inbox · You. `shared/ui/TabBar` draws it — five Feather glyphs at
@@ -55,7 +69,7 @@ distinction between a **repaint** and an **ask** is stated — the countdown red
 inside ten minutes and every minute above, from **one screen-wide clock**, and that is drawing
 rather than a fifth occasion to fetch.
 
-**Four rules on that feature are walked over its own source** in
+**Five rules on that feature are walked over its own source** in
 `components/nowDiscipline.test.ts`, because each is a rule about what the code does _not_ do
 and no green assertion can carry one. **The phone holds no rules** ([ADR-0053](../docs/adr/0053-the-phone-holds-no-rules-and-only-subtracts.md)):
 `Date.parse` appears in `domain/countdown.ts` and nowhere else, so the only derivation is
@@ -64,12 +78,15 @@ subtracting a card's moment from now. **Nothing refreshes on a timer**
 `refetchInterval`, and **two** `setTimeout`s — the wake at a moment the _server_ named, and the
 repaint clock — with the walk asserting that the repaint module cannot reach Query at all.
 **Neither of the prototype's two action-row icons comes back** (`✉`, `⌘`). **The screen never
-admits staleness**: no marker, no banner, no _"can't reach Raketa"_. Each guard carries a
-negative control; do not add an exemption to a walk, **narrow the rule instead** — which is what
-the second one did when the repaint clock landed.
+admits staleness**: no marker, no banner, no _"can't reach Raketa"_. **The door is never
+inferred**: a door is _constructed_ in `mappers/nowMappers.ts` and nowhere else, and its copy
+table is read only where a code is resolved — so a component cannot decide to draw one. Each
+guard carries a negative control; do not add an exemption to a walk, **narrow the rule
+instead** — which is what the second one did when the repaint clock landed.
 
-It also holds the section's **vocabulary**: four copy tables (36 situations · 10 term codes ·
-5 hold reasons · 7 acts), the shelf-code → Find pre-filter map and the caption codes, all keyed
+It also holds the section's **vocabulary**: five copy tables (36 situations · 10 term codes ·
+5 hold reasons · 7 acts · 2 door codes), the shelf-code → Find pre-filter map and the caption
+codes, all keyed
 on unions generated from `openapi.player.json`. **Completeness is a typecheck, not a test**
 ([ADR-0075](../docs/adr/0075-the-second-table-is-unpaid-and-the-first-ships-in-english.md)): a
 contract value added without its sentence fails `pnpm typecheck`. That only holds while the key

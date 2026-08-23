@@ -19,6 +19,7 @@ export type {
   ActCopy,
   ActSurface,
   Audience,
+  DoorCopy,
   FindClaim,
   ShelfCopy,
   SituationCopy,
@@ -31,6 +32,7 @@ export type {
   CaptionCode,
   CardHoldReason,
   Cause,
+  DoorCode,
   FitReason,
   HoldNote,
   ShelfCode,
@@ -62,10 +64,12 @@ export { NowScreen } from './components/NowScreen';
 export { nowKeys } from './hooks/nowKeys';
 
 export type {
+  Block,
   ClubCard,
   ComposedScreen,
   Cover,
   DebtLine,
+  Door,
   EnrolledRegion,
   MatchCard,
   Moment,
@@ -78,3 +82,12 @@ export type {
 } from './domain/ComposedScreen';
 
 export { DEFAULT_SPORT_FILTER, SPORT_BAR, SPORT_CHIP_COPY } from './mappers/sportBar';
+export { DOOR_COPY, doorCopy, type DoorContext, type DoorEntry } from './mappers/doors';
+
+/**
+ * The chip a questionnaire begun at Now's door lands back on (`ADR-0084`).
+ *
+ * The one write another feature may make to this screen. See the store for why
+ * it is a function rather than the store itself.
+ */
+export { selectSportFilter } from './store/sportFilter.store';

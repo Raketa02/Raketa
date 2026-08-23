@@ -25,12 +25,14 @@ import type { Currency, Money } from '@/shared/lib/formatting';
 import { formatMoney } from '@/shared/lib/formatting';
 
 import type {
+  Block,
   ClubCard,
+  ComposedScreen,
   Cover,
   DebtLine,
+  Door,
   MatchCard,
   NowCard,
-  ComposedScreen,
   PersonCard,
   Place,
   Shelf,
@@ -38,6 +40,8 @@ import type {
 
 import { actCopy } from './acts';
 import { captionCopy } from './captions';
+import type { SportFilter } from './codes';
+import { doorCopy } from './doors';
 import { shelfTitle } from './shelves';
 import { situationCopy } from './situations';
 
@@ -47,32 +51,46 @@ type PersonCardResponse = components['schemas']['PersonCardResponse'];
 type ClubCardResponse = components['schemas']['ClubCardResponse'];
 type ShelfResponse = components['schemas']['ShelfResponse'];
 type ShelvesRegionResponse = components['schemas']['ShelvesRegionResponse'];
+type DoorResponse = components['schemas']['DoorResponse'];
 type PlaceResponse = components['schemas']['PlaceResponse'];
 type MoneyResponse = components['schemas']['MoneyResponse'];
 type DebtLineResponse = components['schemas']['DebtLineResponse'];
 
-export function toComposedScreen(wire: NowResponse): ComposedScreen {
+/**
+ * @param sport the chip the request carried, which is the one thing the door's
+ * block does not repeat. Passing it here rather than resolving the door's words
+ * in a component is this app's rule that **a component never holds a table**: the
+ * sport is an input to the copy, not a second place the copy is decided.
+ */
+export function toComposedScreen(wire: NowResponse, sport: SportFilter): ComposedScreen {
   return {
     offers: { cards: wire.offers.cards.map(toMatchCard) },
     yourMatches: { cards: wire.your_matches.cards.map(toMatchCard) },
-    shelves: { shelves: wire.shelves.shelves.filter(isShelf).map(toShelf) },
+    shelves: { blocks: wire.shelves.shelves.map((block) => toBlock(block, sport)) },
     debt: wire.debt == null ? undefined : toDebtLine(wire.debt),
   };
 }
 
 /**
- * The shelves list also carries the **door** into an unrated sport's
- * questionnaire, and this build draws nothing for it (`Raketa02/Raketa#94`).
+ * A shelf or a door, discriminated by the wire's own `block_type`.
  *
- * Dropped rather than mapped to a blank row: `ADR-0084` puts the door in the
- * list precisely so that a build which has never heard of it loses one entry
- * from a list it already iterates. Until #94 lands, tapping a chip for a sport
- * this player holds no rating at renders the two light shelves and no ask —
- * which is the failure that ADR names as the cost of shipping the block first,
- * and it is bounded by one client release.
+ * **This is the only place a door is ever made**, which is the whole of
+ * `ADR-0084`'s negative rule: the phone never concludes *the ranked shelves are
+ * missing, therefore she is unrated*. That inference is wrong on any day the city
+ * genuinely has nothing in a sport she is rated at, and there is nowhere else in
+ * this feature it could be written, because nothing else constructs the type.
  */
-function isShelf(block: ShelvesRegionResponse['shelves'][number]): block is ShelfResponse {
-  return block.block_type === 'shelf';
+function toBlock(block: ShelvesRegionResponse['shelves'][number], sport: SportFilter): Block {
+  switch (block.block_type) {
+    case 'shelf':
+      return toShelf(block);
+    case 'door':
+      return toDoor(block, sport);
+  }
+}
+
+function toDoor(wire: DoorResponse, sport: SportFilter): Door {
+  return { kind: 'door', code: wire.code, copy: doorCopy(wire.code, { sport }) };
 }
 
 /**
@@ -84,6 +102,7 @@ function isShelf(block: ShelvesRegionResponse['shelves'][number]): block is Shel
  */
 function toShelf(wire: ShelfResponse): Shelf {
   return {
+    kind: 'shelf',
     code: wire.code,
     title: shelfTitle(wire.code),
     caption: wire.caption == null ? undefined : captionCopy(wire.caption),

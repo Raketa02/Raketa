@@ -45,7 +45,7 @@ function screenHolding(one: MatchCard): ComposedScreen {
   return {
     offers: { cards: [] },
     yourMatches: { cards: [one] },
-    shelves: { shelves: [] },
+    shelves: { blocks: [] },
     debt: undefined,
   };
 }
@@ -162,7 +162,7 @@ describe('one clock for the whole screen', () => {
     const screenOfThree: ComposedScreen = {
       offers: { cards: [] },
       yourMatches: { cards },
-      shelves: { shelves: [] },
+      shelves: { blocks: [] },
       debt: undefined,
     };
 

@@ -31,6 +31,7 @@ import { ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-n
 import { Card, theme } from '@/shared/ui';
 
 import type {
+  Block,
   EnrolledRegion,
   NowCard,
   OffersRegion,
@@ -40,6 +41,7 @@ import type { SportFilter } from '../mappers/codes';
 
 import type { CardControl } from './ActionRow';
 import { MatchCardView, NowCardView } from './NowCards';
+import { DoorView } from './NowDoor';
 import { NO_MATCHES_BOOKED, REGION_HEADING, nothingOpen } from './nowCopy';
 import { GUTTER, STRIP_GAP, contentWidth, railCardWidth, stripSnapInterval } from './nowGeometry';
 
@@ -146,55 +148,74 @@ export function EnrolledStripView({
 }
 
 /**
- * The shelves, in the server's order. A shelf with nothing in it never arrives.
+ * The blocks, in the server's order. A shelf with nothing in it never arrives.
  *
- * Each is a **rail** rather than a strip: its child is `size.railCardRatio` of the
- * column, so a quarter of the next card shows and the row says *there are more*.
- * That ratio is the rail's own and is correct here; what
+ * Each shelf is a **rail** rather than a strip: its child is `size.railCardRatio`
+ * of the column, so a quarter of the next card shows and the row says *there are
+ * more*. That ratio is the rail's own and is correct here; what
  * `deltas/native-kit.md` forbids is applying it to the **strip** above, whose child
  * is the full content width.
+ *
+ * **The list is not homogeneous, and that is the contract** (`ADR-0084`). One entry
+ * may be the door into a sport this viewer holds no rating at, and it is drawn
+ * where it arrives — in the position the ranked shelves would occupy, with *New on
+ * Raketa* and *New clubs* beneath it. Nothing here decides that: a door is drawn
+ * exactly when the server sent one, and the emptiness of a list is never read as
+ * one, because a genuinely empty city in a sport she **is** rated at looks
+ * identical from here.
  */
 export function ShelvesRegionView({
   region,
   sport,
+  onEnterDoor,
 }: {
   readonly region: ShelvesRegion;
   readonly sport: SportFilter;
+  readonly onEnterDoor: () => void;
 }) {
   const { width } = useWindowDimensions();
 
   return (
     <View testID={REGION_ID.shelves}>
-      {region.shelves.length === 0 ? (
+      {region.blocks.length === 0 ? (
         <View style={[s.region, s.gutter]}>
           <Card>
             <Text style={s.empty}>{nothingOpen(sport)}</Text>
           </Card>
         </View>
       ) : (
-        region.shelves.map((shelf) => (
-          <View key={shelf.code} style={s.region}>
-            {shelf.title !== undefined ? <SectionHeading title={shelf.title} /> : null}
-            {shelf.caption !== undefined ? (
-              <Text style={[s.caption, s.gutter]}>{shelf.caption}</Text>
-            ) : null}
+        region.blocks.map((block) =>
+          block.kind === 'door' ? (
+            <DoorView key={blockKey(block)} door={block} onEnter={onEnterDoor} />
+          ) : (
+            <View key={blockKey(block)} style={s.region}>
+              {block.title !== undefined ? <SectionHeading title={block.title} /> : null}
+              {block.caption !== undefined ? (
+                <Text style={[s.caption, s.gutter]}>{block.caption}</Text>
+              ) : null}
 
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={s.shelfContent}
-            >
-              {shelf.cards.map((card) => (
-                <View key={cardKey(card)} style={{ width: railCardWidth(width) }}>
-                  <NowCardView card={card} fill />
-                </View>
-              ))}
-            </ScrollView>
-          </View>
-        ))
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={s.shelfContent}
+              >
+                {block.cards.map((card) => (
+                  <View key={cardKey(card)} style={{ width: railCardWidth(width) }}>
+                    <NowCardView card={card} fill />
+                  </View>
+                ))}
+              </ScrollView>
+            </View>
+          ),
+        )
       )}
     </View>
   );
+}
+
+/** A block is identified by what it is, so a door and a shelf cannot collide. */
+function blockKey(block: Block): string {
+  return `${block.kind}:${block.code}`;
 }
 
 /** A card is identified by the thing it is about, never by its position. */

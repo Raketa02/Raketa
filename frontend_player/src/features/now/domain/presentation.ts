@@ -149,3 +149,25 @@ export interface SportChipCopy {
   readonly label: string;
   readonly swatch: SportSwatch | undefined;
 }
+
+/**
+ * What the door into a sport's questionnaire says.
+ *
+ * **Two sentences, one behaviour.** `ADR-0084` gives the door a sentence for a
+ * player who has never started this sport's questionnaire and one for a player
+ * whose run is parked, and makes them **one block type** so *"the client never
+ * learns the difference"*. That is why nothing here says which of the two it
+ * came from: the code picks the words and the tap does the same thing either
+ * way, because `POST /assessments` is idempotent per player and sport and hands
+ * back a parked run's outstanding question rather than opening a second one.
+ *
+ * A phone that branched on the code would be holding the rule *a parked run is
+ * resumed and a fresh one is started* — a rule the server already applies, and
+ * one the phone would then be able to disagree with (`ADR-0053`).
+ */
+export interface DoorCopy {
+  /** The honest sentence: why the shelves are missing and what to do about it. */
+  readonly line: string;
+  /** The control's label. The way in, not a description of it. */
+  readonly action: string;
+}

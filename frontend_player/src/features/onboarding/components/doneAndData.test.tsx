@@ -10,7 +10,8 @@
  * the only way to assert a requirement whose whole purpose is that two numbers line up.
  */
 
-import { fireEvent, screen, waitFor } from 'expo-router/testing-library';
+import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
+import { router } from 'expo-router';
 import { StyleSheet, type StyleProp, type TextStyle } from 'react-native';
 
 import { refreshTokens } from '@/features/auth/types';
@@ -427,14 +428,19 @@ describe('the done screen', () => {
   });
 
   it('lists what this run produced, not what the player is rated at', async () => {
-    // A player already rated at padel, resuming an unfinished tennis run — which is also
-    // the single-sport path, since the queue was never persisted and a resumed run has
-    // nothing after it.
+    // A player already rated at padel, standing in an unfinished tennis run — which is
+    // also the single-sport path, since the queue was never persisted and a run reached
+    // on its own has nothing after it.
+    //
+    // **Reached by a link rather than by the entry gate**, because `ADR-0084` stopped the
+    // gate resuming a run for a player who already holds a rating: it parks, and Now's
+    // door is the way back in. A link is the other way a player stands here with no pass
+    // running, and it is the branch `admissionTo` calls *begin*.
     held = [ratingOf('PADEL', PADEL_RESULT)];
     stubGate({ ratings: held, runs: [runInProgress('TENNIS', TENNIS_ID)] });
     transport.on('GET', stepPath(TENNIS_ID), () => json(outstanding(TENNIS_ID)));
 
-    await launchSignedIn();
+    await launchSignedIn(`/question/${TENNIS_ID}?sport=tennis`);
     await waitFor(() => expect(screen).toHavePathname(`/question/${TENNIS_ID}`));
     await answerTheLastQuestion(TENNIS_ID, 'TENNIS', TENNIS_RESULT);
 
@@ -555,10 +561,15 @@ describe('the data screen', () => {
  * process did not. **Nothing is reset between the two passes below**, deliberately, and
  * that is what makes this the regression test rather than a longer version of the others.
  *
- * The second pass is reached the way a player reaches one: not through the picker, but
- * through the entry gate's resume path, which redirects straight to an outstanding
- * question. That path is why the picker's "nothing else reaches onboarding twice in one
- * launch" assumption was never true.
+ * The second pass is reached the way a player reaches one: not through the picker, but by
+ * standing in a run that already exists. That is why the picker's "nothing else reaches
+ * onboarding twice in one launch" assumption was never true.
+ *
+ * It used to be the entry gate's resume path. `ADR-0084` took that away from a player who
+ * already holds a rating — the run **parks**, and Now's door is the way back into it — so
+ * the second pass here is reached by a link into the run instead. What is being tested is
+ * unchanged and is not about how she got there: a pass begun on top of a finished walk
+ * must be numbered against **its own** queue.
  */
 describe('a second pass in the same process', () => {
   /** Two sports rated, the closing screens read, standing in the app. */
@@ -575,15 +586,18 @@ describe('a second pass in the same process', () => {
   }
 
   /**
-   * The gate discovers an unfinished run and redirects to it — no relaunch, no picker, and
-   * **no store reset**. A third sport the player started somewhere else, or on another
-   * device, is the ordinary way this happens.
+   * Into a run that already exists — no relaunch, no picker, and **no store reset**. A
+   * third sport the player started somewhere else, or on another device, is the ordinary
+   * way this happens.
    */
   async function resumeTennisWithoutRelaunching() {
     stubGate({ ratings: held, runs: [runInProgress('TENNIS', TENNIS_AGAIN_ID)] });
     transport.on('GET', stepPath(TENNIS_AGAIN_ID), () => json(outstanding(TENNIS_AGAIN_ID)));
 
     await queryClient.invalidateQueries({ queryKey: onboardingKeys.runInProgress() });
+    act(() => {
+      router.replace(`/question/${TENNIS_AGAIN_ID}?sport=tennis`);
+    });
     await waitFor(() => expect(screen).toHavePathname(`/question/${TENNIS_AGAIN_ID}`));
   }
 

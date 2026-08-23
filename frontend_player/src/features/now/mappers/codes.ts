@@ -44,6 +44,9 @@ export type ShelfCode = components['schemas']['ShelfCode'];
 /** Which one-line caption a shelf carries, when it carries one. */
 export type CaptionCode = components['schemas']['CaptionCode'];
 
+/** Which sentence the door into an unrated sport's questionnaire shows. */
+export type DoorCode = components['schemas']['DoorCode'];
+
 /** The sport bar's five fixed chips, as the one value a request carries. */
 export type SportFilter = components['schemas']['SportFilter'];
 

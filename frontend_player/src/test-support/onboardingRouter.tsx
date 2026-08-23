@@ -28,6 +28,7 @@ import DataRoute from '@/app/(onboarding)/data';
 import DoneRoute from '@/app/(onboarding)/done';
 import OnboardingLayout from '@/app/(onboarding)/_layout';
 import QuestionRoute from '@/app/(onboarding)/question/[assessmentId]';
+import TakeUpSportRoute from '@/app/(onboarding)/rate/[sport]';
 import ResultRoute from '@/app/(onboarding)/result/[assessmentId]';
 import ReviewRoute from '@/app/(onboarding)/review/[assessmentId]';
 import SportsRoute from '@/app/(onboarding)/sports';
@@ -55,6 +56,7 @@ export const ONBOARDING_ROUTES = {
   '(onboarding)/welcome': WelcomeRoute,
   '(onboarding)/sports': SportsRoute,
   '(onboarding)/question/[assessmentId]': QuestionRoute,
+  '(onboarding)/rate/[sport]': TakeUpSportRoute,
   '(onboarding)/review/[assessmentId]': ReviewRoute,
   '(onboarding)/result/[assessmentId]': ResultRoute,
   '(onboarding)/done': DoneRoute,

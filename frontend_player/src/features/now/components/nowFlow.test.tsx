@@ -26,6 +26,7 @@ import { clearStoredTokens, resetSessionStatus, wireHttpCredentials } from '@/sh
 import { queryClient } from '@/shared/lib/query-client';
 import {
   clubCard,
+  door,
   emptyNow,
   matchCard,
   nowPathFor,
@@ -45,6 +46,7 @@ import { nowKeys } from '../hooks/nowKeys';
 import { useSportFilterStore } from '../store/sportFilter.store';
 
 import { ACTION_ROW_ID, CLOCK_ID } from './ActionRow';
+import { DOOR_ID } from './NowDoor';
 import { REGION_ID } from './NowRegions';
 import { SHIMMER_ID } from './NowShimmer';
 
@@ -175,6 +177,50 @@ describe('Now is the app’s home', () => {
     expect(screen.getByText(/38,00/)).toBeTruthy();
     // And nothing pretends to name the situation.
     expect(screen.queryByText('Forming')).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The door, as a block in the shelves list
+// ---------------------------------------------------------------------------
+
+describe('the door into an unrated sport', () => {
+  /**
+   * `ADR-0084` puts the door **in the shelves list, in order**. What this suite owns is
+   * the drawing of it; the walk through the questionnaire it opens is onboarding's, in
+   * `features/onboarding/components/theDoor.test.tsx`.
+   */
+  const withDoor = (code: Wire['DoorCode']): Wire['NowResponse'] => ({
+    ...emptyNow(),
+    shelves: { stamp: 1, shelves: [door(code), shelf('newClubs', [clubCard('c-9', 'Kraków')])] },
+  });
+
+  it('draws where it arrives, with the light shelf beneath it', async () => {
+    await launchOnNow(withDoor('noRunYet'));
+
+    expect(screen.getByTestId(DOOR_ID)).toBeTruthy();
+    expect(screen.getByText('New clubs')).toBeTruthy();
+  });
+
+  it('draws no block at all for a code this build has never heard of', async () => {
+    // What an old build gets, and what `ADR-0084` accepts when it puts the door *in* the
+    // list: one entry missing from a list the phone already iterates. A card holding a
+    // blank sentence over a button that says nothing is worse than the missing row — and
+    // it is the shape a *nearly* tolerant renderer produces, so it is asserted as the
+    // block's absence rather than as the absence of its words.
+    await launchOnNow(withDoor('reRate' as Wire['DoorCode']));
+
+    expect(screen.queryByTestId(DOOR_ID)).toBeNull();
+    expect(screen.getByText('New clubs')).toBeTruthy();
+  });
+
+  it('draws none on a rated sport whose shelves are simply empty', async () => {
+    // The inference `ADR-0053` leaves the phone no rules to draw: an empty city looks
+    // identical from here, and only the server can tell the two apart.
+    await launchOnNow();
+
+    expect(screen.queryByTestId(DOOR_ID)).toBeNull();
+    expect(screen.getByText('Nothing open in your sports right now')).toBeTruthy();
   });
 });
 

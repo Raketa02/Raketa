@@ -28,7 +28,7 @@
 
 import type { Money } from '@/shared/lib/formatting';
 
-import type { ActCopy, SituationCopy } from './presentation';
+import type { ActCopy, DoorCopy, SituationCopy } from './presentation';
 
 /** Indoor or outdoor — a fact about *where*, on the spine of every card. */
 export type Cover = 'indoor' | 'outdoor';
@@ -142,15 +142,53 @@ export interface EnrolledRegion {
  * heard of, which is the same answer as *draw nothing for it*.
  */
 export interface Shelf {
+  readonly kind: 'shelf';
   readonly code: string;
   readonly title: string | undefined;
   readonly caption: string | undefined;
   readonly cards: readonly NowCard[];
 }
 
-/** The shelves, in the server's order. A shelf with nothing in it is absent. */
+/**
+ * The way into a sport's questionnaire, where that sport's shelves would be.
+ *
+ * `ADR-0084`: a player who taps a chip for a sport she holds no rating at is owed
+ * a destination, and it arrives **in the list, in order** — never as a flag, and
+ * never as something the phone concludes from shelves that are missing. That
+ * inference would fire wrongly on any day the city genuinely has nothing in a
+ * sport she *is* rated at, and `ADR-0053` leaves the phone no rules to draw one
+ * with. So a door exists here exactly when one arrived on the wire.
+ *
+ * `copy` is `undefined` for a code this build has never heard of, which is the
+ * same answer as *draw nothing for it* — a door whose sentence is blank and
+ * whose button says nothing is worse than the missing row.
+ */
+export interface Door {
+  readonly kind: 'door';
+  readonly code: string;
+  readonly copy: DoorCopy | undefined;
+}
+
+/**
+ * What the shelves list may hold.
+ *
+ * Heterogeneous by design rather than by accident: the door takes the ranked
+ * shelves' **position**, so *New on Raketa* and *New clubs* still compose beneath
+ * it — the clubs are the argument for spending the two minutes. A union is what
+ * makes a renderer that fails to narrow a type error rather than a blank row.
+ */
+export type Block = Shelf | Door;
+
+/**
+ * The blocks, in the server's order. A shelf with nothing in it is absent.
+ *
+ * Named `blocks` where the wire names it `shelves`. The wire keeps its name
+ * because renaming a field breaks every shipped client reading a region that has
+ * not otherwise changed; nothing outside this app reads *this* type, so the list
+ * is called what it holds.
+ */
 export interface ShelvesRegion {
-  readonly shelves: readonly Shelf[];
+  readonly blocks: readonly Block[];
 }
 
 /**

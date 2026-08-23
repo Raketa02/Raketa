@@ -39,14 +39,20 @@ import {
   begin as beginPass,
   recordRated,
   type OnboardingPass,
+  type PassOrigin,
   type RatedRun,
 } from '../domain/onboardingPass';
 
 interface OnboardingPassState {
   /** Undefined between walks. See above — absence is the state that makes this work. */
   readonly pass: OnboardingPass | undefined;
-  /** Start a pass over these sports. The picker's continue, with what was chosen. */
-  readonly begin: (queue: readonly Sport[]) => void;
+  /**
+   * Start a pass over these sports. The picker's continue, with what was chosen.
+   *
+   * The origin is passed rather than inferred: where a walk began is what decides
+   * where it ends (`ADR-0084`), and nothing downstream can recover it.
+   */
+  readonly begin: (queue: readonly Sport[], origin: PassOrigin) => void;
   /**
    * Start a pass over these sports **only if none is running**.
    *
@@ -54,7 +60,7 @@ interface OnboardingPassState {
    * between: that is a genuine pass of one sport, and saying so is what lets the position
    * rule stop special-casing it.
    */
-  readonly beginIfAbsent: (queue: readonly Sport[]) => void;
+  readonly beginIfAbsent: (queue: readonly Sport[], origin: PassOrigin) => void;
   /** Record that a run produced a rating. Recording it twice is a no-op. */
   readonly record: (run: RatedRun) => void;
   /**
@@ -70,10 +76,10 @@ interface OnboardingPassState {
 
 export const useOnboardingPass = create<OnboardingPassState>((set, get) => ({
   pass: undefined,
-  begin: (queue) => set({ pass: beginPass(queue) }),
-  beginIfAbsent: (queue) => {
+  begin: (queue, origin) => set({ pass: beginPass(queue, origin) }),
+  beginIfAbsent: (queue, origin) => {
     if (get().pass !== undefined) return;
-    set({ pass: beginPass(queue) });
+    set({ pass: beginPass(queue, origin) });
   },
   // A rating recorded with no pass running is dropped rather than beginning one. Every
   // route that shows a result was reached through a screen that begins one, so this is

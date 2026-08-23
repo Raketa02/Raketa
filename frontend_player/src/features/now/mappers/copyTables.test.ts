@@ -20,6 +20,7 @@
 import {
   ACT_COPY,
   CAPTION_COPY,
+  DOOR_COPY,
   FIT_BADGE_WITHHELD,
   FIT_REASON_COPY,
   FIT_UNSURE_WARNING,
@@ -28,6 +29,7 @@ import {
   SITUATION_COPY,
   actCopy,
   captionCopy,
+  doorCopy,
   findPreFilter,
   fitReasonSentence,
   holdReasonClause,
@@ -37,7 +39,7 @@ import {
 import type { SituationContext, Tag, Tone } from '../types';
 
 import type { ActCode, AssertTrue, CaptionCode, CardHoldReason, IsClosedUnion } from './codes';
-import type { ShelfCode, Situation, TermCode } from './codes';
+import type { DoorCode, ShelfCode, Situation, TermCode } from './codes';
 
 /**
  * The five guards a `Record` cannot carry, in the one place they are read
@@ -51,6 +53,7 @@ export type HoldReasonKeyIsClosed = AssertTrue<IsClosedUnion<CardHoldReason>>;
 export type ActKeyIsClosed = AssertTrue<IsClosedUnion<ActCode>>;
 export type ShelfKeyIsClosed = AssertTrue<IsClosedUnion<ShelfCode>>;
 export type CaptionKeyIsClosed = AssertTrue<IsClosedUnion<CaptionCode>>;
+export type DoorKeyIsClosed = AssertTrue<IsClosedUnion<DoorCode>>;
 
 /** The kernel's ladder, in ladder order. Growth is a decision, not a diff. */
 const SITUATIONS: readonly Situation[] = [
@@ -169,6 +172,29 @@ describe('the four copy tables are complete and pinned', () => {
     expect(Object.keys(table).sort()).toEqual([...codes].sort());
   });
 
+  it('holds exactly the two door codes, so a third is a decision', () => {
+    const codes: readonly DoorCode[] = ['noRunYet', 'runParked'];
+
+    expect(codes).toHaveLength(2);
+    expect(Object.keys(DOOR_COPY).sort()).toEqual([...codes].sort());
+  });
+
+  it('words both doors for the chip, and offers a way in on each', () => {
+    for (const code of ['noRunYet', 'runParked'] as const) {
+      const copy = DOOR_COPY[code]({ sport: 'SQUASH' });
+
+      expect(copy.line).toContain('Squash');
+      expect(copy.action.trim().length).toBeGreaterThan(0);
+    }
+  });
+
+  it('takes no noun from the one chip that is not a sport', () => {
+    // `all` never produces a door — the server composes one only for a named chip —
+    // so this is a word chosen for a sentence rather than a rule about when a door
+    // appears. What it must never print is *"Take the All questions"*.
+    expect(DOOR_COPY.noRunYet({ sport: 'all' }).action).not.toContain('All');
+  });
+
   it('holds the one caption v1 composes', () => {
     const codes: readonly CaptionCode[] = ['undeclaredPreferences'];
     expect(Object.keys(CAPTION_COPY).sort()).toEqual([...codes].sort());
@@ -252,6 +278,11 @@ describe('a name this build has never heard of costs one sentence and nothing el
   it('returns nothing for an unknown act, so no button opens somewhere unresolvable', () => {
     expect(actCopy('transferSeat', { price: '38,00 zł' })).toBeUndefined();
     expect(actCopy('gettingIn', { price: '38,00 zł' })?.surface).toBe('gettingIn');
+  });
+
+  it('returns nothing for an unknown door code, so no blank ask is drawn', () => {
+    expect(doorCopy('reRate', { sport: 'SQUASH' })).toBeUndefined();
+    expect(doorCopy('runParked', { sport: 'SQUASH' })?.action).toBe('Pick up where you left off');
   });
 
   it('returns nothing for an unknown term, shelf, caption or hold reason', () => {

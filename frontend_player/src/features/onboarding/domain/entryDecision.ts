@@ -7,13 +7,22 @@
  *
  * The order is deliberate and not arbitrary:
  *
+ *   any rating at all              -> the app
  *   run in progress, not set aside -> resume it, at its outstanding question
- *   no ratings at all              -> onboarding, from welcome
- *   otherwise                      -> the app
+ *   otherwise                      -> onboarding, from welcome
  *
- * **An unfinished run outranks an existing rating**, because a player rated at padel with
- * a tennis run half-answered should land back in the tennis questionnaire, not in the app
- * with those answers stranded.
+ * **A rating outranks an unfinished run, and it did not always.** The original order
+ * resumed a run whatever else the player held, on the argument that *"a player rated at
+ * padel with a tennis run half-answered should land back in the tennis questionnaire, not
+ * in the app with those answers stranded."* That argument is **right about the player it
+ * was written for and wrong about the one the door creates** (`ADR-0084`): four squash
+ * questions answered on a tram must never stand between a player and the padel match she
+ * has paid for. Nothing is stranded any more, because the run **parks** and Now's door is
+ * the way back into it — continuing where it stopped, however old.
+ *
+ * So a run in progress takes the screen only for a player holding **no rating at all**,
+ * for whom there is no app to be kept out of and no door to be shown, and for whom this is
+ * still the first walk through onboarding.
  *
  * The first two inputs answer genuinely different questions and neither substitutes for
  * the other: one asks whether a *run* is unfinished, the other whether a *rating exists*.
@@ -23,6 +32,8 @@
  * — and resuming it the instant they leave would mean the questionnaire had no exit.
  * The deferral lasts one app session, so the next launch resumes exactly as it should;
  * the permanent way out is abandonment, which changes the run rather than the routing.
+ * It survives for exactly the case it was built for: a player with nothing, who has no
+ * other way out of the questionnaire.
  */
 
 import type { AssessmentRun } from './Assessment';
@@ -48,9 +59,9 @@ export function entryDestination({
   runInProgress,
   deferredRunIds,
 }: EntryInput): EntryDestination {
+  if (ratings.length > 0) return { kind: 'app' };
   if (runInProgress !== undefined && !deferredRunIds.includes(runInProgress.assessmentId)) {
     return { kind: 'resume', run: runInProgress };
   }
-  if (ratings.length === 0) return { kind: 'welcome' };
-  return { kind: 'app' };
+  return { kind: 'welcome' };
 }

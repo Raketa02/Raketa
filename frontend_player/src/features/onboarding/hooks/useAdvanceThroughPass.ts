@@ -33,10 +33,12 @@
 import { useRouter } from 'expo-router';
 import { useCallback, useRef } from 'react';
 
+import { selectSportFilter } from '@/features/now/types';
 import type { AppError } from '@/shared/errors';
 
 import type { Sport } from '../domain/Sport';
 import { nextDestination, stopDestination, type PassDestination } from '../domain/onboardingPass';
+import { toWireSport } from '../mappers/onboardingMappers';
 import { useOnboardingPass } from '../store/onboardingPass.store';
 
 import { useStartAssessment } from './useStartAssessment';
@@ -137,20 +139,43 @@ export function useAdvanceThroughPass(sport: Sport): PassAdvance {
     [router, sport],
   );
 
+  /**
+   * Leave the flow, wherever this pass says it ends.
+   *
+   * Three endings and one of them is new. The closing screens account for a
+   * **walk**; Now filtered to a sport is where a walk begun at the door ends
+   * (`ADR-0084`), and the app unfiltered is where a pass that produced nothing
+   * ends. Which of the three is `stopDestination`'s answer and never this hook's.
+   *
+   * **The chip is selected before the navigation**, not after: Now composes on
+   * arrival, and setting the filter afterwards would compose the old sport first
+   * and then throw that screen away.
+   */
+  const leaveFor = useCallback(
+    (ending: PassDestination) => {
+      if (ending.kind === 'closing') {
+        router.replace('/done');
+        return;
+      }
+      if (ending.kind === 'now') selectSportFilter(toWireSport(ending.sport));
+      router.replace('/');
+    },
+    [router],
+  );
+
   const stopHere = useCallback(() => {
     if (departing.current) return;
     departing.current = true;
-    router.replace(stopDestination(pass).kind === 'closing' ? '/done' : '/');
-  }, [pass, router]);
+    leaveFor(stopDestination(pass));
+  }, [leaveFor, pass]);
 
   const advance = useCallback(() => {
     if (departing.current) return;
     departing.current = true;
 
     if (destination.kind !== 'rate') {
-      // The end of the queue, routed by what the pass produced: the closing screens when
-      // something was rated, the app when nothing was. Both are a `replace`.
-      router.replace(destination.kind === 'closing' ? '/done' : '/');
+      // The end of the queue, routed by what the pass produced and where it began.
+      leaveFor(destination);
       return;
     }
 
@@ -165,7 +190,7 @@ export function useAdvanceThroughPass(sport: Sport): PassAdvance {
         departing.current = false;
       },
     });
-  }, [destination, router, startNext]);
+  }, [destination, leaveFor, router, startNext]);
 
   return {
     destination,

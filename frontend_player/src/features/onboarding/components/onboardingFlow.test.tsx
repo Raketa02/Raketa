@@ -533,7 +533,7 @@ describe('a link into the middle of onboarding', () => {
     stubGate();
     // A pass is running over padel — the player is mid-onboarding — and the link names
     // squash.
-    useOnboardingPass.getState().begin(['padel']);
+    useOnboardingPass.getState().begin(['padel'], 'onboarding');
 
     await launchSignedIn(`/question/${STRANGE_LINK_ID}?sport=squash`);
 
@@ -547,7 +547,7 @@ describe('a link into the middle of onboarding', () => {
     // A result is a screen inside onboarding, so it carries the same rule for the same
     // reason — it belongs at the beginning, not at somebody's rating.
     stubGate();
-    useOnboardingPass.getState().begin(['padel']);
+    useOnboardingPass.getState().begin(['padel'], 'onboarding');
 
     await launchSignedIn(`/result/${STRANGE_LINK_ID}?sport=squash`);
 
@@ -561,7 +561,7 @@ describe('a link into the middle of onboarding', () => {
     // that turned them away. Welcome is a screen, and the picker hands the run back
     // anyway — starting a sport with an unfinished run returns that run.
     stubGate({ runs: [runInProgress('SQUASH', STRANGE_LINK_ID)] });
-    useOnboardingPass.getState().begin(['padel']);
+    useOnboardingPass.getState().begin(['padel'], 'onboarding');
 
     await launchSignedIn(`/question/${STRANGE_LINK_ID}?sport=squash`);
 

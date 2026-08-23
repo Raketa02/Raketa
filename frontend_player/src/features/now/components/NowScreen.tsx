@@ -51,6 +51,7 @@
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useCallback } from 'react';
+import { useRouter } from 'expo-router';
 
 import { useCurrentUser } from '@/features/auth/types';
 import { Card, ScreenHeader, theme } from '@/shared/ui';
@@ -72,6 +73,7 @@ export function NowScreen() {
   const { selected, select } = useSportFilter();
   const now = useNow(selected);
   const user = useCurrentUser();
+  const router = useRouter();
 
   const { refetch } = now;
   // Stable, so arming the deadline wake does not re-run on every render.
@@ -92,6 +94,20 @@ export function NowScreen() {
   const onControl = useCallback((control: CardControl) => {
     void control;
   }, []);
+
+  // The door, and the only thing this screen knows about the questionnaire: an
+  // address (`ADR-0084` — *"a route into that sport's questionnaire"*). Starting
+  // or resuming a run, the pass it belongs to and the whole tail after it are
+  // onboarding's, and none of it is imported here.
+  //
+  // The chip the request carried is what names the sport, because the door's block
+  // deliberately does not — she named it and still holds it, and a second copy on
+  // the answer is a second thing that can disagree. `all` never produces a door, so
+  // the value is always a sport; a link that somehow named one anyway is turned
+  // away by the route's own validation rather than by a guard here.
+  const onEnterDoor = useCallback(() => {
+    router.push({ pathname: '/rate/[sport]', params: { sport: selected } });
+  }, [router, selected]);
 
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
@@ -121,7 +137,11 @@ export function NowScreen() {
           <NowClockProvider screen={now.data}>
             <OffersRegionView region={now.data.offers} onControl={onControl} />
             <EnrolledStripView region={now.data.yourMatches} onControl={onControl} />
-            <ShelvesRegionView region={now.data.shelves} sport={selected} />
+            <ShelvesRegionView
+              region={now.data.shelves}
+              sport={selected}
+              onEnterDoor={onEnterDoor}
+            />
           </NowClockProvider>
         ) : now.error !== null ? (
           <View style={s.gutter}>

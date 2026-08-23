@@ -13,6 +13,7 @@ export { QuestionScreen } from './components/QuestionScreen';
 export { ResultScreen } from './components/ResultScreen';
 export { ReviewScreen } from './components/ReviewScreen';
 export { SportsPickerScreen } from './components/SportsPickerScreen';
+export { TakeUpSportScreen } from './components/TakeUpSportScreen';
 export { WelcomeScreen } from './components/WelcomeScreen';
 
 export type { Sport } from './domain/Sport';
@@ -42,3 +43,6 @@ export { useOnboardingAdmission, type OnboardingAdmission } from './hooks/useOnb
 
 /** Route params are untrusted input, so the route that reads them validates them here. */
 export { parseAssessmentRouteParams, type AssessmentRouteParams } from './schemas/routeParams';
+
+/** The door's one param: which sport, in the registry's spelling. */
+export { parseSportRouteParam } from './schemas/routeParams';

@@ -18,6 +18,8 @@
  * 3. **Neither of the prototype's two action-row icons comes back** (`ADR-0088`).
  * 4. **The screen never admits staleness** (`ADR-0038` Rule IV). No marker, no
  *    banner, no *"can't reach Raketa"*.
+ * 5. **The door is never inferred** (`ADR-0084`). It is drawn exactly when the
+ *    server sent one, and one place in the feature can make one at all.
  */
 
 import { readFileSync, readdirSync, statSync } from 'node:fs';
@@ -84,6 +86,7 @@ describe('the feature is walkable at all', () => {
     expect(paths).toContain('components/NowScreen.tsx');
     expect(paths).toContain('components/ActionRow.tsx');
     expect(paths).toContain('hooks/useRepaintClock.ts');
+    expect(paths).toContain('mappers/nowMappers.ts');
     expect(paths.length).toBeGreaterThan(10);
   });
 
@@ -220,6 +223,47 @@ describe('the screen never admits staleness', () => {
     // And the one word that is legitimate domain vocabulary passes.
     expect(STALENESS.test('the club caps how long a court may sit held')).toBe(false);
     expect(withoutComments('/* a stale card */ const x = 1;')).not.toContain('stale');
+  });
+});
+
+describe('the door is never inferred', () => {
+  /**
+   * `ADR-0084` puts the door **in the shelves list, in order**, precisely so that
+   * the phone is not asked to conclude one: *"an inference would fire wrongly on
+   * any day the city genuinely has no matches in a sport the player **is** rated
+   * at"*, and `ADR-0053` leaves the phone no rules to draw one with.
+   *
+   * A behavioural test can show that today's screen does not infer it. It cannot
+   * show that next week's does not, and the inference is one line — a length check
+   * on a list a component already iterates. So the constructor is pinned instead:
+   * a door can only be *made* where the wire's block is read, and everywhere else
+   * a door is a value that arrived.
+   */
+  it('makes a door in exactly one module, and it is the wire boundary', () => {
+    // A **construction**, not the discriminant's declaration: `domain/` names the
+    // literal type and building one there would be impossible anyway.
+    expect(filesContaining(/\{\s*kind: 'door'/)).toEqual(['mappers/nowMappers.ts']);
+  });
+
+  it('reads the door’s copy table only where a code is resolved', () => {
+    // The other half: a component that reached the table could word a door it had
+    // decided to draw on its own.
+    expect(filesContaining(/DOOR_COPY|doorCopy\(/)).toEqual([
+      'mappers/doors.ts',
+      'mappers/nowMappers.ts',
+      'types.ts',
+    ]);
+  });
+
+  it('has a control that would fire', () => {
+    const made = /\{\s*kind: 'door'/;
+
+    expect(made.test("return { kind: 'door', code };")).toBe(true);
+    expect(/DOOR_COPY|doorCopy\(/.test('const copy = doorCopy(code, { sport });')).toBe(true);
+    // The type's own declaration is not a construction, and the shelf beside it is
+    // neither — a matcher that fired on either would be policing the wrong thing.
+    expect(made.test("  readonly kind: 'door';")).toBe(false);
+    expect(made.test("return { kind: 'shelf', code };")).toBe(false);
   });
 });
 

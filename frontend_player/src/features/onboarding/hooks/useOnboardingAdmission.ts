@@ -42,7 +42,12 @@ export function useOnboardingAdmission(sport: Sport | undefined): OnboardingAdmi
       settled.current = 'start-over';
     } else {
       const admission = admissionTo(pass, sport);
-      if (admission.kind === 'begin') beginIfAbsent([sport]);
+      // A run reached with no pass running is the entry gate's resume, which only
+      // fires for a player holding **no rating at all** (`ADR-0084`) — the first
+      // walk through onboarding, so it closes with the account of one. A run
+      // reached through Now's door arrives with its pass already begun, and this
+      // never sees it.
+      if (admission.kind === 'begin') beginIfAbsent([sport], 'onboarding');
       settled.current = admission.kind === 'start-over' ? 'start-over' : 'admit';
     }
   }
