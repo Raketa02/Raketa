@@ -31,18 +31,31 @@ screens a player leaves through).
 
 `features/now/` is **Now, the app's home** — the screen `(app)/(tabs)/index` renders and the
 one onboarding lands on. Three regions (offers · the enrolled strip · the shelves), the sport
-bar, and `ADR-0054`'s four asks. The account placeholder moved to `(app)/(tabs)/account`,
-which nothing reaches until the tab bar lands.
+bar, `ADR-0054`'s four asks, and the match card's **action row**. The account placeholder moved
+to `(app)/(tabs)/account`, which nothing reaches until the tab bar lands.
 
-**Three rules on that feature are walked over its own source** in
+**The action row is one row of three optional slots and has zero variants**
+([ADR-0088](../docs/adr/0088-the-action-row-is-three-slots-and-the-clock-takes-the-first.md)):
+a clock, an act, an exit — each drawn exactly when its own spine field is present, the act the
+only flexible element, and the **empty row still rendered** as a zero-height spacer so
+`marginTop: auto` has something to push. A **live seat claim wins the card**: the claim's five
+minutes take the clock slot and `finishPaying` takes the act. `ADR-0088` is also where the
+distinction between a **repaint** and an **ask** is stated — the countdown redraws every second
+inside ten minutes and every minute above, from **one screen-wide clock**, and that is drawing
+rather than a fifth occasion to fetch.
+
+**Four rules on that feature are walked over its own source** in
 `components/nowDiscipline.test.ts`, because each is a rule about what the code does _not_ do
 and no green assertion can carry one. **The phone holds no rules** ([ADR-0053](../docs/adr/0053-the-phone-holds-no-rules-and-only-subtracts.md)):
 `Date.parse` appears in `domain/countdown.ts` and nowhere else, so the only derivation is
 subtracting a card's moment from now. **Nothing refreshes on a timer**
 ([ADR-0054](../docs/adr/0054-now-refreshes-when-asked-never-on-a-timer.md)): no interval, no
-`refetchInterval`, and one `setTimeout` — the wake at a moment the _server_ named. **The screen
-never admits staleness**: no marker, no banner, no _"can't reach Raketa"_. Each guard carries a
-negative control; do not add an exemption to a walk, narrow the rule instead.
+`refetchInterval`, and **two** `setTimeout`s — the wake at a moment the _server_ named, and the
+repaint clock — with the walk asserting that the repaint module cannot reach Query at all.
+**Neither of the prototype's two action-row icons comes back** (`✉`, `⌘`). **The screen never
+admits staleness**: no marker, no banner, no _"can't reach Raketa"_. Each guard carries a
+negative control; do not add an exemption to a walk, **narrow the rule instead** — which is what
+the second one did when the repaint clock landed.
 
 It also holds the section's **vocabulary**: four copy tables (36 situations · 10 term codes ·
 5 hold reasons · 7 acts), the shelf-code → Find pre-filter map and the caption codes, all keyed

@@ -106,10 +106,19 @@ screen after onboarding.
 It refreshes on **four occasions and no others** — the app coming to the foreground, a
 pull, an action, and a countdown reaching zero
 ([ADR-0054](../docs/adr/0054-now-refreshes-when-asked-never-on-a-timer.md)). There is no
-timer in this app. The phone derives one thing: how long is left until a moment the server
-named ([ADR-0053](../docs/adr/0053-the-phone-holds-no-rules-and-only-subtracts.md)). All
-three of those rules are walked over the feature's own source, because each is a rule
-about what the code does _not_ do.
+interval in this app. The phone derives one thing: how long is left until a moment the
+server named ([ADR-0053](../docs/adr/0053-the-phone-holds-no-rules-and-only-subtracts.md)).
+Those rules are walked over the feature's own source, because each is a rule about what the
+code does _not_ do.
+
+A match card ends in **one action row of three optional slots** — a countdown, the card's
+one act, and the exit — with no variants between them
+([ADR-0088](../docs/adr/0088-the-action-row-is-three-slots-and-the-clock-takes-the-first.md)).
+Twenty-six of the thirty-six situations name no act at all, so most cards end in an empty
+row, and that is the honest shape of a v1 with no match-detail screen rather than an
+oversight. The countdown **repaints** every second inside ten minutes and every minute
+above, from one screen-wide clock; repainting is drawing and is never a fifth occasion to
+fetch.
 
 ## Design system
 

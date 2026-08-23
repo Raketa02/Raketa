@@ -18,8 +18,12 @@
  * own list. Nothing here sorts, filters or drops a card. `ADR-0032`: order is a
  * property of the composed screen.
  *
- * The shelf-level rules — the tail card into Find, absence versus the empty card,
- * the fit badge, emphasis — are `Raketa02/Raketa#88`'s and land on top of this.
+ * **Two of the three regions draw a state card and one draws a shelf card**
+ * (`ADR-0088`). The offers region and the strip hand their cards the handler that
+ * answers the action row's controls; the shelves hand theirs nothing, because a
+ * shelf card reaches its act through its own body and that is `Raketa02/Raketa#88`'s
+ * to build. The rest of the shelf-level rules — the tail card into Find, absence
+ * versus the empty card, the fit badge, emphasis — are `#88`'s too.
  */
 
 import { ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
@@ -34,6 +38,7 @@ import type {
 } from '../domain/ComposedScreen';
 import type { SportFilter } from '../mappers/codes';
 
+import type { CardControl } from './ActionRow';
 import { MatchCardView, NowCardView } from './NowCards';
 import { NO_MATCHES_BOOKED, REGION_HEADING, nothingOpen } from './nowCopy';
 import { GUTTER, STRIP_GAP, contentWidth, railCardWidth, stripSnapInterval } from './nowGeometry';
@@ -59,7 +64,13 @@ export function SectionHeading({ title }: { readonly title: string }) {
  * The thing with a clock is first. Vertical rather than a strip: an offer is not
  * something to swipe past, and there is rarely more than one.
  */
-export function OffersRegionView({ region }: { readonly region: OffersRegion }) {
+export function OffersRegionView({
+  region,
+  onControl,
+}: {
+  readonly region: OffersRegion;
+  readonly onControl: (control: CardControl) => void;
+}) {
   return (
     <View testID={REGION_ID.offers} style={region.cards.length === 0 ? undefined : s.region}>
       {region.cards.length === 0 ? null : (
@@ -67,7 +78,9 @@ export function OffersRegionView({ region }: { readonly region: OffersRegion }) 
           <SectionHeading title={REGION_HEADING.offers} />
           <View style={s.column}>
             {region.cards.map((card) => (
-              <MatchCardView key={card.matchId} card={card} />
+              // A column, so no card is stretched and `fill` stays off: an auto top
+              // margin with no free space above it is worth nothing here.
+              <MatchCardView key={card.matchId} card={card} onControl={onControl} />
             ))}
           </View>
         </>
@@ -86,7 +99,13 @@ export function OffersRegionView({ region }: { readonly region: OffersRegion }) 
  * child is the full content width at every screen width, so the peek is the same
  * 6pt on a 320pt phone and on a 430pt one.
  */
-export function EnrolledStripView({ region }: { readonly region: EnrolledRegion }) {
+export function EnrolledStripView({
+  region,
+  onControl,
+}: {
+  readonly region: EnrolledRegion;
+  readonly onControl: (control: CardControl) => void;
+}) {
   const { width } = useWindowDimensions();
   const cardWidth = contentWidth(width);
 
@@ -113,7 +132,11 @@ export function EnrolledStripView({ region }: { readonly region: EnrolledRegion 
         >
           {region.cards.map((card) => (
             <View key={card.matchId} style={{ width: cardWidth }}>
-              <MatchCardView card={card} />
+              {/* A row stretches its children to the tallest, so `fill` is what
+                  gives the action row's `marginTop: auto` a height to push
+                  against — `native-kit.md` §3's answer to the slab of empty
+                  night under a short card. */}
+              <MatchCardView card={card} onControl={onControl} fill />
             </View>
           ))}
         </ScrollView>
@@ -163,7 +186,7 @@ export function ShelvesRegionView({
             >
               {shelf.cards.map((card) => (
                 <View key={cardKey(card)} style={{ width: railCardWidth(width) }}>
-                  <NowCardView card={card} />
+                  <NowCardView card={card} fill />
                 </View>
               ))}
             </ScrollView>

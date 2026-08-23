@@ -44,6 +44,7 @@ import {
 import { nowKeys } from '../hooks/nowKeys';
 import { useSportFilterStore } from '../store/sportFilter.store';
 
+import { ACTION_ROW_ID, CLOCK_ID } from './ActionRow';
 import { REGION_ID } from './NowRegions';
 import { SHIMMER_ID } from './NowShimmer';
 
@@ -174,6 +175,291 @@ describe('Now is the app’s home', () => {
     expect(screen.getByText(/38,00/)).toBeTruthy();
     // And nothing pretends to name the situation.
     expect(screen.queryByText('Forming')).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The action row: three slots, zero variants
+// ---------------------------------------------------------------------------
+
+describe('the action row', () => {
+  /** A screen holding exactly one card in the strip, so a query names one thing. */
+  async function launchWithCard(card: Wire['MatchCardResponse']) {
+    await launchOnNow({ ...emptyNow(), your_matches: { stamp: 1, cards: [card] } });
+  }
+
+  it('draws each slot exactly when its own field is present', async () => {
+    // `ADR-0088`: one row, and each slot appears when its field is present. Three
+    // fields, three slots, and no variant between them.
+    await launchWithCard(
+      matchCard({
+        matchId: 'mine-1',
+        situation: 'confirmed',
+        clock: '2099-01-01T18:00:00Z',
+        act: 'gettingIn',
+        mayDepart: true,
+      }),
+    );
+
+    expect(screen.getByTestId(CLOCK_ID)).toBeTruthy();
+    expect(screen.getByLabelText('Getting in, Sunset Padel')).toBeTruthy();
+    expect(screen.getByLabelText('Leave this match at Sunset Padel')).toBeTruthy();
+  });
+
+  it('draws none of them when the card carries none, and still renders the row', async () => {
+    // The empty row is a zero-height spacer and not an omission: `native-kit.md`
+    // §3 gives the row `marginTop: auto` so footers align across cards of differing
+    // height, and an element that is not rendered pushes nothing — so the
+    // twenty-six cards that name no act would get the slab of empty night back.
+    await launchWithCard(matchCard({ matchId: 'mine-1', situation: 'forming' }));
+
+    const row = screen.getByTestId(ACTION_ROW_ID);
+
+    expect(row).toBeTruthy();
+    expect(row.children).toHaveLength(0);
+    expect(screen.queryByTestId(CLOCK_ID)).toBeNull();
+    expect(screen.queryByRole('button', { name: /Take the seat/ })).toBeNull();
+  });
+
+  it('gives a card that names no act no button and no tappable body', async () => {
+    // `ADR-0083`, restated by `ADR-0088`: twenty-six of the thirty-six name none,
+    // and that is not a hole to be patched with a button opening something
+    // irrelevant. The card itself is not a tap target either.
+    await launchWithCard(matchCard({ matchId: 'mine-1', situation: 'rescue' }));
+
+    expect(screen.getByText(/the seat stays funded/)).toBeTruthy();
+    expect(screen.queryAllByRole('button')).toHaveLength(0);
+  });
+
+  it('never draws a control the situation alone would imply', async () => {
+    // The act is a **spine** fact. `forming` is the situation a shelf card offering
+    // a seat wears, and a card that named `takeSeat` from the situation would be a
+    // rule on the phone — which is the whole of `ADR-0053`.
+    await launchWithCard(matchCard({ matchId: 'mine-1', situation: 'forming' }));
+
+    expect(screen.queryByRole('button', { name: /Take the seat/ })).toBeNull();
+  });
+
+  it('draws the act and the exit for a situation it has never heard of', async () => {
+    // The sharp version of `ADR-0070`'s unknown-name rule: an old phone meeting a
+    // thirty-seventh situation loses **one sentence**, and keeps the ability to
+    // take the seat and to leave. The act and `mayDepart` are spine facts, so
+    // nothing about them depends on naming the situation.
+    await launchWithCard({
+      ...matchCard({ matchId: 'mine-1', act: 'takeSeat', mayDepart: true }),
+      situation: {
+        situation: 'seatTransferred' as Wire['Situation'],
+        facts: { hold: null, cause: null },
+      },
+    });
+
+    expect(screen.queryByText('Forming')).toBeNull();
+    expect(screen.getByLabelText(/Take the seat · 38,00/)).toBeTruthy();
+    expect(screen.getByLabelText('Leave this match at Sunset Padel')).toBeTruthy();
+  });
+
+  it('draws no exit at all where the server says she may not leave', async () => {
+    // Absent rather than refusing (`ADR-0086`): no door is offered that will not
+    // open, and the phone never works out whether she holds a seat.
+    await launchWithCard(matchCard({ matchId: 'mine-1', situation: 'completed' }));
+
+    expect(screen.queryByLabelText(/^Leave this match/)).toBeNull();
+  });
+
+  it('renders the act’s amount through the repo’s shared table', async () => {
+    // `38,00 zł` — comma decimal, non-breaking space before the suffix. The same
+    // characters here and in the club console, because both implement
+    // `docs/value-formatting.md` and neither reaches for `Intl`.
+    await launchWithCard(matchCard({ matchId: 'mine-1', act: 'takeSeat', amount: 247425 }));
+
+    expect(screen.getByText(`Take the seat · 2\u00a0474,25\u00a0zł`)).toBeTruthy();
+  });
+
+  it('gives a shelf card no control at all, whatever its spine carries', async () => {
+    // `ADR-0088` gives the shelf card its act through its **body** and no button,
+    // and that is `Raketa02/Raketa#88`'s to build. Until then it draws nothing
+    // rather than the wrong thing — and it cannot be handed a control, because it
+    // takes no handler.
+    await launchOnNow({
+      ...emptyNow(),
+      shelves: {
+        stamp: 1,
+        shelves: [
+          shelf('bestFit', [matchCard({ matchId: 'feed-1', act: 'takeSeat', mayDepart: true })]),
+        ],
+      },
+    });
+
+    expect(screen.getByText('Best fit for you')).toBeTruthy();
+    expect(screen.queryByText(/^Take the seat/)).toBeNull();
+    expect(screen.queryByLabelText(/^Leave this match/)).toBeNull();
+  });
+
+  it('names the club on every control, so a dozen cards are not a dozen shrugs', async () => {
+    // `ADR-0086` records that the two icons it replaced had **nothing** for a
+    // label. What is drawn stays short; what is announced carries the card.
+    await launchWithCard(
+      matchCard({ matchId: 'mine-1', act: 'enterResult', mayDepart: true, clubName: 'Wola Padel' }),
+    );
+
+    expect(screen.getByText('Enter the score')).toBeTruthy();
+    expect(screen.getByLabelText('Enter the score, Wola Padel')).toBeTruthy();
+    expect(screen.getByLabelText('Leave this match at Wola Padel')).toBeTruthy();
+  });
+});
+
+describe('a live seat claim wins the card', () => {
+  it('takes the clock slot and the act, whatever the situation named', async () => {
+    // `ADR-0081` worried about the alternative in as many words: *"a card counting
+    // 1:30 to pay under a button offering anything else is two instructions."* The
+    // card's own clock is two days out; the claim's five minutes are what shows.
+    const base = Date.now();
+    const inFiveMinutes = new Date(base + 5 * 60 * 1000).toISOString();
+
+    await launchOnNow({
+      ...emptyNow(),
+      offers: {
+        stamp: 1,
+        cards: [
+          matchCard({
+            matchId: 'offer-1',
+            situation: 'seatOpened',
+            clock: '2099-01-01T18:00:00Z',
+            seatClaimExpiresAt: inFiveMinutes,
+            act: 'finishPaying',
+          }),
+        ],
+      },
+    });
+
+    // The act the wire named, not the one `seatOpened` would suggest.
+    expect(screen.getByText(/^Finish paying/)).toBeTruthy();
+    expect(screen.queryByText(/^Take the seat/)).toBeNull();
+
+    // And the clock is the claim's five minutes rather than the card's own moment,
+    // which would have read in thousands of days.
+    expect(screen.getByTestId(CLOCK_ID).props.children).toMatch(/^[0-5]:\d\d$/);
+  });
+
+  it('shows no exit while a payment is running', async () => {
+    // Abandoning a payment must not be dressed as leaving. The server says so —
+    // `mayDepart` is false under a live claim — and the card simply obeys.
+    const inFiveMinutes = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+
+    await launchOnNow({
+      ...emptyNow(),
+      offers: {
+        stamp: 1,
+        cards: [
+          matchCard({
+            matchId: 'offer-1',
+            situation: 'seatOpened',
+            seatClaimExpiresAt: inFiveMinutes,
+            act: 'finishPaying',
+            mayDepart: false,
+          }),
+        ],
+      },
+    });
+
+    expect(screen.queryByLabelText(/^Leave this match/)).toBeNull();
+  });
+});
+
+describe('the countdown repaints and never fetches', () => {
+  const MINUTE = 60 * 1000;
+
+  const reading = () => String(screen.getByTestId(CLOCK_ID).props.children);
+
+  it('redraws every second inside ten minutes, and asks for nothing', async () => {
+    const inFiveMinutes = new Date(Date.now() + 5 * MINUTE).toISOString();
+
+    await launchOnNow({
+      ...emptyNow(),
+      your_matches: {
+        stamp: 1,
+        cards: [matchCard({ matchId: 'mine-1', clock: inFiveMinutes })],
+      },
+    });
+
+    const first = reading();
+    expect(composes()).toBe(1);
+
+    await act(async () => {
+      jest.advanceTimersByTime(1000);
+    });
+    const second = reading();
+
+    // Twice, because a clock that ticked once and stopped is the shape a timer
+    // that forgets to re-arm produces, and one tick cannot tell them apart.
+    await act(async () => {
+      jest.advanceTimersByTime(1000);
+    });
+    const third = reading();
+
+    expect(new Set([first, second, third]).size).toBe(3);
+    // A repaint is drawing, never a fifth occasion to ask (`ADR-0088`).
+    expect(composes()).toBe(1);
+  });
+
+  it('reads the clock afresh when a pull brings a new screen', async () => {
+    // A screen whose moments have all passed arms nothing at all, so *now* stops
+    // moving. Without a fresh reading when the next answer lands, the first thing
+    // she sees after explicitly asking is a countdown minutes out of date — on the
+    // one occasion she asked.
+    const base = Date.now();
+    const passed = new Date(base - MINUTE).toISOString();
+
+    await launchOnNow({
+      ...emptyNow(),
+      your_matches: { stamp: 1, cards: [matchCard({ matchId: 'mine-1', clock: passed })] },
+    });
+
+    await act(async () => {
+      jest.advanceTimersByTime(5 * MINUTE);
+    });
+
+    stubNow(transport, {
+      ...emptyNow(),
+      your_matches: {
+        stamp: 2,
+        cards: [
+          matchCard({
+            matchId: 'mine-1',
+            clock: new Date(Date.now() + 5 * MINUTE).toISOString(),
+          }),
+        ],
+      },
+    });
+    fireEvent(screen.UNSAFE_getByType(RefreshControl), 'refresh');
+
+    // Five minutes, not the ten a clock five minutes behind would have printed.
+    await waitFor(() => expect(screen.getByTestId(CLOCK_ID).props.children).toMatch(/^[45]:/));
+  });
+
+  it('redraws once a minute above ten, so a second changes nothing', async () => {
+    const inThirtyMinutes = new Date(Date.now() + 30 * MINUTE).toISOString();
+
+    await launchOnNow({
+      ...emptyNow(),
+      your_matches: {
+        stamp: 1,
+        cards: [matchCard({ matchId: 'mine-1', clock: inThirtyMinutes })],
+      },
+    });
+
+    const before = reading();
+
+    await act(async () => {
+      jest.advanceTimersByTime(1000);
+    });
+    expect(reading()).toBe(before);
+
+    await act(async () => {
+      jest.advanceTimersByTime(MINUTE);
+    });
+    expect(reading()).not.toBe(before);
+    expect(composes()).toBe(1);
   });
 });
 

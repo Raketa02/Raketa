@@ -613,9 +613,19 @@ _target_ grows:
 | Info button  | 20            | `{ top: 12, bottom: 12, left: 12, right: 12 }` |
 | Segment      | 25            | `{ top: 9, bottom: 9 }`                        |
 | Button (34+) | 34            | `{ top: 5, bottom: 5 }`                        |
+| Icon-only    | 34 × **44**   | `{ top: 5, bottom: 5 }` — the button's         |
 
 Horizontal slop is bounded by the neighbour: in a `sqrow` with a 6pt gap, horizontal slop
 is at most 3 per side or targets overlap and the wrong square is selected.
+
+**An icon-only control in a row grows sideways rather than reaching for slop.** Now's card
+exit ([ADR-0086](../../docs/adr/0086-a-departure-is-a-route-and-the-card-points-at-it-without-naming-it.md))
+is `size.minTouch` wide × `size.btn` high with the button's own vertical slop, which is
+exactly 44 × 44 reachable and needs no new preset — where horizontal slop would have eaten
+into the neighbour it sits 9pt from. The glyph inside is the stock outline family at
+`size.tabIcon`, which is the app's **one** box for a stock glyph rather than the tab bar's
+private measurement ([ADR-0082](../../docs/adr/0082-the-tab-bar-is-one-outline-family-and-coral-is-the-only-selected-cue.md));
+do not rename that token to something tab-shaped.
 
 ## 6.6 Press states
 

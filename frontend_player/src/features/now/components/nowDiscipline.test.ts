@@ -10,8 +10,13 @@
  * nobody has seen fire is not one nobody should watch.
  *
  * 1. **The phone holds no rules** (`ADR-0053`). One derivation, in one module.
- * 2. **Nothing refreshes on a timer** (`ADR-0054`). Four asks, and no interval.
- * 3. **The screen never admits staleness** (`ADR-0038` Rule IV). No marker, no
+ * 2. **Nothing refreshes on a timer** (`ADR-0054`). Four asks, no interval, and —
+ *    since `ADR-0088` — two `setTimeout`s that do two different jobs, only one of
+ *    which may reach a fetch. The rule was **narrowed** rather than exempted when
+ *    the repaint clock landed, which is the only way a walk survives a second
+ *    legitimate caller.
+ * 3. **Neither of the prototype's two action-row icons comes back** (`ADR-0088`).
+ * 4. **The screen never admits staleness** (`ADR-0038` Rule IV). No marker, no
  *    banner, no *"can't reach Raketa"*.
  */
 
@@ -48,11 +53,26 @@ function featureSources(): readonly SourceFile[] {
   return found;
 }
 
-/** Which files contain `needle`, so a failure names the file rather than a count. */
+/**
+ * Which files contain `needle`, so a failure names the file rather than a count.
+ *
+ * **Comments are stripped first, for every matcher.** Each rule below is stated in
+ * a docblock somewhere in the feature — often in the module the rule is about — and
+ * a walk that fired on the sentence explaining it would be unmaintainable, and
+ * would teach the next person to delete the explanation rather than the defect. A
+ * real call is still a real call: stripping comments cannot hide one.
+ */
 function filesContaining(needle: RegExp): readonly string[] {
   return featureSources()
-    .filter((file) => needle.test(file.text))
+    .filter((file) => needle.test(withoutComments(file.text)))
     .map((file) => file.path);
+}
+
+/** One module's source, comments removed, for a rule that is about one file. */
+function sourceOf(path: string): string {
+  const found = featureSources().find((file) => file.path === path);
+  if (found === undefined) throw new Error(`the walk cannot find ${path}`);
+  return withoutComments(found.text);
 }
 
 describe('the feature is walkable at all', () => {
@@ -62,6 +82,8 @@ describe('the feature is walkable at all', () => {
     // A glob that matches nothing passes every assertion below in silence.
     expect(paths).toContain('domain/countdown.ts');
     expect(paths).toContain('components/NowScreen.tsx');
+    expect(paths).toContain('components/ActionRow.tsx');
+    expect(paths).toContain('hooks/useRepaintClock.ts');
     expect(paths.length).toBeGreaterThan(10);
   });
 
@@ -111,15 +133,60 @@ describe('nothing refreshes on a timer', () => {
     expect(filesContaining(/refetchInterval/)).toEqual([]);
   });
 
-  it('arms a one-shot wake in exactly one module, and that module is the fourth ask', () => {
-    // A countdown reaching zero is one of the four things that count as asking. It
-    // is a single wake at a moment the **server** named — never a period, and never
-    // a fallback in case nothing else happens.
-    expect(filesContaining(/setTimeout\(/)).toEqual(['hooks/useDeadlineAsk.ts']);
+  it('arms a timer in exactly two modules, and names what each one is for', () => {
+    // **The rule is narrowed rather than exempted**, because `ADR-0088` added a
+    // second timer and `ADR-0054` did not stop being true. A countdown reaching
+    // zero is one of the four asks and is a single wake at a moment the *server*
+    // named; a countdown *repainting* is drawing, and `ADR-0088` states the
+    // distinction and states that it is stated nowhere else. Two modules, two
+    // jobs, and the next matcher is what keeps them from becoming one.
+    expect(filesContaining(/setTimeout\(/)).toEqual([
+      'hooks/useDeadlineAsk.ts',
+      'hooks/useRepaintClock.ts',
+    ]);
+  });
+
+  it('keeps the repaint out of reach of a fetch', () => {
+    // The failure this exists for is the one `ADR-0088` names in its own
+    // consequences: *"a build agent who conflates them will put Now on a
+    // 60-second poll."* The repaint clock holds a number and hands it out; it
+    // cannot see Query, the use-case or the transport, so a poll cannot be added
+    // to it by editing it — only by moving it somewhere else, in a diff.
+    const asking = /useQuery|queryClient|invalidate|refetch|composeNow|fetch\(/;
+
+    expect(asking.test(sourceOf('hooks/useRepaintClock.ts'))).toBe(false);
   });
 
   it('has a control that would fire', () => {
     expect(filesContaining(/useEffect\(/).length).toBeGreaterThan(0);
+    expect(/useQuery|refetch/.test('const q = useQuery({})')).toBe(true);
+  });
+});
+
+describe('the two prototype icons stay dropped', () => {
+  /**
+   * `ADR-0088` removed `✉` and `⌘` from the action row, and recorded the removal
+   * as a **genuine override of a UI authority** rather than as a forced
+   * consequence — the first on this map. Both are duplicates: `✉` is a tab-bar
+   * button drawn once per card, and `⌘` opens a sheet showing four dots on every
+   * card where it survives, because on the one card whose sheet has content
+   * (`ready`) its primary button already goes there.
+   *
+   * The reason this is a walk and not an assertion about a rendered card is that
+   * the defect returns by somebody reading `UI` §B6.3 — which still draws both —
+   * and adding them back to a component no test renders with an act.
+   */
+  const DROPPED = /✉|⌘|['"](mail|inbox|command)['"]/;
+
+  it('draws neither, in any module', () => {
+    expect(filesContaining(DROPPED)).toEqual([]);
+  });
+
+  it('has a control that would fire', () => {
+    expect(DROPPED.test("<Feather name='mail' />")).toBe(true);
+    expect(DROPPED.test("const glyph = '⌘';")).toBe(true);
+    // The exit glyph the row does draw is not one of them.
+    expect(DROPPED.test("<Feather name='log-out' />")).toBe(false);
   });
 });
 
@@ -144,13 +211,7 @@ describe('the screen never admits staleness', () => {
     /out of date|last updated|can(no|')?t reach|couldn'?t reach|no connection|\boffline\b|\breconnecting\b|stale (data|screen|card)|\bisStale\b|\bstaleness\b/i;
 
   it('says none of it, in any module', () => {
-    // Comments are stripped first: the rule is stated in several docblocks, and a
-    // walk that fired on the sentence explaining it would be unmaintainable.
-    expect(
-      featureSources()
-        .filter((file) => STALENESS.test(withoutComments(file.text)))
-        .map((file) => file.path),
-    ).toEqual([]);
+    expect(filesContaining(STALENESS)).toEqual([]);
   });
 
   it('has a control that would fire', () => {

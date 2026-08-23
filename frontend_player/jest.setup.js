@@ -37,6 +37,21 @@ jest.mock('expo-network', () => ({
   })),
 }));
 
+// --- the icon font ----------------------------------------------------------
+// `@expo/vector-icons` asks `Font.isLoaded` in its constructor, and under jest-expo
+// that reads a registry the mocked `ExpoFontLoader` never fills — `loadedNativeFonts`
+// comes back as something without a `forEach`, so *rendering any stock glyph at all*
+// throws. The app draws two: the tab bar (`ADR-0082`) and the card's exit control
+// (`ADR-0086`).
+//
+// Only that one question is answered, and it is answered the way a device answers it:
+// the fonts are bundled with the app and are loaded. Everything else in `expo-font`
+// stays real, including the `useFonts` the bootstrap sequence awaits.
+jest.mock('expo-font', () => {
+  const actual = jest.requireActual('expo-font');
+  return { ...actual, isLoaded: () => true };
+});
+
 // --- public runtime config --------------------------------------------------
 // The variables themselves are set in jest.config.js — see the note there; Babel inlines
 // them at transform time, so setting them from here would be too late.

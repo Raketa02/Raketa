@@ -30,7 +30,15 @@
  *    their own response, at which point this becomes a cache write and not a
  *    fetch.
  * 4. **A countdown reaching zero** — `useDeadlineAsk`, one wake at a moment the
- *    server named. **There is no timer anywhere**, and no interval at all.
+ *    server named. **There is no interval anywhere.**
+ *
+ * ## The second timer repaints and never asks
+ *
+ * `NowClockProvider` holds the screen's one repaint clock (`ADR-0088`): a card's
+ * countdown redraws once a second inside ten minutes and once a minute above,
+ * which is a **repaint** and not a fifth occasion to fetch. The two timers are
+ * kept apart by shape rather than by discipline — the repaint module cannot reach
+ * Query at all, and `nowDiscipline.test.ts` walks it.
  *
  * ## What the screen never says
  *
@@ -52,6 +60,8 @@ import { useDeadlineAsk } from '../hooks/useDeadlineAsk';
 import { useNow } from '../hooks/useNow';
 import { useSportFilter } from '../hooks/useSportFilter';
 
+import type { CardControl } from './ActionRow';
+import { NowClockProvider } from './NowClock';
 import { EnrolledStripView, OffersRegionView, ShelvesRegionView } from './NowRegions';
 import { NowShimmer } from './NowShimmer';
 import { SportBar } from './SportBar';
@@ -70,6 +80,18 @@ export function NowScreen() {
   }, [refetch]);
 
   useDeadlineAsk(now.data, ask);
+
+  // Where a card's two controls go.
+  //
+  // **Nowhere yet, and that is stated rather than hidden.** Every destination
+  // `ADR-0088`'s row can name belongs to a ticket that has not landed: the seat
+  // claim and its payment are `Raketa02/Raketa#89`, the result screen `#90`, the
+  // departure screen `#91`, leaving standby `#92`, and Find and the Getting-in
+  // sheet are outside this map. `#87` draws the controls and the anatomy; routing
+  // is each of those tickets' own, and this is the one place each will be wired.
+  const onControl = useCallback((control: CardControl) => {
+    void control;
+  }, []);
 
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
@@ -96,11 +118,11 @@ export function NowScreen() {
         <SportBar selected={selected} onSelect={select} />
 
         {now.data !== undefined ? (
-          <>
-            <OffersRegionView region={now.data.offers} />
-            <EnrolledStripView region={now.data.yourMatches} />
+          <NowClockProvider screen={now.data}>
+            <OffersRegionView region={now.data.offers} onControl={onControl} />
+            <EnrolledStripView region={now.data.yourMatches} onControl={onControl} />
             <ShelvesRegionView region={now.data.shelves} sport={selected} />
-          </>
+          </NowClockProvider>
         ) : now.error !== null ? (
           <View style={s.gutter}>
             <Card>

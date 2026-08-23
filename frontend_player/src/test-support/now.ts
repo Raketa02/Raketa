@@ -42,6 +42,14 @@ export interface MatchCardOptions {
   readonly clubName?: string;
   readonly amount?: number;
   readonly seatClaimExpiresAt?: string;
+  /**
+   * The one act the card names, from the **spine** — never derived from the
+   * situation. A fixture that set it from `situation` would make the client's
+   * refusal to derive it untestable.
+   */
+  readonly act?: Wire['ActCode'] | null;
+  /** `ADR-0086`'s spine boolean: whether this viewer may leave. */
+  readonly mayDepart?: boolean;
 }
 
 export function matchCard({
@@ -51,6 +59,8 @@ export function matchCard({
   clubName = 'Sunset Padel',
   amount = 3800,
   seatClaimExpiresAt,
+  act = null,
+  mayDepart = false,
 }: MatchCardOptions): Wire['MatchCardResponse'] {
   return {
     card_type: 'match',
@@ -67,8 +77,8 @@ export function matchCard({
     price: { amount, currency: 'PLN' },
     fit: null,
     emphasis: false,
-    act: null,
-    may_depart: false,
+    act,
+    may_depart: mayDepart,
     seat_claim: seatClaimExpiresAt === undefined ? null : { expires_at: seatClaimExpiresAt },
     situation: { situation, facts: { hold: null, cause: null } },
   };

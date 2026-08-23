@@ -72,3 +72,33 @@ const BY_RECOVERY: Readonly<Record<AppError['recovery'], string>> = {
 export function nowErrorMessage(error: AppError): string {
   return BY_RECOVERY[error.recovery];
 }
+
+/**
+ * What the exit control announces.
+ *
+ * `ADR-0086` records that the prototype's two icons had **nothing** for a label
+ * (`UI` §1087) and that the control replacing them carries a real one. It names
+ * the club because a screen holds a dozen cards and *Leave this match* said twelve
+ * times is not a label, it is a shrug.
+ *
+ * It does not name a price, and that is the point of `ADR-0086`'s own ruling: what
+ * leaving is worth is the route's to state, and a control that quoted it here
+ * would be quoting a number the card never checked.
+ */
+export function exitLabel(clubName: string): string {
+  return `Leave this match at ${clubName}`;
+}
+
+/** What the exit opens: a screen that states the price before anything happens. */
+export const EXIT_HINT = 'Shows what leaving is worth before anything happens.';
+
+/**
+ * How a countdown reads aloud.
+ *
+ * The figure alone — `4:37` — is a number with no noun. What the slot means is
+ * *this is how long is left*, and a screen reader is the one place that has to be
+ * said rather than shown by position.
+ */
+export function clockAccessibilityLabel(countdown: string): string {
+  return `${countdown} left`;
+}

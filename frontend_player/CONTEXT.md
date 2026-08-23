@@ -195,8 +195,9 @@ Four copy tables and three lookups, colocated under `features/now/` and **not** 
 ### The Now screen
 
 The player app's home. `features/now/` grew from a vocabulary into a screen with
-[#86](https://github.com/Raketa02/Raketa/issues/86); the match card's action row, the
-shelves' tail card and the tab bar are separate tickets that land on top of it.
+[#86](https://github.com/Raketa02/Raketa/issues/86) and gained the match card's action row
+with [#87](https://github.com/Raketa02/Raketa/issues/87); the shelves' tail card, the fit
+badge and the tab bar are separate tickets that land on top of it.
 
 - **Composed screen** — the whole answer to one `GET /api/v1/now`: three regions and one
   fact about the viewer. The client's own domain object, in `domain/ComposedScreen.ts`.
@@ -220,6 +221,35 @@ shelves' tail card and the tab bar are separate tickets that land on top of it.
 - **The deadline ask** — one `setTimeout`, at a moment the **server** named, re-armed when
   the screen changes. Not a timer: there is no interval anywhere in the feature, and
   `refetchInterval` is walked for by name because it is the poll most likely to grow back.
+- **Repaint, against ask** — the distinction
+  [ADR-0088](../docs/adr/0088-the-action-row-is-three-slots-and-the-clock-takes-the-first.md)
+  states and says is stated nowhere else. A countdown **repainting** is drawing; a countdown
+  **reaching zero** is one of the four asks. So the feature holds two `setTimeout`s doing
+  two jobs, and the walk names both and asserts that only one of them can see Query at all.
+  Conflating them is how Now ends up on a sixty-second poll.
+- **The action row** — one row on a state card, three optional slots, **zero variants**:
+  the clock leftmost, the act at `flex: 1`, the exit rightmost (ADR-0088). Each appears
+  exactly when its own field is present, a vacant slot does not stretch, and the empty row
+  still renders as a zero-height spacer — because `marginTop: auto` needs something to push.
+  _Avoid_: "the CTA row" — twenty-six of the thirty-six situations name no act at all.
+- **State card, against shelf card** — the two card shapes ADR-0088 distinguishes. A state
+  card (the strip, the offers region) reaches its act through a **labelled button** and
+  takes the handler that answers it; a shelf card reaches the same act through its **whole
+  body** and gains no button. The inconsistency is deliberate and is the sharpest thing in
+  that ADR; the shelf half is [#88](https://github.com/Raketa02/Raketa/issues/88)'s.
+- **The clock slot** — the card's _one_ moment, and a **live seat claim wins it**: the
+  claim's five minutes override the card's own clock, exactly as `finishPaying` overrides
+  the situation's act. Which of the two can _run out_ is not a choice and the deadline ask
+  watches both; which of the two is _shown_ is this rule.
+- **The seconds band** — ten minutes, and it decides two things that must agree: inside it
+  the screen repaints every second and the label draws a clock face (`4:37`); outside it the
+  screen repaints once a minute and the label draws a duration (`42 min`, `2 h 14 min`,
+  `3 d 4 h`). **The format never prints a digit the cadence cannot keep true**, which is why
+  it is one constant and not two.
+- **The dropped icons** — `✉` and `⌘`, removed from the action row by ADR-0088 as a
+  **genuine override of a UI authority** rather than as a forced consequence: one duplicated
+  a tab-bar button once per card, the other opened a sheet showing four dots everywhere it
+  survived. `nowDiscipline.test.ts` walks the feature so neither returns.
 - **Shimmer vs pull indicator** — the two ways loading is shown, and neither is a staleness
   marker. A shimmer says _there is nothing here yet_ and belongs to a **cold open**; the
   pull indicator says _this is real and I am checking_ and keeps the screen where it is.

@@ -36,6 +36,7 @@ import type {
   Shelf,
 } from '../domain/ComposedScreen';
 
+import { actCopy } from './acts';
 import { captionCopy } from './captions';
 import { shelfTitle } from './shelves';
 import { situationCopy } from './situations';
@@ -88,6 +89,7 @@ function toCard(wire: ShelfResponse['cards'][number]): NowCard {
 function toMatchCard(wire: MatchCardResponse): MatchCard {
   const price = toMoney(wire.price);
   const where = toPlace(wire.where);
+  const money = formatMoney(price);
 
   return {
     kind: 'match',
@@ -97,13 +99,20 @@ function toMatchCard(wire: MatchCardResponse): MatchCard {
     where,
     price,
     situation: wire.situation.situation,
+    // The act arrives as a code and leaves as a label and a destination. It is
+    // read off the **spine** and never off the situation: the server decides
+    // whether a control exists and this layer decides only what it says, which is
+    // the line `ADR-0088` draws. A code this build cannot resolve is `undefined`
+    // — the same answer as no act, and the same drawing.
+    act: wire.act == null ? undefined : actCopy(wire.act, { price: money }),
+    mayDepart: wire.may_depart,
     // The card's own facts, plus the two spine values a sentence may print. The
     // spine is drawn by every phone whether or not it can name the situation, so a
     // sentence built from it degrades to nothing worse than silence.
     status: situationCopy(wire.situation.situation, {
       facts: wire.situation.facts,
       clubName: where.clubName,
-      price: formatMoney(price),
+      price: money,
     }),
   };
 }

@@ -6,7 +6,14 @@
  */
 
 import type { MatchCard, ComposedScreen, Shelf } from './ComposedScreen';
-import { momentsOnScreen, msUntilNextZero, remainingMs } from './countdown';
+import {
+  SECONDS_BAND_MS,
+  countdownLabel,
+  momentsOnScreen,
+  msUntilNextZero,
+  remainingMs,
+  repaintDelayMs,
+} from './countdown';
 
 const NOON = Date.parse('2026-08-23T12:00:00Z');
 
@@ -26,6 +33,8 @@ function matchCard(overrides: Partial<MatchCard> = {}): MatchCard {
     price: { amount: 3800, currency: 'PLN' },
     situation: 'forming',
     status: undefined,
+    act: undefined,
+    mayDepart: false,
     ...overrides,
   };
 }
@@ -128,5 +137,84 @@ describe('when the next countdown reaches zero', () => {
 
   it('answers nothing for a screen with no moments at all', () => {
     expect(msUntilNextZero(screen(), NOON)).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// What the clock slot reads, and how often it is redrawn
+// ---------------------------------------------------------------------------
+
+const SECOND = 1000;
+const MINUTE = 60 * SECOND;
+const HOUR = 60 * MINUTE;
+const DAY = 24 * HOUR;
+
+describe('the countdown reads in four bands', () => {
+  it('draws a clock face under ten minutes', () => {
+    // `ADR-0088`'s own spelling. The seconds are the point: this is the band in
+    // which a seat claim's five minutes run out.
+    expect(countdownLabel(4 * MINUTE + 37 * SECOND)).toBe('4:37');
+    expect(countdownLabel(90 * SECOND)).toBe('1:30');
+    expect(countdownLabel(9 * SECOND)).toBe('0:09');
+  });
+
+  it('draws minutes, then hours, then days above it', () => {
+    // The three lower bands are `docs/value-formatting.md`'s duration row verbatim
+    // — space before the unit — so a length of time reads the same here as it does
+    // in the club console.
+    expect(countdownLabel(42 * MINUTE)).toBe('42 min');
+    expect(countdownLabel(2 * HOUR + 14 * MINUTE)).toBe('2 h 14 min');
+    expect(countdownLabel(3 * DAY + 4 * HOUR)).toBe('3 d 4 h');
+  });
+
+  it('drops a zero component rather than printing it', () => {
+    expect(countdownLabel(2 * HOUR)).toBe('2 h');
+    expect(countdownLabel(3 * DAY)).toBe('3 d');
+  });
+
+  it('reads zero for a moment already behind us, never a negative', () => {
+    // Reaching zero is the fourth ask, so the answer is already on its way: the
+    // card holds still and says so. An empty string would collapse the slot under
+    // the player's thumb, and a negative would say a match starts in −4 minutes.
+    expect(countdownLabel(0)).toBe('0:00');
+    expect(countdownLabel(-90 * SECOND)).toBe('0:00');
+  });
+
+  it('never prints a digit the cadence cannot keep true', () => {
+    // The one property that ties the two halves together: seconds appear in
+    // exactly the band that repaints every second. A label showing `:07` while the
+    // screen redraws once a minute is `ADR-0053`'s *"frozen number reads as broken
+    // rather than static"*, arrived at by drawing instead of by polling.
+    const withSeconds = /:\d\d$/;
+
+    expect(withSeconds.test(countdownLabel(SECONDS_BAND_MS - 1))).toBe(true);
+    expect(repaintDelayMs(SECONDS_BAND_MS - 1)).toBe(SECOND);
+
+    expect(withSeconds.test(countdownLabel(SECONDS_BAND_MS))).toBe(false);
+    expect(repaintDelayMs(SECONDS_BAND_MS + 1)).toBe(MINUTE);
+  });
+
+  it('switches on the same instant in both halves', () => {
+    expect(countdownLabel(SECONDS_BAND_MS)).toBe('10 min');
+    expect(repaintDelayMs(SECONDS_BAND_MS)).toBe(SECOND);
+  });
+});
+
+describe('the repaint cadence', () => {
+  it('arms nothing when nothing on the screen is counting', () => {
+    // A screen of cancelled and played cards costs a phone in a pocket nothing.
+    expect(repaintDelayMs(undefined)).toBeUndefined();
+  });
+
+  it('follows the soonest moment on the screen, not each card', () => {
+    // One screen-wide clock (`ADR-0088`). A card three weeks out redraws once a
+    // second while a seat claim beside it is running, which is the cheap half of
+    // the bargain that keeps the claim honest.
+    const claim = matchCard({ matchId: 'claim', claimExpiresAt: '2026-08-23T12:04:00Z' });
+    const distant = matchCard({ matchId: 'far', clock: '2026-09-12T18:00:00Z' });
+
+    const soonest = msUntilNextZero(screen({ yourMatches: { cards: [distant, claim] } }), NOON);
+
+    expect(repaintDelayMs(soonest)).toBe(SECOND);
   });
 });

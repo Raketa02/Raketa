@@ -19,15 +19,16 @@
  *   subtracting a moment it was handed from the current time — and that lives in
  *   `countdown.ts`. Every field below arrived on the wire.
  *
- * The spine is deliberately narrower than the contract: the fit badge, the
- * emphasis flag, `mayDepart` and the act code are the match card's
- * (`Raketa02/Raketa#87`) and the shelves' (`#88`), and a field mapped here with
- * no reader would be `ADR-0071`'s refusal wearing a domain object's clothes.
+ * The spine is deliberately narrower than the contract: the fit badge and the
+ * emphasis flag are the shelves' (`Raketa02/Raketa#88`), and a field mapped here
+ * with no reader would be `ADR-0071`'s refusal wearing a domain object's clothes.
+ * `act` and `mayDepart` arrived with the action row (`#87`), each with the slot
+ * that draws it.
  */
 
 import type { Money } from '@/shared/lib/formatting';
 
-import type { SituationCopy } from './presentation';
+import type { ActCopy, SituationCopy } from './presentation';
 
 /** Indoor or outdoor — a fact about *where*, on the spine of every card. */
 export type Cover = 'indoor' | 'outdoor';
@@ -77,6 +78,25 @@ export interface MatchCard {
   readonly situation: string;
   /** What the situation says, or absent for a name this build has never heard. */
   readonly status: SituationCopy | undefined;
+  /**
+   * The one act this card names, already resolved to its label and its
+   * destination — or absent, which twenty-six of the thirty-six situations are.
+   *
+   * **In the spine, and never derived from the situation** (`ADR-0083`). That is
+   * what lets a phone meeting an unknown name still take the seat, and it is why
+   * a card whose status line is missing can still carry a button. `undefined`
+   * covers both *no act* and *an act this build cannot resolve*, because a button
+   * whose destination is unknown is the one outcome worse than silence.
+   */
+  readonly act: ActCopy | undefined;
+  /**
+   * Whether this viewer may leave, as the server's boolean (`ADR-0086`).
+   *
+   * A spine fact rather than an act code: leaving is not the card's act, and one
+   * card may not carry two. The phone is forbidden from concluding *I hold a seat*
+   * (`ADR-0053`), so either the server says or the control cannot be drawn at all.
+   */
+  readonly mayDepart: boolean;
 }
 
 /** A player who has just arrived. No situation, no clock, no price. */
