@@ -19,15 +19,17 @@
  *   subtracting a moment it was handed from the current time — and that lives in
  *   `countdown.ts`. Every field below arrived on the wire.
  *
- * The spine is deliberately narrower than the contract: the fit badge and the
- * emphasis flag are the shelves' (`Raketa02/Raketa#88`), and a field mapped here
- * with no reader would be `ADR-0071`'s refusal wearing a domain object's clothes.
- * `act` and `mayDepart` arrived with the action row (`#87`), each with the slot
- * that draws it.
+ * The spine is deliberately narrower than the contract: a field mapped here with
+ * no reader would be `ADR-0071`'s refusal wearing a domain object's clothes. `act`
+ * and `mayDepart` arrived with the action row (`#87`) and the fit badge with the
+ * shelves (`#88`), each with the thing that draws it. What is still absent is the
+ * fit's `target` — the Level a match is aimed at, which crosses only when it is
+ * precise and which no card draws today.
  */
 
 import type { Money } from '@/shared/lib/formatting';
 
+import type { FitBadge } from './fitBadge';
 import type { ActCopy, DoorCopy, SituationCopy } from './presentation';
 
 /** Indoor or outdoor — a fact about *where*, on the spine of every card. */
@@ -97,6 +99,27 @@ export interface MatchCard {
    * (`ADR-0053`), so either the server says or the control cannot be drawn at all.
    */
   readonly mayDepart: boolean;
+  /**
+   * Why this match is suggested, or absent.
+   *
+   * Absent on every card the viewer is already in — a badge answers *why this one*,
+   * and that question is not asked about a match she has paid for — and on a screen
+   * the server could not score, which arrives with no badges rather than with
+   * invented ones. It is **not** absent because she holds no rating at the sport:
+   * `ADR-0084` answers that viewer with a door where the ranked shelves would be, so
+   * no card of hers reaches this field at all.
+   */
+  readonly fit: FitBadge | undefined;
+  /**
+   * Whether this is the one card on the screen that shouts (`ADR-0037`).
+   *
+   * **The server's flag, and never a comparison.** Emphasis is fit ≥ 90 *and*
+   * coverage ≥ 80 % *and* a seat open, capped at one card per screen and silenced
+   * entirely by an offer — every clause of which is about the *other* cards, so it
+   * is a property of the composed screen (`ADR-0032`) rather than of this one. The
+   * phone cannot see coverage at all and must not learn to guess at it.
+   */
+  readonly emphasis: boolean;
 }
 
 /** A player who has just arrived. No situation, no clock, no price. */

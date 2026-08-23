@@ -10,8 +10,10 @@
  *
  * **Nothing is computed.** No total, no count, no comparison against the clock, no
  * inference from an absent field. `ADR-0053` leaves the phone one derivation and
- * it lives in `domain/countdown.ts`; the only thing that happens below is
- * renaming, and formatting money, which is a rendering rather than a rule.
+ * it lives in `domain/countdown.ts`; the only things that happen below are
+ * renaming, formatting money, and clamping the fit badge to 20–99 — the last two
+ * being renderings rather than rules, and the clamp being `ADR-0037`'s own display
+ * bound, applied here so that the true score never enters the app at all.
  *
  * **A widened wire union fails here first.** `Cover` and `Currency` are assigned
  * into narrower types this app owns, so a third cover or a second currency is a
@@ -37,11 +39,14 @@ import type {
   Place,
   Shelf,
 } from '../domain/ComposedScreen';
+import type { FitBadge } from '../domain/fitBadge';
+import { MAX_REASONS, clampBadgeScore } from '../domain/fitBadge';
 
 import { actCopy } from './acts';
 import { captionCopy } from './captions';
-import type { SportFilter } from './codes';
+import type { AssertTrue, SportFilter } from './codes';
 import { doorCopy } from './doors';
+import { fitReasonSentence } from './fitReasons';
 import { shelfTitle } from './shelves';
 import { situationCopy } from './situations';
 
@@ -55,6 +60,29 @@ type DoorResponse = components['schemas']['DoorResponse'];
 type PlaceResponse = components['schemas']['PlaceResponse'];
 type MoneyResponse = components['schemas']['MoneyResponse'];
 type DebtLineResponse = components['schemas']['DebtLineResponse'];
+type FitResponse = components['schemas']['FitResponse'];
+
+/**
+ * Coverage is never a number the player sees, and this is where that stops being a
+ * promise (`ADR-0037`).
+ *
+ * The share of the weight that actually ran ranks the list and gates emphasis, both
+ * on the server. If it ever crossed, the field would be one `toFitBadge` line away
+ * from a second gauge on the card — so its **absence from the contract** is asserted
+ * rather than its absence from this file, and the day it arrives `pnpm typecheck`
+ * fails here and somebody has to decide, in a diff, what a player is told with it.
+ */
+export type CoverageNeverCrosses = AssertTrue<'coverage' extends keyof FitResponse ? false : true>;
+
+/**
+ * A shelf's words are the client's, so the wire has no room for them.
+ *
+ * `ADR-0070` keeps shelf presence and shelf order on the server and leaves the
+ * title here. A `title` arriving on `ShelfResponse` would make `SHELF_COPY` the
+ * second opinion rather than the only one, and the two would disagree in whichever
+ * language shipped last.
+ */
+export type NoTitleCrosses = AssertTrue<'title' extends keyof ShelfResponse ? false : true>;
 
 /**
  * @param sport the chip the request carried, which is the one thing the door's
@@ -141,6 +169,11 @@ function toMatchCard(wire: MatchCardResponse): MatchCard {
     // — the same answer as no act, and the same drawing.
     act: wire.act == null ? undefined : actCopy(wire.act, { price: money }),
     mayDepart: wire.may_depart,
+    fit: wire.fit == null ? undefined : toFitBadge(wire.fit),
+    // The composed screen's flag, carried across untouched. Nothing here reads the
+    // score beside it: a client that recomputed emphasis would light up every 90 on
+    // the board, which is the measured 4,3 % of scores `ADR-0037` was written about.
+    emphasis: wire.emphasis,
     // The card's own facts, plus the two spine values a sentence may print. The
     // spine is drawn by every phone whether or not it can name the situation, so a
     // sentence built from it degrades to nothing worse than silence.
@@ -149,6 +182,35 @@ function toMatchCard(wire: MatchCardResponse): MatchCard {
       clubName: where.clubName,
       price: money,
     }),
+  };
+}
+
+/**
+ * The badge: one clamped number, one boolean, and at most three sentences.
+ *
+ * **The clamp is here and not in the component**, so the true score never enters
+ * this app and no later reader can print an unclamped one by reaching past
+ * whatever clamped. `ADR-0037` calls it a display rule, and a display rule applied
+ * once at the boundary is the version that cannot be applied twice or not at all.
+ *
+ * **A term this build has never heard of is dropped rather than drawn blank**, the
+ * same answer an unknown situation gets. A card with two reasons instead of three
+ * has lost the thing that is actually missing; a card with an empty bullet has
+ * gained a defect. The badge itself is unaffected, because the number is the claim
+ * and the reasons are the support.
+ *
+ * **`target` is not read.** It is the Level the match is aimed at and crosses only
+ * when precise, and no card draws it — mapping it here with nothing to render it
+ * would be a field kept warm for a screen that does not exist.
+ */
+function toFitBadge(wire: FitResponse): FitBadge {
+  return {
+    score: clampBadgeScore(wire.score),
+    unsure: wire.unsure,
+    reasons: wire.reasons
+      .slice(0, MAX_REASONS)
+      .map(fitReasonSentence)
+      .filter((sentence): sentence is string => sentence !== undefined),
   };
 }
 

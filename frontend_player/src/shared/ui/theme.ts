@@ -173,6 +173,11 @@ const type = {
    *  because a component may hold no font size — that rule is what puts the value
    *  somewhere a re-tune can find it. */
   tabLabel: { fontFamily: font.sans[600], fontSize: 8.5 },
+  /** FIT BADGE — `docs/design-system.md` 7.1 fixes it at 11/700, and it is a role here
+   *  for the reason `tabLabel` is: a component may hold no font size. Sans rather than
+   *  mono although it prints a figure, because the badge is a glyph and a number read as
+   *  one word (`✦ 93`) and 7.1 sets no mono; `tabular` still applies to the numerals. */
+  fit: { fontFamily: font.sans[700], fontSize: 11, lineHeight: 12 },
 } as const;
 
 /**

@@ -61,6 +61,8 @@ import { useDeadlineAsk } from '../hooks/useDeadlineAsk';
 import { useNow } from '../hooks/useNow';
 import { useSportFilter } from '../hooks/useSportFilter';
 
+import type { FindPreFilter } from '../mappers/shelves';
+
 import type { CardControl } from './ActionRow';
 import { NowClockProvider } from './NowClock';
 import { EnrolledStripView, OffersRegionView, ShelvesRegionView } from './NowRegions';
@@ -88,12 +90,30 @@ export function NowScreen() {
   // **Nowhere yet, and that is stated rather than hidden.** Every destination
   // `ADR-0088`'s row can name belongs to a ticket that has not landed: the seat
   // claim and its payment are `Raketa02/Raketa#89`, the result screen `#90`, the
-  // departure screen `#91`, leaving standby `#92`, and Find and the Getting-in
-  // sheet are outside this map. `#87` draws the controls and the anatomy; routing
-  // is each of those tickets' own, and this is the one place each will be wired.
+  // departure screen `#91`, leaving standby `#92`, and the Getting-in sheet is
+  // outside this map. `#87` draws the controls and the anatomy and `#88` makes a
+  // shelf card's body one of them; routing is each of those tickets' own, and this
+  // is the one place each will be wired.
   const onControl = useCallback((control: CardControl) => {
     void control;
   }, []);
+
+  // Where a shelf's tail card goes: Find, carrying that shelf's claim and the sport
+  // the screen is already filtered to.
+  //
+  // **The pre-filter is composed and cannot yet be delivered**, which is reported
+  // rather than faked (`Raketa02/Raketa#115`). Find is the placeholder route `#93`
+  // shipped: no feature, no filter and no parameters. Inventing a query-string shape
+  // here would decide Find's contract from Now, which is the one thing
+  // `FindPreFilter` is a value object rather than a URL to avoid. So the tap opens
+  // the destination the tab bar already reaches, and the claim stops here.
+  const onOpenFind = useCallback(
+    (preFilter: FindPreFilter) => {
+      void preFilter;
+      router.push('/find');
+    },
+    [router],
+  );
 
   // The door, and the only thing this screen knows about the questionnaire: an
   // address (`ADR-0084` — *"a route into that sport's questionnaire"*). Starting
@@ -141,6 +161,8 @@ export function NowScreen() {
               region={now.data.shelves}
               sport={selected}
               onEnterDoor={onEnterDoor}
+              onControl={onControl}
+              onOpenFind={onOpenFind}
             />
           </NowClockProvider>
         ) : now.error !== null ? (

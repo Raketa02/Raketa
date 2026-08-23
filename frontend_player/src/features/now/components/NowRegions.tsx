@@ -19,16 +19,19 @@
  * property of the composed screen.
  *
  * **Two of the three regions draw a state card and one draws a shelf card**
- * (`ADR-0088`). The offers region and the strip hand their cards the handler that
- * answers the action row's controls; the shelves hand theirs nothing, because a
- * shelf card reaches its act through its own body and that is `Raketa02/Raketa#88`'s
- * to build. The rest of the shelf-level rules — the tail card into Find, absence
- * versus the empty card, the fit badge, emphasis — are `#88`'s too.
+ * (`ADR-0088`). All three hand their cards the same handler; what differs is how a
+ * card reaches it — the state card through a labelled button in its action row, the
+ * shelf card through its whole body, and only when it names an act.
+ *
+ * **Every shelf ends in a card into Find, and the client appends it.** The tail card
+ * is not in the contract: it is composed from the shelf's own code and the sport the
+ * screen is already filtered to, which is the same composition the door's sentence
+ * makes. A shelf running out is a door and not a wall.
  */
 
 import { ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
-import { Card, theme } from '@/shared/ui';
+import { Card, PressableCard, theme } from '@/shared/ui';
 
 import type {
   Block,
@@ -38,11 +41,18 @@ import type {
   ShelvesRegion,
 } from '../domain/ComposedScreen';
 import type { SportFilter } from '../mappers/codes';
+import { findPreFilter, type FindPreFilter } from '../mappers/shelves';
 
 import type { CardControl } from './ActionRow';
 import { MatchCardView, NowCardView } from './NowCards';
 import { DoorView } from './NowDoor';
-import { NO_MATCHES_BOOKED, REGION_HEADING, nothingOpen } from './nowCopy';
+import {
+  FIND_TAIL_LABEL,
+  NO_MATCHES_BOOKED,
+  REGION_HEADING,
+  findTailLabel,
+  nothingOpen,
+} from './nowCopy';
 import { GUTTER, STRIP_GAP, contentWidth, railCardWidth, stripSnapInterval } from './nowGeometry';
 
 /** The region test ids, so *present and empty* is assertable rather than implied. */
@@ -51,6 +61,9 @@ export const REGION_ID = {
   yourMatches: 'now-region-your-matches',
   shelves: 'now-region-shelves',
 } as const;
+
+/** The card at the end of a shelf, so *every shelf has one* is assertable. */
+export const TAIL_CARD_ID = 'now-shelf-tail';
 
 export function SectionHeading({ title }: { readonly title: string }) {
   return (
@@ -168,10 +181,14 @@ export function ShelvesRegionView({
   region,
   sport,
   onEnterDoor,
+  onControl,
+  onOpenFind,
 }: {
   readonly region: ShelvesRegion;
   readonly sport: SportFilter;
   readonly onEnterDoor: () => void;
+  readonly onControl: (control: CardControl) => void;
+  readonly onOpenFind: (preFilter: FindPreFilter) => void;
 }) {
   const { width } = useWindowDimensions();
 
@@ -201,14 +218,67 @@ export function ShelvesRegionView({
               >
                 {block.cards.map((card) => (
                   <View key={cardKey(card)} style={{ width: railCardWidth(width) }}>
-                    <NowCardView card={card} fill />
+                    <NowCardView card={card} onControl={onControl} fill />
                   </View>
                 ))}
+
+                <ShelfTailCard
+                  code={block.code}
+                  title={block.title}
+                  sport={sport}
+                  width={railCardWidth(width)}
+                  onOpenFind={onOpenFind}
+                />
               </ScrollView>
             </View>
           ),
         )
       )}
+    </View>
+  );
+}
+
+/**
+ * The card every shelf ends in: a door into Find, never a wall.
+ *
+ * **It is not in the contract, and that is the decision** (`ADR-0070`, granted for
+ * exactly this card): the client appends it, composing the shelf's own claim with
+ * the sport it is already filtered to. A tail card on the wire would be a card the
+ * server sends that is not about a match, a person or a club, and its destination is
+ * a client-side route in any case.
+ *
+ * **A shelf whose code this build has never heard of gets none.** `findPreFilter`
+ * answers `undefined` for it, which is the same answer as *do not draw the tail
+ * card* — a door this build cannot address is worse than no door, and the shelf's
+ * title is missing for the same reason at the same moment.
+ */
+function ShelfTailCard({
+  code,
+  title,
+  sport,
+  width,
+  onOpenFind,
+}: {
+  readonly code: string;
+  readonly title: string | undefined;
+  readonly sport: SportFilter;
+  readonly width: number;
+  readonly onOpenFind: (preFilter: FindPreFilter) => void;
+}) {
+  const preFilter = findPreFilter(code, sport);
+  if (preFilter === undefined) return null;
+
+  return (
+    // The id sits on the wrapper because a design-system primitive owns its own
+    // test ids and takes none; the press is reached by the label it announces.
+    <View testID={TAIL_CARD_ID} style={{ width }}>
+      <PressableCard
+        style={s.tail}
+        onPress={() => onOpenFind(preFilter)}
+        accessibilityLabel={findTailLabel(title)}
+      >
+        <Text style={s.tailLabel}>{FIND_TAIL_LABEL}</Text>
+      </PressableCard>
     </View>
   );
 }
@@ -241,6 +311,9 @@ const s = StyleSheet.create({
     paddingHorizontal: GUTTER,
   },
   caption: { ...theme.type.tiny, color: theme.color.muted },
+  // The tail is the shelf's own height, so the rail does not step down at its end.
+  tail: { flex: 1, justifyContent: 'center' },
+  tailLabel: { ...theme.type.inlineTitle, color: theme.color.ink },
   empty: { ...theme.type.tiny, color: theme.color.muted },
   // The negative margin is what lets the strip bleed to the screen edge while its
   // content still aligns to the gutter (`design-system.md` Part 8).

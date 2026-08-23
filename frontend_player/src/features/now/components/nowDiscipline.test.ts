@@ -1,5 +1,5 @@
 /**
- * The three rules on this feature that nothing else can catch, walked over its own
+ * The seven rules on this feature that nothing else can catch, walked over its own
  * source.
  *
  * Each is a rule about what the code **does not** do, and a rule of that shape has
@@ -20,6 +20,10 @@
  *    banner, no *"can't reach Raketa"*.
  * 5. **The door is never inferred** (`ADR-0084`). It is drawn exactly when the
  *    server sent one, and one place in the feature can make one at all.
+ * 6. **Order is the composed screen's** (`ADR-0032`). Nothing here sorts, and a
+ *    shelf can only be *made* where the wire is read — so an update cannot grow one.
+ * 7. **Emphasis is never computed** (`ADR-0037`). The flag is read; the score beside
+ *    it is never compared against anything.
  */
 
 import { readFileSync, readdirSync, statSync } from 'node:fs';
@@ -264,6 +268,69 @@ describe('the door is never inferred', () => {
     // neither — a matcher that fired on either would be policing the wrong thing.
     expect(made.test("  readonly kind: 'door';")).toBe(false);
     expect(made.test("return { kind: 'shelf', code };")).toBe(false);
+  });
+});
+
+describe('order is the composed screen’s, and a shelf arrives whole', () => {
+  /**
+   * `ADR-0032`: order is a property of the composed screen, decided once by the
+   * server. Two edits would take it back, and each has its own matcher.
+   *
+   * The first is a **sort** — one line in a region component, and the screen quietly
+   * disagrees with the shelf's own claim about why a card is third.
+   *
+   * The second is subtler and is what `Raketa02/Raketa#88` is actually about: *an
+   * update is never allowed to carry shelves*. Every act on this screen returns Now's
+   * update in its own response, and a session wiring one is one `map` away from
+   * rebuilding a shelf out of it — at which point a match she just joined moves under
+   * her thumb. A shelf can only be **constructed** where the wire's block is read, so
+   * an update path that wanted to replace one would have to say so in a diff.
+   */
+  it('sorts nothing, anywhere', () => {
+    expect(filesContaining(/\.sort\(|\.reverse\(/)).toEqual([]);
+  });
+
+  it('makes a shelf in exactly one module, and it is the wire boundary', () => {
+    expect(filesContaining(/\{\s*kind: 'shelf'/)).toEqual(['mappers/nowMappers.ts']);
+  });
+
+  it('has a control that would fire', () => {
+    expect(/\.sort\(|\.reverse\(/.test('blocks.sort((a, b) => a.code < b.code)')).toBe(true);
+    expect(/\{\s*kind: 'shelf'/.test("return { kind: 'shelf', code, cards };")).toBe(true);
+    // The type's own declaration is not a construction, and the door beside it is
+    // neither — a matcher that fired on either would be policing the wrong thing.
+    expect(/\{\s*kind: 'shelf'/.test("  readonly kind: 'shelf';")).toBe(false);
+    expect(/\{\s*kind: 'shelf'/.test("return { kind: 'door', code };")).toBe(false);
+  });
+});
+
+describe('emphasis is read and never computed', () => {
+  /**
+   * `ADR-0037` gates the loud card on three facts — fit ≥ 90, coverage ≥ 80 %, a seat
+   * open — and caps it at one per screen. Every clause is about the **other** cards,
+   * and the phone cannot see coverage at all.
+   *
+   * The edit that brings it back is one comparison in one component, and it looks
+   * like tidying: the badge already holds a score, `UI` §B9 still writes
+   * `emphatic ⇔ score >= 90`, and design-system 7.1 says the threshold lives *"in the
+   * domain layer"*. A client that wrote it would light up the top of most screens,
+   * since 4,3 % of realistic scores reach 90 and a list selects for the maximum.
+   *
+   * A behavioural test shows today's screen does not compare. It cannot show that
+   * next week's does not, which is why the comparison itself is what is banned.
+   */
+  const COMPARED = /(score|coverage)\s*[<>]/;
+
+  it('compares a score against nothing, in any module', () => {
+    expect(filesContaining(COMPARED)).toEqual([]);
+  });
+
+  it('has a control that would fire', () => {
+    expect(COMPARED.test('emphatic={card.fit.score >= 90}')).toBe(true);
+    expect(COMPARED.test('const loud = score > EMPHASIS_FLOOR;')).toBe(true);
+    // Reading the flag is not comparing, and neither is printing the number.
+    expect(COMPARED.test('emphatic={card.emphasis}')).toBe(false);
+    expect(COMPARED.test('{`${MARK} ${score}`}')).toBe(false);
   });
 });
 

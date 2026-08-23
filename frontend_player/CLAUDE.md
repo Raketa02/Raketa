@@ -31,7 +31,8 @@ screens a player leaves through).
 
 `features/now/` is **Now, the app's home** — the screen `(app)/(tabs)/index` renders and the
 one onboarding lands on. Three regions (offers · the enrolled strip · the shelves), the sport
-bar, `ADR-0054`'s four asks, and the match card's **action row**.
+bar, `ADR-0054`'s four asks, the match card's **action row**, and the shelves' **fit badge,
+reasons, emphasis and tail card**.
 
 **A chip for a sport she holds no rating at draws a door, and the door is a route**
 ([ADR-0084](../docs/adr/0084-the-sport-bar-is-five-fixed-chips-and-an-unrated-sport-is-a-door.md)).
@@ -59,6 +60,22 @@ the ADR (a 3pt coral dot under the selected label). Do not add a _different_ sec
 amending it. **The bar spends the bottom safe-area inset**, so every screen under `(tabs)` takes
 `edges={['top']}` — a screen claiming `bottom` too puts a band of dead paper above the bar.
 
+**A shelf card carries the fit badge, its reasons, and no button**
+([ADR-0037](../docs/adr/0037-the-fit-badge-shouts-once-and-only-about-a-seat.md),
+[ADR-0088](../docs/adr/0088-the-action-row-is-three-slots-and-the-clock-takes-the-first.md)).
+The badge's score is **clamped 20–99 in the mapper**, so the engine's true 0–100 value never
+enters the app; up to **three reasons** stand under it, resolved from a term code and a typed
+payload into this app's own sentence, and an **unsure** estimate becomes a warning line rather
+than a percentage. **Coverage is never shown in any form** — a type-level assertion in
+`nowMappers.ts` fails the build the day it crosses the wire. **Emphasis is the server's flag**:
+its three gates are all about the _other_ cards, so the phone reads it and never computes it,
+and the walk bans comparing a score against anything. A shelf card's **body** is the control,
+exactly when it names an act, and its **clock is a claim's clock and nothing else** — the
+server sends the match's own boundary there anyway ([#114](https://github.com/Raketa02/Raketa/issues/114))
+and the card ignores it. Every shelf ends in a **tail card** the client appends from the shelf
+code plus the held sport; Find cannot yet receive that pre-filter
+([#115](https://github.com/Raketa02/Raketa/issues/115)).
+
 **The action row is one row of three optional slots and has zero variants**
 ([ADR-0088](../docs/adr/0088-the-action-row-is-three-slots-and-the-clock-takes-the-first.md)):
 a clock, an act, an exit — each drawn exactly when its own spine field is present, the act the
@@ -69,7 +86,7 @@ distinction between a **repaint** and an **ask** is stated — the countdown red
 inside ten minutes and every minute above, from **one screen-wide clock**, and that is drawing
 rather than a fifth occasion to fetch.
 
-**Five rules on that feature are walked over its own source** in
+**Seven rules on that feature are walked over its own source** in
 `components/nowDiscipline.test.ts`, because each is a rule about what the code does _not_ do
 and no green assertion can carry one. **The phone holds no rules** ([ADR-0053](../docs/adr/0053-the-phone-holds-no-rules-and-only-subtracts.md)):
 `Date.parse` appears in `domain/countdown.ts` and nowhere else, so the only derivation is
@@ -80,7 +97,11 @@ repaint clock — with the walk asserting that the repaint module cannot reach Q
 **Neither of the prototype's two action-row icons comes back** (`✉`, `⌘`). **The screen never
 admits staleness**: no marker, no banner, no _"can't reach Raketa"_. **The door is never
 inferred**: a door is _constructed_ in `mappers/nowMappers.ts` and nowhere else, and its copy
-table is read only where a code is resolved — so a component cannot decide to draw one. Each
+table is read only where a code is resolved — so a component cannot decide to draw one.
+**Order is the composed screen's** ([ADR-0032](../docs/adr/0032-order-is-a-property-of-the-composed-screen.md)):
+nothing sorts, and a **shelf** is constructed in that same one module — so an action's update
+cannot grow one, and a match she joined cannot move under her thumb. **Emphasis is never
+computed**: no module compares a score against anything. Each
 guard carries a negative control; do not add an exemption to a walk, **narrow the rule
 instead** — which is what the second one did when the repaint clock landed.
 

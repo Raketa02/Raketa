@@ -13,6 +13,7 @@ export { Card, PressableCard, type CardProps, type PressableCardProps } from './
 export { CloseControl, type CloseControlProps } from './CloseControl';
 export { ConfidenceRing, type ConfidenceRingProps } from './ConfidenceRing';
 export { DarkCard, type DarkCardProps } from './DarkCard';
+export { FitBadge, FIT_BADGE_ID, type FitBadgeProps } from './FitBadge';
 export { Hairline, type HairlineProps, type HairlineVariant } from './Hairline';
 export { InfoGlyph, type InfoGlyphProps } from './InfoGlyph';
 export {

@@ -5,7 +5,16 @@
  * fails `pnpm typecheck` here rather than failing an assertion somewhere confusing.
  */
 
-import { clubCard, door, emptyNow, matchCard, personCard, shelf } from '@/test-support/now';
+import {
+  clubCard,
+  door,
+  emptyNow,
+  fit,
+  fitReason,
+  matchCard,
+  personCard,
+  shelf,
+} from '@/test-support/now';
 import type { Wire } from '@/test-support/transport';
 
 import type { Block, Shelf } from '../domain/ComposedScreen';
@@ -340,5 +349,140 @@ describe('the one fact about the viewer', () => {
     });
 
     expect(screen.debt?.blocked).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The fit badge
+// ---------------------------------------------------------------------------
+
+describe('the fit badge', () => {
+  /** One shelf, one card, and the badge the server put on it. */
+  function badgeOn(card: Wire['MatchCardResponse']) {
+    const shelved = shelfAt(
+      compose({ ...emptyNow(), shelves: { stamp: 1, shelves: [shelf('bestFit', [card])] } }).shelves
+        .blocks,
+      0,
+    );
+    const first = nth(shelved.cards, 0);
+    if (first.kind !== 'match') throw new Error(`a ${first.kind} card carries no badge`);
+    return first;
+  }
+
+  it('clamps the score at both ends, where the wire does not', () => {
+    // The engine's measured range is 8 to 100 and the pill's is 20 to 99, so both
+    // ends are reachable rather than defensive. The clamp is applied here so the
+    // true score never enters the app at all.
+    expect(badgeOn(matchCard({ matchId: 'm-1', fit: fit({ score: 8 }) })).fit?.score).toBe(20);
+    expect(badgeOn(matchCard({ matchId: 'm-1', fit: fit({ score: 100 }) })).fit?.score).toBe(99);
+    expect(badgeOn(matchCard({ matchId: 'm-1', fit: fit({ score: 74 }) })).fit?.score).toBe(74);
+  });
+
+  it('carries the warning as a boolean and no number beside it', () => {
+    const badge = badgeOn(matchCard({ matchId: 'm-1', fit: fit({ score: 74, unsure: true }) })).fit;
+
+    expect(badge?.unsure).toBe(true);
+    // Coverage is never a number the player sees, so there is nowhere to put one.
+    expect(Object.keys(badge ?? {}).sort()).toEqual(['reasons', 'score', 'unsure']);
+  });
+
+  it('resolves each reason to this app’s own sentence', () => {
+    const badge = badgeOn(
+      matchCard({
+        matchId: 'm-1',
+        fit: fit({
+          score: 91,
+          reasons: [
+            fitReason('skill_overlap', {
+              code: 'skill_overlap',
+              level: 2.7,
+              target: 2.9,
+              band_half_width: 0.55,
+              side: 'even',
+            }),
+            fitReason('travel', { code: 'travel', minutes: 14, radius: null }),
+          ],
+        }),
+      }),
+    ).fit;
+
+    expect(badge?.reasons).toEqual([
+      'Your level overlaps the level this match is aimed at.',
+      'It is close to you.',
+    ]);
+  });
+
+  it('takes at most three, so a fourth grows a card here rather than on a phone', () => {
+    const one = fitReason('travel', { code: 'travel', minutes: 14, radius: null });
+    const badge = badgeOn(
+      matchCard({ matchId: 'm-1', fit: fit({ score: 91, reasons: [one, one, one, one] }) }),
+    ).fit;
+
+    expect(badge?.reasons).toHaveLength(3);
+  });
+
+  it('drops a term this build has never heard of rather than drawing it blank', () => {
+    // The same answer an unknown situation gets: lose the thing that is missing, not
+    // the card. A blank bullet is a defect where two reasons instead of three is not.
+    const badge = badgeOn(
+      matchCard({
+        matchId: 'm-1',
+        fit: fit({
+          score: 91,
+          reasons: [
+            fitReason('coverage' as Wire['TermCode'], {
+              code: 'travel',
+              minutes: 14,
+              radius: null,
+            }),
+            fitReason('travel', { code: 'travel', minutes: 14, radius: null }),
+          ],
+        }),
+      }),
+    ).fit;
+
+    expect(badge?.reasons).toEqual(['It is close to you.']);
+  });
+
+  it('is absent on a card the server did not score', () => {
+    // Every card in the strip, and every card on a screen that degraded. It is not
+    // how an unrated viewer is answered — she gets a door where the shelves would be.
+    expect(badgeOn(matchCard({ matchId: 'm-1' })).fit).toBeUndefined();
+  });
+});
+
+describe('emphasis', () => {
+  function cardsOf(cards: Wire['MatchCardResponse'][]) {
+    const shelved = shelfAt(
+      compose({ ...emptyNow(), shelves: { stamp: 1, shelves: [shelf('bestFit', cards)] } }).shelves
+        .blocks,
+      0,
+    );
+    return shelved.cards.map((card) => (card.kind === 'match' ? card.emphasis : 'not a match'));
+  }
+
+  it('is the wire’s flag, carried across untouched', () => {
+    expect(
+      cardsOf([
+        matchCard({ matchId: 'm-1', fit: fit({ score: 94 }), emphasis: true }),
+        matchCard({ matchId: 'm-2', fit: fit({ score: 93 }) }),
+      ]),
+    ).toEqual([true, false]);
+  });
+
+  it('is never concluded from the score', () => {
+    // `ADR-0037`: 4,3 % of realistic scores reach 90 and a list selects for the
+    // maximum, so a client comparing against 90 would light up the top of most
+    // screens. Two cards clear it here and neither is flagged.
+    expect(
+      cardsOf([
+        matchCard({ matchId: 'm-1', fit: fit({ score: 99 }) }),
+        matchCard({ matchId: 'm-2', fit: fit({ score: 95 }) }),
+      ]),
+    ).toEqual([false, false]);
+  });
+
+  it('is false on a card with no badge at all', () => {
+    expect(cardsOf([matchCard({ matchId: 'm-1' })])).toEqual([false]);
   });
 });

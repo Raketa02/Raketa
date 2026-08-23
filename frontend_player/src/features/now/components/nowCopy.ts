@@ -93,6 +93,36 @@ export function exitLabel(clubName: string): string {
 export const EXIT_HINT = 'Shows what leaving is worth before anything happens.';
 
 /**
+ * What the fit badge says aloud, since `✦ 93` is two symbols and no sentence.
+ *
+ * **The emphatic band is a colour and nothing else** — `ADR-0037` gates it on three
+ * facts and caps it at one card per screen, and `UI` §B9 is final on *"two bands
+ * only"*. That leaves the loudest claim on the screen with no non-visual half at
+ * all, which is a cue nobody using a screen reader can have. The word is added
+ * **here**, where it costs no pixel and creates no third band: the drawing is
+ * untouched and the announcement carries the state, which is the split
+ * `ADR-0082` priced for the tab bar and could not make there.
+ */
+export function fitBadgeLabel(score: number, emphatic: boolean): string {
+  return emphatic ? `Fit ${score}, the pick of this screen` : `Fit ${score}`;
+}
+
+/**
+ * The card at the end of every shelf.
+ *
+ * A shelf running out is a **door and not a wall** — the row stops because the cap
+ * did, never because the city did. It is not in the contract: the client appends it
+ * from the shelf's own code plus the sport it is already filtered to, which is the
+ * same composition the door's sentence makes.
+ */
+export const FIND_TAIL_LABEL = 'See more in Find';
+
+/** A screen holds up to five of these, all reading the same. The shelf names itself. */
+export function findTailLabel(shelfTitle: string | undefined): string {
+  return shelfTitle === undefined ? FIND_TAIL_LABEL : `${FIND_TAIL_LABEL}: ${shelfTitle}`;
+}
+
+/**
  * How a countdown reads aloud.
  *
  * The figure alone — `4:37` — is a number with no noun. What the slot means is

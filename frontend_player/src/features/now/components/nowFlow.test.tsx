@@ -17,17 +17,20 @@
  */
 
 import { focusManager, onlineManager } from '@tanstack/react-query';
-import { RefreshControl } from 'react-native';
+import { RefreshControl, StyleSheet } from 'react-native';
 import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
 import { router } from 'expo-router';
 
 import { refreshTokens } from '@/features/auth/types';
+import { FIT_BADGE_ID, theme } from '@/shared/ui';
 import { clearStoredTokens, resetSessionStatus, wireHttpCredentials } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import {
   clubCard,
   door,
   emptyNow,
+  fit,
+  fitReason,
   matchCard,
   nowPathFor,
   personCard,
@@ -45,9 +48,11 @@ import {
 import { nowKeys } from '../hooks/nowKeys';
 import { useSportFilterStore } from '../store/sportFilter.store';
 
-import { ACTION_ROW_ID, CLOCK_ID } from './ActionRow';
+import { ACTION_ROW_ID } from './ActionRow';
+import { CLOCK_ID } from './CardClock';
+import { FIT_REASON_ID, FIT_WARNING_ID } from './NowCards';
 import { DOOR_ID } from './NowDoor';
-import { REGION_ID } from './NowRegions';
+import { REGION_ID, TAIL_CARD_ID } from './NowRegions';
 import { SHIMMER_ID } from './NowShimmer';
 
 const RATING: Wire['RatingResponse'] = {
@@ -331,11 +336,11 @@ describe('the action row', () => {
     expect(screen.getByText(`Take the seat · 2\u00a0474,25\u00a0zł`)).toBeTruthy();
   });
 
-  it('gives a shelf card no control at all, whatever its spine carries', async () => {
-    // `ADR-0088` gives the shelf card its act through its **body** and no button,
-    // and that is `Raketa02/Raketa#88`'s to build. Until then it draws nothing
-    // rather than the wrong thing — and it cannot be handed a control, because it
-    // takes no handler.
+  it('gives a shelf card no button and no exit, whatever its spine carries', async () => {
+    // `ADR-0088`: the shelf card reaches its act through its **body**, and gains
+    // neither the state card's labelled button nor an exit. The body-as-control half
+    // is asserted in *the shelves* below; what is asserted here is that neither
+    // drawn control appears on one.
     await launchOnNow({
       ...emptyNow(),
       shelves: {
@@ -349,6 +354,7 @@ describe('the action row', () => {
     expect(screen.getByText('Best fit for you')).toBeTruthy();
     expect(screen.queryByText(/^Take the seat/)).toBeNull();
     expect(screen.queryByLabelText(/^Leave this match/)).toBeNull();
+    expect(screen.queryByTestId(ACTION_ROW_ID)).toBeNull();
   });
 
   it('names the club on every control, so a dozen cards are not a dozen shrugs', async () => {
@@ -730,6 +736,265 @@ describe('what loading looks like', () => {
     expect(
       await screen.findByText('Something went wrong at our end. Pull down to try again.'),
     ).toBeTruthy();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The shelves: the tail card, the fit badge, emphasis, and the body as a control
+// ---------------------------------------------------------------------------
+
+describe('the shelves', () => {
+  const REASON = fitReason('travel', { code: 'travel', minutes: 14, radius: null });
+
+  /** A screen whose only content is one shelf of one card. */
+  const oneShelf = (
+    code: Wire['ShelfCode'],
+    cards: Wire['ShelfResponse']['cards'],
+  ): Wire['NowResponse'] => ({
+    ...emptyNow(),
+    shelves: { stamp: 1, shelves: [shelf(code, cards)] },
+  });
+
+  /** Index into a list, refusing an absent element rather than asserting one away. */
+  function nth<T>(list: readonly T[], index: number): T {
+    const item = list[index];
+    if (item === undefined) throw new Error(`no element at ${index} of ${list.length}`);
+    return item;
+  }
+
+  /** The badges on screen, in the order they were drawn. */
+  const badges = () => screen.queryAllByTestId(FIT_BADGE_ID);
+
+  const isEmphatic = (badge: ReturnType<typeof badges>[number]) =>
+    StyleSheet.flatten(badge.props.style).backgroundColor === theme.color.coralInk;
+
+  it('renders a shelf from its code, and a code this build has never met stays reserved', async () => {
+    // `recentlyViewed` is reserved on the wire with no producer (`ADR-0085`), so its
+    // return is a **server** change: nothing here is added the day it arrives, and
+    // this asserts that by composing one and finding it whole — title and tail card.
+    await launchOnNow(oneShelf('recentlyViewed', [matchCard({ matchId: 'feed-1' })]));
+
+    expect(screen.getByText('Recently viewed')).toBeTruthy();
+    expect(screen.getAllByTestId(TAIL_CARD_ID)).toHaveLength(1);
+  });
+
+  it('ends every shelf in a card into Find, and opens it on a tap', async () => {
+    // A shelf running out is a door and not a wall. The tail card is **not** in the
+    // contract — the client appends it from the shelf's code and the sport it holds.
+    await launchOnNow({
+      ...emptyNow(),
+      shelves: {
+        stamp: 1,
+        shelves: [
+          shelf('bestFit', [matchCard({ matchId: 'feed-1' })]),
+          shelf('newPlayers', [personCard('p-1', 'ada')]),
+          shelf('newClubs', [clubCard('c-9', 'Kraków Padel')]),
+        ],
+      },
+    });
+
+    expect(screen.getAllByTestId(TAIL_CARD_ID)).toHaveLength(3);
+    // Each names its own shelf, because a screen holds up to five reading the same.
+    expect(screen.getByLabelText('See more in Find: Best fit for you')).toBeTruthy();
+    expect(screen.getByLabelText('See more in Find: New clubs')).toBeTruthy();
+
+    fireEvent.press(screen.getByLabelText('See more in Find: Best fit for you'));
+
+    await waitFor(() => expect(screen).toHavePathname('/find'));
+  });
+
+  it('puts the tail card at the end of the shelf and not at the head of it', async () => {
+    // *Ends* in a card into Find: a door at the front of a row nobody has scrolled is
+    // an exit offered before the thing it is an exit from.
+    await launchOnNow(oneShelf('bestFit', [matchCard({ matchId: 'feed-1', clubName: 'Wola' })]));
+
+    const inOrder = screen.getAllByText(/Wola|See more in Find/);
+
+    expect(String(nth(inOrder, inOrder.length - 1).props.children)).toBe('See more in Find');
+  });
+
+  it('draws no tail card on a shelf whose code it cannot address', async () => {
+    // The same answer the title gets: a door this build cannot open is worse than no
+    // door, and both facts are missing at the same moment for the same reason.
+    await launchOnNow(
+      oneShelf('somethingNew' as Wire['ShelfCode'], [matchCard({ matchId: 'feed-1' })]),
+    );
+
+    expect(screen.getByTestId(REGION_ID.shelves)).toBeTruthy();
+    expect(screen.queryAllByTestId(TAIL_CARD_ID)).toHaveLength(0);
+  });
+
+  it('prints a number on the badge, clamped, and up to three reasons under it', async () => {
+    await launchOnNow(
+      oneShelf('bestFit', [
+        matchCard({
+          matchId: 'feed-1',
+          fit: fit({ score: 100, reasons: [REASON, REASON, REASON] }),
+        }),
+      ]),
+    );
+
+    // 100 never reaches a pill: certainty is never warranted.
+    expect(screen.getByText('✦ 99')).toBeTruthy();
+    expect(screen.getByLabelText('Fit 99')).toBeTruthy();
+    expect(screen.getAllByTestId(FIT_REASON_ID)).toHaveLength(3);
+    expect(screen.getAllByText('It is close to you.')).toHaveLength(3);
+  });
+
+  it('answers an unsure estimate with a warning and never a percentage', async () => {
+    // `ADR-0037`: coverage ranks and gates and *never becomes a second gauge on the
+    // card*. What an uncertain estimate becomes is words.
+    await launchOnNow(
+      oneShelf('bestFit', [
+        matchCard({ matchId: 'feed-1', fit: fit({ score: 74, unsure: true, reasons: [REASON] }) }),
+      ]),
+    );
+
+    expect(screen.getByTestId(FIT_WARNING_ID)).toBeTruthy();
+    expect(screen.getByText('Early days for this match — this is a rough guess.')).toBeTruthy();
+    expect(screen.queryByText(/%/)).toBeNull();
+  });
+
+  it('says nothing at all where the estimate is not unsure', async () => {
+    // The negative half, and the one that decides whether the warning is worth
+    // anything: the fit-model delta rejects a threshold that fires on *"acceptable
+    // but not great"* because *"warning about that would teach players to ignore
+    // warnings"*. A card warning on every suggestion is that failure, drawn.
+    await launchOnNow(
+      oneShelf('bestFit', [
+        matchCard({ matchId: 'feed-1', fit: fit({ score: 74, unsure: false, reasons: [REASON] }) }),
+      ]),
+    );
+
+    expect(screen.getAllByTestId(FIT_REASON_ID)).toHaveLength(1);
+    expect(screen.queryByTestId(FIT_WARNING_ID)).toBeNull();
+    expect(screen.queryByText(/rough guess/)).toBeNull();
+  });
+
+  it('draws no badge at all on a card the server did not score', async () => {
+    await launchOnNow(oneShelf('bestFit', [matchCard({ matchId: 'feed-1' })]));
+
+    expect(badges()).toHaveLength(0);
+    expect(screen.queryAllByTestId(FIT_REASON_ID)).toHaveLength(0);
+  });
+
+  it('shouts on the one card the wire flagged, and on no other', async () => {
+    // The flag is the composed screen's (`ADR-0032`, `ADR-0037`). Both cards below
+    // clear 90 and one is loud, so a client comparing against the score fails here.
+    await launchOnNow(
+      oneShelf('bestFit', [
+        matchCard({ matchId: 'feed-1', fit: fit({ score: 93 }) }),
+        matchCard({ matchId: 'feed-2', fit: fit({ score: 99 }), emphasis: true }),
+      ]),
+    );
+
+    expect(badges().filter(isEmphatic)).toHaveLength(1);
+    // And the one that shouts is the flagged one, not the higher-scoring first card.
+    expect(screen.getByLabelText('Fit 99, the pick of this screen')).toBeTruthy();
+    expect(screen.getByLabelText('Fit 93')).toBeTruthy();
+  });
+
+  it('leaves every card quiet on a screen the server flagged nothing on', async () => {
+    await launchOnNow(
+      oneShelf('bestFit', [
+        matchCard({ matchId: 'feed-1', fit: fit({ score: 99 }) }),
+        matchCard({ matchId: 'feed-2', fit: fit({ score: 95 }) }),
+      ]),
+    );
+
+    expect(badges()).toHaveLength(2);
+    expect(badges().filter(isEmphatic)).toHaveLength(0);
+  });
+
+  it('makes a shelf card’s body the control when it names an act', async () => {
+    await launchOnNow(
+      oneShelf('bestFit', [
+        matchCard({ matchId: 'feed-1', act: 'takeSeat', clubName: 'Wola Padel' }),
+      ]),
+    );
+
+    // The act's own label, and the club beside it — a screen holds a dozen of these
+    // and the visible half of a whole-card control is the card.
+    const body = screen.getByLabelText(/^Take the seat · .+, Wola Padel$/);
+
+    expect(body.props.accessibilityRole).toBe('button');
+    // It presses without throwing; where it goes is `Raketa02/Raketa#89`'s.
+    fireEvent.press(body);
+  });
+
+  it('leaves a shelf card inert all the way through when it names none', async () => {
+    // `ADR-0083`'s converse: a card with no act has no button **and its body is not a
+    // tap target either**, so an inert card does not swallow a press.
+    await launchOnNow(
+      oneShelf('bestFit', [matchCard({ matchId: 'feed-1', clubName: 'Wola Padel' })]),
+    );
+
+    // The card is drawn — the spine is there — and nothing on it is operable.
+    expect(screen.getAllByText(/Wola Padel/).length).toBeGreaterThan(0);
+    expect(screen.queryByLabelText(/^Take the seat/)).toBeNull();
+    expect(screen.queryByRole('button', { name: /Wola Padel/ })).toBeNull();
+  });
+
+  it('keeps a shelf card’s clock empty, whatever moment the wire put on it', async () => {
+    // `ADR-0088`: the clock is *the next moment something happens to the viewer*, and
+    // on a match she holds no stake in, nothing does. The server sends the match's own
+    // boundary here and the card draws the tag instead.
+    await launchOnNow(
+      oneShelf('bestFit', [
+        matchCard({ matchId: 'feed-1', clock: '2099-01-01T18:00:00Z', situation: 'forming' }),
+      ]),
+    );
+
+    expect(screen.queryByTestId(CLOCK_ID)).toBeNull();
+    expect(screen.getByText('Forming')).toBeTruthy();
+  });
+
+  it('replaces the tone tag with the countdown while her own claim runs', async () => {
+    // Replacing rather than joining: that row is already two crowded groups, and
+    // while a player holds 1:30 to pay, *Forming* is not the news.
+    const inFiveMinutes = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+
+    await launchOnNow(
+      oneShelf('bestFit', [
+        matchCard({
+          matchId: 'feed-1',
+          clock: '2099-01-01T18:00:00Z',
+          seatClaimExpiresAt: inFiveMinutes,
+          situation: 'forming',
+        }),
+      ]),
+    );
+
+    expect(String(screen.getByTestId(CLOCK_ID).props.children)).toMatch(/^[0-5]:\d\d$/);
+    expect(screen.queryByText('Forming')).toBeNull();
+  });
+
+  it('does not reshuffle or replace a shelf when she taps a card', async () => {
+    // A match she joined stays put until she next asks for a fresh screen: her tap
+    // may carry an update, and an update is never allowed to carry shelves.
+    await launchOnNow({
+      ...emptyNow(),
+      shelves: {
+        stamp: 1,
+        shelves: [
+          shelf('bestFit', [
+            matchCard({ matchId: 'feed-1', act: 'takeSeat', clubName: 'Wola Padel' }),
+            matchCard({ matchId: 'feed-2', clubName: 'Sunset Padel' }),
+          ]),
+          shelf('newClubs', [clubCard('c-9', 'Kraków Padel')]),
+        ],
+      },
+    });
+
+    const order = () => screen.getAllByRole('header').map((node) => String(node.props.children));
+    const before = order();
+    const asks = composes();
+
+    fireEvent.press(screen.getByLabelText(/^Take the seat · .+, Wola Padel$/));
+
+    expect(order()).toEqual(before);
+    expect(screen.getAllByTestId(TAIL_CARD_ID)).toHaveLength(2);
+    expect(composes()).toBe(asks);
   });
 });
 

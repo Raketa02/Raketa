@@ -14,7 +14,8 @@ import { theme } from '@/shared/ui';
 
 import type { ComposedScreen, MatchCard } from '../domain/ComposedScreen';
 
-import { ACTION_ROW_ID, ActionRow, CLOCK_ID, type CardControl } from './ActionRow';
+import { ACTION_ROW_ID, ActionRow, type CardControl } from './ActionRow';
+import { CLOCK_ID } from './CardClock';
 import { NowClockProvider } from './NowClock';
 
 const NOW = Date.parse('2026-08-23T12:00:00Z');
@@ -37,6 +38,8 @@ function card(overrides: Partial<MatchCard> = {}): MatchCard {
     status: undefined,
     act: undefined,
     mayDepart: false,
+    fit: undefined,
+    emphasis: false,
     ...overrides,
   };
 }

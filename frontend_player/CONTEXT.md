@@ -225,8 +225,8 @@ Four copy tables and three lookups, colocated under `features/now/` and **not** 
 The player app's home. `features/now/` grew from a vocabulary into a screen with
 [#86](https://github.com/Raketa02/Raketa/issues/86) and gained the match card's action row
 with [#87](https://github.com/Raketa02/Raketa/issues/87); the tab bar under it landed with
-[#93](https://github.com/Raketa02/Raketa/issues/93), and the shelves' tail card and the fit
-badge are separate tickets that land on top of it.
+[#93](https://github.com/Raketa02/Raketa/issues/93), and the shelves — the tail card, the fit
+badge and emphasis — with [#88](https://github.com/Raketa02/Raketa/issues/88).
 
 - **Composed screen** — the whole answer to one `GET /api/v1/now`: three regions and one
   fact about the viewer. The client's own domain object, in `domain/ComposedScreen.ts`.
@@ -264,12 +264,23 @@ badge are separate tickets that land on top of it.
 - **State card, against shelf card** — the two card shapes ADR-0088 distinguishes. A state
   card (the strip, the offers region) reaches its act through a **labelled button** and
   takes the handler that answers it; a shelf card reaches the same act through its **whole
-  body** and gains no button. The inconsistency is deliberate and is the sharpest thing in
-  that ADR; the shelf half is [#88](https://github.com/Raketa02/Raketa/issues/88)'s.
+  body** and gains no button, and **only when it names an act** — the converse of ADR-0083's
+  rule, so an inert card does not swallow a press. The inconsistency is deliberate and is the
+  sharpest thing in that ADR. A whole-card control is **one accessibility element**, so such a
+  card announces its act and nothing else ([#116](https://github.com/Raketa02/Raketa/issues/116));
+  no shelf card names an act until [#89](https://github.com/Raketa02/Raketa/issues/89).
 - **The clock slot** — the card's _one_ moment, and a **live seat claim wins it**: the
   claim's five minutes override the card's own clock, exactly as `finishPaying` overrides
   the situation's act. Which of the two can _run out_ is not a choice and the deadline ask
   watches both; which of the two is _shown_ is this rule.
+- **A shelf card's clock is a claim's clock** — and nothing else (ADR-0088). The card's own
+  moment is _the next thing that happens to a viewer with a stake in the match_, and a
+  suggestion is a match she has none in; her own claim is about her. **The server sends the
+  match's boundary on a shelf card anyway**, which is the ADR's one factual slip
+  ([#114](https://github.com/Raketa02/Raketa/issues/114)) and costs the client nothing,
+  because the shelf card reads the claim and never the card's clock. When the claim is
+  there the countdown **replaces** the tone tag rather than joining it: while a player holds
+  1:30 to pay, _Forming_ is not the news.
 - **The seconds band** — ten minutes, and it decides two things that must agree: inside it
   the screen repaints every second and the label draws a clock face (`4:37`); outside it the
   screen repaints once a minute and the label draws a duration (`42 min`, `2 h 14 min`,
@@ -303,6 +314,28 @@ badge are separate tickets that land on top of it.
   in their **words** and in nothing else. The tap is one `POST /assessments`, which is
   idempotent per player and sport and hands back a parked run's outstanding question, so the
   phone never learns which case it is in and holds no rule about resuming.
+- **The fit badge** — `✦ 93`, and the client's three obligations to it
+  ([ADR-0037](../docs/adr/0037-the-fit-badge-shouts-once-and-only-about-a-seat.md)). The
+  score is **clamped 20–99 at display time**, in the mapper, so the engine's true 0–100 value
+  never enters the app; **up to three reasons** stand under it, resolved from a term code and
+  a typed payload to this app's own sentence; and an **unsure** estimate becomes a warning
+  line. _Avoid_: printing coverage in any form — it ranks and it gates emphasis, and a
+  type-level assertion in `nowMappers.ts` fails the build the day it crosses the wire.
+- **Emphasis** — the one card on the whole screen that shouts, as a **flag the server ships**
+  and never a comparison the phone makes. Its three gates are fit ≥ 90, coverage ≥ 80 % and a
+  seat open, all of which are about the _other_ cards, and an offer on screen silences it
+  entirely — so it is a property of the composed screen
+  ([ADR-0032](../docs/adr/0032-order-is-a-property-of-the-composed-screen.md)). The drawn cue
+  is a colour and no word, which is `UI` §B9's _"two bands only"_; the **announced** label
+  carries the state, because a cue with no non-visual half is one nobody using a screen
+  reader can have. `nowDiscipline.test.ts` walks the feature for a score compared against
+  anything.
+- **The tail card** — the card every shelf ends in, opening Find pre-filtered by the shelf's
+  own claim plus the sport the screen holds. **Not in the contract**: the client appends it,
+  and a shelf whose code this build cannot address gets none — the same answer its missing
+  title is. A shelf running out is a door and not a wall. Find cannot yet receive the
+  pre-filter ([#115](https://github.com/Raketa02/Raketa/issues/115)), so the tap opens the
+  destination and the claim stops at the screen.
 - **Block** — what the shelves list holds: a shelf, or a door. The domain calls the field
   `blocks` where the wire keeps `shelves`; the wire keeps its name because renaming it
   breaks every shipped client reading a region that has not otherwise changed.

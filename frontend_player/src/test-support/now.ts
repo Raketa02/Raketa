@@ -59,6 +59,40 @@ export interface MatchCardOptions {
    * build a card the server cannot compose.
    */
   readonly facts?: Partial<Wire['SituationFactsResponse']>;
+  /**
+   * The badge, or `null` for a card the server did not score — every card in the
+   * strip, and every card on a screen that degraded.
+   */
+  readonly fit?: Wire['FitResponse'] | null;
+  /**
+   * `ADR-0037`'s one-card-per-screen flag, which is the **composed screen's** and
+   * never a comparison against the score beside it. A fixture setting it from `fit`
+   * would make the client's refusal to derive it untestable.
+   */
+  readonly emphasis?: boolean;
+}
+
+/** One reason behind the badge: a term code and the payload that term carries. */
+export function fitReason(
+  code: Wire['TermCode'],
+  fact: Wire['FitReasonResponse']['fact'],
+): Wire['FitReasonResponse'] {
+  return { code, fact };
+}
+
+/** The badge as the ranked funnel composes one: a score, a warning and its reasons. */
+export function fit({
+  score,
+  unsure = false,
+  reasons = [fitReason('time_fit', { code: 'time_fit', weekday: 2, minute: 1140 })],
+  target = null,
+}: {
+  readonly score: number;
+  readonly unsure?: boolean;
+  readonly reasons?: Wire['FitReasonResponse'][];
+  readonly target?: number | null;
+}): Wire['FitResponse'] {
+  return { score, unsure, reasons, target };
 }
 
 export function matchCard({
@@ -71,6 +105,8 @@ export function matchCard({
   act = null,
   mayDepart = false,
   facts = {},
+  fit = null,
+  emphasis = false,
 }: MatchCardOptions): Wire['MatchCardResponse'] {
   return {
     card_type: 'match',
@@ -85,8 +121,8 @@ export function matchCard({
       distance_km: 2.4,
     },
     price: { amount, currency: 'PLN' },
-    fit: null,
-    emphasis: false,
+    fit,
+    emphasis,
     act,
     may_depart: mayDepart,
     seat_claim: seatClaimExpiresAt === undefined ? null : { expires_at: seatClaimExpiresAt },

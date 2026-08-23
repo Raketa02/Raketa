@@ -120,6 +120,21 @@ oversight. The countdown **repaints** every second inside ten minutes and every 
 above, from one screen-wide clock; repainting is drawing and is never a fifth occasion to
 fetch.
 
+A suggestion carries a **fit badge** — `✦ 93`, dark, and coral on at most **one card on the
+whole screen** ([ADR-0037](../docs/adr/0037-the-fit-badge-shouts-once-and-only-about-a-seat.md)).
+The number is always printed and always between 20 and 99: below 20 every score means _no_,
+and nothing reaches 100 because certainty is never warranted. Up to three lines under it say
+_why this one_, in this app's words rather than the server's, and where a confidence
+percentage would go there is **a warning instead** — the app says _early days for this match_
+rather than printing a second number nobody can act on. Which card shouts is the **server's**
+decision, because it depends on the other cards; the phone never compares a score against
+anything.
+
+Every shelf **ends in a card into Find**, carrying that shelf's own claim and the sport you
+are filtered to, so a row running out is a door and not a wall. A shelf card has no button:
+where it has something to offer, the whole card is the control, and where it has not, it is
+inert rather than a control that swallows a press.
+
 Tapping a chip for a sport you have no level at does not answer _nothing open in Squash_. It
 opens a **door**: the honest sentence, a way into that sport's questionnaire, and the new
 clubs and new players beneath it, so you can see there is squash here before spending two

@@ -35,6 +35,8 @@ function matchCard(overrides: Partial<MatchCard> = {}): MatchCard {
     status: undefined,
     act: undefined,
     mayDepart: false,
+    fit: undefined,
+    emphasis: false,
     ...overrides,
   };
 }

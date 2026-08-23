@@ -37,16 +37,15 @@
  */
 
 import { Feather } from '@expo/vector-icons';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Button, theme } from '@/shared/ui';
 
 import type { MatchCard, Moment } from '../domain/ComposedScreen';
 import type { ActSurface } from '../domain/presentation';
-import { countdownLabel, remainingMs } from '../domain/countdown';
 
-import { useNowClock } from './NowClock';
-import { clockAccessibilityLabel, exitLabel, EXIT_HINT } from './nowCopy';
+import { CardClock } from './CardClock';
+import { exitLabel, EXIT_HINT } from './nowCopy';
 
 /**
  * What a press on a card's own controls means.
@@ -61,7 +60,6 @@ export type CardControl =
   | { readonly kind: 'exit'; readonly card: MatchCard };
 
 export const ACTION_ROW_ID = 'now-card-action-row';
-export const CLOCK_ID = 'now-card-clock';
 
 export interface ActionRowProps {
   readonly card: MatchCard;
@@ -136,39 +134,6 @@ function clockMoment(card: MatchCard): Moment | undefined {
   return card.claimExpiresAt ?? card.clock;
 }
 
-/**
- * The countdown, repainted by the screen's one clock.
- *
- * Its own component so that a tick re-renders the figures and nothing else — a
- * card whose clock is empty does not read the context at all.
- *
- * **`flexShrink: 0` and a floor on the width.** `ADR-0088` makes the act the only
- * flexible element; a countdown that shrank under a long label would be the one
- * element on the card that changes size as the seconds fall.
- */
-function CardClock({ moment }: { readonly moment: Moment }) {
-  const now = useNowClock();
-  if (now === undefined) return null;
-
-  const left = remainingMs(moment, now);
-  // A moment that does not parse is a contract failure rather than a state, and
-  // the answer is *there is no countdown here* rather than a figure in decades.
-  if (left === undefined) return null;
-
-  const label = countdownLabel(left);
-
-  return (
-    <Text
-      style={s.clock}
-      numberOfLines={1}
-      accessibilityLabel={clockAccessibilityLabel(label)}
-      testID={CLOCK_ID}
-    >
-      {label}
-    </Text>
-  );
-}
-
 const s = StyleSheet.create({
   row: {
     flexDirection: 'row',
@@ -177,13 +142,6 @@ const s = StyleSheet.create({
     // Footers align across cards of differing height, per `native-kit.md` §3. On a
     // card that is its own height this is worth nothing and costs nothing.
     marginTop: 'auto',
-  },
-  clock: {
-    ...theme.num.xs,
-    ...theme.tabular,
-    color: theme.color.ink,
-    flexShrink: 0,
-    minWidth: theme.size.timeSquare,
   },
   // The only flexible element in the row.
   act: { flex: 1 },
