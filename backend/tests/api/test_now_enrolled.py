@@ -433,9 +433,18 @@ async def test_a_match_cancelled_an_hour_ago_still_says_so(
 # --- what the strip still does not carry -------------------------------------
 
 
-async def test_no_card_offers_a_control_no_surface_can_receive(
+async def test_no_card_names_an_act_no_surface_can_receive(
     client, session_factory
 ) -> None:
+    """Of the six receiving surfaces exactly one exists, and it is not an act.
+
+    The departure route landed (`Raketa02/Raketa#80`) and its control is a
+    **spine boolean**, not a seventh act code — leaving is not the card's act.
+    The seat claim and its payment, the result route and leaving standby are
+    still unbuilt, so `act` stays absent: a card naming an act that opens
+    nothing is a door offered that will not open.
+    """
+
     alice_id, alice = await _join(client, ALICE)
     club = await _write_club(session_factory)
     await _write_match(
@@ -445,6 +454,29 @@ async def test_no_card_offers_a_control_no_surface_can_receive(
     card = _strip((await client.get("/api/v1/now", headers=alice)).json())[0]
 
     assert card["act"] is None
-    assert card["may_depart"] is False
     assert card["fit"] is None
     assert card["emphasis"] is False
+    # The one control that now has somewhere to go.
+    assert card["may_depart"] is True
+
+
+async def test_a_leavers_card_offers_no_exit_and_a_started_matchs_offers_none(
+    client, session_factory
+) -> None:
+    """`may_depart` is the kernel's, so the strip and the route agree by
+    construction — and both are false wherever `Match.depart` would refuse."""
+
+    alice_id, alice = await _join(client, ALICE)
+    club = await _write_club(session_factory)
+    await _write_match(
+        session_factory,
+        club,
+        seated=(UUID(alice_id),),
+        paid=(UUID(alice_id),),
+        left=UUID(alice_id),
+    )
+
+    card = _strip((await client.get("/api/v1/now", headers=alice)).json())[0]
+
+    assert card["may_depart"] is False
+    assert card["situation"]["facts"]["departure"] is not None

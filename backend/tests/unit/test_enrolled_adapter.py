@@ -24,7 +24,16 @@ from uuid import UUID, uuid4
 
 from decimal import Decimal
 
-from app.kernel import Cover, Instant, SeatShare, Sport, grosze, hours, instant
+from app.kernel import (
+    Cover,
+    Instant,
+    Outcome,
+    SeatShare,
+    Sport,
+    grosze,
+    hours,
+    instant,
+)
 from app.modules.clubs.domain.club import Club
 from app.modules.clubs.domain.policy import ClubPolicy
 from app.modules.clubs.domain.value_objects import (
@@ -120,10 +129,15 @@ class Matches:
     def __init__(self, *matches: Match) -> None:
         self._matches = list(matches)
         self.asks = 0
+        self.gets: list[UUID] = []
 
     async def for_player(self, player_id: UUID) -> list[Match]:
         self.asks += 1
         return self._matches
+
+    async def get(self, match_id: UUID) -> Match | None:
+        self.gets.append(match_id)
+        return next((match for match in self._matches if match.id == match_id), None)
 
 
 class Clubs:
@@ -132,13 +146,22 @@ class Clubs:
     def __init__(self, *clubs: Club) -> None:
         self._clubs = {club.id: club for club in clubs}
         self.batches: list[tuple[UUID, ...]] = []
+        self.gets: list[UUID] = []
 
     async def find_by_ids(self, club_ids: Sequence[UUID]) -> list[Club]:
         self.batches.append(tuple(club_ids))
         return [self._clubs[one] for one in club_ids if one in self._clubs]
 
-    async def get(self, club_id: UUID):  # pragma: no cover
-        raise AssertionError("the strip reads clubs in one batch, never one by one")
+    async def get(self, club_id: UUID):
+        """The **one-match** read, and the strip cases assert it never fires.
+
+        A batch of one to answer a question about one match would be the same
+        query wearing a loop, so `one()` asks for the club it needs — and every
+        case below that composes a *strip* asserts this list stayed empty.
+        """
+
+        self.gets.append(club_id)
+        return self._clubs.get(club_id)
 
     async def find_all(self):  # pragma: no cover
         raise AssertionError("the strip never walks every club on the platform")
@@ -252,6 +275,9 @@ async def test_the_clubs_are_read_in_one_batch_and_each_one_once() -> None:
     ).for_player(player_id=player, now=AT)
 
     assert clubs.batches == [(club.id,)]
+    # And never one at a time. The single read is `one()`'s, and it exists so
+    # that a question about one match does not pay a batch to answer.
+    assert clubs.gets == []
 
 
 async def test_no_nickname_is_read_for_a_strip_with_no_score_on_it() -> None:
@@ -406,3 +432,130 @@ async def test_a_match_at_a_club_this_read_cannot_see_is_dropped_not_broken() ->
     ).for_player(player_id=player, now=AT)
 
     assert rows == ()
+
+
+# --- one match, for an action off Now ---------------------------------------
+#
+# `one()` is the read behind the departure route and behind the one card an
+# action hands back (ADR-0074, ADR-0086). Its membership is **wider** than the
+# strip's by exactly one case, and its cost claim is the mirror of the strip's:
+# one club read rather than a batch, and nothing at all for a stranger.
+
+
+async def test_one_match_answers_a_row_for_a_seat_she_holds() -> None:
+    club = a_club()
+    alice = uuid4()
+    match = a_match(club, players=[alice])
+    matches, clubs = Matches(match), Clubs(club)
+
+    row = await an_adapter(matches=matches, clubs=clubs).one(
+        player_id=alice, match_id=match.id, now=AT
+    )
+
+    assert row is not None
+    assert row.match_id == match.id
+    assert row.holds_seat is True
+    # One match, one club: the batch read is the strip's and never fires here.
+    assert clubs.gets == [club.id]
+    assert clubs.batches == []
+
+
+async def test_one_match_answers_a_row_for_a_leaver() -> None:
+    """*"A 404 tells a leaver their match never existed"* (ADR-0074).
+
+    She holds no seat, so the membership question is answered by her departure
+    — the second of the two sources `for_player` already reads.
+    """
+
+    club = a_club()
+    alice = uuid4()
+    match = a_match(club, players=[alice])
+    match.depart(alice, quote=Outcome.REVERSED, at=AT)
+
+    row = await an_adapter(matches=Matches(match), clubs=Clubs(club)).one(
+        player_id=alice, match_id=match.id, now=AT
+    )
+
+    assert row is not None
+    assert row.holds_seat is False
+    assert row.departure is not None
+
+
+async def test_one_match_answers_a_row_for_a_live_seat_claim() -> None:
+    """The case that makes this method's membership wider than the strip's.
+
+    A claim holds no seat yet (ADR-0081) and leaves no departure, so
+    `for_player` cannot see her — and her departure route must still open and
+    answer *no*.
+    """
+
+    club = a_club()
+    alice, bob = uuid4(), uuid4()
+    match = a_match(club, players=[bob])
+    match.open_claim(alice, at=AT)
+
+    row = await an_adapter(matches=Matches(match), clubs=Clubs(club)).one(
+        player_id=alice, match_id=match.id, now=AT
+    )
+
+    assert row is not None
+    assert row.holds_seat is False
+    assert row.departure is None
+    assert row.claim_expires_at is not None
+
+
+async def test_a_stranger_gets_nothing_and_pays_for_nothing() -> None:
+    """Authorisation, and the read stops the moment it is answered."""
+
+    club = a_club()
+    match = a_match(club, players=[uuid4()])
+    clubs, ledgers = Clubs(club), Ledgers()
+
+    row = await an_adapter(matches=Matches(match), clubs=clubs, ledgers=ledgers).one(
+        player_id=uuid4(), match_id=match.id, now=AT
+    )
+
+    assert row is None
+    assert clubs.gets == []
+    assert ledgers.loads == []
+
+
+async def test_a_match_that_does_not_exist_answers_nothing() -> None:
+    row = await an_adapter(matches=Matches(), clubs=Clubs()).one(
+        player_id=uuid4(), match_id=uuid4(), now=AT
+    )
+
+    assert row is None
+
+
+async def test_a_match_at_a_club_this_read_cannot_see_answers_nothing() -> None:
+    """The same silence the strip keeps, costing a 404 rather than a missing row.
+
+    A card that would have to name a venue it does not know is worse than no
+    card, and on a one-match route *no card* is *no route*.
+    """
+
+    club = a_club()
+    alice = uuid4()
+    match = a_match(club, players=[alice])
+
+    row = await an_adapter(matches=Matches(match), clubs=Clubs()).one(
+        player_id=alice, match_id=match.id, now=AT
+    )
+
+    assert row is None
+
+
+async def test_no_nickname_is_read_for_a_match_with_no_score_on_it() -> None:
+    """A card names a person on exactly two situations, and this is neither."""
+
+    club = a_club()
+    alice = uuid4()
+    match = a_match(club, players=[alice])
+    users = Users()
+
+    await an_adapter(matches=Matches(match), clubs=Clubs(club), users=users).one(
+        player_id=alice, match_id=match.id, now=AT
+    )
+
+    assert users.batches == []

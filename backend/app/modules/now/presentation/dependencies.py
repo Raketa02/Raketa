@@ -27,35 +27,47 @@ from app.api.dependencies import (
     DbSession,
     DomainEventStoreDep,
     EventPublisherDep,
+    UnitOfWorkDep,
     UserRepositoryDep,
 )
+from app.application.ports import CommandLog
 from app.bootstrap.composition import (
     build_arrivals,
     build_assessment_repository,
     build_city_matches,
     build_club_repository,
+    build_command_log,
     build_commitments,
     build_compose_enrolled,
     build_compose_new_arrivals,
     build_compose_shelves,
+    build_court_holds,
+    build_departures,
     build_enrolled_matches,
     build_ledger_repository,
     build_levels,
+    build_make_departure,
     build_match_repository,
     build_match_scorer,
     build_parked_runs,
     build_rated_sports,
     build_ratings,
+    build_read_departure,
     build_reservation_repository,
     build_skill_rating_repository,
     build_standby_places,
 )
+from app.modules.courts.application.claim_court import ClaimCourt
+from app.modules.matches.application.resolve_court_hold import ResolveCourtHold
 from app.modules.now.application.compose_enrolled import ComposeEnrolled
 from app.modules.now.application.compose_now import ComposeNow
 from app.modules.now.application.compose_shelves import ComposeShelves
+from app.modules.now.application.departure import MakeDeparture, ReadDeparture
 from app.modules.now.application.new_arrivals import ComposeNewArrivals
 from app.modules.now.domain.ports import (
     ArrivalSets,
+    Departures,
+    EnrolledMatches,
     Levels,
     ParkedRuns,
     RatedSports,
@@ -157,32 +169,97 @@ def get_new_arrivals(
 NewArrivalsDep = Annotated[ComposeNewArrivals, Depends(get_new_arrivals)]
 
 
-def get_compose_enrolled(
+def get_enrolled_matches(
     db: DbSession,
     users: UserRepositoryDep,
     event_store: DomainEventStoreDep,
     events: EventPublisherDep,
     clock: ClockDep,
-) -> ComposeEnrolled:
+) -> EnrolledMatches:
     """The enrolled strip's five reads, all of them per request.
 
     The match repository is built with the publisher and the clock every other
-    caller gets, and it is a **read** here — Now writes nothing, so nothing this
-    request does can reach the outbox through it.
+    caller gets. It is a **read** on the composed screen — nothing a `GET /now`
+    does can reach the outbox through it — and the same port answers the one
+    match an action off Now is about, so the strip and the departure route can
+    never describe a match differently.
     """
 
-    return build_compose_enrolled(
-        enrolled=build_enrolled_matches(
-            matches=build_match_repository(db, events=events, clock=clock),
-            clubs=build_club_repository(db),
-            reservations=build_reservation_repository(db),
-            users=users,
-            ledgers=build_ledger_repository(event_store=event_store, events=events),
-        )
+    return build_enrolled_matches(
+        matches=build_match_repository(db, events=events, clock=clock),
+        clubs=build_club_repository(db),
+        reservations=build_reservation_repository(db),
+        users=users,
+        ledgers=build_ledger_repository(event_store=event_store, events=events),
     )
 
 
+EnrolledMatchesDep = Annotated[EnrolledMatches, Depends(get_enrolled_matches)]
+
+
+def get_compose_enrolled(enrolled: EnrolledMatchesDep) -> ComposeEnrolled:
+    return build_compose_enrolled(enrolled=enrolled)
+
+
 EnrolledDep = Annotated[ComposeEnrolled, Depends(get_compose_enrolled)]
+
+
+def get_departures(
+    db: DbSession, events: EventPublisherDep, uow: UnitOfWorkDep, clock: ClockDep
+) -> Departures:
+    """The one write behind an action off Now, and the hold ladder beside it.
+
+    The ladder is wired exactly as the timekeeper's is — the same
+    `ResolveCourtHold` over the same repository — because *a wake is a look* and
+    a tap is a look too: one wiring of the ladder, or a rule true on one path
+    and false on the other. A departure leaves a hold tier, so this is the ask
+    that gives a court back.
+    """
+
+    matches = build_match_repository(db, events=events, clock=clock)
+    reservations = build_reservation_repository(db)
+    holds = build_court_holds(
+        ClaimCourt(build_club_repository(db), reservations, uow), reservations
+    )
+    return build_departures(
+        matches=matches, holds=ResolveCourtHold(matches, holds, uow, clock)
+    )
+
+
+DeparturesDep = Annotated[Departures, Depends(get_departures)]
+
+
+def get_command_log(db: DbSession) -> CommandLog:
+    return build_command_log(db)
+
+
+CommandLogDep = Annotated[CommandLog, Depends(get_command_log)]
+
+
+def get_read_departure(enrolled: EnrolledMatchesDep, clock: ClockDep) -> ReadDeparture:
+    return build_read_departure(enrolled=enrolled, clock=clock)
+
+
+ReadDepartureDep = Annotated[ReadDeparture, Depends(get_read_departure)]
+
+
+def get_make_departure(
+    enrolled: EnrolledMatchesDep,
+    departures: DeparturesDep,
+    log: CommandLogDep,
+    uow: UnitOfWorkDep,
+    clock: ClockDep,
+) -> MakeDeparture:
+    return build_make_departure(
+        enrolled=enrolled,
+        departures=departures,
+        log=log,
+        uow=uow,
+        clock=clock,
+    )
+
+
+MakeDepartureDep = Annotated[MakeDeparture, Depends(get_make_departure)]
 
 
 def get_ratings(ratings: SkillRatingsDep) -> Ratings:

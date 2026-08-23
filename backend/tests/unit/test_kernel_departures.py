@@ -26,6 +26,7 @@ import pytest
 
 from app.kernel import (
     OUTCOME_COUNT,
+    HoldPolicy,
     MatchKind,
     NothingTaken,
     Outcome,
@@ -33,9 +34,12 @@ from app.kernel import (
     Recoverable,
     deadlines,
     grosze,
+    hours,
     live_outcome,
+    may_depart,
     outcome_rank,
     outcome_worse_than,
+    private_lock,
     refill_outcome,
 )
 
@@ -83,9 +87,7 @@ def test_forfeit_ranks_equal_to_a_reversal_and_not_below_it():
 
 
 def test_a_full_refund_beats_half_and_half_beats_nothing():
-    assert outcome_rank(Outcome.REFUNDED_IN_FULL) > outcome_rank(
-        Outcome.REFUNDED_HALF
-    )
+    assert outcome_rank(Outcome.REFUNDED_IN_FULL) > outcome_rank(Outcome.REFUNDED_HALF)
     assert outcome_rank(Outcome.REFUNDED_HALF) > outcome_rank(Outcome.FORFEITED)
 
 
@@ -108,10 +110,7 @@ def test_the_count_is_a_literal_and_not_a_derivation():
     """
 
     source = (
-        Path(__file__).resolve().parents[2]
-        / "app"
-        / "kernel"
-        / "departures.py"
+        Path(__file__).resolve().parents[2] / "app" / "kernel" / "departures.py"
     ).read_text(encoding="utf-8")
 
     assert f"OUTCOME_COUNT = {OUTCOME_COUNT}" in source
@@ -208,10 +207,7 @@ def test_a_private_court_never_reverses_and_never_halves():
     booking; no rescue tier, because nothing here is at risk."""
 
     record = a_private_court(committed_at=None)
-    reachable = {
-        live_outcome(record, at(offset))
-        for offset in range(-20160, 240, 37)
-    }
+    reachable = {live_outcome(record, at(offset)) for offset in range(-20160, 240, 37)}
 
     assert reachable == {Outcome.REFUNDED_IN_FULL, Outcome.FORFEITED}
 
@@ -322,3 +318,125 @@ def _before(moment):
     from app.kernel import minutes, shifted
 
     return shifted(moment, minutes(-A_MINUTE))
+
+
+# --- may this person leave, and the lock that says no -----------------------
+#
+# ADR-0086 states `mayDepart` as a **server boolean** and the phone derives none
+# of it. It is in the kernel rather than in Now because `Match.depart` refuses
+# on the same facts, and a control offering a door the aggregate will not open
+# is the one thing ADR-0083 says is worse than the gap. Every case below is
+# therefore also an assertion about the *write*.
+
+
+def test_a_seated_player_may_leave_a_match_that_has_not_started():
+    assert may_depart(committed(), at(-60), holds_seat=True, holds_claim=False)
+
+
+def test_somebody_who_holds_no_seat_may_not_leave():
+    """The already-left leaver and the stranger, answered by one condition.
+
+    Her route still **resolves** — a 404 would tell her the match never existed
+    — and answers no.
+    """
+
+    assert not may_depart(committed(), at(-60), holds_seat=False, holds_claim=False)
+
+
+def test_a_live_seat_claim_is_its_own_no_and_not_a_consequence_of_the_seat():
+    """ADR-0081 fixes that a claim holds no seat yet.
+
+    Stated rather than left to fall out of `holds_seat`, which happens to answer
+    it today only because no seated player may claim a second seat. Driven with
+    the seat held, so the claim is the only thing refusing.
+    """
+
+    assert not may_depart(committed(), at(-60), holds_seat=True, holds_claim=True)
+
+
+def test_nobody_leaves_a_match_that_has_started():
+    """You played or you did not, and that is `playedNoShow`."""
+
+    assert not may_depart(committed(), at(0), holds_seat=True, holds_claim=False)
+    assert may_depart(committed(), at(-A_MINUTE), holds_seat=True, holds_claim=False)
+
+
+def test_nobody_leaves_a_match_that_is_no_longer_happening():
+    """The fifth falsity, which ADR-0086 does not list and `depart` refuses.
+
+    A cancelled match is not one anybody is looking to leave, and the aggregate
+    raises there by name — so the control must not be drawn.
+    """
+
+    assert not may_depart(
+        committed(club_cancelled=True), at(-60), holds_seat=True, holds_claim=False
+    )
+
+
+def _converted(*, paid=4, **facts):
+    """A private court sold by the share: ADR-0046's *converted* court."""
+
+    facts.setdefault("kind", MatchKind.PRIVATE)
+    facts.setdefault("pay_model", PayModel.SPLIT)
+    return a_match(paid=paid, **facts)
+
+
+def test_the_lock_closes_at_the_clubs_own_deadline_and_not_before():
+    """*"Once a converted court is full and past the club's cancellation
+    deadline, nobody may leave."*
+
+    The default club's window is twenty-four hours, so the boundary is exactly
+    a day out — asserted a minute either side, because a boundary asserted as a
+    region is a boundary nobody has actually checked.
+    """
+
+    court = _converted()
+    assert not private_lock(court, at(-24 * 60 - A_MINUTE))
+    assert private_lock(court, at(-24 * 60))
+
+
+def test_the_lock_reads_the_clubs_window_and_never_the_commitment_deadline():
+    """`deadlines().commit` is the *earlier* of the window and a 12-hour backstop.
+
+    The backstop is a rule about an **open** match's commitment; a private court
+    was bought at booking and commits to nothing. The two diverge at a club whose
+    window is **shorter** than the backstop, and there reading the commitment
+    deadline would close the lock six hours early — refusing a departure the
+    club's own terms allow, which is the unsafe direction of the two.
+
+    Driven at a six-hour club, because at every club with a window of twelve
+    hours or more the two coincide exactly and a test there proves nothing.
+    """
+
+    court = _converted(policy=HoldPolicy(window=hours(6)))
+    when = deadlines(court)
+
+    assert not private_lock(court, at(-6 * 60 - A_MINUTE))
+    assert private_lock(court, at(-6 * 60))
+    # Six hours earlier, and still open — which is the whole of the claim.
+    assert when.commit == at(-12 * 60)
+    assert not private_lock(court, when.commit)
+
+
+def test_a_court_that_is_not_full_never_locks():
+    """A stranger has not yet bought a court that definitely exists."""
+
+    assert not private_lock(_converted(paid=3), at(-A_MINUTE))
+
+
+def test_a_solo_private_court_never_locks():
+    """It sells no seats, so there is no marketplace joiner to lock in."""
+
+    assert not private_lock(_converted(pay_model=PayModel.SOLO), at(-A_MINUTE))
+
+
+def test_an_open_match_never_locks_however_full_and_however_late():
+    assert not private_lock(committed(), at(-A_MINUTE))
+
+
+def test_the_lock_is_the_only_thing_refusing_a_full_converted_court():
+    """`may_depart` and `private_lock` answer the same question, once."""
+
+    court = _converted()
+    assert may_depart(court, at(-25 * 60), holds_seat=True, holds_claim=False)
+    assert not may_depart(court, at(-24 * 60), holds_seat=True, holds_claim=False)

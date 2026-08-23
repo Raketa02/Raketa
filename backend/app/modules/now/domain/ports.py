@@ -18,7 +18,7 @@ from typing import Mapping, Protocol, Sequence, runtime_checkable
 from uuid import UUID
 
 from app.engines.matchmaking import Occupant
-from app.kernel import Instant, Sport
+from app.kernel import Instant, Outcome, Sport
 
 from app.modules.now.domain.arrivals import ArrivalKey, NewClub, NewPlayer
 from app.modules.now.domain.enrolled import Enrolment
@@ -84,6 +84,25 @@ class EnrolledMatches(Protocol):
         self, *, player_id: UUID, now: Instant
     ) -> tuple[Enrolment, ...]:
         """Her matches, soonest first, including the ones she has left."""
+        ...
+
+    async def one(
+        self, *, player_id: UUID, match_id: UUID, now: Instant
+    ) -> Enrolment | None:
+        """This one match, if this viewer is anything to it at all.
+
+        The read behind an action off Now (ADR-0074, ADR-0086) and behind the one
+        card an action hands back. It is a second method rather than the caller
+        filtering ``for_player``, because filtering would read every match she
+        holds to answer a question about one — on a write path, per tap.
+
+        **Its membership is wider than the strip's by exactly one case.** A seat
+        or a departure is what ``for_player`` answers; this also resolves for a
+        viewer holding a **live seat claim**, who holds no seat yet (ADR-0081)
+        and whose route must therefore still open and say *no*. Anybody else is
+        a stranger and gets nothing — authorisation, which ADR-0074 makes the one
+        place a different shape is right.
+        """
         ...
 
 
@@ -324,4 +343,40 @@ class Ratings(Protocol):
 
     async def occupant(self, *, player_id: UUID, sport: Sport) -> Occupant | None:
         """Her rating at that sport, or nothing at all."""
+        ...
+
+
+@runtime_checkable
+class Departures(Protocol):
+    """The one write behind an action off Now, in Now's words.
+
+    Now owns no aggregate and this does not give it one: what is behind this
+    port is ``Match.depart``, which already refuses everything that has to be
+    refused — a started match, a terminal one, a seat she does not hold,
+    ADR-0046's lock, and a quote the live outcome has fallen below. A second
+    implementation of any of them here would be a second answer to a question
+    that already has one.
+
+    It is a port of **Now's own** with its adapter in ``now/infrastructure/``,
+    which is the shape ``money.Seats`` already takes over the same aggregate. The
+    alternative — the composer importing ``matches.application`` — would put
+    another context in Now's application layer and, worse, point the module graph
+    both ways at once: ``now`` reads ``matches`` everywhere in this tree.
+
+    **It does not commit**, and the ticket rests on that: the departure, its
+    vacancy, the hold ladder's answer, both outbox rows *and* the command-log
+    row close together or they do not close at all.
+    """
+
+    async def depart(
+        self, *, match_id: UUID, player_id: UUID, quote: Outcome, at: Instant
+    ) -> Outcome:
+        """Leave, and answer the outcome she was actually quoted at.
+
+        The answer is the aggregate's own recomputed outcome rather than the
+        label that crossed the wire: equal or better applies (ADR-0033), so a
+        forfeit quoted against a reversal goes through and what is recorded is
+        the forfeit. That is the value the command log remembers, because a
+        replay must return *what happened* and not *what was asked for*.
+        """
         ...

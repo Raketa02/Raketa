@@ -290,10 +290,39 @@ Rules to preserve:
   in the composition. A leaver is on the strip and **her departure is two payload forms**
   rather than one with a blank amount (ADR-0072). The **court's total** rides beside the
   spine's price because `{price} settled to the club` is the court's and has no audience.
-  The strip names **no act and offers no exit** while none of the six receiving surfaces
-  exists — ADR-0083's rule is *and a v1 surface can receive it*, and a door that will not
-  open is worse than the gap. One consequence to know rather than discover: `playedNoScore`
-  begins exactly where the tail ends, so **it never appears on Now**.
+  The strip names **no act** while five of the six receiving surfaces are unbuilt —
+  ADR-0083's rule is *and a v1 surface can receive it*, and a door that will not open is
+  worse than the gap — and it offers **one exit**, because the sixth landed. One consequence
+  to know rather than discover: `playedNoScore` begins exactly where the tail ends, so **it
+  never appears on Now**.
+- **A departure is a route off Now, and the card points at it without naming it.**
+  `GET`/`POST /api/v1/matches/{matchId}/departure`, which is ADR-0074's shape *"deliberately
+  and without variation"*
+  ([ADR-0086](../docs/adr/0086-a-departure-is-a-route-and-the-card-points-at-it-without-naming-it.md)).
+  It lives in **`now/`** although its path says `matches`: the answer is Now's vocabulary end
+  to end and `now` already reads `matches` everywhere here, so putting it the other way would
+  point the module graph both ways for the sake of a URL. It reaches the aggregate through
+  `Departures`, a port of Now's own, exactly as `money.Seats` does. It prints **all four
+  outcomes always** with a server-composed `OutcomeStanding` on each — two on a private court
+  — and **no `phase` field**, because the standings answer what a phase would. `stillPossible`
+  is not `opens` with the moment left out: **commitment is an event and never a clock**, so
+  on a match that has not filled the money outcomes are a *fill* away and nothing can name
+  the moment. The quote is `kernel.live_outcome` and the table is composed *from* it, never
+  read back out of it. **`may_depart` is `kernel.may_depart`**, composed once in `card_of`
+  so the strip's control and the route's boolean are one expression, and it is a **spine
+  boolean rather than a seventh act** — leaving is not the card's act. **A refusal is not a
+  second shape**: the quote falling, the match starting or cancelling, ADR-0046's lock, a
+  second tap by somebody who has already left — all five answer with the recomposed screen,
+  and only a stranger's 404 and somebody else's request key answer differently.
+- **A destructive command carries a key, and the log is cross-cutting.** ADR-0030's
+  `command_log`, keyed `(command, idempotency key)` — which is the table's primary key, so the
+  collision is the database's answer. **Twenty-four hours applied on the read**, so
+  correctness never waits on a sweep, and the **prune runs on the write** scoped to that
+  command's own rows, so the table is bounded without a scheduler nobody built. It **does not
+  commit**: the log row joins the transaction its command is written in, or the two can
+  disagree — the one state that makes a replay dangerous rather than merely useless. The log
+  records **what she got** and not what she asked for, because equal or better applies and a
+  replay must hand back the outcome she actually had.
 - **The ranked funnel is one pipeline and eligibility is exhaustive.** Shelves 1 and 2 run
   through retrieve → eligibility → score → floor → `FEED_ORDER` → diversity → cap
   ([ADR-0051](../docs/adr/0051-now-is-ordered-not-drawn.md), ADR-0036/0037), and the only

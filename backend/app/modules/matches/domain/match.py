@@ -86,6 +86,7 @@ from app.kernel import (
     live_outcome,
     match_end,
     outcome_worse_than,
+    private_lock,
     refill_outcome,
     result_window,
 )
@@ -100,6 +101,7 @@ from app.modules.matches.domain.departure import (
 from app.modules.matches.domain.errors import (
     ClaimCoolingDown,
     CourtAlreadyHeld,
+    DepartureLocked,
     DepartureOutcomeWorsened,
     JoiningClosed,
     MatchAlreadySettled,
@@ -854,10 +856,19 @@ class Match:
         match's phase, which is what the route printed, and her outcome is a
         fact about her money, which is nothing. The two agree about the only
         thing that matters.*
+
+        **ADR-0046's lock is refused here and not only on the route.** A
+        converted private court that is full and past the club's cancellation
+        deadline is one *"a stranger joining is buying a court that definitely
+        exists"*, and nobody leaves it. ``kernel.may_depart`` answers false in
+        the same place, so no control is ever drawn — but a boolean the write
+        does not enforce is a rule held only on the phone.
         """
 
         self._refuse_if_settled()
         self._refuse_if_started(at)
+        if private_lock(self.as_record(), at):
+            raise DepartureLocked()
         seat = self.seat_of(player_id)
         if seat is None:
             raise SeatNotTaken()

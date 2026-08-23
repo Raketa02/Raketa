@@ -42,9 +42,16 @@ from enum import Enum
 from typing import TypeAlias, final
 
 from app.kernel.invariants import invariant
-from app.kernel.matches import MatchKind, MatchRecord, deadlines
+from app.kernel.matches import (
+    MatchKind,
+    MatchRecord,
+    PayModel,
+    deadlines,
+    is_full,
+    is_terminal,
+)
 from app.kernel.money import Grosze
-from app.kernel.time import Instant
+from app.kernel.time import Instant, minutes, shifted
 
 
 class Outcome(str, Enum):
@@ -201,3 +208,73 @@ class Recoverable:
 #: and *nothing has come back yet* are opposite sentences and a blank cannot
 #: tell them apart.
 LeaverMoney: TypeAlias = NothingTaken | Recoverable
+
+
+def private_lock(record: MatchRecord, now: Instant) -> bool:
+    """ADR-0046's lock: nobody leaves a converted court that is bought and full.
+
+    *"Once a converted court is **full** and past the club's cancellation
+    deadline, nobody may leave and no refunds are issued — a stranger joining a
+    converted private court is buying a court that **definitely exists**, which
+    an open match cannot sell, and that is what makes the commitment fair."*
+
+    **The club's own deadline and not ``deadlines().commit``.** That one is the
+    *earlier* of the club's window and the platform's twelve-hour backstop, and
+    the backstop is a rule about an open match's commitment — a private court
+    was bought at booking and commits to nothing. Reading it here would engage
+    the lock twelve hours early at a twenty-four-hour club, which is the unsafe
+    direction: it refuses a departure the club's own terms allow.
+
+    **Converted is ``SPLIT``**, because that is the pay model under which seats
+    are sold to anybody at all; a ``SOLO`` court is one player's booking and has
+    no marketplace joiner to lock in.
+    """
+
+    if record.kind is not MatchKind.PRIVATE:
+        return False
+    if record.pay_model is not PayModel.SPLIT:
+        return False
+    if not is_full(record):
+        return False
+    return now >= shifted(record.start, minutes(-record.policy.window))
+
+
+def may_depart(
+    record: MatchRecord, now: Instant, *, holds_seat: bool, holds_claim: bool
+) -> bool:
+    """Whether this viewer may leave this match right now (ADR-0086).
+
+    **The server states it and the phone derives none of it.** The client is
+    forbidden from deriving *I hold a seat* (ADR-0053), so either this is sent or
+    the control cannot be drawn at all.
+
+    It is here rather than in Now because ``Match.depart`` refuses on the same
+    facts, and a control that offered a door the aggregate will not open is the
+    one thing ADR-0083 says is worse than the gap. Five falsities, and ADR-0086
+    names four of them:
+
+    - **She holds no seat**, which is the already-left leaver's case and the
+      stranger's alike. The leaver's route still *resolves* — a 404 would tell
+      her the match never existed — and answers *no*.
+    - **She holds a live seat claim**, because ADR-0081 fixes that a claim holds
+      no seat yet. Abandoning a payment is one of the three ways that record
+      ends and must not grow a second mechanism. Stated rather than left to fall
+      out of ``holds_seat``, which happens to answer it today only because no
+      seated player may claim a second seat.
+    - **The match has started.** There is no departure to make: she played or
+      she did not, and that is ``playedNoShow``.
+    - **The private-court lock** (``private_lock``).
+    - **The match is terminal**, which ADR-0086 does not list because a
+      cancelled match is not one anybody is looking to leave. ``depart`` refuses
+      it by name, so the control must not offer it.
+    """
+
+    if not holds_seat:
+        return False
+    if holds_claim:
+        return False
+    if is_terminal(record):
+        return False
+    if now >= record.start:
+        return False
+    return not private_lock(record, now)

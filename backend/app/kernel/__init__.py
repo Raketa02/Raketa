@@ -28,8 +28,10 @@ from app.kernel.departures import (
     Outcome,
     Recoverable,
     live_outcome,
+    may_depart,
     outcome_rank,
     outcome_worse_than,
+    private_lock,
     refill_outcome,
 )
 from app.kernel.holds import (
@@ -268,7 +270,9 @@ __all__ = [
     "Outcome",
     "Recoverable",
     "live_outcome",
+    "may_depart",
     "outcome_rank",
     "outcome_worse_than",
+    "private_lock",
     "refill_outcome",
 ]

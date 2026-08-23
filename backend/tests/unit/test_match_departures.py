@@ -34,8 +34,10 @@ import pytest
 
 from app.kernel import (
     HoldPolicy,
+    MatchKind,
     NothingTaken,
     Outcome,
+    PayModel,
     Recoverable,
     SeatShare,
     Situation,
@@ -52,6 +54,7 @@ from app.kernel import (
 )
 from app.modules.matches.domain.departure import Departure, oldest_unsettled
 from app.modules.matches.domain.errors import (
+    DepartureLocked,
     DepartureOutcomeWorsened,
     MatchAlreadyStarted,
     SeatNotTaken,
@@ -831,6 +834,83 @@ def test_a_claim_that_pays_past_the_join_cutoff_still_settles_in_full():
     match.take_seat(uuid4(), at=past_the_cutoff)
 
     assert owed.outcome is Outcome.REFUNDED_HALF
+
+
+# --- 7 · the one departure the model refuses --------------------------------
+
+
+def _converted(**overrides):
+    """A private court sold by the share, full: ADR-0046's *converted* court."""
+
+    match = a_committed_match(**overrides)
+    match.kind = MatchKind.PRIVATE
+    match.pay_model = PayModel.SPLIT
+    return match
+
+
+def test_nobody_leaves_a_converted_court_that_is_bought_and_full():
+    """ADR-0046's lock, refused **by the aggregate** and not only by the route.
+
+    `kernel.may_depart` answers false in the same place, so no control is ever
+    drawn — but a boolean the write does not enforce is a rule held only on the
+    phone, and this is the half that keeps it on the server. It survived a
+    mutation pass before this case existed: deleting the refusal left the whole
+    aggregate suite green.
+    """
+
+    match = _converted()
+    # The default club's cancellation window is twenty-four hours, and the
+    # match starts at 18:00 on the eighth.
+    past_the_deadline = at(7, 20)
+
+    with pytest.raises(DepartureLocked):
+        match.depart(match.players[0], quote=Outcome.REFUNDED_IN_FULL,
+                     at=past_the_deadline)
+
+    assert match.departures == []
+    assert match.vacancies == []
+
+
+def test_a_converted_court_is_free_to_leave_until_that_deadline():
+    """A minute either side, because a region asserted is not a boundary.
+
+    The match starts at 18:00 on the eighth and the default club's cancellation
+    window is twenty-four hours, so the lock closes at 18:00 on the seventh.
+    """
+
+    free = _converted()
+    departure = free.depart(
+        free.players[0], quote=Outcome.REFUNDED_IN_FULL, at=at(7, 17, 59)
+    )
+    assert departure.quoted is Outcome.REFUNDED_IN_FULL
+
+    locked = _converted()
+    with pytest.raises(DepartureLocked):
+        locked.depart(locked.players[0], quote=Outcome.REFUNDED_IN_FULL, at=at(7, 18))
+
+
+def test_a_converted_court_short_of_full_never_locks():
+    """A stranger has not yet bought a court that definitely exists."""
+
+    match = _converted()
+    match.depart(match.players[0], quote=Outcome.REFUNDED_IN_FULL, at=at(7, 17))
+
+    # One seat short now, and the deadline has passed — still free to leave.
+    second = match.depart(
+        match.players[1], quote=Outcome.REFUNDED_IN_FULL, at=at(7, 20)
+    )
+
+    assert second.quoted is Outcome.REFUNDED_IN_FULL
+
+
+def test_an_open_match_never_locks_however_full_and_however_late():
+    """The lock is a private-court rule, and an open match is not one."""
+
+    match = a_committed_match()
+
+    departure = leaves(match, match.players[0], when=at(8, 17))
+
+    assert departure.quoted is Outcome.FORFEITED
 
 
 def _a_minute_before(moment):

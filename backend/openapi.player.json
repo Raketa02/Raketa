@@ -650,6 +650,116 @@
           }
         }
       }
+    },
+    "/api/v1/matches/{match_id}/departure": {
+      "get": {
+        "tags": [
+          "matches"
+        ],
+        "summary": "What leaving this match is worth, and what it could still become",
+        "description": "All four outcomes, the one that is live, and whether she may act on it.\n\n**A leaver resolves rather than 404s**, which is ADR-0074's own hardest case\nkept: a 404 tells her the match never existed, and that is the class of\ndefect ADR-0030 was written against. The stranger is the only 404 here, and\nit is authorisation rather than a state of the match.",
+        "operationId": "read_departure_api_v1_matches__match_id__departure_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "match_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The match this departure is about.",
+              "title": "Match Id"
+            },
+            "description": "The match this departure is about."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DepartureScreenResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "matches"
+        ],
+        "summary": "Leave this match, and correct Now off the same tap",
+        "description": "Leave at the quoted outcome, and hand back both screens.\n\n**200 and not 201**: nothing is created at an address a client could then\nfetch \u2014 the departure is a fact about a match, read back through this same\nroute and through the card on Now.\n\n**A refusal is not a second shape.** A quote that has fallen, a match that\nhas started or been cancelled, ADR-0046's lock, a second tap by somebody who\nhas already left \u2014 every one of them comes back here as what a success\nreturns, so the client has one code path and the player *sees* the\ncorrection rather than being told it.",
+        "operationId": "make_departure_api_v1_matches__match_id__departure_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "match_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The match this departure is about.",
+              "title": "Match Id"
+            },
+            "description": "The match this departure is about."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DepartRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DepartureWriteResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -958,6 +1068,26 @@
         "title": "DebtLineResponse",
         "description": "What is owed, and the one consequence of owing it.\n\n``blocked`` means *this player may not create a match or book a court*. She\nmay still pay for a seat in somebody else's match: being cut off must not make\nher less likely to pay."
       },
+      "DepartRequest": {
+        "properties": {
+          "quote": {
+            "$ref": "#/components/schemas/Outcome"
+          },
+          "idempotency_key": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Idempotency Key"
+          }
+        },
+        "type": "object",
+        "required": [
+          "quote",
+          "idempotency_key"
+        ],
+        "title": "DepartRequest",
+        "description": "*Leave*, at the outcome she was looking at, under her own request key.\n\n``quote`` is a **label and never an amount** (ADR-0033). An amount moves for\nreasons that have nothing to do with leaving \u2014 a discount landing, a club\nprice change \u2014 and refusing on those is noise; the label is what she was\nshown as the basis for deciding.\n\n``idempotency_key`` is generated by the client and is **not** the version\nADR-0074 refused. A version would make the phone hold a rule about its own\nstaleness; a key encodes no rule and states no belief about freshness, and\nit answers the one case a version could not \u2014 a phone that loses the answer\nto a departure it already made."
+      },
       "DepartureNothingTakenResponse": {
         "properties": {
           "form": {
@@ -999,6 +1129,105 @@
         ],
         "title": "DepartureRecoverableResponse",
         "description": "A leaver who paid: what she paid, and what became of it.\n\n``outcome`` is absent while nothing has decided it \u2014 whether the money comes\nback depends entirely on her seat refilling, which is why her card keeps the\nmatch's own progress beside this."
+      },
+      "DepartureScreenResponse": {
+        "properties": {
+          "match_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Match Id"
+          },
+          "clock": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clock"
+          },
+          "where": {
+            "$ref": "#/components/schemas/PlaceResponse"
+          },
+          "price": {
+            "$ref": "#/components/schemas/MoneyResponse"
+          },
+          "situation": {
+            "$ref": "#/components/schemas/SituationHalfResponse"
+          },
+          "may_depart": {
+            "type": "boolean",
+            "title": "May Depart"
+          },
+          "quote": {
+            "$ref": "#/components/schemas/Outcome"
+          },
+          "outcomes": {
+            "items": {
+              "$ref": "#/components/schemas/OutcomeRowResponse"
+            },
+            "type": "array",
+            "title": "Outcomes"
+          },
+          "counts": {
+            "$ref": "#/components/schemas/SeatCountsResponse"
+          },
+          "commitment_deadline": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Commitment Deadline"
+          }
+        },
+        "type": "object",
+        "required": [
+          "match_id",
+          "where",
+          "price",
+          "situation",
+          "may_depart",
+          "quote",
+          "outcomes",
+          "counts"
+        ],
+        "title": "DepartureScreenResponse",
+        "description": "What leaving is worth right now, and what it could still become."
+      },
+      "DepartureWriteResponse": {
+        "properties": {
+          "screen": {
+            "$ref": "#/components/schemas/DepartureScreenResponse"
+          },
+          "update": {
+            "$ref": "#/components/schemas/NowUpdateResponse"
+          },
+          "applied": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Outcome"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "screen",
+          "update"
+        ],
+        "title": "DepartureWriteResponse",
+        "description": "A write's answer: its own screen, and Now's update, in one response.\n\nADR-0074's rule, and this is the second act to take it up. Recomposing on\nthe pop was refused there \u2014 every ask pays the full funnel, and paying it on\na return from a screen the server has just finished computing is a cost\nbought for tidiness.\n\n**The refusal path returns this too.** A quote that has fallen, a match that\nhas started, a second tap by somebody who has already left: all of them come\nback as what a success returns, which is what is true now."
       },
       "DoorCode": {
         "type": "string",
@@ -1625,6 +1854,19 @@
         "title": "NowResponse",
         "description": "The whole screen: three regions, and the one fact about the viewer.\n\nThere is **no screen-level stamp** and no ``server_time``. A screen is never\nreplaced as a unit except by a compose, and a compose is three stamped regions\narriving together."
       },
+      "NowUpdateResponse": {
+        "properties": {
+          "card": {
+            "$ref": "#/components/schemas/MatchCardResponse"
+          }
+        },
+        "type": "object",
+        "required": [
+          "card"
+        ],
+        "title": "NowUpdateResponse",
+        "description": "What Now needs to correct itself off the player's own tap (ADR-0070).\n\n**One card and nothing else, today.** A departure returns the card *changed,\nin place* \u2014 same match, same region, new rendering \u2014 so neither viewer-owned\nregion's contents or order moves and there is nothing for a region slot to\nhold. The first action that moves one is taking a seat, and shipping the\nslots ahead of it would be the *\"two fields with no reader\"* ADR-0071\nrefuses. The shelves are never in an update at all."
+      },
       "OffersRegionResponse": {
         "properties": {
           "stamp": {
@@ -1657,6 +1899,46 @@
         ],
         "title": "Outcome",
         "description": "A departure's result: what the leaver got back, or will.\n\nOrdered here by how good they are for the player, which is **not** the\nranking below \u2014 two of them tie, and an enumeration cannot express a tie."
+      },
+      "OutcomeRowResponse": {
+        "properties": {
+          "outcome": {
+            "$ref": "#/components/schemas/Outcome"
+          },
+          "standing": {
+            "$ref": "#/components/schemas/OutcomeStanding"
+          },
+          "opens_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Opens At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "outcome",
+          "standing"
+        ],
+        "title": "OutcomeRowResponse",
+        "description": "One of the four outcomes, and where it stands right now.\n\n``opens_at`` is present **exactly** on ``opens`` and on no other standing.\nThe phone subtracts it and derives nothing else (ADR-0053); a moment beside\n*spent* would be a moment nothing counts to, and a row that is *still\npossible* has none to give, which is precisely what distinguishes it."
+      },
+      "OutcomeStanding": {
+        "type": "string",
+        "enum": [
+          "searching",
+          "opens",
+          "stillPossible",
+          "spent"
+        ],
+        "title": "OutcomeStanding",
+        "description": "Where one of a departure's four outcomes stands, right now.\n\nADR-0086 prints **all four outcomes always** rather than the reachable ones\n\u2014 *\"a table that quietly drops forfeited once it is unreachable is also a\ntable that never showed it while it was\"* \u2014 so every row needs a word for\nits own standing, and the server composes it. The phone derives none of it\n(ADR-0053), and there is deliberately no ``phase`` field beside these: the\nfour markers already say which phase she is in, and a phase name would be a\nsecond vocabulary answering a question already answered.\n\nThe four are exhaustive over the outcomes of any match at any instant, and\neach is a fact about the **quote's own timeline** rather than a judgement:\n\n- ``SEARCHING`` \u2014 the live outcome. Leaving now is quoted this, and the\n  cascade goes looking for somebody at that price.\n- ``OPENS`` \u2014 it becomes the quote at a moment that is already fixed, and\n  the row carries the moment.\n- ``STILL_POSSIBLE`` \u2014 reachable, with **no moment to name**, because what\n  stands between her and it is an event rather than a clock: an open match\n  that has not committed reaches none of the three money outcomes until it\n  fills, and nothing can say when that will be.\n- ``SPENT`` \u2014 behind her. It cannot happen again whatever the match does."
       },
       "OwnerExposureResponse": {
         "properties": {

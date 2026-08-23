@@ -743,3 +743,32 @@ class NowScreen:
     shelves: ShelvesRegion
     sports: frozenset[Sport]
     debt: DebtLine | None = None
+
+
+@final
+@dataclass(frozen=True)
+class NowUpdate:
+    """What an action off Now hands back so the screen corrects itself.
+
+    ADR-0070's update shape: **the one card that changed**, plus any of the two
+    viewer-owned regions whose contents or order changed, whole. The shelves are
+    never in it — dropping a joined match out of *Best fit* would be re-ordering
+    a shelf under the player's thumb, and that waits for the next compose.
+
+    **Today it is one card and nothing else, and that is the honest shape rather
+    than a partial one.** A departure returns the card *changed, in place* —
+    same match, same region, new rendering (ADR-0086) — so neither region's
+    contents or order moves and there is nothing for a region slot to hold. The
+    first action that moves one is taking a seat (``Raketa02/Raketa#89``), where
+    the offer leaves the offers region and the match arrives in the strip;
+    shipping the two slots ahead of it would be the *"two fields with no
+    reader"* ADR-0071 refuses, on the busiest write in the product.
+
+    **Nor can it yet say *this card is gone*.** ADR-0070 requires the one-card
+    answer to be able to, and its first producer is the offers region
+    (``Raketa02/Raketa#83``) — a card whose offer somebody else took. Nothing in
+    a departure removes a card: ADR-0030 keeps the leaver's until her outcome
+    settles, so a *gone* form here would ship with no way to produce one.
+    """
+
+    card: MatchCard

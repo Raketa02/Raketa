@@ -434,6 +434,7 @@ The main ports are defined as Python protocols:
 | `DomainEventStore` | Append/load aggregate streams | `SqlAlchemyEventStore` |
 | `DomainEventPublisher` | Queue released domain events | `EventPublisher` |
 | `PendingOutbox` | Fetch and mark outbox delivery rows | `SqlAlchemyOutboxRepository` |
+| `CommandLog` | What a destructive command already did, for 24 h | `SqlAlchemyCommandLog` |
 
 This keeps use cases testable without depending directly on infrastructure.
 
@@ -464,6 +465,8 @@ callable, and nothing about a green suite would look different afterwards.
 | `POST` | `/api/v1/auth/logout` | Refresh token body | Revoke refresh token, idempotently. |
 | `GET` | `/api/v1/users/me` | Bearer access token | Return the current authenticated user. |
 | `GET` | `/api/v1/now` | Bearer access token | The whole Now screen, composed for this viewer. |
+| `GET` | `/api/v1/matches/{matchId}/departure` | Bearer access token | What leaving this match is worth, and what it could still become. |
+| `POST` | `/api/v1/matches/{matchId}/departure` | Bearer access token | Leave at the quoted outcome; returns this screen and Now's update. |
 
 Example login request:
 
@@ -767,6 +770,65 @@ gate.
 
 Every number in ADR-0069's table is modelled and none has ever been measured. This is the
 first measurement, and it is allowed to find the shape wrong rather than the numbers.
+
+### `GET` / `POST /api/v1/matches/{matchId}/departure`
+
+The first action taken **off** Now, and ADR-0074's shape without variation
+([ADR-0086](../docs/adr/0086-a-departure-is-a-route-and-the-card-points-at-it-without-naming-it.md)).
+It states what leaving is worth right now, and the route *is* the confirmation: one button
+carrying the quote, no third step, and she is not asked twice — a dialog over a screen whose
+whole job is to state the consequence asks the same question twice.
+
+**All four outcomes print, always**, each with a server-composed standing:
+
+| Standing | What it says |
+|---|---|
+| `searching` | the live quote — leaving now is worth this, and the cascade looks at that price |
+| `opens` | it becomes the quote at a moment already fixed, carried as `opens_at` |
+| `stillPossible` | reachable, with **no moment to name** |
+| `spent` | behind her, and it cannot happen again whatever the match does |
+
+Not only the reachable ones: *"a table that quietly drops forfeited once it is unreachable is
+also a table that never showed it while it was."* A private court prints **two** rows, because
+only *refunded in full* and *forfeited* are reachable there — the glossary being read rather
+than a second rule — and names **no commitment deadline**, because the court was bought at
+booking.
+
+`stillPossible` is not `opens` with the moment left out. **Commitment is an event and never a
+clock**: a match past its own deadline and still short has bought nothing, so on a match that
+has not filled the three money outcomes are a *fill* away, and naming a moment there would
+promise a turn that may never come.
+
+Beside the table ride the quote's reasons — the commitment deadline as a moment, the seat's
+amount on the spine, and how full the match is. There is **no `phase` field**: the standings
+already say which phase she is in.
+
+`may_depart` is a **server boolean** and the phone derives none of it. It is
+`kernel.may_depart`, which is what `Match.depart` refuses on, so the control is drawn exactly
+where the write would succeed — false for a viewer holding no seat, for one holding a live
+seat claim, after the start, under ADR-0046's private-court lock, and on a cancelled match. It
+is composed once, in `now.card_of`, so the card on Now and the route's boolean are one
+expression, and it is a **spine boolean rather than a seventh act code**: leaving is not the
+card's act.
+
+A **leaver's route resolves** rather than 404ing — a 404 tells her the match never existed —
+and a stranger's is the only 404, which is authorisation rather than a state of the match.
+
+**A refusal is not a second shape.** The quote falling below what she was shown, the match
+starting or cancelling, the lock closing, a second tap by somebody who has already left: every
+one answers with the screen, recomposed at that instant, so she *sees* the correction rather
+than being told it. The `POST` carries a **client-generated idempotency key** — ADR-0030's
+command log, not the version ADR-0074 refused — and a replay returns the outcome she actually
+got and writes nothing further. The response says **what the tap did**: `applied` is the
+outcome the departure was made at, and `null` exactly when nothing was applied, so *was I
+refused* is a fact the client is told rather than a rule it derives from `may_depart`. The write returns its own screen's answer **and** Now's
+update, which today is the one card that changed: nothing is removed and no region moves,
+because ADR-0030 keeps the leaver's card until her outcome settles.
+
+The route lives in `app/modules/now/` although its path says `matches`. The answer is Now's
+vocabulary end to end and `now` already reads `matches` everywhere in this tree; the write
+reaches the aggregate through `Departures`, a port of Now's own, exactly as `money.Seats`
+does over the same aggregate. A general `GET /api/v1/matches/{id}` still does not exist.
 
 ### What the Now contract will not carry
 
@@ -1232,6 +1294,11 @@ recorder standing in for `alembic.op` and compares the compiled PostgreSQL DDL, 
 for string. An index present in one and absent from the other would be a guarantee that
 holds in every test and nowhere else — worse than not having it, because the suite reads
 as though it were enforced. It needs no database, so it runs on every `make check`.
+
+`tests/unit/test_command_log.py` does the same for `command_log`, on the same argument and
+with the same recorder shape. It found a real disagreement the first time it ran: the
+migration named the primary-key constraint and the model did not, so the two DDLs differed
+by the one constraint ADR-0030 actually asks for.
 
 Run linting:
 

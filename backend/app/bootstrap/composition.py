@@ -34,7 +34,12 @@ from __future__ import annotations
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.application.ports import DomainEventPublisher, DomainEventStore, UnitOfWork
+from app.application.ports import (
+    CommandLog,
+    DomainEventPublisher,
+    DomainEventStore,
+    UnitOfWork,
+)
 from app.bootstrap.events import EventRuntime, get_event_runtime
 from app.core.config import Settings
 from app.engines.assessment import AssessmentEngine
@@ -42,6 +47,7 @@ from app.engines.matchfit.v1 import MatchFitEngineV1
 from app.engines.pairing.v1 import PairingEngineV1
 from app.engines.racketskill.v3 import RacketSkillEngineV3
 from app.infrastructure.clock import SystemClock
+from app.infrastructure.database.sqlalchemy_command_log import SqlAlchemyCommandLog
 from app.infrastructure.database.unit_of_work import AsyncSqlAlchemyUnitOfWork
 from app.kernel import Clock
 from app.modules.auth.domain.ports import (
@@ -80,6 +86,7 @@ from app.modules.money.infrastructure.event_sourced_ledger_repository import (
 )
 from app.modules.money.infrastructure.seats_through_matches import SeatsThroughMatches
 from app.modules.now.application.compose_enrolled import ComposeEnrolled
+from app.modules.now.application.departure import MakeDeparture, ReadDeparture
 from app.modules.now.application.compose_shelves import ComposeShelves
 from app.modules.now.application.new_arrivals import ComposeNewArrivals
 from app.modules.now.application.scoring import MatchScorer
@@ -88,6 +95,7 @@ from app.modules.now.domain.ports import (
     ArrivalSets,
     CityMatches,
     Commitments,
+    Departures,
     EnrolledMatches,
     Levels,
     NewArrivals,
@@ -100,6 +108,9 @@ from app.modules.now.domain.ports import (
 from app.modules.now.infrastructure.arrival_sets import InMemoryArrivalSets
 from app.modules.now.infrastructure.city_matches import CityMatchesFromMatches
 from app.modules.now.infrastructure.commitments import CommitmentsFromMatches
+from app.modules.now.infrastructure.departures_through_matches import (
+    DeparturesThroughMatches,
+)
 from app.modules.now.infrastructure.enrolled_matches import EnrolledFromMatches
 from app.modules.now.infrastructure.levels import LevelsFromSkillRatings
 from app.modules.now.infrastructure.new_arrivals import ArrivalsFromUsersAndClubs
@@ -476,6 +487,57 @@ def build_enrolled_matches(
 def build_compose_enrolled(*, enrolled: EnrolledMatches) -> ComposeEnrolled:
     """The enrolled region — chronological, counted in money, one clock a card."""
     return ComposeEnrolled(enrolled=enrolled)
+
+
+def build_departures(
+    *, matches: MatchRepository, holds: ResolveCourtHold
+) -> Departures:
+    """The one write behind an action off Now (ADR-0086).
+
+    Two ports rather than a session, like every builder around it. What is
+    behind it is `Match.depart` and the hold ladder that runs before the save —
+    a departure *leaves* a hold tier, so the court a match no longer earns goes
+    back in the same transaction the seat is emptied in.
+
+    **It does not commit.** The departure, its vacancy, both outbox rows and
+    ADR-0030's command-log row close together, and that is the use case's
+    transaction to close.
+    """
+    return DeparturesThroughMatches(matches=matches, holds=holds)
+
+
+def build_command_log(session: AsyncSession) -> CommandLog:
+    """ADR-0030's log: what a destructive command already did, for 24 hours.
+
+    A session rather than ports, because it *is* one table and there is no
+    context whose vocabulary it borrows. The twenty-four hours are applied on
+    the read, and the prune runs on the write — so the table is bounded without
+    a scheduler and correctness never waits on one.
+    """
+    return SqlAlchemyCommandLog(session)
+
+
+def build_read_departure(*, enrolled: EnrolledMatches, clock: Clock) -> ReadDeparture:
+    """What leaving is worth right now, and what it could still become."""
+    return ReadDeparture(enrolled=enrolled, clock=clock)
+
+
+def build_make_departure(
+    *,
+    enrolled: EnrolledMatches,
+    departures: Departures,
+    log: CommandLog,
+    uow: UnitOfWork,
+    clock: Clock,
+) -> MakeDeparture:
+    """Leave, and hand back this screen's answer **and** Now's update."""
+    return MakeDeparture(
+        enrolled=enrolled,
+        departures=departures,
+        log=log,
+        uow=uow,
+        clock=clock,
+    )
 
 
 def build_ratings(ratings: SkillRatingRepository) -> Ratings:

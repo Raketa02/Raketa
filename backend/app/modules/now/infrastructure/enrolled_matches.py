@@ -96,27 +96,85 @@ class EnrolledFromMatches:
                 # way `ArrivalRows` is *"silently short on a stranger"* — a
                 # broken card is worse than a missing one.
                 continue
-            seat = match.seat_of(player_id)
-            departure = match.departure_of(player_id)
             rows.append(
-                Enrolment(
-                    match_id=match.id,
-                    record=match.as_record(),
-                    where=_place(club, match),
-                    share=Money(amount=grosze(int(match.share))),
-                    court_total=Money(amount=_court_total(match)),
-                    closed_at=match.closed_at,
-                    holds_seat=seat is not None,
-                    claim_expires_at=_claim(match, player_id, now),
-                    court=await self._court(club, match),
-                    score=_score(match, nicknames, player_id),
-                    departure=None if departure is None else _departure(departure),
-                    paid_in=_paid_in(
-                        ledger, match, seat_index=_seat_index(seat, departure)
-                    ),
+                await self._row(
+                    match,
+                    club=club,
+                    nicknames=nicknames,
+                    ledger=ledger,
+                    player_id=player_id,
+                    now=now,
                 )
             )
         return tuple(rows)
+
+    async def one(
+        self, *, player_id: UUID, match_id: UUID, now: Instant
+    ) -> Enrolment | None:
+        """One match, for a viewer who is something to it. Four reads, not five.
+
+        **Its membership is wider than ``for_player``'s by exactly one case.**
+        That query answers *a seat that names her, or a departure that does*;
+        this also resolves for a viewer holding a **live seat claim**, who holds
+        no seat yet (ADR-0081) and whose departure route must still open and
+        answer *no*. Anybody else is a stranger and gets nothing.
+
+        A match at a club this read cannot see is ``None`` rather than a card
+        naming a venue it does not know — the same silence ``for_player`` keeps,
+        and here it costs a 404 rather than a missing row.
+        """
+
+        match = await self._matches.get(match_id)
+        if match is None:
+            return None
+        seat = match.seat_of(player_id)
+        departure = match.departure_of(player_id)
+        claim = _claim(match, player_id, now)
+        if seat is None and departure is None and claim is None:
+            return None
+
+        club = await self._clubs.get(match.club_id)
+        if club is None:
+            return None
+        return await self._row(
+            match,
+            club=club,
+            # A score names people, and nothing else on a card does — so this
+            # read is paid on exactly the two situations that print one.
+            nicknames=await self._nicknames([match]),
+            ledger=await self._ledgers.load(player_id),
+            player_id=player_id,
+            now=now,
+        )
+
+    async def _row(
+        self,
+        match: Match,
+        *,
+        club: Club,
+        nicknames: dict[UUID, str],
+        ledger: Ledger,
+        player_id: UUID,
+        now: Instant,
+    ) -> Enrolment:
+        """One match as Now's own row. The one place an ``Enrolment`` is built."""
+
+        seat = match.seat_of(player_id)
+        departure = match.departure_of(player_id)
+        return Enrolment(
+            match_id=match.id,
+            record=match.as_record(),
+            where=_place(club, match),
+            share=Money(amount=grosze(int(match.share))),
+            court_total=Money(amount=_court_total(match)),
+            closed_at=match.closed_at,
+            holds_seat=seat is not None,
+            claim_expires_at=_claim(match, player_id, now),
+            court=await self._court(club, match),
+            score=_score(match, nicknames, player_id),
+            departure=None if departure is None else _departure(departure),
+            paid_in=_paid_in(ledger, match, seat_index=_seat_index(seat, departure)),
+        )
 
     async def _nicknames(self, matches: list[Match]) -> dict[UUID, str]:
         """Every player named on a scoreline, in one read.

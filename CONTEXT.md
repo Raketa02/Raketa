@@ -845,6 +845,32 @@ Committed by [ADR-0030](docs/adr/0030-a-departure-is-an-audience-not-a-state.md)
   the full-price search runs, *refunded half* once Rescue has opened. The other outcomes are shown
   beside it as possibilities and are not quoted, because the ordering above is defined over single
   labels ([ADR-0086](docs/adr/0086-a-departure-is-a-route-and-the-card-points-at-it-without-naming-it.md)).
+- **Outcome standing** — where each of a departure's four outcomes stands for one player at one
+  instant: **searching** (the outcome leaving now is quoted at, and the price the cascade goes
+  looking at), **opens** (it becomes the quote at a moment already fixed, and the row carries the
+  moment), **still possible** (reachable, with no moment to name), **spent** (behind her, and it
+  cannot happen again whatever the match does). The departure screen prints **all four always** —
+  *"a table that quietly drops forfeited once it is unreachable is also a table that never showed
+  it while it was"* — and two on a private court, where only two are reachable. Composed by the
+  server; the phone derives none of it, and there is deliberately **no phase name** beside them,
+  because the standings already answer the question a phase would
+  ([ADR-0086](docs/adr/0086-a-departure-is-a-route-and-the-card-points-at-it-without-naming-it.md)).
+- **Still possible, against opens** — the distinction the standings turn on. Commitment is an
+  **event and never a clock**: a match past its own deadline and still short has bought nothing, so
+  on a match that has not filled the three money outcomes are a *fill* away rather than a moment
+  away, and naming a moment there would promise a turn that may never come.
+- **The private-court lock** — once a **converted** court is **full** and past the club's
+  cancellation deadline, nobody may leave and no refunds are issued: a stranger joining is buying a
+  court that definitely exists, which an open match cannot sell, and that is what makes the
+  commitment fair ([ADR-0046](docs/adr/0046-one-reconciliation-two-hours-after-the-reservation-ends.md)).
+  It is the club's **own** window and not the platform's commitment backstop, which is a rule about
+  an open match and would close the lock early.
+- **Now's update** — what an action off Now hands back so the screen corrects itself off the
+  player's own tap: **the one card that changed**, plus any of the two viewer-owned regions whose
+  contents or order changed, whole. The shelves are never in it. A departure returns the card
+  *changed, in place* — same match, same region, new rendering — which is the product's **first
+  mid-session audience change**, and the reason no client may cache a card keyed on the audience
+  that composed it.
 - **Guarantee** — a private-court owner's exposure on a split-payment reservation: **the whole
   court price**, constant from booking until the reservation is reconciled. It is not a
   remainder and it does not shrink as seats fund

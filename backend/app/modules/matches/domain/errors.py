@@ -264,6 +264,29 @@ class DepartureOutcomeWorsened(ConflictError):
         )
 
 
+class DepartureLocked(ConflictError):
+    """A converted private court that is bought and full: nobody leaves.
+
+    ADR-0046's lock, stated on the aggregate rather than only on the route.
+    *"Once a converted court is full and past the club's cancellation deadline,
+    nobody may leave and no refunds are issued — a stranger joining a converted
+    private court is buying a court that definitely exists, which an open match
+    cannot sell, and that is what makes the commitment fair."*
+
+    ``kernel.may_depart`` is false in the same place, so the control is never
+    drawn. This is the half that keeps the rule on the server: a boolean the
+    write does not enforce is a rule held only on the phone, which is the one
+    thing ADR-0053 refuses.
+    """
+
+    code = "match_departure_locked"
+
+    def __init__(self) -> None:
+        super().__init__(
+            "This court is bought and full, so nobody can leave it now."
+        )
+
+
 class CourtAlreadyHeld(ConflictError):
     """A court is already being held for this match."""
 

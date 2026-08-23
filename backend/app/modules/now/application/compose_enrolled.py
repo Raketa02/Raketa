@@ -17,13 +17,19 @@ Everything else a card carries is present exactly when the fact exists — a hol
 a court's name, a refund, an owner's exposure, a score, a departure — so no
 situation is named anywhere below.
 
-**No act and no exit control, and both are refusals rather than omissions.**
-ADR-0083's rule is *a card names an act when the viewer can take it now **and a
-v1 surface can receive it***, and today none of the six surfaces exists: the seat
-claim and its payment are ``Raketa02/Raketa#89``, the result route ``#79``, the
-departure route ``#80``, leaving standby ``#81``. ADR-0086 puts ``may_depart``
-behind that same route. A card naming an act that opens nothing is a door offered
+**No act, and one exit control.** ADR-0083's rule is *a card names an act when
+the viewer can take it now **and a v1 surface can receive it***, and of the six
+surfaces exactly one now exists: the departure route (``Raketa02/Raketa#80``),
+so ``may_depart`` is composed for real. The seat claim and its payment are
+``#89``, the result route ``#79``, leaving standby ``#81``, and until each lands
+its act stays absent — a card naming an act that opens nothing is a door offered
 that will not open, which is the one thing that ADR says is worse than the gap.
+
+**The exit is a spine boolean and not a seventh act** (ADR-0086). Leaving is not
+the card's act: putting it in ``cta`` would reopen an enumeration ADR-0083
+deliberately closed and give one card two act codes. It is the kernel's
+``may_depart``, which is the function ``Match.depart`` refuses on, so the control
+is drawn exactly where the write would succeed and nowhere else.
 
 **No fit badge and no emphasis either.** Both are judgements about a *suggestion*
 — ADR-0037's badge is about a seat she could take and ADR-0051's emphatic card
@@ -50,6 +56,7 @@ from app.kernel import (
     hours,
     is_terminal,
     match_end,
+    may_depart,
     seat_count,
     shifted,
     situation,
@@ -116,34 +123,54 @@ class ComposeEnrolled:
         return EnrolledRegion(
             stamp=stamp,
             cards=tuple(
-                self._card(row, now=now, stamp=stamp)
+                card_of(row, now=now, stamp=stamp)
                 for row in rows
                 if sport is None or row.record.sport is sport
                 if _still_on_screen(row, now)
             ),
         )
 
-    def _card(self, row: Enrolment, *, now: Instant, stamp: Stamp) -> MatchCard:
-        record = row.record
-        claim = row.claim_expires_at
-        return MatchCard(
-            match_id=row.match_id,
-            stamp=stamp,
-            where=row.where,
-            # Written for whoever is looking: her own share inside the match,
-            # what she *would* pay browsing. One number and never both with a
-            # flag, which would ship a figure that does not apply on every card
-            # forever and invite the bug where the wrong one prints.
-            price=row.share,
-            situation=SituationHalf(
-                situation=situation(record, Viewer(holds_seat=row.holds_seat), now),
-                facts=_facts(row, now=now),
-            ),
-            clock=card_clock(record, now, claim_expires_at=claim),
-            seat_claim=(
-                None if claim is None or claim <= now else SeatClaim(expires_at=claim)
-            ),
-        )
+
+def card_of(row: Enrolment, *, now: Instant, stamp: Stamp) -> MatchCard:
+    """One row as the card a phone draws, and the **only** place one is built.
+
+    A module-level function rather than a method because an action off Now needs
+    exactly this and nothing else around it: the departure route composes the
+    card it hands back from the same expression the strip composes its own from
+    (``Raketa02/Raketa#80``), so the screen a player is corrected onto cannot
+    describe the match differently from the card she tapped. A second
+    transcription would be two answers to *what is this match doing*.
+    """
+
+    record = row.record
+    claim = row.claim_expires_at
+    holds_claim = claim is not None and claim > now
+    return MatchCard(
+        match_id=row.match_id,
+        stamp=stamp,
+        where=row.where,
+        # Written for whoever is looking: her own share inside the match,
+        # what she *would* pay browsing. One number and never both with a
+        # flag, which would ship a figure that does not apply on every card
+        # forever and invite the bug where the wrong one prints.
+        price=row.share,
+        situation=SituationHalf(
+            situation=situation(record, Viewer(holds_seat=row.holds_seat), now),
+            facts=_facts(row, now=now),
+        ),
+        clock=card_clock(record, now, claim_expires_at=claim),
+        # The third control in the action row, and a **spine** boolean rather
+        # than an act code (ADR-0086): leaving is not the card's act, and
+        # putting it in `cta` would give one card two of them. It is the
+        # kernel's answer, which is the same function `Match.depart` refuses on
+        # — so the control is drawn exactly where the write would succeed.
+        may_depart=may_depart(
+            record, now, holds_seat=row.holds_seat, holds_claim=holds_claim
+        ),
+        seat_claim=(
+            None if claim is None or not holds_claim else SeatClaim(expires_at=claim)
+        ),
+    )
 
 
 def _still_on_screen(row: Enrolment, now: Instant) -> bool:

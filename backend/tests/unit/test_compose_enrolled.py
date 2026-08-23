@@ -686,21 +686,68 @@ async def test_a_match_with_no_score_prints_none() -> None:
 # --- what a card deliberately does not carry --------------------------------
 
 
-async def test_no_card_names_an_act_or_offers_an_exit_while_no_surface_exists() -> None:
+async def test_no_card_names_an_act_while_no_surface_can_receive_one() -> None:
     """A door offered that will not open is worse than the gap (ADR-0083).
 
-    Every destination the row could name belongs to a ticket that has not
-    landed. This goes red the day one does, which is when the act is composed.
+    The departure route landed and its control is a **spine boolean**, not a
+    seventh act code — leaving is not the card's act, and putting it in `cta`
+    would give one card two of them. Every remaining destination belongs to a
+    ticket that has not landed, so `act` stays absent and this goes red the day
+    one does.
     """
 
     region = await compose(
         enrolled(a_match(paid=4)),
         enrolled(a_match(paid=2)),
-        now=at(120),
+        now=at(-2000),
     )
 
     assert all(card.act is None for card in region.cards)
-    assert all(card.may_depart is False for card in region.cards)
+
+
+async def test_a_card_offers_the_exit_exactly_where_the_write_would_take_it() -> None:
+    """`may_depart` is `kernel.may_depart`, which is what `depart` refuses on.
+
+    Driven **before** the start, because after it every answer is false and the
+    claim would hold for the wrong reason — which is what the first version of
+    this case did.
+    """
+
+    card = await one_card(enrolled(a_match(paid=4)), now=at(-2000))
+
+    assert card.may_depart is True
+
+
+@pytest.mark.parametrize(
+    "row,now",
+    [
+        (enrolled(a_match(paid=4)), at(120)),
+        (enrolled(a_match(paid=4, club_cancelled=True)), at(-2000)),
+        (enrolled(a_match(paid=4), holds_seat=False), at(-2000)),
+        # Her seat is held, so the **claim** is the only thing refusing — the
+        # combination `holds_seat=False` would have been answered a line earlier
+        # and proved nothing about the clause.
+        (
+            enrolled(a_match(paid=4), claim_expires_at=at(-1990)),
+            at(-2000),
+        ),
+        (
+            enrolled(a_match(paid=4, kind=MatchKind.PRIVATE, pay_model=PayModel.SPLIT)),
+            at(-1440),
+        ),
+    ],
+    ids=["started", "cancelled", "already-left", "live-claim", "private-lock"],
+)
+async def test_a_card_offers_no_exit_wherever_the_write_would_refuse(row, now) -> None:
+    """The five falsities, on the card rather than on the route.
+
+    One expression answers both, so a control cannot be drawn where the write
+    would raise — and the day a sixth arrives it arrives on both at once.
+    """
+
+    card = await one_card(row, now=now)
+
+    assert card.may_depart is False
 
 
 async def test_a_card_in_this_region_carries_no_badge_and_never_shouts() -> None:

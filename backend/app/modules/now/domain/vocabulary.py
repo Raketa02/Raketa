@@ -250,6 +250,48 @@ class DepartureForm(str, Enum):
     NOTHING_TAKEN = "nothingTaken"
 
 
+class OutcomeStanding(str, Enum):
+    """Where one of a departure's four outcomes stands, right now.
+
+    ADR-0086 prints **all four outcomes always** rather than the reachable ones
+    — *"a table that quietly drops forfeited once it is unreachable is also a
+    table that never showed it while it was"* — so every row needs a word for
+    its own standing, and the server composes it. The phone derives none of it
+    (ADR-0053), and there is deliberately no ``phase`` field beside these: the
+    four markers already say which phase she is in, and a phase name would be a
+    second vocabulary answering a question already answered.
+
+    The four are exhaustive over the outcomes of any match at any instant, and
+    each is a fact about the **quote's own timeline** rather than a judgement:
+
+    - ``SEARCHING`` — the live outcome. Leaving now is quoted this, and the
+      cascade goes looking for somebody at that price.
+    - ``OPENS`` — it becomes the quote at a moment that is already fixed, and
+      the row carries the moment.
+    - ``STILL_POSSIBLE`` — reachable, with **no moment to name**, because what
+      stands between her and it is an event rather than a clock: an open match
+      that has not committed reaches none of the three money outcomes until it
+      fills, and nothing can say when that will be.
+    - ``SPENT`` — behind her. It cannot happen again whatever the match does.
+    """
+
+    SEARCHING = "searching"
+    OPENS = "opens"
+    STILL_POSSIBLE = "stillPossible"
+    SPENT = "spent"
+
+
+#: Pinned rather than counted, on the rule ``ACT_COUNT`` already holds: ADR-0086
+#: names four standings, and a fifth is a decision somebody made in a diff.
+OUTCOME_STANDING_COUNT = 4
+
+invariant(
+    len(OutcomeStanding) == OUTCOME_STANDING_COUNT,
+    f"the enumeration names {len(OutcomeStanding)} standings, "
+    f"not {OUTCOME_STANDING_COUNT}",
+)
+
+
 class CardHoldReason(str, Enum):
     """Why a court is being kept aside, in the five reasons that reach a card.
 

@@ -1212,5 +1212,89 @@ there; they are not repeated here.
   something profileable to gate; a build that fails on which machine ran it teaches people
   to re-run the build.
 
+- **The departure route** (`now.ReadDeparture`, `MakeDeparture`,
+  `now/presentation/departure_routes.py`) — `GET` / `POST
+  /api/v1/matches/{matchId}/departure`, ADR-0074's shape *"deliberately and without
+  variation"* (ADR-0086). It **lives in `now/`** although its path says `matches`,
+  because the answer is Now's vocabulary end to end — the same spine, the same situation
+  half, the same card, Now's update — and `now` already reads `matches` everywhere in this
+  tree; putting it in `matches/` would point the module graph both ways at once for the
+  sake of a URL. It reaches the aggregate through `Departures`, a port of Now's own, on
+  the precedent `money.Seats` set over the same aggregate. A general `GET /matches/{id}`
+  still does not exist. _Avoid_: adding one here — it authors the match-detail screen's
+  contract inside a ticket that is not about it.
+- **`may_depart`** (`kernel.may_depart`) — the **server boolean** ADR-0086 states and the
+  phone derives none of. It is in the kernel because `Match.depart` refuses on the same
+  facts, so the control is drawn exactly where the write would succeed: false for a viewer
+  holding no seat (the already-left leaver and the stranger alike), for one holding a live
+  seat claim, after the start, under ADR-0046's lock, and on a terminal match — the fifth
+  ADR-0086 does not list, because a cancelled match is not one anybody is looking to leave.
+  It is composed **once**, in `now.card_of`, so the strip's control and the route's boolean
+  are one expression. _Avoid_: reading it as an act code; leaving is not the card's act, and
+  `cta` would give one card two of them.
+- **The private-court lock** (`kernel.private_lock`) — ADR-0046: *"once a converted court
+  is **full** and past the club's cancellation deadline, nobody may leave."* It reads the
+  club's own window (`start − policy.window`) and **never `deadlines().commit`**, which is
+  the *earlier* of that and a platform backstop about an **open** match's commitment —
+  reading it would close the lock early at a short-window club and refuse a departure the
+  club's terms allow. `Match.depart` raises `DepartureLocked` in the same place, because a
+  boolean the write does not enforce is a rule held only on the phone.
+- **Outcome standing** (`now.OutcomeStanding`, `outcome_table`) — where each of a
+  departure's four outcomes stands right now: `searching` (the live quote), `opens` (with
+  the moment, and **only** there), `stillPossible`, `spent`. All four print always — *"a
+  table that quietly drops forfeited once it is unreachable is also a table that never
+  showed it while it was"* — and a private court prints two, which is the glossary being
+  read rather than a second rule. The row marked `searching` **is** `kernel.live_outcome`
+  and never a second reading of the same clock. _Avoid_: a `phase` field beside it; the
+  standings already say which phase she is in.
+- **Commitment is an event, never a clock** (`now._open`) — why `stillPossible` is not
+  `opens` with the moment left out. `live_outcome` reads `committed_at` rather than the
+  commitment deadline, so on a match that has not filled the three money outcomes are a
+  **fill** away and nothing can say when that will be. Naming a moment there would be the
+  screen promising a turn that may never come.
+- **`NowUpdate`** (`now.NowUpdate`) — what an action off Now hands back so the screen
+  corrects itself (ADR-0070, ADR-0074). **One card and nothing else, today**: a departure
+  returns the card *changed, in place* — same match, same region, new rendering — so
+  neither viewer-owned region's contents or order moves. The two region slots and the
+  *this card is gone* form arrive with their first producers (`#89`, `#83`); shipping them
+  now would be ADR-0071's *two fields with no reader* on the busiest write in the product.
+  The shelves are never in an update at all.
+- **`applied`** (`now.DepartureAnswer.applied`) — what a write **did**, and the one field on
+  an action's response that is a fact about the *command* rather than about the match. The
+  outcome the departure was made at, and `null` exactly when nothing was applied. It exists
+  so that *was I refused* is not a rule on the phone: deriving it from `may_depart` still
+  being true would be one, and the acknowledgement ADR-0070 leaves to the client is a
+  sentence it can only write if it knows. On a **replay** it comes off the command log
+  rather than off the aggregate — ADR-0030's *"a replayed key returns the first outcome"* —
+  so it says what she got the first time and not what leaving would be worth now.
+- **The command log** (`application.CommandLog`, `SqlAlchemyCommandLog`, table
+  `command_log`) — ADR-0030's log for **destructive** commands, keyed `(command,
+  idempotency key)`, which is the table's primary key. Cross-cutting like the unit of work
+  beside it, because the second destructive command to arrive needs a home rather than a
+  precedent. **Twenty-four hours applied on the read**, so correctness never waits on a
+  sweep; the **prune runs on the write**, scoped to that command's own rows, so the table
+  is bounded without a scheduler. Neither operation commits — it joins the transaction its
+  command is written in. `IdempotencyKeyIsAnothers` refuses a key that already answered for
+  a different player, rather than folding the player into the key, which would quietly
+  *apply* the second command instead of noticing the collision.
+- **A refusal is not a second shape, applied** (`now._REFUSALS`) — five ways a departure
+  can no longer apply — the quote fell, she has already left, the match started, it was
+  cancelled, the lock closed — and every one answers with **what a success returns**: the
+  screen, recomposed at the instant of the refusal. The player *sees* the correction rather
+  than being told it, and the client has one code path. The only two answers with a
+  different shape are not about the act at all: a stranger's 404, and somebody else's key.
+- **`card_of`** (`now.card_of`) — the **one place** a `MatchCard` is built. A module-level
+  function rather than a method on `ComposeEnrolled`, because an action off Now needs
+  exactly this and nothing around it: the departure route composes the card it hands back
+  from the same expression the strip composes its own from, so a correction can never land
+  a card that disagrees with the screen it came back on.
+- **`EnrolledMatches.one`** (`EnrolledFromMatches.one`) — the one-match read behind an
+  action off Now. Its membership is **wider than the strip's by exactly one case**: a seat
+  or a departure is what `for_player` answers, and this also resolves for a viewer holding a
+  live seat claim, who holds no seat yet and whose route must still open and say *no*.
+  Anybody else is a stranger and gets nothing. It reads its club **singly** where the strip
+  reads a batch, because a batch of one to answer a question about one match is the same
+  query wearing a loop.
+
 Add backend-specific technical terms here as they are resolved. Anything describing the
 *domain* belongs in the shared glossary instead.
