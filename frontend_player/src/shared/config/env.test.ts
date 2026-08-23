@@ -53,8 +53,7 @@ describe('the environment names', () => {
   });
 
   it.each(ENVIRONMENTS)('accepts %s', (environment) => {
-    const apiUrl =
-      environment === 'local' ? 'http://localhost:8000' : 'https://api.raketa.example';
+    const apiUrl = environment === 'local' ? 'http://localhost:8000' : 'https://api.raketa.example';
 
     expect(parseEnv({ EXPO_PUBLIC_API_URL: apiUrl, EXPO_PUBLIC_ENV: environment })).toEqual({
       apiUrl,

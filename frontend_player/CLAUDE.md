@@ -29,6 +29,22 @@ rotation, the `AppError` family, `shared/lib/auth` over the keychain, and two fe
 sports picker, the adaptive question loop, the explained result, and the summary and data
 screens a player leaves through).
 
+`features/now/` holds the Now section's **vocabulary and nothing else yet** — no screen, no
+`api/`, no hooks. Four copy tables (36 situations · 10 term codes · 5 hold reasons · 7 acts),
+the shelf-code → Find pre-filter map and the caption codes, all keyed on unions generated from
+`openapi.player.json`. **Completeness is a typecheck, not a test**
+([ADR-0075](../docs/adr/0075-the-second-table-is-unpaid-and-the-first-ships-in-english.md)): a
+contract value added without its sentence fails `pnpm typecheck`. That only holds while the key
+is a closed union — a code crossing as a bare `string` turns the `Record` into an index
+signature that never fires — so each table carries an `AssertTrue<IsClosedUnion<…>>` pin, and
+`copyTables.test.ts` writes the enumeration out so that _growth_ is a decision somebody makes in
+a diff. The three guards catch three different edits; do not collapse them.
+
+**The tables live in `mappers/`.** They key on `@/generated`, which only `api/` and `mappers/`
+may read, and mapping a wire code to a value object `domain/` owns is what a mapper is. The half
+of each entry the wire has no opinion about — tone, tag, the act's surface — is in
+`domain/presentation.ts`.
+
 `src/shared/ui/` holds the design-system primitives built so far — the cards, note, row,
 hairline, button, tag, bar, header, and the overlays and drawn objects the result screen
 needed (bottom sheet, popover, level bar, confidence ring); the rest arrive with the

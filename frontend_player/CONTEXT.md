@@ -149,6 +149,49 @@ player's decision to come back later. Both are modelled in
   none; "abandoned run" — that **is** a server-side transition and is the permanent way
   out, where this is the temporary one.
 
+### The Now vocabulary
+
+Four copy tables and three lookups, colocated under `features/now/` and **not** promoted to
+`shared/`. The result route imports them; a third reader is the signal to promote
+([ADR-0075](../docs/adr/0075-the-second-table-is-unpaid-and-the-first-ships-in-english.md)).
+
+- **Copy table** — a `Record` over a union **generated** from `openapi.player.json`, whose
+  entry is a **function** of the payload rather than a template string. There are four:
+  36 situations, 10 term codes, 5 hold reasons, 7 acts. They are **three copy tables plus
+  the acts**, kept separate rather than merged over a union of unions — that key type would
+  be assembled by hand, which is the one thing the completeness rule exists to avoid.
+  _Avoid_: "i18n catalogue", "strings file" — the unit here is a payload and a function,
+  not a string with placeholders, which is why no i18n library ships.
+- **Completeness** — a **typecheck**, never a test. A contract value added without its
+  sentence fails `pnpm typecheck`, riding `make gen-api` and the drift check that already
+  exist. This departs from the app's precedent deliberately: `theme.ts` hand-writes its key
+  unions, so nothing else in this client can currently fail to build when the contract grows.
+- **Closed-union pin** — `AssertTrue<IsClosedUnion<T>>` beside each table. Completeness is
+  only a mechanism while the key is a closed union: a code crossing as a bare `string` turns
+  the `Record` into an index signature that never fires, and the missing sentence ships as a
+  blank line. The pin is what makes that a build error rather than a silent stop.
+- **Count pin** — the enumeration written out in `copyTables.test.ts`. The `Record` forces a
+  thirty-seventh row to be **written**; it cannot force anybody to **notice**. _Avoid_:
+  treating the two as one guard — they catch different edits.
+- **Tolerance** — the runtime fallback beside the typecheck, and a different mechanism for a
+  different moment. Every lookup takes a `string`, so a phone meeting a name this build has
+  never heard of loses **one sentence** and draws the spine. Typing the parameter as the
+  union would make that branch unreachable in the one place it has to work.
+- **Tag · tone · alert** — the three columns of the situation table that cross **no wire**.
+  All three are total functions of the situation, so a flag would let the server and the
+  phone disagree about whether a card is urgent. Nineteen tags, where the state-table
+  research counted seventeen: the two offer situations are facts about _this viewer_ and
+  none of the seventeen says one.
+- **Audience** — which of the three a card is drawn for: in the match, looking in, or the
+  **leaver**. Named vocabulary with **no reader yet** — nothing on the wire distinguishes
+  them until the departure payload lands, which is why `SituationContext` is an object and
+  not a positional argument list: the field reaches the rows that read it and leaves the
+  rest untouched.
+- **Find pre-filter** — a shelf's own claim (`seats`, `order`, `kind`) plus the sport the
+  client holds. What the tail card opens Find with; a shelf running out is a door and not a
+  wall. Held as a value object, because Find does not exist yet and a URL shape decided here
+  would be decided in the wrong place.
+
 ### Data and errors
 
 - **Query key factory** — the per-feature object in `hooks/` defining every key, with
