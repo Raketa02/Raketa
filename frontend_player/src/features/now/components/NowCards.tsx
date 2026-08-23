@@ -68,6 +68,9 @@ export const FIT_REASON_ID = 'now-fit-reason';
 /** The warning that stands in for a confidence number. Never a percentage. */
 export const FIT_WARNING_ID = 'now-fit-warning';
 
+/** A leaver's own money line, so *is this card rendered for a leaver* is assertable. */
+export const DEPARTURE_LINE_ID = 'now-card-departure';
+
 /**
  * Whether the card fills the height of the row it sits in.
  *
@@ -193,6 +196,16 @@ function MatchCardShell({
       <ChipRow card={card} chip={chip} />
 
       {card.status !== undefined ? <Text style={s.line}>{card.status.line}</Text> : null}
+
+      {/* A leaver's own money, under the match's own progress and never instead
+          of it — the refill is what decides her outcome, so the card she watches
+          for it is the card that still shows it (`ADR-0072`). Absent for every
+          viewer who has not left, which is every card until she leaves one. */}
+      {card.departure === undefined ? null : (
+        <Text style={s.departure} testID={DEPARTURE_LINE_ID}>
+          {card.departure}
+        </Text>
+      )}
 
       {card.fit === undefined ? null : <FitReasons fit={card.fit} />}
 
@@ -360,6 +373,9 @@ const s = StyleSheet.create({
   chips: { flexDirection: 'row', alignItems: 'center', gap: theme.space.xs },
   title: { ...theme.type.cardTitle, color: theme.color.ink },
   line: { ...theme.type.tiny, color: theme.color.ink },
+  // Muted against the situation's ink: the match's own progress is the news on a
+  // leaver's card, and her settled money is the footnote to it.
+  departure: { ...theme.type.tiny, color: theme.color.muted },
   reasons: { gap: theme.space.xxs },
   reason: { flexDirection: 'row', alignItems: 'flex-start', gap: theme.space.xs },
   mark: { ...theme.type.tag },

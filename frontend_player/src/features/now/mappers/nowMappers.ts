@@ -35,6 +35,7 @@ import type {
   Door,
   MatchCard,
   NowCard,
+  NowUpdate,
   PersonCard,
   Place,
   Shelf,
@@ -45,6 +46,7 @@ import { MAX_REASONS, clampBadgeScore } from '../domain/fitBadge';
 import { actCopy } from './acts';
 import { captionCopy } from './captions';
 import type { AssertTrue, SportFilter } from './codes';
+import { leaverLine } from './departures';
 import { doorCopy } from './doors';
 import { fitReasonSentence } from './fitReasons';
 import { shelfTitle } from './shelves';
@@ -61,6 +63,7 @@ type PlaceResponse = components['schemas']['PlaceResponse'];
 type MoneyResponse = components['schemas']['MoneyResponse'];
 type DebtLineResponse = components['schemas']['DebtLineResponse'];
 type FitResponse = components['schemas']['FitResponse'];
+type NowUpdateResponse = components['schemas']['NowUpdateResponse'];
 
 /**
  * Coverage is never a number the player sees, and this is where that stops being a
@@ -97,6 +100,19 @@ export function toComposedScreen(wire: NowResponse, sport: SportFilter): Compose
     shelves: { blocks: wire.shelves.shelves.map((block) => toBlock(block, sport)) },
     debt: wire.debt == null ? undefined : toDebtLine(wire.debt),
   };
+}
+
+/**
+ * What an action off Now hands back so the screen corrects itself (`ADR-0074`).
+ *
+ * **One card, and the same `toMatchCard` a compose runs through**, so a card
+ * arriving from a departure and the same card arriving from a compose cannot be
+ * rendered by two different expressions. There is no shelf here and no region,
+ * and the type is what says so: an update carrying a `Shelf` would be a match
+ * moving under her thumb, and `Shelf` can only be constructed in this module.
+ */
+export function toNowUpdate(wire: NowUpdateResponse): NowUpdate {
+  return { card: toMatchCard(wire.card) };
 }
 
 /**
@@ -182,6 +198,11 @@ function toMatchCard(wire: MatchCardResponse): MatchCard {
       clubName: where.clubName,
       price: money,
     }),
+    // Present exactly for a viewer who has left, which is what makes this card
+    // *rendered for a leaver* rather than the same card with a flag on it. The
+    // situation above is untouched: an audience changes a card's words and never
+    // its situation (`ADR-0072`).
+    departure: leaverLine(wire.situation.facts.departure),
   };
 }
 

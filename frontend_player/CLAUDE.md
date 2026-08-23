@@ -34,6 +34,9 @@ one onboarding lands on. Three regions (offers · the enrolled strip · the shel
 bar, `ADR-0054`'s four asks, the match card's **action row**, and the shelves' **fit badge,
 reasons, emphasis and tail card**.
 
+`features/departure/` is **the route the card's exit opens** — what leaving a match is worth
+right now, and the one control that takes it.
+
 **A chip for a sport she holds no rating at draws a door, and the door is a route**
 ([ADR-0084](../docs/adr/0084-the-sport-bar-is-five-fixed-chips-and-an-unrated-sport-is-a-door.md)).
 The block arrives **in the shelves list, in order** — where the ranked shelves would be, with
@@ -59,6 +62,28 @@ are placeholder route files that their own feature deletes; `account` is reachab
 the ADR (a 3pt coral dot under the selected label). Do not add a _different_ second cue without
 amending it. **The bar spends the bottom safe-area inset**, so every screen under `(tabs)` takes
 `edges={['top']}` — a screen claiming `bottom` too puts a band of dead paper above the bar.
+
+**Leaving a match is a route, and the screen is the confirmation**
+([ADR-0086](../docs/adr/0086-a-departure-is-a-route-and-the-card-points-at-it-without-naming-it.md)).
+The exit on a card pushes `/matches/[matchId]/departure`, which states the live **quote**, its
+three reasons — the commitment deadline, her seat's amount, how full the match is — and **all
+four outcomes** with a server-composed marker on each. One primary button carrying the quote
+and **no third step**: a dialog over a screen whose whole job is to state the consequence asks
+the same question twice. **A refusal is not a second shape**: all five ways the act can stop
+applying come back as what a success returns, and `applied` — not `mayDepart` still being true
+— is what tells the two apart. Past the point of departure the button is **absent rather than
+refusing**, with no sentence in its place: the situation line already says why.
+
+**An action off Now writes Now's update; it never invalidates it**
+([ADR-0074](../docs/adr/0074-the-result-route-reads-four-facts-and-an-action-off-now-hands-now-its-update.md)).
+The write's answer carries the one card that changed, and `writeNowUpdate` puts it back **in
+place** across every sport's cached screen — nothing added, nothing removed, no region
+reordered, and the shelves never touched at all. Popping back off a route is deliberately none
+of the four asks, so without this the player would return from leaving a match to a card still
+offering her the way out. The **leaver's own line** is the audience made visible: it sits
+beside the match's situation and never instead of it, because a refill is the only thing that
+decides her money, and a player who paid nothing sees a sentence naming **no amount** rather
+than a blank.
 
 **A shelf card carries the fit badge, its reasons, and no button**
 ([ADR-0037](../docs/adr/0037-the-fit-badge-shouts-once-and-only-about-a-seat.md),
@@ -105,9 +130,19 @@ computed**: no module compares a score against anything. Each
 guard carries a negative control; do not add an exemption to a walk, **narrow the rule
 instead** — which is what the second one did when the repaint clock landed.
 
-It also holds the section's **vocabulary**: five copy tables (36 situations · 10 term codes ·
-5 hold reasons · 7 acts · 2 door codes), the shelf-code → Find pre-filter map and the caption
-codes, all keyed
+**The departure feature is walked too**, in `components/departureDiscipline.test.ts`, and its
+four rules are the ones that could only go wrong there. **Nothing mentions transferring a
+seat** — it is the leaver's best outcome and it belongs to a flow that does not exist, so a
+rendered test can only prove today's screen is silent while the walk proves the words are not
+in the build. **No second `Date.parse`**: this screen subtracts through Now's `countdown` or
+it does not subtract, or the same deadline would eventually read two ways on two screens.
+**No second situation table**: the wire embeds the match's spine and situation half verbatim,
+so both screens read one table. **The write is never retried on the app's own initiative** —
+the request key makes a retry _she_ makes safe, and is not a licence to make one for her.
+
+It also holds the section's **vocabulary**: six copy tables (36 situations · 10 term codes ·
+5 hold reasons · 7 acts · 2 door codes · a leaver's line over 4 outcomes), the shelf-code →
+Find pre-filter map and the caption codes, all keyed
 on unions generated from `openapi.player.json`. **Completeness is a typecheck, not a test**
 ([ADR-0075](../docs/adr/0075-the-second-table-is-unpaid-and-the-first-ships-in-english.md)): a
 contract value added without its sentence fails `pnpm typecheck`. That only holds while the key

@@ -81,6 +81,20 @@ export interface MatchCard {
   /** What the situation says, or absent for a name this build has never heard. */
   readonly status: SituationCopy | undefined;
   /**
+   * What her own departure took, for a viewer who has left — absent for everyone
+   * else, which is every card until she leaves one.
+   *
+   * **Beside the situation and never instead of it.** An audience changes a
+   * card's words and which money it names, and never the situation (`ADR-0072`):
+   * a leaver keeps the match's own progress, because whether her money comes
+   * back depends entirely on the seat refilling and a card that hid the match's
+   * progress would hide the only thing that decides her outcome.
+   *
+   * Resolved to a sentence here for the same reason `status` is — the wire sends
+   * a form and a payload, and turning either into words is `mappers/`' job.
+   */
+  readonly departure: string | undefined;
+  /**
    * The one act this card names, already resolved to its label and its
    * destination — or absent, which twenty-six of the thirty-six situations are.
    *
@@ -224,6 +238,27 @@ export interface ShelvesRegion {
 export interface DebtLine {
   readonly owed: Money;
   readonly blocked: boolean;
+}
+
+/**
+ * What Now needs to correct itself off the player's own tap (`ADR-0070`).
+ *
+ * **One card and nothing else, today.** Every action off Now hands its own
+ * answer *and* this back in one response (`ADR-0074`), so returning from a route
+ * the server has just finished computing costs no second ask — which matters
+ * here more than anywhere, because popping back off a route is deliberately none
+ * of `ADR-0054`'s four occasions and Now would otherwise still be showing the
+ * card as it was before the act.
+ *
+ * A departure returns the card **changed, in place** — same match, same region,
+ * new rendering — so neither viewer-owned region's contents or order moves and
+ * there is nothing for a region slot to hold. The wire grows one when the first
+ * action that moves a region lands, which is taking a seat
+ * (`Raketa02/Raketa#89`). **The shelves are never in an update at all**, which is
+ * what stops a match moving under her thumb (`ADR-0032`).
+ */
+export interface NowUpdate {
+  readonly card: MatchCard;
 }
 
 /** The whole screen: three regions, and the one fact about the viewer. */

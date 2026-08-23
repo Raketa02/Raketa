@@ -87,16 +87,34 @@ export function NowScreen() {
 
   // Where a card's two controls go.
   //
-  // **Nowhere yet, and that is stated rather than hidden.** Every destination
-  // `ADR-0088`'s row can name belongs to a ticket that has not landed: the seat
-  // claim and its payment are `Raketa02/Raketa#89`, the result screen `#90`, the
-  // departure screen `#91`, leaving standby `#92`, and the Getting-in sheet is
-  // outside this map. `#87` draws the controls and the anatomy and `#88` makes a
-  // shelf card's body one of them; routing is each of those tickets' own, and this
-  // is the one place each will be wired.
-  const onControl = useCallback((control: CardControl) => {
-    void control;
-  }, []);
+  // **The exit has a destination; the act still has none.** Leaving is a route
+  // that states the price before anything happens (`ADR-0086`), and it is the
+  // first control on this screen to reach one. Every act's destination still
+  // belongs to a ticket that has not landed — the seat claim and its payment are
+  // `Raketa02/Raketa#89`, the result screen `#90`, leaving standby `#92`, and the
+  // Getting-in sheet is outside this map — so an act is still received and
+  // dropped here, which is the one place each will be wired.
+  //
+  // The route is addressed by the **match**, because that is what the departure
+  // is about and it is the only thing the server needs to answer. Nothing about
+  // the card is carried across: the screen asks for what leaving is worth at the
+  // instant it opens, and handing it the card's own already-composed facts would
+  // be quoting a number the card never checked.
+  const onControl = useCallback(
+    (control: CardControl) => {
+      switch (control.kind) {
+        case 'exit':
+          router.push({
+            pathname: '/matches/[matchId]/departure',
+            params: { matchId: control.card.matchId },
+          });
+          return;
+        case 'act':
+          return;
+      }
+    },
+    [router],
+  );
 
   // Where a shelf's tail card goes: Find, carrying that shelf's claim and the sport
   // the screen is already filtered to.

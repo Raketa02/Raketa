@@ -144,6 +144,28 @@ half-answered **parks** rather than taking the screen at launch — it will neve
 you and the match you have paid for — and the door picks it up where you left it, however long
 ago that was.
 
+## Leaving a match
+
+The exit on a card opens a screen, never a dialog
+([ADR-0086](../docs/adr/0086-a-departure-is-a-route-and-the-card-points-at-it-without-naming-it.md)).
+It states what leaving is worth **right now**, and beside that its reasons — the commitment
+deadline, what your seat cost, and how full the match is. Under it are **all four outcomes**
+with a marker on each, so you can see what you have passed and what is ahead; a table that
+quietly drops _nothing comes back_ once it is unreachable is also a table that never showed
+it while it was.
+
+**The screen is the confirmation.** One button, carrying the quote, and no third step: a
+dialog over a screen whose whole job is to state the consequence asks the same question
+twice. If the outcome has worsened between opening the screen and pressing, the server
+refuses and hands back the new one — so you never get less than you were quoted, silently,
+and you _see_ the correction rather than being told about it.
+
+Afterwards your card comes back on Now **in place**, rendered for a leaver and still showing
+the match's progress, because somebody taking your seat is the only thing that decides
+whether your money comes back. Nothing vanishes. A player who had paid nothing yet sees a
+card naming **no amount** rather than a blank to interpret. Past the point of departure the
+exit is simply **not there** — no door is offered that will not open.
+
 Under all of it is the **tab bar** — five destinations, five Feather glyphs, and a flat
 coral circle in the middle for creating a match
 ([ADR-0082](../docs/adr/0082-the-tab-bar-is-one-outline-family-and-coral-is-the-only-selected-cue.md)).

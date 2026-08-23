@@ -54,6 +54,26 @@ export type SportFilter = components['schemas']['SportFilter'];
 export type Cause = components['schemas']['Cause'];
 
 /**
+ * What a departure got back, or will, in the four labels the model closes on.
+ *
+ * Read on a card by the leaver's own line, and on the departure screen by the
+ * table of all four. **Named here rather than promoted**, on the rule `types.ts`
+ * states: the vocabulary is Now's and one cross-feature import is cheaper than
+ * inviting a second table beside it.
+ */
+export type Outcome = components['schemas']['Outcome'];
+
+/**
+ * A leaver's money, in **two forms** and never one with an optional amount.
+ *
+ * The union is the guarantee: reading `paid` without narrowing is a type error,
+ * so no reader can print an amount for a player who never paid one.
+ */
+export type CardDeparture = NonNullable<
+  components['schemas']['SituationFactsResponse']['departure']
+>;
+
+/**
  * `false` when `T` has widened to `string`, and `true` otherwise.
  *
  * The one hazard a `Record` cannot see. `Record<Situation, Entry>` fails to

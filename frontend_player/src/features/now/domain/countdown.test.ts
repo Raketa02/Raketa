@@ -33,6 +33,7 @@ function matchCard(overrides: Partial<MatchCard> = {}): MatchCard {
     price: { amount: 3800, currency: 'PLN' },
     situation: 'forming',
     status: undefined,
+    departure: undefined,
     act: undefined,
     mayDepart: false,
     fit: undefined,

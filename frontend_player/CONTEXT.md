@@ -179,15 +179,15 @@ player's decision to come back later. Both are modelled in
 
 ### The Now vocabulary
 
-Four copy tables and three lookups, colocated under `features/now/` and **not** promoted to
-`shared/`. The result route imports them; a third reader is the signal to promote
+Copy tables and lookups, colocated under `features/now/` and **not** promoted to `shared/`.
+The departure route imports them; a third reader is the signal to promote
 ([ADR-0075](../docs/adr/0075-the-second-table-is-unpaid-and-the-first-ships-in-english.md)).
 
 - **Copy table** — a `Record` over a union **generated** from `openapi.player.json`, whose
-  entry is a **function** of the payload rather than a template string. There are four:
-  36 situations, 10 term codes, 5 hold reasons, 7 acts. They are **three copy tables plus
-  the acts**, kept separate rather than merged over a union of unions — that key type would
-  be assembled by hand, which is the one thing the completeness rule exists to avoid.
+  entry is a **function** of the payload rather than a template string. There are five here:
+  36 situations, 10 term codes, 5 hold reasons, 7 acts, and the **leaver's line** over the 4
+  outcomes. They are kept separate rather than merged over a union of unions — that key type
+  would be assembled by hand, which is the one thing the completeness rule exists to avoid.
   _Avoid_: "i18n catalogue", "strings file" — the unit here is a payload and a function,
   not a string with placeholders, which is why no i18n library ships.
 - **Completeness** — a **typecheck**, never a test. A contract value added without its
@@ -211,10 +211,27 @@ Four copy tables and three lookups, colocated under `features/now/` and **not** 
   research counted seventeen: the two offer situations are facts about _this viewer_ and
   none of the seventeen says one.
 - **Audience** — which of the three a card is drawn for: in the match, looking in, or the
-  **leaver**. Named vocabulary with **no reader yet** — nothing on the wire distinguishes
-  them until the departure payload lands, which is why `SituationContext` is an object and
-  not a positional argument list: the field reaches the rows that read it and leaves the
+  **leaver**. The leaver is the one the wire distinguishes, and it does so through a
+  **payload** rather than a flag: `facts.departure` is present exactly for a viewer who has
+  left. `SituationContext` stays an object rather than a positional argument list for the
+  two that still have no reader — a field then reaches the rows that read it and leaves the
   rest untouched.
+- **The leaver's line** — the one line a leaver's card gains, drawn **beside** the situation
+  and never instead of it. An audience changes a card's words and which money it names and
+  never its situation ([ADR-0072](../docs/adr/0072-two-sentences-are-two-situations-and-a-leaver-is-a-third-audience.md)),
+  so her card keeps the match's own progress: a refill is the only thing that decides her
+  outcome, and a card that hid the progress would hide it. _Avoid_: one payload with an
+  optional amount — _nothing was taken_ and _nothing has come back yet_ are opposite
+  sentences and a blank cannot tell them apart, which is why the wire sends two forms and
+  the union makes reading `paid` without narrowing a type error.
+- **Now's update** — the one card an action hands back so the screen corrects itself off the
+  player's own tap ([ADR-0074](../docs/adr/0074-the-result-route-reads-four-facts-and-an-action-off-now-hands-now-its-update.md)).
+  Applied **in place**: the card is swapped where it already sits, nothing is added, nothing
+  is removed and no region is reordered — and the shelves are never in an update at all.
+  Written across **every** sport's cached screen, because one request per chip means a match
+  she left is stale on `all` as well as on its own. _Avoid_: invalidating instead — popping
+  back off a route is none of the four asks, and a refetch there is the cost that rule
+  refused by name.
 - **Find pre-filter** — a shelf's own claim (`seats`, `order`, `kind`) plus the sport the
   client holds. What the tail card opens Find with; a shelf running out is a door and not a
   wall. Held as a value object, because Find does not exist yet and a URL shape decided here
@@ -343,6 +360,58 @@ badge and emphasis — with [#88](https://github.com/Raketa02/Raketa/issues/88).
   width, bled to the screen edge, peeking by `gutter − gap`. **Not the rail**, whose
   `railCardRatio` belongs to a shelf and would show a quarter of the next card's contents
   here. See `docs/design-system.md` Part 8.
+
+### The departure screen
+
+`features/departure/` — the route Now's exit control opens, landed with
+[#91](https://github.com/Raketa02/Raketa/issues/91). It reads Now's vocabulary and hands Now
+its update; Now knows nothing about it beyond a boolean on a card and an address to push.
+
+- **Quote** — the one **live** outcome, and what the write carries back. A **label and never
+  an amount** ([ADR-0033](../docs/adr/0033-settlement-and-occupancy-are-independent.md)): an
+  amount moves for reasons that have nothing to do with leaving, and refusing on those is
+  noise. The button carries it, which is what makes the screen the confirmation.
+- **Standing** — where one outcome sits on the quote's own timeline: _searching_ ·
+  _opens_ · _still possible_ · _spent_. The server composes it and the phone derives none of
+  it. **All four outcomes print, always** — a table that quietly drops _forfeited_ once it is
+  unreachable is also a table that never showed it while it was — and a private court sends
+  two rows, which is the glossary being read rather than a rule the client applies.
+- **Three roles, and one shared mark** — the outcome table is headed _what you have passed,
+  and what is ahead_, which is three roles: behind her, live now, ahead of her. So _spent_,
+  _searching_ and the two _ahead_ standings wear three **distinct** marks, and only _opens_
+  and _still possible_ share one — there the sentences are the cue, and a countdown and
+  _once the match fills_ are not close to each other. Every mark is **hidden from assistive
+  technology** and the note carries the state. _Avoid_: reading _two standings sharing a
+  mark is fine_ as a rule about the table rather than about that one pair — stated loosely
+  it permits the collapse that empties the heading.
+- **Still possible, against opens** — the distinction the fourth marker exists for. _Opens_
+  names a **moment**; _still possible_ names a **condition**, because what stands between her
+  and it is an event rather than a clock: an open match reaches none of the money outcomes
+  until it fills, and nothing can say when that will be. _Avoid_: naming a moment there — the
+  screen would be promising a turn that may never come.
+- **The screen is the confirmation** — one button, no third step
+  ([ADR-0086](../docs/adr/0086-a-departure-is-a-route-and-the-card-points-at-it-without-naming-it.md)).
+  A dialog over a screen whose entire job is to state the consequence asks the same question
+  twice, and the refuse-and-re-present rule already gives her the only correction that
+  matters.
+- **`applied`** — what the tap **did**: the outcome the departure was made at, absent exactly
+  when nothing was applied. The one field on the answer that is about the command rather than
+  about the match, and the reason _was I refused_ is not a rule on the phone — deriving it
+  from `mayDepart` still being true would be one.
+- **A refusal is not a second shape** — a quote that fell, a match that started, a cancelled
+  match, the private-court lock, a second tap by somebody who has already left: all five come
+  back as **what a success returns** ([ADR-0070](../docs/adr/0070-now-is-three-regions-and-a-card-has-two-halves.md)),
+  so the screen redraws and she _sees_ the correction. One code path, not two.
+- **Absent rather than refusing** — past the point of departure there is no button, and no
+  sentence in its place either: the situation line already says what the match is doing,
+  which is the reason, and a sentence explaining the missing control would be the refusal
+  the rule exists to avoid.
+- **Request key** — one idempotency key per **visit to the screen**, not per press. A press
+  that timed out and a press she was not sure registered are the same intent, and the server
+  answers a repeat with what the first one did. It is **random rather than derived**: a key
+  spelled from the player and the match would survive a process death and would also be
+  guessable from public data, and griefing an irreversible money act is the worse failure
+  ([#117](https://github.com/Raketa02/Raketa/issues/117)).
 
 ### Data and errors
 
