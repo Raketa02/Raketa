@@ -79,3 +79,38 @@ class NothingToCompensate(BadRequestError):
 
     def __init__(self, reference: str) -> None:
         super().__init__(f"This ledger holds no movement under reference {reference}.")
+
+
+class PaymentNamesNoSeat(BadRequestError):
+    """This player has never held or claimed a seat in this match.
+
+    A ``shareOnline`` movement without a seat is refused by ``Movement`` itself,
+    because ``CAUSE_RULES`` says that cause names one — so money arriving for a
+    (match, player) pair that has no seat behind it cannot be recorded at all,
+    even to be given straight back. Refused at the door rather than filed against
+    a seat somebody guessed: a movement pointing at the wrong seat reads as a
+    broken split to the nightly invariant, months later.
+    """
+
+    code = "money_payment_names_no_seat"
+
+    def __init__(self) -> None:
+        super().__init__("No seat in that match belongs to that player.")
+
+
+class CounterShareNotOwed(ConflictError):
+    """A club marked cash for a seat this player no longer holds.
+
+    The one arrival Raketa was never party to (ADR-0059), which is exactly why
+    it cannot be handled the way a late online payment is: reversing a
+    ``player → club`` movement would debit the club, and *"the club is only ever
+    paid, and never debited"* is an absolute with no exception clause
+    (ADR-0045). Nothing moves on Raketa's side and nothing is recorded — **the
+    club returns the cash at the counter**, which is ADR-0059's own remedy for
+    the money it is holding.
+    """
+
+    code = "money_counter_share_not_owed"
+
+    def __init__(self) -> None:
+        super().__init__("That seat is not held by that player, so no cash is owed.")

@@ -173,6 +173,7 @@ def test_the_walk_has_something_to_walk():
         "domain/causes.py",
         "domain/errors.py",
         "domain/events.py",
+        "domain/funding.py",
         "domain/ids.py",
         "domain/invariants.py",
         "domain/ledger.py",
@@ -183,6 +184,7 @@ def test_the_walk_has_something_to_walk():
         "application/__init__.py",
         "application/commands.py",
         "application/event_subscriptions.py",
+        "application/pay_for_a_seat.py",
         "application/pseudonymise_player.py",
         "application/reconcile_ledgers.py",
         "application/record_movements.py",
@@ -194,12 +196,16 @@ def test_the_walk_has_something_to_walk():
 
 @pytest.mark.parametrize("path", INWARD, ids=lambda p: f"{p.parent.name}/{p.name}")
 def test_money_reaches_into_no_other_context(path):
-    """The ledger is downstream, and today it is downstream of nothing.
+    """The ledger is downstream, and its layers of rules reach nowhere at all.
 
-    ADR-0055 permits Money to *read* Matches. If it ever needs to, the read is a
-    port of Money's own with the adapter in ``infrastructure/`` — the shape Now
-    used for ``RatedSports`` — so this stays true of the layers where the rules
-    are and the fence in ``.importlinter`` keeps the arrow pointing one way.
+    ADR-0055 permits Money to *read* Matches, and since ``Raketa02/Raketa#70`` it
+    does: a seat payment gives the player her seat before it records the share.
+    That read is a **port of Money's own** — ``Seats``, answered by
+    ``infrastructure/seats_through_matches.py``, the shape Now used for
+    ``RatedSports`` — so this file stays green, which is the whole point of
+    asking for that shape. The one context Money is allowed to know is knowable
+    from exactly one directory, and the fence in ``.importlinter`` keeps the
+    arrow pointing one way.
     """
 
     reached = {

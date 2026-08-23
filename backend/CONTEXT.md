@@ -861,7 +861,37 @@ there; they are not repeated here.
   **folds**, checked against the stored ledger on every run including one that creates
   nothing. The reference is the idempotency probe. The whole seeded set is then asserted
   against the three invariants. _Avoid_: seeding a movement for a paid seat — that join is
-  `Raketa02/Raketa#70`, and authoring it here would write down the answer it computes.
+  `Raketa02/Raketa#70`, and the runner does not drive it yet: the catalog would have to
+  name what each seeded match's money *is*, which is the demo week's own effort
+  (`Raketa02/Raketa#96`).
+- **Custody** (`money.Custody`) — who is holding a seat's money the instant it arrives:
+  `held` for an open match, `passedThrough` for a private court (ADR-0056). It **follows
+  what was sold, never how it was paid**, so it is the match's answer and nothing on a
+  command can move it. Cash across a counter is not a third member — it is a *channel*,
+  and Raketa is never a party to it. _Avoid_: letting a payer, a provider or a club state
+  it; the same 38 zł means two different things and the difference is invisible on the
+  screen.
+- **Payment channel** (`money.PaymentChannel`) — `Online` or `AcrossTheCounter`: where the
+  money came through, which is the **caller's** fact because it is the only one that knows
+  it. Put together with the custody above, the two decide which movements a share writes;
+  neither answers it alone. `Online` carries the `Raketa → club` settlement's own
+  reference, required rather than optional because a caller cannot know in advance whether
+  the court was already bought.
+- **The seat a share is for** (`money.Seats`, `SeatsThroughMatches`) — Money's one question
+  to another context, stated in Money's words: *give this player the seat this money is
+  for, and tell me what the money is for*. ADR-0055 fences the dependency one way, so
+  `money/infrastructure/` is the only directory in the context that knows a seat is a
+  position on a `Match`. It **writes and does not commit**. _Avoid_: reaching for
+  `MatchRepository` from a use case — `tests/unit/test_money_events.py` walks Money's
+  domain and application layers for exactly that.
+- **The two transactions of a seat payment** (`money.PayForASeat`) — the seat, the
+  reservation (or the inventory loss) and both outbox rows close **together** (ADR-0035);
+  the movement is a **second** transaction, because ADR-0055 refuses a movement inside a
+  match transaction. Matches runs **first**, because the movement names the reservation
+  that write produced. A process dying between them leaves a paid seat with no movement,
+  and a replayed report heals it — the port answers *hers* for a seat that is already
+  paid. _Avoid_: the other order, which records money against a seat she never got; and
+  one commit, which is a match rolled back because a bank was slow.
 
 Add backend-specific technical terms here as they are resolved. Anything describing the
 *domain* belongs in the shared glossary instead.

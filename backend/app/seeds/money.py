@@ -9,11 +9,15 @@ those edges.
 
 **A paid seat does not yet write a movement, and none is authored here.** The
 seeded matches have fourteen paid seats between them and the ledgers below name
-five movements' worth of state. That gap is a ticket, not an oversight:
-``Raketa02/Raketa#70`` is the transaction that writes the seat, the reservation
-and both movements together, and seeding the join here would be writing down the
-answer to the question that ticket exists to compute — the rule the court hold
-and the leaver's outcome are already seeded under.
+five movements' worth of state. The transaction that writes the seat, the
+reservation and the movement together now exists — ``money.PayForASeat``,
+``Raketa02/Raketa#70`` — and the runner still pays through ``PaySeat``, because
+what it would take to drive it is not a use-case swap: every seeded match would
+gain money, and a seeded fact nobody **claims** is the one thing this catalog
+refuses. Naming what each match's money is belongs to the week that assembles
+them all (``Raketa02/Raketa#96``). Authoring a movement *here* stays wrong for
+the original reason: it would write down the answer the join computes, which is
+the rule the court hold and the leaver's outcome are already seeded under.
 
 **The claims are the folds, because the folds are the whole context.**
 ``balance``, ``held`` and the movement count are computed from the movements and

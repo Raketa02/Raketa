@@ -29,7 +29,8 @@ five kinds of stored fact exist to remove.
 
 **Nothing here commits.** ``ClaimCourt.claim`` does not, ``MatchRepository.save``
 does not, and this composes over both — so the seat payment, the court it earns
-and both outbox rows are one write (``Raketa02/Raketa#70``).
+and both outbox rows are one write, closed by ``money.PayForASeat``
+(``Raketa02/Raketa#70``).
 """
 
 from __future__ import annotations

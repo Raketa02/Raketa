@@ -269,6 +269,28 @@ Rules to preserve:
   than a rule to remember. **Money reads Matches; Matches never reads Money** — a fence in
   `.importlinter`, because a ledger read inside state derivation would make the situation
   ladder depend on a second aggregate's fold.
+- **A seat payment is two transactions, and the order is the design.** `money.PayForASeat`
+  is the join between Matches, Courts and Money
+  ([ADR-0035](../docs/adr/0035-a-reservation-claims-a-court-over-an-interval.md),
+  [ADR-0055](../docs/adr/0055-the-ledger-is-event-sourced-one-stream-per-player.md),
+  [ADR-0056](../docs/adr/0056-a-movement-has-two-parties-and-custody-follows-what-was-sold.md)).
+  First the **seat, the reservation *or* the inventory loss, and both outbox rows**, closed
+  together — *"a seat payment that earns a court, and the court it earns, are one event or
+  they are a bug."* Then the **movement**, in a transaction of its own, because ADR-0055
+  refuses a movement inside a match transaction: *"a card charge can fail after the match
+  record is already correct."* **Matches runs first**, because a movement names the
+  reservation that write produced, and because the seat write's refusal is what decides
+  which chain is recorded. A process dying between the two leaves a paid seat with no
+  movement — the safe direction, and a replayed report heals it, because the port answers
+  *the seat is hers* for a seat that is **already** paid rather than reading it as gone and
+  refunding a seat she is sitting on. **Custody follows what was sold and is the match's
+  answer**; the **channel** — online, or cash across a counter — is the caller's, and the
+  two meet in exactly one function. Money reaches Matches through `Seats`, a port of its
+  own, so `tests/unit/test_money_events.py` still walks Money's domain and application
+  layers and finds no other context in them. The reservation's half of the atomicity claim
+  is in `tests/integration/`, and **not** by preference: pysqlite opens no transaction
+  before a `SAVEPOINT`, so a reservation written inside ADR-0035's savepoint survives a
+  rollback on SQLite and nowhere else.
 - **The kernel is one import path.** `app.kernel` re-exports its whole public API through
   an explicit `__all__`, and nothing outside the package — tests included — imports a
   submodule, so a definition can move between kernel files without touching a caller

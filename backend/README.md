@@ -246,6 +246,34 @@ day tens of rows becomes thousands, not a default.
 | Private split court | `player → Raketa`, then `Raketa → club`, in one write | zero |
 | Cash at a counter | `player → club` — Raketa is neither party | zero |
 
+### A seat payment: two transactions, and the order is the design
+
+`money.PayForASeat` is the join between Matches, Courts and Money — the place a partial write
+would leave a player holding a paid seat in a match with no court and no record of why.
+
+| Order | What closes together | Why not the other |
+| --- | --- | --- |
+| 1 | the seat, the reservation **or** the inventory loss, and both outbox rows | ADR-0035: *"a seat payment that earns a court, and the court it earns, are one event or they are a bug"* |
+| 2 | the movement, or the movement **and** its reversal | ADR-0055: *"no movement is ever written inside a match transaction"* — a card charge can fail after the match record is already correct |
+
+**Matches runs first**, because a movement names the reservation *that* write produced, and
+because the seat write's refusal is what decides which chain gets recorded. A process dying
+between the two leaves a paid seat with no movement — the safe direction — and a replayed
+report heals it: the port answers *the seat is hers* for a seat that is **already** paid,
+rather than reading it as gone and refunding a seat she is sitting on.
+
+**Custody is the match's answer; the channel is the caller's.** What was sold decides whether
+the money is held or passed through, so no payer, provider or club can move it; where the money
+came through — online, or cash across a counter — is the only half a caller knows. They meet in
+one function and neither answers alone.
+
+Money reaches Matches through `Seats`, a port of its own answered from
+`money/infrastructure/`, so ADR-0055's one-way fence holds at the layers where the rules are.
+Money arriving for a seat that has gone is a `shareOnline` and its `REV-`/`claimLapsed`
+reversal **in one append**; a counter mark for a seat she no longer holds is refused outright,
+because reversing it would debit the club and *the club is only ever paid* (ADR-0045,
+ADR-0059) — the club returns the cash at the counter.
+
 **Nothing is edited and nothing is deleted.** A wrong movement is corrected by a second one
 with the parties reversed, under a `REV-` reference, carrying *its own* cause — the reason the
 correction was needed is not the reason the original happened. Erasure appends
@@ -757,10 +785,11 @@ idempotency probe: a movement is filed under a fixed `PAY-<token>`, and the ledg
 second one under it, so finding it is finding that the scenario has already run.
 
 **A paid seat does not write a movement yet, and none is authored here.** The eight seeded
-matches hold fourteen paid seats between them; the transaction that writes a seat, its
-reservation and both movements together is `Raketa02/Raketa#70`, and seeding that join would
-be writing down the answer the ticket exists to compute — the rule the court hold and the
-leaver's outcome are already seeded under.
+matches hold fourteen paid seats between them and are still paid through `PaySeat`, not
+through `money.PayForASeat`. The join exists now (`Raketa02/Raketa#70`); what does not is a
+catalog that can *name* what each seeded match's money is, and a scenario carrying money
+nobody claimed would break the rule every other seeded fact is held to. Driving the join from
+the runner is the demo week's own effort, `Raketa02/Raketa#96`.
 
 Scope is what is **decided**: players, onboarding assessments, Skill ratings, clubs, court
 reservations and bookings, matches, and ledgers. Nothing **authors** a match-held reservation — a

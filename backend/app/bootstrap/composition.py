@@ -72,10 +72,11 @@ from app.modules.matches.domain.ports import (
     MatchSchedule,
     SeatClaims,
 )
-from app.modules.money.domain.ports import LedgerRepository
+from app.modules.money.domain.ports import LedgerRepository, Seats
 from app.modules.money.infrastructure.event_sourced_ledger_repository import (
     EventSourcedLedgerRepository,
 )
+from app.modules.money.infrastructure.seats_through_matches import SeatsThroughMatches
 from app.modules.now.domain.ports import RatedSports
 from app.modules.now.infrastructure.rating_sports import RatedSportsFromSkillRatings
 from app.modules.matches.infrastructure.court_holds import (
@@ -267,8 +268,9 @@ def build_match_repository(
     a named future reader, and it is the planned playerEventsTracker.
 
     The publisher is an argument rather than built here so that a caller sharing
-    one outbox writer across two contexts — which `Raketa02/Raketa#70` will do —
-    passes it in rather than getting a second one by accident.
+    one outbox writer across two contexts — which `money.PayForASeat` does, over
+    Matches and Money (`Raketa02/Raketa#70`) — passes it in rather than getting a
+    second one by accident.
     """
     return SqlAlchemyMatchRepository(session, events=events, clock=clock)
 
@@ -380,3 +382,25 @@ def build_ledger_repository(
     once and passes it on.
     """
     return EventSourcedLedgerRepository(event_store=event_store, events=events)
+
+
+def build_seats(
+    *,
+    matches: MatchRepository,
+    holds: ResolveCourtHold,
+    reservations: ReservationRepository,
+) -> Seats:
+    """Money's one question to another context: *give her the seat this paid for.*
+
+    Takes three **ports and a use case** rather than a session, so the seat
+    write, the hold ladder and the court behind it are the same ones every other
+    caller gets. In particular ``holds`` is passed in rather than built here:
+    ADR-0031 makes ``ResolveCourtHold`` the only thing allowed to move
+    ``held_since``, and a second instance would be a second one of those.
+
+    It commits nothing. The transaction that carries the seat, the reservation
+    and both outbox rows belongs to ``money.PayForASeat`` (ADR-0035,
+    `Raketa02/Raketa#70`).
+    """
+
+    return SeatsThroughMatches(matches=matches, holds=holds, reservations=reservations)

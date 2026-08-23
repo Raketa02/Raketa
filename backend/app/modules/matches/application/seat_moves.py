@@ -11,9 +11,11 @@ own tables in the match's own transaction — ADR-0081 puts its expiry under the
 match's `next_wake_at` for exactly that reason.
 
 **None of them commits anything the caller cannot join.** ``save`` publishes the
-announcements into the same transaction and does not commit, so
-``Raketa02/Raketa#70`` — a seat payment, the court it earns, and both outbox
-rows in one write — composes over these rather than around them.
+announcements into the same transaction and does not commit, which is what lets
+``money.PayForASeat`` compose over these rather than around them — a seat
+payment, the court it earns and both outbox rows in one write
+(``Raketa02/Raketa#70``). It reaches them through a port of Money's own rather
+than by importing this module, because the fence points the other way.
 
 **Every one of them ends in the hold ladder, before the save and inside the same
 transaction.** Three of the four move what the ladder says — a payment enters a
@@ -143,9 +145,10 @@ class RedeemSeatClaim(_MatchWrite):
     rides along inside ``pay_seat``, so a match this payment fills past its own
     deadline commits in the same transaction.
 
-    **This is the seam ``Raketa02/Raketa#70`` widens**, not replaces: the court
-    the payment earns and the two movements it writes join *this* transaction,
-    which is why nothing here commits anything a caller cannot compose over.
+    **This is the seam ``money.PayForASeat`` composes over**, not replaces: the
+    court the payment earns joins *this* transaction, and the movement follows in
+    one of its own — ADR-0055 refuses a movement inside a match transaction, and
+    ``Raketa02/Raketa#70`` is where the two are ordered.
     """
 
     async def execute(self, command: RedeemSeatClaimCommand) -> Match:

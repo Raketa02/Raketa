@@ -16,10 +16,10 @@ needs — a `player → Raketa` with no `Raketa → club` beside it is a float t
 reads wrong until the second half arrives.
 
 **A compensation is a draft like any other**, so a share and its reversal can be
-one write. That is #70's shape exactly: money that arrived for a seat that had
-already gone is recorded as ``shareOnline`` and compensated by a ``REV-``
-movement with cause ``claimLapsed``, and there is no instant between the two at
-which the ledger says Raketa kept 30 zł.
+one write. That is what ``pay_for_a_seat.py`` uses it for: money that arrived for
+a seat that had already gone is recorded as ``shareOnline`` and compensated by a
+``REV-`` movement with cause ``claimLapsed``, and there is no instant between the
+two at which the ledger says Raketa kept 30 zł.
 """
 
 from __future__ import annotations

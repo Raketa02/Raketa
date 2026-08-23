@@ -736,7 +736,8 @@ Committed by [ADR-0030](docs/adr/0030-a-departure-is-an-audience-not-a-state.md)
   cutoff**; none may be started after it. While one runs, the vacancy's pending sends go quiet, and
   a lapse resumes them without telling anybody twice. It ends the same way whatever ended it — the
   five minutes, the player, or the match dying underneath them — and money that arrives afterwards
-  is refunded under the cause `claimLapsed`
+  is refunded under the cause `claimLapsed` — **recorded and reversed in one write**, so the
+  ledger never says we kept her money
   ([ADR-0081](docs/adr/0081-a-seat-is-never-taken-until-it-is-paid.md)). *Built (`#68`), and one
   word of it is worth reading twice: **live** is composed rather than stored — unended and not
   yet expired — so a claim is over at its own instant whether or not anything has written the
@@ -1064,7 +1065,12 @@ Committed by [ADR-0055](docs/adr/0055-the-ledger-is-event-sourced-one-stream-per
 **Custody follows what was sold.** An open match's seat money is **held by Raketa** until the
 match commits, because no court exists yet and the money may have to come back whole. A private
 court is already bought, so a share is **paid through to the club** on arrival and Raketa holds
-nothing. Same 30 zł, two regimes, and the difference is invisible on the screen.
+nothing. Same 30 zł, two regimes, and the difference is invisible on the screen. **Which regime
+applies is the match's answer, never the payer's** — the channel a payment came through (bought
+online, or cash across a counter) is a different fact and decides nothing about custody. *Built
+(`#70`): a seat payment gives the player her seat and the court that seat earns in **one**
+write, and records the money in a second, because a movement is never written inside a match
+transaction.*
 
 **The ledger is downstream and one-way: Money reads Matches; Matches never reads Money.** Which
 door a payer came through lives on the *match record*, not the ledger, because it is an input to
