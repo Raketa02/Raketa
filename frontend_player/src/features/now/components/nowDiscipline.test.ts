@@ -93,6 +93,7 @@ describe('the feature is walkable at all', () => {
     expect(paths).toContain('components/NowScreen.tsx');
     expect(paths).toContain('components/ActionRow.tsx');
     expect(paths).toContain('hooks/useRepaintClock.ts');
+    expect(paths).toContain('hooks/useMomentClock.ts');
     expect(paths).toContain('mappers/nowMappers.ts');
     expect(paths.length).toBeGreaterThan(10);
   });
@@ -150,9 +151,15 @@ describe('nothing refreshes on a timer', () => {
     // named; a countdown *repainting* is drawing, and `ADR-0088` states the
     // distinction and states that it is stated nowhere else. Two modules, two
     // jobs, and the next matcher is what keeps them from becoming one.
+    //
+    // The repaint module is `useMomentClock` and no longer `useRepaintClock`,
+    // because the loop was **promoted** when the result route became the third
+    // screen to want one (`Raketa02/Raketa#90`). What is narrowed here is which
+    // module holds it, not how many hold one: this feature still arms exactly two
+    // timers, and the one that repaints is still the one that cannot ask.
     expect(filesContaining(/setTimeout\(/)).toEqual([
       'hooks/useDeadlineAsk.ts',
-      'hooks/useRepaintClock.ts',
+      'hooks/useMomentClock.ts',
     ]);
   });
 
@@ -162,8 +169,13 @@ describe('nothing refreshes on a timer', () => {
     // 60-second poll."* The repaint clock holds a number and hands it out; it
     // cannot see Query, the use-case or the transport, so a poll cannot be added
     // to it by editing it — only by moving it somewhere else, in a diff.
+    //
+    // Both halves are checked, because the loop is now shared: the module that
+    // arms the timer, and the Now-shaped wrapper that hands it the screen's own
+    // moments. A poll added to either would be a poll.
     const asking = /useQuery|queryClient|invalidate|refetch|composeNow|fetch\(/;
 
+    expect(asking.test(sourceOf('hooks/useMomentClock.ts'))).toBe(false);
     expect(asking.test(sourceOf('hooks/useRepaintClock.ts'))).toBe(false);
   });
 

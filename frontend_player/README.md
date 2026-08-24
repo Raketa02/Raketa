@@ -166,6 +166,37 @@ whether your money comes back. Nothing vanishes. A player who had paid nothing y
 card naming **no amount** rather than a blank to interpret. Past the point of departure the
 exit is simply **not there** — no door is offered that will not open.
 
+## Entering a score, and answering one
+
+A match you played asks for a score, and the card's act opens a screen
+([ADR-0060](../docs/adr/0060-a-result-is-entered-on-a-route-and-the-card-names-the-act.md)).
+It is **one screen for the whole conversation** — entering, being asked whether the other
+side's score is right, proposing a different one, the settled result and the evening nobody
+scored — because the route renders the same situation the card resolved rather than a screen
+of its own.
+
+**Both sides are named, yours first**, everywhere a score appears: with four people and two
+sides, `6-4, 3-6, 6-2` says nothing about whose 6 it was.
+
+**The clock is the biggest thing on it**, next to the sentence saying what happens if nobody
+does anything — because silence is what settles a result. One proposal nobody answers
+**stands**; two that never agree leave the match counting for nothing. While the half-hour
+acceptance window is running the screen says so, so it never reads _settled_ thirty minutes
+early.
+
+**Disagreeing costs a statement.** There is no _reject_ button anywhere, and there is nowhere
+to send one: a modification carries a score, which is what makes the objection specific and
+settles it by the other side's silence in turn.
+
+A settled result prints its score and **moves nobody's level** — no engine produces one, and
+the app does not invent a number nothing computed. A player who left before the match opens
+the screen and is offered nothing, because she played half an evening and paid for it; she is
+never told her match did not exist.
+
+The pad is **one pad for every sport**, and that is a gap rather than a preference: the sport
+is not on the player contract at all, so it ships as the widest of the four
+([#120](https://github.com/Raketa02/Raketa/issues/120)).
+
 Under all of it is the **tab bar** — five destinations, five Feather glyphs, and a flat
 coral circle in the middle for creating a match
 ([ADR-0082](../docs/adr/0082-the-tab-bar-is-one-outline-family-and-coral-is-the-only-selected-cue.md)).

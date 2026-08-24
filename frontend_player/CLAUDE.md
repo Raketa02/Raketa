@@ -35,7 +35,8 @@ bar, `ADR-0054`'s four asks, the match card's **action row**, and the shelves' *
 reasons, emphasis and tail card**.
 
 `features/departure/` is **the route the card's exit opens** — what leaving a match is worth
-right now, and the one control that takes it.
+right now, and the one control that takes it. `features/result/` is **the route the two
+post-play acts open** — the whole result conversation on one screen.
 
 **A chip for a sport she holds no rating at draws a door, and the door is a route**
 ([ADR-0084](../docs/adr/0084-the-sport-bar-is-five-fixed-chips-and-an-unrated-sport-is-a-door.md)).
@@ -90,6 +91,34 @@ beside the match's situation and never instead of it, because a refill is the on
 decides her money, and a player who paid nothing sees a sentence naming **no amount** rather
 than a blank.
 
+**Entering a score is a route, and it renders by situation**
+([ADR-0060](../docs/adr/0060-a-result-is-entered-on-a-route-and-the-card-names-the-act.md),
+[ADR-0048](../docs/adr/0048-silence-confirms-a-result-and-disagreement-carries-a-score.md)).
+`enterResult` and `answerResult` both push `/matches/[matchId]/result`, and **one screen holds
+every rendering** — entry, the two audience renderings of a live proposal, the counter, the
+settled result and the evening nobody scored. There is **no rendering enum and no screen
+identifier**: the sentence at the top is Now's own situation table, every block under it is
+composed from the server's three booleans, the score on the table and the two clocks, and the
+only thing keyed on a situation's name is the ending, resolved in `mappers/` where a wire code
+may be named. **The settlement deadline is the hero** — the largest figure on the screen, with
+the sentence saying what happens if nobody acts, keyed on `proposals` because one proposal
+stands and two count for nothing — and the **acceptance grace** is drawn only while the server
+sends it, so the screen never reads _settled_ half an hour early. **There is nowhere to say
+no**: a modification carries a score, and the walk keeps the vocabulary of rejection out of the
+build. **A correction opens on what is already there and a counter opens empty**, because a
+pre-filled counter is one tap from a "different" score identical to the one it is countering.
+**No level movement anywhere** — the settled ending is silent about levels in both directions,
+and only the unscored ending says _nobody's level moved_, which is what that rendering is for.
+A **leaver** opens the screen and is offered nothing.
+
+**The pad is one pad for every sport, and that is a gap** — `ADR-0060` specifies it per sport
+and the **sport is on no player-facing payload**, so it ships as the widest of the four
+([#120](https://github.com/Raketa02/Raketa/issues/120)). It holds the instrument's state and
+no rule about scores: only finished rows are sent, a row holding one number blocks the send and
+says so, and clearing empties the whole row. **Both sides are named, hers first, everywhere a
+score appears** — on the settled card and on this screen, through the one function that does it,
+with a side the wire named nobody on named by position.
+
 **A shelf card carries the fit badge, its reasons, and no button**
 ([ADR-0037](../docs/adr/0037-the-fit-badge-shouts-once-and-only-about-a-seat.md),
 [ADR-0088](../docs/adr/0088-the-action-row-is-three-slots-and-the-clock-takes-the-first.md)).
@@ -123,7 +152,10 @@ and no green assertion can carry one. **The phone holds no rules** ([ADR-0053](.
 subtracting a card's moment from now. **Nothing refreshes on a timer**
 ([ADR-0054](../docs/adr/0054-now-refreshes-when-asked-never-on-a-timer.md)): no interval, no
 `refetchInterval`, and **two** `setTimeout`s — the wake at a moment the _server_ named, and the
-repaint clock — with the walk asserting that the repaint module cannot reach Query at all.
+repaint clock — with the walk asserting that neither repaint module can reach Query at all.
+That repaint loop is `useMomentClock`, and it is **the app's only one**: Now, the departure
+screen and the result screen all call it, and it was promoted out of the departure feature the
+moment a third screen wanted one — which is the trigger that hook had recorded for itself.
 **Neither of the prototype's two action-row icons comes back** (`✉`, `⌘`). **The screen never
 admits staleness**: no marker, no banner, no _"can't reach Raketa"_. **The door is never
 inferred**: a door is _constructed_ in `mappers/nowMappers.ts` and nowhere else, and its copy
@@ -136,6 +168,15 @@ wire says it is**: `toNowUpdate` switches on `update_type`, never on a missing c
 forms are constructed in that one module — so a component cannot decide a card has gone. Each
 guard carries a negative control; do not add an exemption to a walk, **narrow the rule
 instead** — which is what the second one did when the repaint clock landed.
+
+**The result feature is walked too**, in `components/resultDiscipline.test.ts`: **nothing can
+say no** (the words `reject`/`decline`/`dispute`/`refuse` are not in the build), **no second
+`Date.parse`, no device clock and no timer of its own**, **no second situation table**, **a
+situation is named in exactly one module** — so a `situation === 'confirmResult'` in a component
+would be the screen identifier `ADR-0060` refused, arriving as an `if` — **neither write is
+retried**, and **the screen holds no stale time**, which is the one rule there that a rendered
+test cannot reach: the test renderer drops the query when the route is popped, so a reopen
+refetches whatever the stale time says.
 
 **The departure feature is walked too**, in `components/departureDiscipline.test.ts`, and its
 four rules are the ones that could only go wrong there. **Nothing mentions transferring a
@@ -171,8 +212,8 @@ refusals that file states, with reasons.
 
 `src/shared/ui/` holds the design-system primitives built so far — the cards, note, row,
 hairline, button, tag, bar, header, and the overlays and drawn objects the result screen
-needed (bottom sheet, popover, level bar, confidence ring); the rest arrive with the
-features that need them. **Build outward from the structure below** rather than reaching
+needed (bottom sheet, popover, level bar, confidence ring) and the **scoreboard** the result
+screen and the settled card share; the rest arrive with the features that need them. **Build outward from the structure below** rather than reaching
 for `create-expo-app` — its default template contradicts ADR-0009 — and copy the shape of
 `src/features/auth/` or `src/features/onboarding/` rather than inventing a second one.
 

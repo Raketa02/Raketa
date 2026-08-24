@@ -44,14 +44,13 @@ import { useCallback, useMemo, useRef } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { countdownLabel, remainingMs, type Moment } from '@/features/now/types';
+import { countdownLabel, remainingMs, useMomentClock, type Moment } from '@/features/now/types';
 import { formatMoney } from '@/shared/lib/formatting';
 import { Button, Card, CloseControl, Note, Row, ScreenHeader, theme } from '@/shared/ui';
 
 import type { Departure, OutcomeRow } from '../domain/Departure';
 import { departureRequestKey } from '../domain/requestKey';
 import { useDeparture } from '../hooks/useDeparture';
-import { useDepartureClock } from '../hooks/useDepartureClock';
 import { useLeaveMatch } from '../hooks/useLeaveMatch';
 
 import { OutcomeTable } from './OutcomeTable';
@@ -166,7 +165,10 @@ function Loaded({
   // Every moment this screen holds, so one clock repaints all of them and two
   // countdowns can never disagree about what time it is by a render.
   const moments = useMemo(() => momentsOn(screen), [screen]);
-  const now = useDepartureClock(moments);
+  // Now's loop, not a second one. It was this feature's until the result route
+  // became the third screen to want a countdown, which is the trigger the hook that
+  // lived here recorded for promoting it (`Raketa02/Raketa#90`).
+  const now = useMomentClock(moments);
 
   const countdown = useCallback(
     (moment: Moment | undefined): string | undefined => {

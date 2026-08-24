@@ -11,6 +11,7 @@ import {
   countdownLabel,
   momentsOnScreen,
   msUntilNextZero,
+  soonestMs,
   remainingMs,
   repaintDelayMs,
 } from './countdown';
@@ -34,6 +35,7 @@ function matchCard(overrides: Partial<MatchCard> = {}): MatchCard {
     situation: 'forming',
     status: undefined,
     departure: undefined,
+    score: undefined,
     act: undefined,
     mayDepart: false,
     fit: undefined,
@@ -143,6 +145,16 @@ describe('when the next countdown reaches zero', () => {
 
   it('answers nothing for a screen with no moments at all', () => {
     expect(msUntilNextZero(screen(), NOON)).toBeUndefined();
+  });
+
+  it('answers the same three ways for a bare list of moments', () => {
+    // The same loop, over the moments a screen off Now is counting to rather than
+    // over a composed screen — one implementation, because two would eventually
+    // differ on the case above and only one of them would be tested.
+    expect(soonestMs(['2026-08-23T12:03:00Z', '2026-08-23T12:09:00Z'], NOON)).toBe(3 * 60 * 1000);
+    expect(soonestMs(['2026-08-23T11:00:00Z', '2026-08-23T12:07:00Z'], NOON)).toBe(7 * 60 * 1000);
+    expect(soonestMs(['2026-08-23T11:00:00Z'], NOON)).toBeUndefined();
+    expect(soonestMs([], NOON)).toBeUndefined();
   });
 });
 

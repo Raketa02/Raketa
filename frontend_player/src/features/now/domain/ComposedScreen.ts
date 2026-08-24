@@ -57,6 +57,43 @@ export interface Place {
   readonly distanceKm: number | undefined;
 }
 
+/**
+ * One set, two integers, and never a display string.
+ *
+ * `ADR-0060`: *"the specification set hardcodes `6-4, 3-6, 6-2` in every document
+ * and nowhere says whose 6 it is"*, so the wire carries the pair and the client
+ * formats it. `first` is `sides[0]`'s.
+ */
+export interface SetScore {
+  readonly first: number;
+  readonly second: number;
+}
+
+/** One side of the net, named by the players who were on it. */
+export interface ScoreSide {
+  /**
+   * Their nicknames, and possibly none of them.
+   *
+   * A leaver's seat is vacated, so a side can come back with a name missing or
+   * with none at all. Nothing here fills the gap — naming a side that has no
+   * names is the caller's, once, in `components/nowCopy.ts`.
+   */
+  readonly players: readonly string[];
+}
+
+/**
+ * The score, with the viewer's side first.
+ *
+ * The flip is the **server's** (`ADR-0060`: *"the viewer's side is always
+ * first"*), so `sides[0]` and every set's `first` are hers when she played. This
+ * app never reorders it: two answers to *whose 6 was that* is the failure naming
+ * the sides exists to prevent.
+ */
+export interface ScoreLine {
+  readonly sides: readonly ScoreSide[];
+  readonly sets: readonly SetScore[];
+}
+
 /** A match, as one card. */
 export interface MatchCard {
   readonly kind: 'match';
@@ -94,6 +131,19 @@ export interface MatchCard {
    * a form and a payload, and turning either into words is `mappers/`' job.
    */
   readonly departure: string | undefined;
+  /**
+   * The score, present on the two situations that have one to print.
+   *
+   * `ADR-0048`'s settled result and a live proposal are the only cards the server
+   * sends one on, and this is the field `Raketa02/Raketa#90` gave a reader: it has
+   * crossed the wire since `#74` and nothing drew it, which made *a settled
+   * result prints the score on the card* an obligation with no implementation.
+   *
+   * **No level movement rides beside it, in v1 or in this type.** No engine
+   * produces one, and a card must not invent a number nothing computed
+   * (`ADR-0049`) — so there is nowhere here for one to be put.
+   */
+  readonly score: ScoreLine | undefined;
   /**
    * The one act this card names, already resolved to its label and its
    * destination — or absent, which twenty-six of the thirty-six situations are.

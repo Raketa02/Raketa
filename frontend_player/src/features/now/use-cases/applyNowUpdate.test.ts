@@ -29,6 +29,7 @@ function card(matchId: string, overrides: Partial<MatchCard> = {}): MatchCard {
     situation: 'forming',
     status: undefined,
     departure: undefined,
+    score: undefined,
     act: undefined,
     mayDepart: true,
     fit: undefined,

@@ -19,6 +19,7 @@ import AccountRoute from '@/app/(app)/(tabs)/account';
 import AppLayout from '@/app/(app)/_layout';
 import CreateRoute from '@/app/(app)/(tabs)/create';
 import DepartureRoute from '@/app/(app)/matches/[matchId]/departure';
+import MatchResultRoute from '@/app/(app)/matches/[matchId]/result';
 import FindRoute from '@/app/(app)/(tabs)/find';
 import InboxRoute from '@/app/(app)/(tabs)/inbox';
 import TabsLayout from '@/app/(app)/(tabs)/_layout';
@@ -54,6 +55,7 @@ export const ONBOARDING_ROUTES = {
   // Pushed over the tab tree rather than into it, which is what a test needs in
   // order to press an exit on Now and land somewhere real.
   '(app)/matches/[matchId]/departure': DepartureRoute,
+  '(app)/matches/[matchId]/result': MatchResultRoute,
   '(auth)/_layout': AuthLayout,
   '(auth)/sign-in': SignInRoute,
   '(onboarding)/_layout': OnboardingLayout,

@@ -15,7 +15,9 @@
  */
 
 import type { AppError } from '@/shared/errors';
+import type { ScoreBoardRow } from '@/shared/ui';
 
+import type { ScoreLine, ScoreSide } from '../domain/ComposedScreen';
 import type { SportFilter } from '../mappers/codes';
 import { SPORT_CHIP_COPY } from '../mappers/sportBar';
 
@@ -131,4 +133,46 @@ export function findTailLabel(shelfTitle: string | undefined): string {
  */
 export function clockAccessibilityLabel(countdown: string): string {
   return `${countdown} left`;
+}
+
+/**
+ * What a side is called when the wire named nobody on it.
+ *
+ * A side comes back with a name missing, or with none at all, whenever a seat has
+ * been vacated — a leaver's own side is the ordinary case, and she is exactly the
+ * player who most needs the score to read the right way round. So a nameless side
+ * is named by **position**, which is the one thing that is always true of it and is
+ * the server's own composition: index 0 is the viewer's.
+ *
+ * Two positional names and no more. A third side is not a thing a net has, and a
+ * score that arrived with one would draw its rows with no name rather than with an
+ * invented one.
+ */
+export const SIDE_FALLBACK: readonly [string, string] = ['Your side', 'The other side'];
+
+/**
+ * A score as two named rows of games — the one place either half is decided.
+ *
+ * `ADR-0060` requires **every** surface showing a score to name both sides with the
+ * viewer's first, and there are two such surfaces: the settled card on Now and the
+ * result route's screen. This is the function both call, so a side cannot be named
+ * one way on the card and another on the screen she reaches by tapping it.
+ *
+ * **The transpose is a projection and not arithmetic.** `first` is `sides[0]`'s
+ * games — the wire says so — so row 0 reads every set's `first` and row 1 every
+ * set's `second`. Nothing is summed, nothing is compared, and who won is never
+ * worked out: it is not a fact the phone was sent, and computing it would be the
+ * level movement `ADR-0049` refuses, arriving through a formatter.
+ */
+export function scoreBoardRows(score: ScoreLine): readonly ScoreBoardRow[] {
+  return score.sides.map((side, index) => ({
+    name: sideName(side, index),
+    games: score.sets.map((set) => (index === 0 ? set.first : set.second)),
+  }));
+}
+
+/** The players on a side, or where it sat when the wire named none of them. */
+export function sideName(side: ScoreSide, index: number): string {
+  if (side.players.length > 0) return side.players.join(' and ');
+  return SIDE_FALLBACK[index] ?? '';
 }

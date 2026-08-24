@@ -60,23 +60,36 @@ export function momentsOnScreen(screen: ComposedScreen): readonly Moment[] {
 }
 
 /**
- * Milliseconds until the soonest moment on screen that has not passed, or
+ * Milliseconds until the soonest of these moments that has not passed, or
  * `undefined` when there is none.
  *
  * A moment already behind us is skipped rather than answered as zero: it has
- * already had its ask, and answering zero would fetch on every render for the
- * rest of the screen's life.
+ * already had its ask, and answering zero would fetch — or repaint — on every
+ * render for the rest of the screen's life.
+ *
+ * **Over a list rather than over the screen**, because the two callers hold two
+ * different things: the composed screen's own next zero, and whatever moments a
+ * screen off Now is counting to. Two copies of this loop is how one of them comes
+ * to skip a passed moment and the other does not.
  */
-export function msUntilNextZero(screen: ComposedScreen, now: number): number | undefined {
+export function soonestMs(moments: readonly Moment[], now: number): number | undefined {
   let soonest: number | undefined;
 
-  for (const moment of momentsOnScreen(screen)) {
+  for (const moment of moments) {
     const left = remainingMs(moment, now);
     if (left === undefined || left <= 0) continue;
     if (soonest === undefined || left < soonest) soonest = left;
   }
 
   return soonest;
+}
+
+/**
+ * Milliseconds until the soonest moment **on the composed screen** that has not
+ * passed, or `undefined` when there is none.
+ */
+export function msUntilNextZero(screen: ComposedScreen, now: number): number | undefined {
+  return soonestMs(momentsOnScreen(screen), now);
 }
 
 /**

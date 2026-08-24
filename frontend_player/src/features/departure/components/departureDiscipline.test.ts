@@ -124,12 +124,14 @@ describe('the phone holds one derivation, and this is not where a second lives',
     expect(filesContaining(/Date\.parse\(/)).toEqual([]);
   });
 
-  it('reads the device clock only where a repaint needs an instant', () => {
+  it('never reads the device clock at all', () => {
     // `Date.now()` is not a derivation from server data — it is what a countdown
-    // subtracts *from*. It belongs to the timer and to nothing else: a component
-    // reading it would be a second reading of *now* on one screen, and two
+    // subtracts *from* — and it belongs to the timer and to nothing else. The timer
+    // is **Now's** since the result route became the third screen to want one
+    // (`Raketa02/Raketa#90`), so this feature reads no clock of its own: a module
+    // here that read one would be a second reading of *now* on one screen, and two
     // countdowns disagreeing by a render.
-    expect(filesContaining(/Date\.now\(/)).toEqual(['hooks/useDepartureClock.ts']);
+    expect(filesContaining(/Date\.now\(/)).toEqual([]);
   });
 
   it('computes nothing about money', () => {
@@ -171,10 +173,13 @@ describe('nothing retries the write for her', () => {
     expect(filesContaining(/retry:\s*(true|\d)/)).toEqual([]);
   });
 
-  it('arms exactly one timer, and it cannot reach Query', () => {
-    // The repaint is a repaint and never an occasion to ask. A module that both
-    // held a cadence and could fetch is how a screen quietly starts polling.
-    expect(filesContaining(/setTimeout|setInterval/)).toEqual(['hooks/useDepartureClock.ts']);
+  it('arms no timer of its own, and only two modules can reach Query', () => {
+    // The repaint is a repaint and never an occasion to ask, and a module that both
+    // held a cadence and could fetch is how a screen quietly starts polling. This
+    // feature now arms none at all — the loop is `now/hooks/useMomentClock.ts`,
+    // where Now's own walk keeps it out of reach of a fetch — so a cadence added
+    // here would be a second loop rather than a modified one.
+    expect(filesContaining(/setTimeout|setInterval/)).toEqual([]);
     expect(filesContaining(/useQueryClient|@tanstack\/react-query/)).toEqual([
       'hooks/useDeparture.ts',
       'hooks/useLeaveMatch.ts',

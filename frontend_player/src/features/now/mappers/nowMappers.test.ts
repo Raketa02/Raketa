@@ -201,6 +201,59 @@ describe('a match card', () => {
     expect(card.where.cover).toBe('indoor');
     expect(card.where.distanceKm).toBe(2.4);
   });
+
+  it('carries the score exactly as it arrived, and flips nothing', () => {
+    // The server put the viewer's side first and `first` is hers. A flip here would
+    // be a second answer to *whose 6 was that*, which is the failure naming both
+    // sides exists to prevent (`ADR-0060`).
+    const card = nth(
+      compose({
+        ...emptyNow(),
+        your_matches: {
+          stamp: 1,
+          cards: [
+            matchCard({
+              matchId: 'm-1',
+              situation: 'completed',
+              facts: {
+                score: {
+                  sides: [{ players: ['Ada', 'Kuba'] }, { players: ['Marta', 'Ola'] }],
+                  sets: [
+                    { first: 6, second: 4 },
+                    { first: 3, second: 6 },
+                  ],
+                },
+              },
+            }),
+          ],
+        },
+      }).yourMatches.cards,
+      0,
+    );
+
+    expect(card.score?.sides.map((side) => side.players)).toEqual([
+      ['Ada', 'Kuba'],
+      ['Marta', 'Ola'],
+    ]);
+    expect(card.score?.sets).toEqual([
+      { first: 6, second: 4 },
+      { first: 3, second: 6 },
+    ]);
+  });
+
+  it('has no score on a card the server sent none for', () => {
+    // Which is thirty-four of the thirty-six: a score is on a card exactly when the
+    // match has one to print, and never inferred from the situation.
+    const card = nth(
+      compose({
+        ...emptyNow(),
+        your_matches: { stamp: 1, cards: [matchCard({ matchId: 'm-1', situation: 'ready' })] },
+      }).yourMatches.cards,
+      0,
+    );
+
+    expect(card.score).toBeUndefined();
+  });
 });
 
 describe('a shelf', () => {

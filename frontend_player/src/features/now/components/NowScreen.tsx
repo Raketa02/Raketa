@@ -87,19 +87,19 @@ export function NowScreen() {
 
   // Where a card's two controls go.
   //
-  // **The exit has a destination; the act still has none.** Leaving is a route
-  // that states the price before anything happens (`ADR-0086`), and it is the
-  // first control on this screen to reach one. Every act's destination still
-  // belongs to a ticket that has not landed — the seat claim and its payment are
-  // `Raketa02/Raketa#89`, the result screen `#90`, leaving standby `#92`, and the
-  // Getting-in sheet is outside this map — so an act is still received and
+  // **Two of the six acts have a destination now, and both are the same one.**
+  // `enterResult` and `answerResult` resolve to the `result` surface — one route,
+  // because `ADR-0060` makes it *"one route resolving the same situation the card
+  // resolved"* and the two labels are two moments of one conversation rather than
+  // two screens. The rest still belong to tickets that have not landed — the seat
+  // claim and its payment are `Raketa02/Raketa#89`, leaving standby `#92`, and the
+  // Getting-in sheet is outside this map — so an unwired act is received and
   // dropped here, which is the one place each will be wired.
   //
-  // The route is addressed by the **match**, because that is what the departure
-  // is about and it is the only thing the server needs to answer. Nothing about
-  // the card is carried across: the screen asks for what leaving is worth at the
-  // instant it opens, and handing it the card's own already-composed facts would
-  // be quoting a number the card never checked.
+  // Both routes are addressed by the **match** and carry nothing else. The card's
+  // own already-composed facts are not handed across: each screen asks for what is
+  // true at the instant it opens, and quoting the card would be showing a number
+  // the card never checked.
   const onControl = useCallback(
     (control: CardControl) => {
       switch (control.kind) {
@@ -110,6 +110,12 @@ export function NowScreen() {
           });
           return;
         case 'act':
+          if (control.surface === 'result') {
+            router.push({
+              pathname: '/matches/[matchId]/result',
+              params: { matchId: control.card.matchId },
+            });
+          }
           return;
       }
     },

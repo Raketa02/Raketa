@@ -48,7 +48,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import type { ReactNode } from 'react';
 
 import { formatMoney } from '@/shared/lib/formatting';
-import { Card, FitBadge, Note, PressableCard, Tag, theme } from '@/shared/ui';
+import { Card, FitBadge, Note, PressableCard, ScoreBoard, Tag, theme } from '@/shared/ui';
 
 import type { ClubCard, MatchCard, NowCard, PersonCard } from '../domain/ComposedScreen';
 import type { FitBadge as FitBadgeValue } from '../domain/fitBadge';
@@ -57,7 +57,7 @@ import { FIT_UNSURE_WARNING } from '../mappers/fitReasons';
 import { ActionRow, type CardControl } from './ActionRow';
 import { CardClock } from './CardClock';
 import { TONE_PRESENTATION } from './tonePresentation';
-import { fitBadgeLabel } from './nowCopy';
+import { fitBadgeLabel, scoreBoardRows } from './nowCopy';
 
 /** The metadata separator, everywhere on this screen without exception. */
 const SEP = ' · ';
@@ -206,6 +206,14 @@ function MatchCardShell({
           {card.departure}
         </Text>
       )}
+
+      {/* The score, on the two situations the server sends one for: a live
+          proposal and a settled result. Under the situation line, because the line
+          says what the conversation is doing and the score is what it is about —
+          and **no level movement anywhere beside it**, in v1 or at all, because no
+          engine produces one and a card must not invent a number nothing computed
+          (`ADR-0049`). */}
+      {card.score === undefined ? null : <ScoreBoard rows={scoreBoardRows(card.score)} />}
 
       {card.fit === undefined ? null : <FitReasons fit={card.fit} />}
 

@@ -277,6 +277,13 @@ badge and emphasis — with [#88](https://github.com/Raketa02/Raketa/issues/88).
   **reaching zero** is one of the four asks. So the feature holds two `setTimeout`s doing
   two jobs, and the walk names both and asserts that only one of them can see Query at all.
   Conflating them is how Now ends up on a sixty-second poll.
+- **The one repaint loop** — `useMomentClock`, over whatever moments a screen is holding.
+  Now, the departure screen and the result screen all call it, and each holds **one** clock
+  rather than one per card or one per row. It lives in Now beside the arithmetic it repaints
+  rather than in `shared/`, which may never import a feature. It was the departure feature's
+  own hook until a **third** screen wanted one — the trigger that hook recorded — and the
+  promotion is what stops two loops becoming two cadences. _Avoid_: writing a fourth; a
+  screen that repaints on a different beat from the one before it looks broken.
 - **The action row** — one row on a state card, three optional slots, **zero variants**:
   the clock leftmost, the act at `flex: 1`, the exit rightmost (ADR-0088). Each appears
   exactly when its own field is present, a vacant slot does not stretch, and the empty row
@@ -416,6 +423,60 @@ its update; Now knows nothing about it beyond a boolean on a card and an address
   spelled from the player and the match would survive a process death and would also be
   guessable from public data, and griefing an irreversible money act is the worse failure
   ([#117](https://github.com/Raketa02/Raketa/issues/117)).
+
+### The result screen
+
+`features/result/` — the route the two post-play acts on a card open, landed with
+[#90](https://github.com/Raketa02/Raketa/issues/90). Like the departure screen it reads
+Now's vocabulary and hands Now its update; Now knows nothing about it beyond an act code and
+an address to push.
+
+- **One route, every rendering** — entry, the two audience renderings of a live proposal, the
+  counter, the settled result and the unscored ending. The route **renders by situation, not
+  by a screen identifier** ([ADR-0060](../docs/adr/0060-a-result-is-entered-on-a-route-and-the-card-names-the-act.md)),
+  so the sentence at the top is Now's own table and every block under it is composed from the
+  server's three booleans, the score on the table and the two clocks. _Avoid_: a `phase` or a
+  rendering enum — it is a second vocabulary answering a question the ladder already answers.
+- **The hero clock** — the settlement deadline, drawn as the largest figure on the screen with
+  the sentence that says what happens if nobody acts. Absent once the answer is in: a settled
+  result and an unscored evening count to **nothing**, not to zero.
+- **The acceptance grace** — the second, quieter line, present **only while it runs**. Inside
+  it a counter beats a pending acceptance, so a screen that hid it would say _settled_ half an
+  hour early. Its presence is the server's; the phone never works out that it has passed.
+- **What silence does** — one sentence, keyed on `proposals`, which is a number the server
+  sent: nothing entered → the evening counts and the result does not; one proposal → it
+  stands; two → the match counts for nothing. Copy selection from a fact, not a rule: nothing
+  branches on it but the words, and the deadline beside it is the server's.
+- **Score pad** — the instrument, five rows of two cells with one live. It holds the pad's
+  **state** and no rule about scores: whether `21-19` is a match anybody played is the
+  server's permissive validator's. Only **finished rows** are sent, and a row holding one
+  number blocks the send — sending it would mean choosing a number she did not type, and the
+  screen says so rather than leaving a missing button to be interpreted. **Clear empties the
+  row**, both cells, which is also the only way a score gets shorter.
+- **One pad for every sport** — [ADR-0060](../docs/adr/0060-a-result-is-entered-on-a-route-and-the-card-names-the-act.md)
+  specifies it **per sport** and that cannot be built: the sport is on no player-facing
+  payload. It ships as the widest of the four ADR-0060 names, so every score the others can
+  produce is reachable, and a padel player is shown fourteen keys she will never press
+  ([#120](https://github.com/Raketa02/Raketa/issues/120)).
+- **A correction opens full and a counter opens empty** — correcting is editing her own side's
+  sentence; countering is writing a different one. _Avoid_: pre-filling a counter — it puts
+  her one tap from a "different" score identical to the one on the table, which consumes her
+  side's one proposal and then lets silence uncount the match.
+- **The sides are named, hers first** — everywhere a score appears, on the card and on this
+  screen, through the **one** function that does it (`scoreBoardRows`). A side whose players
+  the wire named none of is named by **position**, which is the ordinary case for a leaver
+  whose seat was vacated. _Avoid_: a second join — the two surfaces would name a side two
+  ways.
+- **No bare rejection, and nowhere to send one** — [ADR-0048](../docs/adr/0048-silence-confirms-a-result-and-disagreement-carries-a-score.md).
+  The product's word is **propose a modification**, never _dispute_, and the walk keeps the
+  vocabulary of rejection out of the build.
+- **No level movement anywhere** — no engine produces one. The settled ending says nothing
+  about a level in either direction; the **unscored** ending does say _nobody's level moved_,
+  because that rendering exists to say what the evening counted for and what it did not
+  ([ADR-0049](../docs/adr/0049-an-unscored-match-is-an-evening-not-evidence.md)).
+- **A leaver opens it and is offered nothing** — she played half an evening and paid for it,
+  so the route resolves rather than 404s, the score reads the right way round for her, and
+  all three booleans are false.
 
 ### Data and errors
 

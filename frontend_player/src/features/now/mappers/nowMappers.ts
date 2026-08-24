@@ -38,6 +38,7 @@ import type {
   NowUpdate,
   PersonCard,
   Place,
+  ScoreLine,
   Shelf,
 } from '../domain/ComposedScreen';
 import type { FitBadge } from '../domain/fitBadge';
@@ -64,6 +65,7 @@ type MoneyResponse = components['schemas']['MoneyResponse'];
 type DebtLineResponse = components['schemas']['DebtLineResponse'];
 type FitResponse = components['schemas']['FitResponse'];
 type NowUpdateResponse = components['schemas']['NowUpdateResponse'];
+type ScoreLineResponse = components['schemas']['ScoreLineResponse'];
 
 /**
  * Coverage is never a number the player sees, and this is where that stops being a
@@ -214,6 +216,27 @@ function toMatchCard(wire: MatchCardResponse): MatchCard {
     // situation above is untouched: an audience changes a card's words and never
     // its situation (`ADR-0072`).
     departure: leaverLine(wire.situation.facts.departure),
+    // The score exactly as it was sent, sides and sets in the order they arrived.
+    // Whose 6 it is has already been decided by the server putting the viewer's
+    // side first, and re-deciding it here would be the second answer to that
+    // question `ADR-0060` names the sides to prevent.
+    score: wire.situation.facts.score == null ? undefined : toScoreLine(wire.situation.facts.score),
+  };
+}
+
+/**
+ * The score, carried across and never rearranged.
+ *
+ * The two `map`s are renamings and nothing else — `first` is `sides[0]`'s games,
+ * which is the wire's own statement about the pair. Nothing sums a set, compares
+ * two, or works out who won: who won is not a fact the phone was sent, and a
+ * client that computed it would be the level movement `ADR-0049` refuses arriving
+ * through the back door.
+ */
+function toScoreLine(wire: ScoreLineResponse): ScoreLine {
+  return {
+    sides: wire.sides.map((side) => ({ players: side.players })),
+    sets: wire.sets.map((set) => ({ first: set.first, second: set.second })),
   };
 }
 

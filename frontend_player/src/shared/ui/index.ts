@@ -26,6 +26,12 @@ export { Note, type NoteProps, type NoteVariant } from './Note';
 export { InfoMark, Popover, type InfoMarkProps, type PopoverProps } from './Popover';
 export { QuestionNavigator, type QuestionNavigatorProps } from './QuestionNavigator';
 export { Row, type RowProps, type RowVariant } from './Row';
+export {
+  ScoreBoard,
+  SCORE_BOARD_ROW_ID,
+  type ScoreBoardProps,
+  type ScoreBoardRow,
+} from './ScoreBoard';
 export { ScreenHeader, type ScreenHeaderProps } from './ScreenHeader';
 export {
   TabBar,
