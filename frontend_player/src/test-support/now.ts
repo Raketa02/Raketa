@@ -217,3 +217,44 @@ export function seatWrite({
 export function nowOffering(...cards: Wire['MatchCardResponse'][]): Wire['NowResponse'] {
   return { ...emptyNow(), offers: { stamp: 1, cards } };
 }
+
+/** `DELETE /api/v1/matches/{id}/standby`, the address the queue card's act writes to. */
+export function standbyPath(matchId: string): string {
+  return `/api/v1/matches/${matchId}/standby`;
+}
+
+/**
+ * What leaving standby answered: the update, and nothing beside it.
+ *
+ * The **gone** form by default, because that is what this act produces — a queue
+ * place is the whole of what put the match on her strip, so the card goes with it.
+ * The other form is reachable from here on purpose: an answer that came back
+ * *changed* must not be read as *gone* by a client that assumed the act's usual
+ * shape, and a fixture that could not describe it could not test that.
+ */
+export function standbyWrite(
+  update: Wire['StandbyWriteResponse']['update'],
+): Wire['StandbyWriteResponse'] {
+  return { update };
+}
+
+/** The card is off her screen: the one form of the update that shortens a region. */
+export function cardGone(matchId: string): Wire['NowUpdateResponse'] {
+  return { update_type: 'gone', match_id: matchId };
+}
+
+/** The card is still on her screen, recomposed: the form every other act answers with. */
+export function cardChanged(card: Wire['MatchCardResponse']): Wire['NowUpdateResponse'] {
+  return { update_type: 'card', card };
+}
+
+/**
+ * What she owes, and whether it costs her anything (`ADR-0070`).
+ *
+ * Present on the envelope exactly when something is owed — *"absent when there is
+ * nothing owed, rather than present at zero"* — so a fixture that wanted *no debt*
+ * leaves it `null` rather than passing zero here.
+ */
+export function debt(amount: number, blocked: boolean): Wire['DebtLineResponse'] {
+  return { owed: { amount, currency: 'PLN' }, blocked };
+}

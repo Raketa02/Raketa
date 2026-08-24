@@ -27,9 +27,10 @@
  *    it is and puts its indicator at the top.
  * 3. **An action** — and it is a **cache write rather than a fetch** (`ADR-0074`),
  *    because every act off this screen hands Now its update in its own response.
- *    Taking a seat is the first one this screen makes itself: `useTakeSeat` writes
- *    the card and the two regions the answer carries and invalidates nothing. The
- *    routes do the same from outside.
+ *    Two of them this screen makes itself, and neither asks first: `useTakeSeat`
+ *    writes the card and the two regions the answer carries, and `useLeaveStandby`
+ *    writes the one form of the update that **removes** a card. Neither
+ *    invalidates anything. The routes do the same from outside.
  * 4. **A countdown reaching zero** — `useDeadlineAsk`, one wake at a moment the
  *    server named. **There is no interval anywhere.**
  *
@@ -41,6 +42,16 @@
  * **corrected card** (`ADR-0070`) — which is honest, and which on its own would
  * have a card quietly stop offering a seat under her thumb. One plain line at the
  * top of Now, held and then faded, **once**, and never a dialog.
+ *
+ * ## The one line that is about the player
+ *
+ * `ADR-0070` puts exactly one viewer fact on the envelope beside the three
+ * regions, and the **debt line** is it: an amount, a currency and one boolean
+ * meaning *she may not create a match or book a court*. It is drawn above the
+ * regions, exactly when the server sent one, and it changes nothing else on the
+ * screen — no act is withheld, no button is disabled and no card is dimmed,
+ * because being cut off must not make her less likely to pay for a seat in
+ * somebody else's match.
  *
  * ## The second timer repaints and never asks
  *
@@ -68,6 +79,7 @@ import { Card, ScreenHeader, theme } from '@/shared/ui';
 
 import { dayAndTime } from '../domain/deviceClock';
 import { useDeadlineAsk } from '../hooks/useDeadlineAsk';
+import { useLeaveStandby } from '../hooks/useLeaveStandby';
 import { useNow } from '../hooks/useNow';
 import { useSportFilter } from '../hooks/useSportFilter';
 import { useTakeSeat } from '../hooks/useTakeSeat';
@@ -75,12 +87,19 @@ import { useTakeSeat } from '../hooks/useTakeSeat';
 import type { FindPreFilter } from '../mappers/shelves';
 
 import type { CardControl } from './ActionRow';
+import { DebtLine } from './DebtLine';
 import { NowClockProvider } from './NowClock';
 import { EnrolledStripView, OffersRegionView, ShelvesRegionView } from './NowRegions';
 import { NowShimmer } from './NowShimmer';
 import { SportBar } from './SportBar';
 import { TransientLine } from './TransientLine';
-import { SEAT_GONE, greeting, nowErrorMessage, seatFailureLine } from './nowCopy';
+import {
+  SEAT_GONE,
+  STANDBY_LEAVE_FAILED,
+  greeting,
+  nowErrorMessage,
+  seatFailureLine,
+} from './nowCopy';
 import { GUTTER } from './nowGeometry';
 
 /**
@@ -101,6 +120,7 @@ export function NowScreen() {
   const user = useCurrentUser();
   const router = useRouter();
   const takeSeat = useTakeSeat(selected);
+  const leaveStandby = useLeaveStandby();
   const [notice, setNotice] = useState<TransientNotice | undefined>(undefined);
 
   const { refetch } = now;
@@ -112,6 +132,7 @@ export function NowScreen() {
   useDeadlineAsk(now.data, ask);
 
   const { mutate: take } = takeSeat;
+  const { mutate: leave } = leaveStandby;
 
   // One line at a time, and each showing is its own. Replacing the sentence rather
   // than queueing a second is the whole of *once*: two lines stacked would be a
@@ -124,16 +145,22 @@ export function NowScreen() {
 
   // Where a card's two controls go.
   //
-  // **Three of the seven acts have a destination now.** `enterResult` and
-  // `answerResult` resolve to the `result` surface — one route, because `ADR-0060`
-  // makes it *"one route resolving the same situation the card resolved"* and the
-  // two labels are two moments of one conversation rather than two screens.
-  // `takeSeat` resolves to no screen at all: it is a **write**, answered by the
-  // card it was about (`ADR-0070`), so the tap sends it and the screen corrects
-  // itself. The rest still belong to tickets that have not landed — `finishPaying`
-  // wants the payment sheet (`Raketa02/Raketa#126`), leaving standby is `#92`, and
-  // the Getting-in sheet is outside this map — so an unwired act is received and
-  // dropped here, which is the one place each will be wired.
+  // **Four of the seven acts have a destination now, and two of the four are
+  // writes.** `enterResult` and `answerResult` resolve to the `result` surface —
+  // one route, because `ADR-0060` makes it *"one route resolving the same situation
+  // the card resolved"* and the two labels are two moments of one conversation
+  // rather than two screens. `takeSeat` and `leaveStandby` resolve to no screen at
+  // all: each is answered by the card it was about (`ADR-0070`, `ADR-0087`), so the
+  // tap sends it and the screen corrects itself. The last two belong to tickets
+  // that have not landed — `finishPaying` wants the payment sheet
+  // (`Raketa02/Raketa#126`) and the Getting-in sheet is outside this map — so an
+  // unwired act is received and dropped here, which is the one place each will be
+  // wired.
+  //
+  // **Neither write asks first.** A seat is a race, and leaving standby costs
+  // nothing — `ADR-0087`: *"a confirmation here would imply a cost the model says
+  // does not exist"*, and there is no place to forfeit because a standby position
+  // is deliberately not a fact the platform shows.
   //
   // Both routes are addressed by the **match** and carry nothing else. The card's
   // own already-composed facts are not handed across: each screen asks for what is
@@ -154,6 +181,16 @@ export function NowScreen() {
               pathname: '/matches/[matchId]/result',
               params: { matchId: control.card.matchId },
             });
+            return;
+          }
+          if (control.surface === 'standbyWrite') {
+            // One tap and no confirmation, and the acknowledgement is the card
+            // **leaving** — which the hook's cache write does (`ADR-0074`). What
+            // is left here is the failure, and only the failure: nothing can
+            // refuse this act, so a tap that does not apply is a tap that never
+            // reached the server, and a card that stayed put while saying nothing
+            // is a player wondering whether she is still queued.
+            leave({ matchId: control.card.matchId }, { onError: () => show(STANDBY_LEAVE_FAILED) });
             return;
           }
           if (control.surface === 'seatClaim') {
@@ -178,7 +215,7 @@ export function NowScreen() {
           return;
       }
     },
-    [router, show, take],
+    [leave, router, show, take],
   );
 
   // Where a shelf's tail card goes: Find, carrying that shelf's claim and the sport
@@ -245,6 +282,12 @@ export function NowScreen() {
               <TransientLine key={notice.showing} line={notice.line} onFaded={faded} />
             )}
 
+            {/* The one fact about the viewer, above the three regions that are
+                about matches, and drawn exactly when the server sent one — the
+                envelope carries a debt line when something is owed and nothing
+                when nothing is, so presence is never a comparison here. */}
+            {now.data.debt === undefined ? null : <DebtLine debt={now.data.debt} />}
+
             <OffersRegionView
               region={now.data.offers}
               onControl={onControl}
@@ -253,7 +296,15 @@ export function NowScreen() {
               // with, which is the only thing that knows *which* card it was.
               busyMatchId={takeSeat.isPending ? takeSeat.variables?.matchId : undefined}
             />
-            <EnrolledStripView region={now.data.yourMatches} onControl={onControl} />
+            <EnrolledStripView
+              region={now.data.yourMatches}
+              onControl={onControl}
+              // The queue place she is leaving right now, so its own button says
+              // so. The strip holds a **write** for the first time (`ADR-0087`),
+              // which is the condition the offers region's own prop was withheld
+              // for until this ticket.
+              busyMatchId={leaveStandby.isPending ? leaveStandby.variables?.matchId : undefined}
+            />
             <ShelvesRegionView
               region={now.data.shelves}
               sport={selected}

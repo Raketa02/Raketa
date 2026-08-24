@@ -415,9 +415,57 @@ screen behind it, so the tap is answered by the card it was about.
   ([ADR-0081](../docs/adr/0081-a-seat-is-never-taken-until-it-is-paid.md)) — arrive as
   conflicts and get the same one line, keyed on the backend's `code` and never its `message`.
 - **Busy, on the act** — the `Button` primitive's own state on the card whose write is in
-  flight. Not a fourth slot and not a variant: this is the one act on the screen that is a
-  **write** rather than a route, so between the tap and the answer there is otherwise
-  nothing at all to see, and a blocked button is what stops one thumb sending two commands.
+  flight. Not a fourth slot and not a variant: this is one of the two acts on the screen
+  that are a **write** rather than a route, so between the tap and the answer there is
+  otherwise nothing at all to see, and a blocked button is what stops one thumb sending two
+  commands. **Both regions that hold a write thread it**, and each names a _match_: a strip
+  holding three queue places must not go dead because she left one.
+
+### Leaving standby, and the debt line
+
+The two surfaces [#92](https://github.com/Raketa02/Raketa/issues/92) finished the screen's
+obligations to a player with: the second write Now makes for itself, and the one line on it
+that is about _her_ rather than about a match.
+
+- **The standby write** — `DELETE /api/v1/matches/{matchId}/standby`, sent with **no body
+  and no sport chip**. The seat write carries the chip because its answer is two whole
+  regions composed under it; this one answers a **card**, and a card is a card whatever chip
+  is held. No idempotency key: the route is idempotent by its own nature, which is the case
+  a key exists to manufacture
+  ([ADR-0087](../docs/adr/0087-leaving-standby-is-the-seventh-act.md)).
+- **One tap and no confirmation** — nothing is lost. No money moves, no Player Score is
+  touched, and there is **no place to forfeit**, because a standby position is deliberately
+  not a fact the platform shows. A dialog would imply a cost the model says does not exist,
+  which is worse than a mis-tap: a mis-tap is one tap to undo, and a false warning teaches a
+  player that standby is something she is giving up. _Avoid_: "cancel my place" — there is
+  no place.
+- **The card leaving is the acknowledgement** — this is the only act in the product that
+  **removes** a card
+  ([ADR-0091](../docs/adr/0091-a-queue-place-is-a-card-and-leaving-one-is-the-first-card-that-goes.md)),
+  so a line saying _you have left the queue_ would be the product telling her something she
+  is already looking at. The **only** thing the screen says here is the failure, and it names
+  what is still true: _that did not go through — you are still on standby_.
+- **The debt line** — an amount, a currency and **one boolean** meaning _she may not create a
+  match or book a court_
+  ([ADR-0070](../docs/adr/0070-now-is-three-regions-and-a-card-has-two-halves.md)). A screen
+  fact and **not a fourth region**: the three regions are ordered lists of tappable cards,
+  and a region holding one untappable sentence breaks that on its first use. Drawn above all
+  three, amber, and never a control — there is no payment surface to open.
+- **Presence is the server's and so is the block** — the envelope carries a debt line
+  exactly when something is owed, so nothing here compares an amount against zero, and the
+  consequence is drawn off the boolean rather than off the figure beside it. The amount is
+  said whether or not she is blocked, which is the whole argument for the line: she is warned
+  **before** she meets the block rather than meeting it as a bare refusal.
+- **What being cut off does not cost her** — she can still take a seat in somebody else's
+  match, and the line says so in the same breath. It is enforced by the screen **withholding
+  nothing**: no act is dropped, no button is disabled and no card is dimmed. Being cut off
+  must not make her less likely to pay.
+- **No list of blocked acts** — _which_ acts are refused is compressed into the boolean on
+  purpose, and a client-side enumeration of them would be a vocabulary nothing else in the
+  product reads. The walk keeps the debt out of every module that draws a card.
+- **Not an alert** — the note carries no `alert` role, because a note announces itself when
+  it _appears_ and this one appears with the screen, on every one of `ADR-0054`'s four asks.
+  The card's own rescue strip keeps the role, because that one is news.
 
 ### The departure screen
 

@@ -3,7 +3,10 @@
  * about a match.
  *
  * A match's sentence comes off the situation table in `mappers/`; these are the
- * greeting, the region headings, the empty states and the one failure line.
+ * greeting, the region headings, the empty states, the two failure lines and the
+ * **debt line** — the one thing here that is about the *player* rather than about
+ * the screen or a match, and which is written from three facts the envelope
+ * carries rather than from anything the phone works out.
  *
  * **Nothing here admits staleness.** `ADR-0038` Rule IV, kept by `ADR-0054`: no
  * card carries a stale marker, no banner appears, and there is no *"can't reach
@@ -15,9 +18,11 @@
  */
 
 import type { AppError } from '@/shared/errors';
+import type { Money } from '@/shared/lib/formatting';
+import { formatMoney } from '@/shared/lib/formatting';
 import type { ScoreBoardRow } from '@/shared/ui';
 
-import type { ScoreLine, ScoreSide } from '../domain/ComposedScreen';
+import type { DebtLine, ScoreLine, ScoreSide } from '../domain/ComposedScreen';
 import type { SportFilter } from '../mappers/codes';
 import { SPORT_CHIP_COPY } from '../mappers/sportBar';
 
@@ -229,4 +234,72 @@ export function seatFailureLine(error: AppError): string {
     return SEAT_FAILURE_BY_CODE[code] ?? SEAT_WRITE_FAILED;
   }
   return SEAT_WRITE_FAILED;
+}
+
+/**
+ * What a tap on *leave standby* says when it did not go through.
+ *
+ * **Nothing can refuse this act** (`ADR-0087`) — anybody may queue for any match,
+ * and deleting a place she does not hold answers what a success answers — so the
+ * only way it fails is that it never reached the server or the server could not
+ * answer at all. There is no code to key on and no table to hold: one sentence,
+ * and it names what is still true rather than only what went wrong.
+ *
+ * It is the same plain line the seat write uses and deliberately **not** the same
+ * words. A tap with no confirmation behind it and no screen to return to is a tap
+ * whose only evidence is the card leaving; a card that stays put and says nothing
+ * is a player wondering whether she is still on the queue, which is the one thing
+ * this sentence answers.
+ */
+export const STANDBY_LEAVE_FAILED = 'That did not go through — you are still on standby.';
+
+/**
+ * What a player who owes money is told, on the one line Now gives her.
+ *
+ * **Three facts, and the client writes the sentences** (`ADR-0041`, `ADR-0070`):
+ * an amount, a currency, and one boolean meaning *she may not create a match or
+ * book a court*. The boolean is the **server's** and is read rather than worked
+ * out — concluding *she owes, therefore create is dead* would be a rule, and the
+ * phone holds none (`ADR-0053`).
+ *
+ * **Presence is the server's too, and that is why nothing here compares an
+ * amount.** The envelope carries a debt line exactly when something is owed —
+ * *"absent when there is nothing owed, rather than present at zero: a zero the
+ * client has to compare against is the same rule wearing a third hat"* — so the
+ * amount is printed, never tested.
+ *
+ * **The amount is said whether or not she is blocked, and the consequence only
+ * when she is.** That is the whole argument for the line existing: she is warned
+ * *before* she meets the block, rather than meeting it as a bare refusal on a
+ * screen that does not exist yet (`Raketa02/Raketa#92`'s own words — *"so she is
+ * not blocked later with no explanation"*).
+ *
+ * **The third sentence is the one that is not a consequence.** Being cut off must
+ * not make her less likely to pay, so the line says what is still open in the same
+ * breath as what is not — and it is a sentence rather than a rule, because nothing
+ * on this screen is gated on the block in either direction.
+ */
+export function owedSentence(owed: Money): string {
+  return `You owe ${formatMoney(owed)}.`;
+}
+
+/** The consequence, stated rather than discovered. Drawn only when `blocked`. */
+export const DEBT_CONSEQUENCE = 'Until it is settled you cannot create a match or book a court.';
+
+/** What being cut off does **not** cost her. Drawn beside the consequence. */
+export const DEBT_STILL_OPEN = 'You can still take a seat in someone else’s match.';
+
+/**
+ * The debt line's sentences, in the order they are read.
+ *
+ * One function, so the boolean is read in exactly one place in the feature and a
+ * component cannot grow a second opinion about what owing money costs. It hands
+ * back sentences and never a list of acts: *which* acts are refused is the
+ * server's statement, compressed into the boolean on purpose, and a client-side
+ * enumeration of them would be a vocabulary nothing else in the product reads
+ * (`ADR-0070`).
+ */
+export function debtSentences(debt: DebtLine): readonly string[] {
+  if (!debt.blocked) return [owedSentence(debt.owed)];
+  return [owedSentence(debt.owed), DEBT_CONSEQUENCE, DEBT_STILL_OPEN];
 }

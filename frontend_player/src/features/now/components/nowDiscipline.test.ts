@@ -1,6 +1,6 @@
 /**
- * The ten rules on this feature that nothing else can catch, walked over its own
- * source.
+ * The twelve rules on this feature that nothing else can catch, walked over its
+ * own source.
  *
  * Each is a rule about what the code **does not** do, and a rule of that shape has
  * no positive test: a suite full of green assertions says nothing about the line
@@ -31,6 +31,12 @@
  *    refusal is answered by the corrected card and one line that fades.
  * 10. **Nothing here asks the OS about notifications** (`ADR-0061`). Refusing
  *    permission costs a player the message and never the card.
+ * 11. **The block is read and never derived** (`ADR-0070`, `ADR-0053`). One
+ *    boolean says what owing money costs, and no module compares the amount
+ *    beside it against anything.
+ * 12. **The debt reaches no card** (`ADR-0070`). It is a fact about the *viewer*,
+ *    and nothing that draws a match may consult it — being cut off must not make
+ *    her less likely to pay for a seat in somebody else's match.
  */
 
 import { readFileSync, readdirSync, statSync } from 'node:fs';
@@ -101,6 +107,8 @@ describe('the feature is walkable at all', () => {
     expect(paths).toContain('mappers/nowMappers.ts');
     expect(paths).toContain('components/TransientLine.tsx');
     expect(paths).toContain('hooks/useTakeSeat.ts');
+    expect(paths).toContain('hooks/useLeaveStandby.ts');
+    expect(paths).toContain('components/DebtLine.tsx');
     expect(paths.length).toBeGreaterThan(10);
   });
 
@@ -449,6 +457,82 @@ describe('an offer card costs nothing to a player who said no', () => {
     expect(ASKING.test('const { timeSensitiveSetting } = settings')).toBe(true);
     // A card's own act is not a permission question.
     expect(ASKING.test("if (control.surface === 'seatClaim')")).toBe(false);
+  });
+});
+
+describe('what owing money costs is the server’s statement and not a sum', () => {
+  /**
+   * `ADR-0070` puts one viewer fact on the envelope and makes it **three** — an
+   * amount, a currency and one boolean meaning *she may not create a match or book
+   * a court*. Both halves of that shape are rules about what this client does not
+   * do, and neither has a positive test:
+   *
+   * - **The amount is printed, never tested.** The backend's own reason is written
+   *   beside the type: *"absent when there is nothing owed, rather than present at
+   *   zero — a zero the client has to compare against is the same rule wearing a
+   *   third hat."* The tempting edit is `debt.owed.amount > 0`, which looks like a
+   *   guard and is the phone concluding *she owes* for itself.
+   * - **The boolean is read where the sentence is written, and nowhere else.** A
+   *   component that reached it would be one `disabled` away from holding the rule
+   *   the boolean exists to state, and the failure would be silent in the direction
+   *   that matters: a button withheld from a player who could have used it.
+   */
+  const COMPARED_AMOUNT = /(owed|amount)[\w.]*\s*(===|!==|==|!=|<|>|<=|>=)/;
+
+  it('compares an amount against nothing, in any module', () => {
+    expect(filesContaining(COMPARED_AMOUNT)).toEqual([]);
+  });
+
+  it('reads the block in the one module that writes the sentence', () => {
+    // Three files, and only one of them is a *reading*: the domain type declares
+    // the field, the mapper transcribes it off the wire, and `nowCopy` is where a
+    // boolean becomes words. A fourth name here is a component with an opinion.
+    expect(filesContaining(/\bblocked\b/)).toEqual([
+      'components/nowCopy.ts',
+      'domain/ComposedScreen.ts',
+      'mappers/nowMappers.ts',
+    ]);
+  });
+
+  it('has a control that would fire', () => {
+    expect(COMPARED_AMOUNT.test('if (debt.owed.amount > 0) return null;')).toBe(true);
+    expect(COMPARED_AMOUNT.test('const blocked = owed.amount !== 0;')).toBe(true);
+    // Printing an amount is not comparing one, and neither is asking whether the
+    // server sent a debt line at all — presence is the server's answer, not a sum.
+    expect(COMPARED_AMOUNT.test('`You owe ${formatMoney(owed)}.`')).toBe(false);
+    expect(COMPARED_AMOUNT.test('now.data.debt === undefined ? null : <DebtLine />')).toBe(false);
+  });
+});
+
+describe('the debt reaches no card', () => {
+  it('is named in six modules and none of them draws a match', () => {
+    // The edit this exists against is the ordinary one: an action row, a card or
+    // the act table consulting the debt to grey out a button. `ADR-0070` compresses
+    // *which acts are refused* into one boolean precisely so that no client holds a
+    // list of them — and `Raketa02/Raketa#92` is explicit that **paying for a seat
+    // in somebody else's match stays available**, because being cut off must not
+    // make her less likely to pay.
+    //
+    // So the rule is where the word may appear at all: the domain type, the mapper
+    // that reads it off the wire, the copy that turns it into sentences, the block
+    // that draws them, the screen that places it, and this feature's public
+    // surface. `components/NowCards.tsx`, `components/ActionRow.tsx` and
+    // `mappers/acts.ts` are the three that must never join the list.
+    expect(filesContaining(/debt/i)).toEqual([
+      'components/DebtLine.tsx',
+      'components/NowScreen.tsx',
+      'components/nowCopy.ts',
+      'domain/ComposedScreen.ts',
+      'mappers/nowMappers.ts',
+      'types.ts',
+    ]);
+  });
+
+  it('has a control that would fire', () => {
+    // The matcher is an equality over a list the feature really holds, so it fires
+    // on an addition as well as on a removal. This is the addition it is watching.
+    expect(filesContaining(/debt/i)).not.toContain('components/ActionRow.tsx');
+    expect(filesContaining(/debt/i).length).toBeGreaterThan(0);
   });
 });
 

@@ -89,12 +89,11 @@ export function OffersRegionView({
   /**
    * The match whose seat is being taken right now, if one is.
    *
-   * This region alone, because this region alone holds an act that is a **write**
-   * rather than a route: taking a seat is answered by the card itself, so the
-   * button has to say it is working. The strip's acts all open a screen, which is
-   * its own answer — a card there gains this the day it holds a write of its own
-   * (`Raketa02/Raketa#92`), and not before, because a prop nothing sets is a prop
-   * nobody can be sure is read.
+   * Because this region holds an act that is a **write** rather than a route:
+   * taking a seat is answered by the card itself, so the button has to say it is
+   * working. The strip below now carries the same prop for the same reason — it
+   * gained a write of its own with `leaveStandby` (`ADR-0087`), which is exactly
+   * the condition this one was withheld from it for.
    */
   readonly busyMatchId?: string;
 }) {
@@ -134,9 +133,20 @@ export function OffersRegionView({
 export function EnrolledStripView({
   region,
   onControl,
+  busyMatchId,
 }: {
   readonly region: EnrolledRegion;
   readonly onControl: (control: CardControl) => void;
+  /**
+   * The queue place she is leaving right now, if one is.
+   *
+   * The strip's other acts all open a **screen**, which is its own answer that
+   * something happened. Leaving standby opens none (`ADR-0087` refuses it a route,
+   * because a route exists to hold a consequence and this act has none), so
+   * between the tap and the card disappearing there is otherwise nothing at all to
+   * see — and a blocked button is what stops one thumb sending two commands.
+   */
+  readonly busyMatchId?: string;
 }) {
   const { width } = useWindowDimensions();
   const cardWidth = contentWidth(width);
@@ -168,7 +178,12 @@ export function EnrolledStripView({
                   gives the action row's `marginTop: auto` a height to push
                   against — `native-kit.md` §3's answer to the slab of empty
                   night under a short card. */}
-              <MatchCardView card={card} onControl={onControl} fill />
+              <MatchCardView
+                card={card}
+                onControl={onControl}
+                busy={card.matchId === busyMatchId}
+                fill
+              />
             </View>
           ))}
         </ScrollView>

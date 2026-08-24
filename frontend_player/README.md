@@ -168,6 +168,28 @@ no toast, and no card left saying _first to take it_ an hour after it was taken.
 **Turning notifications down costs you the message and never the card.** The offers are on
 this screen whether or not your phone ever buzzed.
 
+## Leaving standby
+
+Asking to be told when a seat frees on a match costs nothing, and getting off that queue
+costs nothing either — so it is **one tap and no confirmation**
+([ADR-0087](../docs/adr/0087-leaving-standby-is-the-seventh-act.md)). There is no position to
+lose: standby confers priority rather than a place, and rejoining costs what joining cost. A
+warning here would tell you that you were giving something up, which is not true.
+
+The card leaves your screen and nothing announces it — you are looking at the answer. The one
+time the app says anything is when the tap did not reach us, and then it says what is still
+true: _that did not go through — you are still on standby_.
+
+## What you owe
+
+If you owe money there is **one line on Now** saying the amount, and saying plainly that until
+it is settled you cannot create a match or book a court — so you meet that as something you
+were told rather than as a refusal with no explanation
+([ADR-0070](../docs/adr/0070-now-is-three-regions-and-a-card-has-two-halves.md)).
+
+**Taking a seat in somebody else's match still works**, and the line says so. Nothing on the
+screen is greyed out, dropped or dimmed: being cut off must not make you less likely to pay.
+
 ## Leaving a match
 
 The exit on a card opens a screen, never a dialog

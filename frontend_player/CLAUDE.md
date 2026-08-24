@@ -169,7 +169,31 @@ retry** — what a key would buy is answered by the card carrying her claim — 
 button carries the `Button` primitive's own `busy` while the write is in flight, which is what
 stops one thumb sending two commands.
 
-**Ten rules on that feature are walked over its own source** in
+**Leaving standby is one tap, and the card going is the answer**
+([ADR-0087](../docs/adr/0087-leaving-standby-is-the-seventh-act.md),
+[ADR-0091](../docs/adr/0091-a-queue-place-is-a-card-and-leaving-one-is-the-first-card-that-goes.md)).
+The `waitlisted` card's act sends `DELETE /api/v1/matches/{matchId}/standby` — **no body, no
+sport chip** — and what comes back is the update's _gone_ form, which is the only thing in the
+product that removes a card. **No confirmation**: nothing is lost, and there is no place to
+forfeit, so a dialog would imply a cost the model says does not exist. The screen says nothing
+on a success — she is looking at the card leaving — and one plain line on a failure, naming
+what is still true (_you are still on standby_). The strip threads the act's **`busy`** for
+the first time here, keyed on the match, so leaving one queue place does not deaden the two
+beside it.
+
+**A player who owes money gets one line on Now, and it withholds nothing**
+([ADR-0070](../docs/adr/0070-now-is-three-regions-and-a-card-has-two-halves.md)). An amount, a
+currency and one boolean meaning _she may not create a match or book a court_, drawn above all
+three regions — a screen fact and not a fourth region. **Presence is the server's and so is
+the block**: the envelope carries a line exactly when something is owed, so nothing compares
+an amount, and the consequence comes off the boolean rather than off the figure. The amount is
+said whether or not she is blocked, because the line exists to warn her **before** the refusal.
+She can still take a seat in somebody else's match — said in the same breath, and enforced by
+nothing on the screen being dropped, disabled or dimmed. **`ComposeNow` sends `null`
+unconditionally** ([#108](https://github.com/Raketa02/Raketa/issues/108)), so no running app
+reaches this rendering yet.
+
+**Twelve rules on that feature are walked over its own source** in
 `components/nowDiscipline.test.ts`, because each is a rule about what the code does _not_ do
 and no green assertion can carry one. **The phone holds no rules** ([ADR-0053](../docs/adr/0053-the-phone-holds-no-rules-and-only-subtracts.md)):
 `Date.parse` appears in `domain/countdown.ts` and nowhere else, so the only derivation is
@@ -191,7 +215,12 @@ computed**: no module compares a score against anything. **An update is narrowed
 wire says it is**: `toNowUpdate` switches on `update_type`, never on a missing card, and both
 forms are constructed in that one module — so a component cannot decide a card has gone.
 **Nothing on this screen is said by a dialog**: `alert(` and the toast vocabulary are not in
-the build, because a refusal is answered by the corrected card and one line that fades.
+the build, because a refusal is answered by the corrected card and one line that fades — and
+because leaving standby must never grow a confirmation. **The block is read and never
+derived**: no module compares an amount against anything, and `blocked` is named only where
+the type is declared, where the wire is read and where the sentence is written. **The debt
+reaches no card**: the word appears in six modules and none of them draws a match, which is
+what keeps the client from holding its own list of blocked acts.
 **Nothing here asks the OS about notifications** — refusing permission costs a player the
 message and never the card
 ([ADR-0061](../docs/adr/0061-the-invitation-ladder-is-an-order-and-one-open-call.md)), and the

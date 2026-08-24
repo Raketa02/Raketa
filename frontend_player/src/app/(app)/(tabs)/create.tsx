@@ -6,9 +6,10 @@
  * and it is one in the routing sense: it is a tab like the others, so it needs a screen
  * like the others. Posting a match is its own effort and is not on this map.
  *
- * A player in debt cannot create a match at all (`Raketa02/Raketa#92`), which is a rule
- * the server states on Now's debt line — it is named here so the screen that replaces
- * this one does not go looking for it on the phone.
+ * A player in debt cannot create a match at all, and **Now already says so**: the debt
+ * line states the consequence from a boolean the server sends (`ADR-0070`), so the screen
+ * that replaces this one enforces the refusal against the server and never looks for the
+ * rule on the phone. What it must not do is grow a second reading of the same fact.
  */
 
 import { StyleSheet, Text, View } from 'react-native';
