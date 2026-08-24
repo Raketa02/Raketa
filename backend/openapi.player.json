@@ -760,6 +760,57 @@
           }
         }
       }
+    },
+    "/api/v1/matches/{match_id}/standby": {
+      "delete": {
+        "tags": [
+          "matches"
+        ],
+        "summary": "Leave this match's standby queue, and correct Now off the same tap",
+        "description": "Take the viewer off the queue, and say what her screen should now hold.\n\n**200 and a body, not 204.** ADR-0074 has every action off Now return Now's\nupdate in the same response, so the screen corrects itself off her own tap\nrather than paying a full compose on the way back; a no-content answer would\nmake this the one act that does not.\n\n**Deleting a place she does not hold answers exactly what a success\nanswers.** Anybody may queue for any match, so there is no membership to be\na stranger to and nothing here can refuse: the only 404 is a match id that\nnames nothing, which is about the address rather than about the act.",
+        "operationId": "leave_standby_api_v1_matches__match_id__standby_delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "match_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The match whose standby queue this is about.",
+              "title": "Match Id"
+            },
+            "description": "The match whose standby queue this is about."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandbyWriteResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -915,6 +966,46 @@
         ],
         "title": "CaptionCode",
         "description": "Which one-line caption a shelf carries, when it carries one.\n\nA code and not a sentence, on ADR-0070's rule. ADR-0066 requires the caption\nto be *composed by the server* and the client to *evaluate nothing*: both\nhold, because the server decides whether a caption fires and which one it\nis, and the phone draws the one it was handed.\n\nThere is exactly one in v1, and it fires only when a term the ranking\n**actually reads** is undeclared \u2014 hours, price, radius-and-anchor,\ncompetitive or social. A player who declined all four sees nothing on Now,\nforever, at whatever percentage."
+      },
+      "CardChangedResponse": {
+        "properties": {
+          "update_type": {
+            "type": "string",
+            "const": "card",
+            "title": "Update Type",
+            "default": "card"
+          },
+          "card": {
+            "$ref": "#/components/schemas/MatchCardResponse"
+          }
+        },
+        "type": "object",
+        "required": [
+          "card"
+        ],
+        "title": "CardChangedResponse",
+        "description": "The card the act was about, recomposed and still on her screen.\n\nSame match, same region, new rendering \u2014 so the client replaces it **in\nplace** and no region's contents or order moves. That is ADR-0032 applied to\nthe one moment a client is holding a card the server has just recomposed."
+      },
+      "CardGoneResponse": {
+        "properties": {
+          "update_type": {
+            "type": "string",
+            "const": "gone",
+            "title": "Update Type",
+            "default": "gone"
+          },
+          "match_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Match Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "match_id"
+        ],
+        "title": "CardGoneResponse",
+        "description": "The card the act was about has left this viewer's screen.\n\nADR-0070 requires the one-card answer to be able to say this and nothing in\nthe product could produce it until ADR-0087's write landed: a departure\n*keeps* the leaver's card, because ADR-0030 keeps it until her outcome\nsettles. Leaving standby removes one, because a queue place is the whole of\nwhat put that match on her strip.\n\nIt names the match and carries no card, because there is none to carry: the\nviewer is nothing to that match now, and an emptied card would be an answer\nto *what is this match doing* composed for somebody who is not asking."
       },
       "CardHoldReason": {
         "type": "string",
@@ -1855,17 +1946,23 @@
         "description": "The whole screen: three regions, and the one fact about the viewer.\n\nThere is **no screen-level stamp** and no ``server_time``. A screen is never\nreplaced as a unit except by a compose, and a compose is three stamped regions\narriving together."
       },
       "NowUpdateResponse": {
-        "properties": {
-          "card": {
-            "$ref": "#/components/schemas/MatchCardResponse"
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/CardChangedResponse"
+          },
+          {
+            "$ref": "#/components/schemas/CardGoneResponse"
           }
-        },
-        "type": "object",
-        "required": [
-          "card"
         ],
         "title": "NowUpdateResponse",
-        "description": "What Now needs to correct itself off the player's own tap (ADR-0070).\n\n**One card and nothing else, today.** A departure returns the card *changed,\nin place* \u2014 same match, same region, new rendering \u2014 so neither viewer-owned\nregion's contents or order moves and there is nothing for a region slot to\nhold. The first action that moves one is taking a seat, and shipping the\nslots ahead of it would be the *\"two fields with no reader\"* ADR-0071\nrefuses. The shelves are never in an update at all."
+        "description": "What Now needs to correct itself off the player's own tap (ADR-0070).\n\n**One card, in one of two forms**, discriminated on the wire so that reading\na card off the *gone* form is a narrowing error rather than a blank line \u2014\nthe same shape ADR-0072 gives the leaver's money, and for the same reason: a\nnullable card would leave *it is gone* and *this build sent none* looking\nidentical.\n\n**Neither of the two viewer-owned region slots is here yet**, and that is\nstill the honest shape rather than a partial one. ADR-0070 puts a region in\nan update when its *contents or order* change, and a card leaving is\nexpressed by the form below rather than by re-sending the region it left.\nThe first act that moves a region's order is taking a seat\n(``Raketa02/Raketa#89``); shipping the slots ahead of it would be the *\"two\nfields with no reader\"* ADR-0071 refuses. **The shelves are never in an\nupdate at all.**",
+        "discriminator": {
+          "propertyName": "update_type",
+          "mapping": {
+            "card": "#/components/schemas/CardChangedResponse",
+            "gone": "#/components/schemas/CardGoneResponse"
+          }
+        }
       },
       "OffersRegionResponse": {
         "properties": {
@@ -2845,6 +2942,19 @@
           "sports"
         ],
         "title": "SportsResponse"
+      },
+      "StandbyWriteResponse": {
+        "properties": {
+          "update": {
+            "$ref": "#/components/schemas/NowUpdateResponse"
+          }
+        },
+        "type": "object",
+        "required": [
+          "update"
+        ],
+        "title": "StandbyWriteResponse",
+        "description": "What leaving standby answers: Now's update, and nothing beside it.\n\nADR-0074's shape is *its own screen's answer **and** Now's update*, and this\nact has no screen of its own \u2014 ADR-0087 refuses it one, because a route\nexists to hold a consequence and leaving a queue has none. So the response\nis the update alone, in an object rather than bare, because a bare union at\nthe top level of a response is a shape neither client generator narrows\nwithout ceremony and because the day a second field is right it has\nsomewhere to go.\n\n**There is no ``applied``.** The departure route carries one so that *was I\nrefused* is not a rule on the phone; here nothing can refuse, so a boolean\nthat is always true is a field with no reader."
       },
       "SubmitAnswerRequest": {
         "properties": {

@@ -120,6 +120,11 @@ describe('a write’s answer', () => {
   it('carries Now’s one changed card, mapped as a compose would map it', () => {
     const answer = toDepartureAnswer(departureWrite(screen, card, 'refundedInFull'));
 
+    // Narrowed rather than asserted through, because the *gone* form has no
+    // card at all (`ADR-0087`) and a departure may never produce it: `ADR-0030`
+    // keeps the leaver's card until her outcome settles.
+    expect(answer.update.kind).toBe('card');
+    if (answer.update.kind !== 'card') throw new Error('a departure changes a card');
     expect(answer.update.card.matchId).toBe(MATCH);
     expect(answer.update.card.status?.tag).toBe('Rescue active');
   });

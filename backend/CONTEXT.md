@@ -1289,12 +1289,51 @@ there; they are not repeated here.
   from the same expression the strip composes its own from, so a correction can never land
   a card that disagrees with the screen it came back on.
 - **`EnrolledMatches.one`** (`EnrolledFromMatches.one`) — the one-match read behind an
-  action off Now. Its membership is **wider than the strip's by exactly one case**: a seat
-  or a departure is what `for_player` answers, and this also resolves for a viewer holding a
-  live seat claim, who holds no seat yet and whose route must still open and say *no*.
-  Anybody else is a stranger and gets nothing. It reads its club **singly** where the strip
-  reads a batch, because a batch of one to answer a question about one match is the same
-  query wearing a loop.
+  action off Now. Its membership is **wider than the strip's by exactly one case**: a seat,
+  a departure or a standby place is what `for_player` answers, and this also resolves for a
+  viewer holding a live seat claim, who holds no seat yet and whose route must still open
+  and say *no*. Anybody else is a stranger and gets nothing. It reads its club **singly**
+  where the strip reads a batch, because a batch of one to answer a question about one
+  match is the same query wearing a loop.
+- **The standby queue** (`match_standby_places`, migration `0016`) — who asked to be told
+  if a seat frees, as a table keyed `(match_id, player_id)` and **not part of the `Match`
+  aggregate**: a join changes nothing a rung reads about the match, and routing it through
+  the aggregate would bump ADR-0034's version column and invalidate the scoring-context
+  cache keyed `matchId : recordVersion` every time somebody queued. The pair is the primary
+  key, so **asking twice is asking once** — which is what lets ADR-0087's route refuse an
+  idempotency key. It is **deleted rather than ended**, the opposite of every other child
+  table here: a vacancy, a departure and a claim are kept because *what happened at 18:03*
+  is a support question about money or about a seat, and neither is true of a queue place.
+  And it **announces nothing**, the one place Matches departs from *every change is its own
+  named event* — that obligation is about a match somebody paid for, and this has one
+  reader, the cascade, which reads the list when a seat frees rather than following it.
+- **The strip's fourth membership** (`Enrolment.on_standby`) — a seat, a departure, a live
+  claim, **or a queue place**, and the fourth confers nothing at all (ADR-0091). It is on
+  the strip because `waitlisted` is a card that names an act and this is the only region on
+  Now that could hold one: the offers region is seats offered to her, and the ranked
+  shelves exclude a queued match by rule. Two reads and one list — `for_player` answers
+  enrolment and `queued_by` answers the queue, kept apart because eligibility reads the
+  first as *what is already hers* and a queue place is neither her identity nor her hours.
+- **`ACT_OF`** (`now.domain.vocabulary`) — which act a card names, per situation. **One row
+  today**, and that is ADR-0083's rule rather than a stub: an act arrives with the surface
+  that receives it, and of the ten situations that would name one only `waitlisted` has a
+  destination. A **partial** table, because writing twenty-six `None`s would be twenty-six
+  rows nobody could get wrong; what keeps it honest is the assertion beside it that its
+  values are exactly the acts this build can receive.
+- **`NowUpdate`, in two forms** (`CardChanged` · `CardGone`) — the card changed in place, or
+  the card gone. ADR-0070 requires the second and nothing could produce it until ADR-0091:
+  a departure **keeps** the leaver's card, and a queue place is the whole of what put a
+  match on her strip. A discriminated union rather than a nullable card, on ADR-0072's rule
+  for the leaver's money — *it is gone* and *this build sent none* are opposite sentences
+  and a blank cannot tell them apart. Neither form is a region: a card leaving is said by
+  the form rather than by re-sending the region it left, which also keeps the update
+  independent of the sport chip, where a region is not.
+- **A store is a port that reads back what it writes** (`test_shelf_discipline._stores`) —
+  the walk that keeps ADR-0068's deleted player-feed cache from returning under another
+  name. It requires **both halves**, which was free while every write in Now answered a
+  value and stopped being free when `Standby.leave` arrived returning nothing: a port that
+  writes and never answers cannot hand one player's answer to another, and reading it as a
+  player-keyed cache is the walk misfiring rather than the rule firing.
 
 Add backend-specific technical terms here as they are resolved. Anything describing the
 *domain* belongs in the shared glossary instead.

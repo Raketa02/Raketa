@@ -24,15 +24,28 @@
  * that is not on this sport's screen changes nothing on it, and inventing a
  * region for the card would be the client deciding a card's *place* — the one
  * judgement `ADR-0070` keeps on the server.
+ *
+ * **The second form removes rather than replaces**, and it is the one thing here
+ * that shortens a region. `ADR-0070` requires the one-card answer to be able to
+ * say *this card is no longer on your screen*, and `ADR-0087`'s write is the
+ * first that can: a queue place is the whole of what put that match on the
+ * strip. It is still not the client deciding a card's place — the server said
+ * the card is gone, and this removes exactly the match it named, from wherever
+ * it was, in the order the rest were already in.
  */
 
 import type { ComposedScreen, MatchCard, NowUpdate } from '../domain/ComposedScreen';
 
 export function applyNowUpdate(screen: ComposedScreen, update: NowUpdate): ComposedScreen {
+  const apply =
+    update.kind === 'card'
+      ? (cards: readonly MatchCard[]) => replaced(cards, update.card)
+      : (cards: readonly MatchCard[]) => removed(cards, update.matchId);
+
   return {
     ...screen,
-    offers: { cards: replaced(screen.offers.cards, update.card) },
-    yourMatches: { cards: replaced(screen.yourMatches.cards, update.card) },
+    offers: { cards: apply(screen.offers.cards) },
+    yourMatches: { cards: apply(screen.yourMatches.cards) },
   };
 }
 
@@ -45,4 +58,16 @@ export function applyNowUpdate(screen: ComposedScreen, update: NowUpdate): Compo
 function replaced(cards: readonly MatchCard[], card: MatchCard): readonly MatchCard[] {
   if (!cards.some((held) => held.matchId === card.matchId)) return cards;
   return cards.map((held) => (held.matchId === card.matchId ? card : held));
+}
+
+/**
+ * The same list without one match, or the same list.
+ *
+ * Identity is preserved on a miss for the reason above, and the surviving cards
+ * keep the order they arrived in: removing one is not a licence to re-order the
+ * rest, which is `ADR-0032` on the one operation that could.
+ */
+function removed(cards: readonly MatchCard[], matchId: string): readonly MatchCard[] {
+  if (!cards.some((held) => held.matchId === matchId)) return cards;
+  return cards.filter((held) => held.matchId !== matchId);
 }

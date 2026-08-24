@@ -800,6 +800,11 @@ Committed by [ADR-0030](docs/adr/0030-a-departure-is-an-audience-not-a-state.md)
 - **Standby** — the players who asked to be told if a seat frees on a particular match. It confers
   **priority, not a place**: the cascade offers to standby before anybody else, and orders within
   standby by fit, so a standby **position** is not a fact the platform will show — it can rise.
+  A place is a **membership of a pair**, so asking twice is asking once and leaving is idempotent;
+  it is the **fourth membership** that puts a match on the enrolled strip, and the only one that
+  confers nothing. **Nothing joins a queue in v1** — the waitlist toggle was a match-screen control
+  and that screen is out of scope — so a standby place arrives from seed, or from the standing rule
+  when one is built.
   Priority is what standby **is**: told in the same breath as strangers, joining a list would buy
   nothing. The third thing it buys is **loudness**: a standby seat is the only message
   allowed to pierce a Focus, and on iOS it does
@@ -870,7 +875,11 @@ Committed by [ADR-0030](docs/adr/0030-a-departure-is-an-audience-not-a-state.md)
   contents or order changed, whole. The shelves are never in it. A departure returns the card
   *changed, in place* — same match, same region, new rendering — which is the product's **first
   mid-session audience change**, and the reason no client may cache a card keyed on the audience
-  that composed it.
+  that composed it. It has **two forms**, and the second is *this card is gone*: leaving standby
+  removes a card, because a queue place is the whole of what put that match on the strip
+  ([ADR-0091](docs/adr/0091-a-queue-place-is-a-card-and-leaving-one-is-the-first-card-that-goes.md)).
+  A discriminated union rather than a card that may be missing — *it is gone* and *this build sent
+  none* are opposite sentences.
 - **Guarantee** — a private-court owner's exposure on a split-payment reservation: **the whole
   court price**, constant from booking until the reservation is reconciled. It is not a
   remainder and it does not shrink as seats fund
@@ -1178,7 +1187,10 @@ about it. Decided by [ADR-0070](docs/adr/0070-now-is-three-regions-and-a-card-ha
   finishPaying · enterResult · answerResult · seeAlternatives · gettingIn · leaveStandby`.
   **Twenty-six of the thirty-six situations name none**, and such a card has no button and no
   tappable body. A card names an act **when the viewer can take it now and a v1 surface can
-  receive it**, so an eighth arrives *with* the surface that receives it and never ahead of it.
+  receive it**, so an eighth arrives *with* the surface that receives it and never ahead of it —
+  and the card has to be somewhere a player can see: `waitlisted` shipped its act one ticket
+  before it had a region to render in
+  ([ADR-0091](docs/adr/0091-a-queue-place-is-a-card-and-leaving-one-is-the-first-card-that-goes.md)).
 - **Clock slot** — the card's one moment, and which moment fills it is a rule rather than
   thirty-six judgements: **the next moment at which something happens to the viewer whether
   they act or not**. A card that is over or cancelled counts to nothing and the slot is empty.

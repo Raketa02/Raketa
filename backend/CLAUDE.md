@@ -314,6 +314,34 @@ Rules to preserve:
   second shape**: the quote falling, the match starting or cancelling, ADR-0046's lock, a
   second tap by somebody who has already left — all five answer with the recomposed screen,
   and only a stranger's 404 and somebody else's request key answer differently.
+- **A queue place is a card, and leaving one is the first card that goes.** ADR-0087 gave
+  `waitlisted` the seventh act and left it on a card that rendered nowhere — the strip
+  answered a seat or a departure, the offers region answers an offer, and the shelves
+  exclude a queued match by rule
+  ([ADR-0091](../docs/adr/0091-a-queue-place-is-a-card-and-leaving-one-is-the-first-card-that-goes.md)).
+  The strip now has a **fourth membership** and it confers nothing; the region's own copy
+  says so — *you are queued, not committed*. The queue is a table keyed
+  `(match_id, player_id)` and is **not part of the aggregate**: a join moves no state anybody
+  contends for, and going through `Match` would bump ADR-0034's version and invalidate the
+  scoring-context cache on every ask. It **announces nothing**, which is this context's one
+  departure from *every change is its own named event* — that obligation is about a match
+  somebody paid for, and the queue's single reader is the cascade, which reads the list when
+  a seat frees. A place is **deleted rather than ended**, unlike every other child table here,
+  because *rejoining costs what joining cost* is only true if nothing keeps a record of every
+  time she changed her mind. `DELETE /api/v1/matches/{matchId}/standby` therefore refuses
+  **nothing but the address**: anybody may queue for any match, so there is no membership to
+  be a stranger to, and *deleting a place she does not hold* is answered by having nothing to
+  check. **Nothing joins a queue in v1** — the waitlist toggle is a match-screen control and
+  that screen is out of scope — so `JoinStandby` has the seed catalog as its only caller, the
+  shape the four private-owner situations already take.
+- **Now's update is one card in one of two forms.** `CardChanged` or `CardGone`, and the
+  second is ADR-0070's *"the one-card answer must be able to say this card is no longer on
+  your screen"*, produced for the first time by leaving standby — a departure **keeps** the
+  leaver's card (ADR-0030), so nothing before it could. A **discriminated union** and not a
+  nullable card, on ADR-0072's rule for the leaver's money: *it is gone* and *this build sent
+  none* are opposite sentences and a blank cannot tell them apart. **Neither region slot is
+  here yet**: a region belongs in an update when its *contents or order* change, a single card
+  leaving is said by the form, and the first act that moves an order is taking a seat.
 - **A destructive command carries a key, and the log is cross-cutting.** ADR-0030's
   `command_log`, keyed `(command, idempotency key)` — which is the table's primary key, so the
   collision is the database's answer. **Twenty-four hours applied on the read**, so

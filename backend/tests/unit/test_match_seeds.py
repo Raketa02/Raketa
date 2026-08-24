@@ -29,6 +29,7 @@ from app.bootstrap.composition import (
     build_clock,
     build_event_publisher,
     build_match_repository,
+    build_match_standby_places,
     build_reservation_repository,
 )
 from app.kernel import (
@@ -36,6 +37,7 @@ from app.kernel import (
     MatchKind,
     Outcome,
     Situation,
+    Viewer,
     court_hold,
     is_held,
     situation,
@@ -555,3 +557,154 @@ async def test_a_seeded_match_write_with_no_instant_is_refused(session_factory):
 
     with pytest.raises(SeedFailed, match="no instant set"):
         _SeededWeekClock().now()
+
+
+# --- the queue: the one claim asked with a viewer ---------------------------
+
+
+async def test_the_queued_account_is_really_on_the_queue(session_factory):
+    """A seeded place is written through the use case a tap would run.
+
+    There is no join route in v1 (ADR-0087), so the catalog is the only writer
+    and a place that failed to land would leave the one card in the product that
+    names an act unreachable — with nothing else in the run looking different.
+    """
+
+    async with session_factory() as session:
+        seeded = (await seed(session)).matches
+        queued = next(entry for entry in seeded if entry.match.standby)
+        claim = queued.match.standby[0]
+        player = next(
+            account.player_id
+            for account in (await seed(session)).accounts
+            if account.account.slug == claim.player_slug
+        )
+
+        places = build_match_standby_places(session)
+        assert queued.match_id in await places.held_by(player)
+
+
+async def test_the_queued_account_resolves_to_the_situation_it_is_named_for(
+    session_factory,
+):
+    """The catalog's claim, asked of the kernel **with a viewer**.
+
+    `waitlisted` is the one situation only a viewer can be in (ADR-0040), so
+    this is the only place in the whole seed system where `situation()` is asked
+    with one — everywhere else the name is a fact about the match alone.
+    """
+
+    async with session_factory() as session:
+        seeded = (await seed(session)).matches
+        queued = next(entry for entry in seeded if entry.match.standby)
+        claim = queued.match.standby[0]
+
+    async with session_factory() as session:
+        repository = build_match_repository(
+            session, events=build_event_publisher(session), clock=build_clock()
+        )
+        stored = await repository.get(queued.match_id)
+        assert stored is not None
+        assert (
+            situation(
+                stored.as_record(),
+                Viewer(on_standby=True),
+                claim.resolved_at,
+            )
+            is claim.situation
+        )
+
+
+async def test_a_queued_account_whose_card_no_longer_says_so_stops_the_run(
+    session_factory, monkeypatch
+):
+    """The negative control for the check above, and it is the whole of it.
+
+    The situation is derived, so retuning the ladder can move it under the name
+    — and the card it moves is the only one this build can act on. Without this
+    the check is a line nobody has seen fire.
+    """
+
+    queued = next(one for one in MATCHES if one.standby)
+    lying = replace(
+        queued,
+        standby=(
+            replace(
+                queued.standby[0],
+                promise="a player whose match has been played",
+                situation=Situation.NEEDS_RESULT,
+            ),
+        ),
+    )
+    _only_the_match_catalog(monkeypatch, (lying,))
+
+    async with session_factory() as session:
+        with pytest.raises(SeedFailed, match="whose match has been played"):
+            await seed(session)
+
+
+async def test_a_queue_place_naming_nobody_stops_the_run(
+    session_factory, monkeypatch
+):
+    """A catalog that has been half-edited, refused before it can be seeded."""
+
+    queued = next(one for one in MATCHES if one.standby)
+    lying = replace(
+        queued,
+        standby=(replace(queued.standby[0], player_slug="nobody-at-all"),),
+    )
+    _only_the_match_catalog(monkeypatch, (lying,))
+
+    async with session_factory() as session:
+        with pytest.raises(SeedFailed, match="nobody-at-all"):
+            await seed(session)
+
+
+def test_a_catalog_queuing_somebody_twice_is_refused():
+    """Asking twice is asking once, so a catalog saying it twice says one thing.
+
+    Refused in `__post_init__`, before anything is written, on the rule every
+    other impossible scenario here is refused by.
+    """
+
+    queued = next(one for one in MATCHES if one.standby)
+    with pytest.raises(ValueError, match="queues somebody twice"):
+        replace(queued, standby=(queued.standby[0], queued.standby[0]))
+
+
+def test_the_queued_account_holds_no_seat_in_the_match_it_is_queued_for():
+    """Rung 7 tests *not seated*, so a queued seat holder would name no act.
+
+    The catalog seats accounts in order, so this is a property of the counts and
+    the slug rather than of the run — and it is checked here, before the write,
+    because the run's own check would find it as a situation that moved.
+    """
+
+    for scenario in MATCHES:
+        seated = {account.slug for account in ACCOUNTS[: scenario.taken]}
+        for claim in scenario.standby:
+            assert claim.player_slug not in seated, scenario.slug
+
+
+async def test_a_queue_place_that_was_never_written_stops_the_run(
+    session_factory, monkeypatch
+):
+    """The other half of the check, and the half no ordinary run reaches.
+
+    The situation check above fires when the *ladder* moves; this one fires when
+    the **place** does not land, which is the failure a silent write produces —
+    a seeded week whose one actionable card is simply absent, with nothing else
+    in the run looking different. Driven by removing the write, because that is
+    the only thing that makes the guard reachable.
+    """
+
+    async def wrote_nothing(*args, **kwargs) -> None:
+        return None
+
+    monkeypatch.setattr(
+        "app.seeds.runner._write_the_standby_places", wrote_nothing
+    )
+
+    async with session_factory() as session:
+        with pytest.raises(SeedFailed, match="holds no such place"):
+            await seed(session)

@@ -14,6 +14,9 @@ from app.modules.now.presentation.departure_routes import (
     router as departure_router,
 )
 from app.modules.now.presentation.routes import router as now_router
+from app.modules.now.presentation.standby_routes import (
+    router as standby_router,
+)
 from app.modules.rating.presentation.routes import ratings_router
 from app.modules.rating.presentation.routes import router as assessments_router
 from app.modules.users.presentation.routes import router as users_router
@@ -26,3 +29,4 @@ player_api_router.include_router(assessments_router)
 player_api_router.include_router(ratings_router)
 player_api_router.include_router(now_router)
 player_api_router.include_router(departure_router)
+player_api_router.include_router(standby_router)

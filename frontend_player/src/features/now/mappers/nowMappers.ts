@@ -105,14 +105,25 @@ export function toComposedScreen(wire: NowResponse, sport: SportFilter): Compose
 /**
  * What an action off Now hands back so the screen corrects itself (`ADR-0074`).
  *
- * **One card, and the same `toMatchCard` a compose runs through**, so a card
- * arriving from a departure and the same card arriving from a compose cannot be
- * rendered by two different expressions. There is no shelf here and no region,
- * and the type is what says so: an update carrying a `Shelf` would be a match
- * moving under her thumb, and `Shelf` can only be constructed in this module.
+ * **One card in one of two forms, and the same `toMatchCard` a compose runs
+ * through**, so a card arriving from an action and the same card arriving from a
+ * compose cannot be rendered by two different expressions. There is no shelf
+ * here and no region, and the type is what says so: an update carrying a `Shelf`
+ * would be a match moving under her thumb, and `Shelf` can only be constructed
+ * in this module.
+ *
+ * **The two forms are narrowed on the wire's own discriminator** and never on
+ * the presence of a card. `ADR-0087`'s *gone* has no card at all, so a phone
+ * testing for one would be reading the absence of a field as a meaning — which
+ * is the blank `ADR-0072` refuses one shape over.
  */
 export function toNowUpdate(wire: NowUpdateResponse): NowUpdate {
-  return { card: toMatchCard(wire.card) };
+  switch (wire.update_type) {
+    case 'card':
+      return { kind: 'card', card: toMatchCard(wire.card) };
+    case 'gone':
+      return { kind: 'gone', matchId: wire.match_id };
+  }
 }
 
 /**

@@ -33,6 +33,7 @@ from app.kernel import (
     grosze,
     hours,
     instant,
+    shifted,
 )
 from app.modules.clubs.domain.club import Club
 from app.modules.clubs.domain.policy import ClubPolicy
@@ -93,14 +94,18 @@ def a_club(*, courts: int = 2) -> Club:
 
 
 def a_match(
-    club: Club, *, players: Sequence[UUID], score: Score | None = None
+    club: Club,
+    *,
+    players: Sequence[UUID],
+    score: Score | None = None,
+    start: Instant = START,
 ) -> Match:
     match = Match.post(
         match_id=uuid4(),
         club_id=club.id,
         category_id=club.live_categories[0].id,
         sport=Sport.PADEL,
-        start=START,
+        start=start,
         duration=hours(1),
         share=SHARE,
         policy=ClubPolicy().hold_policy(),
@@ -129,11 +134,33 @@ class Matches:
     def __init__(self, *matches: Match) -> None:
         self._matches = list(matches)
         self.asks = 0
+        self.queue_asks = 0
+        #: Which of these matches the viewer holds a standby place for. Empty
+        #: unless a case says otherwise, which is the ordinary player.
+        self.queued: set[UUID] = set()
         self.gets: list[UUID] = []
 
     async def for_player(self, player_id: UUID) -> list[Match]:
+        """A seat that names her, or a departure that does — like the real one.
+
+        Filtered rather than answering everything, because the strip's newest
+        claim is that a match she is *only queued for* reaches it: a stub that
+        answered every match would make that claim pass on the wrong read.
+        """
+
         self.asks += 1
-        return self._matches
+        return [
+            match
+            for match in self._matches
+            if match.seat_of(player_id) is not None
+            or match.departure_of(player_id) is not None
+        ]
+
+    async def queued_by(self, player_id: UUID) -> list[Match]:
+        self.queue_asks += 1
+        return [
+            match for match in self._matches if match.id in self.queued
+        ]
 
     async def get(self, match_id: UUID) -> Match | None:
         self.gets.append(match_id)
@@ -218,6 +245,24 @@ class Ledgers:
         return Ledger.for_player(player_id)
 
 
+class Standby:
+    """The queue, as the set of match ids one player asked about."""
+
+    def __init__(self, *match_ids: UUID) -> None:
+        self._held = frozenset(match_ids)
+        self.asks: list[UUID] = []
+
+    async def held_by(self, player_id: UUID) -> frozenset[UUID]:
+        self.asks.append(player_id)
+        return self._held
+
+    async def join(self, **_: object) -> None:  # pragma: no cover
+        raise AssertionError("the strip never puts anybody on a queue")
+
+    async def leave(self, **_: object) -> None:  # pragma: no cover
+        raise AssertionError("the strip never takes anybody off a queue")
+
+
 def an_adapter(
     *,
     matches: Matches,
@@ -225,9 +270,11 @@ def an_adapter(
     reservations: Reservations | None = None,
     users: Users | None = None,
     ledgers: Ledgers | None = None,
+    standby: Standby | None = None,
 ) -> EnrolledFromMatches:
     return EnrolledFromMatches(
         matches=matches,
+        standby=standby or Standby(),
         clubs=clubs,
         reservations=reservations or Reservations(),
         users=users or Users(),
@@ -559,3 +606,132 @@ async def test_no_nickname_is_read_for_a_match_with_no_score_on_it() -> None:
     )
 
     assert users.batches == []
+
+
+# --- the queue: the fourth membership --------------------------------------
+
+
+async def test_a_queued_match_reaches_the_strip_and_says_so() -> None:
+    """A standby place is a fourth membership, and the only one conferring none.
+
+    It is on the strip because `waitlisted` is a card that names an act and this
+    is the only region on Now that could hold one — the offers region is seats
+    offered to her, and the ranked shelves exclude a match she is queued for by
+    rule.
+    """
+
+    club = a_club()
+    alice = uuid4()
+    match = a_match(club, players=[uuid4()])
+    matches = Matches(match)
+    matches.queued = {match.id}
+
+    rows = await an_adapter(matches=matches, clubs=Clubs(club)).for_player(
+        player_id=alice, now=AT
+    )
+
+    assert [row.match_id for row in rows] == [match.id]
+    assert rows[0].on_standby is True
+    assert rows[0].holds_seat is False
+
+
+async def test_a_match_she_is_seated_in_is_not_reported_as_queued() -> None:
+    """The flag is the queue's answer and never a default."""
+
+    club = a_club()
+    alice = uuid4()
+    match = a_match(club, players=[alice])
+
+    rows = await an_adapter(matches=Matches(match), clubs=Clubs(club)).for_player(
+        player_id=alice, now=AT
+    )
+
+    assert rows[0].on_standby is False
+
+
+async def test_a_match_she_both_holds_and_queued_for_appears_once() -> None:
+    """The two reads overlap and the strip is a list of matches, not of rows.
+
+    Nothing in the store refuses the pair — a player who queued for a match she
+    later joined is an ordinary history — so the merge deduplicates rather than
+    drawing her two cards for one match.
+    """
+
+    club = a_club()
+    alice = uuid4()
+    match = a_match(club, players=[alice])
+    matches = Matches(match)
+    matches.queued = {match.id}
+
+    rows = await an_adapter(matches=matches, clubs=Clubs(club)).for_player(
+        player_id=alice, now=AT
+    )
+
+    assert [row.match_id for row in rows] == [match.id]
+    assert rows[0].holds_seat is True
+    assert rows[0].on_standby is True
+
+
+async def test_one_match_answers_a_row_for_a_queued_viewer() -> None:
+    """She is something to it, so the route opens rather than 404ing.
+
+    The write behind it needs the card that is true *after* the place is gone,
+    and a 404 here would make the one act with a surface unable to describe its
+    own result.
+    """
+
+    club = a_club()
+    alice = uuid4()
+    match = a_match(club, players=[uuid4()])
+
+    row = await an_adapter(
+        matches=Matches(match), clubs=Clubs(club), standby=Standby(match.id)
+    ).one(player_id=alice, match_id=match.id, now=AT)
+
+    assert row is not None
+    assert row.on_standby is True
+
+
+async def test_the_queue_is_asked_about_one_match_and_never_walked() -> None:
+    """`held_by` answers a set of ids where `queued_by` assembles whole matches.
+
+    Reading whole matches — every seat, every vacancy, every claim — to compute
+    a boolean is the same query wearing a loop, so the single-match read asks
+    the cheaper port and the strip pays for the matches because it draws them.
+    """
+
+    club = a_club()
+    alice = uuid4()
+    match = a_match(club, players=[alice])
+    matches = Matches(match)
+    standby = Standby()
+
+    await an_adapter(matches=matches, clubs=Clubs(club), standby=standby).one(
+        player_id=alice, match_id=match.id, now=AT
+    )
+
+    assert standby.asks == [alice]
+    assert matches.queue_asks == 0
+
+
+async def test_the_two_memberships_are_merged_in_one_chronological_order() -> None:
+    """The strip is chronological, and it merges two lists to be so.
+
+    Both reads answer soonest-first, so a merge that concatenated them would put
+    every queued match after every enrolled one however the clock reads — and a
+    chronological region whose order is fixed at composition is the whole point
+    of the region (ADR-0073).
+    """
+
+    club = a_club()
+    alice = uuid4()
+    later = a_match(club, players=[alice], start=shifted(START, hours(48)))
+    sooner = a_match(club, players=[uuid4()], start=START)
+    matches = Matches(later, sooner)
+    matches.queued = {sooner.id}
+
+    rows = await an_adapter(matches=matches, clubs=Clubs(club)).for_player(
+        player_id=alice, now=AT
+    )
+
+    assert [row.match_id for row in rows] == [sooner.id, later.id]

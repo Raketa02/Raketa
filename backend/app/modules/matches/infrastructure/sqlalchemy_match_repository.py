@@ -74,6 +74,7 @@ from app.modules.matches.infrastructure.sqlalchemy_match_models import (
     MatchORM,
     MatchSeatClaimORM,
     MatchSeatORM,
+    MatchStandbyPlaceORM,
     MatchVacancyORM,
 )
 
@@ -165,6 +166,26 @@ class SqlAlchemyMatchRepository:
             await self._rows(
                 select(MatchORM)
                 .where(MatchORM.id.in_(seated.union(left)))
+                .order_by(MatchORM.start, MatchORM.id)
+            )
+        )
+
+    async def queued_by(self, player_id: UUID) -> list[Match]:
+        # A third arm on `for_player`'s union was refused rather than merely
+        # not written: that answer is read by eligibility as *what is already
+        # hers*, and a standby place is neither her identity nor her hours. It
+        # is the same statement shape and the same total order, so the strip
+        # merges two ordered lists rather than re-sorting one.
+        return await self._assembled(
+            await self._rows(
+                select(MatchORM)
+                .where(
+                    MatchORM.id.in_(
+                        select(MatchStandbyPlaceORM.match_id).where(
+                            MatchStandbyPlaceORM.player_id == player_id
+                        )
+                    )
+                )
                 .order_by(MatchORM.start, MatchORM.id)
             )
         )

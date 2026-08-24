@@ -243,22 +243,42 @@ export interface DebtLine {
 /**
  * What Now needs to correct itself off the player's own tap (`ADR-0070`).
  *
- * **One card and nothing else, today.** Every action off Now hands its own
- * answer *and* this back in one response (`ADR-0074`), so returning from a route
- * the server has just finished computing costs no second ask — which matters
- * here more than anywhere, because popping back off a route is deliberately none
- * of `ADR-0054`'s four occasions and Now would otherwise still be showing the
- * card as it was before the act.
+ * **One card, in one of two forms.** Every action off Now hands its own answer
+ * *and* this back in one response (`ADR-0074`), so returning from a route the
+ * server has just finished computing costs no second ask — which matters here
+ * more than anywhere, because popping back off a route is deliberately none of
+ * `ADR-0054`'s four occasions and Now would otherwise still be showing the card
+ * as it was before the act.
  *
  * A departure returns the card **changed, in place** — same match, same region,
- * new rendering — so neither viewer-owned region's contents or order moves and
- * there is nothing for a region slot to hold. The wire grows one when the first
- * action that moves a region lands, which is taking a seat
+ * new rendering — so neither viewer-owned region's contents or order moves.
+ * Leaving standby returns **gone**: a queue place is the whole of what put that
+ * match on her strip, so the card goes with it (`ADR-0087`).
+ *
+ * A union rather than an optional card, because the wire is one: reading a card
+ * off the *gone* form is a narrowing error here and a blank line if it were not.
+ * Neither form is a region — the wire grows a region slot when the first action
+ * that moves a region's *order* lands, which is taking a seat
  * (`Raketa02/Raketa#89`). **The shelves are never in an update at all**, which is
  * what stops a match moving under her thumb (`ADR-0032`).
  */
-export interface NowUpdate {
+export type NowUpdate = CardChanged | CardGone;
+
+/** The card the act was about, recomposed and still on her screen. */
+export interface CardChanged {
+  readonly kind: 'card';
   readonly card: MatchCard;
+}
+
+/**
+ * The card the act was about has left her screen.
+ *
+ * It names the match and carries no card, because there is none to carry: she
+ * is nothing to that match now.
+ */
+export interface CardGone {
+  readonly kind: 'gone';
+  readonly matchId: string;
 }
 
 /** The whole screen: three regions, and the one fact about the viewer. */

@@ -148,6 +148,28 @@ class DepartureClaim:
 
 
 @dataclass(frozen=True)
+class StandbyClaim:
+    """Who is queued for this match, and what her card must therefore say.
+
+    The catalog's rule applied to the one membership that confers nothing: a
+    standby place is *priority, not a place*, so there is no position to name —
+    what the name promises is the **situation the queued account resolves to**,
+    which the kernel is asked on every run exactly as it is asked for the match
+    itself.
+
+    ``player_slug`` names an account catalog entry, so a queue place cannot
+    point at a player who does not exist without the run stopping. It must be
+    an account the scenario does **not** seat: rung 7 tests *not seated*, and a
+    queued seat holder resolves to whatever her seat says.
+    """
+
+    promise: str
+    player_slug: str
+    situation: Situation
+    resolved_at: Instant
+
+
+@dataclass(frozen=True)
 class SeedMatch:
     """One deterministic match: whose club, when, and how far along it is.
 
@@ -185,6 +207,11 @@ class SeedMatch:
     #: One of the four cancellation causes, by name, or nothing.
     cancelled: str | None = None
     cancelled_at: Instant | None = None
+    #: Who asked to be told if a seat frees here, and what her card then says.
+    #: Empty for every scenario but the one — a queue place changes nothing
+    #: about the *match*, so it is a fact hung on a scenario rather than a
+    #: scenario of its own, exactly as ``HELD_SOFT``'s hold is not.
+    standby: tuple[StandbyClaim, ...] = ()
 
     def __post_init__(self) -> None:
         if self.paid > self.taken:
@@ -216,6 +243,13 @@ class SeedMatch:
         if (self.cancelled is None) != (self.cancelled_at is None):
             raise ValueError(
                 f"'{self.slug}': a cancellation is a moment as well as a cause"
+            )
+        queued = [claim.player_slug for claim in self.standby]
+        if len(queued) != len(set(queued)):
+            raise ValueError(
+                f"'{self.slug}' queues somebody twice. Asking twice is asking "
+                "once — that is what makes leaving idempotent — so a catalog "
+                "that says it twice is saying one thing in two rows."
             )
 
 
@@ -310,6 +344,18 @@ RECOVERING = SeedMatch(
     joined_at=seed_moment(day_offset=4, hour=19),
     vacated=1,
     vacated_at=seed_moment(day_offset=4, hour=19, minute=30),
+    standby=(
+        StandbyClaim(
+            promise=(
+                "a player queued for a match she holds no seat in — the one "
+                "situation only a viewer can be in, and the only card in the "
+                "product whose act is a bare write (ADR-0040, ADR-0087)"
+            ),
+            player_slug="rated-in-every-sport",
+            situation=Situation.WAITLISTED,
+            resolved_at=seed_moment(day_offset=4, hour=20),
+        ),
+    ),
     departure=DepartureClaim(
         promise=(
             "a leaver who paid, whose money nothing has decided yet — the "

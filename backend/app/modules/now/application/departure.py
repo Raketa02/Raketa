@@ -55,7 +55,7 @@ from app.modules.now.domain.departure import (
 )
 from app.modules.now.domain.enrolled import Enrolment
 from app.modules.now.domain.ports import Departures, EnrolledMatches
-from app.modules.now.domain.screen import MatchCard, NowUpdate, Stamp
+from app.modules.now.domain.screen import CardChanged, MatchCard, NowUpdate, Stamp
 
 #: The name this act is filed under in the command log. ADR-0030 keys the log
 #: ``(command, idempotency key)``, so the name is half the key and is fixed here
@@ -228,7 +228,7 @@ class MakeDeparture:
         row = await _row(self._enrolled, command.player_id, command.match_id, now)
         return DepartureAnswer(
             screen=_screen(row, now=now, stamp=stamp),
-            update=NowUpdate(card=card_of(row, now=now, stamp=stamp)),
+            update=CardChanged(card=card_of(row, now=now, stamp=stamp)),
             applied=applied,
         )
 

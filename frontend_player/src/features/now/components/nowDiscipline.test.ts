@@ -24,6 +24,9 @@
  *    shelf can only be *made* where the wire is read — so an update cannot grow one.
  * 7. **Emphasis is never computed** (`ADR-0037`). The flag is read; the score beside
  *    it is never compared against anything.
+ * 8. **An update's two forms are told apart by the wire's discriminator** (`ADR-0087`),
+ *    never by a field being absent — the same rule the leaver's two payload forms
+ *    already hold (`ADR-0072`).
  */
 
 import { readFileSync, readdirSync, statSync } from 'node:fs';
@@ -331,6 +334,35 @@ describe('emphasis is read and never computed', () => {
     // Reading the flag is not comparing, and neither is printing the number.
     expect(COMPARED.test('emphatic={card.emphasis}')).toBe(false);
     expect(COMPARED.test('{`${MARK} ${score}`}')).toBe(false);
+  });
+});
+
+describe('an update is narrowed on what the wire says it is', () => {
+  it('reads the discriminator rather than the absence of a card', () => {
+    // `ADR-0087` gives the update two forms and only one carries a card. A phone
+    // testing for the card would be reading a missing field as a meaning, which
+    // is the blank `ADR-0072` refuses for the leaver's money — and it would read
+    // an old server's answer, or a third form nobody has shipped yet, as *gone*.
+    const source = sourceOf('mappers/nowMappers.ts');
+
+    expect(source).toContain('switch (wire.update_type)');
+    expect(source).not.toMatch(/wire\.card\s*(===|!==|==|!=)/);
+    expect(source).not.toMatch(/'card' in wire/);
+  });
+
+  it('makes an update in exactly one module', () => {
+    // The same rule the door already holds, and matched the same way: on the
+    // opening brace, so the type's own declaration is not policed and a
+    // *construction* is. A component that could build one is a component that
+    // could decide a card has gone.
+    expect(filesContaining(/\{ kind: 'gone'/)).toEqual(['mappers/nowMappers.ts']);
+    expect(filesContaining(/\{ kind: 'card'/)).toEqual(['mappers/nowMappers.ts']);
+  });
+
+  it('has a control that would fire', () => {
+    // Both matchers above are negative or single-file, so the walk passing while
+    // seeing nothing is the failure mode. This is a tag the feature really holds.
+    expect(filesContaining(/\{ kind: 'door'/).length).toBeGreaterThan(0);
   });
 });
 

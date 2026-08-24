@@ -24,7 +24,7 @@ from datetime import datetime
 from typing import Annotated, Literal, get_args
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, RootModel
 
 from app.engines.fit import (
     BalanceFact,
@@ -50,7 +50,9 @@ from app.kernel import Cause, Cover, Outcome, Situation, exhaustive, invariant
 
 from app.modules.now.domain.screen import (
     Block,
+    CardChanged,
     CardDeparture,
+    CardGone,
     ClubCard,
     DebtLine,
     DepartureNothingTaken,
@@ -63,6 +65,7 @@ from app.modules.now.domain.screen import (
     MatchCard,
     Money,
     NowScreen,
+    NowUpdate,
     OffersRegion,
     OwnerExposure,
     PersonCard,
@@ -89,6 +92,7 @@ from app.modules.now.domain.vocabulary import (
     DepartureForm,
     FitSide,
     DoorCode,
+    NowUpdateKind,
     RefundDestination,
     ShelfCode,
 )
@@ -961,3 +965,101 @@ class NowResponse(BaseModel):
                 else DebtLineResponse.from_domain(screen.debt)
             ),
         )
+
+
+class CardChangedResponse(BaseModel):
+    """The card the act was about, recomposed and still on her screen.
+
+    Same match, same region, new rendering — so the client replaces it **in
+    place** and no region's contents or order moves. That is ADR-0032 applied to
+    the one moment a client is holding a card the server has just recomposed.
+    """
+
+    update_type: Literal[NowUpdateKind.CARD] = NowUpdateKind.CARD
+    card: MatchCardResponse
+
+    @classmethod
+    def from_domain(cls, update: CardChanged) -> "CardChangedResponse":
+        return cls(card=MatchCardResponse.from_domain(update.card))
+
+
+class CardGoneResponse(BaseModel):
+    """The card the act was about has left this viewer's screen.
+
+    ADR-0070 requires the one-card answer to be able to say this and nothing in
+    the product could produce it until ADR-0087's write landed: a departure
+    *keeps* the leaver's card, because ADR-0030 keeps it until her outcome
+    settles. Leaving standby removes one, because a queue place is the whole of
+    what put that match on her strip.
+
+    It names the match and carries no card, because there is none to carry: the
+    viewer is nothing to that match now, and an emptied card would be an answer
+    to *what is this match doing* composed for somebody who is not asking.
+    """
+
+    update_type: Literal[NowUpdateKind.GONE] = NowUpdateKind.GONE
+    match_id: UUID
+
+    @classmethod
+    def from_domain(cls, update: CardGone) -> "CardGoneResponse":
+        return cls(match_id=update.match_id)
+
+
+#: Discriminated on what the update *is about the card*, never on the card:
+#: one of the two forms has no card at all, which is the whole point of the
+#: split.
+AnyNowUpdateResponse = Annotated[
+    CardChangedResponse | CardGoneResponse,
+    Field(discriminator="update_type"),
+]
+
+
+class NowUpdateResponse(RootModel[AnyNowUpdateResponse]):
+    """What Now needs to correct itself off the player's own tap (ADR-0070).
+
+    **One card, in one of two forms**, discriminated on the wire so that reading
+    a card off the *gone* form is a narrowing error rather than a blank line —
+    the same shape ADR-0072 gives the leaver's money, and for the same reason: a
+    nullable card would leave *it is gone* and *this build sent none* looking
+    identical.
+
+    **Neither of the two viewer-owned region slots is here yet**, and that is
+    still the honest shape rather than a partial one. ADR-0070 puts a region in
+    an update when its *contents or order* change, and a card leaving is
+    expressed by the form below rather than by re-sending the region it left.
+    The first act that moves a region's order is taking a seat
+    (``Raketa02/Raketa#89``); shipping the slots ahead of it would be the *"two
+    fields with no reader"* ADR-0071 refuses. **The shelves are never in an
+    update at all.**
+    """
+
+    root: AnyNowUpdateResponse
+
+    @classmethod
+    def from_domain(cls, update: NowUpdate) -> "NowUpdateResponse":
+        if isinstance(update, CardChanged):
+            return cls(CardChangedResponse.from_domain(update))
+        return cls(CardGoneResponse.from_domain(update))
+
+
+class StandbyWriteResponse(BaseModel):
+    """What leaving standby answers: Now's update, and nothing beside it.
+
+    ADR-0074's shape is *its own screen's answer **and** Now's update*, and this
+    act has no screen of its own — ADR-0087 refuses it one, because a route
+    exists to hold a consequence and leaving a queue has none. So the response
+    is the update alone, in an object rather than bare, because a bare union at
+    the top level of a response is a shape neither client generator narrows
+    without ceremony and because the day a second field is right it has
+    somewhere to go.
+
+    **There is no ``applied``.** The departure route carries one so that *was I
+    refused* is not a rule on the phone; here nothing can refuse, so a boolean
+    that is always true is a field with no reader.
+    """
+
+    update: NowUpdateResponse
+
+    @classmethod
+    def from_domain(cls, update: NowUpdate) -> "StandbyWriteResponse":
+        return cls(update=NowUpdateResponse.from_domain(update))

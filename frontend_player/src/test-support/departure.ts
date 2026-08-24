@@ -100,7 +100,7 @@ export function departureWrite(
   card: Wire['MatchCardResponse'],
   applied: Wire['Outcome'] | null,
 ): Wire['DepartureWriteResponse'] {
-  return { screen, update: { card }, applied };
+  return { screen, update: { update_type: 'card', card }, applied };
 }
 
 /** What a leaver who paid carries beside the match's own situation. */

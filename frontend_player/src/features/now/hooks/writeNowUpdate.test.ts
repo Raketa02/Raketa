@@ -48,7 +48,10 @@ function screenHolding(matchId: string): ComposedScreen {
   };
 }
 
-const LEFT: NowUpdate = { card: card('m-1', { mayDepart: false, departure: 'You left.' }) };
+const LEFT: NowUpdate = {
+  kind: 'card',
+  card: card('m-1', { mayDepart: false, departure: 'You left.' }),
+};
 
 let client: QueryClient;
 

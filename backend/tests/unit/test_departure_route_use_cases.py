@@ -58,6 +58,8 @@ from app.modules.now.application.departure import (
 )
 from app.modules.now.domain.enrolled import Enrolment
 from app.modules.now.domain.screen import (
+    CardChanged,
+    CardGone,
     DepartureRecoverable,
     Money,
     Place,
@@ -319,15 +321,36 @@ async def test_the_update_carries_no_region_and_no_shelf() -> None:
 
     Same match, same region, new rendering — so neither viewer-owned region's
     contents or order moves, and there is nothing for a region slot to hold.
+
+    The discriminator is the second field and the only one, which is the whole
+    of what ADR-0087 added: an update is one card in one of two forms, and
+    neither form is a region.
     """
 
     use_case, *_ = make(row=enrolled())
 
     answer = await use_case.execute(a_command())
 
+    assert isinstance(answer.update, CardChanged)
     assert [field.name for field in answer.update.__dataclass_fields__.values()] == [
-        "card"
+        "card",
+        "update_type",
     ]
+
+
+async def test_a_departure_never_removes_a_card() -> None:
+    """ADR-0030 keeps the leaver's card until her outcome settles.
+
+    The *gone* form exists (ADR-0070, produced by leaving standby), and this
+    route may never reach for it: a strip that dropped her would hide the only
+    thing that decides her refund — whether her seat refills.
+    """
+
+    use_case, *_ = make(row=enrolled())
+
+    answer = await use_case.execute(a_command())
+
+    assert not isinstance(answer.update, CardGone)
 
 
 async def test_the_log_records_what_she_got_and_not_what_she_asked_for() -> None:

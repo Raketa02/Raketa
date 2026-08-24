@@ -467,6 +467,7 @@ callable, and nothing about a green suite would look different afterwards.
 | `GET` | `/api/v1/now` | Bearer access token | The whole Now screen, composed for this viewer. |
 | `GET` | `/api/v1/matches/{matchId}/departure` | Bearer access token | What leaving this match is worth, and what it could still become. |
 | `POST` | `/api/v1/matches/{matchId}/departure` | Bearer access token | Leave at the quoted outcome; returns this screen and Now's update. |
+| `DELETE` | `/api/v1/matches/{matchId}/standby` | Bearer access token | Leave this match's standby queue; returns Now's update. |
 
 Example login request:
 
@@ -530,7 +531,7 @@ judgements (ADR-0073):
 | **Tail** | A card lives **24 hours from the moment it closed**, not from when the match would have ended |
 
 **Enrolment is a relationship, not an object.** There is no enrolment row: her matches are
-a seat that names her, *or a departure that does*. ADR-0030's leaver is an audience of the
+a seat that names her, a departure that does, *or a standby place she holds*. ADR-0030's leaver is an audience of the
 same card — *"the leaver's card is the match's card rendered for somebody who used to hold
 a seat"* — so she keeps a card, and it keeps showing the match's progress, because a refill
 is the only thing that decides her refund. Her money rides beside the situation in **two
@@ -555,11 +556,20 @@ situation is named anywhere in the composition: the hold and its age, the specif
 destination that fixes its tense, a private court's two figures, and the score with both
 sides named and the viewer's first.
 
-**The strip names no act and offers no exit**, deliberately. ADR-0083's rule is *a card
-names an act when the viewer can take it now **and a v1 surface can receive it***, and
-none of the six receiving surfaces exists yet — the seat claim (`#89`), the result route
-(`#79`), the departure route (`#80`) and leaving standby (`#81`). A door offered that will
-not open is worse than the gap.
+**The strip has a fourth membership, and it confers nothing.** A queue place puts the
+match on the strip as `waitlisted`, because that is the only region on Now that could hold
+the card: the offers region is seats offered to her, and the ranked shelves exclude a
+queued match by rule
+([ADR-0091](../docs/adr/0091-a-queue-place-is-a-card-and-leaving-one-is-the-first-card-that-goes.md)).
+The region's own copy admits the exception — *you are queued, not committed*.
+
+**The strip names one act and offers one exit.** ADR-0083's rule is *a card names an act
+when the viewer can take it now **and a v1 surface can receive it***, and of the seven
+receiving surfaces two now exist: the departure route (`#80`), whose control is a spine
+boolean rather than an act, and the standby write (`#81`), which is why a `waitlisted` card
+names `leaveStandby`. The seat claim (`#89`), the result route (`#79`), Find (`#115`) and
+the Getting-in sheet are unbuilt, so their acts stay absent — a door offered that will not
+open is worse than the gap.
 
 #### The door into a sport you have no rating at
 
@@ -822,13 +832,56 @@ command log, not the version ADR-0074 refused — and a replay returns the outco
 got and writes nothing further. The response says **what the tap did**: `applied` is the
 outcome the departure was made at, and `null` exactly when nothing was applied, so *was I
 refused* is a fact the client is told rather than a rule it derives from `may_depart`. The write returns its own screen's answer **and** Now's
-update, which today is the one card that changed: nothing is removed and no region moves,
-because ADR-0030 keeps the leaver's card until her outcome settles.
+update, which for a departure is the card **changed in place**: nothing is removed and no
+region moves, because ADR-0030 keeps the leaver's card until her outcome settles.
 
 The route lives in `app/modules/now/` although its path says `matches`. The answer is Now's
 vocabulary end to end and `now` already reads `matches` everywhere in this tree; the write
 reaches the aggregate through `Departures`, a port of Now's own, exactly as `money.Seats`
 does over the same aggregate. A general `GET /api/v1/matches/{id}` still does not exist.
+
+### `DELETE /api/v1/matches/{matchId}/standby`
+
+The second action off Now, and the one that is **a write rather than a screen**
+([ADR-0087](../docs/adr/0087-leaving-standby-is-the-seventh-act.md)). A route exists to hold
+a consequence and leaving a queue has none: no seat, no money, no cascade, no outcome, and
+**no position to forfeit**, because a standby position is a fact the platform refuses to show
+precisely so that it can rise.
+
+**No confirmation and no warning**, for the same reason — a confirmation would imply a cost
+the model says does not exist, and that is worse than a mis-tap. **No idempotency key**:
+ADR-0030's log is for *destructive* commands, and a repeated delete of a place she no longer
+holds is the state she asked for.
+
+**It refuses nothing but the address.** Anybody may queue for any match, so there is no
+membership to be a stranger to; *deleting a place the viewer does not hold answers exactly
+what a success answers*, by having nothing to check. The only 404 is a match id that names
+nothing.
+
+It answers **Now's update and nothing beside it** — ADR-0074's shape is *its own screen's
+answer and Now's update*, and this act has no screen. The update is **one card in one of two
+forms**:
+
+| Form | When |
+|---|---|
+| `card` | she is still something to the match — a seat, a departure, a live claim — so the card is recomposed in place |
+| `gone` | the queue place was the whole of it, so the card leaves her screen |
+
+The second is ADR-0070's *"the one-card answer must be able to say **this card is no longer
+on your screen**"*, produced here for the first time: a departure keeps the leaver's card, so
+nothing before this could remove one. It is a **discriminated union** rather than a nullable
+card, on ADR-0072's rule for the leaver's money — *it is gone* and *this build sent none* are
+opposite sentences and a blank cannot tell them apart.
+
+**Nothing joins a queue in v1.** The waitlist toggle is a match-screen control and that screen
+is out of scope, so `JoinStandby` exists as a use case with the seed catalog as its only
+caller — the shape the four private-owner situations already take. Its named future caller is
+the **standing rule** that auto-joins matching lists.
+
+The route lives in `app/modules/now/` for the reason the departure route does, and the queue
+itself is a table beside the aggregate rather than part of it: a join moves no state anybody
+contends for, and going through `Match` would bump ADR-0034's version column and invalidate
+the scoring-context cache keyed `matchId : recordVersion` on every ask.
 
 ### What the Now contract will not carry
 

@@ -49,6 +49,9 @@ from app.modules.matches.domain.match import Match
 from app.modules.matches.infrastructure.sqlalchemy_match_repository import (
     SqlAlchemyMatchRepository,
 )
+from app.modules.matches.infrastructure.sqlalchemy_standby_list import (
+    SqlAlchemyStandbyPlaces,
+)
 
 ALICE = {
     "email": "alice@example.com",
@@ -194,6 +197,22 @@ async def _write_match(
         await repository.add(match)
         await session.commit()
     return match
+
+
+async def _queue(session_factory, match: Match, player_id: UUID) -> None:
+    """Put a player on a match's standby queue, through the real store.
+
+    There is no join route in v1 (ADR-0087), so this is the same line the seed
+    catalog is the only other user of.
+    """
+
+    async with session_factory() as session:
+        await SqlAlchemyStandbyPlaces(session).join(
+            match_id=match.id,
+            player_id=player_id,
+            at=instant(datetime.now(timezone.utc).replace(microsecond=0)),
+        )
+        await session.commit()
 
 
 def _blocks(body) -> list[dict]:
@@ -515,3 +534,66 @@ async def test_a_sport_she_holds_no_rating_at_composes_a_door_and_no_shelves(
     assert [block["block_type"] for block in blocks][0] == "door"
     assert _ranked(body) is None
     assert _shelf(body, "fullWorthWaiting") is None
+
+
+async def test_a_match_she_is_queued_for_is_never_suggested_to_her(
+    client, session_factory
+) -> None:
+    """`NotOnStandby`, firing for the first time in the product.
+
+    The rule has been one of the funnel's eight since the funnel shipped, and it
+    was evaluated against an adapter that answered the empty set for everybody,
+    because standby had no store (`Raketa02/Raketa#81`). The defect it exists for
+    is a screen suggesting a player the match she has already asked about.
+    """
+
+    alice_id, alice = await _join(client, ALICE)
+    bob_id, bob = await _join(client, BOB)
+    await _rate_as_beginner(client, alice)
+    await _rate_as_beginner(client, bob)
+    club = await _write_club(session_factory)
+    match = await _write_match(
+        session_factory, club, seated=(UUID(bob_id),), paid=(UUID(bob_id),)
+    )
+
+    before = _ranked(
+        (await client.get("/api/v1/now?sport=PADEL", headers=alice)).json()
+    )
+    assert before is not None
+    assert [card["match_id"] for card in before["cards"]] == [str(match.id)]
+
+    await _queue(session_factory, match, UUID(alice_id))
+
+    after = _ranked(
+        (await client.get("/api/v1/now?sport=PADEL", headers=alice)).json()
+    )
+    assert after is None or str(match.id) not in {
+        card["match_id"] for card in after["cards"]
+    }
+
+
+async def test_somebody_else_s_queue_place_suggests_her_nothing_less(
+    client, session_factory
+) -> None:
+    """The rule is about the viewer's own queue and not about the match's.
+
+    A read that dropped the player from its predicate would take a popular
+    match off everybody's shelves the moment one person queued for it.
+    """
+
+    _, alice = await _join(client, ALICE)
+    bob_id, bob = await _join(client, BOB)
+    await _rate_as_beginner(client, alice)
+    await _rate_as_beginner(client, bob)
+    club = await _write_club(session_factory)
+    match = await _write_match(
+        session_factory, club, seated=(UUID(bob_id),), paid=(UUID(bob_id),)
+    )
+    await _queue(session_factory, match, UUID(bob_id))
+
+    shelf = _ranked(
+        (await client.get("/api/v1/now?sport=PADEL", headers=alice)).json()
+    )
+
+    assert shelf is not None
+    assert [card["match_id"] for card in shelf["cards"]] == [str(match.id)]

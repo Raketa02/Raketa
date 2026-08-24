@@ -319,6 +319,36 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/matches/{match_id}/standby": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Leave this match's standby queue, and correct Now off the same tap
+         * @description Take the viewer off the queue, and say what her screen should now hold.
+         *
+         *     **200 and a body, not 204.** ADR-0074 has every action off Now return Now's
+         *     update in the same response, so the screen corrects itself off her own tap
+         *     rather than paying a full compose on the way back; a no-content answer would
+         *     make this the one act that does not.
+         *
+         *     **Deleting a place she does not hold answers exactly what a success
+         *     answers.** Anybody may queue for any match, so there is no membership to be
+         *     a stranger to and nothing here can refuse: the only 404 is a match id that
+         *     names nothing, which is about the address rather than about the act.
+         */
+        delete: operations["leave_standby_api_v1_matches__match_id__standby_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -432,6 +462,48 @@ export interface components {
          * @enum {string}
          */
         CaptionCode: "undeclaredPreferences";
+        /**
+         * CardChangedResponse
+         * @description The card the act was about, recomposed and still on her screen.
+         *
+         *     Same match, same region, new rendering — so the client replaces it **in
+         *     place** and no region's contents or order moves. That is ADR-0032 applied to
+         *     the one moment a client is holding a card the server has just recomposed.
+         */
+        CardChangedResponse: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            update_type: "card";
+            card: components["schemas"]["MatchCardResponse"];
+        };
+        /**
+         * CardGoneResponse
+         * @description The card the act was about has left this viewer's screen.
+         *
+         *     ADR-0070 requires the one-card answer to be able to say this and nothing in
+         *     the product could produce it until ADR-0087's write landed: a departure
+         *     *keeps* the leaver's card, because ADR-0030 keeps it until her outcome
+         *     settles. Leaving standby removes one, because a queue place is the whole of
+         *     what put that match on her strip.
+         *
+         *     It names the match and carries no card, because there is none to carry: the
+         *     viewer is nothing to that match now, and an emptied card would be an answer
+         *     to *what is this match doing* composed for somebody who is not asking.
+         */
+        CardGoneResponse: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            update_type: "gone";
+            /**
+             * Match Id
+             * Format: uuid
+             */
+            match_id: string;
+        };
         /**
          * CardHoldReason
          * @description Why a court is being kept aside, in the five reasons that reach a card.
@@ -1073,16 +1145,22 @@ export interface components {
          * NowUpdateResponse
          * @description What Now needs to correct itself off the player's own tap (ADR-0070).
          *
-         *     **One card and nothing else, today.** A departure returns the card *changed,
-         *     in place* — same match, same region, new rendering — so neither viewer-owned
-         *     region's contents or order moves and there is nothing for a region slot to
-         *     hold. The first action that moves one is taking a seat, and shipping the
-         *     slots ahead of it would be the *"two fields with no reader"* ADR-0071
-         *     refuses. The shelves are never in an update at all.
+         *     **One card, in one of two forms**, discriminated on the wire so that reading
+         *     a card off the *gone* form is a narrowing error rather than a blank line —
+         *     the same shape ADR-0072 gives the leaver's money, and for the same reason: a
+         *     nullable card would leave *it is gone* and *this build sent none* looking
+         *     identical.
+         *
+         *     **Neither of the two viewer-owned region slots is here yet**, and that is
+         *     still the honest shape rather than a partial one. ADR-0070 puts a region in
+         *     an update when its *contents or order* change, and a card leaving is
+         *     expressed by the form below rather than by re-sending the region it left.
+         *     The first act that moves a region's order is taking a seat
+         *     (``Raketa02/Raketa#89``); shipping the slots ahead of it would be the *"two
+         *     fields with no reader"* ADR-0071 refuses. **The shelves are never in an
+         *     update at all.**
          */
-        NowUpdateResponse: {
-            card: components["schemas"]["MatchCardResponse"];
-        };
+        NowUpdateResponse: components["schemas"]["CardChangedResponse"] | components["schemas"]["CardGoneResponse"];
         /**
          * OffersRegionResponse
          * @description Seats offered to this viewer, soonest-to-expire first.
@@ -1596,6 +1674,25 @@ export interface components {
         SportsResponse: {
             /** Sports */
             sports: components["schemas"]["SportResource"][];
+        };
+        /**
+         * StandbyWriteResponse
+         * @description What leaving standby answers: Now's update, and nothing beside it.
+         *
+         *     ADR-0074's shape is *its own screen's answer **and** Now's update*, and this
+         *     act has no screen of its own — ADR-0087 refuses it one, because a route
+         *     exists to hold a consequence and leaving a queue has none. So the response
+         *     is the update alone, in an object rather than bare, because a bare union at
+         *     the top level of a response is a shape neither client generator narrows
+         *     without ceremony and because the day a second field is right it has
+         *     somewhere to go.
+         *
+         *     **There is no ``applied``.** The departure route carries one so that *was I
+         *     refused* is not a rule on the phone; here nothing can refuse, so a boolean
+         *     that is always true is a field with no reader.
+         */
+        StandbyWriteResponse: {
+            update: components["schemas"]["NowUpdateResponse"];
         };
         /** SubmitAnswerRequest */
         SubmitAnswerRequest: {
@@ -2314,6 +2411,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DepartureWriteResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    leave_standby_api_v1_matches__match_id__standby_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The match whose standby queue this is about. */
+                match_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StandbyWriteResponse"];
                 };
             };
             /** @description Validation Error */

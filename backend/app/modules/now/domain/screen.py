@@ -60,6 +60,7 @@ from app.modules.now.domain.vocabulary import (
     DepartureForm,
     DoorCode,
     FitSide,
+    NowUpdateKind,
     RefundDestination,
     ShelfCode,
 )
@@ -747,28 +748,53 @@ class NowScreen:
 
 @final
 @dataclass(frozen=True)
-class NowUpdate:
-    """What an action off Now hands back so the screen corrects itself.
+class CardChanged:
+    """The card the act was about, recomposed: same match, same region, new words.
 
-    ADR-0070's update shape: **the one card that changed**, plus any of the two
-    viewer-owned regions whose contents or order changed, whole. The shelves are
-    never in it — dropping a joined match out of *Best fit* would be re-ordering
-    a shelf under the player's thumb, and that waits for the next compose.
-
-    **Today it is one card and nothing else, and that is the honest shape rather
-    than a partial one.** A departure returns the card *changed, in place* —
-    same match, same region, new rendering (ADR-0086) — so neither region's
-    contents or order moves and there is nothing for a region slot to hold. The
-    first action that moves one is taking a seat (``Raketa02/Raketa#89``), where
-    the offer leaves the offers region and the match arrives in the strip;
-    shipping the two slots ahead of it would be the *"two fields with no
-    reader"* ADR-0071 refuses, on the busiest write in the product.
-
-    **Nor can it yet say *this card is gone*.** ADR-0070 requires the one-card
-    answer to be able to, and its first producer is the offers region
-    (``Raketa02/Raketa#83``) — a card whose offer somebody else took. Nothing in
-    a departure removes a card: ADR-0030 keeps the leaver's until her outcome
-    settles, so a *gone* form here would ship with no way to produce one.
+    A departure's whole answer, and leaving standby's answer for the one viewer
+    who is still something to the match afterwards — somebody holding a seat, a
+    departure or a live claim beside a stale queue place.
     """
 
     card: MatchCard
+
+    update_type: NowUpdateKind = NowUpdateKind.CARD
+
+
+@final
+@dataclass(frozen=True)
+class CardGone:
+    """The card the act was about has left this viewer's screen.
+
+    ADR-0070 requires the one-card answer to be able to say this, and until now
+    nothing in the product could produce it: a departure **keeps** the leaver's
+    card, because ADR-0030 keeps it until her outcome settles. Leaving standby
+    is the first act that removes one — a queue place is the whole of what put
+    that match on her strip, so the card goes with it.
+
+    It names the match rather than carrying an emptied card, because there is
+    no card: the viewer is nothing to the match now, and composing one for her
+    would be answering *what is this match doing* for somebody who is not
+    asking.
+    """
+
+    match_id: UUID
+
+    update_type: NowUpdateKind = NowUpdateKind.GONE
+
+
+#: What an action off Now hands back so the screen corrects itself.
+#:
+#: ADR-0070's update shape: **the one card that changed**, plus any of the two
+#: viewer-owned regions whose contents or order changed, whole. The shelves are
+#: never in it — dropping a joined match out of *Best fit* would be re-ordering
+#: a shelf under the player's thumb, and that waits for the next compose.
+#:
+#: **The two region slots are still not here**, and that is still the honest
+#: shape rather than a partial one: no act yet moves a region's *order*, and a
+#: card leaving one is expressed by ``CardGone`` — which is what ADR-0070 asks
+#: for in as many words. The first action that moves a region is taking a seat
+#: (``Raketa02/Raketa#89``), where the offer leaves one region and the match
+#: arrives in another; shipping the slots ahead of it would be the *"two fields
+#: with no reader"* ADR-0071 refuses, on the busiest write in the product.
+NowUpdate = CardChanged | CardGone

@@ -77,6 +77,25 @@ class MatchRepository(Protocol):
         """
         ...
 
+    async def queued_by(self, player_id: UUID) -> list[Match]:
+        """Every match this player holds a **standby place** for, soonest first.
+
+        A second method rather than a third arm on ``for_player``, and the
+        reason is that the two answers mean different things to their readers.
+        ``for_player`` is *enrolment* — a seat or a departure — and eligibility
+        reads it twice: ``NotAlreadyMine`` off the identity and
+        ``NoScheduleConflict`` off the hours. A standby place is neither. It
+        must not make a Thursday evening *hers* for the purposes of a clash,
+        because she is not playing; and the shelf rule that keeps a queued match
+        off her suggestions is ``NotOnStandby``, which already exists. Widening
+        ``for_player`` would have made both of those wrong in silence.
+
+        Ordered by ``start`` and broken by id, the same total order, because the
+        enrolled strip merges the two lists and a chronological region's order
+        is fixed at composition (ADR-0073).
+        """
+        ...
+
     async def starting_between(
         self, *, club_ids: Sequence[UUID], window_from: Instant, window_to: Instant
     ) -> list[Match]:
@@ -229,5 +248,61 @@ class MatchSchedule(Protocol):
         its answer is the right one. Losing here is therefore not an error and
         not a retry — it is somebody else having already done it. Answers whether
         the row was ours to arm.
+        """
+        ...
+
+
+@runtime_checkable
+class StandbyPlaces(Protocol):
+    """The queue: who asked to be told if a seat frees, and the two writes on it.
+
+    A port of its own rather than three more methods on ``MatchRepository``,
+    because a standby place is **not part of the aggregate** and the separation
+    is what keeps that true. ADR-0034 makes ``matches.version`` the concurrency
+    guard for everything the aggregate owns; a join moves no state anybody is
+    contending for, and routing it through ``Match`` would bump that version —
+    serialising joins against seat payments and invalidating the
+    scoring-context cache keyed ``matchId : recordVersion`` every time somebody
+    queued.
+
+    **Nothing here announces anything**, which is the one place this context
+    departs from ADR-0034's *every change is its own named event*. That
+    obligation is about a **match**: the trail exists so a support agent can
+    explain what happened to a game somebody paid for. A standby place moves no
+    money, confers no place — *priority, not a place* — and has exactly one
+    reader, the invitation cascade (``Raketa02/Raketa#82``), which reads the
+    list when a seat frees rather than following it. An outbox row nothing
+    subscribes to is ADR-0071's field with no reader, written once per tap.
+
+    **Both writes are idempotent and neither reports what it found.** Joining
+    twice is joining once and leaving twice is leaving once, which is exactly
+    what lets ADR-0087 refuse an idempotency key on the route: *"a repeated
+    delete of a standby place a player no longer holds is the state they asked
+    for"*. A method answering *and it was there* would be an answer with one
+    honest use — telling her she had already left — and ADR-0070 forbids that
+    shape: a refusal is not a second shape, and here there is no refusal at all.
+    """
+
+    async def join(self, *, match_id: UUID, player_id: UUID, at: Instant) -> None:
+        """Queue this player for this match, or leave her queued.
+
+        ``at`` is stored and read by nothing today. Rung 1 of the invitation
+        ladder is fit-ordered within itself (ADR-0061), so *when she asked* is a
+        fact rather than a place — and it is stored because it is the one thing
+        here nothing could derive later.
+        """
+        ...
+
+    async def leave(self, *, match_id: UUID, player_id: UUID) -> None:
+        """Take her off this match's queue, or leave it as it already is."""
+        ...
+
+    async def held_by(self, player_id: UUID) -> frozenset[UUID]:
+        """Which matches this player is queued for. Empty is the ordinary answer.
+
+        A set rather than a list, on ``RatedSports.for_player``'s rule: nothing
+        downstream reads an order out of it, and a list would invite one. The
+        thing that *is* ordered is the strip, and its order comes off ``start``
+        in ``queued_by`` rather than off the queue.
         """
         ...

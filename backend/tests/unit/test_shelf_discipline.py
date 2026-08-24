@@ -94,13 +94,19 @@ def test_the_dice_walk_can_see_one() -> None:
 
 
 def _stores() -> dict[str, set[str]]:
-    """Every port in Now that **writes**, and the parameters it is keyed on.
+    """Every port in Now that **puts something in and takes it back out**.
 
-    A store is what a cache is, and a port that stores is the one shape in this
-    module that returns nothing: every other port answers with a value. So the
-    set is read off the return annotations rather than off the names, which is
-    what stops a `PlayerFeedCache` from being missed for spelling itself
-    differently.
+    A store is what a cache is, and it is read off the return annotations rather
+    than off the names — which is what stops a `PlayerFeedCache` from being
+    missed for spelling itself differently.
+
+    **Two halves, not one.** A port that writes and never answers cannot serve
+    anybody a stale anything: it is a command. That distinction was free while
+    every write in Now returned a value, and stopped being free when ADR-0087's
+    `Standby.leave` arrived returning nothing — a delete keyed on a player,
+    which the one-sided test read as a player-keyed cache. The property this
+    file is about is *can this hand one player's answer to another*, and a port
+    with no read cannot hand anything to anybody.
     """
 
     from typing import get_type_hints
@@ -114,6 +120,7 @@ def _stores() -> dict[str, set[str]]:
             continue
         keys: set[str] = set()
         writes = False
+        reads = False
         for method in dir(port):
             attribute = getattr(port, method, None)
             if method.startswith("_") or not callable(attribute):
@@ -122,10 +129,14 @@ def _stores() -> dict[str, set[str]]:
                 hints = get_type_hints(attribute)
             except (TypeError, NameError):
                 continue
-            if hints.get("return") is type(None):
+            if "return" not in hints:
+                continue
+            if hints["return"] is type(None):
                 writes = True
                 keys |= {key for key in hints if key != "return"}
-        if writes:
+            else:
+                reads = True
+        if writes and reads:
             found[name] = keys
     return found
 
@@ -140,6 +151,23 @@ def test_the_only_two_stores_in_now_are_the_two_caches_adr_0068_keeps() -> None:
     """
 
     assert set(_stores()) == {"ArrivalSets", "ScoringContexts"}
+
+
+def test_a_write_only_port_is_not_read_as_a_store() -> None:
+    """The negative control for the two halves the walk now requires.
+
+    Without it, `_stores` narrowing is a change nothing measures: a later
+    session could put the one-sided test back and every case above would stay
+    green, because there is no cache in this tree to catch. `Standby` is the
+    live example — it deletes a row keyed on a player and answers nothing — and
+    a port shaped like it must be absent from the walk *and* present in the
+    module, or the walk is passing by having stopped looking.
+    """
+
+    from app.modules.now.domain import ports
+
+    assert hasattr(ports, "Standby")
+    assert "Standby" not in _stores()
 
 
 def test_neither_store_is_keyed_on_a_player() -> None:

@@ -1,4 +1,4 @@
-"""Five tables: the match, its seats, the holes left, the leavers, and the claims.
+"""Six tables: the match, its seats, the holes, the leavers, the claims, the queue.
 
 **No constraint here is a decision the way the exclusion constraint is** — a
 match contends for nothing that another match could take, because what is
@@ -35,7 +35,13 @@ reversed in the schema. It is also many-to-one over time — a seat can be claim
 let go and claimed again, and each of those has its own five minutes and its own
 receipt — which is a shape a row per seat cannot hold at all.
 
-**The score is a JSON column and not a sixth table.** It is a *value* — no
+**The standby queue is a sixth table and it is the one that is deleted rather
+than ended.** It is not part of the aggregate at all: a place changes nothing a
+rung reads about the *match*, and putting it through ``Match`` would bump
+ADR-0034's version column on a write that moves no state anybody is contending
+for. The pair is its primary key, because asking twice is asking once.
+
+**The score is a JSON column and not a seventh table.** It is a *value* — no
 identity, no lifecycle, never read or written apart from the match — and giving
 it row identity would be inventing one. The list of sets is stored as the pairs
 of integers it crosses the wire as (``Raketa02/Raketa#74``), never as a display
@@ -461,4 +467,61 @@ class MatchSeatClaimORM(Base):
             sqlite_where=sa.text(CLAIM_UNENDED),
             postgresql_where=sa.text(CLAIM_UNENDED),
         ),
+    )
+
+
+class MatchStandbyPlaceORM(Base):
+    """One player who asked to be told if a seat frees on one match.
+
+    **A sixth table and not part of the aggregate.** A standby place changes
+    nothing the ladder reads about the *match* — it is a fact about a viewer,
+    and ``kernel.Viewer`` is where the resolver takes it — so routing a join
+    through ``Match`` would bump ADR-0034's ``version`` column, serialise joins
+    against seat payments, and invalidate the scoring-context cache keyed
+    ``matchId : recordVersion`` every time somebody queued.
+
+    **The pair is the primary key.** Asking twice is asking once: a standby
+    place confers *priority, not a place*, so there is no position to lose and
+    no second row to hold. That is the database's half of ADR-0087's *"the route
+    is idempotent by its own nature, which is the case a key exists to
+    manufacture"* — a second join collides rather than queueing her twice.
+
+    **Deleted, not ended**, which is the opposite of every other child here and
+    is deliberate. A vacancy, a departure and a claim are kept because *what
+    happened at 18:03* is a support question about money or about a seat
+    somebody could not take. Standby moves no money and confers no place, so a
+    tombstone would preserve no fact — and *"rejoining costs what joining cost,
+    which is nothing"* is only true if the platform is not keeping a record of
+    every time she changed her mind.
+
+    ``joined_at`` is stored because nothing derives it, and it is read by
+    nothing today: rung 1 of the invitation ladder is **fit-ordered** within
+    itself (ADR-0061), so this is a fact about when she asked rather than a
+    place in a queue.
+    """
+
+    __tablename__ = "match_standby_places"
+
+    match_id: Mapped[UUID] = mapped_column(
+        UUIDType(binary=False),
+        sa.ForeignKey("matches.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    #: Not a foreign key, for the reason ``match_seats.player_id`` is not one:
+    #: a player lives behind a projection in another context.
+    player_id: Mapped[UUID] = mapped_column(UUIDType(binary=False), primary_key=True)
+    joined_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), nullable=False
+    )
+
+    __table_args__ = (
+        # Named, so the constraint this whole decision rests on can be found by
+        # name in a PostgreSQL error rather than by whatever the server called it.
+        sa.PrimaryKeyConstraint(
+            "match_id", "player_id", name="pk_match_standby_places"
+        ),
+        # The composite key answers *who is queued for this match* off its own
+        # left edge. *What is this player queued for* is the strip's question,
+        # asked on every compose, and it needs its own index.
+        sa.Index("ix_match_standby_places_player_id", "player_id"),
     )

@@ -32,11 +32,10 @@ from app.kernel import Outcome
 
 from app.modules.now.application.departure import DepartureAnswer
 from app.modules.now.domain.departure import DepartureScreen, OutcomeRow
-from app.modules.now.domain.screen import NowUpdate
 from app.modules.now.domain.vocabulary import OutcomeStanding
 from app.modules.now.presentation.schemas import (
-    MatchCardResponse,
     MoneyResponse,
+    NowUpdateResponse,
     PlaceResponse,
     SeatCountsResponse,
     SituationHalfResponse,
@@ -114,24 +113,6 @@ class DepartureScreenResponse(BaseModel):
             counts=SeatCountsResponse.from_domain(screen.counts),
             commitment_deadline=screen.commitment_deadline,
         )
-
-
-class NowUpdateResponse(BaseModel):
-    """What Now needs to correct itself off the player's own tap (ADR-0070).
-
-    **One card and nothing else, today.** A departure returns the card *changed,
-    in place* — same match, same region, new rendering — so neither viewer-owned
-    region's contents or order moves and there is nothing for a region slot to
-    hold. The first action that moves one is taking a seat, and shipping the
-    slots ahead of it would be the *"two fields with no reader"* ADR-0071
-    refuses. The shelves are never in an update at all.
-    """
-
-    card: MatchCardResponse
-
-    @classmethod
-    def from_domain(cls, update: NowUpdate) -> "NowUpdateResponse":
-        return cls(card=MatchCardResponse.from_domain(update.card))
 
 
 class DepartureWriteResponse(BaseModel):

@@ -131,6 +131,41 @@ invariant(
 )
 
 
+class NowUpdateKind(str, Enum):
+    """Which of the two things an action off Now hands back about one card.
+
+    ADR-0070 requires both: *"the one-card answer must therefore be able to say
+    **this card is no longer on your screen**, not only here is its new
+    content."* Until now only the first was producible — a departure keeps the
+    leaver's card, so nothing in the product removed one — and the shape was
+    deliberately left at one card rather than shipped with a form nothing could
+    make (ADR-0071). **Leaving standby is the first producer of the second**:
+    the queue is the whole of her relationship to that match, so the card goes
+    with the place.
+
+    A discriminated union rather than a nullable card, on ADR-0072's rule for
+    the leaver's money: an absent card would be a blank the reader interprets,
+    and *the card is gone* and *this build sent none* are opposite sentences.
+    Reading a card off the wrong form is a narrowing error here.
+    """
+
+    CARD = "card"
+    GONE = "gone"
+
+
+#: Pinned rather than counted, on ``ACT_COUNT``'s rule. ADR-0070 names two
+#: things an update can say about a card, and a third is a decision somebody
+#: made in a diff — a region slot, when one lands, is a field beside the update
+#: rather than a third kind of it.
+NOW_UPDATE_KIND_COUNT = 2
+
+invariant(
+    len(NowUpdateKind) == NOW_UPDATE_KIND_COUNT,
+    f"the enumeration names {len(NowUpdateKind)} update kinds, "
+    f"not {NOW_UPDATE_KIND_COUNT}",
+)
+
+
 class ShelfCode(str, Enum):
     """Which claim a shelf makes, as a code and never as a title string.
 
@@ -405,4 +440,35 @@ REFUND_DESTINATION_OF: Mapping[Cause, RefundDestination] = MappingProxyType(
 invariant(
     set(REFUND_DESTINATION_OF) == set(Cause),
     "a cause exists with nowhere for its money to go",
+)
+
+
+#: Which act a card names, per situation. **One row today, and that is the
+#: enumeration's own rule rather than a stub.**
+#:
+#: ADR-0083 fixes *a card names an act when the viewer can take it now **and a
+#: v1 surface can receive it***, and lists nine situations whose act it accepts
+#: on the first half — the four cancellations, ``ready``, ``needsResult``,
+#: ``confirmResult``, ``seatOffered`` and ``seatOpened``. Not one of their
+#: surfaces exists: the result route is ``Raketa02/Raketa#79``, the offers
+#: region ``#83``, Find is a placeholder (``#115``) and the Getting-in sheet is
+#: unbuilt. ADR-0087 added the tenth, ``waitlisted``, **with** the write that
+#: receives it, which is the only way the set was ever allowed to grow — so it
+#: is the only row here, and each of the nine arrives in the ticket that builds
+#: its destination.
+#:
+#: A table rather than nine ``if``s to come, and a **partial** one rather than
+#: thirty-six rows: twenty-six situations name nothing and writing them out as
+#: ``None`` would be twenty-six rows nobody could get wrong, where the assertion
+#: below is the thing that actually keeps it honest.
+ACT_OF: Mapping[Situation, ActCode] = MappingProxyType(
+    {
+        Situation.WAITLISTED: ActCode.LEAVE_STANDBY,
+    }
+)
+
+invariant(
+    set(ACT_OF.values()) == {ActCode.LEAVE_STANDBY},
+    "a card names an act whose surface this build does not have — ADR-0083's "
+    "rule is that an act arrives with the surface that receives it",
 )

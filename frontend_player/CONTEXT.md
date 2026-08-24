@@ -225,13 +225,17 @@ The departure route imports them; a third reader is the signal to promote
   sentences and a blank cannot tell them apart, which is why the wire sends two forms and
   the union makes reading `paid` without narrowing a type error.
 - **Now's update** — the one card an action hands back so the screen corrects itself off the
-  player's own tap ([ADR-0074](../docs/adr/0074-the-result-route-reads-four-facts-and-an-action-off-now-hands-now-its-update.md)).
-  Applied **in place**: the card is swapped where it already sits, nothing is added, nothing
-  is removed and no region is reordered — and the shelves are never in an update at all.
-  Written across **every** sport's cached screen, because one request per chip means a match
-  she left is stale on `all` as well as on its own. _Avoid_: invalidating instead — popping
-  back off a route is none of the four asks, and a refetch there is the cost that rule
-  refused by name.
+  player's own tap ([ADR-0074](../docs/adr/0074-the-result-route-reads-four-facts-and-an-action-off-now-hands-now-its-update.md)),
+  in **one of two forms**. `card` is applied **in place**: swapped where it already sits,
+  nothing added and no region reordered. `gone` **removes** it — the one operation here that
+  shortens a region — with the surviving cards left in the order they arrived in
+  ([ADR-0091](../docs/adr/0091-a-queue-place-is-a-card-and-leaving-one-is-the-first-card-that-goes.md)).
+  The shelves are never in an update at all. Written across **every** sport's cached screen,
+  because one request per chip means a match she left is stale on `all` as well as on its own.
+  _Avoid_: invalidating instead — popping back off a route is none of the four asks, and a
+  refetch there is the cost that rule refused by name. _Avoid_: telling the two forms apart by
+  whether a card is present — that reads a missing field as a meaning, and an old server's
+  answer would arrive as _gone_.
 - **Find pre-filter** — a shelf's own claim (`seats`, `order`, `kind`) plus the sport the
   client holds. What the tail card opens Find with; a shelf running out is a door and not a
   wall. Held as a value object, because Find does not exist yet and a URL shape decided here

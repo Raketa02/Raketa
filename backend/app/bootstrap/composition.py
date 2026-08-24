@@ -70,6 +70,7 @@ from app.modules.courts.infrastructure.sqlalchemy_booking_repository import (
     SqlAlchemyBookingRepository,
 )
 from app.modules.matches.application.resolve_court_hold import ResolveCourtHold
+from app.modules.matches.application.standby import JoinStandby
 from app.modules.matches.application.take_match_wake import (
     MatchWakeBatch,
     TakeMatchWake,
@@ -80,6 +81,7 @@ from app.modules.matches.domain.ports import (
     MatchSchedule,
     SeatClaims,
 )
+from app.modules.matches.domain.ports import StandbyPlaces as MatchStandbyPlaces
 from app.modules.money.domain.ports import LedgerRepository, Seats
 from app.modules.money.infrastructure.event_sourced_ledger_repository import (
     EventSourcedLedgerRepository,
@@ -87,6 +89,7 @@ from app.modules.money.infrastructure.event_sourced_ledger_repository import (
 from app.modules.money.infrastructure.seats_through_matches import SeatsThroughMatches
 from app.modules.now.application.compose_enrolled import ComposeEnrolled
 from app.modules.now.application.departure import MakeDeparture, ReadDeparture
+from app.modules.now.application.standby import LeaveStandby
 from app.modules.now.application.compose_shelves import ComposeShelves
 from app.modules.now.application.new_arrivals import ComposeNewArrivals
 from app.modules.now.application.scoring import MatchScorer
@@ -103,6 +106,7 @@ from app.modules.now.domain.ports import (
     RatedSports,
     Ratings,
     ScoringContexts,
+    Standby,
     StandbyPlaces,
 )
 from app.modules.now.infrastructure.arrival_sets import InMemoryArrivalSets
@@ -118,7 +122,7 @@ from app.modules.now.infrastructure.parked_runs import ParkedRunsFromAssessments
 from app.modules.now.infrastructure.rating_sports import RatedSportsFromSkillRatings
 from app.modules.now.infrastructure.ratings import RatingsFromSkillRatings
 from app.modules.now.infrastructure.scoring_contexts import InMemoryScoringContexts
-from app.modules.now.infrastructure.standby_places import NoStandbyPlaces
+from app.modules.now.infrastructure.standby_places import StandbyThroughMatches
 from app.modules.matches.infrastructure.court_holds import (
     CourtHoldsThroughReservations,
 )
@@ -130,6 +134,9 @@ from app.modules.matches.infrastructure.sqlalchemy_match_schedule import (
 )
 from app.modules.matches.infrastructure.sqlalchemy_seat_claims import (
     SqlAlchemySeatClaims,
+)
+from app.modules.matches.infrastructure.sqlalchemy_standby_list import (
+    SqlAlchemyStandbyPlaces,
 )
 from app.modules.courts.infrastructure.sqlalchemy_reservation_repository import (
     SqlAlchemyReservationRepository,
@@ -459,16 +466,17 @@ def build_compose_new_arrivals(
 def build_enrolled_matches(
     *,
     matches: MatchRepository,
+    standby: MatchStandbyPlaces,
     clubs: ClubRepository,
     reservations: ReservationRepository,
     users: UserRepository,
     ledgers: LedgerRepository,
 ) -> EnrolledMatches:
-    """A player's own matches, and what five contexts say about each.
+    """A player's own matches, and what six contexts say about each.
 
-    Five **ports** rather than a session, on the precedent `build_arrivals` set:
-    what backs a match, a club, a reservation, a user or a ledger belongs to
-    those contexts, and the enrolled strip only needs to be told.
+    Six **ports** rather than a session, on the precedent `build_arrivals` set:
+    what backs a match, a queue place, a club, a reservation, a user or a ledger
+    belongs to those contexts, and the enrolled strip only needs to be told.
 
     It is the widest reach in the app and it earns it: the strip is the region a
     player is committed to, and a card there prints where the game is, whether
@@ -477,6 +485,7 @@ def build_enrolled_matches(
     """
     return EnrolledFromMatches(
         matches=matches,
+        standby=standby,
         clubs=clubs,
         reservations=reservations,
         users=users,
@@ -588,15 +597,74 @@ def build_commitments(matches: MatchRepository) -> Commitments:
     return CommitmentsFromMatches(matches)
 
 
-def build_standby_places() -> StandbyPlaces:
-    """Which matches the viewer is queued for. **Nowhere records that yet.**
+def build_standby(
+    *, matches: MatchRepository, standby: MatchStandbyPlaces
+) -> StandbyThroughMatches:
+    """Which matches the viewer is queued for, and the write that leaves one.
 
-    Takes nothing, because there is nothing to take: standby has no table, no
-    port of its own and no join operation anywhere in the product
-    (`Raketa02/Raketa#81`, `#82`). The rule above it is written, evaluated and
-    tested, and this is the one line that changes the day the store lands.
+    One object answering **two** ports, on the precedent `build_arrivals` set:
+    they are one question asked in two directions, and a second class would be
+    a second file that knows a standby place is a row in the Matches context.
+    They stay two ports because their readers differ — `ComposeShelves` takes
+    the read alone.
+
+    **The store landed.**
+
+    This function is the one line ADR-0087's predecessor promised would change:
+    it used to take nothing and answer the empty set for everybody, because
+    standby had no table anywhere in the product. The rule above it —
+    `NotOnStandby`, one of the funnel's eight — has been written, evaluated and
+    tested the whole time, which is why landing the store cost a constructor
+    call rather than a pipeline change (`Raketa02/Raketa#81`).
+
+    Two ports rather than a session, like every builder around it. The match
+    repository is here to turn an unknown id into a 404 on the write and for
+    nothing else.
     """
-    return NoStandbyPlaces()
+    return StandbyThroughMatches(matches=matches, standby=standby)
+
+
+def build_match_standby_places(session: AsyncSession) -> MatchStandbyPlaces:
+    """The queue itself: one table with the pair as its primary key.
+
+    A session rather than ports, because it *is* one table. It is deliberately
+    not part of the `Match` aggregate — a join moves no state anybody contends
+    for, and routing it through the aggregate would bump ADR-0034's version
+    column and invalidate the scoring-context cache every time somebody queued.
+    """
+    return SqlAlchemyStandbyPlaces(session)
+
+
+def build_leave_standby(
+    *,
+    enrolled: EnrolledMatches,
+    standby: Standby,
+    uow: UnitOfWork,
+    clock: Clock,
+) -> LeaveStandby:
+    """ADR-0087's write: leave the queue, and hand Now the one card that changed.
+
+    No command log, unlike the departure beside it. ADR-0030's log is for
+    *destructive* commands and this one is idempotent by its own nature, so a
+    replay has nothing to hand back that a fresh run would not compute.
+    """
+    return LeaveStandby(enrolled=enrolled, standby=standby, uow=uow, clock=clock)
+
+
+def build_join_standby(
+    *,
+    matches: MatchRepository,
+    standby: MatchStandbyPlaces,
+    clock: Clock,
+) -> JoinStandby:
+    """The write with no route, because v1 has no surface that joins a queue.
+
+    The waitlist toggle is a match-screen control and the match screen is out of
+    scope, so the only caller today is the seed catalog — which executes use
+    cases and never SQL, so a seeded standby place has to be written by the code
+    a request would run.
+    """
+    return JoinStandby(matches=matches, standby=standby, clock=clock)
 
 
 def build_scoring_contexts() -> ScoringContexts:

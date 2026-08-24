@@ -19,6 +19,16 @@ rendered for somebody who used to hold a seat"* means she is not a different
 membership, so the port answers one list and the departure payload beside a row
 is what says which audience it is. A strip that dropped her would hide the only
 thing that decides her refund — whether her seat refills.
+
+**And so is a standby place**, which is the one membership here that confers
+nothing at all. ``waitlisted`` is the single situation only a viewer can be in
+(ADR-0040) and it is one of the ten that name an act (ADR-0083, ADR-0087); the
+strip is the only region on Now that could hold such a card, since the offers
+region is seats offered to her and the ranked shelves exclude a match she is
+queued for by rule. A card nowhere on the screen cannot carry a button, so the
+row is here and the ladder is told through ``Viewer.on_standby`` — which the
+kernel's played rung has expected since it shipped: *"a standby player and a
+leaver both resolve to the post-play situation."*
 """
 
 from __future__ import annotations
@@ -78,8 +88,19 @@ class Enrolment:
     closed_at: Instant | None = None
 
     #: Whether she is on it now. ``False`` with a departure beside it is the
-    #: leaver; ``False`` with neither cannot be produced by this port.
+    #: leaver; ``False`` with neither and no standby place cannot be produced by
+    #: this port.
     holds_seat: bool = False
+
+    #: Whether she asked to be told if a seat frees on this match. It is the
+    #: **fourth** membership the strip has, after a seat, a departure and a live
+    #: claim, and the only one that confers nothing: *priority, not a place*.
+    #:
+    #: It is a field on the row rather than a set the composer holds beside it
+    #: because it is a fact about **this pair**, exactly like ``holds_seat``, and
+    #: the kernel takes both through one ``Viewer``. A set passed alongside would
+    #: be a second place the viewer is assembled.
+    on_standby: bool = False
 
     #: Her own live seat claim on this match, if she is buying a seat in it.
     claim_expires_at: Instant | None = None

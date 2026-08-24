@@ -45,6 +45,8 @@ from app.modules.now.domain.screen import (
     Place,
 )
 from app.modules.now.domain.vocabulary import (
+    ACT_OF,
+    ActCode,
     CardHoldReason,
     DepartureForm,
     RefundDestination,
@@ -686,14 +688,15 @@ async def test_a_match_with_no_score_prints_none() -> None:
 # --- what a card deliberately does not carry --------------------------------
 
 
-async def test_no_card_names_an_act_while_no_surface_can_receive_one() -> None:
+async def test_no_seated_card_names_an_act_while_no_surface_can_receive_one() -> None:
     """A door offered that will not open is worse than the gap (ADR-0083).
 
     The departure route landed and its control is a **spine boolean**, not a
     seventh act code — leaving is not the card's act, and putting it in `cta`
-    would give one card two of them. Every remaining destination belongs to a
-    ticket that has not landed, so `act` stays absent and this goes red the day
-    one does.
+    would give one card two of them. Nine of the ten situations that name an act
+    have a destination belonging to a ticket that has not landed, so `act` stays
+    absent on all of them and this goes red the day one arrives without its
+    surface.
     """
 
     region = await compose(
@@ -703,6 +706,120 @@ async def test_no_card_names_an_act_while_no_surface_can_receive_one() -> None:
     )
 
     assert all(card.act is None for card in region.cards)
+
+
+# --- the queue: the fourth membership, and the one act that has a surface ----
+
+
+async def test_a_queue_place_puts_the_match_on_the_strip_as_waitlisted() -> None:
+    """`waitlisted` is the one situation only a viewer can be in (ADR-0040).
+
+    It is composed here because this is the only region on Now that could hold
+    it: the offers region is seats offered to her, and the ranked shelves
+    exclude a match she is queued for by rule. A card nowhere on the screen
+    cannot carry a button.
+    """
+
+    card = await one_card(
+        enrolled(a_match(paid=2), holds_seat=False, on_standby=True), now=at(-2000)
+    )
+
+    assert card.situation.situation is Situation.WAITLISTED
+
+
+async def test_a_queued_card_names_the_act_whose_surface_this_ticket_built() -> None:
+    """ADR-0087 exercised ADR-0083's growth rule: the act came **with** the write.
+
+    That is the only way the enumeration was ever allowed to grow, and it is why
+    this is the one act composed anywhere in the product today.
+    """
+
+    card = await one_card(
+        enrolled(a_match(paid=2), holds_seat=False, on_standby=True), now=at(-2000)
+    )
+
+    assert card.act is ActCode.LEAVE_STANDBY
+
+
+async def test_a_queue_place_beside_a_seat_changes_nothing() -> None:
+    """Rung 7 tests *not seated*, so the seat wins and so does its silence.
+
+    Nothing in the store refuses the pair, and nothing should: a player who
+    queued for a match she later joined is an ordinary history, and the ladder
+    already answers it.
+    """
+
+    card = await one_card(
+        enrolled(a_match(paid=4), holds_seat=True, on_standby=True), now=at(-2000)
+    )
+
+    assert card.situation.situation is not Situation.WAITLISTED
+    assert card.act is None
+
+
+async def test_a_queued_card_offers_no_exit() -> None:
+    """She holds no seat, so there is nothing to depart from.
+
+    The two controls never appear together, which is ADR-0087's own reason for
+    refusing to fold this act into the departure route.
+    """
+
+    card = await one_card(
+        enrolled(a_match(paid=2), holds_seat=False, on_standby=True), now=at(-2000)
+    )
+
+    assert card.may_depart is False
+
+
+async def test_a_queued_card_on_a_cancelled_match_says_the_cancellation() -> None:
+    """The queue rung is the seventh, and four cancellations sit above it.
+
+    A player queued for a match the club called off is told the match is off —
+    not that she is still queueing for it — and her card dies on the same
+    twenty-four-hour tail every other closed card does.
+    """
+
+    card = await one_card(
+        enrolled(
+            a_match(paid=2, club_cancelled=True),
+            holds_seat=False,
+            on_standby=True,
+            closed_at=at(-2100),
+        ),
+        now=at(-2000),
+    )
+
+    assert card.situation.situation is Situation.CANCELLED_CLUB
+    assert card.act is None
+
+
+async def test_a_queued_card_leaves_the_screen_on_the_same_tail() -> None:
+    """One rule for the region, and a queue place does not extend it."""
+
+    region = await compose(
+        enrolled(
+            a_match(paid=2, club_cancelled=True),
+            holds_seat=False,
+            on_standby=True,
+            closed_at=at(-2000),
+        ),
+        now=at(-2000 + 24 * 60 + 1),
+    )
+
+    assert region.cards == ()
+
+
+async def test_the_act_table_names_only_acts_this_build_can_receive() -> None:
+    """Read off the table itself, so a tenth row is a decision in a diff.
+
+    ADR-0083's rule is *a card names an act when the viewer can take it now and
+    a v1 surface can receive it*, and nine of the ten situations that would name
+    one have no destination: the result route, the offers region, Find and the
+    Getting-in sheet are all unbuilt. A row added ahead of its surface is a door
+    that will not open, and this is where it is noticed.
+    """
+
+    assert dict(ACT_OF) == {Situation.WAITLISTED: ActCode.LEAVE_STANDBY}
 
 
 async def test_a_card_offers_the_exit_exactly_where_the_write_would_take_it() -> None:

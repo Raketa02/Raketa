@@ -44,18 +44,20 @@ from app.bootstrap.composition import (
     build_court_holds,
     build_departures,
     build_enrolled_matches,
+    build_leave_standby,
     build_ledger_repository,
     build_levels,
     build_make_departure,
     build_match_repository,
     build_match_scorer,
+    build_match_standby_places,
     build_parked_runs,
     build_rated_sports,
     build_ratings,
     build_read_departure,
     build_reservation_repository,
     build_skill_rating_repository,
-    build_standby_places,
+    build_standby,
 )
 from app.modules.courts.application.claim_court import ClaimCourt
 from app.modules.matches.application.resolve_court_hold import ResolveCourtHold
@@ -64,6 +66,7 @@ from app.modules.now.application.compose_now import ComposeNow
 from app.modules.now.application.compose_shelves import ComposeShelves
 from app.modules.now.application.departure import MakeDeparture, ReadDeparture
 from app.modules.now.application.new_arrivals import ComposeNewArrivals
+from app.modules.now.application.standby import LeaveStandby
 from app.modules.now.domain.ports import (
     ArrivalSets,
     Departures,
@@ -73,6 +76,7 @@ from app.modules.now.domain.ports import (
     RatedSports,
     Ratings,
     ScoringContexts,
+    Standby,
 )
 from app.modules.rating.domain.ports import (
     AssessmentRepository,
@@ -176,17 +180,23 @@ def get_enrolled_matches(
     events: EventPublisherDep,
     clock: ClockDep,
 ) -> EnrolledMatches:
-    """The enrolled strip's five reads, all of them per request.
+    """The enrolled strip's six reads, all of them per request.
 
     The match repository is built with the publisher and the clock every other
     caller gets. It is a **read** on the composed screen — nothing a `GET /now`
     does can reach the outbox through it — and the same port answers the one
     match an action off Now is about, so the strip and the departure route can
     never describe a match differently.
+
+    The queue is the sixth, and it is read here rather than composed beside the
+    strip because a standby place is a fact about **this pair** exactly as a
+    seat is: the kernel takes both through one `Viewer`, so assembling them in
+    two places would be assembling the viewer twice.
     """
 
     return build_enrolled_matches(
         matches=build_match_repository(db, events=events, clock=clock),
+        standby=build_match_standby_places(db),
         clubs=build_club_repository(db),
         reservations=build_reservation_repository(db),
         users=users,
@@ -227,6 +237,37 @@ def get_departures(
 
 
 DeparturesDep = Annotated[Departures, Depends(get_departures)]
+
+
+def get_standby(db: DbSession, events: EventPublisherDep, clock: ClockDep) -> Standby:
+    """ADR-0087's write, and the read the shelves already had.
+
+    One adapter behind two ports: the composer takes the read alone, because a
+    composer holding an object that can delete a player's queue place is a
+    composer one autocomplete away from doing it.
+    """
+
+    return build_standby(
+        matches=build_match_repository(db, events=events, clock=clock),
+        standby=build_match_standby_places(db),
+    )
+
+
+StandbyDep = Annotated[Standby, Depends(get_standby)]
+
+
+def get_leave_standby(
+    enrolled: EnrolledMatchesDep,
+    standby: StandbyDep,
+    uow: UnitOfWorkDep,
+    clock: ClockDep,
+) -> LeaveStandby:
+    return build_leave_standby(
+        enrolled=enrolled, standby=standby, uow=uow, clock=clock
+    )
+
+
+LeaveStandbyDep = Annotated[LeaveStandby, Depends(get_leave_standby)]
 
 
 def get_command_log(db: DbSession) -> CommandLog:
@@ -313,7 +354,9 @@ def get_compose_shelves(
             contexts=contexts,
         ),
         commitments=build_commitments(matches),
-        standby=build_standby_places(),
+        standby=build_standby(
+            matches=matches, standby=build_match_standby_places(db)
+        ),
         ratings=ratings,
         scorer=build_match_scorer(),
     )

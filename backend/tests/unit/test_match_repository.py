@@ -37,6 +37,7 @@ from app.bootstrap.composition import (
     build_court_holds,
     build_event_publisher,
     build_match_repository,
+    build_match_standby_places,
     build_reservation_repository,
     build_unit_of_work,
 )
@@ -147,6 +148,10 @@ class _World:
 
         self.clock = clock
         self.repository = matches
+        #: The queue, which is a table beside the aggregate rather than part of
+        #: it: a join moves no state anybody contends for, so it never goes
+        #: through `Match` and never bumps the version (ADR-0091).
+        self.standby = build_match_standby_places(session)
         self.reservations = reservations
         self.uow = uow
         self.holds = holds
@@ -635,6 +640,92 @@ async def test_a_player_with_nothing_gets_nothing_rather_than_everything(world):
     await a_posted_match(world)
 
     assert await world.repository.for_player(uuid4()) == []
+
+
+# --- the queue: a fourth membership, and its own read ------------------------
+
+
+async def test_the_queue_read_answers_soonest_first(world):
+    """The same total order ``for_player`` answers in, because the strip merges
+    the two lists and a chronological region's order is fixed at composition
+    (ADR-0073). Two orders would make the merge decide it."""
+
+    club, category = await a_club_with_a_category(world)
+
+    async def posted(when):
+        return await world.post.execute(
+            PostMatchCommand(
+                club_id=club.id,
+                category_id=category.id,
+                sport=Sport.PADEL,
+                start=when,
+                duration=hours(1),
+                share=SeatShare(grosze(3800)),
+            )
+        )
+
+    later = await posted(instant(datetime(2026, 9, 9, 18, tzinfo=timezone.utc)))
+    sooner = await posted(START)
+    alice = uuid4()
+
+    # Queued in the opposite order to the one the read must answer in, so an
+    # order read off insertion cannot pass.
+    await _queue(world, later.id, alice)
+    await _queue(world, sooner.id, alice)
+
+    assert [one.id for one in await world.repository.queued_by(alice)] == [
+        sooner.id,
+        later.id,
+    ]
+
+
+async def test_the_queue_read_answers_this_player_and_nobody_else(world):
+    """It is the strip's read, and the strip is one player's own screen.
+
+    A read that dropped the predicate would put every queued match in the city
+    on every queued player's strip — and each of those cards names an act.
+    """
+
+    mine = await a_posted_match(world)
+    hers = await a_posted_match(
+        world, start=instant(datetime(2026, 9, 9, 18, tzinfo=timezone.utc))
+    )
+    alice, bob = uuid4(), uuid4()
+    await _queue(world, mine.id, alice)
+    await _queue(world, hers.id, bob)
+
+    assert [one.id for one in await world.repository.queued_by(alice)] == [mine.id]
+
+
+async def test_a_player_queued_for_nothing_is_queued_for_nothing(world):
+    await a_posted_match(world)
+
+    assert await world.repository.queued_by(uuid4()) == []
+
+
+async def test_a_seat_does_not_put_a_match_in_the_queue_read(world):
+    """The two memberships are separate, and eligibility depends on it.
+
+    ``for_player`` is *what is already hers* and the funnel reads it twice; a
+    queue place is neither her identity nor her hours, so a read that answered
+    both would make a match she is only queued for clash with a suggestion at
+    the same time.
+    """
+
+    posted = await a_posted_match(world)
+    alice = uuid4()
+    await world.take.execute(TakeSeatCommand(match_id=posted.id, player_id=alice))
+
+    assert await world.repository.queued_by(alice) == []
+    assert [one.id for one in await world.repository.for_player(alice)] == [posted.id]
+
+
+async def _queue(world, match_id, player_id):
+    """Through the real store, on the world's own clock."""
+
+    await world.standby.join(
+        match_id=match_id, player_id=player_id, at=instant(world.clock.now())
+    )
 
 
 async def test_the_moment_a_match_closed_survives_the_round_trip(world):

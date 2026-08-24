@@ -76,9 +76,14 @@ refusing**, with no sentence in its place: the situation line already says why.
 
 **An action off Now writes Now's update; it never invalidates it**
 ([ADR-0074](../docs/adr/0074-the-result-route-reads-four-facts-and-an-action-off-now-hands-now-its-update.md)).
-The write's answer carries the one card that changed, and `writeNowUpdate` puts it back **in
-place** across every sport's cached screen — nothing added, nothing removed, no region
-reordered, and the shelves never touched at all. Popping back off a route is deliberately none
+The write's answer carries the one card that changed **in one of two forms**, and
+`writeNowUpdate` applies it across every sport's cached screen — nothing added, no region
+reordered, and the shelves never touched at all. The second form is _this card is gone_
+([ADR-0091](../docs/adr/0091-a-queue-place-is-a-card-and-leaving-one-is-the-first-card-that-goes.md)):
+leaving standby removes a card, because a queue place is the whole of what put that match on
+the strip. It is the **one** operation here that shortens a region, the surviving cards keep
+the order they arrived in, and the two forms are told apart by the wire's own discriminator —
+never by a card being absent, which would read an old server's answer as _gone_. Popping back off a route is deliberately none
 of the four asks, so without this the player would return from leaving a match to a card still
 offering her the way out. The **leaver's own line** is the audience made visible: it sits
 beside the match's situation and never instead of it, because a refill is the only thing that
@@ -111,7 +116,7 @@ distinction between a **repaint** and an **ask** is stated — the countdown red
 inside ten minutes and every minute above, from **one screen-wide clock**, and that is drawing
 rather than a fifth occasion to fetch.
 
-**Seven rules on that feature are walked over its own source** in
+**Eight rules on that feature are walked over its own source** in
 `components/nowDiscipline.test.ts`, because each is a rule about what the code does _not_ do
 and no green assertion can carry one. **The phone holds no rules** ([ADR-0053](../docs/adr/0053-the-phone-holds-no-rules-and-only-subtracts.md)):
 `Date.parse` appears in `domain/countdown.ts` and nowhere else, so the only derivation is
@@ -126,7 +131,9 @@ table is read only where a code is resolved — so a component cannot decide to 
 **Order is the composed screen's** ([ADR-0032](../docs/adr/0032-order-is-a-property-of-the-composed-screen.md)):
 nothing sorts, and a **shelf** is constructed in that same one module — so an action's update
 cannot grow one, and a match she joined cannot move under her thumb. **Emphasis is never
-computed**: no module compares a score against anything. Each
+computed**: no module compares a score against anything. **An update is narrowed on what the
+wire says it is**: `toNowUpdate` switches on `update_type`, never on a missing card, and both
+forms are constructed in that one module — so a component cannot decide a card has gone. Each
 guard carries a negative control; do not add an exemption to a walk, **narrow the rule
 instead** — which is what the second one did when the repaint clock landed.
 

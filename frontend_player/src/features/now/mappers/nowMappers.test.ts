@@ -19,7 +19,7 @@ import type { Wire } from '@/test-support/transport';
 
 import type { Block, Shelf } from '../domain/ComposedScreen';
 
-import { toComposedScreen } from './nowMappers';
+import { toComposedScreen, toNowUpdate } from './nowMappers';
 
 /**
  * The mapper, asked for a chip.
@@ -484,5 +484,32 @@ describe('emphasis', () => {
 
   it('is false on a card with no badge at all', () => {
     expect(cardsOf([matchCard({ matchId: 'm-1' })])).toEqual([false]);
+  });
+});
+
+describe('an action’s update', () => {
+  it('maps the changed card through the same expression a compose does', () => {
+    // A card arriving from an action and the same card arriving from a compose
+    // cannot be rendered by two different expressions, or one screen says two
+    // things about one match. Asserted as *the same card*, against a compose of
+    // the identical wire object, rather than against a copy of the expected
+    // rendering — which would agree with itself.
+    const wire = matchCard({ matchId: 'm-1', situation: 'confirmed' });
+    const update = toNowUpdate({ update_type: 'card', card: wire });
+    const composed = nth(
+      compose({ ...emptyNow(), your_matches: { stamp: 1, cards: [wire] } }).yourMatches.cards,
+      0,
+    );
+
+    if (update.kind !== 'card') throw new Error('the card form was asked for');
+    expect(update.card).toEqual(composed);
+  });
+
+  it('maps the gone form to the match it names and no card', () => {
+    // `ADR-0087`'s form, and the reason the union exists: there is no card to
+    // map, and an emptied one would be a blank the renderer has to interpret.
+    const update = toNowUpdate({ update_type: 'gone', match_id: 'm-1' });
+
+    expect(update).toEqual({ kind: 'gone', matchId: 'm-1' });
   });
 });

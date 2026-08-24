@@ -311,22 +311,53 @@ class Commitments(Protocol):
 
 @runtime_checkable
 class StandbyPlaces(Protocol):
-    """Which matches this viewer is queued for. **Ships dark.**
+    """Which matches this viewer is queued for. **The store landed.**
 
     ``NotOnStandby`` is one of the delta's eight common rules and it needs a set
-    to test against. Standby has no store anywhere in the product — the queue is
-    a membership the departure cascade will create (``Raketa02/Raketa#81``,
-    ``#82``) — so today every answer is empty and the rule passes for every
-    candidate.
+    to test against. It shipped against an adapter that answered the empty set
+    for everybody, because standby had no store anywhere in the product — the
+    port was written first precisely so that the day the table arrived the
+    change would be one line in the composition root rather than a rule somebody
+    had to remember to add (``Raketa02/Raketa#81``). This is that day, and it
+    was one line.
 
-    It is a **port with an empty answer** rather than a rule left out, because
-    the two are different the day the store lands: a missing rule is a screen
-    suggesting a player the match she is already queued for, found by somebody
-    reading the pipeline, and an empty port is one line in the composition root.
+    It is a **read and only a read**, and the write beside it is a second port
+    rather than a second method here: ``ComposeShelves`` takes this one, and a
+    composer holding an object that can delete a player's queue place is a
+    composer one autocomplete away from doing it.
     """
 
     async def for_player(self, player_id: UUID) -> frozenset[UUID]:
-        """Empty for every player today, and honestly so."""
+        """Every match she asked to be told about. Empty is the common answer."""
+        ...
+
+
+@runtime_checkable
+class Standby(Protocol):
+    """The second write behind an action off Now, in Now's words.
+
+    ADR-0087's ``DELETE``, and the port is Now's own with its adapter in
+    ``now/infrastructure/`` — the shape ``Departures`` and ``money.Seats``
+    already take over the Matches context. The alternative, a composer importing
+    ``matches.application``, would put another context in Now's application
+    layer and point the module graph both ways at once.
+
+    **It refuses nothing and reports nothing**, which is the whole of ADR-0087:
+    *"a repeated delete of a standby place a player no longer holds is the state
+    they asked for"*. There is no quote to fall, no lock, no money and no place
+    to lose, so the only thing that can go wrong is a match that does not exist.
+
+    **It does not commit.** The delete and the read that composes the answer are
+    the use case's transaction, on the rule ``Departures`` already follows.
+    """
+
+    async def leave(self, *, match_id: UUID, player_id: UUID) -> None:
+        """Take her off this match's queue, or leave it as it already is.
+
+        Raises ``MatchNotFound`` for a match that does not exist, which is the
+        only refusal in the act and is about the **address** rather than about
+        the queue.
+        """
         ...
 
 

@@ -75,8 +75,10 @@ from app.bootstrap.composition import (
     build_domain_event_store,
     build_event_publisher,
     build_court_holds,
+    build_join_standby,
     build_ledger_repository,
     build_match_repository,
+    build_match_standby_places,
     build_password_hasher,
     build_reservation_repository,
     build_skill_rating_repository,
@@ -85,7 +87,7 @@ from app.bootstrap.composition import (
 )
 from app.core.config import Settings, get_settings
 from app.infrastructure.database.engine import create_engine
-from app.kernel import Instant, Sport, exhaustive, live_outcome, situation
+from app.kernel import Instant, Sport, Viewer, exhaustive, live_outcome, situation
 from app.modules.clubs.application.add_court import AddCourt
 from app.modules.clubs.application.add_court_category import AddCourtCategory
 from app.modules.clubs.application.change_club_policy import ChangeClubPolicy
@@ -130,9 +132,16 @@ from app.modules.matches.application.commands import (
 )
 from app.modules.matches.application.post_match import PostMatch
 from app.modules.matches.application.resolve_court_hold import ResolveCourtHold
+from app.modules.matches.application.standby import (
+    JoinStandby,
+    JoinStandbyCommand,
+)
 from app.modules.matches.application.seat_moves import Depart, PaySeat, TakeSeat
 from app.modules.matches.domain.match import Match
 from app.modules.matches.domain.ports import MatchRepository
+from app.modules.matches.domain.ports import (
+    StandbyPlaces as MatchStandbyPlaces,
+)
 from app.modules.money.application.commands import (
     Compensation,
     HeldByRaketa,
@@ -181,7 +190,7 @@ from app.seeds.catalog import (
 )
 from app.seeds.clubs import CLUBS, KRAKOW, SeedCategory, SeedClub
 from app.seeds.courts import RESERVATIONS, SeedReservation
-from app.seeds.matches import MATCHES, SeedMatch
+from app.seeds.matches import MATCHES, SeedMatch, StandbyClaim
 from app.seeds.money import LEDGERS, Arrival, SeedLedger
 from app.seeds.guard import refuse_unless_seedable
 
@@ -328,6 +337,8 @@ class _UseCases:
     depart: Depart
     cancel_match: CancelMatch
     resolve_hold: ResolveCourtHold
+    join_standby: JoinStandby
+    standby: MatchStandbyPlaces
     record_movements: RecordMovements
     record_share: RecordShare
     #: The clock the Matches use cases write with. See `_SeededWeekClock`.
@@ -359,6 +370,10 @@ def _build(session: AsyncSession) -> _UseCases:
     # the wall clock a seeded match's schedule would be relative to the day the
     # seed happened to run rather than to the week it describes.
     matches = build_match_repository(session, events=events, clock=week)
+    # The queue is on the seeded week's clock too, for the reason everything
+    # around it is: `joined_at` is a fact about the week the scenario describes
+    # and not about the day somebody ran the seed.
+    standby = build_match_standby_places(session)
     court_holds = build_court_holds(claim_court, reservations)
     # The ladder is on the seeded week's clock too, and it has to be: a hold is
     # granted at the instant a tier is entered, and on the wall clock every
@@ -390,6 +405,10 @@ def _build(session: AsyncSession) -> _UseCases:
         depart=Depart(matches, resolve_hold, uow, week),
         cancel_match=CancelMatch(matches, resolve_hold, uow, week),
         resolve_hold=resolve_hold,
+        join_standby=build_join_standby(
+            matches=matches, standby=standby, clock=week
+        ),
+        standby=standby,
         week=week,
         register_club=RegisterClub(clubs, uow, clock),
         change_policy=ChangeClubPolicy(clubs, uow, clock),
@@ -1159,13 +1178,26 @@ async def _seed_match(
     club_id = _seeded_club_id_for_match(clubs, scenario)
     existing = await _match_already_seeded(use_cases, club_id, scenario)
     if existing is not None:
+        # The queue is written on this path too, and it is the one child here
+        # that has to be: a scenario that gained a standby place after the
+        # database was seeded would otherwise never get one, and the check
+        # below would then fail on a run that was doing its job. Joining is
+        # idempotent, so a run that changes nothing writes nothing.
+        await _write_the_standby_places(use_cases, accounts, existing.id, scenario)
         _refuse_a_match_whose_name_lies(scenario, existing)
+        await _refuse_a_standby_place_whose_name_lies(
+            use_cases, accounts, existing, scenario
+        )
         return SeededMatch(match=scenario, match_id=existing.id, created=False)
 
     match = await _write_the_match(use_cases, accounts, club_id, scenario)
+    await _write_the_standby_places(use_cases, accounts, match.id, scenario)
     stored = await use_cases.matches.get(match.id)
     assert stored is not None  # just written, in this transaction
     _refuse_a_match_whose_name_lies(scenario, stored)
+    await _refuse_a_standby_place_whose_name_lies(
+        use_cases, accounts, stored, scenario
+    )
     return SeededMatch(match=scenario, match_id=stored.id, created=True)
 
 
@@ -1244,6 +1276,48 @@ async def _write_the_match(
     return match
 
 
+async def _write_the_standby_places(
+    use_cases: _UseCases,
+    accounts: tuple[SeededAccount, ...],
+    match_id: UUID,
+    scenario: SeedMatch,
+) -> None:
+    """Queue whoever the scenario says asked, through the use case a tap would.
+
+    Seeds execute use cases and never SQL, and here that is load-bearing rather
+    than ceremonial: **v1 has no surface that joins a queue at all** — the
+    prototype's waitlist toggle is a match-screen control and the match screen
+    is out of scope — so the seed is the only writer, and a seeded place written
+    any other way would be a state no code path in the product produces.
+
+    On the week's own clock, like every other Matches write here.
+    """
+
+    for claim in scenario.standby:
+        use_cases.week.at(claim.resolved_at)
+        await use_cases.join_standby.execute(
+            JoinStandbyCommand(
+                match_id=match_id,
+                player_id=_seeded_player_for_standby(accounts, scenario, claim),
+            )
+        )
+
+
+def _seeded_player_for_standby(
+    accounts: tuple[SeededAccount, ...],
+    scenario: SeedMatch,
+    claim: StandbyClaim,
+) -> UUID:
+    for account in accounts:
+        if account.account.slug == claim.player_slug:
+            return account.player_id
+    raise SeedFailed(
+        f"'{scenario.slug}' queues the player '{claim.player_slug}', which the "
+        f"account catalog does not hold. A queue place pointing at nobody is a "
+        f"catalog that has been half-edited."
+    )
+
+
 def _players_for(
     accounts: tuple[SeededAccount, ...], scenario: SeedMatch
 ) -> list[UUID]:
@@ -1313,6 +1387,52 @@ def _refuse_a_match_whose_name_lies(scenario: SeedMatch, stored: Match) -> None:
             f"nothing about the card it is developed against would look wrong."
         )
     _refuse_a_departure_whose_name_lies(scenario, stored)
+
+
+async def _refuse_a_standby_place_whose_name_lies(
+    use_cases: _UseCases,
+    accounts: tuple[SeededAccount, ...],
+    stored: Match,
+    scenario: SeedMatch,
+) -> None:
+    """Ask the **kernel** what the queued account's card says, every run.
+
+    The same check the match's own name gets, pointed at the one thing about a
+    match that is true only *for somebody*: ``waitlisted`` is the single
+    situation only a viewer can be in (ADR-0040), so this is the one place in
+    the catalog where the kernel is asked with a ``Viewer`` rather than without.
+
+    Two things can make it lie and they fail differently on purpose. The place
+    missing from the store is a queue that was never written — an ordinary
+    seeded fact gone absent. The place present and the situation something else
+    is the ladder having moved under the name, which is the failure the whole
+    catalog exists for: nothing about the card would look wrong.
+    """
+
+    for claim in scenario.standby:
+        player_id = _seeded_player_for_standby(accounts, scenario, claim)
+        if stored.id not in await use_cases.standby.held_by(player_id):
+            raise SeedFailed(
+                f"'{scenario.slug}' says '{claim.player_slug}' is queued for it "
+                f"and the store holds no such place. A card promising "
+                f"{claim.promise} cannot be drawn against a queue that is empty."
+            )
+        resolved = situation(
+            stored.as_record(),
+            Viewer(
+                holds_seat=stored.seat_of(player_id) is not None,
+                on_standby=True,
+            ),
+            claim.resolved_at,
+        )
+        if resolved is not claim.situation:
+            raise SeedFailed(
+                f"'{scenario.slug}' promises '{claim.player_slug}' "
+                f"{claim.promise} — {claim.situation.value} — and the kernel now "
+                f"resolves her card to {resolved.value}. A queued player whose "
+                f"name lies is worse than one that is missing: the act on that "
+                f"card is the only one this build can receive."
+            )
 
 
 def _refuse_a_departure_whose_name_lies(scenario: SeedMatch, stored: Match) -> None:
@@ -1405,6 +1525,13 @@ def report(seeded: Seeded) -> list[str]:
         lines.append(
             f"      match {match.match_id} · {match.match.claim.situation.value}"
         )
+        for queued in match.match.standby:
+            # Named here because it is the only fact in the run that is true of
+            # *one account* rather than of the match, and a developer signing in
+            # as somebody else would otherwise not know whose card it is.
+            lines.append(
+                f"      queued: {queued.player_slug} · {queued.situation.value}"
+            )
 
     lines.append("")
     lines.append(f"Seeded {len(seeded.ledgers)} ledger(s).")

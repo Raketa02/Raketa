@@ -48,8 +48,11 @@ function screen(overrides: Partial<ComposedScreen> = {}): ComposedScreen {
 }
 
 const LEFT: NowUpdate = {
+  kind: 'card',
   card: card('m-2', { mayDepart: false, departure: 'You left — nothing had been taken.' }),
 };
+
+const GONE: NowUpdate = { kind: 'gone', matchId: 'm-2' };
 
 describe('applying Now’s update', () => {
   it('replaces the card in place, and moves nothing', () => {
@@ -118,5 +121,60 @@ describe('applying Now’s update', () => {
     });
 
     expect(applyNowUpdate(before, LEFT).debt).toEqual(before.debt);
+  });
+
+  it('takes the card off the screen when the server says it has gone', () => {
+    // `ADR-0070` requires the one-card answer to be able to say *this card is no
+    // longer on your screen*, and `ADR-0087`'s write is the first that can: a
+    // queue place is the whole of what put that match on the strip.
+    const before = screen({
+      yourMatches: { cards: [card('m-1'), card('m-2'), card('m-3')] },
+    });
+
+    const after = applyNowUpdate(before, GONE);
+
+    expect(after.yourMatches.cards.map((held) => held.matchId)).toEqual(['m-1', 'm-3']);
+  });
+
+  it('leaves the surviving cards in the order they arrived in', () => {
+    // Removing one is not a licence to re-order the rest. Order is a property of
+    // the composed screen (`ADR-0032`), and this is the one operation here that
+    // could quietly become a re-sort.
+    const before = screen({
+      yourMatches: { cards: [card('m-3'), card('m-2'), card('m-1')] },
+    });
+
+    const after = applyNowUpdate(before, GONE);
+
+    expect(after.yourMatches.cards.map((held) => held.matchId)).toEqual(['m-3', 'm-1']);
+  });
+
+  it('reaches the offers region with the gone form too', () => {
+    const before = screen({ offers: { cards: [card('m-2')] } });
+
+    expect(applyNowUpdate(before, GONE).offers.cards).toEqual([]);
+  });
+
+  it('removes nothing anywhere else when the gone card is not held', () => {
+    const cards = [card('m-1')];
+    const before = screen({ yourMatches: { cards } });
+
+    expect(applyNowUpdate(before, GONE).yourMatches.cards).toBe(cards);
+  });
+
+  it('never touches the shelves on the gone form either', () => {
+    // The rule is about the update shape and not about which form arrived: a
+    // ranked list shortened by a write is still a list that moved under her
+    // thumb.
+    const shelf = {
+      kind: 'shelf' as const,
+      code: 'bestFit',
+      title: 'Best fit for you',
+      caption: undefined,
+      cards: [card('m-2')],
+    };
+    const before = screen({ shelves: { blocks: [shelf] } });
+
+    expect(applyNowUpdate(before, GONE).shelves).toBe(before.shelves);
   });
 });
