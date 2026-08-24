@@ -190,6 +190,31 @@ were told rather than as a refusal with no explanation
 **Taking a seat in somebody else's match still works**, and the line says so. Nothing on the
 screen is greyed out, dropped or dimmed: being cut off must not make you less likely to pay.
 
+## Being told when a seat opens
+
+Seats free at short notice and the first person to take one gets it, so the phone telling you
+is most of what the whole channel is worth. **The permission is explained before anything is
+fired**: at the end of onboarding, a screen says why, what the message will say, and what it
+will never say — one line at a time, the sport and when it starts, and **never the club**,
+because a lock screen gets read over shoulders
+([ADR-0061](../docs/adr/0061-the-invitation-ladder-is-an-order-and-one-open-call.md),
+[ADR-0062](../docs/adr/0062-a-notification-is-a-prompt-to-look-not-a-record.md)).
+
+It carries **_Turn on_** and **_Not now_**, and only _Turn on_ shows the system dialog. Your
+phone grants that dialog once, so it is spent only on a yes; _Not now_ asks nothing, records
+nothing, and is asked again the first time you queue for a match, which is the moment being
+interrupted has a point — a moment nothing in this build reaches yet, because nothing here
+joins a queue ([#132](https://github.com/Raketa02/Raketa/issues/132)).
+
+**Saying no costs you nothing on Now.** Every seat you could take is on the screen either way
+— this only decides whether your phone tells you before you look. Nothing is dropped, greyed
+out or withheld, and Now never asks your phone anything.
+
+**Tapping a notification shows you what is true now**, not what the message said. The message
+carries no data at all: opening the app is what refreshes Now, and Now is the only surface
+that states anything
+([ADR-0054](../docs/adr/0054-now-refreshes-when-asked-never-on-a-timer.md)).
+
 ## Leaving a match
 
 The exit on a card opens a screen, never a dialog

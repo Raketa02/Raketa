@@ -121,8 +121,8 @@ export function DoneScreen() {
         <Button
           label="Continue"
           size="lg"
-          onPress={() => router.replace('/data')}
-          accessibilityHint="Shows what Raketa keeps and what it never does with it"
+          onPress={() => router.replace('/notifications')}
+          accessibilityHint="Explains being told when a seat opens up"
         />
       </View>
     </SafeAreaView>

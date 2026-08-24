@@ -23,6 +23,7 @@
 
 import { Redirect, Stack } from 'expo-router';
 
+import { useDeviceRegistration } from '@/features/notifications/types';
 import {
   EntryUnavailableScreen,
   useEndOnboardingPass,
@@ -39,6 +40,13 @@ export default function AppLayout() {
   // someone has to remember on each of the several ways out of the flow. Called before the
   // returns below, because a hook may not be conditional.
   useEndOnboardingPass(entry.kind === 'app');
+
+  // Where this phone can be reached, re-stated once per app session for a player who
+  // has already said yes. Declared on the same branch and for the same reason: this is
+  // the one place that knows the player is in the app, and the registration must not be
+  // attempted for somebody whose request would go out unauthenticated. `ADR-0065` needs
+  // it to run more than once — the setting it reports is one she can revoke afterwards.
+  useDeviceRegistration(entry.kind === 'app');
 
   // Can't happen in practice — `BootstrapGate` renders nothing until the sequence
   // resolves, so no route tree exists while the status is still `bootstrapping`. It is

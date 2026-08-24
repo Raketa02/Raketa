@@ -61,6 +61,12 @@ const secureStoreImport = {
     'Only src/shared/lib/auth may touch the keychain. One module owning it is what makes token lifetime auditable. See docs/adr/0008.',
 };
 
+const notificationsImport = {
+  group: ['expo-notifications'],
+  message:
+    'Only src/shared/lib/notifications may ask the OS about notifications. One module owning it is what keeps ADR-0061 true in both directions: refusing permission costs a player the message and never a card, and nothing may branch on timeSensitiveSetting (ADR-0065).',
+};
+
 const observabilityVendorImports = {
   group: ['@sentry/*', 'posthog-*', '@amplitude/*', 'mixpanel-*'],
   message:
@@ -93,6 +99,7 @@ const CORE_PATTERNS = [
   crossAppImports,
   deepFeatureImports,
   secureStoreImport,
+  notificationsImport,
   observabilityVendorImports,
 ];
 
@@ -211,6 +218,20 @@ export default [
     // The single place fetch is configured.
     files: ['src/shared/lib/http/**'],
     rules: { 'no-restricted-globals': 'off' },
+  },
+  {
+    // The single module that asks the OS about notifications (ADR-0061, ADR-0065).
+    files: ['src/shared/lib/notifications/**'],
+    rules: {
+      'no-restricted-imports': restrict([
+        crossAppImports,
+        deepFeatureImports,
+        secureStoreImport,
+        observabilityVendorImports,
+        generatedImports,
+        featureImportsFromShared,
+      ]),
+    },
   },
   {
     // The adapter that hides the observability vendor from everything else.

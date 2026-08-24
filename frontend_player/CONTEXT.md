@@ -467,6 +467,58 @@ that is about _her_ rather than about a match.
   it _appears_ and this one appears with the screen, on every one of `ADR-0054`'s four asks.
   The card's own rescue strip keeps the role, because that one is news.
 
+### Notification permission, and the one setting reported
+
+The channel's client half ([#95](https://github.com/Raketa02/Raketa/issues/95)): the two
+occasions the permission is explained on, the one control that spends the OS prompt, and the
+three facts one registered phone sends.
+
+- **The explainer** — four cards and two controls, one implementation, shown on two
+  surfaces: the onboarding screen `/notifications`, between the ratings and the data screen,
+  and a bottom sheet raised at a standby join
+  ([ADR-0061](../docs/adr/0061-the-invitation-ladder-is-an-order-and-one-open-call.md)).
+  The argument does not change with the furniture around it.
+- **_Turn on_ / _Not now_** — and **only _Turn on_ fires the system dialog**. _Not now_
+  spends nothing, records nothing and asks the OS nothing at all; it is wired to a different
+  callback rather than to the same one with a flag, because a code path that _could_ fire the
+  prompt on the declining branch is one edit away from firing it. _Avoid_: "decline",
+  "refuse" — the second occasion is what makes it a deferral.
+- **Standing** — `granted` · `askable` · `spent`, this app's reading of the OS's answer. The
+  question is never _what did she answer_ but **may we still ask**, so it is derived from
+  `canAskAgain`: iOS grants one dialog per install and two Android denials are permanent, and
+  reading a bare _denied_ would write an Android phone off a whole denial early.
+- **The second occasion** — the **first** standby join of a session, which is the moment the
+  interruption has a reason. Nothing joins a queue in v1, so the sheet and its rule are
+  asserted as a rendering rather than as a flow
+  ([#132](https://github.com/Raketa02/Raketa/issues/132)). _"This session"_ is a narrowing:
+  nothing on the phone persists a decision but the keychain, which holds credentials only.
+- **Registering a device** — `PUT /api/v1/push/device`, carrying a token, a platform and
+  `time_sensitive_setting`. **`PUT` because the address of one phone is a thing that is set**,
+  so there is no idempotency key and nothing to retry. 204, and nothing comes back: it moves
+  no card, so it is none of `ADR-0074`'s updates.
+- **Once per app session, not once per tap** — the setting is read **at the moment of
+  registering** and never remembered, because revocation happens _after_ a grant. A client
+  that registered only on the tap would report that every player still has Time Sensitive on,
+  for ever ([ADR-0065](../docs/adr/0065-a-seat-you-asked-for-pierces-a-focus-and-we-send-only-when-the-named-seat-changes.md)).
+- **`timeSensitiveSetting`** — `enabled` · `disabled` · `notSupported`, **reported and never
+  acted on**. Nothing in the client branches on it, walked over the whole app. It answers
+  `notSupported` today on both platforms, which is the truth of a build with no Time Sensitive
+  entitlement — and becomes a constant wearing a measurement's clothes the day that
+  entitlement ships ([#131](https://github.com/Raketa02/Raketa/issues/131)).
+- **The one Android channel** — `offers`, at `IMPORTANCE_HIGH`, created before the server is
+  told where to send. Not two: separate channels for _seats you asked for_ and _seats we found
+  you_ is a mute switch on the rungs that never asked, with no server-side signal that it was
+  thrown. The id is agreed with the backend and checked by nothing
+  ([#130](https://github.com/Raketa02/Raketa/issues/130)).
+- **Nothing receives a notification** — no listener, no handler, no payload read anywhere in
+  the app. The message carries no data at all, and a tap opening the app **is**
+  `ADR-0054`'s arrival ask, which already refetches. _Avoid_: "the notification tells the
+  screen" — the lock screen states nothing; Now does.
+- **Silence on failure** — the dialog, the token read and the `PUT` can each go wrong and
+  none of them is hers. `ADR-0061` says a refusal costs her the message and never a card, so a
+  _failure_ costs no more than a refusal does: the screen moves on and the next launch tries
+  again.
+
 ### The departure screen
 
 `features/departure/` — the route Now's exit control opens, landed with

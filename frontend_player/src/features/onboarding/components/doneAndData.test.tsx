@@ -479,6 +479,11 @@ describe('the data screen', () => {
   async function reachTheDataScreen() {
     await rateBothSports();
     fireEvent.press(await screen.findByLabelText('Continue'));
+    // The explainer stands between the ratings and the data screen now
+    // (`Raketa02/Raketa#95`). *Not now* is the way past that asks the phone
+    // nothing — which is what keeps the write list below unchanged.
+    await waitFor(() => expect(screen).toHavePathname('/notifications'));
+    fireEvent.press(screen.getByLabelText('Not now'));
     await waitFor(() => expect(screen).toHavePathname('/data'));
   }
 
@@ -578,6 +583,11 @@ describe('a second pass in the same process', () => {
     await rateBothSports();
 
     fireEvent.press(await screen.findByLabelText('Continue'));
+    // The explainer stands between the ratings and the data screen now
+    // (`Raketa02/Raketa#95`). *Not now* is the way past that asks the phone
+    // nothing — which is what keeps the write list below unchanged.
+    await waitFor(() => expect(screen).toHavePathname('/notifications'));
+    fireEvent.press(screen.getByLabelText('Not now'));
     await waitFor(() => expect(screen).toHavePathname('/data'));
 
     fireEvent.press(screen.getByLabelText('Start playing'));

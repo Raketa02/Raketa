@@ -37,6 +37,26 @@ jest.mock('expo-network', () => ({
   })),
 }));
 
+// --- the notification service ------------------------------------------------
+// `expo-notifications` talks to `UNUserNotificationCenter` / `NotificationManagerCompat`
+// and to Expo's token service, and has no JS implementation to fall back on.
+//
+// The default is a **fresh install**: nothing granted, and the one system prompt still
+// unspent. That is what every suite that is not about notifications should see, because
+// it is the state in which this app asks the OS nothing and sends nothing — a default of
+// *granted* would have every signed-in suite quietly issue a device registration to a
+// route it never described.
+//
+// Suites that are about notifications drive these through `jest.requireMock`, which is
+// also why they are plain `jest.fn()`s rather than fixed values.
+jest.mock('expo-notifications', () => ({
+  getPermissionsAsync: jest.fn(async () => ({ granted: false, canAskAgain: true })),
+  requestPermissionsAsync: jest.fn(async () => ({ granted: false, canAskAgain: false })),
+  getExpoPushTokenAsync: jest.fn(async () => ({ type: 'expo', data: 'ExponentPushToken[test]' })),
+  setNotificationChannelAsync: jest.fn(async () => undefined),
+  AndroidImportance: { HIGH: 6 },
+}));
+
 // --- the icon font ----------------------------------------------------------
 // `@expo/vector-icons` asks `Font.isLoaded` in its constructor, and under jest-expo
 // that reads a registry the mocked `ExpoFontLoader` never fills — `loadedNativeFonts`

@@ -28,6 +28,7 @@ import AuthLayout from '@/app/(auth)/_layout';
 import SignInRoute from '@/app/(auth)/sign-in';
 import DataRoute from '@/app/(onboarding)/data';
 import DoneRoute from '@/app/(onboarding)/done';
+import NotificationsRoute from '@/app/(onboarding)/notifications';
 import OnboardingLayout from '@/app/(onboarding)/_layout';
 import QuestionRoute from '@/app/(onboarding)/question/[assessmentId]';
 import TakeUpSportRoute from '@/app/(onboarding)/rate/[sport]';
@@ -66,6 +67,7 @@ export const ONBOARDING_ROUTES = {
   '(onboarding)/review/[assessmentId]': ReviewRoute,
   '(onboarding)/result/[assessmentId]': ResultRoute,
   '(onboarding)/done': DoneRoute,
+  '(onboarding)/notifications': NotificationsRoute,
   '(onboarding)/data': DataRoute,
 };
 

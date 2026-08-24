@@ -37,7 +37,9 @@ named.
 
 `features/departure/` is **the route the card's exit opens** — what leaving a match is worth
 right now, and the one control that takes it. `features/result/` is **the route the two
-post-play acts open** — the whole result conversation on one screen.
+post-play acts open** — the whole result conversation on one screen. `features/notifications/`
+is **the permission, explained** — the two occasions it is asked on, and the three facts one
+registered phone reports.
 
 **A chip for a sport she holds no rating at draws a door, and the door is a route**
 ([ADR-0084](../docs/adr/0084-the-sport-bar-is-five-fixed-chips-and-an-unrated-sport-is-a-door.md)).
@@ -193,6 +195,30 @@ nothing on the screen being dropped, disabled or dimmed. **`ComposeNow` sends `n
 unconditionally** ([#108](https://github.com/Raketa02/Raketa/issues/108)), so no running app
 reaches this rendering yet.
 
+**Notification permission is explained, and the OS prompt is spent only on a yes**
+([ADR-0061](../docs/adr/0061-the-invitation-ladder-is-an-order-and-one-open-call.md),
+[ADR-0065](../docs/adr/0065-a-seat-you-asked-for-pierces-a-focus-and-we-send-only-when-the-named-seat-changes.md)).
+`features/notifications/` holds one explainer — four cards, _Turn on_ and _Not now_ — shown on
+**two** surfaces: `/notifications`, between the ratings and the data screen, and a bottom sheet
+raised at a standby join. **Only _Turn on_ calls the OS**; _Not now_ spends nothing, records
+nothing and asks nothing, and both lead to the same next screen, because refusing costs her the
+message and never a card. A grant registers the phone — `PUT /api/v1/push/device`, a token, a
+platform and `time_sensitive_setting` — and so does **every app session**, because the setting
+is one she can revoke afterwards and a value captured once at the grant would report a flat 0%
+revocation for ever. **`expo-notifications` is imported by exactly one module**,
+`shared/lib/notifications/`, the shape `shared/lib/auth` has over the keychain, and ESLint bans
+it everywhere else. Five rules are walked in `notificationsDiscipline.test.ts`, four of them
+over the **whole** of `src/`: nothing branches on `timeSensitiveSetting`, one module asks the
+OS, **nothing subscribes to a notification or reads a payload** — the message carries no data
+and a tap opening the app is already `ADR-0054`'s arrival ask — this feature never reaches
+Query, and nothing persists what she answered. **Three things ship unreachable and each is
+filed rather than faked**: the second occasion has no act to raise it
+([#132](https://github.com/Raketa02/Raketa/issues/132)), the Expo token needs a project id
+([#26](https://github.com/Raketa02/Raketa/issues/26)), and `timeSensitiveSetting` is not
+readable through this SDK at all — it answers `notSupported`, which is true of a build with no
+Time Sensitive entitlement and stops being true the day #37 lands
+([#131](https://github.com/Raketa02/Raketa/issues/131)).
+
 **Twelve rules on that feature are walked over its own source** in
 `components/nowDiscipline.test.ts`, because each is a rule about what the code does _not_ do
 and no green assertion can carry one. **The phone holds no rules** ([ADR-0053](../docs/adr/0053-the-phone-holds-no-rules-and-only-subtracts.md)):
@@ -223,9 +249,10 @@ reaches no card**: the word appears in six modules and none of them draws a matc
 what keeps the client from holding its own list of blocked acts.
 **Nothing here asks the OS about notifications** — refusing permission costs a player the
 message and never the card
-([ADR-0061](../docs/adr/0061-the-invitation-ladder-is-an-order-and-one-open-call.md)), and the
-explainer lands in its own feature ([#95](https://github.com/Raketa02/Raketa/issues/95)). Each
-guard carries a negative control; do not add an exemption to a walk, **narrow the rule
+([ADR-0061](../docs/adr/0061-the-invitation-ladder-is-an-order-and-one-open-call.md)). The
+explainer lives in `features/notifications/` and ESLint now bans `expo-notifications`
+everywhere but its one adapter, so that rule is enforced from outside this feature as well as
+walked from inside it. Each guard carries a negative control; do not add an exemption to a walk, **narrow the rule
 instead** — which is what the second one did when the repaint clock landed.
 
 **The result feature is walked too**, in `components/resultDiscipline.test.ts`: **nothing can
