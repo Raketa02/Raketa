@@ -425,6 +425,35 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/matches/{match_id}/seat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Take a free seat, and correct Now off the same tap
+         * @description Open her five minutes in front of a free seat, and answer with the screen.
+         *
+         *     **200 and a body, not 201.** ADR-0074 has every action off Now return Now's
+         *     update in the same response, and what a claim creates is not a resource the
+         *     client addresses — it is five minutes on a card it already holds.
+         *
+         *     **Nothing is refused but the address.** Anybody may buy a free seat in any
+         *     match: ``Match.open_claim`` is how *any* seat is taken from the marketplace,
+         *     and *offered seats behave differently* is a second rule nobody would
+         *     remember. The only 404 is a match id that names nothing.
+         */
+        post: operations["take_seat_api_v1_matches__match_id__seat_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1660,6 +1689,24 @@ export interface components {
             turned_up?: number | null;
         };
         /**
+         * SeatWriteResponse
+         * @description Now's update for one card, and the two regions the tap moved it between.
+         *
+         *     **The two regions are present exactly when ``claimed`` is true**, and that is
+         *     one decision rather than two. A tap that applied moved a card out of the
+         *     offers region and into the strip; a tap that did not moved nothing, and
+         *     leaving the corrected card exactly where it is is what lets the client draw
+         *     its own fading line over a seat that has gone rather than watching the card
+         *     vanish under her thumb.
+         */
+        SeatWriteResponse: {
+            /** Claimed */
+            claimed: boolean;
+            update: components["schemas"]["NowUpdateResponse"];
+            offers?: components["schemas"]["OffersRegionResponse"] | null;
+            your_matches?: components["schemas"]["EnrolledRegionResponse"] | null;
+        };
+        /**
          * SetScoreResponse
          * @description One set, two integers, and no tiebreak field in v1.
          */
@@ -2700,6 +2747,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["StandbyWriteResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    take_seat_api_v1_matches__match_id__seat_post: {
+        parameters: {
+            query?: {
+                /** @description The chip on the sport bar when the seat was tapped. The two regions this answers with are recomposed under it, so that a filtered screen is not replaced by an unfiltered one. */
+                sport?: components["schemas"]["SportFilter"];
+            };
+            header?: never;
+            path: {
+                /** @description The match a seat is being taken in. */
+                match_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeatWriteResponse"];
                 };
             };
             /** @description Validation Error */

@@ -17,10 +17,11 @@ is missing.
 
 from datetime import datetime, timedelta, timezone
 from uuid import UUID, uuid4
+from zoneinfo import ZoneInfo
 
 import pytest
 
-from app.kernel import Instant, Sport
+from app.kernel import Cover, Instant, MatchRecord, OfferKind, Sport, grosze
 from app.modules.now.application.commands import ComposeNowQuery, SportFilter
 from app.engines.matchfit.v1 import MatchFitEngineV1
 from app.engines.pairing.v1 import PairingEngineV1
@@ -39,14 +40,24 @@ from tests.unit.shelf_doubles import (
 )
 from app.modules.now.application.compose_now import ComposeNow, stamp_at
 from app.modules.now.application.new_arrivals import ComposeNewArrivals
+from app.modules.now.application.compose_offers import ComposeOffers
 from app.modules.now.domain.enrolled import Enrolment
-from app.modules.now.domain.ports import EnrolledMatches, ParkedRuns, RatedSports
+from app.modules.now.domain.offers import OfferedSeat
+from app.modules.now.domain.ports import (
+    EnrolledMatches,
+    OfferedSeats,
+    ParkedRuns,
+    RatedSports,
+)
 from app.modules.now.domain.screen import (
     Block,
     ClubCard,
     Door,
     Level,
+    MatchCard,
+    Money,
     PersonCard,
+    Place,
     Shelf,
     Stamp,
 )
@@ -144,14 +155,79 @@ class RecordingEnrolled(EnrolledMatches):
     `tests/unit/test_compose_enrolled.py`'s subject.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, *rows: Enrolment) -> None:
+        self._rows = rows
         self.calls: list[dict[str, object]] = []
 
     async def for_player(
         self, *, player_id: UUID, now: Instant
     ) -> tuple[Enrolment, ...]:
         self.calls.append({"player_id": player_id, "now": now})
-        return ()
+        return self._rows
+
+
+class RecordingOffered(OfferedSeats):
+    """The offers region's port, answering nothing and remembering the ask.
+
+    A player who has been told about no seat is the ordinary case and it is the
+    one this file wants: what is under test here is the *reach* — which viewer
+    and which clock reading arrive — where the cards themselves are
+    `tests/unit/test_compose_offers.py`'s subject.
+    """
+
+    def __init__(self, *rows: OfferedSeat) -> None:
+        self._rows = rows
+        self.calls: list[dict[str, object]] = []
+
+    async def for_player(
+        self, *, player_id: UUID, now: Instant
+    ) -> tuple[OfferedSeat, ...]:
+        self.calls.append({"player_id": player_id, "now": now})
+        return self._rows
+
+    async def one(
+        self, *, player_id: UUID, match_id: UUID, now: Instant
+    ) -> OfferedSeat | None:  # pragma: no cover - the compose never asks
+        raise AssertionError("a compose never asks about one match")
+
+
+def a_place() -> Place:
+    return Place(
+        club_id=uuid4(),
+        club_name="Sport Club Kraków",
+        zone=ZoneInfo("Europe/Warsaw"),
+        cover=Cover.INDOOR,
+    )
+
+
+def an_offer(
+    *, match_id: UUID | None = None, record: MatchRecord | None = None
+) -> OfferedSeat:
+    """One live offer, which is the whole of what this file needs about them."""
+
+    return OfferedSeat(
+        match_id=match_id or uuid4(),
+        vacancy_id=uuid4(),
+        record=record if record is not None else a_match(paid=3, starts=600),
+        where=a_place(),
+        kind=OfferKind.OPEN,
+        share=Money(amount=grosze(3800)),
+        court_total=Money(amount=grosze(15200)),
+        offered_at=AT,
+    )
+
+
+def an_enrolment(
+    *, match_id: UUID, record: MatchRecord, **kwargs
+) -> Enrolment:
+    return Enrolment(
+        match_id=match_id,
+        record=record,
+        where=a_place(),
+        share=Money(amount=grosze(3800)),
+        court_total=Money(amount=grosze(15200)),
+        **kwargs,
+    )
 
 
 def _empty_shelves() -> ComposeShelves:
@@ -180,6 +256,7 @@ def _compose(
     parked: ParkedRuns | None = None,
     enrolled: EnrolledMatches | None = None,
     shelves: ComposeShelves | None = None,
+    offered: OfferedSeats | None = None,
 ) -> ComposeNow:
     return ComposeNow(
         rated_sports=rated,
@@ -187,6 +264,7 @@ def _compose(
         new_arrivals=arrivals or RecordingNewArrivals(),
         shelves=shelves or _empty_shelves(),
         enrolled=ComposeEnrolled(enrolled=enrolled or RecordingEnrolled()),
+        offers=ComposeOffers(offered=offered or RecordingOffered()),
         clock=clock,
     )
 
@@ -394,6 +472,147 @@ async def test_the_shelves_region_carries_whatever_composed() -> None:
     )
 
     assert [shelf.code for shelf in screen.shelves.shelves] == [ShelfCode.NEW_CLUBS]
+
+
+async def test_the_offers_composer_is_asked_with_the_named_chip() -> None:
+    # The **named chip** and never the resolved set, exactly as the strip takes
+    # it. The two readings of `all` coincide here rather than merely agreeing
+    # today — the cascade's pool excludes anybody holding no rating at the
+    # match's sport, so no offer can exist outside *the sports she holds a
+    # rating at*.
+    player = uuid4()
+    offered = RecordingOffered()
+    await _compose(
+        FakeRatedSports(), SteppingClock(AT), offered=offered
+    ).execute(ComposeNowQuery(player_id=player, sport=SportFilter.PADEL))
+
+    assert offered.calls == [{"player_id": player, "now": AT}]
+
+
+async def test_the_region_takes_the_chip_and_never_the_resolved_set() -> None:
+    """The case that tells the two apart, which one rated sport cannot.
+
+    `all` resolves to *the sports she holds a rating at*, and a player rated at
+    two sports resolves to a set of two — where the chip is `None` and hides
+    nothing. Passing the resolved set would make the region show one of her
+    sports and drop the other, chosen by whatever the set iterates first.
+    """
+
+    player = uuid4()
+    rated_at = FakeRatedSports(
+        **{str(player): frozenset({Sport.PADEL, Sport.TENNIS})}
+    )
+    padel = an_offer(record=a_match(paid=3, starts=600, sport=Sport.PADEL))
+    tennis = an_offer(record=a_match(paid=1, starts=600, sport=Sport.TENNIS))
+    screen = await _compose(
+        rated_at, SteppingClock(AT), offered=RecordingOffered(padel, tennis)
+    ).execute(ComposeNowQuery(player_id=player, sport=SportFilter.ALL))
+
+    assert len(screen.offers.cards) == 2
+
+
+async def test_the_offers_region_shares_the_composes_one_clock_reading() -> None:
+    offered = RecordingOffered()
+    clock = SteppingClock(AT, AT + timedelta(seconds=5))
+    screen = await _compose(
+        FakeRatedSports(), clock, offered=offered
+    ).execute(ComposeNowQuery(player_id=uuid4()))
+
+    assert clock.reads == 1
+    assert offered.calls[0]["now"] == AT
+    assert screen.offers.stamp == stamp_at(AT)
+
+
+async def test_a_match_the_offers_region_speaks_for_leaves_the_queue_card() -> None:
+    """One match, one card, and the region that holds it is the ladder's answer.
+
+    Rung 1's own audience: a player on a match's standby queue is the first
+    person the cascade tells, so she holds a queue place *and* a live offer. Rung
+    6 sits above rung 7 — *"telling her she is still queueing while the seat is
+    hers to take would be the one sentence that makes standby worthless"* — and
+    the strip is where that ruling is applied, because two regions cannot each
+    apply it to their own.
+    """
+
+    match_id = uuid4()
+    record = a_match(paid=3, starts=600)
+    screen = await _compose(
+        FakeRatedSports(),
+        SteppingClock(AT),
+        enrolled=RecordingEnrolled(
+            an_enrolment(match_id=match_id, record=record, on_standby=True)
+        ),
+        offered=RecordingOffered(an_offer(match_id=match_id, record=record)),
+    ).execute(ComposeNowQuery(player_id=uuid4()))
+
+    assert [card.match_id for card in screen.offers.cards] == [match_id]
+    assert screen.your_matches.cards == ()
+
+
+async def test_a_seat_of_her_own_is_never_taken_off_the_strip_by_a_region() -> None:
+    """Narrowed to the one membership that confers nothing.
+
+    A seat, a departure or a live claim is money or a clock of her own, and no
+    region above may take that card off the strip. The two answers are computed
+    in two files off two reads, so if they ever disagree the cost is a duplicate
+    card rather than a missing one.
+    """
+
+    match_id = uuid4()
+    record = a_match(paid=3, starts=600)
+    screen = await _compose(
+        FakeRatedSports(),
+        SteppingClock(AT),
+        enrolled=RecordingEnrolled(
+            an_enrolment(match_id=match_id, record=record, holds_seat=True)
+        ),
+        offered=RecordingOffered(an_offer(match_id=match_id, record=record)),
+    ).execute(ComposeNowQuery(player_id=uuid4()))
+
+    assert [card.match_id for card in screen.your_matches.cards] == [match_id]
+
+
+async def test_an_offer_silences_emphasis_across_the_whole_screen() -> None:
+    """ADR-0037's rule, composed end to end rather than asserted on a stand-in.
+
+    An offer is a seat with a clock on it at the very top of Now and it is the
+    loudest thing the product has to say; a suggestion shouting underneath it
+    would be two things competing to be the one thing she does next.
+    """
+
+    player = uuid4()
+    rated_at = FakeRatedSports(**{str(player): frozenset({Sport.PADEL})})
+    city = FakeCityMatches(a_context(record=a_match(paid=3, starts=600)))
+    shelves = ComposeShelves(
+        city=city,
+        commitments=FakeCommitments(),
+        standby=FakeStandbyPlaces(),
+        ratings=FakeRatings(PADEL=rated(240)),
+        scorer=MatchScorer(pairing=PairingEngineV1(), matchfit=MatchFitEngineV1()),
+    )
+
+    loud = await _compose(rated_at, SteppingClock(AT), shelves=shelves).execute(
+        ComposeNowQuery(player_id=player, sport=SportFilter.PADEL)
+    )
+    quiet = await _compose(
+        rated_at,
+        SteppingClock(AT),
+        shelves=shelves,
+        offered=RecordingOffered(an_offer()),
+    ).execute(ComposeNowQuery(player_id=player, sport=SportFilter.PADEL))
+
+    assert any(_emphatic(loud)), "the negative control never shouted"
+    assert not any(_emphatic(quiet))
+
+
+def _emphatic(screen) -> list[bool]:
+    return [
+        card.emphasis
+        for block in screen.shelves.shelves
+        if isinstance(block, Shelf)
+        for card in block.cards
+        if isinstance(card, MatchCard)
+    ]
 
 
 async def test_the_arrivals_composer_is_asked_with_the_resolved_sports() -> None:

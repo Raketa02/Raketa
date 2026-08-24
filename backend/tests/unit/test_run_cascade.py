@@ -63,6 +63,9 @@ from tests.unit.cascade_doubles import (
     FixedClock,
     SpyUnitOfWork,
 )
+from app.modules.now.application.compose_offers import ComposeOffers
+from app.modules.now.domain.offers import OfferedSeat
+from app.modules.now.domain.screen import Place
 from tests.unit.match_records import at
 from tests.unit.shelf_doubles import a_context, a_match, rated
 
@@ -888,3 +891,108 @@ def test_the_wall_admits_the_levels_the_engines_band_contains(hundredths) -> Non
     assert band is not None
     her = level(hundredths)
     assert band.admits(her) == (band.low <= her <= band.high)
+
+
+# ---------------------------------------------------------------------------
+# What the offers region can therefore draw
+# ---------------------------------------------------------------------------
+
+
+class _OfferedFromWhatWasWritten:
+    """`OfferedSeats` over exactly what a dispatch wrote, for one match.
+
+    The join between the cascade and the region, and the only thing this file
+    stands up beyond the ladder. Everything about the read itself —
+    deduplication, batching, *already mine* — is
+    `tests/unit/test_offered_adapter.py`'s; what this needs is a port that
+    invents nothing, so that a card appearing is a claim about the **dispatch**
+    rather than about a fixture.
+    """
+
+    def __init__(self, offers: FakeOffers, context) -> None:
+        self._offers = offers
+        self._context = context
+
+    async def for_player(self, *, player_id, now):
+        return tuple(
+            OfferedSeat(
+                match_id=offer.match_id,
+                vacancy_id=offer.vacancy_id,
+                record=self._context.record,
+                where=Place(
+                    club_id=self._context.club.club_id,
+                    club_name=self._context.club.name,
+                    zone=self._context.club.zone,
+                    cover=self._context.club.cover,
+                ),
+                kind=offer.kind,
+                share=self._context.share,
+                court_total=self._context.court_total,
+                offered_at=offer.offered_at,
+            )
+            for offer in self._offers.written
+            if offer.player_id == player_id
+        )
+
+    async def one(self, *, player_id, match_id, now):  # pragma: no cover
+        raise AssertionError("this file composes a region, never one card")
+
+
+async def _region_for(fixture: Fixture, player_id: UUID):
+    return await ComposeOffers(
+        offered=_OfferedFromWhatWasWritten(fixture.offers, fixture.context)
+    ).compose(viewer=player_id, sport=None, now=fixture.now, stamp=1)
+
+
+async def test_a_player_the_pool_admitted_gets_a_card() -> None:
+    """The negative controls below are worth nothing without this one.
+
+    A region that drew nothing for everybody would satisfy both of them, so the
+    positive case is what makes them assertions rather than tautologies.
+    """
+
+    who, skill = a_player(300)
+    fixture = Fixture()
+    fixture.in_the_band(who).rate(who, skill)
+    await fixture.run()
+
+    region = await _region_for(fixture, who)
+
+    assert [card.match_id for card in region.cards] == [fixture.context.match_id]
+
+
+async def test_no_card_reaches_a_sport_the_viewer_holds_no_rating_at() -> None:
+    """`RATED_AT_SPORT` is the pool's, and the region inherits it by having
+    nothing to draw.
+
+    The region asks ``cascade.seat_exclusions`` — the four facts about the *seat*
+    — and never the three about the candidate, deliberately: re-deciding *is she
+    still the right person for this* on a card she is already looking at would
+    withdraw a seat by a rule she cannot see, which is what ADR-0061 replaced
+    retraction with wording to avoid. So this rule has to hold where the offer is
+    **written**, and this is the assertion that it does.
+    """
+
+    who = uuid4()
+    fixture = Fixture()
+    fixture.in_the_band(who).rate(who, None)
+    await fixture.run()
+
+    region = await _region_for(fixture, who)
+
+    assert region.cards == ()
+
+
+async def test_no_card_reaches_a_player_outside_the_matchs_band() -> None:
+    """The wall, read from the screen's end. ADR-0061: *"everyone inside the band
+    the players who stayed signed up for."*"""
+
+    inside, inside_skill = a_player(300)
+    outside, outside_skill = a_player(480)
+    fixture = Fixture()
+    fixture.in_the_band(inside, outside)
+    fixture.rate(inside, inside_skill).rate(outside, outside_skill)
+    await fixture.run()
+
+    assert (await _region_for(fixture, inside)).cards != ()
+    assert (await _region_for(fixture, outside)).cards == ()

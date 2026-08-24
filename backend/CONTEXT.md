@@ -1461,5 +1461,73 @@ there; they are not repeated here.
   two above it decide what is *true* — a court given back, a claim reaped, a result settled
   — and this one decides who is **told**.
 
+- **The offers region** (`now/application/compose_offers.py`) — seats put in front of this
+  viewer, **soonest-to-expire first**, with no floor, no cap and no caption. The last three
+  are facts about the *type* rather than rules applied in the composer: `OffersRegion` has
+  nowhere to put any of them, which is ADR-0052's own reason for refusing to make this a
+  sixth shelf. It takes the **named chip** like the strip, and here the two readings of
+  `all` coincide rather than merely agreeing — the pool excludes anybody unrated at the
+  match's sport, so no offer can exist outside *the sports she holds a rating at*.
+- **`seat_expires_at`** — the **join cutoff**, and there is nothing else it could be. The
+  open call has no clock of its own (ADR-0061 retired the hold with the exclusive offer), so
+  what expires is the *seat*, and `Match.open_claim` enforces exactly that instant. Derived
+  on every read rather than stored beside the offer, on the band's own argument. A seat can
+  also stop being takeable because somebody took it, and that is not a moment — which is why
+  the region **filters** on `seat_exclusions` and only **orders** on this.
+- **`seat_exclusions`** — the four pool rules that are facts about the **seat** rather than
+  about a candidate: a free seat, joining still open, live inventory, and not already hers.
+  Written once and read from both ends, because the cascade asks *who is told* and the
+  region asks *is the seat still there*, and two readings of those four facts is a card
+  offering a seat the aggregate refuses. `POOL_RULES` is asserted to be their **partition**
+  with `CANDIDATE_RULES`, so an eighth rule lands in one half rather than in neither. The
+  region never re-asks the candidate half: withdrawing a seat by a rule she cannot see is
+  what ADR-0061 replaced retraction with wording to avoid.
+- **The refusal path is one expression.** `_viewer` hands the ladder an offer **exactly
+  while there is still a seat**, so a card recomposed after somebody else took it resolves
+  to the match's own situation and *says the seat is gone* rather than going on claiming
+  one. Rung 6 answers `seatOffered` / `seatOpened` for anybody carrying an offer and never
+  looks at whether the match is full — deliberately, since it sits above the queue that
+  produced it — so the judgement about whether the seat is still hers to take belongs to the
+  composer, and it is made once for both callers.
+- **The seat route** — `POST /api/v1/matches/{matchId}/seat`, in `now/` for the reason the
+  departure, result and standby routes are. It **refuses nothing but the address**: anybody
+  may buy a free seat in any match, because `Match.open_claim` is how *any* seat is taken
+  from the marketplace and *offered seats behave differently* is a second rule nobody would
+  remember. Six refusals answer with the recomposed card; **two answer with a 409** and both
+  are about *her* rather than about the seat — she is already buying a seat somewhere else,
+  or she let this one go thirty seconds ago — because neither can be said by recomposing a
+  card about this match, and a card that went on saying *first to take it* would be a button
+  she taps for ever. No idempotency key: ADR-0030's log is for destructive commands, and
+  what one would buy is answered by the card that comes back carrying her claim.
+- **`SeatWriteResponse` carries two regions, and it is the first answer that does.**
+  ADR-0070 defines an update as *the one card that changed, plus any of the two viewer-owned
+  regions whose contents or order changed, whole*, and nothing before this could move one.
+  They ride **beside** `NowUpdateResponse` rather than inside it, so the departure and
+  standby answers do not grow two fields nobody fills — and they are present **exactly when
+  `claimed` is true**, which is one decision rather than two: a tap that applied moved a card
+  between regions and a tap that did not moved nothing. Leaving the corrected card in place
+  is what lets the client draw its own fading line over a seat that has gone.
+- **`claimed`** — the one field on that answer about the **command** rather than the match,
+  and the departure route's `applied` in the shape a claim needs. Without it, *was I refused*
+  is a rule the phone derives from whether a seat claim turned up on the card (ADR-0053).
+- **The strip's fifth membership is a live seat claim.** It arrived with the act that opens
+  one: an offer card leaves the offers region the instant the match becomes hers, so without
+  it the match she has five minutes to pay for would be on no region of her home screen.
+  `EnrolledMatches.one` and `for_player` therefore answer the **same** membership now, where
+  the first used to be wider by exactly this case.
+- **One match is one card, and the strip is what yields.** A player on a match's standby
+  queue is rung 1 — the first person the cascade tells — so she holds a queue place *and* a
+  live offer, and both regions would draw a card saying opposite things. The ladder settled
+  it by putting the seat above the queue that produced it, so `ComposeNow` composes the
+  offers region **first** and hands the strip what it is already speaking for. The yield is
+  narrowed to the one membership that **confers nothing**: a seat, a departure or a live
+  claim is money or a clock of her own, and if the two reads ever disagree the cost is a
+  duplicate card rather than a missing one.
+- **The ladder walk follows the write and not the package.** `test_resolve_court_hold.py`
+  now walks Now's `*_through_matches.py` adapters beside `matches/application`, and checks
+  **before** rather than merely *somewhere in the same function* — a walk that only asked
+  whether `apply` appeared would be green on a write that saved first and asked afterwards,
+  which is the window the rule exists to close.
+
 Add backend-specific technical terms here as they are resolved. Anything describing the
 *domain* belongs in the shared glossary instead.

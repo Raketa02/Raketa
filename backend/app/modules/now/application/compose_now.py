@@ -4,11 +4,10 @@
 comes from that one reading, which is what makes a compose a single statement
 about a single instant rather than three regions that half-disagree.
 
-**Regions are filled one ticket at a time and the envelope never moves.** The
-route shipped with all three empty so the client could compile against it; what
-is real here today is the shape of the answer, the resolution of ``all``, the
-stamps, **the enrolled strip**, **the ranked shelves** and **shelves 4 and 5**.
-The offers region is the cascade's (``Raketa02/Raketa#83``).
+**All three regions are real.** The route shipped with all three empty so the
+client could compile against it, and they were filled one ticket at a time: the
+enrolled strip, the ranked shelves, shelves 4 and 5, and now the **offers
+region**, which is the cascade's output arriving on a screen for the first time.
 
 **The shelves are emitted in the server's fixed order** and nothing about that
 order is a fact about the viewer: the ranked pair first, then the two arrival
@@ -40,6 +39,7 @@ from app.kernel import Clock, Instant, Sport
 
 from app.modules.now.application.commands import ComposeNowQuery
 from app.modules.now.application.compose_enrolled import ComposeEnrolled
+from app.modules.now.application.compose_offers import ComposeOffers, offered_matches
 from app.modules.now.application.compose_shelves import ComposeShelves
 from app.modules.now.application.new_arrivals import ComposeNewArrivals
 from app.modules.now.domain.composition import emphasised, without_repeats
@@ -49,7 +49,6 @@ from app.modules.now.domain.screen import (
     Block,
     Door,
     NowScreen,
-    OffersRegion,
     ShelvesRegion,
     Stamp,
 )
@@ -93,6 +92,7 @@ class ComposeNow:
         new_arrivals: ComposeNewArrivals,
         shelves: ComposeShelves,
         enrolled: ComposeEnrolled,
+        offers: ComposeOffers,
         clock: Clock,
     ) -> None:
         self._rated_sports = rated_sports
@@ -100,6 +100,7 @@ class ComposeNow:
         self._new_arrivals = new_arrivals
         self._shelves = shelves
         self._enrolled = enrolled
+        self._offers = offers
         self._clock = clock
 
     async def execute(self, query: ComposeNowQuery) -> NowScreen:
@@ -109,8 +110,23 @@ class ComposeNow:
         door = await self._door(query)
         ranked = await self._ranked(query=query, sports=sports, now=now, stamp=stamp)
 
+        # **The offers region is composed first**, and that is an ordering rather
+        # than a preference: it is the region above everything, and it is the one
+        # that decides an overlap. A player on a match's standby queue is rung 1
+        # — the first person the cascade tells — so she holds a queue place *and*
+        # a live offer, and the strip and this region would otherwise each draw a
+        # card for the same match saying opposite things. The ladder settled
+        # which sentence wins by putting the seat above the queue that produced
+        # it; composing in that order is how the screen obeys it.
+        offers = await self._offers.compose(
+            viewer=query.player_id,
+            sport=query.sport.sport,
+            now=now,
+            stamp=stamp,
+        )
+
         screen = NowScreen(
-            offers=OffersRegion(stamp=stamp),
+            offers=offers,
             your_matches=await self._enrolled.compose(
                 viewer=query.player_id,
                 # The **named chip**, not the resolved set. ADR-0084 filters the
@@ -120,6 +136,7 @@ class ComposeNow:
                 sport=query.sport.sport,
                 now=now,
                 stamp=stamp,
+                offered=offered_matches(offers),
             ),
             shelves=ShelvesRegion(
                 stamp=stamp,

@@ -488,16 +488,55 @@ async def test_a_private_court_is_claimed_the_moment_it_is_posted(world):
 
 # --- the obligation itself --------------------------------------------------
 
-_APPLICATION = Path(__file__).resolve().parents[2] / "app/modules/matches/application"
+_APP = Path(__file__).resolve().parents[2] / "app"
+_APPLICATION = _APP / "modules/matches/application"
+
+#: The other place a match is saved: Now drives two writes through the Matches
+#: aggregate — a departure (`Raketa02/Raketa#80`) and a seat claim (`#83`) — from
+#: adapters of its own rather than from a use case here. The obligation follows
+#: the write and not the package, so the walk follows it too: an adapter that
+#: saved without asking would leave exactly the record the kernel refuses to
+#: read, and it would do it on the busiest write in the product.
+_NOW_ADAPTERS = _APP / "modules/now/infrastructure"
 
 #: The one module allowed to save a match without asking the ladder first: it
 #: *is* the ladder, and `apply` is what it calls.
 _THE_LADDER = "resolve_court_hold.py"
 
-#: The result route is `Raketa02/Raketa#79` and writes only a score. It is listed
-#: by name rather than inferred, so a module that stops being about results has
-#: to be re-argued here rather than silently keeping its exemption.
-_WRITES_NO_COURT_FACT = {"record_result.py"}
+#: The two modules that write only a **score**, which moves no count the ladder
+#: reads: the result use case (`Raketa02/Raketa#79`) and Now's adapter over the
+#: same aggregate. They are listed by name rather than inferred, so a module that
+#: stops being about results has to be re-argued here rather than silently
+#: keeping its exemption.
+_WRITES_NO_COURT_FACT = {"record_result.py", "results_through_matches.py"}
+
+
+def _saves(node) -> list[int]:
+    """Where in this function a match is persisted, by line."""
+
+    return [
+        call.lineno
+        for call in ast.walk(node)
+        if isinstance(call, ast.Call)
+        and isinstance(call.func, ast.Attribute)
+        and call.func.attr in {"save", "add"}
+        and isinstance(call.func.value, ast.Attribute)
+        and call.func.value.attr == "_matches"
+    ]
+
+
+def _asks(node) -> list[int]:
+    """Where in this function the hold ladder is asked, by line."""
+
+    return [
+        call.lineno
+        for call in ast.walk(node)
+        if isinstance(call, ast.Call)
+        and isinstance(call.func, ast.Attribute)
+        and call.func.attr == "apply"
+        and isinstance(call.func.value, ast.Attribute)
+        and call.func.value.attr == "_holds"
+    ]
 
 
 def _persisting_functions(tree: ast.AST):
@@ -506,17 +545,43 @@ def _persisting_functions(tree: ast.AST):
     for node in ast.walk(tree):
         if not isinstance(node, (ast.AsyncFunctionDef, ast.FunctionDef)):
             continue
-        calls = [
-            call
-            for call in ast.walk(node)
-            if isinstance(call, ast.Call)
-            and isinstance(call.func, ast.Attribute)
-            and call.func.attr in {"save", "add"}
-            and isinstance(call.func.value, ast.Attribute)
-            and call.func.value.attr == "_matches"
-        ]
-        if calls:
+        if _saves(node):
             yield node
+
+
+def _offenders(tree: ast.AST, where: str) -> list[str]:
+    """Every persisting function in this module that breaks the obligation.
+
+    A function rather than a loop inside the test, so that the negative controls
+    below drive **the check itself** rather than the two helpers it is built
+    from: a walk whose controls exercise only its parts is one that can lose its
+    assertion with both controls green.
+    """
+
+    offences = []
+    for function in _persisting_functions(tree):
+        asked, saved = _asks(function), _saves(function)
+        if not asked:
+            offences.append(f"{where}::{function.name} never asks")
+        elif min(asked) > min(saved):
+            offences.append(f"{where}::{function.name} asks too late")
+    return offences
+
+
+def _walked() -> list[Path]:
+    """Every module that may persist a match: this package, and Now's adapters."""
+
+    here = [
+        module
+        for module in sorted(_APPLICATION.glob("*.py"))
+        if module.name not in {_THE_LADDER} | _WRITES_NO_COURT_FACT
+    ]
+    there = [
+        module
+        for module in sorted(_NOW_ADAPTERS.glob("*_through_matches.py"))
+        if module.name not in _WRITES_NO_COURT_FACT
+    ]
+    return here + there
 
 
 def test_every_matches_write_asks_the_ladder_before_it_saves():
@@ -525,25 +590,21 @@ def test_every_matches_write_asks_the_ladder_before_it_saves():
     Two facts have to stay in step and the ladder is the only thing allowed to
     move them; a write that saves without asking leaves a record the kernel
     refuses to read, and nothing about a green suite would look different. So
-    this walks the package rather than trusting the next person to remember.
+    this walks the packages rather than trusting the next person to remember.
+
+    **Before, and not merely somewhere in the same function.** The rule is
+    *before the save, in the same transaction*, and a walk that only asked
+    whether `apply` appeared would be green on a write that saved first and asked
+    afterwards — which is the window this exists to close, since a stored record
+    sitting in the combination the kernel refuses to read arrives as a 500 on a
+    home screen rather than as a red test.
     """
 
-    unchecked = []
-    for module in sorted(_APPLICATION.glob("*.py")):
-        if module.name in {_THE_LADDER} | _WRITES_NO_COURT_FACT:
-            continue
-        tree = ast.parse(module.read_text())
-        for function in _persisting_functions(tree):
-            asked = any(
-                isinstance(call.func, ast.Attribute)
-                and call.func.attr == "apply"
-                and isinstance(call.func.value, ast.Attribute)
-                and call.func.value.attr == "_holds"
-                for call in ast.walk(function)
-                if isinstance(call, ast.Call)
-            )
-            if not asked:
-                unchecked.append(f"{module.name}::{function.name}")
+    unchecked = [
+        offence
+        for module in _walked()
+        for offence in _offenders(ast.parse(module.read_text()), module.name)
+    ]
 
     assert not unchecked, f"a match is saved without asking the ladder: {unchecked}"
 
@@ -564,18 +625,55 @@ class Writer:
         return stored
 """
     tree = ast.parse(source)
-    functions = list(_persisting_functions(tree))
 
-    assert [one.name for one in functions] == ["execute"]
-    assert not any(
-        isinstance(call.func, ast.Attribute) and call.func.attr == "apply"
-        for function in functions
-        for call in ast.walk(function)
-        if isinstance(call, ast.Call)
+    assert [one.name for one in _persisting_functions(tree)] == ["execute"]
+    assert _offenders(tree, "control.py") == ["control.py::execute never asks"]
+
+
+def test_the_walk_can_tell_an_ask_that_comes_too_late():
+    """The second negative control, for the half that is about **order**.
+
+    A function that saves and *then* asks satisfies every membership test and is
+    exactly the defect: the record is on disk in the one combination the kernel
+    refuses to read for as long as the ladder takes to answer.
+    """
+
+    tree = ast.parse(
+        """
+class Writer:
+    async def execute(self, command):
+        match = await self._matches.get(command.match_id)
+        stored = await self._matches.save(match)
+        await self._holds.apply(match, at=command.at)
+        return stored
+"""
     )
+    function = next(_persisting_functions(tree))
+
+    assert _asks(function), "the control has to ask, or it tests the other half"
+    assert _offenders(tree, "control.py") == ["control.py::execute asks too late"]
 
 
 def test_the_walk_looks_at_the_modules_that_exist():
-    """A glob matching nothing passes, so the count is asserted rather than trusted."""
+    """A glob matching nothing passes, so the count is asserted rather than trusted.
+
+    Both globs, because the second was added later and a directory that stops
+    matching is the shape this file already knows fails silently.
+    """
+
+    walked = {module.name for module in _walked()}
 
     assert len(list(_APPLICATION.glob("*.py"))) >= 7
+    assert len(list(_NOW_ADAPTERS.glob("*_through_matches.py"))) >= 2
+    # Named rather than counted, because the obligation followed the write out of
+    # this package: Now drives two of them, and a `_walked` that quietly stopped
+    # returning either would leave the busiest write in the product unchecked
+    # while every other assertion here stayed green.
+    assert {
+        "seat_moves.py",
+        "departures_through_matches.py",
+        "claims_through_matches.py",
+    } <= walked
+    # And the two exemptions are exemptions rather than omissions.
+    assert not walked & _WRITES_NO_COURT_FACT
+    assert _THE_LADDER not in walked

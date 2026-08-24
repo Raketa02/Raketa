@@ -23,6 +23,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
+from tests.api.test_now_offers import _write_offer
 from tests.api.test_now_ranked_shelves import (
     ALICE,
     _blocks,
@@ -175,3 +176,41 @@ async def test_a_full_match_is_never_the_loud_one(
     assert waiting is not None
     assert waiting["cards"][0]["fit"]["score"] >= 90
     assert _emphatic(body) == []
+
+
+async def test_an_offer_on_the_screen_silences_it_entirely(
+    client, session_factory
+) -> None:
+    """ADR-0037's last gate, end to end and with its own negative control.
+
+    An offer is a seat with a clock on it at the very top of Now and it is the
+    loudest thing the product has to say; a suggestion shouting underneath it
+    would be two things competing to be the one thing she does next. The first
+    half of this case is the same screen without the offer, which is what makes
+    the second half an assertion rather than a screen that was quiet anyway.
+    """
+
+    alice_id, alice = await _join(client, ALICE)
+    await _rate_as_beginner(client, alice)
+    crowd = await _a_crowd(client)
+    club = await _write_club(session_factory)
+    await _write_match(session_factory, club, seated=crowd, paid=crowd)
+
+    loud = (await client.get("/api/v1/now?sport=PADEL", headers=alice)).json()
+    assert _ranked(loud)["cards"][0]["emphasis"] is True
+
+    offered = await _write_match(
+        session_factory, club, start=_soon(days=6), seated=crowd[:1], paid=crowd[:1]
+    )
+    await _write_offer(session_factory, offered, UUID(alice_id))
+
+    quiet = (await client.get("/api/v1/now?sport=PADEL", headers=alice)).json()
+
+    assert quiet["offers"]["cards"] != []
+    assert not any(
+        card["emphasis"]
+        for block in _blocks(quiet)
+        if block["block_type"] == "shelf"
+        for card in block["cards"]
+        if card["card_type"] == "match"
+    )

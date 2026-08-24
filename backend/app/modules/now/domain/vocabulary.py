@@ -443,7 +443,7 @@ invariant(
 )
 
 
-#: Which act a card names, per situation. **Three rows, and each arrived with
+#: Which act a card names, per situation. **Five rows, and each arrived with
 #: the surface that receives it.**
 #:
 #: ADR-0083 fixes *a card names an act when the viewer can take it now **and a
@@ -454,17 +454,25 @@ invariant(
 #: way this set was ever allowed to grow. The two post-play rows join it on the
 #: same terms: ADR-0060 names them as the first two situations to carry a label
 #: at all — *enter a score* against *answer one* — and the route that receives
-#: both is ``/api/v1/matches/{matchId}/result``. The remaining seven have no
-#: destination — the offers region is ``Raketa02/Raketa#83``, Find is a
-#: placeholder (``#115``) and the Getting-in sheet is unbuilt — and each arrives
-#: in the ticket that builds its own.
+#: both is ``/api/v1/matches/{matchId}/result``. The two offer situations join it
+#: on the same terms and in one row each, because ``Raketa02/Raketa#83`` builds
+#: ``POST /api/v1/matches/{matchId}/seat``: an open call and the exclusive offer
+#: ADR-0061 retired are one act at two names, since ``Match.open_claim`` is *"how
+#: **any** seat is taken from the marketplace"* and *offered seats behave
+#: differently* is a second rule nobody would remember.
 #:
-#: A table rather than seven ``if``s to come, and a **partial** one rather than
-#: thirty-six rows: twenty-four situations name nothing and writing them out as
-#: ``None`` would be twenty-four rows nobody could get wrong, where the assertion
+#: The remaining five have no destination — Find is a placeholder (``#115``), the
+#: Getting-in sheet is unbuilt, and ``finishPaying`` wants the payment sheet
+#: (``#126``) — and each arrives in the ticket that builds its own.
+#:
+#: A table rather than five ``if``s to come, and a **partial** one rather than
+#: thirty-six rows: twenty-two situations name nothing and writing them out as
+#: ``None`` would be twenty-two rows nobody could get wrong, where the assertion
 #: below is the thing that actually keeps it honest.
 ACT_OF: Mapping[Situation, ActCode] = MappingProxyType(
     {
+        Situation.SEAT_OFFERED: ActCode.TAKE_SEAT,
+        Situation.SEAT_OPENED: ActCode.TAKE_SEAT,
         Situation.NEEDS_RESULT: ActCode.ENTER_RESULT,
         Situation.CONFIRM_RESULT: ActCode.ANSWER_RESULT,
         Situation.WAITLISTED: ActCode.LEAVE_STANDBY,
@@ -473,7 +481,12 @@ ACT_OF: Mapping[Situation, ActCode] = MappingProxyType(
 
 invariant(
     set(ACT_OF.values())
-    == {ActCode.ENTER_RESULT, ActCode.ANSWER_RESULT, ActCode.LEAVE_STANDBY},
+    == {
+        ActCode.TAKE_SEAT,
+        ActCode.ENTER_RESULT,
+        ActCode.ANSWER_RESULT,
+        ActCode.LEAVE_STANDBY,
+    },
     "a card names an act whose surface this build does not have — ADR-0083's "
     "rule is that an act arrives with the surface that receives it",
 )
@@ -485,7 +498,11 @@ invariant(
 #: name the act. It is the same fact the route's three booleans read, and
 #: ``card_of`` is the one place it is applied.
 #:
-#: ``leaveStandby`` is not here and could not be: ``waitlisted`` is the one
-#: situation only a viewer can be in, so its act is viewer-correct by
-#: construction rather than by a gate.
+#: ``leaveStandby`` and ``takeSeat`` are not here and could not be. Both belong to
+#: situations only a **viewer** can be in — ``waitlisted`` needs a queue place and
+#: the two offer names need an offer — so their acts are viewer-correct by
+#: construction rather than by a gate. ``takeSeat`` is the case that makes the
+#: name of this set exact rather than approximate: it is the act of somebody who
+#: holds **no** seat, so a gate keyed on holding one would withhold it from
+#: everybody it is for.
 ACTS_NEEDING_A_SEAT = frozenset({ActCode.ENTER_RESULT, ActCode.ANSWER_RESULT})

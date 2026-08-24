@@ -59,6 +59,7 @@ from app.kernel import Sport
 from app.modules.now.application.commands import ComposeNowQuery, SportFilter
 from app.modules.now.application.compose_enrolled import ComposeEnrolled
 from app.modules.now.application.compose_now import ComposeNow
+from app.modules.now.application.compose_offers import ComposeOffers
 from app.modules.now.application.compose_shelves import ComposeShelves
 from app.modules.now.application.scoring import MatchScorer
 from app.modules.now.domain.arrivals import NEW_CLUBS_CAP, NEW_PLAYERS_CAP
@@ -87,6 +88,7 @@ from tests.unit.test_compose_now import (
     FakeRatedSports,
     RecordingEnrolled,
     RecordingNewArrivals,
+    RecordingOffered,
     SteppingClock,
 )
 
@@ -218,6 +220,7 @@ def _composer(
                 ),
             ),
             enrolled=ComposeEnrolled(enrolled=RecordingEnrolled()),
+            offers=ComposeOffers(offered=RecordingOffered()),
             clock=SteppingClock(AT),
         ),
         ComposeNowQuery(player_id=player, sport=SportFilter.PADEL),

@@ -25,6 +25,7 @@ from app.modules.now.domain.cascade import Offer, PendingWave, Wave
 from app.modules.now.domain.departure import AppliedDeparture
 from app.modules.now.domain.enrolled import Enrolment
 from app.modules.now.domain.funnel import MatchScoringContext
+from app.modules.now.domain.offers import OfferedSeat
 from app.modules.now.domain.screen import Level
 
 
@@ -85,7 +86,20 @@ class EnrolledMatches(Protocol):
     async def for_player(
         self, *, player_id: UUID, now: Instant
     ) -> tuple[Enrolment, ...]:
-        """Her matches, soonest first, including the ones she has left."""
+        """Her matches, soonest first, including the ones she has left.
+
+        **A live seat claim is one of them** (`Raketa02/Raketa#83`). It was not,
+        while nothing in the product could open one from a screen: the strip
+        answered a seat, a departure and a queue place, and a claim reached only
+        the single-match read behind an action. Taking a seat is what makes the
+        gap visible — an offer card leaves the offers region the instant the
+        match becomes hers, so without this the match she has five minutes to pay
+        for is on no region of her home screen at all.
+
+        At most one such row exists, ever: ADR-0081 allows one live claim per
+        player across every match, so this widens the read by one match and not
+        by a set.
+        """
         ...
 
     async def one(
@@ -98,12 +112,12 @@ class EnrolledMatches(Protocol):
         filtering ``for_player``, because filtering would read every match she
         holds to answer a question about one — on a write path, per tap.
 
-        **Its membership is wider than the strip's by exactly one case.** A seat
-        or a departure is what ``for_player`` answers; this also resolves for a
-        viewer holding a **live seat claim**, who holds no seat yet (ADR-0081)
-        and whose route must therefore still open and say *no*. Anybody else is
-        a stranger and gets nothing — authorisation, which ADR-0074 makes the one
-        place a different shape is right.
+        **Its membership is now exactly the strip's**, where it used to be wider
+        by a live seat claim. That difference closed from the other end: the
+        strip drew no card for a claim nobody could open from a screen, and
+        `Raketa02/Raketa#83` opens one. Anybody else is a stranger and gets
+        nothing — authorisation, which ADR-0074 makes the one place a different
+        shape is right.
         """
         ...
 
@@ -655,4 +669,79 @@ class CascadeWaves(Protocol):
         the only thing that may move a dispatch back is the quiet hours, and
         those were applied when the hole opened.
         """
+        ...
+
+
+@runtime_checkable
+class OfferedSeats(Protocol):
+    """Every seat this viewer has been told about, and what each card needs.
+
+    The offers region's own read (`Raketa02/Raketa#83`), and the second port
+    over the ``match_offers`` table: ``Offers`` is what the cascade **writes**
+    and what the push queue ranks, and this is what a screen **draws**. They stay
+    two ports for the reason ``Standby``'s read and write do — a composer holding
+    an object that can record an offer is a composer one autocomplete away from
+    writing one — and the adapter behind this one reaches ``Offers`` rather than
+    the table, so a rung stored as an integer is still mapped back in one place.
+
+    **It answers offers and never live offers.** Whether the seat is still there
+    is a question about the *match*, asked at the instant the screen is composed
+    through ``cascade.seat_exclusions``; a port that filtered would be a second
+    reading of the record, and it would answer differently a second later.
+
+    **It carries no order**, unlike ``EnrolledMatches.for_player``. The region is
+    ordered soonest-to-expire and expiry is ``cascade.seat_expires_at`` — a
+    function of the record and the club's cutoff, which is a rule and therefore
+    the composer's. What the adapter must give is a *stable* list, so that two
+    composes at one instant answer the same order.
+
+    **The cost is stated rather than hidden**, on the precedent ``EnrolledMatches``
+    set: this reads every offer ever made to this player and loads the match
+    behind each distinct one, where only the takeable ones are drawn. That is
+    bounded by how often seats free in her band rather than by anything about
+    her, so it grows with the platform — `Raketa02/Raketa#125` is where the
+    projection lands.
+    """
+
+    async def for_player(
+        self, *, player_id: UUID, now: Instant
+    ) -> tuple[OfferedSeat, ...]:
+        """Every seat put in front of her, whether or not it is still there."""
+        ...
+
+    async def one(
+        self, *, player_id: UUID, match_id: UUID, now: Instant
+    ) -> OfferedSeat | None:
+        """The offer she holds on **this** match, if she holds one at all.
+
+        The read behind taking a seat, and a second method rather than the caller
+        filtering ``for_player`` for the reason ``EnrolledMatches.one`` is one: on
+        a write path, filtering would load every match she has ever been told
+        about to answer a question about one.
+
+        A match with two holes has two offers to her at most one of which is the
+        newest; this answers the **newest**, because a card is about the match and
+        the price she was last quoted is the sentence she was last shown.
+        """
+        ...
+
+
+@runtime_checkable
+class Claims(Protocol):
+    """Taking the five minutes in front of a free seat (ADR-0081).
+
+    Now's second write, reached through another context's aggregate exactly as
+    ``Departures`` is. ``Match.open_claim`` already refuses everything that has
+    to be refused and ``SeatClaims`` already answers the one question no
+    aggregate can — *is she buying a seat somewhere else* — so this port composes
+    the existing write rather than reassembling it.
+
+    **It does not commit**, on ``Departures``'s rule: the claim, the hold ladder's
+    answer and the outbox row close together or they do not close at all.
+    """
+
+    async def take(
+        self, *, match_id: UUID, player_id: UUID, at: Instant
+    ) -> Instant:
+        """Open her claim on the first free seat, and answer when it lapses."""
         ...

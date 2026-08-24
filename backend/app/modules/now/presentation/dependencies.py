@@ -40,8 +40,10 @@ from app.bootstrap.composition import (
     build_club_repository,
     build_command_log,
     build_commitments,
+    build_claims,
     build_compose_enrolled,
     build_compose_new_arrivals,
+    build_compose_offers,
     build_compose_shelves,
     build_court_holds,
     build_departures,
@@ -53,6 +55,8 @@ from app.bootstrap.composition import (
     build_match_repository,
     build_match_scorer,
     build_match_standby_places,
+    build_offered_seats,
+    build_offers,
     build_parked_runs,
     build_rated_sports,
     build_accept_result,
@@ -62,13 +66,16 @@ from app.bootstrap.composition import (
     build_read_result,
     build_results,
     build_reservation_repository,
+    build_seat_claims,
     build_skill_rating_repository,
     build_standby,
+    build_take_the_seat,
 )
 from app.modules.courts.application.claim_court import ClaimCourt
 from app.modules.matches.application.resolve_court_hold import ResolveCourtHold
 from app.modules.now.application.compose_enrolled import ComposeEnrolled
 from app.modules.now.application.compose_now import ComposeNow
+from app.modules.now.application.compose_offers import ComposeOffers
 from app.modules.now.application.compose_shelves import ComposeShelves
 from app.modules.now.application.departure import MakeDeparture, ReadDeparture
 from app.modules.now.application.result import (
@@ -78,12 +85,15 @@ from app.modules.now.application.result import (
 )
 from app.modules.now.application.new_arrivals import ComposeNewArrivals
 from app.modules.now.application.cascade import OpenCascade
+from app.modules.now.application.seat import TakeTheSeat
 from app.modules.now.application.standby import LeaveStandby
 from app.modules.now.domain.ports import (
     ArrivalSets,
+    Claims,
     Departures,
     EnrolledMatches,
     Levels,
+    OfferedSeats,
     ParkedRuns,
     RatedSports,
     Ratings,
@@ -193,7 +203,7 @@ def get_enrolled_matches(
     events: EventPublisherDep,
     clock: ClockDep,
 ) -> EnrolledMatches:
-    """The enrolled strip's six reads, all of them per request.
+    """The enrolled strip's seven reads, all of them per request.
 
     The match repository is built with the publisher and the clock every other
     caller gets. It is a **read** on the composed screen — nothing a `GET /now`
@@ -205,11 +215,16 @@ def get_enrolled_matches(
     strip because a standby place is a fact about **this pair** exactly as a
     seat is: the kernel takes both through one `Viewer`, so assembling them in
     two places would be assembling the viewer twice.
+
+    The seat claim is the seventh, and it is the same lookup `ClaimSeat` takes:
+    one live claim per player across the platform, so it widens the strip by one
+    match rather than by a set (`Raketa02/Raketa#83`).
     """
 
     return build_enrolled_matches(
         matches=build_match_repository(db, events=events, clock=clock),
         standby=build_match_standby_places(db),
+        claims=build_seat_claims(db),
         clubs=build_club_repository(db),
         reservations=build_reservation_repository(db),
         users=users,
@@ -463,12 +478,91 @@ def get_compose_shelves(
 ShelvesDep = Annotated[ComposeShelves, Depends(get_compose_shelves)]
 
 
+def get_offered_seats(
+    db: DbSession, events: EventPublisherDep, clock: ClockDep
+) -> OfferedSeats:
+    """The offers region's four reads, all of them per request.
+
+    The offers store is Now's own table and the other three belong to Matches,
+    Clubs and Courts. The match repository is built with the publisher and the
+    clock every other caller gets: this is a **read** on the composed screen, and
+    nothing a `GET /now` does can reach the outbox through it.
+    """
+
+    return build_offered_seats(
+        offers=build_offers(db),
+        matches=build_match_repository(db, events=events, clock=clock),
+        clubs=build_club_repository(db),
+        reservations=build_reservation_repository(db),
+    )
+
+
+OfferedSeatsDep = Annotated[OfferedSeats, Depends(get_offered_seats)]
+
+
+def get_compose_offers(offered: OfferedSeatsDep) -> ComposeOffers:
+    return build_compose_offers(offered=offered)
+
+
+OffersDep = Annotated[ComposeOffers, Depends(get_compose_offers)]
+
+
+def get_claims(
+    db: DbSession, events: EventPublisherDep, uow: UnitOfWorkDep, clock: ClockDep
+) -> Claims:
+    """Now's second write, and the hold ladder beside it.
+
+    The ladder is wired exactly as the departure's is — the same
+    `ResolveCourtHold` over the same repository — because every Matches write
+    asks it before the save, and a claim being the one that does not is how a
+    rule comes to be true on one path and false on another.
+    """
+
+    matches = build_match_repository(db, events=events, clock=clock)
+    reservations = build_reservation_repository(db)
+    holds = build_court_holds(
+        ClaimCourt(build_club_repository(db), reservations, uow), reservations
+    )
+    return build_claims(
+        matches=matches,
+        claims=build_seat_claims(db),
+        holds=ResolveCourtHold(matches, holds, uow, clock),
+    )
+
+
+ClaimsDep = Annotated[Claims, Depends(get_claims)]
+
+
+def get_take_the_seat(
+    claims: ClaimsDep,
+    offered: OfferedSeatsDep,
+    enrolled: EnrolledMatchesDep,
+    offers: OffersDep,
+    strip: EnrolledDep,
+    uow: UnitOfWorkDep,
+    clock: ClockDep,
+) -> TakeTheSeat:
+    return build_take_the_seat(
+        claims=claims,
+        offered=offered,
+        enrolled=enrolled,
+        offers=offers,
+        strip=strip,
+        uow=uow,
+        clock=clock,
+    )
+
+
+TakeTheSeatDep = Annotated[TakeTheSeat, Depends(get_take_the_seat)]
+
+
 def get_compose_now(
     rated_sports: RatedSportsDep,
     parked_runs: ParkedRunsDep,
     new_arrivals: NewArrivalsDep,
     shelves: ShelvesDep,
     enrolled: EnrolledDep,
+    offers: OffersDep,
     clock: ClockDep,
 ) -> ComposeNow:
     return ComposeNow(
@@ -477,6 +571,7 @@ def get_compose_now(
         new_arrivals=new_arrivals,
         shelves=shelves,
         enrolled=enrolled,
+        offers=offers,
         clock=clock,
     )
 

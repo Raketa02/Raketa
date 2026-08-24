@@ -972,6 +972,68 @@
           }
         }
       }
+    },
+    "/api/v1/matches/{match_id}/seat": {
+      "post": {
+        "tags": [
+          "matches"
+        ],
+        "summary": "Take a free seat, and correct Now off the same tap",
+        "description": "Open her five minutes in front of a free seat, and answer with the screen.\n\n**200 and a body, not 201.** ADR-0074 has every action off Now return Now's\nupdate in the same response, and what a claim creates is not a resource the\nclient addresses \u2014 it is five minutes on a card it already holds.\n\n**Nothing is refused but the address.** Anybody may buy a free seat in any\nmatch: ``Match.open_claim`` is how *any* seat is taken from the marketplace,\nand *offered seats behave differently* is a second rule nobody would\nremember. The only 404 is a match id that names nothing.",
+        "operationId": "take_seat_api_v1_matches__match_id__seat_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "match_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The match a seat is being taken in.",
+              "title": "Match Id"
+            },
+            "description": "The match a seat is being taken in."
+          },
+          {
+            "name": "sport",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/SportFilter",
+              "description": "The chip on the sport bar when the seat was tapped. The two regions this answers with are recomposed under it, so that a filtered screen is not replaced by an unfiltered one.",
+              "default": "all"
+            },
+            "description": "The chip on the sport bar when the seat was tapped. The two regions this answers with are recomposed under it, so that a filtered screen is not replaced by an unfiltered one."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeatWriteResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2874,6 +2936,44 @@
         ],
         "title": "SeatCountsResponse",
         "description": "What a counting sentence counts. **Counting is by money.**\n\n``paid`` and ``held`` are two numbers and never one: a held-and-unpaid seat\nis a name with no money behind it and can lapse, so folding it into the\ncount tells four people a match is complete while a seat may still go.\n\n``turned_up`` is present once the match has been played and absent before \u2014\nit is the third thing ``{f} of {n}`` counts, and it is **sent** rather than\nderived, because *one less than the seats* stops being minus one the moment\na doubles match loses two people."
+      },
+      "SeatWriteResponse": {
+        "properties": {
+          "claimed": {
+            "type": "boolean",
+            "title": "Claimed"
+          },
+          "update": {
+            "$ref": "#/components/schemas/NowUpdateResponse"
+          },
+          "offers": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OffersRegionResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "your_matches": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EnrolledRegionResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "claimed",
+          "update"
+        ],
+        "title": "SeatWriteResponse",
+        "description": "Now's update for one card, and the two regions the tap moved it between.\n\n**The two regions are present exactly when ``claimed`` is true**, and that is\none decision rather than two. A tap that applied moved a card out of the\noffers region and into the strip; a tap that did not moved nothing, and\nleaving the corrected card exactly where it is is what lets the client draw\nits own fading line over a seat that has gone rather than watching the card\nvanish under her thumb."
       },
       "SetScoreResponse": {
         "properties": {

@@ -88,6 +88,8 @@ from app.modules.money.infrastructure.event_sourced_ledger_repository import (
 )
 from app.modules.money.infrastructure.seats_through_matches import SeatsThroughMatches
 from app.modules.now.application.compose_enrolled import ComposeEnrolled
+from app.modules.now.application.compose_offers import ComposeOffers
+from app.modules.now.application.seat import TakeTheSeat
 from app.modules.now.application.departure import MakeDeparture, ReadDeparture
 from app.modules.now.application.result import (
     AcceptResult,
@@ -107,11 +109,13 @@ from app.modules.now.domain.ports import (
     ArrivalRows,
     ArrivalSets,
     CityMatches,
+    Claims,
     Commitments,
     Departures,
     EnrolledMatches,
     Levels,
     NewArrivals,
+    OfferedSeats,
     ParkedRuns,
     RatedSports,
     Ratings,
@@ -131,8 +135,12 @@ from app.modules.now.infrastructure.commitments import CommitmentsFromMatches
 from app.modules.now.infrastructure.departures_through_matches import (
     DeparturesThroughMatches,
 )
+from app.modules.now.infrastructure.claims_through_matches import (
+    ClaimsThroughMatches,
+)
 from app.modules.now.infrastructure.enrolled_matches import EnrolledFromMatches
 from app.modules.now.infrastructure.levels import LevelsFromSkillRatings
+from app.modules.now.infrastructure.offered_seats import OfferedFromTheCascade
 from app.modules.now.infrastructure.new_arrivals import ArrivalsFromUsersAndClubs
 from app.modules.now.infrastructure.parked_runs import ParkedRunsFromAssessments
 from app.modules.now.infrastructure.rating_sports import RatedSportsFromSkillRatings
@@ -494,16 +502,23 @@ def build_enrolled_matches(
     *,
     matches: MatchRepository,
     standby: MatchStandbyPlaces,
+    claims: SeatClaims,
     clubs: ClubRepository,
     reservations: ReservationRepository,
     users: UserRepository,
     ledgers: LedgerRepository,
 ) -> EnrolledMatches:
-    """A player's own matches, and what six contexts say about each.
+    """A player's own matches, and what seven contexts say about each.
 
-    Six **ports** rather than a session, on the precedent `build_arrivals` set:
-    what backs a match, a queue place, a club, a reservation, a user or a ledger
-    belongs to those contexts, and the enrolled strip only needs to be told.
+    Seven **ports** rather than a session, on the precedent `build_arrivals`
+    set: what backs a match, a queue place, a seat claim, a club, a reservation,
+    a user or a ledger belongs to those contexts, and the enrolled strip only
+    needs to be told.
+
+    The seat claim is the seventh and it arrived with the act that opens one
+    (`Raketa02/Raketa#83`): an offer card leaves the offers region the instant the
+    match becomes hers, so without it the match she has five minutes to pay for
+    would be on no region of her home screen at all.
 
     It is the widest reach in the app and it earns it: the strip is the region a
     player is committed to, and a card there prints where the game is, whether
@@ -513,6 +528,7 @@ def build_enrolled_matches(
     return EnrolledFromMatches(
         matches=matches,
         standby=standby,
+        claims=claims,
         clubs=clubs,
         reservations=reservations,
         users=users,
@@ -594,6 +610,78 @@ def build_offers(session: AsyncSession) -> Offers:
     version and invalidate the scoring-context cache on every dispatch.
     """
     return SqlAlchemyOffers(session)
+
+
+def build_offered_seats(
+    *,
+    offers: Offers,
+    matches: MatchRepository,
+    clubs: ClubRepository,
+    reservations: ReservationRepository,
+) -> OfferedSeats:
+    """What the cascade told **this player**, and the match behind each of them.
+
+    The second port over one table, and it takes `Offers` rather than a session
+    for exactly that reason: `offer_of` is the one place a stored rung becomes a
+    `Rung`, and a second reader going to the table directly would be a second
+    mapping of that integer.
+
+    Four ports rather than a session, on `build_enrolled_matches`'s precedent —
+    what backs a match, a club or a reservation belongs to those contexts, and
+    the offers region only needs to be told.
+    """
+    return OfferedFromTheCascade(
+        offers=offers, matches=matches, clubs=clubs, reservations=reservations
+    )
+
+
+def build_compose_offers(*, offered: OfferedSeats) -> ComposeOffers:
+    """The offers region — soonest-to-expire, no floor, no cap, no caption."""
+    return ComposeOffers(offered=offered)
+
+
+def build_claims(
+    *, matches: MatchRepository, claims: SeatClaims, holds: ResolveCourtHold
+) -> Claims:
+    """Now's second write: the five minutes in front of a free seat (ADR-0081).
+
+    Three ports rather than a session, like every builder around it. What is
+    behind it is `Match.open_claim`, the cross-match *is she buying something
+    else* query no aggregate can take, and the hold ladder that runs before the
+    save on every Matches write.
+
+    **It does not commit.** The claim, the hold ladder's answer and the outbox
+    row close together, and that is the use case's transaction to close.
+    """
+    return ClaimsThroughMatches(matches=matches, claims=claims, holds=holds)
+
+
+def build_take_the_seat(
+    *,
+    claims: Claims,
+    offered: OfferedSeats,
+    enrolled: EnrolledMatches,
+    offers: ComposeOffers,
+    strip: ComposeEnrolled,
+    uow: UnitOfWork,
+    clock: Clock,
+) -> TakeTheSeat:
+    """Take a seat, and hand back the card and the two regions it moved between.
+
+    No command log, unlike the departure beside it. ADR-0030's log is for
+    *destructive* commands, and a second tap by the player who already holds the
+    claim is refused by her own claim — the state she asked for, answered rather
+    than applied twice.
+    """
+    return TakeTheSeat(
+        claims=claims,
+        offered=offered,
+        enrolled=enrolled,
+        offers=offers,
+        strip=strip,
+        uow=uow,
+        clock=clock,
+    )
 
 
 def build_cascade_waves(session: AsyncSession) -> CascadeWaves:

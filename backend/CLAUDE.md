@@ -384,6 +384,35 @@ Rules to preserve:
   filler paid. **The two tables are Now's first** — an offer changes nothing about the
   match, so ADR-0091's argument for keeping the queue out of the aggregate applies harder,
   and neither table announces anything.
+- **The offers region is the cascade's output on a screen, and the refusal path is one
+  expression.** Seats put in front of this viewer, **soonest-to-expire** —
+  `cascade.seat_expires_at`, which is the join cutoff and the one instant `Match.open_claim`
+  enforces — with no floor, no cap and no caption, all three because `OffersRegion` has
+  nowhere to put them (ADR-0052, kept by ADR-0061). An offer is a **fact about the past** and
+  a seat is not, so liveness is asked live through `cascade.seat_exclusions`, the four pool
+  rules that are about the seat rather than about a candidate, written once and read from
+  both ends. The region never re-asks the **candidate** half: withdrawing a seat by a rule
+  she cannot see is what that ADR replaced retraction with wording to avoid. The card hands
+  the ladder an offer **exactly while there is still a seat**, so one composer answers both
+  *first to take it* and *the seat is gone*, and a refusal is what a success returns
+  (ADR-0070) rather than a second shape.
+- **`POST /api/v1/matches/{matchId}/seat` opens ADR-0081's five minutes, and refuses nothing
+  but the address.** Anybody may buy a free seat in any match — `open_claim` is how *any*
+  seat is taken from the marketplace. Six refusals answer with the recomposed card; **two
+  answer 409 and both are about her rather than the seat** (she is buying elsewhere, or she
+  let this one go thirty seconds ago), because neither can be said by recomposing a card
+  about this match. Its answer is the **first** to carry ADR-0070's region slots — the offer
+  is gone and the match belongs in the strip — and they ride **beside** the update, present
+  exactly when `claimed` is true, so the two writes that move no region grow no field nobody
+  fills. **The strip gained a fifth membership with it**: a live seat claim, or the match she
+  has five minutes to pay for would be on no region of her screen at all.
+- **One match is one card, and the strip is what yields.** A standby player is rung 1, so she
+  holds a queue place *and* a live offer; the ladder settled which sentence wins by putting
+  the seat above the queue that produced it, so `ComposeNow` composes the offers region first
+  and hands the strip what it is already speaking for. The yield is narrowed to the
+  membership that **confers nothing** — a seat, a departure or a claim is never taken off the
+  strip by a region above it, so a disagreement costs a duplicate card rather than a missing
+  one.
 - **Now's update is one card in one of two forms.** `CardChanged` or `CardGone`, and the
   second is ADR-0070's *"the one-card answer must be able to say this card is no longer on
   your screen"*, produced for the first time by leaving standby — a departure **keeps** the

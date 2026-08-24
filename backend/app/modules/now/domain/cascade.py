@@ -256,6 +256,43 @@ POOL_RULES: tuple[PoolExclusion, ...] = (
 
 invariant(set(POOL_RULES) == set(PoolExclusion), "a pool rule with no place")
 
+#: The rules that are facts about **the seat**, answerable from the record, the
+#: clock and whether this match is already hers. They are the whole of what the
+#: offers region asks a second time (``Raketa02/Raketa#83``): the cascade decides
+#: *who is told*, and the region decides *whether the seat is still there* — and
+#: the second question is asked live on every compose because an offer is a fact
+#: about the past and a seat is not.
+SEAT_RULES: tuple[PoolExclusion, ...] = (
+    PoolExclusion.HAS_FREE_SEAT,
+    PoolExclusion.BEFORE_JOIN_CUTOFF,
+    PoolExclusion.LIVE_INVENTORY,
+    PoolExclusion.NOT_ALREADY_MINE,
+)
+
+#: The rules that need the **candidate** — her rating, her diary, her Level. The
+#: offers region never asks these again: the cascade asked them when it wrote the
+#: offer, and re-deciding *is she still the right person for this* on a card she
+#: is already looking at would withdraw a seat by a rule she cannot see, which is
+#: precisely what ADR-0061 replaced retraction with wording to avoid.
+CANDIDATE_RULES: tuple[PoolExclusion, ...] = (
+    PoolExclusion.RATED_AT_SPORT,
+    PoolExclusion.NO_SCHEDULE_CONFLICT,
+    PoolExclusion.INSIDE_THE_BAND,
+)
+
+#: A **partition**, asserted rather than described. An eighth rule lands in one
+#: half or the other on the day it is written, rather than in neither — which is
+#: the failure the two tuples exist to make impossible: a rule about the seat
+#: that the region never asks is a card offering a seat that is gone.
+invariant(
+    set(SEAT_RULES) | set(CANDIDATE_RULES) == set(PoolExclusion),
+    "a pool rule that is neither about the seat nor about the candidate",
+)
+invariant(
+    not (set(SEAT_RULES) & set(CANDIDATE_RULES)),
+    "a pool rule counted as both a seat fact and a candidate fact",
+)
+
 
 @final
 @dataclass(frozen=True)
@@ -327,18 +364,69 @@ def exclusions_for(
 
     verdicts: dict[PoolExclusion, bool] = {
         PoolExclusion.RATED_AT_SPORT: candidate.level is not None,
-        PoolExclusion.HAS_FREE_SEAT: not is_full(record),
-        PoolExclusion.BEFORE_JOIN_CUTOFF: now < deadlines(record).join_cut,
-        PoolExclusion.LIVE_INVENTORY: not is_terminal(record),
         PoolExclusion.NO_SCHEDULE_CONFLICT: not _clashes(record, candidate.busy),
-        PoolExclusion.NOT_ALREADY_MINE: not candidate.already_mine,
         PoolExclusion.INSIDE_THE_BAND: (
             band is None
             or candidate.level is None
             or band.admits(candidate.level)
         ),
     }
+    return frozenset(
+        rule for rule, held in verdicts.items() if not held
+    ) | seat_exclusions(record, already_mine=candidate.already_mine, now=now)
+
+
+def seat_exclusions(
+    record: MatchRecord, *, already_mine: bool, now: Instant
+) -> frozenset[PoolExclusion]:
+    """The four rules that are about **the seat** rather than about a person.
+
+    Written once and read from both ends. The cascade asks it inside
+    ``exclusions_for`` when it decides who to tell; the offers region asks it
+    again on every compose, because ``Offers.held_by`` *"answers offers and never
+    live offers"* — whether the seat is still there is a question about the
+    match, and an offer written an hour ago cannot answer it.
+
+    Two readings of these four facts is the failure this exists to remove, and it
+    is not a hypothetical one: a region that decided *the match is full* by its
+    own arithmetic would eventually disagree with the pool that wrote the offer,
+    and the visible symptom is a card offering a seat the aggregate refuses.
+
+    ``already_mine`` is the same three memberships the pool means by it — a seat,
+    a live claim, or a departure she made herself — and it is a fact about the
+    pair rather than about the record, which is why it is a parameter and not
+    read off ``record``.
+    """
+
+    verdicts: dict[PoolExclusion, bool] = {
+        PoolExclusion.HAS_FREE_SEAT: not is_full(record),
+        PoolExclusion.BEFORE_JOIN_CUTOFF: now < deadlines(record).join_cut,
+        PoolExclusion.LIVE_INVENTORY: not is_terminal(record),
+        PoolExclusion.NOT_ALREADY_MINE: not already_mine,
+    }
     return frozenset(rule for rule, held in verdicts.items() if not held)
+
+
+def seat_expires_at(record: MatchRecord) -> Instant:
+    """The moment an open seat in this match stops being takeable.
+
+    **The join cutoff, and there is nothing else it could be.** ADR-0061 retired
+    the exclusive offer's one-hour hold along with the offer itself, so an open
+    call has no clock of its own — what expires is the *seat*, and
+    ``Match.open_claim`` enforces exactly this instant and no other: *"nobody may
+    start buying a seat once joining has closed."*
+
+    It is derived on every read rather than stored beside the offer, on the band's
+    own argument: a club that moves its cutoff, or a match that moves its hour,
+    moves this with it, where a copy taken at the dispatch would be a second
+    answer to *when does this seat die* that nothing keeps in step.
+
+    A seat can also stop being takeable because somebody took it, and that is not
+    a moment — which is why the region **filters** on ``seat_exclusions`` and
+    only **orders** on this.
+    """
+
+    return deadlines(record).join_cut
 
 
 def _clashes(

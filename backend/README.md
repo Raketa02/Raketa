@@ -468,6 +468,7 @@ callable, and nothing about a green suite would look different afterwards.
 | `GET` | `/api/v1/matches/{matchId}/departure` | Bearer access token | What leaving this match is worth, and what it could still become. |
 | `POST` | `/api/v1/matches/{matchId}/departure` | Bearer access token | Leave at the quoted outcome; returns this screen and Now's update. |
 | `DELETE` | `/api/v1/matches/{matchId}/standby` | Bearer access token | Leave this match's standby queue; returns Now's update. |
+| `POST` | `/api/v1/matches/{matchId}/seat` | Bearer access token | Take a free seat — five minutes to pay — and correct Now off the same tap. |
 
 Example login request:
 
@@ -511,11 +512,47 @@ appearing every week to say *nothing worth waiting for* is a row players learn t
 past. The debt line is absent rather than zero, so the client never compares an amount to
 decide whether to draw it.
 
-**The regions fill one ticket at a time and the envelope never moves.** The route shipped
-with all three empty so both clients could compile against it. What composes today is the
-**enrolled strip**, the shelves region's last two shelves — the two that do not run through
-the ranked funnel — and, for a sport the viewer holds no rating at, the door. The offers
-region is the invitation cascade's.
+**All three regions are real.** The route shipped with all three empty so both clients
+could compile against it, and they filled one ticket at a time: the **enrolled strip**, the
+ranked pair, the two arrival shelves, the door for a sport the viewer holds no rating at,
+and — last — the **offers region**, which is where the invitation cascade's output reaches a
+screen.
+
+#### The offers region: seats put in front of her, soonest-to-expire
+
+The region above everything, and the only one whose cards are about a seat the viewer
+neither holds nor is being suggested — she has been **told**, and the card exists so she can
+race for it (ADR-0052, kept by ADR-0061).
+
+- **No floor, no cap, no caption and no tail card**, and all four because `OffersRegion` has
+  nowhere to put them. That is the ADR's own reason for refusing to make this a sixth shelf:
+  as a shelf it would inherit all four and become something the server could order *below* a
+  suggestion, where *above everything* is the whole point.
+- **Soonest-to-expire and never soonest-to-play**, which is `cascade.seat_expires_at` — the
+  join cutoff, and the one instant `Match.open_claim` enforces. The open call has no clock of
+  its own, so what expires is the seat. Sorting by the hour of the game would sort her offers
+  by when the evening is rather than by when the chance dies.
+- **An offer is a fact about the past and a seat is not.** Whether the seat is still there is
+  asked live, through `cascade.seat_exclusions` — the four pool rules that are facts about
+  the *seat* rather than about a candidate, written once and read from both ends so that the
+  region and the pool that wrote the offer cannot drift. The **candidate** half is never
+  re-asked: withdrawing a seat by a rule she cannot see is what ADR-0061 replaced retraction
+  with wording to avoid.
+- **The refusal path is one expression.** The card hands the ladder an offer exactly while
+  there is still a seat, so a card recomposed after somebody else took it resolves to what
+  the match is actually doing and *says the seat is gone*. One composer answers both
+  sentences, which is what lets a refusal be what a success returns (ADR-0070).
+- **The card prints the price at this instant**, not the one stored on the offer. The two
+  differ exactly when the rescue deadline passed between the telling and the tap, and that is
+  a real change she is entitled to see rather than a disagreement to hide.
+- **Any offer on the screen silences emphasis entirely** (ADR-0037): an offer is the loudest
+  thing the product has to say, and a suggestion shouting underneath it would be two things
+  competing to be the one thing she does next.
+- **One match is one card.** A standby player is rung 1 — the first person the cascade tells
+  — so she holds a queue place *and* a live offer. The ladder settled which sentence wins by
+  putting the seat above the queue that produced it, so the offers region is composed first
+  and the strip yields; the yield is narrowed to the membership that **confers nothing**, so
+  a seat, a departure or a live claim is never taken off the strip by a region above it.
 
 #### The enrolled strip: her own matches, counted in money
 
@@ -839,6 +876,41 @@ The route lives in `app/modules/now/` although its path says `matches`. The answ
 vocabulary end to end and `now` already reads `matches` everywhere in this tree; the write
 reaches the aggregate through `Departures`, a port of Now's own, exactly as `money.Seats`
 does over the same aggregate. A general `GET /api/v1/matches/{id}` still does not exist.
+
+### `POST /api/v1/matches/{matchId}/seat`
+
+The surface the offers region's one act arrives with (ADR-0083), and what it opens is
+ADR-0081's five minutes rather than a seat: *a seat is never taken until it is paid, and what
+a player takes while she pays is a seat claim.*
+
+It lives in `now/` although its path says `matches`, for the reason the departure, result and
+standby routes do — the answer is Now's vocabulary end to end.
+
+- **It refuses nothing but the address.** Anybody may buy a free seat in any match, because
+  `Match.open_claim` is how *any* seat is taken from the marketplace and *offered seats
+  behave differently* is a second rule nobody would remember. The only 404 is a match id that
+  names nothing.
+- **A refusal is not a second shape.** Somebody else took it, the match filled, joining
+  closed, it started, it was cancelled, she is already in it: all six answer with what a
+  success answers, so the player *sees* that the seat has gone rather than being told by a
+  dialog.
+- **Two refusals answer 409, and both are about her rather than the seat** — she is already
+  buying a seat somewhere else, or she let this one go thirty seconds ago. Neither can be said
+  by recomposing a card about *this* match, and a card that went on saying *first to take it*
+  would be a button she taps for ever. They are ADR-0081's own two structural limits on a
+  serial claimant, and each carries the one sentence that says what to do.
+- **The answer carries two regions, and it is the first in the product that does.** ADR-0070
+  defines an update as *the one card that changed, plus any of the two viewer-owned regions
+  whose contents or order changed, whole*, and taking a seat is the act that ADR names when it
+  explains why: *the offer is gone, the match belongs in the strip*. They ride **beside** the
+  update rather than inside it, so the two writes that move no region grow no field nobody
+  fills — and they are present **exactly when `claimed` is true**, which is what leaves the
+  corrected card in place for the client to draw its own fading line over.
+- **The shelves are never in an update** (ADR-0032). The shelf copy of that match is corrected
+  by the one card, which is identified by the match and never by its position.
+- **No idempotency key.** ADR-0030's log is for *destructive* commands, and a second tap by
+  the player who already holds the claim is refused by her own claim. What a key would buy —
+  *did my first tap land* — is answered by the card that comes back carrying it.
 
 ### `DELETE /api/v1/matches/{matchId}/standby`
 

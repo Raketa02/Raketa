@@ -6,13 +6,14 @@ the court a match will be played on is a **reservation**, that the names on a
 scoreline are user rows, and that what she has actually paid is a fold off her
 ledger.
 
-**Six ports and no session**, on the precedent ``ArrivalsFromUsersAndClubs``
-set: what backs a match, a standby place, a club, a reservation, a user or a
-ledger is those contexts' business, and the day any of them answers faster only
-its own adapter moves. Two of the six are the Matches context asked two
-different questions — *which matches* and *which queue* — because the strip
-needs the matches themselves and a single row needs a boolean, and paying for
-whole matches to answer a boolean is the same query wearing a loop.
+**Seven ports and no session**, on the precedent ``ArrivalsFromUsersAndClubs``
+set: what backs a match, a standby place, a seat claim, a club, a reservation, a
+user or a ledger is those contexts' business, and the day any of them answers
+faster only its own adapter moves. Three of the seven are the Matches context
+asked three different questions — *which matches*, *which queue* and *which seat
+is she buying* — because the strip needs the matches themselves, a single row
+needs a boolean, and one live claim is one id: paying for whole matches to answer
+either of the last two is the same query wearing a loop.
 
 **It reads facts and decides nothing.** The court is returned whether or not it
 may be shown; the score is returned in the order it was stored. Every rule —
@@ -38,7 +39,11 @@ from app.modules.clubs.domain.ports import ClubRepository
 from app.modules.courts.domain.ports import ReservationRepository
 from app.modules.matches.domain.departure import Departure
 from app.modules.matches.domain.match import Match
-from app.modules.matches.domain.ports import MatchRepository, StandbyPlaces
+from app.modules.matches.domain.ports import (
+    MatchRepository,
+    SeatClaims,
+    StandbyPlaces,
+)
 from app.modules.matches.domain.seat import Seat
 from app.modules.money.domain.ledger import Ledger
 from app.modules.money.domain.movement import SeatRef
@@ -62,6 +67,7 @@ class EnrolledFromMatches:
         *,
         matches: MatchRepository,
         standby: StandbyPlaces,
+        claims: SeatClaims,
         clubs: ClubRepository,
         reservations: ReservationRepository,
         users: UserRepository,
@@ -69,6 +75,7 @@ class EnrolledFromMatches:
     ) -> None:
         self._matches = matches
         self._standby = standby
+        self._claims = claims
         self._clubs = clubs
         self._reservations = reservations
         self._users = users
@@ -77,13 +84,23 @@ class EnrolledFromMatches:
     async def for_player(
         self, *, player_id: UUID, now: Instant
     ) -> tuple[Enrolment, ...]:
-        # Two reads and one list. `for_player` is *enrolment* — a seat or a
-        # departure — and `queued_by` is the standby place, which is a fourth
-        # membership conferring nothing (ADR-0087). They are two methods rather
-        # than one union because eligibility reads the first as *what is already
-        # hers*, and a queue place is neither her identity nor her hours.
+        # Three reads and one list. `for_player` is *enrolment* — a seat or a
+        # departure — `queued_by` is the standby place, which is a fourth
+        # membership conferring nothing (ADR-0087), and `live_for` is the fifth:
+        # the seat she is buying right now (ADR-0081). They are three methods
+        # rather than one union because eligibility reads the first as *what is
+        # already hers*, and neither a queue place nor a claim is her identity or
+        # her hours.
+        #
+        # The claim read answers **one match id at most** — one live claim per
+        # player across the platform — so it is a lookup and a `get`, rather than
+        # a fourth list to merge.
         queued = await self._matches.queued_by(player_id)
-        matches = _merged(await self._matches.for_player(player_id), queued)
+        matches = _merged(
+            await self._matches.for_player(player_id),
+            queued,
+            await self._claimed(player_id, now),
+        )
         if not matches:
             # A player with no matches pays for no club read, no ledger replay
             # and no reservation loop — which is most players on most screens.
@@ -126,12 +143,13 @@ class EnrolledFromMatches:
     ) -> Enrolment | None:
         """One match, for a viewer who is something to it.
 
-        **Its membership is wider than ``for_player``'s by exactly one case and
-        the same as it in the other three.** That query answers *a seat that
-        names her, a departure that does, or a standby place she holds*; this
-        also resolves for a viewer holding a **live seat claim**, who holds no
-        seat yet (ADR-0081) and whose departure route must still open and answer
-        *no*. Anybody else is a stranger and gets nothing.
+        **Its membership is exactly ``for_player``'s, in all four cases.** A seat
+        that names her, a departure that does, a standby place she holds, and the
+        one live seat claim ADR-0081 lets her hold anywhere. It used to be wider
+        by that last case and the difference closed from the other end — the
+        strip drew no card for a claim while nothing on a screen could open one,
+        and `Raketa02/Raketa#83` opens one. Anybody else is a stranger and gets
+        nothing.
 
         The standby read is asked **whether or not the other three answered**,
         and that costs one indexed lookup on a write path rather than none. It
@@ -202,6 +220,26 @@ class EnrolledFromMatches:
             paid_in=_paid_in(ledger, match, seat_index=_seat_index(seat, departure)),
         )
 
+    async def _claimed(self, player_id: UUID, now: Instant) -> list[Match]:
+        """The match she is buying a seat in, if she is buying one at all.
+
+        ``SeatClaims.live_for`` composes *live* against the clock rather than
+        reading a receipt, so a claim whose five minutes ran out is gone from
+        this answer the instant it lapsed — without waiting for the reaper. The
+        strip therefore drops the card at the same moment the aggregate stops
+        honouring the claim, which is the only way the two can agree.
+
+        A claimed match she also holds a seat in cannot exist — ``open_claim``
+        refuses a second seat — so this can only ever *add* a match, and
+        ``_merged`` keeps the copy the first read produced either way.
+        """
+
+        match_id = await self._claims.live_for(player_id, at=now)
+        if match_id is None:
+            return []
+        match = await self._matches.get(match_id)
+        return [] if match is None else [match]
+
     async def _queued_for(self, match_id: UUID, player_id: UUID) -> bool:
         """Whether she is on this one match's queue.
 
@@ -252,22 +290,31 @@ class EnrolledFromMatches:
         return None if label is None else label.value
 
 
-def _merged(enrolled: list[Match], queued: list[Match]) -> list[Match]:
-    """Two lists that are each already in order, as one list in that order.
+def _merged(*lists: list[Match]) -> list[Match]:
+    """Lists that are each already in order, as one list in that order.
 
-    Both queries order by ``start`` and break by id, so this re-states the tie
+    Every query orders by ``start`` and breaks by id, so this re-states the tie
     rather than inventing one — and it is written here, once, because a
     chronological region's order is fixed at composition (ADR-0073) and a second
     key would be a second answer to *where does this card sit*.
 
-    Deduplicated by id, because the two memberships are not exclusive in the
-    store: a player may hold a seat, or have left, and still carry a queue place
-    on the same match. Nothing refuses that and nothing should — it is a state
-    the ladder already answers, since rung 7 tests *not seated*.
+    Deduplicated by id, because the memberships are not exclusive in the store: a
+    player may hold a seat, or have left, and still carry a queue place on the
+    same match. Nothing refuses that and nothing should — it is a state the
+    ladder already answers, since rung 7 tests *not seated*.
+
+    **Which list wins a collision cannot matter, and that is a property rather
+    than a convention.** Every list here is whole ``Match`` aggregates loaded
+    from one repository, so two lists reaching the same match carry the same
+    facts about it; what a row says about *this player* is read off the match in
+    ``_row`` and never off which query found it. The dedupe is therefore the
+    dictionary's, and reordering these arguments is an equivalent change — which
+    is why nothing below asserts an order between them.
     """
 
-    seen = {match.id: match for match in enrolled}
-    seen.update({match.id: match for match in queued if match.id not in seen})
+    seen: dict[UUID, Match] = {}
+    for matches in lists:
+        seen.update({match.id: match for match in matches if match.id not in seen})
     return sorted(seen.values(), key=lambda match: (match.start, match.id))
 
 

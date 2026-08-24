@@ -27,6 +27,7 @@ from app.kernel import (
     Instant,
     MatchRecord,
     Sport,
+    deadlines,
     hours,
     instant,
     minutes,
@@ -34,6 +35,7 @@ from app.kernel import (
 )
 
 from app.modules.now.domain.cascade import (
+    CANDIDATE_RULES,
     CASCADE_FLOOR,
     DARK_RUNGS,
     FLOOR_HORIZON,
@@ -41,6 +43,7 @@ from app.modules.now.domain.cascade import (
     POOL_RULES,
     QUIET_EXEMPT_WITHIN,
     QUIET_UNTIL,
+    SEAT_RULES,
     WAVE_OF,
     Band,
     Invitation,
@@ -53,6 +56,8 @@ from app.modules.now.domain.cascade import (
     floor_at,
     invitation_order,
     rungs_in,
+    seat_exclusions,
+    seat_expires_at,
     wave_due,
 )
 from tests.unit.match_records import DURATION, at, seats
@@ -347,6 +352,118 @@ def test_every_rule_is_evaluated_even_when_an_earlier_one_has_already_failed() -
 
 # ---------------------------------------------------------------------------
 # The floor
+# ---------------------------------------------------------------------------
+# The seat half, which the offers region asks a second time
+# ---------------------------------------------------------------------------
+
+
+def test_the_rules_split_into_the_seat_and_the_candidate_and_nothing_else() -> None:
+    """A **partition**, so an eighth rule lands in one half rather than neither.
+
+    The offers region asks the seat half again on every compose
+    (`Raketa02/Raketa#83`), because an offer is a fact about the past and a seat
+    is not. A rule about the seat that the region never asks is a card offering a
+    seat that has gone.
+    """
+
+    assert set(SEAT_RULES) | set(CANDIDATE_RULES) == set(PoolExclusion)
+    assert not set(SEAT_RULES) & set(CANDIDATE_RULES)
+
+
+def test_the_seat_half_is_the_four_facts_about_the_match() -> None:
+    assert set(SEAT_RULES) == {
+        PoolExclusion.HAS_FREE_SEAT,
+        PoolExclusion.BEFORE_JOIN_CUTOFF,
+        PoolExclusion.LIVE_INVENTORY,
+        PoolExclusion.NOT_ALREADY_MINE,
+    }
+
+
+def test_a_seat_that_is_there_fails_nothing() -> None:
+    assert (
+        seat_exclusions(a_match(paid=3, starts=600), already_mine=False, now=at(0))
+        == frozenset()
+    )
+
+
+@pytest.mark.parametrize(
+    "record,mine,rule",
+    [
+        (
+            a_match(paid=4, starts=600),
+            False,
+            PoolExclusion.HAS_FREE_SEAT,
+        ),
+        (
+            a_match(paid=3, starts=10),
+            False,
+            PoolExclusion.BEFORE_JOIN_CUTOFF,
+        ),
+        (
+            a_match(paid=3, starts=600, club_cancelled=True),
+            False,
+            PoolExclusion.LIVE_INVENTORY,
+        ),
+        (
+            a_match(paid=3, starts=600),
+            True,
+            PoolExclusion.NOT_ALREADY_MINE,
+        ),
+    ],
+    ids=["full", "past-the-cutoff", "cancelled", "already-hers"],
+)
+def test_each_seat_rule_excludes_on_its_own_fact(record, mine, rule) -> None:
+    assert seat_exclusions(record, already_mine=mine, now=at(0)) == {rule}
+
+
+def test_the_seat_half_is_the_one_the_whole_pool_composes_over() -> None:
+    """One implementation, read from both ends.
+
+    A region that decided *the match is full* by its own arithmetic would
+    eventually disagree with the pool that wrote the offer, and the visible
+    symptom is a card offering a seat the aggregate refuses.
+    """
+
+    record = a_match(paid=4, starts=10, club_cancelled=True)
+    whole = exclusions_for(
+        a_candidate(hundredths=None, already_mine=True), record, band=None, now=at(0)
+    )
+
+    assert seat_exclusions(record, already_mine=True, now=at(0)) <= whole
+    assert whole - set(CANDIDATE_RULES) == seat_exclusions(
+        record, already_mine=True, now=at(0)
+    )
+
+
+def test_a_seat_expires_at_the_join_cutoff_and_nowhere_else() -> None:
+    """The one instant `Match.open_claim` enforces, and the region's own order.
+
+    ADR-0061 retired the exclusive offer's one-hour hold along with the offer, so
+    an open call has no clock of its own: what expires is the seat.
+    """
+
+    record = a_match(paid=3, starts=600)
+
+    assert seat_expires_at(record) == deadlines(record).join_cut
+
+
+def test_the_expiry_moves_when_the_club_moves_its_cutoff() -> None:
+    """Derived on every read rather than copied beside the offer.
+
+    A stored copy taken at the dispatch would be a second answer to *when does
+    this seat die* that nothing keeps in step, which is the band's own argument.
+    """
+
+    from dataclasses import replace
+
+    record = a_match(paid=3, starts=600)
+    stricter = replace(
+        record, policy=replace(record.policy, join_cut=hours(4))
+    )
+
+    assert seat_expires_at(stricter) < seat_expires_at(record)
+
+
 # ---------------------------------------------------------------------------
 
 

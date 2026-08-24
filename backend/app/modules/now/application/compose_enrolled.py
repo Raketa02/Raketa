@@ -121,6 +121,7 @@ class ComposeEnrolled:
         sport: Sport | None,
         now: Instant,
         stamp: Stamp,
+        offered: frozenset[UUID] = frozenset(),
     ) -> EnrolledRegion:
         """Her matches, chronological, with the closed ones past their tail gone.
 
@@ -132,6 +133,18 @@ class ComposeEnrolled:
         about her, and applying it here would hide a match she has paid for and
         is playing tomorrow because nobody has rated her at it yet — which is
         the very mistake that ADR decides the default on.
+
+        ``offered`` is the set of matches the region **above** is already
+        speaking for, and it defaults to empty so that a caller composing the
+        strip alone — an action off Now, a test — is unchanged. It exists for one
+        overlap and it is rung 1's own audience: a player on a match's standby
+        queue is the first person the cascade tells, so she holds both a queue
+        place and a live offer, and the strip and the offers region would each
+        draw a card for the same match saying opposite things. The ladder has
+        already ruled — rung 6 sits **above** rung 7, *"telling her she is still
+        queueing while the seat is hers to take would be the one sentence that
+        makes standby worthless"* — and this is that ruling applied to the
+        screen, which is the only place it can be applied at all.
         """
 
         rows = await self._enrolled.for_player(player_id=viewer, now=now)
@@ -140,6 +153,7 @@ class ComposeEnrolled:
             cards=tuple(
                 card_of(row, now=now, stamp=stamp)
                 for row in rows
+                if not _yields_to_an_offer(row, offered)
                 if sport is None or row.record.sport is sport
                 if _still_on_screen(row, now)
             ),
@@ -235,6 +249,32 @@ def _situation_of(row: Enrolment, now: Instant) -> Situation:
         row.record,
         Viewer(holds_seat=row.holds_seat, on_standby=row.on_standby),
         now,
+    )
+
+
+def _yields_to_an_offer(row: Enrolment, offered: frozenset[UUID]) -> bool:
+    """Whether the region above is the one that should be drawing this match.
+
+    **Narrowed to the one membership that confers nothing.** A queue place is
+    *priority, not a place*, so a card about it has nothing to say that a live
+    offer does not say better — and the offers region is where the ladder puts
+    that sentence. A seat, a departure or a live claim is money or a clock of her
+    own, and no region above may take that card off the strip.
+
+    The two conditions coincide by construction today: a match reaches the offers
+    region only when it is not hers in any of those three senses, which is
+    ``cascade.seat_exclusions``'s own ``NOT_ALREADY_MINE``. They are written out
+    anyway, because the two answers are computed in two files off two reads —
+    and if they ever disagree the cost here is a **duplicate** card rather than a
+    missing one, which is the direction a screen should fail in.
+    """
+
+    if row.match_id not in offered:
+        return False
+    return (
+        not row.holds_seat
+        and row.departure is None
+        and row.claim_expires_at is None
     )
 
 

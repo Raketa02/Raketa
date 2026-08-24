@@ -46,6 +46,7 @@ from app.modules.now.domain.screen import (
 )
 from app.modules.now.domain.vocabulary import (
     ACT_OF,
+    ACTS_NEEDING_A_SEAT,
     ActCode,
     CardHoldReason,
     DepartureForm,
@@ -810,22 +811,62 @@ async def test_a_queued_card_leaves_the_screen_on_the_same_tail() -> None:
 
 
 async def test_the_act_table_names_only_acts_this_build_can_receive() -> None:
-    """Read off the table itself, so a fourth row is a decision in a diff.
+    """Read off the table itself, so a sixth row is a decision in a diff.
 
     ADR-0083's rule is *a card names an act when the viewer can take it now and
-    a v1 surface can receive it*, and seven of the ten situations that would
-    name one still have no destination: the offers region, Find and the
-    Getting-in sheet are all unbuilt. The two post-play rows arrived with
-    `/api/v1/matches/{matchId}/result`, which is the only way this set has ever
+    a v1 surface can receive it*, and five of the ten situations that would name
+    one still have no destination: Find is a placeholder, the Getting-in sheet is
+    unbuilt, and `finishPaying` wants the payment sheet. The two post-play rows
+    arrived with `/api/v1/matches/{matchId}/result` and the two offer rows with
+    `/api/v1/matches/{matchId}/seat`, which is the only way this set has ever
     been allowed to grow. A row added ahead of its surface is a door that will
     not open, and this is where it is noticed.
+
+    **The two offer rows carry one act between them.** An open call and the
+    exclusive offer ADR-0061 retired are one act at two names, because
+    `Match.open_claim` is how *any* seat is taken from the marketplace and
+    *offered seats behave differently* is a second rule nobody would remember.
     """
 
     assert dict(ACT_OF) == {
+        Situation.SEAT_OFFERED: ActCode.TAKE_SEAT,
+        Situation.SEAT_OPENED: ActCode.TAKE_SEAT,
         Situation.NEEDS_RESULT: ActCode.ENTER_RESULT,
         Situation.CONFIRM_RESULT: ActCode.ANSWER_RESULT,
         Situation.WAITLISTED: ActCode.LEAVE_STANDBY,
     }
+
+
+async def test_only_the_two_result_acts_are_withheld_from_a_seatless_viewer() -> None:
+    """Pinned by membership, because the set is applied in exactly one place.
+
+    ``takeSeat`` is the member that makes the name exact rather than approximate:
+    it is the act of somebody who holds **no** seat, so a gate keyed on holding
+    one would withhold it from everybody it is for. Adding it here is invisible
+    today — the strip cannot resolve an offer situation, so the gate never sees
+    that act — and would be a card with no button the day a second composer
+    applied the same table.
+    """
+
+    assert ACTS_NEEDING_A_SEAT == {ActCode.ENTER_RESULT, ActCode.ANSWER_RESULT}
+
+
+async def test_the_strip_never_names_take_seat() -> None:
+    """The table grew two rows and the strip can reach neither.
+
+    Both offer situations need a `Viewer` carrying an offer, and `_situation_of`
+    hands the ladder a seat and a queue place and nothing else — deliberately, on
+    its own docstring's reason: *"an offer belongs to the offers region, which is
+    composed elsewhere and from a different read."* So a card here cannot name an
+    act that opens a race the strip's own reads know nothing about.
+    """
+
+    region = await compose(
+        enrolled(a_match(paid=3), holds_seat=False, on_standby=True),
+        now=shifted(START, -hours(10)),
+    )
+
+    assert [card.act for card in region.cards] == [ActCode.LEAVE_STANDBY]
 
 
 async def test_the_result_acts_are_withheld_from_a_viewer_holding_no_seat() -> None:

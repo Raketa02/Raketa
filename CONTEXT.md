@@ -879,7 +879,12 @@ Committed by [ADR-0030](docs/adr/0030-a-departure-is-an-audience-not-a-state.md)
   removes a card, because a queue place is the whole of what put that match on the strip
   ([ADR-0091](docs/adr/0091-a-queue-place-is-a-card-and-leaving-one-is-the-first-card-that-goes.md)).
   A discriminated union rather than a card that may be missing — *it is gone* and *this build sent
-  none* are opposite sentences.
+  none* are opposite sentences. **The region half arrived with taking a seat**, which is the first
+  act that moves a card *between* two regions — the offer is gone and the match belongs in the
+  strip — and both come back **whole** rather than as a list of removals, which the phone would
+  have to interpret. They ride only on the answer that can move one, and only when the tap
+  applied: a refusal moved nothing, and leaving the corrected card exactly where it is is what
+  lets the client draw its own line over a seat that has gone.
 - **Invitation ladder** — the order a freed seat is offered in: **seven rungs**, fit-ordered
   within a rung, over one eligible pool
   ([ADR-0061](docs/adr/0061-the-invitation-ladder-is-an-order-and-one-open-call.md)). The **rung
@@ -904,6 +909,19 @@ Committed by [ADR-0030](docs/adr/0030-a-departure-is-an-audience-not-a-state.md)
   because the wording is what keeps a taken seat honest and nothing is ever removed from a lock
   screen ([ADR-0062](docs/adr/0062-a-notification-is-a-prompt-to-look-not-a-record.md)). Whether
   the seat is still there is a question about the **match**, asked live.
+- **Offers region** — the region **above everything** on Now: seats put in front of this viewer,
+  **soonest-to-expire first**, with no floor, no cap and no caption. *The thing with a clock is
+  first.* What expires is the **seat** and not the offer — the open call has no clock of its own —
+  so the moment is the **join cutoff**, which is the one instant a claim may still be started at.
+  Ordering by the hour of the game would sort her chances by when the evening is rather than by
+  when they die.
+- **Taking a seat** — the act an offer card names, and what it opens is the **seat claim** rather
+  than the seat. Anybody may take any free seat: an offered seat and one she found herself are the
+  same race when it is the last one, and *offered seats behave differently* is a rule nobody would
+  remember. A player who is **not fastest finds out from the screen** — the card comes back
+  corrected, saying the seat is gone, rather than an error saying so — and the two refusals that
+  answer differently are the two that are about *her* rather than about the seat: she is already
+  buying a seat somewhere else, or she let this one go seconds ago.
 - **Dispatch** — one of the two sends a freed seat produces: the standby queue **immediately**,
   everybody else **ten minutes later**. An empty queue costs nothing — the second dispatch comes
   forward rather than waiting on a head start nobody earned. Delivery is **held to 08:00 local**

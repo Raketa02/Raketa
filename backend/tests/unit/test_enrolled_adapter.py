@@ -263,6 +263,23 @@ class Standby:
         raise AssertionError("the strip never takes anybody off a queue")
 
 
+class Claims:
+    """The cross-match claim read: one live claim per player, or nothing.
+
+    A match id and never a match, because that is what `SeatClaims` answers —
+    the strip loads it back through the repository it already holds, which is
+    what the `gets` counter below is watching.
+    """
+
+    def __init__(self, match_id: UUID | None = None) -> None:
+        self._match_id = match_id
+        self.asks: list[tuple[UUID, Instant]] = []
+
+    async def live_for(self, player_id: UUID, *, at: Instant) -> UUID | None:
+        self.asks.append((player_id, at))
+        return self._match_id
+
+
 def an_adapter(
     *,
     matches: Matches,
@@ -271,10 +288,12 @@ def an_adapter(
     users: Users | None = None,
     ledgers: Ledgers | None = None,
     standby: Standby | None = None,
+    claims: Claims | None = None,
 ) -> EnrolledFromMatches:
     return EnrolledFromMatches(
         matches=matches,
         standby=standby or Standby(),
+        claims=claims or Claims(),
         clubs=clubs,
         reservations=reservations or Reservations(),
         users=users or Users(),
@@ -735,3 +754,82 @@ async def test_the_two_memberships_are_merged_in_one_chronological_order() -> No
     )
 
     assert [row.match_id for row in rows] == [sooner.id, later.id]
+
+
+async def test_a_seat_she_is_buying_reaches_the_strip() -> None:
+    """The fifth membership, and it arrived with the act that opens one.
+
+    An offer card leaves the offers region the instant the match becomes hers
+    (`Raketa02/Raketa#83`), so without this the match she has five minutes to pay
+    for would be on no region of her home screen at all.
+    """
+
+    club = a_club()
+    alice = uuid4()
+    match = a_match(club, players=[uuid4()])
+    match.open_claim(alice, at=AT)
+    matches = Matches(match)
+
+    rows = await an_adapter(
+        matches=matches, clubs=Clubs(club), claims=Claims(match.id)
+    ).for_player(player_id=alice, now=AT)
+
+    assert [row.match_id for row in rows] == [match.id]
+    assert rows[0].holds_seat is False
+    assert rows[0].claim_expires_at is not None
+
+
+async def test_the_claim_read_is_one_lookup_and_one_get() -> None:
+    """One live claim per player across the platform, so it is not a list.
+
+    The read widens the strip by one match rather than by a set, which is what
+    lets it be a lookup and a `get` instead of a fourth query to merge.
+    """
+
+    club = a_club()
+    alice = uuid4()
+    match = a_match(club, players=[uuid4()])
+    match.open_claim(alice, at=AT)
+    matches = Matches(match)
+    claims = Claims(match.id)
+
+    await an_adapter(matches=matches, clubs=Clubs(club), claims=claims).for_player(
+        player_id=alice, now=AT
+    )
+
+    assert claims.asks == [(alice, AT)]
+    assert matches.gets == [match.id]
+
+
+async def test_a_player_buying_nothing_pays_for_no_match_read() -> None:
+    club = a_club()
+    matches = Matches(a_match(club, players=[uuid4()]))
+    claims = Claims(None)
+
+    rows = await an_adapter(
+        matches=matches, clubs=Clubs(club), claims=claims
+    ).for_player(player_id=uuid4(), now=AT)
+
+    assert rows == ()
+    assert matches.gets == []
+
+
+async def test_a_claim_on_a_match_she_already_holds_a_seat_in_appears_once() -> None:
+    """`open_claim` refuses a second seat, so this can only ever *add* a match.
+
+    The merge keeps the copy the first read produced either way, which is why the
+    claim read is passed last: that list is the one carrying her seat and her
+    departure.
+    """
+
+    club = a_club()
+    alice = uuid4()
+    match = a_match(club, players=[alice])
+    matches = Matches(match)
+
+    rows = await an_adapter(
+        matches=matches, clubs=Clubs(club), claims=Claims(match.id)
+    ).for_player(player_id=alice, now=AT)
+
+    assert [row.match_id for row in rows] == [match.id]
+    assert rows[0].holds_seat is True
