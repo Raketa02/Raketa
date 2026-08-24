@@ -37,6 +37,8 @@ from app.bootstrap.composition import (
     build_cascade_waves,
     build_city_matches,
     build_open_cascade,
+    build_push_devices,
+    build_register_device,
     build_club_repository,
     build_command_log,
     build_commitments,
@@ -86,6 +88,7 @@ from app.modules.now.application.result import (
 from app.modules.now.application.new_arrivals import ComposeNewArrivals
 from app.modules.now.application.cascade import OpenCascade
 from app.modules.now.application.seat import TakeTheSeat
+from app.modules.now.application.push import RegisterDevice
 from app.modules.now.application.standby import LeaveStandby
 from app.modules.now.domain.ports import (
     ArrivalSets,
@@ -95,6 +98,7 @@ from app.modules.now.domain.ports import (
     Levels,
     OfferedSeats,
     ParkedRuns,
+    PushDevices,
     RatedSports,
     Ratings,
     Results,
@@ -577,3 +581,28 @@ def get_compose_now(
 
 
 ComposeNowDep = Annotated[ComposeNow, Depends(get_compose_now)]
+
+
+def get_push_devices(db: DbSession) -> PushDevices:
+    """Where a player's phones are. Request-scoped, like every other store."""
+
+    return build_push_devices(db)
+
+
+PushDevicesDep = Annotated[PushDevices, Depends(get_push_devices)]
+
+
+def get_register_device(
+    devices: PushDevicesDep, uow: UnitOfWorkDep, clock: ClockDep
+) -> RegisterDevice:
+    """*Reach me here.* The channel's only route.
+
+    No sender and no lines: registering a phone sends nothing. The first message
+    it can receive is the next one a dispatch owes her, which is the queue's
+    business and not this request's.
+    """
+
+    return build_register_device(devices=devices, uow=uow, clock=clock)
+
+
+RegisterDeviceDep = Annotated[RegisterDevice, Depends(get_register_device)]

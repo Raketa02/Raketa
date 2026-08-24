@@ -42,6 +42,7 @@ from app.modules.now.application.compose_now import ComposeNow, stamp_at
 from app.modules.now.application.new_arrivals import ComposeNewArrivals
 from app.modules.now.application.compose_offers import ComposeOffers
 from app.modules.now.domain.enrolled import Enrolment
+from app.modules.now.domain.cascade import Rung
 from app.modules.now.domain.offers import OfferedSeat
 from app.modules.now.domain.ports import (
     EnrolledMatches,
@@ -211,6 +212,7 @@ def an_offer(
         record=record if record is not None else a_match(paid=3, starts=600),
         where=a_place(),
         kind=OfferKind.OPEN,
+        rung=Rung.IN_THE_BAND,
         share=Money(amount=grosze(3800)),
         court_total=Money(amount=grosze(15200)),
         offered_at=AT,

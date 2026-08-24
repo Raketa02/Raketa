@@ -1529,5 +1529,63 @@ there; they are not repeated here.
   whether `apply` appeared would be green on a write that saved first and asked afterwards,
   which is the window the rule exists to close.
 
+- **The push channel** — one message, and it is the only thing in this backend that makes a
+  phone light up (ADR-0062, `Raketa02/Raketa#84`). It lives in `now/` because the seats it
+  carries are the offers region's, and it owns **two tables**: `push_lines`, the one line a
+  player's lock screen holds, and `push_devices`, where that lock screen is. Neither
+  announces anything, on ADR-0091's rule and for the reason the offers table does not.
+- **Its own queue, and not a delayed outbox row.** A send is not a change leaving the
+  building — the offer that caused it is already written and already true — and the outbox is
+  the trail a support agent reads for a game somebody *paid for*. It is the fourth job on the
+  tick the outbox already runs, and **last of the four**: the three above decide what is
+  true, and this one decides who is woken.
+- **One row per player, and that is ADR-0062's rule expressed as a key.** The queue is a
+  nullable `due_at` on the same row rather than a second table, exactly as `dispatched_at` is
+  the whole of the cascade's state. `owe` **keeps an earlier moment**, so a player told about
+  a second seat while her send is queued gets one send that sees both.
+- **The named seat** — the seat the line names, with the rest a count. A seat she **asked
+  for** outranks one we chose for her, soonest-to-expire inside each group. This deliberately
+  differs from the offers region, which is ordered soonest-to-expire and nothing else: the
+  region shows every offer and only decides how far she scrolls, and the line shows one and
+  hides the rest, so its order decides which seat she learns about at all.
+- **The ranking is over her whole live set, every send** (ADR-0065), never within one
+  dispatch — which is what makes a chosen seat arriving while a standby seat holds the line
+  unable to take the line. It is why the send re-reads `OfferedSeats` rather than being told
+  what a dispatch wrote, and why liveness is the region's own `seat_exclusions` rather than a
+  second reading.
+- **A message is sent only when the named seat changes.** A count-only change sends nothing
+  on either platform: Android has no way to send one quietly, and `IOS_COUNT_REFRESH` ships
+  **off** until `Raketa02/Raketa#37` measures the APNs hop (ADR-0067). `+N more` prints
+  anyway and undercounts, because dropping it would make the line's *shape* depend on a
+  measurement.
+- **`NamedSeat` carries a zone and never a club**, which is what makes *never the venue* a
+  property of the type rather than a rule somebody keeps: a glance at a lock screen must not
+  publish where somebody will be. The zone is a **clock face** — `Tue 19:00` is the time on
+  the wall at the club.
+- **The one sentence the server composes.** ADR-0022 says the backend never formats and
+  ADR-0041 says the sentence is the client's; ADR-0075 states the exception **by class** —
+  *copy the server composes is copy the player reads outside the app* — and `push_body` is
+  the class's only member, because the OS draws it where no client of ours is running.
+  `test_now_vocabulary.py`'s sentence walk is **narrowed to that one function** rather than
+  to the file, and carries its own negative control.
+- **Only a seat she asked for buzzes.** iOS `time-sensitive` on a standby seat and `passive`
+  on one we chose; Android is **one channel** at `IMPORTANCE_HIGH`, which Do Not Disturb
+  still silences, and Notification Policy Access is **not** requested. Rungs 3–7 still
+  *replace* the line — a silent update is still a message — which is what stops it naming a
+  seat that is gone.
+- **`timeSensitiveSetting` is stored and branched on by nothing** (ADR-0065). A revoked
+  player keeps her standby priority and still gets the seat; demoting her would cost her
+  seats as a punishment for a settings choice. `notSupported` is a fourth value and not a
+  synonym for a refusal. `test_push_never_retracts.py` walks the **whole app** for a branch
+  on it, because the tempting place to write one is the cascade's pool.
+- **Nothing is ever retracted, and the port shape says so**: `PushSender` has one method. The
+  only deletion in the path is a **device row** whose token has moved to another account — a
+  phone signed into a second account still answers to the same token, and a row left behind
+  would put one player's seats on somebody else's lock screen.
+- **`LoggingPushSender` is the transport**, and it is honest about being a stand-in: an Expo
+  project id, a Firebase service account and an Apple membership are a human's work
+  (`Raketa02/Raketa#26`, `#37`), and everything the ADRs decide is expressible through Expo
+  and through bare APNs/FCM alike. In `local`, the log is the lock screen.
+
 Add backend-specific technical terms here as they are resolved. Anything describing the
 *domain* belongs in the shared glossary instead.

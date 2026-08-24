@@ -101,6 +101,11 @@ from app.modules.now.application.cascade import (
     OpenCascade,
     RunCascade,
 )
+from app.modules.now.application.push import (
+    PushBatch,
+    RegisterDevice,
+    SendTheLine,
+)
 from app.modules.now.application.standby import LeaveStandby
 from app.modules.now.application.compose_shelves import ComposeShelves
 from app.modules.now.application.new_arrivals import ComposeNewArrivals
@@ -123,6 +128,9 @@ from app.modules.now.domain.ports import (
     CascadeWaves,
     ClubRegulars,
     Offers,
+    PushDevices,
+    PushLines,
+    PushSender,
     RatedPlayers,
     ScoringContexts,
     Standby,
@@ -152,6 +160,11 @@ from app.modules.now.infrastructure.scoring_contexts import InMemoryScoringConte
 from app.modules.now.infrastructure.cascade_stores import (
     SqlAlchemyCascadeWaves,
     SqlAlchemyOffers,
+)
+from app.modules.now.infrastructure.push_sender import LoggingPushSender
+from app.modules.now.infrastructure.push_stores import (
+    SqlAlchemyPushDevices,
+    SqlAlchemyPushLines,
 )
 from app.modules.now.infrastructure.pool_sources import (
     ClubRegularsFromMatches,
@@ -727,6 +740,7 @@ def build_run_cascade(
     *,
     waves: CascadeWaves,
     offers: Offers,
+    lines: PushLines,
     contexts: CityMatches,
     players: RatedPlayers,
     regulars: ClubRegulars,
@@ -747,6 +761,7 @@ def build_run_cascade(
     return RunCascade(
         waves=waves,
         offers=offers,
+        lines=lines,
         contexts=contexts,
         players=players,
         regulars=regulars,
@@ -811,6 +826,7 @@ def build_cascade_tick(
         run=build_run_cascade(
             waves=waves,
             offers=build_offers(session),
+            lines=build_push_lines(session),
             contexts=build_city_matches(
                 matches=matches,
                 clubs=build_club_repository(session),
@@ -826,6 +842,117 @@ def build_cascade_tick(
                 matches=matches, standby=build_match_standby_places(session)
             ),
             scorer=build_match_scorer(),
+            uow=uow,
+            clock=clock,
+        ),
+        uow=uow,
+        clock=clock,
+    )
+
+
+def build_push_lines(session: AsyncSession) -> PushLines:
+    """The one line each player's lock screen holds, and the queue over it.
+
+    A session rather than ports, because it *is* one table — the shape
+    `build_offers` and `build_command_log` already take. It is Now's for the
+    reason the offers table is: **a message is not a fact about a match**, so
+    routing it through `Match` would bump ADR-0034's version and invalidate the
+    scoring-context cache every time somebody's phone was told about a seat.
+    """
+    return SqlAlchemyPushLines(session)
+
+
+def build_push_devices(session: AsyncSession) -> PushDevices:
+    """Where a player's phones are, as they last reported themselves."""
+    return SqlAlchemyPushDevices(session)
+
+
+def build_push_sender() -> PushSender:
+    """Whatever carries a composed message. **A log until one is provisioned.**
+
+    The transport is the one thing in this channel nobody can build here: an
+    Expo project id, a Firebase service account and an Apple membership are all
+    a human's work (`Raketa02/Raketa#26`, `Raketa02/Raketa#37`), and an agent may
+    not create a credential file at all. Everything the two ADRs decide is
+    expressible through Expo and through bare APNs/FCM alike, so what is behind
+    this port stays a choice nobody has had to make.
+    """
+    return LoggingPushSender()
+
+
+def build_register_device(
+    *, devices: PushDevices, uow: UnitOfWork, clock: Clock
+) -> RegisterDevice:
+    """*Reach me here.* The channel's only route, and it refuses nothing."""
+    return RegisterDevice(devices=devices, uow=uow, clock=clock)
+
+
+def build_send_the_line(
+    *,
+    lines: PushLines,
+    offered: OfferedSeats,
+    devices: PushDevices,
+    sender: PushSender,
+    uow: UnitOfWork,
+    clock: Clock,
+) -> SendTheLine:
+    """One player's send: rank her live seats, and send if the named one changed.
+
+    It takes `OfferedSeats` — the offers region's own read — rather than the
+    offers table, because *which seats are live* must be one answer: a channel
+    with its own reading of that would eventually name a seat the region does
+    not show.
+    """
+    return SendTheLine(
+        lines=lines,
+        offered=offered,
+        devices=devices,
+        sender=sender,
+        uow=uow,
+        clock=clock,
+    )
+
+
+def build_push_batch(
+    *, lines: PushLines, send: SendTheLine, uow: UnitOfWork, clock: Clock
+) -> PushBatch:
+    """Every owed send at this instant, run once each."""
+    return PushBatch(lines=lines, send=send, uow=uow, clock=clock)
+
+
+def build_push_tick(
+    *,
+    session: AsyncSession,
+    event_runtime: EventRuntime,
+    clock: Clock,
+) -> PushBatch:
+    """ADR-0062's channel, wired from the same factories a request gets.
+
+    The counterpart of `build_cascade_tick`, and it takes an `EventRuntime` for
+    the same reason: the match repository every caller gets is built with a
+    publisher, so a send that ever reached a write would reach the outbox the way
+    a tap does. It does not — nothing here mutates a match, and the only rows it
+    writes are its own.
+
+    No scoring context is handed in, unlike the cascade's tick: a message names a
+    sport and an hour, and nothing on it is scored.
+    """
+
+    events = event_runtime.create_publisher_for(session=session)
+    uow = build_unit_of_work(session)
+    lines = build_push_lines(session)
+    return build_push_batch(
+        lines=lines,
+        send=build_send_the_line(
+            lines=lines,
+            offered=build_offered_seats(
+                offers=build_offers(session),
+                matches=build_match_repository(session, events=events, clock=clock),
+                clubs=build_club_repository(session),
+                reservations=build_reservation_repository(session),
+            ),
+            devices=build_push_devices(session),
+            sender=build_push_sender(),
             uow=uow,
             clock=clock,
         ),

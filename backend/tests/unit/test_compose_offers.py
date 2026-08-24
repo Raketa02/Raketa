@@ -40,6 +40,7 @@ from app.modules.now.application.compose_offers import (
     offer_card_of,
     offered_matches,
 )
+from app.modules.now.domain.cascade import Rung
 from app.modules.now.domain.offers import OfferedSeat
 from app.modules.now.domain.ports import OfferedSeats
 from app.modules.now.domain.screen import Money, Place
@@ -98,6 +99,7 @@ def offered(record: MatchRecord | None = None, **kwargs) -> OfferedSeat:
             "record": record if record is not None else a_match(paid=3),
             "where": a_place(),
             "kind": OfferKind.OPEN,
+            "rung": Rung.IN_THE_BAND,
             "share": Money(amount=SHARE),
             "court_total": Money(amount=COURT),
             "offered_at": at(-600),

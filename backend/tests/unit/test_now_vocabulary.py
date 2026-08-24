@@ -36,6 +36,18 @@ from app.modules.now.domain.vocabulary import (
 ROOT = Path(__file__).resolve().parents[2]
 NOW = ROOT / "app" / "modules" / "now"
 
+#: The one function in this package that may write a sentence, and the whole of
+#: the exception. ADR-0075 states it **by class** — *copy the server composes is
+#: copy the player reads outside the app* — and this is the class's only member:
+#: the OS draws a push line on a locked phone, where no client of ours is
+#: running to hold a copy table. ADR-0062 fixes the sentence itself.
+#:
+#: Keyed on the **function** and not on the module, exactly as the `logger`
+#: exemption is keyed on the call: a sentence anywhere else in `push.py` — a
+#: constant, a title, a second composer — is still a failure, and the control
+#: below drives that both ways.
+SERVER_COPY: tuple[Path, str] = (Path("domain") / "push.py", "push_body")
+
 
 def test_the_seven_acts_are_exactly_the_seven() -> None:
     # ADR-0083 opened the set at six; ADR-0087 added the seventh *with* the write
@@ -193,10 +205,33 @@ def _is_a_log_line(node: ast.Call) -> bool:
     )
 
 
-def _exempt_strings(tree: ast.AST) -> set[int]:
+def _server_copy(tree: ast.AST, path: Path | None) -> set[int]:
+    """The one function allowed to compose a sentence, by node identity.
+
+    Empty for every file but the one `SERVER_COPY` names, and empty for that
+    file's other functions. A push body is the only string in this package a
+    player ever reads, and it is composed here because the operating system
+    draws it where no client of ours is running (ADR-0075, ADR-0062).
+    """
+
+    if path is None or not str(path).endswith(str(SERVER_COPY[0])):
+        return set()
+    exempt: set[int] = set()
+    for node in ast.walk(tree):
+        if (
+            isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+            and node.name == SERVER_COPY[1]
+        ):
+            for inner in ast.walk(node):
+                if isinstance(inner, ast.Constant) and isinstance(inner.value, str):
+                    exempt.add(id(inner))
+    return exempt
+
+
+def _exempt_strings(tree: ast.AST, path: Path | None = None) -> set[int]:
     """String constants that are not player copy, by node identity.
 
-    Four kinds, and each is exempt for a stated reason rather than because it
+    Six kinds, and each is exempt for a stated reason rather than because it
     was in the way. A docstring is the module explaining itself. An
     ``invariant()`` message is addressed to whoever broke a precondition, and it
     lands in a stack trace and never in a payload. A ``summary=`` or
@@ -209,12 +244,21 @@ def _exempt_strings(tree: ast.AST) -> set[int]:
     not replay), and the alternative was writing those sentences in three words
     so a walk about player copy would let them through.
 
+    The fifth is a `sa.text()` fragment — an index predicate is addressed to a
+    **database**, reaches no response, and is the one place in this package
+    where four English words are a `WHERE` clause. It is keyed on the call, so a
+    sentence assigned beside one still fails.
+
+    The sixth is the push body, which is the one sentence in this package a
+    player genuinely reads — see `SERVER_COPY`, and note that it is keyed on the
+    function for the same reason the others are keyed on the call.
+
     The exemption is on the **call**, not on the module: a sentence assigned to
     a constant in a file that also logs is still a failure, which the negative
     control below drives both ways.
     """
 
-    exempt: set[int] = set()
+    exempt: set[int] = _server_copy(tree, path)
     for node in ast.walk(tree):
         if isinstance(
             node, (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)
@@ -229,7 +273,7 @@ def _exempt_strings(tree: ast.AST) -> set[int]:
                 exempt.add(id(body[0].value))
         if isinstance(node, ast.Call):
             named = getattr(node.func, "id", None) or getattr(node.func, "attr", None)
-            if named == "invariant" or _is_a_log_line(node):
+            if named in {"invariant", "text"} or _is_a_log_line(node):
                 for argument in ast.walk(node):
                     if isinstance(argument, ast.Constant):
                         exempt.add(id(argument))
@@ -255,7 +299,7 @@ def test_the_module_tree_holds_no_sentence() -> None:
     offenders: list[str] = []
     for path in sorted(NOW.rglob("*.py")):
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
-        exempt = _exempt_strings(tree)
+        exempt = _exempt_strings(tree, path)
         for node in ast.walk(tree):
             if not isinstance(node, ast.Constant) or not isinstance(node.value, str):
                 continue
@@ -301,9 +345,52 @@ def test_the_sentence_walk_can_tell_a_sentence_from_a_code() -> None:
             and len(node.value.split()) > 3
         ]
 
+    beside_a_predicate = ast.parse(
+        'sa.text("dispatched_at IS NOT NULL")\n'
+        'REASON = "no court is held for this match yet"\n'
+    )
+
     assert offending(caught) == ["no court is held for this match yet"]
     assert offending(missed) == []
     assert offending(beside_a_log) == ["no court is held for this match yet"]
+    assert offending(beside_a_predicate) == ["no court is held for this match yet"]
+
+
+def test_the_server_copy_exemption_is_one_function_in_one_file() -> None:
+    """The second negative control, driven both ways and on the real file.
+
+    The exemption is worth exactly what proves it is narrow: a sentence outside
+    `push_body` in the very module that composes one must still fail, or *this
+    file writes copy* has quietly become the rule instead of *this function
+    does*. The positive half asserts the function is really there — an exemption
+    naming a function nobody wrote is decoration that would let the next
+    sentence through in whatever file inherited the name.
+    """
+
+    path = NOW / SERVER_COPY[0]
+    tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    assert any(
+        isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        and node.name == SERVER_COPY[1]
+        for node in ast.walk(tree)
+    )
+    assert _server_copy(tree, path), "the composer's own sentence is not exempt"
+
+    beside_it = ast.parse(
+        f"def {SERVER_COPY[1]}(): return 'a padel seat just opened'\n"
+        "TITLE = 'a padel seat just opened'\n"
+    )
+    exempt = _exempt_strings(beside_it, path)
+    assert [
+        node.value
+        for node in ast.walk(beside_it)
+        if isinstance(node, ast.Constant)
+        and isinstance(node.value, str)
+        and id(node) not in exempt
+    ] == ["a padel seat just opened"]
+
+    # And the same function in any other file is not exempt at all.
+    assert not _server_copy(beside_it, NOW / "domain" / "screen.py")
 
 
 def test_the_walk_reaches_the_tree_it_is_claiming_about() -> None:

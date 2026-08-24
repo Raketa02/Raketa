@@ -20,6 +20,7 @@ from app.kernel import Instant, Ok, Sport
 
 from app.modules.now.application.scoring import Unscorable
 from app.modules.now.domain.cascade import Band, Offer, PendingWave, Wave
+from app.modules.now.domain.push import LiveLine
 from app.modules.now.domain.funnel import MatchScoringContext
 
 
@@ -274,3 +275,46 @@ class FixedClock:
 
 def an_id() -> UUID:
     return uuid4()
+
+
+class FakePushLines:
+    """The push queue, with every debt visible.
+
+    `owed` is every batch handed to `owe`, kept as **lists rather than a set**,
+    so a case asserting that nobody is owed a send twice in one dispatch reads
+    the call rather than its collapse.
+    """
+
+    def __init__(self, *lines: LiveLine) -> None:
+        self.lines = list(lines)
+        self.owed: list[tuple[tuple[UUID, ...], Instant]] = []
+        #: Every `(player, match, instant)` a message was recorded for. Named
+        #: for the column rather than for the method, because `replaced` is the
+        #: port and an attribute of that name would shadow it — which is a
+        #: `TypeError` at the call site and never a failed assertion.
+        self.named: list[tuple[UUID, UUID, Instant]] = []
+        self.cleared: list[UUID] = []
+
+    @property
+    def told(self) -> list[UUID]:
+        """Everybody owed a send, flattened, in the order they were owed one."""
+
+        return [player_id for batch, _ in self.owed for player_id in batch]
+
+    async def owe(self, player_ids: Sequence[UUID], *, at: Instant) -> None:
+        self.owed.append((tuple(player_ids), at))
+
+    async def due(self, *, now: Instant, limit: int) -> tuple[LiveLine, ...]:
+        return tuple(
+            line
+            for line in self.lines
+            if line.due_at is not None and line.due_at <= now
+        )[:limit]
+
+    async def replaced(
+        self, line: LiveLine, *, named_match_id: UUID, at: Instant
+    ) -> None:
+        self.named.append((line.player_id, named_match_id, at))
+
+    async def settled(self, line: LiveLine) -> None:
+        self.cleared.append(line.player_id)

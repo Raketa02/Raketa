@@ -88,6 +88,7 @@ from app.bootstrap.composition import (
     build_open_cascade,
     build_rated_players,
     build_ratings,
+    build_push_lines,
     build_run_cascade,
     build_scoring_contexts,
     build_standby,
@@ -447,6 +448,12 @@ def _build(session: AsyncSession) -> _UseCases:
         run_cascade=build_run_cascade(
             waves=cascade_waves,
             offers=cascade_offers,
+            # The push channel's queue, joined to the dispatch's transaction like
+            # everything else it writes. **Nothing seeded ever sends**: the batch
+            # that would read these rows runs on the worker, and a seeded week
+            # has no phones to reach — which is the honest state, since a device
+            # token is a fact about somebody's handset rather than about a week.
+            lines=build_push_lines(session),
             contexts=contexts,
             players=build_rated_players(event_store),
             regulars=build_club_regulars(matches),

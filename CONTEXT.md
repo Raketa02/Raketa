@@ -809,6 +809,14 @@ Committed by [ADR-0030](docs/adr/0030-a-departure-is-an-audience-not-a-state.md)
   nothing. The third thing it buys is **loudness**: a standby seat is the only message
   allowed to pierce a Focus, and on iOS it does
   ([ADR-0065](docs/adr/0065-a-seat-you-asked-for-pierces-a-focus-and-we-send-only-when-the-named-seat-changes.md)).
+- **The line** — the **one live message** a player's lock screen holds from us, ever, and the
+  thing a **named seat** is named on. A new seat's message *takes the previous one's place*
+  rather than stacking beside it, and with no frequency cap in v1 that replacement **is** the
+  frequency control. It belongs to **offers**: *one live message per player* was earned as a
+  frequency control on seats rather than as a claim on her lock screen forever, so any future
+  kind of message stacks beside it rather than evicting a live seat
+  ([ADR-0062](docs/adr/0062-a-notification-is-a-prompt-to-look-not-a-record.md),
+  [ADR-0065](docs/adr/0065-a-seat-you-asked-for-pierces-a-focus-and-we-send-only-when-the-named-seat-changes.md)).
 - **Named seat** — the one seat a lock-screen line actually names when several are live; the rest
   are a count. Which one is **ranked over the whole live set every time we send** — a seat the
   player asked for over one we chose, soonest-to-expire inside each group — so a lesser seat can

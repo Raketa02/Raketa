@@ -413,6 +413,31 @@ Rules to preserve:
   membership that **confers nothing** — a seat, a departure or a claim is never taken off the
   strip by a region above it, so a disagreement costs a duplicate card rather than a missing
   one.
+- **One message, one queue, and one line per player.** The push channel (ADR-0062,
+  amended by [ADR-0065](../docs/adr/0065-a-seat-you-asked-for-pierces-a-focus-and-we-send-only-when-the-named-seat-changes.md)
+  and [ADR-0067](../docs/adr/0067-the-quiet-replacement-is-evidenced-and-the-extra-message-waits.md))
+  is the only thing in this backend that makes a phone light up, and it is the **fourth job**
+  on the tick the outbox already runs — its **own queue**, because a send is not a change
+  leaving the building. `push_lines` is one row per player, which is *one live message per
+  player* expressed as a key, with the queue as a nullable `due_at` on the same row. **A
+  notification is a prompt to look**: the sentence is past tense — *a padel seat just opened*
+  — so it is still true after somebody else takes the seat, and there is nothing to withdraw,
+  which is just as well because no platform offers server-side removal as a guarantee.
+  `PushSender` therefore has **one method**, and the only deletion in the path is a device row
+  whose token has moved to another account. The **named seat** is the one the line names and
+  the rest are a count: a seat she *asked for* outranks one we chose, soonest-to-expire inside
+  each group, ranked over her **whole live set on every send** rather than within one dispatch
+  — which is what stops a chosen seat taking the line from a standby seat. **A message goes
+  only when the named seat changes**; a count-only change sends nothing on either platform,
+  because `IOS_COUNT_REFRESH` ships off until `#37` measures the APNs hop. Only a seat she
+  asked for **buzzes** (iOS `time-sensitive`, otherwise `passive`); Android is **one channel**
+  at `IMPORTANCE_HIGH` and Notification Policy Access is not requested. `timeSensitiveSetting`
+  is stored and **branched on by nothing**, walked over the whole app. `push_body` is the one
+  place this backend writes English — ADR-0075's exception stated by class, and the sentence
+  walk is narrowed to that function rather than to its file — and it carries sport, time and
+  travel time and **never the venue**, which is a property of `NamedSeat` rather than a rule:
+  the value has no club on it. The transport is a **log until one is provisioned** (`#26`,
+  `#37`), and travel time has no source at all (`#129`).
 - **Now's update is one card in one of two forms.** `CardChanged` or `CardGone`, and the
   second is ADR-0070's *"the one-card answer must be able to say this card is no longer on
   your screen"*, produced for the first time by leaving standby — a departure **keeps** the

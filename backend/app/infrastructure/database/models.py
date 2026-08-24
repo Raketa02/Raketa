@@ -27,6 +27,10 @@ from app.modules.now.infrastructure.sqlalchemy_cascade_models import (
     MatchCascadeWaveORM,
     MatchOfferORM,
 )
+from app.modules.now.infrastructure.sqlalchemy_push_models import (
+    PushDeviceORM,
+    PushLineORM,
+)
 from app.modules.users.infrastructure.sqlalchemy_user_model import UserORM
 
 __all__ = [
@@ -45,6 +49,8 @@ __all__ = [
     "MatchOfferORM",
     "MatchSeatORM",
     "MatchVacancyORM",
+    "PushDeviceORM",
+    "PushLineORM",
     "RefreshTokenORM",
     "ReservationORM",
     "UserORM",

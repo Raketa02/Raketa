@@ -69,6 +69,7 @@ from app.modules.now.domain.ports import (
     ClubRegulars,
     Commitments,
     Offers,
+    PushLines,
     RatedPlayers,
     Ratings,
     StandbyQueue,
@@ -177,6 +178,7 @@ class RunCascade:
         *,
         waves: CascadeWaves,
         offers: Offers,
+        lines: PushLines,
         contexts: CityMatches,
         players: RatedPlayers,
         regulars: ClubRegulars,
@@ -189,6 +191,7 @@ class RunCascade:
     ) -> None:
         self._waves = waves
         self._offers = offers
+        self._lines = lines
         self._contexts = contexts
         self._players = players
         self._regulars = regulars
@@ -247,6 +250,22 @@ class RunCascade:
                     )
                     for one in invitations
                 ]
+            )
+            # **The send is owed in the same transaction as the offer**, on
+            # the rule that puts the two cascade rows inside the departure's:
+            # an offer nobody is told about is a seat that dies quietly, and
+            # nothing re-reads old offers looking for the ones that were
+            # missed. What that transaction does *not* pay for is the message —
+            # the ranking over her whole live set, the devices and the transport
+            # are the send's own, on its own queue (`Raketa02/Raketa#84`).
+            #
+            # Everybody told is owed a look, including somebody whose line
+            # already names this match: *whether* anything is sent is the send's
+            # decision, made against the live set rather than against what one
+            # dispatch happened to write, and deciding it here would be
+            # ADR-0065's ranking narrowed to one dispatch.
+            await self._lines.owe(
+                [one.player_id for one in invitations], at=now
             )
         await self._waves.dispatched(
             vacancy_id=wave.vacancy_id, wave=wave.wave, at=now

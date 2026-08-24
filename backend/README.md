@@ -1036,8 +1036,8 @@ is asserted.
 ladder is a background mechanism, not an endpoint: leaving a match through
 `POST /api/v1/matches/{matchId}/departure` opens a cascade **in the same transaction**, and
 the dispatches run on the tick the outbox already does. The offers it writes are what the
-offers region will draw (`Raketa02/Raketa#83`) and what the push queue will rank
-(`Raketa02/Raketa#84`); until one of those ships, **no field of it is on either document**.
+offers region draws and what the push queue ranks; the ladder itself still has no endpoint of
+its own.
 
 - **One pool, ranked over seven rungs, told in two dispatches** — rung 1 (the standby queue)
   immediately, rungs 2–7 ten minutes later, and an empty first dispatch brings the second
@@ -1051,6 +1051,49 @@ offers region will draw (`Raketa02/Raketa#83`) and what the push queue will rank
   twice about one hole.
 - **Two tables, both Now's** — `match_offers` keyed on the hole and `match_cascade_waves`
   keyed `(vacancy, wave)`. Neither announces anything, and nothing is ever withdrawn.
+
+### `PUT /api/v1/push/device` — and the one message behind it
+
+**The push channel's whole wire surface is one request, and it says where a phone is.** A
+notification is *a prompt to look*, not a record (ADR-0062): nothing about one is requested,
+acknowledged, listed or dismissed by a client, so the only thing a phone ever tells the server
+is a token, its platform, and what `timeSensitiveSetting` said. 204 and no body — registering
+is not an act off Now, so there is no update to hand back.
+
+Everything else is a background mechanism on the tick the outbox already runs, **fourth and
+last of the four jobs**, because it is the only one that makes a phone light up:
+
+- **Its own queue, not a delayed outbox row.** `push_lines` is **one row per player** — which
+  is ADR-0062's *one live message per player* expressed as a key — with the queue a nullable
+  `due_at` on the same row. A dispatch that told somebody owes her a send **in the same
+  transaction as the offer**; an already-owed send keeps its earlier moment.
+- **Past tense, always.** *"A padel seat just opened — Tue 19:00. First to take it."* was true
+  at 16:42, is true at midnight, and is still true after somebody else takes the seat. That is
+  the whole of the retraction design, because no platform offers server-side removal of a
+  delivered alert as a guarantee — `PushSender` has one method, and nothing here withdraws
+  anything.
+- **Sport, time and travel time; never the venue.** A glance at a lock screen must not publish
+  where somebody will be. `NamedSeat` carries a **zone and no club**, so the sentence cannot
+  print one. Travel time has no source in v1 (`Raketa02/Raketa#129`) and the clause ships with
+  nothing to fill it.
+- **The named seat is ranked over her whole live set on every send**, never within one
+  dispatch (ADR-0065): a seat she **asked for** outranks one we chose, soonest-to-expire inside
+  each group, the rest a count. So a chosen seat arriving while a standby seat holds the line
+  never takes the line.
+- **A message goes only when the named seat changes.** A count-only change sends nothing on
+  either platform — Android cannot send one quietly, and the iOS count-refresh ships **off**
+  until `Raketa02/Raketa#37` measures the APNs hop (ADR-0067). `+N more` prints anyway and
+  undercounts.
+- **Only a seat she asked for buzzes**: iOS `interruption-level: time-sensitive`, `passive`
+  for one we chose. Android is **one channel** at `IMPORTANCE_HIGH`, which Do Not Disturb
+  still silences, and Notification Policy Access is **not** requested.
+- **`timeSensitiveSetting` is stored and branched on by nothing.** A player who revoked keeps
+  her standby priority and still gets the seat; `notSupported` is a fourth value and not a
+  refusal. A walk over the whole app refuses a branch on it.
+- **The transport is a log until one is provisioned.** An Expo project id, a Firebase service
+  account and an Apple membership are a human's work (`Raketa02/Raketa#26`, `#37`), and
+  everything the ADRs decide is expressible through Expo and through bare APNs/FCM alike. In
+  `local`, the log is the lock screen.
 
 ### What the Now contract will not carry
 

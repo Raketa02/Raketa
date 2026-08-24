@@ -173,6 +173,7 @@ class OfferedFromTheCascade:
             record=match.as_record(),
             where=_place(club, match),
             kind=offer.kind,
+            rung=offer.player_rung,
             # The seat's own share, **not** the amount stored on the offer: the
             # composer applies `kernel.seat_price` to it at the composing instant,
             # so a card quotes the rescue tier that is running now rather than the

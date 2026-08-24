@@ -27,6 +27,7 @@ from uuid import UUID
 
 from app.kernel import Instant, MatchRecord, OfferKind
 
+from app.modules.now.domain.cascade import Rung
 from app.modules.now.domain.screen import Money, Place
 
 
@@ -50,6 +51,14 @@ class OfferedSeat:
     record: MatchRecord
     where: Place
     kind: OfferKind
+
+    #: Which rung of the ladder she stood on when this seat reached her. The
+    #: region ignores it — a card is a card whoever it came to — and the **push**
+    #: is what reads it: ADR-0065 ranks a seat she asked for above one we chose
+    #: for her, and words the line differently for each, so this is the only
+    #: place that difference shows. It is the offer's own stored rung rather
+    #: than a second reading of the row (``offer_of``).
+    rung: Rung
 
     #: What one seat is sold for, before the rescue tier. The **card** prints
     #: ``kernel.seat_price`` of this at the composing instant rather than the

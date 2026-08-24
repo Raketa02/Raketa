@@ -761,3 +761,8 @@ def test_the_worker_the_process_starts_carries_a_timekeeper():
     # what is being claimed is that the worker *the process starts* runs it,
     # and a factory that can be passed in proves nothing about the one that is.
     assert worker._cascade_batch_factory is not None
+    # And the fourth (ADR-0062, `Raketa02/Raketa#84`), which is the only job in
+    # the process that makes a phone light up. Unwired, the offers the cascade
+    # writes reach a screen and never a lock screen — and nothing else in the
+    # tree would go red, because every one of its own tests passes a factory in.
+    assert worker._push_batch_factory is not None

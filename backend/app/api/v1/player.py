@@ -16,6 +16,9 @@ from app.modules.now.presentation.departure_routes import (
 from app.modules.now.presentation.result_routes import (
     router as result_router,
 )
+from app.modules.now.presentation.push_routes import (
+    router as push_router,
+)
 from app.modules.now.presentation.routes import router as now_router
 from app.modules.now.presentation.seat_routes import (
     router as seat_router,
@@ -38,3 +41,4 @@ player_api_router.include_router(departure_router)
 player_api_router.include_router(result_router)
 player_api_router.include_router(standby_router)
 player_api_router.include_router(seat_router)
+player_api_router.include_router(push_router)

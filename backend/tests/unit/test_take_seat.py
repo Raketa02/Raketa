@@ -43,6 +43,7 @@ from app.modules.now.application.compose_enrolled import ComposeEnrolled
 from app.modules.now.application.compose_offers import ComposeOffers
 from app.modules.now.application.seat import TakeSeatCommand, TakeTheSeat
 from app.modules.now.domain.enrolled import Enrolment
+from app.modules.now.domain.cascade import Rung
 from app.modules.now.domain.offers import OfferedSeat
 from app.modules.now.domain.ports import Claims, EnrolledMatches, OfferedSeats
 from app.modules.now.domain.screen import CardChanged, CardGone, Money, Place
@@ -143,6 +144,7 @@ def offered(record: MatchRecord | None = None, **kwargs) -> OfferedSeat:
             "record": record if record is not None else a_match(paid=3),
             "where": a_place(),
             "kind": OfferKind.OPEN,
+            "rung": Rung.IN_THE_BAND,
             "share": Money(amount=SHARE),
             "court_total": Money(amount=COURT),
             "offered_at": at(-700),

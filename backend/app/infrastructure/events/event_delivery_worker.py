@@ -21,15 +21,15 @@ TickWorkFactory = Callable[[AsyncSession], TickWork]
 
 
 class EventWorker:
-    """The process's one background tick: delivery, the wakes, and the cascade.
+    """The process's one tick: delivery, the wakes, the cascade, the sends.
 
-    **Three jobs, one interval, and ADR-0076 asks for exactly that** — *"the
+    **Four jobs, one interval, and ADR-0076 asks for exactly that** — *"the
     existing `EventWorker` gains two more indexed lookups on the tick it already
     runs: the outbox, due match wakes, due sends. No new interval and no second
-    process."* The third is the invitation cascade's dispatch queue (ADR-0061,
-    ``Raketa02/Raketa#82``), which is a different queue from the *sends* that
-    line anticipates: this one decides **whom to tell**, and the notification
-    channel that tells them arrives with ``Raketa02/Raketa#84``.
+    process."* The last two are separate queues rather than the one that line
+    anticipates: the cascade (ADR-0061, ``Raketa02/Raketa#82``) decides **whom to
+    tell**, and the push channel (ADR-0062, ``Raketa02/Raketa#84``) is what tells
+    them.
 
     The cost is stated rather than discovered: **one worker means one queue of
     work**, so a slow job delays whatever is behind it. Affordable because no
@@ -38,7 +38,7 @@ class EventWorker:
 
     **Each job gets its own session and its own guard**, so a wake that raises
     cannot roll back a published outbox row and cannot stop the outbox running at
-    all. One interval, two units of work — never one unit that fails as a whole.
+    all. One interval, four units of work — never one unit that fails as a whole.
     """
 
     def __init__(
@@ -48,6 +48,7 @@ class EventWorker:
         batch_factory: EventBatchFactory,
         wake_batch_factory: TickWorkFactory | None = None,
         cascade_batch_factory: TickWorkFactory | None = None,
+        push_batch_factory: TickWorkFactory | None = None,
         poll_interval_seconds: float = 1.0,
         worker_id: str | None = None,
     ) -> None:
@@ -55,6 +56,7 @@ class EventWorker:
         self._batch_factory = batch_factory
         self._wake_batch_factory = wake_batch_factory
         self._cascade_batch_factory = cascade_batch_factory
+        self._push_batch_factory = push_batch_factory
         self._poll_interval = poll_interval_seconds
         self._worker_id = worker_id or f"{socket.gethostname()}:{new_uuid()}"
         self._stop_event = asyncio.Event()
@@ -99,6 +101,10 @@ class EventWorker:
                 except Exception:
                     logger.exception("cascade tick failed")
                 try:
+                    await self._take_due_sends()
+                except Exception:
+                    logger.exception("push tick failed")
+                try:
                     await asyncio.wait_for(
                         self._stop_event.wait(), timeout=self._poll_interval
                     )
@@ -131,7 +137,7 @@ class EventWorker:
     async def _take_due_dispatches(self) -> None:
         """ADR-0061's two dispatch jobs. Absent rather than empty when unwired.
 
-        Last on the tick, and deliberately: the two jobs above it decide what is
+        Third on the tick, and deliberately: the two jobs above it decide what is
         **true** — a court given back, a claim reaped, a result settled — and
         this one decides who is **told**. A dispatch reading a record the wake
         has just moved is a dispatch telling the truth; the other order would
@@ -142,4 +148,19 @@ class EventWorker:
             return
         async with self._session_factory() as session:
             batch = self._cascade_batch_factory(session)
+            await batch.execute(worker_id=self._worker_id)
+
+    async def _take_due_sends(self) -> None:
+        """ADR-0062's one message. Absent rather than empty when unwired.
+
+        Last on the tick, and deliberately: this is the only job in the process
+        that makes a phone light up, and it composes from the offers the job
+        above it has just written. The other order would send a message about a
+        seat that did not exist yet.
+        """
+
+        if self._push_batch_factory is None:
+            return
+        async with self._session_factory() as session:
+            batch = self._push_batch_factory(session)
             await batch.execute(worker_id=self._worker_id)

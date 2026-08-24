@@ -139,6 +139,7 @@ def build_event_delivery_worker(
     from app.bootstrap.composition import (
         build_cascade_tick,
         build_match_wake_batch,
+        build_push_tick,
     )
 
     processing_clock = clock or SystemClock()
@@ -162,6 +163,14 @@ def build_event_delivery_worker(
             session=session,
             event_runtime=event_runtime,
             contexts=scoring_contexts,
+            clock=processing_clock,
+        ),
+        # ADR-0062's channel, on the same tick. **Last of the four**: the three
+        # above decide what is *true* — a court given back, a claim reaped, a
+        # seat offered — and this is the only one that makes a phone light up.
+        push_batch_factory=lambda session: build_push_tick(
+            session=session,
+            event_runtime=event_runtime,
             clock=processing_clock,
         ),
         poll_interval_seconds=settings.EVENT_DELIVERY_POLL_INTERVAL_SECONDS,

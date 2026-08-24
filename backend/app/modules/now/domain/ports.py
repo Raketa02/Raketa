@@ -26,6 +26,7 @@ from app.modules.now.domain.departure import AppliedDeparture
 from app.modules.now.domain.enrolled import Enrolment
 from app.modules.now.domain.funnel import MatchScoringContext
 from app.modules.now.domain.offers import OfferedSeat
+from app.modules.now.domain.push import LiveLine, PushDevice, PushMessage
 from app.modules.now.domain.screen import Level
 
 
@@ -744,4 +745,125 @@ class Claims(Protocol):
         self, *, match_id: UUID, player_id: UUID, at: Instant
     ) -> Instant:
         """Open her claim on the first free seat, and answer when it lapses."""
+        ...
+
+
+@runtime_checkable
+class PushLines(Protocol):
+    """The one line each player's lock screen holds, and the queue over it.
+
+    **Its own queue and not a delayed outbox row.** The outbox is what carries a
+    change out of the building, and a send is not a change — the offer that
+    caused it is already written and already true. Putting a send there would
+    also make its moment a property of a row nothing re-reads; it is the line
+    ADR-0076 draws for the timekeeper, drawn again here (`Raketa02/Raketa#84`).
+
+    **One row per player, and that is ADR-0062's rule expressed as a key.** The
+    pending half and the live half are two facts about one thing, so a second
+    table would be joined to this one on the same column and could disagree with
+    it.
+
+    It **announces nothing**, on ADR-0091's rule and for the reason ``Offers``
+    does: a message moves no money and confers no place.
+    """
+
+    async def owe(self, player_ids: Sequence[UUID], *, at: Instant) -> None:
+        """Say that these players may have something new to be told.
+
+        Called from inside the dispatch's own transaction, on ``Offers``'s rule:
+        an offer with no send owed behind it is a seat nobody hears about, and
+        nothing re-reads old offers looking for the ones that were missed.
+
+        **A send already owed takes the later moment**, and the queue coalesces
+        per player — which is what *one live message per player* means on this
+        side of the wire. The moment moving is what a running send compares
+        against below: a debt incurred while one was in flight is a debt the
+        next tick still owes, rather than one that send clears on its way out.
+        It cannot starve anybody, because every moment written here is a
+        dispatch's own instant and is therefore already in the past.
+        """
+        ...
+
+    async def due(self, *, now: Instant, limit: int) -> tuple[LiveLine, ...]:
+        """Every player owed a send at this instant, with the line she holds.
+
+        Answers the whole line rather than a set of ids, because the decision
+        the caller makes needs both halves at once: *what does her screen say
+        now* is what *has the named seat changed* is asked against, and reading
+        it back one player at a time would be the same query wearing a loop.
+        """
+        ...
+
+    async def replaced(
+        self, line: LiveLine, *, named_match_id: UUID, at: Instant
+    ) -> None:
+        """A message went out: her line now names this match, and owes nothing.
+
+        The previous line is **not** withdrawn — nothing is ever removed from a
+        lock screen (ADR-0062). It is *replaced*, by the collapse id, on the
+        device.
+
+        It takes the ``LiveLine`` that was **read** rather than a player id, and
+        that is the whole of the concurrency story: clearing a debt is a
+        compare-and-set against the moment it was owed at, so a dispatch that
+        told her about something while this send was in flight is still owed one
+        afterwards. Handed a player id, this would clear a debt it had never
+        looked at, and the seat that dispatch was about would reach nobody.
+        """
+        ...
+
+    async def settled(self, line: LiveLine) -> None:
+        """Nothing was sent, and nothing is owed. **Her line is untouched.**
+
+        The debt is cleared without moving what her screen says, which is the
+        only honest answer when the named seat did not change, when nothing of
+        hers is live any more, or when there is no device to reach: in all three
+        her lock screen still holds exactly what it held before.
+
+        Compare-and-set on the read line, exactly as ``replaced`` is.
+        """
+        ...
+
+
+@runtime_checkable
+class PushDevices(Protocol):
+    """Where a player can be reached, as her phones last reported it.
+
+    A player may hold two phones and both are written to, with **one** collapse
+    id — so each phone shows one message, which is what ADR-0062's rule means on
+    a person rather than on a device.
+    """
+
+    async def register(self, device: PushDevice) -> None:
+        """Record this phone against this player, replacing what it said before.
+
+        **A token names a phone, and a phone has one player at a time.**
+        Registering it removes it from every other player: a token that survived
+        a sign-out would send one person's seats to somebody else's lock screen,
+        which is the one failure in this channel that is worse than silence.
+        """
+        ...
+
+    async def for_player(self, player_id: UUID) -> tuple[PushDevice, ...]:
+        """Her phones, oldest registration first."""
+        ...
+
+
+@runtime_checkable
+class PushSender(Protocol):
+    """Whatever actually carries a composed message to a phone.
+
+    The narrowest port in Now, and deliberately: everything decided — the
+    wording, the collapse id, the interruption level, the channel — is decided
+    before this is called, because all of it is expressible through Expo's push
+    API and through bare APNs/FCM alike (ADR-0062, `Raketa02/Raketa#25`). What
+    is behind it is a transport choice this map has not had to make.
+
+    **It never withdraws anything**, because there is nothing to withdraw: a
+    message is replaced by the next one carrying the same collapse id, and a
+    delivered line that has gone stale is left alone (ADR-0062).
+    """
+
+    async def send(self, messages: Sequence[PushMessage]) -> None:
+        """Carry these, or raise. A raise leaves the send owed for the next tick."""
         ...

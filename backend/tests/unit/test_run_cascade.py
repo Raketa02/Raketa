@@ -56,6 +56,7 @@ from tests.unit.cascade_doubles import (
     FakeContexts,
     FakeDiaries,
     FakeOffers,
+    FakePushLines,
     FakeRatedPlayers,
     FakeRatings,
     FakeScorer,
@@ -94,6 +95,7 @@ class Fixture:
         )
         self.waves = FakeCascadeWaves()
         self.offers = overrides.pop("offers", FakeOffers())
+        self.lines = overrides.pop("lines", FakePushLines())
         self.contexts = FakeContexts(self.context)
         self.players = overrides.pop("players", FakeRatedPlayers())
         self.regulars = overrides.pop("regulars", FakeClubRegulars())
@@ -126,6 +128,7 @@ class Fixture:
         return RunCascade(
             waves=self.waves,
             offers=self.offers,
+            lines=self.lines,
             contexts=self.contexts,
             players=self.players,
             regulars=self.regulars,
@@ -628,6 +631,106 @@ async def test_a_match_that_cannot_be_read_retires_its_row() -> None:
 
 
 # ---------------------------------------------------------------------------
+# The send the dispatch owes
+# ---------------------------------------------------------------------------
+
+
+async def test_everybody_told_is_owed_a_send_at_the_dispatchs_own_instant() -> None:
+    """The push queue joins the transaction that wrote the offers.
+
+    An offer nobody is told about is a seat that dies quietly, and nothing
+    re-reads old offers looking for the ones that were missed — which is the
+    same argument that puts the cascade's own two rows inside the departure's
+    transaction (ADR-0061, `Raketa02/Raketa#84`).
+    """
+
+    (her, hers), (him, his) = a_player(), a_player(310)
+    fixture = Fixture().in_the_band(her, him).rate(her, hers).rate(him, his)
+
+    assert await fixture.run() is CascadeOutcome.DISPATCHED
+    assert sorted(fixture.lines.told, key=str) == sorted([her, him], key=str)
+    assert [at for _, at in fixture.lines.owed] == [NOW]
+
+
+async def test_only_the_people_told_are_owed_a_send() -> None:
+    """Not the pool, and not the whole population.
+
+    The people the pool excluded were never offered anything, so a send owed to
+    one of them would rank her live set, find nothing new, and clear a debt
+    nobody incurred — a tick's work per dispatch for every rated player in the
+    sport.
+    """
+
+    (told, skill), excluded = a_player(), uuid4()
+    fixture = (
+        Fixture()
+        .in_the_band(told, excluded)
+        .rate(told, skill)
+        # No rating at the sport: `RATED_AT_SPORT` drops her before anything is
+        # written, so she is not told and is owed nothing.
+        .rate(excluded, None)
+    )
+
+    await fixture.run()
+    assert fixture.lines.told == [told]
+
+
+async def test_a_dispatch_that_reached_nobody_owes_no_send() -> None:
+    fixture = Fixture()
+
+    assert await fixture.run() is CascadeOutcome.NOBODY
+    assert fixture.lines.owed == []
+
+
+async def test_a_suppressed_dispatch_owes_no_send() -> None:
+    """Somebody is five minutes from owning the seat, so nobody is told at all.
+
+    Telling twenty more people about it is the exceptional-card lie ADR-0061
+    spends its wording to avoid, and a send owed here would be that lie on a
+    lock screen, where nothing can take it back.
+    """
+
+    from app.kernel import SeatClaim
+
+    who, skill = a_player()
+    record = a_match(
+        paid=1,
+        starts=FAR,
+        claims=(SeatClaim(seat_index=2, expires_at=shifted(NOW, minutes(3))),),
+    )
+    fixture = Fixture(context=a_context(record=record))
+    fixture.contexts = FakeContexts(fixture.context)
+    fixture.in_the_band(who).rate(who, skill)
+
+    assert await fixture.run() is CascadeOutcome.SUPPRESSED
+    assert fixture.lines.owed == []
+
+
+async def test_the_send_is_owed_before_the_dispatch_commits() -> None:
+    """One transaction, or the offer and the send can disagree about a seat."""
+
+    her, skill = a_player()
+    fixture = Fixture().in_the_band(her).rate(her, skill)
+    order: list[str] = []
+
+    class _Owing(FakePushLines):
+        async def owe(self, player_ids, *, at):
+            order.append("owed")
+            await super().owe(player_ids, at=at)
+
+    class _Committing(SpyUnitOfWork):
+        async def commit(self) -> None:
+            order.append("committed")
+            await super().commit()
+
+    fixture.lines = _Owing()
+    fixture.uow = _Committing()
+
+    await fixture.run()
+    assert order == ["owed", "committed"]
+
+
+# ---------------------------------------------------------------------------
 # Opening the two dispatches
 # ---------------------------------------------------------------------------
 
@@ -926,6 +1029,7 @@ class _OfferedFromWhatWasWritten:
                     cover=self._context.club.cover,
                 ),
                 kind=offer.kind,
+                rung=offer.player_rung,
                 share=self._context.share,
                 court_total=self._context.court_total,
                 offered_at=offer.offered_at,

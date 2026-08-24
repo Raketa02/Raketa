@@ -454,6 +454,36 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/push/device": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Register this phone for seat notifications
+         * @description Record where this player can be reached, replacing what this phone said.
+         *
+         *     **The player is the token's holder and never a field on the request.** A
+         *     body naming a player would let one account point the channel at another
+         *     account's phone, which is the one failure in this channel worse than
+         *     silence — and it is why registering a token also takes it off every *other*
+         *     player, since a phone that has been signed out of still answers to it.
+         *
+         *     Nothing here can be refused: any player may be reachable, the token is
+         *     opaque to us, and all three ``timeSensitiveSetting`` values are equally
+         *     acceptable because none of them changes what the server does.
+         */
+        put: operations["register_device_api_v1_push_device_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1383,6 +1413,18 @@ export interface components {
             distance_km?: number | null;
         };
         /**
+         * Platform
+         * @description Which store the app came from, which is which fields a message carries.
+         *
+         *     Two, and the divergence between them is loudness and nothing else
+         *     (ADR-0065). Retraction behaves identically on both — ADR-0062's parity line,
+         *     narrowed to retraction — because past-tense wording survives a flat battery,
+         *     a force-quit and an offline queue, which is where every removal design
+         *     fails.
+         * @enum {string}
+         */
+        Platform: "ios" | "android";
+        /**
          * PricePayload
          * @description What she owes for the seat, and the ceiling she declared, both in grosze.
          *
@@ -1520,6 +1562,20 @@ export interface components {
         RefundResponse: {
             amount: components["schemas"]["MoneyResponse"];
             destination: components["schemas"]["RefundDestination"];
+        };
+        /**
+         * RegisterDeviceRequest
+         * @description *Reach me here.* Sent on sign-in, on token rotation, and on a settings change.
+         *
+         *     **No moment.** When a phone told us is the server's fact; a client-supplied
+         *     one would let a phone with a wrong clock decide which of two registrations
+         *     is newer.
+         */
+        RegisterDeviceRequest: {
+            /** Token */
+            token: string;
+            platform: components["schemas"]["Platform"];
+            time_sensitive_setting: components["schemas"]["TimeSensitiveSetting"];
         };
         /**
          * ReliabilityPayload
@@ -1944,6 +2000,22 @@ export interface components {
             /** Hours */
             hours?: components["schemas"]["HourWindowResponse"][] | null;
         };
+        /**
+         * TimeSensitiveSetting
+         * @description What ``UNNotificationSettings.timeSensitiveSetting`` said, as reported.
+         *
+         *     **Nothing branches on it, and that is the decision rather than an
+         *     omission** (ADR-0065). The cascade does not demote a player who has revoked:
+         *     she keeps her standby priority, still gets the seat, and still sees the line
+         *     when she next looks. Demoting her would quietly cost her seats as a
+         *     punishment for a settings choice.
+         *
+         *     It is **observability**: if a large fraction of players revoke, ADR-0065's
+         *     central judgement was wrong, and reporting the setting is the only way we
+         *     would ever learn it.
+         * @enum {string}
+         */
+        TimeSensitiveSetting: "enabled" | "disabled" | "notSupported";
         /** TokenResponse */
         TokenResponse: {
             /** Access Token */
@@ -2783,6 +2855,37 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["SeatWriteResponse"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    register_device_api_v1_push_device_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegisterDeviceRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

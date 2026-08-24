@@ -1034,6 +1034,46 @@
           }
         }
       }
+    },
+    "/api/v1/push/device": {
+      "put": {
+        "tags": [
+          "push"
+        ],
+        "summary": "Register this phone for seat notifications",
+        "description": "Record where this player can be reached, replacing what this phone said.\n\n**The player is the token's holder and never a field on the request.** A\nbody naming a player would let one account point the channel at another\naccount's phone, which is the one failure in this channel worse than\nsilence \u2014 and it is why registering a token also takes it off every *other*\nplayer, since a phone that has been signed out of still answers to it.\n\nNothing here can be refused: any player may be reachable, the token is\nopaque to us, and all three ``timeSensitiveSetting`` values are equally\nacceptable because none of them changes what the server does.",
+        "operationId": "register_device_api_v1_push_device_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterDeviceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -2352,6 +2392,15 @@
         "title": "PlaceResponse",
         "description": "Where: the club, its IANA zone, whether there is a roof, and how far."
       },
+      "Platform": {
+        "type": "string",
+        "enum": [
+          "ios",
+          "android"
+        ],
+        "title": "Platform",
+        "description": "Which store the app came from, which is which fields a message carries.\n\nTwo, and the divergence between them is loudness and nothing else\n(ADR-0065). Retraction behaves identically on both \u2014 ADR-0062's parity line,\nnarrowed to retraction \u2014 because past-tense wording survives a flat battery,\na force-quit and an offline queue, which is where every removal design\nfails."
+      },
       "PricePayload": {
         "properties": {
           "code": {
@@ -2596,6 +2645,30 @@
         ],
         "title": "RefundResponse",
         "description": "What a cancellation returns, and where it went.\n\nThe destination fixes the tense, so it crosses rather than being derived\nfrom the cause on the phone: a card refund is never claimed to have landed,\nand a club credit is definite because it genuinely is instant."
+      },
+      "RegisterDeviceRequest": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Token"
+          },
+          "platform": {
+            "$ref": "#/components/schemas/Platform"
+          },
+          "time_sensitive_setting": {
+            "$ref": "#/components/schemas/TimeSensitiveSetting"
+          }
+        },
+        "type": "object",
+        "required": [
+          "token",
+          "platform",
+          "time_sensitive_setting"
+        ],
+        "title": "RegisterDeviceRequest",
+        "description": "*Reach me here.* Sent on sign-in, on token rotation, and on a settings change.\n\n**No moment.** When a phone told us is the server's fact; a client-supplied\none would let a phone with a wrong clock decide which of two registrations\nis newer."
       },
       "ReliabilityPayload": {
         "properties": {
@@ -3469,6 +3542,16 @@
         ],
         "title": "TimePayload",
         "description": "When the match starts on the club's clock face, and when she said.\n\nBoth halves in the vocabulary the declaration is made in \u2014 a weekday number\nand a minute of the day \u2014 so the client owns the words and the locale, and\nthe two are the **club's** local day and minute rather than anything read off\na UTC instant.\n\n``days`` and ``hours`` are the declaration itself and are absent when she\nmade none, which is what lets a client say *\"Tuesday 18:30\"* rather than\n*\"Tuesday 18:30, outside the hours you gave\"* to somebody who gave none."
+      },
+      "TimeSensitiveSetting": {
+        "type": "string",
+        "enum": [
+          "enabled",
+          "disabled",
+          "notSupported"
+        ],
+        "title": "TimeSensitiveSetting",
+        "description": "What ``UNNotificationSettings.timeSensitiveSetting`` said, as reported.\n\n**Nothing branches on it, and that is the decision rather than an\nomission** (ADR-0065). The cascade does not demote a player who has revoked:\nshe keeps her standby priority, still gets the seat, and still sees the line\nwhen she next looks. Demoting her would quietly cost her seats as a\npunishment for a settings choice.\n\nIt is **observability**: if a large fraction of players revoke, ADR-0065's\ncentral judgement was wrong, and reporting the setting is the only way we\nwould ever learn it."
       },
       "TokenResponse": {
         "properties": {
