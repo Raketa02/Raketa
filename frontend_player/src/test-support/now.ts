@@ -179,3 +179,41 @@ export function stubNow(
 ): void {
   transport.on('GET', nowPathFor(sport), () => json(body));
 }
+
+/** `POST /api/v1/matches/{id}/seat?sport=…`, the address the offer card's act writes to. */
+export function seatPath(matchId: string, sport: Wire['SportFilter'] = 'all'): string {
+  return `/api/v1/matches/${matchId}/seat?sport=${sport}`;
+}
+
+/**
+ * What taking a seat answered.
+ *
+ * `claimed` and the two regions are **separate arguments**, although the server
+ * sends the regions exactly when the tap applied: a fixture that derived one from
+ * the other could not describe the answer the client is required to survive — a
+ * claim whose regions did not arrive — and would make the client's refusal to
+ * derive *was I refused* from them untestable.
+ */
+export function seatWrite({
+  claimed,
+  update,
+  offers = null,
+  yourMatches = null,
+}: {
+  readonly claimed: boolean;
+  readonly update: Wire['MatchCardResponse'];
+  readonly offers?: Wire['MatchCardResponse'][] | null;
+  readonly yourMatches?: Wire['MatchCardResponse'][] | null;
+}): Wire['SeatWriteResponse'] {
+  return {
+    claimed,
+    update: { update_type: 'card', card: update },
+    offers: offers === null ? null : { stamp: 2, cards: offers },
+    your_matches: yourMatches === null ? null : { stamp: 2, cards: yourMatches },
+  };
+}
+
+/** A screen holding one offer and nothing else — the shape a race starts from. */
+export function nowOffering(...cards: Wire['MatchCardResponse'][]): Wire['NowResponse'] {
+  return { ...emptyNow(), offers: { stamp: 1, cards } };
+}

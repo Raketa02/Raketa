@@ -307,10 +307,12 @@ export interface DebtLine {
  *
  * A union rather than an optional card, because the wire is one: reading a card
  * off the *gone* form is a narrowing error here and a blank line if it were not.
- * Neither form is a region — the wire grows a region slot when the first action
- * that moves a region's *order* lands, which is taking a seat
- * (`Raketa02/Raketa#89`). **The shelves are never in an update at all**, which is
- * what stops a match moving under her thumb (`ADR-0032`).
+ * **Neither form is a region, and the first act that moves one did not change
+ * that.** Taking a seat sends its two regions **beside** this rather than inside
+ * it (`SeatAnswer` below), so the two writes that move no region grow no field
+ * nobody fills (`ADR-0071`) and this stays the one card it has always been.
+ * **The shelves are never in an update at all**, which is what stops a match
+ * moving under her thumb (`ADR-0032`).
  */
 export type NowUpdate = CardChanged | CardGone;
 
@@ -337,4 +339,47 @@ export interface ComposedScreen {
   readonly yourMatches: EnrolledRegion;
   readonly shelves: ShelvesRegion;
   readonly debt: DebtLine | undefined;
+}
+
+/**
+ * The two viewer-owned regions, whole.
+ *
+ * `ADR-0070` puts a region in an update when its **contents or order** change,
+ * and taking a seat is the first act in the product that moves a card *between*
+ * two of them — the offer is gone, and the match belongs in the strip. Both
+ * arrive together or neither does, which is the server's own decision expressed
+ * as one field rather than two: a tap that applied moved a card from one region
+ * to the other, and a tap that did not moved nothing.
+ *
+ * **The shelves are not here and never will be.** An update carries no shelf, so
+ * a match she has just joined cannot move under her thumb (`ADR-0032`); the
+ * shelf copy of it is corrected by the one card, which is identified by the
+ * match rather than by its position.
+ */
+export interface ScreenRegions {
+  readonly offers: OffersRegion;
+  readonly yourMatches: EnrolledRegion;
+}
+
+/**
+ * What taking a seat answered: what the tap did, and what her screen holds.
+ *
+ * **`claimed` is the server's statement about the *command*** and the only field
+ * here that is not about the match — the departure route's `applied` in the shape
+ * a claim needs. Whether she was first is not something the phone may work out
+ * (`ADR-0053`): deriving it from a seat claim turning up on the card, or from the
+ * two regions arriving, would be a rule, and the one sentence the client writes
+ * for itself — *that seat has gone* — is a sentence it can only write if it was
+ * told.
+ *
+ * **A refusal is not a second shape** (`ADR-0070`). Somebody else took it, the
+ * match filled, joining closed, it started, it was cancelled, she is already in
+ * it: all six come back as what a success returns, carrying the corrected card,
+ * so she *sees* the seat is gone rather than being told by a dialog.
+ */
+export interface SeatAnswer {
+  readonly claimed: boolean;
+  readonly update: NowUpdate;
+  /** Present exactly when the tap applied, and absent on every refusal. */
+  readonly regions: ScreenRegions | undefined;
 }

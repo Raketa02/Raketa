@@ -13,13 +13,14 @@ import {
   fitReason,
   matchCard,
   personCard,
+  seatWrite,
   shelf,
 } from '@/test-support/now';
 import type { Wire } from '@/test-support/transport';
 
 import type { Block, Shelf } from '../domain/ComposedScreen';
 
-import { toComposedScreen, toNowUpdate } from './nowMappers';
+import { toComposedScreen, toNowUpdate, toSeatAnswer } from './nowMappers';
 
 /**
  * The mapper, asked for a chip.
@@ -564,5 +565,83 @@ describe('an action’s update', () => {
     const update = toNowUpdate({ update_type: 'gone', match_id: 'm-1' });
 
     expect(update).toEqual({ kind: 'gone', matchId: 'm-1' });
+  });
+});
+
+describe('what taking a seat answered', () => {
+  /**
+   * A card carrying **every** spine field the write can move.
+   *
+   * A refusal's whole answer is this one card, so a mapper that mangled a field on
+   * the way through would be the corrected card being wrong — and a fixture with
+   * `act: null` and no claim cannot see it, because dropping either is then the
+   * identity. It is the same trap the fit-badge suite hit with `unsure`.
+   */
+  const card = matchCard({
+    matchId: 'm-1',
+    situation: 'confirmed',
+    clock: '2026-08-24T18:00:00Z',
+    act: 'takeSeat',
+    mayDepart: true,
+  });
+
+  it('reads what the tap did off the wire and never off the card', () => {
+    // `claimed` is the server's statement about the **command**, and the client's
+    // one self-written sentence hangs off it. The two cases below carry the
+    // *identical* card — one with a seat claim on it, one without — so a mapper
+    // deriving *was I refused* from the card would answer the same for both.
+    const claim = matchCard({
+      matchId: 'm-1',
+      situation: 'confirmed',
+      seatClaimExpiresAt: '2026-08-24T18:05:00Z',
+    });
+
+    expect(toSeatAnswer(seatWrite({ claimed: false, update: claim })).claimed).toBe(false);
+    expect(toSeatAnswer(seatWrite({ claimed: true, update: card })).claimed).toBe(true);
+  });
+
+  it('maps the card through the same expression a compose does', () => {
+    const answer = toSeatAnswer(seatWrite({ claimed: false, update: card }));
+    const composed = nth(
+      compose({ ...emptyNow(), your_matches: { stamp: 1, cards: [card] } }).yourMatches.cards,
+      0,
+    );
+
+    if (answer.update.kind !== 'card') throw new Error('the card form was asked for');
+    expect(answer.update.card).toEqual(composed);
+  });
+
+  it('carries both regions when the tap applied, mapped like any other card', () => {
+    const answer = toSeatAnswer(
+      seatWrite({ claimed: true, update: card, offers: [], yourMatches: [card] }),
+    );
+    const composed = nth(
+      compose({ ...emptyNow(), your_matches: { stamp: 1, cards: [card] } }).yourMatches.cards,
+      0,
+    );
+
+    expect(answer.regions?.offers.cards).toEqual([]);
+    expect(answer.regions?.yourMatches.cards).toEqual([composed]);
+  });
+
+  it('carries no regions at all on a refusal', () => {
+    // A tap that did not apply moved nothing, so the screen keeps the regions it
+    // has and the corrected card is put back where it already sat.
+    expect(toSeatAnswer(seatWrite({ claimed: false, update: card })).regions).toBeUndefined();
+  });
+
+  it('treats half an answer as none', () => {
+    // The server sends both or neither. Half of one is not a region to write: the
+    // direction this may fail in is a card in the wrong region, never a region
+    // that has gone blank under her thumb.
+    const half = { ...seatWrite({ claimed: true, update: card, offers: [] }), your_matches: null };
+
+    expect(toSeatAnswer(half).regions).toBeUndefined();
+    // And the other half missing answers the same way, so neither field is the
+    // one that decides it.
+    expect(
+      toSeatAnswer({ ...seatWrite({ claimed: true, update: card, yourMatches: [] }), offers: null })
+        .regions,
+    ).toBeUndefined();
   });
 });

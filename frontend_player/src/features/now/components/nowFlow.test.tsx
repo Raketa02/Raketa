@@ -34,6 +34,8 @@ import {
   matchCard,
   nowPathFor,
   personCard,
+  seatPath,
+  seatWrite,
   shelf,
   stubNow,
 } from '@/test-support/now';
@@ -41,6 +43,7 @@ import { launchSignedIn, stubGate as stubGateWith } from '@/test-support/onboard
 import {
   errorResponse,
   installTransport,
+  json,
   type Transport,
   type Wire,
 } from '@/test-support/transport';
@@ -148,9 +151,7 @@ describe('Now is the app’s home', () => {
     });
 
     // The situation's sentence, from the client's own table — no copy crosses the wire.
-    expect(
-      screen.getByText('A seat is being offered to you — nobody else can take it for the hour.'),
-    ).toBeTruthy();
+    expect(screen.getByText('A seat just opened — first to take it.')).toBeTruthy();
     // The shelf's title, from its code — likewise.
     expect(screen.getByText('Best fit for you')).toBeTruthy();
     expect(screen.getByText('New on Raketa')).toBeTruthy();
@@ -187,6 +188,68 @@ describe('Now is the app’s home', () => {
     expect(screen.getByText(/38,00/)).toBeTruthy();
     // And nothing pretends to name the situation.
     expect(screen.queryByText('Forming')).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The offers region, above everything
+// ---------------------------------------------------------------------------
+
+describe('seats offered to her', () => {
+  /**
+   * Every test id in the tree, in the order it is drawn — which is what *above*
+   * means on a screen that is one scroll.
+   */
+  const drawnRegions = (): readonly string[] =>
+    screen.getAllByTestId(/^now-region-/).map((node) => String(node.props.testID));
+
+  function offer(matchId: string, clubName: string): Wire['MatchCardResponse'] {
+    return matchCard({ matchId, situation: 'seatOpened', clubName, act: 'takeSeat' });
+  }
+
+  it('renders above her own matches', async () => {
+    // `ADR-0052`, kept by `ADR-0061`: *the thing with a clock is first*. A seat is
+    // the only region on this screen that dies while she is reading it.
+    await launchOnNow({
+      ...emptyNow(),
+      offers: { stamp: 1, cards: [offer('offer-1', 'Sunset Padel')] },
+    });
+
+    // All three, in the order they are drawn: a query by pattern hands back host
+    // elements in tree order, which on a screen that is one scroll is *above*.
+    expect(drawnRegions()).toEqual([REGION_ID.offers, REGION_ID.yourMatches, REGION_ID.shelves]);
+  });
+
+  it('draws them in the order they arrived, which is soonest-to-expire', async () => {
+    // The order is composed once, on the server (`ADR-0032`), and the client's
+    // whole part in it is not having an opinion. The fixture arrives in an order
+    // no client-side comparator would produce — not alphabetical by club, not by
+    // match id — so a screen that sorted would disagree with it.
+    await launchOnNow({
+      ...emptyNow(),
+      offers: {
+        stamp: 1,
+        cards: [offer('offer-2', 'Zabłocie Sport'), offer('offer-1', 'Hala Wisła')],
+      },
+    });
+
+    // By the club each control names, which is the half of the label that says
+    // *which card* — the amount beside it is pinned by the action row's own suite.
+    const drawn = screen
+      .getAllByLabelText(/^Take the seat/)
+      .map((node) => String(node.props.accessibilityLabel).split(', ').pop());
+
+    expect(drawn).toEqual(['Zabłocie Sport', 'Hala Wisła']);
+  });
+
+  it('draws nothing at all when there are none, and still holds the region', async () => {
+    // A region is present and empty, never absent — but *empty* here draws no
+    // furniture: a permanent row saying no seats have opened is what `ADR-0050`
+    // refuses.
+    await launchOnNow();
+
+    expect(screen.getByTestId(REGION_ID.offers).children).toHaveLength(0);
+    expect(screen.queryByText('A seat just opened')).toBeNull();
   });
 });
 
@@ -260,6 +323,20 @@ describe('the action row', () => {
     expect(screen.getByTestId(CLOCK_ID)).toBeTruthy();
     expect(screen.getByLabelText('Getting in, Sunset Padel')).toBeTruthy();
     expect(screen.getByLabelText('Leave this match at Sunset Padel')).toBeTruthy();
+  });
+
+  it('leaves a card whose act opens a route ready to press', async () => {
+    // The state card is drawn with a `busy` of its own — the offers region sets it
+    // while a seat write is in flight — and every other card must default to
+    // *not*. A blocked button announces `busy` and swallows the press, which on a
+    // card whose act is a **route** would be a screen nobody can reach.
+    await launchWithCard(
+      matchCard({ matchId: 'mine-1', situation: 'needsResult', act: 'enterResult' }),
+    );
+
+    expect(screen.getByLabelText('Enter the score, Sunset Padel').props.accessibilityState).toEqual(
+      expect.objectContaining({ disabled: false, busy: false }),
+    );
   });
 
   it('draws none of them when the card carries none, and still renders the row', async () => {
@@ -912,14 +989,23 @@ describe('the shelves', () => {
         matchCard({ matchId: 'feed-1', act: 'takeSeat', clubName: 'Wola Padel' }),
       ]),
     );
+    transport.on('POST', seatPath('feed-1'), () =>
+      json(seatWrite({ claimed: false, update: matchCard({ matchId: 'feed-1', act: null }) })),
+    );
 
     // The act's own label, and the club beside it — a screen holds a dozen of these
     // and the visible half of a whole-card control is the card.
     const body = screen.getByLabelText(/^Take the seat · .+, Wola Padel$/);
 
     expect(body.props.accessibilityRole).toBe('button');
-    // It presses without throwing; where it goes is `Raketa02/Raketa#89`'s.
+
+    // And the press reaches the act's **own** destination. The code determines it
+    // (`ADR-0083`), never the region the card is drawn in — which is what lets a
+    // phone that cannot name a situation still take the seat. No shelf card names
+    // this act today; the client does not hold that as a rule.
     fireEvent.press(body);
+
+    await waitFor(() => expect(transport.requestsTo('POST', seatPath('feed-1'))).toHaveLength(1));
   });
 
   it('leaves a shelf card inert all the way through when it names none', async () => {
@@ -971,7 +1057,11 @@ describe('the shelves', () => {
 
   it('does not reshuffle or replace a shelf when she taps a card', async () => {
     // A match she joined stays put until she next asks for a fresh screen: her tap
-    // may carry an update, and an update is never allowed to carry shelves.
+    // carries an update and two whole **regions**, and neither is ever allowed to
+    // carry a shelf. The strongest case is the one where the write *applied* —
+    // that is the tap that moves a card between regions, and the moment a client
+    // reaching for *the same match, wherever it appears* would move it under her
+    // thumb.
     await launchOnNow({
       ...emptyNow(),
       shelves: {
@@ -985,15 +1075,28 @@ describe('the shelves', () => {
         ],
       },
     });
+    const hers = matchCard({
+      matchId: 'feed-1',
+      clubName: 'Wola Padel',
+      act: 'finishPaying',
+      seatClaimExpiresAt: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
+    });
+    transport.on('POST', seatPath('feed-1'), () =>
+      json(seatWrite({ claimed: true, update: hers, offers: [], yourMatches: [hers] })),
+    );
 
     const order = () => screen.getAllByRole('header').map((node) => String(node.props.children));
     const before = order();
     const asks = composes();
 
     fireEvent.press(screen.getByLabelText(/^Take the seat · .+, Wola Padel$/));
+    // The strip has taken it, so the answer has been applied in full.
+    await screen.findByText(/^Finish paying/);
 
     expect(order()).toEqual(before);
     expect(screen.getAllByTestId(TAIL_CARD_ID)).toHaveLength(2);
+    // The shelf card is still there, still saying what it said.
+    expect(screen.getByLabelText(/^Take the seat · .+, Wola Padel$/)).toBeTruthy();
     expect(composes()).toBe(asks);
   });
 });

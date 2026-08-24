@@ -423,6 +423,11 @@ const motion = {
      *  player cannot finish before the screen leaves is worse than no sentence at all, so
      *  if the copy grows this grows with it, as an amendment rather than a tweak. */
     calculating: 1200,
+    /** The transient line (design-system 11.4). Long enough to read one sentence that
+     *  nobody was looking for, short enough not to sit over the card it is about while
+     *  she decides what to do instead. It is a **hold**, so reduced motion keeps it and
+     *  skips only the fade that follows. */
+    line: 3000,
   },
 } as const;
 

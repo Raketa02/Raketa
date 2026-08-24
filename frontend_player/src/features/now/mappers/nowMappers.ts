@@ -33,12 +33,15 @@ import type {
   Cover,
   DebtLine,
   Door,
+  EnrolledRegion,
   MatchCard,
   NowCard,
   NowUpdate,
+  OffersRegion,
   PersonCard,
   Place,
   ScoreLine,
+  SeatAnswer,
   Shelf,
 } from '../domain/ComposedScreen';
 import type { FitBadge } from '../domain/fitBadge';
@@ -65,6 +68,9 @@ type MoneyResponse = components['schemas']['MoneyResponse'];
 type DebtLineResponse = components['schemas']['DebtLineResponse'];
 type FitResponse = components['schemas']['FitResponse'];
 type NowUpdateResponse = components['schemas']['NowUpdateResponse'];
+type OffersRegionResponse = components['schemas']['OffersRegionResponse'];
+type EnrolledRegionResponse = components['schemas']['EnrolledRegionResponse'];
+type SeatWriteResponse = components['schemas']['SeatWriteResponse'];
 type ScoreLineResponse = components['schemas']['ScoreLineResponse'];
 
 /**
@@ -97,10 +103,58 @@ export type NoTitleCrosses = AssertTrue<'title' extends keyof ShelfResponse ? fa
  */
 export function toComposedScreen(wire: NowResponse, sport: SportFilter): ComposedScreen {
   return {
-    offers: { cards: wire.offers.cards.map(toMatchCard) },
-    yourMatches: { cards: wire.your_matches.cards.map(toMatchCard) },
+    offers: toOffersRegion(wire.offers),
+    yourMatches: toEnrolledRegion(wire.your_matches),
     shelves: { blocks: wire.shelves.shelves.map((block) => toBlock(block, sport)) },
     debt: wire.debt == null ? undefined : toDebtLine(wire.debt),
+  };
+}
+
+/**
+ * Both viewer-owned regions are cards and an order, and nothing else.
+ *
+ * Two one-line functions rather than two inline `map`s because a **second**
+ * producer of a whole region landed with the seat write: a compose and an
+ * accepted offer both build these, and two transcriptions of *a region is its
+ * cards* is how the two come to disagree about what one is. The `stamp` beside
+ * them on the wire is not read here — nothing in the client reads a stamp yet,
+ * and mapping one would be a field kept warm for a race nobody has written.
+ */
+function toOffersRegion(wire: OffersRegionResponse): OffersRegion {
+  return { cards: wire.cards.map(toMatchCard) };
+}
+
+function toEnrolledRegion(wire: EnrolledRegionResponse): EnrolledRegion {
+  return { cards: wire.cards.map(toMatchCard) };
+}
+
+/**
+ * What taking a seat answered (`ADR-0070`, `ADR-0074`).
+ *
+ * **`claimed` is read and never derived.** It is the server's statement about the
+ * command, and the client's one self-written sentence — *that seat has gone* —
+ * hangs off it. Deriving it from a seat claim appearing on the card, or from the
+ * regions arriving, would be a rule the phone holds (`ADR-0053`) and would put
+ * the wrong sentence on the screen the first time the two disagreed.
+ *
+ * **The two regions are one field, and it is `undefined` unless both arrived.**
+ * The server sends both or neither — *a tap that applied moved a card from one
+ * region to the other, and a tap that did not moved nothing* — so half an answer
+ * is treated as none: keeping the regions the screen already holds and correcting
+ * the one card in place is the direction this can fail in without a region going
+ * blank under her thumb.
+ */
+export function toSeatAnswer(wire: SeatWriteResponse): SeatAnswer {
+  const offers = wire.offers;
+  const yourMatches = wire.your_matches;
+
+  return {
+    claimed: wire.claimed,
+    update: toNowUpdate(wire.update),
+    regions:
+      offers == null || yourMatches == null
+        ? undefined
+        : { offers: toOffersRegion(offers), yourMatches: toEnrolledRegion(yourMatches) },
   };
 }
 

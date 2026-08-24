@@ -64,9 +64,21 @@ export const ACTION_ROW_ID = 'now-card-action-row';
 export interface ActionRowProps {
   readonly card: MatchCard;
   readonly onControl: (control: CardControl) => void;
+  /**
+   * Whether this card's act is a write that is in flight.
+   *
+   * **Not a fourth slot and not a variant.** It is the `Button` primitive's own
+   * state, which blocks the press and announces `busy`, and it exists because one
+   * act on this screen is a write with no screen behind it: taking a seat is
+   * answered by the card itself, so between the tap and the answer there is
+   * otherwise nothing at all to see. No `busyLabel` — a row that swapped in a
+   * sentence per act would be six sentences held for a moment each, and the act's
+   * own label going quiet says it.
+   */
+  readonly busy?: boolean;
 }
 
-export function ActionRow({ card, onControl }: ActionRowProps) {
+export function ActionRow({ card, onControl, busy = false }: ActionRowProps) {
   const moment = clockMoment(card);
   // Bound to a `const` so the narrowing survives into the press handler. The
   // alternative is re-reading `card.act` inside a closure, which TypeScript
@@ -88,6 +100,7 @@ export function ActionRow({ card, onControl }: ActionRowProps) {
           // The code determined its own destination (`ADR-0083`); this only reads
           // it, and the card beside it says what the destination is about.
           onPress={() => onControl({ kind: 'act', surface: act.surface, card })}
+          busy={busy}
           style={s.act}
         />
       )}

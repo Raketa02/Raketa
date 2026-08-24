@@ -104,13 +104,15 @@ export function NowCardView({ card, onControl, fill = false }: NowCardViewProps)
 export interface MatchCardViewProps extends FillableCardProps {
   readonly card: MatchCard;
   readonly onControl: (control: CardControl) => void;
+  /** Whether this card's own act is a write that is in flight. See `ActionRow`. */
+  readonly busy?: boolean;
 }
 
 /** The state card: the strip and the offers region, with the action row. */
-export function MatchCardView({ card, onControl, fill = false }: MatchCardViewProps) {
+export function MatchCardView({ card, onControl, fill = false, busy = false }: MatchCardViewProps) {
   return (
     <MatchCardShell card={card} fill={fill} chip={toneTag(card)}>
-      <ActionRow card={card} onControl={onControl} />
+      <ActionRow card={card} onControl={onControl} busy={busy} />
     </MatchCardShell>
   );
 }
@@ -161,8 +163,10 @@ function ShelfMatchCardView({
  * and the price all stop being reachable. That is a consequence of `ADR-0088`'s
  * *body rather than button* which the ADR does not discuss, and what a suggestion
  * card should announce as one element is copy design rather than an implementation
- * detail. Filed as `Raketa02/Raketa#116`, and unreachable until `#89` gives a shelf
- * card an act at all.
+ * detail. Filed as `Raketa02/Raketa#116`. It is **reachable now**: the seat write
+ * (`#89`) gives `takeSeat` a destination wherever a card names it, and no shelf card
+ * carries that act today only because no composer puts one there — which is a fact
+ * about the server rather than a rule this client holds.
  */
 interface CardPress {
   readonly onPress: () => void;

@@ -136,11 +136,21 @@ export const SITUATION_COPY: Readonly<Record<Situation, SituationEntry>> = {
     alert: null,
   }),
 
-  // 6 · a seat is on the table for this viewer. Two names because they are two
-  // sentences: one is a reservation and the other is a race, and nothing may
-  // claim a seat is held when it is not.
+  // 6 · a seat is on the table for this viewer. Two names, and **one sentence**:
+  // `ADR-0061` retired the exclusive offer along with the one-hour hold and the
+  // *"a seat is being offered to you"* wording it existed to make safe, so there
+  // is nothing left in the product that could hold a seat for anybody. The
+  // product owner's hard constraint — *a seat that is gone must never be
+  // presented as an exceptional card* — is kept by the **wording**: everyone is
+  // told in the open-call voice, so no card ever claimed to be exclusive and no
+  // card has to be retracted into a lie.
+  //
+  // The two names survive on the wire because the kernel keeps a name for the
+  // retired shape, and the **tag** is the only thing that still tells them apart.
+  // A sentence promising an hour nobody enforces would be the one claim on this
+  // screen that the platform cannot keep.
   seatOffered: () => ({
-    line: 'A seat is being offered to you — nobody else can take it for the hour.',
+    line: 'A seat just opened — first to take it.',
     tag: 'Seat offered',
     tone: 'time',
     alert: null,

@@ -262,11 +262,44 @@ describe('every situation says something', () => {
     expect(SITUATION_COPY.inventoryLost(context()).tone).toBe('ended');
   });
 
-  it('never claims a seat is reserved when it is a race', () => {
-    expect(SITUATION_COPY.seatOpened(context()).line).toBe(
-      'A seat just opened — first to take it.',
-    );
-    expect(SITUATION_COPY.seatOffered(context()).line).toContain('nobody else can take it');
+  it('never claims a seat is reserved, under either of its two names', () => {
+    // `ADR-0061` retired the exclusive offer **and its wording** together — the
+    // one-hour hold, the cap of three, and *"a seat is being offered to you"* all
+    // existed to make one-at-a-time safe, and none of them ships. So both offer
+    // situations speak in the open-call voice, and the hard constraint — *a seat
+    // that is gone must never be presented as an exceptional card* — is kept by
+    // that wording rather than by a retraction nobody can send.
+    const race = 'A seat just opened — first to take it.';
+
+    expect(SITUATION_COPY.seatOpened(context()).line).toBe(race);
+    expect(SITUATION_COPY.seatOffered(context()).line).toBe(race);
+  });
+
+  it('tells the two offer names apart by the tag, which is all that is left', () => {
+    // The lines are now identical on purpose, so the **tag** is the only thing
+    // carrying the difference between an open call and the exclusive offer the
+    // kernel keeps a name for. A table where both halves agree is a table where one
+    // of the two names means nothing.
+    const offered = SITUATION_COPY.seatOffered(context());
+    const opened = SITUATION_COPY.seatOpened(context());
+
+    expect(offered.tag).not.toBe(opened.tag);
+    expect(offered.line).toBe(opened.line);
+    expect(offered.tone).toBe(opened.tone);
+  });
+
+  it('says nothing anywhere about a seat being held for somebody', () => {
+    // The negative control the rewrite above needs: a table with one such
+    // sentence in it is a table that can grow a second. Every line on this screen
+    // is checked, because the claim is about the vocabulary and not about two rows.
+    const reserving = /reserved for you|held for you|nobody else can|for the hour/i;
+
+    for (const situation of SITUATIONS) {
+      expect(SITUATION_COPY[situation](context()).line).not.toMatch(reserving);
+    }
+
+    expect(reserving.test('nobody else can take it for the hour')).toBe(true);
+    expect(reserving.test('A seat just opened — first to take it.')).toBe(false);
   });
 
   it('reads the club and the price off the spine rather than restating them', () => {

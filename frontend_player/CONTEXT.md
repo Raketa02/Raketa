@@ -372,6 +372,53 @@ badge and emphasis — with [#88](https://github.com/Raketa02/Raketa/issues/88).
   `railCardRatio` belongs to a shelf and would show a quarter of the next card's contents
   here. See `docs/design-system.md` Part 8.
 
+### Taking a seat
+
+`features/now/` gained its **own write** with
+[#89](https://github.com/Raketa02/Raketa/issues/89): the offers region's one act has no
+screen behind it, so the tap is answered by the card it was about.
+
+- **The seat write** — `POST /api/v1/matches/{matchId}/seat`, sent with **no body** and the
+  sport chip as a query parameter. Which seat is the match's answer and not the caller's,
+  and a price is not something a caller quotes. There is no idempotency key and no retry:
+  what a key would buy — _did my first tap land_ — is answered by the card that comes back
+  carrying the claim, and a retry the app makes for her is a command she did not give.
+- **Seat answer** — what the write answers: `claimed`, one card, and **the two viewer-owned
+  regions when the tap applied**. Taking a seat is the first act in the product that moves a
+  card _between_ regions, which is the case
+  [ADR-0070](../docs/adr/0070-now-is-three-regions-and-a-card-has-two-halves.md) reserved
+  the region slots for: _the offer is gone, the match belongs in the strip_.
+- **`claimed`** — the server's statement about the **command**, the departure route's
+  `applied` in the shape a claim needs. Never derived from a seat claim turning up on the
+  card, or from the regions arriving
+  ([ADR-0053](../docs/adr/0053-the-phone-holds-no-rules-and-only-subtracts.md)): the one
+  sentence this screen writes for itself hangs off it, and a phone that worked it out would
+  eventually tell a player who got the seat that she did not.
+- **Two halves, two scopes** — the card goes to **every** sport's cached screen and the two
+  regions go to **the chip the write was sent under**, because that is the chip they were
+  composed under. Sending `all`'s regions to the padel screen would replace her filtered
+  screen with somebody else's; the other chips keep their own regions and take the corrected
+  card in place, so the worst this can be is a card in the wrong region rather than a card
+  saying the wrong thing.
+- **The transient line** — one plain line at the top of Now, held and then faded, saying
+  _that seat has gone_
+  ([ADR-0062](../docs/adr/0062-a-notification-is-a-prompt-to-look-not-a-record.md),
+  design-system 11.4). **Not a card, no tap target, and never a dialog**: a refusal is
+  answered by the corrected card, and the line only says that she tapped and did not get it
+  — without it a card would silently stop offering a seat under her thumb. _Avoid_: a toast;
+  this app has never built one, and the walk bans the vocabulary.
+- **Once** — one line at a time, replaced rather than stacked, and each showing restarts its
+  own hold. Two disappointments stacked would be a list of them.
+- **The refusals that are about her** — six of the eight ways the write can stop applying
+  come back as **what a success returns** and she reads them off the card. The two that
+  cannot — she is already buying a seat elsewhere, or she let this one go thirty seconds ago
+  ([ADR-0081](../docs/adr/0081-a-seat-is-never-taken-until-it-is-paid.md)) — arrive as
+  conflicts and get the same one line, keyed on the backend's `code` and never its `message`.
+- **Busy, on the act** — the `Button` primitive's own state on the card whose write is in
+  flight. Not a fourth slot and not a variant: this is the one act on the screen that is a
+  **write** rather than a route, so between the tap and the answer there is otherwise
+  nothing at all to see, and a blocked button is what stops one thumb sending two commands.
+
 ### The departure screen
 
 `features/departure/` — the route Now's exit control opens, landed with

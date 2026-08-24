@@ -47,11 +47,16 @@ export function moveAccessibilityFocus(target: FocusTarget | undefined): void {
 /**
  * Whether the OS has asked for reduced motion.
  *
- * A hook rather than a context, deliberately: both consumers are overlays, at most one is
- * mounted at a time, and a context would have to be wired into the root layout and every
- * test harness to answer a question two components ask. When something that is *always*
- * mounted needs it — a press transform, a list entrance — this becomes the context
- * Part 13 describes, and this hook is what reads it.
+ * A hook rather than a context, deliberately: every consumer is mounted for as long as it
+ * has something to say and no longer — the two overlays, and Now's transient line
+ * (design-system 11.4) — and a context would have to be wired into the root layout and
+ * every test harness to answer a question three components ask. When something that is
+ * *always* mounted needs it — a press transform, a list entrance — this becomes the
+ * context Part 13 describes, and this hook is what reads it.
+ *
+ * The third consumer is why this is exported from the barrel: a feature may not reach
+ * into `shared/ui` file by file, and the alternative was a second copy of a
+ * subscription whose whole job is to be the only one.
  */
 export function useReducedMotion(): boolean {
   const [reduced, setReduced] = useState(false);

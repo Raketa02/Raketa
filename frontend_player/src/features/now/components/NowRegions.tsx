@@ -82,9 +82,21 @@ export function SectionHeading({ title }: { readonly title: string }) {
 export function OffersRegionView({
   region,
   onControl,
+  busyMatchId,
 }: {
   readonly region: OffersRegion;
   readonly onControl: (control: CardControl) => void;
+  /**
+   * The match whose seat is being taken right now, if one is.
+   *
+   * This region alone, because this region alone holds an act that is a **write**
+   * rather than a route: taking a seat is answered by the card itself, so the
+   * button has to say it is working. The strip's acts all open a screen, which is
+   * its own answer — a card there gains this the day it holds a write of its own
+   * (`Raketa02/Raketa#92`), and not before, because a prop nothing sets is a prop
+   * nobody can be sure is read.
+   */
+  readonly busyMatchId?: string;
 }) {
   return (
     <View testID={REGION_ID.offers} style={region.cards.length === 0 ? undefined : s.region}>
@@ -95,7 +107,12 @@ export function OffersRegionView({
             {region.cards.map((card) => (
               // A column, so no card is stretched and `fill` stays off: an auto top
               // margin with no free space above it is worth nothing here.
-              <MatchCardView key={card.matchId} card={card} onControl={onControl} />
+              <MatchCardView
+                key={card.matchId}
+                card={card}
+                onControl={onControl}
+                busy={card.matchId === busyMatchId}
+              />
             ))}
           </View>
         </>

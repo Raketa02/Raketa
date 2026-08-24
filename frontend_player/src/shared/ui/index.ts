@@ -44,5 +44,5 @@ export {
   type TabKey,
 } from './TabBar';
 export { Tag, type TagProps, type TagVariant } from './Tag';
-export { behindOverlay, type FocusTarget } from './overlay';
+export { behindOverlay, useReducedMotion, type FocusTarget } from './overlay';
 export { theme, type BandKey, type SportKey, type Theme } from './theme';

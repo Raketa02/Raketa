@@ -1,5 +1,5 @@
 /**
- * The seven rules on this feature that nothing else can catch, walked over its own
+ * The ten rules on this feature that nothing else can catch, walked over its own
  * source.
  *
  * Each is a rule about what the code **does not** do, and a rule of that shape has
@@ -27,6 +27,10 @@
  * 8. **An update's two forms are told apart by the wire's discriminator** (`ADR-0087`),
  *    never by a field being absent — the same rule the leaver's two payload forms
  *    already hold (`ADR-0072`).
+ * 9. **Nothing on this screen is said by a dialog** (`ADR-0070`, `ADR-0062`). A
+ *    refusal is answered by the corrected card and one line that fades.
+ * 10. **Nothing here asks the OS about notifications** (`ADR-0061`). Refusing
+ *    permission costs a player the message and never the card.
  */
 
 import { readFileSync, readdirSync, statSync } from 'node:fs';
@@ -95,6 +99,8 @@ describe('the feature is walkable at all', () => {
     expect(paths).toContain('hooks/useRepaintClock.ts');
     expect(paths).toContain('hooks/useMomentClock.ts');
     expect(paths).toContain('mappers/nowMappers.ts');
+    expect(paths).toContain('components/TransientLine.tsx');
+    expect(paths).toContain('hooks/useTakeSeat.ts');
     expect(paths.length).toBeGreaterThan(10);
   });
 
@@ -375,6 +381,74 @@ describe('an update is narrowed on what the wire says it is', () => {
     // Both matchers above are negative or single-file, so the walk passing while
     // seeing nothing is the failure mode. This is a tag the feature really holds.
     expect(filesContaining(/\{ kind: 'door'/).length).toBeGreaterThan(0);
+  });
+});
+
+describe('nothing on this screen is said by a dialog', () => {
+  /**
+   * `ADR-0070`'s rule is that **a refusal is not a second shape**: six of the eight
+   * ways taking a seat can stop applying come back as what a success returns, so
+   * the player reads what happened off the card that was already in front of her.
+   * `ADR-0062` finishes the sentence — the acknowledgement is *"one plain line at
+   * the top of Now, once — not a card, no tap target, it fades"*.
+   *
+   * The edit this exists against is the ordinary one: a write's `onError` growing
+   * an `Alert.alert`, which is what every app does and which here would stop her to
+   * announce that something did **not** happen — over a screen that has already
+   * corrected itself to say so. A rendered test proves today's screen is silent; it
+   * cannot prove next week's is, and the whole cost of the defect is one line
+   * somebody adds while wiring the next act.
+   *
+   * The **toast** is banned in the same breath and is not the same thing: the design
+   * system specifies one (9.2) and this app has never built it. A toast for this
+   * would be a floating card over a screen whose own card is the answer.
+   */
+  const ANNOUNCED = /\balert\(|toast/i;
+
+  it('opens none of it, in any module', () => {
+    expect(filesContaining(ANNOUNCED)).toEqual([]);
+  });
+
+  it('has a control that would fire', () => {
+    expect(ANNOUNCED.test("Alert.alert('That seat has gone')")).toBe(true);
+    expect(ANNOUNCED.test('alert(line)')).toBe(true);
+    expect(ANNOUNCED.test('showToast(line)')).toBe(true);
+    expect(ANNOUNCED.test('<Toast line={line} />')).toBe(true);
+    // The `alert` **role** is not a dialog: it is how a note announces itself, and
+    // a matcher that fired on it would be policing accessibility.
+    expect(ANNOUNCED.test('accessibilityRole="alert"')).toBe(false);
+    expect(ANNOUNCED.test('AccessibilityInfo.announceForAccessibility(line)')).toBe(false);
+  });
+});
+
+describe('an offer card costs nothing to a player who said no', () => {
+  /**
+   * `ADR-0061`: *"refusing permission costs a player only exclusive offers — which
+   * no longer exist. A quiet player still gets the card on Now."* The cascade tells
+   * her by push **and** puts the seat on this screen, and the two are independent
+   * by construction: a card is composed from what the wire sent, and this feature
+   * has no way to ask the OS anything.
+   *
+   * That is why this is a walk. A rendered test cannot show that a card does not
+   * depend on a permission the app has never asked for — there is no permission
+   * state to withhold — so what is asserted is that the question is not asked here
+   * at all. When the explainer lands (`Raketa02/Raketa#95`) it lands in its own
+   * feature; if it ever needs to reach this one, this rule is **narrowed** in the
+   * diff where somebody has to say why a card would consult it.
+   */
+  const ASKING =
+    /expo-notifications|Notifications\.|requestPermission|getPermission|timeSensitive/i;
+
+  it('asks the OS nothing, in any module', () => {
+    expect(filesContaining(ASKING)).toEqual([]);
+  });
+
+  it('has a control that would fire', () => {
+    expect(ASKING.test("import * as Notifications from 'expo-notifications';")).toBe(true);
+    expect(ASKING.test('await Notifications.getPermissionsAsync()')).toBe(true);
+    expect(ASKING.test('const { timeSensitiveSetting } = settings')).toBe(true);
+    // A card's own act is not a permission question.
+    expect(ASKING.test("if (control.surface === 'seatClaim')")).toBe(false);
   });
 });
 

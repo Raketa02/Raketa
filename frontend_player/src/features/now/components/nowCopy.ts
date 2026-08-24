@@ -176,3 +176,57 @@ export function sideName(side: ScoreSide, index: number): string {
   if (side.players.length > 0) return side.players.join(' and ');
   return SIDE_FALLBACK[index] ?? '';
 }
+
+/**
+ * What a seat she was not fastest to says, once.
+ *
+ * `ADR-0062`, in its own words: *"one plain line at the top of Now — that seat has
+ * gone. Not a card, no action, no tap target; it fades."* A card is what a
+ * **takeable** seat wears, and a gone seat in card shape is exactly what the
+ * product owner's hard constraint forbids.
+ *
+ * It is written by the client rather than sent, and that is the one sentence on
+ * this screen that is. The server answers a refusal with the **corrected card**
+ * (`ADR-0070`) — which is what she sees, and which no longer offers her anything —
+ * and the line is the acknowledgement that she tapped and did not get it. Without
+ * it a card would silently stop offering a seat under her thumb and she would be
+ * left wondering whether the tap landed at all.
+ */
+export const SEAT_GONE = 'That seat has gone.';
+
+/**
+ * The two refusals that are about **her** rather than about the seat.
+ *
+ * Six of the eight ways taking a seat can stop applying come back as what a
+ * success returns, and she reads them off the card. These two cannot be said by
+ * recomposing a card about *this* match — one is a sentence about a different
+ * match and the other is about a moment — so the server answers them as conflicts,
+ * each carrying the one thing to do about it (`ADR-0081`'s two structural limits
+ * on a serial claimant).
+ *
+ * Keyed on the backend's stable `code` and never on its `message`, which is a
+ * diagnostic written for a log.
+ */
+const SEAT_FAILURE_BY_CODE: Readonly<Record<string, string>> = {
+  match_player_already_claiming: 'You are already buying a seat. Finish that one first.',
+  match_claim_cooling_down: 'Give that seat a moment before trying again.',
+};
+
+/** A tap that never reached the server, or one it could not answer at all. */
+export const SEAT_WRITE_FAILED = 'That did not go through, and nothing has changed. Try again.';
+
+/**
+ * What a failed tap says — the same one plain line, never a dialog.
+ *
+ * **Own properties only.** Indexing a `Record` with an arbitrary string reaches
+ * `Object.prototype`, and a code spelled `toString` would otherwise resolve to a
+ * function and put whatever that stringifies to on the screen
+ * (`Raketa02/Raketa#118`).
+ */
+export function seatFailureLine(error: AppError): string {
+  const code = error.code;
+  if (code !== undefined && Object.prototype.hasOwnProperty.call(SEAT_FAILURE_BY_CODE, code)) {
+    return SEAT_FAILURE_BY_CODE[code] ?? SEAT_WRITE_FAILED;
+  }
+  return SEAT_WRITE_FAILED;
+}

@@ -31,8 +31,9 @@ screens a player leaves through).
 
 `features/now/` is **Now, the app's home** — the screen `(app)/(tabs)/index` renders and the
 one onboarding lands on. Three regions (offers · the enrolled strip · the shelves), the sport
-bar, `ADR-0054`'s four asks, the match card's **action row**, and the shelves' **fit badge,
-reasons, emphasis and tail card**.
+bar, `ADR-0054`'s four asks, the match card's **action row**, the shelves' **fit badge,
+reasons, emphasis and tail card**, and the section's one **write**: taking the seat an offer
+named.
 
 `features/departure/` is **the route the card's exit opens** — what leaving a match is worth
 right now, and the one control that takes it. `features/result/` is **the route the two
@@ -145,7 +146,30 @@ distinction between a **repaint** and an **ask** is stated — the countdown red
 inside ten minutes and every minute above, from **one screen-wide clock**, and that is drawing
 rather than a fifth occasion to fetch.
 
-**Eight rules on that feature are walked over its own source** in
+**Taking a seat is a write with no screen behind it, and the card is the answer**
+([ADR-0070](../docs/adr/0070-now-is-three-regions-and-a-card-has-two-halves.md),
+[ADR-0081](../docs/adr/0081-a-seat-is-never-taken-until-it-is-paid.md)). The offers card's act
+posts to `/matches/{matchId}/seat` carrying **no body** and the sport chip, and what comes back
+is `claimed`, one card, and — **exactly when the tap applied** — the two viewer-owned regions,
+because this is the first act in the product that moves a card between two of them. The two
+halves go to two scopes: the **card** to every sport's cached screen, and the **regions** to the
+chip the write was sent under, which is the chip they were composed under. `claimed` is read
+and never worked out from the card that came back
+([ADR-0053](../docs/adr/0053-the-phone-holds-no-rules-and-only-subtracts.md)). **A player who
+was not fastest finds out from the screen**: six of the eight refusals answer with what a
+success answers, the corrected card is put back where it already sat, and the app draws **one
+plain line at the top of Now — _that seat has gone_ — held and then faded, once**
+([ADR-0062](../docs/adr/0062-a-notification-is-a-prompt-to-look-not-a-record.md),
+design-system 11.4). Never a dialog and never a toast, and the two refusals that are about
+_her_ rather than about the seat get the same one line. **The arrival half of that rule is not
+built**: the line fires off her own tap, and _she opens Now two hours later and the seat is
+gone_ needs a fact no payload carries — filed, not faked
+([#128](https://github.com/Raketa02/Raketa/issues/128)). There is **no idempotency key and no
+retry** — what a key would buy is answered by the card carrying her claim — and the act's
+button carries the `Button` primitive's own `busy` while the write is in flight, which is what
+stops one thumb sending two commands.
+
+**Ten rules on that feature are walked over its own source** in
 `components/nowDiscipline.test.ts`, because each is a rule about what the code does _not_ do
 and no green assertion can carry one. **The phone holds no rules** ([ADR-0053](../docs/adr/0053-the-phone-holds-no-rules-and-only-subtracts.md)):
 `Date.parse` appears in `domain/countdown.ts` and nowhere else, so the only derivation is
@@ -165,7 +189,13 @@ nothing sorts, and a **shelf** is constructed in that same one module — so an 
 cannot grow one, and a match she joined cannot move under her thumb. **Emphasis is never
 computed**: no module compares a score against anything. **An update is narrowed on what the
 wire says it is**: `toNowUpdate` switches on `update_type`, never on a missing card, and both
-forms are constructed in that one module — so a component cannot decide a card has gone. Each
+forms are constructed in that one module — so a component cannot decide a card has gone.
+**Nothing on this screen is said by a dialog**: `alert(` and the toast vocabulary are not in
+the build, because a refusal is answered by the corrected card and one line that fades.
+**Nothing here asks the OS about notifications** — refusing permission costs a player the
+message and never the card
+([ADR-0061](../docs/adr/0061-the-invitation-ladder-is-an-order-and-one-open-call.md)), and the
+explainer lands in its own feature ([#95](https://github.com/Raketa02/Raketa/issues/95)). Each
 guard carries a negative control; do not add an exemption to a walk, **narrow the rule
 instead** — which is what the second one did when the repaint clock landed.
 

@@ -25,12 +25,22 @@
  *    `staleTime: Infinity` with `refetchOnMount: false` buys.
  * 2. **Pull** — the `RefreshControl` below, which keeps the screen exactly where
  *    it is and puts its indicator at the top.
- * 3. **An action** — invalidating `nowKeys`. Nothing on this screen is an action
- *    yet; the routes that will be (`#89`, `#91`, `#92`) hand Now its update in
- *    their own response, at which point this becomes a cache write and not a
- *    fetch.
+ * 3. **An action** — and it is a **cache write rather than a fetch** (`ADR-0074`),
+ *    because every act off this screen hands Now its update in its own response.
+ *    Taking a seat is the first one this screen makes itself: `useTakeSeat` writes
+ *    the card and the two regions the answer carries and invalidates nothing. The
+ *    routes do the same from outside.
  * 4. **A countdown reaching zero** — `useDeadlineAsk`, one wake at a moment the
  *    server named. **There is no interval anywhere.**
+ *
+ * ## The one sentence this screen writes for itself
+ *
+ * Everything else on Now is a sentence the wire sent or a copy table resolving a
+ * code the wire sent. *That seat has gone* is neither: it is the acknowledgement
+ * `ADR-0062` specifies, and it exists because a refusal is answered by the
+ * **corrected card** (`ADR-0070`) — which is honest, and which on its own would
+ * have a card quietly stop offering a seat under her thumb. One plain line at the
+ * top of Now, held and then faded, **once**, and never a dialog.
  *
  * ## The second timer repaints and never asks
  *
@@ -50,7 +60,7 @@
 
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { useRouter } from 'expo-router';
 
 import { useCurrentUser } from '@/features/auth/types';
@@ -60,6 +70,7 @@ import { dayAndTime } from '../domain/deviceClock';
 import { useDeadlineAsk } from '../hooks/useDeadlineAsk';
 import { useNow } from '../hooks/useNow';
 import { useSportFilter } from '../hooks/useSportFilter';
+import { useTakeSeat } from '../hooks/useTakeSeat';
 
 import type { FindPreFilter } from '../mappers/shelves';
 
@@ -68,14 +79,29 @@ import { NowClockProvider } from './NowClock';
 import { EnrolledStripView, OffersRegionView, ShelvesRegionView } from './NowRegions';
 import { NowShimmer } from './NowShimmer';
 import { SportBar } from './SportBar';
-import { greeting, nowErrorMessage } from './nowCopy';
+import { TransientLine } from './TransientLine';
+import { SEAT_GONE, greeting, nowErrorMessage, seatFailureLine } from './nowCopy';
 import { GUTTER } from './nowGeometry';
+
+/**
+ * The one sentence this screen writes for itself, and the count that makes it once.
+ *
+ * The number is not shown and is not a position: it is what tells one showing from
+ * the next, so that tapping a second gone seat — or the same one twice — restarts
+ * the hold rather than landing on a line that is already half faded.
+ */
+interface TransientNotice {
+  readonly showing: number;
+  readonly line: string;
+}
 
 export function NowScreen() {
   const { selected, select } = useSportFilter();
   const now = useNow(selected);
   const user = useCurrentUser();
   const router = useRouter();
+  const takeSeat = useTakeSeat(selected);
+  const [notice, setNotice] = useState<TransientNotice | undefined>(undefined);
 
   const { refetch } = now;
   // Stable, so arming the deadline wake does not re-run on every render.
@@ -85,15 +111,28 @@ export function NowScreen() {
 
   useDeadlineAsk(now.data, ask);
 
+  const { mutate: take } = takeSeat;
+
+  // One line at a time, and each showing is its own. Replacing the sentence rather
+  // than queueing a second is the whole of *once*: two lines stacked would be a
+  // list of disappointments, and `ADR-0062` gives the screen one.
+  const show = useCallback(
+    (line: string) => setNotice((held) => ({ showing: (held?.showing ?? 0) + 1, line })),
+    [],
+  );
+  const faded = useCallback(() => setNotice(undefined), []);
+
   // Where a card's two controls go.
   //
-  // **Two of the six acts have a destination now, and both are the same one.**
-  // `enterResult` and `answerResult` resolve to the `result` surface — one route,
-  // because `ADR-0060` makes it *"one route resolving the same situation the card
-  // resolved"* and the two labels are two moments of one conversation rather than
-  // two screens. The rest still belong to tickets that have not landed — the seat
-  // claim and its payment are `Raketa02/Raketa#89`, leaving standby `#92`, and the
-  // Getting-in sheet is outside this map — so an unwired act is received and
+  // **Three of the seven acts have a destination now.** `enterResult` and
+  // `answerResult` resolve to the `result` surface — one route, because `ADR-0060`
+  // makes it *"one route resolving the same situation the card resolved"* and the
+  // two labels are two moments of one conversation rather than two screens.
+  // `takeSeat` resolves to no screen at all: it is a **write**, answered by the
+  // card it was about (`ADR-0070`), so the tap sends it and the screen corrects
+  // itself. The rest still belong to tickets that have not landed — `finishPaying`
+  // wants the payment sheet (`Raketa02/Raketa#126`), leaving standby is `#92`, and
+  // the Getting-in sheet is outside this map — so an unwired act is received and
   // dropped here, which is the one place each will be wired.
   //
   // Both routes are addressed by the **match** and carry nothing else. The card's
@@ -115,11 +154,31 @@ export function NowScreen() {
               pathname: '/matches/[matchId]/result',
               params: { matchId: control.card.matchId },
             });
+            return;
+          }
+          if (control.surface === 'seatClaim') {
+            // The cache write is the hook's (`ADR-0074`) and runs first; what is
+            // left here is the acknowledgement, which exists only because the
+            // answer to a refusal is a card that quietly stops offering anything.
+            // `claimed` is the server's word for it and is never worked out from
+            // the card that came back (`ADR-0053`).
+            take(
+              { matchId: control.card.matchId },
+              {
+                onSuccess: (answer) => {
+                  if (!answer.claimed) show(SEAT_GONE);
+                },
+                // The same one plain line, for the two refusals that are about her
+                // rather than about the seat and for a tap that never landed. A
+                // dialog would stop her to say that nothing happened.
+                onError: (error) => show(seatFailureLine(error)),
+              },
+            );
           }
           return;
       }
     },
-    [router],
+    [router, show, take],
   );
 
   // Where a shelf's tail card goes: Find, carrying that shelf's claim and the sport
@@ -179,7 +238,21 @@ export function NowScreen() {
 
         {now.data !== undefined ? (
           <NowClockProvider screen={now.data}>
-            <OffersRegionView region={now.data.offers} onControl={onControl} />
+            {/* At the top of Now, above the region it is about, and keyed on the
+                showing so a second tap restarts the hold rather than joining a
+                fade already running (`ADR-0062`). */}
+            {notice === undefined ? null : (
+              <TransientLine key={notice.showing} line={notice.line} onFaded={faded} />
+            )}
+
+            <OffersRegionView
+              region={now.data.offers}
+              onControl={onControl}
+              // The card whose seat is being taken right now, so its own button
+              // says so. `variables` is the intent the in-flight write went out
+              // with, which is the only thing that knows *which* card it was.
+              busyMatchId={takeSeat.isPending ? takeSeat.variables?.matchId : undefined}
+            />
             <EnrolledStripView region={now.data.yourMatches} onControl={onControl} />
             <ShelvesRegionView
               region={now.data.shelves}

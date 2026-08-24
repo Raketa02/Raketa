@@ -144,6 +144,30 @@ half-answered **parks** rather than taking the screen at launch — it will neve
 you and the match you have paid for — and the door picks it up where you left it, however long
 ago that was.
 
+## Racing for a seat
+
+A seat that frees is offered to everybody it fits at once, and the card says so: **a seat
+just opened — first to take it**. Nothing on it claims the seat is reserved, because nothing
+holds it ([ADR-0061](../docs/adr/0061-the-invitation-ladder-is-an-order-and-one-open-call.md)).
+The offers sit at the very top of Now, above the matches you are in: the thing with a clock
+is first.
+
+Taking one is a single tap and no dialog. What comes back is the card itself: if you were
+fastest it now counts down **five minutes to pay** and its button says _finish paying_, and
+the match has moved out of the offers and into your own matches
+([ADR-0081](../docs/adr/0081-a-seat-is-never-taken-until-it-is-paid.md)). While that payment
+is running there is **no exit control** — abandoning a payment is not the same thing as
+leaving a match, and it is not dressed as one.
+
+**If somebody was faster you find out from the screen rather than from an error.** The card
+you tapped redraws in place, saying what the match is actually doing and offering nothing,
+and one plain line appears at the top of Now — _that seat has gone_ — which fades on its own
+([ADR-0062](../docs/adr/0062-a-notification-is-a-prompt-to-look-not-a-record.md)). No dialog,
+no toast, and no card left saying _first to take it_ an hour after it was taken.
+
+**Turning notifications down costs you the message and never the card.** The offers are on
+this screen whether or not your phone ever buzzed.
+
 ## Leaving a match
 
 The exit on a card opens a screen, never a dialog
