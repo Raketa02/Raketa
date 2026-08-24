@@ -176,15 +176,42 @@ def test_cover_is_the_kernel_s_and_this_module_does_not_redeclare_it() -> None:
     assert len(Cover) == COVER_COUNT
 
 
+def _is_a_log_line(node: ast.Call) -> bool:
+    """Whether this call is ``logger.<level>(...)`` and therefore an operator's.
+
+    Keyed on the receiver being named ``logger`` rather than on the method name,
+    because the level is what varies and the receiver is what makes it a log at
+    all. A function called ``logger`` would satisfy it too and there is none;
+    what this must not match is a *field* called ``note`` or ``line``, which is
+    the shape the rule exists for.
+    """
+
+    return (
+        isinstance(node.func, ast.Attribute)
+        and isinstance(node.func.value, ast.Name)
+        and node.func.value.id == "logger"
+    )
+
+
 def _exempt_strings(tree: ast.AST) -> set[int]:
     """String constants that are not player copy, by node identity.
 
-    Three kinds, and each is exempt for a stated reason rather than because it
+    Four kinds, and each is exempt for a stated reason rather than because it
     was in the way. A docstring is the module explaining itself. An
     ``invariant()`` message is addressed to whoever broke a precondition, and it
     lands in a stack trace and never in a payload. A ``summary=`` or
     ``description=`` keyword is API documentation for a client developer, which
-    reaches the OpenAPI document and never a screen.
+    reaches the OpenAPI document and never a screen. And a ``logger`` call's
+    argument is addressed to an **operator**: it goes to a log and cannot reach
+    a response, which is the identical argument the ``invariant`` exemption
+    makes — the invitation cascade is the first thing in this package with a
+    degradation worth reporting (a club it cannot see, a rating stream that will
+    not replay), and the alternative was writing those sentences in three words
+    so a walk about player copy would let them through.
+
+    The exemption is on the **call**, not on the module: a sentence assigned to
+    a constant in a file that also logs is still a failure, which the negative
+    control below drives both ways.
     """
 
     exempt: set[int] = set()
@@ -202,7 +229,7 @@ def _exempt_strings(tree: ast.AST) -> set[int]:
                 exempt.add(id(body[0].value))
         if isinstance(node, ast.Call):
             named = getattr(node.func, "id", None) or getattr(node.func, "attr", None)
-            if named == "invariant":
+            if named == "invariant" or _is_a_log_line(node):
                 for argument in ast.walk(node):
                     if isinstance(argument, ast.Constant):
                         exempt.add(id(argument))
@@ -253,6 +280,14 @@ def test_the_sentence_walk_can_tell_a_sentence_from_a_code() -> None:
     )
     missed = ast.parse(
         'invariant(False, "no court is held for this match yet")\n'
+        'logger.warning("no court is held for this match yet")\n'
+    )
+    # The exemption is on the *call* and not on the file: a module that logs
+    # does not thereby get to carry copy, which is the half a per-module
+    # exemption would have lost.
+    beside_a_log = ast.parse(
+        'logger.warning("could not read a band")\n'
+        'REASON = "no court is held for this match yet"\n'
     )
 
     def offending(tree: ast.AST) -> list[str]:
@@ -268,6 +303,7 @@ def test_the_sentence_walk_can_tell_a_sentence_from_a_code() -> None:
 
     assert offending(caught) == ["no court is held for this match yet"]
     assert offending(missed) == []
+    assert offending(beside_a_log) == ["no court is held for this match yet"]
 
 
 def test_the_walk_reaches_the_tree_it_is_claiming_about() -> None:

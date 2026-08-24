@@ -106,6 +106,23 @@ class SqlAlchemyStandbyPlaces:
         )
         return frozenset(rows.scalars().all())
 
+    async def queued_for(self, match_id: UUID) -> frozenset[UUID]:
+        """Who is queued for this match — **rung 1 of the invitation ladder.**
+
+        Off the composite primary key's own left edge, which is the read the
+        migration that created this table said it was for and the first thing to
+        actually make it (``Raketa02/Raketa#82``). It needs no index of its own,
+        and that asymmetry with ``held_by`` is the whole reason there are two
+        methods rather than one query with a parameter.
+        """
+
+        rows = await self._session.execute(
+            select(MatchStandbyPlaceORM.player_id).where(
+                MatchStandbyPlaceORM.match_id == match_id
+            )
+        )
+        return frozenset(rows.scalars().all())
+
     async def _holds(self, *, match_id: UUID, player_id: UUID) -> bool:
         """Whether the pair is already there, off the primary key itself."""
 

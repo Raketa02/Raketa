@@ -140,6 +140,7 @@ THE_SURFACE = (
     "COVER_COUNT",
     "Cover",
     "OUTCOME_COUNT",
+    "RESCUE_FRACTION",
     "LeaverMoney",
     "NothingTaken",
     "Outcome",
@@ -150,6 +151,7 @@ THE_SURFACE = (
     "outcome_worse_than",
     "private_lock",
     "refill_outcome",
+    "seat_price",
 )
 
 

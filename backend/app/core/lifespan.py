@@ -30,6 +30,11 @@ def build_lifespan(settings: Settings):
                 event_runtime=app.state.event_runtime,
                 session_factory=session_factory,
                 settings=settings,
+                # The application's own cache and not a second one: the tick
+                # and the request path ask the same question about the same
+                # matches, and its key is `matchId : recordVersion`, so sharing
+                # it cannot serve either a stale answer.
+                scoring_contexts=app.state.scoring_contexts,
             )
             worker.start()
             app.state.event_delivery_worker = worker

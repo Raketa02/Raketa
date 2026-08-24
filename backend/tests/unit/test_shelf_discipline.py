@@ -141,16 +141,31 @@ def _stores() -> dict[str, set[str]]:
     return found
 
 
-def test_the_only_two_stores_in_now_are_the_two_caches_adr_0068_keeps() -> None:
+def test_the_four_stores_in_now_are_two_caches_and_the_cascades_two_tables() -> None:
     """ADR-0068 deletes the **player feed** cache by name and keeps two others.
 
     *"Every ask pays the full funnel"*: the deleted one is the only place on this
     screen that could serve a stale answer to a direct question, because it was
-    the only one keyed on the person asking. A third store appearing here is
-    that one returning, whatever it is called.
+    the only one keyed on the person asking. A fifth name appearing here is that
+    one returning, whatever it is called.
+
+    **The set grew by two and the guard did not weaken**, which is the thing to
+    read. `Offers` and `CascadeWaves` are the invitation cascade's own tables
+    (ADR-0061, `Raketa02/Raketa#82`) and they are stores by this walk's
+    definition — they put something in and take it back out — but they are not
+    *caches*: what is in them is the only copy there is, so there is nothing
+    they could be stale against. The property that makes all four safe is the
+    one asserted below rather than this list: **none of them is keyed on a
+    player**, so none can hand one player's answer to another. The list is here
+    so that growth is a decision somebody makes in a diff.
     """
 
-    assert set(_stores()) == {"ArrivalSets", "ScoringContexts"}
+    assert set(_stores()) == {
+        "ArrivalSets",
+        "CascadeWaves",
+        "Offers",
+        "ScoringContexts",
+    }
 
 
 def test_a_write_only_port_is_not_read_as_a_store() -> None:
@@ -170,12 +185,19 @@ def test_a_write_only_port_is_not_read_as_a_store() -> None:
     assert "Standby" not in _stores()
 
 
-def test_neither_store_is_keyed_on_a_player() -> None:
+def test_no_store_is_keyed_on_a_player() -> None:
     """Which is the property that makes them safe rather than their names.
 
-    The new-arrivals set is filed under `city : sport : kind` and the scoring
-    context under `matchId : recordVersion`. Neither can hold one player's
-    answer, so neither can hand it to another.
+    The new-arrivals set is filed under `city : sport : kind`, the scoring
+    context under `matchId : recordVersion`, an offer under `vacancy : player`
+    and a dispatch under `vacancy : wave`. None of them takes a **player** as
+    the key it is *written* by, so none can hold one player's answer and hand it
+    to another.
+
+    The offers table is the interesting one: a player is half its primary key,
+    and it is still not player-keyed by this walk's meaning — the row is filed
+    under a hole and the player names which row, so there is no answer to *what
+    does this player see* stored anywhere that a second player could be given.
     """
 
     for name, keys in _stores().items():

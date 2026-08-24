@@ -360,6 +360,30 @@ Rules to preserve:
   obviously impossible and never the rulebook**, with a per-sport ceiling, and a bare
   rejection is refused by having no shape to send one in.
 
+- **A seat that frees reaches somebody, in two dispatches over one ranked pool.** The
+  invitation cascade ([ADR-0061](../docs/adr/0061-the-invitation-ladder-is-an-order-and-one-open-call.md),
+  amending [ADR-0052](../docs/adr/0052-a-vacancy-is-offered-not-announced.md)) replaced the
+  exclusive offer — and its hold, its three-offer cap and its twelve-hour backstop — with
+  **one open call at every distance**, kept honest by the *wording* rather than by
+  retraction: *a seat just opened, first to take it* is still true after somebody else takes
+  it. It lives in **`now/`** for the reason the departure and result routes do. **Opening is
+  synchronous and dispatching is not**: two rows join the departure's transaction, because a
+  vacancy with no cascade behind it is a seat that dies quietly and nothing re-reads old
+  vacancies; the pool, the rating replays and the scores are the dispatch's, on the tick the
+  outbox already runs. The pool is **seven fact rules evaluated whole**, on
+  `funnel.exclusions`'s shape and for its reason. **The band is the wall and it has no field
+  behind it** — it is the pairing engine's `TargetBand`, the mean of the seated Levels, so
+  *"the band the players who stayed signed up for"* is derived rather than stored and moves
+  when the seats do; **no band is no wall**, because refusing everybody on a missing fact
+  turns a hole into a seat nobody can ever be told about. The **rung dominates the fit** —
+  ADR-0052 refused pure fit ranking by name, since under it joining a queue buys nothing —
+  and three rungs ship **dark**, one of them (4) not named by the ADR because ADR-0085's
+  *Recently viewed* store was never built. A **live seat claim leaves a wave due** rather
+  than spending it, and nobody is told twice about one hole. `kernel.seat_price` is
+  `refill_outcome`'s **mirror**, asserted as an equivalence: the leaver recovers what the
+  filler paid. **The two tables are Now's first** — an offer changes nothing about the
+  match, so ADR-0091's argument for keeping the queue out of the aggregate applies harder,
+  and neither table announces anything.
 - **Now's update is one card in one of two forms.** `CardChanged` or `CardGone`, and the
   second is ADR-0070's *"the one-card answer must be able to say this card is no longer on
   your screen"*, produced for the first time by leaving standby — a departure **keeps** the

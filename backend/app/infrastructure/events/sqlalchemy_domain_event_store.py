@@ -100,6 +100,32 @@ class SqlAlchemyEventStore:
         )
         return list(result.scalars().all())
 
+    async def find_first_event_field(
+        self,
+        *,
+        aggregate_type: str,
+        payload_equals: Mapping[str, str],
+        field: str,
+    ) -> list[str]:
+        """The sibling of the lookup above, selecting a payload field.
+
+        One statement, and the same predicate: the only difference is what is
+        projected. A caller that needed the ids *and* a field would ask twice
+        rather than have this answer pairs, because the two questions have
+        different readers and neither wants the other's half.
+        """
+
+        query = select(EventStoreORM.payload[field].as_string()).where(
+            EventStoreORM.aggregate_type == aggregate_type,
+            EventStoreORM.version == 1,
+        )
+        for key, value in payload_equals.items():
+            query = query.where(EventStoreORM.payload[key].as_string() == value)
+        result = await self._session.execute(
+            query.order_by(EventStoreORM.occurred_at, EventStoreORM.version)
+        )
+        return [value for value in result.scalars().all() if value is not None]
+
     async def _current_version(
         self, *, aggregate_type: str, aggregate_id: UUID
     ) -> int:

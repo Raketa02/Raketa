@@ -22,6 +22,7 @@ from app.infrastructure.events.sqlalchemy_domain_event_store import (
 from app.infrastructure.events.sqlalchemy_event_delivery_queue import (
     SqlAlchemyOutboxRepository,
 )
+from app.modules.now.domain.ports import ScoringContexts
 from app.infrastructure.events.transactional_publisher import (
     EventPublisher,
 )
@@ -127,6 +128,7 @@ def build_event_delivery_worker(
     event_runtime: EventRuntime,
     session_factory: async_sessionmaker[AsyncSession],
     settings: Settings,
+    scoring_contexts: ScoringContexts,
     clock: Clock | None = None,
 ) -> EventWorker:
     # Imported here rather than at the top because `composition` imports this
@@ -134,7 +136,10 @@ def build_event_delivery_worker(
     # to know how to build an event publisher, and the worker has to know how to
     # build a use case. One deferred import at the one call site is cheaper than
     # a third bootstrap module holding two functions.
-    from app.bootstrap.composition import build_match_wake_batch
+    from app.bootstrap.composition import (
+        build_cascade_tick,
+        build_match_wake_batch,
+    )
 
     processing_clock = clock or SystemClock()
     return EventWorker(
@@ -148,6 +153,15 @@ def build_event_delivery_worker(
         wake_batch_factory=lambda session: build_match_wake_batch(
             session=session,
             event_runtime=event_runtime,
+            clock=processing_clock,
+        ),
+        # ADR-0061's two dispatch jobs, on the same tick. Last of the three,
+        # because the two above it decide what is *true* and this one decides
+        # who is *told*.
+        cascade_batch_factory=lambda session: build_cascade_tick(
+            session=session,
+            event_runtime=event_runtime,
+            contexts=scoring_contexts,
             clock=processing_clock,
         ),
         poll_interval_seconds=settings.EVENT_DELIVERY_POLL_INTERVAL_SECONDS,

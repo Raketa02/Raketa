@@ -93,6 +93,7 @@ from app.kernel import (
     shifted,
 )
 
+from app.modules.now.domain.cascade import Rung
 from app.seeds.courts import SEED_MONDAY, seed_slot
 
 
@@ -145,6 +146,34 @@ class DepartureClaim:
     promise: str
     outcome: Outcome | None
     names_an_amount: bool
+
+
+@dataclass(frozen=True)
+class OfferClaim:
+    """Who the invitation cascade told about a hole, and on which rung.
+
+    ADR-0061's ladder, standing in the catalog exactly as the standby claim
+    does: what the name promises is that a seat which freed **reached
+    somebody**, and the rung says *why her* rather than *how soon*. It is the
+    strongest form of this catalog's rule available for the cascade, because an
+    offer is not a fact anybody can seed directly — it is what a dispatch
+    computes from the pool, the band and the fit, so a claim that holds is a
+    claim the whole ladder produced.
+
+    ``player_slug`` names an account catalog entry, so an offer cannot point at
+    a player who does not exist without the run stopping. It must be an account
+    the scenario does **not** seat: a seat holder is refused by the pool's own
+    ``NotAlreadyMine``, so a claim naming one could never hold.
+
+    ``rung`` is checked rather than described. Rung 1 is the standby promise —
+    *somebody who asked for this match is told first* — and a scenario claiming
+    it while its queue is empty is a scenario whose name has drifted off the
+    ladder that produced it.
+    """
+
+    promise: str
+    player_slug: str
+    rung: Rung
 
 
 @dataclass(frozen=True)
@@ -237,6 +266,11 @@ class SeedMatch:
     #: about the *match*, so it is a fact hung on a scenario rather than a
     #: scenario of its own, exactly as ``HELD_SOFT``'s hold is not.
     standby: tuple[StandbyClaim, ...] = ()
+    offers: tuple[OfferClaim, ...] = ()
+    """Who the cascade told about this scenario's hole (ADR-0061).
+
+    Empty for every scenario that loses nobody — there is no hole, so there is
+    nothing to tell anybody about — and refused for one that does not, below."""
 
     def __post_init__(self) -> None:
         if self.paid > self.taken:
@@ -379,6 +413,17 @@ RECOVERING = SeedMatch(
             player_slug="rated-in-every-sport",
             situation=Situation.WAITLISTED,
             resolved_at=seed_moment(day_offset=4, hour=20),
+        ),
+    ),
+    offers=(
+        OfferClaim(
+            promise=(
+                "the seat this match lost, in front of the player who asked "
+                "about it — rung 1 of the invitation ladder, and the whole of "
+                "what joining a standby queue buys (ADR-0061)"
+            ),
+            player_slug="rated-in-every-sport",
+            rung=Rung.STANDBY,
         ),
     ),
     departure=DepartureClaim(

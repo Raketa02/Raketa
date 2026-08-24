@@ -46,6 +46,7 @@ from app.modules.matches.domain.errors import (
     MatchNotFound,
     SeatNotTaken,
 )
+from app.modules.now.application.cascade import OpenCascade
 from app.modules.now.application.compose_enrolled import card_of
 from app.modules.now.application.compose_now import stamp_at
 from app.modules.now.domain.departure import (
@@ -154,12 +155,14 @@ class MakeDeparture:
         *,
         enrolled: EnrolledMatches,
         departures: Departures,
+        cascade: OpenCascade,
         log: CommandLog,
         uow: UnitOfWork,
         clock: Clock,
     ) -> None:
         self._enrolled = enrolled
         self._departures = departures
+        self._cascade = cascade
         self._log = log
         self._uow = uow
         self._clock = clock
@@ -198,6 +201,22 @@ class MakeDeparture:
             # sentence about a rule.
             return await self._answer(command, now=now, applied=None)
 
+        if applied.vacancy is not None:
+            # **The cascade is opened inside this transaction** (ADR-0061). A
+            # hole with nobody told about it is a seat that dies quietly, and
+            # nothing re-reads old vacancies looking for the ones that were
+            # missed — so it closes with the departure or it does not close at
+            # all, which is the seat payment's own argument about its
+            # reservation. What it costs here is two rows: assembling the pool,
+            # replaying a rating each and scoring them is the dispatch's, on its
+            # own queue, because leaving a match must not get slower in
+            # proportion to how popular the sport is.
+            await self._cascade.execute(
+                match_id=command.match_id,
+                vacancy_id=applied.vacancy,
+                vacated_at=now,
+            )
+
         await self._log.remember(
             LoggedCommand(
                 command=DEPARTURE_COMMAND,
@@ -206,12 +225,12 @@ class MakeDeparture:
                 # What she **got**, not what she asked for: equal or better
                 # applies, so a forfeit quoted against a reversal goes through
                 # and the forfeit is what a replay has to hand back.
-                result=applied.value,
+                result=applied.outcome.value,
                 recorded_at=now,
             )
         )
         await self._uow.commit()
-        return await self._answer(command, now=now, applied=applied)
+        return await self._answer(command, now=now, applied=applied.outcome)
 
     async def _answer(
         self, command: DepartCommand, *, now: Instant, applied: Outcome | None

@@ -1393,6 +1393,73 @@ there; they are not repeated here.
   than an evening holds, a count no format of that sport reaches, and a set nobody scored
   in. The ceiling is **per sport** — tennis has played 70-68 and padel has not — and it
   runs before anything is written, so a typo does not consume a side's one proposal.
+- **The invitation cascade** (`now.application.cascade`) — what happens when a seat frees:
+  the pool is computed once, ranked over ADR-0061's seven rungs, and told in **two
+  dispatches**. It lives in `now/` although the thing that lost a seat is a match, for the
+  reason the departure and result routes do — the scoring context, the fit engine and the
+  offer the offers region will render are all Now's, and `now` already reads `matches`
+  everywhere in this tree.
+- **Opening against dispatching** — `OpenCascade` writes two rows and joins the
+  **departure's transaction**, because a vacancy with no cascade behind it is a seat that
+  dies quietly and nothing re-reads old vacancies looking for the ones that were missed.
+  `RunCascade` is the expensive half — the rated population, a rating replay each, a score
+  each — and runs on its own queue, so leaving a match does not get slower in proportion to
+  how popular the sport is.
+- **The pool** (`now.domain.cascade.exclusions_for`) — seven fact rules, evaluated whole and
+  never short-circuited, on `funnel.exclusions`'s own shape: they are the same question
+  asked from opposite ends, *which matches may reach this player* against *which players may
+  reach this match*. Distance and price are absent because ADR-0027 forbids either as an
+  exclusion, and the absence is asserted rather than merely true.
+- **The band is the wall, and it is the pairing engine's** (`TargetBand`) — ADR-0061's
+  *"everyone inside the band the players who stayed signed up for"* has **no field behind it
+  and needs none**: the band is the mean of the seated Levels either side of one constant
+  half-width, which the shipped engine already computes. So there is no level-band column
+  and no second implementation; a band derived from the seats is a band that moves when the
+  seats do. `MatchScorer.analyse` runs the engine with a stand-in observer, which is safe
+  because `_target_band` reads `snapshot.occupants` and never `current_player` — asserted as
+  a property, the way the travel sentinel is.
+- **No band is no wall** — a match with nobody seated, or nobody seated the platform has a
+  Level for, has nothing to be outside of. Refusing everybody on a missing fact would turn
+  the hole left by the last rated player into a seat nobody can ever be told about, which is
+  the dead seat the floor is dropped inside a day to avoid.
+- **The floor keys on the clock** (`floor_at`) — fit ≥ 70 above twenty-four hours and none
+  below it, and the number is `BEST_FIT_FLOOR`'s **without importing it**: a shelf floor and
+  a rescue floor sharing a home is how one comes to be tuned by somebody moving the other.
+- **The ladder is an order over people** (`invitation_order`) — rung, then fit within a
+  rung, then id. The **rung dominates**, which is the whole design: ADR-0052 refused pure
+  fit ranking by name, because under it joining a standby queue buys nothing. Somebody on
+  two rungs stands on the higher one, because standing twice would be told twice.
+- **Three rungs ship dark, and one of them is not the ADR's** — 2 and 7 have no feature, and
+  **rung 4 joins them**: its source was to be ADR-0085's *Recently viewed*, which shipped
+  dark itself. A dark rung answers the empty set without reading a store at all.
+- **The two dispatches** (`Wave`) — rung 1 immediately, rungs 2–7 at **+10 minutes**, and an
+  **empty first dispatch brings the second forward**, so the head start is not paid for an
+  empty queue. Delivery is **held to 08:00 local** unless the match starts within twelve
+  hours, applied **once** when the hole opens: re-deciding it on every tick would let a
+  dispatch held to 08:00 be re-held to tomorrow's 08:00 for ever if a tick were ever late.
+- **A live seat claim silences pending waves** and a lapse resumes them. Liveness is
+  composed off the record rather than latched (ADR-0081), so the row is left **due** and the
+  first tick after the claim ends runs it — and nobody already reached is reached twice,
+  because the store is silent about an offer it holds.
+- **`seat_price`** (`kernel.seat_price`) — what a filler pays now: the full share from the
+  vacancy, half from the rescue deadline, and **no tier at all on a private court**. The
+  **mirror of `refill_outcome`**, asserted as an equivalence rather than as two examples: a
+  discount that started an hour before the refund it funds is money the platform invents.
+  Two functions and not one because the answers have different types — an amount and a name.
+- **The cascade's two tables are Now's, and they are the first it owns** — `match_offers`
+  keyed on the **hole** (so rung 3 can tell a second hole from the first) and
+  `match_cascade_waves` keyed `(vacancy, wave)`. Not Matches', for ADR-0091's reason applied
+  harder: **the match is unchanged by an offer**, so routing one through `Match` would bump
+  ADR-0034's version and cost forty cache misses every time forty people were told. Not the
+  kernel's either: a rung is ranking policy with one reader tree, which is what `funnel.py`
+  holds. Neither announces anything.
+- **Nothing is withdrawn** — ADR-0061 keeps a taken seat honest by the **wording**, so an
+  offer has no `withdrawn_at` and no status. It is a fact about the past; *is the seat still
+  there* is a question about the match, asked live.
+- **The worker's third job** — the cascade's queue, on the tick the outbox already runs
+  (ADR-0076's *"no new interval and no second process"*). **Last of the three**, because the
+  two above it decide what is *true* — a court given back, a claim reaped, a result settled
+  — and this one decides who is **told**.
 
 Add backend-specific technical terms here as they are resolved. Anything describing the
 *domain* belongs in the shared glossary instead.

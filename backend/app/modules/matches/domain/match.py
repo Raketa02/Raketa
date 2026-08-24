@@ -941,6 +941,31 @@ class Match:
             self._announce_settlement(departure, at=at)
         return departure
 
+    def vacancy_left_by(self, departure: Departure) -> Vacancy | None:
+        """The hole this departure made, while it is still a hole.
+
+        **Looked up rather than returned by ``depart``**, because the two are
+        independent facts (ADR-0033) and a method handing both back would be the
+        welded pair those two records exist to take apart. What makes the lookup
+        exact rather than a guess is that a vacancy's id is *derived*: one match,
+        one seat and one instant name one hole, so the seat and the moment on the
+        departure identify it with nothing left over.
+
+        ``None`` once somebody has taken the seat back, which is the honest
+        answer to *where is the hole* rather than an error: the invitation
+        cascade asks this to decide whom to tell, and a hole that is already
+        filled has nobody left to tell.
+        """
+
+        for vacancy in self.vacancies:
+            if (
+                vacancy.seat_index == departure.seat_index
+                and vacancy.vacated_at == departure.departed_at
+                and vacancy.is_open
+            ):
+                return vacancy
+        return None
+
     def resolve_departures_to(self, outcome: Outcome, *, at: Instant) -> int:
         """Move every departure to this outcome where that is **upward**.
 

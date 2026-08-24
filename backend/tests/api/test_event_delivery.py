@@ -3,6 +3,7 @@ import asyncio
 import pytest
 from sqlalchemy import select
 
+from app.bootstrap.composition import build_scoring_contexts
 from app.bootstrap.events import (
     build_event_delivery_worker,
     build_event_runtime,
@@ -69,6 +70,7 @@ async def test_signup_event_is_delivered_by_embedded_worker(
         event_runtime=build_event_runtime(),
         session_factory=session_factory,
         settings=settings,
+        scoring_contexts=build_scoring_contexts(),
     )
     worker.start()
     try:

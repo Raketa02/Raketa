@@ -27,8 +27,14 @@ async def test_lifespan_starts_and_stops_embedded_worker(monkeypatch):
     )
     app = FastAPI()
     app.state.event_runtime = object()
+    # The application's own scoring-context cache, which the tick shares with
+    # the request path (ADR-0068's key is `matchId : recordVersion`, so sharing
+    # it cannot serve either a stale answer). Stood up here because the lifespan
+    # hands it to the worker rather than letting it build a second one.
+    app.state.scoring_contexts = object()
     worker = _FakeWorker()
     built: list[object] = []
+    handed: list[object] = []
     disposed = False
 
     monkeypatch.setattr(lifespan_module, "init_engine", lambda settings: None)
@@ -39,6 +45,7 @@ async def test_lifespan_starts_and_stops_embedded_worker(monkeypatch):
 
     def build_worker(**kwargs):
         built.append(kwargs["event_runtime"])
+        handed.append(kwargs["scoring_contexts"])
         return worker
 
     async def dispose_engine() -> None:
@@ -51,6 +58,7 @@ async def test_lifespan_starts_and_stops_embedded_worker(monkeypatch):
     async with lifespan_module.build_lifespan(settings)(app):
         assert worker.started is True
         assert built == [app.state.event_runtime]
+        assert handed == [app.state.scoring_contexts]
         assert app.state.event_delivery_worker is worker
 
     assert worker.stopped is True

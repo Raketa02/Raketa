@@ -306,3 +306,19 @@ class StandbyPlaces(Protocol):
         in ``queued_by`` rather than off the queue.
         """
         ...
+
+    async def queued_for(self, match_id: UUID) -> frozenset[UUID]:
+        """Who is queued for this match. **The cascade's read, and rung 1.**
+
+        The other direction of ``held_by``, and the one the table's composite
+        key answers off its own left edge — the migration that created it says
+        so in as many words, and the index beside it exists for the reverse.
+        Two methods rather than one, because the two questions have different
+        readers and different costs: the strip asks *what is this player queued
+        for* on every compose, and this is asked once when a seat frees.
+
+        A set, for ``held_by``'s reason: rung 1 is **fit-ordered** within itself
+        (ADR-0061), so the queue has no order for a list to imply. ``joined_at``
+        is stored and still read by nothing.
+        """
+        ...

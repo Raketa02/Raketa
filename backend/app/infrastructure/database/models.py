@@ -23,6 +23,10 @@ from app.modules.matches.infrastructure.sqlalchemy_match_models import (
     MatchSeatORM,
     MatchVacancyORM,
 )
+from app.modules.now.infrastructure.sqlalchemy_cascade_models import (
+    MatchCascadeWaveORM,
+    MatchOfferORM,
+)
 from app.modules.users.infrastructure.sqlalchemy_user_model import UserORM
 
 __all__ = [
@@ -36,7 +40,9 @@ __all__ = [
     "CommandLogORM",
     "EventOutboxORM",
     "EventStoreORM",
+    "MatchCascadeWaveORM",
     "MatchORM",
+    "MatchOfferORM",
     "MatchSeatORM",
     "MatchVacancyORM",
     "RefreshTokenORM",

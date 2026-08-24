@@ -64,8 +64,10 @@ from app.engines.matchmaking import (
     MatchSnapshot,
     Occupant,
     PlayerProfile,
+    PlayerRef,
     SeatSnapshot,
     SeatState,
+    UnratedPlayer,
 )
 from app.kernel import (
     Instant,
@@ -96,6 +98,16 @@ from app.modules.now.domain.screen import Fit, FitReason
 #: worse rather than better, and a suggestion that is quietly too cautious is
 #: recoverable where one that is quietly too generous is a wasted evening.
 TRAVEL_UNMEASURED: Minutes = minutes(90)
+
+#: Who a match is analysed *for* when the question is about the match itself.
+#: **A stand-in, and provably inert.** ``MatchSnapshot`` requires a
+#: ``current_player`` because every matchmaking answer is relative to somebody —
+#: *"a perfectly balanced match forty minutes away at twice your ceiling"* — but
+#: the target band is not: it is the mean of the **seated** Levels, and the
+#: pairing engine reads it off ``snapshot.occupants``. Unrated rather than a
+#: fabricated Level, on the rule the whole rating context holds: a Level the
+#: platform does not have may not be stood in for.
+BAND_OBSERVER: Occupant = UnratedPlayer(player=PlayerRef("cascade:band"))
 
 #: How many reasons ride on a card. The engine ranks every scored term by
 #: contribution; the card takes the strongest three, which is the specification's
@@ -189,8 +201,8 @@ def snapshot_for(
         # because the engine reads the **payable** and a card struck through the
         # share needs the other — a snapshot whose share moves and whose payable
         # does not scores identically, which the engines assert rather than say.
-        seat_share=_share(context),
-        payable=Payable(_share(context)),
+        seat_share=share_of(context),
+        payable=Payable(share_of(context)),
         club=ClubSnapshot(
             travel_minutes=TRAVEL_UNMEASURED,
             zone=context.club.zone,
@@ -245,7 +257,7 @@ def _seat(seat: Seat, occupant: Occupant | None) -> SeatSnapshot:
     )
 
 
-def _share(context: MatchScoringContext) -> SeatShare:
+def share_of(context: MatchScoringContext) -> SeatShare:
     return SeatShare(grosze(int(context.share.amount)))
 
 
@@ -319,6 +331,35 @@ class MatchScorer:
         except Exception as failure:  # noqa: BLE001 — the degrade signal
             raise Unscorable(str(failure)) from failure
         return score, analysis
+
+    def analyse(
+        self, context: MatchScoringContext, *, now: Instant
+    ) -> PairingAnalysis:
+        """The pairing analysis alone, for a caller that wants the **match**.
+
+        The invitation cascade needs one thing off this engine before it has a
+        candidate to score: the ``TargetBand``, which is ADR-0061's wall and
+        which a match has whether or not anybody is looking at it. So the
+        observer below is a stand-in, and that it cannot move the answer is a
+        **property** rather than a comment — ``_target_band`` reads
+        ``snapshot.occupants``, which is everybody on a seat, and never
+        ``current_player``. The suite asserts it the way the travel sentinel is
+        asserted: the same match analysed for two wildly different observers
+        produces the identical band, with a negative control that seats somebody
+        and watches it move.
+
+        A caller that also wants a score must use ``score`` and read the band
+        off *that* analysis, or the card would advertise a band one run computed
+        and a fit another did — which is the disagreement ADR-0026 makes the
+        caller run one analysis to prevent.
+        """
+
+        moment = _to_the_minute(now)
+        try:
+            snapshot = snapshot_for(context, viewer=BAND_OBSERVER, now=now)
+            return self._pairing.analyse(snapshot=snapshot, now=moment)
+        except Exception as failure:  # noqa: BLE001 — the degrade signal
+            raise Unscorable(str(failure)) from failure
 
 
 def badge_from(

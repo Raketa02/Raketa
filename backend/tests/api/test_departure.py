@@ -805,3 +805,141 @@ async def test_the_strip_now_offers_the_exit_it_could_not_offer_before(
 
     assert card["may_depart"] is True
     assert card["act"] is None
+
+
+# ---------------------------------------------------------------------------
+# The cascade a departure opens
+# ---------------------------------------------------------------------------
+
+
+async def test_leaving_puts_two_dispatches_on_the_cascades_queue(
+    client, session_factory
+) -> None:
+    """ADR-0061's *"two dispatch jobs"*, over the wire and in one transaction.
+
+    The unit suite asserts the ordering against a stub; what this adds is that
+    the route really is wired to a cascade at all — a collaborator that was
+    declared and never handed in would leave every case in that file green and
+    every seat that frees unheard-of.
+
+    The rows are read straight out of the table rather than through a port,
+    because the claim is that the departure's **commit** carried them: a
+    dispatch opened and rolled back is exactly what the in-transaction rule
+    exists to prevent, and only the committed row can tell the two apart.
+    """
+
+    alice, headers = await _join(client, ALICE)
+    club = await _write_club(session_factory)
+    match = await _write_match(
+        session_factory, club, start=_in(96), seated=(alice,), paid=(alice,)
+    )
+
+    answer = await client.post(
+        _url(match),
+        headers=headers,
+        json={"quote": "reversed", "idempotency_key": KEY},
+    )
+    assert answer.status_code == 200, answer.text
+
+    rows = await _cascade_waves(session_factory, match.id)
+
+    assert [row.wave for row in rows] == [1, 2]
+    assert all(row.dispatched_at is None for row in rows)
+    # One hole, and both dispatches are filed under it — which is what makes
+    # rung 3 answerable when a second hole opens later (ADR-0061).
+    assert len({row.vacancy_id for row in rows}) == 1
+
+
+async def test_the_second_dispatch_is_never_due_before_the_first(
+    client, session_factory
+) -> None:
+    """The head start, as much of it as a route on the wall clock can claim.
+
+    **The exact gap is deliberately not asserted here.** This route reads
+    `SystemClock`, so whether the quiet hours apply depends on the hour the
+    suite happens to run at — before 08:00 in the club's zone both dispatches
+    are held to the same 08:00 and the gap is zero, which is the rule working.
+    A case that accepted either number would be a case that cannot fail, so what
+    is claimed is the half that is true at every hour: the standby queue is
+    never told **after** the strangers. The ten minutes themselves are pinned
+    against a fixed clock in `test_cascade_ladder.py`, where the zone and the
+    distance to the match are both controlled.
+    """
+
+    alice, headers = await _join(client, ALICE)
+    club = await _write_club(session_factory)
+    match = await _write_match(
+        session_factory, club, start=_in(96), seated=(alice,), paid=(alice,)
+    )
+
+    await client.post(
+        _url(match),
+        headers=headers,
+        json={"quote": "reversed", "idempotency_key": KEY},
+    )
+
+    first, second = await _cascade_waves(session_factory, match.id)
+
+    assert first.wave == 1 and second.wave == 2
+    assert second.due_at >= first.due_at
+
+
+async def test_a_refused_departure_queues_nothing(client, session_factory) -> None:
+    """Nothing applied, so there is no hole and nobody to tell.
+
+    A started match is the cheapest of the five refusals to reach over HTTP, and
+    the claim is the same for all of them: the answer is the recomposed screen
+    (ADR-0070) and the queue is untouched.
+    """
+
+    alice, headers = await _join(client, ALICE)
+    club = await _write_club(session_factory)
+    match = await _write_match(
+        session_factory, club, start=_in(-1), seated=(alice,), paid=(alice,)
+    )
+
+    answer = await client.post(
+        _url(match),
+        headers=headers,
+        json={"quote": "reversed", "idempotency_key": KEY},
+    )
+
+    assert answer.status_code == 200, answer.text
+    assert answer.json()["applied"] is None
+    assert await _cascade_waves(session_factory, match.id) == []
+
+
+async def test_a_replayed_key_does_not_queue_a_second_pair(
+    client, session_factory
+) -> None:
+    """A replay writes nothing at all, and the queue is part of *nothing*."""
+
+    alice, headers = await _join(client, ALICE)
+    club = await _write_club(session_factory)
+    match = await _write_match(
+        session_factory, club, start=_in(96), seated=(alice,), paid=(alice,)
+    )
+    body = {"quote": "reversed", "idempotency_key": KEY}
+
+    await client.post(_url(match), headers=headers, json=body)
+    await client.post(_url(match), headers=headers, json=body)
+
+    assert len(await _cascade_waves(session_factory, match.id)) == 2
+
+
+async def _cascade_waves(session_factory, match_id: UUID):
+    """The dispatch rows this match's holes opened, oldest first."""
+
+    from sqlalchemy import select
+
+    from app.modules.now.infrastructure.sqlalchemy_cascade_models import (
+        MatchCascadeWaveORM,
+    )
+
+    async with session_factory() as session:
+        rows = await session.execute(
+            select(MatchCascadeWaveORM)
+            .where(MatchCascadeWaveORM.match_id == match_id)
+            .order_by(MatchCascadeWaveORM.wave)
+        )
+        return list(rows.scalars().all())

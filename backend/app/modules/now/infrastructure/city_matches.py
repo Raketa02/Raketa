@@ -142,48 +142,98 @@ class CityMatchesFromMatches:
             if known is not None:
                 rows.append(known)
                 continue
-            club = clubs.get(match.club_id)
-            if club is None:
-                # A match at a club this read cannot see could only become a
-                # card naming a place it does not know. Dropped silently, the
-                # way ``ArrivalRows`` is *"silently short on a stranger"*.
-                continue
-            category = _category(club, match)
-            if category is None:
-                # A category the club has retired since the match was posted.
-                # Its ``Cover`` is a **required** field of every card's spine and
-                # is read live off the category (ADR-0090), so there is nothing
-                # honest to put there and the candidate goes.
-                continue
-            fresh.append(
-                MatchScoringContext(
-                    match_id=match.id,
-                    version=match.version,
-                    record=match.as_record(),
-                    club=ClubFacts(
-                        club_id=club.id,
-                        name=club.name.value,
-                        zone=club.timezone,
-                        cover=category,
-                        crowding=crowding[_bucket(match)],
-                    ),
-                    share=Money(amount=grosze(int(match.share))),
-                    court_total=Money(
-                        amount=grosze(int(match.share) * len(match.seats))
-                    ),
-                    occupants=tuple(
-                        [
-                            await self._occupant(occupants, seat.player_id, match.sport)
-                            for seat in match.seats
-                        ]
-                    ),
-                    counted=match.counted,
-                )
+            built = await self._assembled(
+                match, clubs.get(match.club_id), crowding, occupants
             )
-            rows.append(fresh[-1])
+            if built is None:
+                continue
+            fresh.append(built)
+            rows.append(built)
         if fresh:
             await self._contexts.remember(fresh)
         return tuple(rows)
+
+    async def one(self, match_id: UUID) -> MatchScoringContext | None:
+        """One named match's context, cache first, or nothing.
+
+        **The single read beside the batch**, on the precedent
+        ``EnrolledFromMatches.one`` set: the invitation cascade knows exactly
+        which match lost a seat, and asking for a window of the city to pick one
+        match out of it is the same query wearing a loop. It reads its club
+        **singly** where ``contexts`` reads them all, which is the same
+        asymmetry — and it shares the cache, so a cascade running moments after
+        a compose pays nothing at all.
+
+        It answers ``None`` for the three silences ``contexts`` already keeps —
+        a match that is not there, a club this read cannot see, a category the
+        club has retired — because the cascade's answer to *no context* is to
+        tell nobody, which is what dropping a candidate from a shelf means too.
+        """
+
+        match = await self._matches.get(match_id)
+        if match is None:
+            return None
+        held = await self._contexts.known([(match.id, match.version)])
+        known = held.get((match.id, match.version))
+        if known is not None:
+            return known
+        club = await self._clubs.get(match.club_id)
+        clubs = {} if club is None else {club.id: club}
+        built = await self._assembled(
+            match, club, await self._crowding([match], clubs), {}
+        )
+        if built is not None:
+            await self._contexts.remember([built])
+        return built
+
+    async def _assembled(
+        self,
+        match: Match,
+        club: Club | None,
+        crowding: dict[tuple[UUID, Instant, int], Ratio],
+        occupants: dict[tuple[UUID, Sport], Occupant | None],
+    ) -> MatchScoringContext | None:
+        """One match as everybody looking at it sees it, or nothing.
+
+        Extracted so the batch and the single read assemble a context the **same
+        way**: two spellings of *what is in a scoring context* would be two
+        caches under one key, and the second reader to be written would be the
+        one that quietly dropped a field.
+        """
+
+        if club is None:
+            # A match at a club this read cannot see could only become a card
+            # naming a place it does not know. Dropped silently, the way
+            # ``ArrivalRows`` is *"silently short on a stranger"*.
+            return None
+        category = _category(club, match)
+        if category is None:
+            # A category the club has retired since the match was posted. Its
+            # ``Cover`` is a **required** field of every card's spine and is
+            # read live off the category (ADR-0090), so there is nothing honest
+            # to put there and the candidate goes.
+            return None
+        return MatchScoringContext(
+            match_id=match.id,
+            version=match.version,
+            record=match.as_record(),
+            club=ClubFacts(
+                club_id=club.id,
+                name=club.name.value,
+                zone=club.timezone,
+                cover=category,
+                crowding=crowding[_bucket(match)],
+            ),
+            share=Money(amount=grosze(int(match.share))),
+            court_total=Money(amount=grosze(int(match.share) * len(match.seats))),
+            occupants=tuple(
+                [
+                    await self._occupant(occupants, seat.player_id, match.sport)
+                    for seat in match.seats
+                ]
+            ),
+            counted=match.counted,
+        )
 
     async def _crowding(
         self, matches: list[Match], clubs: dict[UUID, Club]

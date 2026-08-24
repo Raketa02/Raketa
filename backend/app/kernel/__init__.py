@@ -23,6 +23,7 @@ from app.kernel.causes import CAUSE_COUNT, Cause
 from app.kernel.courts import COVER_COUNT, Cover
 from app.kernel.departures import (
     OUTCOME_COUNT,
+    RESCUE_FRACTION,
     LeaverMoney,
     NothingTaken,
     Outcome,
@@ -33,6 +34,7 @@ from app.kernel.departures import (
     outcome_worse_than,
     private_lock,
     refill_outcome,
+    seat_price,
 )
 from app.kernel.holds import (
     Hold,
@@ -269,6 +271,7 @@ __all__ = [
     "Cover",
     # departures — what a leaver recovers, ranked, and the two money forms
     "OUTCOME_COUNT",
+    "RESCUE_FRACTION",
     "LeaverMoney",
     "NothingTaken",
     "Outcome",
@@ -279,4 +282,5 @@ __all__ = [
     "outcome_worse_than",
     "private_lock",
     "refill_outcome",
+    "seat_price",
 ]

@@ -34,7 +34,9 @@ from app.application.ports import CommandLog
 from app.bootstrap.composition import (
     build_arrivals,
     build_assessment_repository,
+    build_cascade_waves,
     build_city_matches,
+    build_open_cascade,
     build_club_repository,
     build_command_log,
     build_commitments,
@@ -75,6 +77,7 @@ from app.modules.now.application.result import (
     ReadResult,
 )
 from app.modules.now.application.new_arrivals import ComposeNewArrivals
+from app.modules.now.application.cascade import OpenCascade
 from app.modules.now.application.standby import LeaveStandby
 from app.modules.now.domain.ports import (
     ArrivalSets,
@@ -294,9 +297,41 @@ def get_read_departure(enrolled: EnrolledMatchesDep, clock: ClockDep) -> ReadDep
 ReadDepartureDep = Annotated[ReadDeparture, Depends(get_read_departure)]
 
 
+def get_open_cascade(
+    db: DbSession,
+    ratings: RatingsDep,
+    contexts: ScoringContextsDep,
+    events: EventPublisherDep,
+    clock: ClockDep,
+) -> OpenCascade:
+    """The two rows a departure writes so the seat reaches somebody.
+
+    It builds a ``CityMatches`` of its own, and that is the cost of the club's
+    **zone**: ADR-0052 holds delivery to 08:00 local, and nothing else on this
+    route needs a club at all. The scoring-context cache is shared with the
+    compose path, so a hole opening moments after a screen was drawn pays
+    nothing for it.
+    """
+
+    return build_open_cascade(
+        waves=build_cascade_waves(db),
+        contexts=build_city_matches(
+            matches=build_match_repository(db, events=events, clock=clock),
+            clubs=build_club_repository(db),
+            reservations=build_reservation_repository(db),
+            ratings=ratings,
+            contexts=contexts,
+        ),
+    )
+
+
+OpenCascadeDep = Annotated[OpenCascade, Depends(get_open_cascade)]
+
+
 def get_make_departure(
     enrolled: EnrolledMatchesDep,
     departures: DeparturesDep,
+    cascade: OpenCascadeDep,
     log: CommandLogDep,
     uow: UnitOfWorkDep,
     clock: ClockDep,
@@ -304,6 +339,7 @@ def get_make_departure(
     return build_make_departure(
         enrolled=enrolled,
         departures=departures,
+        cascade=cascade,
         log=log,
         uow=uow,
         clock=clock,

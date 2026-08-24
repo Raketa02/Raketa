@@ -880,6 +880,38 @@ Committed by [ADR-0030](docs/adr/0030-a-departure-is-an-audience-not-a-state.md)
   ([ADR-0091](docs/adr/0091-a-queue-place-is-a-card-and-leaving-one-is-the-first-card-that-goes.md)).
   A discriminated union rather than a card that may be missing — *it is gone* and *this build sent
   none* are opposite sentences.
+- **Invitation ladder** — the order a freed seat is offered in: **seven rungs**, fit-ordered
+  within a rung, over one eligible pool
+  ([ADR-0061](docs/adr/0061-the-invitation-ladder-is-an-order-and-one-open-call.md)). The **rung
+  dominates the fit**, and that is what standby is worth: told in the same instant as strangers,
+  joining a waitlist buys nothing. Three rungs ship **dark** — a standing-rules feature, a
+  *recently viewed* signal and an availability calendar, none of which exists — and a dark rung
+  is declared and empty rather than renumbered away, so a rung turns on when its feature ships
+  and adding one is a re-sort rather than a new stage.
+- **Open call** — the one mode a vacancy is offered in. There is no exclusive offer, no hold, no
+  cap of three and no twelve-hour backstop; everyone eligible is told in the **race wording** — *a
+  seat just opened, first to take it* — so no card ever claimed to be exclusive and none has to be
+  retracted into a lie. What is left of exclusivity is the **seat claim**, which is five minutes
+  of the right to buy and belongs to the money chain
+  ([ADR-0081](docs/adr/0081-a-seat-is-never-taken-until-it-is-paid.md)).
+- **Level band** — the range a forming match is aimed at: the **mean of the seated Levels**
+  either side of one constant half-width. It is *the band the players who stayed signed up for*,
+  and it is a **hard wall** on the cascade — reaching outside it takes unanimous consent from
+  those players and does not ship. Derived from the roster and never stored, so it moves when the
+  seats do; a match with no seated Level has **no band**, which is not a band nobody clears.
+- **Offer** — a seat put in front of one player, at one instant, at the price she would have paid
+  then. A **fact about the past and never a state**: nothing is withdrawn and nothing is deleted,
+  because the wording is what keeps a taken seat honest and nothing is ever removed from a lock
+  screen ([ADR-0062](docs/adr/0062-a-notification-is-a-prompt-to-look-not-a-record.md)). Whether
+  the seat is still there is a question about the **match**, asked live.
+- **Dispatch** — one of the two sends a freed seat produces: the standby queue **immediately**,
+  everybody else **ten minutes later**. An empty queue costs nothing — the second dispatch comes
+  forward rather than waiting on a head start nobody earned. Delivery is **held to 08:00 local**
+  unless the match starts within twelve hours, because a free seat does not wake anybody at 03:00.
+- **Rescue price** — what a player taking a freed seat pays: the **full share** from the vacancy,
+  **half** from the rescue deadline, and no discount at all on a private court. The exact mirror
+  of what the leaver recovers — the money that arrives is the money that goes back — and there is
+  no checkpoint tier: a seat sold past the checkpoint is still sold at the rescue price.
 - **Guarantee** — a private-court owner's exposure on a split-payment reservation: **the whole
   court price**, constant from booking until the reservation is reconciled. It is not a
   remainder and it does not shrink as seats fund

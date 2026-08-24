@@ -21,6 +21,8 @@ from app.engines.matchmaking import Occupant
 from app.kernel import Instant, Outcome, Sport
 
 from app.modules.now.domain.arrivals import ArrivalKey, NewClub, NewPlayer
+from app.modules.now.domain.cascade import Offer, PendingWave, Wave
+from app.modules.now.domain.departure import AppliedDeparture
 from app.modules.now.domain.enrolled import Enrolment
 from app.modules.now.domain.funnel import MatchScoringContext
 from app.modules.now.domain.screen import Level
@@ -256,6 +258,24 @@ class CityMatches(Protocol):
         """
         ...
 
+    async def one(self, match_id: UUID) -> MatchScoringContext | None:
+        """The context for one named match, or nothing.
+
+        **The single read beside the batch**, on the precedent
+        ``EnrolledMatches.one`` set and for the same reason: the invitation
+        cascade knows exactly which match lost a seat, and asking for a window
+        of the city in order to pick one match out of it is the same query
+        wearing a loop. It answers ``None`` for a match this read cannot see at
+        all — an unknown id, or a club it cannot reach — which is the silence
+        ``contexts`` already keeps about a venue it cannot name.
+
+        It shares the cache with ``contexts`` rather than sitting beside it: the
+        key is ``matchId : recordVersion`` either way, so a cascade running
+        moments after a compose pays nothing, and a compose after a cascade pays
+        nothing either.
+        """
+        ...
+
 
 @runtime_checkable
 class ScoringContexts(Protocol):
@@ -401,14 +421,22 @@ class Departures(Protocol):
 
     async def depart(
         self, *, match_id: UUID, player_id: UUID, quote: Outcome, at: Instant
-    ) -> Outcome:
-        """Leave, and answer the outcome she was actually quoted at.
+    ) -> AppliedDeparture:
+        """Leave, and answer the outcome she was quoted at **and the hole left**.
 
-        The answer is the aggregate's own recomputed outcome rather than the
-        label that crossed the wire: equal or better applies (ADR-0033), so a
-        forfeit quoted against a reversal goes through and what is recorded is
-        the forfeit. That is the value the command log remembers, because a
-        replay must return *what happened* and not *what was asked for*.
+        The outcome is the aggregate's own recomputed one rather than the label
+        that crossed the wire: equal or better applies (ADR-0033), so a forfeit
+        quoted against a reversal goes through and what is recorded is the
+        forfeit. That is the value the command log remembers, because a replay
+        must return *what happened* and not *what was asked for*.
+
+        The **hole** rides beside it because the invitation cascade is opened on
+        it, in this same transaction: a vacancy with no cascade behind it is a
+        seat nobody will ever be told about, and nothing re-reads old vacancies
+        looking for the ones that were missed. Two fields and not one, on
+        ADR-0033's own rule — a departure and the hole it leaves are independent
+        facts, and a single value naming only the outcome would have made the
+        caller derive the second from the first.
         """
         ...
 
@@ -454,4 +482,177 @@ class Results(Protocol):
 
     async def accept(self, *, match_id: UUID, player_id: UUID, at: Instant) -> None:
         """Agree with what is on the table, from the opposing side only."""
+        ...
+
+
+@runtime_checkable
+class StandbyQueue(Protocol):
+    """Who asked to be told about **one match**. Rung 1, and the whole of it.
+
+    The other direction of ``StandbyPlaces``, and a third port over the same
+    table rather than a method on it — the split ``StandbyPlaces`` and
+    ``Standby`` already make, for the same reason. ``ComposeShelves`` takes the
+    viewer's read; the cascade takes this one; and neither holds an object that
+    can answer the other's question, let alone delete a queue place.
+
+    A set, because rung 1 is **fit-ordered within itself** (ADR-0061): the queue
+    has no order for a list to imply, and ``joined_at`` is stored and read by
+    nothing.
+    """
+
+    async def queued_for(self, match_id: UUID) -> frozenset[UUID]:
+        """Everybody queued for this match. Empty is the ordinary answer."""
+        ...
+
+
+@runtime_checkable
+class RatedPlayers(Protocol):
+    """Everybody who holds a rating at one sport. **The pool's population.**
+
+    ADR-0061's addition to the feed's filter, read from the only end it can be
+    read from: *"a player is never offered a seat in a sport they hold no rating
+    in"*, and the rule is *a rating exists at that sport* rather than *they
+    answered that questionnaire*, because the two diverge the moment somebody
+    adds a sport or is rated by playing.
+
+    **The inverse of every other rating read in the product**, and that is why
+    it is its own port. ``Ratings.occupant`` and ``RatedSports.holds`` both ask
+    about a **named** player, and the rating streams are keyed ``(player,
+    sport)`` precisely so those cost one lookup with no index. This asks the
+    question the key cannot answer — *who* — so it reads the opening events
+    rather than a stream, and the adapter is the one place that knows it.
+
+    It answers **ids and nothing else**. A Level costs a stream replay each, and
+    the ladder only needs one for a candidate that has already survived the
+    cheap half of the pool filter.
+    """
+
+    async def at(self, sport: Sport) -> tuple[UUID, ...]:
+        """Every player with a rating at this sport, oldest rating first."""
+        ...
+
+
+@runtime_checkable
+class ClubRegulars(Protocol):
+    """Who plays at one club often enough to be rung 5.
+
+    ADR-0061's *"compatible players who use this club often"*, shipped as **play
+    history at that club** — which is the only source the product has and is
+    what the ADR names. *Often* is deliberately not a threshold here: a single
+    past match at the club is what puts somebody on this rung, because the rung
+    is an **ordering** and not a claim, and a cut-off invented in this file
+    would be a number nobody wrote down deciding who hears about a seat.
+    """
+
+    async def at(self, *, club_id: UUID, before: Instant) -> frozenset[UUID]:
+        """Everybody who has held a seat at a match at this club, before now."""
+        ...
+
+
+@runtime_checkable
+class Offers(Protocol):
+    """What the cascade wrote down: which seat reached whom, and when.
+
+    **The store the offers region reads** (`Raketa02/Raketa#83`) and the one
+    ``kernel.Viewer.offer`` is answered from. It is written here and read there,
+    which is why it is a port of Now's own rather than a table in Matches: an
+    offer is not a fact about the match — the match is unchanged by it — and
+    ADR-0034's version column would be bumped by every dispatch if it were,
+    invalidating the scoring-context cache each time somebody was told.
+
+    It **announces nothing**, on ADR-0091's rule for the standby queue: the
+    outbox exists so a support agent can explain a game somebody *paid for*, and
+    an offer moves no money and confers no place. The push queue reads this
+    table because ADR-0065 ranks *"the whole live set every dispatch"*, which is
+    a query and not a subscription.
+    """
+
+    async def record(self, offers: Sequence[Offer]) -> None:
+        """Write these offers. **Silent about one already made.**
+
+        A player already offered *this* hole is left exactly as she was, rather
+        than told again with a new instant — that is the whole of ADR-0061's
+        *"a lapse resumes them and nobody is told twice"*, and it is answered by
+        the store having nothing to do rather than by a caller remembering to
+        filter. It does not commit, on ``Departures``'s rule.
+        """
+        ...
+
+    async def offered_for(self, *, vacancy_id: UUID) -> frozenset[UUID]:
+        """Who has already been told about this hole."""
+        ...
+
+    async def held_by(self, player_id: UUID) -> tuple[Offer, ...]:
+        """Every seat put in front of this player, newest first.
+
+        **The offers region's own read** (`Raketa02/Raketa#83`), and the seed
+        catalog is its first caller — the shape ``JoinStandby`` already has.
+        What it answers is the whole offer and not a set of ids, because a card
+        prints the price she was quoted and the push words itself differently
+        for a seat she **asked** about (ADR-0065); both are on the row.
+
+        It answers offers and never *live* offers. Whether the seat is still
+        there is a question about the **match**, asked at the instant the screen
+        is composed — a store that filtered would be a second reading of the
+        record, and it would answer differently a second later.
+        """
+        ...
+
+    async def reached_on(self, *, match_id: UUID) -> frozenset[UUID]:
+        """Who has been told about **any** hole in this match.
+
+        Rung 3, and the reason an offer is filed under its vacancy as well as
+        its match: *offered an earlier vacancy on this match and did not get it*
+        is a comparison of holes, and the caller subtracts this hole's own
+        offers from this answer.
+        """
+        ...
+
+
+@runtime_checkable
+class CascadeWaves(Protocol):
+    """The cascade's own queue: two rows per hole, and when each may run.
+
+    **Its own queue and not the match's schedule**, which is the same line
+    `Raketa02/Raketa#84` draws for the push sends and it is drawn for a stronger
+    reason here. ``next_wake`` is computed by the kernel from the record on
+    every write (ADR-0076), and a dispatch is not a boundary the ladder reads —
+    nothing about the match resolves differently at vacancy + 10 minutes. Adding
+    one would put a threshold in the timekeeper, which ADR-0076 forbids by name
+    and ``tests/unit/test_timekeeper_holds_no_thresholds.py`` reddens on.
+
+    **Two rows per hole and no row per candidate.** That is ADR-0061's
+    all-at-once shape: an eligible set computed once, two dispatch jobs,
+    first-to-accept wins, and nothing to reconcile when the seat fills
+    mid-walk.
+
+    Nothing here commits: opening the waves belongs to the transaction that
+    wrote the departure, and a dispatch belongs to its own.
+    """
+
+    async def open(self, waves: Sequence[PendingWave]) -> None:
+        """Put these dispatches on the queue. Idempotent per ``(hole, wave)``."""
+        ...
+
+    async def due(self, *, now: Instant, limit: int) -> tuple[PendingWave, ...]:
+        """Dispatches whose moment has come and which have not run, oldest first."""
+        ...
+
+    async def dispatched(
+        self, *, vacancy_id: UUID, wave: Wave, at: Instant
+    ) -> None:
+        """Mark one dispatch done. A dispatch that reached nobody is still done."""
+        ...
+
+    async def bring_forward(
+        self, *, vacancy_id: UUID, wave: Wave, to: Instant
+    ) -> None:
+        """Pull a pending dispatch earlier, never later.
+
+        ADR-0061's *"an empty rung is skipped instantly, so the head start is
+        not paid for an empty queue"*: a first dispatch that reached nobody has
+        bought nothing, so the second stops waiting for it. Never later, because
+        the only thing that may move a dispatch back is the quiet hours, and
+        those were applied when the hole opened.
+        """
         ...

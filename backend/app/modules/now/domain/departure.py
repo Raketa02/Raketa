@@ -208,3 +208,23 @@ def _open(record: MatchRecord, now: Instant) -> tuple[OutcomeRow, ...]:
             opens_at=when.check if committed and now < when.check else None,
         ),
     )
+
+
+@final
+@dataclass(frozen=True)
+class AppliedDeparture:
+    """What a departure actually did: her outcome, and the hole it left.
+
+    **Two facts and not one**, which is ADR-0033 arriving in a return type: the
+    outcome is what her money settled at and the hole is what the match is now
+    short. The command log remembers the first; the invitation cascade is opened
+    on the second.
+
+    ``vacancy`` is ``None`` when the hole was closed before this value was built
+    — nobody can do that inside one transaction today, so it is the honest
+    answer to a question that is not asked rather than a case with a meaning.
+    A cascade is simply not opened for a hole that is not there.
+    """
+
+    outcome: Outcome
+    vacancy: UUID | None

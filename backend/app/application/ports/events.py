@@ -66,6 +66,30 @@ class DomainEventStore(Protocol):
         """
         ...
 
+    async def find_first_event_field(
+        self,
+        *,
+        aggregate_type: str,
+        payload_equals: Mapping[str, str],
+        field: str,
+    ) -> list[str]:
+        """One **payload field** of every matching opening event, oldest first.
+
+        The same index read as above pointed at the payload rather than at the
+        stream id, and it exists because a derived stream id cannot be reversed.
+        A Skill rating's id is ``uuid5(player, sport)``, which makes every
+        by-pair read one lookup with no index — and makes *whose rating is this*
+        unanswerable from the id alone. Without this, a caller asking **who**
+        holds a rating at a sport has to load each matched stream to read its
+        first event back, which is one query per player on a question that is
+        one query.
+
+        Raw strings, because the store holds a JSON payload and does not know
+        that a field spelled like a UUID is one. The caller parses, and a value
+        it cannot parse is a payload that has drifted from the event class.
+        """
+        ...
+
 
 class PendingOutbox(Protocol):
     async def fetch_pending(

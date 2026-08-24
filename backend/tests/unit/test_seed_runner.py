@@ -87,14 +87,22 @@ SEED_MODULES = sorted((ROOT / "app" / "seeds").glob("*.py"))
 #: will sell a name under any of them.
 RFC2606_RESERVED_TLDS = frozenset({".test", ".example", ".invalid", ".localhost"})
 
-#: The bounded contexts that have aggregates. Clubs joined the set with #64,
+#: The bounded contexts the seed path reaches. Clubs joined the set with #64,
 #: Courts with #65, Matches with #66 and Money with #69, which is what the
 #: equality below is for: it grows deliberately, one context at a time, and it
-#: cannot silently fall behind either. Every context the Now section names is
-#: now modeled, so the next addition is a genuinely new one rather than a gap
-#: being closed.
+#: cannot silently fall behind either.
+#:
+#: **`now` is the seventh and it is not a context**, which is the one entry here
+#: that needs saying. Now owns no aggregate; what the seed reaches it for is the
+#: **invitation cascade** (ADR-0061, `Raketa02/Raketa#82`), because
+#: `matches.Depart` leaves a hole and the departure *route* is what opens a
+#: cascade over one. Without it the seeded week would carry the single state the
+#: product cannot otherwise reach — a vacancy nobody was ever told about — and
+#: the offers region would have nothing to draw (`Raketa02/Raketa#83`). So the
+#: name in this set is *whose use case the seed drives*, which is what it has
+#: always been, rather than a claim that a seventh aggregate now exists.
 MODELED_CONTEXTS = frozenset(
-    {"users", "rating", "clubs", "courts", "matches", "money"}
+    {"users", "rating", "clubs", "courts", "matches", "money", "now"}
 )
 
 #: SQLAlchemy's statement constructors. Importing one into the seed path is how

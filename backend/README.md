@@ -958,6 +958,28 @@ which is about what she typed and needs a reason a recomposed screen cannot carr
 opens and offers nothing. **A general `GET /matches/{id}` does not exist**, and its absence
 is asserted.
 
+### The invitation cascade — no route, and two tables
+
+**A seat that frees reaches somebody, and nothing about it crosses a wire yet.** ADR-0061's
+ladder is a background mechanism, not an endpoint: leaving a match through
+`POST /api/v1/matches/{matchId}/departure` opens a cascade **in the same transaction**, and
+the dispatches run on the tick the outbox already does. The offers it writes are what the
+offers region will draw (`Raketa02/Raketa#83`) and what the push queue will rank
+(`Raketa02/Raketa#84`); until one of those ships, **no field of it is on either document**.
+
+- **One pool, ranked over seven rungs, told in two dispatches** — rung 1 (the standby queue)
+  immediately, rungs 2–7 ten minutes later, and an empty first dispatch brings the second
+  forward. Delivery is held to 08:00 local unless the match starts within twelve hours.
+- **The pool is a fact filter**: a rating at that sport, a free seat, the join cutoff, live
+  inventory, no calendar conflict, not already hers — plus the **level band**, which is the
+  pairing engine's `TargetBand` and therefore has no column behind it.
+- **Three rungs ship dark.** ADR-0061 names 2 and 7; **4 joins them**, because ADR-0085
+  shipped the *Recently viewed* store dark and nothing was ever built to read.
+- **A live seat claim leaves a dispatch due** rather than spending it, and nobody is told
+  twice about one hole.
+- **Two tables, both Now's** — `match_offers` keyed on the hole and `match_cascade_waves`
+  keyed `(vacancy, wave)`. Neither announces anything, and nothing is ever withdrawn.
+
 ### What the Now contract will not carry
 
 Enforced by `tests/unit/test_now_contract_document.py`, which reads the emitted document
@@ -1238,6 +1260,20 @@ and whether her card names an amount at all — checked against the stored depar
 run. It is the only claim in the seed catalog that is about a refund, and the outcome itself is
 never authored: like the court hold, it is what the rules composed on the way through the same
 use cases a request runs.
+
+A scenario that loses a player also names **who the invitation cascade told**, and on which
+rung. That is the strongest form of this catalog's rule available anywhere in it: an offer is
+not a fact anybody can seed — it is what a dispatch computed from the pool, the band and the
+fit — so a claim that holds is a claim the whole ladder produced. The **rung** is what makes it
+worth checking: an offer on the wrong rung is a card that looks entirely right while the
+standby promise has quietly gone.
+
+The seed runs both dispatches itself rather than leaving them to the worker, each at its own
+due moment on the seeded week's clock, because a seeded week whose offers depend on how long
+the app has been up is a week that reads differently every time. It is also the one place
+`app/seeds/` reaches into `now/`, and it has to: `matches.Depart` is the seed's own caller and
+opens no cascade, so without it the seeded week would carry the single state the product
+cannot otherwise reach — **a hole nobody was ever told about**.
 
 Every other catalog checks a property somebody wrote down. A match's state is *derived*, so a
 scenario names the `Situation` it must resolve to and the runner asks `kernel.situation`

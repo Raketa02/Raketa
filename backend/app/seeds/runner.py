@@ -75,10 +75,22 @@ from app.bootstrap.composition import (
     build_domain_event_store,
     build_event_publisher,
     build_court_holds,
+    build_cascade_waves,
+    build_city_matches,
+    build_club_regulars,
+    build_commitments,
     build_join_standby,
     build_ledger_repository,
     build_match_repository,
+    build_match_scorer,
     build_match_standby_places,
+    build_offers,
+    build_open_cascade,
+    build_rated_players,
+    build_ratings,
+    build_run_cascade,
+    build_scoring_contexts,
+    build_standby,
     build_password_hasher,
     build_reservation_repository,
     build_skill_rating_repository,
@@ -87,7 +99,17 @@ from app.bootstrap.composition import (
 )
 from app.core.config import Settings, get_settings
 from app.infrastructure.database.engine import create_engine
-from app.kernel import Instant, Sport, Viewer, exhaustive, live_outcome, situation
+from app.kernel import (
+    MINUTES_PER_DAY,
+    Instant,
+    Sport,
+    Viewer,
+    exhaustive,
+    live_outcome,
+    minutes,
+    shifted,
+    situation,
+)
 from app.modules.clubs.application.add_court import AddCourt
 from app.modules.clubs.application.add_court_category import AddCourtCategory
 from app.modules.clubs.application.change_club_policy import ChangeClubPolicy
@@ -133,6 +155,12 @@ from app.modules.matches.application.commands import (
 )
 from app.modules.matches.application.post_match import PostMatch
 from app.modules.matches.application.resolve_court_hold import ResolveCourtHold
+from app.modules.now.application.cascade import (
+    CascadeOutcome,
+    OpenCascade,
+    RunCascade,
+)
+from app.modules.now.domain.ports import CascadeWaves, Offers
 from app.modules.matches.application.standby import (
     JoinStandby,
     JoinStandbyCommand,
@@ -193,7 +221,8 @@ from app.seeds.catalog import (
 )
 from app.seeds.clubs import CLUBS, KRAKOW, SeedCategory, SeedClub
 from app.seeds.courts import RESERVATIONS, SeedReservation
-from app.seeds.matches import MATCHES, SeedMatch, StandbyClaim
+from app.seeds.courts import SEED_MONDAY
+from app.seeds.matches import MATCHES, OfferClaim, SeedMatch, StandbyClaim
 from app.seeds.money import LEDGERS, Arrival, SeedLedger
 from app.seeds.guard import refuse_unless_seedable
 
@@ -343,6 +372,10 @@ class _UseCases:
     resolve_hold: ResolveCourtHold
     join_standby: JoinStandby
     standby: MatchStandbyPlaces
+    open_cascade: OpenCascade
+    run_cascade: RunCascade
+    waves: CascadeWaves
+    offers: Offers
     record_movements: RecordMovements
     record_share: RecordShare
     #: The clock the Matches use cases write with. See `_SeededWeekClock`.
@@ -389,7 +422,43 @@ def _build(session: AsyncSession) -> _UseCases:
     ledgers = build_ledger_repository(event_store=event_store, events=events)
     record_movements = RecordMovements(ledgers, uow, week)
 
+    # The invitation cascade, wired from the same factories a request and the
+    # worker get. **On the seeded week's clock**, like every other Matches write
+    # here: an offer is a fact about the evening a seat freed, and on the wall
+    # clock every seeded `offered_at` would be the day somebody ran the seed.
+    #
+    # It is the only thing in this file that reads Now, and it is here because
+    # `Depart` alone leaves a hole nobody was ever told about — which is a state
+    # the product cannot otherwise reach, since the departure **route** opens a
+    # cascade in the same transaction (ADR-0061).
+    cascade_waves = build_cascade_waves(session)
+    cascade_offers = build_offers(session)
+    now_ratings = build_ratings(ratings)
+    contexts = build_city_matches(
+        matches=matches,
+        clubs=clubs,
+        reservations=reservations,
+        ratings=now_ratings,
+        contexts=build_scoring_contexts(),
+    )
+
     return _UseCases(
+        open_cascade=build_open_cascade(waves=cascade_waves, contexts=contexts),
+        run_cascade=build_run_cascade(
+            waves=cascade_waves,
+            offers=cascade_offers,
+            contexts=contexts,
+            players=build_rated_players(event_store),
+            regulars=build_club_regulars(matches),
+            commitments=build_commitments(matches),
+            ratings=now_ratings,
+            standby=build_standby(matches=matches, standby=standby),
+            scorer=build_match_scorer(),
+            uow=uow,
+            clock=week,
+        ),
+        waves=cascade_waves,
+        offers=cascade_offers,
         users=users,
         assessments=assessments,
         ratings=ratings,
@@ -1189,8 +1258,18 @@ async def _seed_match(
         # below would then fail on a run that was doing its job. Joining is
         # idempotent, so a run that changes nothing writes nothing.
         await _write_the_standby_places(use_cases, accounts, existing.id, scenario)
+        # The cascade is run on this path too, and for the queue's own reason: a
+        # scenario that gained an offer claim after the database was seeded
+        # would otherwise never get one, and the check below would then fail on
+        # a run that was doing its job. Both halves are idempotent — a hole
+        # already queued opens nothing and a dispatch already run is not due —
+        # so a run that changes nothing writes nothing.
+        await _run_the_cascade(use_cases, existing, scenario)
         _refuse_a_match_whose_name_lies(scenario, existing)
         await _refuse_a_standby_place_whose_name_lies(
+            use_cases, accounts, existing, scenario
+        )
+        await _refuse_an_offer_whose_name_lies(
             use_cases, accounts, existing, scenario
         )
         return SeededMatch(match=scenario, match_id=existing.id, created=False)
@@ -1199,10 +1278,16 @@ async def _seed_match(
     await _write_the_standby_places(use_cases, accounts, match.id, scenario)
     stored = await use_cases.matches.get(match.id)
     assert stored is not None  # just written, in this transaction
+    # **After the queue and never before it.** Rung 1 is *somebody who asked for
+    # this match*, so a dispatch run before the places were written would find
+    # an empty queue, bring the second wave forward and tell a stranger first —
+    # the standby promise broken by an ordering nobody would see.
+    await _run_the_cascade(use_cases, stored, scenario)
     _refuse_a_match_whose_name_lies(scenario, stored)
     await _refuse_a_standby_place_whose_name_lies(
         use_cases, accounts, stored, scenario
     )
+    await _refuse_an_offer_whose_name_lies(use_cases, accounts, stored, scenario)
     return SeededMatch(match=scenario, match_id=stored.id, created=True)
 
 
@@ -1322,6 +1407,138 @@ async def _write_the_standby_places(
                 player_id=_seeded_player_for_standby(accounts, scenario, claim),
             )
         )
+
+
+#: Far enough ahead that ``due`` answers every dispatch a seeded hole opened,
+#: including one the quiet hours held to the following morning. The seed runs
+#: both waves itself rather than waiting for a worker tick, so *due* here means
+#: *exists* — and the moment each one runs at is still its own ``due_at``.
+_FAR_FUTURE: Instant = shifted(SEED_MONDAY, minutes(365 * MINUTES_PER_DAY))
+
+#: No ceiling. The batch's ``WAKE_BATCH_SIZE`` bounds the work one **tick** does
+#: and means nothing here: a seeded week has as many dispatches as it has holes,
+#: and taking a slice of them would leave a scenario's own claim depending on
+#: how many other scenarios came first.
+_EVERY_WAVE = 10_000
+
+
+async def _run_the_cascade(
+    use_cases: _UseCases, stored: Match, scenario: SeedMatch
+) -> None:
+    """Tell somebody about every hole this scenario left (ADR-0061).
+
+    **The seed's `Depart` is not the departure route**, and this is the gap that
+    closes. `now.MakeDeparture` opens a cascade in the transaction that writes
+    the hole, because a vacancy nobody was told about is a seat that dies
+    quietly; `matches.Depart` is the seed's own caller and does not, so without
+    this the seeded week would carry the one state the product cannot reach — a
+    hole with no invitation ladder behind it.
+
+    **Both dispatches are run here rather than left to the worker**, each at its
+    own due moment on the seeded week's clock. A seeded week whose offers depend
+    on a background process having ticked is a week that reads differently
+    depending on how long the app has been up, and the demo walkthrough
+    (`Raketa02/Raketa#96`) is a claim about the data rather than about the
+    uptime. What is *not* short-circuited is the ladder itself: the pool, the
+    band, the floor and the order are all the dispatch's, computed from the same
+    ports a request would hand it.
+
+    A scenario that loses nobody has no open hole and this writes nothing at
+    all, which is why it is called unconditionally rather than behind
+    `scenario.vacated`.
+    """
+
+    for vacancy in stored.open_vacancies:
+        use_cases.week.at(vacancy.vacated_at)
+        await use_cases.open_cascade.execute(
+            match_id=stored.id,
+            vacancy_id=vacancy.id,
+            vacated_at=vacancy.vacated_at,
+        )
+    # Read back rather than composed, so the quiet hours a hole was actually
+    # held by are the moments these dispatches run at — `delivery_at` is applied
+    # once, when the hole opens, and re-deriving it here would be a second
+    # answer to *when may this be delivered*.
+    for wave in await use_cases.waves.due(now=_FAR_FUTURE, limit=_EVERY_WAVE):
+        if wave.match_id != stored.id:
+            continue
+        use_cases.week.at(wave.due_at)
+        outcome = await use_cases.run_cascade.execute(wave)
+        if outcome is CascadeOutcome.GONE:
+            raise SeedFailed(
+                f"'{scenario.slug}' opened a cascade on a match the scoring "
+                f"read cannot see. A hole with no context behind it is a seat "
+                f"nobody will ever be told about."
+            )
+
+
+async def _refuse_an_offer_whose_name_lies(
+    use_cases: _UseCases,
+    accounts: tuple[SeededAccount, ...],
+    stored: Match,
+    scenario: SeedMatch,
+) -> None:
+    """Check that the ladder told the people the scenario says it told.
+
+    The catalog's rule applied to the one fact here that **nothing can seed
+    directly**: an offer is what a dispatch computed from the pool, the band and
+    the fit, so a claim that holds is a claim the whole ladder produced. Two
+    things can make it lie and they fail differently on purpose. Nobody told is
+    a cascade that did not reach her — the band moved, the floor moved, or a
+    rule started firing. The wrong **rung** is the ladder's *order* having moved
+    under the name, which is the failure the whole catalog exists for: the offer
+    is there, the card would look right, and the standby promise is gone.
+
+    A scenario claiming an offer and losing nobody is refused before either,
+    because there is no hole for a ladder to have walked.
+    """
+
+    if scenario.offers and not scenario.vacated:
+        raise SeedFailed(
+            f"'{scenario.slug}' claims an offer and loses nobody. A cascade "
+            f"walks a hole, and a scenario with no hole has nothing to tell "
+            f"anybody about."
+        )
+    for claim in scenario.offers:
+        player_id = _seeded_player_for_offer(accounts, scenario, claim)
+        # Asked **by player**, which is the offers region's own read: the seed
+        # is its first caller, the shape `JoinStandby` already has.
+        hers = [
+            one
+            for one in await use_cases.offers.held_by(player_id)
+            if one.match_id == stored.id
+        ]
+        offer = hers[0] if hers else None
+        if offer is None:
+            raise SeedFailed(
+                f"'{scenario.slug}' says the cascade told "
+                f"'{claim.player_slug}' about its hole and no offer exists. A "
+                f"name promising {claim.promise} cannot be drawn against a "
+                f"ladder that reached nobody."
+            )
+        if offer.player_rung is not claim.rung:
+            raise SeedFailed(
+                f"'{scenario.slug}' says '{claim.player_slug}' was told on "
+                f"rung {claim.rung.value} and the ladder put her on rung "
+                f"{offer.player_rung.value}. The offer is there and the card "
+                f"would look right, which is what makes this the failure worth "
+                f"stopping on."
+            )
+
+
+def _seeded_player_for_offer(
+    accounts: tuple[SeededAccount, ...],
+    scenario: SeedMatch,
+    claim: OfferClaim,
+) -> UUID:
+    for account in accounts:
+        if account.account.slug == claim.player_slug:
+            return account.player_id
+    raise SeedFailed(
+        f"'{scenario.slug}' offers its seat to '{claim.player_slug}', which the "
+        f"account catalog does not hold. An offer pointing at nobody is a "
+        f"catalog that has been half-edited."
+    )
 
 
 def _seeded_player_for_standby(

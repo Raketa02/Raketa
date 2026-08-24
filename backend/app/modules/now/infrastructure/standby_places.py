@@ -1,11 +1,12 @@
-"""``StandbyPlaces`` and ``Standby`` over the queue Matches owns.
+"""``StandbyPlaces``, ``Standby`` and ``StandbyQueue`` over the queue Matches owns.
 
-One class for both of Now's standby ports, because they are one question asked
-in two directions — *what is she queued for* and *take her off this one* — and
-the file that knows a standby place is a row in the Matches context should be
-one file. They are two **ports** because their readers differ: ``ComposeShelves``
-takes the read alone, and a composer holding an object that can delete a
-player's queue place is a composer one autocomplete away from doing it.
+One class for all three of Now's standby ports, because they are one question
+asked in three directions — *what is she queued for*, *who asked about this
+match*, and *take her off this one* — and the file that knows a standby place is
+a row in the Matches context should be one file. They stay three **ports**
+because their readers differ: ``ComposeShelves`` takes the viewer's read alone,
+the cascade takes the match's, and a composer holding an object that can delete
+a player's queue place is a composer one autocomplete away from doing it.
 
 **This file used to be ``NoStandbyPlaces``**, which answered the empty set for
 everybody and said so: *"standby has no store anywhere in the product… so the
@@ -43,6 +44,17 @@ class StandbyThroughMatches:
         """Every match she asked to be told about."""
 
         return await self._standby.held_by(player_id)
+
+    async def queued_for(self, match_id: UUID) -> frozenset[UUID]:
+        """Who asked about this match — **rung 1 of the invitation ladder.**
+
+        Passed straight through, like ``for_player``: the composite key answers
+        it off its own left edge, and there is no rule here for the adapter to
+        apply. Which of these people the cascade actually tells is
+        ``domain/cascade.py``'s, and this does not know a rung exists.
+        """
+
+        return await self._standby.queued_for(match_id)
 
     async def leave(self, *, match_id: UUID, player_id: UUID) -> None:
         """Take her off, after checking there is a match to be off.

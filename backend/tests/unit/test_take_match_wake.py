@@ -40,6 +40,7 @@ from app.bootstrap.composition import (
     build_match_repository,
     build_match_schedule,
     build_reservation_repository,
+    build_scoring_contexts,
     build_unit_of_work,
 )
 from app.bootstrap.events import build_event_delivery_worker, build_event_runtime
@@ -751,6 +752,12 @@ def test_the_worker_the_process_starts_carries_a_timekeeper():
         event_runtime=build_event_runtime(),
         session_factory=None,  # type: ignore[arg-type]
         settings=Settings(WRITER_DB_URL="sqlite+aiosqlite:///:memory:"),
+        scoring_contexts=build_scoring_contexts(),
     )
 
     assert worker._wake_batch_factory is not None
+    # The third job on the same tick (ADR-0061, `Raketa02/Raketa#82`), asserted
+    # here rather than in the cascade's own file for this test's own reason:
+    # what is being claimed is that the worker *the process starts* runs it,
+    # and a factory that can be passed in proves nothing about the one that is.
+    assert worker._cascade_batch_factory is not None

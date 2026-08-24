@@ -51,6 +51,7 @@ from app.modules.matches.infrastructure.sqlalchemy_match_models import (
 )
 from app.seeds.catalog import ACCOUNTS
 from app.seeds.clubs import CLUBS
+from app.modules.now.domain.cascade import Rung
 from app.seeds.matches import (
     MATCHES,
     DepartureClaim,
@@ -658,6 +659,107 @@ async def test_a_queue_place_naming_nobody_stops_the_run(
     async with session_factory() as session:
         with pytest.raises(SeedFailed, match="nobody-at-all"):
             await seed(session)
+
+
+async def test_an_offer_claim_naming_somebody_the_ladder_did_not_reach_stops_the_run(
+    session_factory, monkeypatch
+):
+    """The check that an offer claim exists at all, driven where it can fire.
+
+    An ordinary run reaches the person the catalog names, so this half is
+    unreachable from a green seed — the same shape the standby check's own
+    negative controls take, and the same defect the last commit found in two of
+    them. Here the claim names an account the cascade has no reason to tell:
+    somebody seated in the match, whom the pool's own `NotAlreadyMine` refuses.
+    """
+
+    offered = next(one for one in MATCHES if one.offers)
+    seated = ACCOUNTS[0].slug
+    lying = replace(
+        offered,
+        offers=(replace(offered.offers[0], player_slug=seated),),
+    )
+    _only_the_match_catalog(monkeypatch, (lying,))
+
+    async with session_factory() as session:
+        with pytest.raises(SeedFailed, match="reached nobody"):
+            await seed(session)
+
+
+async def test_an_offer_claim_on_the_wrong_rung_stops_the_run(
+    session_factory, monkeypatch
+):
+    """**The negative control the whole claim exists for.**
+
+    The offer is there, the card would look right, and the ladder has quietly
+    stopped putting the person who *asked* first — which is the standby promise
+    gone with nothing on any screen to say so. The rung is what makes that
+    visible, and without this case it is a field nobody has seen checked.
+    """
+
+    offered = next(one for one in MATCHES if one.offers)
+    lying = replace(
+        offered,
+        offers=(replace(offered.offers[0], rung=Rung.IN_THE_BAND),),
+    )
+    _only_the_match_catalog(monkeypatch, (lying,))
+
+    async with session_factory() as session:
+        with pytest.raises(SeedFailed, match="rung"):
+            await seed(session)
+
+
+async def test_an_offer_claim_naming_nobody_stops_the_run(
+    session_factory, monkeypatch
+):
+    """A catalog that has been half-edited, refused before it can be checked."""
+
+    offered = next(one for one in MATCHES if one.offers)
+    lying = replace(
+        offered, offers=(replace(offered.offers[0], player_slug="nobody-at-all"),)
+    )
+    _only_the_match_catalog(monkeypatch, (lying,))
+
+    async with session_factory() as session:
+        with pytest.raises(SeedFailed, match="nobody-at-all"):
+            await seed(session)
+
+
+async def test_a_scenario_claiming_an_offer_and_losing_nobody_stops_the_run(
+    session_factory, monkeypatch
+):
+    """A cascade walks a hole, so a claim with no hole is a claim about nothing.
+
+    Refused explicitly rather than as *the ladder reached nobody*, because the
+    two are different edits: one is a scenario whose ladder stopped working, and
+    this is a scenario that never had one.
+    """
+
+    intact = next(one for one in MATCHES if one.offers)
+    lying = replace(
+        next(one for one in MATCHES if not one.vacated and not one.offers),
+        offers=intact.offers,
+    )
+    _only_the_match_catalog(monkeypatch, (lying,))
+
+    async with session_factory() as session:
+        with pytest.raises(SeedFailed, match="loses nobody"):
+            await seed(session)
+
+
+def test_every_offer_claim_names_an_account_the_scenario_does_not_seat():
+    """A seat holder could never be offered the seat, so a claim naming one lies.
+
+    Checked here, before the write, because the run's own check would find it as
+    *the ladder reached nobody* — which is the right refusal for a ladder that
+    stopped working and the wrong sentence for a catalog that was never
+    coherent.
+    """
+
+    for scenario in MATCHES:
+        seated = {account.slug for account in ACCOUNTS[: scenario.taken]}
+        for claim in scenario.offers:
+            assert claim.player_slug not in seated, scenario.slug
 
 
 def test_a_catalog_queuing_somebody_twice_is_refused():

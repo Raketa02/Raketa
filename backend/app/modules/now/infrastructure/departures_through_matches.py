@@ -36,6 +36,7 @@ from app.kernel import Instant, Outcome
 from app.modules.matches.application.resolve_court_hold import ResolveCourtHold
 from app.modules.matches.domain.errors import MatchNotFound
 from app.modules.matches.domain.ports import MatchRepository
+from app.modules.now.domain.departure import AppliedDeparture
 
 
 class DeparturesThroughMatches:
@@ -47,7 +48,7 @@ class DeparturesThroughMatches:
 
     async def depart(
         self, *, match_id: UUID, player_id: UUID, quote: Outcome, at: Instant
-    ) -> Outcome:
+    ) -> AppliedDeparture:
         match = await self._matches.get(match_id)
         if match is None:
             raise MatchNotFound()
@@ -63,5 +64,13 @@ class DeparturesThroughMatches:
 
         # The aggregate's own recomputed outcome, which is what she was actually
         # quoted at — equal or better than the label that crossed the wire, and
-        # the value a replay has to hand back.
-        return departure.quoted
+        # the value a replay has to hand back — beside the hole she left, which
+        # is what the invitation cascade is opened on. The hole is looked up
+        # rather than handed back by `depart`, because a departure and its
+        # vacancy are independent facts and a method returning both welded would
+        # be the scalar ADR-0033 exists to replace.
+        hole = match.vacancy_left_by(departure)
+        return AppliedDeparture(
+            outcome=departure.quoted,
+            vacancy=None if hole is None else hole.id,
+        )

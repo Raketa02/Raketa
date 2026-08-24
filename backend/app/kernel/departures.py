@@ -50,7 +50,7 @@ from app.kernel.matches import (
     is_full,
     is_terminal,
 )
-from app.kernel.money import Grosze
+from app.kernel.money import Grosze, Ratio, SeatShare, apply_fraction, percent
 from app.kernel.time import Instant, minutes, shifted
 
 
@@ -176,6 +176,48 @@ def refill_outcome(record: MatchRecord, now: Instant) -> Outcome:
     if now < deadlines(record).rescue:
         return Outcome.REFUNDED_IN_FULL
     return Outcome.REFUNDED_HALF
+
+
+#: What the rescue discount is. **Half, and it is one number rather than a tier
+#: table**: ``docs/adr/0061-the-invitation-ladder-is-an-order-and-one-open-call.md``
+#: gives the cascade *"full from the vacancy, 50 % from the rescue deadline"*
+#: and there is deliberately no third step — a seat sold past the checkpoint is
+#: still sold at the rescue price, which is the same absence ``refill_outcome``
+#: states from the leaver's side.
+RESCUE_FRACTION: Ratio = percent(50)
+
+
+def seat_price(record: MatchRecord, share: SeatShare, now: Instant) -> SeatShare:
+    """What a player taking a free seat pays **now** — the filler's half.
+
+    **The mirror of ``refill_outcome``, and that is a property rather than a
+    coincidence.** ADR-0061 prices the open call at *"full from the vacancy,
+    50 % from the rescue deadline"*, and ADR-0033 says what the leaver gets:
+    *"the leaver recovers what the filler paid: full price from the vacancy,
+    half from the rescue deadline."* Those are one boundary read by two parties,
+    so they are one function apart rather than two readings of two documents —
+    and the suite asserts the equivalence directly: this is the full share
+    exactly when ``refill_outcome`` is ``REFUNDED_IN_FULL``. They are two
+    functions rather than one because the answers have different **types** — an
+    amount and a name — and a caller wanting the money must not have to map a
+    name back onto it.
+
+    **A private court has no discount tier at all**, which is the sentence
+    ``refill_outcome`` already carries: that path bought the court at booking,
+    so there is no court to save and nothing the discount would be for.
+
+    There is no checkpoint tier. Past the checkpoint the roster can no longer
+    change, so in the ordinary case nobody is buying — but ADR-0033 is explicit
+    that a filler who *nonetheless arrives* pays the rescue price, and inventing
+    a third step here would make the money that arrives differ from the money
+    that goes back.
+    """
+
+    if record.kind is MatchKind.PRIVATE:
+        return share
+    if now < deadlines(record).rescue:
+        return share
+    return SeatShare(apply_fraction(share, RESCUE_FRACTION))
 
 
 @final

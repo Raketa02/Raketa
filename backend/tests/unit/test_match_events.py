@@ -59,7 +59,7 @@ AGGREGATE = ROOT / "app" / "modules" / "matches" / "domain" / "match.py"
 READ_ONLY = frozenset(
     {"as_record", "open_vacancies", "is_settled", "seat_of", "seat_at",
      "departure_of", "pull_events", "unended_claims", "live_claim_of",
-     "seats_under_claim", "side_of"}
+     "seats_under_claim", "side_of", "vacancy_left_by"}
 )
 
 #: Twenty-seven changes and twenty-seven names. Pinned, so that deleting an event

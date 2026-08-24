@@ -94,6 +94,11 @@ from app.modules.now.application.result import (
     ProposeResult,
     ReadResult,
 )
+from app.modules.now.application.cascade import (
+    CascadeBatch,
+    OpenCascade,
+    RunCascade,
+)
 from app.modules.now.application.standby import LeaveStandby
 from app.modules.now.application.compose_shelves import ComposeShelves
 from app.modules.now.application.new_arrivals import ComposeNewArrivals
@@ -111,9 +116,14 @@ from app.modules.now.domain.ports import (
     RatedSports,
     Ratings,
     Results,
+    CascadeWaves,
+    ClubRegulars,
+    Offers,
+    RatedPlayers,
     ScoringContexts,
     Standby,
     StandbyPlaces,
+    StandbyQueue,
 )
 from app.modules.now.infrastructure.arrival_sets import InMemoryArrivalSets
 from app.modules.now.infrastructure.city_matches import CityMatchesFromMatches
@@ -131,6 +141,14 @@ from app.modules.now.infrastructure.results_through_matches import (
     ResultsThroughMatches,
 )
 from app.modules.now.infrastructure.scoring_contexts import InMemoryScoringContexts
+from app.modules.now.infrastructure.cascade_stores import (
+    SqlAlchemyCascadeWaves,
+    SqlAlchemyOffers,
+)
+from app.modules.now.infrastructure.pool_sources import (
+    ClubRegularsFromMatches,
+    RatedPlayersFromRatingStreams,
+)
 from app.modules.now.infrastructure.standby_places import StandbyThroughMatches
 from app.modules.matches.infrastructure.court_holds import (
     CourtHoldsThroughReservations,
@@ -544,15 +562,185 @@ def build_make_departure(
     *,
     enrolled: EnrolledMatches,
     departures: Departures,
+    cascade: OpenCascade,
     log: CommandLog,
     uow: UnitOfWork,
     clock: Clock,
 ) -> MakeDeparture:
-    """Leave, and hand back this screen's answer **and** Now's update."""
+    """Leave, hand back this screen's answer **and** Now's update, and tell somebody.
+
+    The cascade is a collaborator rather than a subscriber, because a hole with
+    nobody told about it is a seat that dies quietly: it joins the departure's
+    transaction (ADR-0061). What it does *there* is write two rows; the pool,
+    the ratings and the scoring are the dispatch's, on its own queue.
+    """
     return MakeDeparture(
         enrolled=enrolled,
         departures=departures,
+        cascade=cascade,
         log=log,
+        uow=uow,
+        clock=clock,
+    )
+
+
+def build_offers(session: AsyncSession) -> Offers:
+    """What the cascade told whom. **The first table Now owns.**
+
+    A session rather than ports, because it *is* one table — the shape
+    `build_command_log` and `build_match_standby_places` already take. It is
+    Now's rather than Matches' because **the match is unchanged by an offer**:
+    no rung reads one, so routing it through `Match` would bump ADR-0034's
+    version and invalidate the scoring-context cache on every dispatch.
+    """
+    return SqlAlchemyOffers(session)
+
+
+def build_cascade_waves(session: AsyncSession) -> CascadeWaves:
+    """The dispatch queue: two rows per hole, and when each may run.
+
+    Its own queue and not `next_wake`, because a dispatch is not a boundary the
+    ladder reads — nothing about the match resolves differently at vacancy + 10
+    minutes, and ADR-0076 forbids a threshold in the timekeeper by name.
+    """
+    return SqlAlchemyCascadeWaves(session)
+
+
+def build_rated_players(events: DomainEventStore) -> RatedPlayers:
+    """Everybody holding a rating at one sport — the pool's population.
+
+    The event store rather than the rating repository, and that is the whole of
+    why this port exists: a rating stream's id **is** `(player, sport)`, which
+    makes every other rating read one lookup and makes *who holds one*
+    unanswerable from an id. The opening events are the only end it can be asked
+    from.
+    """
+    return RatedPlayersFromRatingStreams(events)
+
+
+def build_club_regulars(matches: MatchRepository) -> ClubRegulars:
+    """Who has played at one club — rung 5, as far as the product can see it."""
+    return ClubRegularsFromMatches(matches)
+
+
+def build_open_cascade(
+    *, waves: CascadeWaves, contexts: CityMatches
+) -> OpenCascade:
+    """Put a hole's two dispatches on the queue, with the quiet hours applied.
+
+    It takes `CityMatches` for the **club's zone**: ADR-0052 holds delivery to
+    08:00 local, and the player the platform cannot locate has no zone of her
+    own to hold it to (`Raketa02/Raketa#102`).
+    """
+    return OpenCascade(waves=waves, contexts=contexts)
+
+
+def build_run_cascade(
+    *,
+    waves: CascadeWaves,
+    offers: Offers,
+    contexts: CityMatches,
+    players: RatedPlayers,
+    regulars: ClubRegulars,
+    commitments: Commitments,
+    ratings: Ratings,
+    standby: StandbyQueue,
+    scorer: MatchScorer,
+    uow: UnitOfWork,
+    clock: Clock,
+) -> RunCascade:
+    """One dispatch: assemble the pool, rank it, write the offers.
+
+    Every rung is a port and none of them is a session, so *which store answers
+    which rung* is visible here in one place — including the three that answer
+    nothing, which are absent because a dark rung reads no store at all rather
+    than reading an empty one.
+    """
+    return RunCascade(
+        waves=waves,
+        offers=offers,
+        contexts=contexts,
+        players=players,
+        regulars=regulars,
+        commitments=commitments,
+        ratings=ratings,
+        standby=standby,
+        scorer=scorer,
+        uow=uow,
+        clock=clock,
+    )
+
+
+def build_cascade_batch(
+    *, waves: CascadeWaves, run: RunCascade, uow: UnitOfWork, clock: Clock
+) -> CascadeBatch:
+    """Every dispatch due at this instant, run once each.
+
+    A batch on the event worker beside the outbox drain and the match wakes, for
+    their reason: one indexed query, a bounded slice of work, and whatever is
+    left is still due next tick.
+    """
+    return CascadeBatch(waves=waves, run=run, uow=uow, clock=clock)
+
+
+def build_cascade_tick(
+    *,
+    session: AsyncSession,
+    event_runtime: EventRuntime,
+    contexts: ScoringContexts,
+    clock: Clock,
+) -> CascadeBatch:
+    """ADR-0061's dispatch queue, wired from the same factories a request gets.
+
+    The counterpart of `build_match_wake_batch`, and it takes an
+    `EventRuntime` for the same reason: the match repository every caller gets
+    is built with a publisher, so a cascade that ever reached a write would
+    reach the outbox the way a tap does. It does not — nothing here mutates a
+    match — and building it the ordinary way is what keeps that an observation
+    rather than a worker-only path.
+
+    Every rung is a port, and the three dark ones are absent because a dark rung
+    reads no store rather than reading an empty one.
+
+    The scoring-context cache is **handed in** rather than made here, because it
+    is the one adapter in this app whose lifetime is the application's: a fresh
+    one per tick would re-read every club and replay every seated rating for a
+    match a screen had just paid for. Keyed `matchId : recordVersion`, so
+    sharing it across the request path and the tick cannot serve either a stale
+    answer.
+    """
+
+    events = event_runtime.create_publisher_for(session=session)
+    event_store = build_domain_event_store(session, runtime=event_runtime)
+    uow = build_unit_of_work(session)
+    matches = build_match_repository(session, events=events, clock=clock)
+    ratings = build_ratings(
+        build_skill_rating_repository(event_store=event_store, events=events)
+    )
+    waves = build_cascade_waves(session)
+    return build_cascade_batch(
+        waves=waves,
+        run=build_run_cascade(
+            waves=waves,
+            offers=build_offers(session),
+            contexts=build_city_matches(
+                matches=matches,
+                clubs=build_club_repository(session),
+                reservations=build_reservation_repository(session),
+                ratings=ratings,
+                contexts=contexts,
+            ),
+            players=build_rated_players(event_store),
+            regulars=build_club_regulars(matches),
+            commitments=build_commitments(matches),
+            ratings=ratings,
+            standby=build_standby(
+                matches=matches, standby=build_match_standby_places(session)
+            ),
+            scorer=build_match_scorer(),
+            uow=uow,
+            clock=clock,
+        ),
         uow=uow,
         clock=clock,
     )

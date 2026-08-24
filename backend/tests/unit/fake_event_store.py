@@ -84,6 +84,12 @@ class InMemoryEventStore:
         # append is a no-op here and in the real adapter, so counting rows alone
         # cannot tell "wrote nothing" from "never called".
         self.appends = 0
+        # Counted for the same reason `appends` is, pointed at the reads: the
+        # invitation cascade's claim that finding a sport's population is **one
+        # query and not one per player** is invisible from the answer, which is
+        # identical either way.
+        self.stream_loads = 0
+        self.index_reads = 0
 
     async def append(
         self,
@@ -126,6 +132,7 @@ class InMemoryEventStore:
     async def load_stream(
         self, *, aggregate_type: str, aggregate_id: UUID
     ) -> list[StoredDomainEvent]:
+        self.stream_loads += 1
         stream = self._streams.get((aggregate_type, aggregate_id), [])
         return [self._to_stored(row) for row in stream]
 
@@ -140,6 +147,28 @@ class InMemoryEventStore:
             if all(opening.get(key) == value for key, value in payload_equals.items()):
                 matched.append(aggregate_id)
         return matched
+
+    async def find_first_event_field(
+        self,
+        *,
+        aggregate_type: str,
+        payload_equals: Mapping[str, str],
+        field: str,
+    ) -> list[str]:
+        self.index_reads += 1
+        found: list[str] = []
+        for (stream_type, _), stream in self._streams.items():
+            if stream_type != aggregate_type or not stream:
+                continue
+            opening = stream[0].payload
+            if not all(
+                opening.get(key) == value for key, value in payload_equals.items()
+            ):
+                continue
+            value = opening.get(field)
+            if value is not None:
+                found.append(str(value))
+        return found
 
     def _to_stored(self, row: _Row) -> StoredDomainEvent:
         # Decoded on the way out, exactly as the real adapter does, so a payload

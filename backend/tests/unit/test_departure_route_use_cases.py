@@ -56,6 +56,7 @@ from app.modules.now.application.departure import (
     MakeDeparture,
     ReadDeparture,
 )
+from app.modules.now.domain.departure import AppliedDeparture
 from app.modules.now.domain.enrolled import Enrolment
 from app.modules.now.domain.screen import (
     CardChanged,
@@ -76,6 +77,8 @@ VIEWER = UUID("11111111-1111-1111-1111-111111111111")
 STRANGER = UUID("22222222-2222-2222-2222-222222222222")
 MATCH = UUID("33333333-3333-3333-3333-333333333333")
 KEY = "e0c1f0a4-2b0d-4a1e-9c3f-000000000001"
+#: The hole a departure leaves — the cascade's subject, and not the match's.
+VACANCY = UUID("44444444-4444-4444-4444-444444444444")
 
 
 @dataclass
@@ -109,21 +112,51 @@ class StubEnrolled:
 
 
 class StubDepartures:
-    """The write, which either answers an outcome or raises a refusal."""
+    """The write, which either answers a departure or raises a refusal.
 
-    def __init__(self, *, applies: Outcome | None = None, raises=None) -> None:
+    It answers **two** facts (ADR-0033): the outcome her money settled at, and
+    the hole the match is now short. `vacancy` is what the invitation cascade is
+    opened on, and a case can set it to `None` to describe the one state where a
+    departure applies and no hole is left to tell anybody about.
+    """
+
+    def __init__(
+        self,
+        *,
+        applies: Outcome | None = None,
+        raises=None,
+        vacancy: UUID | None = VACANCY,
+    ) -> None:
         self._applies = applies
         self._raises = raises
+        self._vacancy = vacancy
         self.calls: list[tuple[UUID, UUID, Outcome]] = []
 
     async def depart(
         self, *, match_id: UUID, player_id: UUID, quote: Outcome, at: Instant
-    ) -> Outcome:
+    ) -> AppliedDeparture:
         self.calls.append((match_id, player_id, quote))
         if self._raises is not None:
             raise self._raises
         assert self._applies is not None
-        return self._applies
+        return AppliedDeparture(outcome=self._applies, vacancy=self._vacancy)
+
+
+class StubCascade:
+    """`OpenCascade`, recording the holes it was asked to put on the queue.
+
+    A stub rather than the real thing wired to fakes, because what this suite
+    claims about the cascade is only *when* it is opened — which hole, in which
+    transaction. What a dispatch then does is `test_run_cascade.py`'s.
+    """
+
+    def __init__(self) -> None:
+        self.opened: list[tuple[UUID, UUID, Instant]] = []
+
+    async def execute(
+        self, *, match_id: UUID, vacancy_id: UUID, vacated_at: Instant
+    ) -> None:
+        self.opened.append((match_id, vacancy_id, vacated_at))
 
 
 @dataclass
@@ -182,6 +215,7 @@ def make(
     departures: StubDepartures | None = None,
     log: StubLog | None = None,
     now: Instant | None = None,
+    cascade: StubCascade | None = None,
 ) -> tuple[MakeDeparture, StubEnrolled, StubDepartures, StubLog, CountingUnitOfWork]:
     enrolled_port = StubEnrolled(row)
     write = departures or StubDepartures(applies=Outcome.REFUNDED_IN_FULL)
@@ -190,6 +224,7 @@ def make(
     use_case = MakeDeparture(
         enrolled=enrolled_port,
         departures=write,
+        cascade=cascade or StubCascade(),
         log=book,
         uow=uow,
         clock=_Clock(now or at(-2000)),
@@ -351,6 +386,117 @@ async def test_a_departure_never_removes_a_card() -> None:
     answer = await use_case.execute(a_command())
 
     assert not isinstance(answer.update, CardGone)
+
+
+async def test_leaving_opens_the_cascade_on_the_hole_it_just_left() -> None:
+    """A seat that frees must reach somebody (ADR-0061).
+
+    The hole and not the match: a second departure on the same match is a
+    second hole with its own audience, and a cascade opened on the match would
+    make rung 3 — *offered an earlier vacancy on this match* — unanswerable.
+    """
+
+    cascade = StubCascade()
+    use_case, *_ = make(row=enrolled(), cascade=cascade, now=at(-2000))
+
+    await use_case.execute(a_command())
+
+    assert cascade.opened == [(MATCH, VACANCY, at(-2000))]
+
+
+async def test_the_cascade_is_opened_before_the_commit() -> None:
+    """The two rows join the departure's transaction, or the seat dies quietly.
+
+    Nothing re-reads old vacancies looking for the ones that were missed, so
+    there is no repair for a hole whose cascade was never opened — the same
+    *"one event or they are a bug"* argument the seat payment makes about its
+    reservation. Asserted by counting commits at the moment the cascade is
+    asked, because a call made *after* the commit would look identical from the
+    outside.
+    """
+
+    seen: list[int] = []
+    uow_holder: list[object] = []
+
+    class WatchingCascade(StubCascade):
+        async def execute(self, **kwargs) -> None:
+            seen.append(uow_holder[0].commits)
+            await super().execute(**kwargs)
+
+    use_case, _, _, _, uow = make(row=enrolled(), cascade=WatchingCascade())
+    uow_holder.append(uow)
+
+    await use_case.execute(a_command())
+
+    assert seen == [0]
+    assert uow.commits == 1
+
+
+async def test_a_refused_departure_opens_no_cascade() -> None:
+    """Nothing was applied, so there is no hole and nobody to tell.
+
+    The refusal path answers with the recomposed screen (ADR-0070), and a
+    cascade opened there would put two rows on the queue for a vacancy that
+    does not exist.
+    """
+
+    cascade = StubCascade()
+    use_case, *_ = make(
+        row=enrolled(),
+        departures=StubDepartures(raises=MatchAlreadyStarted()),
+        cascade=cascade,
+    )
+
+    await use_case.execute(a_command())
+
+    assert cascade.opened == []
+
+
+async def test_a_replayed_key_opens_no_second_cascade() -> None:
+    """A replay writes nothing at all, and the queue is part of *nothing*.
+
+    ADR-0030 hands back the first outcome; the hole was already told about, and
+    opening it again would be two more rows for one vacancy — refused by the
+    store's own key, but only after paying for the decision.
+    """
+
+    cascade = StubCascade()
+    book = StubLog()
+    book.rows[(DEPARTURE_COMMAND, KEY)] = LoggedCommand(
+        command=DEPARTURE_COMMAND,
+        key=KEY,
+        player_id=VIEWER,
+        result=Outcome.REFUNDED_IN_FULL.value,
+        recorded_at=at(-2100),
+    )
+    use_case, *_ = make(row=enrolled(), log=book, cascade=cascade)
+
+    await use_case.execute(a_command())
+
+    assert cascade.opened == []
+
+
+async def test_a_departure_that_leaves_no_hole_opens_no_cascade() -> None:
+    """The one state where the act applied and there is nothing to tell.
+
+    Nothing can produce it inside one transaction today, so this is the honest
+    answer to a question that is not asked rather than a case with a meaning —
+    and it is here because the alternative is a cascade opened on `None`.
+    """
+
+    cascade = StubCascade()
+    use_case, *_ = make(
+        row=enrolled(),
+        departures=StubDepartures(
+            applies=Outcome.REFUNDED_IN_FULL, vacancy=None
+        ),
+        cascade=cascade,
+    )
+
+    answer = await use_case.execute(a_command())
+
+    assert answer.applied is Outcome.REFUNDED_IN_FULL
+    assert cascade.opened == []
 
 
 async def test_the_log_records_what_she_got_and_not_what_she_asked_for() -> None:
