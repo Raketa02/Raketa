@@ -111,6 +111,29 @@ def test_the_other_three_are_permitted(clean_env, environment):
     refuse_unless_seedable(settings)  # does not raise
 
 
+@pytest.mark.parametrize(
+    "environment", [Environment.DEVELOPMENT, Environment.STAGING]
+)
+def test_seeding_outside_local_is_refused_by_the_two_layers_together(
+    clean_env, environment
+):
+    """*Seeding refuses to run outside `local`* — `Raketa02/Raketa#96`'s third
+    acceptance criterion, which no single refusal states.
+
+    It is true and it is **composite**, which is why it is written down here
+    rather than inferred from the table above. `SEEDABLE` says only `production`
+    may never be seeded; the other half is `app/core/config.py` refusing to
+    *start* on the two environments that are defined and not provisioned. Only
+    `local` runs today (`docs/environments.md`), so the pair adds up to the
+    criterion — and the day one of them is provisioned this case goes red, which
+    is the right moment to decide whether a real remote environment may hold
+    accounts whose password is public in this repository's source.
+    """
+
+    with pytest.raises(ConfigurationError):
+        build(APP_ENV=environment)
+
+
 def test_every_environment_has_been_decided_about():
     """A fifth environment must be argued with, not inherited.
 

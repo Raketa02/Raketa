@@ -94,6 +94,7 @@ from app.kernel import (
 )
 
 from app.modules.now.domain.cascade import Rung
+from app.seeds.catalog import ACCOUNTS, EMPTY_HANDED
 from app.seeds.courts import SEED_MONDAY, seed_slot
 
 
@@ -231,6 +232,16 @@ class SeedMatch:
     player holds seat 2 is not a fact any screen is developed against — the
     seeded accounts fill them in catalog order, so signing in as one of them
     still shows her own match.
+
+    ``seats`` is the exception that the demo week made necessary
+    (``Raketa02/Raketa#96``). *Which* player holds seat 2 stops being a detail
+    the moment the week has to be **walked by one address**: all three regions
+    of Now are non-empty together only for a viewer who is rated at the sports
+    she is being ranked at *and* holds a seat somewhere, and the account rated in
+    all four sports is the last entry in a catalog ordered emptiest-first, so
+    counting from the head can never reach her. Empty means *the catalog's own
+    order*, which is what every scenario wanted while the only question was what
+    a match looks like from the outside.
     """
 
     slug: str
@@ -245,6 +256,10 @@ class SeedMatch:
     posted_at: Instant = POSTED
     taken: int = 0
     paid: int = 0
+    #: Which accounts hold the seats, by slug and in seat order. Empty means the
+    #: account catalog's own order, minus the accounts whose names promise
+    #: nothing at all.
+    seats: tuple[str, ...] = ()
     #: When the seats are taken, which is what decides whether filling the match
     #: commits it — a match that fills past its own deadline commits on the spot.
     joined_at: Instant = POSTED
@@ -302,6 +317,19 @@ class SeedMatch:
         if (self.cancelled is None) != (self.cancelled_at is None):
             raise ValueError(
                 f"'{self.slug}': a cancellation is a moment as well as a cause"
+            )
+        if self.seats and len(self.seats) != self.taken:
+            raise ValueError(
+                f"'{self.slug}' seats {self.taken} players and names "
+                f"{len(self.seats)} of them. A partial seat list is a scenario "
+                "that is half-authored: the rest would silently fall back to "
+                "the catalog's order, which is the answer naming them was "
+                "meant to replace."
+            )
+        if len(self.seats) != len(set(self.seats)):
+            raise ValueError(
+                f"'{self.slug}' seats somebody twice, which the aggregate "
+                "refuses — a player holds one seat in a match or none."
             )
         queued = [claim.player_slug for claim in self.standby]
         if len(queued) != len(set(queued)):
@@ -400,6 +428,26 @@ RECOVERING = SeedMatch(
     duration=hours(1),
     taken=4,
     paid=4,
+    # **Named because the band is part of the claim.** ADR-0061 makes the level
+    # band a hard wall and the pairing engine reads it off *the seats that are
+    # left*, so who is on this match decides who the cascade below can reach —
+    # and the offer claim names a rung, which is the thing the whole catalog
+    # exists to stop drifting. Under the catalog's own order the fourth seat
+    # went to an Established padel player, the mean rose with her, and the
+    # account this match is supposed to reach fell outside the wall: the offer
+    # simply stopped existing, with nothing in the record looking wrong.
+    #
+    # **The leaver is the Established one**, and that is the same argument
+    # arriving as an ordering: she is gone by the time the ladder walks, so what
+    # is left is the New-band group the offer is aimed at. It also gives the
+    # third audience a *rated* player, which is the leaver worth developing
+    # against — a card about a refund, drawn for somebody the platform knows.
+    seats=(
+        "rating-barely-established",
+        "assessment-in-progress",
+        "assessment-abandoned",
+        "assessment-completed",
+    ),
     joined_at=seed_moment(day_offset=4, hour=19),
     vacated=1,
     vacated_at=seed_moment(day_offset=4, hour=19, minute=30),
@@ -517,6 +565,118 @@ PRIVATE_OPEN = SeedMatch(
     open_seats=2,
 )
 
+PRIVATE_PARTIAL = SeedMatch(
+    slug="match-private-with-shares-outstanding",
+    description=(
+        "A private court split among its seats, with half the shares still "
+        "unpaid and **no seat on the marketplace**. The owner's guarantee is "
+        "the whole court and never shrinks (ADR-0045), so what this card is "
+        "about is a liability rather than a game: two people owe nothing yet "
+        "and she is carrying them. No v1 flow reaches this state — nothing "
+        "opens a private court and nothing closes one — so it is seeded, and "
+        "what is asserted of it is the rendering."
+    ),
+    claim=SituationClaim(
+        promise="a private court carrying the shares nobody has paid",
+        situation=Situation.PRIVATE_PARTIAL,
+        resolved_at=seed_moment(day_offset=4, hour=20),
+    ),
+    club_slug="club-that-never-holds",
+    category="Padel · indoor",
+    sport=Sport.PADEL,
+    start=seed_slot(11, day_offset=6).start,
+    duration=hours(1),
+    taken=2,
+    paid=2,
+    joined_at=seed_moment(day_offset=1, hour=9),
+    kind=MatchKind.PRIVATE,
+    open_seats=0,
+)
+
+PRIVATE_FULL = SeedMatch(
+    slug="match-private-and-paid-for",
+    description=(
+        "The same split court with its last share paid. **The owner stops "
+        "carrying it the moment it fills**, and that is why this is its own "
+        "name rather than `privatePartial` at four seats: the published ladder "
+        "resolved a full split court to the partial name, whose card goes on "
+        "naming a liability against a court that has just discharged it "
+        "(ADR-0072). The state-table research produced this key zero times, "
+        "which is exactly why it needs seeding — nothing else in the system "
+        "will ever hand a client one."
+    ),
+    claim=SituationClaim(
+        promise="a private court whose shares are all in",
+        situation=Situation.PRIVATE_FULL,
+        resolved_at=seed_moment(day_offset=4, hour=20),
+    ),
+    club_slug="club-with-two-padel-categories",
+    category="Padel · Wall, outdoor",
+    sport=Sport.PADEL,
+    start=seed_slot(13, day_offset=6).start,
+    duration=hours(1),
+    taken=4,
+    paid=4,
+    joined_at=seed_moment(day_offset=1, hour=9),
+    kind=MatchKind.PRIVATE,
+    open_seats=0,
+)
+
+PRIVATE_RESERVED = SeedMatch(
+    slug="match-private-and-paid-outright",
+    description=(
+        "An ordinary court booking wearing a match's shape: one player paid for "
+        "the whole thing and whoever turns up owes nothing (`solo`). It is the "
+        "quietest card in the enumeration and deliberately so — there is no "
+        "share to name, no counting worth printing, and `freeCancelHours` has "
+        "no reader anywhere in the product, so the card is silent in both "
+        "directions. Seeded because it is silent, not in spite of it: a "
+        "rendering nobody can reach is a rendering nobody has ever seen."
+    ),
+    claim=SituationClaim(
+        promise="a court one player bought outright and brought people to",
+        situation=Situation.PRIVATE_RESERVED,
+        resolved_at=seed_moment(day_offset=4, hour=20),
+    ),
+    club_slug="club-that-tightened-its-cap",
+    category="Tennis · outdoor",
+    sport=Sport.TENNIS,
+    start=seed_slot(10, day_offset=6).start,
+    duration=hours(1),
+    taken=2,
+    paid=0,
+    joined_at=seed_moment(day_offset=1, hour=9),
+    kind=MatchKind.PRIVATE,
+    pay_model=PayModel.SOLO,
+    open_seats=0,
+)
+
+FULL = SeedMatch(
+    slug="match-nobody-can-join",
+    description=(
+        "Four seats taken and paid, with the commitment deadline still ahead of "
+        "it — so it is **complete and not yet committed**, which are two facts "
+        "and not one. It is the only seeded state shelf 2 is about: *full, but "
+        "worth waiting for* ranks matches nobody can join, and until this "
+        "scenario existed the only full matches on the seeded week were ones "
+        "that had already been played, so the shelf had a subject for exactly "
+        "as long as the wall clock sat before the week."
+    ),
+    claim=SituationClaim(
+        promise="a complete match still short of its commitment deadline",
+        situation=Situation.FULL,
+        resolved_at=seed_moment(day_offset=4, hour=20),
+    ),
+    club_slug="club-that-retired-a-category",
+    category="Badminton · hall A",
+    sport=Sport.BADMINTON,
+    start=seed_slot(18, day_offset=6).start,
+    duration=hours(1),
+    taken=4,
+    paid=4,
+    joined_at=seed_moment(day_offset=1, hour=9),
+)
+
 CANCELLED_BY_CLUB = SeedMatch(
     slug="match-the-club-cancelled",
     description=(
@@ -566,6 +726,25 @@ HELD_SOFT = SeedMatch(
     duration=hours(1),
     taken=3,
     paid=3,
+    # **Named seats, and this is the pair's other half** — the whole of what
+    # makes the seeded week walkable by a single address (`Raketa02/Raketa#96`).
+    # Now's three regions are non-empty together only for a viewer who is rated
+    # at the sports being ranked *and* holds a seat somewhere, and the account
+    # rated in all four sports is the last entry in a catalog ordered
+    # emptiest-first. It is this scenario rather than one more because a second
+    # match saying *she has paid and is waiting* would be one scenario twice —
+    # and because it is the state whose card is worth arriving at: a court kept
+    # aside on her behalf, on terms the club can still withdraw.
+    #
+    # The hour is load-bearing. She is queued for `match-that-lost-a-player` at
+    # 18:00 the same evening and the cascade's pool refuses a candidate with a
+    # clash, so a seat here at that hour would take her off the one offer the
+    # seeded week has.
+    seats=(
+        "rated-in-every-sport",
+        "rating-well-established",
+        "rating-barely-established",
+    ),
     joined_at=seed_moment(day_offset=1, hour=9),
 )
 
@@ -576,7 +755,50 @@ MATCHES: tuple[SeedMatch, ...] = (
     RECOVERING,
     NEEDS_RESULT,
     CONFIRM_RESULT,
+    FULL,
     PRIVATE_OPEN,
+    PRIVATE_PARTIAL,
+    PRIVATE_FULL,
+    PRIVATE_RESERVED,
     HELD_SOFT,
     CANCELLED_BY_CLUB,
 )
+
+
+def _refuse_an_impossible_catalog() -> None:
+    """Fail at import rather than part-way through a run.
+
+    Two claims, and the second is the one this file gained a reason for. A slug
+    that names nobody is a catalog half-edited, and it is checked here as well
+    as in the runner because a run reaches the last scenario having already
+    written every one above it. A slug naming an account whose name promises
+    **nothing at all** is the failure `Raketa02/Raketa#96` was opened to close:
+    every seeded match filled its seats from the head of the *account* catalog,
+    so the account whose description reads *registered and nothing else* was
+    sitting on every one that had anybody on it, drawing a Now screen nobody had
+    asked it to draw.
+    """
+
+    known = {account.slug for account in ACCOUNTS}
+    for match in MATCHES:
+        named = (
+            *match.seats,
+            *(claim.player_slug for claim in match.standby),
+            *(claim.player_slug for claim in match.offers),
+        )
+        for slug in named:
+            if slug not in known:
+                raise RuntimeError(
+                    f"'{match.slug}' names the player '{slug}', which the "
+                    f"account catalog does not hold."
+                )
+            if slug in EMPTY_HANDED:
+                raise RuntimeError(
+                    f"'{match.slug}' enrols '{slug}', whose name promises an "
+                    f"empty screen. A seat and a queue place both put a card on "
+                    f"her Now, and empty is the state a client is least likely "
+                    f"to have a fixture for."
+                )
+
+
+_refuse_an_impossible_catalog()

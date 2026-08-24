@@ -1272,6 +1272,9 @@ async def _seed_match(
         # already queued opens nothing and a dispatch already run is not due —
         # so a run that changes nothing writes nothing.
         await _run_the_cascade(use_cases, existing, scenario)
+        _refuse_an_enrolled_account_that_promised_an_empty_screen(
+            accounts, existing, scenario
+        )
         _refuse_a_match_whose_name_lies(scenario, existing)
         await _refuse_a_standby_place_whose_name_lies(
             use_cases, accounts, existing, scenario
@@ -1290,6 +1293,9 @@ async def _seed_match(
     # an empty queue, bring the second wave forward and tell a stranger first —
     # the standby promise broken by an ordering nobody would see.
     await _run_the_cascade(use_cases, stored, scenario)
+    _refuse_an_enrolled_account_that_promised_an_empty_screen(
+        accounts, stored, scenario
+    )
     _refuse_a_match_whose_name_lies(scenario, stored)
     await _refuse_a_standby_place_whose_name_lies(
         use_cases, accounts, stored, scenario
@@ -1566,19 +1572,44 @@ def _seeded_player_for_standby(
 def _players_for(
     accounts: tuple[SeededAccount, ...], scenario: SeedMatch
 ) -> list[UUID]:
-    """The seeded accounts, in catalog order, as many as the scenario seats.
+    """Who sits on this match: the slugs it names, or the catalog's own order.
 
-    In order rather than chosen, so that signing in as the first seeded account
+    In order rather than chosen, so that signing in as an early seeded account
     shows a developer her own matches — and so that which player is on seat 2 is
-    the same on every run.
+    the same on every run. A scenario that **names** its seats overrides that,
+    because the demo week has to be walkable by one address and counting from
+    the head of an emptiest-first catalog can never reach the account rated in
+    every sport (``Raketa02/Raketa#96``).
+
+    **The accounts whose names promise nothing at all are skipped**, and that is
+    a correction rather than a refinement. Counting from the head seated
+    ``brand-new-player`` on every scenario that seats anybody, so the one
+    account a client's empty screen is drawn from was on a third of the seeded
+    week. Skipped here rather than refused here: the refusal is on the catalog,
+    at import, and again against the **stored** seats on every run — this is
+    only the arithmetic that keeps a plain scenario from reaching for her.
     """
 
-    if scenario.taken > len(accounts):
-        raise SeedFailed(
-            f"'{scenario.slug}' seats {scenario.taken} players and the account "
-            f"catalog holds {len(accounts)}."
-        )
-    return [account.player_id for account in accounts[: scenario.taken]]
+    seatable = [one for one in accounts if not one.account.holds_nothing]
+    if not scenario.seats:
+        if scenario.taken > len(seatable):
+            raise SeedFailed(
+                f"'{scenario.slug}' seats {scenario.taken} players and the "
+                f"account catalog holds {len(seatable)} that may sit on a match."
+            )
+        return [account.player_id for account in seatable[: scenario.taken]]
+
+    by_slug = {account.account.slug: account.player_id for account in accounts}
+    seated: list[UUID] = []
+    for slug in scenario.seats:
+        if slug not in by_slug:
+            raise SeedFailed(
+                f"'{scenario.slug}' seats '{slug}', which the account catalog "
+                f"does not hold. A seat pointing at nobody is a catalog that "
+                f"has been half-edited."
+            )
+        seated.append(by_slug[slug])
+    return seated
 
 
 async def _match_already_seeded(
@@ -1605,6 +1636,37 @@ def _seeded_club_id_for_match(
         f"club catalog does not hold. A match at a club that does not exist is "
         f"a catalog that has been half-edited."
     )
+
+
+def _refuse_an_enrolled_account_that_promised_an_empty_screen(
+    accounts: tuple[SeededAccount, ...], stored: Match, scenario: SeedMatch
+) -> None:
+    """*Registered and nothing else* asked of the seats that are actually there.
+
+    The catalog refuses a scenario that **names** one of these accounts, at
+    import. This asks the other half — the one the catalog cannot see — of the
+    match on disk: a scenario seating from the catalog's own order gets whoever
+    that order reaches, and for the whole life of this catalog that order
+    started at the account whose entire description is *nothing else at all*.
+
+    Against the **stored** seats rather than the intention, so it fires on a run
+    that creates nothing: a database seeded before this check existed still
+    holds those seats, and a silent second run would leave a developer
+    developing an empty screen against an account holding five matches.
+    """
+
+    for account in accounts:
+        if not account.account.holds_nothing:
+            continue
+        if stored.seat_of(account.player_id) is None:
+            continue
+        raise SeedFailed(
+            f"'{scenario.slug}' seats '{account.account.slug}', whose name "
+            f"promises an empty screen and whose whole value is being the "
+            f"account a client's empty state is drawn from. A player holding a "
+            f"seat is a player with a card on Now, and nothing about that card "
+            f"would look wrong."
+        )
 
 
 def _refuse_a_match_whose_name_lies(scenario: SeedMatch, stored: Match) -> None:

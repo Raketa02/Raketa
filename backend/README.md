@@ -1306,7 +1306,7 @@ breaks on it.
 
 | Address | State |
 | --- | --- |
-| `brand-new-player@raketa.example` | Registered and nothing else — every empty state at once |
+| `brand-new-player@raketa.example` | Registered and nothing else — no rating, no seat, no queue place. The only account whose **emptiness is enforced** |
 | `assessment-in-progress@raketa.example` | Padel assessment open at its first question, no rating |
 | `assessment-abandoned@raketa.example` | Padel run ended without a rating; the sport is free to start again |
 | `assessment-completed@raketa.example` | One completed run and the rating it produced, band **New** |
@@ -1346,10 +1346,10 @@ Court claims are seeded too, in `app/seeds/courts.py`, on the same rule:
 
 Their windows are **fixed absolute instants** on Monday 7 September 2026, not offsets from
 now: *next Tuesday at 18:00* computed at run time is a different Tuesday tomorrow, and a
-second run would claim a second court. A week somebody can walk through arrives with the
-demo week (`Raketa02/Raketa#96`).
+second run would claim a second court. See *The demo week* below for the week they add up
+to, and for what a fixed week costs.
 
-`app/seeds/matches.py` adds eight matches, and here the name is checked by the **kernel**:
+`app/seeds/matches.py` adds thirteen matches, and here the name is checked by the **kernel**:
 
 | Match | The situation its name promises |
 | --- | --- |
@@ -1358,9 +1358,28 @@ demo week (`Raketa02/Raketa#96`).
 | `match-past-its-commitment-deadline` | `formingLate` — short, with the deadline behind it |
 | `match-that-lost-a-player` | `replacement` — committed, one seat short, and a leaver who is owed |
 | `match-played-and-unscored` | `needsResult` — played, waiting twenty-four hours for a score |
+| `match-with-a-score-on-the-table` | `confirmResult` — one side has entered a score, the other has not answered |
+| `match-nobody-can-join` | `full` — complete, and **not yet committed**: the one subject shelf 2 has |
 | `match-private-with-seats-opened` | `privateOpen` — somebody's court, two seats for sale |
+| `match-private-with-shares-outstanding` | `privatePartial` — the owner carrying the shares nobody has paid |
+| `match-private-and-paid-for` | `privateFull` — the last share in, and the guarantee discharged |
+| `match-private-and-paid-outright` | `privateReserved` — one player bought the court; nobody else owes anything |
 | `match-holding-a-court-softly` | `heldSoft` — one seat from full, and a court kept aside |
 | `match-the-club-cancelled` | `cancelledClub` — a decision, not a receipt |
+
+The **four private-owner situations** are the group with no flow behind them at all: nothing
+in v1 posts a private match, opens a seat on one or closes one, and `freeCancelHours` has no
+reader, so a `privateReserved` card is silent in both directions. They are seeded *because*
+they are unreachable — `privateFull` was produced **zero** times across 280 224 records in the
+state-table research (ADR-0072), and a client that has never been handed one will get it wrong.
+
+**Most scenarios do not name who is on them** — which player holds seat 2 is not a fact any
+screen is developed against, so the seeded accounts fill the seats in catalog order. Two name
+theirs, each for its own reason: `match-holding-a-court-softly` so the demo week has one
+address holding a card of her own, and `match-that-lost-a-player` because the **level band**
+the invitation cascade walks is read off the seats that are left, so who is on the match
+decides who its offer can reach. And no scenario may seat `brand-new-player`: her name
+promises an empty screen, which is the one state a client has no other fixture for.
 
 **No scenario carries a seat claim, and that is now a decision rather than a gap.** ADR-0081
 refuses a thirty-seventh situation, so a claim moves no name in this catalog at all: a
@@ -1397,8 +1416,8 @@ situation is a function of the record *and* the clock. Retune a threshold or reo
 and `make seed` stops and says which account's screen just moved.
 
 **No scenario says whether a court is held, and none may.** The hold ladder decides that
-(ADR-0031), and it runs inside the same use cases the runner drives — so five of the eight
-seeded matches end up holding a real reservation whose holder is `MatchHeld(match_id)`, and
+(ADR-0031), and it runs inside the same use cases the runner drives — so the seeded matches
+that earn one end up holding a real reservation whose holder is `MatchHeld(match_id)`, and
 `held_since` is the instant the seeded week entered the tier. That is why
 `app/seeds/courts.py` refuses a match-held claim outright: a match's court is *granted*, not
 authored, and writing one there would be writing down the answer the ladder computes.
@@ -1425,20 +1444,52 @@ against the same three invariants the nightly reconciliation calls. The referenc
 idempotency probe: a movement is filed under a fixed `PAY-<token>`, and the ledger refuses a
 second one under it, so finding it is finding that the scenario has already run.
 
-**A paid seat does not write a movement yet, and none is authored here.** The eight seeded
-matches hold fourteen paid seats between them and are still paid through `PaySeat`, not
-through `money.PayForASeat`. The join exists now (`Raketa02/Raketa#70`); what does not is a
-catalog that can *name* what each seeded match's money is, and a scenario carrying money
-nobody claimed would break the rule every other seeded fact is held to. Driving the join from
-the runner is the demo week's own effort, `Raketa02/Raketa#96`.
+**A paid seat does not write a movement yet, and none is authored here.** The seeded matches
+are still paid through `PaySeat`, not through `money.PayForASeat`. The join exists now
+(`Raketa02/Raketa#70`); what does not is a catalog that can *name* what each seeded match's
+money is, and a scenario carrying money nobody claimed would break the rule every other
+seeded fact is held to.
+
+### The demo week
+
+The five catalogs above are not five lists — they are **one week**, and reading them as one
+is what `Raketa02/Raketa#96` assembled. Each context added its own scenarios as it landed;
+what was missing was the walk.
+
+There is one **walkthrough instant**: Friday 20:00 on the seeded week, half an hour after
+`match-that-lost-a-player` lost one, which is the instant three of the scenarios already
+name. At it, `rated-in-every-sport@raketa.example` has
+
+- an **offers region** — the seat that hole freed, in front of her because she asked;
+- an **enrolled strip** — a court being kept aside for a match she has paid for;
+- and every shelf a v1 server composes: *Best fit for you*, *Full, but worth waiting for*,
+  *New on Raketa* and *New clubs*.
+
+*Recently viewed* is the fifth shelf and is **absent by decision** — ADR-0085 keeps the code
+in the enumeration and composes it nowhere, so no seeded data can put it on a screen
+(`Raketa02/Raketa#123`). And `brand-new-player@raketa.example` is the other end of the same
+claim: all three regions empty, which is the state a client is least likely to have got right.
+
+`tests/api/test_demo_week.py` is the walk. It signs in over HTTP — the address, the password
+and the token are what a developer actually meets — and then **composes at the week's own
+clock**, which is the one thing a request cannot do.
+
+The week is **staged**: each scenario is named at its own instant, and no single instant
+shows all thirteen in the states they are named for — a match played on Tuesday evening is
+not still forming on Friday. That is the catalog's design. What is not is the anchor: the
+week is a fixed week in 2026 and the product reads the wall clock, so the two post-play
+conversations (`needsResult`, `confirmResult`) are readable only from inside the week, and
+once the wall clock walks past it every seeded address's Now is at most one shelf of new
+clubs. That is filed as `Raketa02/Raketa#134` rather than worked around here, because the
+way out — a scrubbable clock, an anchor stored per run, or re-seeding by hand — is a
+decision and not a detail.
 
 Scope is what is **decided**: players, onboarding assessments, Skill ratings, clubs, court
 reservations and bookings, matches, and ledgers. Nothing **authors** a match-held reservation — a
 match's court is granted by the hold ladder (ADR-0031) as a consequence of its seats and its
 clock, so `app/seeds/courts.py` refuses one and `app/seeds/matches.py` gets them for free by
 running the real use cases. A walk over `app/seeds/` asserts the package imports **exactly**
-the six contexts
-that exist — equality in both directions, so it grows deliberately and cannot silently fall
+the contexts that exist — equality in both directions, so it grows deliberately and cannot silently fall
 behind.
 
 Four rules hold this together, and each exists because of a specific way seed data goes

@@ -747,6 +747,24 @@ there; they are not repeated here.
   that player's **money** is — settled or open, and whether her card names an amount — checked
   against the stored departures, and the only claim in the seed system that is about a refund.
   _Avoid_: a claim with no instant, which is not a claim.
+- **Named seats** (`SeedMatch.seats`) — the slugs holding a scenario's seats, in seat order,
+  where the default is the account catalog's own order. *Which* player is on seat 2 is not a
+  fact any screen is developed against, and it stops being true the moment the week has to be
+  **walked by one address**: Now's three regions are non-empty together only for a viewer who
+  is rated at the sports being ranked *and* holds a seat, and the account rated in all four
+  sports is last in a catalog ordered emptiest-first. Two scenarios name theirs and each for
+  its own reason — one so the walker holds a card, one because the **level band** the cascade
+  walks is read off the seats that are left, so who is on the match decides who its offer can
+  reach. _Avoid_: naming half of them, which falls back to catalog order for the rest.
+- **An account named for emptiness holds nothing** (`SeedAccount.holds_nothing`,
+  `EMPTY_HANDED`) — the one account whose *state* is *nothing at all*, written as a claim
+  rather than left as the absence of scenarios. The two stopped being the same thing when a
+  second context could enrol somebody: every seeded match filled its seats from the head of
+  the account catalog, so `brand-new-player` sat on every seeded match that had anybody on it
+  — eight of the nine — while its own description read *registered and nothing else*. Refused twice — the match catalog refuses a
+  scenario that names one at import, and the runner refuses one it finds on the **stored**
+  seats on every run, including a run that creates nothing. _Avoid_: deriving it from an
+  empty `scenarios`, which is a claim about ratings and not about a screen.
 
 - **Composed screen** (`modules/now`) — a **read** with no aggregate behind it: Now owns no
   state, writes nothing and stores nothing, and what it does own is the *composition* —
@@ -1045,8 +1063,26 @@ there; they are not repeated here.
   nothing. The reference is the idempotency probe. The whole seeded set is then asserted
   against the three invariants. _Avoid_: seeding a movement for a paid seat — that join is
   `Raketa02/Raketa#70`, and the runner does not drive it yet: the catalog would have to
-  name what each seeded match's money *is*, which is the demo week's own effort
-  (`Raketa02/Raketa#96`).
+  name what each seeded match's money *is*.
+- **The demo week** — the five catalogs read as one week rather than as five lists. Each
+  context added its own scenarios as it landed and the assembly is last
+  (`Raketa02/Raketa#96`): one **walkthrough instant** — Friday 20:00, half an hour after
+  the seeded hole opened — at which one signed-in address has all three of Now's regions
+  non-empty and every shelf a v1 server composes. Asserted in `tests/api/test_demo_week.py`,
+  which signs in over HTTP and then **composes at the week's own clock**, because the week
+  is a fixed absolute week and the product reads the wall clock (`Raketa02/Raketa#134`). The
+  week is **staged** and no single instant shows all thirteen matches in the states they are
+  named for — a match played on Tuesday is not still forming on Friday, which is the
+  catalog's design and not the gap.
+  _Avoid_: reading the walkthrough as a fixture — it is the same seed a `make seed` writes.
+- **A rendering rather than a flow** — how the demo week asserts the two audiences no v1
+  flow can reach: the four **private-owner** situations and the **leaver**. Nothing posts a
+  private match, opens a seat on one or closes one, and `freeCancelHours` has no reader —
+  so what is checked is that the card composes and carries the right name, which is the
+  whole of what a client can be developed against. `privateFull` in particular was produced
+  **zero** times across 280 224 records in the state-table research (ADR-0072), so a client
+  that has never been handed one will get it wrong. _Avoid_: writing a flow to reach them,
+  which would be building a feature to test a rendering.
 - **Custody** (`money.Custody`) — who is holding a seat's money the instant it arrives:
   `held` for an open match, `passedThrough` for a private court (ADR-0056). It **follows
   what was sold, never how it was paid**, so it is the match's answer and nothing on a

@@ -96,7 +96,19 @@ Rules to preserve:
   which is the strongest form of the rule available anywhere in the catalog. Seed only what is
   **decided** — and a match's court is not seeded at all: it is *granted*, by the ladder, on the
   way through the same use cases a request runs, so a seeded match holds a court exactly when
-  its seats and its clock say it should.
+  its seats and its clock say it should. **The account named for an empty screen holds
+  nothing**, refused at import and again against the stored seats on every run: the seats
+  were filled from the head of the account catalog, so the one account a client's empty
+  state is drawn from was sitting on every seeded match that had anybody on it — eight of
+  the nine — and nothing about the cards it drew looked wrong.
+- **The five catalogs are one week, and the assembly is a test rather than a builder.**
+  `tests/api/test_demo_week.py` signs in over HTTP and composes Now at **one instant on the
+  seeded week**, where one address has all three regions and every shelf a v1 server
+  composes. It composes rather than requesting because the week is a fixed absolute week and
+  the product reads the wall clock (`Raketa02/Raketa#134`). The two audiences no v1 flow can
+  reach — the four private-owner situations and the leaver — are asserted there as
+  **renderings**: that the card composes and says the right name, never a flow that arrives
+  at it.
 - **New routes mount under `app/api/v1/router.py`;** keep the `/api/v1` prefix.
 - **Validate and normalize inside the value object**, not in the use case — see
   `app/modules/users/domain/value_objects.py`.

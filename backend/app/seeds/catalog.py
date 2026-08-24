@@ -232,11 +232,24 @@ class SeedAccount:
 
     ``scenarios`` is per sport and may be empty: an account with nothing in it is
     a state, and the one every client's empty screen is drawn from.
+
+    ``holds_nothing`` is that emptiness written down as a **claim** rather than
+    left as the absence of scenarios, because the two stopped being the same
+    thing the moment a second context could enrol somebody. An account with no
+    scenarios has no rating; it can still be sitting on five matches, and it was
+    — every seeded match filled its seats from the head of this catalog, so
+    ``brand-new-player`` sat on every seeded match that had anybody on it — eight
+    of the nine — while its own
+    description said *registered and nothing else*. That is the failure this
+    catalog exists to refuse and the one that reads best from the outside:
+    nothing about the screen it draws looks wrong, it is simply not the screen
+    the name promises. Empty is a **state**, and a state has to be defended.
     """
 
     slug: str
     description: str
     scenarios: tuple[Scenario, ...] = ()
+    holds_nothing: bool = False
 
     @property
     def email(self) -> str:
@@ -251,8 +264,11 @@ BRAND_NEW_PLAYER = SeedAccount(
     slug="brand-new-player",
     description=(
         "A registered player with nothing else at all — no assessment, no "
-        "rating. Every empty state a client can show, in one account."
+        "rating, no seat, no queue place. Every empty state a client can show, "
+        "in one account, and the only account in the catalog whose emptiness is "
+        "a claim the seed run enforces."
     ),
+    holds_nothing=True,
 )
 
 ASSESSMENT_IN_PROGRESS = SeedAccount(
@@ -365,6 +381,14 @@ ACCOUNTS: tuple[SeedAccount, ...] = (
     RATED_IN_EVERY_SPORT,
 )
 
+#: The accounts whose names promise nothing at all, derived from the claim on
+#: each one rather than written out a second time. Every catalog downstream that
+#: enrols somebody reads this: a match may not seat one of these, and the seed
+#: run checks the stored seats rather than the intention, on every run.
+EMPTY_HANDED: frozenset[str] = frozenset(
+    account.slug for account in ACCOUNTS if account.holds_nothing
+)
+
 
 def _refuse_an_impossible_catalog() -> None:
     """Fail at import rather than part-way through a run.
@@ -382,6 +406,15 @@ def _refuse_an_impossible_catalog() -> None:
     """
 
     RawPassword(SEED_PASSWORD)
+
+    if not EMPTY_HANDED:
+        raise RuntimeError(
+            "no seed account promises an empty screen. Every downstream "
+            "catalog refuses to enrol one of these, and a refusal over an "
+            "empty set holds vacuously and reads exactly like one that holds — "
+            "so the day this list empties is the day the empty screen goes back "
+            "to being a state only an unseeded database has."
+        )
 
     if not SEED_EMAIL_DOMAIN.endswith(RESERVED_TLD):
         raise RuntimeError(

@@ -49,10 +49,12 @@ from app.modules.matches.infrastructure.sqlalchemy_match_models import (
     MatchSeatORM,
     MatchVacancyORM,
 )
-from app.seeds.catalog import ACCOUNTS
+from app.seeds.catalog import ACCOUNTS, EMPTY_HANDED
 from app.seeds.clubs import CLUBS
 from app.modules.now.domain.cascade import Rung
+from app.seeds import matches as match_catalog
 from app.seeds.matches import (
+    HELD_SOFT,
     MATCHES,
     DepartureClaim,
     SeedMatch,
@@ -182,6 +184,81 @@ def test_a_departure_claim_on_a_match_that_loses_nobody_is_refused():
                 names_an_amount=True,
             ),
         )
+
+
+# --- 1b. named seats, and the account that must never be on one -------------
+
+
+def test_a_scenario_names_every_seat_or_none_of_them():
+    """A half-named seat list falls back to the catalog's order for the rest,
+    which is the answer naming them was there to replace."""
+
+    with pytest.raises(ValueError, match="half-authored"):
+        replace(HELD_SOFT, seats=HELD_SOFT.seats[:1])
+
+
+def test_a_scenario_seating_one_player_twice_is_refused():
+    """The aggregate refuses it too — this is where a developer meets it."""
+
+    with pytest.raises(ValueError, match="one seat in a match or none"):
+        replace(
+            HELD_SOFT,
+            taken=2,
+            paid=2,
+            seats=(HELD_SOFT.seats[0], HELD_SOFT.seats[0]),
+        )
+
+
+def test_no_scenario_enrols_the_account_named_for_an_empty_screen():
+    """`Raketa02/Raketa#96`'s rule, over the catalog as it stands.
+
+    Written against `EMPTY_HANDED` rather than against the slug, because the
+    claim lives on the account and a test naming the string would go on passing
+    the day the account was renamed. The set is asserted non-empty first, for
+    the reason every wildcard fence in this tree is: an intersection with
+    nothing holds vacuously and reads exactly like one that holds.
+    """
+
+    assert EMPTY_HANDED
+
+    for match in MATCHES:
+        enrolled = {
+            *match.seats,
+            *(claim.player_slug for claim in match.standby),
+            *(claim.player_slug for claim in match.offers),
+        }
+        assert not (enrolled & EMPTY_HANDED), match.slug
+
+
+def test_a_catalog_that_enrols_an_empty_handed_account_is_refused_at_import(
+    monkeypatch,
+):
+    """The import-time half. Halfway through a run is the one place a bad entry
+    must not be found — a run reaches the ninth scenario having written eight."""
+
+    slug = sorted(EMPTY_HANDED)[0]
+    lying = replace(HELD_SOFT, seats=(slug, *HELD_SOFT.seats[1:]))
+
+    monkeypatch.setattr(match_catalog, "MATCHES", (lying,))
+    with pytest.raises(RuntimeError, match="promises an empty screen"):
+        match_catalog._refuse_an_impossible_catalog()
+
+
+def test_a_catalog_naming_a_player_who_does_not_exist_is_refused_at_import(
+    monkeypatch,
+):
+    lying = replace(HELD_SOFT, seats=("nobody-at-all", *HELD_SOFT.seats[1:]))
+
+    monkeypatch.setattr(match_catalog, "MATCHES", (lying,))
+    with pytest.raises(RuntimeError, match="account catalog does not hold"):
+        match_catalog._refuse_an_impossible_catalog()
+
+
+def test_the_catalog_as_authored_passes_its_own_import_refusal():
+    """The negative control the two above need: a refusal that fired on
+    everything would pass both of them and stop every run."""
+
+    match_catalog._refuse_an_impossible_catalog()
 
 
 # --- 2. the run, and the second run -----------------------------------------
@@ -341,30 +418,68 @@ async def _stored_departures(session):
     return list(rows.scalars().all())
 
 
-async def test_the_seeded_accounts_fill_the_seats_in_catalog_order(
-    session_factory,
-):
-    """Signing in as the first seeded account shows a developer her own matches."""
+async def _seats_held_by(session_factory, run, player_id) -> list[str]:
+    """Every seeded match this player is sitting on, by slug."""
 
-    async with session_factory() as session:
-        run = await seed(session)
-
-    first_player = run.accounts[0].player_id
     async with session_factory() as session:
         repository = build_match_repository(
             session, events=build_event_publisher(session), clock=build_clock()
         )
-        held = [
+        return [
             entry.match.slug
             for entry in run.matches
             if (stored := await repository.get(entry.match_id)) is not None
-            and stored.seat_of(first_player) is not None
+            and stored.seat_of(player_id) is not None
         ]
 
-    # Every scenario that seats anybody seats her first, except the one whose
-    # only seated player has since left it.
+
+async def test_the_seeded_accounts_fill_the_seats_in_catalog_order(
+    session_factory,
+):
+    """Signing in as an early seeded account shows a developer her own matches.
+
+    *Early* rather than *first*: the head of the catalog is the account whose
+    name promises nothing at all, and she is skipped. The one below her is what
+    catalog order now means, so a scenario that names no seats reaches her.
+    """
+
+    async with session_factory() as session:
+        run = await seed(session)
+
+    seatable = [one for one in run.accounts if not one.account.holds_nothing]
+    held = await _seats_held_by(session_factory, run, seatable[0].player_id)
+
+    # Every scenario that neither names its seats nor has since lost her seats
+    # her first.
     assert "match-with-a-seat-held-and-unpaid" in held
-    assert "match-that-lost-a-player" not in held
+    assert "match-holding-a-court-softly" not in held
+
+
+async def test_the_account_named_for_an_empty_screen_sits_on_nothing(
+    session_factory,
+):
+    """`Raketa02/Raketa#96`'s own rule, asked of the seats that are there.
+
+    Counting from the head of the catalog seated `brand-new-player` on every
+    scenario that seats anybody, so the account a client's empty state is drawn
+    from sat on every one that had anybody on it. Nothing about the cards she drew would
+    have looked wrong — they were simply not the screen her name promises, which
+    is the failure mode this catalog exists to refuse.
+
+    Asserted against the **stored** seats and not against `_players_for`, for
+    the same reason the runner's own refusal is: what a developer meets is the
+    database, and the arithmetic that fills it is one of two ways in.
+    """
+
+    async with session_factory() as session:
+        run = await seed(session)
+
+    empty_handed = [one for one in run.accounts if one.account.holds_nothing]
+    assert empty_handed, "no seeded account promises an empty screen"
+
+    for account in empty_handed:
+        held = await _seats_held_by(session_factory, run, account.player_id)
+        assert held == [], f"{account.account.slug} is sitting on {held}"
 
 
 async def test_a_seeded_match_holds_a_court_exactly_when_the_ladder_says_so(
