@@ -133,15 +133,18 @@ CANCELLED = (
     ),
 )
 
-#: Rung 5. Six names off one clock, and the two precedences inside it: a no-show
-#: beats an agreed score, and an unscored match closes at the entry deadline.
+#: Rung 5. Six names off two clocks, and the precedences inside it: a no-show
+#: beats an agreed score, a bare table closes at the **entry** deadline, and a
+#: score on the table closes at its **own** — which is the ordering ADR-0048
+#: reversed, and the rows below are what fail when it is put back.
 PLAYED = (
     row(
         "somebody who paid did not turn up, whatever else is on the table",
         at_offset=120,
         paid=4,
         no_show=True,
-        score_proposed=True,
+        proposed_at=at(91),
+        proposals=1,
         result_agreed=True,
         expected=Situation.PLAYED_NO_SHOW,
     ),
@@ -159,16 +162,62 @@ PLAYED = (
         expected=Situation.COMPLETED,
     ),
     row(
-        "past the entry deadline: an evening, never evidence",
+        "past the entry deadline with nothing on the table: an evening, "
+        "never evidence",
         at_offset=1560,
         paid=4,
         expected=Situation.PLAYED_NO_SCORE,
     ),
     row(
-        "a score is on the table and the deadline is still running",
+        "a score is on the table and its own deadline is still running",
         at_offset=120,
         paid=4,
-        score_proposed=True,
+        proposed_at=at(91),
+        proposals=1,
+        expected=Situation.CONFIRM_RESULT,
+    ),
+    # The ordering ADR-0048 reversed, pinned in both directions. Under the old
+    # ladder the entry deadline was tested first and this row read
+    # `playedNoScore` with twenty-two hours of its own answer still to run.
+    row(
+        "a score entered late outlives the entry deadline, because its own "
+        "answer is still running",
+        at_offset=1500,
+        paid=4,
+        proposed_at=at(1439),
+        proposals=1,
+        expected=Situation.CONFIRM_RESULT,
+    ),
+    row(
+        "silence answered a lone proposal, and the match counts",
+        at_offset=1532,
+        paid=4,
+        proposed_at=at(91),
+        proposals=1,
+        expected=Situation.COMPLETED,
+    ),
+    row(
+        "silence answered two proposals, and Raketa will not arbitrate",
+        at_offset=1532,
+        paid=4,
+        proposed_at=at(91),
+        proposals=2,
+        expected=Situation.PLAYED_NO_SCORE,
+    ),
+    row(
+        "a proposal at its own deadline exactly is already answered",
+        at_offset=1531,
+        paid=4,
+        proposed_at=at(91),
+        proposals=1,
+        expected=Situation.COMPLETED,
+    ),
+    row(
+        "and a minute before it is not",
+        at_offset=1530,
+        paid=4,
+        proposed_at=at(91),
+        proposals=1,
         expected=Situation.CONFIRM_RESULT,
     ),
     row(
@@ -181,7 +230,8 @@ PLAYED = (
         "a score before the last point is ignored",
         at_offset=-1,
         paid=4,
-        score_proposed=True,
+        proposed_at=at(91),
+        proposals=1,
         expected=Situation.READY,
     ),
     row(

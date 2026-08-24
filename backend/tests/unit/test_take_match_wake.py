@@ -81,9 +81,11 @@ from app.modules.matches.application.commands import (
     DepartCommand,
     PaySeatCommand,
     PostMatchCommand,
+    ProposeScoreCommand,
     TakeSeatCommand,
 )
 from app.modules.matches.application.post_match import PostMatch
+from app.modules.matches.application.record_result import ProposeScore
 from app.modules.matches.application.resolve_court_hold import ResolveCourtHold
 from app.modules.matches.application.seat_moves import Depart, PaySeat, TakeSeat
 from app.modules.matches.application.take_match_wake import (
@@ -91,6 +93,7 @@ from app.modules.matches.application.take_match_wake import (
     TakeMatchWake,
     WakeOutcome,
 )
+from app.modules.matches.domain.score import Score, SetScore
 from app.modules.matches.domain.wake import MatchWake
 from app.modules.matches.infrastructure.sqlalchemy_match_models import MatchORM
 
@@ -146,6 +149,7 @@ class _World:
         self.take = TakeSeat(matches, holds, uow, clock)
         self.pay = PaySeat(matches, holds, uow, clock)
         self.depart = Depart(matches, holds, uow, clock)
+        self.propose = ProposeScore(matches, uow, clock)
 
     async def announcements(self) -> int:
         counted = select(func.count()).select_from(EventOutboxORM)
@@ -262,6 +266,40 @@ async def a_committed_match_that_lost_somebody(world, **overrides):
         )
     )
     return match, players[0]
+
+
+async def a_played_match_with_a_lone_proposal(world, **overrides):
+    """Four paid seats, the match played, and one side's score on the table.
+
+    The clock is left at the moment of the proposal, so the next thing ahead of
+    the match is the proposal's own deadline and nothing else.
+    """
+
+    match = await a_match(world, **overrides)
+    world.clock.set(INSIDE_COMMITMENT)
+    players = [uuid4() for _ in range(4)]
+    for player in players:
+        await world.take.execute(
+            TakeSeatCommand(match_id=match.id, player_id=player)
+        )
+        await world.pay.execute(PaySeatCommand(match_id=match.id, player_id=player))
+
+    entered = START + timedelta(hours=2)
+    world.clock.set(entered)
+    await world.propose.execute(
+        ProposeScoreCommand(
+            match_id=match.id,
+            player_id=players[0],
+            score=Score((SetScore(6, 4), SetScore(7, 6))),
+        )
+    )
+    return match, players, entered
+
+
+async def the_match(world, match_id):
+    stored = await world.matches.get(match_id)
+    assert stored is not None
+    return stored
 
 
 async def the_departure(world, match_id, player_id):
@@ -548,6 +586,69 @@ def test_the_walk_can_tell_the_difference():
     ]
 
     assert read
+
+
+# --- the fourth actor: silence settles a result -----------------------------
+
+
+async def test_the_entry_deadline_settles_nothing_and_re_arms_for_the_proposal(world):
+    """The two deadlines are two boundaries, and the earlier one is not this
+    actor's. A look at the entry deadline finds a conversation that is still
+    live — which is the reversal ADR-0048 made — writes nothing, and points the
+    schedule at the moment silence actually answers."""
+
+    match, players, entered = await a_played_match_with_a_lone_proposal(world)
+    entry = START + timedelta(hours=1, minutes=24 * 60)
+    wake = await world.the_one_due_wake(entry)
+    assert wake.reason is WakeReason.RESULT_WINDOW
+
+    world.clock.set(entry)
+    outcome = await world.look.execute(wake)
+
+    assert outcome is WakeOutcome.NOTHING_TO_DO
+    assert not (await the_match(world, match.id)).result_agreed
+    _, reason = await world.stored_schedule(match.id)
+    assert reason == WakeReason.SETTLEMENT.value
+
+
+async def test_a_wake_at_the_proposals_deadline_writes_the_receipt(world):
+    """The timekeeper's **fourth actor**. Nothing else would ever write it: the
+    opponent said nothing, so no tap settles it, and the ladder has already
+    moved — what this buys is the announcement and the flag."""
+
+    match, players, entered = await a_played_match_with_a_lone_proposal(world)
+    entry = START + timedelta(hours=1, minutes=24 * 60)
+    world.clock.set(entry)
+    await world.look.execute(await world.the_one_due_wake(entry))
+
+    settles = entered + timedelta(hours=24)
+    wake = await world.the_one_due_wake(settles)
+    assert wake.reason is WakeReason.SETTLEMENT
+
+    world.clock.set(settles)
+    outcome = await world.look.execute(wake)
+
+    assert outcome is WakeOutcome.ACTED
+    assert (await the_match(world, match.id)).result_agreed
+
+
+async def test_settling_a_result_is_taken_twice_without_moving_anything(world):
+    """A duplicate look is looking twice: the second re-derives, finds the
+    result already agreed, and writes nothing."""
+
+    match, players, entered = await a_played_match_with_a_lone_proposal(world)
+    entry = START + timedelta(hours=1, minutes=24 * 60)
+    world.clock.set(entry)
+    await world.look.execute(await world.the_one_due_wake(entry))
+
+    settles = entered + timedelta(hours=24)
+    wake = await world.the_one_due_wake(settles)
+    world.clock.set(settles)
+    await world.look.execute(wake)
+    before = await world.announcements()
+
+    assert await world.look.execute(wake) is not WakeOutcome.ACTED
+    assert await world.announcements() == before
 
 
 # --- the wiring -------------------------------------------------------------

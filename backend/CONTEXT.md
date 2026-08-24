@@ -1314,12 +1314,19 @@ there; they are not repeated here.
   shelves exclude a queued match by rule. Two reads and one list — `for_player` answers
   enrolment and `queued_by` answers the queue, kept apart because eligibility reads the
   first as *what is already hers* and a queue place is neither her identity nor her hours.
-- **`ACT_OF`** (`now.domain.vocabulary`) — which act a card names, per situation. **One row
-  today**, and that is ADR-0083's rule rather than a stub: an act arrives with the surface
-  that receives it, and of the ten situations that would name one only `waitlisted` has a
-  destination. A **partial** table, because writing twenty-six `None`s would be twenty-six
-  rows nobody could get wrong; what keeps it honest is the assertion beside it that its
-  values are exactly the acts this build can receive.
+- **`ACT_OF`** (`now.domain.vocabulary`) — which act a card names, per situation. **Three
+  rows**, and that is ADR-0083's rule rather than a count: an act arrives with the surface
+  that receives it, and of the ten situations that would name one, `waitlisted` has the
+  standby write and the two post-play names have the result route. Seven still have none. A
+  **partial** table, because writing twenty-four `None`s would be twenty-four rows nobody
+  could get wrong; what keeps it honest is the assertion beside it that its values are
+  exactly the acts this build can receive.
+- **`ACTS_NEEDING_A_SEAT`** (`now.domain.vocabulary`) — the two rows of that table which
+  need a fact the **situation** does not carry. The played rung has no membership test on
+  purpose — a leaver and a standby player both resolve to `needsResult`, so what is
+  withheld from them is the affordance rather than the sentence (ADR-0030) — and ADR-0048
+  lets neither of them touch the result. `card_of` is the one place it is applied, off
+  `holds_seat`, which is the same fact the route's three booleans read.
 - **`NowUpdate`, in two forms** (`CardChanged` · `CardGone`) — the card changed in place, or
   the card gone. ADR-0070 requires the second and nothing could produce it until ADR-0091:
   a departure **keeps** the leaver's card, and a queue place is the whole of what put a
@@ -1334,6 +1341,58 @@ there; they are not repeated here.
   value and stopped being free when `Standby.leave` arrived returning nothing: a port that
   writes and never answers cannot hand one player's answer to another, and reading it as a
   player-keyed cache is the walk misfiring rather than the rule firing.
+
+- **The result route** (`now/presentation/result_routes.py`) — `GET` /
+  `POST /api/v1/matches/{matchId}/result` and `POST …/result/acceptance`, ADR-0074's shape.
+  It lives in `now/` although its path says `matches`, for the reason the departure route
+  does. It embeds the spine verbatim, carries the situation off the **same ladder**, and is
+  **not a card** — no fit badge, no emphasis, no card stamp. Five renderings, one reader:
+  entry, both audience renderings of a live proposal, the counter, the settled result and
+  the unscored ending are `needsResult` · `confirmResult` · `completed` · `playedNoScore`
+  resolved for the viewer who asked. **No `phase` field and no version.** A general
+  `GET /matches/{id}` is refused, and its absence is asserted.
+- **Two writes and not three** — ADR-0074 names three acts and there are two addresses,
+  because entering, correcting and countering are one act at three moments: ADR-0048 caps
+  *proposals per side* across all of them, and which one a given score is depends on what
+  is already on the table. A client choosing between two endpoints would be holding exactly
+  that rule (ADR-0053). The three booleans are three **labels** over these two sends.
+  Accepting has its own address because it carries nothing, and one endpoint whose meaning
+  turned on whether a field was present is the *not there / there and empty* confusion the
+  result block itself is shaped to avoid.
+- **The result block** (`ResultBlock`) — four facts and no history: the score on the table,
+  which side put it there, whether it is agreed, and how many **sides** have spoken. Always
+  present and **empty when nothing is on the table**, which is a region's rule rather than
+  a shelf's, because it makes no claim. `proposed_by` indexes into `score.sides`, which the
+  composer has already put the viewer's side first in — so `0` is always *your side* and
+  the phone subtracts nothing.
+- **The entry deadline against the settlement deadline** (`kernel.result_window` ·
+  `kernel.settlement_deadline`) — ADR-0048 replaced one constant with two, and both are
+  twenty-four hours from different moments. The first bounds **every** way a score arrives
+  — a first entry, a correction and a counter alike — which is what makes that ADR's outer
+  bound of forty-eight hours arithmetic rather than a second rule. The second is a property
+  of the **proposal**, so a correction replaces it along with the score, and it answers
+  `None` once nothing is left for silence to answer.
+- **A side proposes once, and a correction is not a proposal** — `Match.propose_score`
+  moves the count when the *other* side speaks and never when this one repeats itself
+  (ADR-0048). So a teammate objecting to a teammate's score is a correction rather than a
+  counter, and is the more permissive of the two — the rule that makes her agreement
+  worthless is the same rule that makes her objection credible.
+- **Silence is derived and the flag is a receipt** — the ladder settles a lone proposal off
+  `proposed_at` whether or not a wake has been round, exactly as the two cancellation flags
+  work. `Match.settle_result_by_silence` is the timekeeper's **fourth actor** and writes
+  the announcement, not the truth. **Two proposals settle nothing** and it writes nothing
+  for them: Raketa does not arbitrate and does not file a receipt saying it did.
+- **The acceptance grace** (`now.domain.result.ACCEPTANCE_GRACE_MINUTES`) — thirty minutes
+  from the proposal, inside which a counter beats a pending acceptance, present on the wire
+  **only while it runs**. It is Now's and **not the kernel's**, because no rung reads it: it
+  changes nothing about what the match is doing and everything about what the screen may
+  say, and a boundary in the kernel is a moment the ladder compares a clock against.
+- **The permissive validator** (`matches.domain.score.validate_score`) — it *"declines the
+  obviously impossible"* and never enforces the rulebook, because local variation is wide
+  enough that a strict one eventually calls a real match illegal. Three refusals: more sets
+  than an evening holds, a count no format of that sport reaches, and a set nobody scored
+  in. The ceiling is **per sport** — tennis has played 70-68 and padel has not — and it
+  runs before anything is written, so a typo does not consume a side's one proposal.
 
 Add backend-specific technical terms here as they are resolved. Anything describing the
 *domain* belongs in the shared glossary instead.

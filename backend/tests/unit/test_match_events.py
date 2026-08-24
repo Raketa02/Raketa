@@ -59,7 +59,7 @@ AGGREGATE = ROOT / "app" / "modules" / "matches" / "domain" / "match.py"
 READ_ONLY = frozenset(
     {"as_record", "open_vacancies", "is_settled", "seat_of", "seat_at",
      "departure_of", "pull_events", "unended_claims", "live_claim_of",
-     "seats_under_claim"}
+     "seats_under_claim", "side_of"}
 )
 
 #: Twenty-seven changes and twenty-seven names. Pinned, so that deleting an event
@@ -85,18 +85,21 @@ def _announces(node: ast.FunctionDef) -> bool:
     An attribute call rather than ``self._record`` specifically, because
     ``post`` is a classmethod and announces through the instance it built.
 
-    ``commit_if_due`` and ``resolve_departures_to`` are the two public methods
-    that announce **on behalf of a caller**: a payment that fills a match past
-    its deadline commits it, and a cancellation reopens every settlement it
-    improves. Naming them here rather than inlining their ``_record`` calls is
-    what keeps one change one announcement.
+    ``commit_if_due``, ``resolve_departures_to`` and ``agree_result`` are the
+    three public methods that announce **on behalf of a caller**: a payment that
+    fills a match past its deadline commits it, a cancellation reopens every
+    settlement it improves, and the timekeeper's silence settles a result the
+    same way an opponent's tap does. Naming them here rather than inlining their
+    ``_record`` calls is what keeps one change one announcement — and it is what
+    makes *settled by silence* and *settled by agreement* one event with a flag
+    on it, which is ADR-0048's own reading of them.
     """
 
     return any(
         isinstance(inner, ast.Call)
         and isinstance(inner.func, ast.Attribute)
         and inner.func.attr
-        in {"_record", "commit_if_due", "resolve_departures_to"}
+        in {"_record", "commit_if_due", "resolve_departures_to", "agree_result"}
         for inner in ast.walk(node)
     )
 

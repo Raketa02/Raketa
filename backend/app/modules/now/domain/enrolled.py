@@ -61,6 +61,17 @@ class PlayedScore:
     sets: tuple[tuple[int, int], ...]
     viewer_side: int | None = None
 
+    #: Which side put this score on the table, in the match's own order. A
+    #: **side and never a player**: ADR-0048 caps proposals per side, so naming
+    #: the teammate who typed it would put a person in an argument the model
+    #: holds between two halves of a net.
+    #:
+    #: It is here rather than on the card's ``ScoreLine`` because a card draws a
+    #: score on exactly the two settled situations, where *who proposed it* has
+    #: no audience at all — and a field with no reader is the thing ADR-0071
+    #: refuses. The result route is its one reader.
+    proposed_side: int | None = None
+
 
 @final
 @dataclass(frozen=True)

@@ -60,12 +60,21 @@ _CHECKPOINT = hours(2)
 #: fifteen minutes before the start.
 _DOOR_CODE_LEAD = minutes(15)
 
-#: How long after the last point a score may still be entered. Twenty-four hours,
-#: not the prototype's thirty minutes: ADR-0048 permits entry *"for 24 hours after
-#: the match ends"* and ADR-0049 says outright *"with the deadline now 24 hours"*.
-#: The thirty minutes survive as the moment the card **asks** — a nudge while both
-#: sides are still at the club — and never as a bar (``Raketa02/Raketa#79``).
+#: How long after the last point a score may still be **entered**. Twenty-four
+#: hours, not the prototype's thirty minutes: ADR-0048 permits entry *"for 24
+#: hours after the match ends"* and ADR-0049 says outright *"with the deadline
+#: now 24 hours"*. The thirty minutes survive as the moment the card **asks** — a
+#: nudge while both sides are still at the club — and never as a bar.
 _RESULT_WINDOW = hours(24)
+
+#: How long a score sits on the table before **silence answers it**. ADR-0048
+#: replaces *"``resultWindow`` as a single constant"* with two — *"an entry
+#: deadline on the match and a proposal deadline on each proposal"* — and this is
+#: the second. It is declared beside the first and not spelled as it, although
+#: today the two durations coincide: they answer different questions and either
+#: could move without the other, and one constant serving two rules is how a
+#: change to one silently becomes a change to both.
+_SETTLEMENT = hours(24)
 
 #: How long a hole left by a departure keeps the match in the recovery group
 #: before the card goes back to describing an ordinary forming match.
@@ -88,6 +97,12 @@ _CLAIM_COOLDOWN: Seconds = seconds(30)
 #: the spot*: a match whose last seat was paid after the deadline had already
 #: passed commits the moment it fills, and says so.
 _LATE_FILL_TOLERANCE = minutes(1)
+
+#: How many sides a score has. Public because it is the cap on the proposal
+#: count — ADR-0048 gives each side one proposal — and because Matches splits its
+#: seats down the middle to find them; two spellings of *how many sides a net
+#: has* is the mapper this kernel exists to make unnecessary.
+SIDES = 2
 
 # Every one of these is private, and each has a function below that answers the
 # question it exists for. A constant re-exported is an invitation to compute
@@ -372,11 +387,33 @@ class MatchRecord:
     no_show: bool = False
     """Somebody who paid did not turn up."""
 
-    score_proposed: bool = False
-    """A score is on the table awaiting an answer."""
+    proposed_at: Instant | None = None
+    """When the score now on the table was put there, or `None` for a bare table.
+
+    **A moment rather than the boolean it replaces**, because the ladder cannot
+    otherwise answer ADR-0048's *"a lone proposal unanswered for 24 hours
+    stands"*: settlement by silence is a deadline the proposal carries with it,
+    and a record saying only *there is a score* forces the truth to wait on a
+    write. It is `None` again once the result is agreed — the same moment
+    `score_proposed` went false — because the ladder answers `completed` above
+    every rung that reads this and a settled proposal has no deadline left."""
+
+    proposals: int = 0
+    """How many **sides** have put a score up, and never how many taps there were.
+
+    ADR-0048 caps it at one per side and calls a revision of your own side's live
+    proposal a correction rather than a second proposal, so this reaches two and
+    stops. It is the fact that separates the two ways silence can end a
+    conversation: one proposal nobody answered **stands**, and two proposals
+    nobody accepted leave the match uncounted."""
 
     result_agreed: bool = False
-    """A score has settled, by agreement or by silence."""
+    """A score has settled, by agreement or by silence.
+
+    A **receipt** and not the truth, exactly as the two cancellation flags are:
+    the ladder settles a lone proposal off `proposed_at` whether or not a wake
+    has been round to write this, so a downed timekeeper delays the
+    announcement and never what the screen says."""
 
     def __post_init__(self) -> None:
         players = SPORT_SPECS[self.sport].players
@@ -420,6 +457,18 @@ class MatchRecord:
         invariant(
             len({claim.seat_index for claim in self.claims}) == len(self.claims),
             "two unended claims on one seat",
+        )
+        # A score has two sides and ADR-0048 gives each of them one proposal, so
+        # a third is a writer having counted corrections. Refused at the door
+        # because the count is what separates *stands* from *uncounted* once
+        # silence answers, and a wrong one settles the wrong way round.
+        invariant(
+            0 <= self.proposals <= SIDES,
+            f"{self.proposals} proposals over {SIDES} sides",
+        )
+        invariant(
+            self.proposed_at is None or self.proposals > 0,
+            "a score on the table that no side proposed",
         )
 
 
@@ -476,6 +525,12 @@ class WakeReason(str, Enum):
     MATCH_END = "matchEnd"
     #: Twenty-four hours after that, when a score can no longer be entered.
     RESULT_WINDOW = "resultWindow"
+    #: Twenty-four hours after a proposal, when silence answers it. **Last, and
+    #: therefore the loser of every tie it is in**, which it is in exactly once:
+    #: a score entered at the final point itself settles at the same instant the
+    #: entry deadline passes, and *the score can no longer be entered* is the
+    #: earlier and more consequential name for that moment.
+    SETTLEMENT = "settlement"
 
 
 #: Declaration order, as a rank. Derived from the enumeration rather than
@@ -587,17 +642,50 @@ def match_end(record: MatchRecord) -> Instant:
 
 
 def result_window(record: MatchRecord) -> Instant:
-    """When a score can no longer be entered: past this, a match nobody agreed on
-    is an evening rather than evidence (ADR-0048, ADR-0049).
+    """The **entry deadline**: when a score can no longer be put on the table.
+
+    Past this, a match with a bare table is an evening rather than evidence
+    (ADR-0048, ADR-0049). It bounds *every* way a score arrives — a first entry,
+    a correction of one, and a counter — which is what makes ADR-0048's outer
+    bound arithmetic true: the last moment anybody may propose is twenty-four
+    hours after the final point, each proposal is answered by silence twenty-four
+    hours later, so nothing settles more than forty-eight hours after it.
+
+    **It is not the settlement deadline**, and ADR-0048 replaced the one constant
+    that was both with two. A match with a score on the table lives past this one
+    — ``settlement_deadline`` is what ends its conversation.
 
     **How long a card is kept afterwards is not here.** A card lives twenty-four
     hours from the moment it *closed*, which is a fact about a settlement or a
     cancellation and not about when the match would have ended
     (``Raketa02/Raketa#74``) — so the record the ladder reads cannot say it, and
-    the kernel does not pretend to. It is also not a boundary any rung reads.
+    the kernel does not pretend to.
     """
 
     return shifted(match_end(record), _RESULT_WINDOW)
+
+
+def settlement_deadline(record: MatchRecord) -> Instant | None:
+    """When silence answers the score on the table, or `None` for a bare table.
+
+    ADR-0048's **proposal deadline**, and it is a property of the proposal rather
+    than of the match: twenty-four hours from the moment the live score was put
+    up, so a correction that replaces the score replaces its deadline with it.
+    What happens when it passes depends on how many sides have spoken — a lone
+    proposal *stands*, two leave the match uncounted — and that is the ladder's
+    to say rather than this function's.
+
+    `None` is *there is nothing left for silence to answer*, which covers both
+    ways that happens: nobody has proposed at all, or somebody accepted. **The
+    settled case is here and not in the aggregate that writes the flag**, because
+    two readers depend on it and they are both the kernel's — the ladder, which
+    answers `completed` above every rung that reads this, and `next_wake`, which
+    would otherwise arm a look at an answer nobody can give.
+    """
+
+    if record.proposed_at is None or record.result_agreed:
+        return None
+    return shifted(record.proposed_at, _SETTLEMENT)
 
 
 def is_terminal(record: MatchRecord) -> bool:

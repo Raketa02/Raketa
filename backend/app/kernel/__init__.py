@@ -47,6 +47,7 @@ from app.kernel.holds import (
 )
 from app.kernel.invariants import InvariantViolated, exhaustive, invariant
 from app.kernel.matches import (
+    SIDES,
     Boundary,
     Deadlines,
     HoldPolicy,
@@ -76,6 +77,7 @@ from app.kernel.matches import (
     match_end,
     result_window,
     seat_count,
+    settlement_deadline,
     turned_up,
     vacancy_expires_at,
 )
@@ -209,6 +211,7 @@ __all__ = [
     "shifted",
     "slot_start",
     # matches — the facts one pure function reads, and the five deadlines
+    "SIDES",
     "Boundary",
     "Deadlines",
     "HoldPolicy",
@@ -238,6 +241,7 @@ __all__ = [
     "match_end",
     "result_window",
     "seat_count",
+    "settlement_deadline",
     "turned_up",
     "vacancy_expires_at",
     # holds — is a court being kept aside, on what terms, and until when

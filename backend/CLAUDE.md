@@ -334,6 +334,32 @@ Rules to preserve:
   check. **Nothing joins a queue in v1** — the waitlist toggle is a match-screen control and
   that screen is out of scope — so `JoinStandby` has the seed catalog as its only caller, the
   shape the four private-owner situations already take.
+- **A result is a conversation on a route, and the ladder settles it rather than a write.**
+  `GET`/`POST /api/v1/matches/{matchId}/result` and `POST …/result/acceptance`, ADR-0074's
+  shape, in `now/` for the reason the departure route is
+  ([ADR-0074](../docs/adr/0074-the-result-route-reads-four-facts-and-an-action-off-now-hands-now-its-update.md),
+  [ADR-0060](../docs/adr/0060-a-result-is-entered-on-a-route-and-the-card-names-the-act.md),
+  [ADR-0048](../docs/adr/0048-silence-confirms-a-result-and-disagreement-carries-a-score.md)).
+  It embeds the spine verbatim, resolves off the **same ladder** — five renderings, one
+  reader — and is **not a card**. The result block is **four facts and no history**, always
+  present and empty when nothing is on the table. **Two clocks, both named**, and the
+  thirty-minute grace crosses only while it runs, because hiding it produces the outcome
+  ADR-0048 built it to prevent inverted: the screen says *settled* half an hour early.
+  **ADR-0048 replaced one constant with two** — `result_window` bounds every way a score
+  arrives, which is what makes the forty-eight-hour outer bound arithmetic, and
+  `settlement_deadline` is a property of the **proposal**, so a correction replaces it.
+  **Silence is derived**: the ladder answers `completed` for a lone proposal past its
+  deadline whether or not a wake has been round, and `result_agreed` is a receipt like the
+  two cancellation flags — which is what makes the ordering ADR-0048 reversed real rather
+  than dependent on a job. Two proposals settle nothing, and nothing is written for them.
+  **Two writes, not ADR-0074's three**: entering, correcting and countering are one act at
+  three moments and the aggregate tells them apart, because a client choosing between two
+  endpoints would hold ADR-0048's cap as a rule. The three booleans are three **labels**
+  over two sends, and every one of ADR-0048's permissions is enforced on the aggregate as
+  well as composed on the screen — the lesson `#80` paid for. The validator **declines the
+  obviously impossible and never the rulebook**, with a per-sport ceiling, and a bare
+  rejection is refused by having no shape to send one in.
+
 - **Now's update is one card in one of two forms.** `CardChanged` or `CardGone`, and the
   second is ADR-0070's *"the one-card answer must be able to say this card is no longer on
   your screen"*, produced for the first time by leaving standby — a departure **keeps** the

@@ -302,7 +302,7 @@ def _with_a_claim(record: MatchRecord, now) -> MatchRecord | None:
                 "committed_at", "open_vacancies", "transferring", "court_locked",
                 "club_extended", "inventory_lost", "club_cancelled", "weather",
                 "form_cancelled", "checkpoint_cancelled", "no_show",
-                "score_proposed", "result_agreed",
+                "proposed_at", "proposals", "result_agreed",
             )
         },
         claims=(a_claim(index, instant(now + _CLAIM_WINDOW)),),

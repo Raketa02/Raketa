@@ -345,18 +345,65 @@ class MatchNotPlayed(ConflictError):
 
 
 class ResultWindowClosed(ConflictError):
-    """The twenty-four hours are up and a score can no longer be entered.
+    """The conversation is over, on whichever of its two deadlines ended it.
 
-    The kernel's own boundary (``kernel.result_window``): past it the ladder
-    answers ``playedNoScore``, so a score accepted here would be one the screen
-    could never show. Not entering one carries no penalty — a match nobody
-    agreed on is an evening, not evidence (ADR-0049).
+    ADR-0048 replaced one constant with two, and both close the same door: past
+    ``kernel.result_window`` no score may be put on the table at all, and past
+    ``kernel.settlement_deadline`` the score on it has already been answered by
+    silence. Either way what arrives is a tap at a question that has closed.
+    Not entering a score carries no penalty — a match nobody agreed on is an
+    evening, not evidence (ADR-0049).
     """
 
     code = "match_result_window_closed"
 
     def __init__(self) -> None:
-        super().__init__("It is too late to enter a score for this match.")
+        super().__init__("It is too late to answer this match's result.")
+
+
+class SideHasProposed(ConflictError):
+    """This side has had its turn, and ADR-0048 gives it one.
+
+    Two scores on the table is the whole of the disagreement the ADR models: a
+    third would be one side repeating itself, and *"the extra day buys delay
+    rather than resolution"*. Replacing your **own** side's live score is not
+    this — that is a correction, and it is allowed freely.
+    """
+
+    code = "match_side_has_proposed"
+
+    def __init__(self) -> None:
+        super().__init__("Your side has already proposed a score for this match.")
+
+
+class AcceptanceFromOwnSide(ConflictError):
+    """A teammate agreeing with a teammate proves nothing (ADR-0048).
+
+    Accepting is opposing-side only and one opponent suffices. Countering is
+    open to anybody who played, including the proposing side — which is the same
+    rule read the other way round: a teammate's objection is credible precisely
+    because her agreement is not.
+    """
+
+    code = "match_acceptance_from_own_side"
+
+    def __init__(self) -> None:
+        super().__init__("Only the other side can accept this score.")
+
+
+class ImpossibleScore(BadRequestError):
+    """A scoreline no format of this sport could produce.
+
+    The validator declines *"the obviously impossible"* and never enforces the
+    rulebook: local variation — tie-breaks, golden point, timed formats — is
+    wide enough that a strict one eventually calls a real match illegal, which
+    is a support problem with no answer. A 7-6 is not this.
+    """
+
+    code = "match_impossible_score"
+
+    def __init__(self) -> None:
+        super().__init__("That score could not have been played at this sport.")
 
 
 class StartMustBeInTheFuture(BadRequestError):

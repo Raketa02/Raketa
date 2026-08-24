@@ -198,6 +198,24 @@ def test_more_seats_opened_than_the_court_is_sold_for_is_refused() -> None:
         a_match(paid=1, open_seats=5)
 
 
+def test_a_third_proposal_is_refused_at_the_door() -> None:
+    """A score has two sides and ADR-0048 gives each of them one proposal, so a
+    third is a writer having counted corrections. It is refused here because the
+    count is what separates *stands* from *uncounted* once silence answers, and
+    a wrong one settles the wrong way round."""
+
+    with pytest.raises(InvariantViolated, match="proposals over"):
+        a_match(paid=4, proposed_at=at(120), proposals=3)
+
+
+def test_a_score_on_the_table_that_no_side_proposed_is_refused() -> None:
+    """The two facts move together or the record is describing nothing: a
+    proposal's moment with a zero count has no way to settle."""
+
+    with pytest.raises(InvariantViolated, match="no side proposed"):
+        a_match(paid=4, proposed_at=at(120), proposals=0)
+
+
 def test_a_club_policy_that_cannot_mean_anything_is_refused() -> None:
     with pytest.raises(InvariantViolated, match="cancellation window"):
         HoldPolicy(window=minutes(0))

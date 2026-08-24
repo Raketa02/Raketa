@@ -347,7 +347,13 @@ def _score(
 
     The viewer's side is found from the seat she holds **or the one she left**,
     because a leaver who played and then left after the match is still on one
-    side of that net.
+    side of that net. It is *not* what decides whether she may touch the result
+    — ADR-0048 lets a leaver do none of it — and the composer reads ``holds_seat``
+    for that rather than this.
+
+    The proposing side comes off ``Match.side_of``, which is Matches' own answer
+    to *which half of the net is this player on*: transcribing the arithmetic
+    here would be the second spelling of a fact the aggregate already states.
     """
 
     if match.score is None:
@@ -366,6 +372,9 @@ def _score(
         sides=(sides[0], sides[1]),
         sets=tuple((one.side_a, one.side_b) for one in match.score.sets),
         viewer_side=None if index is None else (0 if index < half else 1),
+        proposed_side=(
+            None if match.score_by is None else match.side_of(match.score_by)
+        ),
     )
 
 

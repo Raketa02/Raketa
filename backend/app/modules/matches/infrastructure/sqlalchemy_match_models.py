@@ -267,6 +267,16 @@ class MatchORM(Base):
         sa.DateTime(timezone=True), nullable=True
     )
 
+    #: When the score now on the table was put there, and therefore when silence
+    #: answers it (ADR-0048). Declared **last, where it reads worst**, because
+    #: `ALTER TABLE ADD COLUMN` appends and the migration test compares the two
+    #: DDLs string for string — a model that read better and described a
+    #: different table would make that comparison a formality. It belongs beside
+    #: `score_sets` and does not sit there.
+    score_proposed_at: Mapped[Optional[datetime]] = mapped_column(
+        sa.DateTime(timezone=True), nullable=True
+    )
+
     __table_args__ = (
         sa.Index(
             DUE_WAKE,

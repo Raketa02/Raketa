@@ -93,6 +93,8 @@ from app.modules.now.domain.screen import (
 )
 from app.modules.now.domain.vocabulary import (
     ACT_OF,
+    ACTS_NEEDING_A_SEAT,
+    ActCode,
     CANCELLATION_CAUSE_OF,
     REFUND_DESTINATION_OF,
 )
@@ -173,13 +175,12 @@ def card_of(row: Enrolment, *, now: Instant, stamp: Stamp) -> MatchCard:
             facts=_facts(row, now=now),
         ),
         clock=card_clock(record, now, claim_expires_at=claim),
-        # **The one act this build composes**, and the enumeration's own rule is
-        # why there is one: ADR-0083 lets a card name an act when the viewer can
-        # take it now *and a v1 surface can receive it*, and ADR-0087 shipped
-        # `leaveStandby` with the write that receives it. The other nine
-        # situations that would name one have no destination yet, and each
+        # **The three acts this build composes**, and the enumeration's own rule
+        # is why there are three: ADR-0083 lets a card name an act when the
+        # viewer can take it now *and a v1 surface can receive it*. The other
+        # seven situations that would name one have no destination yet, and each
         # arrives in the ticket that builds its own.
-        act=ACT_OF.get(resolved),
+        act=_act(row, resolved),
         # The third control in the action row, and a **spine** boolean rather
         # than an act code (ADR-0086): leaving is not the card's act, and
         # putting it in `cta` would give one card two of them. It is the
@@ -192,6 +193,30 @@ def card_of(row: Enrolment, *, now: Instant, stamp: Stamp) -> MatchCard:
             None if claim is None or not holds_claim else SeatClaim(expires_at=claim)
         ),
     )
+
+
+def _act(row: Enrolment, resolved: Situation) -> ActCode | None:
+    """Which act this card names, **for this viewer**.
+
+    The table is keyed by situation and two of its three rows need a fact the
+    situation does not carry. The played rung has no membership test at all — a
+    leaver and a standby player both resolve to `needsResult`, deliberately, so
+    that the affordance is what is withheld from them rather than the sentence —
+    and ADR-0048 lets neither touch the result. So a card composed for somebody
+    holding no seat names no act, which is the same answer the route gives her:
+    her screen opens and offers nothing.
+
+    Read off the **viewer** and never off the record, which is the mutation this
+    table's own sibling was written to catch: `holds_seat` is a fact about this
+    pair, and a card that named the act from the match alone would put *enter the
+    score* in front of the one person ADR-0030 keeps a card for precisely
+    because she may not.
+    """
+
+    act = ACT_OF.get(resolved)
+    if act in ACTS_NEEDING_A_SEAT and not row.holds_seat:
+        return None
+    return act
 
 
 def _situation_of(row: Enrolment, now: Instant) -> Situation:

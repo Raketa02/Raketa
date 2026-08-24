@@ -21,7 +21,7 @@ from app.modules.matches.application.commands import (
     AgreeResultCommand,
     ProposeScoreCommand,
 )
-from app.modules.matches.domain.errors import MatchNotFound, SeatNotTaken
+from app.modules.matches.domain.errors import MatchNotFound
 from app.modules.matches.domain.match import Match
 from app.modules.matches.domain.ports import MatchRepository
 
@@ -38,12 +38,12 @@ class ProposeScore:
         match = await self._matches.get(command.match_id)
         if match is None:
             raise MatchNotFound()
-        # Only somebody who was on the court may say what happened on it. A
-        # leaver's seat is empty by then, which is why her screen opens and
-        # offers nothing (`Raketa02/Raketa#90`) rather than 404ing.
-        if match.seat_of(command.player_id) is None:
-            raise SeatNotTaken()
-
+        # Only somebody who was on the court may say what happened on it, and
+        # that is the **aggregate's** refusal rather than a guard here: it has to
+        # find her side to apply ADR-0048's one-proposal-per-side cap, so a seat
+        # she does not hold is refused on the way to a question it cannot
+        # answer. A leaver's seat is empty by then, which is why her screen opens
+        # and offers nothing (`Raketa02/Raketa#90`) rather than 404ing.
         match.propose_score(
             command.score, by=command.player_id, at=instant(self._clock.now())
         )
@@ -68,7 +68,7 @@ class AgreeResult:
             raise MatchNotFound()
 
         match.agree_result(
-            at=instant(self._clock.now()), by_silence=command.by_silence
+            at=instant(self._clock.now()), by=command.player_id
         )
         stored = await self._matches.save(match)
         await self._uow.commit()

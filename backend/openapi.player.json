@@ -761,6 +761,167 @@
         }
       }
     },
+    "/api/v1/matches/{match_id}/result": {
+      "get": {
+        "tags": [
+          "matches"
+        ],
+        "summary": "What this match's result conversation is doing, and what she may do",
+        "description": "One reader, five renderings, off the same ladder a card resolves on.\n\n**Anyone who held a seat when the match ended resolves normally \u2014 including a\nleaver \u2014 with the three booleans false where ADR-0048 says so.** The leaver\nis the case that proves the rule: she played half an evening and paid for it,\nand a 404 would tell her the match never existed, which is the class of\ndefect ADR-0030 was written against. A match still forming resolves to its\nforming situation with an empty result block \u2014 dull, correct, and not a\nspecial case. **A stranger gets a 404**, and that is authorisation rather\nthan a state of the match.",
+        "operationId": "read_result_api_v1_matches__match_id__result_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "match_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The match this result is about.",
+              "title": "Match Id"
+            },
+            "description": "The match this result is about."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultScreenResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "matches"
+        ],
+        "summary": "Put a score on the table, and correct Now off the same tap",
+        "description": "Enter a score, correct her own side's, or counter the other side's.\n\n**200 and not 201**: nothing is created at an address a client could then\nfetch \u2014 the score is a fact about a match, read back through this same route\nand through the card on Now.\n\n**A refusal is not a second shape.** A side that has already spoken, a result\nthat settled while her screen was open, a deadline that ran out, a leaver\ntapping through a stale screen \u2014 every one of them comes back as what a\nsuccess returns, so the client has one code path and the player *sees* the\ncorrection rather than being told it. The one exception is a score no format\nof this sport could produce, which is about what she typed rather than about\nwhat the match is doing: a recomposed screen would show her the same table\nand no reason at all.",
+        "operationId": "propose_score_api_v1_matches__match_id__result_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "match_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The match this result is about.",
+              "title": "Match Id"
+            },
+            "description": "The match this result is about."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProposeScoreRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultWriteResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/matches/{match_id}/result/acceptance": {
+      "post": {
+        "tags": [
+          "matches"
+        ],
+        "summary": "Agree with the score on the table, and correct Now off the same tap",
+        "description": "Agree, from the opposing side, with what is on the table.\n\n**A separate address because it carries nothing**, not because it is a\ndifferent kind of thing: a body-less agreement posted to the same path as a\nscore would be one endpoint whose meaning depended on whether a field was\npresent, which is the *not there / there and empty* confusion the result\nblock itself is shaped to avoid.\n\n**A stale accept is ADR-0074's own named case** and comes back as the\ncounter's situation with `may_accept` false. So does a second tap on a result\nthat has already settled, and so does silence having settled it first.",
+        "operationId": "accept_result_api_v1_matches__match_id__result_acceptance_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "match_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The match this result is about.",
+              "title": "Match Id"
+            },
+            "description": "The match this result is about."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultWriteResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/matches/{match_id}/standby": {
       "delete": {
         "tags": [
@@ -2160,6 +2321,39 @@
         "title": "PricePayload",
         "description": "What she owes for the seat, and the ceiling she declared, both in grosze.\n\n``ceiling`` is absent when she declared none, which is what a client needs in\norder to say *\"38 z\u0142\"* rather than *\"38 z\u0142, under your ceiling\"* \u2014 the second\nsentence is a claim about a declaration that does not exist."
       },
+      "ProposeScoreRequest": {
+        "properties": {
+          "sets": {
+            "items": {
+              "prefixItems": [
+                {
+                  "type": "integer",
+                  "maximum": 999.0,
+                  "minimum": 0.0
+                },
+                {
+                  "type": "integer",
+                  "maximum": 999.0,
+                  "minimum": 0.0
+                }
+              ],
+              "type": "array",
+              "maxItems": 2,
+              "minItems": 2
+            },
+            "type": "array",
+            "maxItems": 16,
+            "minItems": 1,
+            "title": "Sets"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sets"
+        ],
+        "title": "ProposeScoreRequest",
+        "description": "*This is what we played*, as sets of two integers and never a string.\n\n**The viewer's side first**, which is the order the screen showed her: the\nserver puts her side first on the way out, so the same order coming back is\nthe one thing that cannot be misread. Which player each integer belongs to\nis the seats' business and hers is not on the wire at all.\n\nOne body for entering, correcting and countering: they are one act at three\nmoments and the server is what tells them apart. A field naming which the\nclient thought this was would be the phone holding ADR-0048's cap."
+      },
       "QuestionResponse": {
         "properties": {
           "id": {
@@ -2371,6 +2565,46 @@
         "title": "ReliabilityPayload",
         "description": "The reliability the term scored on, and how many records it read.\n\n``observed`` against ``seated`` is the difference between *\"this group turns\nup\"* and *\"one of these four has a record and the rest are strangers\"*, which\nthe term's value alone cannot separate."
       },
+      "ResultBlockResponse": {
+        "properties": {
+          "agreed": {
+            "type": "boolean",
+            "title": "Agreed"
+          },
+          "proposals": {
+            "type": "integer",
+            "title": "Proposals"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ScoreLineResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "proposed_by": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proposed By"
+          }
+        },
+        "type": "object",
+        "required": [
+          "agreed",
+          "proposals"
+        ],
+        "title": "ResultBlockResponse",
+        "description": "What is on the table, and who has spoken. Four facts and no history.\n\n**Always present and empty when nothing is on the table** \u2014 an empty score\nand a zero count on `needsResult`, never an absent object. It makes no\nclaim, so it follows a region's rule rather than a shelf's, and *not there*\nand *there and empty* cannot then be handled in one place and not the other.\n\n**No history.** A counter *replaces* what was on the table; printing the\nscore it beat invites arguing with a number that is no longer live, and none\nof the five renderings draws a timeline."
+      },
       "ResultResponse": {
         "properties": {
           "mu": {
@@ -2457,6 +2691,97 @@
           "calibration_priority"
         ],
         "title": "ResultResponse"
+      },
+      "ResultScreenResponse": {
+        "properties": {
+          "match_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Match Id"
+          },
+          "where": {
+            "$ref": "#/components/schemas/PlaceResponse"
+          },
+          "price": {
+            "$ref": "#/components/schemas/MoneyResponse"
+          },
+          "situation": {
+            "$ref": "#/components/schemas/SituationHalfResponse"
+          },
+          "result": {
+            "$ref": "#/components/schemas/ResultBlockResponse"
+          },
+          "counts": {
+            "$ref": "#/components/schemas/SeatCountsResponse"
+          },
+          "may_enter": {
+            "type": "boolean",
+            "title": "May Enter"
+          },
+          "may_accept": {
+            "type": "boolean",
+            "title": "May Accept"
+          },
+          "may_counter": {
+            "type": "boolean",
+            "title": "May Counter"
+          },
+          "settlement_deadline": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Settlement Deadline"
+          },
+          "acceptance_grace": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Acceptance Grace"
+          }
+        },
+        "type": "object",
+        "required": [
+          "match_id",
+          "where",
+          "price",
+          "situation",
+          "result",
+          "counts",
+          "may_enter",
+          "may_accept",
+          "may_counter"
+        ],
+        "title": "ResultScreenResponse",
+        "description": "The result conversation, for one viewer, at one instant."
+      },
+      "ResultWriteResponse": {
+        "properties": {
+          "screen": {
+            "$ref": "#/components/schemas/ResultScreenResponse"
+          },
+          "update": {
+            "$ref": "#/components/schemas/NowUpdateResponse"
+          }
+        },
+        "type": "object",
+        "required": [
+          "screen",
+          "update"
+        ],
+        "title": "ResultWriteResponse",
+        "description": "A write's answer: its own screen, and Now's update, in one response.\n\nADR-0074's rule, and this is the route it was written for. **The refusal\npath returns this too**: a stale accept comes back as the counter's\nsituation with `may_accept` false, and the player *sees* the correction\nrather than being told it."
       },
       "ScoreLineResponse": {
         "properties": {

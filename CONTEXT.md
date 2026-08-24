@@ -1025,6 +1025,26 @@ Committed by [ADR-0030](docs/adr/0030-a-departure-is-an-audience-not-a-state.md)
   **Accepting is opposing-side-only and one person suffices; countering is open to anyone who
   played**, including the proposing side, because what makes a teammate's agreement worthless is
   what makes their objection credible.
+- **Correction** *(of a proposal)* — a side replacing its **own** live score before the other
+  side has answered. **Not a second proposal** and it does not move the count: the two attempts
+  bound an argument between two sides, and a player fixing his own typing before anyone has read
+  it is not one of them
+  ([ADR-0048](docs/adr/0048-silence-confirms-a-result-and-disagreement-carries-a-score.md)). It
+  follows that a teammate objecting to a teammate's score corrects it rather than countering —
+  the freer of the two acts, and the same rule read the other way round.
+- **Entry deadline** — **24 hours after the last point**, and the last moment *any* score may be
+  put on the table: a first entry, a correction and a counter alike. It is what makes the outer
+  bound of 48 hours arithmetic rather than a second rule, and it carries a named cost — an
+  opponent's window to *counter* a proposal made at hour 23 is one hour, where her window to
+  *accept* it runs the full day. A match whose table is still bare when it passes is **counted
+  and unscored**, with no penalty to anybody.
+- **Settlement deadline** — **24 hours after the live proposal was entered**, and therefore a
+  property of the proposal rather than of the match: a correction replaces it along with the
+  score. ADR-0048 replaced one constant with these two, and the two are what make *a score
+  entered late outlives the entry deadline* true. What happens when it passes depends on how
+  many sides have spoken — one proposal **stands**, two leave the match uncounted — and
+  **neither answer waits on a write**: the state is derived, and the flag recording it is a
+  receipt.
 - **Acceptance grace** — the **30 minutes after a proposal was entered**, inside which a counter
   beats a pending acceptance. An accepted result is not settled until it closes: in a four-player
   match somebody is always slower to their phone, and without it a partner's fast tap shuts the

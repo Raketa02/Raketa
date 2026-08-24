@@ -123,9 +123,14 @@ COURT_FACTS: tuple[dict[str, Any], ...] = (
     {"released_at": at(-1000)},
 )
 
-#: The nine facts that decide what happened to the **match**, one at a time.
+#: The ten facts that decide what happened to the **match**, one at a time.
 #: Inventory loss sets the club cancellation too, which is exactly why it has to
 #: be tested above it.
+#:
+#: The two proposal rows are one axis and not two spellings of one: ADR-0048
+#: settles them in **opposite** directions once silence answers — a lone proposal
+#: stands and the match counts, two proposals leave it uncounted — so a grid
+#: carrying only the first would never reach the second's name at all.
 OUTCOMES: tuple[dict[str, Any], ...] = (
     {"inventory_lost": True, "club_cancelled": True},
     {"club_cancelled": True},
@@ -133,7 +138,8 @@ OUTCOMES: tuple[dict[str, Any], ...] = (
     {"form_cancelled": True},
     {"checkpoint_cancelled": True},
     {"no_show": True},
-    {"score_proposed": True},
+    {"proposed_at": at(91), "proposals": 1},
+    {"proposed_at": at(91), "proposals": 2},
     {"result_agreed": True},
     {"transferring": True},
 )

@@ -62,6 +62,7 @@ from typing import final
 from uuid import UUID, uuid5
 
 from app.kernel import (
+    SIDES,
     SPORT_SPECS,
     HoldPolicy,
     Instant,
@@ -89,6 +90,7 @@ from app.kernel import (
     private_lock,
     refill_outcome,
     result_window,
+    settlement_deadline,
 )
 from app.shared.domain import DomainEvent, EventRecorder
 
@@ -99,6 +101,7 @@ from app.modules.matches.domain.departure import (
     oldest_unsettled,
 )
 from app.modules.matches.domain.errors import (
+    AcceptanceFromOwnSide,
     ClaimCoolingDown,
     CourtAlreadyHeld,
     DepartureLocked,
@@ -120,6 +123,7 @@ from app.modules.matches.domain.errors import (
     SeatAlreadyTaken,
     SeatNotFound,
     SeatNotTaken,
+    SideHasProposed,
     StartMustBeInTheFuture,
 )
 from app.modules.matches.domain.events import (
@@ -151,7 +155,7 @@ from app.modules.matches.domain.events import (
     SeatTransferStarted,
     SeatVacated,
 )
-from app.modules.matches.domain.score import Score
+from app.modules.matches.domain.score import Score, validate_score
 from app.modules.matches.domain.seat import Seat
 from app.modules.matches.domain.vacancy import Vacancy
 
@@ -245,6 +249,14 @@ class Match:
     no_show: bool = False
     score: Score | None = None
     score_by: UUID | None = None
+
+    #: When the score now on the table was put there. A **Declaration's own
+    #: moment** rather than a sixth kind: nothing derives it — a correction
+    #: replaces the proposal and its deadline with it — and ADR-0048's silence
+    #: rule is measured from here, so a record without it cannot say when the
+    #: conversation ends.
+    proposed_at: Instant | None = None
+
     proposals: int = 0
     result_agreed: bool = False
 
@@ -389,7 +401,8 @@ class Match:
             form_cancelled=self.form_cancelled,
             checkpoint_cancelled=self.checkpoint_cancelled,
             no_show=self.no_show,
-            score_proposed=self.score is not None and not self.result_agreed,
+            proposed_at=self.proposed_at,
+            proposals=self.proposals,
             result_agreed=self.result_agreed,
         )
 
@@ -1275,19 +1288,45 @@ class Match:
         self.no_show = True
         self._record(NoShowRecorded(match_id=self.id, occurred_at=at))
 
+    def side_of(self, player_id: UUID) -> int | None:
+        """Which half of the net this player is on, or `None` for a stranger.
+
+        Side 0 is the first half of the seats and side 1 the second, in the
+        seats' fixed order — the definition ``domain/score.py`` already states,
+        read here rather than restated there, so *whose 6 is that* has one
+        answer in the context that owns the seats.
+
+        **A leaver is a stranger to this**, and deliberately: her seat is empty,
+        so she is on neither side and ADR-0048 lets her touch nothing. That is
+        the same fact the route's three booleans read, arrived at once.
+        """
+
+        seat = self.seat_of(player_id)
+        if seat is None:
+            return None
+        return 0 if seat.index < len(self.seats) // SIDES else 1
+
     def propose_score(self, score: Score, *, by: UUID, at: Instant) -> None:
         """Put a score on the table, replacing whatever was there.
 
         Four facts and never a list (ADR-0034): the score on the table, who put
-        it there, whether it is agreed, and **how many** proposals there have
-        been. The conversation itself belongs to the announcements, which is the
-        shape a support agent reads it in.
+        it there, when, and **how many sides** have spoken. The conversation
+        itself belongs to the announcements, which is the shape a support agent
+        reads it in.
 
-        Refused past ``kernel.result_window`` — the ladder answers
-        ``playedNoScore`` from there, and a score stored past it would be one
-        the screen cannot show. What the *route* asks and permits is
-        ``Raketa02/Raketa#79``'s, including the permissive validator: nothing
-        here judges whether 7-6 is a real set.
+        **A side proposes once, and replacing your own side's live score is not
+        a second proposal.** ADR-0048: *"the three attempts exist to bound an
+        argument between two sides, and a player fixing his own typing before
+        anyone has read it is not one."* So the count moves when the *other*
+        side speaks and never when this one repeats itself — which also means a
+        teammate objecting to a teammate's score is a correction rather than a
+        counter, and is the more permissive of the two.
+
+        Refused past ``kernel.result_window``, which bounds every way a score
+        arrives — entry, correction and counter alike. That is what makes
+        ADR-0048's outer bound of forty-eight hours arithmetic rather than a
+        second rule, and it is why an opponent's window to *counter* a late
+        proposal is shorter than her window to accept it.
         """
 
         self._refuse_if_settled()
@@ -1296,9 +1335,27 @@ class Match:
             raise ResultAlreadyAgreed()
         if at >= result_window(self.as_record()):
             raise ResultWindowClosed()
+
+        mine = self.side_of(by)
+        if mine is None:
+            # Only somebody who was on the court may say what happened on it.
+            raise SeatNotTaken()
+        validate_score(score, self.sport)
+
+        theirs = None if self.score_by is None else self.side_of(self.score_by)
+        if theirs is not None and mine != theirs:
+            # The other side is answering, which is a counter and the second
+            # proposal. A side that has already had its turn has nothing left to
+            # say: at two, only an acceptance ends this.
+            if self.proposals >= SIDES:
+                raise SideHasProposed()
+            self.proposals += 1
+        elif theirs is None:
+            self.proposals = 1
+
         self.score = score
         self.score_by = by
-        self.proposals += 1
+        self.proposed_at = at
         self._record(
             ScoreProposed(
                 match_id=self.id,
@@ -1309,11 +1366,18 @@ class Match:
             )
         )
 
-    def agree_result(self, *, at: Instant, by_silence: bool = False) -> None:
+    def agree_result(self, *, at: Instant, by: UUID | None = None) -> None:
         """The score settles — by agreement, or by the silence that confirms it.
 
-        ADR-0048 makes those one outcome and a support agent does not, so which
-        one it was rides on the announcement and nowhere else.
+        ``by`` is who accepted, and `None` **is** the silence: ADR-0048 makes
+        the two one outcome and a support agent does not, so which it was rides
+        on the announcement and nowhere else. One field rather than a player and
+        a boolean beside it, which could disagree.
+
+        **Accepting is opposing-side only, and one opponent suffices**
+        (ADR-0048): a teammate agreeing with a teammate proves nothing, and a
+        rule stated on a screen and enforced nowhere is a rule the phone holds.
+        Silence answers from no side at all and is refused by none of it.
         """
 
         self._refuse_if_settled()
@@ -1322,15 +1386,57 @@ class Match:
         score = self.score
         if score is None:
             raise NoScoreOnTheTable()
+        if by is not None:
+            mine = self.side_of(by)
+            if mine is None:
+                raise SeatNotTaken()
+            proposer = (
+                None if self.score_by is None else self.side_of(self.score_by)
+            )
+            if proposer is not None and mine == proposer:
+                raise AcceptanceFromOwnSide()
+            # Past the proposal's own deadline the conversation is over: silence
+            # already answered it, whether or not a wake has been round to write
+            # the receipt, and a tap that arrives afterwards is answering a
+            # question that has closed.
+            settles = settlement_deadline(self.as_record())
+            if settles is not None and at >= settles:
+                raise ResultWindowClosed()
         self.result_agreed = True
         self._record(
             ResultAgreed(
                 match_id=self.id,
                 sets=[[one.side_a, one.side_b] for one in score.sets],
-                by_silence=by_silence,
+                by_silence=by is None,
                 occurred_at=at,
             )
         )
+
+    def settle_result_by_silence(self, *, at: Instant) -> bool:
+        """The timekeeper's fourth actor: write the receipt silence earned.
+
+        **The ladder has already moved**, which is the whole shape of this: a
+        lone proposal past its deadline resolves to ``completed`` off the
+        record, so this writes the announcement and the flag rather than the
+        truth — the same standing the two cancellation receipts have, and what
+        makes a downed timekeeper delay the trail and never the screen.
+
+        **Two proposals settle nothing**, and there is nothing here to write for
+        them: ADR-0048 leaves that match uncounted, which is a name the ladder
+        answers and not a fact anybody records. Raketa will not arbitrate, and
+        it will not file a receipt saying it did.
+
+        The threshold is read off the kernel from inside the aggregate, like the
+        other three actors', so the timekeeper still holds no boundary at all.
+        """
+
+        if self.result_agreed or self.is_settled or self.proposals != 1:
+            return False
+        settles = settlement_deadline(self.as_record())
+        if settles is None or at < settles:
+            return False
+        self.agree_result(at=at)
+        return True
 
     # -- events -------------------------------------------------------------
 

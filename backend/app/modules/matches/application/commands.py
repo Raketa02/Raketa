@@ -196,7 +196,12 @@ class ProposeScoreCommand:
 
 @dataclass(frozen=True)
 class AgreeResultCommand:
-    """*That is the score* — or nobody answered for twenty-four hours."""
+    """*That is the score* — or nobody answered for twenty-four hours.
+
+    ``player_id`` is who accepted, and `None` **is** the silence: one field
+    rather than a player and a boolean beside it, which could disagree about
+    which of the two happened.
+    """
 
     match_id: UUID
-    by_silence: bool = False
+    player_id: UUID | None = None

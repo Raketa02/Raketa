@@ -411,3 +411,47 @@ class Departures(Protocol):
         replay must return *what happened* and not *what was asked for*.
         """
         ...
+
+
+@runtime_checkable
+class Results(Protocol):
+    """The result conversation's two writes, in Now's words.
+
+    Now owns no aggregate and this does not give it one: behind it is
+    ``Match.propose_score`` and ``Match.agree_result``, which already refuse
+    everything ADR-0048 asks — a match not yet played, one past the entry
+    deadline, a score on a table whose own deadline has run out, a side that has
+    already had its turn, a teammate accepting a teammate, and anybody who was
+    not on the court. A second implementation of any of them here would be a
+    second answer to a question that already has one, and the route would then
+    be free to disagree with the aggregate about who may speak.
+
+    **Two writes and not three**, although ADR-0074 names three acts. Entering
+    and countering are the same act at two moments — ADR-0048 caps *proposals per
+    side* over both, and the aggregate decides which one a given score is from
+    what is on the table. A client choosing between them would be holding the
+    rule that tells them apart, which is the one thing ADR-0053 leaves the phone
+    none of; the three booleans it *is* told are three labels over these two
+    sends.
+
+    **Neither commits**, on the departure route's rule: the score, its
+    announcement and the recomposed answer close together or they do not close at
+    all.
+    """
+
+    async def propose(
+        self, *, match_id: UUID, player_id: UUID, sets: Sequence[tuple[int, int]],
+        at: Instant,
+    ) -> None:
+        """Put this score on the table as her side's, whichever act that is.
+
+        The sets cross as pairs of integers rather than as a Matches value
+        object, so Now's application layer states a score in the units the wire
+        carries and the adapter is the one place that knows what type Matches
+        keeps them in.
+        """
+        ...
+
+    async def accept(self, *, match_id: UUID, player_id: UUID, at: Instant) -> None:
+        """Agree with what is on the table, from the opposing side only."""
+        ...

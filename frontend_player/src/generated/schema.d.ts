@@ -319,6 +319,82 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/matches/{match_id}/result": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What this match's result conversation is doing, and what she may do
+         * @description One reader, five renderings, off the same ladder a card resolves on.
+         *
+         *     **Anyone who held a seat when the match ended resolves normally — including a
+         *     leaver — with the three booleans false where ADR-0048 says so.** The leaver
+         *     is the case that proves the rule: she played half an evening and paid for it,
+         *     and a 404 would tell her the match never existed, which is the class of
+         *     defect ADR-0030 was written against. A match still forming resolves to its
+         *     forming situation with an empty result block — dull, correct, and not a
+         *     special case. **A stranger gets a 404**, and that is authorisation rather
+         *     than a state of the match.
+         */
+        get: operations["read_result_api_v1_matches__match_id__result_get"];
+        put?: never;
+        /**
+         * Put a score on the table, and correct Now off the same tap
+         * @description Enter a score, correct her own side's, or counter the other side's.
+         *
+         *     **200 and not 201**: nothing is created at an address a client could then
+         *     fetch — the score is a fact about a match, read back through this same route
+         *     and through the card on Now.
+         *
+         *     **A refusal is not a second shape.** A side that has already spoken, a result
+         *     that settled while her screen was open, a deadline that ran out, a leaver
+         *     tapping through a stale screen — every one of them comes back as what a
+         *     success returns, so the client has one code path and the player *sees* the
+         *     correction rather than being told it. The one exception is a score no format
+         *     of this sport could produce, which is about what she typed rather than about
+         *     what the match is doing: a recomposed screen would show her the same table
+         *     and no reason at all.
+         */
+        post: operations["propose_score_api_v1_matches__match_id__result_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/matches/{match_id}/result/acceptance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Agree with the score on the table, and correct Now off the same tap
+         * @description Agree, from the opposing side, with what is on the table.
+         *
+         *     **A separate address because it carries nothing**, not because it is a
+         *     different kind of thing: a body-less agreement posted to the same path as a
+         *     score would be one endpoint whose meaning depended on whether a field was
+         *     present, which is the *not there / there and empty* confusion the result
+         *     block itself is shaped to avoid.
+         *
+         *     **A stale accept is ADR-0074's own named case** and comes back as the
+         *     counter's situation with `may_accept` false. So does a second tap on a result
+         *     that has already settled, and so does silence having settled it first.
+         */
+        post: operations["accept_result_api_v1_matches__match_id__result_acceptance_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/matches/{match_id}/standby": {
         parameters: {
             query?: never;
@@ -1297,6 +1373,26 @@ export interface components {
             ceiling?: number | null;
         };
         /**
+         * ProposeScoreRequest
+         * @description *This is what we played*, as sets of two integers and never a string.
+         *
+         *     **The viewer's side first**, which is the order the screen showed her: the
+         *     server puts her side first on the way out, so the same order coming back is
+         *     the one thing that cannot be misread. Which player each integer belongs to
+         *     is the seats' business and hers is not on the wire at all.
+         *
+         *     One body for entering, correcting and countering: they are one act at three
+         *     moments and the server is what tells them apart. A field naming which the
+         *     client thought this was would be the phone holding ADR-0048's cap.
+         */
+        ProposeScoreRequest: {
+            /** Sets */
+            sets: [
+                number,
+                number
+            ][];
+        };
+        /**
          * QuestionResponse
          * @description A question in reading order: category, situation, question, answers.
          */
@@ -1417,6 +1513,28 @@ export interface components {
             /** Seated */
             seated: number;
         };
+        /**
+         * ResultBlockResponse
+         * @description What is on the table, and who has spoken. Four facts and no history.
+         *
+         *     **Always present and empty when nothing is on the table** — an empty score
+         *     and a zero count on `needsResult`, never an absent object. It makes no
+         *     claim, so it follows a region's rule rather than a shelf's, and *not there*
+         *     and *there and empty* cannot then be handled in one place and not the other.
+         *
+         *     **No history.** A counter *replaces* what was on the table; printing the
+         *     score it beat invites arguing with a number that is no longer live, and none
+         *     of the five renderings draws a timeline.
+         */
+        ResultBlockResponse: {
+            /** Agreed */
+            agreed: boolean;
+            /** Proposals */
+            proposals: number;
+            score?: components["schemas"]["ScoreLineResponse"] | null;
+            /** Proposed By */
+            proposed_by?: number | null;
+        };
         /** ResultResponse */
         ResultResponse: {
             /** Mu */
@@ -1445,6 +1563,45 @@ export interface components {
             factors?: components["schemas"]["FactorResponse"][];
             /** Uncertainty Factors */
             uncertainty_factors?: components["schemas"]["UncertaintyFactorResponse"][];
+        };
+        /**
+         * ResultScreenResponse
+         * @description The result conversation, for one viewer, at one instant.
+         */
+        ResultScreenResponse: {
+            /**
+             * Match Id
+             * Format: uuid
+             */
+            match_id: string;
+            where: components["schemas"]["PlaceResponse"];
+            price: components["schemas"]["MoneyResponse"];
+            situation: components["schemas"]["SituationHalfResponse"];
+            result: components["schemas"]["ResultBlockResponse"];
+            counts: components["schemas"]["SeatCountsResponse"];
+            /** May Enter */
+            may_enter: boolean;
+            /** May Accept */
+            may_accept: boolean;
+            /** May Counter */
+            may_counter: boolean;
+            /** Settlement Deadline */
+            settlement_deadline?: string | null;
+            /** Acceptance Grace */
+            acceptance_grace?: string | null;
+        };
+        /**
+         * ResultWriteResponse
+         * @description A write's answer: its own screen, and Now's update, in one response.
+         *
+         *     ADR-0074's rule, and this is the route it was written for. **The refusal
+         *     path returns this too**: a stale accept comes back as the counter's
+         *     situation with `may_accept` false, and the player *sees* the correction
+         *     rather than being told it.
+         */
+        ResultWriteResponse: {
+            screen: components["schemas"]["ResultScreenResponse"];
+            update: components["schemas"]["NowUpdateResponse"];
         };
         /**
          * ScoreLineResponse
@@ -2411,6 +2568,106 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DepartureWriteResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_result_api_v1_matches__match_id__result_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The match this result is about. */
+                match_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResultScreenResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    propose_score_api_v1_matches__match_id__result_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The match this result is about. */
+                match_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProposeScoreRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResultWriteResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    accept_result_api_v1_matches__match_id__result_acceptance_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The match this result is about. */
+                match_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResultWriteResponse"];
                 };
             };
             /** @description Validation Error */

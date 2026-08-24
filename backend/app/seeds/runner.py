@@ -129,6 +129,7 @@ from app.modules.matches.application.commands import (
     PostMatchCommand,
     TakeSeatCommand,
     DepartCommand,
+    ProposeScoreCommand,
 )
 from app.modules.matches.application.post_match import PostMatch
 from app.modules.matches.application.resolve_court_hold import ResolveCourtHold
@@ -136,6 +137,8 @@ from app.modules.matches.application.standby import (
     JoinStandby,
     JoinStandbyCommand,
 )
+from app.modules.matches.application.record_result import ProposeScore
+from app.modules.matches.domain.score import Score, SetScore
 from app.modules.matches.application.seat_moves import Depart, PaySeat, TakeSeat
 from app.modules.matches.domain.match import Match
 from app.modules.matches.domain.ports import MatchRepository
@@ -335,6 +338,7 @@ class _UseCases:
     take_seat: TakeSeat
     pay_seat: PaySeat
     depart: Depart
+    propose_score: ProposeScore
     cancel_match: CancelMatch
     resolve_hold: ResolveCourtHold
     join_standby: JoinStandby
@@ -403,6 +407,7 @@ def _build(session: AsyncSession) -> _UseCases:
         take_seat=TakeSeat(matches, resolve_hold, uow, week),
         pay_seat=PaySeat(matches, resolve_hold, uow, week),
         depart=Depart(matches, resolve_hold, uow, week),
+        propose_score=ProposeScore(matches, uow, week),
         cancel_match=CancelMatch(matches, resolve_hold, uow, week),
         resolve_hold=resolve_hold,
         join_standby=build_join_standby(
@@ -1264,6 +1269,22 @@ async def _write_the_match(
                 )
             )
 
+    if scenario.score is not None:
+        # **The score goes on through the aggregate**, like everything else here
+        # — so a seeded proposal carries the moment silence answers it, the
+        # announcement a support agent reads, and the side cap ADR-0048 puts on
+        # it. Writing the column would seed the answer this ticket computes.
+        use_cases.week.at(scenario.score.at)
+        await use_cases.propose_score.execute(
+            ProposeScoreCommand(
+                match_id=match.id,
+                player_id=seated[scenario.score.by_seat],
+                score=Score(
+                    tuple(SetScore(a, b) for a, b in scenario.score.sets)
+                ),
+            )
+        )
+
     if scenario.cancelled is not None:
         assert scenario.cancelled_at is not None  # `SeedMatch` refuses otherwise
         use_cases.week.at(scenario.cancelled_at)
@@ -1387,6 +1408,7 @@ def _refuse_a_match_whose_name_lies(scenario: SeedMatch, stored: Match) -> None:
             f"nothing about the card it is developed against would look wrong."
         )
     _refuse_a_departure_whose_name_lies(scenario, stored)
+    _refuse_a_score_whose_name_lies(scenario, stored)
 
 
 async def _refuse_a_standby_place_whose_name_lies(
@@ -1433,6 +1455,50 @@ async def _refuse_a_standby_place_whose_name_lies(
                 f"name lies is worse than one that is missing: the act on that "
                 f"card is the only one this build can receive."
             )
+
+
+def _refuse_a_score_whose_name_lies(scenario: SeedMatch, stored: Match) -> None:
+    """The same check, for the score on the table.
+
+    Three facts, and each of them changes what the card says. The scoreline
+    itself, because a card prints it. **How many sides have spoken**, because
+    that is what decides which way silence settles it — *stands* against
+    *uncounted* — and nothing else in the run reads it. And the proposal's own
+    **moment**, because it is the hero clock: a stored score with no moment
+    behind it resolves against the match's deadline instead, which is the
+    reversal ADR-0048 made and the one this catalog would silently undo.
+    """
+
+    claim = scenario.score
+    if claim is None:
+        return
+
+    if stored.score is None:
+        raise SeedFailed(
+            f"'{scenario.slug}' promises {claim.promise} and the stored match "
+            "has a bare table. A scenario named for a conversation nobody "
+            "started is the failure this catalog exists to refuse."
+        )
+    stored_sets = tuple((one.side_a, one.side_b) for one in stored.score.sets)
+    if stored_sets != claim.sets:
+        raise SeedFailed(
+            f"'{scenario.slug}' promises {claim.promise} and the stored score "
+            f"is {stored_sets}."
+        )
+    if stored.proposals != claim.proposals:
+        raise SeedFailed(
+            f"'{scenario.slug}' promises {claim.proposals} proposal(s) and the "
+            f"stored match carries {stored.proposals}. One proposal nobody "
+            "answered stands; two leave the match uncounted, and a card cannot "
+            "tell them apart from the score alone."
+        )
+    if stored.proposed_at != claim.at:
+        raise SeedFailed(
+            f"'{scenario.slug}' promises a score entered at {claim.at} and the "
+            f"stored match says {stored.proposed_at}. That moment is the "
+            "screen's hero clock, and a match without one answers against its "
+            "own deadline instead."
+        )
 
 
 def _refuse_a_departure_whose_name_lies(scenario: SeedMatch, stored: Match) -> None:

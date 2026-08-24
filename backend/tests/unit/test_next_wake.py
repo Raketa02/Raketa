@@ -60,6 +60,7 @@ _DOOR_CODE_LEAD = 15
 _HOLD_FAR = 12 * 60
 _HOLD_NEAR = 4 * 60
 _RESULT_WINDOW = 24 * 60
+_SETTLEMENT = 24 * 60
 _VACANCY_DECAY = 24 * 60
 _CLAIM_WINDOW = 5
 
@@ -73,16 +74,16 @@ def _sample() -> list[tuple[MatchRecord, Instant]]:
 SAMPLE = _sample()
 
 
-# --- the eleven names -------------------------------------------------------
+# --- the thirteen names -------------------------------------------------------
 
 
-def test_the_enumeration_is_closed_at_twelve() -> None:
-    """Pinned, the same way `SITUATION_COUNT` is. A thirteenth reason is a
+def test_the_enumeration_is_closed_at_thirteen() -> None:
+    """Pinned, the same way `SITUATION_COUNT` is. A fourteenth reason is a
     decision about where it sorts, and the tie-break is the enumeration's own
     order."""
 
-    assert len(WakeReason) == 12
-    assert len({reason.value for reason in WakeReason}) == 12
+    assert len(WakeReason) == 13
+    assert len({reason.value for reason in WakeReason}) == 13
 
 
 #: One record and one clock per reason, each built so that the named threshold is
@@ -166,6 +167,18 @@ _REACHES = {
         a_match(paid=4, court_locked=True),
         at(int(DURATION) + _RESULT_WINDOW - 1),
     ),
+    WakeReason.SETTLEMENT: (
+        # A score entered an hour after the last point: its own deadline is an
+        # hour past the entry deadline, so this is the only boundary left ahead
+        # once the clock is between the two.
+        a_match(
+            paid=4,
+            court_locked=True,
+            proposed_at=at(int(DURATION) + 60),
+            proposals=1,
+        ),
+        at(int(DURATION) + _RESULT_WINDOW + 1),
+    ),
 }
 
 
@@ -206,6 +219,7 @@ def test_the_named_moment_is_the_moment_the_rule_names(reason: WakeReason) -> No
         WakeReason.PLAY: START,
         WakeReason.MATCH_END: at(int(DURATION)),
         WakeReason.RESULT_WINDOW: at(int(DURATION) + _RESULT_WINDOW),
+        WakeReason.SETTLEMENT: at(int(DURATION) + 60 + _SETTLEMENT),
     }[reason]
 
     assert wake.at == expected
@@ -391,6 +405,30 @@ def test_a_terminal_match_names_no_wake_at_all() -> None:
         a_match(paid=2, inventory_lost=True),
     ):
         assert next_wake(cancelled, at(-7200)) is None
+
+
+def test_a_settled_result_arms_no_wake_for_an_answer_nobody_can_give() -> None:
+    """A settled match is not terminal — the four cancellations are — so it goes
+    on waking, and the boundary that must *not* be among them is the one the
+    conversation has finished with.
+
+    `settlement_deadline` is what refuses it, and it is the same function the
+    ladder reads — so *there is nothing left for silence to answer* is one fact
+    with one home rather than a flag the schedule has to remember separately.
+    """
+
+    entered = at(int(DURATION) + 5)
+    live = a_match(paid=4, proposed_at=entered, proposals=1)
+    settled = a_match(
+        paid=4, proposed_at=entered, proposals=1, result_agreed=True
+    )
+    # Past the entry deadline, the proposal's own is the only boundary left.
+    past_entry = at(int(DURATION) + _RESULT_WINDOW + 1)
+
+    ahead = next_wake(live, past_entry)
+    assert ahead is not None and ahead.reason is WakeReason.SETTLEMENT
+
+    assert next_wake(settled, past_entry) is None
 
 
 def test_a_wake_is_strictly_ahead_of_the_instant_it_is_asked_about() -> None:

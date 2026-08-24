@@ -148,6 +148,28 @@ class DepartureClaim:
 
 
 @dataclass(frozen=True)
+class ScoreClaim:
+    """A score on the table, and which side put it there.
+
+    ``by_seat`` is a seat index rather than an account slug, for the reason
+    ``taken`` and ``paid`` are counts: *which* player typed it is not a fact any
+    screen is developed against, and what the rendering turns on is only whether
+    the viewer is on that side of the net.
+
+    ``proposals`` is what the catalog **promises** rather than what it writes —
+    the run counts the stored one and refuses a name that has drifted, which is
+    the only way *a lone proposal* and *both sides have spoken* can be told
+    apart on a card, and they settle in opposite directions.
+    """
+
+    promise: str
+    sets: tuple[tuple[int, int], ...]
+    by_seat: int
+    at: Instant
+    proposals: int = 1
+
+
+@dataclass(frozen=True)
 class StandbyClaim:
     """Who is queued for this match, and what her card must therefore say.
 
@@ -207,6 +229,9 @@ class SeedMatch:
     #: One of the four cancellation causes, by name, or nothing.
     cancelled: str | None = None
     cancelled_at: Instant | None = None
+    #: The score on the table, for a scenario that has one. `None` everywhere
+    #: else, because a bare table is what every other played match is testing.
+    score: ScoreClaim | None = None
     #: Who asked to be told if a seat frees here, and what her card then says.
     #: Empty for every scenario but the one — a queue place changes nothing
     #: about the *match*, so it is a fact hung on a scenario rather than a
@@ -390,6 +415,37 @@ NEEDS_RESULT = SeedMatch(
     joined_at=seed_moment(day_offset=0, hour=9),
 )
 
+CONFIRM_RESULT = SeedMatch(
+    slug="match-with-a-score-on-the-table",
+    description=(
+        "Four players, played, and one side has entered a score the other has "
+        "not answered. The card asks the opponents to agree and asks the "
+        "proposing side nothing — and if nobody answers, silence confirms it "
+        "twenty-four hours after the proposal rather than after the match "
+        "(ADR-0048). It is the one seeded state where the two deadlines are "
+        "different instants, which is what the reversal in that ADR bought."
+    ),
+    claim=SituationClaim(
+        promise="a played match with a score awaiting an answer",
+        situation=Situation.CONFIRM_RESULT,
+        resolved_at=seed_moment(day_offset=1, hour=22),
+    ),
+    club_slug="club-with-two-padel-categories",
+    category="Padel · Mondo, indoor",
+    sport=Sport.PADEL,
+    start=seed_slot(19, day_offset=1).start,
+    duration=hours(1),
+    taken=4,
+    paid=4,
+    joined_at=seed_moment(day_offset=0, hour=9),
+    score=ScoreClaim(
+        promise="a 6-4 7-6 from the first side, unanswered",
+        sets=((6, 4), (7, 6)),
+        by_seat=0,
+        at=seed_moment(day_offset=1, hour=21),
+    ),
+)
+
 PRIVATE_OPEN = SeedMatch(
     slug="match-private-with-seats-opened",
     description=(
@@ -474,6 +530,7 @@ MATCHES: tuple[SeedMatch, ...] = (
     FORMING_LATE,
     RECOVERING,
     NEEDS_RESULT,
+    CONFIRM_RESULT,
     PRIVATE_OPEN,
     HELD_SOFT,
     CANCELLED_BY_CLUB,

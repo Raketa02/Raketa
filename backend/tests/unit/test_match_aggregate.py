@@ -38,13 +38,16 @@ from app.kernel import (
     hours,
     instant,
     is_full,
+    Outcome,
     keeping_a_court,
     live_outcome,
     minutes,
     situation,
 )
 from app.modules.matches.domain.errors import (
+    AcceptanceFromOwnSide,
     CourtAlreadyHeld,
+    ImpossibleScore,
     MatchAlreadySettled,
     MatchAlreadyStarted,
     MatchIsFull,
@@ -58,11 +61,17 @@ from app.modules.matches.domain.errors import (
     SeatAlreadyPaid,
     SeatNotFound,
     SeatNotTaken,
+    SideHasProposed,
     StartMustBeInTheFuture,
 )
 from app.modules.matches.domain.events import SeatVacated
 from app.modules.matches.domain.match import Match
-from app.modules.matches.domain.score import Score, SetScore
+from app.modules.matches.domain.score import (
+    MAX_UNIT_SCORE,
+    Score,
+    SetScore,
+    validate_score,
+)
 
 CLUB = uuid4()
 CATEGORY = uuid4()
@@ -699,6 +708,263 @@ def test_a_settled_score_cannot_be_reopened():
 
     with pytest.raises(ResultAlreadyAgreed):
         match.propose_score(SCORE, by=match.seats[1].player_id, at=at(8, 20, 30))
+
+
+# --- ADR-0048's permissions, enforced where the rule lives ------------------
+#
+# Every one of these is stated on the result screen as a boolean, and the lesson
+# `Raketa02/Raketa#80` paid for is that a boolean stated on a screen and enforced
+# nowhere is a rule the phone holds: a client ignoring it applies an act the
+# server said was impossible. So each is asserted on the aggregate, one function
+# away from where the route composes the boolean.
+
+OTHER = Score((SetScore(4, 6), SetScore(6, 7)))
+
+
+def test_a_side_correcting_its_own_live_score_is_not_a_second_proposal():
+    """ADR-0048: *"a player fixing his own typing before anyone has read it"* is
+    not one of the three attempts."""
+
+    match = a_full_match(when=at(8, 12))
+    alice, andy = match.seats[0].player_id, match.seats[1].player_id
+    match.propose_score(SCORE, by=alice, at=at(8, 20))
+
+    match.propose_score(OTHER, by=andy, at=at(8, 21))
+
+    assert match.score == OTHER
+    assert match.score_by == andy
+    assert match.proposals == 1
+
+
+def test_a_side_that_has_proposed_cannot_propose_against_the_other_one():
+    """Two scores on the table is the whole of the disagreement the ADR models;
+    a third would be one side repeating itself."""
+
+    match = a_full_match(when=at(8, 12))
+    alice, bob = match.seats[0].player_id, match.seats[2].player_id
+    match.propose_score(SCORE, by=alice, at=at(8, 20))
+    match.propose_score(OTHER, by=bob, at=at(8, 21))
+
+    with pytest.raises(SideHasProposed):
+        match.propose_score(SCORE, by=alice, at=at(8, 22))
+
+
+def test_the_side_holding_the_live_score_may_still_correct_it_at_two():
+    """The other side has not answered the counter, so the counter's own side is
+    still free to replace it — the same correction rule, one turn later."""
+
+    match = a_full_match(when=at(8, 12))
+    alice, bob = match.seats[0].player_id, match.seats[2].player_id
+    match.propose_score(SCORE, by=alice, at=at(8, 20))
+    match.propose_score(OTHER, by=bob, at=at(8, 21))
+
+    third = Score((SetScore(3, 6),))
+    match.propose_score(third, by=match.seats[3].player_id, at=at(8, 22))
+
+    assert match.score == third
+    assert match.proposals == 2
+
+
+def test_a_stranger_cannot_put_a_score_on_a_match_she_did_not_play():
+    match = a_full_match(when=at(8, 12))
+
+    with pytest.raises(SeatNotTaken):
+        match.propose_score(SCORE, by=uuid4(), at=at(8, 20))
+
+
+def test_a_leaver_cannot_put_a_score_up_although_her_card_survives():
+    """ADR-0030 keeps her card and ADR-0048 lets her do none of it. The seat is
+    what the aggregate reads, so leaving is what refuses her."""
+
+    match = a_full_match(when=at(8, 12))
+    alice = match.seats[0].player_id
+    match.depart(alice, quote=Outcome.FORFEITED, at=at(8, 11))
+
+    with pytest.raises(SeatNotTaken):
+        match.propose_score(SCORE, by=alice, at=at(8, 20))
+
+
+def test_a_teammate_cannot_accept_a_teammate_s_score():
+    """*A teammate agreeing with a teammate proves nothing* — the rule that also
+    makes her objection credible."""
+
+    match = a_full_match(when=at(8, 12))
+    match.propose_score(SCORE, by=match.seats[0].player_id, at=at(8, 20))
+
+    with pytest.raises(AcceptanceFromOwnSide):
+        match.agree_result(at=at(8, 20, 25), by=match.seats[1].player_id)
+
+
+def test_one_opponent_suffices():
+    match = a_full_match(when=at(8, 12))
+    match.propose_score(SCORE, by=match.seats[0].player_id, at=at(8, 20))
+
+    match.agree_result(at=at(8, 20, 25), by=match.seats[2].player_id)
+
+    assert match.result_agreed
+
+
+def test_a_stranger_cannot_accept_a_score_either():
+    match = a_full_match(when=at(8, 12))
+    match.propose_score(SCORE, by=match.seats[0].player_id, at=at(8, 20))
+
+    with pytest.raises(SeatNotTaken):
+        match.agree_result(at=at(8, 20, 25), by=uuid4())
+
+
+def test_an_acceptance_past_the_proposals_own_deadline_is_refused():
+    """Silence answered it already, whether or not a wake has been round."""
+
+    match = a_full_match(when=at(8, 12))
+    match.propose_score(SCORE, by=match.seats[0].player_id, at=at(8, 20))
+
+    with pytest.raises(ResultWindowClosed):
+        match.agree_result(at=at(9, 21), by=match.seats[2].player_id)
+
+
+def test_the_acceptance_deadline_is_the_proposals_and_not_the_match_s():
+    """A minute either side of `proposed_at + 24 h`, which on this match is an
+    hour later than the entry deadline. Reading the entry deadline instead would
+    close the door an hour early on every proposal but the first minute's."""
+
+    match = a_full_match(when=at(8, 12))
+    alice, bob = match.seats[0].player_id, match.seats[2].player_id
+    match.propose_score(SCORE, by=alice, at=at(8, 21))
+
+    match.agree_result(at=at(9, 20, 59), by=bob)
+
+    assert match.result_agreed
+
+
+# --- settlement by silence: the ladder moves, this writes the receipt --------
+
+
+def test_silence_settles_a_lone_proposal_at_its_own_deadline():
+    match = a_full_match(when=at(8, 12))
+    match.propose_score(SCORE, by=match.seats[0].player_id, at=at(8, 20))
+    match.pull_events()
+
+    assert match.settle_result_by_silence(at=at(9, 20))
+
+    assert match.result_agreed
+    announced = match.pull_events()
+    assert [one.__class__.__name__ for one in announced] == ["ResultAgreed"]
+    assert announced[0].by_silence
+
+
+def test_silence_settles_nothing_before_that_deadline():
+    match = a_full_match(when=at(8, 12))
+    match.propose_score(SCORE, by=match.seats[0].player_id, at=at(8, 20))
+    match.pull_events()
+
+    assert not match.settle_result_by_silence(at=at(9, 19))
+
+    assert not match.result_agreed
+    assert match.pull_events() == []
+
+
+def test_silence_settles_nothing_once_both_sides_have_proposed():
+    """*Raketa will not arbitrate*, and it does not file a receipt saying it
+    did. The match is uncounted, which is a name the ladder answers."""
+
+    match = a_full_match(when=at(8, 12))
+    match.propose_score(SCORE, by=match.seats[0].player_id, at=at(8, 20))
+    match.propose_score(OTHER, by=match.seats[2].player_id, at=at(8, 21))
+    match.pull_events()
+
+    assert not match.settle_result_by_silence(at=at(9, 22))
+
+    assert not match.result_agreed
+    assert match.pull_events() == []
+    assert (
+        situation(match.as_record(), None, at(9, 22)) is Situation.PLAYED_NO_SCORE
+    )
+
+
+def test_a_bare_table_settles_nothing_at_all():
+    match = a_full_match(when=at(8, 12))
+
+    assert not match.settle_result_by_silence(at=at(9, 22))
+
+
+def test_the_ladder_answers_completed_before_any_wake_writes_the_receipt():
+    """The receipt is a receipt: a downed timekeeper delays the announcement and
+    never what the screen says."""
+
+    match = a_full_match(when=at(8, 12))
+    match.propose_score(SCORE, by=match.seats[0].player_id, at=at(8, 20))
+
+    assert not match.result_agreed
+    assert situation(match.as_record(), None, at(9, 21)) is Situation.COMPLETED
+
+
+# --- the permissive validator: decline the obviously impossible -------------
+
+
+@pytest.mark.parametrize(
+    "sets",
+    [
+        pytest.param(((7, 6),), id="a real 7-6 is never illegal"),
+        pytest.param(((6, 0), (6, 0)), id="a whitewash"),
+        pytest.param(((7, 6), (6, 7), (10, 8)), id="a super-tiebreak third"),
+        pytest.param(((0, 6), (0, 6)), id="losing every game"),
+    ],
+)
+def test_the_validator_accepts_every_real_padel_scoreline(sets):
+    match = a_full_match(when=at(8, 12))
+
+    match.propose_score(
+        Score(tuple(SetScore(a, b) for a, b in sets)),
+        by=match.seats[0].player_id,
+        at=at(8, 20),
+    )
+
+    assert match.proposals == 1
+
+
+@pytest.mark.parametrize(
+    "sets",
+    [
+        pytest.param(((6, 4),) * 6, id="more sets than an evening holds"),
+        pytest.param(((66, 4),), id="a count no format of this sport reaches"),
+        pytest.param(((0, 0),), id="a set nobody scored in"),
+    ],
+)
+def test_the_validator_declines_the_obviously_impossible(sets):
+    match = a_full_match(when=at(8, 12))
+
+    with pytest.raises(ImpossibleScore):
+        match.propose_score(
+            Score(tuple(SetScore(a, b) for a, b in sets)),
+            by=match.seats[0].player_id,
+            at=at(8, 20),
+        )
+
+
+def test_the_ceiling_is_the_sport_s_and_not_one_number_for_all_four():
+    """A 66-64 tennis set has been played and a 66-64 padel set has not. The
+    ceiling is per sport precisely so the wider format is not judged by the
+    narrower one."""
+
+    assert MAX_UNIT_SCORE[Sport.TENNIS] > MAX_UNIT_SCORE[Sport.PADEL]
+    validate_score(Score((SetScore(66, 64),)), Sport.TENNIS)
+    with pytest.raises(ImpossibleScore):
+        validate_score(Score((SetScore(66, 64),)), Sport.PADEL)
+
+
+def test_a_refused_score_leaves_nothing_on_the_table():
+    """The validator runs before anything is written, so a typo does not consume
+    her side's one proposal."""
+
+    match = a_full_match(when=at(8, 12))
+    with pytest.raises(ImpossibleScore):
+        match.propose_score(
+            Score((SetScore(0, 0),)), by=match.seats[0].player_id, at=at(8, 20)
+        )
+
+    assert match.score is None
+    assert match.proposals == 0
+    assert match.proposed_at is None
 
 
 # --- the shape refuses what it cannot mean ----------------------------------

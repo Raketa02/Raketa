@@ -89,6 +89,11 @@ from app.modules.money.infrastructure.event_sourced_ledger_repository import (
 from app.modules.money.infrastructure.seats_through_matches import SeatsThroughMatches
 from app.modules.now.application.compose_enrolled import ComposeEnrolled
 from app.modules.now.application.departure import MakeDeparture, ReadDeparture
+from app.modules.now.application.result import (
+    AcceptResult,
+    ProposeResult,
+    ReadResult,
+)
 from app.modules.now.application.standby import LeaveStandby
 from app.modules.now.application.compose_shelves import ComposeShelves
 from app.modules.now.application.new_arrivals import ComposeNewArrivals
@@ -105,6 +110,7 @@ from app.modules.now.domain.ports import (
     ParkedRuns,
     RatedSports,
     Ratings,
+    Results,
     ScoringContexts,
     Standby,
     StandbyPlaces,
@@ -121,6 +127,9 @@ from app.modules.now.infrastructure.new_arrivals import ArrivalsFromUsersAndClub
 from app.modules.now.infrastructure.parked_runs import ParkedRunsFromAssessments
 from app.modules.now.infrastructure.rating_sports import RatedSportsFromSkillRatings
 from app.modules.now.infrastructure.ratings import RatingsFromSkillRatings
+from app.modules.now.infrastructure.results_through_matches import (
+    ResultsThroughMatches,
+)
 from app.modules.now.infrastructure.scoring_contexts import InMemoryScoringContexts
 from app.modules.now.infrastructure.standby_places import StandbyThroughMatches
 from app.modules.matches.infrastructure.court_holds import (
@@ -546,6 +555,50 @@ def build_make_departure(
         log=log,
         uow=uow,
         clock=clock,
+    )
+
+
+def build_results(*, matches: MatchRepository) -> Results:
+    """The result conversation's two writes (ADR-0074).
+
+    One port rather than a session, like every builder around it. **No hold
+    ladder beside it**, unlike `build_departures`: nothing about a result moves a
+    seat, so no tier can be entered or left and there is no court to give back.
+
+    **It does not commit.** The score, its announcement and the recomposed answer
+    close together, and that is the use case's transaction to close.
+    """
+    return ResultsThroughMatches(matches=matches)
+
+
+def build_read_result(*, enrolled: EnrolledMatches, clock: Clock) -> ReadResult:
+    """What this match's result conversation is doing, for this viewer."""
+    return ReadResult(enrolled=enrolled, clock=clock)
+
+
+def build_propose_result(
+    *,
+    enrolled: EnrolledMatches,
+    results: Results,
+    uow: UnitOfWork,
+    clock: Clock,
+) -> ProposeResult:
+    """Put a score up, and hand back this screen's answer **and** Now's update."""
+    return ProposeResult(
+        enrolled=enrolled, results=results, uow=uow, clock=clock
+    )
+
+
+def build_accept_result(
+    *,
+    enrolled: EnrolledMatches,
+    results: Results,
+    uow: UnitOfWork,
+    clock: Clock,
+) -> AcceptResult:
+    """Agree with the score on the table, and hand Now its update."""
+    return AcceptResult(
+        enrolled=enrolled, results=results, uow=uow, clock=clock
     )
 
 

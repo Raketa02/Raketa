@@ -15,20 +15,21 @@ for the timekeeper is a second ladder and should be deleted rather than
 reconciled."* ``tests/unit/test_timekeeper_holds_no_thresholds.py`` reddens on
 one appearing in this package.
 
-**Three actors now, and they are asked in a fixed order rather than in a loop.**
+**Four actors now, and they are asked in a fixed order rather than in a loop.**
 The hold ladder decides what happens to the club's court; the departure
 settlement decides what happens to a leaver's money once the roster can no
 longer change; the claim reaper writes the receipt for a payment window that ran
-out, which is what puts a seat back in front of everybody else. They read
-different facts — a departure is not in ``MatchRecord`` at all, and a claim is in
-it only as a moment — so none can move what another looks at, and a look that
-finds work for any of them saves once. A fourth joins by being asked here, in a
-line, and the schedule already wakes for the thresholds it would need.
+out, which is what puts a seat back in front of everybody else; and the result
+settlement writes the one silence earned. They read different facts — a departure
+is not in ``MatchRecord`` at all, and a claim is in it only as a moment — so none
+can move what another looks at, and a look that finds work for any of them saves
+once. A fifth joins by being asked here, in a line, and the schedule already
+wakes for the thresholds it would need.
 
-**Neither actor holds a threshold, and that is enforced.** The moment this
-look settles against is read inside the aggregate, off ``kernel.deadlines``;
-nothing in this package names a duration or does arithmetic on an instant, and
-the walk above reddens when something does.
+**No actor holds a threshold, and that is enforced.** The moment each look
+settles against is read inside the aggregate, off ``kernel.deadlines`` and
+``kernel.settlement_deadline``; nothing in this package names a duration or does
+arithmetic on an instant, and the walk above reddens when something does.
 
 A wake that crosses the commitment deadline underfull ought to cancel the match,
 and still cannot, because nothing writes that cancellation on its own —
@@ -120,8 +121,15 @@ class TakeMatchWake:
         # over — and what the receipt buys is the row a support agent reads and
         # the anchor the thirty-second cooldown is measured from.
         reaped = match.reap_lapsed_claims(at=now)
+        # The fourth, and the only one that writes a **receipt for something the
+        # ladder has already said**: a lone proposal past its deadline resolves
+        # to `completed` off the record whether or not this has run, so what is
+        # bought here is the announcement a support agent reads and the flag the
+        # engines will. Two proposals settle nothing and it writes nothing —
+        # Raketa does not arbitrate and does not file a receipt saying it did.
+        scored = match.settle_result_by_silence(at=now)
 
-        if move is not HoldMove.STAND or settled or reaped:
+        if move is not HoldMove.STAND or settled or reaped or scored:
             # `save` recomputes the schedule from the record it is writing, so
             # the acting path arms itself and this one does not touch it.
             await self._matches.save(match)

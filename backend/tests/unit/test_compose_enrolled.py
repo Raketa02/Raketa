@@ -810,16 +810,43 @@ async def test_a_queued_card_leaves_the_screen_on_the_same_tail() -> None:
 
 
 async def test_the_act_table_names_only_acts_this_build_can_receive() -> None:
-    """Read off the table itself, so a tenth row is a decision in a diff.
+    """Read off the table itself, so a fourth row is a decision in a diff.
 
     ADR-0083's rule is *a card names an act when the viewer can take it now and
-    a v1 surface can receive it*, and nine of the ten situations that would name
-    one have no destination: the result route, the offers region, Find and the
-    Getting-in sheet are all unbuilt. A row added ahead of its surface is a door
-    that will not open, and this is where it is noticed.
+    a v1 surface can receive it*, and seven of the ten situations that would
+    name one still have no destination: the offers region, Find and the
+    Getting-in sheet are all unbuilt. The two post-play rows arrived with
+    `/api/v1/matches/{matchId}/result`, which is the only way this set has ever
+    been allowed to grow. A row added ahead of its surface is a door that will
+    not open, and this is where it is noticed.
     """
 
-    assert dict(ACT_OF) == {Situation.WAITLISTED: ActCode.LEAVE_STANDBY}
+    assert dict(ACT_OF) == {
+        Situation.NEEDS_RESULT: ActCode.ENTER_RESULT,
+        Situation.CONFIRM_RESULT: ActCode.ANSWER_RESULT,
+        Situation.WAITLISTED: ActCode.LEAVE_STANDBY,
+    }
+
+
+async def test_the_result_acts_are_withheld_from_a_viewer_holding_no_seat() -> None:
+    """The played rung has no membership test — deliberately, so that the
+    affordance is what a leaver loses rather than the sentence — and ADR-0048
+    lets her touch nothing. Two of the table's three rows therefore need a fact
+    the situation does not carry, and this is where that is applied.
+    """
+
+    played = a_match(paid=4)
+
+    seated = await one_card(enrolled(played), now=at(120))
+    left = await one_card(
+        enrolled(played, holds_seat=False, departure=DepartureNothingTaken()),
+        now=at(120),
+    )
+
+    assert seated.situation.situation is Situation.NEEDS_RESULT
+    assert left.situation.situation is Situation.NEEDS_RESULT
+    assert seated.act is ActCode.ENTER_RESULT
+    assert left.act is None
 
 
 async def test_a_card_offers_the_exit_exactly_where_the_write_would_take_it() -> None:

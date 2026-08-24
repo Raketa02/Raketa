@@ -45,6 +45,7 @@ SCHEDULE_MIGRATION = VERSIONS / "0010_match_schedule.py"
 DEPARTURES_MIGRATION = VERSIONS / "0011_match_departures.py"
 CLAIMS_MIGRATION = VERSIONS / "0012_match_seat_claims.py"
 CLOSED_AT_MIGRATION = VERSIONS / "0014_match_closed_at.py"
+PROPOSED_AT_MIGRATION = VERSIONS / "0017_match_score_proposed_at.py"
 
 #: In the order Alembic applies them.
 MIGRATIONS = (
@@ -55,6 +56,9 @@ MIGRATIONS = (
     # `0013` is Clubs' and touches none of these tables; the chain still applies
     # it, and this list is only the migrations that describe *this* schema.
     CLOSED_AT_MIGRATION,
+    # `0015` is the cross-cutting command log and `0016` the standby queue, both
+    # of which create tables of their own rather than describing these.
+    PROPOSED_AT_MIGRATION,
 )
 
 MATCH_TABLES = (

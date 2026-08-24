@@ -443,32 +443,49 @@ invariant(
 )
 
 
-#: Which act a card names, per situation. **One row today, and that is the
-#: enumeration's own rule rather than a stub.**
+#: Which act a card names, per situation. **Three rows, and each arrived with
+#: the surface that receives it.**
 #:
 #: ADR-0083 fixes *a card names an act when the viewer can take it now **and a
 #: v1 surface can receive it***, and lists nine situations whose act it accepts
 #: on the first half — the four cancellations, ``ready``, ``needsResult``,
-#: ``confirmResult``, ``seatOffered`` and ``seatOpened``. Not one of their
-#: surfaces exists: the result route is ``Raketa02/Raketa#79``, the offers
-#: region ``#83``, Find is a placeholder (``#115``) and the Getting-in sheet is
-#: unbuilt. ADR-0087 added the tenth, ``waitlisted``, **with** the write that
-#: receives it, which is the only way the set was ever allowed to grow — so it
-#: is the only row here, and each of the nine arrives in the ticket that builds
-#: its destination.
+#: ``confirmResult``, ``seatOffered`` and ``seatOpened``. ADR-0087 added the
+#: tenth, ``waitlisted``, **with** the write that receives it, which is the only
+#: way this set was ever allowed to grow. The two post-play rows join it on the
+#: same terms: ADR-0060 names them as the first two situations to carry a label
+#: at all — *enter a score* against *answer one* — and the route that receives
+#: both is ``/api/v1/matches/{matchId}/result``. The remaining seven have no
+#: destination — the offers region is ``Raketa02/Raketa#83``, Find is a
+#: placeholder (``#115``) and the Getting-in sheet is unbuilt — and each arrives
+#: in the ticket that builds its own.
 #:
-#: A table rather than nine ``if``s to come, and a **partial** one rather than
-#: thirty-six rows: twenty-six situations name nothing and writing them out as
-#: ``None`` would be twenty-six rows nobody could get wrong, where the assertion
+#: A table rather than seven ``if``s to come, and a **partial** one rather than
+#: thirty-six rows: twenty-four situations name nothing and writing them out as
+#: ``None`` would be twenty-four rows nobody could get wrong, where the assertion
 #: below is the thing that actually keeps it honest.
 ACT_OF: Mapping[Situation, ActCode] = MappingProxyType(
     {
+        Situation.NEEDS_RESULT: ActCode.ENTER_RESULT,
+        Situation.CONFIRM_RESULT: ActCode.ANSWER_RESULT,
         Situation.WAITLISTED: ActCode.LEAVE_STANDBY,
     }
 )
 
 invariant(
-    set(ACT_OF.values()) == {ActCode.LEAVE_STANDBY},
+    set(ACT_OF.values())
+    == {ActCode.ENTER_RESULT, ActCode.ANSWER_RESULT, ActCode.LEAVE_STANDBY},
     "a card names an act whose surface this build does not have — ADR-0083's "
     "rule is that an act arrives with the surface that receives it",
 )
+
+#: The acts that need a fact the **situation** does not carry: whether the viewer
+#: was on the court. The played rung deliberately has no membership test — a
+#: leaver and a standby player both resolve to ``needsResult`` — and ADR-0048
+#: lets neither of them touch the result, so a card composed for one must not
+#: name the act. It is the same fact the route's three booleans read, and
+#: ``card_of`` is the one place it is applied.
+#:
+#: ``leaveStandby`` is not here and could not be: ``waitlisted`` is the one
+#: situation only a viewer can be in, so its act is viewer-correct by
+#: construction rather than by a gate.
+ACTS_NEEDING_A_SEAT = frozenset({ActCode.ENTER_RESULT, ActCode.ANSWER_RESULT})

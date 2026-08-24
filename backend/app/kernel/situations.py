@@ -71,6 +71,7 @@ from app.kernel.matches import (
     match_end,
     result_window,
     seat_count,
+    settlement_deadline,
     vacancy_expires_at,
 )
 from app.kernel.time import Instant
@@ -281,10 +282,25 @@ def _ladder(
             return Situation.PLAYED_SHORT
         if record.result_agreed:
             return Situation.COMPLETED
+        # The score rung is tested **above** the deadline rung, which is the one
+        # ordering ADR-0048 reversed: *"`confirmResult` is now tested first and
+        # no longer falls to `playedNoScore` when a clock runs out"*. Under the
+        # old order a score entered at hour 23 was discarded at hour 24 with its
+        # own answer still running, which is the rule that ADR paid the loser to
+        # wait out.
+        settles = settlement_deadline(record)
+        if settles is not None:
+            if now < settles:
+                return Situation.CONFIRM_RESULT
+            # Silence has answered, and what it said depends on how many sides
+            # spoke. One proposal nobody replied to **stands** and the match
+            # counts; two proposals nobody accepted is the disagreement Raketa
+            # has refused to arbitrate, and an evening rather than evidence.
+            if record.proposals == 1:
+                return Situation.COMPLETED
+            return Situation.PLAYED_NO_SCORE
         if now >= result_window(record):
             return Situation.PLAYED_NO_SCORE
-        if record.score_proposed:
-            return Situation.CONFIRM_RESULT
         return Situation.NEEDS_RESULT
 
     # 6 · a seat on the table, above the queue that produced it: somebody who
@@ -502,6 +518,13 @@ def _ladder_boundaries(record: MatchRecord) -> tuple[Boundary, ...]:
     # resolve above every rung that reads `commit`.
     if record.committed_at is None:
         candidates.append(Boundary(WakeReason.COMMITMENT, when.commit))
+
+    # Conditioned on there being a proposal, exactly like the rung that reads it:
+    # a match with a bare table has an entry deadline and nothing to answer, and
+    # waking it for a proposal nobody made would be a look with nothing to find.
+    settles = settlement_deadline(record)
+    if settles is not None:
+        candidates.append(Boundary(WakeReason.SETTLEMENT, settles))
 
     if record.open_vacancies:
         if record.committed_at is not None:

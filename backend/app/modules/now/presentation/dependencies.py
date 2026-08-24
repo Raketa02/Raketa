@@ -53,8 +53,12 @@ from app.bootstrap.composition import (
     build_match_standby_places,
     build_parked_runs,
     build_rated_sports,
+    build_accept_result,
+    build_propose_result,
     build_ratings,
     build_read_departure,
+    build_read_result,
+    build_results,
     build_reservation_repository,
     build_skill_rating_repository,
     build_standby,
@@ -65,6 +69,11 @@ from app.modules.now.application.compose_enrolled import ComposeEnrolled
 from app.modules.now.application.compose_now import ComposeNow
 from app.modules.now.application.compose_shelves import ComposeShelves
 from app.modules.now.application.departure import MakeDeparture, ReadDeparture
+from app.modules.now.application.result import (
+    AcceptResult,
+    ProposeResult,
+    ReadResult,
+)
 from app.modules.now.application.new_arrivals import ComposeNewArrivals
 from app.modules.now.application.standby import LeaveStandby
 from app.modules.now.domain.ports import (
@@ -75,6 +84,7 @@ from app.modules.now.domain.ports import (
     ParkedRuns,
     RatedSports,
     Ratings,
+    Results,
     ScoringContexts,
     Standby,
 )
@@ -301,6 +311,58 @@ def get_make_departure(
 
 
 MakeDepartureDep = Annotated[MakeDeparture, Depends(get_make_departure)]
+
+
+def get_results(db: DbSession, events: EventPublisherDep, clock: ClockDep) -> Results:
+    """The result conversation's two writes, over the repository every caller gets.
+
+    **No hold ladder here**, which is the one difference from `get_departures`:
+    a score moves no seat, so no tier can be entered or left and there is no
+    court to give back. Wiring one in would be a look with nothing to find, and
+    the kind of copied line that later reads as a rule.
+    """
+
+    return build_results(
+        matches=build_match_repository(db, events=events, clock=clock)
+    )
+
+
+ResultsDep = Annotated[Results, Depends(get_results)]
+
+
+def get_read_result(enrolled: EnrolledMatchesDep, clock: ClockDep) -> ReadResult:
+    return build_read_result(enrolled=enrolled, clock=clock)
+
+
+ReadResultDep = Annotated[ReadResult, Depends(get_read_result)]
+
+
+def get_propose_result(
+    enrolled: EnrolledMatchesDep,
+    results: ResultsDep,
+    uow: UnitOfWorkDep,
+    clock: ClockDep,
+) -> ProposeResult:
+    return build_propose_result(
+        enrolled=enrolled, results=results, uow=uow, clock=clock
+    )
+
+
+ProposeResultDep = Annotated[ProposeResult, Depends(get_propose_result)]
+
+
+def get_accept_result(
+    enrolled: EnrolledMatchesDep,
+    results: ResultsDep,
+    uow: UnitOfWorkDep,
+    clock: ClockDep,
+) -> AcceptResult:
+    return build_accept_result(
+        enrolled=enrolled, results=results, uow=uow, clock=clock
+    )
+
+
+AcceptResultDep = Annotated[AcceptResult, Depends(get_accept_result)]
 
 
 def get_ratings(ratings: SkillRatingsDep) -> Ratings:

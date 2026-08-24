@@ -883,6 +883,81 @@ itself is a table beside the aggregate rather than part of it: a join moves no s
 contends for, and going through `Match` would bump ADR-0034's version column and invalidate
 the scoring-context cache keyed `matchId : recordVersion` on every ask.
 
+### `GET` / `POST /api/v1/matches/{matchId}/result` · `POST …/result/acceptance`
+
+The result conversation, and the third action off Now
+([ADR-0074](../docs/adr/0074-the-result-route-reads-four-facts-and-an-action-off-now-hands-now-its-update.md),
+[ADR-0060](../docs/adr/0060-a-result-is-entered-on-a-route-and-the-card-names-the-act.md),
+[ADR-0048](../docs/adr/0048-silence-confirms-a-result-and-disagreement-carries-a-score.md)).
+It **embeds the match's spine verbatim**, carries the situation off the **same ladder** a
+card resolves on, and is **not a card** — no fit badge, no emphasis, no card stamp. There is
+**no `phase`**, because the situation answers what a phase would, and **no version**: a
+client-held one would make the phone hold a rule about its own staleness.
+
+**Five renderings, one reader.** Entry, both audience renderings of a live proposal, the
+counter, the settled result and the unscored ending are `needsResult`, `confirmResult`,
+`completed` and `playedNoScore` resolved for the viewer who asked.
+
+**The result block is four facts and no history**, always present and empty when nothing is
+on the table — a region's rule rather than a shelf's, because it makes no claim.
+
+| Fact | |
+|---|---|
+| `score` | the sets, **the viewer's side first**, sides named by their players |
+| `proposed_by` | an index into `score.sides`, so `0` is always *your side* |
+| `agreed` | settled, by a tap or by the silence that confirms it |
+| `proposals` | how many **sides** have spoken, capped at two |
+
+**Two clocks, both named.** `settlement_deadline` is the hero — the entry deadline before
+anybody speaks, and the live proposal's own deadline after. `acceptance_grace` is the
+quieter line and crosses **only while it runs**: hiding it produces the outcome ADR-0048
+built it to prevent, inverted — the screen says *settled* half an hour early.
+
+**ADR-0048 replaced one constant with two, and they are twenty-four hours from different
+moments.** `result_window` bounds *every* way a score arrives — a first entry, a correction
+and a counter alike — which is what makes that ADR's outer bound of forty-eight hours
+arithmetic rather than a second rule. `settlement_deadline` is a property of the
+**proposal**, so a correction replaces it along with the score. The cost is named rather
+than hidden: an opponent's window to *counter* a proposal made at hour 23 is one hour, where
+her window to *accept* it runs the full day.
+
+**Silence is derived, and `result_agreed` is a receipt.** The ladder answers `completed` for
+a lone proposal past its deadline whether or not a wake has been round — the same standing
+the two cancellation flags have, and what makes the reversal ADR-0048 specified real rather
+than dependent on a job landing. The timekeeper's **fourth actor** writes the announcement.
+**Two proposals settle nothing** and nothing is written for them: Raketa will not arbitrate,
+and it will not file a receipt saying it did.
+
+**What the viewer may do is three named booleans**, and the phone derives none of them.
+
+| Boolean | |
+|---|---|
+| `may_enter` | put **her own side's** score up — the first entry, or a correction of her side's live one |
+| `may_accept` | agree with what is on the table. Opposing side only; one opponent suffices |
+| `may_counter` | put a different score up against it. False once her side has spoken |
+
+**Two writes and not ADR-0074's three.** Entering, correcting and countering are one act at
+three moments — ADR-0048 caps *proposals per side* across all of them, and which one a given
+score is depends on what is already on the table. A client picking between two endpoints
+would be holding exactly that rule (ADR-0053), so a score goes to one address and the server
+decides what it was. Accepting has its own address because it carries nothing.
+
+**A bare rejection is refused by having no shape to send one in**, rather than by a
+validator that turns one away. **The server validates permissively** — it declines the
+obviously impossible and never the rulebook, with a per-sport ceiling, because local
+variation is wide enough that a strict validator eventually calls a real match illegal.
+
+**A refusal is not a second shape.** A side that has already spoken, a result that settled
+while her screen was open, a deadline that ran out, a leaver tapping through a stale screen
+— every one comes back as what a success returns, including ADR-0074's own named case: *a
+stale accept comes back as the counter's situation with `may_accept` false*. The two
+exceptions are not about the act — a stranger's 404, and a score no format could produce,
+which is about what she typed and needs a reason a recomposed screen cannot carry.
+
+**Anyone who held a seat when the match ended resolves, including a leaver**, whose screen
+opens and offers nothing. **A general `GET /matches/{id}` does not exist**, and its absence
+is asserted.
+
 ### What the Now contract will not carry
 
 Enforced by `tests/unit/test_now_contract_document.py`, which reads the emitted document
