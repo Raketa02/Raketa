@@ -263,6 +263,76 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/player-profile/options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The Social tag vocabulary and the Search radius bounds
+         * @description Read-only, unauthenticated, no request body. Tag **ids** and their grouping cross the wire; the label a player reads is the client's own copy.
+         *
+         *     A tag id is permanent — it is persisted on profiles, so retiring a tag means dropping it from this response while continuing to honour it on the profiles that hold it. Ids are never reused and never renamed.
+         *
+         *     Both the group order and the tag order within a group are part of the contract: the picker renders what it is given rather than sorting.
+         */
+        get: operations["get_player_profile_options_api_v1_player_profile_options_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/photos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload one photo
+         * @description One photo per request. The body is the raw image and `Content-Type` names its format; JPEG, PNG and HEIC/HEIF are accepted.
+         *
+         *     **What is stored is not what was sent.** Every image is decoded and re-encoded to JPEG with its long edge capped, which is how EXIF — and with it the GPS coordinates a phone writes into a photo — is removed reliably rather than best-effort.
+         *
+         *     The returned id is what a profile commit carries; a photo becomes part of a profile only when a commit names it. Uploaded photos that are never committed are intended to be swept, and that sweep is not running yet.
+         */
+        post: operations["upload_photo_api_v1_photos_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/photos/{photo_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A signed URL for one of your photos
+         * @description Returns a short-lived signed URL rather than the bytes: the store serves the image directly, so a photo never crosses this API twice.
+         *
+         *     A photo id that does not exist and one belonging to another player both answer `photo_not_found`, deliberately — the alternative is an endpoint that confirms whether a stranger's id is real.
+         */
+        get: operations["get_photo_api_v1_photos__photo_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -435,6 +505,48 @@ export interface components {
             message: string;
         };
         /**
+         * PhotoResponse
+         * @description One photo: the id a profile commit will carry, and a URL that reads it.
+         *
+         *     The same shape from the upload and from the read, so a client renders a tile
+         *     it has just filled and a tile it is restoring with one code path.
+         *
+         *     **The URL is not an identifier and must not be stored as one.** It carries a
+         *     signature and stops working at ``expires_at``; the id is what is permanent.
+         */
+        PhotoResponse: {
+            /**
+             * Photo Id
+             * Format: uuid
+             * @description Permanent id — what the profile commit carries
+             */
+            photo_id: string;
+            /**
+             * Url
+             * @description Short-lived signed URL that reads this photo. Not a stable address: it is signed for one player, for one window, and there is no public bucket behind it.
+             */
+            url: string;
+            /**
+             * Expires At
+             * Format: date-time
+             * @description When the URL stops working. Ask for the photo again to get another; there is no way to extend one.
+             */
+            expires_at: string;
+        };
+        /**
+         * PlayerProfileOptionsResponse
+         * @description Everything a client needs to *render* the profile steps, in one round trip.
+         *
+         *     Two facts rather than one endpoint each, because they are the same kind of
+         *     thing — closed, read-only, and needed by the same part of onboarding at the
+         *     same moment.
+         */
+        PlayerProfileOptionsResponse: {
+            /** Social Tag Groups */
+            social_tag_groups: components["schemas"]["SocialTagGroupResource"][];
+            search_radius: components["schemas"]["SearchRadiusBoundsResource"];
+        };
+        /**
          * QuestionResponse
          * @description A question in reading order: category, situation, question, answers.
          */
@@ -531,6 +643,69 @@ export interface components {
             factors?: components["schemas"]["FactorResponse"][];
             /** Uncertainty Factors */
             uncertainty_factors?: components["schemas"]["UncertaintyFactorResponse"][];
+        };
+        /**
+         * SearchRadiusBoundsResource
+         * @description The range a Search radius may take, in whole kilometres.
+         *
+         *     The unit is in every field name on purpose: a bare ``minimum`` is one
+         *     refactor away from being read as metres.
+         */
+        SearchRadiusBoundsResource: {
+            /**
+             * Minimum Km
+             * @description Smallest radius a player may hold
+             */
+            minimum_km: number;
+            /**
+             * Maximum Km
+             * @description Largest radius a player may hold
+             */
+            maximum_km: number;
+            /**
+             * Step Km
+             * @description Granularity — whole kilometres
+             */
+            step_km: number;
+            /**
+             * Default Km
+             * @description What the control opens at
+             */
+            default_km: number;
+        };
+        /**
+         * SocialTag
+         * @description The closed set of tag ids. An id here is permanent.
+         * @enum {string}
+         */
+        SocialTag: "STAYS_FOR_A_DRINK" | "STRAIGHT_HOME_AFTER" | "TALKS_THROUGH_THE_MATCH" | "SETTLES_UP_ON_THE_SPOT" | "BOOKS_THE_NEXT_ONE" | "SHARES_A_LIFT" | "PLAYS_TO_WIN" | "LAUGHS_OFF_MISTAKES" | "ENCOURAGES_A_PARTNER" | "GENEROUS_ON_LINE_CALLS" | "QUIET_AND_FOCUSED" | "WARMS_UP_PROPERLY" | "HERE_TO_IMPROVE" | "HERE_TO_COMPETE" | "HERE_FOR_THE_EXERCISE" | "HERE_TO_MEET_PLAYERS" | "HERE_FOR_A_REGULAR_GAME" | "HERE_TO_GET_BACK_INTO_IT";
+        /**
+         * SocialTagGroup
+         * @description The three groups, which are about the game and nothing else.
+         * @enum {string}
+         */
+        SocialTagGroup: "AFTER_THE_MATCH" | "ON_THE_COURT" | "WHY_YOU_ARE_HERE";
+        /**
+         * SocialTagGroupResource
+         * @description One of the three groups, with its tags in the order they are rendered.
+         */
+        SocialTagGroupResource: {
+            group: components["schemas"]["SocialTagGroup"];
+            /** Tags */
+            tags: components["schemas"]["SocialTagResource"][];
+        };
+        /**
+         * SocialTagResource
+         * @description One tag, as an id and nothing else — for now.
+         *
+         *     An object rather than a bare string deliberately: retiring a tag is
+         *     anticipated (an id is honoured forever and hidden from the picker), and a
+         *     tag that carries a field one day is an addition here, where an array of
+         *     strings would have to change element type — which breaks a shipped client.
+         */
+        SocialTagResource: {
+            /** @description Permanent id, persisted on profiles */
+            id: components["schemas"]["SocialTag"];
         };
         /**
          * Sport
@@ -1093,6 +1268,84 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RatingsResponse"];
+                };
+            };
+        };
+    };
+    get_player_profile_options_api_v1_player_profile_options_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlayerProfileOptionsResponse"];
+                };
+            };
+        };
+    };
+    upload_photo_api_v1_photos_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "image/heic": string;
+                "image/heif": string;
+                "image/jpeg": string;
+                "image/png": string;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PhotoResponse"];
+                };
+            };
+        };
+    };
+    get_photo_api_v1_photos__photo_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                photo_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PhotoResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
