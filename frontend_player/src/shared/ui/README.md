@@ -74,9 +74,9 @@ components from the start. The prototype maintained a second copy of each in its
 recorded that they had drifted — one implementation, used everywhere.
 
 Built so far, by the onboarding slice: `Button`, `Card` (+ `PressableCard`), `Note`,
-`Bar`, `ScreenHeader`, `Tag`, `Hairline`, `BottomSheet`, `CloseControl`, `DarkCard`,
-`Row`, `LevelBar`, `ConfidenceRing`, `Popover` (+ `InfoMark`) and `InfoGlyph`. Import them
-from `@/shared/ui`.
+`Bar`, `ScreenHeader`, `Tag`, `Chip`, `Hairline`, `BottomSheet`, `CloseControl`,
+`DarkCard`, `Row`, `LevelBar`, `ConfidenceRing`, `Popover` (+ `InfoMark`) and
+`InfoGlyph`. Import them from `@/shared/ui`.
 
 **Overlays.** `BottomSheet` and `Popover` are both real modals, and 9.1's and 7.6's "it is
 a real modal" is three separate obligations rather than one prop — read `overlay.ts` and

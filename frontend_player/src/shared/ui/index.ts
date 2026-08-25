@@ -10,6 +10,7 @@ export { Bar, type BarProps } from './Bar';
 export { BottomSheet, type BottomSheetProps } from './BottomSheet';
 export { Button, type ButtonProps, type ButtonSize, type ButtonVariant } from './Button';
 export { Card, PressableCard, type CardProps, type PressableCardProps } from './Card';
+export { Chip, type ChipProps } from './Chip';
 export { CloseControl, type CloseControlProps } from './CloseControl';
 export { ConfidenceRing, type ConfidenceRingProps } from './ConfidenceRing';
 export { DarkCard, type DarkCardProps } from './DarkCard';

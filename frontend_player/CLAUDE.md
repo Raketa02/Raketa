@@ -38,9 +38,9 @@ one cannot be tested at all. Hand-written fakes live in `src/test-support/platfo
 **Location is foreground only** — nothing asks for, checks or starts a background one.
 
 `src/shared/ui/` holds the design-system primitives built so far — the cards, note, row,
-hairline, button, tag, bar, header, and the overlays and drawn objects the result screen
-needed (bottom sheet, popover, level bar, confidence ring); the rest arrive with the
-features that need them. **Build outward from the structure below** rather than reaching
+hairline, button, tag, chip, bar, header, and the overlays and drawn objects the result
+screen needed (bottom sheet, popover, level bar, confidence ring); the rest arrive with
+the features that need them. **Build outward from the structure below** rather than reaching
 for `create-expo-app` — its default template contradicts ADR-0009 — and copy the shape of
 `src/features/auth/` or `src/features/onboarding/` rather than inventing a second one.
 
