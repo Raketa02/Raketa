@@ -5,9 +5,9 @@
  * mappers, the use-cases, the hooks, the store and the screens all run for real — so a
  * pass here means the flow works end to end minus the socket.
  *
- * The gate's four outcomes are routing behaviour, so they are asserted as routing: which
- * screen a launch lands on. These tests live outside `src/app/` and import the route
- * files, per docs/architecture.md Part 16.
+ * The gate's outcomes are routing behaviour, so they are asserted as routing: which screen
+ * a launch lands on. These tests live outside `src/app/` and import the route files, per
+ * docs/architecture.md Part 16.
  *
  * Every assertion is about what a player can see or what left the device. None reads a
  * store's internals or a hook's return shape.
@@ -79,17 +79,6 @@ const OPENING_STEP: Wire['AssessmentStepResponse'] = {
   },
 };
 
-const USER: Wire['UserResponse'] = {
-  id: '11111111-2222-4333-8444-555555555555',
-  email: 'ada@example.com',
-  nickname: 'ada',
-  authority: 'player',
-  is_admin: false,
-  is_active: true,
-  has_player_profile: false,
-  created_at: '2026-08-13T10:00:00Z',
-};
-
 let transport: Transport;
 
 const stubGate = (options?: Parameters<typeof stubGateWith>[1]) => stubGateWith(transport, options);
@@ -110,7 +99,7 @@ afterEach(() => {
 });
 
 // ---------------------------------------------------------------------------
-// The entry gate — all four outcomes
+// The entry gate — every outcome
 // ---------------------------------------------------------------------------
 
 describe('where a launch lands', () => {
@@ -134,15 +123,15 @@ describe('where a launch lands', () => {
     expect(screen.getByText("Let's find your level")).toBeTruthy();
   });
 
-  it('sends an already-rated player into the app, not into onboarding', async () => {
-    stubGate({ ratings: [RATING] });
-    transport.on('GET', '/api/v1/users/me', () => json(USER));
+  it('sends a player with a rating and a Player profile into the app', async () => {
+    stubGate({ ratings: [RATING], hasPlayerProfile: true });
 
     await launchSignedIn();
 
-    // A player who finished onboarding lands here on every later launch — the rating is
-    // what the gate reads, so this is also the proof that onboarding is not re-offered to
-    // someone who already proved a sport.
+    // A player who finished onboarding lands here on every later launch. **Both** facts are
+    // what the gate reads now: a rating says the first part is behind them, and a committed
+    // Player profile says the second one is — so this is also the proof that neither part
+    // is re-offered to someone who has already been through it.
     expect(await screen.findByText('Inside the app')).toBeTruthy();
     expect(screen.getByText('ada · ada@example.com')).toBeTruthy();
     expect(screen).toHavePathname('/');
@@ -160,14 +149,52 @@ describe('where a launch lands', () => {
 
     await waitFor(() => expect(screen).toHavePathname('/welcome'));
     expect(screen.queryByText('Inside the app')).toBeNull();
+    // And **not** into the second part, which this player has no rating to have earned.
+    // They have no Player profile either, so the two branches are both live here and the
+    // order between them is what decides — ratings first, always.
+    expect(screen).not.toHavePathname('/tags');
+  });
+
+  it('sends a rated player with no Player profile into the social steps', async () => {
+    // The hole ADR-0090 closes, as routing. This player rated padel, reached the social
+    // steps and closed the app: they hold a rating, so the gate used to drop them into the
+    // app past the second part, permanently and with no route back to it.
+    stubGate({ ratings: [RATING], hasPlayerProfile: false });
+
+    await launchSignedIn();
+
+    await waitFor(() => expect(screen).toHavePathname('/tags'));
+    expect(screen.getByText('Setting up · Step 1 of 6')).toBeTruthy();
+    // The first step, never the one they were on. The draft is client-held and died with
+    // the process, so there is no middle of the part to be resumed to.
+    expect(screen.queryByText('Inside the app')).toBeNull();
+  });
+
+  it('resumes an unfinished run ahead of the social steps, not after them', async () => {
+    // Both of the later branches would answer for this player — they hold a rating and no
+    // profile — and neither may. Answers already given are never stranded behind a screen
+    // asking about something else.
+    stubGate({
+      ratings: [RATING],
+      hasPlayerProfile: false,
+      runs: [runInProgress('TENNIS', ASSESSMENT_ID)],
+    });
+    transport.on('GET', `/api/v1/assessments/${ASSESSMENT_ID}`, () => json(OPENING_STEP));
+
+    await launchSignedIn();
+
+    await waitFor(() => expect(screen).toHavePathname(`/question/${ASSESSMENT_ID}`));
+    expect(await screen.findByText('Recent activity')).toBeTruthy();
   });
 
   it('enters the app on finishing, not back into onboarding off a stale gate read', async () => {
     // The launch that cached the answer "no ratings". It is correct at the time, it is
     // fresh for 30s, and it stays in the cache for five minutes — while the player spends
     // several of those minutes actually doing the questionnaire.
-    stubGate();
-    transport.on('GET', '/api/v1/users/me', () => json(USER));
+    // The profile is committed, which takes the second part out of this test's way: what is
+    // being pinned here is the *ratings* read going stale, and a gate that answered
+    // `social-steps` would prove it by accident, from the other branch.
+    stubGate({ hasPlayerProfile: true });
 
     await launchSignedIn();
     await waitFor(() => expect(screen).toHavePathname('/welcome'));

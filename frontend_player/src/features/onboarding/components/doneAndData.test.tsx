@@ -150,17 +150,6 @@ function ratingOf(sport: Wire['Sport'], result: Wire['ResultResponse']): Wire['R
   };
 }
 
-const USER: Wire['UserResponse'] = {
-  id: '11111111-2222-4333-8444-555555555555',
-  email: 'ada@example.com',
-  nickname: 'ada',
-  authority: 'player',
-  is_admin: false,
-  is_active: true,
-  has_player_profile: false,
-  created_at: '2026-08-13T10:00:00Z',
-};
-
 let transport: Transport;
 /** What the server holds now. The gate reads it again on the way into the app. */
 let held: Wire['RatingResponse'][];
@@ -223,7 +212,13 @@ async function answerTheLastQuestion(
   transport.on('POST', answersPath(assessmentId), () => {
     transport.on('GET', stepPath(assessmentId), () => json(finished(assessmentId, result)));
     held = [...held, ratingOf(sport, result)];
-    stubGate({ ratings: held });
+    // **A committed Player profile throughout this suite**, which is not what a player who
+    // has just answered their last question really holds. It is what isolates these tests:
+    // what they are about is the closing screens and the ratings the pass produced, and the
+    // gate's second-part branch would otherwise answer for every one of them. Onboarding's
+    // second part is not wired into this exit yet — that is the commit's own ticket, and it
+    // is where this line becomes a walk through six more screens.
+    stubGate({ ratings: held, hasPlayerProfile: true });
     return json(finished(assessmentId, result));
   });
 
@@ -424,7 +419,7 @@ describe('the done screen', () => {
     // the single-sport path, since the queue was never persisted and a resumed run has
     // nothing after it.
     held = [ratingOf('PADEL', PADEL_RESULT)];
-    stubGate({ ratings: held, runs: [runInProgress('TENNIS', TENNIS_ID)] });
+    stubGate({ ratings: held, hasPlayerProfile: true, runs: [runInProgress('TENNIS', TENNIS_ID)] });
     transport.on('GET', stepPath(TENNIS_ID), () => json(outstanding(TENNIS_ID)));
 
     await launchSignedIn();
@@ -514,7 +509,6 @@ describe('the data screen', () => {
   });
 
   it('enters the app when it is done, and the next launch goes straight there', async () => {
-    transport.on('GET', '/api/v1/users/me', () => json(USER));
     await reachTheDataScreen();
 
     fireEvent.press(screen.getByLabelText('Start playing'));
@@ -556,7 +550,6 @@ describe('the data screen', () => {
 describe('a second pass in the same process', () => {
   /** Two sports rated, the closing screens read, standing in the app. */
   async function completeAPassAndEnterTheApp() {
-    transport.on('GET', '/api/v1/users/me', () => json(USER));
     await rateBothSports();
 
     fireEvent.press(await screen.findByLabelText('Continue'));
@@ -573,7 +566,11 @@ describe('a second pass in the same process', () => {
    * device, is the ordinary way this happens.
    */
   async function resumeTennisWithoutRelaunching() {
-    stubGate({ ratings: held, runs: [runInProgress('TENNIS', TENNIS_AGAIN_ID)] });
+    stubGate({
+      ratings: held,
+      hasPlayerProfile: true,
+      runs: [runInProgress('TENNIS', TENNIS_AGAIN_ID)],
+    });
     transport.on('GET', stepPath(TENNIS_AGAIN_ID), () => json(outstanding(TENNIS_AGAIN_ID)));
 
     await queryClient.invalidateQueries({ queryKey: onboardingKeys.runInProgress() });
@@ -597,7 +594,7 @@ describe('a second pass in the same process', () => {
     await resumeTennisWithoutRelaunching();
 
     transport.on('POST', `${stepPath(TENNIS_AGAIN_ID)}/abandonment`, () => noContent());
-    stubGate({ ratings: held, runs: [] });
+    stubGate({ ratings: held, hasPlayerProfile: true, runs: [] });
 
     fireEvent.press(screen.getByLabelText('Leave this rating'));
     fireEvent.press(await screen.findByLabelText(/^Stop rating Tennis\./));

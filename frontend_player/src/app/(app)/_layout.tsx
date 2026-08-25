@@ -1,5 +1,5 @@
 /**
- * Two boundaries, in order: is there a session, and does this player have a rating yet.
+ * Two boundaries, in order: is there a session, and is onboarding behind this player yet.
  *
  * Expo Router's declarative protected routes landed **after** SDK 52, so until this app
  * moves past it the guard is a redirect keyed on `SessionStatus` — never on
@@ -12,9 +12,14 @@
  *
  * ## The entry gate
  *
- * The second redirect is onboarding's. It is **not** part of `SessionStatus`: making "has
- * a rating" a session state would block every cold launch on a network request, which is
- * the opposite of what the bootstrap sequence exists to avoid.
+ * The second redirect is onboarding's, and onboarding is **two parts** — so the gate has
+ * four destinations rather than two: an unfinished run resumes, no ratings goes to welcome,
+ * a rating with no Player profile goes to the second part's first step, and only then does
+ * a player reach the app ([ADR-0090](../../../../docs/adr/0090-onboarding-per-player-checkpoint.md)).
+ *
+ * None of it is part of `SessionStatus`: making "has a rating" a session state would block
+ * every cold launch on a network request, which is the opposite of what the bootstrap
+ * sequence exists to avoid.
  *
  * Where a player belongs is a rule, and it lives in the onboarding feature with its own
  * tests. This file only turns the decision into a route — which is the whole job of a
@@ -57,6 +62,11 @@ export default function AppLayout() {
       return <EntryUnavailableScreen error={entry.error} onRetry={entry.retry} />;
     case 'welcome':
       return <Redirect href="/welcome" />;
+    case 'social-steps':
+      // The first step, always — never the one they were on when they closed the app. The
+      // draft is client-held and starts empty, so the middle of the part is not a place a
+      // player can be resumed to.
+      return <Redirect href="/tags" />;
     case 'resume':
       return (
         <Redirect

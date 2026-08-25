@@ -112,20 +112,28 @@ review comment and a test description all use the same word.
 - **Guard** — the redirect in `(app)/_layout.tsx` keyed on session status. On SDK 52 this
   is a redirect, not a declarative protected route; those landed later. _Avoid_:
   "middleware" (that is a web server's word, and it runs on a server).
-- **Entry gate** — the _second_ redirect in `(app)/_layout.tsx`, deciding between the app
-  and onboarding from two parallel reads: is a run unfinished, and does a rating exist.
-  Distinct from the guard, and deliberately **not** part of session status — a rating
-  check inside bootstrap would block every cold launch on a network request. _Avoid_:
-  "onboarded flag" — there is no such thing, because a rating is per sport.
+- **Entry gate** — the _second_ redirect in `(app)/_layout.tsx`, deciding where a launch
+  lands from **three parallel reads**: is a run unfinished, does a rating exist, and does a
+  Player profile exist. Four destinations, and the order between them is the rule: resume ·
+  welcome · the social steps · the app. Distinct from the guard, and deliberately **not**
+  part of session status — a rating check inside bootstrap would block every cold launch on
+  a network request. The third read is the authenticated player the app already asks for,
+  never a fourth endpoint. _Avoid_: "onboarded flag" — there is no such thing, because a
+  rating is per sport. Whether a _Player profile_ exists is not that flag: it is a
+  per-player question with a per-player answer, which is the distinction
+  [ADR-0090](../docs/adr/0090-onboarding-per-player-checkpoint.md) draws and the shared
+  glossary now carries.
 - **Untrusted route input** — any param from a deep link, push payload, universal link,
   App Link or QR code. Zod-validated in the feature's `schemas/` before use.
 
 ### The onboarding flow
 
-Two client-only concepts. **Neither exists on the backend and neither should:** an
-Assessment is per sport, and nothing on the server records the sequence of them or a
-player's decision to come back later. Both are modelled in
-`features/onboarding/domain/onboardingPass.ts` and held in that feature's stores.
+Four client-only concepts. **None exists on the backend and none should:** an Assessment is
+per sport, and nothing on the server records the sequence of them, a player's decision to
+come back later, or a half-answered second part. The first two are modelled in
+`features/onboarding/domain/onboardingPass.ts` and held in that feature's stores; the last
+two belong to `features/player_profile/`, which owns the second part and will own the
+profile editor that later edits the same values.
 
 - **Onboarding pass** — **one walk through onboarding**: the sports the player chose, in
   the order they chose them, and which of those produced a Skill rating. It is what the
@@ -149,6 +157,23 @@ player's decision to come back later. Both are modelled in
   _Avoid_: "paused run", "saved run" — both suggest a server-side state, and there is
   none; "abandoned run" — that **is** a server-side transition and is the permanent way
   out, where this is the temporary one.
+- **Social step** — one of the **six** screens of onboarding's **second part**: tags,
+  photos, availability, location, radius, opt-in, in that order. The step names are the
+  route segments, so `/radius` is the screen that asks for a Search radius and there is no
+  second spelling of the six. **The part is the unit, not the step** — back and forward move
+  freely between steps and never cross out of the part, the first step has no back control,
+  and the last is followed by the profile commit rather than by a seventh screen
+  ([ADR-0090](../docs/adr/0090-onboarding-per-player-checkpoint.md)). _Avoid_: "wizard
+  step", "page"; also "onboarding step" for a question in the questionnaire — that is a
+  **position** in a run, and the two move by different rules.
+- **Profile draft** — every answer the second part has collected, held **on the client**
+  until the one commit that ends the part. In memory, never persisted, and never sent
+  anywhere before that commit — which is what makes moving between steps free and what makes
+  leaving mid-part restart at step one. Its absence is a state: no draft means the player is
+  not in the part, which is how a link naming a step in the middle is told from a player who
+  walked there. _Avoid_: "form state" — it outlives every screen in the part; "saved draft"
+  and "resume" — nothing is saved, and the asymmetry with part one's resumable run is
+  deliberate.
 
 ### Data and errors
 

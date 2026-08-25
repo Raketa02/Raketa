@@ -24,10 +24,27 @@ feature, not after:
 
 `src/app/_layout.tsx` composes the providers and `src/shared/lib/bootstrap` runs the one
 ordered startup sequence. Above that: the HTTP client with its 401 → refresh → retry
-rotation, the `AppError` family, `shared/lib/auth` over the keychain, and two features —
-`auth` (sign up, sign in, session restore) and `onboarding` (the entry gate, welcome, the
+rotation, the `AppError` family, `shared/lib/auth` over the keychain, and three features —
+`auth` (sign up, sign in, session restore), `onboarding` (the entry gate, welcome, the
 sports picker, the adaptive question loop, the explained result, and the summary and data
-screens a player leaves through).
+screens a player leaves through) and `player_profile` (onboarding's **second part**: six
+steps over a client-held draft, as a walking skeleton — the routes, the draft and the
+navigation work; what each step asks is still being built).
+
+**Onboarding is two parts, and the part is the checkpoint unit**
+([ADR-0090](../docs/adr/0090-onboarding-per-player-checkpoint.md)). Part one is the Skill
+rating and resumes mid-run; part two writes nothing until one commit at the end, so leaving
+it restarts at step one. The entry gate reads three facts and has four destinations — resume
+· welcome · the social steps · the app — and the second part's screens live in
+`player_profile/` rather than in `onboarding/` because the profile screen will later edit the
+same values against the same rules
+([ADR-0089](../docs/adr/0089-player-profile-context-event-sourced.md)).
+
+**The second part is reached only through the entry gate today, so the closing screens come
+before it rather than after it.** A player finishing the questionnaire walks result → done →
+data → the app, and the gate turns them straight round into the social steps. The spec's
+order — the six steps, then the commit, then done and data — arrives with the commit, which
+is also what gives the last step something to continue to.
 
 `src/shared/lib/platform/` owns everything the app knows about the device: the Query
 focus and online wirings, and two **platform ports** — `LocationPort` over `expo-location`

@@ -39,6 +39,7 @@ describe('where a player belongs on launch', () => {
         ratings: [],
         runInProgress: undefined,
         deferredRunIds: NONE_DEFERRED,
+        hasPlayerProfile: true,
       }),
     ).toEqual({ kind: 'welcome' });
   });
@@ -49,6 +50,7 @@ describe('where a player belongs on launch', () => {
         ratings: [rating('padel')],
         runInProgress: undefined,
         deferredRunIds: NONE_DEFERRED,
+        hasPlayerProfile: true,
       }),
     ).toEqual({ kind: 'app' });
   });
@@ -59,6 +61,7 @@ describe('where a player belongs on launch', () => {
         ratings: [],
         runInProgress: RUN,
         deferredRunIds: NONE_DEFERRED,
+        hasPlayerProfile: true,
       }),
     ).toEqual({ kind: 'resume', run: RUN });
   });
@@ -72,6 +75,7 @@ describe('where a player belongs on launch', () => {
         ratings: [rating('padel')],
         runInProgress: RUN,
         deferredRunIds: NONE_DEFERRED,
+        hasPlayerProfile: true,
       }),
     ).toEqual({ kind: 'resume', run: RUN });
   });
@@ -86,6 +90,7 @@ describe('a run the player asked to come back to later', () => {
         ratings: [],
         runInProgress: RUN,
         deferredRunIds: [RUN.assessmentId],
+        hasPlayerProfile: true,
       }),
     ).toEqual({ kind: 'welcome' });
   });
@@ -96,6 +101,7 @@ describe('a run the player asked to come back to later', () => {
         ratings: [rating('padel')],
         runInProgress: RUN,
         deferredRunIds: [RUN.assessmentId],
+        hasPlayerProfile: true,
       }),
     ).toEqual({ kind: 'app' });
   });
@@ -108,7 +114,66 @@ describe('a run the player asked to come back to later', () => {
         ratings: [],
         runInProgress: RUN,
         deferredRunIds: ['a-different-assessment'],
+        hasPlayerProfile: true,
       }),
     ).toEqual({ kind: 'resume', run: RUN });
+  });
+});
+
+describe('a player with a rating and no Player profile', () => {
+  it('is sent to the social steps rather than into the app', () => {
+    // The hole ADR-0090 closes. Rating padel, reaching the social steps and killing the
+    // app used to leave a player *rated*, so the gate read one fact and dropped them into
+    // the app past the second part — permanently, with no route back to it.
+    expect(
+      entryDestination({
+        ratings: [rating('padel')],
+        runInProgress: undefined,
+        deferredRunIds: NONE_DEFERRED,
+        hasPlayerProfile: false,
+      }),
+    ).toEqual({ kind: 'social-steps' });
+  });
+
+  it('is still sent to welcome when nothing has been rated', () => {
+    // Order matters, and this is the pair that fixes it. A player with no ratings has not
+    // finished the first part, and the second part is only reachable after it — so *no
+    // ratings* is answered before *no profile*, and the brand-new account goes to welcome
+    // rather than into a part it has not earned.
+    expect(
+      entryDestination({
+        ratings: [],
+        runInProgress: undefined,
+        deferredRunIds: NONE_DEFERRED,
+        hasPlayerProfile: false,
+      }),
+    ).toEqual({ kind: 'welcome' });
+  });
+
+  it('still resumes an unfinished run first', () => {
+    // An unfinished run outranks everything, and that did not change: answers already
+    // given must never be stranded behind a screen asking about something else.
+    expect(
+      entryDestination({
+        ratings: [rating('padel')],
+        runInProgress: RUN,
+        deferredRunIds: NONE_DEFERRED,
+        hasPlayerProfile: false,
+      }),
+    ).toEqual({ kind: 'resume', run: RUN });
+  });
+
+  it('reaches the social steps once that run is set aside', () => {
+    // *Done for now* with a sport still to go is an ordinary outcome, and it must still
+    // lead to a profile — the third user story in the spec. The deferral takes the run out
+    // of the gate's way and the next branch is the one that answers.
+    expect(
+      entryDestination({
+        ratings: [rating('padel')],
+        runInProgress: RUN,
+        deferredRunIds: [RUN.assessmentId],
+        hasPlayerProfile: false,
+      }),
+    ).toEqual({ kind: 'social-steps' });
   });
 });

@@ -32,5 +32,10 @@ export function toAuthenticatedUser(wire: UserResponse): AuthenticatedUser {
     id: wire.id,
     email: wire.email,
     nickname: wire.nickname,
+    // Kept where `is_admin` is dropped, because the app must branch on it: the entry gate
+    // reads it to decide whether onboarding's second part is still owed. It defaults to
+    // false on the wire for responses that are not about the authenticated player — such
+    // as the one registration returns — and a brand-new account has no profile anyway.
+    hasPlayerProfile: wire.has_player_profile,
   };
 }

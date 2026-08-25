@@ -20,13 +20,19 @@ import TabsLayout from '@/app/(app)/(tabs)/_layout';
 import HomeRoute from '@/app/(app)/(tabs)/index';
 import AuthLayout from '@/app/(auth)/_layout';
 import SignInRoute from '@/app/(auth)/sign-in';
+import AvailabilityRoute from '@/app/(onboarding)/availability';
 import DataRoute from '@/app/(onboarding)/data';
 import DoneRoute from '@/app/(onboarding)/done';
+import LocationRoute from '@/app/(onboarding)/location';
 import OnboardingLayout from '@/app/(onboarding)/_layout';
+import OptInRoute from '@/app/(onboarding)/opt-in';
+import PhotosRoute from '@/app/(onboarding)/photos';
 import QuestionRoute from '@/app/(onboarding)/question/[assessmentId]';
+import RadiusRoute from '@/app/(onboarding)/radius';
 import ResultRoute from '@/app/(onboarding)/result/[assessmentId]';
 import ReviewRoute from '@/app/(onboarding)/review/[assessmentId]';
 import SportsRoute from '@/app/(onboarding)/sports';
+import TagsRoute from '@/app/(onboarding)/tags';
 import WelcomeRoute from '@/app/(onboarding)/welcome';
 import { beginSession } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
@@ -48,6 +54,14 @@ export const ONBOARDING_ROUTES = {
   '(onboarding)/result/[assessmentId]': ResultRoute,
   '(onboarding)/done': DoneRoute,
   '(onboarding)/data': DataRoute,
+  // The second part, in order. They are routes rather than one route with a param so the
+  // sequence is visible in the file tree, the way the authorization boundary is.
+  '(onboarding)/tags': TagsRoute,
+  '(onboarding)/photos': PhotosRoute,
+  '(onboarding)/availability': AvailabilityRoute,
+  '(onboarding)/location': LocationRoute,
+  '(onboarding)/radius': RadiusRoute,
+  '(onboarding)/opt-in': OptInRoute,
 };
 
 /**
@@ -90,17 +104,45 @@ export interface GateStub {
    * gate picks.
    */
   readonly runs?: readonly Wire['InProgressAssessmentResponse'][];
+  /**
+   * Whether onboarding's second part has been committed — the gate's fourth branch.
+   *
+   * Defaults to **false**, which is the answer that goes with the default of no ratings: a
+   * player who has been rated at nothing has committed nothing either. It is only consulted
+   * once a rating exists, so most suites never have to state it.
+   */
+  readonly hasPlayerProfile?: boolean;
 }
 
+/** The signed-in player, as `GET /users/me` answers. Identity is filler; the flag is not. */
+export const GATE_USER: Wire['UserResponse'] = {
+  id: '11111111-2222-4333-8444-555555555555',
+  email: 'ada@example.com',
+  nickname: 'ada',
+  authority: 'player',
+  is_admin: false,
+  is_active: true,
+  has_player_profile: false,
+  created_at: '2026-08-13T10:00:00Z',
+};
+
 /**
- * The gate's two reads: what this player is rated at, and what they left unfinished.
+ * The gate's three reads: what this player is rated at, what they left unfinished, and who
+ * they are — which is where *does a Player profile exist* is served from.
  *
- * The second is **one** request covering every sport. An empty list is the answer for a
- * player with nothing outstanding — a 200, not a 204 and not a failure.
+ * The unfinished-run read is **one** request covering every sport. An empty list is the
+ * answer for a player with nothing outstanding — a 200, not a 204 and not a failure.
  */
-export function stubGate(transport: Transport, { ratings = [], runs = [] }: GateStub = {}) {
+export function stubGate(
+  transport: Transport,
+  { ratings = [], runs = [], hasPlayerProfile = false }: GateStub = {},
+) {
   transport.on('GET', '/api/v1/ratings', () =>
     json<Wire['RatingsResponse']>({ ratings: [...ratings] }),
+  );
+
+  transport.on('GET', '/api/v1/users/me', () =>
+    json<Wire['UserResponse']>({ ...GATE_USER, has_player_profile: hasPlayerProfile }),
   );
 
   stubRunsInProgress(transport, runs);

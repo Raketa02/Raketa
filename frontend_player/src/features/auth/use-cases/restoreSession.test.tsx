@@ -79,6 +79,7 @@ describe('relaunching', () => {
       id: USER.id,
       email: USER.email,
       nickname: USER.nickname,
+      hasPlayerProfile: USER.has_player_profile,
     });
   });
 
@@ -251,6 +252,7 @@ describe('the launch sequence', () => {
         id: USER.id,
         email: USER.email,
         nickname: USER.nickname,
+        hasPlayerProfile: USER.has_player_profile,
       }),
     );
     expect(transport.requestsTo('GET', '/api/v1/users/me')).toHaveLength(1);

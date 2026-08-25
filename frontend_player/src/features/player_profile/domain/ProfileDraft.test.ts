@@ -1,0 +1,60 @@
+/**
+ * The draft, with no store and no renderer.
+ *
+ * What is being pinned here is that recording one answer leaves the other five alone —
+ * which is the whole promise the part makes when it says back and forward are free.
+ */
+
+import { emptyDraft, recordAnswer } from './ProfileDraft';
+
+describe('a draft that has been started', () => {
+  it('holds nothing, and says so without using an empty value to mean it', () => {
+    const draft = emptyDraft();
+
+    // A blank week and no photos are legitimate *answers* — an empty grid means no
+    // preference and never "leave me out" — so those two start as empty lists rather than
+    // as absences. The three that must actually be answered start absent.
+    expect(draft).toEqual({
+      socialTagIds: [],
+      photoIds: [],
+      availability: [],
+      location: undefined,
+      searchRadiusKm: undefined,
+      proposalsOptIn: undefined,
+    });
+  });
+});
+
+describe('recording an answer', () => {
+  it('keeps every other answer', () => {
+    // The reason the draft exists at all: walking back to check one thing must not cost
+    // the player the rest.
+    const walked = recordAnswer(
+      recordAnswer(recordAnswer(emptyDraft(), { searchRadiusKm: 12 }), {
+        availability: [{ day: 1, part: 'morning' }],
+      }),
+      { location: { latitude: 41.39, longitude: 2.16 } },
+    );
+
+    expect(walked.searchRadiusKm).toBe(12);
+    expect(walked.availability).toEqual([{ day: 1, part: 'morning' }]);
+    expect(walked.location).toEqual({ latitude: 41.39, longitude: 2.16 });
+  });
+
+  it('replaces the answer to the step that was answered again', () => {
+    const changed = recordAnswer(recordAnswer(emptyDraft(), { searchRadiusKm: 12 }), {
+      searchRadiusKm: 30,
+    });
+
+    expect(changed.searchRadiusKm).toBe(30);
+  });
+
+  it('leaves the draft it was given untouched', () => {
+    // Nothing mutates: the store swaps one value for another, and a Zustand selector that
+    // was handed a mutated object would not re-render the screen reading it.
+    const before = emptyDraft();
+    recordAnswer(before, { searchRadiusKm: 12 });
+
+    expect(before.searchRadiusKm).toBeUndefined();
+  });
+});
