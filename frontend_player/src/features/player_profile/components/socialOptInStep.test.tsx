@@ -31,10 +31,10 @@ import { installTransport, type Transport, type Wire } from '@/test-support/tran
 import { useProfileDraft } from '../store/profileDraft.store';
 
 import {
+  OPT_IN_ANSWERS,
   OPT_IN_FINISH_LABEL,
   OPT_IN_PROMISES,
   PROPOSALS_OPT_IN_COPY_VERSION,
-  optInAnswerLabel,
 } from './optInPresentation';
 
 /** One rating: the first part is behind this player, and the second one is not. */
@@ -52,8 +52,10 @@ const RATING: Wire['RatingResponse'] = {
 
 let transport: Transport;
 
-const YES = optInAnswerLabel(true);
-const NO = optInAnswerLabel(false);
+const labelFor = (accepted: boolean) =>
+  OPT_IN_ANSWERS.find((answer) => answer.accepted === accepted)?.label ?? '';
+const YES = labelFor(true);
+const NO = labelFor(false);
 
 const control = (label: string) => screen.getByLabelText(label);
 const isSelected = (label: string) => control(label).props.accessibilityState?.selected;

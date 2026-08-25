@@ -24,8 +24,13 @@
  * That is a rule worth stating once, in a file with no renderer, rather than living inside
  * a `disabled` prop where the difference between *unanswered* and *declined* is one typo.
  *
- * The words the answer was given against travel with it in `ProposalsOptIn` itself, so
- * there is no arrangement of these functions that can produce an answer without them.
+ * ## The words travel with the answer, and the type is what guarantees it
+ *
+ * There is no constructor here, deliberately. `ProposalsOptIn.copyVersion` is **required**,
+ * so an answer without the wording it was given against is not a value this app can build —
+ * a function wrapping an object literal would add a middle man to enforce what the type
+ * already refuses. *Which* wording was shown is the screen's fact, not this file's: the
+ * thing that drew the sentences is the only thing that can honestly name them.
  */
 
 import type { ProposalsOptIn } from './ProfileDraft';

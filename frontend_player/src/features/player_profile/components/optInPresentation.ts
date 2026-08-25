@@ -30,6 +30,19 @@
  * Two answers and a finish. No skip, no dismiss, no close, no decide-later — a player who
  * left through one of those would be neither opted in nor opted out, and somebody
  * downstream would have to guess. The guess is the thing consent exists to remove.
+ *
+ * ## What the version names is the screen, not this file
+ *
+ * The step's title and the line under it come from `socialStepPresentation`, because the
+ * chrome of all six steps is one table and splitting it would give this step two spellings
+ * of its own name. A player reads them on the same screen as the card, so
+ * `optInPresentation.test.ts` pins them alongside everything below — what the version
+ * identifier names is what was *shown*, wherever the string happened to be declared.
+ *
+ * The one sentence deliberately outside the pin is the note beside the finish saying the
+ * commit is not built yet. That is a statement about the state of the build rather than
+ * about what the player is agreeing to, and it is deleted rather than re-worded when the
+ * commit lands — versioning it would be recording a build detail as evidence.
  */
 
 /**
@@ -99,6 +112,27 @@ export const OPT_IN_NEVER_PRE_TICKED = 'Never pre-ticked. Skipping is not consen
 export function optInAnswerLabel(accepted: boolean): string {
   return accepted ? 'Yes — suggest games' : "No — don't suggest games";
 }
+
+/** One answer, and the words on the control that gives it. */
+export interface OptInAnswer {
+  readonly accepted: boolean;
+  readonly label: string;
+}
+
+/**
+ * The two answers **in the order they are offered**, which is the approved copy's order and
+ * not an incidental one.
+ *
+ * **No comes first.** The option a screen puts first is the one it reads as recommending,
+ * and this is the question where the product must not be seen to lean. That makes the order
+ * a copy decision rather than a layout one, which is why it is stated here beside the words
+ * and pinned by the same test — a screen that mapped over a list of its own could reverse
+ * it without anything noticing.
+ */
+export const OPT_IN_ANSWERS: readonly OptInAnswer[] = [
+  { accepted: false, label: optInAnswerLabel(false) },
+  { accepted: true, label: optInAnswerLabel(true) },
+];
 
 /** The finish, naming what is on the other side of it rather than the act of finishing. */
 export const OPT_IN_FINISH_LABEL = 'Finish — show me players';
