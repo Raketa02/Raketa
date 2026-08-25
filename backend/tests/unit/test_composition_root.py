@@ -42,6 +42,7 @@ from app.bootstrap.composition import (
     build_password_hasher,
     build_photo_review,
     build_photo_storage,
+    build_player_profile_repository,
     build_refresh_token_repository,
     build_skill_rating_repository,
     build_token_service,
@@ -142,6 +143,7 @@ async def test_every_port_is_built_from_a_session_and_the_settings(session_facto
             build_assessment_engine(),
             build_assessment_repository(event_store=store, events=events),
             build_skill_rating_repository(event_store=store, events=events),
+            build_player_profile_repository(event_store=store, events=events),
             # No session: photos are bytes in an object store, not rows. What
             # they need instead is the settings — the bucket and which store —
             # which is the other half of what this module promises a caller

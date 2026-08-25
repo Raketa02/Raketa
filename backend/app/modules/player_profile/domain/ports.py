@@ -1,9 +1,15 @@
-"""The three seams the photo path is built on.
+"""The seams this context is built on: the photo path's three, and the profile's.
 
 Each is here rather than in ``app/application/ports/`` because each is the
 Player profile context's own: a photo belongs to a profile, and no other context
 has one. Cross-cutting ports — the unit of work, the event store, the publisher
 — stay where they are.
+
+``PlayerProfileRepository`` is the **aggregate repository** kind, not the
+read-model kind: it is how a use case reaches an event-sourced aggregate without
+knowing that it is event-sourced, owning the aggregate-type name, the replay and
+the optimistic-concurrency bookkeeping (ADR-0018). See ``backend/CONTEXT.md`` for
+the distinction, and ADR-0089 for why this context is event-sourced.
 
 **Nothing in this file names a vendor.** ``PhotoStorage`` says *put these bytes
 under this reference and give me a short-lived URL for them*; whether that is
@@ -13,13 +19,15 @@ answer and is invisible from here (``docs/adr/0091``).
 
 from __future__ import annotations
 
-from typing import Mapping, Protocol
+from typing import Mapping, Protocol, runtime_checkable
+from uuid import UUID
 
 from app.modules.player_profile.domain.photos import (
     PhotoRef,
     PhotoReviewVerdict,
     TranscodedImage,
 )
+from app.modules.player_profile.domain.profile import PlayerProfile
 
 
 class PhotoStorage(Protocol):
@@ -96,3 +104,53 @@ class PhotoReview(Protocol):
     """
 
     async def review(self, image: TranscodedImage) -> PhotoReviewVerdict: ...
+
+
+@runtime_checkable
+class PlayerProfileRepository(Protocol):
+    """Loads and saves PlayerProfile aggregates.
+
+    Every method is keyed on the player and nothing else, because the stream is
+    — there is no profile id to pass and no ownership argument to forget, which
+    is the one hazard ``AssessmentRepository.load`` needs its ``for_player`` to
+    close.
+    """
+
+    async def load(self, player_id: UUID) -> PlayerProfile | None:
+        """This player's profile, replayed from its stream, or nothing.
+
+        ``None`` rather than a raise, because *no profile yet* is the ordinary
+        state of every account that has not finished onboarding's second part —
+        it is what the commit expects to find, and what the entry gate asks
+        about (``docs/adr/0090``).
+        """
+        ...
+
+    async def save(self, profile: PlayerProfile) -> None:
+        """Append the aggregate's pending events and publish them.
+
+        Appends and publishes; it does **not** commit. The transaction stays a
+        use-case dependency for the reason it does in the rating context: the
+        boundary is a decision about the *command*, not about persistence.
+
+        A no-op when nothing is pending, which is what lets a transition that
+        changed nothing be saved without growing the stream.
+        """
+        ...
+
+    async def exists_for(self, *, player_id: UUID) -> bool:
+        """Whether this player has committed a profile.
+
+        A question rather than the aggregate, deliberately: this is what
+        ``GET /users/me`` reads on every launch to decide whether onboarding's
+        second part is still owed (``docs/adr/0090``), and replaying a profile
+        to answer a boolean would be paying for state nobody looks at. A caller
+        that only asked a question also has no business with an aggregate it
+        might then mutate.
+
+        **It reads the stream, not a projection.** The gate is checked
+        immediately after the commit that creates the profile, and a read model
+        that has not caught up would send a player who has just finished the
+        social steps back into them.
+        """
+        ...

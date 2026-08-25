@@ -44,9 +44,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 from types import MappingProxyType
-from typing import Mapping
+from typing import Iterable, Mapping
 
 from app.kernel import invariant
+from app.modules.player_profile.domain.errors import (
+    DuplicateSocialTag,
+    SocialTagSelectionOutOfBounds,
+    UnknownSocialTag,
+)
 
 
 class SocialTagGroup(str, Enum):
@@ -170,6 +175,96 @@ SOCIAL_TAG_SELECTION_BOUNDS = SocialTagSelectionBounds(
     minimum_tags=2,
     maximum_tags=6,
 )
+
+
+@dataclass(frozen=True, slots=True)
+class SocialTagSelection:
+    """The tags one player holds: between the floor and the ceiling, no repeats.
+
+    Built through ``of`` or ``from_ids``, never directly, so that no caller holds
+    a selection in its own order. The order is the **vocabulary's**, which means
+    two players who picked the same tags hold equal selections whatever order
+    their pickers sent them in, and a stored selection reads the way the picker
+    renders it.
+
+    **This is where the served bounds are re-validated, and it has to be here.**
+    The floor and the ceiling are published at ``GET /player-profile/options`` so
+    a picker can grey out its confirm control, and a disabled button is not a
+    validation (``docs/adr/0089``) — it is absent from a replayed request, an
+    older build, and anything that is not the app.
+    """
+
+    tags: tuple[SocialTag, ...]
+
+    def __post_init__(self) -> None:
+        invariant(
+            list(self.tags) == _in_vocabulary_order(set(self.tags)),
+            "a social tag selection was built outside `of`",
+        )
+
+    @classmethod
+    def of(cls, tags: Iterable[SocialTag]) -> "SocialTagSelection":
+        """The selection these tags make, or a refusal naming which rule broke.
+
+        Duplicates are **refused** rather than dropped, which is the opposite of
+        what an availability grid does with a repeated slot — deliberately. A
+        grid is a set of cells and a cell ticked twice is ticked; a selection is
+        counted against a floor and a ceiling, so silently collapsing three ids
+        into two would refuse a player for a mistake their client made and tell
+        them they picked too few.
+        """
+
+        chosen = tuple(tags)
+        unique = set(chosen)
+        if len(unique) != len(chosen):
+            raise DuplicateSocialTag()
+        if not SOCIAL_TAG_SELECTION_BOUNDS.contains(len(unique)):
+            raise SocialTagSelectionOutOfBounds()
+        return cls(tags=tuple(_in_vocabulary_order(unique)))
+
+    @classmethod
+    def from_ids(cls, ids: Iterable[str]) -> "SocialTagSelection":
+        """The selection these wire ids make, refusing any the vocabulary lacks.
+
+        An id this platform does not serve is refused with its own code rather
+        than folded into "invalid selection", because the two ask the client for
+        different things: too many tags is a picker that let the player overfill,
+        an unknown id is a picker working from a vocabulary this release no
+        longer serves, and the recovery for that one is to re-read the options.
+        """
+
+        tags: list[SocialTag] = []
+        for value in ids:
+            try:
+                tags.append(SocialTag(value))
+            except ValueError as exc:
+                raise UnknownSocialTag() from exc
+        return cls.of(tags)
+
+    @property
+    def ids(self) -> tuple[str, ...]:
+        """The selection as a stream stores it and the wire carries it."""
+
+        return tuple(tag.value for tag in self.tags)
+
+    def __len__(self) -> int:
+        return len(self.tags)
+
+
+def _in_vocabulary_order(tags: Iterable[SocialTag]) -> list[SocialTag]:
+    """`tags` arranged as the vocabulary declares them, groups included.
+
+    Reads ``SOCIAL_TAG_VOCABULARY`` rather than the enum, so the one order that
+    is part of the contract is the one order a selection is stored in.
+    """
+
+    held = set(tags)
+    return [
+        tag
+        for grouped in SOCIAL_TAG_VOCABULARY.values()
+        for tag in grouped
+        if tag in held
+    ]
 
 
 def _validate_vocabulary() -> None:

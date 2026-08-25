@@ -42,6 +42,7 @@ from app.shared.domain.errors import (
 # Imported for their side effect: every error module must be loaded before the
 # subclass walk below can see its classes.
 from app.modules.auth.domain import errors as auth_errors  # noqa: F401
+from app.modules.player_profile.domain import errors as profile_errors
 from app.modules.rating.domain import errors as rating_errors
 from app.modules.users.domain import errors as users_errors  # noqa: F401
 
@@ -85,6 +86,9 @@ def test_the_walk_actually_finds_the_domain_errors():
         "InvalidCredentials",
         "EmailAlreadyRegistered",
         "AccessTokenExpired",
+        "PhotoNotFound",
+        "ProposalsOptInNotAnswered",
+        "PlayerProfileAlreadyExists",
     } <= names
 
 
@@ -118,6 +122,24 @@ def test_the_two_conflicting_assessment_errors_are_distinguishable():
         == rating_errors.AssessmentAlreadyFinished().status_code
         == 409
     )
+
+
+def test_the_profile_commits_refusals_are_distinguishable():
+    """The five 400s the commit can answer with arrive on the same status from
+    the same endpoint and ask the client for five different things: re-read the
+    options, pick fewer tags, deduplicate the picker, move the slider, or ask
+    the consent question that was skipped."""
+
+    refusals = [
+        profile_errors.UnknownSocialTag,
+        profile_errors.SocialTagSelectionOutOfBounds,
+        profile_errors.DuplicateSocialTag,
+        profile_errors.SearchRadiusOutOfBounds,
+        profile_errors.ProposalsOptInNotAnswered,
+    ]
+
+    assert len({error.code for error in refusals}) == len(refusals)
+    assert {error().status_code for error in refusals} == {400}
 
 
 def test_a_code_is_not_derived_from_the_message():

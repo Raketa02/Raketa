@@ -52,6 +52,7 @@
           "users"
         ],
         "summary": "Current authenticated user",
+        "description": "Carries `has_player_profile`, the fourth branch of onboarding's entry gate. It is read from the profile's event stream rather than from a projection, so a player who has just committed their profile is never sent back into the social steps by a read model that has not caught up.",
         "operationId": "me_api_v1_users_me_get",
         "responses": {
           "200": {
@@ -624,6 +625,108 @@
         }
       }
     },
+    "/api/v1/players/me/profile": {
+      "post": {
+        "tags": [
+          "player-profile"
+        ],
+        "summary": "Commit every answer from onboarding's second part",
+        "description": "Idempotent per `Idempotency-Key`. The same key twice creates one profile and returns the same body \u2014 the second call answers 200 and records nothing.\n\n**Every rule the picker enforced is re-validated here.** The tag vocabulary, the tag floor and ceiling and the radius bounds are all served by `GET /player-profile/options` so a client can build controls that cannot produce an illegal value \u2014 and a disabled button is not a validation. Photo ids are checked to exist *and* to belong to the caller.\n\n**An empty availability grid is accepted.** Blank means no preference; it is never read as *leave me out*, and it excludes the player from nothing.\n\n**The proposals opt-in has no default.** Send the player's actual answer; `null` is refused rather than treated as a no. The answer is recorded with the moment, the copy version shown and the surface, because consent is evidenced rather than asserted.",
+        "operationId": "commit_player_profile_api_v1_players_me_profile_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "description": "What the client calls this commit. Sending the same key again returns the profile the first call created, with a 200 \u2014 one profile, one consent answer, whatever a flaky connection does to the response.",
+              "title": "Idempotency-Key"
+            },
+            "description": "What the client calls this commit. Sending the same key again returns the profile the first call created, with a 200 \u2014 one profile, one consent answer, whatever a flaky connection does to the response."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommitPlayerProfileRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The profile was created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlayerProfileResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "This idempotency key has already been committed; the profile the first call created is returned and nothing was recorded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlayerProfileResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`unknown_social_tag` \u2014 an id this platform does not serve; re-read `GET /player-profile/options`.\n\n`social_tag_selection_out_of_bounds` \u2014 too few or too many tags for the served floor and ceiling.\n\n`duplicate_social_tag` \u2014 the same tag id arrived twice.\n\n`search_radius_out_of_bounds` \u2014 outside the served range, or off its step.\n\n`proposals_opt_in_not_answered` \u2014 the answer was `null`. Ask the question; do not send `false` on the player's behalf.\n\n`too_many_photos` / `duplicate_photo` \u2014 the photo list is not one a profile may hold.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`photo_not_found` \u2014 a photo id that does not exist, or belongs to another player. The two answer the same way deliberately.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`player_profile_already_exists` \u2014 this player has a profile and this is a **different** idempotency key, so it is a second commit rather than a retry of the first.\n\n`concurrent_modification` \u2014 two commits for this player raced and this one lost. Retry: the retry replays the winner.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/photos": {
       "post": {
         "tags": [
@@ -805,6 +908,28 @@
         "title": "AssessmentStepResponse",
         "description": "The server-driven step: at most one of `question` / `result` is set, and\n`transcript` is everything already answered behind it. Neither means the run\nis not asking and has not been rated \u2014 see `status`."
       },
+      "AvailabilitySlotResource": {
+        "properties": {
+          "day": {
+            "type": "integer",
+            "maximum": 7.0,
+            "minimum": 1.0,
+            "title": "Day",
+            "description": "ISO weekday \u2014 1 is Monday, 7 is Sunday. The grid is Monday-first."
+          },
+          "part": {
+            "$ref": "#/components/schemas/DayPart",
+            "description": "Which part of that day"
+          }
+        },
+        "type": "object",
+        "required": [
+          "day",
+          "part"
+        ],
+        "title": "AvailabilitySlotResource",
+        "description": "One ticked cell of the availability grid.\n\nTwo named fields rather than the single joined code the event stream stores.\nThe stream's code is a *storage* encoding chosen so a replay folds strings;\nthis is a contract a client renders a grid from, and a client that had to\nsplit ``\"3:EVENING\"`` would be parsing our persistence format."
+      },
       "BandResponse": {
         "properties": {
           "name": {
@@ -828,6 +953,55 @@
         ],
         "title": "BandResponse"
       },
+      "CommitPlayerProfileRequest": {
+        "properties": {
+          "social_tag_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Social Tag Ids",
+            "description": "The tag ids this player picked, as served by `GET /player-profile/options`. The count is re-checked against the served floor and ceiling, and an id this platform does not serve is refused with `unknown_social_tag`."
+          },
+          "photo_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Photo Ids",
+            "description": "Ids returned by `POST /photos`, in the order the player arranged them \u2014 the first is the one a player card shows. At most 3; an empty list is valid. Every id is checked to exist and to belong to this player."
+          },
+          "availability": {
+            "items": {
+              "$ref": "#/components/schemas/AvailabilitySlotResource"
+            },
+            "type": "array",
+            "title": "Availability",
+            "description": "The cells of the week this player ticked. **An empty list is a valid answer** and means no preference \u2014 it is never read as unavailable. Repeated cells are collapsed."
+          },
+          "location": {
+            "$ref": "#/components/schemas/LocationAreaResource"
+          },
+          "search_radius_km": {
+            "type": "integer",
+            "title": "Search Radius Km",
+            "description": "Whole kilometres, re-checked against the range and step served by `GET /player-profile/options`."
+          },
+          "proposals_opt_in": {
+            "$ref": "#/components/schemas/ProposalsOptInRequest"
+          }
+        },
+        "type": "object",
+        "required": [
+          "social_tag_ids",
+          "location",
+          "search_radius_km",
+          "proposals_opt_in"
+        ],
+        "title": "CommitPlayerProfileRequest",
+        "description": "Every answer from onboarding's second part, in one body.\n\nPhotos and availability default to empty because both are legitimately\nblank: a player may hold no photos, and **a blank week means \"no preference\"\nand never \"leave me out\"**. Nothing else has a default \u2014 a location, a\nradius, a tag selection and an answer to the proposals question are all\nthings this request must actually carry."
+      },
       "ConfidenceReasonResponse": {
         "properties": {
           "key": {
@@ -847,6 +1021,15 @@
         "title": "ConfidenceReasonResponse",
         "description": "Why confidence landed where it did: a stable key and the sentence shown."
       },
+      "ConsentSurface": {
+        "type": "string",
+        "enum": [
+          "ONBOARDING",
+          "PROFILE"
+        ],
+        "title": "ConsentSurface",
+        "description": "Where a player was standing when they answered.\n\nTwo values, and both are reachable. ``ONBOARDING`` is the only one the commit\ncan record \u2014 the commit *is* the end of onboarding's second part. The profile\nscreen edits the same value later (``docs/adr/0089``), which is what\n``PROFILE`` is for; the aggregate transition it uses exists, and the endpoint\nthat drives it does not yet."
+      },
       "CreateAssessmentRequest": {
         "properties": {
           "sport": {
@@ -858,6 +1041,16 @@
           "sport"
         ],
         "title": "CreateAssessmentRequest"
+      },
+      "DayPart": {
+        "type": "string",
+        "enum": [
+          "MORNING",
+          "AFTERNOON",
+          "EVENING"
+        ],
+        "title": "DayPart",
+        "description": "The three parts of a day a player may tick.\n\nClosed, and deliberately coarse. The product asks *when do you usually play*,\nand an answer finer than this would be a schedule \u2014 which is the thing a\npreference is explicitly not.\n\nDeclared in rendering order, so ``tuple(DayPart)`` is the order a grid is\nlaid out in and no caller sorts."
       },
       "ErrorResponse": {
         "description": "The body of every error response, on both API surfaces.",
@@ -980,6 +1173,29 @@
         "title": "InProgressAssessmentsResponse",
         "description": "Every unfinished run this player holds \u2014 empty when they hold none.\n\nEmpty is the ordinary answer for a new account and for a player who has\nfinished everything they started, so it is a 200 with an empty list rather\nthan a 404 or the singular form's 204.\n\nOrdered by the sport registry, so a caller that wants one run can take the\nfirst entry."
       },
+      "LocationAreaResource": {
+        "properties": {
+          "latitude": {
+            "type": "number",
+            "maximum": 90.0,
+            "minimum": -90.0,
+            "title": "Latitude"
+          },
+          "longitude": {
+            "type": "number",
+            "maximum": 180.0,
+            "minimum": -180.0,
+            "title": "Longitude"
+          }
+        },
+        "type": "object",
+        "required": [
+          "latitude",
+          "longitude"
+        ],
+        "title": "LocationAreaResource",
+        "description": "Where a player plays.\n\n**What is sent and what is kept are not the same number.** A client sends the\nfix its device gave it; the platform rounds to roughly a kilometre before\nanything is recorded, and it is the rounded pair that comes back here. The\nprecise fix is never stored and never shareable\n(``../../../../CONTEXT.md`` \u2014 *Location area*)."
+      },
       "LoginRequest": {
         "properties": {
           "email": {
@@ -1079,6 +1295,133 @@
         ],
         "title": "PlayerProfileOptionsResponse",
         "description": "Everything a client needs to *render* the profile steps, in one round trip.\n\nA handful of facts rather than one endpoint each, because they are the same\nkind of thing \u2014 closed, read-only, and needed by the same part of onboarding\nat the same moment.\n\n**Fields are only ever added.** A shipped mobile app parses this document for\nmonths after it stops being built, so a new field goes on the end and the\nones already here keep their names and their types."
+      },
+      "PlayerProfileResponse": {
+        "properties": {
+          "player_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Player Id"
+          },
+          "social_tag_ids": {
+            "items": {
+              "$ref": "#/components/schemas/SocialTag"
+            },
+            "type": "array",
+            "title": "Social Tag Ids"
+          },
+          "photo_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Photo Ids"
+          },
+          "availability": {
+            "items": {
+              "$ref": "#/components/schemas/AvailabilitySlotResource"
+            },
+            "type": "array",
+            "title": "Availability"
+          },
+          "location": {
+            "$ref": "#/components/schemas/LocationAreaResource"
+          },
+          "search_radius_km": {
+            "type": "integer",
+            "title": "Search Radius Km"
+          },
+          "proposals_opt_in": {
+            "$ref": "#/components/schemas/ProposalsOptInResponse"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_id",
+          "social_tag_ids",
+          "photo_ids",
+          "availability",
+          "location",
+          "search_radius_km",
+          "proposals_opt_in",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "PlayerProfileResponse",
+        "description": "A player's profile as it now stands.\n\nThe same body whether the commit created the profile or replayed an earlier\none, so a client that only wants its profile needs no branch on the status.\n\n**Fields are only ever added.** A shipped mobile app parses this document for\nmonths after it stops being built."
+      },
+      "ProposalsOptInRequest": {
+        "properties": {
+          "accepted": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accepted",
+            "description": "The player's answer. `null` means the question was not answered, which is refused \u2014 it is never read as `false`."
+          },
+          "copy_version": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Copy Version",
+            "description": "Identifier of the exact copy the player was shown. Not the copy itself \u2014 the words are the client's and are never stored here."
+          }
+        },
+        "type": "object",
+        "required": [
+          "accepted",
+          "copy_version"
+        ],
+        "title": "ProposalsOptInRequest",
+        "description": "The answer to the proposals question, and the words it was given against.\n\n``accepted`` is **nullable and required**, which is the shape of a question\nthat has no default. Null means *not answered* and is refused by the commit\nwith ``proposals_opt_in_not_answered``; it is not a quiet ``false``, because\na recorded refusal and an unanswered question are different facts and only\none of them is consent (``../../../../CONTEXT.md`` \u2014 *Skipping is not\nconsent*).\n\n``copy_version`` identifies the exact wording the player was shown. It is\nrequired because consent gathered against one sentence is not consent to a\ndifferent one, and a consent record that cannot name its words cannot\nevidence anything."
+      },
+      "ProposalsOptInResponse": {
+        "properties": {
+          "accepted": {
+            "type": "boolean",
+            "title": "Accepted"
+          },
+          "copy_version": {
+            "type": "string",
+            "title": "Copy Version",
+            "description": "The copy this answer was given against"
+          },
+          "surface": {
+            "$ref": "#/components/schemas/ConsentSurface",
+            "description": "Where it was answered"
+          },
+          "answered_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Answered At",
+            "description": "When it was answered"
+          }
+        },
+        "type": "object",
+        "required": [
+          "accepted",
+          "copy_version",
+          "surface",
+          "answered_at"
+        ],
+        "title": "ProposalsOptInResponse",
+        "description": "The standing answer, and the evidence recorded with it.\n\nThis is the *current* answer. The **history** \u2014 every answer this player ever\ngave, against which words and on which surface \u2014 is the stream, and nothing\nserves it yet because nothing has asked for it."
       },
       "QuestionResponse": {
         "properties": {
@@ -1671,6 +2014,12 @@
               }
             ],
             "title": "Created At"
+          },
+          "has_player_profile": {
+            "type": "boolean",
+            "title": "Has Player Profile",
+            "description": "Whether this player has committed a Player profile \u2014 the fourth branch of the entry gate. Read from the profile's own event stream rather than from a projection, so it is correct immediately after the commit that creates one. False on a response that is not about the authenticated player, such as the one registration returns.",
+            "default": false
           }
         },
         "type": "object",
@@ -1682,7 +2031,8 @@
           "is_admin",
           "is_active"
         ],
-        "title": "UserResponse"
+        "title": "UserResponse",
+        "description": "The account, plus the one fact about it onboarding's entry gate needs.\n\n``has_player_profile`` is not a property of a ``User`` and the domain layer\nhas no idea it exists \u2014 it is answered by the Player profile context and\njoined here, on the response, because the gate reads it on every cold launch\nand a second round trip for one boolean would be a second thing to fail\n(``docs/adr/0090``).\n\n**It is not an \"onboarded\" flag.** The rating context's invariant against one\nstands: whether a player has been through onboarding *for a sport* is asked\nby asking whether a rating exists for that sport, and this field cannot\nanswer it. This asks a genuinely per-player question, because a profile is\none per player and has no sport dimension at all."
       },
       "ValidationError": {
         "properties": {

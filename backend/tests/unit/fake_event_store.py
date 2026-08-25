@@ -34,15 +34,37 @@ from app.application.events.store import (
     StoredDomainEvent,
 )
 from app.infrastructure.events.json_event_codec import JsonEventCodec
+from app.modules.player_profile.application.event_subscriptions import (
+    register_player_profile_events,
+)
 from app.modules.rating.application.event_subscriptions import register_rating_events
 from app.shared.domain import DomainEvent
 
 
 def rating_event_codec() -> JsonEventCodec:
-    """The codec the application runs, with this context's events registered."""
+    """The codec the application runs, with the rating context's events only.
+
+    Kept narrow for the tests that are *about* the rating codec — a catalog with
+    one context in it is what makes "this event has no contract" a failure those
+    tests can assert. The store below uses the whole catalog instead.
+    """
 
     catalog = EventCatalog()
     register_rating_events(catalog)
+    return JsonEventCodec(catalog)
+
+
+def domain_event_codec() -> JsonEventCodec:
+    """The codec with every context registered, as the application builds it.
+
+    The fake store uses this rather than one context's, because a store that
+    could only encode one module's events would refuse a use case from any other
+    — and the refusal would look like a bug in the use case.
+    """
+
+    catalog = EventCatalog()
+    register_rating_events(catalog)
+    register_player_profile_events(catalog)
     return JsonEventCodec(catalog)
 
 
@@ -62,7 +84,7 @@ class InMemoryEventStore:
     """Append-only streams held in a dict, keyed as the real store keys them."""
 
     def __init__(self) -> None:
-        self._codec = rating_event_codec()
+        self._codec = domain_event_codec()
         # Insertion-ordered: streams in the order they were opened, rows in the
         # order they were appended.
         self._streams: dict[tuple[str, UUID], list[_Row]] = {}

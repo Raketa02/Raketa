@@ -273,6 +273,21 @@ of the code because this file asks for them in that order.
 - **Profile photo** — the first of a player's photos, and the one a player card shows. A
   player may hold up to three or none; none is not an absence but a **generated court
   poster**, derived from their identity so it is stable across devices.
+- **Profile commit** — the single idempotent request that ends onboarding's second part,
+  carrying all six answers at once. Nothing is written before it, so leaving mid-part
+  restarts at step 1 ([ADR-0090](docs/adr/0090-onboarding-per-player-checkpoint.md)). Keyed
+  by a client-supplied **idempotency key**, which the creating event carries so a retry is
+  recognised from the stream itself rather than from a table beside it.
+- **Player profile events** (durable name / version):
+  - **PlayerProfileCreated** — `player_profile.created` / v1 — the commit, carrying every
+    preference and the idempotency key. **Not the opt-in.**
+  - **SocialTagsChanged** — `player_profile.social_tags_changed` / v1.
+  - **PhotosChanged** — `player_profile.photos_changed` / v1.
+  - **AvailabilityChanged** — `player_profile.availability_changed` / v1.
+  - **LocationChanged** — `player_profile.location_changed` / v1.
+  - **SearchRadiusChanged** — `player_profile.search_radius_changed` / v1.
+  - **ProposalsOptInAnswered** — `player_profile.proposals_opt_in_answered` / v1 — the
+    answer, the copy version shown and the surface; the moment is the event's own.
 
 **Invariants**
 - **A tag id is permanent.** Ids are persisted on accounts, so retiring a tag means hiding
@@ -294,6 +309,17 @@ of the code because this file asks for them in that order.
 - **Consent is evidenced, not asserted.** Every answer is recorded with the moment it was
   given and **the exact copy the player was shown**, because consent gathered against one
   sentence is not consent to a different one. It is as revocable as it was grantable.
+- **Every consent answer is recorded, re-affirmations included.** The five preferences
+  record nothing when set to what they already hold; the opt-in always records. *Asked
+  again, against these words, and said yes again* is a fact about consent, and a log that
+  collapses it cannot say which wording a standing yes was given against. This is also why
+  the creating commit appends the opt-in as its own event rather than folding it into
+  `PlayerProfileCreated`: the consent history is one sequence with no special first case.
+- **A location is held coarsely, and the precise fix is never stored.** The coarsening
+  happens on the way in, before an event is recorded, so there is no version of a profile's
+  stream from which a device's own reading could be recovered — the same argument
+  [ADR-0091](docs/adr/0091-photo-storage-behind-a-port.md) makes for re-encoding a photo
+  rather than scrubbing its EXIF.
 - **A profile is one per player, and asking whether one exists is a legitimate question.**
   See the narrowed *there is no onboarded player* invariant above, and
   [ADR-0090](docs/adr/0090-onboarding-per-player-checkpoint.md).

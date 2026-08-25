@@ -21,6 +21,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from app.kernel import invariant
+from app.modules.player_profile.domain.errors import SearchRadiusOutOfBounds
 
 
 @dataclass(frozen=True)
@@ -68,3 +69,31 @@ SEARCH_RADIUS_BOUNDS = SearchRadiusBounds(
     step_km=1,
     default_km=10,
 )
+
+
+@dataclass(frozen=True, slots=True)
+class SearchRadius:
+    """One player's chosen distance, checked against the served bounds.
+
+    A type rather than a bare ``int`` for the reason every field name here spells
+    its unit: a radius that has been validated and a number that happens to be
+    inside the range are different things, and only one of them can be stored.
+
+    **The check is re-done here even though the slider cannot offer an invalid
+    value.** The bounds are served so a client can build a control that only
+    produces legal numbers, and a control is not a validation (``docs/adr/0089``)
+    — it is absent from a replayed request and from every build that is not this
+    one.
+    """
+
+    kilometres: int
+
+    def __post_init__(self) -> None:
+        if not SEARCH_RADIUS_BOUNDS.contains(self.kilometres):
+            raise SearchRadiusOutOfBounds()
+
+    @classmethod
+    def default(cls) -> "SearchRadius":
+        """What the control opens at, for a caller that needs a radius to show."""
+
+        return cls(kilometres=SEARCH_RADIUS_BOUNDS.default_km)

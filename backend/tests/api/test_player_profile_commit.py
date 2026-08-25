@@ -1,0 +1,346 @@
+"""The profile commit over HTTP: the contract, the idempotency, the refusals.
+
+Everything here runs against the real routes and the real event store on
+in-memory SQLite; only the object store is faked, by `tests/conftest.py`, so no
+test needs MinIO running.
+
+The contract these assert is the one the player client generates its wire types
+from, and it is what onboarding's second part ends with: **one request carrying
+six answers, safe to send twice.**
+"""
+
+from __future__ import annotations
+
+from uuid import uuid4
+
+import pytest
+
+from app.modules.player_profile.domain.search_radius import SEARCH_RADIUS_BOUNDS
+from tests.unit import image_fixtures as fixtures
+
+ALICE = {
+    "email": "alice.profile@example.com",
+    "password1": "hunter22!",
+    "password2": "hunter22!",
+    "nickname": "alice-profile",
+}
+BOB = {
+    "email": "bob.profile@example.com",
+    "password1": "hunter22!",
+    "password2": "hunter22!",
+    "nickname": "bob-profile",
+}
+
+COMMIT_URL = "/api/v1/players/me/profile"
+
+
+async def auth_headers(client, payload=ALICE) -> dict[str, str]:
+    await client.post("/api/v1/users", json=payload)
+    login = await client.post(
+        "/api/v1/auth/login",
+        json={"email": payload["email"], "password": payload["password1"]},
+    )
+    assert login.status_code == 200, login.text
+    return {"Authorization": f"Bearer {login.json()['access_token']}"}
+
+
+def a_body(**overrides) -> dict:
+    body = {
+        "social_tag_ids": ["PLAYS_TO_WIN", "HERE_TO_IMPROVE"],
+        "photo_ids": [],
+        "availability": [
+            {"day": 2, "part": "EVENING"},
+            {"day": 6, "part": "MORNING"},
+        ],
+        "location": {"latitude": 51.5073509, "longitude": -0.1277583},
+        "search_radius_km": SEARCH_RADIUS_BOUNDS.default_km,
+        "proposals_opt_in": {"accepted": True, "copy_version": "proposals-2026-08"},
+    }
+    body.update(overrides)
+    return body
+
+
+async def commit(client, headers, body=None, key="commit-1"):
+    return await client.post(
+        COMMIT_URL,
+        json=a_body() if body is None else body,
+        headers={**headers, "Idempotency-Key": key},
+    )
+
+
+async def upload_photo(client, headers) -> str:
+    response = await client.post(
+        "/api/v1/photos",
+        content=fixtures.plain_jpeg(),
+        headers={**headers, "Content-Type": "image/jpeg"},
+    )
+    assert response.status_code == 201, response.text
+    return response.json()["photo_id"]
+
+
+# ---------------------------------------------------------------------------
+# The commit
+# ---------------------------------------------------------------------------
+
+
+async def test_a_commit_returns_the_profile_it_created(client):
+    headers = await auth_headers(client)
+
+    response = await commit(client, headers)
+
+    assert response.status_code == 201, response.text
+    body = response.json()
+    assert body["social_tag_ids"] == ["PLAYS_TO_WIN", "HERE_TO_IMPROVE"]
+    assert body["search_radius_km"] == SEARCH_RADIUS_BOUNDS.default_km
+    assert body["availability"] == [
+        {"day": 2, "part": "EVENING"},
+        {"day": 6, "part": "MORNING"},
+    ]
+    assert body["proposals_opt_in"] == {
+        "accepted": True,
+        "copy_version": "proposals-2026-08",
+        # The surface is the route's own fact, never the body's — this endpoint
+        # *is* the end of onboarding, so a client cannot declare otherwise.
+        "surface": "ONBOARDING",
+        "answered_at": body["proposals_opt_in"]["answered_at"],
+    }
+
+
+async def test_the_location_that_comes_back_is_coarser_than_the_one_sent(client):
+    """What a device measured is not what this platform keeps."""
+
+    headers = await auth_headers(client)
+
+    body = (await commit(client, headers)).json()
+
+    assert body["location"] == {"latitude": 51.51, "longitude": -0.13}
+
+
+async def test_a_commit_with_no_availability_slots_is_accepted(client):
+    """Blank means no preference. It is a valid answer, not a missing one."""
+
+    headers = await auth_headers(client)
+
+    response = await commit(client, headers, a_body(availability=[]))
+
+    assert response.status_code == 201, response.text
+    assert response.json()["availability"] == []
+
+
+async def test_photo_ids_are_committed_in_the_order_they_were_arranged(client):
+    headers = await auth_headers(client)
+    first, second = await upload_photo(client, headers), await upload_photo(
+        client, headers
+    )
+
+    response = await commit(client, headers, a_body(photo_ids=[second, first]))
+
+    assert response.status_code == 201, response.text
+    assert response.json()["photo_ids"] == [second, first]
+
+
+# ---------------------------------------------------------------------------
+# Idempotency
+# ---------------------------------------------------------------------------
+
+
+async def test_the_same_key_twice_creates_one_profile_and_answers_the_same(client):
+    headers = await auth_headers(client)
+
+    first = await commit(client, headers, key="draft-7")
+    second = await commit(client, headers, key="draft-7")
+
+    assert first.status_code == 201
+    assert second.status_code == 200, "a replay, not a creation"
+    assert second.json() == first.json()
+
+
+async def test_a_second_commit_under_a_different_key_conflicts(client):
+    headers = await auth_headers(client)
+    await commit(client, headers, key="draft-7")
+
+    response = await commit(client, headers, key="draft-8")
+
+    assert response.status_code == 409
+    assert response.json()["code"] == "player_profile_already_exists"
+
+
+async def test_a_commit_without_the_idempotency_key_is_refused(client):
+    """Required rather than optional: this is the request that gets
+    double-tapped, and a key sent only when a client remembers to is a second
+    profile waiting for a bad afternoon."""
+
+    headers = await auth_headers(client)
+
+    response = await client.post(COMMIT_URL, json=a_body(), headers=headers)
+
+    assert response.status_code == 422
+    assert response.json()["code"] == "validation_error"
+
+
+async def test_one_players_key_says_nothing_about_anothers(client):
+    alice = await auth_headers(client, ALICE)
+    bob = await auth_headers(client, BOB)
+    await commit(client, alice, key="same-key")
+
+    response = await commit(client, bob, key="same-key")
+
+    assert response.status_code == 201, response.text
+
+
+# ---------------------------------------------------------------------------
+# Re-validation, over the wire
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "body, status_code, code",
+    [
+        (
+            {"social_tag_ids": ["PLAYS_TO_WIN"]},
+            400,
+            "social_tag_selection_out_of_bounds",
+        ),
+        (
+            {
+                "social_tag_ids": [
+                    "PLAYS_TO_WIN",
+                    "HERE_TO_IMPROVE",
+                    "QUIET_AND_FOCUSED",
+                    "HERE_TO_COMPETE",
+                    "STAYS_FOR_A_DRINK",
+                    "SHARES_A_LIFT",
+                    "WARMS_UP_PROPERLY",
+                ]
+            },
+            400,
+            "social_tag_selection_out_of_bounds",
+        ),
+        (
+            {"social_tag_ids": ["PLAYS_TO_WIN", "LOOKING_FOR_A_DATE"]},
+            400,
+            "unknown_social_tag",
+        ),
+        (
+            {"social_tag_ids": ["PLAYS_TO_WIN", "PLAYS_TO_WIN"]},
+            400,
+            "duplicate_social_tag",
+        ),
+        (
+            {"search_radius_km": SEARCH_RADIUS_BOUNDS.maximum_km + 1},
+            400,
+            "search_radius_out_of_bounds",
+        ),
+        (
+            {"search_radius_km": SEARCH_RADIUS_BOUNDS.minimum_km - 1},
+            400,
+            "search_radius_out_of_bounds",
+        ),
+        (
+            {
+                "proposals_opt_in": {
+                    "accepted": None,
+                    "copy_version": "proposals-2026-08",
+                }
+            },
+            400,
+            "proposals_opt_in_not_answered",
+        ),
+    ],
+)
+async def test_a_rule_the_client_enforced_is_refused_with_its_own_code(
+    client, body, status_code, code
+):
+    """A disabled button is not a validation. Each of these is something the
+    served options let a picker prevent, and each is refused here anyway — with
+    the code that says which recovery to attempt."""
+
+    headers = await auth_headers(client)
+
+    response = await commit(client, headers, a_body(**body))
+
+    assert response.status_code == status_code, response.text
+    assert response.json()["code"] == code
+
+
+async def test_a_photo_id_that_does_not_exist_is_refused(client):
+    headers = await auth_headers(client)
+
+    response = await commit(client, headers, a_body(photo_ids=[str(uuid4())]))
+
+    assert response.status_code == 404
+    assert response.json()["code"] == "photo_not_found"
+
+
+async def test_another_players_photo_id_is_refused_the_same_way(client):
+    """The same answer for *no such photo* and *somebody else's photo* — the
+    alternative is an endpoint that confirms a stranger's id is real."""
+
+    alice = await auth_headers(client, ALICE)
+    bob = await auth_headers(client, BOB)
+    bobs_photo = await upload_photo(client, bob)
+
+    response = await commit(client, alice, a_body(photo_ids=[bobs_photo]))
+
+    assert response.status_code == 404
+    assert response.json()["code"] == "photo_not_found"
+
+
+async def test_a_refused_commit_leaves_no_profile_behind(client):
+    headers = await auth_headers(client)
+
+    unanswered = {"accepted": None, "copy_version": "proposals-2026-08"}
+
+    refused = await commit(client, headers, a_body(proposals_opt_in=unanswered))
+    assert refused.status_code == 400
+
+    me = await client.get("/api/v1/users/me", headers=headers)
+    assert me.json()["has_player_profile"] is False
+
+
+async def test_the_commit_requires_a_token(client):
+    response = await client.post(
+        COMMIT_URL, json=a_body(), headers={"Idempotency-Key": "commit-1"}
+    )
+
+    assert response.status_code == 401
+
+
+# ---------------------------------------------------------------------------
+# The entry gate's fourth branch
+# ---------------------------------------------------------------------------
+
+
+async def test_a_new_account_reports_no_player_profile(client):
+    headers = await auth_headers(client)
+
+    me = await client.get("/api/v1/users/me", headers=headers)
+
+    assert me.status_code == 200
+    assert me.json()["has_player_profile"] is False
+
+
+async def test_the_flag_is_true_immediately_after_the_commit(client):
+    """Read from the profile's own stream rather than a projection, which is
+    what stops a player who has just finished the social steps being routed
+    straight back into them."""
+
+    headers = await auth_headers(client)
+    await commit(client, headers)
+
+    me = await client.get("/api/v1/users/me", headers=headers)
+
+    assert me.json()["has_player_profile"] is True
+
+
+async def test_one_players_profile_does_not_answer_for_another(client):
+    alice = await auth_headers(client, ALICE)
+    bob = await auth_headers(client, BOB)
+    await commit(client, alice)
+
+    assert (await client.get("/api/v1/users/me", headers=alice)).json()[
+        "has_player_profile"
+    ] is True
+    assert (await client.get("/api/v1/users/me", headers=bob)).json()[
+        "has_player_profile"
+    ] is False

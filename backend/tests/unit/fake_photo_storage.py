@@ -37,6 +37,11 @@ class InMemoryPhotoStorage:
         #: Every `valid_for_seconds` this was asked for, in order, so a test can
         #: assert the window the caller requested without parsing a URL.
         self.signed_windows: list[int] = []
+        #: Every ref `exists` was asked about, in order. Counted rather than
+        #: inferred from the objects, because "asked and told no" and "never
+        #: asked" are the same state of the dict and a different fact about the
+        #: caller — the profile commit's ordering of its checks turns on it.
+        self.existence_checks: list[PhotoRef] = []
 
     async def put(
         self,
@@ -48,6 +53,7 @@ class InMemoryPhotoStorage:
         self.objects[ref] = StoredObject(image, metadata)
 
     async def exists(self, ref: PhotoRef) -> bool:
+        self.existence_checks.append(ref)
         return ref in self.objects
 
     async def presigned_read_url(self, ref: PhotoRef, *, valid_for_seconds: int) -> str:

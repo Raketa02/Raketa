@@ -29,6 +29,17 @@ there; they are not repeated here.
   **after commit**. The only place a side effect belongs. _Avoid_: listener, callback.
 - **Command** — the input dataclass a use case's `execute` takes. Carries primitives
   from the boundary, not domain value objects.
+- **Stream-answered idempotency** — how a create-once command recognises its own retry:
+  the **creating event carries the client's idempotency key**, so *has this exact request
+  already been served* is asked of the aggregate rather than of a table beside it. The
+  profile commit is the first of these (`CommitPlayerProfile`,
+  [ADR-0089](../docs/adr/0089-player-profile-context-event-sourced.md)). The alternative —
+  an `idempotency_keys` table written in the same transaction — is a second record of one
+  fact and so a second place for it to disagree, which is the dual-write shape
+  [ADR-0017](../docs/adr/0017-rating-context-event-sourced.md) rejected. It answers the
+  *sequential* retry; two concurrent duplicates collide on version 1 of one stream and the
+  loser is told `concurrent_modification`, exactly as two concurrent assessment starts are.
+  _Avoid_: "dedupe table", "request log".
 - **Event-sourced aggregate** vs **persisted-with-events entity** — the two persistence
   shapes in this codebase, and a deliberate per-context choice. `User` is the former
   (state rebuilt from its stream); `RefreshToken` is the latter (current state is the

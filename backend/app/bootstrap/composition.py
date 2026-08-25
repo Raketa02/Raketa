@@ -56,6 +56,10 @@ from app.modules.player_profile.domain.ports import (
     ImageTranscoder,
     PhotoReview,
     PhotoStorage,
+    PlayerProfileRepository,
+)
+from app.modules.player_profile.infrastructure.event_sourced_player_profile_repository import (  # noqa: E501
+    EventSourcedPlayerProfileRepository,
 )
 from app.modules.player_profile.infrastructure.passthrough_photo_review import (
     PassThroughPhotoReview,
@@ -221,3 +225,17 @@ def build_photo_review() -> PhotoReview:
     """
 
     return PassThroughPhotoReview()
+
+
+def build_player_profile_repository(
+    *,
+    event_store: DomainEventStore,
+    events: DomainEventPublisher,
+) -> PlayerProfileRepository:
+    """Per unit of work, for the same reason the rating repositories are.
+
+    It remembers the stream versions it loaded, so it must never be longer-lived
+    than the transaction it was built beside: one request's versions must never
+    answer for another's.
+    """
+    return EventSourcedPlayerProfileRepository(event_store=event_store, events=events)
