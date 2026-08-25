@@ -77,7 +77,8 @@ Built so far, by the onboarding slice: `Button`, `Card` (+ `PressableCard`), `No
 `Bar`, `ScreenHeader`, `Tag`, `Chip`, `Hairline`, `BottomSheet`, `CloseControl`,
 `DarkCard`, `Row`, `LevelBar`, `ConfidenceRing`, `Popover` (+ `InfoMark`), `InfoGlyph`,
 and by the second part's photos step: `PhotoRow` with `PhotoTile`, `PhotoAddTile` and
-`PhotoPosterTile`, plus `CourtPoster`. Import them from `@/shared/ui`.
+`PhotoPosterTile`, plus `CourtPoster`; and by its availability step: `AvailabilityGrid`.
+Import them from `@/shared/ui`.
 
 **Overlays.** `BottomSheet` and `Popover` are both real modals, and 9.1's and 7.6's "it is
 a real modal" is three separate obligations rather than one prop — read `overlay.ts` and
@@ -98,7 +99,7 @@ described in `viewBox` units and the caller gives it a box, so one drawing serve
 tile and a 27pt avatar. It varies in geometry and never in colour, and the framing that
 varies is the _caller's_ — the design system's contract is that one player id produces one
 poster, and which crop an id maps to belongs to the feature, exactly as the ring's ceiling
-belongs to the engine. It and `ConfidenceRing` are the only components that need
+belongs to the engine. It, `ConfidenceRing` and the availability grid's tick are what need
 `react-native-svg`.
 
 **The photo tile** (6.9) is a row before it is a tile: `PhotoRow` is always three slots
@@ -106,6 +107,15 @@ wide and pads itself with undrawn space, which is where the ceiling lives — at
 there is no add control on screen rather than a disabled one. Every word on it is the
 caller's, because the step that collects photos and the profile editor that will change
 them do not say the same things.
+
+**The availability grid** (6.8) is seven days by three parts of the day, and **days are
+rows because seven columns cannot be reached** — seven cells at the 44pt minimum want 308pt
+against the 290pt of content the narrowest phone has. Turned the other way a cell is 44 tall
+by its own geometry, the first control in the app that reaches the touch minimum without
+being granted a `hitSlop`; `profileControlGeometry.test.ts` pins that division. A cell is the
+only pressable thing on it — there is no row, column or _weekends_ shortcut anywhere in the
+component — and its selected state is a fill inversion **and** a tick, because twenty-one
+rectangles differing only in lightness are a texture. Every word is the caller's.
 
 **A feature never keeps a second copy of one of these.** If a primitive does not do what
 a screen needs, extend the primitive — the two auth-form controls that remain in

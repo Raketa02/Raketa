@@ -29,9 +29,10 @@ rotation, the `AppError` family, `shared/lib/auth` over the keychain, and three 
 sports picker, the adaptive question loop, the explained result, and the summary and data
 screens a player leaves through) and `player_profile` (onboarding's **second part**: six
 steps over a client-held draft. The routes, the draft and the navigation work end to end,
-and two steps are built — the Social tags picker, 2 to 6 chips from a served vocabulary, and
-the photos step, up to three court photos or none; the other four still stand in for
-themselves).
+and three steps are built — the Social tags picker, 2 to 6 chips from a served vocabulary,
+the photos step, up to three court photos or none, and the availability grid, seven days by
+three parts of the day and blank until a player ticks something; the other three still stand
+in for themselves).
 
 **Onboarding is two parts, and the part is the checkpoint unit**
 ([ADR-0090](../docs/adr/0090-onboarding-per-player-checkpoint.md)). Part one is the Skill
@@ -68,8 +69,9 @@ has gone out, and buying that would mean a second transport.
 
 `src/shared/ui/` holds the design-system primitives built so far — the cards, note, row,
 hairline, button, tag, chip, bar, header, the overlays and drawn objects the result screen
-needed (bottom sheet, popover, level bar, confidence ring), and the photo tile with its
-generated court poster; the rest arrive with the features that need them. **Build outward from the structure below** rather than reaching
+needed (bottom sheet, popover, level bar, confidence ring), the photo tile with its
+generated court poster, and the availability grid; the rest arrive with the features that
+need them. **Build outward from the structure below** rather than reaching
 for `create-expo-app` — its default template contradicts ADR-0009 — and copy the shape of
 `src/features/auth/` or `src/features/onboarding/` rather than inventing a second one.
 

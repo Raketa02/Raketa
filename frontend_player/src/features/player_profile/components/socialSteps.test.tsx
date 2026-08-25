@@ -89,31 +89,31 @@ const STEPS = [
  * The first step that still stands in for itself, and the one this suite answers to prove
  * the draft survives a walk.
  *
- * It moves as tickets land. Photos was it until the step was built, and the photos step is
- * the wrong one to have used anyway: it is the one of the six that may be passed with
- * nothing at all, so *an answer that is still there* has to be asked of a step that
- * insists on one.
+ * It moves as tickets land. Photos was it, then availability, and both are the wrong step
+ * to have used anyway: each may be passed with nothing at all, so *an answer that is still
+ * there* has to be asked of a step that insists on one.
  */
-const FIRST_PLACEHOLDER_STEP = 2;
+const FIRST_PLACEHOLDER_STEP = 3;
 
-/** The one step of the six that may be walked past with nothing answered at all. */
-const PHOTOS_STEP = 1;
+/** The steps of the six that may be walked past with nothing answered at all. */
+const OPTIONAL_STEPS = [1, 2];
 
 /**
  * Answer whatever step is on screen.
  *
- * Two of the six are built and each wants something different — two tags at the floor, and
- * nothing at all on the photos step, which is optional and reaches the device besides. The
- * rest still stand in for themselves. This suite is about the walk, so it answers each of
- * them the way that step wants and says nothing else about any of them.
+ * Three of the six are built and each wants something different — two tags at the floor,
+ * and nothing at all on the photos and availability steps, both of which continue from
+ * empty. The rest still stand in for themselves. This suite is about the walk, so it
+ * answers each of them the way that step wants and says nothing else about any of them.
  */
 function answerTheStep(index: number) {
   if (index >= FIRST_PLACEHOLDER_STEP) {
     fireEvent.press(screen.getByLabelText('Answer this step'));
     return;
   }
-  // The photos step: optional, and it reaches the device. Its own suite drives the picker.
-  if (index === PHOTOS_STEP) return;
+  // Optional, and each has its own suite: the photos step reaches the device, and the
+  // availability grid ships empty on purpose.
+  if (OPTIONAL_STEPS.includes(index)) return;
 
   fireEvent.press(screen.getByLabelText('Plays to win'));
   fireEvent.press(screen.getByLabelText('Here to improve'));
@@ -124,6 +124,15 @@ async function continueFromTheFirstStep() {
   answerTheStep(0);
   fireEvent.press(await screen.findByLabelText('Continue'));
   await waitFor(() => expect(screen).toHavePathname('/photos'));
+}
+
+/** Walk from the photos step as far as `index`, answering each step on the way. */
+async function walkOnTo(index: number) {
+  for (let step = 1; step < index; step += 1) {
+    answerTheStep(step);
+    fireEvent.press(screen.getByLabelText('Continue'));
+    await waitFor(() => expect(screen).toHavePathname(STEPS[step + 1]!.path));
+  }
 }
 
 let transport: Transport;
@@ -243,8 +252,7 @@ describe('the draft the part holds', () => {
     // rest, and an answer they gave must still be there when they return to it.
     await enterTheSocialSteps();
     await continueFromTheFirstStep();
-    fireEvent.press(screen.getByLabelText('Continue'));
-    await waitFor(() => expect(screen).toHavePathname(STEPS[FIRST_PLACEHOLDER_STEP]!.path));
+    await walkOnTo(FIRST_PLACEHOLDER_STEP);
 
     fireEvent.press(screen.getByLabelText('Answer this step'));
     expect(await screen.findByLabelText('Answered')).toBeTruthy();
@@ -266,8 +274,7 @@ describe('the draft the part holds', () => {
   it("keeps each step's answer to itself", async () => {
     await enterTheSocialSteps();
     await continueFromTheFirstStep();
-    fireEvent.press(screen.getByLabelText('Continue'));
-    await waitFor(() => expect(screen).toHavePathname(STEPS[FIRST_PLACEHOLDER_STEP]!.path));
+    await walkOnTo(FIRST_PLACEHOLDER_STEP);
 
     // The next step is unanswered, and answering it must not have been done on its behalf
     // by the step before — nothing is claimed for a player who has not said it.
@@ -349,8 +356,7 @@ describe('killing the app mid-part', () => {
   it('restarts at the first step with nothing answered, and the rating untouched', async () => {
     await enterTheSocialSteps();
     await continueFromTheFirstStep();
-    fireEvent.press(screen.getByLabelText('Continue'));
-    await waitFor(() => expect(screen).toHavePathname(STEPS[FIRST_PLACEHOLDER_STEP]!.path));
+    await walkOnTo(FIRST_PLACEHOLDER_STEP);
     fireEvent.press(screen.getByLabelText('Answer this step'));
     expect(await screen.findByLabelText('Answered')).toBeTruthy();
 

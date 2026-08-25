@@ -6,6 +6,12 @@
  * its card, bar and popover in a deck and recorded that they had drifted.
  */
 
+export {
+  AvailabilityGrid,
+  type AvailabilityGridCell,
+  type AvailabilityGridProps,
+  type AvailabilityGridRow,
+} from './AvailabilityGrid';
 export { Bar, type BarProps } from './Bar';
 export { BottomSheet, type BottomSheetProps } from './BottomSheet';
 export { Button, type ButtonProps, type ButtonSize, type ButtonVariant } from './Button';

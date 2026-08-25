@@ -40,7 +40,12 @@ export type DayPart = 'morning' | 'afternoon' | 'evening';
  */
 export type Weekday = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 
-/** One ticked cell: a day, and one of the three parts of it. */
+/**
+ * One cell of the grid: a day, and one of the three parts of it.
+ *
+ * In the draft's list it is a **ticked** one, but the same pair names a cell whatever its
+ * state — which is why the grid's rules take one of these rather than a loose day and part.
+ */
 export interface AvailabilitySlot {
   readonly day: Weekday;
   readonly part: DayPart;

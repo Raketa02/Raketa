@@ -2,12 +2,12 @@
 
 import { Redirect } from 'expo-router';
 
-import { SocialStepScreen, useSocialStepAdmission } from '@/features/player_profile/types';
+import { SocialAvailabilityStep, useSocialStepAdmission } from '@/features/player_profile/types';
 
 export default function AvailabilityRoute() {
   const admission = useSocialStepAdmission('availability');
 
   if (admission === 'start-over') return <Redirect href="/tags" />;
 
-  return <SocialStepScreen step="availability" />;
+  return <SocialAvailabilityStep />;
 }
