@@ -272,6 +272,19 @@ timeout policy is centralized and expressed as classes (`request`, `upload`, `do
 `background`), implemented with `AbortController`. **No hard-coded millisecond literal in
 a feature.**
 
+### Uploads
+
+`httpUpload` is the module's second verb, not a second path: it builds the same wire call
+and goes through the same 401 rotation, differing only in what it puts in the body and how
+long it may take. It also turns the local `file://` URI a picker hands back into bytes,
+because reading one is a `fetch` and `fetch` lives here.
+
+**Progress is stages, not bytes.** React Native's `fetch` cannot report how much of a body
+has been sent; `XMLHttpRequest` and a native uploader can, and either would be a second
+transport with its own headers, timeout and rotation. So an upload reports the two stages
+it genuinely passes through — the bytes are read, then they are sent — and a screen drawing
+that never claims a percentage nobody measured.
+
 ### Retry
 
 Centralized in `src/shared/lib/http` and `query-client`, never per call site.

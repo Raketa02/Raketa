@@ -27,3 +27,8 @@ export {
   type PickedImage,
   type PickImagesOptions,
 } from './imagePicking';
+export {
+  ImagePickingProvider,
+  useImagePicking,
+  type ImagePickingProviderProps,
+} from './ImagePickingProvider';

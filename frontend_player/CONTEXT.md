@@ -174,6 +174,14 @@ profile editor that later edits the same values.
   walked there. _Avoid_: "form state" — it outlives every screen in the part; "saved draft"
   and "resume" — nothing is saved, and the asymmetry with part one's resumable run is
   deliberate.
+- **Photo workbench** — the pictures the photos step is holding, each with the upload it is
+  in the middle of, beside the Profile draft and in the same store. Not an answer: a local
+  `file://` URI is worthless to the server and an upload in flight has nothing to commit, so
+  what reaches the draft is **derived** from it — the ids of the photos that arrived, in the
+  player's order. One store because the two share one lifetime and that derivation is the
+  invariant; two would be two things to reset and a sync somebody forgets. _Avoid_: "photo
+  state", "upload queue" — the queue is one promise chain inside the step's hook, and it is
+  not what this holds.
 - **Profile options** — the **one read** the six steps are drawn from: the Social tag
   vocabulary with its grouping, how many tags a profile must hold, and the Search radius
   bounds. Reference data owned by TanStack Query, fetched once for the whole part, and the

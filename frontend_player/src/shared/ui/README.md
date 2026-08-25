@@ -75,8 +75,9 @@ recorded that they had drifted — one implementation, used everywhere.
 
 Built so far, by the onboarding slice: `Button`, `Card` (+ `PressableCard`), `Note`,
 `Bar`, `ScreenHeader`, `Tag`, `Chip`, `Hairline`, `BottomSheet`, `CloseControl`,
-`DarkCard`, `Row`, `LevelBar`, `ConfidenceRing`, `Popover` (+ `InfoMark`) and
-`InfoGlyph`. Import them from `@/shared/ui`.
+`DarkCard`, `Row`, `LevelBar`, `ConfidenceRing`, `Popover` (+ `InfoMark`), `InfoGlyph`,
+and by the second part's photos step: `PhotoRow` with `PhotoTile`, `PhotoAddTile` and
+`PhotoPosterTile`, plus `CourtPoster`. Import them from `@/shared/ui`.
 
 **Overlays.** `BottomSheet` and `Popover` are both real modals, and 9.1's and 7.6's "it is
 a real modal" is three separate obligations rather than one prop — read `overlay.ts` and
@@ -89,8 +90,22 @@ that opens a sheet, the sheet's own close and the popover's are the same 28pt ob
 **Drawn objects.** `LevelBar` (7.5) and `ConfidenceRing` (7.8) are geometry, not styling —
 their values are `theme.size.levelBar` and `theme.size.ring*`, and both keep a fixed scale
 (1,00–5,00 and 0–100) so a value lands in the same place on every screen that draws one.
-`ConfidenceRing` is the only component that needs `react-native-svg`. Both take a
-`variant`/repaint for the dark card, because React Native has no colour cascade.
+Both take a `variant`/repaint for the dark card, because React Native has no colour
+cascade.
+
+`CourtPoster` (6.9) is the third, and the one with **no size at all**: the court is
+described in `viewBox` units and the caller gives it a box, so one drawing serves a 90pt
+tile and a 27pt avatar. It varies in geometry and never in colour, and the framing that
+varies is the _caller's_ — the design system's contract is that one player id produces one
+poster, and which crop an id maps to belongs to the feature, exactly as the ring's ceiling
+belongs to the engine. It and `ConfidenceRing` are the only components that need
+`react-native-svg`.
+
+**The photo tile** (6.9) is a row before it is a tile: `PhotoRow` is always three slots
+wide and pads itself with undrawn space, which is where the ceiling lives — at three photos
+there is no add control on screen rather than a disabled one. Every word on it is the
+caller's, because the step that collects photos and the profile editor that will change
+them do not say the same things.
 
 **A feature never keeps a second copy of one of these.** If a primitive does not do what
 a screen needs, extend the primitive — the two auth-form controls that remain in

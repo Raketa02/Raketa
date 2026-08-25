@@ -29,8 +29,9 @@ rotation, the `AppError` family, `shared/lib/auth` over the keychain, and three 
 sports picker, the adaptive question loop, the explained result, and the summary and data
 screens a player leaves through) and `player_profile` (onboarding's **second part**: six
 steps over a client-held draft. The routes, the draft and the navigation work end to end,
-and the first step — the Social tags picker, 2 to 6 chips from a served vocabulary — is
-built; the other five still stand in for themselves).
+and two steps are built — the Social tags picker, 2 to 6 chips from a served vocabulary, and
+the photos step, up to three court photos or none; the other four still stand in for
+themselves).
 
 **Onboarding is two parts, and the part is the checkpoint unit**
 ([ADR-0090](../docs/adr/0090-onboarding-per-player-checkpoint.md)). Part one is the Skill
@@ -52,13 +53,23 @@ focus and online wirings, and two **platform ports** — `LocationPort` over `ex
 and `ImagePickingPort` over `expo-image-picker`. Each is the only importer of its native
 module, for the reason `shared/lib/auth` is the only importer of the keychain, plus one
 more: a native module has no JS implementation underneath it, so a feature that imports
-one cannot be tested at all. Hand-written fakes live in `src/test-support/platform.ts`.
+one cannot be tested at all. Hand-written fakes live in `src/test-support/platform.ts`, and
+a screen reaches the picker through `useImagePicking()` — a context whose default is the
+device, so only a test ever supplies anything else.
 **Location is foreground only** — nothing asks for, checks or starts a background one.
 
+`shared/lib/http` has **two verbs**: `httpRequest` for JSON and `httpUpload` for one file.
+They share the correlation id, the `Authorization` header, the timeout policy, the error
+mapping and the single-flight 401 rotation — a second copy of any of those is the second
+networking path the module exists to prevent. `httpUpload` also reads the local `file://`
+URI a picker hands back, because `fetch` is what this module is allowed to touch, and it
+reports **stages rather than bytes**: React Native's `fetch` cannot say how much of a body
+has gone out, and buying that would mean a second transport.
+
 `src/shared/ui/` holds the design-system primitives built so far — the cards, note, row,
-hairline, button, tag, chip, bar, header, and the overlays and drawn objects the result
-screen needed (bottom sheet, popover, level bar, confidence ring); the rest arrive with
-the features that need them. **Build outward from the structure below** rather than reaching
+hairline, button, tag, chip, bar, header, the overlays and drawn objects the result screen
+needed (bottom sheet, popover, level bar, confidence ring), and the photo tile with its
+generated court poster; the rest arrive with the features that need them. **Build outward from the structure below** rather than reaching
 for `create-expo-app` — its default template contradicts ADR-0009 — and copy the shape of
 `src/features/auth/` or `src/features/onboarding/` rather than inventing a second one.
 

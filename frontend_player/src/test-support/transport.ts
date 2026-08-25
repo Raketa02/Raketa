@@ -65,6 +65,24 @@ export function noContent(): Response {
 }
 
 /**
+ * The bytes behind a local `file://` URI, for the one caller that reads one.
+ *
+ * `httpUpload` turns a picked image into bytes with `fetch`, because `fetch` is what
+ * `shared/lib/http` is allowed to touch — so a local read arrives at this fake socket like
+ * any other request. It is answered by default rather than stubbed per test: what is under
+ * a picker's URI is the device's business, and a suite about a photos screen should not
+ * have to describe a filesystem to get one.
+ *
+ * A test that wants a *failing* read says so, with `transport.on('GET', uri, ...)`.
+ */
+export function fileBytes(uri: string): Response {
+  return new Response(`the bytes of ${uri}`, {
+    status: 200,
+    headers: { 'Content-Type': 'application/octet-stream' },
+  });
+}
+
+/**
  * A served Transcript of `answers` entries, for a step fixture that needs one.
  *
  * Every step the backend returns carries the answers already given, so a fixture must
@@ -139,7 +157,7 @@ export function installTransport(): Transport {
     };
     requests.push(recorded);
 
-    const responder = routes.get(keyOf(method, path));
+    const responder = routes.get(keyOf(method, path)) ?? defaultResponderFor(path);
     if (responder === undefined) {
       throw new Error(
         `No stub for ${method} ${path}. Stub it with transport.on(), or the test is ` +
@@ -178,6 +196,11 @@ export function installTransport(): Transport {
       global.fetch = original;
     },
   };
+}
+
+/** Reads of the device's own storage are answered without a stub — see `fileBytes`. */
+function defaultResponderFor(path: string): Responder | undefined {
+  return path.startsWith('file://') ? () => fileBytes(path) : undefined;
 }
 
 function abortError(): Error {

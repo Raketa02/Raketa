@@ -13,7 +13,8 @@
  */
 
 export { SocialTagsStep } from './components/SocialTagsStep';
-/** The five steps still standing in for themselves. Each ticket removes one from the union. */
+export { SocialPhotosStep } from './components/SocialPhotosStep';
+/** The four steps still standing in for themselves. Each ticket removes one from the union. */
 export { SocialStepScreen, type UnbuiltSocialStep } from './components/SocialStepScreen';
 
 export { SOCIAL_STEPS, type SocialStep } from './domain/socialSteps';

@@ -7,9 +7,10 @@
  */
 
 import type { components } from '@/generated/schema';
-import { httpRequest } from '@/shared/lib/http';
+import { httpRequest, httpUpload, type UploadProgress } from '@/shared/lib/http';
 
 type PlayerProfileOptionsResponse = components['schemas']['PlayerProfileOptionsResponse'];
+type PhotoResponse = components['schemas']['PhotoResponse'];
 
 export interface PlayerProfileApiOptions {
   readonly signal?: AbortSignal;
@@ -32,6 +33,41 @@ export function getProfileOptions({
     method: 'GET',
     path: '/api/v1/player-profile/options',
     authenticated: false,
+    signal,
+  });
+}
+
+export interface UploadPhotoOptions extends PlayerProfileApiOptions {
+  /** The device's own copy of the picture, as `ImagePickingPort` handed it over. */
+  readonly uri: string;
+  /** Sent as `Content-Type`; the route reads it and nothing else to decide the format. */
+  readonly contentType: string;
+  readonly onProgress?: UploadProgress;
+}
+
+/**
+ * Send one photo, and get back the id a profile commit will carry.
+ *
+ * **One photo per request**, which is the route's shape and also the product's: a request
+ * carrying three would make one failure cost all three, and the step gives a player one
+ * thing to retry rather than a part to start again.
+ *
+ * What comes back also carries a short-lived signed URL, and this deliberately does not
+ * hand it on. The picture is already on the phone — the tile is drawing it — so a URL is
+ * a round trip to see what is on screen, and one that stops working besides.
+ */
+export function uploadPhoto({
+  uri,
+  contentType,
+  onProgress,
+  signal,
+}: UploadPhotoOptions): Promise<PhotoResponse> {
+  return httpUpload<PhotoResponse>({
+    path: '/api/v1/photos',
+    uri,
+    contentType,
+    authenticated: true,
+    onProgress,
     signal,
   });
 }

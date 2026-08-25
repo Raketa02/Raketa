@@ -65,6 +65,16 @@ export interface FakeImagePicking extends ImagePickingPort, FakePermission {
    * handed over whatever the permission says — see the note above.
    */
   library: readonly PickedImage[];
+  /**
+   * Whether the picker respects the limit it was opened with. True by default.
+   *
+   * A caller may **not** assume it does. The limit is handed to a native module and
+   * honoured on the far side of a boundary this app does not own, and design-system 6.9
+   * requires the step to refuse a surplus in words precisely because the row of three
+   * cannot say anything about one on its own. Set this false to be the picker that hands
+   * back more than it was asked for, and prove the step survives it.
+   */
+  honoursLimit: boolean;
   /** Every limit the picker was opened with, in order. */
   readonly limits: readonly number[];
 }
@@ -120,7 +130,7 @@ export function fakeLocation(
  * default that handed one over would hide it.
  */
 export function fakeImagePicking(
-  initial: Partial<Pick<FakeImagePicking, 'state' | 'answer' | 'library'>> = {},
+  initial: Partial<Pick<FakeImagePicking, 'state' | 'answer' | 'library' | 'honoursLimit'>> = {},
 ): FakeImagePicking {
   const limits: number[] = [];
 
@@ -128,6 +138,7 @@ export function fakeImagePicking(
     state: initial.state ?? 'undetermined',
     answer: initial.answer ?? 'granted',
     library: initial.library ?? [],
+    honoursLimit: initial.honoursLimit ?? true,
 
     get limits() {
       return limits;
@@ -138,7 +149,7 @@ export function fakeImagePicking(
 
     pickImages: async ({ limit }) => {
       limits.push(limit);
-      return fake.library.slice(0, limit);
+      return fake.honoursLimit ? fake.library.slice(0, limit) : fake.library;
     },
   };
 

@@ -35,6 +35,7 @@ import SportsRoute from '@/app/(onboarding)/sports';
 import TagsRoute from '@/app/(onboarding)/tags';
 import WelcomeRoute from '@/app/(onboarding)/welcome';
 import { beginSession } from '@/shared/lib/auth';
+import { ImagePickingProvider, type ImagePickingPort } from '@/shared/lib/platform';
 import { queryClient } from '@/shared/lib/query-client';
 
 import { json, type Transport, type Wire } from './transport';
@@ -65,6 +66,30 @@ export const ONBOARDING_ROUTES = {
 };
 
 /**
+ * The photo library this tree runs against, for the suite that is about one.
+ *
+ * A module-level value rather than a parameter, because the route map `renderRouter` takes
+ * is static: `TestRoot` is a component in a table, not something a test constructs. Set it
+ * with `stubImagePicking` before launching and clear it with `resetImagePicking` in
+ * teardown, beside `transport.restore()` and for the same reason.
+ *
+ * Unset means the real device port, which is what production gets — and in a test that is
+ * a native module jest has mocked into a picker nobody described, so a screen that opened
+ * one without saying so gets nothing back rather than a picture from nowhere.
+ */
+let imagePicking: ImagePickingPort | undefined;
+
+/** Run the tree against this photo library. Call before `launchSignedIn`. */
+export function stubImagePicking(port: ImagePickingPort): void {
+  imagePicking = port;
+}
+
+/** Forget it again. Called from `afterEach`, beside `transport.restore()`. */
+export function resetImagePicking(): void {
+  imagePicking = undefined;
+}
+
+/**
  * The providers the real root layout composes, without the bootstrap sequence — fonts, the
  * splash screen and config validation are the launch path's business and have their own
  * tests.
@@ -78,7 +103,13 @@ function TestRoot() {
       }}
     >
       <QueryClientProvider client={queryClient}>
-        <Slot />
+        {imagePicking === undefined ? (
+          <Slot />
+        ) : (
+          <ImagePickingProvider port={imagePicking}>
+            <Slot />
+          </ImagePickingProvider>
+        )}
       </QueryClientProvider>
     </SafeAreaProvider>
   );

@@ -28,6 +28,7 @@ import {
 } from '../domain/SocialTag';
 
 type PlayerProfileOptionsResponse = components['schemas']['PlayerProfileOptionsResponse'];
+type PhotoResponse = components['schemas']['PhotoResponse'];
 type WireSocialTag = components['schemas']['SocialTag'];
 type WireSocialTagGroup = components['schemas']['SocialTagGroup'];
 
@@ -73,4 +74,17 @@ export function toProfileOptions(response: PlayerProfileOptionsResponse): Profil
       maximum: response.social_tag_selection.maximum_tags,
     },
   };
+}
+
+/**
+ * The permanent id out of an upload's answer, and nothing else out of it.
+ *
+ * `PhotoResponse` carries a signed URL and an expiry beside the id, and both stop at this
+ * boundary on purpose: **the URL is not an identifier and must not be stored as one.** The
+ * tile is already drawing the device's own copy, so the client has no use for a second,
+ * expiring address for the same picture — and a mapper that carried one would be an
+ * invitation to keep it.
+ */
+export function toUploadedPhotoId(response: PhotoResponse): string {
+  return response.photo_id;
 }

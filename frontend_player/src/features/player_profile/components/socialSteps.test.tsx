@@ -55,15 +55,15 @@ const STEPS = [
   },
   {
     path: '/photos',
-    title: 'Add a photo',
-    eyebrow: 'Setting up · Step 2 of 6',
+    title: 'Your court photos',
+    eyebrow: 'Setting up · Step 2 of 6 · On-court only — up to three',
     back: 'Back to What kind of player are you?',
   },
   {
     path: '/availability',
     title: 'When do you usually play?',
     eyebrow: 'Setting up · Step 3 of 6',
-    back: 'Back to Add a photo',
+    back: 'Back to Your court photos',
   },
   {
     path: '/location',
@@ -86,17 +86,35 @@ const STEPS = [
 ] as const;
 
 /**
+ * The first step that still stands in for itself, and the one this suite answers to prove
+ * the draft survives a walk.
+ *
+ * It moves as tickets land. Photos was it until the step was built, and the photos step is
+ * the wrong one to have used anyway: it is the one of the six that may be passed with
+ * nothing at all, so *an answer that is still there* has to be asked of a step that
+ * insists on one.
+ */
+const FIRST_PLACEHOLDER_STEP = 2;
+
+/** The one step of the six that may be walked past with nothing answered at all. */
+const PHOTOS_STEP = 1;
+
+/**
  * Answer whatever step is on screen.
  *
- * The first step is built and has a floor — two tags, or its continue control does not
- * appear — and the other five still stand in for themselves. This suite is about the walk,
- * so it answers each of them the way that step wants and says nothing else about either.
+ * Two of the six are built and each wants something different — two tags at the floor, and
+ * nothing at all on the photos step, which is optional and reaches the device besides. The
+ * rest still stand in for themselves. This suite is about the walk, so it answers each of
+ * them the way that step wants and says nothing else about any of them.
  */
 function answerTheStep(index: number) {
-  if (index > 0) {
+  if (index >= FIRST_PLACEHOLDER_STEP) {
     fireEvent.press(screen.getByLabelText('Answer this step'));
     return;
   }
+  // The photos step: optional, and it reaches the device. Its own suite drives the picker.
+  if (index === PHOTOS_STEP) return;
+
   fireEvent.press(screen.getByLabelText('Plays to win'));
   fireEvent.press(screen.getByLabelText('Here to improve'));
 }
@@ -225,34 +243,38 @@ describe('the draft the part holds', () => {
     // rest, and an answer they gave must still be there when they return to it.
     await enterTheSocialSteps();
     await continueFromTheFirstStep();
+    fireEvent.press(screen.getByLabelText('Continue'));
+    await waitFor(() => expect(screen).toHavePathname(STEPS[FIRST_PLACEHOLDER_STEP]!.path));
 
     fireEvent.press(screen.getByLabelText('Answer this step'));
     expect(await screen.findByLabelText('Answered')).toBeTruthy();
 
     // Forward to the end, then all the way back.
-    for (let step = 2; step < STEPS.length; step += 1) {
+    for (let step = FIRST_PLACEHOLDER_STEP + 1; step < STEPS.length; step += 1) {
       fireEvent.press(screen.getByLabelText('Continue'));
     }
     await waitFor(() => expect(screen).toHavePathname('/opt-in'));
-    for (let index = STEPS.length - 1; index > 1; index -= 1) {
+    for (let index = STEPS.length - 1; index > FIRST_PLACEHOLDER_STEP; index -= 1) {
       fireEvent.press(screen.getByLabelText(STEPS[index]!.back!));
       await waitFor(() => expect(screen).toHavePathname(STEPS[index - 1]!.path));
     }
 
-    expect(screen).toHavePathname('/photos');
+    expect(screen).toHavePathname(STEPS[FIRST_PLACEHOLDER_STEP]!.path);
     expect(screen.getByLabelText('Answered')).toBeTruthy();
   });
 
   it("keeps each step's answer to itself", async () => {
     await enterTheSocialSteps();
     await continueFromTheFirstStep();
+    fireEvent.press(screen.getByLabelText('Continue'));
+    await waitFor(() => expect(screen).toHavePathname(STEPS[FIRST_PLACEHOLDER_STEP]!.path));
 
     // The next step is unanswered, and answering it must not have been done on its behalf
     // by the step before — nothing is claimed for a player who has not said it.
     expect(screen.getByLabelText('Answer this step')).toBeTruthy();
   });
 
-  it('sends nothing to the server anywhere in the part', async () => {
+  it('writes nothing to the server anywhere in the part', async () => {
     await enterTheSocialSteps();
     // Everything the gate asked on the way in, plus the one read the first step is drawn
     // from. What the part costs *after* it is on screen is measured from here — counting
@@ -261,18 +283,32 @@ describe('the draft the part holds', () => {
 
     await continueFromTheFirstStep();
     for (let step = 2; step < STEPS.length; step += 1) {
-      fireEvent.press(screen.getByLabelText('Answer this step'));
+      answerTheStep(step - 1);
       fireEvent.press(screen.getByLabelText('Continue'));
       await waitFor(() => expect(screen).toHavePathname(STEPS[step]!.path));
     }
     fireEvent.press(screen.getByLabelText('Answer this step'));
 
-    // The part is the checkpoint unit: nothing is written until the one commit at the end,
-    // which is why moving between steps is free in both directions and why leaving restarts
-    // at step one. The commit is a later ticket, so today the whole part is silent — not
-    // one request, in either direction, on any of the six. The vocabulary is reference data
-    // and is not read again, so walking back to the first step costs nothing either.
-    expect(transport.requests.slice(onArrival)).toEqual([]);
+    const afterArrival = transport.requests.slice(onArrival);
+
+    // The part is the checkpoint unit: **nothing is written until the one commit at the
+    // end**, which is why moving between steps is free in both directions and why leaving
+    // restarts at step one. Not one write, in either direction, on any of the six.
+    //
+    // A photo is the one thing the part does send, and only when a player adds one — the
+    // bytes go up as they are picked and become part of a profile when the commit names
+    // them. This walk adds none, so nothing leaves here at all.
+    expect(afterArrival.filter((request) => request.method !== 'GET')).toEqual([]);
+
+    // And the only thing read is who the player is, which step two's court poster is drawn
+    // from — the auth feature's own query rather than a second one against the same route.
+    // The count is not pinned because it cannot be: the router harness runs on fake timers
+    // and `waitFor` advances them, so Query's five-minute collection can fire mid-walk and
+    // the read happens once or not at all. What must not change is that there is nothing
+    // *else* in the list.
+    expect(afterArrival.map((request) => request.path)).toEqual(
+      afterArrival.map(() => '/api/v1/users/me'),
+    );
   });
 });
 
@@ -313,6 +349,8 @@ describe('killing the app mid-part', () => {
   it('restarts at the first step with nothing answered, and the rating untouched', async () => {
     await enterTheSocialSteps();
     await continueFromTheFirstStep();
+    fireEvent.press(screen.getByLabelText('Continue'));
+    await waitFor(() => expect(screen).toHavePathname(STEPS[FIRST_PLACEHOLDER_STEP]!.path));
     fireEvent.press(screen.getByLabelText('Answer this step'));
     expect(await screen.findByLabelText('Answered')).toBeTruthy();
 

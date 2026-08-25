@@ -123,7 +123,7 @@ function newCorrelationId(): string {
   return `p-${random}-${requestCounter.toString(36)}`;
 }
 
-function buildUrl(path: string): string {
+export function buildUrl(path: string): string {
   const base = getEnv().apiUrl.replace(/\/+$/, '');
   return `${base}${path.startsWith('/') ? path : `/${path}`}`;
 }
@@ -186,7 +186,7 @@ async function decode(response: Response): Promise<unknown> {
 }
 
 /** One trip to the socket and back, decoded but not yet judged. */
-interface Attempt {
+export interface Attempt {
   readonly status: number;
   readonly ok: boolean;
   readonly body: unknown;
@@ -197,20 +197,37 @@ interface Attempt {
   readonly sentWith: number | undefined;
 }
 
-async function sendOnce(
-  request: HttpRequest,
-  url: string,
-  payload: string | undefined,
-): Promise<Attempt> {
+/**
+ * One call to the socket, in the terms `fetch` takes.
+ *
+ * The two verbs above this — a JSON request and a file upload — differ in what they put
+ * in the body and how long they are allowed to take, and in nothing else. So each builds
+ * one of these and the correlation id, the `Authorization` header, the timeout wiring,
+ * the decoding and the failure classification are written once. A third verb that needed
+ * its own copy of those is the second networking path this module exists to prevent.
+ */
+export interface WireCall {
+  readonly method: HttpMethod;
+  readonly url: string;
+  /** `undefined` when the request carries nothing — a GET, or a POST with no body. */
+  readonly body: BodyInit | undefined;
+  /** Sent as `Content-Type`. Absent whenever `body` is. */
+  readonly contentType: string | undefined;
+  readonly authenticated: boolean;
+  readonly signal?: AbortSignal;
+  readonly timeoutMs: number;
+}
+
+export async function sendOnce(call: WireCall): Promise<Attempt> {
   const headers: Record<string, string> = {
     Accept: 'application/json',
     'X-Request-ID': newCorrelationId(),
   };
 
-  if (payload !== undefined) headers['Content-Type'] = 'application/json';
+  if (call.contentType !== undefined) headers['Content-Type'] = call.contentType;
 
   let sentWith: number | undefined;
-  if (request.authenticated) {
+  if (call.authenticated) {
     const credential = credentials.current();
     if (credential !== undefined) {
       headers.Authorization = `Bearer ${credential.accessToken}`;
@@ -218,20 +235,19 @@ async function sendOnce(
     }
   }
 
-  const timeoutMs = TIMEOUT_MS[request.timeout ?? 'request'];
-  const timeout = withTimeout(timeoutMs, request.signal);
+  const timeout = withTimeout(call.timeoutMs, call.signal);
 
   let response: Response;
   try {
-    response = await fetch(url, {
-      method: request.method,
+    response = await fetch(call.url, {
+      method: call.method,
       headers,
-      body: payload,
+      body: call.body,
       signal: timeout.signal,
     });
   } catch (cause) {
     if (timeout.signal.aborted) {
-      if (timeout.didTimeOut) throw timedOut(timeoutMs);
+      if (timeout.didTimeOut) throw timedOut(call.timeoutMs);
       // The caller cancelled. Propagate it unchanged — this is not a failure.
       throw cause;
     }
@@ -249,7 +265,11 @@ async function sendOnce(
 }
 
 /**
- * Perform a request and return its decoded body, rotating an expired token underneath it.
+ * Send, rotating an expired token underneath the caller, and judge what came back.
+ *
+ * **This is the whole of the 401 rotation and there is exactly one of it.** `send` is
+ * called again, unchanged, when a rotation succeeds — so whatever builds the call has to
+ * be able to build it twice, which for a body means one that can be read twice.
  *
  * Every failure leaves here as an `AppError`, with one deliberate exception: a caller
  * cancellation re-throws the underlying `AbortError`, because a cancelled request is not
@@ -267,15 +287,11 @@ async function sendOnce(
  * refresh, registration and logout declare `authenticated: false`, so a wrong password is
  * never answered by rotating a token, and the refresh call can never refresh itself.
  */
-export async function httpRequest<T>(request: HttpRequest): Promise<T> {
-  // Everything that can fail for a reason that is NOT the network is done first, on
-  // purpose. A `ConfigError` from an unvalidated environment, or a body that cannot be
-  // serialized, is a bug in this build — and reporting it to the player as "check your
-  // connection" would send them to restart their router over a broken app.
-  const url = buildUrl(request.path);
-  const payload = request.body === undefined ? undefined : JSON.stringify(request.body);
-
-  let attempt = await sendOnce(request, url, payload);
+export async function sendWithRotation<T>(
+  authenticated: boolean,
+  send: () => Promise<Attempt>,
+): Promise<T> {
+  let attempt = await send();
 
   // `sentWith` undefined means the request carried no credential, so there is nothing to
   // rotate and the 401 is simply correct.
@@ -291,7 +307,7 @@ export async function httpRequest<T>(request: HttpRequest): Promise<T> {
     }
 
     if (outcome === 'retry' && credentials.current() !== undefined) {
-      attempt = await sendOnce(request, url, payload);
+      attempt = await send();
 
       if (attempt.status === 401) {
         // A credential minted seconds ago was rejected too. There is nothing left to
@@ -300,7 +316,7 @@ export async function httpRequest<T>(request: HttpRequest): Promise<T> {
         await credentials.abandon();
       }
     }
-  } else if (attempt.status === 401 && request.authenticated) {
+  } else if (attempt.status === 401 && authenticated) {
     // An authenticated request went out with **no credential at all** and was refused.
     //
     // The app believes it has a session and holds nothing to prove it. There is no token
@@ -319,6 +335,28 @@ export async function httpRequest<T>(request: HttpRequest): Promise<T> {
   if (typeof attempt.body === 'string') throw mapDecodeFailure(attempt.body);
 
   return attempt.body as T;
+}
+
+/** Perform a JSON request and return its decoded body. */
+export async function httpRequest<T>(request: HttpRequest): Promise<T> {
+  // Everything that can fail for a reason that is NOT the network is done first, on
+  // purpose. A `ConfigError` from an unvalidated environment, or a body that cannot be
+  // serialized, is a bug in this build — and reporting it to the player as "check your
+  // connection" would send them to restart their router over a broken app.
+  const url = buildUrl(request.path);
+  const payload = request.body === undefined ? undefined : JSON.stringify(request.body);
+
+  return sendWithRotation<T>(request.authenticated, () =>
+    sendOnce({
+      method: request.method,
+      url,
+      body: payload,
+      contentType: payload === undefined ? undefined : 'application/json',
+      authenticated: request.authenticated,
+      signal: request.signal,
+      timeoutMs: TIMEOUT_MS[request.timeout ?? 'request'],
+    }),
+  );
 }
 
 /** Re-exported so a caller can narrow without reaching past this module. */

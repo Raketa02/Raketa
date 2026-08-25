@@ -2,12 +2,12 @@
 
 import { Redirect } from 'expo-router';
 
-import { SocialStepScreen, useSocialStepAdmission } from '@/features/player_profile/types';
+import { SocialPhotosStep, useSocialStepAdmission } from '@/features/player_profile/types';
 
 export default function PhotosRoute() {
   const admission = useSocialStepAdmission('photos');
 
   if (admission === 'start-over') return <Redirect href="/tags" />;
 
-  return <SocialStepScreen step="photos" />;
+  return <SocialPhotosStep />;
 }

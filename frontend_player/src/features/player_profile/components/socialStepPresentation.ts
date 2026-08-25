@@ -30,7 +30,7 @@ const COPY: Readonly<Record<SocialStep, StepCopy>> = {
     asks: 'The tags another player would recognise you by, from a fixed list.',
   },
   photos: {
-    title: 'Add a photo',
+    title: 'Your court photos',
     asks: 'Up to three photos of you on a court, or none at all.',
   },
   availability: {

@@ -4,8 +4,8 @@
  * This is what is left of the tracer bullet. The part's route sequence, its chrome, its
  * client-held draft, its back and forward, and the entry gate that lands a player here all
  * work end to end; what each screen actually *asks* arrives with the ticket that builds it,
- * and the first of those has landed — the Social tags step is a real screen now and no
- * longer passes through here.
+ * and two of them have landed — the Social tags step and the photos step are real screens
+ * now and no longer pass through here.
  *
  * The chrome and the back control moved to `SocialStepLayout`, which every step wears,
  * built or not. What stays here is only the standing-in: a control that records something
@@ -34,7 +34,7 @@ import { stepCopy } from './socialStepPresentation';
  * out of the table below fails `pnpm typecheck` instead of leaving a screen that quietly
  * offers both its real control and a placeholder.
  */
-export type UnbuiltSocialStep = Exclude<SocialStep, 'tags'>;
+export type UnbuiltSocialStep = Exclude<SocialStep, 'tags' | 'photos'>;
 
 /**
  * The placeholder answer each step records, and how to tell it has.
@@ -54,10 +54,6 @@ const PLACEHOLDER: Readonly<
     { readonly answer: Partial<ProfileDraft>; readonly held: (draft: ProfileDraft) => boolean }
   >
 > = {
-  photos: {
-    answer: { photoIds: ['placeholder-photo'] },
-    held: (draft) => draft.photoIds.length > 0,
-  },
   availability: {
     answer: { availability: [{ day: 1, part: 'morning' }] },
     held: (draft) => draft.availability.length > 0,

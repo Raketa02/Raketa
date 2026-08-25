@@ -13,6 +13,12 @@ export { Card, PressableCard, type CardProps, type PressableCardProps } from './
 export { Chip, type ChipProps } from './Chip';
 export { CloseControl, type CloseControlProps } from './CloseControl';
 export { ConfidenceRing, type ConfidenceRingProps } from './ConfidenceRing';
+export {
+  CourtPoster,
+  COURT_POSTER_SPACE,
+  type CourtPosterFraming,
+  type CourtPosterProps,
+} from './CourtPoster';
 export { DarkCard, type DarkCardProps } from './DarkCard';
 export { Hairline, type HairlineProps, type HairlineVariant } from './Hairline';
 export { InfoGlyph, type InfoGlyphProps } from './InfoGlyph';
@@ -23,6 +29,17 @@ export {
   type LevelBarVariant,
 } from './LevelBar';
 export { Note, type NoteProps, type NoteVariant } from './Note';
+export {
+  PhotoAddTile,
+  PhotoPosterTile,
+  PhotoRow,
+  PhotoTile,
+  type PhotoAddTileProps,
+  type PhotoPosterTileProps,
+  type PhotoRowProps,
+  type PhotoTileFoot,
+  type PhotoTileProps,
+} from './PhotoTile';
 export { InfoMark, Popover, type InfoMarkProps, type PopoverProps } from './Popover';
 export { QuestionNavigator, type QuestionNavigatorProps } from './QuestionNavigator';
 export { Row, type RowProps, type RowVariant } from './Row';
