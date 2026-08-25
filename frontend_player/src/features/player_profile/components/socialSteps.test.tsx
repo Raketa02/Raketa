@@ -46,14 +46,16 @@ const RATING: Wire['RatingResponse'] = {
  * The six steps in order: what each says it is, what its eyebrow reads, the back control it
  * offers, and the label it continues with.
  *
- * The first step's eyebrow carries its own rule as well as its position — the tag floor
- * belongs on the screen rather than only inside a disabled button — which is why the line
- * is per step here rather than composed from the index.
+ * **The eyebrow is per step rather than composed from the index**, because two of the six
+ * do something else with the line. The first carries its own rule as well as its position —
+ * the tag floor belongs on the screen rather than only inside a disabled button. The last
+ * gives the position up entirely: *before finishing* already says where the player is, and
+ * what that line has to carry is that one question is the whole of what is left.
  *
- * `forward` is *Continue* on five of the six. The location step names what leaving without
+ * `forward` is *Continue* on four of the six. The location step names what leaving without
  * an area costs, because a location is what search and matchmaking are worked out from —
- * and this walk is the one that leaves without one, which is why the difference shows up
- * here rather than only in that step's own suite.
+ * and this walk is the one that leaves without one. The last step finishes rather than
+ * continuing: there is nothing in front of it but the commit.
  */
 const STEPS = [
   {
@@ -94,20 +96,14 @@ const STEPS = [
   {
     path: '/opt-in',
     title: 'May we suggest games?',
-    eyebrow: 'Setting up · Step 6 of 6',
+    eyebrow: 'The one thing we ask before finishing',
     back: 'Back to How far will you travel?',
-    forward: 'Continue',
+    forward: 'Finish — show me players',
   },
 ] as const;
 
-/**
- * The one step that still stands in for itself, and the one this suite answers to prove a
- * placeholder is still reachable and still records something.
- *
- * It moves as tickets land: photos was it, then availability, then location, then the
- * radius. When the last of them is built this constant goes with it.
- */
-const FIRST_PLACEHOLDER_STEP = 5;
+/** The last step's two answers. Either one is a whole answer; neither is ever pre-ticked. */
+const OPT_IN = { yes: 'Yes — suggest games', no: "No — don't suggest games" } as const;
 
 /**
  * The step this suite gives a real answer to and comes back for.
@@ -134,14 +130,14 @@ const OPTIONAL_STEPS = [1, 2, 3, 4];
 /**
  * Answer whatever step is on screen.
  *
- * Five of the six are built and each wants something different — two tags at the floor, and
- * nothing at all on the four after it, which continue from empty for four different
- * reasons. The last still stands in for itself. This suite is about the walk, so it answers
- * each of them the way that step wants and says nothing else about any of them.
+ * Each of the six wants something different — two tags at the floor, nothing at all on the
+ * four after it for four different reasons, and one of two answers on the last, which has
+ * no default in either direction. This suite is about the walk, so it answers each of them
+ * the way that step wants and says nothing else about any of them.
  */
 function answerTheStep(index: number) {
-  if (index >= FIRST_PLACEHOLDER_STEP) {
-    fireEvent.press(screen.getByLabelText('Answer this step'));
+  if (index === STEPS.length - 1) {
+    fireEvent.press(screen.getByLabelText(OPT_IN.yes));
     return;
   }
   // Optional, and each has its own suite: the photos step reaches the device, and the
@@ -226,14 +222,15 @@ afterEach(() => {
 // ---------------------------------------------------------------------------
 
 describe('walking forward through the second part', () => {
-  it('visits the six steps in order, saying which one of how many', async () => {
+  it('visits the six steps in order, each saying where in the part it is', async () => {
     await enterTheSocialSteps();
 
     for (const [index, step] of STEPS.entries()) {
       expect(screen).toHavePathname(step.path);
       expect(screen.getByText(step.title)).toBeTruthy();
       // Story 12: the player should know these screens end. Unlike the questionnaire, this
-      // part can say how many there are, because six is six whatever anybody answers.
+      // part can say how many there are, because six is six whatever anybody answers — and
+      // the last one says it in words instead, because it is the one asking to finish.
       expect(screen.getByText(step.eyebrow)).toBeTruthy();
 
       if (index < STEPS.length - 1) {
@@ -253,8 +250,10 @@ describe('walking forward through the second part', () => {
 
     await waitFor(() => expect(screen).toHavePathname('/opt-in'));
     // What follows the last step is the profile commit, and a commit is not a screen. Until
-    // it exists the part ends here rather than claiming the account was set up.
+    // it exists the part ends here rather than claiming the account was set up: the finish
+    // is on screen and closed, and the note beside it says so.
     expect(screen.queryByLabelText('Continue')).toBeNull();
+    expect(screen.getByLabelText(STEPS[5]!.forward).props.accessibilityState?.disabled).toBe(true);
     expect(screen.getByText(/Finishing sends everything at once/)).toBeTruthy();
   });
 });
@@ -329,11 +328,13 @@ describe('the draft the part holds', () => {
   it("keeps each step's answer to itself", async () => {
     await enterTheSocialSteps();
     await continueFromTheFirstStep();
-    await walkOnTo(FIRST_PLACEHOLDER_STEP);
+    await walkOnTo(STEPS.length - 1);
 
-    // The next step is unanswered, and answering it must not have been done on its behalf
-    // by the step before — nothing is claimed for a player who has not said it.
-    expect(screen.getByLabelText('Answer this step')).toBeTruthy();
+    // The last step is unanswered, and answering it must not have been done on its behalf
+    // by the five before it — nothing is claimed for a player who has not said it, and on
+    // this one that is the difference between a consent record and a guess.
+    expect(screen.getByLabelText(OPT_IN.yes).props.accessibilityState?.selected).toBe(false);
+    expect(screen.getByLabelText(OPT_IN.no).props.accessibilityState?.selected).toBe(false);
   });
 
   it('writes nothing to the server anywhere in the part', async () => {
@@ -349,7 +350,7 @@ describe('the draft the part holds', () => {
       await continueFrom(step - 1);
       await waitFor(() => expect(screen).toHavePathname(STEPS[step]!.path));
     }
-    fireEvent.press(screen.getByLabelText('Answer this step'));
+    answerTheStep(STEPS.length - 1);
 
     const afterArrival = transport.requests.slice(onArrival);
 
@@ -413,9 +414,9 @@ describe('killing the app mid-part', () => {
   it('restarts at the first step with nothing answered, and the rating untouched', async () => {
     await enterTheSocialSteps();
     await continueFromTheFirstStep();
-    await walkOnTo(FIRST_PLACEHOLDER_STEP);
-    fireEvent.press(screen.getByLabelText('Answer this step'));
-    expect(await screen.findByLabelText('Answered')).toBeTruthy();
+    await walkOnTo(STEPS.length - 1);
+    answerTheStep(STEPS.length - 1);
+    expect(screen.getByLabelText(OPT_IN.yes).props.accessibilityState?.selected).toBe(true);
 
     // The process dies: the query cache and the in-memory draft go with it. Nothing was
     // ever written, so there is nothing on the server to come back to — which is exactly

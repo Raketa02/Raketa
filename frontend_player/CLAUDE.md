@@ -29,12 +29,13 @@ rotation, the `AppError` family, `shared/lib/auth` over the keychain, and three 
 sports picker, the adaptive question loop, the explained result, and the summary and data
 screens a player leaves through) and `player_profile` (onboarding's **second part**: six
 steps over a client-held draft. The routes, the draft and the navigation work end to end,
-and five steps are built — the Social tags picker, 2 to 6 chips from a served vocabulary,
-the photos step, up to three court photos or none, the availability grid, seven days by
-three parts of the day and blank until a player ticks something, the location step, one
-foreground fix coarsened to about a kilometre before it is held, and the radius step, a
-slider over the served bounds that opens at the served default; the last one still stands
-in for itself).
+and **all six steps are built** — the Social tags picker, 2 to 6 chips from a served
+vocabulary, the photos step, up to three court photos or none, the availability grid, seven
+days by three parts of the day and blank until a player ticks something, the location step,
+one foreground fix coarsened to about a kilometre before it is held, the radius step, a
+slider over the served bounds that opens at the served default, and the Proposals opt-in,
+never pre-ticked and with a finish that stays closed until the player answers either way.
+What is left of the part is the commit that sends it).
 
 **Onboarding is two parts, and the part is the checkpoint unit**
 ([ADR-0090](../docs/adr/0090-onboarding-per-player-checkpoint.md)). Part one is the Skill
@@ -44,6 +45,12 @@ it restarts at step one. The entry gate reads three facts and has four destinati
 `player_profile/` rather than in `onboarding/` because the profile screen will later edit the
 same values against the same rules
 ([ADR-0089](../docs/adr/0089-player-profile-context-event-sourced.md)).
+
+**The consent step's copy is frozen and versioned.** `optInPresentation.ts` owns every
+sentence the Proposals opt-in card shows, together with the `copy_version` stamped beside
+the answer in the draft — consent gathered against one sentence is not consent to a
+different one, so re-wording that card is a **new version with the old one retained**,
+never an edit. It is the only file in this app whose strings are evidence.
 
 **The second part is reached only through the entry gate today, so the closing screens come
 before it rather than after it.** A player finishing the questionnaire walks result → done →
