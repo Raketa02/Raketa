@@ -17,7 +17,7 @@ import sys
 from pathlib import Path
 
 from sandbuket import claude_code, create_sandbox
-from sandbuket.errors import AgentError
+from sandbuket.errors import AgentError, AgentIdleTimeoutError
 from sandbuket.sandboxes.docker import docker
 
 # --- workaround: sandbuket's 64 KiB stdout line cap --------------------------
@@ -59,6 +59,14 @@ DEFAULT_MODEL = "claude-opus-5"
 # an iteration's token spend is not buying quality.
 DEFAULT_EFFORT = "xhigh"
 DEFAULT_LABEL = "ready-for-agent"
+# Sandbuket's watchdog fails an iteration after this many seconds with no stdout
+# line from the agent, and its own default is 600. That is too tight for this
+# loop: the prompt requires the app's *full* gate before committing, and a cold
+# `poetry install && make check` is one Bash tool call that emits nothing to the
+# orchestrator until it returns — the agent is working hard and looks idle. The
+# timeout still earns its keep against a genuinely wedged process, so it stays;
+# it is just set above the longest legitimate silence rather than below it.
+DEFAULT_IDLE_TIMEOUT = 30 * 60
 # How many iterations may fail back-to-back before the loop gives up. One is too
 # few — a dropped connection is transient far more often than not. Unbounded is
 # wrong too: a broken image or a bad credential fails identically every time, and
@@ -128,17 +136,30 @@ def worktree_for(branch: str) -> Path | None:
     return None
 
 
-def quarantine_partial_work(branch: str, reason: str) -> None:
-    """Stash whatever a failed iteration left in the worktree, and say where.
+def preserve_partial_work(branch: str, reason: str) -> None:
+    """Commit whatever an interrupted iteration left, so the next one can finish it.
 
-    A dropped iteration can leave a half-finished ticket behind. The next one
-    would inherit it *invisibly* — RECENT COMMITS only shows committed work, so
-    the agent sees a clean-looking start and a dirty tree it has no memory of,
-    and either builds on code no gate has seen or fights it.
+    Called twice: once at startup, to adopt anything an earlier run left behind,
+    and again after each caught iteration failure.
 
-    Stashing, not discarding: the work cost real tokens and may be most of a
-    ticket. `git stash` is recoverable and, unlike `reset --hard` or `clean -f`,
-    is not one of the destructive commands this repo's guard blocks.
+    An interrupted iteration leaves a half-finished ticket in the worktree. Left
+    uncommitted, the next iteration inherits it *invisibly* — RECENT COMMITS only
+    shows committed work, so the agent sees a clean-looking start and a dirty tree
+    it has no memory of, and either builds on code no gate has seen or fights it.
+
+    Committing rather than stashing is what makes the work resumable. A stash is
+    preserved but invisible: nothing in the prompt mentions it, so the next
+    iteration silently starts a different ticket and the stash rots. A commit is
+    preserved *and* visible — `fetch_recent_commits` greps for AFK, so the marker
+    below lands in RECENT COMMITS, and prompt.md tells the agent to finish that
+    task before picking a new one.
+
+    The tradeoff, deliberately taken: this puts code on the branch that never
+    passed the app's gate. The subject line says so, and the next iteration is
+    required to gate it before building on it.
+
+    A no-op when the branch has no worktree yet or the worktree is clean, which
+    is the normal case for a healthy run.
     """
     worktree = worktree_for(branch)
     if worktree is None:
@@ -151,16 +172,40 @@ def quarantine_partial_work(branch: str, reason: str) -> None:
     ).stdout.strip()
     if not dirty:
         return
-    subprocess.run(
-        ["git", "stash", "push", "-u", "-m", f"AFK partial work — {reason}"],
+    message = (
+        # `AFK:` first, or fetch_recent_commits' --grep misses it and the whole
+        # point — making the work visible to the next iteration — is lost.
+        f"AFK: WIP — interrupted during {reason}; gate never ran\n"
+        "\n"
+        "Committed by the orchestrator, not by the agent: the iteration died "
+        "before it could verify or commit. This code has NOT passed the app's "
+        "check gate and may not even parse.\n"
+        "\n"
+        "The next iteration owns it: finish this task, run the gate, and amend "
+        "or replace this commit. Do not start a new ticket on top of it."
+    )
+    subprocess.run(["git", "add", "-A"], cwd=worktree, capture_output=True, text=True)
+    committed = subprocess.run(
+        # --no-verify because a pre-commit hook is exactly what half-finished code
+        # fails, and a hook veto here would discard the work this function exists
+        # to save. The commit is a holding pen, not a claim that the code is good.
+        ["git", "commit", "--no-verify", "-m", message],
         cwd=worktree,
         capture_output=True,
         text=True,
     )
+    if committed.returncode != 0:
+        print(
+            f"  ! could not preserve {len(dirty.splitlines())} uncommitted path(s): "
+            f"{committed.stderr.strip() or committed.stdout.strip()}\n"
+            f"  ! they are still in {worktree} — deal with them before re-running.",
+            file=sys.stderr,
+        )
+        return
     print(
-        f"  ! {len(dirty.splitlines())} uncommitted path(s) left behind; stashed "
-        f"so the next iteration starts clean.\n"
-        f"  ! recover with: git -C {worktree} stash pop",
+        f"  ! {len(dirty.splitlines())} uncommitted path(s) left behind; committed "
+        f"as a WIP marker so the next iteration finishes them.\n"
+        f"  ! inspect with: git -C {worktree} show HEAD",
         file=sys.stderr,
     )
 
@@ -188,6 +233,21 @@ async def afk(args: argparse.Namespace) -> int:
         f"effort {args.effort})."
     )
 
+    # Sweep the worktree BEFORE handing it to sandbuket, not after. Two reasons.
+    #
+    # First, the in-loop handler below only covers failures this process lives to
+    # catch. A run killed by a signal, an unhandled error, or a laptop that slept
+    # leaves the worktree dirty with nobody to clean it, and sandbuket preserves
+    # the worktree on failure by design — so the mess outlives the run that made
+    # it and there is no other moment that would notice.
+    #
+    # Second, sandbuket reuses an existing managed worktree and inspects it to
+    # decide what to do (worktree_manager.create): a clean one is fast-forwarded
+    # from origin, a dirty one is handed over untouched. Stashing first therefore
+    # buys the fast-forward too. Stashing afterwards would get neither — the
+    # decision is already made by the time control returns to us.
+    preserve_partial_work(args.branch, "an earlier run")
+
     async with await create_sandbox(
         sandbox=sandbox,
         branch=args.branch,
@@ -204,20 +264,27 @@ async def afk(args: argparse.Namespace) -> int:
                     prompt=build_prompt(args.label, args.branch),
                     completion_signal=COMPLETION_SIGNAL,
                     max_iterations=1,
+                    idle_timeout_seconds=args.idle_timeout,
                 )
-            except AgentError as exc:
+            except (AgentError, AgentIdleTimeoutError) as exc:
                 # The agent process died — most often a connection lost
                 # mid-response, which is transient and says nothing about the
                 # work. Before this guard it tore the whole run down: one blip
                 # at iteration 2 of N cost the remaining budget and left a
                 # half-finished ticket dirty in the worktree.
                 #
-                # AgentError only, deliberately. The rest of the SandbuketError
+                # These two only, deliberately. The rest of the SandbuketError
                 # family is infrastructure — Docker missing, a sync failure, a
                 # bad cwd — and none of that gets better by being retried.
+                #
+                # AgentIdleTimeoutError is named separately because it does NOT
+                # subclass AgentError — it descends straight from SandbuketError.
+                # Catching the base class alone let a watchdog timeout escape as
+                # an unhandled traceback: the run died instead of retrying, and
+                # the iteration's partial work was never quarantined.
                 consecutive_failures += 1
                 print(f"  ! iteration {i} failed: {exc}", file=sys.stderr)
-                quarantine_partial_work(args.branch, f"iteration {i} of this run")
+                preserve_partial_work(args.branch, f"iteration {i} of this run")
                 if consecutive_failures >= MAX_CONSECUTIVE_FAILURES:
                     print(
                         f"\n{consecutive_failures} iterations failed back to "
@@ -259,6 +326,14 @@ def main() -> int:
         help="reasoning effort (default: %(default)s)",
     )
     parser.add_argument("--label", default=DEFAULT_LABEL)
+    parser.add_argument(
+        "--idle-timeout",
+        type=int,
+        default=DEFAULT_IDLE_TIMEOUT,
+        metavar="SECONDS",
+        help="fail an iteration after this long with no agent output "
+        "(default: %(default)s)",
+    )
     args = parser.parse_args()
     try:
         return asyncio.run(afk(args))

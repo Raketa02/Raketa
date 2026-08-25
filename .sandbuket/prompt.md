@@ -25,6 +25,26 @@ The orchestrator prepends two things to this prompt before each run:
 Respect blocking relationships: if an issue body says it is `Blocked by #N`, do
 not pick it unless #N is already closed.
 
+## Resuming an interrupted task
+
+If the most recent commit in `RECENT COMMITS` starts with `AFK: WIP`, a previous
+iteration was killed mid-task and the orchestrator committed what it had. That
+work is **yours to finish**, and it takes priority over everything in Task
+Selection below — do not start a new ticket on top of it.
+
+The commit never passed the gate, so treat it as a draft and not as a fact. It
+also does not say which issue it belongs to — the orchestrator committed it
+blind and has no way to know. Read the diff (`git show HEAD`), work out from it
+which `ready-for-agent` issue it was serving, and fix or discard what is wrong.
+
+When the task is done, replace the marker rather than leaving it in the log —
+`git commit --amend` if it is still the tip, or a normal commit that supersedes
+it. The branch must not end an iteration with an
+`AFK: WIP` subject at its tip.
+
+If the marker's work turns out to be worthless, say so in the issue comment and
+revert it — an honest revert is better than building on a bad draft.
+
 ## Task Selection
 
 Pick the next task from unblocked `ready-for-agent` issues. Prioritize:
