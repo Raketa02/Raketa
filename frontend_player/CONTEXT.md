@@ -174,6 +174,14 @@ profile editor that later edits the same values.
   walked there. _Avoid_: "form state" — it outlives every screen in the part; "saved draft"
   and "resume" — nothing is saved, and the asymmetry with part one's resumable run is
   deliberate.
+- **Profile options** — the **one read** the six steps are drawn from: the Social tag
+  vocabulary with its grouping, how many tags a profile must hold, and the Search radius
+  bounds. Reference data owned by TanStack Query, fetched once for the whole part, and the
+  reason no client restates a vocabulary or a bound the commit re-validates against. Ids and
+  grouping cross the wire; **every label a player reads is this app's copy**, so a served id
+  this build has no words for is dropped rather than drawn — the answer `toSport` gives an
+  unknown sport. _Avoid_: "config" and "settings"; neither is about this player, and both
+  invite something per-player being added to it.
 
 ### Data and errors
 

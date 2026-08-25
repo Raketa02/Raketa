@@ -27,7 +27,7 @@ export interface StepCopy {
 const COPY: Readonly<Record<SocialStep, StepCopy>> = {
   tags: {
     title: 'What kind of player are you?',
-    asks: 'Two to six tags about the game, chosen from a fixed list.',
+    asks: 'The tags another player would recognise you by, from a fixed list.',
   },
   photos: {
     title: 'Add a photo',

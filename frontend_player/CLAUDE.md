@@ -28,8 +28,9 @@ rotation, the `AppError` family, `shared/lib/auth` over the keychain, and three 
 `auth` (sign up, sign in, session restore), `onboarding` (the entry gate, welcome, the
 sports picker, the adaptive question loop, the explained result, and the summary and data
 screens a player leaves through) and `player_profile` (onboarding's **second part**: six
-steps over a client-held draft, as a walking skeleton — the routes, the draft and the
-navigation work; what each step asks is still being built).
+steps over a client-held draft. The routes, the draft and the navigation work end to end,
+and the first step — the Social tags picker, 2 to 6 chips from a served vocabulary — is
+built; the other five still stand in for themselves).
 
 **Onboarding is two parts, and the part is the checkpoint unit**
 ([ADR-0090](../docs/adr/0090-onboarding-per-player-checkpoint.md)). Part one is the Skill

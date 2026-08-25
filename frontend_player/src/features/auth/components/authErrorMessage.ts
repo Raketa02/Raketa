@@ -8,10 +8,12 @@
  *
  * The fallback is by *recovery category* rather than a single "Something went wrong",
  * because the categories were assigned precisely so a failure could say something true
- * about what to do next — even one this build has never seen.
+ * about what to do next — even one this build has never seen. That fallback table is
+ * `shared/errors`' now: three features need it, and the copy of it that used to sit here
+ * was the first of the three.
  */
 
-import type { AppError } from '@/shared/errors';
+import { recoveryMessage, type AppError } from '@/shared/errors';
 
 const BY_CODE: Readonly<Record<string, string>> = {
   invalid_credentials: "That email and password don't match. Try again.",
@@ -20,18 +22,9 @@ const BY_CODE: Readonly<Record<string, string>> = {
   nickname_already_taken: 'That nickname is taken. Pick another.',
 };
 
-const BY_RECOVERY: Readonly<Record<AppError['recovery'], string>> = {
-  'retryable-automatically': "We couldn't reach Raketa. Check your connection and try again.",
-  'retryable-by-user': "That didn't go through. Try again in a moment.",
-  'requires-reauthentication': 'Your session has ended. Sign in again.',
-  'requires-user-correction': 'Check the details above and try again.',
-  'business-conflict': "That can't be done right now.",
-  terminal: 'Something went wrong at our end. Try again later.',
-};
-
 export function authErrorMessage(error: AppError): string {
   const known = error.code === undefined ? undefined : BY_CODE[error.code];
-  return known ?? BY_RECOVERY[error.recovery];
+  return known ?? recoveryMessage(error);
 }
 
 /**

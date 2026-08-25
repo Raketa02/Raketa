@@ -3,10 +3,10 @@
  *
  * The same harness every onboarding flow suite uses — only `fetch` is faked, and the
  * router, the http client, the hooks, the store and the screens all run for real. What is
- * being proved here is the walk itself: six routes in one order, a draft that survives
+ * being proved here is **the walk itself**: six routes in one order, a draft that survives
  * moving between them in both directions, and a part that cannot be entered from its
- * middle. What each step *asks* is not built yet, and that is the point of landing the
- * skeleton first.
+ * middle. What each step asks is each step's own suite; this one answers whatever is on
+ * screen and keeps walking.
  *
  * Every assertion is about what a player can see, where they land, or what left the device.
  */
@@ -16,7 +16,11 @@ import { fireEvent, screen, waitFor } from 'expo-router/testing-library';
 import { refreshTokens } from '@/features/auth/types';
 import { clearStoredTokens, resetSessionStatus, wireHttpCredentials } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
-import { launchSignedIn, stubGate as stubGateWith } from '@/test-support/onboardingRouter';
+import {
+  launchSignedIn,
+  stubGate as stubGateWith,
+  stubProfileOptions,
+} from '@/test-support/onboardingRouter';
 import { installTransport, type Transport, type Wire } from '@/test-support/transport';
 
 import { useProfileDraft } from '../store/profileDraft.store';
@@ -34,15 +38,75 @@ const RATING: Wire['RatingResponse'] = {
   updated_at: '2026-08-14T09:00:00Z',
 };
 
-/** The six steps in order, with the back control each one offers. */
+/**
+ * The six steps in order: what each says it is, what its eyebrow reads, and the back
+ * control it offers.
+ *
+ * The first step's eyebrow carries its own rule as well as its position — the tag floor
+ * belongs on the screen rather than only inside a disabled button — which is why the line
+ * is per step here rather than composed from the index.
+ */
 const STEPS = [
-  { path: '/tags', title: 'What kind of player are you?', back: undefined },
-  { path: '/photos', title: 'Add a photo', back: 'Back to What kind of player are you?' },
-  { path: '/availability', title: 'When do you usually play?', back: 'Back to Add a photo' },
-  { path: '/location', title: 'Where do you play?', back: 'Back to When do you usually play?' },
-  { path: '/radius', title: 'How far will you travel?', back: 'Back to Where do you play?' },
-  { path: '/opt-in', title: 'May we suggest games?', back: 'Back to How far will you travel?' },
+  {
+    path: '/tags',
+    title: 'What kind of player are you?',
+    eyebrow: 'Setting up · Step 1 of 6 · Pick 2 to 6',
+    back: undefined,
+  },
+  {
+    path: '/photos',
+    title: 'Add a photo',
+    eyebrow: 'Setting up · Step 2 of 6',
+    back: 'Back to What kind of player are you?',
+  },
+  {
+    path: '/availability',
+    title: 'When do you usually play?',
+    eyebrow: 'Setting up · Step 3 of 6',
+    back: 'Back to Add a photo',
+  },
+  {
+    path: '/location',
+    title: 'Where do you play?',
+    eyebrow: 'Setting up · Step 4 of 6',
+    back: 'Back to When do you usually play?',
+  },
+  {
+    path: '/radius',
+    title: 'How far will you travel?',
+    eyebrow: 'Setting up · Step 5 of 6',
+    back: 'Back to Where do you play?',
+  },
+  {
+    path: '/opt-in',
+    title: 'May we suggest games?',
+    eyebrow: 'Setting up · Step 6 of 6',
+    back: 'Back to How far will you travel?',
+  },
 ] as const;
+
+/**
+ * Answer whatever step is on screen.
+ *
+ * The first step is built and has a floor — two tags, or its continue control does not
+ * appear — and the other five still stand in for themselves. This suite is about the walk,
+ * so it answers each of them the way that step wants and says nothing else about either.
+ */
+function answerTheStep(index: number) {
+  if (index > 0) {
+    fireEvent.press(screen.getByLabelText('Answer this step'));
+    return;
+  }
+  fireEvent.press(screen.getByLabelText('Plays to win'));
+  fireEvent.press(screen.getByLabelText('Here to improve'));
+}
+
+/** The first step's continue is blocked until its floor is met; the rest are not. */
+async function continueFromTheFirstStep() {
+  answerTheStep(0);
+  fireEvent.press(await screen.findByLabelText('Continue'));
+  await waitFor(() => expect(screen).toHavePathname('/photos'));
+}
 
 let transport: Transport;
 
@@ -51,10 +115,14 @@ const stubGate = (options?: Parameters<typeof stubGateWith>[1]) => stubGateWith(
 /** A launch by a player the gate owes the second part to, landing on its first step. */
 async function enterTheSocialSteps() {
   stubGate({ ratings: [RATING], hasPlayerProfile: false });
+  stubProfileOptions(transport);
 
   await launchSignedIn();
 
   await waitFor(() => expect(screen).toHavePathname('/tags'));
+  // The first step is drawn from a served vocabulary, so the walk starts once it is on
+  // screen rather than once the route has changed.
+  await screen.findByLabelText('Pick 2 tags to continue');
 }
 
 beforeEach(async () => {
@@ -86,10 +154,11 @@ describe('walking forward through the second part', () => {
       expect(screen.getByText(step.title)).toBeTruthy();
       // Story 12: the player should know these screens end. Unlike the questionnaire, this
       // part can say how many there are, because six is six whatever anybody answers.
-      expect(screen.getByText(`Setting up · Step ${index + 1} of 6`)).toBeTruthy();
+      expect(screen.getByText(step.eyebrow)).toBeTruthy();
 
       if (index < STEPS.length - 1) {
-        fireEvent.press(screen.getByLabelText('Continue'));
+        answerTheStep(index);
+        fireEvent.press(await screen.findByLabelText('Continue'));
         await waitFor(() => expect(screen).toHavePathname(STEPS[index + 1]!.path));
       }
     }
@@ -97,7 +166,8 @@ describe('walking forward through the second part', () => {
 
   it('ends at the last step rather than navigating on to something that does not exist', async () => {
     await enterTheSocialSteps();
-    for (let step = 1; step < STEPS.length; step += 1) {
+    await continueFromTheFirstStep();
+    for (let step = 2; step < STEPS.length; step += 1) {
       fireEvent.press(screen.getByLabelText('Continue'));
     }
 
@@ -118,7 +188,10 @@ describe('walking back through the second part', () => {
     // longer. There is no control here that could reach it.
     expect(screen.queryByLabelText(/^Back to /)).toBeNull();
 
-    for (let index = 1; index < STEPS.length; index += 1) {
+    await continueFromTheFirstStep();
+    expect(screen.getByLabelText(STEPS[1]!.back!)).toBeTruthy();
+
+    for (let index = 2; index < STEPS.length; index += 1) {
       fireEvent.press(screen.getByLabelText('Continue'));
       await waitFor(() => expect(screen).toHavePathname(STEPS[index]!.path));
       expect(screen.getByLabelText(STEPS[index]!.back!)).toBeTruthy();
@@ -127,7 +200,8 @@ describe('walking back through the second part', () => {
 
   it('leads from every step to the one before it, all the way back to the first', async () => {
     await enterTheSocialSteps();
-    for (let step = 1; step < STEPS.length; step += 1) {
+    await continueFromTheFirstStep();
+    for (let step = 2; step < STEPS.length; step += 1) {
       fireEvent.press(screen.getByLabelText('Continue'));
     }
     await waitFor(() => expect(screen).toHavePathname('/opt-in'));
@@ -150,8 +224,7 @@ describe('the draft the part holds', () => {
     // The whole reason the draft exists: checking one thing must not cost the player the
     // rest, and an answer they gave must still be there when they return to it.
     await enterTheSocialSteps();
-    fireEvent.press(screen.getByLabelText('Continue'));
-    await waitFor(() => expect(screen).toHavePathname('/photos'));
+    await continueFromTheFirstStep();
 
     fireEvent.press(screen.getByLabelText('Answer this step'));
     expect(await screen.findByLabelText('Answered')).toBeTruthy();
@@ -172,11 +245,7 @@ describe('the draft the part holds', () => {
 
   it("keeps each step's answer to itself", async () => {
     await enterTheSocialSteps();
-    fireEvent.press(screen.getByLabelText('Answer this step'));
-    expect(await screen.findByLabelText('Answered')).toBeTruthy();
-
-    fireEvent.press(screen.getByLabelText('Continue'));
-    await waitFor(() => expect(screen).toHavePathname('/photos'));
+    await continueFromTheFirstStep();
 
     // The next step is unanswered, and answering it must not have been done on its behalf
     // by the step before — nothing is claimed for a player who has not said it.
@@ -185,11 +254,13 @@ describe('the draft the part holds', () => {
 
   it('sends nothing to the server anywhere in the part', async () => {
     await enterTheSocialSteps();
-    // Everything the gate asked on the way in. What the part itself costs is measured from
-    // here — counting writes only would let a step that started *reading* pass.
+    // Everything the gate asked on the way in, plus the one read the first step is drawn
+    // from. What the part costs *after* it is on screen is measured from here — counting
+    // writes only would let a step that started reading on every render pass.
     const onArrival = transport.requests.length;
 
-    for (let step = 1; step < STEPS.length; step += 1) {
+    await continueFromTheFirstStep();
+    for (let step = 2; step < STEPS.length; step += 1) {
       fireEvent.press(screen.getByLabelText('Answer this step'));
       fireEvent.press(screen.getByLabelText('Continue'));
       await waitFor(() => expect(screen).toHavePathname(STEPS[step]!.path));
@@ -199,7 +270,8 @@ describe('the draft the part holds', () => {
     // The part is the checkpoint unit: nothing is written until the one commit at the end,
     // which is why moving between steps is free in both directions and why leaving restarts
     // at step one. The commit is a later ticket, so today the whole part is silent — not
-    // one request, in either direction, on any of the six.
+    // one request, in either direction, on any of the six. The vocabulary is reference data
+    // and is not read again, so walking back to the first step costs nothing either.
     expect(transport.requests.slice(onArrival)).toEqual([]);
   });
 });
@@ -214,11 +286,12 @@ describe('a link naming a step in the middle of the part', () => {
     // would commit a Player profile built from four screens the player never saw — with
     // the tag selection, the week and the consent all missing.
     stubGate({ ratings: [RATING], hasPlayerProfile: false });
+    stubProfileOptions(transport);
 
     await launchSignedIn('/radius');
 
     await waitFor(() => expect(screen).toHavePathname('/tags'));
-    expect(screen.getByText('Setting up · Step 1 of 6')).toBeTruthy();
+    expect(await screen.findByText(STEPS[0]!.eyebrow)).toBeTruthy();
   });
 
   it('is not turned away once the player is genuinely inside the part', async () => {
@@ -226,7 +299,8 @@ describe('a link naming a step in the middle of the part', () => {
     // five by walking there is exactly what the part is for.
     await enterTheSocialSteps();
 
-    for (let step = 1; step <= 4; step += 1) {
+    await continueFromTheFirstStep();
+    for (let step = 2; step <= 4; step += 1) {
       fireEvent.press(screen.getByLabelText('Continue'));
       await waitFor(() => expect(screen).toHavePathname(STEPS[step]!.path));
     }
@@ -238,8 +312,7 @@ describe('a link naming a step in the middle of the part', () => {
 describe('killing the app mid-part', () => {
   it('restarts at the first step with nothing answered, and the rating untouched', async () => {
     await enterTheSocialSteps();
-    fireEvent.press(screen.getByLabelText('Continue'));
-    await waitFor(() => expect(screen).toHavePathname('/photos'));
+    await continueFromTheFirstStep();
     fireEvent.press(screen.getByLabelText('Answer this step'));
     expect(await screen.findByLabelText('Answered')).toBeTruthy();
 
@@ -255,7 +328,9 @@ describe('killing the app mid-part', () => {
     // Step one, not step two: the Skill rating survived — it is what sends them back here
     // rather than to welcome — and the six answers did not.
     await waitFor(() => expect(screen).toHavePathname('/tags'));
-    expect(screen.getByLabelText('Answer this step')).toBeTruthy();
-    expect(screen.queryByLabelText('Answered')).toBeNull();
+    // Nothing picked: the control is still asking for the floor, and the two tags chosen on
+    // the way through are gone with the process that held them.
+    expect(await screen.findByLabelText('Pick 2 tags to continue')).toBeTruthy();
+    expect(screen.getByLabelText('Plays to win').props.accessibilityState?.selected).toBe(false);
   });
 });

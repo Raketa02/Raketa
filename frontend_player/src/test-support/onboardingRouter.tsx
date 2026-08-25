@@ -96,6 +96,68 @@ export const SPORTS_SERVED: Wire['SportsResponse'] = {
 
 export const RUNS_IN_PROGRESS_PATH = '/api/v1/assessments/in-progress';
 
+export const PROFILE_OPTIONS_PATH = '/api/v1/player-profile/options';
+
+/**
+ * The eighteen Social tags in their three groups, the selection bounds and the radius
+ * bounds — as `GET /player-profile/options` answers.
+ *
+ * The order here is the order the picker must render, because the picker renders what it
+ * is served and sorts nothing. A suite that wants a shorter vocabulary passes its own.
+ */
+export const PROFILE_OPTIONS_SERVED: Wire['PlayerProfileOptionsResponse'] = {
+  social_tag_groups: [
+    {
+      group: 'AFTER_THE_MATCH',
+      tags: [
+        { id: 'STAYS_FOR_A_DRINK' },
+        { id: 'STRAIGHT_HOME_AFTER' },
+        { id: 'TALKS_THROUGH_THE_MATCH' },
+        { id: 'SETTLES_UP_ON_THE_SPOT' },
+        { id: 'BOOKS_THE_NEXT_ONE' },
+        { id: 'SHARES_A_LIFT' },
+      ],
+    },
+    {
+      group: 'ON_THE_COURT',
+      tags: [
+        { id: 'PLAYS_TO_WIN' },
+        { id: 'LAUGHS_OFF_MISTAKES' },
+        { id: 'ENCOURAGES_A_PARTNER' },
+        { id: 'GENEROUS_ON_LINE_CALLS' },
+        { id: 'QUIET_AND_FOCUSED' },
+        { id: 'WARMS_UP_PROPERLY' },
+      ],
+    },
+    {
+      group: 'WHY_YOU_ARE_HERE',
+      tags: [
+        { id: 'HERE_TO_IMPROVE' },
+        { id: 'HERE_TO_COMPETE' },
+        { id: 'HERE_FOR_THE_EXERCISE' },
+        { id: 'HERE_TO_MEET_PLAYERS' },
+        { id: 'HERE_FOR_A_REGULAR_GAME' },
+        { id: 'HERE_TO_GET_BACK_INTO_IT' },
+      ],
+    },
+  ],
+  social_tag_selection: { minimum_tags: 2, maximum_tags: 6 },
+  search_radius: { minimum_km: 1, maximum_km: 50, step_km: 1, default_km: 10 },
+};
+
+/**
+ * What the profile steps are drawn from.
+ *
+ * Separate from `stubGate` because the gate does not read it: the vocabulary is wanted by
+ * the first social step, and a suite that never enters the part never asks for it.
+ */
+export function stubProfileOptions(
+  transport: Transport,
+  served: Wire['PlayerProfileOptionsResponse'] = PROFILE_OPTIONS_SERVED,
+) {
+  transport.on('GET', PROFILE_OPTIONS_PATH, () => json(served));
+}
+
 export interface GateStub {
   readonly ratings?: readonly Wire['RatingResponse'][];
   /**

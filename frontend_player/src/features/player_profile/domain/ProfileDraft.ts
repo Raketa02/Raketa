@@ -27,6 +27,8 @@
  * means *not asked yet*, and it is never quietly read as no.
  */
 
+import type { SocialTagId } from './SocialTag';
+
 /** Which part of a day one ticked cell of the availability grid belongs to. */
 export type DayPart = 'morning' | 'afternoon' | 'evening';
 
@@ -70,8 +72,13 @@ export interface ProposalsOptIn {
 }
 
 export interface ProfileDraft {
-  /** Tag ids as the platform serves them. Ids are persisted forever; labels are copy. */
-  readonly socialTagIds: readonly string[];
+  /**
+   * Tag ids as the platform serves them. Ids are persisted forever; labels are copy.
+   *
+   * Narrowed to the vocabulary rather than left as strings, because a draft only ever holds
+   * what the picker offered — and the picker offers only what this build can draw.
+   */
+  readonly socialTagIds: readonly SocialTagId[];
   /** Uploaded photo ids, in the order the player arranged them — the first one leads. */
   readonly photoIds: readonly string[];
   /** The cells of the week that were ticked. Empty is an answer. */

@@ -12,7 +12,9 @@
  * ([ADR-0089](../../../../docs/adr/0089-player-profile-context-event-sourced.md)).
  */
 
-export { SocialStepScreen } from './components/SocialStepScreen';
+export { SocialTagsStep } from './components/SocialTagsStep';
+/** The five steps still standing in for themselves. Each ticket removes one from the union. */
+export { SocialStepScreen, type UnbuiltSocialStep } from './components/SocialStepScreen';
 
 export { SOCIAL_STEPS, type SocialStep } from './domain/socialSteps';
 export type {

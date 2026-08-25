@@ -12,10 +12,10 @@
  * away from any of the others.
  */
 
-import { SocialStepScreen, useSocialStepAdmission } from '@/features/player_profile/types';
+import { SocialTagsStep, useSocialStepAdmission } from '@/features/player_profile/types';
 
 export default function TagsRoute() {
   useSocialStepAdmission('tags');
 
-  return <SocialStepScreen step="tags" />;
+  return <SocialTagsStep />;
 }
