@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import pytest
 
-from app.kernel import iso_weekday
 from app.modules.player_profile.application.commands import (
     CommitPlayerProfileCommand,
 )
@@ -20,7 +19,6 @@ from app.modules.player_profile.application.commit_player_profile import (
     CommitPlayerProfile,
 )
 from app.modules.player_profile.application.has_player_profile import HasPlayerProfile
-from app.modules.player_profile.domain.availability import AvailabilitySlot, DayPart
 from app.modules.player_profile.domain.consent import ConsentSurface
 from app.modules.player_profile.domain.errors import (
     PhotoNotFound,
@@ -99,7 +97,7 @@ def a_command(**overrides) -> CommitPlayerProfileCommand:
         idempotency_key="commit-1",
         social_tag_ids=["PLAYS_TO_WIN", "HERE_TO_IMPROVE"],
         photo_ids=[],
-        availability=[AvailabilitySlot(day=iso_weekday(2), part=DayPart.EVENING)],
+        availability=[(2, "EVENING")],
         latitude=51.5073509,
         longitude=-0.1277583,
         search_radius_km=10,

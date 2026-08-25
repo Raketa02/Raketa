@@ -6,7 +6,6 @@ from dataclasses import dataclass
 from typing import Sequence
 from uuid import UUID
 
-from app.modules.player_profile.domain.availability import AvailabilitySlot
 from app.modules.player_profile.domain.consent import ConsentSurface
 
 
@@ -37,13 +36,18 @@ class GetPhotoCommand:
 class CommitPlayerProfileCommand:
     """Every answer from onboarding's second part, in one command.
 
-    **Mostly primitives, deliberately.** The tag ids arrive as strings and the
-    radius as an ``int`` so that the *domain* refuses an id outside the
-    vocabulary and a radius outside the served bounds — with the codes a client
-    branches on — rather than a schema layer refusing them as a shapeless 422.
-    Availability is the exception: a day of the week and a part of the day carry
-    no served vocabulary and nothing to disagree with, so the boundary builds the
-    slots and this command holds them.
+    **Primitives from the boundary, not domain value objects**
+    (``backend/CONTEXT.md`` — *Command*). Availability arrives as
+    ``(iso weekday, part of day)`` pairs and the domain is what turns them into
+    slots, so nothing in ``presentation/`` builds a value object. The one enum is
+    ``ConsentSurface``, which is a closed set the boundary *selects from* rather
+    than constructs — the same shape ``CreateAssessmentCommand`` carries
+    ``Sport`` in.
+
+    The tag ids stay strings and the radius stays an ``int`` on purpose: it is
+    what lets the *domain* refuse an id outside the vocabulary and a radius
+    outside the served bounds, with the codes a client branches on, instead of a
+    schema layer refusing them as a shapeless 422.
 
     ``proposals_opt_in`` is ``bool | None`` and the ``None`` is load-bearing.
     Unanswered is neither yes nor no, so a client that has not asked the question
@@ -60,7 +64,8 @@ class CommitPlayerProfileCommand:
     idempotency_key: str
     social_tag_ids: Sequence[str]
     photo_ids: Sequence[UUID]
-    availability: Sequence[AvailabilitySlot]
+    #: ``(iso weekday 1–7, part of day)`` — one pair per cell the player ticked.
+    availability: Sequence[tuple[int, str]]
     latitude: float
     longitude: float
     search_radius_km: int

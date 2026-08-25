@@ -73,27 +73,45 @@ SEARCH_RADIUS_BOUNDS = SearchRadiusBounds(
 
 @dataclass(frozen=True, slots=True)
 class SearchRadius:
-    """One player's chosen distance, checked against the served bounds.
+    """One player's distance, in whole kilometres.
 
     A type rather than a bare ``int`` for the reason every field name here spells
-    its unit: a radius that has been validated and a number that happens to be
-    inside the range are different things, and only one of them can be stored.
+    its unit: a bare number is one refactor away from being read as metres.
 
-    **The check is re-done here even though the slider cannot offer an invalid
-    value.** The bounds are served so a client can build a control that only
-    produces legal numbers, and a control is not a validation (``docs/adr/0089``)
-    — it is absent from a replayed request and from every build that is not this
-    one.
+    **The bounds are not an invariant of this type, and that is deliberate.**
+    ``chosen`` refuses a radius outside them; the plain constructor does not,
+    because a radius that is *already on a stream* was legal when it was recorded
+    and stays a fact whatever the bounds say today. The bounds are documented as
+    editable — *"a later opinion is an edit here"* — so a type that asserted them
+    would make narrowing the range retroactively un-rehydrate every profile
+    outside the new one, and the first symptom would be `GET /users/me` failing
+    for real players. **The write path refuses; the fold accepts.**
     """
 
     kilometres: int
 
-    def __post_init__(self) -> None:
-        if not SEARCH_RADIUS_BOUNDS.contains(self.kilometres):
+    @classmethod
+    def chosen(cls, kilometres: int) -> "SearchRadius":
+        """A radius a player just picked, checked against the served bounds.
+
+        The check happens even though the slider cannot offer an invalid value:
+        the bounds are served so a client can build a control that only produces
+        legal numbers, and a control is not a validation (``docs/adr/0089``) — it
+        is absent from a replayed request and from every build that is not this
+        one. **Every command path goes through here.**
+        """
+
+        if not SEARCH_RADIUS_BOUNDS.contains(kilometres):
             raise SearchRadiusOutOfBounds()
+        return cls(kilometres=kilometres)
 
     @classmethod
-    def default(cls) -> "SearchRadius":
-        """What the control opens at, for a caller that needs a radius to show."""
+    def recorded(cls, kilometres: int) -> "SearchRadius":
+        """A radius read back off a stream. **Deliberately not re-checked.**
 
-        return cls(kilometres=SEARCH_RADIUS_BOUNDS.default_km)
+        Named rather than left as the bare constructor so that every call site
+        says which of the two it is, and so that a reader of ``_apply`` can see
+        that the fold accepts what the write path refused to let in.
+        """
+
+        return cls(kilometres=kilometres)

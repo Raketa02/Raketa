@@ -8,11 +8,19 @@ event-sourced base, because event-sourced-versus-persisted-with-events is an ope
 per-context decision and a shared base would quietly answer it for the contexts
 nobody has built yet.
 
-**There is no lookup by payload here**, which is the one way this adapter is
-simpler than the rating ones. A profile's stream id *is* the player id
-(``domain/ids.py``), so every question this port answers is a direct stream
-read — nothing scans opening events, and nothing depends on a serialized field
-name staying spelled the way the codec writes it.
+**A profile's stream id is the player id itself.** There is no derivation and no
+namespace, because there is nothing to derive *from*: a Skill rating is keyed on
+``(player, sport)`` and needs a function to collapse the pair, where a profile is
+keyed on the player and only the player (``docs/adr/0089``). One player therefore
+has exactly one profile stream, and the store's own uniqueness on
+``(aggregate_type, aggregate_id, version)`` is what makes *at most one profile
+per player* something the database enforces rather than something a
+read-before-write hopes for.
+
+**There is no lookup by payload here**, which follows from that and is the one
+way this adapter is simpler than the rating ones: every question this port
+answers is a direct stream read. Nothing scans opening events, and nothing
+depends on a serialized field name staying spelled the way the codec writes it.
 
 **The version is recovered, not taken**, so this must be constructed **per
 request** from the session, exactly as the event store dependency is. A profile

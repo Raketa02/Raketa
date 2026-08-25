@@ -147,8 +147,31 @@ class AvailabilityGrid:
         return cls()
 
     @classmethod
+    def of_cells(cls, cells: Iterable[tuple[int, str]]) -> "AvailabilityGrid":
+        """The grid these ``(weekday, part)`` pairs make.
+
+        The command path's entry point, so that a *command* carries primitives
+        from the boundary and the domain is what turns them into slots
+        (``backend/CONTEXT.md`` — *Command*). Raises through ``invariant`` for a
+        pair that is not a cell, because the boundary schema constrains the day
+        to 1–7 and the part to the three there are: reaching this with anything
+        else means a caller inside the application built it.
+        """
+
+        return cls.of(
+            AvailabilitySlot(day=iso_weekday(day), part=_part(part))
+            for day, part in cells
+        )
+
+    @classmethod
     def from_codes(cls, codes: Iterable[str]) -> "AvailabilityGrid":
         return cls.of(AvailabilitySlot.from_code(code) for code in codes)
+
+    @property
+    def cells(self) -> tuple[tuple[int, str], ...]:
+        """The grid as the boundary spells it, in the grid's own order."""
+
+        return tuple((int(slot.day), slot.part.value) for slot in self.slots)
 
     @property
     def codes(self) -> tuple[str, ...]:
@@ -158,6 +181,11 @@ class AvailabilityGrid:
 
     def __len__(self) -> int:
         return len(self.slots)
+
+
+def _part(value: str) -> DayPart:
+    invariant(value in DayPart.__members__, f"part of the day: {value!r}")
+    return DayPart[value]
 
 
 def _in_reading_order(

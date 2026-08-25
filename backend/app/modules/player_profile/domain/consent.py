@@ -56,6 +56,28 @@ class ConsentSurface(StrEnum):
     PROFILE = "PROFILE"
 
 
+def answerable_copy_version(value: str) -> str:
+    """The copy version a consent answer may be *recorded against*, or a raise.
+
+    **On the write path only.** A consent answer already on a stream is folded
+    back without passing through here, for the reason the tag bounds and the
+    radius bounds are not re-checked on replay: ``MAX_COPY_VERSION_LENGTH`` is a
+    policy number somebody may lower, and a fold that could refuse a recorded
+    fact would un-rehydrate the profiles that hold longer ones.
+
+    Raises through ``invariant`` rather than returning a refusal because the
+    boundary schema already constrains both ends — reaching this with an empty
+    string means a caller inside the application built one, which is a bug.
+    """
+
+    invariant(bool(value.strip()), "proposals opt-in with no copy version")
+    invariant(
+        len(value) <= MAX_COPY_VERSION_LENGTH,
+        f"copy version length: {len(value)}",
+    )
+    return value
+
+
 @dataclass(frozen=True, slots=True)
 class ProposalsOptIn:
     """One answer to the proposals question, with what makes it evidence.
@@ -63,6 +85,11 @@ class ProposalsOptIn:
     Note what is *not* here: a default, an "unknown" member, and any way to
     construct one without saying which words were shown. An unanswered opt-in is
     represented by there being no ``ProposalsOptIn`` at all.
+
+    This is the **replayed** shape — what a fold over the stream produces — so it
+    asserts only what is true of every answer ever recorded. The rule about which
+    copy versions may be *written* lives in ``answerable_copy_version`` above,
+    where the write path can reach it and the fold cannot.
     """
 
     accepted: bool
@@ -71,15 +98,11 @@ class ProposalsOptIn:
     answered_at: Instant
 
     def __post_init__(self) -> None:
+        # A type-level truth rather than a policy: `accepted` is the answer, and
+        # a non-bool here means something has put a third state into a question
+        # that has two. Never edited by a product decision, so never a hazard on
+        # replay.
         invariant(
             isinstance(self.accepted, bool),
             f"proposals opt-in answer: {self.accepted!r}",
-        )
-        invariant(
-            bool(self.copy_version.strip()),
-            "proposals opt-in with no copy version",
-        )
-        invariant(
-            len(self.copy_version) <= MAX_COPY_VERSION_LENGTH,
-            f"copy version length: {len(self.copy_version)}",
         )

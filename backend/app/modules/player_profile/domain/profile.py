@@ -20,6 +20,16 @@ an idempotent client retry from growing a stream by an event that says a player
 did not do anything. The consent transition is the deliberate exception, and
 ``answer_proposals_opt_in`` says why.
 
+**The write path refuses; the fold accepts.** ``_apply`` rebuilds every value
+through a ``recorded`` constructor that does *not* re-check the served bounds,
+and the transitions above build through the checking ones. That asymmetry is
+load-bearing: the tag floor and ceiling, the radius bounds and the copy-version
+cap are all documented as numbers product may edit, and a fold that could refuse
+a recorded fact would make lowering any of them retroactively un-rehydrate the
+profiles outside the new range — first visible as ``GET /users/me`` failing for
+players who had done nothing wrong. A stream is a record of what happened, and
+replaying it may not second-guess it.
+
 **Snapshotting is not built, and this is the aggregate that will need it.** An
 assessment is under ten events and then finished; a profile is written every time
 someone adjusts their week, for years. ADR-0089 records that as a known cost
@@ -36,7 +46,11 @@ from uuid import UUID
 
 from app.kernel import Instant, instant
 from app.modules.player_profile.domain.availability import AvailabilityGrid
-from app.modules.player_profile.domain.consent import ConsentSurface, ProposalsOptIn
+from app.modules.player_profile.domain.consent import (
+    ConsentSurface,
+    ProposalsOptIn,
+    answerable_copy_version,
+)
 from app.modules.player_profile.domain.errors import (
     DuplicatePhoto,
     TooManyPhotos,
@@ -63,7 +77,7 @@ MAX_PROFILE_PHOTOS: Final = 3
 
 
 def photo_order(photo_ids: Iterable[UUID]) -> tuple[UUID, ...]:
-    """The photo list as a profile may hold it, or a refusal saying why not.
+    """The photo list as a profile may hold it; raises if it is not one.
 
     **Order is preserved, never sorted.** The first photo is the one a player
     card shows, so the sequence the client sent *is* the answer — which is the
@@ -183,7 +197,7 @@ class PlayerProfile:
             ProposalsOptInAnswered(
                 player_id=player_id,
                 accepted=proposals_opt_in_accepted,
-                copy_version=consent_copy_version,
+                copy_version=answerable_copy_version(consent_copy_version),
                 surface=consent_surface.value,
                 occurred_at=occurred_at,
             )
@@ -281,7 +295,7 @@ class PlayerProfile:
             ProposalsOptInAnswered(
                 player_id=self.player_id,
                 accepted=accepted,
-                copy_version=copy_version,
+                copy_version=answerable_copy_version(copy_version),
                 surface=surface.value,
                 occurred_at=occurred_at,
             )
@@ -298,19 +312,19 @@ class PlayerProfile:
     def _apply(self, event: DomainEvent) -> None:
         if isinstance(event, PlayerProfileCreated):
             self.player_id = event.player_id
-            self.social_tags = SocialTagSelection.from_ids(event.social_tags)
+            self.social_tags = SocialTagSelection.recorded(event.social_tags)
             self.photo_ids = tuple(UUID(value) for value in event.photo_ids)
             self.availability = AvailabilityGrid.from_codes(event.availability)
             self.location = LocationArea(
                 latitude=event.latitude, longitude=event.longitude
             )
-            self.search_radius = SearchRadius(kilometres=event.search_radius_km)
+            self.search_radius = SearchRadius.recorded(event.search_radius_km)
             self.idempotency_key = event.idempotency_key
             self.created_at = instant(event.occurred_at)
             self._touch(event.occurred_at)
             return
         if isinstance(event, SocialTagsChanged):
-            self.social_tags = SocialTagSelection.from_ids(event.social_tags)
+            self.social_tags = SocialTagSelection.recorded(event.social_tags)
             self._touch(event.occurred_at)
             return
         if isinstance(event, PhotosChanged):
@@ -328,7 +342,7 @@ class PlayerProfile:
             self._touch(event.occurred_at)
             return
         if isinstance(event, SearchRadiusChanged):
-            self.search_radius = SearchRadius(kilometres=event.search_radius_km)
+            self.search_radius = SearchRadius.recorded(event.search_radius_km)
             self._touch(event.occurred_at)
             return
         if isinstance(event, ProposalsOptInAnswered):

@@ -145,7 +145,7 @@ async def commit_player_profile(
             idempotency_key=idempotency_key,
             social_tag_ids=payload.social_tag_ids,
             photo_ids=payload.photo_ids,
-            availability=payload.availability_slots(),
+            availability=payload.availability_cells(),
             latitude=payload.location.latitude,
             longitude=payload.location.longitude,
             search_radius_km=payload.search_radius_km,

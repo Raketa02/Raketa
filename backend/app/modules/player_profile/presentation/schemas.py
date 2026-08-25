@@ -20,11 +20,10 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
-from app.kernel import invariant, iso_weekday
+from app.kernel import invariant
 from app.modules.player_profile.domain.availability import (
     DAYS_IN_THE_GRID,
     AvailabilityGrid,
-    AvailabilitySlot,
     DayPart,
 )
 from app.modules.player_profile.domain.consent import (
@@ -208,12 +207,16 @@ class AvailabilitySlotResource(BaseModel):
     )
     part: DayPart = Field(..., description="Which part of that day")
 
-    def to_domain(self) -> AvailabilitySlot:
-        return AvailabilitySlot(day=iso_weekday(self.day), part=self.part)
+    def as_cell(self) -> tuple[int, str]:
+        """The pair a command carries. **Not a domain value object** — building
+        one is the domain's job, not the boundary's (``backend/CONTEXT.md``)."""
+
+        return self.day, self.part.value
 
     @classmethod
-    def from_domain(cls, slot: AvailabilitySlot) -> "AvailabilitySlotResource":
-        return cls(day=int(slot.day), part=slot.part)
+    def from_cell(cls, cell: tuple[int, str]) -> "AvailabilitySlotResource":
+        day, part = cell
+        return cls(day=day, part=DayPart(part))
 
 
 class LocationAreaResource(BaseModel):
@@ -314,8 +317,8 @@ class CommitPlayerProfileRequest(BaseModel):
     )
     proposals_opt_in: ProposalsOptInRequest
 
-    def availability_slots(self) -> list[AvailabilitySlot]:
-        return [slot.to_domain() for slot in self.availability]
+    def availability_cells(self) -> list[tuple[int, str]]:
+        return [slot.as_cell() for slot in self.availability]
 
 
 class ProposalsOptInResponse(BaseModel):
@@ -386,4 +389,4 @@ class PlayerProfileResponse(BaseModel):
 
 
 def _grid_resource(grid: AvailabilityGrid) -> list[AvailabilitySlotResource]:
-    return [AvailabilitySlotResource.from_domain(slot) for slot in grid.slots]
+    return [AvailabilitySlotResource.from_cell(cell) for cell in grid.cells]

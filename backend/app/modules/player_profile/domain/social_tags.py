@@ -187,11 +187,19 @@ class SocialTagSelection:
     their pickers sent them in, and a stored selection reads the way the picker
     renders it.
 
-    **This is where the served bounds are re-validated, and it has to be here.**
-    The floor and the ceiling are published at ``GET /player-profile/options`` so
-    a picker can grey out its confirm control, and a disabled button is not a
-    validation (``docs/adr/0089``) — it is absent from a replayed request, an
-    older build, and anything that is not the app.
+    **The floor and the ceiling are not an invariant of this type**, and that is
+    deliberate. ``chosen`` refuses a selection outside them; ``recorded`` does
+    not, because a selection *already on a stream* was legal when it was written
+    and stays a fact whatever the bounds say today. The bounds are documented as
+    editable — *"a later opinion is an edit here"* — so a type that asserted them
+    would make lowering the ceiling retroactively un-rehydrate every profile
+    above the new one, and the first symptom would be `GET /users/me` failing for
+    real players. **The write path refuses; the fold accepts.**
+
+    What *is* an invariant of the type is the ordering: a selection is always
+    held in the vocabulary's own order, so two players who picked the same tags
+    hold equal selections whatever order their pickers sent them in, and a stored
+    selection reads the way the picker renders it.
     """
 
     tags: tuple[SocialTag, ...]
@@ -199,12 +207,19 @@ class SocialTagSelection:
     def __post_init__(self) -> None:
         invariant(
             list(self.tags) == _in_vocabulary_order(set(self.tags)),
-            "a social tag selection was built outside `of`",
+            "a social tag selection was built outside `chosen` or `recorded`",
         )
 
     @classmethod
-    def of(cls, tags: Iterable[SocialTag]) -> "SocialTagSelection":
-        """The selection these tags make, or a refusal naming which rule broke.
+    def chosen(cls, tags: Iterable[SocialTag]) -> "SocialTagSelection":
+        """A selection a player just made, checked against the served bounds.
+
+        **This is where the served bounds are re-validated, and it has to be
+        here.** The floor and the ceiling are published at
+        ``GET /player-profile/options`` so a picker can grey out its confirm
+        control, and a disabled button is not a validation (``docs/adr/0089``) —
+        it is absent from a replayed request, an older build, and anything that
+        is not the app.
 
         Duplicates are **refused** rather than dropped, which is the opposite of
         what an availability grid does with a repeated slot — deliberately. A
@@ -214,9 +229,9 @@ class SocialTagSelection:
         them they picked too few.
         """
 
-        chosen = tuple(tags)
-        unique = set(chosen)
-        if len(unique) != len(chosen):
+        picked = tuple(tags)
+        unique = set(picked)
+        if len(unique) != len(picked):
             raise DuplicateSocialTag()
         if not SOCIAL_TAG_SELECTION_BOUNDS.contains(len(unique)):
             raise SocialTagSelectionOutOfBounds()
@@ -224,7 +239,7 @@ class SocialTagSelection:
 
     @classmethod
     def from_ids(cls, ids: Iterable[str]) -> "SocialTagSelection":
-        """The selection these wire ids make, refusing any the vocabulary lacks.
+        """A selection from wire ids, refusing any the vocabulary lacks.
 
         An id this platform does not serve is refused with its own code rather
         than folded into "invalid selection", because the two ask the client for
@@ -233,13 +248,20 @@ class SocialTagSelection:
         longer serves, and the recovery for that one is to re-read the options.
         """
 
-        tags: list[SocialTag] = []
-        for value in ids:
-            try:
-                tags.append(SocialTag(value))
-            except ValueError as exc:
-                raise UnknownSocialTag() from exc
-        return cls.of(tags)
+        return cls.chosen(_parsed(ids))
+
+    @classmethod
+    def recorded(cls, ids: Iterable[str]) -> "SocialTagSelection":
+        """A selection read back off a stream. **Not re-counted.**
+
+        The ids themselves are still parsed, and an unparseable one still raises
+        — but that is not the same hazard: **a tag id is permanent**, never
+        reused and never renamed, so an id on a stream is an id this enum still
+        holds. A failure here means that invariant was broken, which is a bug to
+        hear about rather than a bound somebody moved.
+        """
+
+        return cls(tags=tuple(_in_vocabulary_order(_parsed(ids))))
 
     @property
     def ids(self) -> tuple[str, ...]:
@@ -249,6 +271,18 @@ class SocialTagSelection:
 
     def __len__(self) -> int:
         return len(self.tags)
+
+
+def _parsed(ids: Iterable[str]) -> list[SocialTag]:
+    """Wire ids as tags, refusing any this platform does not serve."""
+
+    tags: list[SocialTag] = []
+    for value in ids:
+        try:
+            tags.append(SocialTag(value))
+        except ValueError as exc:
+            raise UnknownSocialTag() from exc
+    return tags
 
 
 def _in_vocabulary_order(tags: Iterable[SocialTag]) -> list[SocialTag]:

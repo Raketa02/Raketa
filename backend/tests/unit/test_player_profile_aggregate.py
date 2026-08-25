@@ -17,8 +17,14 @@ from app.modules.player_profile.domain.availability import (
     AvailabilitySlot,
     DayPart,
 )
+from app.modules.player_profile.domain import search_radius, social_tags
 from app.modules.player_profile.domain.consent import ConsentSurface
-from app.modules.player_profile.domain.errors import DuplicatePhoto, TooManyPhotos
+from app.modules.player_profile.domain.errors import (
+    DuplicatePhoto,
+    SearchRadiusOutOfBounds,
+    SocialTagSelectionOutOfBounds,
+    TooManyPhotos,
+)
 from app.modules.player_profile.domain.events import (
     AvailabilityChanged,
     LocationChanged,
@@ -33,8 +39,14 @@ from app.modules.player_profile.domain.profile import (
     MAX_PROFILE_PHOTOS,
     PlayerProfile,
 )
-from app.modules.player_profile.domain.search_radius import SearchRadius
-from app.modules.player_profile.domain.social_tags import SocialTagSelection
+from app.modules.player_profile.domain.search_radius import (
+    SearchRadius,
+    SearchRadiusBounds,
+)
+from app.modules.player_profile.domain.social_tags import (
+    SocialTagSelection,
+    SocialTagSelectionBounds,
+)
 from app.shared.ids import new_uuid
 from tests.unit.fake_event_store import utc
 
@@ -55,7 +67,7 @@ def a_profile(**overrides) -> PlayerProfile:
             [AvailabilitySlot(day=iso_weekday(2), part=DayPart.EVENING)]
         ),
         location=LocationArea.around(51.5074, -0.1278),
-        search_radius=SearchRadius(kilometres=10),
+        search_radius=SearchRadius.chosen(kilometres=10),
         proposals_opt_in_accepted=True,
         consent_copy_version="proposals-2026-08",
         consent_surface=ConsentSurface.ONBOARDING,
@@ -190,7 +202,7 @@ def test_each_preference_has_its_own_change_event():
     profile.change_photos([new_uuid()], occurred_at=LATER)
     profile.change_availability(AvailabilityGrid.blank(), occurred_at=LATER)
     profile.change_location(LocationArea.around(48.85, 2.35), occurred_at=LATER)
-    profile.change_search_radius(SearchRadius(kilometres=25), occurred_at=LATER)
+    profile.change_search_radius(SearchRadius.chosen(kilometres=25), occurred_at=LATER)
 
     assert [type(event) for event in profile.pull_events()] == [
         SocialTagsChanged,
@@ -210,7 +222,7 @@ def test_a_preference_set_to_what_it_already_is_records_nothing():
     profile.change_social_tags(
         SocialTagSelection.from_ids(TAGS), occurred_at=LATER
     )
-    profile.change_search_radius(SearchRadius(kilometres=10), occurred_at=LATER)
+    profile.change_search_radius(SearchRadius.chosen(kilometres=10), occurred_at=LATER)
     profile.change_location(
         LocationArea.around(51.5074, -0.1278), occurred_at=LATER
     )
@@ -268,6 +280,51 @@ def test_reordering_the_same_photos_is_a_change():
     profile.change_photos([second, first], occurred_at=LATER)
 
     assert [type(event) for event in profile.pull_events()] == [PhotosChanged]
+
+
+def test_a_profile_still_replays_after_the_served_bounds_are_narrowed(monkeypatch):
+    """**The write path refuses; the fold accepts.** The regression this exists
+    for: replaying through the *checking* constructors meant that the day product
+    lowered the tag ceiling or raised the minimum radius, every profile outside
+    the new range stopped rehydrating — so `GET /users/me` would 400 for players
+    who had done nothing, and the fourth branch of the entry gate ADR-0090
+    depends on would fail for exactly them.
+
+    The bounds are documented as editable (*"a later opinion is an edit here"*),
+    which is what makes this reachable rather than theoretical.
+    """
+
+    committed = a_profile(
+        social_tags=SocialTagSelection.from_ids(
+            ["PLAYS_TO_WIN", "HERE_TO_IMPROVE", "QUIET_AND_FOCUSED"]
+        ),
+        search_radius=SearchRadius.chosen(kilometres=40),
+    )
+    stream = committed.pull_events()
+
+    # Product changes its mind: at most two tags, and never further than 20km.
+    monkeypatch.setattr(
+        social_tags,
+        "SOCIAL_TAG_SELECTION_BOUNDS",
+        SocialTagSelectionBounds(minimum_tags=1, maximum_tags=2),
+    )
+    monkeypatch.setattr(
+        search_radius,
+        "SEARCH_RADIUS_BOUNDS",
+        SearchRadiusBounds(minimum_km=1, maximum_km=20, step_km=1, default_km=10),
+    )
+
+    rebuilt = PlayerProfile.from_history(stream)
+
+    assert len(rebuilt.social_tags) == 3, "the three tags they actually picked"
+    assert rebuilt.search_radius.kilometres == 40
+    # And the write path has moved with the bounds, which is the other half.
+    with pytest.raises(SocialTagSelectionOutOfBounds):
+        SocialTagSelection.from_ids(
+            ["PLAYS_TO_WIN", "HERE_TO_IMPROVE", "QUIET_AND_FOCUSED"]
+        )
+    with pytest.raises(SearchRadiusOutOfBounds):
+        SearchRadius.chosen(kilometres=40)
 
 
 def test_an_event_this_aggregate_does_not_know_is_refused_rather_than_ignored():

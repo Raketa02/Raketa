@@ -110,9 +110,9 @@ class CommitPlayerProfile:
             raise ProposalsOptInNotAnswered()
 
         selection = SocialTagSelection.from_ids(command.social_tag_ids)
-        radius = SearchRadius(kilometres=command.search_radius_km)
+        radius = SearchRadius.chosen(command.search_radius_km)
         area = LocationArea.around(command.latitude, command.longitude)
-        grid = AvailabilityGrid.of(command.availability)
+        grid = AvailabilityGrid.of_cells(command.availability)
         # Ordered and counted here as well as inside ``create``, so that the
         # ids checked against storage below are exactly the ids that will be
         # recorded — a duplicate refused after three existence checks would have

@@ -16,8 +16,10 @@ from app.modules.player_profile.domain.availability import (
     DayPart,
 )
 from app.modules.player_profile.domain.consent import (
+    MAX_COPY_VERSION_LENGTH,
     ConsentSurface,
     ProposalsOptIn,
+    answerable_copy_version,
 )
 from app.modules.player_profile.domain.errors import (
     DuplicateSocialTag,
@@ -51,10 +53,10 @@ def slot(day: int, part: DayPart) -> AvailabilitySlot:
 def test_a_selection_at_each_end_of_the_bounds_is_accepted():
     every_tag = [tag for group in SOCIAL_TAG_VOCABULARY.values() for tag in group]
 
-    floor = SocialTagSelection.of(
+    floor = SocialTagSelection.chosen(
         every_tag[: SOCIAL_TAG_SELECTION_BOUNDS.minimum_tags]
     )
-    ceiling = SocialTagSelection.of(
+    ceiling = SocialTagSelection.chosen(
         every_tag[: SOCIAL_TAG_SELECTION_BOUNDS.maximum_tags]
     )
 
@@ -64,7 +66,7 @@ def test_a_selection_at_each_end_of_the_bounds_is_accepted():
 
 def test_a_selection_below_the_floor_is_refused():
     with pytest.raises(SocialTagSelectionOutOfBounds):
-        SocialTagSelection.of([SocialTag.PLAYS_TO_WIN])
+        SocialTagSelection.chosen([SocialTag.PLAYS_TO_WIN])
 
 
 def test_a_selection_above_the_ceiling_is_refused():
@@ -72,7 +74,7 @@ def test_a_selection_above_the_ceiling_is_refused():
     too_many = every_tag[: SOCIAL_TAG_SELECTION_BOUNDS.maximum_tags + 1]
 
     with pytest.raises(SocialTagSelectionOutOfBounds):
-        SocialTagSelection.of(too_many)
+        SocialTagSelection.chosen(too_many)
 
 
 def test_a_tag_id_outside_the_vocabulary_is_refused_with_its_own_code():
@@ -101,6 +103,33 @@ def test_a_selection_is_held_in_vocabulary_order_whatever_order_it_arrived_in():
     assert forwards.ids == ("STAYS_FOR_A_DRINK", "HERE_TO_IMPROVE")
 
 
+def test_a_selection_already_on_a_stream_is_not_re_counted():
+    """**The write path refuses; the fold accepts** — the same rule the radius
+    holds, and for the same reason: the ceiling is a number product may lower,
+    and a fold that could refuse a recorded fact would un-rehydrate every profile
+    above the new one."""
+
+    every_tag = [tag for group in SOCIAL_TAG_VOCABULARY.values() for tag in group]
+    was_legal_once = [
+        tag.value for tag in every_tag[: SOCIAL_TAG_SELECTION_BOUNDS.maximum_tags + 2]
+    ]
+
+    recorded = SocialTagSelection.recorded(was_legal_once)
+
+    assert len(recorded) == len(was_legal_once)
+    with pytest.raises(SocialTagSelectionOutOfBounds):
+        SocialTagSelection.from_ids(was_legal_once), "but the write path still refuses"
+
+
+def test_an_unparseable_tag_id_still_raises_on_replay():
+    """Not the same hazard as a moved bound: **a tag id is permanent**, never
+    reused and never renamed, so an id on a stream is one this enum still holds.
+    A failure here means that invariant was broken — a bug to hear about."""
+
+    with pytest.raises(UnknownSocialTag):
+        SocialTagSelection.recorded(["NO_SUCH_TAG"])
+
+
 # ---------------------------------------------------------------------------
 # Search radius
 # ---------------------------------------------------------------------------
@@ -111,7 +140,7 @@ def test_a_selection_is_held_in_vocabulary_order_whatever_order_it_arrived_in():
     [SEARCH_RADIUS_BOUNDS.minimum_km, SEARCH_RADIUS_BOUNDS.maximum_km],
 )
 def test_both_ends_of_the_served_range_are_a_radius(kilometres: int):
-    assert SearchRadius(kilometres=kilometres).kilometres == kilometres
+    assert SearchRadius.chosen(kilometres=kilometres).kilometres == kilometres
 
 
 @pytest.mark.parametrize(
@@ -120,11 +149,23 @@ def test_both_ends_of_the_served_range_are_a_radius(kilometres: int):
 )
 def test_a_radius_outside_the_served_range_is_refused(kilometres: int):
     with pytest.raises(SearchRadiusOutOfBounds):
-        SearchRadius(kilometres=kilometres)
+        SearchRadius.chosen(kilometres=kilometres)
 
 
-def test_the_default_radius_is_the_one_the_control_opens_at():
-    assert SearchRadius.default().kilometres == SEARCH_RADIUS_BOUNDS.default_km
+def test_a_radius_already_on_a_stream_is_not_re_checked():
+    """**The write path refuses; the fold accepts.**
+
+    The bounds are documented as editable — *"a later opinion is an edit here"*.
+    If narrowing them could refuse a value already recorded, then lowering the
+    maximum would retroactively un-rehydrate every profile above it, and the
+    first symptom would be `GET /users/me` failing for players who did nothing
+    wrong. A stream is a record of what happened; replaying it may not
+    second-guess it.
+    """
+
+    was_legal_once = SEARCH_RADIUS_BOUNDS.maximum_km + 25
+
+    assert SearchRadius.recorded(was_legal_once).kilometres == was_legal_once
 
 
 # ---------------------------------------------------------------------------
@@ -211,11 +252,39 @@ def test_two_fixes_in_the_same_area_become_the_same_area():
 # ---------------------------------------------------------------------------
 
 
-def test_a_consent_record_cannot_be_built_without_the_words_it_was_given_against():
+def test_a_consent_answer_cannot_be_recorded_without_the_words_it_was_given_against():
+    with pytest.raises(InvariantViolated):
+        answerable_copy_version("   ")
+
+
+def test_a_copy_version_longer_than_the_cap_cannot_be_recorded():
+    with pytest.raises(InvariantViolated):
+        answerable_copy_version("v" * (MAX_COPY_VERSION_LENGTH + 1))
+
+
+def test_a_consent_answer_already_on_a_stream_is_not_re_checked():
+    """The cap is a policy number somebody may lower. The fold has to accept
+    what was legal when it was written, or a shorter cap would un-rehydrate the
+    consent records that evidence the longer ones."""
+
+    already_recorded = ProposalsOptIn(
+        accepted=True,
+        copy_version="v" * (MAX_COPY_VERSION_LENGTH + 1),
+        surface=ConsentSurface.ONBOARDING,
+        answered_at=utc(2026, 8, 25),
+    )
+
+    assert already_recorded.accepted is True
+
+
+def test_an_answer_that_is_not_a_yes_or_a_no_is_a_broken_precondition():
+    """A type-level truth rather than a policy — the question has two states,
+    and it is never edited by a product decision."""
+
     with pytest.raises(InvariantViolated):
         ProposalsOptIn(
-            accepted=True,
-            copy_version="   ",
+            accepted="yes",  # type: ignore[arg-type]
+            copy_version="proposals-2026-08",
             surface=ConsentSurface.ONBOARDING,
             answered_at=utc(2026, 8, 25),
         )

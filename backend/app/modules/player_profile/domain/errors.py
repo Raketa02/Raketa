@@ -14,13 +14,18 @@ refused here anyway, because a disabled button is not a validation
 (``docs/adr/0089``): it is absent from a replayed request, from an older build,
 and from anything that is not the app.
 
-**All four are 400s rather than 413 and 415**, and that is a decision rather
-than an oversight. The envelope's contract is that ``code`` is *"the only half a
-client may branch on"* (``app/core/exception_handlers.py``), so the status buys
-nothing the code does not already carry — while adding two status classes to
-``app/shared/domain/errors.py``, which three contexts share, for one endpoint's
-sake. If a reverse proxy ever caps request bodies in front of this application,
-its own 413 will arrive without a code and that is the moment to reconsider.
+**The photo-format ones are 400s rather than 413 and 415**, and that is a
+decision rather than an oversight. The envelope's contract is that ``code`` is
+*"the only half a client may branch on"* (``app/core/exception_handlers.py``), so
+the status buys nothing the code does not already carry — while adding two status
+classes to ``app/shared/domain/errors.py``, which three contexts share, for one
+endpoint's sake. If a reverse proxy ever caps request bodies in front of this
+application, its own 413 will arrive without a code and that is the moment to
+reconsider.
+
+The same reasoning puts every one of the commit's refusals on 400 and gives each
+its own code, so that seven failures of one request stay seven distinct
+recoveries on the wire.
 """
 
 from __future__ import annotations
