@@ -58,6 +58,10 @@ class SearchRadiusBounds:
 
 #: The served bounds. A change here changes what every client's slider offers and
 #: what the profile commit accepts, in one release and without an app-store one.
+#:
+#: These four numbers were unspecified too, and product confirmed them as they
+#: stand on 2026-08-25. Unlike a tag id they are not on a clock: nothing persists
+#: a bound, so a later opinion is an edit here rather than a retirement.
 SEARCH_RADIUS_BOUNDS = SearchRadiusBounds(
     minimum_km=1,
     maximum_km=50,

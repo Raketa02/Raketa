@@ -24,16 +24,19 @@ two different lists.
     ON_THE_COURT        what they are like while it is going on
     WHY_YOU_ARE_HERE    what they came for
 
-**Where these eighteen came from, and how long they are still cheap to change.**
-The ticket that asked for this endpoint says the eighteen are in its parent spec.
-They are not — the parent names the three groups and the count, and the source
-documents it read them from were removed in the 2026-08-25 reset. So the ids
-below were composed here, to the glossary's rule that a tag is about the game and
-never about the person. Nothing has been persisted against them yet: until the
-profile commit ships and a real profile holds one, replacing an id is an edit to
-this file, a test and the contract. **After that it is not** — an id is honoured
-forever, so a later change means retiring an id and adding another beside it.
-Replace them now if product has an approved list.
+**Where these eighteen came from.** The ticket that asked for this endpoint said
+the eighteen were in its parent spec. They were not — the parent named the three
+groups and the count, and the source documents it read them from went in the
+2026-08-25 reset. So the ids below were composed here, to the glossary's rule
+that a tag is about the game and never about the person, and then put to product
+as a decision rather than left standing as an assumption.
+
+**Product approved them as they stand, on 2026-08-25** — the equal six-per-group
+split included, which the parent never specified either. That happened while the
+list was still cheap: the profile commit had not shipped, no profile held an id,
+and a replacement was an edit to this file, two tests and the contract. It is not
+cheap any more. From here an id is honoured forever, so changing the vocabulary
+means retiring an id and adding another beside it — never editing a line below.
 """
 
 from __future__ import annotations
