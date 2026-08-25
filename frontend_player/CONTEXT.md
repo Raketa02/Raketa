@@ -179,6 +179,26 @@ player's decision to come back later. Both are modelled in
 
 ### Platform and delivery
 
+- **Platform port** — a narrow TypeScript interface in `shared/lib/platform/` over one
+  native capability, with exactly two implementations: the real one that imports the
+  native module, and a fake in `src/test-support/platform.ts`. Two exist —
+  `LocationPort` and `ImagePickingPort` — and each is **the only importer of its module**,
+  the way `shared/lib/auth` is the only importer of the keychain. The reason is not
+  tidiness: a native module has no JS underneath it, so a feature that imports one is a
+  feature no test can drive. _Avoid_: "device module", "native service" — a module holding
+  both capabilities is the utils bucket this app bans, and a capability is one file.
+- **Permission state** — the four answers a platform port gives about a capability:
+  `undetermined | granted | denied | blocked`. **Denied and blocked are different
+  refusals** — denied can be asked again at the moment the player understands why; blocked
+  is settled in the OS settings app and re-asking resolves instantly and negatively, so a
+  screen must offer the manual path instead. _Avoid_: a boolean, "permission denied" for
+  both — collapsing them either re-prompts forever or sends an unasked player to Settings.
+- **Location fix** — one position from the device: latitude, longitude, and the accuracy
+  the device itself reports, `null` where it reports none. Read **in the foreground,
+  once**. _Avoid_: "tracking", "background location" — a stream of positions collected
+  while the player is elsewhere is a movement trail, a different privacy class from the
+  one anybody agreed to, and nothing in this app asks for it.
+
 - **New Architecture** — React Native's Fabric/TurboModules runtime, enabled
   (`newArchEnabled`). A dependency blocking it is technical debt with a plan, not an
   exemption.

@@ -68,7 +68,33 @@ export default (): ExpoConfig => {
         backgroundColor: '#ffffff',
       },
     },
-    plugins: ['expo-router', 'expo-secure-store'],
+    plugins: [
+      'expo-router',
+      'expo-secure-store',
+      [
+        'expo-location',
+        {
+          // The one sentence the OS shows above the prompt. It says what is taken —
+          // one position — and what for, because a player who cannot tell why is a
+          // player who says no. Both background flags are spelled out although both
+          // are already the default: a background location is a movement trail, which
+          // is a different privacy class from the one this asks about, and a default
+          // is a thing somebody flips without noticing.
+          locationWhenInUsePermission:
+            'Raketa uses your location once, to set the area you play in.',
+          isIosBackgroundLocationEnabled: false,
+          isAndroidBackgroundLocationEnabled: false,
+          isAndroidForegroundServiceEnabled: false,
+        },
+      ],
+      [
+        'expo-image-picker',
+        {
+          photosPermission:
+            'Raketa uses your photos so you can put a picture of yourself on your profile.',
+        },
+      ],
+    ],
     experiments: {
       typedRoutes: true,
     },

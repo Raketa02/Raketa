@@ -34,6 +34,21 @@ jest.mock('sucrase/register/ts', () => ({}));
 
 const config = appConfig();
 
+/**
+ * One configured plugin entry, as its `[name, options]` pair.
+ *
+ * A plugin listed as a bare string carries no options and would fail here, which is the
+ * intent: the entries below exist *because* of what they configure.
+ */
+function pluginNamed(name: string): [string, Record<string, unknown>] {
+  const entry = (config.plugins ?? []).find(
+    (plugin) => Array.isArray(plugin) && plugin[0] === name,
+  );
+
+  if (!Array.isArray(entry)) throw new Error(`${name} is not configured in app.config.ts`);
+  return [entry[0] as string, (entry[1] ?? {}) as Record<string, unknown>];
+}
+
 describe('the config document', () => {
   it('takes its name from the identity function rather than spelling one', () => {
     expect(config.name).toBe(appIdentity(getEnv().environment).displayName);
@@ -51,6 +66,37 @@ describe('the config document', () => {
 
   it('publishes exactly one URL scheme', () => {
     expect(config.scheme).toBe('raketa');
+  });
+
+  /**
+   * The two native capabilities onboarding needs, and the flag that decides what kind of
+   * product this is.
+   *
+   * A **background** location is not a stronger version of a foreground one — it is a
+   * movement trail, collected while the player is doing something else, and nobody agreed
+   * to that. The ports never ask for it (`src/shared/lib/platform/location.test.ts`), and
+   * this is the other half: the native project generated from this document does not even
+   * declare the permission, so no later code could ask for one that the binary would
+   * grant. Spelled out although `false` is already the plugin's default, because a
+   * default is the kind of thing that gets flipped without anybody reading it.
+   */
+  it('asks for a foreground location and no background one, on either platform', () => {
+    const [, options] = pluginNamed('expo-location');
+
+    expect(options.locationWhenInUsePermission).toEqual(expect.any(String));
+    expect(options.isIosBackgroundLocationEnabled).toBe(false);
+    expect(options.isAndroidBackgroundLocationEnabled).toBe(false);
+    expect(options.isAndroidForegroundServiceEnabled).toBe(false);
+  });
+
+  /**
+   * The prompt is the only place the app explains itself before the OS asks, and an
+   * unexplained prompt is a prompt that gets refused.
+   */
+  it('gives the photo-library prompt a reason to show the player', () => {
+    const [, options] = pluginNamed('expo-image-picker');
+
+    expect(options.photosPermission).toEqual(expect.any(String));
   });
 
   /**

@@ -61,6 +61,23 @@ const secureStoreImport = {
     'Only src/shared/lib/auth may touch the keychain. One module owning it is what makes token lifetime auditable. See docs/adr/0008.',
 };
 
+const locationImport = {
+  group: ['expo-location'],
+  message:
+    'Only src/shared/lib/platform may import expo-location. A native module cannot be ' +
+    'driven from a test, so a feature that imports one is a feature that cannot be ' +
+    'tested — and one file owning the capability is what keeps it foreground-only and ' +
+    'readable in one sitting. Use the LocationPort from @/shared/lib/platform.',
+};
+
+const imagePickerImport = {
+  group: ['expo-image-picker'],
+  message:
+    'Only src/shared/lib/platform may import expo-image-picker. Use the ImagePickingPort ' +
+    'from @/shared/lib/platform, and fakeImagePicking() from src/test-support/platform.ts ' +
+    'in a test — a native module has no JS implementation a test could drive.',
+};
+
 const observabilityVendorImports = {
   group: ['@sentry/*', 'posthog-*', '@amplitude/*', 'mixpanel-*'],
   message:
@@ -93,10 +110,31 @@ const CORE_PATTERNS = [
   crossAppImports,
   deepFeatureImports,
   secureStoreImport,
+  locationImport,
+  imagePickerImport,
   observabilityVendorImports,
 ];
 
 const restrict = (patterns, paths = [asyncStoragePath]) => ['error', { patterns, paths }];
+
+/** Every ban that applies to a file under `src/shared/`, which is the strictest set. */
+const SHARED_PATTERNS = [...CORE_PATTERNS, generatedImports, featureImportsFromShared];
+
+/**
+ * That set minus the one ban a sanctioned owner is exempt from.
+ *
+ * **A subtraction, never a re-listing.** The exception blocks below used to enumerate
+ * their patterns by hand, which meant a ban added to `CORE_PATTERNS` reached every file
+ * in the app *except* the four that had opted out of a different rule — so
+ * `expo-location` was importable from `src/shared/lib/auth/` while three documents said
+ * it was importable nowhere but the platform module. A miss like that is silent: the new
+ * ban is real, it fires almost everywhere, and nothing about the config looks wrong.
+ *
+ * Written this way the next ban propagates on its own, and an exemption states the one
+ * rule it is exempt from rather than the five it still obeys.
+ */
+const sharedPatternsExcept = (...exemptions) =>
+  SHARED_PATTERNS.filter((pattern) => !exemptions.includes(pattern));
 
 export default [
   ...expoConfig,
@@ -184,28 +222,28 @@ export default [
   // --- shared/ is beneath every feature and may not reach back up -------------
   {
     files: ['src/shared/**'],
-    rules: {
-      'no-restricted-imports': restrict([
-        ...CORE_PATTERNS,
-        generatedImports,
-        featureImportsFromShared,
-      ]),
-    },
+    rules: { 'no-restricted-imports': restrict(SHARED_PATTERNS) },
   },
 
-  // --- the three sanctioned exceptions ----------------------------------------
+  // --- the four sanctioned exceptions -----------------------------------------
   {
     // The single chokepoint for credentials (ADR-0008).
     files: ['src/shared/lib/auth/**'],
-    rules: {
-      'no-restricted-imports': restrict([
-        crossAppImports,
-        deepFeatureImports,
-        observabilityVendorImports,
-        generatedImports,
-        featureImportsFromShared,
-      ]),
-    },
+    rules: { 'no-restricted-imports': restrict(sharedPatternsExcept(secureStoreImport)) },
+  },
+  {
+    // The port that owns the device's position — and owns nothing else. The exemption is
+    // one FILE, not the platform directory: a directory-wide one would let `appState.ts`
+    // open the photo library, which is how a module of ports becomes the device bucket
+    // this app bans. Everything above them depends on the interface, which is the only
+    // reason a screen that reads a position can be exercised by a test at all.
+    files: ['src/shared/lib/platform/location.ts'],
+    rules: { 'no-restricted-imports': restrict(sharedPatternsExcept(locationImport)) },
+  },
+  {
+    // Likewise: the photo library, and not the position.
+    files: ['src/shared/lib/platform/imagePicking.ts'],
+    rules: { 'no-restricted-imports': restrict(sharedPatternsExcept(imagePickerImport)) },
   },
   {
     // The single place fetch is configured.
@@ -216,13 +254,7 @@ export default [
     // The adapter that hides the observability vendor from everything else.
     files: ['src/shared/lib/observability/**'],
     rules: {
-      'no-restricted-imports': restrict([
-        crossAppImports,
-        deepFeatureImports,
-        secureStoreImport,
-        generatedImports,
-        featureImportsFromShared,
-      ]),
+      'no-restricted-imports': restrict(sharedPatternsExcept(observabilityVendorImports)),
     },
   },
 

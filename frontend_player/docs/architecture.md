@@ -738,8 +738,18 @@ sessions.
 - **Development builds, not Expo Go**, as the day-to-day environment: `development` →
   `preview/internal` → `production`. Expo Go is for quick experiments and cannot contain
   this app's native dependencies.
-- **Native code hides behind a narrow TS interface** — `LocationService`,
-  `BiometricService` in `src/shared/lib/platform/` — never imported raw across the UI.
+- **Native code hides behind a narrow TS interface** in `src/shared/lib/platform/`, never
+  imported raw across the UI. Two exist: `LocationPort` over `expo-location` and
+  `ImagePickingPort` over `expo-image-picker`, each the only importer of its module and
+  each with a hand-written fake in `src/test-support/platform.ts`. A native module has no
+  JS implementation underneath it, so a feature that imports one is a feature no test can
+  drive — which is the argument, more than tidiness. The linter enforces both bans and
+  `scripts/test-import-boundaries.sh` proves it still does.
+- **Location is foreground only.** Nothing asks for, checks or starts a background
+  location, `app.config.ts` disables it on both platforms, and two tests assert the
+  absence. A background permission is not a stronger foreground one — it collects a
+  movement trail while the player is doing something else, which is a different privacy
+  class from the one they were asked about.
 - **Platform files over scattered branches.** `share.ios.ts` / `share.android.ts` when
   behaviour genuinely differs; not `if (Platform.OS === 'ios')` in twenty components.
 - **Permissions are requested just in time**, when the user understands why, through one
@@ -1003,12 +1013,28 @@ encodes:
 - no imports from `../backend/` or any sibling app
 - `@react-native-async-storage/async-storage` is banned outright
 - `expo-secure-store` is importable only inside `src/shared/lib/auth/`
+- `expo-location` and `expo-image-picker` are importable only by the port that owns each —
+  `platform/location.ts` and `platform/imagePicking.ts`, one file each rather than the
+  platform directory, so a module of ports cannot become the device bucket. The ban holds
+  in tests too, which could not drive a native module anyway
+- **every exemption is a subtraction from the full ban list, never a re-listing.** An
+  exception block that enumerates its patterns by hand loses each ban added after it, and
+  loses it in silence — which is how `expo-location` was briefly importable from
+  `shared/lib/auth/` while three documents said it was importable nowhere but a port
 - `fetch` is configured only in `src/shared/lib/http/`; features call it through there
 - `src/shared/**` may not import `src/features/**`
 - a feature may not deep-import another feature's internals
 - `src/app/**` may not import a feature's internals — only its `types.ts` surface
 
 Circular dependencies fail CI.
+
+And the rules are themselves tested. Every ban above was added to a tree that already
+satisfied it, so not one had ever been seen to fail — which is indistinguishable from one
+that cannot. `pnpm test:boundaries` (`scripts/test-import-boundaries.sh`) feeds the real
+linter code that breaks each module ban, on stdin so nothing is written to disk, and
+asserts it goes red — then asserts it stays quiet in the one module that owns the import.
+It runs in `pnpm check` and as its own CI step, for the reason `make test-hooks` and
+`make test-drift` exist.
 
 ### Anti-patterns, stated plainly
 
@@ -1107,7 +1133,10 @@ when the code that needs them is written — not preemptively:
 - Maestro — E2E journeys ([Part 16](#part-16--testing)).
 
 > `expo-network` was on this list and has since joined the manifest, with the code that
-> wires the online and focus managers ([Part 7](#part-7--tanstack-query)). So has
+> wires the online and focus managers ([Part 7](#part-7--tanstack-query)). So have
+> `expo-location` and `expo-image-picker`, with the two ports that own them
+> ([Part 13](#part-13--native-and-platform)) — added when onboarding's location and photo
+> steps were specified, and not one screen earlier. So has
 > `react-native-svg`, with the confidence ring — the one drawn object that needs vector
 > arcs ([design system 7.8](design-system.md#78-the-confidence-ring)); the level bar beside
 > it is still built from Views, and nothing else in the app needs drawing yet. Both are

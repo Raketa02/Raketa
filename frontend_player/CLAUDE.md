@@ -29,6 +29,14 @@ rotation, the `AppError` family, `shared/lib/auth` over the keychain, and two fe
 sports picker, the adaptive question loop, the explained result, and the summary and data
 screens a player leaves through).
 
+`src/shared/lib/platform/` owns everything the app knows about the device: the Query
+focus and online wirings, and two **platform ports** — `LocationPort` over `expo-location`
+and `ImagePickingPort` over `expo-image-picker`. Each is the only importer of its native
+module, for the reason `shared/lib/auth` is the only importer of the keychain, plus one
+more: a native module has no JS implementation underneath it, so a feature that imports
+one cannot be tested at all. Hand-written fakes live in `src/test-support/platform.ts`.
+**Location is foreground only** — nothing asks for, checks or starts a background one.
+
 `src/shared/ui/` holds the design-system primitives built so far — the cards, note, row,
 hairline, button, tag, bar, header, and the overlays and drawn objects the result screen
 needed (bottom sheet, popover, level bar, confidence ring); the rest arrive with the
@@ -87,10 +95,11 @@ pnpm ios / android
 pnpm lint         # ESLint — also enforces the import boundaries below
 pnpm typecheck    # tsc --noEmit (strict)
 pnpm test         # Jest (jest-expo)
+pnpm test:boundaries   # drive ESLint at code breaking each module ban; it must go red
 pnpm format       # Prettier --write   pnpm format:check → --check
 pnpm gen:api      # regenerate src/generated/ from ../backend/openapi.player.json
 pnpm doctor       # npx expo-doctor — checks dependency/SDK agreement
-pnpm check        # lint + format check + typecheck + test — the local gate
+pnpm check        # lint + format + typecheck + test + boundaries — the local gate
 ```
 
 **You cannot see the screen.** If a change is visual, say so and ask for a look rather than
@@ -98,6 +107,10 @@ asserting it renders correctly.
 
 ## Safety — never without an explicit request
 
+- **Ask for a background location.** Foreground only, permanently: a stream of positions
+  collected while the player is elsewhere is a movement trail, which is not what anybody
+  agreed to. `app.config.ts` disables it on both platforms and two tests assert the
+  absence.
 - **Store credentials anywhere but the OS keychain.** Tokens live in `expo-secure-store`,
   reached only through `src/shared/lib/auth`. **Never** `AsyncStorage` (unencrypted
   plaintext on device), never a module variable that outlives a session, never a log line.
@@ -158,6 +171,13 @@ Rules to preserve:
 - **`src/shared/lib/auth` is the single chokepoint for credentials.** No feature, screen or
   hook imports `expo-secure-store`. One module owning the keychain is what makes token
   lifetime auditable.
+- **Each platform port is the single chokepoint for its native capability.** Only
+  `platform/location.ts` may import `expo-location` and only `platform/imagePicking.ts`
+  may import `expo-image-picker` — one file each, not the platform directory, so a module
+  of ports cannot become a device bucket. Nothing else: not a feature, not a screen, not a
+  test. Depend on `LocationPort` / `ImagePickingPort` and drive the fakes in
+  `src/test-support/platform.ts`. ESLint enforces it and `pnpm test:boundaries` proves the
+  rule still fires.
 - **`src/shared/lib/http` is the only place `fetch` is configured** — and the only place the
   401 → refresh → retry rotation lives.
 - **`shared/` never imports a feature,** and a feature never deep-imports another — go

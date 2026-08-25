@@ -161,6 +161,14 @@ jobs:
         run: pnpm typecheck
       - name: Test
         run: pnpm test
+      # A native module may be imported from exactly one port, and the keychain
+      # from exactly one module. Every one of those bans was added to a tree that
+      # already satisfied it, so none has ever been seen to fail — which is
+      # indistinguishable from one that cannot. This feeds the real linter code
+      # that breaks each rule and asserts it goes red. Nothing is written to
+      # disk: the violations arrive on stdin.
+      - name: Verify the import boundaries still fire
+        run: pnpm test:boundaries
       # Last, and after the check it tests: it perturbs the contract in the
       # workspace and restores it. A drift check nothing exercises is one that
       # can stop matching without anybody noticing — the argument test-hooks.sh
