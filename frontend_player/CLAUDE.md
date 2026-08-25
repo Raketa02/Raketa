@@ -29,9 +29,10 @@ rotation, the `AppError` family, `shared/lib/auth` over the keychain, and three 
 sports picker, the adaptive question loop, the explained result, and the summary and data
 screens a player leaves through) and `player_profile` (onboarding's **second part**: six
 steps over a client-held draft. The routes, the draft and the navigation work end to end,
-and three steps are built — the Social tags picker, 2 to 6 chips from a served vocabulary,
-the photos step, up to three court photos or none, and the availability grid, seven days by
-three parts of the day and blank until a player ticks something; the other three still stand
+and four steps are built — the Social tags picker, 2 to 6 chips from a served vocabulary,
+the photos step, up to three court photos or none, the availability grid, seven days by
+three parts of the day and blank until a player ticks something, and the location step, one
+foreground fix coarsened to about a kilometre before it is held; the other two still stand
 in for themselves).
 
 **Onboarding is two parts, and the part is the checkpoint unit**
@@ -55,9 +56,12 @@ and `ImagePickingPort` over `expo-image-picker`. Each is the only importer of it
 module, for the reason `shared/lib/auth` is the only importer of the keychain, plus one
 more: a native module has no JS implementation underneath it, so a feature that imports
 one cannot be tested at all. Hand-written fakes live in `src/test-support/platform.ts`, and
-a screen reaches the picker through `useImagePicking()` — a context whose default is the
-device, so only a test ever supplies anything else.
-**Location is foreground only** — nothing asks for, checks or starts a background one.
+a screen reaches either through `useLocation()` / `useImagePicking()` — contexts whose
+default is the device, so only a test ever supplies anything else. Beside them sit the two
+lifecycle wirings and `useOnForeground`, the app's one answer to _did we just come back_.
+**Location is foreground only** — nothing asks for, checks or starts a background one — and
+a fix is **coarsened to about a kilometre the moment it is read**, so the precise reading
+never reaches a store, a screen or a crash report.
 
 `shared/lib/http` has **two verbs**: `httpRequest` for JSON and `httpUpload` for one file.
 They share the correlation id, the `Authorization` header, the timeout policy, the error

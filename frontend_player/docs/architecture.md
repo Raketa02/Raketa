@@ -758,6 +758,14 @@ sessions.
   JS implementation underneath it, so a feature that imports one is a feature no test can
   drive — which is the argument, more than tidiness. The linter enforces both bans and
   `scripts/test-import-boundaries.sh` proves it still does.
+- **A screen reaches a port through its context** — `useLocation()` / `useImagePicking()`,
+  each defaulting to the real device, so nothing in the app wires anything up and a test
+  wraps the tree in the device it wants. A screen that imported `deviceLocation` directly
+  would be a screen no test can put in front of a refused permission.
+- **A `blocked` permission has exactly one remedy, and it is not a prompt.**
+  `openAppSettings()` opens the app's own page in Settings; the OS resolves a blocked
+  permission itself, instantly and negatively, so a control that asked again would be a
+  control that does nothing.
 - **Location is foreground only.** Nothing asks for, checks or starts a background
   location, `app.config.ts` disables it on both platforms, and two tests assert the
   absence. A background permission is not a stronger foreground one — it collects a

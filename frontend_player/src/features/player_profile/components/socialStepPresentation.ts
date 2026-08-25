@@ -39,7 +39,7 @@ const COPY: Readonly<Record<SocialStep, StepCopy>> = {
   },
   location: {
     title: 'Where do you play?',
-    asks: 'The area you play in, from your device or picked by hand.',
+    asks: 'The area you play in, read once from your device and rounded.',
   },
   radius: {
     title: 'How far will you travel?',

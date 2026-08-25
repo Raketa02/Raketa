@@ -49,8 +49,9 @@ export interface LocationPort {
   /**
    * One fix, now. `null` when the device could not produce one — a refused permission,
    * location services switched off, or simply no signal. All three mean the same thing to
-   * a screen, which is *offer the manual path*, so they arrive as one answer rather than
-   * as three native error classes every caller would have to know.
+   * a screen, which is *there is no area, say what that costs and let the player continue*,
+   * so they arrive as one answer rather than as three native error classes every caller
+   * would have to know.
    */
   readonly readFix: () => Promise<LocationFix | null>;
 }

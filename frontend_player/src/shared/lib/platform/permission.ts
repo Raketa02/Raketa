@@ -21,7 +21,8 @@
  * - `denied` — refused, and the OS will show the prompt again. Ask at the moment the
  *   player understands why, never before.
  * - `blocked` — refused permanently. Asking resolves instantly and negatively; only the
- *   settings app can change it, so a screen must offer the manual path instead.
+ *   settings app can change it, so a screen must say so and offer `openAppSettings()`
+ *   rather than a control that would prompt.
  */
 export type PermissionState = 'undetermined' | 'granted' | 'denied' | 'blocked';
 
@@ -46,4 +47,34 @@ export function permissionStateOf(response: NativePermissionResponse): Permissio
   if (response.granted) return 'granted';
   if (response.status === 'undetermined') return 'undetermined';
   return response.canAskAgain ? 'denied' : 'blocked';
+}
+
+/**
+ * A capability that can be asked about and asked for — which both ports are, structurally.
+ *
+ * Named as the shape rather than as a union of the two ports, so a third capability obeys
+ * this rule by having the two methods rather than by being added to a list somewhere.
+ */
+export interface AskablePermission {
+  readonly getPermission: () => Promise<PermissionState>;
+  readonly requestPermission: () => Promise<PermissionState>;
+}
+
+/**
+ * Ask, but only where asking achieves something.
+ *
+ * A `granted` permission needs no prompt at all, and a `blocked` one is resolved by the OS
+ * instantly and negatively without showing the player anything — so a caller that asks
+ * anyway loops against a system that has already answered. What is left is the two states
+ * a prompt exists for.
+ *
+ * Here rather than in the steps that reach a capability, because it is a rule about the
+ * vocabulary above rather than about photos or about location, and because the two steps
+ * that had written it themselves had written it identically — which is how the third one
+ * would have come to disagree with them about what a blocked permission means.
+ */
+export async function ensurePermission(capability: AskablePermission): Promise<PermissionState> {
+  const current = await capability.getPermission();
+  if (current === 'granted' || current === 'blocked') return current;
+  return capability.requestPermission();
 }

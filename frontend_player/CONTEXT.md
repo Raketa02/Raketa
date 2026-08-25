@@ -232,13 +232,20 @@ profile editor that later edits the same values.
   `undetermined | granted | denied | blocked`. **Denied and blocked are different
   refusals** — denied can be asked again at the moment the player understands why; blocked
   is settled in the OS settings app and re-asking resolves instantly and negatively, so a
-  screen must offer the manual path instead. _Avoid_: a boolean, "permission denied" for
+  screen must say so and offer the settings page instead of a control that would prompt. _Avoid_: a boolean, "permission denied" for
   both — collapsing them either re-prompts forever or sends an unasked player to Settings.
 - **Location fix** — one position from the device: latitude, longitude, and the accuracy
   the device itself reports, `null` where it reports none. Read **in the foreground,
   once**. _Avoid_: "tracking", "background location" — a stream of positions collected
   while the player is elsewhere is a movement trail, a different privacy class from the
-  one anybody agreed to, and nothing in this app asks for it.
+  one anybody agreed to, and nothing in this app asks for it. A fix is **coarsened the
+  moment it is read** — the Location area is what the app keeps, and the fix itself does
+  not outlive the function that asked for it.
+- **Foregrounded** — the app coming back to the front, as `useOnForeground` reports it:
+  `AppState` becoming `active`, read through the focus manager `wireFocusManager` already
+  feeds. One listener for the whole app (docs/architecture.md Part 13), so _foreground_ has
+  one meaning rather than one per screen. _Avoid_: a second `AppState` listener in a
+  feature — that is the one that disagrees about what `inactive` means.
 
 - **New Architecture** — React Native's Fabric/TurboModules runtime, enabled
   (`newArchEnabled`). A dependency blocking it is technical debt with a plan, not an

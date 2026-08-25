@@ -2,12 +2,12 @@
 
 import { Redirect } from 'expo-router';
 
-import { SocialStepScreen, useSocialStepAdmission } from '@/features/player_profile/types';
+import { SocialLocationStep, useSocialStepAdmission } from '@/features/player_profile/types';
 
 export default function LocationRoute() {
   const admission = useSocialStepAdmission('location');
 
   if (admission === 'start-over') return <Redirect href="/tags" />;
 
-  return <SocialStepScreen step="location" />;
+  return <SocialLocationStep />;
 }

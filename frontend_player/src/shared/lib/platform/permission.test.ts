@@ -14,7 +14,7 @@
  * yet.
  */
 
-import { permissionStateOf } from './permission';
+import { ensurePermission, permissionStateOf, type PermissionState } from './permission';
 
 describe('reading a native permission response', () => {
   it('is granted when the platform granted it', () => {
@@ -51,5 +51,61 @@ describe('reading a native permission response', () => {
     expect(permissionStateOf({ granted: true, canAskAgain: false, status: 'granted' })).not.toBe(
       'blocked',
     );
+  });
+});
+
+/**
+ * Asking, and the two states where asking is the wrong move.
+ *
+ * Both steps that reach a native capability had written this dance themselves, identically,
+ * which is exactly how the two would have come to disagree about what a blocked permission
+ * means. It belongs beside the vocabulary it is about.
+ */
+describe('asking for a permission', () => {
+  /** A capability, as this rule sees one: something that can be asked, and asked again. */
+  function capability(current: PermissionState, answer: PermissionState) {
+    const asks: PermissionState[] = [];
+    return {
+      asks,
+      getPermission: async () => current,
+      requestPermission: async () => {
+        asks.push(answer);
+        return answer;
+      },
+    };
+  }
+
+  it('shows the prompt when the player has not been asked', async () => {
+    const photos = capability('undetermined', 'granted');
+
+    await expect(ensurePermission(photos)).resolves.toBe('granted');
+    expect(photos.asks).toEqual(['granted']);
+  });
+
+  /** A refusal is not permanent: the OS will show the dialog again, so asking is the remedy. */
+  it('shows it again after a refusal that may be re-asked', async () => {
+    const photos = capability('denied', 'granted');
+
+    await expect(ensurePermission(photos)).resolves.toBe('granted');
+    expect(photos.asks).toEqual(['granted']);
+  });
+
+  it('does not prompt for something already granted', async () => {
+    const photos = capability('granted', 'denied');
+
+    await expect(ensurePermission(photos)).resolves.toBe('granted');
+    expect(photos.asks).toEqual([]);
+  });
+
+  /**
+   * The one that has to be right. A blocked permission is resolved by the OS instantly and
+   * negatively without showing anything, so a caller that keeps asking loops forever against
+   * a system that has already answered — and the player is never shown a thing.
+   */
+  it('never asks for one the OS has settled against', async () => {
+    const photos = capability('blocked', 'granted');
+
+    await expect(ensurePermission(photos)).resolves.toBe('blocked');
+    expect(photos.asks).toEqual([]);
   });
 });

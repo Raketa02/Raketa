@@ -18,9 +18,12 @@ import { clearStoredTokens, resetSessionStatus, wireHttpCredentials } from '@/sh
 import { queryClient } from '@/shared/lib/query-client';
 import {
   launchSignedIn,
+  resetLocation,
   stubGate as stubGateWith,
+  stubLocation,
   stubProfileOptions,
 } from '@/test-support/onboardingRouter';
+import { fakeLocation } from '@/test-support/platform';
 import { installTransport, type Transport, type Wire } from '@/test-support/transport';
 
 import { useProfileDraft } from '../store/profileDraft.store';
@@ -39,12 +42,17 @@ const RATING: Wire['RatingResponse'] = {
 };
 
 /**
- * The six steps in order: what each says it is, what its eyebrow reads, and the back
- * control it offers.
+ * The six steps in order: what each says it is, what its eyebrow reads, the back control it
+ * offers, and the label it continues with.
  *
  * The first step's eyebrow carries its own rule as well as its position — the tag floor
  * belongs on the screen rather than only inside a disabled button — which is why the line
  * is per step here rather than composed from the index.
+ *
+ * `forward` is *Continue* on five of the six. The location step names what leaving without
+ * an area costs, because a location is what search and matchmaking are worked out from —
+ * and this walk is the one that leaves without one, which is why the difference shows up
+ * here rather than only in that step's own suite.
  */
 const STEPS = [
   {
@@ -52,36 +60,42 @@ const STEPS = [
     title: 'What kind of player are you?',
     eyebrow: 'Setting up · Step 1 of 6 · Pick 2 to 6',
     back: undefined,
+    forward: 'Continue',
   },
   {
     path: '/photos',
     title: 'Your court photos',
     eyebrow: 'Setting up · Step 2 of 6 · On-court only — up to three',
     back: 'Back to What kind of player are you?',
+    forward: 'Continue',
   },
   {
     path: '/availability',
     title: 'When do you usually play?',
     eyebrow: 'Setting up · Step 3 of 6',
     back: 'Back to Your court photos',
+    forward: 'Continue',
   },
   {
     path: '/location',
     title: 'Where do you play?',
     eyebrow: 'Setting up · Step 4 of 6',
     back: 'Back to When do you usually play?',
+    forward: 'Continue without matching',
   },
   {
     path: '/radius',
     title: 'How far will you travel?',
     eyebrow: 'Setting up · Step 5 of 6',
     back: 'Back to Where do you play?',
+    forward: 'Continue',
   },
   {
     path: '/opt-in',
     title: 'May we suggest games?',
     eyebrow: 'Setting up · Step 6 of 6',
     back: 'Back to How far will you travel?',
+    forward: 'Continue',
   },
 ] as const;
 
@@ -89,22 +103,30 @@ const STEPS = [
  * The first step that still stands in for itself, and the one this suite answers to prove
  * the draft survives a walk.
  *
- * It moves as tickets land. Photos was it, then availability, and both are the wrong step
- * to have used anyway: each may be passed with nothing at all, so *an answer that is still
- * there* has to be asked of a step that insists on one.
+ * It moves as tickets land. Photos was it, then availability, then location, and all three
+ * are the wrong step to have used anyway: each may be passed with nothing at all, so *an
+ * answer that is still there* has to be asked of a step that insists on one.
  */
-const FIRST_PLACEHOLDER_STEP = 3;
+const FIRST_PLACEHOLDER_STEP = 4;
 
-/** The steps of the six that may be walked past with nothing answered at all. */
-const OPTIONAL_STEPS = [1, 2];
+/**
+ * The steps of the six that may be walked past with nothing answered at all.
+ *
+ * Photos and the week are genuinely optional — no photo is fine, and a blank week means no
+ * preference. **The location step is not**: it can be *passed* with nothing, at the cost of
+ * search and matchmaking, and this walk is the one that pays it. That is why its forward
+ * control is labelled differently, and why its own suite owns both answers.
+ */
+const OPTIONAL_STEPS = [1, 2, 3];
 
 /**
  * Answer whatever step is on screen.
  *
- * Three of the six are built and each wants something different — two tags at the floor,
- * and nothing at all on the photos and availability steps, both of which continue from
- * empty. The rest still stand in for themselves. This suite is about the walk, so it
- * answers each of them the way that step wants and says nothing else about any of them.
+ * Four of the six are built and each wants something different — two tags at the floor, and
+ * nothing at all on the photos, availability and location steps, which continue from empty
+ * for three different reasons. The rest still stand in for themselves. This suite is about
+ * the walk, so it answers each of them the way that step wants and says nothing else about
+ * any of them.
  */
 function answerTheStep(index: number) {
   if (index >= FIRST_PLACEHOLDER_STEP) {
@@ -119,10 +141,21 @@ function answerTheStep(index: number) {
   fireEvent.press(screen.getByLabelText('Here to improve'));
 }
 
+/**
+ * Press the forward control of the step at `from`.
+ *
+ * Named per step rather than as one string: five of the six say *Continue* and one says
+ * what it costs to leave it empty, and a helper that hunted for either would stop noticing
+ * which screen it was on.
+ */
+function continueFrom(from: number) {
+  fireEvent.press(screen.getByLabelText(STEPS[from]!.forward));
+}
+
 /** The first step's continue is blocked until its floor is met; the rest are not. */
 async function continueFromTheFirstStep() {
   answerTheStep(0);
-  fireEvent.press(await screen.findByLabelText('Continue'));
+  fireEvent.press(await screen.findByLabelText(STEPS[0]!.forward));
   await waitFor(() => expect(screen).toHavePathname('/photos'));
 }
 
@@ -130,7 +163,7 @@ async function continueFromTheFirstStep() {
 async function walkOnTo(index: number) {
   for (let step = 1; step < index; step += 1) {
     answerTheStep(step);
-    fireEvent.press(screen.getByLabelText('Continue'));
+    continueFrom(step);
     await waitFor(() => expect(screen).toHavePathname(STEPS[step + 1]!.path));
   }
 }
@@ -143,6 +176,10 @@ const stubGate = (options?: Parameters<typeof stubGateWith>[1]) => stubGateWith(
 async function enterTheSocialSteps() {
   stubGate({ ratings: [RATING], hasPlayerProfile: false });
   stubProfileOptions(transport);
+  // A phone nobody has asked yet. This suite never presses the location step's control, so
+  // no prompt is shown and no fix is read — what it needs from the device is only that it
+  // is *described*, rather than being whatever a mocked native module answers.
+  stubLocation(fakeLocation());
 
   await launchSignedIn();
 
@@ -165,6 +202,7 @@ beforeEach(async () => {
 
 afterEach(() => {
   transport.restore();
+  resetLocation();
   queryClient.clear();
 });
 
@@ -185,7 +223,7 @@ describe('walking forward through the second part', () => {
 
       if (index < STEPS.length - 1) {
         answerTheStep(index);
-        fireEvent.press(await screen.findByLabelText('Continue'));
+        fireEvent.press(await screen.findByLabelText(step.forward));
         await waitFor(() => expect(screen).toHavePathname(STEPS[index + 1]!.path));
       }
     }
@@ -195,7 +233,7 @@ describe('walking forward through the second part', () => {
     await enterTheSocialSteps();
     await continueFromTheFirstStep();
     for (let step = 2; step < STEPS.length; step += 1) {
-      fireEvent.press(screen.getByLabelText('Continue'));
+      continueFrom(step - 1);
     }
 
     await waitFor(() => expect(screen).toHavePathname('/opt-in'));
@@ -219,7 +257,7 @@ describe('walking back through the second part', () => {
     expect(screen.getByLabelText(STEPS[1]!.back!)).toBeTruthy();
 
     for (let index = 2; index < STEPS.length; index += 1) {
-      fireEvent.press(screen.getByLabelText('Continue'));
+      continueFrom(index - 1);
       await waitFor(() => expect(screen).toHavePathname(STEPS[index]!.path));
       expect(screen.getByLabelText(STEPS[index]!.back!)).toBeTruthy();
     }
@@ -229,7 +267,7 @@ describe('walking back through the second part', () => {
     await enterTheSocialSteps();
     await continueFromTheFirstStep();
     for (let step = 2; step < STEPS.length; step += 1) {
-      fireEvent.press(screen.getByLabelText('Continue'));
+      continueFrom(step - 1);
     }
     await waitFor(() => expect(screen).toHavePathname('/opt-in'));
 
@@ -259,7 +297,7 @@ describe('the draft the part holds', () => {
 
     // Forward to the end, then all the way back.
     for (let step = FIRST_PLACEHOLDER_STEP + 1; step < STEPS.length; step += 1) {
-      fireEvent.press(screen.getByLabelText('Continue'));
+      continueFrom(step - 1);
     }
     await waitFor(() => expect(screen).toHavePathname('/opt-in'));
     for (let index = STEPS.length - 1; index > FIRST_PLACEHOLDER_STEP; index -= 1) {
@@ -291,7 +329,7 @@ describe('the draft the part holds', () => {
     await continueFromTheFirstStep();
     for (let step = 2; step < STEPS.length; step += 1) {
       answerTheStep(step - 1);
-      fireEvent.press(screen.getByLabelText('Continue'));
+      continueFrom(step - 1);
       await waitFor(() => expect(screen).toHavePathname(STEPS[step]!.path));
     }
     fireEvent.press(screen.getByLabelText('Answer this step'));
@@ -344,7 +382,7 @@ describe('a link naming a step in the middle of the part', () => {
 
     await continueFromTheFirstStep();
     for (let step = 2; step <= 4; step += 1) {
-      fireEvent.press(screen.getByLabelText('Continue'));
+      continueFrom(step - 1);
       await waitFor(() => expect(screen).toHavePathname(STEPS[step]!.path));
     }
 

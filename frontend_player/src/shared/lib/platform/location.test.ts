@@ -50,7 +50,7 @@ describe('the location permission', () => {
     await expect(deviceLocation.requestPermission()).resolves.toBe('granted');
   });
 
-  it('reports a permanent refusal as blocked, so a screen can offer the manual path', async () => {
+  it('reports a permanent refusal as blocked, so a screen can send the player to Settings', async () => {
     native.getForegroundPermissionsAsync.mockResolvedValue(blocked);
     await expect(deviceLocation.getPermission()).resolves.toBe('blocked');
   });
@@ -85,8 +85,8 @@ describe('reading one fix', () => {
   /**
    * A refused permission, location services switched off, and a device that simply cannot
    * see the sky all arrive here as a rejection. All three mean the same thing to the
-   * player — pick your area by hand — so the port answers "no fix" rather than making
-   * every caller write a try/catch around a native error class.
+   * player — there is no area, and what that costs has to be said — so the port answers
+   * "no fix" rather than making every caller write a try/catch around a native error class.
    */
   it('answers with no fix rather than throwing when the device cannot produce one', async () => {
     native.getCurrentPositionAsync.mockRejectedValue(new Error('Location request failed'));

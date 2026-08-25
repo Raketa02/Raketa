@@ -35,11 +35,7 @@
 import { useCallback, useRef, useState } from 'react';
 
 import { isAppError, unknownFailure, type AppError } from '@/shared/errors';
-import {
-  useImagePicking,
-  type ImagePickingPort,
-  type PermissionState,
-} from '@/shared/lib/platform';
+import { ensurePermission, useImagePicking, type PermissionState } from '@/shared/lib/platform';
 
 import {
   addPhotos,
@@ -71,19 +67,6 @@ export interface PhotoStepStanding {
 }
 
 const READY: PhotoStepStanding = { refusedAtTheCeiling: false, access: 'granted' };
-
-/**
- * Ask, but only where asking achieves something.
- *
- * A `blocked` permission is resolved by the OS instantly and negatively without showing
- * anything, so re-asking is a call that cannot change an answer; `granted` needs no prompt
- * at all. What is left is the two states a prompt exists for.
- */
-async function ensurePermission(picking: ImagePickingPort): Promise<PermissionState> {
-  const current = await picking.getPermission();
-  if (current === 'granted' || current === 'blocked') return current;
-  return picking.requestPermission();
-}
 
 function accessFrom(permission: PermissionState): PhotoAccess {
   if (permission === 'granted') return 'granted';

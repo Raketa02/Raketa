@@ -15,12 +15,14 @@
  * response — which is the thing the boundary exists to prevent.
  */
 
-export { wireFocusManager } from './appState';
+export { useOnForeground, wireFocusManager } from './appState';
+export { openAppSettings } from './appSettings';
 export { wireOnlineManager } from './networkState';
 
-export type { PermissionState } from './permission';
+export { ensurePermission, type AskablePermission, type PermissionState } from './permission';
 
 export { deviceLocation, type LocationFix, type LocationPort } from './location';
+export { LocationProvider, useLocation, type LocationProviderProps } from './LocationProvider';
 export {
   deviceImagePicking,
   type ImagePickingPort,

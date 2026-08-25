@@ -11,6 +11,7 @@
  */
 
 import { QueryClientProvider } from '@tanstack/react-query';
+import type { ReactNode } from 'react';
 import { Slot } from 'expo-router';
 import { renderRouter } from 'expo-router/testing-library';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -35,7 +36,12 @@ import SportsRoute from '@/app/(onboarding)/sports';
 import TagsRoute from '@/app/(onboarding)/tags';
 import WelcomeRoute from '@/app/(onboarding)/welcome';
 import { beginSession } from '@/shared/lib/auth';
-import { ImagePickingProvider, type ImagePickingPort } from '@/shared/lib/platform';
+import {
+  ImagePickingProvider,
+  LocationProvider,
+  type ImagePickingPort,
+  type LocationPort,
+} from '@/shared/lib/platform';
 import { queryClient } from '@/shared/lib/query-client';
 
 import { json, type Transport, type Wire } from './transport';
@@ -90,6 +96,26 @@ export function resetImagePicking(): void {
 }
 
 /**
+ * The device whose position this tree reads, for the suites that walk as far as step four.
+ *
+ * Same shape and same reasons as the photo library above. Unset means the real port over a
+ * native module jest has mocked, which answers a device nobody described — so a suite that
+ * reaches the location step without saying what the phone knows gets an answer it did not
+ * choose, which is exactly the surprise this stub exists to remove.
+ */
+let location: LocationPort | undefined;
+
+/** Run the tree against this device. Call before `launchSignedIn`. */
+export function stubLocation(port: LocationPort): void {
+  location = port;
+}
+
+/** Forget it again. Called from `afterEach`, beside `transport.restore()`. */
+export function resetLocation(): void {
+  location = undefined;
+}
+
+/**
  * The providers the real root layout composes, without the bootstrap sequence — fonts, the
  * splash screen and config validation are the launch path's business and have their own
  * tests.
@@ -103,15 +129,32 @@ function TestRoot() {
       }}
     >
       <QueryClientProvider client={queryClient}>
-        {imagePicking === undefined ? (
+        <WithPorts>
           <Slot />
-        ) : (
-          <ImagePickingProvider port={imagePicking}>
-            <Slot />
-          </ImagePickingProvider>
-        )}
+        </WithPorts>
       </QueryClientProvider>
     </SafeAreaProvider>
+  );
+}
+
+/**
+ * The two ports, wrapped only where a suite said what they are.
+ *
+ * Composed here rather than in `TestRoot` so adding a third port is one entry rather than a
+ * fourth level of nesting and a second conditional.
+ */
+function WithPorts({ children }: { readonly children: ReactNode }) {
+  const withLocation =
+    location === undefined ? (
+      children
+    ) : (
+      <LocationProvider port={location}>{children}</LocationProvider>
+    );
+
+  return imagePicking === undefined ? (
+    withLocation
+  ) : (
+    <ImagePickingProvider port={imagePicking}>{withLocation}</ImagePickingProvider>
   );
 }
 
