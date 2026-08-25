@@ -86,6 +86,7 @@ const USER: Wire['UserResponse'] = {
   authority: 'player',
   is_admin: false,
   is_active: true,
+  has_player_profile: false,
   created_at: '2026-08-13T10:00:00Z',
 };
 

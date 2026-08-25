@@ -24,6 +24,7 @@ describe('toAuthenticatedUser', () => {
       authority: 'player',
       is_admin: true,
       is_active: true,
+      has_player_profile: false,
       created_at: '2026-08-13T10:00:00Z',
     });
 

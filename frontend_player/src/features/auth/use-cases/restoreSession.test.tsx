@@ -42,6 +42,7 @@ const USER: Wire['UserResponse'] = {
   authority: 'player',
   is_admin: false,
   is_active: true,
+  has_player_profile: false,
 };
 
 let transport: Transport;
