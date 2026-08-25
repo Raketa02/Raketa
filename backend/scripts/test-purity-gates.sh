@@ -457,6 +457,89 @@ clean
 
 # ---------------------------------------------------------------------------
 echo
+echo ".importlinter — the imaging and object-store libraries fenced out"
+
+# ADR-0091 puts photo bytes behind a `PhotoStorage` port and the re-encode behind an
+# `ImageTranscoder` port. "Behind a port" is only true while nothing on the inside can
+# reach the library directly, and the failure is a one-line convenience — `from PIL
+# import Image` at the top of a use case — that reviews well and quietly makes the
+# application layer depend on an adapter.
+#
+# Same four arms as the configuration fence, and the same reason for one probe each:
+# two of them are wildcards, and a wildcard matching nothing is reported KEPT.
+probe "$MODULE_APPLICATION_PROBE" 'from PIL import Image
+
+
+def thumbnail(data: bytes) -> int:
+    return Image.MAX_IMAGE_PIXELS or 0
+'
+expect red imports "a use case importing the imaging library is refused" \
+  "app.modules.users.application is not allowed to import PIL"
+clean
+
+probe "$MODULE_DOMAIN_PROBE" 'import aioboto3
+
+SESSION = aioboto3.Session
+'
+expect red imports "a domain layer importing the object-store SDK is refused" \
+  "app.modules.users.domain is not allowed to import aioboto3"
+clean
+
+probe "$APPLICATION_PROBE" 'import botocore
+
+VERSION = botocore.__version__
+'
+expect red imports "the cross-cutting application layer reaching botocore is refused" \
+  "app.application is not allowed to import botocore"
+clean
+
+probe "$SHARED_DOMAIN_PROBE" 'import pillow_heif
+
+OPENER = pillow_heif.register_heif_opener
+'
+expect red imports "the shared domain layer importing the HEIF decoder is refused" \
+  "app.shared.domain is not allowed to import pillow_heif"
+clean
+
+# The one that matters most, and the reason this contract sets
+# `allow_indirect_imports = false`: reaching the library *through the adapter* is the
+# same violation wearing a different import. A use case that constructs
+# `PillowImageTranscoder` itself has bypassed the port just as completely as one that
+# calls Pillow, and with the flag on it would read as KEPT.
+probe "$MODULE_APPLICATION_PROBE" 'from app.modules.player_profile.infrastructure.pillow_image_transcoder import (
+    PillowImageTranscoder,
+)
+
+TRANSCODER = PillowImageTranscoder()
+'
+expect red imports "a use case reaching the library *through the adapter* is refused" \
+  "app.modules.users.application is not allowed to import PIL"
+clean
+
+# The legitimate direction, which is what the fence is for: the adapter is on the
+# outside of it, so the import refused five times above is allowed here.
+probe "$MODULE_INFRA_PROBE" 'from PIL import Image
+
+MODE = Image.Resampling.LANCZOS
+'
+expect green imports "an infrastructure adapter importing the imaging library is allowed"
+clean
+
+# The wildcard arms again: a context created tomorrow is fenced from the imaging and
+# storage libraries on the day it exists.
+mkdir -p "$NEW_CONTEXT_DIR/application"
+: >"$NEW_CONTEXT_DIR/__init__.py"
+: >"$NEW_CONTEXT_DIR/application/__init__.py"
+probe "$NEW_CONTEXT_DIR/application/resize.py" 'from PIL import Image
+
+MODE = Image.Resampling.LANCZOS
+'
+expect red imports "a context created tomorrow is fenced from the imaging library too" \
+  "app.modules._purity_probe_context.application is not allowed to import PIL"
+clean
+
+# ---------------------------------------------------------------------------
+echo
 echo "the tree is left as it was found"
 
 expect green imports "the import contracts hold again"

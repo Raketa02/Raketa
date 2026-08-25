@@ -26,6 +26,7 @@ import pytest
 
 from app.core.config import (
     DEFAULT_JWT_SECRET_KEY,
+    DEFAULT_PHOTO_STORAGE_SECRET_KEY,
     ENVIRONMENT_PROFILES,
     UNPROVISIONED,
     ConfigurationError,
@@ -38,6 +39,7 @@ from app.core.logging import configure_logging
 POISON_PASSWORD = "hunter2-do-not-log-me"
 POISON_DB_URL = f"postgresql+asyncpg://u:{POISON_PASSWORD}@db.example:5432/raketa"
 POISON_SECRET = "s3cret-do-not-log-me"
+POISON_PHOTO_SECRET = "photo-s3cret-do-not-log-me"
 
 
 @pytest.fixture
@@ -77,6 +79,7 @@ def settings_for(env, **overrides) -> Settings:
     if env is Environment.PRODUCTION:
         base |= {
             "JWT_SECRET_KEY": POISON_SECRET,
+            "PHOTO_STORAGE_SECRET_KEY": POISON_PHOTO_SECRET,
             "WRITER_DB_URL": POISON_DB_URL,
             "DB_SSL_MODE": "require",
             "ALLOW_ORIGINS": ["https://club.raketa.example"],
@@ -227,6 +230,18 @@ def test_production_refuses_the_default_signing_key(clean_env) -> None:
     assert "JWT_SECRET_KEY" in str(exc.value)
 
 
+def test_production_refuses_the_shipped_photo_storage_secret(clean_env) -> None:
+    """The same failure as the signing key, on the bucket holding players' faces.
+
+    It is the local MinIO container's password, written in the compose file and
+    in both templates, so it is as public as the signing key — and it grants
+    read and write over every photo the platform holds.
+    """
+    with pytest.raises(ConfigurationError) as exc:
+        production(PHOTO_STORAGE_SECRET_KEY=DEFAULT_PHOTO_STORAGE_SECRET_KEY)
+    assert "PHOTO_STORAGE_SECRET_KEY" in str(exc.value)
+
+
 def test_production_refuses_debug_mode(clean_env) -> None:
     with pytest.raises(ConfigurationError) as exc:
         production(DEBUG=True)
@@ -361,6 +376,7 @@ def test_no_refusal_fires_outside_the_environment_it_names(clean_env) -> None:
     settings = build(
         APP_ENV="local",
         JWT_SECRET_KEY=DEFAULT_JWT_SECRET_KEY,
+        PHOTO_STORAGE_SECRET_KEY=DEFAULT_PHOTO_STORAGE_SECRET_KEY,
         DEBUG=True,
         ALLOW_ORIGINS=["*"],
         ALLOW_CREDENTIALS=True,
@@ -380,6 +396,12 @@ REFUSALS = [
     ("APP_HOST", lambda: build(APP_ENV="staging", WRITER_DB_URL=POISON_DB_URL)),
     ("WRITER_DB_URL", lambda: build(APP_ENV="staging", APP_HOST="10.0.0.1")),
     ("JWT_SECRET_KEY", lambda: production(JWT_SECRET_KEY=DEFAULT_JWT_SECRET_KEY)),
+    (
+        "PHOTO_STORAGE_SECRET_KEY",
+        lambda: production(
+            PHOTO_STORAGE_SECRET_KEY=DEFAULT_PHOTO_STORAGE_SECRET_KEY
+        ),
+    ),
     ("DEBUG", lambda: production(DEBUG=True)),
     ("ALLOW_ORIGINS", lambda: production(ALLOW_ORIGINS=["*"])),
     (
@@ -396,6 +418,7 @@ REFUSAL_IDS = [
     "APP_HOST",
     "WRITER_DB_URL",
     "JWT_SECRET_KEY",
+    "PHOTO_STORAGE_SECRET_KEY",
     "DEBUG",
     "ALLOW_ORIGINS-wildcard-with-credentials",
     "ALLOW_ORIGINS-plaintext-when-deployed",
@@ -422,7 +445,9 @@ def test_no_refusal_echoes_a_value(clean_env, variable, trigger) -> None:
         POISON_PASSWORD,
         POISON_DB_URL,
         POISON_SECRET,
+        POISON_PHOTO_SECRET,
         DEFAULT_JWT_SECRET_KEY,
+        DEFAULT_PHOTO_STORAGE_SECRET_KEY,
         "prd",
     ):
         assert leaked not in message, f"{variable} refusal echoed a configured value"

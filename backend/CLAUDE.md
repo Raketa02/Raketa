@@ -18,7 +18,7 @@ make typecheck   # mypy app
 make check       # lint + lint-imports + typecheck + test — the same gate CI runs
 make test-gates  # prove the kernel/engines purity gates still fire (CI runs it)
 make openapi     # emit openapi.player.json — the contract the client generates from
-make up / down   # dev stack (Postgres 17 + API + Redis); make logs, make shell
+make up / down   # dev stack (Postgres 17 + API + MinIO + Redis); make logs, make shell
 make migrate     # alembic upgrade head inside the API container
 make seed        # deterministic dev accounts (make seed-host to run it on the host)
 ```
@@ -91,6 +91,16 @@ Rules to preserve:
   and a rated scenario carries the band it promises, checked against the stored rating on
   every run. Seed only what is **modeled**: Players, onboarding assessments and Skill
   ratings have aggregates; nothing else does, so nothing else gets a scenario.
+- **Photo bytes live behind `PhotoStorage`, and the re-encode behind
+  `ImageTranscoder`** ([ADR-0091](../docs/adr/0091-photo-storage-behind-a-port.md)).
+  One S3-compatible adapter serves MinIO locally and S3 deployed — same class, different
+  endpoint — so the deployed answer is a setting rather than a migration of live user
+  data. Every port method takes a `PhotoRef` (owner **and** photo id), so ownership is the
+  port's contract rather than each caller's memory. **Every upload is re-encoded to JPEG**,
+  which is how EXIF — and the GPS in it — is stripped reliably rather than best-effort.
+  `.importlinter` forbids `PIL`, `pillow_heif`, `aioboto3`, `boto3` and `botocore` to
+  every domain and application layer, **including through the adapter**, because a use
+  case that constructs the transcoder itself has bypassed the port just as completely.
 - **New routes mount under `app/api/v1/router.py`;** keep the `/api/v1` prefix.
 - **Validate and normalize inside the value object**, not in the use case — see
   `app/modules/users/domain/value_objects.py`.

@@ -67,6 +67,15 @@
 # this fence — so it costs nothing to hold and catches the ORM model somebody will
 # one day reach for while writing an aggregate.
 #
+# The imaging and object-store libraries are fenced the same way, and for the reason
+# ADR-0091 exists: photo bytes live behind a `PhotoStorage` port and the re-encode
+# behind an `ImageTranscoder` port, and *behind a port* is only true while nothing on
+# the inside can reach the library. That fence sets `allow_indirect_imports = false`
+# deliberately, because the interesting violation is the indirect one — a use case
+# that constructs `PillowImageTranscoder` itself has bypassed the port exactly as
+# completely as one that imports Pillow, and with the flag on it would read as KEPT.
+# It is green on today's tree with the flag off, which is what makes it affordable.
+#
 # The framework contract below is the opposite case to the configuration one, and sets
 # `allow_indirect_imports = false` deliberately. The violation it exists for was
 # **only ever indirect** — no domain module has ever imported `fastapi` directly, and
@@ -175,3 +184,19 @@ forbidden_modules =
     pydantic_settings
     os
 allow_indirect_imports = true
+
+[importlinter:contract:a-business-layer-cannot-reach-an-imaging-or-object-store-library]
+name = No domain or application layer imports an imaging or object-store library
+type = forbidden
+source_modules =
+    app.application
+    app.shared.domain
+    app.modules.*.domain
+    app.modules.*.application
+forbidden_modules =
+    PIL
+    pillow_heif
+    aioboto3
+    boto3
+    botocore
+allow_indirect_imports = false

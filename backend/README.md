@@ -21,6 +21,7 @@ ports, and Docker images are built separately for development and production.
 - Event-sourced `User` aggregate with durable event stream persistence.
 - Transactional outbox and embedded event-delivery worker.
 - Async SQLAlchemy persistence with Alembic migrations.
+- Player photo upload and retrieval, behind an S3-compatible storage port.
 - Dockerized local development and production runtime images.
 
 ## Architecture
@@ -141,6 +142,9 @@ The main ports are defined as Python protocols:
 | `DomainEventStore` | Append/load aggregate streams | `SqlAlchemyEventStore` |
 | `DomainEventPublisher` | Queue released domain events | `EventPublisher` |
 | `PendingOutbox` | Fetch and mark outbox delivery rows | `SqlAlchemyOutboxRepository` |
+| `PhotoStorage` | Store and sign URLs for photo bytes | `S3PhotoStorage` (MinIO locally) |
+| `ImageTranscoder` | Re-encode an upload to the stored format | `PillowImageTranscoder` |
+| `PhotoReview` | Whether a photo meets the on-court rule | `PassThroughPhotoReview` |
 
 This keeps use cases testable without depending directly on infrastructure.
 
@@ -170,6 +174,12 @@ callable, and nothing about a green suite would look different afterwards.
 | `POST` | `/api/v1/auth/refresh` | Refresh token body | Rotate token pair. |
 | `POST` | `/api/v1/auth/logout` | Refresh token body | Revoke refresh token, idempotently. |
 | `GET` | `/api/v1/users/me` | Bearer access token | Return the current authenticated user. |
+| `POST` | `/api/v1/photos` | Bearer access token | Upload one photo. Raw image body; `Content-Type` names the format. |
+| `GET` | `/api/v1/photos/{photo_id}` | Bearer access token | A short-lived signed URL for one of your own photos. |
+
+The route table above is not the whole surface — `/api/v1/sports`,
+`/api/v1/assessments`, `/api/v1/ratings` and `/api/v1/player-profile/options`
+are in `openapi.player.json`, which is the document that is authoritative.
 
 Example login request:
 
@@ -237,6 +247,7 @@ aggregator.
 | `APP_ENV` is not one of the four | A typo must not silently change behaviour. |
 | `development`/`staging` with no `APP_HOST` or `WRITER_DB_URL` | Neither is provisioned; falling back points at a database that does not exist. |
 | `production` with the default `JWT_SECRET_KEY` | It is public in this repo's history, so every token it signs is forgeable. |
+| `production` with the default `PHOTO_STORAGE_SECRET_KEY` | It is the local MinIO container's, published in this repo, and it unlocks every photo the platform holds. |
 | `production` with `DEBUG=true` | It serves verbose errors to callers. |
 | `production` with wildcard `ALLOW_ORIGINS` **and** `ALLOW_CREDENTIALS` | Browsers reject the combination anyway. |
 | a deployed environment with a non-`https://` entry in `ALLOW_ORIGINS` | A browser origin reached over a public network in the clear is a session cookie in the clear. |
@@ -285,6 +296,9 @@ The development compose file starts:
 
 - `api`: FastAPI with Uvicorn reload and optional debugpy on port `5678`.
 - `db`: PostgreSQL 17 with a persistent named volume.
+- `minio`: S3-compatible object storage for player photos, with a persistent
+  named volume. The S3 API is on `9000` and the browser console on `9001`.
+- `minio-init`: creates the photo bucket and exits.
 - `redis`: Redis 7.2, available for future integrations.
 
 The API container waits for Postgres, runs `alembic upgrade head`, then starts
@@ -415,6 +429,57 @@ Addresses are on `.example` — a TLD RFC 2606 reserves, so no registry can sell
 run pointed at the wrong database cannot mail a stranger. Not the `.test` of the same
 sentence, because `EmailStr` at the HTTP boundary refuses that one and a seeded account
 nobody can sign in as is not an account.
+
+## Photo Storage
+
+Player photos are the first thing this platform stores that is expensive per unit
+and cannot be regenerated. They live behind a **`PhotoStorage` port**
+([ADR-0091](../docs/adr/0091-photo-storage-behind-a-port.md)), with one
+S3-compatible adapter: MinIO on a laptop, AWS S3 deployed, the same class with a
+different endpoint. That is the whole of the deployed answer — a setting, not a
+migration of live user data, which is what shipping them as `bytea` in Postgres
+would have cost.
+
+**One photo per request.** `POST /api/v1/photos` takes the raw image as the
+request body with `Content-Type` naming the format, and returns an id. The
+profile commit will carry **ids only**: three multi-megabyte images inside an
+idempotent JSON POST would turn it into a multipart upload whose failure took the
+whole part's answers with it.
+
+**Bytes are re-encoded on receipt** — accepted as JPEG, PNG or HEIC/HEIF, stored
+as JPEG with the long edge capped. Re-encoding is the mechanism, not an
+optimisation: it is how EXIF is stripped reliably, and EXIF carries GPS, which
+the product's privacy rules put in the row nobody ever sees. The orientation tag
+is applied before it is discarded, or every phone photo is stored sideways.
+
+Two caps, and they answer different questions. `MAX_UPLOAD_BYTES` bounds the
+request and is enforced *while the body streams*, because Starlette's multipart
+parser caps only non-file parts and would otherwise spool an unbounded upload to
+disk before a handler ran. `MAX_DECODED_PIXELS` bounds the image's **declared**
+dimensions, read from the header before a pixel is allocated — a small PNG can
+declare 30000x30000 and decode to 2.7 GB, which the byte cap cannot see.
+
+**Photos are served through short-lived presigned URLs; there is no public
+bucket.** Locally that needs two endpoint settings, and the distinction is the
+platform's own (`docs/environments.md`): `PHOTO_STORAGE_ENDPOINT_URL` is the
+server-to-server address this API calls, and `PHOTO_STORAGE_PUBLIC_ENDPOINT_URL`
+is the public-network address a *phone* opens. SigV4 signs the host, so a URL
+signed for `http://minio:9000` is invalid everywhere a device can reach.
+
+A `PhotoReview` port exists with a pass-through adapter. Nothing checks the
+on-court rule today, and that is deliberate rather than pending: nobody can see
+another player's photo yet, so a check protects nothing while a false reject
+stops a real player on their first day. When it lands it **soft-warns** — the
+verdict is stored beside the bytes, and a flagged photo is still stored.
+
+`.importlinter` holds the ports open: no domain or application layer may import
+`PIL`, `pillow_heif`, `aioboto3`, `boto3` or `botocore`, directly **or through
+the adapter**, and `make test-gates` drives probes through every arm of that
+contract.
+
+**Not yet built:** uploaded-but-uncommitted photos accumulate. The 24-hour sweep
+ADR-0091 calls for needs periodic-job machinery this platform does not have —
+there is an embedded outbox worker and nothing else — and it has its own ticket.
 
 ## Testing And Quality
 

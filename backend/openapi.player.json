@@ -623,6 +623,111 @@
           }
         }
       }
+    },
+    "/api/v1/photos": {
+      "post": {
+        "tags": [
+          "photos"
+        ],
+        "summary": "Upload one photo",
+        "description": "One photo per request. The body is the raw image and `Content-Type` names its format; JPEG, PNG and HEIC/HEIF are accepted.\n\n**What is stored is not what was sent.** Every image is decoded and re-encoded to JPEG with its long edge capped, which is how EXIF \u2014 and with it the GPS coordinates a phone writes into a photo \u2014 is removed reliably rather than best-effort.\n\nThe returned id is what a profile commit carries; a photo becomes part of a profile only when a commit names it. Uploaded photos that are never committed are intended to be swept, and that sweep is not running yet.",
+        "operationId": "upload_photo_api_v1_photos_post",
+        "requestBody": {
+          "content": {
+            "image/heic": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "image/heif": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "image/jpeg": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "image/png": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PhotoResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/photos/{photo_id}": {
+      "get": {
+        "tags": [
+          "photos"
+        ],
+        "summary": "A signed URL for one of your photos",
+        "description": "Returns a short-lived signed URL rather than the bytes: the store serves the image directly, so a photo never crosses this API twice.\n\nA photo id that does not exist and one belonging to another player both answer `photo_not_found`, deliberately \u2014 the alternative is an endpoint that confirms whether a stranger's id is real.",
+        "operationId": "get_photo_api_v1_photos__photo_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "photo_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Photo Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PhotoResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -920,6 +1025,35 @@
         },
         "type": "object",
         "title": "LogoutResponse"
+      },
+      "PhotoResponse": {
+        "properties": {
+          "photo_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Photo Id",
+            "description": "Permanent id \u2014 what the profile commit carries"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url",
+            "description": "Short-lived signed URL that reads this photo. Not a stable address: it is signed for one player, for one window, and there is no public bucket behind it."
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At",
+            "description": "When the URL stops working. Ask for the photo again to get another; there is no way to extend one."
+          }
+        },
+        "type": "object",
+        "required": [
+          "photo_id",
+          "url",
+          "expires_at"
+        ],
+        "title": "PhotoResponse",
+        "description": "One photo: the id a profile commit will carry, and a URL that reads it.\n\nThe same shape from the upload and from the read, so a client renders a tile\nit has just filled and a tile it is restoring with one code path.\n\n**The URL is not an identifier and must not be stored as one.** It carries a\nsignature and stops working at ``expires_at``; the id is what is permanent."
       },
       "PlayerProfileOptionsResponse": {
         "properties": {

@@ -23,6 +23,10 @@ from app.core.config import get_settings  # noqa: E402
 from app.infrastructure.database.base import Base  # noqa: E402
 from app.infrastructure.database.session import get_db  # noqa: E402
 from app.main import create_app  # noqa: E402  (also registers ORM models)
+from app.modules.player_profile.presentation.dependencies import (  # noqa: E402
+    get_photo_storage,
+)
+from tests.unit.fake_photo_storage import InMemoryPhotoStorage  # noqa: E402
 
 
 @pytest_asyncio.fixture
@@ -47,8 +51,21 @@ async def session_factory(db_engine):
     return async_sessionmaker(db_engine, expire_on_commit=False, class_=AsyncSession)
 
 
+@pytest.fixture
+def photo_storage():
+    """The object store every API test runs against.
+
+    Requested by name when a test wants to look at what was stored; overridden
+    on `client` regardless, so **no test in this suite needs MinIO running** —
+    which is the acceptance criterion, not a convenience. A suite that only
+    passes with a container up is a suite CI cannot be trusted to run.
+    """
+
+    return InMemoryPhotoStorage()
+
+
 @pytest_asyncio.fixture
-async def client(session_factory):
+async def client(session_factory, photo_storage):
     get_settings.cache_clear()
     app = create_app()
 
@@ -61,6 +78,7 @@ async def client(session_factory):
                 raise
 
     app.dependency_overrides[get_db] = _get_db_override
+    app.dependency_overrides[get_photo_storage] = lambda: photo_storage
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac

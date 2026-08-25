@@ -211,5 +211,45 @@ there; they are not repeated here.
   invisible until a player sees a tag the engine has never heard of. _Avoid_: a second
   copy in a client, a served label, shipping the list in an app-store release.
 
+- **Photo storage port** — the seam photo bytes live behind
+  (`app/modules/player_profile/domain/ports.py`, [ADR-0091](../docs/adr/0091-photo-storage-behind-a-port.md)).
+  One S3-compatible adapter serves both deployments: MinIO on a laptop and AWS S3 deployed
+  are the same class with a different endpoint, which is why the deployed answer is a
+  setting rather than a migration of live user data. **Every method takes a `PhotoRef` —
+  the owner and the photo id together** — so ownership is part of the port's contract
+  rather than a check each caller has to remember, and the S3 adapter renders it as a key
+  prefix. _Avoid_: a bare photo id in a signature, a second adapter class whose body is a
+  copy, bytes in Postgres.
+- **Re-encode on receipt** — every uploaded image is decoded to pixels and written back
+  out as JPEG at a capped long edge, always, whatever arrived. **This is how EXIF is
+  stripped reliably rather than best-effort**: nothing is carried across because nothing
+  copies it, where a scrubbing pass is a list of tags somebody has to keep complete. EXIF
+  is not a detail — it carries GPS, which the product's privacy rules put in the row
+  nobody ever sees. The orientation tag is *applied* before it is dropped, or every phone
+  photo is stored sideways. _Avoid_: storing what arrived, a tag-deletion pass, dropping
+  orientation without honouring it.
+- **Presigned URL** — how a photo is served: a short-lived signature the object store
+  honours directly, so bytes never cross this API twice. **Signing is offline
+  computation**, not a lookup, so an endpoint that hands one back without checking the
+  object exists returns a working-looking URL for a photo that is not there. Two endpoints
+  are configured rather than one, because the URL this process *calls* is a
+  server-to-server address and the URL a *phone* opens is a public-network one, and SigV4
+  signs the host. _Avoid_: a public bucket, a long window, signing before checking, signing
+  against the internal endpoint.
+- **Photo review port** — the seam the on-court content check will drop into, with a
+  pass-through adapter today. It **soft-warns and never blocks**: the verdict rides on the
+  stored object as metadata, and a flagged photo is still stored. Deferring the checker is
+  safe for a stated reason rather than by neglect — nobody can see another player's photo
+  yet, so a check protects nothing while a false reject stops a real player on their first
+  day. _Avoid_: a `REJECTED` verdict nothing has earned, copy claiming a check that is not
+  running, a client-side check.
+- **Decode cap** — the ceiling on an image's *declared* dimensions, read from the header
+  before a pixel is allocated, and a **separate question from the byte cap**. Both PNG and
+  HEIF compress uniform data enormously, so a file well inside the byte cap can decode to
+  tens of gigabytes — the decompression bomb, which the byte cap cannot see because the
+  file really is small. Pillow's own guard is pointed at the same number, so the two agree
+  by construction rather than by being maintained in step. _Avoid_: one cap standing in for
+  both, a warning where a refusal belongs, checking size after decoding.
+
 Add backend-specific technical terms here as they are resolved. Anything describing the
 *domain* belongs in the shared glossary instead.

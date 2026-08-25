@@ -1,4 +1,4 @@
-"""Wire schemas for the two Player profile facts the platform serves.
+"""Wire schemas for the Player profile context.
 
 Ids and grouping cross the wire; the human-readable label of a tag does not. The
 backend emits machine codes and never display text (``docs/adr/0022``), so a
@@ -7,8 +7,12 @@ client renders ``STAYS_FOR_A_DRINK`` in its own copy, in its own language.
 
 from __future__ import annotations
 
+from datetime import datetime
+from uuid import UUID
+
 from pydantic import BaseModel, Field
 
+from app.modules.player_profile.domain.photos import PresignedPhoto
 from app.modules.player_profile.domain.search_radius import SearchRadiusBounds
 from app.modules.player_profile.domain.social_tags import (
     SOCIAL_TAG_VOCABULARY,
@@ -83,4 +87,42 @@ class PlayerProfileOptionsResponse(BaseModel):
                 for group, tags in SOCIAL_TAG_VOCABULARY.items()
             ],
             search_radius=SearchRadiusBoundsResource.from_bounds(bounds),
+        )
+
+
+class PhotoResponse(BaseModel):
+    """One photo: the id a profile commit will carry, and a URL that reads it.
+
+    The same shape from the upload and from the read, so a client renders a tile
+    it has just filled and a tile it is restoring with one code path.
+
+    **The URL is not an identifier and must not be stored as one.** It carries a
+    signature and stops working at ``expires_at``; the id is what is permanent.
+    """
+
+    photo_id: UUID = Field(
+        ..., description="Permanent id — what the profile commit carries"
+    )
+    url: str = Field(
+        ...,
+        description=(
+            "Short-lived signed URL that reads this photo. Not a stable address: "
+            "it is signed for one player, for one window, and there is no public "
+            "bucket behind it."
+        ),
+    )
+    expires_at: datetime = Field(
+        ...,
+        description=(
+            "When the URL stops working. Ask for the photo again to get another; "
+            "there is no way to extend one."
+        ),
+    )
+
+    @classmethod
+    def from_domain(cls, photo_id: UUID, presigned: PresignedPhoto) -> "PhotoResponse":
+        return cls(
+            photo_id=photo_id,
+            url=presigned.url,
+            expires_at=presigned.expires_at,
         )

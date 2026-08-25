@@ -75,6 +75,7 @@ def production(**overrides) -> Settings:
     return build(
         APP_ENV=Environment.PRODUCTION,
         JWT_SECRET_KEY=POISON_SECRET,
+        PHOTO_STORAGE_SECRET_KEY=POISON_SECRET,
         WRITER_DB_URL=POISON_DB_URL,
         DB_SSL_MODE="require",
         ALLOW_ORIGINS=["https://raketa.example"],
@@ -204,6 +205,7 @@ def test_importing_the_package_refuses_in_production():
         ["-c", "import app.seeds.catalog"],
         APP_ENV="production",
         JWT_SECRET_KEY=POISON_SECRET,
+        PHOTO_STORAGE_SECRET_KEY=POISON_SECRET,
         WRITER_DB_URL=UNREACHABLE_DB_URL,
         DB_SSL_MODE="require",
         ALLOW_CREDENTIALS="false",
@@ -221,6 +223,7 @@ def test_the_command_refuses_in_production_before_it_reaches_a_database():
         ["-m", "app.seeds"],
         APP_ENV="production",
         JWT_SECRET_KEY=POISON_SECRET,
+        PHOTO_STORAGE_SECRET_KEY=POISON_SECRET,
         WRITER_DB_URL=UNREACHABLE_DB_URL,
         DB_SSL_MODE="require",
         ALLOW_CREDENTIALS="false",

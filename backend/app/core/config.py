@@ -109,6 +109,12 @@ ENCRYPTED_DB_SSL_MODES = frozenset({"require", "verify-ca", "verify-full"})
 #: mistake available: it is in this file, in both templates, and in git history.
 DEFAULT_JWT_SECRET_KEY = "change-me-in-production"
 
+#: The shipped object-store credentials. They are the MinIO container's, written in
+#: `docker-compose-local.yml` and in both templates, so they are as public as the JWT
+#: default above — and they unlock every photo the platform holds.
+DEFAULT_PHOTO_STORAGE_ACCESS_KEY = "raketa_photos"
+DEFAULT_PHOTO_STORAGE_SECRET_KEY = "raketa_photos_pwd"
+
 #: The environments a browser reaches over a public network. `local` is not one of them,
 #: which is what makes `http://localhost:3000` a legal allowed origin on a laptop.
 DEPLOYED = frozenset(
@@ -178,6 +184,24 @@ class Settings(BaseSettings):
 
     # --- migrations
     RUN_MIGRATIONS_ON_STARTUP: bool = False
+
+    # --- photo storage (S3-compatible: MinIO locally, S3 deployed — docs/adr/0091)
+    #
+    # `PHOTO_STORAGE_ENDPOINT_URL` is a **server-to-server** URL and carries no scheme
+    # rule; `PHOTO_STORAGE_PUBLIC_ENDPOINT_URL` is the one a player's phone opens a
+    # presigned URL against, and falls back to the first when unset. Both are `None` in
+    # a deployed environment, where botocore resolves AWS's own https endpoints — which
+    # is the whole of the adapter swap.
+    PHOTO_STORAGE_ENDPOINT_URL: Optional[str] = "http://minio:9000"
+    PHOTO_STORAGE_PUBLIC_ENDPOINT_URL: Optional[str] = None
+    PHOTO_STORAGE_BUCKET: str = "raketa-player-photos"
+    PHOTO_STORAGE_REGION: str = "us-east-1"
+    PHOTO_STORAGE_ACCESS_KEY: str = DEFAULT_PHOTO_STORAGE_ACCESS_KEY
+    PHOTO_STORAGE_SECRET_KEY: str = DEFAULT_PHOTO_STORAGE_SECRET_KEY
+    #: How long a presigned photo URL works for. Whole minutes, because that is the
+    #: unit the kernel's clock arithmetic takes and the window is not a precise
+    #: quantity — it is *short enough that a leaked URL stops being one*.
+    PHOTO_URL_VALID_FOR_MINUTES: int = 5
 
     # --- domain event delivery
     EVENT_DELIVERY_WORKER_ENABLED: bool = True
@@ -300,6 +324,13 @@ class Settings(BaseSettings):
                 "JWT_SECRET_KEY is still the shipped default in production. It is "
                 "public in this repository's history, so every token it signs is "
                 "forgeable. Generate one with: openssl rand -hex 32."
+            )
+
+        if self.PHOTO_STORAGE_SECRET_KEY == DEFAULT_PHOTO_STORAGE_SECRET_KEY:
+            raise ConfigurationError(
+                "PHOTO_STORAGE_SECRET_KEY is still the shipped default in production. "
+                "It is the local MinIO container's, published in this repository, so "
+                "it grants read and write access to every photo the platform holds."
             )
 
         if self.DEBUG:

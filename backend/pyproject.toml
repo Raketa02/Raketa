@@ -33,6 +33,9 @@ debugpy = "^1.8.20"
 email-validator = "^2.3.0"
 pydantic = "^2.13.4"
 pydantic-settings = "^2.14.1"
+pillow = "^12.3.0"
+pillow-heif = "^1.5.0"
+aioboto3 = "^15.5.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^9.0.3"

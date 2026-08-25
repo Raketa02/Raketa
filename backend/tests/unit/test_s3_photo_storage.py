@@ -1,0 +1,181 @@
+"""The object-store adapter, exercised without an object store.
+
+**Presigning is offline computation** — a signature over the request that would
+be sent, not a round trip — so the part of this adapter with a decision in it is
+fully testable with nothing running. That is worth using: it is where the
+endpoint split lives, and the endpoint split is what makes a photo openable on a
+phone.
+
+What is *not* covered here, and cannot be from a laptop with no container: that
+MinIO and S3 accept these signatures. ADR-0091 says as much in writing — S3
+compatible is not S3, and the first deployment will find at least one difference
+in presigned URL semantics, multipart edges or CORS.
+"""
+
+from __future__ import annotations
+
+from urllib.parse import parse_qs, urlparse
+from uuid import UUID
+
+import pytest
+from botocore.exceptions import ClientError
+
+from app.modules.player_profile.domain.photos import PhotoRef
+from app.modules.player_profile.infrastructure.s3_photo_storage import (
+    S3PhotoStorage,
+    object_key_for,
+    reports_an_absent_object,
+)
+
+ALICE = UUID("11111111-1111-1111-1111-111111111111")
+PHOTO = UUID("33333333-3333-3333-3333-333333333333")
+REF = PhotoRef(owner_id=ALICE, photo_id=PHOTO)
+
+
+def minio() -> S3PhotoStorage:
+    """How `local` is wired: an internal endpoint and a different public one."""
+
+    return S3PhotoStorage(
+        bucket="raketa-player-photos",
+        endpoint_url="http://minio:9000",
+        public_endpoint_url="http://localhost:9000",
+        region_name="us-east-1",
+        access_key_id="raketa_photos",
+        secret_access_key="raketa_photos_pwd",
+    )
+
+
+def aws() -> S3PhotoStorage:
+    """How a deployed environment is wired: no endpoint override at all."""
+
+    return S3PhotoStorage(
+        bucket="raketa-player-photos",
+        endpoint_url=None,
+        public_endpoint_url=None,
+        region_name="eu-north-1",
+        access_key_id="key",
+        secret_access_key="secret",
+    )
+
+
+# ---------------------------------------------------------------------------
+# The endpoint split
+# ---------------------------------------------------------------------------
+
+
+async def test_a_url_is_signed_against_the_public_endpoint_not_the_internal_one() -> (
+    None
+):
+    """`http://minio:9000` is a name only the compose network resolves.
+
+    SigV4 signs the host, so a URL signed for the internal name is invalid at
+    the external one — which is why signing has a client of its own. Get this
+    wrong and every photo is a broken image on every device.
+    """
+
+    url = await minio().presigned_read_url(REF, valid_for_seconds=300)
+
+    assert urlparse(url).netloc == "localhost:9000"
+    assert "minio:9000" not in url
+
+
+async def test_the_public_endpoint_falls_back_to_the_internal_one() -> None:
+    # One endpoint configured is the ordinary case on a host-run uvicorn, where
+    # MinIO is on localhost for both.
+    storage = S3PhotoStorage(
+        bucket="b",
+        endpoint_url="http://localhost:9000",
+        public_endpoint_url=None,
+        region_name="us-east-1",
+        access_key_id="k",
+        secret_access_key="s",
+    )
+
+    url = await storage.presigned_read_url(REF, valid_for_seconds=300)
+
+    assert urlparse(url).netloc == "localhost:9000"
+
+
+async def test_the_deployed_wiring_is_the_same_class_with_no_endpoint() -> None:
+    """ADR-0091's adapter swap, demonstrated rather than asserted in prose.
+
+    The same class, one setting different, and the URL is AWS's own https
+    endpoint. No code changes and no user data moves — which is the entire
+    reason photos are not `bytea` in Postgres.
+    """
+
+    url = await aws().presigned_read_url(REF, valid_for_seconds=300)
+
+    assert urlparse(url).scheme == "https"
+    assert urlparse(url).netloc.endswith("amazonaws.com")
+    assert "eu-north-1" in url
+
+
+# ---------------------------------------------------------------------------
+# What the URL grants
+# ---------------------------------------------------------------------------
+
+
+async def test_the_url_is_signed_and_carries_the_requested_window() -> None:
+    url = await minio().presigned_read_url(REF, valid_for_seconds=300)
+
+    query = parse_qs(urlparse(url).query)
+    assert query["X-Amz-Expires"] == ["300"]
+    assert query["X-Amz-Signature"]
+    assert query["X-Amz-Algorithm"] == ["AWS4-HMAC-SHA256"]
+
+
+async def test_the_url_addresses_this_players_key_and_no_other() -> None:
+    url = await minio().presigned_read_url(REF, valid_for_seconds=300)
+
+    assert object_key_for(ALICE, PHOTO) in urlparse(url).path
+
+
+async def test_the_secret_is_never_in_the_url() -> None:
+    # A presigned URL is handed to a device and ends up in logs, crash reports
+    # and screenshots. The signature is derived from the secret; the secret
+    # itself must not be in it.
+    url = await minio().presigned_read_url(REF, valid_for_seconds=300)
+
+    assert "raketa_photos_pwd" not in url
+
+
+async def test_path_style_addressing_keeps_the_bucket_out_of_the_hostname() -> None:
+    # Virtual-host style would resolve `raketa-player-photos.minio`, which is
+    # not a name anything on the compose network answers to.
+    url = await minio().presigned_read_url(REF, valid_for_seconds=300)
+
+    assert urlparse(url).path.startswith("/raketa-player-photos/")
+
+
+# ---------------------------------------------------------------------------
+# Absent versus broken
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("code", ["404", "NoSuchKey", "NotFound"])
+def test_the_stores_several_spellings_of_absent_are_all_read_as_absent(
+    code: str,
+) -> None:
+    # MinIO and S3 do not agree on which of these `head_object` returns, so both
+    # are read rather than one being trusted.
+    error = ClientError({"Error": {"Code": code}}, "HeadObject")
+
+    assert reports_an_absent_object(error)
+
+
+@pytest.mark.parametrize(
+    "code", ["AccessDenied", "NoSuchBucket", "InternalError", "SlowDown", ""]
+)
+def test_a_broken_store_is_never_reported_as_an_absent_photo(code: str) -> None:
+    """The failure that would be invisible.
+
+    Reading an outage as *not found* turns it into every player's photos
+    silently vanishing — and it would make the profile commit refuse every photo
+    id it was handed, for the duration, with a validation error rather than an
+    error that says the store is down.
+    """
+
+    error = ClientError({"Error": {"Code": code}}, "HeadObject")
+
+    assert not reports_an_absent_object(error)

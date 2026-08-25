@@ -38,7 +38,10 @@ from app.bootstrap.composition import (
     build_clock,
     build_domain_event_store,
     build_event_publisher,
+    build_image_transcoder,
     build_password_hasher,
+    build_photo_review,
+    build_photo_storage,
     build_refresh_token_repository,
     build_skill_rating_repository,
     build_token_service,
@@ -49,6 +52,9 @@ from app.bootstrap.events import EventRuntime, build_event_runtime, get_event_ru
 from app.core.config import get_settings
 from app.kernel import Sport
 from app.main import create_app
+from app.modules.player_profile.application.commands import UploadPhotoCommand
+from app.modules.player_profile.application.upload_photo import UploadPhoto
+from app.modules.player_profile.domain.errors import UnsupportedImageFormat
 from app.modules.rating.application.commands import CreateAssessmentCommand
 from app.modules.rating.application.create_assessment import CreateAssessment
 from app.modules.users.application.commands import RegisterUserCommand
@@ -136,6 +142,13 @@ async def test_every_port_is_built_from_a_session_and_the_settings(session_facto
             build_assessment_engine(),
             build_assessment_repository(event_store=store, events=events),
             build_skill_rating_repository(event_store=store, events=events),
+            # No session: photos are bytes in an object store, not rows. What
+            # they need instead is the settings — the bucket and which store —
+            # which is the other half of what this module promises a caller
+            # outside a request.
+            build_photo_storage(settings),
+            build_image_transcoder(),
+            build_photo_review(),
         ]
 
     assert all(port is not None for port in built)
@@ -268,3 +281,35 @@ def test_the_factories_import_no_web_framework():
     )
 
     assert frameworks == []
+
+
+async def test_the_photo_path_is_assembled_without_a_session_or_a_request():
+    """The upload path runs on the settings alone — no database at all.
+
+    Worth its own case rather than a line in the list above: every other port in
+    this module takes a session, so *this* is the one that proves the factories
+    are a function of configuration and not of a request that happens to carry a
+    transaction. It is what a sweep job (#142) will need.
+    """
+
+    settings = get_settings()
+
+    use_case = UploadPhoto(
+        storage=build_photo_storage(settings),
+        transcoder=build_image_transcoder(),
+        review=build_photo_review(),
+        clock=build_clock(),
+        url_valid_for_minutes=settings.PHOTO_URL_VALID_FOR_MINUTES,
+    )
+
+    # Executed as far as it can go without a store: the transcoder and the
+    # reviewer are real, and a refused format proves the wiring runs rather than
+    # only that the constructors accepted their arguments.
+    with pytest.raises(UnsupportedImageFormat):
+        await use_case.execute(
+            UploadPhotoCommand(
+                owner_id=new_uuid(),
+                data=b"not an image",
+                declared_media_type="image/gif",
+            )
+        )

@@ -52,6 +52,18 @@ from app.modules.auth.infrastructure.password_hasher import BcryptPasswordHasher
 from app.modules.auth.infrastructure.sqlalchemy_refresh_token_repository import (
     SqlAlchemyRefreshTokenRepository,
 )
+from app.modules.player_profile.domain.ports import (
+    ImageTranscoder,
+    PhotoReview,
+    PhotoStorage,
+)
+from app.modules.player_profile.infrastructure.passthrough_photo_review import (
+    PassThroughPhotoReview,
+)
+from app.modules.player_profile.infrastructure.pillow_image_transcoder import (
+    PillowImageTranscoder,
+)
+from app.modules.player_profile.infrastructure.s3_photo_storage import S3PhotoStorage
 from app.modules.rating.domain.ports import AssessmentRepository, SkillRatingRepository
 from app.modules.rating.infrastructure.event_sourced_assessment_repository import (
     EventSourcedAssessmentRepository,
@@ -166,3 +178,46 @@ def build_skill_rating_repository(
 ) -> SkillRatingRepository:
     """Per unit of work, for the same reason the assessment's is."""
     return EventSourcedSkillRatingRepository(event_store=event_store, events=events)
+
+
+# --------------------------------------------------------------------------
+# Player profile
+# --------------------------------------------------------------------------
+
+
+def build_photo_storage(settings: Settings) -> PhotoStorage:
+    """The object store, wherever it is.
+
+    One class for MinIO and for S3 — see the adapter's docstring. **Which store
+    is chosen is one setting, and it is read here**, so a sweep job or a
+    management command reaches the same bucket a request does rather than a
+    second opinion about where photos live.
+
+    Constructing this opens no connection: an `aioboto3.Session` is credentials
+    and a region, and the client that talks is made per call.
+    """
+
+    return S3PhotoStorage(
+        bucket=settings.PHOTO_STORAGE_BUCKET,
+        endpoint_url=settings.PHOTO_STORAGE_ENDPOINT_URL,
+        public_endpoint_url=settings.PHOTO_STORAGE_PUBLIC_ENDPOINT_URL,
+        region_name=settings.PHOTO_STORAGE_REGION,
+        access_key_id=settings.PHOTO_STORAGE_ACCESS_KEY,
+        secret_access_key=settings.PHOTO_STORAGE_SECRET_KEY,
+    )
+
+
+def build_image_transcoder() -> ImageTranscoder:
+    return PillowImageTranscoder()
+
+
+def build_photo_review() -> PhotoReview:
+    """The pass-through reviewer, which allows everything.
+
+    The concrete reviewer is chosen here and nowhere else, for the same reason
+    the engine version is: when the real on-court check lands it replaces this
+    line, and no use case, route or test of the upload path changes shape
+    (`docs/adr/0091`).
+    """
+
+    return PassThroughPhotoReview()
