@@ -5,7 +5,7 @@
 # frontend_player/. Targets here are only for things that genuinely span apps.
 # ----------------------------------------------------------------------------
 .PHONY: help gen-api openapi check check-backend check-player \
-        test-hooks test-drift afk-install afk-build afk
+        test-hooks test-drift poetry-pin test-poetry-pin afk-install afk-build afk
 
 help:              ## list targets
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS=":.*?## "}; {printf "\033[36m%-16s\033[0m %s\n", $$1, $$2}'
@@ -41,6 +41,15 @@ test-hooks:        ## verify the ownership + bash guardrails still match
 
 test-drift:        ## verify the contract drift check still fires
 	bash .github/scripts/test-contract-drift.sh
+
+# The Poetry that writes backend/poetry.lock and the Poetry every build pins to
+# read it are two different numbers in five files, and nothing compared them
+# until #153. Cross-app because the pins are in backend/ and .github/ both.
+poetry-pin:        ## verify every pinned Poetry can read backend/poetry.lock
+	bash .github/scripts/check-poetry-pin-drift.sh
+
+test-poetry-pin:   ## verify the poetry pin check still fires
+	bash .github/scripts/test-poetry-pin-drift.sh
 
 # ----------------------------------------------------------------------------
 # AFK agent loop (sandbuket). See tools/afk/README.md.

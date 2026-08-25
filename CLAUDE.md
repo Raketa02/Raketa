@@ -44,6 +44,15 @@ the hooks themselves, `make gen-api`.
   its client types fails the build
   ([`.github/scripts/check-contract-drift.sh`](.github/scripts/check-contract-drift.sh),
   proven still to fire by `make test-drift`).
+- **One Poetry writes `backend/poetry.lock` and every pin reads it.** The version is
+  pinned in five places across `backend/` and `.github/`, and each must be at least the
+  version stamped in the lock's header. Poetry only *warns* when a pin is too old and
+  still exits 0, so this drifted two majors unnoticed (#153); the next `lock-version`
+  bump would have failed all five at once. Regenerating the lock and bumping the pins is
+  one commit, checked by
+  [`.github/scripts/check-poetry-pin-drift.sh`](.github/scripts/check-poetry-pin-drift.sh)
+  (`make poetry-pin`, proven still to fire by `make test-poetry-pin`). Poetry 2.x
+  unbundled `poetry export`, so a site that exports also installs `poetry-plugin-export`.
 - **One session changes one app.** A `PreToolUse` hook blocks writes that cross an app
   boundary. A block is information — surface it, don't route around it. See
   [`docs/agents/ownership-boundaries.md`](docs/agents/ownership-boundaries.md).
@@ -88,7 +97,9 @@ guardrail doing its job.
 - [`docs/adr/`](docs/adr/) — decisions affecting the system or the contract between apps.
 
 After changing either hook, run `make test-hooks` (65 assertions). A guardrail that
-silently stops matching is worse than none, because you stop watching for it.
+silently stops matching is worse than none, because you stop watching for it. The same
+argument is why `make test-drift` and `make test-poetry-pin` exist: each drives its check
+against a deliberately broken tree and asserts it goes red.
 
 ## Agent skills
 
