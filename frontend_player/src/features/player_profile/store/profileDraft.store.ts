@@ -34,6 +34,19 @@
  * away needs a way to tell *not in the part* from *in the part, having answered nothing* —
  * and an empty draft cannot tell those apart, which is why entering is explicit.
  *
+ * ## The commit key is the part's, and that is what makes it work
+ *
+ * Beside the draft is the key the commit will be sent under. It is minted when the part is
+ * entered and lives exactly as long as the draft, which is the property the whole defence
+ * rests on: a double tap and a retry after a failure both send the key the *first* attempt
+ * sent, so the server serves one profile whatever the finger and the connection do. Minting
+ * one per press would be six presses and six profiles waiting to happen; a disabled button
+ * is only the courtesy.
+ *
+ * It goes with the draft when the part ends, for the same reason the workbench does: a new
+ * part is a new commit, and a key held over from the last one would ask the server to
+ * replay a profile built from answers nobody gave this time.
+ *
  * Nothing from the backend enters this store. The served tag vocabulary and radius bounds
  * are TanStack Query's; what is here is only what the player has said.
  */
@@ -42,6 +55,20 @@ import { create } from 'zustand';
 
 import { emptyDraft, recordAnswer, type ProfileDraft } from '../domain/ProfileDraft';
 import { uploadedPhotoIds, type ProfilePhoto } from '../domain/photoCollection';
+
+/**
+ * A name for one commit, in the alphabet the route accepts (1–128 characters).
+ *
+ * `Math.random` is right here and would be wrong for a credential — the same call the
+ * correlation id in `shared/lib/http` makes, for the same reason. This is an opaque handle
+ * a player's own commit is filed under, not a secret and not a guess anybody benefits from
+ * making: idempotency is answered from that player's own profile stream, so the key has to
+ * be stable across attempts and unique across parts, and nothing more.
+ */
+function newCommitKey(): string {
+  const random = () => Math.random().toString(36).slice(2, 12);
+  return `profile-commit-${random()}${random()}`;
+}
 
 interface ProfileDraftState {
   /** Undefined outside the part. See above — absence is the state that makes this work. */
@@ -53,6 +80,11 @@ interface ProfileDraftState {
    * fine: unlike the draft, nothing has to tell those two apart — `draft` already does.
    */
   readonly photos: readonly ProfilePhoto[];
+  /**
+   * What the commit at the end of the part will be sent under. Undefined outside the part,
+   * exactly as the draft is — see above for why one press must not mint its own.
+   */
+  readonly commitKey: string | undefined;
   /**
    * Enter the part, **only if it is not already running**.
    *
@@ -80,9 +112,11 @@ interface ProfileDraftState {
   /**
    * Back to no part running.
    *
-   * The part's only ending today is process death, which clears an in-memory store without
-   * anybody asking it to — so this exists for the suites that need a clean one. The *other*
-   * ending, the commit, arrives with its own ticket and brings the call site that means it.
+   * Two endings reach this. **The commit** calls it once the server has the answers, so
+   * nothing is left holding a draft the part has finished with — and so that a key which
+   * has already produced a profile cannot be sent again under a different set of answers.
+   * The other is process death, which clears an in-memory store without anybody asking it
+   * to; the suites that need a clean one use this to stand in for it.
    */
   readonly reset: () => void;
 }
@@ -90,11 +124,13 @@ interface ProfileDraftState {
 export const useProfileDraft = create<ProfileDraftState>((set, get) => ({
   draft: undefined,
   photos: [],
+  commitKey: undefined,
   enterIfAbsent: () => {
     if (get().draft !== undefined) return;
-    // The workbench is cleared with the draft, never separately: a new part that inherited
-    // the last one's tiles would show a player photographs they did not pick this time.
-    set({ draft: emptyDraft(), photos: [] });
+    // The workbench and the key are cleared with the draft, never separately: a new part
+    // that inherited the last one's tiles would show a player photographs they did not pick
+    // this time, and one that inherited its key would ask the server to replay it.
+    set({ draft: emptyDraft(), photos: [], commitKey: newCommitKey() });
   },
   // Dropped rather than starting a part, for the reason the pass drops a rating recorded
   // with no pass running: every screen that can answer was reached through the one that
@@ -109,5 +145,5 @@ export const useProfileDraft = create<ProfileDraftState>((set, get) => ({
       const photos = change(state.photos);
       return { photos, draft: recordAnswer(state.draft, { photoIds: uploadedPhotoIds(photos) }) };
     }),
-  reset: () => set({ draft: undefined, photos: [] }),
+  reset: () => set({ draft: undefined, photos: [], commitKey: undefined }),
 }));

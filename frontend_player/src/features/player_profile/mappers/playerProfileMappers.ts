@@ -15,11 +15,18 @@
  * The dropping is kept honest by the types: a nineteenth tag arrives through `pnpm gen:api`
  * as a new member of the generated union, and this file stops compiling rather than letting
  * the tag disappear from the picker of the next build anybody ships.
+ *
+ * **The boundary runs both ways.** `toCommitRequest` is the outbound half: the part's six
+ * answers, in the app's own words, becoming the one body that ends it. It takes a value that
+ * cannot hold a missing answer (`domain/profileCommit`), so the mapping is a renaming and
+ * nothing else — no default, no omission, no field decided here.
  */
 
 import type { components } from '@/generated/schema';
 
 import type { ProfileOptions } from '../domain/ProfileOptions';
+import type { DayPart } from '../domain/ProfileDraft';
+import type { ProfileCommit } from '../domain/profileCommit';
 import {
   SOCIAL_TAG_GROUP_IDS,
   SOCIAL_TAG_IDS,
@@ -31,6 +38,8 @@ type PlayerProfileOptionsResponse = components['schemas']['PlayerProfileOptionsR
 type PhotoResponse = components['schemas']['PhotoResponse'];
 type WireSocialTag = components['schemas']['SocialTag'];
 type WireSocialTagGroup = components['schemas']['SocialTagGroup'];
+type CommitPlayerProfileRequest = components['schemas']['CommitPlayerProfileRequest'];
+type WireDayPart = components['schemas']['DayPart'];
 
 /**
  * One spelling, not two.
@@ -96,4 +105,53 @@ export function toProfileOptions(response: PlayerProfileOptionsResponse): Profil
  */
 export function toUploadedPhotoId(response: PhotoResponse): string {
   return response.photo_id;
+}
+
+/**
+ * The three parts of a day, in the two spellings that exist.
+ *
+ * The app's are lower case because they are values in its own code; the wire's are the
+ * backend's enum. A table rather than `part.toUpperCase()`, for the reason the tag ids are
+ * a membership test rather than a cast: a fourth part added to either side then stops this
+ * file compiling instead of producing a string the other end has never heard of.
+ */
+const WIRE_DAY_PART: Readonly<Record<DayPart, WireDayPart>> = {
+  morning: 'MORNING',
+  afternoon: 'AFTERNOON',
+  evening: 'EVENING',
+};
+
+/**
+ * Everything the second part collected, as the one body that ends it.
+ *
+ * It takes a `ProfileCommit` and not a draft, which is the whole of what keeps a partial
+ * commit off the wire: the three answers that may legitimately be absent while a player is
+ * walking the part have already been proved present by `readyToCommit`, so there is nothing
+ * here to default, skip or guess at.
+ *
+ * **Order is carried, never imposed.** The photo ids are the order the player arranged —
+ * the first one leads — and the tag ids and the ticked cells go as they are held. Nothing
+ * is sorted and nothing is deduplicated: the picker cannot produce a repeat, and the commit
+ * collapses repeated cells itself.
+ *
+ * **The opt-in travels with the words it was given against.** `copy_version` is the client's
+ * identifier for the exact wording shown; the sentences themselves stay here and are never
+ * sent. An answer with no wording beside it is not a value this app can build, so there is
+ * nothing to check for at this boundary.
+ */
+export function toCommitRequest(commit: ProfileCommit): CommitPlayerProfileRequest {
+  return {
+    social_tag_ids: [...commit.socialTagIds],
+    photo_ids: [...commit.photoIds],
+    availability: commit.availability.map((slot) => ({
+      day: slot.day,
+      part: WIRE_DAY_PART[slot.part],
+    })),
+    location: { latitude: commit.location.latitude, longitude: commit.location.longitude },
+    search_radius_km: commit.searchRadiusKm,
+    proposals_opt_in: {
+      accepted: commit.proposalsOptIn.accepted,
+      copy_version: commit.proposalsOptIn.copyVersion,
+    },
+  };
 }

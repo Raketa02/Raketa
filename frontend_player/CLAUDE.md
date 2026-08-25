@@ -27,15 +27,15 @@ ordered startup sequence. Above that: the HTTP client with its 401 → refresh �
 rotation, the `AppError` family, `shared/lib/auth` over the keychain, and three features —
 `auth` (sign up, sign in, session restore), `onboarding` (the entry gate, welcome, the
 sports picker, the adaptive question loop, the explained result, and the summary and data
-screens a player leaves through) and `player_profile` (onboarding's **second part**: six
-steps over a client-held draft. The routes, the draft and the navigation work end to end,
-and **all six steps are built** — the Social tags picker, 2 to 6 chips from a served
-vocabulary, the photos step, up to three court photos or none, the availability grid, seven
-days by three parts of the day and blank until a player ticks something, the location step,
-one foreground fix coarsened to about a kilometre before it is held, the radius step, a
-slider over the served bounds that opens at the served default, and the Proposals opt-in,
-never pre-ticked and with a finish that stays closed until the player answers either way.
-What is left of the part is the commit that sends it).
+screens a player leaves through) and `player_profile` (onboarding's **second part**, complete: six
+steps over a client-held draft, and the one write that ends them — the Social tags picker,
+2 to 6 chips from a served vocabulary, the photos step, up to three court photos or none,
+the availability grid, seven days by three parts of the day and blank until a player ticks
+something, the location step, one foreground fix coarsened to about a kilometre before it is
+held, the radius step, a slider over the served bounds that opens at the served default, the
+Proposals opt-in, never pre-ticked and with a finish that stays closed until the player
+answers either way, and the **profile commit**: every answer in one idempotent
+`POST /players/me/profile`, after which the player walks the closing screens into the app).
 
 **Onboarding is two parts, and the part is the checkpoint unit**
 ([ADR-0090](../docs/adr/0090-onboarding-per-player-checkpoint.md)). Part one is the Skill
@@ -52,11 +52,28 @@ the answer in the draft — consent gathered against one sentence is not consent
 different one, so re-wording that card is a **new version with the old one retained**,
 never an edit. It is the only file in this app whose strings are evidence.
 
-**The second part is reached only through the entry gate today, so the closing screens come
-before it rather than after it.** A player finishing the questionnaire walks result → done →
-data → the app, and the gate turns them straight round into the social steps. The spec's
-order — the six steps, then the commit, then done and data — arrives with the commit, which
-is also what gives the last step something to continue to.
+**The closing screens sit on the far side of the second part.** The order is
+result → the six steps → the commit → done → data → the app, and it is the _pass_ that
+routes into the part (`nextDestination`, given whether a Player profile exists) as well as
+the entry gate. A player who is already set up — one resuming a run they left behind — goes
+straight to the closing screens instead. The done screen accounts for the ratings a walk
+produced, so it comes after the write that makes that account true of the account; entered
+with no pass running, it has nothing of its own to show and says so.
+
+**The commit is the one mutation in this app a retry may repeat.** Its **commit key** is
+minted when the part is entered and lives exactly as long as the draft, so a double tap and a
+retry after a failure both carry the key the first attempt carried — the disabled control is
+the courtesy, the key is the defence. `Idempotency-Key` is set by `shared/lib/http` for any
+request that names one, including the replay a 401 rotation makes. A failed commit keeps the
+draft, keeps the player on the step, offers the control that failed as the retry, and claims
+nothing. `commitStanding` and `mayFinish` own when the finish opens — a rule, not a
+`disabled={…}` expression — and `readyToCommit` under them is what makes a partial commit
+unrepresentable. Two things hold the finish shut. **No Location area**: location is a core
+requirement for discovery, `CommitPlayerProfileRequest` requires it, and the last step asks
+once more with the way back one press away rather than trapping a player on step four behind
+an OS prompt. **A photo still going up**: uploads outlive the step that started them, and the
+body names photos by the ids the server gave back, so committing mid-upload would silently
+drop a picture the player watched arrive. That one asks for nothing and opens itself.
 
 `src/shared/lib/platform/` owns everything the app knows about the device: the Query
 focus and online wirings, and two **platform ports** — `LocationPort` over `expo-location`

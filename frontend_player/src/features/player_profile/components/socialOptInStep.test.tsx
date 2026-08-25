@@ -23,9 +23,12 @@ import { clearStoredTokens, resetSessionStatus, wireHttpCredentials } from '@/sh
 import { queryClient } from '@/shared/lib/query-client';
 import {
   launchSignedIn,
+  resetLocation,
   stubGate as stubGateWith,
+  stubLocation,
   stubProfileOptions,
 } from '@/test-support/onboardingRouter';
+import { fakeLocation } from '@/test-support/platform';
 import { installTransport, type Transport, type Wire } from '@/test-support/transport';
 
 import { useProfileDraft } from '../store/profileDraft.store';
@@ -64,10 +67,18 @@ const finish = () => control(OPT_IN_FINISH_LABEL);
 /** What the part is holding, which for this step is the half that is never drawn. */
 const recorded = () => useProfileDraft.getState().draft?.proposalsOptIn;
 
-/** A launch by a player the gate owes the second part to, walked to the last of the six. */
+/**
+ * A launch by a player the gate owes the second part to, walked to the last of the six.
+ *
+ * **The area is captured on the way through**, which is not incidental to this suite: the
+ * finish is closed for a part that is short of one, and a walk that skipped it would prove
+ * the commit's rule about location over and over instead of this step's rule about consent.
+ * The step that refuses without an area has its own suite; this one arrives with one.
+ */
 async function reachTheOptInStep() {
   stubGateWith(transport, { ratings: [RATING], hasPlayerProfile: false });
   stubProfileOptions(transport);
+  stubLocation(fakeLocation());
 
   await launchSignedIn();
 
@@ -83,7 +94,8 @@ async function reachTheOptInStep() {
   fireEvent.press(screen.getByLabelText('Continue'));
 
   await waitFor(() => expect(screen).toHavePathname('/location'));
-  fireEvent.press(screen.getByLabelText('Continue without matching'));
+  fireEvent.press(screen.getByLabelText('Use my location'));
+  fireEvent.press(await screen.findByLabelText('Continue'));
 
   await waitFor(() => expect(screen).toHavePathname('/radius'));
   fireEvent.press(await screen.findByLabelText('Continue'));
@@ -103,6 +115,7 @@ beforeEach(async () => {
 
 afterEach(() => {
   transport.restore();
+  resetLocation();
   queryClient.clear();
 });
 

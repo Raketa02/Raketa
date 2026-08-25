@@ -29,23 +29,48 @@
  * scope note is the sentence that says so. It is not decoration: without it the card reads
  * as *disappear or be suggested to*, which is a choice nobody is being offered.
  *
- * ## Nothing here reaches the network
+ * ## This is where the part is written, and it is the only place that is
  *
- * The answer and its copy version go into the part's client-held draft like the five before
- * it, and the whole of it is sent in one commit at the end of the part
- * ([ADR-0090](../../../../../docs/adr/0090-onboarding-per-player-checkpoint.md)). That
- * commit is not built yet, which is what the note above the finish says out loud rather
- * than navigating somewhere that would claim the account was set up.
+ * The answer and its copy version go into the client-held draft like the five before it, and
+ * then the finish sends **the whole of it in one request**
+ * ([ADR-0090](../../../../../docs/adr/0090-onboarding-per-player-checkpoint.md)). Not six
+ * writes: a partial commit — the tags saved and the consent lost — is the worst outcome this
+ * part has available to it.
+ *
+ * What that costs this screen is two states it is the only one that can have. **A commit
+ * that did not land** leaves the player exactly here, with the draft intact and the control
+ * that failed as the retry, and nothing anywhere claiming the account was set up. **A commit
+ * with an answer still missing** cannot be sent at all, and the one it is realistically
+ * short of is the area — the location step names that cost when a player passes it, and this
+ * is where it is collected, with the way back one press away.
+ *
+ * The sequencing is `useCommitProfile`'s and the rule about what a complete part is is
+ * `readyToCommit`'s. What is left here is what a player sees and touches.
  */
 
+import { useRouter } from 'expo-router';
 import { Fragment } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { recoveryMessage } from '@/shared/errors';
 import { Button, Card, Chip, Hairline, Note, theme } from '@/shared/ui';
 
-import { mayFinish, optInStanding } from '../domain/proposalsOptIn';
+import { mayFinish, type CommitStanding } from '../domain/profileCommit';
+import { optInStanding } from '../domain/proposalsOptIn';
+import { useCommitProfile } from '../hooks/useCommitProfile';
 import { useProfileDraft } from '../store/profileDraft.store';
 
+import {
+  COMMIT_FAILED_BODY,
+  COMMIT_FAILED_TITLE,
+  FINISHING_WORD,
+  FINISH_HINT,
+  UPLOADING_BODY,
+  UPLOADING_HINT,
+  UPLOADING_TITLE,
+  answerStillWanted,
+} from './commitPresentation';
+import { pathThatAsks } from './socialStepRoutes';
 import {
   OPT_IN_ANSWERS,
   OPT_IN_EYEBROW,
@@ -61,16 +86,35 @@ import { SocialStepLayout } from './SocialStepLayout';
 import { stepCopy } from './socialStepPresentation';
 
 /**
- * What finishing does is the profile commit, and a commit is not a screen — it arrives with
- * its own ticket, together with the idempotency key that makes a double tap produce one
- * profile. The control is here now because **the rule this step owns is about the control**:
- * when it opens, and on what. Where it leads is the next ticket's.
+ * Where the part leads once the server has it: the closing screens, then the app.
+ *
+ * A route literal rather than an import, and that is the boundary working. What follows the
+ * commit is onboarding's — the summary of the ratings this walk produced, and what Raketa
+ * keeps — and this feature owns the profile rather than the flow that collects it. Written
+ * here, beside the one press that goes there, rather than in `socialStepRoutes`: that table
+ * is the six steps, and the six steps stop before this.
  */
-const finishNotBuiltYet = () => undefined;
+const AFTER_THE_PART = '/done';
+
+/**
+ * Why the finish will not move, for whoever cannot see that it will not.
+ *
+ * Three closed reasons and they are genuinely different: an answer one of the five earlier
+ * steps asks for, a photo still arriving, and the question on this very screen. Only the
+ * last is `optInPresentation`'s — reaching for *choose yes or no above to finish* in either
+ * of the other two would tell a player to do something they have already done.
+ */
+function finishHint(standing: CommitStanding['kind'], stepHint: string | undefined): string {
+  if (standing === 'uploading') return UPLOADING_HINT;
+  if (standing !== 'incomplete') return FINISH_HINT;
+  return stepHint ?? OPT_IN_FINISH_BLOCKED_HINT;
+}
 
 export function SocialOptInStep() {
+  const router = useRouter();
   const draft = useProfileDraft((state) => state.draft);
   const answer = useProfileDraft((state) => state.answer);
+  const { standing: commit, finish } = useCommitProfile();
 
   const standing = optInStanding(draft?.proposalsOptIn);
 
@@ -92,7 +136,26 @@ export function SocialOptInStep() {
   const say = (accepted: boolean) =>
     answer({ proposalsOptIn: { accepted, copyVersion: PROPOSALS_OPT_IN_COPY_VERSION } });
 
-  const open = mayFinish(standing);
+  /**
+   * What the finish is waiting for, if anything.
+   *
+   * `mayFinish` is not consulted separately any more, and that is not a rule being dropped:
+   * *an answer that has not been given is not an answer* is one of the three the readiness
+   * rule reports, so the finish still opens on either answer and on neither absence. What
+   * changed is that the same control now also refuses a part that is short of an area,
+   * which no rule about consent could ever have said.
+   */
+  const wanted = answerStillWanted(commit.kind === 'incomplete' ? commit.missing : []);
+  /**
+   * Whether the finish takes a press. **The rule is `mayFinish`'s**, and the only thing left
+   * here is drawing it.
+   *
+   * It deliberately stays open while a commit is in flight: the design system is explicit
+   * that *a busy button is not a disabled button*, and a control announcing itself disabled
+   * with a hint asking for an answer already given would describe a screen that does not
+   * exist.
+   */
+  const open = mayFinish(commit);
 
   return (
     <SocialStepLayout
@@ -103,26 +166,57 @@ export function SocialOptInStep() {
       eyebrow={OPT_IN_EYEBROW}
       action={
         <>
-          {/* `base` rather than `info`: this is not an explanation of the product, it is a
-              statement about the state of the build — the one thing on this screen that
-              will be deleted rather than re-worded. */}
-          <Note variant="base">
-            This is the last of the six. Finishing sends everything at once — that step is still to
-            come.
-          </Note>
+          {/* The failure, and it is `coral` and an alert because it is a status about
+              something the player just did rather than an explanation of the product. It
+              says what did not happen and that nothing was lost — never that setting up
+              worked, which is the one claim a failed commit must not make. */}
+          {commit.kind === 'failed' ? (
+            <Note variant="coral" title={COMMIT_FAILED_TITLE} accessibilityRole="alert">
+              {`${recoveryMessage(commit.error)} ${COMMIT_FAILED_BODY}`}
+            </Note>
+          ) : null}
+
+          {/* An answer the commit cannot do without, and the way back to the step that asks
+              it. `amber` rather than `coral`: nothing has gone wrong and nothing is lost —
+              this is a step still to be taken, and it is one press away. */}
+          {wanted !== undefined ? (
+            <>
+              <Note variant="amber" title={wanted.copy.title}>
+                {wanted.copy.body}
+              </Note>
+              <Button
+                label={wanted.copy.label}
+                variant="secondary"
+                size="lg"
+                onPress={() => router.replace(pathThatAsks(wanted.answer))}
+              />
+            </>
+          ) : null}
+
+          {/* A photo the player watched go up, still going. There is nothing to answer and
+              nowhere to go back to — it resolves itself and the finish opens — so this says
+              what is happening and offers no control at all. `base`, because it is neither a
+              warning nor an explanation of the product: it is a state that is passing. */}
+          {commit.kind === 'uploading' ? (
+            <Note variant="base" title={UPLOADING_TITLE}>
+              {UPLOADING_BODY}
+            </Note>
+          ) : null}
 
           <Button
             label={OPT_IN_FINISH_LABEL}
             size="lg"
-            // The whole of this step's rule, in one prop: closed until answered, open on
-            // either answer. `mayFinish` is where that is decided, so *no* can never be
-            // mistaken for *not yet*.
+            // Closed until answered, open on either answer — and closed again for a part
+            // that is short of something the six steps must carry. Both are `readyToCommit`
+            // reporting, so *no* can never be mistaken for *not yet*.
             disabled={!open}
-            onPress={finishNotBuiltYet}
-            // Only while it is closed. An enabled control that repeated its own label as a
-            // hint would be read twice, and there is nothing to promise about what
-            // finishing sends until there is a commit to send it.
-            accessibilityHint={open ? undefined : OPT_IN_FINISH_BLOCKED_HINT}
+            // Blocked while the request is in flight, which is the courtesy. The defence is
+            // the idempotency key: it belongs to the part rather than to the press, so a
+            // second tap that beats this state is the same commit rather than a second one.
+            busy={commit.kind === 'committing'}
+            busyLabel={FINISHING_WORD}
+            onPress={() => finish(() => router.replace(AFTER_THE_PART))}
+            accessibilityHint={finishHint(commit.kind, wanted?.copy.finishHint)}
           />
         </>
       }

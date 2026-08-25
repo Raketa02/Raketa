@@ -178,7 +178,12 @@ afterEach(() => {
  * which run comes back depends on what was asked for.
  */
 async function startRating(...sports: readonly string[]) {
-  stubGate();
+  // **A committed Player profile throughout this suite**, from the launch onwards, which is
+  // not what a player walking into welcome really holds. It is what isolates these tests:
+  // what they are about is the closing screens and the ratings the pass produced, and for a
+  // player who has not finished setting up the last sport leads into the second part's six
+  // steps instead — which is `commitTheProfile.test.tsx`'s walk, not this one's.
+  stubGate({ hasPlayerProfile: true });
   transport.on('GET', '/api/v1/sports', () => json(SPORTS_SERVED));
   transport.on('POST', '/api/v1/assessments', (request) => {
     const { sport } = request.body as { sport: Wire['Sport'] };
@@ -212,12 +217,8 @@ async function answerTheLastQuestion(
   transport.on('POST', answersPath(assessmentId), () => {
     transport.on('GET', stepPath(assessmentId), () => json(finished(assessmentId, result)));
     held = [...held, ratingOf(sport, result)];
-    // **A committed Player profile throughout this suite**, which is not what a player who
-    // has just answered their last question really holds. It is what isolates these tests:
-    // what they are about is the closing screens and the ratings the pass produced, and the
-    // gate's second-part branch would otherwise answer for every one of them. Onboarding's
-    // second part is not wired into this exit yet — that is the commit's own ticket, and it
-    // is where this line becomes a walk through six more screens.
+    // The same standing the launch was given: this player finished setting up long ago and
+    // is here for one more sport. See `startRating`.
     stubGate({ ratings: held, hasPlayerProfile: true });
     return json(finished(assessmentId, result));
   });
@@ -468,9 +469,11 @@ describe('the data screen', () => {
     await reachTheDataScreen();
 
     expect(await screen.findByText(/Your answers, the rating they produced/)).toBeTruthy();
-    expect(screen.getByText('What we keep')).toBeTruthy();
+    expect(screen.getByText('What we keep from the questions')).toBeTruthy();
     expect(screen.getByText(/which version of the rating engine produced it/)).toBeTruthy();
-    expect(screen.getByText(/not shared with other players, and they are never sold/)).toBeTruthy();
+    expect(
+      screen.getByText(/not shared with other players, and nothing here is ever sold/),
+    ).toBeTruthy();
 
     // The invariant the whole rating context is built on, said plainly because the player
     // is entitled to know it.
@@ -479,6 +482,54 @@ describe('the data screen', () => {
     expect(screen.getByText(/proved, never declared/)).toBeTruthy();
 
     expect(screen.getByText('You can rate a sport again later')).toBeTruthy();
+  });
+
+  it('accounts for what the second part collected, not only the questionnaire', async () => {
+    // Onboarding is two parts, and this screen is the account of both. A player who handed
+    // over tags, photos, a week, an area and a distance ten screens ago and read a screen
+    // that mentioned none of them would have been told a half-truth on the way out.
+    await reachTheDataScreen();
+
+    expect(await screen.findByText('What we keep from setting up')).toBeTruthy();
+    expect(screen.getByText(/tags you picked, the photos you added/)).toBeTruthy();
+
+    // Each of the four promises the steps themselves made, kept on the way out.
+    expect(screen.getByText(/never shown to anybody as a calendar/)).toBeTruthy();
+    expect(screen.getByText(/rounded before anything is written down/)).toBeTruthy();
+    expect(screen.getByText(/re-encoded when it reaches Raketa/)).toBeTruthy();
+    expect(screen.getByText(/the exact wording you were shown/)).toBeTruthy();
+  });
+
+  it('says nothing about checking a photo, because nothing checks one', async () => {
+    // The prototype's screen claimed a review that does not happen. An app that describes a
+    // safeguard it has not built has told the player something untrue about the product.
+    await reachTheDataScreen();
+
+    expect(screen.queryByText(/review/i)).toBeNull();
+    expect(screen.queryByText(/moderat/i)).toBeNull();
+    expect(screen.queryByText(/checked/i)).toBeNull();
+  });
+
+  it('promises no profile editor, because there is not one', async () => {
+    // The same class of claim. Editing a Player profile is a screen this app does not have,
+    // and #135 puts it outside this spec — so the only withdrawal promise here is the one
+    // the consent card already made, in its own words.
+    await reachTheDataScreen();
+
+    expect(screen.queryByText(/editable from your profile/)).toBeNull();
+    expect(screen.getByText(/You can stop any time, from your profile/)).toBeTruthy();
+  });
+
+  it('is still not a consent form, and offers nothing here that means yes', async () => {
+    // It now says what the opt-in recorded, which is an account of a decision already
+    // taken. That is the opposite of asking for one: the only control on the screen is the
+    // way out, and it says so.
+    await reachTheDataScreen();
+
+    expect(screen.getByText(/nothing on this screen changes it/)).toBeTruthy();
+
+    const controls = screen.getAllByRole('button');
+    expect(controls.map((control) => control.props.accessibilityLabel)).toEqual(['Start playing']);
   });
 
   it('calls no endpoint at all', async () => {
@@ -497,8 +548,10 @@ describe('the data screen', () => {
 
     // Every write this flow makes, from welcome to the app: two runs started and two
     // answers submitted. Nothing here is a consent — what a consent covers is a legal
-    // question this flow cannot answer — and the match-proposals opt-in is its own
-    // explicit, skippable step whenever it arrives, never folded into this one.
+    // question this flow cannot answer — and the Proposals opt-in is its own explicit step
+    // with no skip and no default, never folded into this one. (This player was already
+    // set up, which is why the second part is not in the list; the walk that commits one
+    // is `commitTheProfile.test.tsx`.)
     const writes = transport.requests.filter((request) => request.method !== 'GET');
     expect(writes.map((request) => `${request.method} ${request.path}`)).toEqual([
       'POST /api/v1/assessments',

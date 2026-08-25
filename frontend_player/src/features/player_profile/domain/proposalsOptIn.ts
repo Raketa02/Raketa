@@ -16,13 +16,18 @@
  * three states are spelled out so that reading one of them is a decision rather than a
  * coincidence — the same argument `socialTagSelection`'s standing makes about a floor.
  *
- * ## No is a whole answer
+ * ## No is a whole answer, and the rule that says so has moved
  *
- * `mayFinish` is deliberately blind to *which* answer was given. A gate that opened only on
- * yes would be the product withholding the rest of itself until the player consented, and
- * a player who declines has finished this step exactly as completely as one who accepts.
- * That is a rule worth stating once, in a file with no renderer, rather than living inside
- * a `disabled` prop where the difference between *unanswered* and *declined* is one typo.
+ * `mayFinish` used to live here and be blind to *which* answer was given — a gate that
+ * opened only on yes would be the product withholding the rest of itself until the player
+ * consented. That rule is now `profileCommit.mayFinish`, because consent stopped being the
+ * only thing that can hold the finish shut: the part is also refused without a Location
+ * area, and while a photo is still arriving. Neither is anything this file could have said.
+ *
+ * Nothing was dropped in the move. *An answer that has not been given is not an answer* is
+ * one of the three `readyToCommit` reports, so the finish still opens on either answer and
+ * on neither absence — and `optInStanding` below is still what the two controls draw their
+ * selected state from.
  *
  * ## The words travel with the answer, and the type is what guarantees it
  *
@@ -49,16 +54,4 @@ export function optInStanding(optIn: ProposalsOptIn | undefined): ProposalsOptIn
   return optIn === undefined
     ? { kind: 'unanswered' }
     : { kind: 'answered', accepted: optIn.accepted };
-}
-
-/**
- * Whether the part may be finished from here.
- *
- * **Either answer, and nothing else.** There is no skip, no dismiss and no decide-later
- * anywhere on this step, because a player who passed through one of those would be neither
- * opted in nor opted out — and somebody downstream would then have to guess, which is the
- * guess consent exists to make unnecessary.
- */
-export function mayFinish(standing: ProposalsOptInStanding): boolean {
-  return standing.kind === 'answered';
 }

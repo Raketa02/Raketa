@@ -18,6 +18,14 @@ export type {
 
 export { authKeys } from './hooks/authKeys';
 export { useCurrentUser } from './hooks/useCurrentUser';
+/**
+ * The one write another feature may make to the authenticated player.
+ *
+ * Onboarding's second part ends in a commit that creates a Player profile, and the entry
+ * gate reads whether one exists off this player. The *fact* is auth's, so the cache effect
+ * is auth's too — see the hook.
+ */
+export { useMarkPlayerProfileCommitted } from './hooks/useMarkPlayerProfileCommitted';
 
 /**
  * The two launch steps. Exported because the bootstrap sequence needs them and

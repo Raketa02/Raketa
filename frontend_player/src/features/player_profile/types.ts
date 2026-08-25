@@ -20,6 +20,14 @@ export { SocialRadiusStep } from './components/SocialRadiusStep';
 export { SocialOptInStep } from './components/SocialOptInStep';
 
 export { SOCIAL_STEPS, type SocialStep } from './domain/socialSteps';
+/**
+ * Where the second part begins, as a route.
+ *
+ * The entry gate and the end of onboarding's first part both send a player here, and both
+ * used to spell the route themselves. **The first step is the only door in** — the draft is
+ * client-held and starts empty, so the middle of the part is not a place anyone can be sent.
+ */
+export { SOCIAL_STEPS_ENTRY } from './components/socialStepRoutes';
 export type {
   AvailabilitySlot,
   DayPart,

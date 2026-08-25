@@ -33,6 +33,7 @@ import {
   useEndOnboardingPass,
   useEntryDecision,
 } from '@/features/onboarding/types';
+import { SOCIAL_STEPS_ENTRY } from '@/features/player_profile/types';
 import { useSessionStatus } from '@/shared/lib/auth';
 
 export default function AppLayout() {
@@ -65,8 +66,9 @@ export default function AppLayout() {
     case 'social-steps':
       // The first step, always — never the one they were on when they closed the app. The
       // draft is client-held and starts empty, so the middle of the part is not a place a
-      // player can be resumed to.
-      return <Redirect href="/tags" />;
+      // player can be resumed to. Which route that is belongs to the feature that owns the
+      // part, not to this file.
+      return <Redirect href={SOCIAL_STEPS_ENTRY} />;
     case 'resume':
       return (
         <Redirect

@@ -39,10 +39,13 @@
  * `optInPresentation.test.ts` pins them alongside everything below — what the version
  * identifier names is what was *shown*, wherever the string happened to be declared.
  *
- * The one sentence deliberately outside the pin is the note beside the finish saying the
- * commit is not built yet. That is a statement about the state of the build rather than
- * about what the player is agreeing to, and it is deleted rather than re-worded when the
- * commit lands — versioning it would be recording a build detail as evidence.
+ * The note that used to sit beside the finish, saying the commit was not built yet, was
+ * deliberately outside the pin and has been deleted rather than re-worded, exactly as this
+ * file said it would be. What replaced it lives in `commitPresentation` — what finishing
+ * does, what is still wanted, and what a failed commit says — and it stays outside the pin
+ * for the same reason: none of it is part of any agreement. It describes the state of a
+ * setup flow, it is shown conditionally, and versioning it would be recording a build
+ * detail as evidence.
  */
 
 /**
@@ -140,8 +143,10 @@ export const OPT_IN_FINISH_LABEL = 'Finish — show me players';
 /**
  * Why the finish is closed, for whoever cannot see that it is.
  *
- * Only while it is closed. Once an answer is given the control says what it does and a hint
- * repeating it would be read twice — and there is nothing here to promise about what
- * finishing sends until the commit exists to send it.
+ * **This step's own reason, and only this one.** The finish is also closed for a part that
+ * is short of an answer one of the five earlier steps asks for — an area, most of all — and
+ * that sentence is `commitPresentation`'s, because it is about the commit rather than about
+ * consent. Reaching for this one there would tell a player to choose yes or no when they
+ * already have.
  */
 export const OPT_IN_FINISH_BLOCKED_HINT = 'Choose yes or no above to finish';

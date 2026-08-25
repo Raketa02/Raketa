@@ -20,6 +20,17 @@ import {
 const PADEL_RUN = '1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6';
 const TENNIS_RUN = 'b7c8d9e0-1f2a-4b3c-8d4e-5f6a7b8c9d0e';
 
+/**
+ * The two players a destination can be asked about: one who has finished onboarding's
+ * second part, and one who has not.
+ *
+ * `SET_UP` is also what a launch that has not answered the question yet reads as — the
+ * fail-safe direction, because the closing screens lead to the app and the entry gate there
+ * has the last word.
+ */
+const SET_UP = { hasPlayerProfile: true };
+const NOT_SET_UP = { hasPlayerProfile: false };
+
 /** A pass over these sports with those runs already rated, built the way the app builds it. */
 function passOver(queue: readonly ('padel' | 'tennis' | 'squash')[]): OnboardingPass {
   return begin(queue);
@@ -100,7 +111,7 @@ describe('position across sports', () => {
     // Dropping it would turn "Rating 2 of 2" into "Rating 1 of 1" as a reward for giving
     // up on the first one.
     const pass = passOver(['tennis', 'padel']);
-    nextDestination(pass, 'tennis');
+    nextDestination(pass, 'tennis', SET_UP);
 
     expect(pass.queue).toEqual(['tennis', 'padel']);
     expect(positionOf(pass, 'padel')).toEqual({ index: 2, total: 2 });
@@ -128,7 +139,7 @@ describe('position across sports', () => {
 
 describe('where the player goes after a sport', () => {
   it('rates the next sport they chose', () => {
-    expect(nextDestination(passOver(['tennis', 'padel', 'squash']), 'padel')).toEqual({
+    expect(nextDestination(passOver(['tennis', 'padel', 'squash']), 'padel', SET_UP)).toEqual({
       kind: 'rate',
       sport: 'squash',
     });
@@ -137,16 +148,25 @@ describe('where the player goes after a sport', () => {
   it('offers the next sport whether or not this one produced a rating', () => {
     // Abandoning is the player saying stop *to this sport*. The rest of what they chose is
     // still what they chose, so the queue is not edited and the offer does not change.
-    expect(nextDestination(passOver(['tennis', 'padel']), 'tennis')).toEqual({
+    expect(nextDestination(passOver(['tennis', 'padel']), 'tennis', SET_UP)).toEqual({
       kind: 'rate',
       sport: 'padel',
     });
   });
 
-  it('shows the closing screens after the last sport, when the pass produced a rating', () => {
+  it('offers the next sport before it looks at setting up at all', () => {
+    // The second part is what follows the *queue*, not what follows a sport. A player with
+    // two sports to go is owed the second of them first.
+    expect(nextDestination(passOver(['tennis', 'padel']), 'tennis', NOT_SET_UP)).toEqual({
+      kind: 'rate',
+      sport: 'padel',
+    });
+  });
+
+  it('shows the closing screens after the last sport, when setting up is behind them', () => {
     const pass = recordRated(passOver(['padel']), { assessmentId: PADEL_RUN, sport: 'padel' });
 
-    expect(nextDestination(pass, 'padel')).toEqual({ kind: 'closing' });
+    expect(nextDestination(pass, 'padel', SET_UP)).toEqual({ kind: 'closing' });
   });
 
   it('shows the closing screens even when the last sport is the one that produced nothing', () => {
@@ -157,25 +177,52 @@ describe('where the player goes after a sport', () => {
       sport: 'padel',
     });
 
-    expect(nextDestination(pass, 'tennis')).toEqual({ kind: 'closing' });
+    expect(nextDestination(pass, 'tennis', SET_UP)).toEqual({ kind: 'closing' });
+  });
+
+  it('sends a player with no Player profile into the second part instead', () => {
+    // Onboarding is two parts, and the closing screens sit on the far side of the second
+    // one: the done screen accounts for the ratings, and it is the commit at the end of the
+    // six steps that makes the account true of the account.
+    const pass = recordRated(passOver(['padel']), { assessmentId: PADEL_RUN, sport: 'padel' });
+
+    expect(nextDestination(pass, 'padel', NOT_SET_UP)).toEqual({ kind: 'social-steps' });
+  });
+
+  it('sends them there after an abandonment just the same', () => {
+    // The way out of a sport is the way out of a sport, however the sport ended. What is
+    // still owed is owed either way.
+    const pass = recordRated(passOver(['padel', 'tennis']), {
+      assessmentId: PADEL_RUN,
+      sport: 'padel',
+    });
+
+    expect(nextDestination(pass, 'tennis', NOT_SET_UP)).toEqual({ kind: 'social-steps' });
   });
 
   it('goes straight to the app when the pass produced nothing', () => {
     // There is no account to give, the done screen has only its empty state to show, and
     // answering *stop* with two more screens is the wrong response to what was asked.
-    expect(nextDestination(passOver(['padel']), 'padel')).toEqual({ kind: 'app' });
+    expect(nextDestination(passOver(['padel']), 'padel', SET_UP)).toEqual({ kind: 'app' });
+  });
+
+  it('goes to the app even with setting up still to do, and lets the gate answer', () => {
+    // Nothing was rated *in this pass*, so this rule has nothing to account for and no way
+    // to know what an earlier walk produced. The entry gate reads both facts and will turn
+    // a player who is genuinely owed the second part into it.
+    expect(nextDestination(passOver(['padel']), 'padel', NOT_SET_UP)).toEqual({ kind: 'app' });
   });
 
   it('goes straight to the app from a sport outside the pass that produced nothing', () => {
     // The resumed run that was abandoned: nothing was chosen, nothing was rated.
-    expect(nextDestination(begin([]), 'padel')).toEqual({ kind: 'app' });
+    expect(nextDestination(begin([]), 'padel', SET_UP)).toEqual({ kind: 'app' });
   });
 
   it('goes straight to the app when no pass is running', () => {
     // The same answer as a pass that produced nothing, for the same reason: there is
     // nothing to account for. This is what sends a player who abandons a resumed run into
     // the app rather than to a summary of an earlier walk's ratings.
-    expect(nextDestination(undefined, 'padel')).toEqual({ kind: 'app' });
+    expect(nextDestination(undefined, 'padel', SET_UP)).toEqual({ kind: 'app' });
   });
 
   it('shows the closing screens from a sport outside the pass once something was rated', () => {
@@ -183,7 +230,7 @@ describe('where the player goes after a sport', () => {
     // an account to give, so it is still owed.
     const pass = recordRated(passOver(['padel']), { assessmentId: PADEL_RUN, sport: 'padel' });
 
-    expect(nextDestination(pass, 'squash')).toEqual({ kind: 'closing' });
+    expect(nextDestination(pass, 'squash', SET_UP)).toEqual({ kind: 'closing' });
   });
 });
 

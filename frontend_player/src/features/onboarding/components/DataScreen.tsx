@@ -6,11 +6,18 @@
  * the evidence trail makes about the number, applied to the data: an app that shows its
  * working about a rating should show its working about what it kept to produce it.
  *
+ * **It accounts for the whole of what onboarding collected**, which is now two parts rather
+ * than one. A screen that listed the questionnaire's answers and said nothing about the
+ * tags, the photos, the week, the area, the distance and the consent that the second part
+ * collects would be a lie by omission — the player handed those over ten screens ago and
+ * this is the screen that says what became of them.
+ *
  * **It is not a consent form and must never become one.** Nothing is recorded, nothing is
  * agreed to, and there is no control here that means yes. What a consent covers —
- * retention, withdrawal, jurisdiction — is a legal question, and the match-proposals
- * opt-in is its own explicit, skippable step whenever it arrives. Folding either into a
- * screen the player passes through on the way out would collect an agreement nobody read.
+ * retention, withdrawal, jurisdiction — is a legal question, and the Proposals opt-in is its
+ * own explicit step, with no skip and no default, several screens back. Saying here what
+ * that answer was recorded with is an account of a decision already taken; asking for it
+ * again on the way out would be collecting an agreement nobody read.
  *
  * **"No one can hand-edit a Level" is an invariant, not reassurance** (`CONTEXT.md`): a
  * level is proved, never declared, and the domain refuses a manual write rather than
@@ -30,14 +37,51 @@ import { Button, Card, Note, theme } from '@/shared/ui';
 
 import { OnboardingChrome } from './OnboardingChrome';
 
+/**
+ * What Raketa keeps, and what it never does with it — the whole of onboarding, in the order
+ * a player gave it.
+ *
+ * Every claim below is one the app can be held to. The photos really are re-encoded on
+ * arrival, which is why nothing they carried survives; the area really is rounded before
+ * anything is written, on the phone and again on the platform; the consent record really is
+ * stamped with the wording that was shown. **Nothing here claims a check nobody performs** —
+ * there is no sentence saying a photo is reviewed, because a promise about moderation is a
+ * promise, not a description — and **nothing here promises a screen that does not exist**:
+ * editing a Player profile is not built, so this table says what was kept rather than what
+ * a player may go and change.
+ */
 const POINTS = [
   {
-    title: 'What we keep',
+    title: 'What we keep from the questions',
     body: 'Your answers, the rating they produced, and which version of the rating engine produced it. That last one is what lets a rating be re-examined later — a number nobody can attribute is a number nobody can check.',
   },
   {
-    title: 'What we never do with it',
-    body: 'Your answers stay between you and Raketa. They are not shared with other players, and they are never sold.',
+    title: 'What we keep from setting up',
+    body: 'The tags you picked, the photos you added, the parts of the week you ticked, the area you play in and how far you will travel. That is what lets another player see who they would be playing, and what lets Raketa look for them near you.',
+  },
+  {
+    title: 'Your week is a preference, not a diary',
+    body: 'It is used to work out when two players overlap, and it is never shown to anybody as a calendar. Nothing you ticked is a promise to be anywhere.',
+  },
+  {
+    title: 'Your area is kept coarse, and your position is never shared',
+    body: 'About a kilometre across — the exact reading your phone gave is rounded before anything is written down, on this phone and again on the platform, so nobody has it to show. Raketa never reads your location while you are somewhere else in your phone.',
+  },
+  {
+    title: 'A photo arrives without the data behind it',
+    body: 'Phones write the place and time into a picture. Every photo is re-encoded when it reaches Raketa, so what is stored is the picture and none of what was attached to it.',
+  },
+  {
+    title: 'What you said about suggestions is on the record',
+    // The withdrawal half is the consent card's own promise, word for word — *You can stop
+    // any time, from your profile*. Echoing it is repeating a promise the product has
+    // already made on the screen where it counts; inventing a *new* one here would be the
+    // class of claim the note above this table bans.
+    body: 'Your answer to whether Raketa may suggest games is kept with the moment you gave it and the exact wording you were shown, so what you agreed to can be read back rather than assumed. You can stop any time, from your profile — and nothing on this screen changes it.',
+  },
+  {
+    title: 'What we never do with any of it',
+    body: 'It stays between you and Raketa. Your questionnaire answers are not shared with other players, and nothing here is ever sold.',
   },
   {
     title: 'No one can hand-edit a Level',
@@ -45,6 +89,10 @@ const POINTS = [
   },
   {
     title: 'You can rate a sport again later',
+    // Deliberately **not** a promise that the six answers above are editable. Editing a
+    // Player profile is a screen this app does not have yet, and the steps that do promise
+    // it — photos and location — promise only their own. A screen listing five things a
+    // player cannot go and change would be the same untrue claim as a review nobody runs.
     body: 'Any sport, whenever you like — including one you skipped today, and one you stopped part-way through. Nothing here was a one-shot exam.',
   },
 ] as const;

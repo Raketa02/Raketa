@@ -419,7 +419,10 @@ describe('abandoning a sport', () => {
     useOnboardingPass.getState().begin(['padel', 'tennis']);
     useOnboardingPass.getState().record({ assessmentId: PADEL_RUN, sport: 'padel' });
 
-    stubGate({ runs: [runInProgress('TENNIS', TENNIS_RUN)] });
+    // A player who finished setting up long ago and came back for one more sport. Without
+    // that, the way out of the last sport is onboarding's *second part* rather than the
+    // closing screens — which is a different walk, with its own suite.
+    stubGate({ runs: [runInProgress('TENNIS', TENNIS_RUN)], hasPlayerProfile: true });
     transport.on('GET', stepPath(TENNIS_RUN), () => json(TENNIS_OPENING));
     transport.on('GET', stepPath(PADEL_RUN), () => json(PADEL_FINISHED));
     stubAbandonment(TENNIS_RUN);

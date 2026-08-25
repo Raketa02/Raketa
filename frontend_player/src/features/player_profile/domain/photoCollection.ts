@@ -202,3 +202,19 @@ export function uploadedPhotoIds(photos: readonly ProfilePhoto[]): readonly stri
     photo.upload.kind === 'uploaded' ? [photo.upload.photoId] : [],
   );
 }
+
+/**
+ * How many are still on their way up.
+ *
+ * The step is free to leave while one is — an upload outlives the screen it was started
+ * from, deliberately, so that pressing continue does not cancel it. **The commit is not**:
+ * a photo with no id yet is a photo the one write at the end of the part cannot name, so
+ * committing while one is in flight would drop a picture the player watched arrive.
+ *
+ * A failed one is not counted. That one is not on its way anywhere — the tile says `Failed`
+ * and offers the retry — and holding the whole part shut on a photo the player has decided
+ * to leave behind would make one failure cost the setup rather than the picture.
+ */
+export function uploadsInFlight(photos: readonly ProfilePhoto[]): number {
+  return photos.filter((photo) => photo.upload.kind === 'uploading').length;
+}

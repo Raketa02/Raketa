@@ -241,7 +241,7 @@ describe('walking forward through the second part', () => {
     }
   });
 
-  it('ends at the last step rather than navigating on to something that does not exist', async () => {
+  it('ends at the last step, which finishes rather than continuing', async () => {
     await enterTheSocialSteps();
     await continueFromTheFirstStep();
     for (let step = 2; step < STEPS.length; step += 1) {
@@ -249,12 +249,39 @@ describe('walking forward through the second part', () => {
     }
 
     await waitFor(() => expect(screen).toHavePathname('/opt-in'));
-    // What follows the last step is the profile commit, and a commit is not a screen. Until
-    // it exists the part ends here rather than claiming the account was set up: the finish
-    // is on screen and closed, and the note beside it says so.
+    // Nothing in front of it: what follows the last step is the commit, and a commit is not
+    // a screen. So there is no *Continue* here — the one control that leaves is the finish.
     expect(screen.queryByLabelText('Continue')).toBeNull();
-    expect(screen.getByLabelText(STEPS[5]!.forward).props.accessibilityState?.disabled).toBe(true);
-    expect(screen.getByText(/Finishing sends everything at once/)).toBeTruthy();
+    expect(screen.getByLabelText(STEPS[5]!.forward)).toBeTruthy();
+  });
+
+  it('will not finish a part that walked past the area, and offers the way back to it', async () => {
+    // This walk pressed *Continue without matching* on step four, which is allowed and is
+    // the cost that step names. The commit is where it is collected: finding players near
+    // you works from one thing, and a profile without it takes part in nothing. So the part
+    // insists once more, here, with the way back one press away — rather than trapping the
+    // player on step four behind an OS prompt.
+    await enterTheSocialSteps();
+    await continueFromTheFirstStep();
+    for (let step = 2; step < STEPS.length; step += 1) {
+      await continueFrom(step - 1);
+    }
+    await waitFor(() => expect(screen).toHavePathname('/opt-in'));
+
+    // Answered either way — so what is holding the finish is not the consent question.
+    fireEvent.press(screen.getByLabelText(OPT_IN.yes));
+
+    const finish = screen.getByLabelText(STEPS[5]!.forward);
+    expect(finish.props.accessibilityState?.disabled).toBe(true);
+    // Not merely grey: the reason is on screen, and it is readable without sight.
+    expect(finish.props.accessibilityHint).toBe('Set the area you play in to finish');
+    expect(screen.getByText('We still need the area you play in')).toBeTruthy();
+
+    // And nothing was sent. A part that cannot be committed does not half-commit.
+    expect(transport.requests.filter((request) => request.method === 'POST')).toEqual([]);
+
+    fireEvent.press(screen.getByLabelText('Set the area you play in'));
+    await waitFor(() => expect(screen).toHavePathname('/location'));
   });
 });
 

@@ -221,3 +221,61 @@ describe('the request itself', () => {
     expect(transport.requests[0]?.path).toBe('/api/v1/sports');
   });
 });
+
+describe('the idempotency key', () => {
+  it('is sent as the header the write path reads', async () => {
+    transport.on('POST', '/api/v1/players/me/profile', () => json({ ok: true }, 201));
+
+    await httpRequest({
+      method: 'POST',
+      path: '/api/v1/players/me/profile',
+      body: {},
+      authenticated: false,
+      idempotencyKey: 'commit-1',
+    });
+
+    expect(transport.requests[0]?.headers['Idempotency-Key']).toBe('commit-1');
+  });
+
+  it('is absent from a request that names none', async () => {
+    // Every other endpoint. A header set on everything would be a claim about writes the
+    // backend never made, and one more thing to get wrong on the one route that needs it.
+    transport.on('GET', '/api/v1/sports', () => json({ sports: [] }));
+
+    await httpRequest({ method: 'GET', path: '/api/v1/sports', authenticated: false });
+
+    expect(transport.requests[0]?.headers['Idempotency-Key']).toBeUndefined();
+  });
+
+  it('survives the replay a rotated token makes', async () => {
+    // The rotation exists to be invisible above this module. A replay that dropped the key
+    // would be a second write to the server — one profile becoming two because a token
+    // happened to expire mid-commit.
+    let rotated = false;
+    configureHttp({
+      current: () => ({ accessToken: rotated ? 'token-2' : 'token-1', generation: 1 }),
+      refresh: () => {
+        rotated = true;
+        return Promise.resolve('retry' as const);
+      },
+      abandon: () => Promise.resolve(),
+    });
+    transport.on('POST', '/api/v1/players/me/profile', () =>
+      rotated ? json({ ok: true }, 201) : errorResponse(401, 'unauthorized'),
+    );
+
+    await httpRequest({
+      method: 'POST',
+      path: '/api/v1/players/me/profile',
+      body: {},
+      authenticated: true,
+      idempotencyKey: 'commit-1',
+    });
+
+    expect(transport.requests).toHaveLength(2);
+    expect(transport.requests.map((request) => request.headers['Idempotency-Key'])).toEqual([
+      'commit-1',
+      'commit-1',
+    ]);
+  });
+});

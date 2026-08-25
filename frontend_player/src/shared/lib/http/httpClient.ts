@@ -104,6 +104,18 @@ export interface HttpRequest {
    * token right now" is a different set from "the endpoints that take none".
    */
   readonly authenticated: boolean;
+  /**
+   * What the caller calls this write, sent as `Idempotency-Key`.
+   *
+   * Transport, not product: the header is how a client says *this is the same request,
+   * not a second one*, and which endpoints take one is the contract's business rather
+   * than this module's. It is here for the same reason the `Authorization` header is —
+   * a second place that set it would be a second networking path.
+   *
+   * **The key is the caller's to keep stable.** Rotating it between a failure and its
+   * retry is what turns one write into two, and nothing here can tell those apart.
+   */
+  readonly idempotencyKey?: string;
   /** TanStack Query supplies one. Forwarded so a screen change stops the work. */
   readonly signal?: AbortSignal;
   readonly timeout?: TimeoutClass;
@@ -214,6 +226,8 @@ export interface WireCall {
   /** Sent as `Content-Type`. Absent whenever `body` is. */
   readonly contentType: string | undefined;
   readonly authenticated: boolean;
+  /** Sent as `Idempotency-Key`. Absent on every call that does not name one. */
+  readonly idempotencyKey?: string;
   readonly signal?: AbortSignal;
   readonly timeoutMs: number;
 }
@@ -225,6 +239,11 @@ export async function sendOnce(call: WireCall): Promise<Attempt> {
   };
 
   if (call.contentType !== undefined) headers['Content-Type'] = call.contentType;
+
+  // Set on every attempt, including the replay a 401 rotation makes: the whole point of
+  // the key is that the second attempt is not a second write, and dropping it there would
+  // turn the rotation — which exists to be invisible — into a duplicate commit.
+  if (call.idempotencyKey !== undefined) headers['Idempotency-Key'] = call.idempotencyKey;
 
   let sentWith: number | undefined;
   if (call.authenticated) {
@@ -353,6 +372,7 @@ export async function httpRequest<T>(request: HttpRequest): Promise<T> {
       body: payload,
       contentType: payload === undefined ? undefined : 'application/json',
       authenticated: request.authenticated,
+      idempotencyKey: request.idempotencyKey,
       signal: request.signal,
       timeoutMs: TIMEOUT_MS[request.timeout ?? 'request'],
     }),

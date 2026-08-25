@@ -36,6 +36,7 @@
  * entry gate as a pure function, tested without mounting anything.
  */
 
+import type { EntryInput } from './entryDecision';
 import type { Sport } from './Sport';
 
 /** A run that produced a Skill rating. **Identifiers only** — see above. */
@@ -171,22 +172,60 @@ export function admissionTo(pass: OnboardingPass | undefined, sport: Sport): Pas
 export type PassDestination =
   /** The next sport the player chose. */
   | { readonly kind: 'rate'; readonly sport: Sport }
+  /**
+   * Onboarding's **second part**, from its first step.
+   *
+   * The part after this one, for a player who has not committed a Player profile — the six
+   * social steps, then the commit, and the closing screens on the far side of it
+   * ([ADR-0090](../../../../../docs/adr/0090-onboarding-per-player-checkpoint.md)).
+   */
+  | { readonly kind: 'social-steps' }
   /** The closing screens: the summary of what this pass produced, then what is kept. */
   | { readonly kind: 'closing' }
   /** Straight into the app. */
   | { readonly kind: 'app' };
 
 /**
+ * What the pass has to be told about the player to answer where they go next.
+ *
+ * One fact, spelled the way `EntryInput` spells it, and it is a **parameter** rather than
+ * something this module reaches for — a rule that fetched would not be one.
+ *
+ * **Unknown must read as `true`.** A launch that has not answered *does this player have a
+ * profile* is not a licence to walk them into six steps they may have finished months ago;
+ * the closing screens lead to the app, and the gate there has the last word and will send
+ * them into the second part if that is where they belong. The other default sends a player
+ * with a profile through the part again, ending on a commit the server refuses.
+ */
+type PlayerProfileFact = Pick<EntryInput, 'hasPlayerProfile'>;
+
+/**
  * Where a player who **stops before the end of the queue** goes.
  *
- * The closing screens when this pass produced a rating, the app when it produced nothing.
  * Named on its own because it is asked twice — by a player pressing *done for now* with
  * sports still to go, and by `nextDestination` when there are none left — and one rule
  * answering both is what stops the two from drifting into different answers to *is there
  * anything to account for*.
+ *
+ * Three answers, in this order:
+ *
+ * - **Nothing rated in this pass → the app**, and the entry gate answers from there. There
+ *   is no account to give, and this pass knows nothing about ratings an earlier walk made
+ *   or about a part left unfinished; the gate knows both. Answering *stop* with screens
+ *   about a walk that produced nothing would be the wrong response to what was asked.
+ * - **A rating and no Player profile → the second part.** Setting up is not finished, and
+ *   the closing screens belong on the other side of it: the done screen accounts for this
+ *   pass, and it is the commit that makes what it accounts for true of the account.
+ * - **A rating and a profile → the closing screens**, which is what this used to answer for
+ *   everybody. It is now the *finished* player's answer — the one resuming a run they left
+ *   behind after they had already been set up.
  */
-export function stopDestination(pass: OnboardingPass | undefined): PassDestination {
-  return pass !== undefined && pass.rated.length > 0 ? { kind: 'closing' } : { kind: 'app' };
+export function stopDestination(
+  pass: OnboardingPass | undefined,
+  { hasPlayerProfile }: PlayerProfileFact,
+): PassDestination {
+  if (pass === undefined || pass.rated.length === 0) return { kind: 'app' };
+  return hasPlayerProfile ? { kind: 'closing' } : { kind: 'social-steps' };
 }
 
 /**
@@ -194,10 +233,11 @@ export function stopDestination(pass: OnboardingPass | undefined): PassDestinati
  *
  * **Finished and abandoned land in the same place**, which is why one rule answers for
  * both. Abandoning is the player saying stop, and it is still the end of that sport: if
- * any sport in the pass was rated, they leave through the same closing screens as the
- * player who finished — the done screen accounts for the ratings they made, and the data
- * screen says what was kept and that no one can hand-edit a Level. Ending on an
- * abandonment is not a reason to be told none of that.
+ * any sport in the pass was rated, they leave the way the player who finished does —
+ * through setting up, if it is not done, and then the closing screens either way, where the
+ * done screen accounts for the ratings they made and the data screen says what was kept and
+ * that no one can hand-edit a Level. Ending on an abandonment is not a reason to be told
+ * none of that.
  *
  * **When the pass produced nothing, it goes straight to the app.** There is no account to
  * give, the done screen has only its empty state to show, and answering *stop* with two
@@ -209,12 +249,16 @@ export function stopDestination(pass: OnboardingPass | undefined): PassDestinati
  * resumed run into the app rather than to a summary of the ratings an *earlier* walk
  * produced — that walk ended when they reached the app, and its ratings went with it.
  */
-export function nextDestination(pass: OnboardingPass | undefined, sport: Sport): PassDestination {
+export function nextDestination(
+  pass: OnboardingPass | undefined,
+  sport: Sport,
+  standing: PlayerProfileFact,
+): PassDestination {
   if (pass === undefined) return { kind: 'app' };
 
   const at = pass.queue.indexOf(sport);
   const next = at === -1 ? undefined : pass.queue[at + 1];
 
   if (next !== undefined) return { kind: 'rate', sport: next };
-  return stopDestination(pass);
+  return stopDestination(pass, standing);
 }

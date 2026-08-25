@@ -174,6 +174,24 @@ profile editor that later edits the same values.
   walked there. _Avoid_: "form state" — it outlives every screen in the part; "saved draft"
   and "resume" — nothing is saved, and the asymmetry with part one's resumable run is
   deliberate.
+- **Profile commit** — the Profile draft with **every answer present**, and the one request
+  that carries it. A distinct type from the draft on purpose: three of the draft's fields
+  are legitimately absent while a player is walking the part, and none of them may be
+  absent in what is sent — so a partial commit is unrepresentable rather than merely
+  avoided. It is built in one place (`readyToCommit`), which also names what is still
+  wanted so the last step can ask for it rather than only refuse. **Where the part stands**
+  folds that together with how the one request is going — outstanding · waiting on an upload
+  · ready · sending · failed · landed — and _when the finish opens_ is read off it, so the
+  rule has a name and a test rather than living in a `disabled` prop. _Avoid_: "submit",
+  "save" — this happens once and creates the profile; "payload" — that is the body, and the
+  commit is the answers.
+- **Commit key** — the Idempotency key the profile commit is sent under, minted when the
+  part is entered and living exactly as long as the Profile draft. It belongs to the
+  **part**, never to a press: a double tap and a retry after a failure both carry the key
+  the first attempt carried, so the server serves one profile whatever the finger and the
+  connection do. A disabled control is the courtesy; this is the defence. _Avoid_:
+  "request id" — that is the per-request correlation id `shared/lib/http` sets, and it is
+  deliberately different on every attempt.
 - **Photo workbench** — the pictures the photos step is holding, each with the upload it is
   in the middle of, beside the Profile draft and in the same store. Not an answer: a local
   `file://` URI is worthless to the server and an upload in flight has nothing to commit, so

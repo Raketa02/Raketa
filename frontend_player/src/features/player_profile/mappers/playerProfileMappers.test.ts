@@ -1,5 +1,6 @@
 /**
- * The wire boundary for what the profile steps are rendered from.
+ * The wire boundary for what the profile steps are rendered from, and for the one body
+ * that ends the part.
  *
  * Fixtures are typed from the generated schema on purpose: a backend shape change then
  * fails `pnpm typecheck` rather than failing here with a confusing assertion.
@@ -7,7 +8,9 @@
 
 import type { Wire } from '@/test-support/transport';
 
-import { toProfileOptions } from './playerProfileMappers';
+import type { ProfileCommit } from '../domain/profileCommit';
+
+import { toCommitRequest, toProfileOptions } from './playerProfileMappers';
 
 const SERVED: Wire['PlayerProfileOptionsResponse'] = {
   social_tag_groups: [
@@ -104,5 +107,72 @@ describe('the served radius bounds', () => {
       stepKm: 1,
       defaultKm: 10,
     });
+  });
+});
+
+describe('the body that ends the part', () => {
+  /** A whole part's worth of answers: two tags, two photos, two cells, an area and a yes. */
+  const COMMIT: ProfileCommit = {
+    socialTagIds: ['PLAYS_TO_WIN', 'HERE_TO_IMPROVE'],
+    photoIds: ['photo-a', 'photo-b'],
+    availability: [
+      { day: 1, part: 'morning' },
+      { day: 7, part: 'evening' },
+    ],
+    location: { latitude: 41.39, longitude: 2.16 },
+    searchRadiusKm: 12,
+    proposalsOptIn: { accepted: true, copyVersion: 'proposals-opt-in.v1' },
+  };
+
+  it('carries every answer the six steps collected, in one body', () => {
+    expect(toCommitRequest(COMMIT)).toEqual({
+      social_tag_ids: ['PLAYS_TO_WIN', 'HERE_TO_IMPROVE'],
+      photo_ids: ['photo-a', 'photo-b'],
+      availability: [
+        { day: 1, part: 'MORNING' },
+        { day: 7, part: 'EVENING' },
+      ],
+      location: { latitude: 41.39, longitude: 2.16 },
+      search_radius_km: 12,
+      proposals_opt_in: { accepted: true, copy_version: 'proposals-opt-in.v1' },
+    });
+  });
+
+  it('keeps the photo order the player arranged, because the first one leads', () => {
+    const reversed = toCommitRequest({ ...COMMIT, photoIds: ['photo-b', 'photo-a'] });
+
+    expect(reversed.photo_ids).toEqual(['photo-b', 'photo-a']);
+  });
+
+  it('sends an empty week and no photos as themselves, never as an omission', () => {
+    // Both are answers. A body that dropped either field would let the server default it,
+    // which is the same value arrived at by two routes — and one of them a guess.
+    const blank = toCommitRequest({ ...COMMIT, photoIds: [], availability: [] });
+
+    expect(blank.photo_ids).toEqual([]);
+    expect(blank.availability).toEqual([]);
+  });
+
+  it('sends a declined opt-in as a recorded no, with its copy version', () => {
+    // `false` here is a refusal the player gave. It is never what an unanswered question
+    // becomes — that one cannot reach this function at all.
+    const declined = toCommitRequest({
+      ...COMMIT,
+      proposalsOptIn: { accepted: false, copyVersion: 'proposals-opt-in.v1' },
+    });
+
+    expect(declined.proposals_opt_in).toEqual({
+      accepted: false,
+      copy_version: 'proposals-opt-in.v1',
+    });
+  });
+
+  it('spells each part of the day the way the contract does', () => {
+    const afternoon = toCommitRequest({
+      ...COMMIT,
+      availability: [{ day: 3, part: 'afternoon' }],
+    });
+
+    expect(afternoon.availability).toEqual([{ day: 3, part: 'AFTERNOON' }]);
   });
 });

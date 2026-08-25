@@ -1,5 +1,5 @@
 import { emptyDraft, recordAnswer } from './ProfileDraft';
-import { mayFinish, optInStanding } from './proposalsOptIn';
+import { optInStanding } from './proposalsOptIn';
 
 const COPY = 'proposals-opt-in.v1';
 
@@ -18,7 +18,10 @@ describe('what an unanswered question is', () => {
   });
 
   it('does not open the finish', () => {
-    expect(mayFinish(optInStanding(undefined))).toBe(false);
+    // The rule itself is `profileCommit.mayFinish`'s and is tested there — an unanswered
+    // question is one of the three things `readyToCommit` reports. What this asserts is the
+    // half this file owns: the standing it produces is the one that holds the finish shut.
+    expect(optInStanding(undefined).kind).toBe('unanswered');
   });
 });
 
@@ -39,9 +42,9 @@ describe('an answer that was given', () => {
    * would be the product pressing for consent by withholding the rest of itself, which is
    * the failure the step's copy is written against.
    */
-  it('opens the finish whichever one it was', () => {
-    expect(mayFinish(optInStanding({ accepted: true, copyVersion: COPY }))).toBe(true);
-    expect(mayFinish(optInStanding({ accepted: false, copyVersion: COPY }))).toBe(true);
+  it('is answered whichever one it was, so the finish opens on either', () => {
+    expect(optInStanding({ accepted: true, copyVersion: COPY }).kind).toBe('answered');
+    expect(optInStanding({ accepted: false, copyVersion: COPY }).kind).toBe('answered');
   });
 });
 

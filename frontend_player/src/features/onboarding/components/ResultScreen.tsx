@@ -126,6 +126,15 @@ type MarkRefs = Readonly<Record<ExplainerKey, MutableRefObject<View | null>>>;
 /** Raised when the run ended on evidence the questionnaire could not settle. */
 const CALIBRATION_ELEVATED = 'elevated';
 
+/**
+ * The two things the last sport can lead to, as the control that leads there.
+ *
+ * Which one is shown is the pass's answer and never this screen's — the same destination
+ * `advance` acts on, read here only to label the control it presses.
+ */
+const SEE_YOUR_RATINGS = 'See your ratings';
+const FINISH_SETUP = 'Finish setting up';
+
 export interface ResultScreenProps {
   readonly assessmentId: string;
   readonly sport: Sport;
@@ -256,10 +265,21 @@ export function ResultScreen({ assessmentId, sport }: ResultScreenProps) {
           ) : null}
 
           {next === undefined ? (
-            // Stopping here is an outcome, not an abandonment: nothing is discarded and
-            // nothing is sent. Where it leads is the pass's answer — the closing screens,
-            // since this run just produced a rating.
-            <Button label="See your ratings" size="lg" onPress={onwards.advance} />
+            // The last sport, and the label names what is actually next. For most players
+            // that is onboarding's second part — six short steps and the commit that
+            // creates their Player profile — and only after it the summary of what this
+            // walk produced. Promising ratings to a player about to answer six more
+            // questions would be the screen mis-describing its own control.
+            <Button
+              label={onwards.destination.kind === 'social-steps' ? FINISH_SETUP : SEE_YOUR_RATINGS}
+              size="lg"
+              onPress={onwards.advance}
+              accessibilityHint={
+                onwards.destination.kind === 'social-steps'
+                  ? 'A few quick questions before you are in'
+                  : undefined
+              }
+            />
           ) : (
             <>
               <Button
