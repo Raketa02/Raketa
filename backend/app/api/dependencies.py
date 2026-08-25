@@ -59,8 +59,8 @@ def get_token_service(settings: SettingsDep) -> TokenService:
 TokenServiceDep = Annotated[TokenService, Depends(get_token_service)]
 
 
-def get_clock() -> Clock:
-    return build_clock()
+def get_clock(settings: SettingsDep) -> Clock:
+    return build_clock(settings)
 
 
 ClockDep = Annotated[Clock, Depends(get_clock)]

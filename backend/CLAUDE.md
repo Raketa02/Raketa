@@ -104,11 +104,22 @@ Rules to preserve:
 - **The five catalogs are one week, and the assembly is a test rather than a builder.**
   `tests/api/test_demo_week.py` signs in over HTTP and composes Now at **one instant on the
   seeded week**, where one address has all three regions and every shelf a v1 server
-  composes. It composes rather than requesting because the week is a fixed absolute week and
-  the product reads the wall clock (`Raketa02/Raketa#134`). The two audiences no v1 flow can
+  composes. It composes rather than requesting because the week is a fixed absolute week; how
+  a *person* gets inside it is `tests/api/test_scrub.py`'s subject rather than this one's
+  (ADR-0092, `Raketa02/Raketa#134`). The two audiences no v1 flow can
   reach — the four private-owner situations and the leaver — are asserted there as
   **renderings**: that the card composes and says the right name, never a flow that arrives
   at it.
+- **One function decides what time this deployment thinks it is**, and it is
+  `build_clock(settings)` ([ADR-0092](../docs/adr/0092-the-seeded-week-is-walked-by-displacing-the-clock.md)).
+  The wall clock, or — when `CLOCK_SCRUBBABLE` is on — the process's one `ScrubbableClock`,
+  which **displaces** the host's by a signed number of seconds so a developer can stand inside
+  the seeded week and still watch its deadlines fire. `/_clock` moves it and is mounted on the
+  application, never on a surface router, so neither client contract carries it. The setting is
+  off by default in all four environments and **refused outside `local`** by a written-out
+  table, so what the environment selects is permission and never behaviour — nothing above the
+  composition root can tell the two clocks apart. A test never inherits a scrub:
+  `tests/conftest.py` calls `forget_the_movable_clock()` after every one.
 - **New routes mount under `app/api/v1/router.py`;** keep the `/api/v1` prefix.
 - **Validate and normalize inside the value object**, not in the use case — see
   `app/modules/users/domain/value_objects.py`.

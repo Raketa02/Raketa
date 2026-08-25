@@ -11,6 +11,13 @@ knobs kept in agreement by memory. One value replaces three, and the failure mod
 removes is the silent one: nothing goes wrong until the deployment where somebody sets
 two of them and forgets the third.
 
+`CLOCK_SCRUBBABLE` is the one setting that looks like an exception and is not, so it
+is worth saying which side of the rule it stands on. **The environment does not select
+it; it only refuses it.** The setting is off by default in all four environments, and
+what an environment decides is whether somebody is *allowed* to turn it on — which is
+the second rule below, not the first. No code branches on `APP_ENV` to decide what time
+it is, and every engine still takes `now` as an input (ADR-0015, ADR-0092).
+
 **Configuration that is dangerous rather than merely wrong refuses to boot.** The
 refusals are checked on the settings object itself rather than in the application
 factory, so they hold for every construction path — a worker, a migration, a seed run —
@@ -25,9 +32,11 @@ record — but it is never the offending value of the refusal that prints it.
 
 import json
 from dataclasses import dataclass
+from datetime import datetime
 from enum import StrEnum
 from functools import lru_cache
-from typing import Annotated, Any, List, Optional, Set
+from types import MappingProxyType
+from typing import Annotated, Any, List, Mapping, Optional, Set
 
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
@@ -119,6 +128,40 @@ DEPLOYED = frozenset(
 #: it — it is governed by its own refusal, in combination with `ALLOW_CREDENTIALS`.
 CORS_WILDCARD = "*"
 
+#: Where the process's clock may be moved (ADR-0092), written out per environment
+#: rather than derived as "local only". Derived, a fifth environment would inherit an
+#: answer to the one question in this file that decides what *every* request believes
+#: the time is — and it would inherit it silently. Written out, the day a fifth name
+#: exists is the day this table stops covering `Environment`, and the check below
+#: refuses to import. The same argument, and the same shape, as `app/seeds/guard.py`.
+#:
+#: `development` and `staging` are `False` and not "not yet": a clock somebody can move
+#: is a clock a *second* person is reading, and on a shared environment a demo of the
+#: seeded week would be an outage on somebody else's screen with no error anywhere.
+CLOCK_MAY_BE_SCRUBBED: Mapping[Environment, bool] = MappingProxyType(
+    {
+        Environment.LOCAL: True,
+        Environment.DEVELOPMENT: False,
+        Environment.STAGING: False,
+        Environment.PRODUCTION: False,
+    }
+)
+
+_clock_undecided = sorted(
+    e.value for e in Environment if e not in CLOCK_MAY_BE_SCRUBBED
+)
+if _clock_undecided:
+    raise ConfigurationError(
+        "CLOCK_MAY_BE_SCRUBBED does not say whether these environments may move "
+        "their clock: " + ", ".join(_clock_undecided) + ". Decide, rather than "
+        "inheriting an answer."
+    )
+
+#: Spelled once, for the refusal message.
+SCRUBBABLE_NAMES = ", ".join(
+    env.value for env, allowed in CLOCK_MAY_BE_SCRUBBED.items() if allowed
+)
+
 
 class Settings(BaseSettings):
     # --- app metadata
@@ -179,6 +222,18 @@ class Settings(BaseSettings):
     # --- migrations
     RUN_MIGRATIONS_ON_STARTUP: bool = False
 
+    # --- the clock (ADR-0092)
+    #
+    # Off by default in every environment, including `local`. A default that varied by
+    # environment would be the environment selecting behaviour — the rule this module
+    # opens with — and it would mean a laptop's test run and CI disagreeing about what
+    # `build_clock` returns. Turning it on is somebody typing it, once.
+    CLOCK_SCRUBBABLE: bool = False
+    # Where the clock starts, so that a stack brought up against a seeded database
+    # lands inside the seeded week rather than three weeks after it. Optional: a
+    # scrubbable clock with no anchor starts on the wall and waits to be moved.
+    CLOCK_SCRUB_TO: Optional[datetime] = None
+
     # --- domain event delivery
     EVENT_DELIVERY_WORKER_ENABLED: bool = True
     EVENT_DELIVERY_POLL_INTERVAL_SECONDS: float = 1.0
@@ -215,6 +270,29 @@ class Settings(BaseSettings):
     def _default_reader(cls, v):
         return None if v == "" else v
 
+    @field_validator("CLOCK_SCRUB_TO", mode="before")
+    @classmethod
+    def _unset_anchor(cls, v):
+        # An empty value is the variable being present and saying nothing — a
+        # commented-out line somebody uncommented and emptied — and it means *no
+        # anchor*, not a parse failure.
+        return None if v == "" else v
+
+    @field_validator("CLOCK_SCRUB_TO", mode="after")
+    @classmethod
+    def _anchor_names_an_offset(cls, v: Optional[datetime]) -> Optional[datetime]:
+        # The same refusal `app.kernel.instant` makes, made earlier and with a message
+        # about a variable rather than about a type. A naive anchor reads as a time and
+        # behaves as one until it is compared with the wall clock, and then it is a
+        # `TypeError` on the first request — a stack that boots and cannot serve.
+        # The value is not echoed, for the reason this module's docstring gives.
+        if v is not None and v.tzinfo is None:
+            raise ConfigurationError(
+                "CLOCK_SCRUB_TO carries no UTC offset. An instant without one is not "
+                "an instant — write it as 2026-09-08T21:00:00Z."
+            )
+        return v
+
     model_config = SettingsConfigDict(case_sensitive=True, env_file=".env")
 
     def model_post_init(self, __context: Any) -> None:
@@ -241,6 +319,23 @@ class Settings(BaseSettings):
         each refusal is triggered by a different variable, and a configuration that
         trips two is broken either way."""
         env = self.APP_ENV
+
+        if self.CLOCK_SCRUBBABLE and not CLOCK_MAY_BE_SCRUBBED[env]:
+            raise ConfigurationError(
+                f"CLOCK_SCRUBBABLE is on, and APP_ENV selects '{env}'. A clock a "
+                f"request can move is a clock every other reader of this deployment "
+                f"is also on, and moving it re-dates deadlines, refunds and result "
+                f"windows for all of them with no error anywhere. It is permitted "
+                f"in: {SCRUBBABLE_NAMES}."
+            )
+
+        if self.CLOCK_SCRUB_TO is not None and not self.CLOCK_SCRUBBABLE:
+            raise ConfigurationError(
+                "CLOCK_SCRUB_TO is set while CLOCK_SCRUBBABLE is off. Nothing reads "
+                "it in that combination, so the process would run on the wall clock "
+                "while its configuration said otherwise — set CLOCK_SCRUBBABLE, or "
+                "remove the anchor."
+            )
 
         if env in UNPROVISIONED:
             # "Configured" means somebody set it. There is nothing to compare a host

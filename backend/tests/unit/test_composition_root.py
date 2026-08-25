@@ -125,7 +125,7 @@ async def test_every_port_is_built_from_a_session_and_the_settings(session_facto
         events = build_event_publisher(session)
 
         built = [
-            build_clock(),
+            build_clock(settings),
             build_unit_of_work(session),
             store,
             events,
@@ -151,7 +151,7 @@ async def test_a_registration_runs_through_the_factories_alone(session_factory):
             event_store=build_domain_event_store(session),
             hasher=build_password_hasher(),
             uow=build_unit_of_work(session),
-            clock=build_clock(),
+            clock=build_clock(get_settings()),
             events=build_event_publisher(session),
         )
 
@@ -185,7 +185,7 @@ async def test_an_event_sourced_use_case_runs_through_the_factories_alone(
             assessments=build_assessment_repository(event_store=store, events=events),
             ratings=build_skill_rating_repository(event_store=store, events=events),
             uow=build_unit_of_work(session),
-            clock=build_clock(),
+            clock=build_clock(get_settings()),
         )
 
         start = await create.execute(

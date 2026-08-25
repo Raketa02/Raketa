@@ -1,10 +1,12 @@
 from fastapi import FastAPI
 
+from app.api.scrub import build_scrub_router
 from app.api.v1.router import api_router
 from app.bootstrap.composition import (
     build_arrival_sets,
     build_clock,
     build_scoring_contexts,
+    build_scrubbable_clock,
 )
 from app.bootstrap.events import get_event_runtime
 from app.core.config import Environment, Settings, get_settings
@@ -45,7 +47,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     # per *application* rather than a module singleton, so two apps in one
     # process (which is what a test run is) never answer from each other's
     # database. It expires and never invalidates, so there is nothing to reset.
-    app.state.arrival_sets = build_arrival_sets(clock=build_clock())
+    app.state.arrival_sets = build_arrival_sets(clock=build_clock(settings))
 
     # The match scoring context cache (ADR-0068), on the same lifetime and for
     # the same reason — its value is being shared across every viewer looking at
@@ -54,6 +56,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     # to expire. It is bounded by size instead, or a match played on Tuesday
     # would sit in memory until the process restarted.
     app.state.scoring_contexts = build_scoring_contexts()
+
+    # ADR-0092's whole HTTP surface, and it exists only when somebody asked for
+    # it. Mounted here rather than in `app/api/v1/router.py` on purpose: the two
+    # surface routers are what `app/api/contract.py` emits the client documents
+    # from, so a route added there would be a route both clients generate a type
+    # for. The settings object has already refused this combination anywhere but
+    # `local`, so there is no environment check to make a second time.
+    if settings.CLOCK_SCRUBBABLE:
+        app.include_router(build_scrub_router(build_scrubbable_clock(settings)))
 
     register_middleware(app, settings)
     register_exception_handlers(app)

@@ -172,6 +172,29 @@ URL that simply has no scheme. One typo, one complaint.
     the app was compiled; one production build serves staging and production alike. The club
     app bans reading it outright, with a lint rule.
 
+## The clock is configuration, and only a laptop may move it
+
+A developer's clock is the one place this page's first rule is easy to break by accident, so
+where it stands is written down. [ADR-0092](adr/0092-the-seeded-week-is-walked-by-displacing-the-clock.md)
+gives the backend a second `Clock` adapter that **displaces** the host's — the seeded week is
+a fixed week in September 2026, and two of its situations are true for a day no wall clock is
+ever on.
+
+- **The environment does not select it; it only refuses it.** `CLOCK_SCRUBBABLE` is off by
+  default in all four environments, `local` included. Turning it on is somebody typing it.
+  What an environment decides is whether that is *permitted*, which is rule 2 above and not
+  rule 1 — the same shape as the seed system's production refusal.
+- **Permitted in `local`, refused in the other three**, from a table written out per
+  environment whose completeness is checked on import. `development` and `staging` are `False`
+  and not *not yet*: a clock somebody can move is a clock a second person is reading.
+- **It displaces, it does not freeze.** A scrub sets a signed offset and time keeps running, so
+  every deadline stays a deadline.
+- **The route that moves it is on neither client contract.** It is mounted on the application
+  beside `/health`, only when the setting is on, so no client generates a type for it and rule
+  8 above is untouched.
+- **No domain behaviour varies.** Every engine already takes `now` as an input, so what changes
+  is one adapter in the composition root and nothing above it.
+
 ## Feature flags are not environment configuration
 
 **A flag answers *is this feature active*. An environment answers *which infrastructure am I

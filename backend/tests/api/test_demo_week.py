@@ -8,19 +8,22 @@ money. This file asserts the thing none of them can: that the seeded week is one
 
 **Signing in is over HTTP and composing is not, and the split is the seeded
 week's own shape.** The address, the password and the token are what a developer
-actually meets, so they are exercised through the API. The *screen* cannot be:
+actually meets, so they are exercised through the API. The *screen* is composed:
 `app/seeds/courts.py` anchors the week to a fixed absolute instant on purpose —
 *"next Tuesday at 18:00 computed at run time is a different Tuesday tomorrow"* —
-and the product reads the wall clock, with no way anywhere to read one inside the
-week. So a walkthrough composes at the week's own instants, exactly as the seed
-runner *writes* at them, through the same composition root a request is wired
-from. What that leaves undone is stated rather than hidden and filed as
-`Raketa02/Raketa#134`: the week is **staged**, so each scenario is named at its
-own instant and no single instant shows all thirteen at once — that part is the
-catalog's design. What is not is that the week is in 2026 and the wall clock will
-walk past it, after which every seeded address's Now goes empty; and that the two
-post-play conversations, `needsResult` and `confirmResult`, are readable only
-from inside the week, which nothing in the product can do.
+and the week is **staged**, so each scenario is named at its own instant and no
+single instant shows all thirteen at once. Asserting thirteen claims therefore
+means asking at thirteen clocks, which is what composing through the same
+composition root a request is wired from buys.
+
+**The half this file could not reach is now `tests/api/test_scrub.py`.** It used
+to end here, filed as `Raketa02/Raketa#134`: the week is in 2026, the wall clock
+walks past it, and the two post-play conversations — `needsResult` and
+`confirmResult` — were readable only from inside a week nothing in the product
+could stand in. ADR-0092 gave a `local` process a clock it can be moved off, so
+that file signs in, scrubs and reads the result route, all over HTTP. What is
+proved there is a *developer's experience*; what is proved here is the data, and
+the two are different claims.
 
 **The walkthrough instant is the week's own peak**, and it is the instant three
 of the seeded scenarios already name: Friday at 20:00, half an hour after

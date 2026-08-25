@@ -1184,6 +1184,8 @@ aggregator.
 | `production` with wildcard `ALLOW_ORIGINS` **and** `ALLOW_CREDENTIALS` | Browsers reject the combination anyway. |
 | a deployed environment with a non-`https://` entry in `ALLOW_ORIGINS` | A browser origin reached over a public network in the clear is a session cookie in the clear. |
 | `production` with a `DB_SSL_MODE` that does not encrypt | Transport security should not be something anyone has to remember. |
+| `CLOCK_SCRUBBABLE` anywhere but `local` | A clock a request can move is a clock every other reader of that deployment is on. |
+| `CLOCK_SCRUB_TO` with no `CLOCK_SCRUBBABLE`, or with no UTC offset | Nothing would read it; and an instant with no offset is not an instant. |
 
 The origin refusal is the backend's instance of the platform's **public-network scheme
 rule**, added by #99 so that all three apps carry it (`docs/environments.md`). The backend
@@ -1211,6 +1213,8 @@ serving HTTP.
 | `EVENT_DELIVERY_POLL_INTERVAL_SECONDS` | Outbox worker poll interval. |
 | `EVENT_DELIVERY_BATCH_SIZE` | Max outbox rows processed per poll. |
 | `RUN_MIGRATIONS_ON_STARTUP` | Optional production startup migration toggle. |
+| `CLOCK_SCRUBBABLE` | Puts the process on a clock `/_clock` can move. `local` only; off by default everywhere. |
+| `CLOCK_SCRUB_TO` | Where that clock starts, e.g. `2026-09-08T21:30:00Z`. Refused without the setting above. |
 
 PostgreSQL URLs using `postgresql://` or `postgres://` are normalized to the
 asyncpg driver at runtime. Libpq SSL query parameters are stripped and replaced
@@ -1476,13 +1480,13 @@ clock**, which is the one thing a request cannot do.
 
 The week is **staged**: each scenario is named at its own instant, and no single instant
 shows all thirteen in the states they are named for — a match played on Tuesday evening is
-not still forming on Friday. That is the catalog's design. What is not is the anchor: the
-week is a fixed week in 2026 and the product reads the wall clock, so the two post-play
-conversations (`needsResult`, `confirmResult`) are readable only from inside the week, and
-once the wall clock walks past it every seeded address's Now is at most one shelf of new
-clubs. That is filed as `Raketa02/Raketa#134` rather than worked around here, because the
-way out — a scrubbable clock, an anchor stored per run, or re-seeding by hand — is a
-decision and not a detail.
+not still forming on Friday. That is the catalog's design.
+
+**The anchor was not, and `Raketa02/Raketa#134` closed it.** The week is a fixed week in
+2026, so the two post-play conversations (`needsResult`, `confirmResult`) are true for one
+day nobody's wall clock is ever on, and once the wall clock walks past the week every
+seeded address's Now is at most one shelf of new clubs. The way in is to move the clock,
+not the week — see *A clock you can move* below.
 
 Scope is what is **decided**: players, onboarding assessments, Skill ratings, clubs, court
 reservations and bookings, matches, and ledgers. Nothing **authors** a match-held reservation — a
@@ -1531,6 +1535,45 @@ Addresses are on `.example` — a TLD RFC 2606 reserves, so no registry can sell
 run pointed at the wrong database cannot mail a stranger. Not the `.test` of the same
 sentence, because `EmailStr` at the HTTP boundary refuses that one and a seeded account
 nobody can sign in as is not an account.
+
+### A clock you can move
+
+The seeded week is a *fixed* week, deliberately: *"next Tuesday at 18:00"* computed at run
+time is a different Tuesday tomorrow, so a second run would claim a second court and the
+run that creates nothing could never happen. Which leaves the week walkable only from a
+clock inside it — and [ADR-0092](../docs/adr/0092-the-seeded-week-is-walked-by-displacing-the-clock.md)
+is that clock.
+
+```bash
+# backend/.env  (local only — the settings object refuses it anywhere else)
+CLOCK_SCRUBBABLE=true
+CLOCK_SCRUB_TO=2026-09-08T21:30:00Z     # optional: where the clock starts
+```
+
+```bash
+curl localhost:8000/_clock                                   # where it is standing
+curl -X POST localhost:8000/_clock \
+     -H 'content-type: application/json' \
+     -d '{"at": "2026-09-08T21:30:00Z"}'                     # Tuesday evening
+curl -X DELETE localhost:8000/_clock                         # the host's clock back
+```
+
+At that instant `match-played-and-unscored` is asking for a score and
+`match-with-a-score-on-the-table` is waiting for an answer — the two screens that had no
+day. Sign in as `assessment-in-progress@raketa.example`, who is seated on both.
+
+Four things are worth knowing:
+
+- **It displaces time; it does not stop it.** A minute after the scrub it is a minute past
+  Tuesday 21:30. Seat claims lapse, `next_wake_at` comes due, the timekeeper takes the
+  wake — which is the half of the week worth watching.
+- **It moves the whole process**, including the event-delivery worker, and it outlives the
+  request that moved it.
+- **It ships off, in every environment**, and `CLOCK_SCRUBBABLE` outside `local` is a
+  startup refusal. `/_clock` does not exist unless the setting is on, and it is on neither
+  client's contract.
+- **A test never inherits a scrub.** `tests/conftest.py` puts the clock back after every
+  test, autouse.
 
 ## Testing And Quality
 

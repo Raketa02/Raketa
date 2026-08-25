@@ -32,6 +32,9 @@ way `build_assessment_repository` takes its two.
 
 from __future__ import annotations
 
+from datetime import datetime
+from functools import lru_cache
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.application.ports import (
@@ -46,10 +49,10 @@ from app.engines.assessment import AssessmentEngine
 from app.engines.matchfit.v1 import MatchFitEngineV1
 from app.engines.pairing.v1 import PairingEngineV1
 from app.engines.racketskill.v3 import RacketSkillEngineV3
-from app.infrastructure.clock import SystemClock
+from app.infrastructure.clock import ScrubbableClock, SystemClock
 from app.infrastructure.database.sqlalchemy_command_log import SqlAlchemyCommandLog
 from app.infrastructure.database.unit_of_work import AsyncSqlAlchemyUnitOfWork
-from app.kernel import Clock
+from app.kernel import Clock, instant, seconds
 from app.modules.auth.domain.ports import (
     PasswordHasher,
     RefreshTokenRepository,
@@ -209,8 +212,71 @@ from app.modules.users.infrastructure.sqlalchemy_user_repository import (
 # --------------------------------------------------------------------------
 
 
-def build_clock() -> Clock:
-    return SystemClock()
+def build_clock(settings: Settings) -> Clock:
+    """The clock this process runs on — the wall, or one it can be moved off.
+
+    **The whole of ADR-0092's surface is this function.** Every engine takes
+    `now` as an input and every use case takes a `Clock`, so the question *what
+    time does this deployment think it is* has exactly one place it can be
+    answered — and a developer standing inside the seeded week is that answer
+    being different, rather than any code path being different.
+
+    The scrubbable one is the **process's**, not this call's: a clock built
+    fresh per request would forget every scrub the moment the response was
+    written. `SystemClock` is stateless and stays per-call, which is what every
+    other function in this module does.
+    """
+
+    if not settings.CLOCK_SCRUBBABLE:
+        return SystemClock()
+    return build_scrubbable_clock(settings)
+
+
+def build_scrubbable_clock(settings: Settings) -> ScrubbableClock:
+    """The process's one movable clock, built on first ask and kept.
+
+    Typed narrower than `build_clock` on purpose: `create_app` mounts the route
+    that moves it and therefore needs the thing itself, not a `Clock` it would
+    have to narrow back with an `isinstance` the type system cannot check.
+
+    It is the caller's business whether it *should* be built — this does not
+    consult `CLOCK_SCRUBBABLE`, it consults the anchor. `build_clock` above is
+    where the setting is read, so there is one place that decides.
+    """
+
+    return _one_movable_clock(settings.CLOCK_SCRUB_TO)
+
+
+@lru_cache(maxsize=1)
+def _one_movable_clock(anchor: datetime | None) -> ScrubbableClock:
+    """One per process, cached the way `get_event_runtime` and `get_settings` are.
+
+    Keyed on the anchor rather than on nothing, so that two applications in one
+    process — which is what a test run is — cannot inherit each other's starting
+    instant. Two applications configured *identically* do share one, and that is
+    the intent: the delivery worker's tick and the request that scrubs are the
+    same deployment, and a worker running an hour behind the screen it feeds
+    would be the failure this whole design is meant to remove.
+    """
+
+    displaced = (
+        seconds(round((instant(anchor) - SystemClock().now()).total_seconds()))
+        if anchor is not None
+        else seconds(0)
+    )
+    return ScrubbableClock(SystemClock(), displaced_by=displaced)
+
+
+def forget_the_movable_clock() -> None:
+    """Drop the process's movable clock, so the next ask builds a fresh one.
+
+    The named seam a test suite resets through — and it *must* reset, because
+    the one real cost of this design is that a clock a request can move is a
+    clock a test can forget to put back. `tests/conftest.py` calls this after
+    every test rather than trusting each one to.
+    """
+
+    _one_movable_clock.cache_clear()
 
 
 def build_unit_of_work(session: AsyncSession) -> UnitOfWork:

@@ -4,6 +4,7 @@ from typing import AsyncIterator
 from fastapi import FastAPI
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
+from app.bootstrap.composition import build_clock
 from app.bootstrap.events import build_event_delivery_worker
 from app.core.config import Settings
 from app.infrastructure.database.engine import (
@@ -35,6 +36,12 @@ def build_lifespan(settings: Settings):
                 # matches, and its key is `matchId : recordVersion`, so sharing
                 # it cannot serve either a stale answer.
                 scoring_contexts=app.state.scoring_contexts,
+                # The process's clock and not a second one. A tick on the wall
+                # while the requests it feeds are on a scrubbed week would leave
+                # every deadline unfired — the seat claims never reaped, the
+                # holds never released — and the screen would simply sit there
+                # (ADR-0092).
+                clock=build_clock(settings),
             )
             worker.start()
             app.state.event_delivery_worker = worker

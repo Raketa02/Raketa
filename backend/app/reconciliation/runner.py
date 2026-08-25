@@ -49,7 +49,7 @@ async def run(settings: Settings | None = None) -> Reconciliation:
                 event_store=build_domain_event_store(session),
                 events=build_event_publisher(session),
             )
-            return await ReconcileLedgers(ledgers, build_clock()).execute()
+            return await ReconcileLedgers(ledgers, build_clock(settings)).execute()
     finally:
         await engine.dispose()
 

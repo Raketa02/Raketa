@@ -390,7 +390,10 @@ def _build(session: AsyncSession) -> _UseCases:
     event_store = build_domain_event_store(session)
     events = build_event_publisher(session)
     engine = build_assessment_engine()
-    clock = build_clock()
+    # The process's clock, whichever one that is — a seed run driven from a
+    # scrubbed process registers its timeless aggregates at the instant that
+    # process believes in, which is the point of there being one answer.
+    clock = build_clock(get_settings())
     uow = build_unit_of_work(session)
 
     assessments = build_assessment_repository(event_store=event_store, events=events)

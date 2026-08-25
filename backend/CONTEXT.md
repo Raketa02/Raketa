@@ -131,6 +131,14 @@ there; they are not repeated here.
   command can disagree. Its wall-clock adapter is `SystemClock` in
   `app/infrastructure/clock.py`, and only a composition root imports it — depending on
   *what a clock is* must not drag a live one into scope.
+- **Scrub** — moving the process's clock off the host's, to stand inside the seeded week
+  (ADR-0092). The adapter is `ScrubbableClock`, beside `SystemClock`, and it **displaces**
+  rather than freezes: `now()` is the host's clock plus a signed number of seconds, so a
+  scrub to Tuesday evening is Tuesday evening and, a minute later, a minute past it —
+  deadlines still fire. Which of the two adapters a process runs on is `build_clock`'s
+  answer and nothing else's; it is selected by `CLOCK_SCRUBBABLE`, off by default in all
+  four environments and refused outside `local`. _Avoid_: freeze, time travel, fake clock —
+  it is not a stand-in for a real clock, it is a real clock somebody moved.
 - **Matchmaking brands** — `Level` and `Uncertainty`, both `NewType`s over the kernel's
   `Ratio` and both carried in **hundredths** (`level(320)` is 3,20), plus `PlayerRef`.
   They live in `app/engines/matchmaking.py`, not the kernel: ADR-0022 records that

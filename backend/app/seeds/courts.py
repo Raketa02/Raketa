@@ -25,6 +25,14 @@ Tuesday tomorrow — so a second run would claim a second court and the run that
 creates nothing could never happen. The demo week (`Raketa02/Raketa#96`) is where
 a week somebody can walk through arrives; these are the states the context has to
 be able to represent.
+
+**What that costs is paid on the clock rather than here.** A fixed week is
+walkable only from inside it, and the product had no way to stand there — so
+`needsResult` and `confirmResult` were true for a day nobody's wall clock is ever
+on, and the whole week went quiet once the wall clock passed it
+(`Raketa02/Raketa#134`). ADR-0092 answers that by letting a `local` process be
+moved off the host's clock, which is why this anchor did not have to move: the
+week stays the same week on every run, in every database, for ever.
 """
 
 from __future__ import annotations

@@ -21,12 +21,15 @@ carries a credential.
 """
 
 import logging
+from datetime import datetime, timezone
 
 import pytest
 
 from app.core.config import (
+    CLOCK_MAY_BE_SCRUBBED,
     DEFAULT_JWT_SECRET_KEY,
     ENVIRONMENT_PROFILES,
+    SCRUBBABLE_NAMES,
     UNPROVISIONED,
     ConfigurationError,
     Environment,
@@ -351,6 +354,98 @@ def test_a_valid_production_configuration_starts(clean_env) -> None:
     assert settings.LOG_JSON is True
 
 
+# --------------------------------------------------------------------------- #
+# The clock (ADR-0092)
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.parametrize("name", ["local", "development", "staging", "production"])
+def test_the_clock_is_the_hosts_by_default(clean_env, name: str) -> None:
+    """Off everywhere, including `local`, and that is the point.
+
+    A default that varied by environment would be the environment selecting
+    behaviour rather than configuration — the rule this module opens with — and it
+    would mean a laptop and CI disagreeing about what `build_clock` returns while
+    both read the same source.
+    """
+
+    settings = settings_for(name)
+
+    assert settings.CLOCK_SCRUBBABLE is False
+    assert settings.CLOCK_SCRUB_TO is None
+
+
+def test_a_laptop_may_move_its_clock(clean_env) -> None:
+    """The one environment where the seeded week can be walked."""
+
+    settings = build(
+        APP_ENV="local",
+        CLOCK_SCRUBBABLE=True,
+        CLOCK_SCRUB_TO="2026-09-08T21:00:00Z",
+    )
+
+    assert settings.CLOCK_SCRUBBABLE is True
+    assert settings.CLOCK_SCRUB_TO == datetime(2026, 9, 8, 21, tzinfo=timezone.utc)
+
+
+@pytest.mark.parametrize("name", ["development", "staging", "production"])
+def test_nowhere_else_may(clean_env, name: str) -> None:
+    """A shared deployment has a second reader, and moving the clock is not theirs.
+
+    Written as a loop over *every* other environment rather than as a production
+    case, because the two unprovisioned names are the ones somebody would reach for
+    to run a demo on — which is exactly the deployment where another person is
+    looking at the same screen.
+    """
+
+    with pytest.raises(ConfigurationError) as exc:
+        settings_for(name, CLOCK_SCRUBBABLE=True)
+
+    assert "CLOCK_SCRUBBABLE" in str(exc.value)
+    assert name in str(exc.value)
+
+
+def test_an_anchor_with_no_scrubbable_clock_refuses(clean_env) -> None:
+    """The combination that would run on the wall while claiming otherwise."""
+
+    with pytest.raises(ConfigurationError) as exc:
+        build(APP_ENV="local", CLOCK_SCRUB_TO="2026-09-08T21:00:00Z")
+
+    assert "CLOCK_SCRUB_TO" in str(exc.value)
+
+
+def test_a_naive_anchor_refuses(clean_env) -> None:
+    """Refused at boot rather than on the first request that compares it.
+
+    The kernel refuses a naive instant too, but by then it is a `TypeError` from
+    inside an adapter — a stack that starts and cannot serve.
+    """
+
+    with pytest.raises(ConfigurationError) as exc:
+        build(
+            APP_ENV="local",
+            CLOCK_SCRUBBABLE=True,
+            CLOCK_SCRUB_TO="2026-09-08T21:00:00",
+        )
+
+    assert "CLOCK_SCRUB_TO" in str(exc.value)
+
+
+def test_an_empty_anchor_is_no_anchor(clean_env) -> None:
+    """A variable somebody uncommented and left blank means *unset*, not *broken*."""
+
+    settings = build(APP_ENV="local", CLOCK_SCRUBBABLE=True, CLOCK_SCRUB_TO="")
+
+    assert settings.CLOCK_SCRUB_TO is None
+
+
+def test_every_environment_says_whether_it_may_be_scrubbed(clean_env) -> None:
+    """The table is total, and the import refuses if a fifth name is not in it."""
+
+    assert set(CLOCK_MAY_BE_SCRUBBED) == set(Environment)
+    assert SCRUBBABLE_NAMES == Environment.LOCAL.value
+
+
 def test_no_refusal_fires_outside_the_environment_it_names(clean_env) -> None:
     """Every production trigger, in `local`, all at once — and it starts.
 
@@ -387,6 +482,19 @@ REFUSALS = [
         lambda: production(ALLOW_ORIGINS=[f"http://{POISON_PASSWORD}.example"]),
     ),
     ("DB_SSL_MODE", lambda: production(DB_SSL_MODE="disable")),
+    ("CLOCK_SCRUBBABLE", lambda: production(CLOCK_SCRUBBABLE=True)),
+    (
+        "CLOCK_SCRUB_TO",
+        lambda: build(APP_ENV="local", CLOCK_SCRUB_TO="2026-09-08T21:00:00Z"),
+    ),
+    (
+        "CLOCK_SCRUB_TO",
+        lambda: build(
+            APP_ENV="local",
+            CLOCK_SCRUBBABLE=True,
+            CLOCK_SCRUB_TO="2026-09-08T21:00:00",
+        ),
+    ),
 ]
 
 #: Two refusals name the same variable, so the ids are spelled rather than derived —
@@ -400,6 +508,9 @@ REFUSAL_IDS = [
     "ALLOW_ORIGINS-wildcard-with-credentials",
     "ALLOW_ORIGINS-plaintext-when-deployed",
     "DB_SSL_MODE",
+    "CLOCK_SCRUBBABLE-outside-local",
+    "CLOCK_SCRUB_TO-with-no-scrubbable-clock",
+    "CLOCK_SCRUB_TO-naive",
 ]
 
 

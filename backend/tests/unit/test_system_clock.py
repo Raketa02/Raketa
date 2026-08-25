@@ -1,10 +1,17 @@
 """The wall clock, and the separation that having an interface is *for*.
 
-`SystemClock` is the one adapter in the system that reads ambient time, and until
-this module's subject moved it shared a file with the `Clock` Protocol — so every
-one of the twelve modules that only wanted to know *what a clock is* had a live
-one in scope. Nothing enforced the distinction, and nothing would have noticed it
-being crossed.
+`SystemClock` is the adapter that reads ambient time, and until this module's
+subject moved it shared a file with the `Clock` Protocol — so every one of the
+twelve modules that only wanted to know *what a clock is* had a live one in
+scope. Nothing enforced the distinction, and nothing would have noticed it being
+crossed.
+
+ADR-0092 put a second adapter in that same file — `ScrubbableClock`, a `local`
+developer's displaced clock, whose own behaviour is
+`test_scrubbable_clock.py`'s subject. The walks below are what keep it under the
+same fence for free: they are stated over the *module*, so the rule is *wiring is
+the layer allowed to know which clock is real* rather than a list of class
+names.
 
 Three of the four claims below erase at runtime and so are walked rather than
 exercised: that the interface resolves from the kernel everywhere, that the

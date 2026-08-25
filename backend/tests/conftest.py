@@ -19,10 +19,30 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
+from app.bootstrap.composition import (  # noqa: E402
+    forget_the_movable_clock,
+)
 from app.core.config import get_settings  # noqa: E402
 from app.infrastructure.database.base import Base  # noqa: E402
 from app.infrastructure.database.session import get_db  # noqa: E402
 from app.main import create_app  # noqa: E402  (also registers ORM models)
+
+
+@pytest.fixture(autouse=True)
+def put_the_clock_back():
+    """No test inherits another's scrub, and none has to remember to say so.
+
+    The one real cost of ADR-0092 is written down in the issue that asked for
+    it: *"a clock a request can move is a clock a test can forget to put back."*
+    This is the answer, and it is autouse because a fixture each test opts into
+    is the same discipline it replaces. Nothing builds a movable clock unless a
+    test turns `CLOCK_SCRUBBABLE` on, so for the whole suite bar one file this
+    costs a dictionary lookup.
+    """
+
+    forget_the_movable_clock()
+    yield
+    forget_the_movable_clock()
 
 
 @pytest_asyncio.fixture
