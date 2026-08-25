@@ -18,6 +18,7 @@ from app.modules.player_profile.domain.social_tags import (
     SOCIAL_TAG_VOCABULARY,
     SocialTag,
     SocialTagGroup,
+    SocialTagSelectionBounds,
 )
 
 
@@ -68,25 +69,62 @@ class SearchRadiusBoundsResource(BaseModel):
         )
 
 
+class SocialTagSelectionBoundsResource(BaseModel):
+    """How many Social tags a selection must hold to be one.
+
+    The unit is in both field names for the reason it is on the radius bounds:
+    a bare ``minimum`` beside a list of eighteen tags reads as a count of
+    something, and which something is exactly what a client would guess wrong.
+    """
+
+    minimum_tags: int = Field(
+        ..., description="Fewest tags a player may hold — the picker's floor"
+    )
+    maximum_tags: int = Field(
+        ..., description="Most tags a player may hold — the picker's ceiling"
+    )
+
+    @classmethod
+    def from_bounds(
+        cls, bounds: SocialTagSelectionBounds
+    ) -> "SocialTagSelectionBoundsResource":
+        return cls(
+            minimum_tags=bounds.minimum_tags,
+            maximum_tags=bounds.maximum_tags,
+        )
+
+
 class PlayerProfileOptionsResponse(BaseModel):
     """Everything a client needs to *render* the profile steps, in one round trip.
 
-    Two facts rather than one endpoint each, because they are the same kind of
-    thing — closed, read-only, and needed by the same part of onboarding at the
-    same moment.
+    A handful of facts rather than one endpoint each, because they are the same
+    kind of thing — closed, read-only, and needed by the same part of onboarding
+    at the same moment.
+
+    **Fields are only ever added.** A shipped mobile app parses this document for
+    months after it stops being built, so a new field goes on the end and the
+    ones already here keep their names and their types.
     """
 
     social_tag_groups: list[SocialTagGroupResource]
     search_radius: SearchRadiusBoundsResource
+    social_tag_selection: SocialTagSelectionBoundsResource
 
     @classmethod
-    def from_domain(cls, bounds: SearchRadiusBounds) -> "PlayerProfileOptionsResponse":
+    def from_domain(
+        cls,
+        radius_bounds: SearchRadiusBounds,
+        tag_selection_bounds: SocialTagSelectionBounds,
+    ) -> "PlayerProfileOptionsResponse":
         return cls(
             social_tag_groups=[
                 SocialTagGroupResource.from_group(group, tags)
                 for group, tags in SOCIAL_TAG_VOCABULARY.items()
             ],
-            search_radius=SearchRadiusBoundsResource.from_bounds(bounds),
+            search_radius=SearchRadiusBoundsResource.from_bounds(radius_bounds),
+            social_tag_selection=SocialTagSelectionBoundsResource.from_bounds(
+                tag_selection_bounds
+            ),
         )
 
 

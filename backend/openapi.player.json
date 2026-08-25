@@ -607,8 +607,8 @@
         "tags": [
           "player-profile"
         ],
-        "summary": "The Social tag vocabulary and the Search radius bounds",
-        "description": "Read-only, unauthenticated, no request body. Tag **ids** and their grouping cross the wire; the label a player reads is the client's own copy.\n\nA tag id is permanent \u2014 it is persisted on profiles, so retiring a tag means dropping it from this response while continuing to honour it on the profiles that hold it. Ids are never reused and never renamed.\n\nBoth the group order and the tag order within a group are part of the contract: the picker renders what it is given rather than sorting.",
+        "summary": "The Social tag vocabulary and how many to pick, and the Search radius bounds",
+        "description": "Read-only, unauthenticated, no request body. Tag **ids** and their grouping cross the wire; the label a player reads is the client's own copy.\n\nA tag id is permanent \u2014 it is persisted on profiles, so retiring a tag means dropping it from this response while continuing to honour it on the profiles that hold it. Ids are never reused and never renamed.\n\nBoth the group order and the tag order within a group are part of the contract: the picker renders what it is given rather than sorting.\n\n`social_tag_selection` carries how many tags a profile must hold \u2014 both ends included. The profile commit re-validates against the same numbers, so a picker that reads them here cannot disagree with it.",
         "operationId": "get_player_profile_options_api_v1_player_profile_options_get",
         "responses": {
           "200": {
@@ -1066,15 +1066,19 @@
           },
           "search_radius": {
             "$ref": "#/components/schemas/SearchRadiusBoundsResource"
+          },
+          "social_tag_selection": {
+            "$ref": "#/components/schemas/SocialTagSelectionBoundsResource"
           }
         },
         "type": "object",
         "required": [
           "social_tag_groups",
-          "search_radius"
+          "search_radius",
+          "social_tag_selection"
         ],
         "title": "PlayerProfileOptionsResponse",
-        "description": "Everything a client needs to *render* the profile steps, in one round trip.\n\nTwo facts rather than one endpoint each, because they are the same kind of\nthing \u2014 closed, read-only, and needed by the same part of onboarding at the\nsame moment."
+        "description": "Everything a client needs to *render* the profile steps, in one round trip.\n\nA handful of facts rather than one endpoint each, because they are the same\nkind of thing \u2014 closed, read-only, and needed by the same part of onboarding\nat the same moment.\n\n**Fields are only ever added.** A shipped mobile app parses this document for\nmonths after it stops being built, so a new field goes on the end and the\nones already here keep their names and their types."
       },
       "QuestionResponse": {
         "properties": {
@@ -1420,6 +1424,27 @@
         ],
         "title": "SocialTagResource",
         "description": "One tag, as an id and nothing else \u2014 for now.\n\nAn object rather than a bare string deliberately: retiring a tag is\nanticipated (an id is honoured forever and hidden from the picker), and a\ntag that carries a field one day is an addition here, where an array of\nstrings would have to change element type \u2014 which breaks a shipped client."
+      },
+      "SocialTagSelectionBoundsResource": {
+        "properties": {
+          "minimum_tags": {
+            "type": "integer",
+            "title": "Minimum Tags",
+            "description": "Fewest tags a player may hold \u2014 the picker's floor"
+          },
+          "maximum_tags": {
+            "type": "integer",
+            "title": "Maximum Tags",
+            "description": "Most tags a player may hold \u2014 the picker's ceiling"
+          }
+        },
+        "type": "object",
+        "required": [
+          "minimum_tags",
+          "maximum_tags"
+        ],
+        "title": "SocialTagSelectionBoundsResource",
+        "description": "How many Social tags a selection must hold to be one.\n\nThe unit is in both field names for the reason it is on the radius bounds:\na bare ``minimum`` beside a list of eighteen tags reads as a count of\nsomething, and which something is exactly what a client would guess wrong."
       },
       "Sport": {
         "type": "string",

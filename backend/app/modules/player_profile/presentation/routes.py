@@ -1,9 +1,15 @@
 """The Player profile context's read-only endpoints.
 
-One route today: the Social tag vocabulary and the Search radius bounds, served
-so that neither the onboarding picker nor the profile editor that will edit the
-same values later holds a second copy of either (``docs/adr/0089``). It follows
-the precedent ``GET /api/v1/sports`` set for the ``Sport`` registry.
+One route today: the Social tag vocabulary, how many of them a player picks,
+and the Search radius bounds — served so that neither the onboarding picker nor
+the profile editor that will edit the same values later holds a second copy of
+any of them (``docs/adr/0089``). It follows the precedent ``GET /api/v1/sports``
+set for the ``Sport`` registry.
+
+The floor and the ceiling are here for the same reason the vocabulary is: a
+client that hardcodes them is a client whose disabled button can disagree with
+what the commit accepts. The numbers themselves live in the domain module and
+are not restated here.
 
 It takes no body, reads nothing per player and needs no token — there is nothing
 here that belongs to anybody. That is what makes the answer cacheable, and the
@@ -15,6 +21,9 @@ from __future__ import annotations
 from fastapi import APIRouter, Response, status
 
 from app.modules.player_profile.domain.search_radius import SEARCH_RADIUS_BOUNDS
+from app.modules.player_profile.domain.social_tags import (
+    SOCIAL_TAG_SELECTION_BOUNDS,
+)
 from app.modules.player_profile.presentation.schemas import (
     PlayerProfileOptionsResponse,
 )
@@ -31,7 +40,10 @@ _CACHE_SECONDS = 3600
     "/options",
     response_model=PlayerProfileOptionsResponse,
     status_code=status.HTTP_200_OK,
-    summary="The Social tag vocabulary and the Search radius bounds",
+    summary=(
+        "The Social tag vocabulary and how many to pick, "
+        "and the Search radius bounds"
+    ),
     description=(
         "Read-only, unauthenticated, no request body. Tag **ids** and their "
         "grouping cross the wire; the label a player reads is the client's own "
@@ -40,11 +52,17 @@ _CACHE_SECONDS = 3600
         "means dropping it from this response while continuing to honour it on "
         "the profiles that hold it. Ids are never reused and never renamed.\n\n"
         "Both the group order and the tag order within a group are part of the "
-        "contract: the picker renders what it is given rather than sorting."
+        "contract: the picker renders what it is given rather than sorting.\n\n"
+        "`social_tag_selection` carries how many tags a profile must hold — "
+        "both ends included. The profile commit re-validates against the same "
+        "numbers, so a picker that reads them here cannot disagree with it."
     ),
 )
 async def get_player_profile_options(
     response: Response,
 ) -> PlayerProfileOptionsResponse:
     response.headers["Cache-Control"] = f"public, max-age={_CACHE_SECONDS}"
-    return PlayerProfileOptionsResponse.from_domain(SEARCH_RADIUS_BOUNDS)
+    return PlayerProfileOptionsResponse.from_domain(
+        SEARCH_RADIUS_BOUNDS,
+        SOCIAL_TAG_SELECTION_BOUNDS,
+    )

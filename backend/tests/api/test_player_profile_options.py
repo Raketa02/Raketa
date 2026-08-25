@@ -1,4 +1,4 @@
-"""``GET /api/v1/player-profile/options`` — the two facts a client must not hold.
+"""``GET /api/v1/player-profile/options`` — the facts a client must not hold.
 
 The vocabulary's own invariants are unit-tested; this file is about the wire:
 what a client actually receives, that it needs nothing to ask for it, and that
@@ -94,6 +94,28 @@ async def test_the_search_radius_bounds_are_served_with_their_default(client):
 
 
 @pytest.mark.asyncio
+async def test_the_social_tag_floor_and_ceiling_are_served(client):
+    # Written out rather than read from the constant: this guards the *wire*,
+    # and a mapper that swapped the two would leave the constant untouched.
+    resp = await client.get(OPTIONS_PATH)
+    assert resp.status_code == 200, resp.text
+
+    assert resp.json()["social_tag_selection"] == {
+        "minimum_tags": 2,
+        "maximum_tags": 6,
+    }
+
+
+@pytest.mark.asyncio
+async def test_the_ceiling_is_reachable_from_what_is_served(client):
+    # A ceiling above the vocabulary would be a counter that never fills.
+    body = (await client.get(OPTIONS_PATH)).json()
+    tags = [tag["id"] for group in body["social_tag_groups"] for tag in group["tags"]]
+
+    assert body["social_tag_selection"]["maximum_tags"] <= len(tags)
+
+
+@pytest.mark.asyncio
 async def test_the_answer_needs_no_token_and_no_body(client):
     # Nothing here belongs to anybody, and the first step of the social part
     # renders from it — asking for a token would be asking for one twice.
@@ -135,6 +157,7 @@ def test_the_committed_contract_carries_the_route_and_its_schemas():
         "SocialTagGroupResource",
         "SocialTagResource",
         "SearchRadiusBoundsResource",
+        "SocialTagSelectionBoundsResource",
         "SocialTag",
         "SocialTagGroup",
     ):

@@ -41,6 +41,7 @@ means retiring an id and adding another beside it — never editing a line below
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from enum import Enum
 from types import MappingProxyType
 from typing import Mapping
@@ -120,6 +121,57 @@ SOCIAL_TAG_VOCABULARY: Mapping[SocialTagGroup, tuple[SocialTag, ...]] = (
 )
 
 
+@dataclass(frozen=True)
+class SocialTagSelectionBounds:
+    """How many tags a selection must hold to be one.
+
+    The unit is in both field names for the reason it is on the radius bounds: a
+    bare ``minimum`` beside a vocabulary of eighteen reads as a count of
+    something, and which something is exactly what a client would guess wrong.
+    """
+
+    minimum_tags: int
+    maximum_tags: int
+
+    #: The range may collapse — ``minimum_tags == maximum_tags`` is "exactly N
+    #: tags", a rule a product could hold. That is the one deliberate departure
+    #: from ``SearchRadiusBounds``, which refuses a collapsed range because a
+    #: slider with one position is a control with nothing to do.
+
+    def __post_init__(self) -> None:
+        invariant(
+            self.minimum_tags >= 0,
+            f"social tag floor: {self.minimum_tags}",
+        )
+        invariant(
+            self.minimum_tags <= self.maximum_tags,
+            f"social tag range: {self.minimum_tags}–{self.maximum_tags}",
+        )
+
+    def contains(self, tag_count: int) -> bool:
+        """Is this a number of tags a player is allowed to hold?
+
+        Both ends included. It lives here rather than at the call site so that
+        the endpoint serving the numbers and the commit re-validating against
+        them cannot answer differently.
+        """
+
+        return self.minimum_tags <= tag_count <= self.maximum_tags
+
+
+#: The served floor and ceiling. A change here changes what every client's
+#: picker allows and what the profile commit accepts, in one release and without
+#: an app-store one.
+#:
+#: Product confirmed **2 to 6** on 2026-08-25, the same day as the vocabulary
+#: itself. Unlike a tag id these are not on a clock: nothing persists a bound, so
+#: a later opinion is an edit here rather than a retirement.
+SOCIAL_TAG_SELECTION_BOUNDS = SocialTagSelectionBounds(
+    minimum_tags=2,
+    maximum_tags=6,
+)
+
+
 def _validate_vocabulary() -> None:
     """Refuse to import a vocabulary that has drifted from its own enum.
 
@@ -128,6 +180,9 @@ def _validate_vocabulary() -> None:
     that no picker ever shows, and one listed twice would render twice. Checked
     on import rather than in a test alone, because the failure it prevents is a
     tag id that exists on the wire and in nobody's picker.
+
+    The ceiling is checked against the same list, because a ceiling above the
+    vocabulary is a rule no player could break and a counter that never fills.
     """
 
     grouped = [tag for tags in SOCIAL_TAG_VOCABULARY.values() for tag in tags]
@@ -141,6 +196,11 @@ def _validate_vocabulary() -> None:
         tuple(SOCIAL_TAG_VOCABULARY) == tuple(SocialTagGroup),
         f"the vocabulary's groups are not the group enum: "
         f"{list(SOCIAL_TAG_VOCABULARY)}",
+    )
+    invariant(
+        SOCIAL_TAG_SELECTION_BOUNDS.maximum_tags <= len(grouped),
+        f"the social tag ceiling is above the vocabulary: "
+        f"{SOCIAL_TAG_SELECTION_BOUNDS.maximum_tags} of {len(grouped)}",
     )
 
 
