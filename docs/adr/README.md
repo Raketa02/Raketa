@@ -68,3 +68,6 @@ If your work **contradicts** an existing ADR, surface it rather than silently ov
 - [0024 — An Instant is an aware datetime; engines compute in integer minute coordinates](0024-instant-as-aware-datetime-minute-coordinates.md)
 - [0028 — Four environments, one typed configuration](0028-four-environment-model-and-typed-configuration.md) — *renames the dev compose file to `docker-compose-local.yml`; 0010 names the old filename and stands as written*
 - [0029 — Seed data goes through aggregates, and never runs in production](0029-seed-data-through-aggregates-never-in-production.md)
+- [0089 — The Player profile context is event-sourced](0089-player-profile-context-event-sourced.md) — *the first racket-sport aggregate keyed on the player rather than on (player, sport)*
+- [0090 — Onboarding is two parts, and the second one is per player](0090-onboarding-per-player-checkpoint.md) — *narrows `CONTEXT.md`'s "there is no onboarded player" invariant; 0017 and 0020 are untouched*
+- [0091 — Photo bytes live behind a port; MinIO locally, S3 deployed](0091-photo-storage-behind-a-port.md) — *does not wake the dormant deployment path of 0010*
