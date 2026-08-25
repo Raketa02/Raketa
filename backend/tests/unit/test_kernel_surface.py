@@ -3,7 +3,7 @@
 ``app.kernel`` re-exports its whole public API, and nothing outside the package
 — tests included — imports a submodule. That is already how the ``Sport``
 registry is consumed, and it is what lets the kernel be reorganised internally
-without breaking a caller: moving ``invariant`` beside the money types is then a
+without breaking a caller: moving ``invariant`` beside the time types is then a
 file move, not a sweep across the tree.
 
 The export list earns its keep by being read. A reviewer watching ``__all__``
@@ -39,31 +39,6 @@ THE_SURFACE = (
     "Reason",
     "Result",
     "Unavailable",
-    "GROSZE_PER_ZLOTY",
-    "SOLD_FORMATS",
-    "CardAllowance",
-    "CardCoversShare",
-    "ClubCard",
-    "CourtPrice",
-    "Grosze",
-    "NoCard",
-    "Payable",
-    "Ratio",
-    "SeatShare",
-    "add_grosze",
-    "apply_fraction",
-    "at_least_zero",
-    "card_offset",
-    "court_price",
-    "divide_among_players",
-    "grosze",
-    "negate_grosze",
-    "payable_from",
-    "percent",
-    "ratio",
-    "round_half_away_from_zero",
-    "subtract_grosze",
-    "zloty",
     "MINUTES_PER_DAY",
     "Clock",
     "DayOffset",

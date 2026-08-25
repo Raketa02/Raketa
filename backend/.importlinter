@@ -13,18 +13,12 @@
 # three purity rules (no clock, no randomness, no hidden state) are worth exactly
 # what enforces them.
 #
-# The two matchmaking engines are fenced from each other in *both* directions
-# (docs/adr/0026). Match Fit consumes Pairing's *output* — it takes a
-# `PairingAnalysis` as an input value — and that vocabulary lives in
-# `app/engines/forecast.py`, which either side may import. What must not happen is
-# Match Fit reaching for the pairing *engine*: an engine free to construct its own
-# forecast can score a match against a pairing nobody was shown, which is two
-# implementations of one question inside one layer. The fence is drawn around the
-# whole packages rather than only the version directories, which is stricter than
-# the ticket asked for and simpler to state: neither engine's arithmetic may move
-# because the other's version moved. It is two contracts and not one because a
-# `forbidden` contract with overlapping source and forbidden lists would also
-# forbid each package from importing itself.
+# Engines are also fenced from *each other* when two of them answer questions that
+# could be confused. Only one engine ships today — RacketSkill — so no such contract
+# is written here; the pair that used to be (Pairing and Match Fit, docs/adr/0026)
+# went with their code. The shape to copy when a second engine lands: two `forbidden`
+# contracts and not one, because a single contract with overlapping source and
+# forbidden lists would also forbid each package from importing itself.
 #
 # `datetime` is forbidden to the **engines only**. The kernel's time module is its
 # one legitimate home; an engine receives an instant rather than constructing one.
@@ -153,24 +147,6 @@ forbidden_modules =
     uuid
     secrets
     time
-allow_indirect_imports = true
-
-[importlinter:contract:matchfit-does-not-reach-the-pairing-engine]
-name = Match Fit reads the pairing engine's output vocabulary, never the engine
-type = forbidden
-source_modules =
-    app.engines.matchfit
-forbidden_modules =
-    app.engines.pairing
-allow_indirect_imports = true
-
-[importlinter:contract:pairing-does-not-reach-match-fit]
-name = The pairing engine does not know Match Fit exists
-type = forbidden
-source_modules =
-    app.engines.pairing
-forbidden_modules =
-    app.engines.matchfit
 allow_indirect_imports = true
 
 [importlinter:contract:domain-does-not-know-the-framework-or-the-orm]

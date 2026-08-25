@@ -16,14 +16,21 @@ described here means extending the system deliberately (Part 15), not inventing 
   translating a stylesheet into React Native, and that translation is not mechanical —
   see [Part 0](#part-0--reading-a-web-prototype-as-a-native-app) first.
 - **Changes made since locking** are recorded in [Part 16](#part-16--amendments-after-locking),
-  never absorbed silently. Locked means changes are _visible_, not forbidden.
+  never absorbed silently. Locked means changes are _visible_, not forbidden. Sections
+  deleted by the 2026-08-25 reset are listed in [Part 17](#part-17--what-the-reset-removed).
 - **Implementation:** the tokens are real code at
   [`../src/shared/ui/theme.ts`](../src/shared/ui/theme.ts). That file is the single source
   of colour, type, spacing, radius, elevation and motion values.
-- **Scope: the player app only.** The club console (`frontend_club/`) has its own design
-  system. The two palettes converge because it is one brand, but **the values are never
-  shared** — no common package, no cross-import
+- **Scope: the player app only.** A second client would get its own design system. Two
+  palettes would converge because it is one brand, but **the values are never shared** — no
+  common package, no cross-import
   ([ADR-0005](../../docs/adr/0005-three-app-monorepo-ownership-boundaries.md)).
+- **Cut back on 2026-08-25.** The reset reduced the repository to sign-up, sign-in and
+  onboarding, and every section specifying a removed feature was removed with it — the
+  match card, the fit badge, the balance bar, the seat avatar, the booking slot grid, and
+  the Find / Match detail / Creating / Passport screens. **Section numbers of what survives
+  are unchanged**, so the gaps are deliberate and an old citation still resolves to the
+  right thing; [Part 17](#part-17--what-the-reset-removed) lists what stood where.
 
 ---
 
@@ -104,8 +111,8 @@ physical object; a card on it reads as a piece of paper on a desk.
 ## 1.2 One accent, used sparingly
 
 Coral is the only attention colour. It appears on: the primary button, the active tab,
-the level mark on the band bar, the FAB, the onboarding progress fill, the hot tag, and
-the _me_ avatar. **Nothing else.** When everything is accented, nothing is.
+the level mark on the band bar, the onboarding progress fill, and the hot tag.
+**Nothing else.** When everything is accented, nothing is.
 
 ## 1.3 Semantic colour is never decorative
 
@@ -122,7 +129,7 @@ not grow to accommodate a new meaning; a meaning is assigned to a colour already
 ## 1.4 Numbers are monospaced, always
 
 Money, levels, times, percentages and counts use IBM Plex Mono with tabular figures. A
-column of prices lines up. **A level changing from 2,71 to 2,80 does not reflow its row.**
+column of levels lines up. **A level changing from 2,71 to 2,80 does not reflow its row.**
 
 ## 1.5 Nothing animates that does not have to
 
@@ -144,8 +151,8 @@ There is no frame, no stage, no scenario rail — see [Part 0](#part-0--reading-
 | `paper`   | `#F4F2ED` | App background. Warm off-white                                           |
 | `paper2`  | `#EDEAE3` | Recessed surface — the situation header in a question, the popover close |
 | `surface` | `#FFFFFF` | Cards, sheets, popovers, raised controls                                 |
-| `ink`     | `#101B20` | Body text, selected chip, selected slot square                           |
-| `night`   | `#0A3441` | Dark cards, avatars, fit badge, meter fill, toast                        |
+| `ink`     | `#101B20` | Body text, selected chip                                                 |
+| `night`   | `#0A3441` | Dark cards, meter fill, toast                                            |
 | `night2`  | `#12495B` | Secondary dark                                                           |
 | `muted`   | `#5C6D73` | Secondary text, `tiny`, eyebrows, disabled                               |
 | `line`    | `#E5E1D8` | Card borders, chip borders, dividers                                     |
@@ -192,8 +199,8 @@ below AA, and nothing in this app reaches WCAG's large-text threshold (18.66pt b
 
 | You want                                                                                | Use                                  |
 | --------------------------------------------------------------------------------------- | ------------------------------------ |
-| A coral or mint **mark** with no text (FAB, level mark, progress fill, seat ring, dots) | `coral` / `mint`                     |
-| **White text** on coral — the primary button, the high fit badge                        | `coralInk` (white on it **5.89**)    |
+| A coral or mint **mark** with no text (level mark, progress fill, dots)                 | `coral` / `mint`                     |
+| **White text** on coral — the primary button                                            | `coralInk` (white on it **5.89**)    |
 | **White text** on mint — the success toast                                              | `mintInk` (white on it **5.84**)     |
 | **Dark text** on a coral fill — the _me_ avatar's initials                              | `ink` on `coral` (**4.50**)          |
 | Coral or mint **text on its own soft**                                                  | `coralInk` (5.11) / `mintInk` (5.08) |
@@ -266,8 +273,8 @@ for text**, and the audit did not catch it.
 | muted on line2                                    | 4.62      | AA                                  |
 | muted on paper2                                   | 4.49      | AA — used at 11pt+ only             |
 | **ink on coral**                                  | **4.50**  | AA — the only dark-on-coral pairing |
-| coral on paper (marks: FAB, level mark, progress) | 3.48      | ≥3:1, meets **1.4.11**              |
-| mint on surface (free-slot border)                | 4.07      | ≥3:1, meets **1.4.11**              |
+| coral on paper (marks: level mark, progress fill) | 3.48      | ≥3:1, meets **1.4.11**              |
+| mint on surface (mint-bordered fills)             | 4.07      | ≥3:1, meets **1.4.11**              |
 
 Deliberately absent: _white on coral_ (3.89) and _white on mint_ (4.07) — see Rule C.
 
@@ -329,7 +336,7 @@ them is a one-off that needs justifying.
 | `levelLarge` | 26   | Level on comparison cards                    |
 | `numXL`      | 22   | Panel and summary numbers                    |
 | `numL`       | 19   | Panel numbers                                |
-| `numM`       | 17   | Prices and row numbers                       |
+| `numM`       | 17   | Row numbers                                  |
 | `numS`       | 14   | Inline numbers                               |
 | `numXS`      | 13   | Dense inline numbers                         |
 
@@ -420,10 +427,9 @@ Everything else follows. A value outside the grid is a bug.
 | 15                  | Dark card                                      |
 | 13                  | Card, popover                                  |
 | 12                  | Toast                                          |
-| 10                  | Button, note, day square, segmented control    |
-| 9                   | Range square, hour square, avatar, info button |
-| 8                   | Time square, balance bar, sport dot backing    |
-| 7                   | Fit badge                                      |
+| 10                  | Button, note, segmented control                |
+| 9                   | Info button                                    |
+| 8                   | Sport dot backing                              |
 | 6                   | Tag, sport dot                                 |
 
 **The pattern: the bigger the surface, the rounder.** A dark card is 15 where a light one
@@ -479,7 +485,8 @@ Children repaint automatically:
 > codebase, a popover rendered from inside a dark card renders through the overlay root,
 > not as a descendant** — so the repaint never reaches it and the overrides are unnecessary.
 
-Used for: the onboarding result, the state card on a match, the level card on the passport.
+Used for: the onboarding result and the done screen — the two places the app states a
+finding rather than offering a choice.
 
 ## 5.3 Hairline — the internal divider
 
@@ -528,7 +535,7 @@ Consecutive rows are separated by a 1pt `line2` top border, **applied from the s
 onward** — so the first row has no rule above it and the last none below, automatically.
 In RN: `index > 0 && styles.divider`, never a `borderBottom` on every row.
 
-Used for every key-value list: price breakdowns, passport stats, wallet lines.
+Used for every key-value list: the result screen's figures, the evidence trail's rows.
 
 ---
 
@@ -575,8 +582,9 @@ segment   flex 1  paddingVertical 6  radius 8  label 10.5 / 700  muted
 selected  background surface   label ink
 ```
 
-**Inset track, raised selection — the inverse of the chip.** Used for Games/Courts and for
-time-of-day.
+**Inset track, raised selection — the inverse of the chip.** For a two- or three-way view
+switch within one screen. Nothing uses it today; it is specified so the first screen that
+needs one does not invent a second shape.
 
 ## 6.4 Tag — the status pill
 
@@ -625,65 +633,15 @@ Touch has no hover. Every pressable declares its pressed appearance explicitly:
 | ------------------------------- | ------------------------------------------------------ |
 | Card                            | `borderColor: coral`                                   |
 | Button                          | the variant's pressed fill ([6.1](#61-button))         |
-| Chip / segment / slot square    | `opacity: .7`                                          |
+| Chip / segment                  | `opacity: .7`                                          |
 | Avatar (press-and-hold to peek) | `scale(.93)`, and while holding a 3pt `coralSoft` ring |
 
 Feedback is immediate — use `Pressable`'s `pressed` state, not a 120ms animation. The
 120ms in the prototype is a mouse-hover transition and has no touch equivalent.
 
-## 6.7 Slot squares
-
-Three siblings for the three kinds of time selector, plus the range square:
-
-| Element      | Shape                                         |
-| ------------ | --------------------------------------------- |
-| Day square   | radius 10, padding 6 × 9, centred, 1pt border |
-| Time square  | radius 8, height 32, mono 11.5 / 700          |
-| Hour square  | radius 9, padding 6 × 9, mono 11.5 / 700      |
-| Range square | radius 9, padding 6 × 9, centred, 1pt border  |
-
-The time and range squares share a **four-state vocabulary**:
-
-| State         | Background | Border      | Text    |
-| ------------- | ---------- | ----------- | ------- |
-| free          | `mintSoft` | `mint`      | `ink`   |
-| off / taken   | `line2`    | transparent | `muted` |
-| on / selected | `ink`      | `ink`       | `#fff`  |
-| end           | `surface`  | `ink`       | `ink`   |
-
-**`end` is the hollow square marking where a booking finishes** — the same border as
-selected, the opposite fill.
-
-> The free square's border is `mint` (4.07:1 on surface), not the prototype's `#BFE0D2`
-> (1.27:1). A pale fill on a white card needs a border that is actually visible, or a free
-> slot is indistinguishable from the card behind it.
-
 ---
 
 # Part 7 — Data display
-
-## 7.1 Fit badge
-
-```
-height 23   paddingHorizontal 9   radius 7
-background night   label #fff 11 / 700
-high (score ≥ 90): background coralInk
-```
-
-Dark by default, **coral at 90 or above**, so _a very good match is the only thing on a
-Find card that competes with the accent_. The threshold lives in the domain layer, not in
-the component.
-
-## 7.2 Balance bar
-
-```
-height 24   radius 8   overflow hidden   background line2
-two children, flex-weighted to the predicted shares
-labels inside the bar: #fff, 9.5 / 700, italic
-```
-
-Percentages sit **inside** the bar. Each child's fill must come from the AA-safe set
-(`night`, `night2`, `mintInk`, `coralInk`, `red`) — white text sits on it.
 
 ## 7.3 Meter and bar
 
@@ -694,21 +652,6 @@ Percentages sit **inside** the bar. Each child's fill must come from the AA-safe
 
 A bar states a fraction, so it is only for a value with a denominator somebody knows. The
 questionnaire has none — see [7.9](#79-the-question-navigator).
-
-## 7.4 Seat avatar
-
-```
-27 × 27   radius 9   background night   initials #fff 9.5 / 700
-empty:  no fill, 1.5pt dashed border in muted, label muted
-me:     background coral, initials ink        ← Rule C
-```
-
-**A dashed border for an empty seat is the only dashed element in the app, and it means
-one thing: a place that could be filled.** Its border is `muted` (4.83:1 on paper), not
-`line` (1.17:1) — a dashed border nobody can see does not communicate an open seat.
-
-Press-and-hold peeks at the player: the avatar scales to .93 and gains a 3pt `coralSoft`
-ring.
 
 ## 7.5 The level bar
 
@@ -729,7 +672,7 @@ legend  (optional)     a coral tick and a bracket glyph, with labels
 > on top of the bands and it hid exactly what the bands were there to show.
 
 **The scale is always the full 1,00–5,00**, so the same value always lands in the same
-place — on the passport, on the result card and on a comparison card alike.
+place — on the result card and on a comparison card alike.
 
 Band names use the band **ink** values ([2.4](#24-band-colours--the-level-bar)), not the
 deeps. The bracket uses `muted`.
@@ -881,7 +824,7 @@ Two horizontal patterns with different jobs.
 
 | Pattern        | Behaviour                                                                              | Used for                              |
 | -------------- | -------------------------------------------------------------------------------------- | ------------------------------------- |
-| **Square row** | Free scroll, content-sized children, gap 6, no scrollbar                               | Day squares, chips, the match rail    |
+| **Square row** | Free scroll, content-sized children, gap 6, no scrollbar                               | Chips, sport squares                  |
 | **Strip**      | Snapping carousel, full-content-width children, gap 9, **bleeding to the screen edge** | Where one item at a time is the point |
 
 ```
@@ -957,16 +900,21 @@ SafeAreaView
   ScreenHeader        eyebrow + h1, optional back, optional right slot
   ScrollView          paddingHorizontal 15, paddingBottom 15
   CTA                 conditional, pinned above the tab bar
-  TabBar              5 columns
+  TabBar              equal columns, one per top-level destination
 ```
 
 ## 10.2 The tab bar
 
 ```
-5 equal columns, paddingTop 6, paddingBottom = 12 + bottom safe-area inset
+equal columns, one per top-level destination
+paddingTop 6, paddingBottom = 12 + bottom safe-area inset
 icon 16 × 16
-FAB (centre): 28 × 28, radius 10, background coral, lifted 3 above the row
 ```
+
+> **Not built, and not chrome until it has somewhere to go.** `src/app/(app)/(tabs)/` is a
+> `Stack`, because there is one screen and an empty tab bar over a single route is chrome
+> pretending to be navigation. The geometry is specified here so the second destination
+> does not also have to design the bar.
 
 > **The prototype ships no icon set** — its tab icons are `currentColor` squares, an honest
 > placeholder that specifies shape and position but not glyph. Real icons come from
@@ -984,54 +932,6 @@ eyebrow above, h1 below
 optional back chevron, 20pt, muted, 44 × 44 target
 optional right slot for a segmented control
 ```
-
----
-
-# Part 11 — Cross-screen patterns
-
-These appear in three or more places and are specified once.
-
-## 11.1 The sport bar
-
-A square row of chips — one per sport plus "All", each with a 6pt sport-coloured square.
-Persistent across Find, Courts and Create.
-
-## 11.2 The match card
-
-The canonical representation of a **joinable** match, used on Home, Find, the waitlist and
-the creation overlap rail.
-
-```
-┌────────────────────────────────────────────┐
-│ Sat · 18:30  [Promotion]          ╭─────╮  │
-│ Zabłocie Sport · 14 min           │glyph│  │
-│ [●Padel] [Doubles] [Counts]       ╰─────╯  │
-│                                      3/4   │
-├────────────────────────────────────────────┤
-│ [✦ 93] [●Forming]        38,00 zł · 0 fee  │
-├────────────────────────────────────────────┤
-│ optional footer line                       │
-└────────────────────────────────────────────┘
-```
-
-**Left column:** mono time, optional badge, club + distance in `tiny`, then a row of tags.
-**Right column:** the sport glyph with seat occupancy, and `filled/n` in mono.
-Then a hairline carrying the fit badge, the state tag, and the price — **struck through
-when a club card applies.**
-
-The optional footer adds a second hairline. It exists for the creation flow, which needs
-to say the category and the target level — **the two things a Find card cannot know to
-say.**
-
-## 11.3 The state card
-
-The canonical representation of a match you are **in**: a dark card carrying the state tag,
-a context line, the group facet, the court facet, and up to four lines each with a tick or
-a circle marker.
-
-**Driven entirely by a state table, so the visual is identical across all 32 contexts and
-only the content changes.** This is a design property worth protecting: a bespoke state
-card for one context is how 32 contexts become 32 layouts.
 
 ---
 
@@ -1231,7 +1131,7 @@ player who stopped after one rating is owed the same account of the run as one w
 ### The done screen
 
 One card per sport. The sport's identity colour is its **3pt left rail** — the same rail
-the note ([5.4](#54-note--the-explanation-block)) and the result screen's band card use —
+the note ([5.4](#54-note--the-message-block)) and the result screen's band card use —
 with the sport's name beside it, because a rail is not readable and no state is carried by
 colour alone.
 
@@ -1268,57 +1168,6 @@ is no control that means yes. The match-proposals opt-in is its own explicit, sk
 step whenever it arrives; folding it into a screen the player passes through on the way out
 would collect an agreement nobody read.
 
-## 12.2 Find
-
-Two tabs via the segmented control.
-
-**Games** — sport bar, day chips, a filter chip with a count badge, then a match card per
-match ordered by fit. The empty state is a bold line, a `tiny` explanation and a
-clear-filters button. **The copy is explicit that an empty list is a true answer**, not a
-failure.
-
-**Courts** — club cards with name, distance, a "from" price and a row of hour squares.
-Sorted by soonest / cheapest / nearest.
-
-## 12.3 Match detail
-
-The longest screen in the app. The order is part of the design:
-
-1. State card
-2. The five numbers — balance, fit, at stake, target, price
-3. Balance bar with the predicted split
-4. The seat row — one avatar per seat, dashed for empty, coral for me
-5. Court certainty — which court, held or not, and why
-6. The deadline strip — three markers on a bar
-7. Money — share, card, payable
-8. The pinned join/leave action
-
-## 12.4 Creating
-
-**Step 1** is the mode choice as two tall pressable cards with a four-row comparison each.
-**Step 2** is one scrolling screen: sport → club → category → calendar → overlap → price →
-rules → create.
-
-### The calendar
-
-A square row of day squares — weekday, date, count of free starts, and a **coral count
-badge** top-right when open matches already exist that day. Then three eyebrow-labelled
-grids of time squares (Morning / Afternoon / Evening), four columns.
-
-### The overlap block
-
-**The frame is a note plus cards, not a card containing cards.** Note tone escalates with
-severity: info → coral (tight) → amber (busy) → coral (saturated).
-
-## 12.5 Passport, Wallet, Score
-
-- **Passport** — a dark card with the level and band bar, a per-sport row list, a
-  per-format block where a sport has two, and the calibration explanation.
-- **Wallet** — three totals (held / committed / settled) then a ledger of rows, each with a
-  label, a reference in `tiny`, and a **signed** mono amount. Held lines carry a warn tag,
-  pending refunds an ok tag.
-- **Score** — a large display number, a meter, the gate threshold marked, and record rows.
-
 ---
 
 # Part 13 — Accessibility
@@ -1337,17 +1186,18 @@ the missing column is a requirement here.**
 - **Live announcements.** Every toast calls `announceForAccessibility`.
 - **Modal semantics.** The sheet and the popover set `accessibilityViewIsModal` (iOS) and
   hide siblings (Android), and return focus to the trigger on close.
-- **Names on everything tappable.** Tabs, info marks, the popover close, avatars, slot
-  squares. A slot square's label is its time _and_ its state — "18:30, free" — because
-  colour is not available to a screen reader.
+- **Names on everything tappable.** Tabs, info marks, the popover close, answer options,
+  the question navigator's dots. **A control's label is its content _and_ its state** —
+  a navigator dot reads "question 3, answered" — because colour is not available to a
+  screen reader.
 - **State, not just style.** `accessibilityState` for selected chips, tabs and segments.
 - **Dynamic Type.** Text scales with the OS setting; layouts use `flex` and wrapping rather
-  than fixed heights, except where a fixed height is the design (slot grids, the tab bar).
+  than fixed heights, except where a fixed height is the design (the tab bar).
   **`allowFontScaling={false}` is permitted only inside the level bar's drawn geometry**,
   where a scaled label would break the alignment of the bar it labels.
 
 **Never:** colour as the only signal. Every state carries a word or a shape — that is what
-tags, the dashed empty seat and the hollow `end` square are for.
+the tag variants and the navigator's filled-versus-hollow dots are for.
 
 ---
 
@@ -1355,6 +1205,12 @@ tags, the dashed empty seat and the hollow `end` square are for.
 
 The [prototype audit](design-system-v34-prototype-audit.md) recorded eight inconsistencies
 and five accessibility gaps. All are resolved here. **This table is the diff.**
+
+> **Kept verbatim through the 2026-08-25 reset.** Some rows correct components the reset
+> then removed — the match card, the fit badge, the empty-seat avatar. The rows stay because
+> this table is a *record of what was decided and why*, not a description of the current
+> tree, and the reasoning in the right-hand column is what a rebuilt component would be
+> argued from. Editing it to match today's tree would delete the evidence.
 
 | #   | Prototype                                                                                                            | Locked here                                                                                                           | Why                                                                                       |
 | --- | -------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
@@ -1387,7 +1243,7 @@ Every ratio quoted was computed against WCAG 2.1, not estimated.
 ## 15.1 Adding a component
 
 1. **Is it one of the existing primitives?** card · dark card · note · row · tag · chip ·
-   button · slot square. If yes, use it.
+   button. If yes, use it.
 2. **Colour:** pick the _meaning_, then the token. Never a hex. Check Rule C if white text
    will sit on it.
 3. **Space:** from the 3pt grid. 9 between cards, 15 at the gutter.
@@ -1449,6 +1305,37 @@ unchangeable one; it is one whose changes are recorded rather than absorbed.
 | 2026-08-15 | [12.1](#121-onboarding) calculating screen        | —                                                                                                                                                                                                   | **New section.** An indicator and one short line naming the Sport, no chrome and no way out, **held for a minimum duration** and not skipped under reduced motion                                                                          | The duration is the specification, not decoration: the request is one round trip over fast arithmetic, so unheld this screen appears and leaves inside a frame and reads as a glitch at the exact moment a Level comes into existence. Recording it here is what couples it to its copy — one short line, because a sentence a player cannot finish before the screen leaves is worse than none. `theme.motion.hold` lands with it, nested so the motion block keeps its one-line contract (_the four things reduced motion skips_)                                                                          |
 | 2026-08-15 | [12.1](#121-onboarding) question screen           | The forward control over answered questions read `Next question` everywhere                                                                                                                         | At the end of a **stopped** run it reads that it leads back to the answers, because there is no next question                                                                                                                              | The same move, and the one place this screen could name a screen the run cannot produce. It appeared with the review: before the stop existed, walking forward always arrived at a question                                                                                                                                                                                                                                                                                                                                                                                                                  |
 
+# Part 17 — What the reset removed
+
+On **2026-08-25** the repository was cut back to sign-up, sign-in and onboarding. The
+sections below specified features that no longer exist and were deleted rather than left
+standing as a specification nobody is building to.
+
+**Numbering of the surviving sections did not change.** A design system is cited by section
+number — 72 internal cross-references, plus the ADRs and `architecture.md` — and renumbering
+to close the gaps would silently repoint every one of them. The gaps are the record.
+
+| Was | Specified | Why it went |
+| --- | --- | --- |
+| 6.7 | Slot squares — day / time / hour / range squares and their four-state vocabulary | The booking time grid. Courts and Bookings were never modelled and the contexts are gone. |
+| 7.1 | Fit badge — dark pill, coral at a score of 90+ | The Match Fit engine was deleted. A badge with no number behind it is a shape, not a component. |
+| 7.2 | Balance bar — two flex-weighted children labelled with the predicted shares | The pairing / balance-forecast engine was deleted. |
+| 7.4 | Seat avatar — filled, dashed-empty, and the coral *me* variant | Matches and seats were never modelled. This carried the app's only dashed border. |
+| 11 (all) | Cross-screen patterns — the sport bar, the match card, the state card | All three are compositions of removed domain nouns. The state card's 32-context table went with the Matches context. |
+| 12.2 | Find — the Games / Courts tabs, the fit-ordered list, the club cards | |
+| 12.3 | Match detail — the state card, the five numbers, the seat row, the deadline strip, the money block | |
+| 12.4 | Creating — the two-mode choice, the calendar, the overlap block | |
+| 12.5 | Passport, Wallet, Score | Wallet was the money ledger and Score the player score, both removed. **Passport was the per-sport ratings view** — the one entry here with a live subject, since ratings survive. It is deleted rather than kept because it specified a per-format block, and `CONTEXT.md` is explicit that **there is no `Format`**: one rating per sport. A screen for reading ratings is a fresh design against the vocabulary that actually exists. |
+
+**Do not restore any of these from the v34 prototype or the audit.** They were measured off
+a design for a product this repository no longer implements, and several are already known
+to contradict the current domain — the per-format block above, and the fit badge's 90
+threshold, which named a scale the deleted engine defined. Rebuilding one is an amendment
+under [Part 15](#part-15--extension-guide), recorded in
+[Part 16](#part-16--amendments-after-locking).
+
+---
+
 # Appendix A — The token contract
 
 The authoritative values live in
@@ -1471,7 +1358,7 @@ SPACE       a 3pt grid · 9 between cards · 15 at the gutter
 RADIUS      bigger surface, rounder · dark card 15, light card 13
 TOUCH       44 × 44pt minimum reachable · hitSlop when the visual is smaller
             no hover — every pressable declares its pressed state
-NUMBERS     mono + tabular · comma decimals · 2,71 · 38,00 zł · 65% · 18:30
+NUMBERS     mono + tabular · comma decimals · 2,71 · 65% · 60 min · 18:30
 STATE       every state has a word or a shape, never colour alone
 NEVER       the phone frame, the stage, the scenario rail — the harness is not the app
 ```

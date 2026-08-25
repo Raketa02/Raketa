@@ -1,36 +1,42 @@
 # Raketa
 
-A racket-sport platform. Players find and book courts; clubs manage those courts.
+A racket-sport platform. **Today it does one thing end to end:** a player signs up, signs
+in, and answers a questionnaire that gives them a Skill rating per sport.
 
-This is a **monorepo of three independently deployable applications** that share one
+This is a **monorepo of two independently deployable applications** that share one
 domain language and communicate only over HTTP.
 
 | App | Path | Stack | Status |
 | --- | --- | --- | --- |
-| **Backend API** | [`backend/`](backend/) | FastAPI · Clean/hexagonal · DDD · event sourcing · Poetry | running — Users + Auth implemented |
-| **Player app** | [`frontend_player/`](frontend_player/) | React Native · Expo · TypeScript (iOS + Android) | scaffolded — not yet installed |
-| **Club web app** | [`frontend_club/`](frontend_club/) | Next.js App Router · React · TypeScript | scaffolded — not yet installed |
+| **Backend API** | [`backend/`](backend/) | FastAPI · Clean/hexagonal · DDD · event sourcing · Poetry | running — Users, Auth and the rating questionnaire |
+| **Player app** | [`frontend_player/`](frontend_player/) | React Native · Expo · TypeScript (iOS + Android) | sign-up, sign-in and onboarding implemented |
 
 ```
                     ┌──────────────────┐
                     │   backend/       │  owns the domain + the API contract
                     │   FastAPI        │
                     └────────┬─────────┘
-                     HTTP    │    HTTP
-              ┌──────────────┴──────────────┐
-   ┌──────────▼──────────┐      ┌───────────▼───────────┐
-   │  frontend_player/   │      │   frontend_club/      │
-   │  Expo · direct API  │      │   Next.js · via BFF   │
-   │  token in keychain  │      │   httpOnly cookie     │
-   └─────────────────────┘      └───────────────────────┘
+                             │  HTTP
+                  ┌──────────▼──────────┐
+                  │  frontend_player/   │
+                  │  Expo · direct API  │
+                  │  token in keychain  │
+                  └─────────────────────┘
 ```
+
+> **Reset on 2026-08-25.** The repository was cut back to the three features above. A club
+> console (`frontend_club/`), the pairing / balance-forecast / Match Fit engines, the
+> kernel's money module and the unwritten Clubs / Courts / Matches / Money / Now contexts
+> were removed, along with the ADRs and specifications that decided only them. Nothing in
+> that set was judged wrong — it was judged premature. See the
+> [ADR index](docs/adr/README.md#the-2026-08-25-reset--why-the-sequence-has-gaps).
 
 ## Start here
 
 - **[`CONTEXT-MAP.md`](CONTEXT-MAP.md)** — the topology: what lives where, and which file
   owns which vocabulary.
-- **[`CONTEXT.md`](CONTEXT.md)** — the shared domain glossary. One definition of `Court`,
-  obeyed by all three apps.
+- **[`CONTEXT.md`](CONTEXT.md)** — the shared domain glossary. One definition of
+  `Assessment`, obeyed by both apps.
 - **[`docs/adr/`](docs/adr/)** — why the architecture is the way it is.
 - **[`CLAUDE.md`](CLAUDE.md)** — instructions for AI agents working in this repo.
 
@@ -52,9 +58,6 @@ make down                             # stop
 make install                          # poetry install  (needs Python 3.11)
 make check                            # lint + typecheck + test
 
-# Club web app  (first run: see frontend_club/README.md)
-cd frontend_club && pnpm install && pnpm dev
-
 # Player app    (first run: see frontend_player/README.md)
 cd frontend_player && pnpm install && pnpm start
 ```
@@ -63,15 +66,14 @@ Only if you want uvicorn on the **host** rather than in the container:
 `cd backend && cp .env.example .env`. The name matters — `config.py` loads `.env`, so a
 file called `.env.local` is read by nothing.
 
-The two frontends hold architecture, config and rules but have **not** been installed or
-generated yet — each README has its bootstrap sequence. They were deliberately not
-created with `create-next-app` / `create-expo-app`, whose default layouts contradict
-[ADR-0009](docs/adr/0009-feature-first-clean-architecture-frontends.md).
+The player app was deliberately not created with `create-expo-app`, whose default layout
+contradicts [ADR-0009](docs/adr/0009-feature-first-clean-architecture-frontends.md); see
+its README for the bootstrap sequence.
 
 ## Repo-wide commands
 
 ```bash
-make gen-api      # regenerate BOTH clients' wire types from backend/openapi.json
+make gen-api      # regenerate the client's wire types from backend/openapi.player.json
 make check        # every app's gate
 make test-hooks   # verify the ownership guardrails still match
 ```
@@ -79,15 +81,16 @@ make test-hooks   # verify the ownership guardrails still match
 ## The API contract
 
 The backend is the **single source of truth**
-([ADR-0006](docs/adr/0006-backend-owns-api-contract.md)). Both clients generate their
-TypeScript wire types from `backend/openapi.json` — neither hand-writes a type mirroring
-a backend response. After a contract change:
+([ADR-0006](docs/adr/0006-backend-owns-api-contract.md)). The client generates its
+TypeScript wire types from `backend/openapi.player.json` — it never hand-writes a type
+mirroring a backend response. After a contract change:
 
 ```bash
-make gen-api      # dumps openapi.json, regenerates both clients
+make gen-api      # emits openapi.player.json, regenerates the client
 ```
 
-Commit `backend/openapi.json` together with both generated files.
+Commit `backend/openapi.player.json` together with the generated file. CI regenerates and
+diffs, so a contract change shipped without its client types fails the build.
 
 ## Working with AI agents
 
@@ -98,7 +101,6 @@ Start each session inside the app you intend to change:
 
 ```bash
 cd backend         && claude
-cd frontend_club   && claude
 cd frontend_player && claude
 ```
 
@@ -110,7 +112,7 @@ Full explanation, including what to do when you get blocked:
 [`docs/agents/ownership-boundaries.md`](docs/agents/ownership-boundaries.md).
 
 ```bash
-make test-hooks    # 45 assertions over both guardrails
+make test-hooks    # 65 assertions over both guardrails
 ```
 
 The guardrails need `jq` (`brew install jq`); without it they block rather than wave

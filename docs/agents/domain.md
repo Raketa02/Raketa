@@ -7,21 +7,21 @@ How to consume this repo's domain documentation before working in the codebase.
 1. **[`CONTEXT-MAP.md`](../../CONTEXT-MAP.md)** (root) — the topology. Start here; it
    tells you which file owns which vocabulary.
 2. **[`CONTEXT.md`](../../CONTEXT.md)** (root) — the **shared domain glossary**, the
-   source of truth for terms like User, Authority, Club, Court, Booking.
-3. **The `CONTEXT.md` of the app you are working in** — `backend/`,
-   `frontend_player/`, or `frontend_club/`. These hold *technical* vocabulary only and
-   never redefine a domain term.
+   source of truth for terms like User, Authority, Sport, Assessment, Skill rating.
+3. **The `CONTEXT.md` of the app you are working in** — `backend/` or
+   `frontend_player/`. These hold *technical* vocabulary only and never redefine a
+   domain term.
 4. **[`docs/adr/`](../adr/)** — read the ADRs touching the area you are about to change.
 
 ## The split, in one line
 
 Domain language is defined **once** at the root; each app adds only its own technical
-vocabulary. A `Court` is a `Court` in Python and in TypeScript.
+vocabulary. An `Assessment` is an `Assessment` in Python and in TypeScript.
 
 ## Layout
 
 **Multi-context.** Note this differs from the usual multi-context shape: the contexts are
-three deployable apps at the root, not packages under `src/`, and **every ADR is
+deployable apps at the root, not packages under `src/`, and **every ADR is
 system-wide** at the root — there are no per-app ADR directories.
 
 ```
@@ -30,8 +30,7 @@ system-wide** at the root — there are no per-app ADR directories.
 ├── CONTEXT.md                    the shared domain glossary (source of truth)
 ├── docs/adr/                     system-wide decisions, 0001 onward
 ├── backend/CONTEXT.md            technical vocabulary only
-├── frontend_player/CONTEXT.md    technical vocabulary only
-└── frontend_club/CONTEXT.md      technical vocabulary only
+└── frontend_player/CONTEXT.md    technical vocabulary only
 ```
 
 ## Use the glossary's vocabulary
@@ -45,18 +44,23 @@ ways: either you are inventing language the project doesn't use (reconsider), or
 a real gap that should be resolved into the glossary before code hardens around an
 accidental name.
 
-## The racket-sport domain is mostly unwritten
+## The racket-sport domain is almost entirely unwritten
 
-`CONTEXT.md` currently documents **Users** and **Auth** — the contexts that actually
-exist in code — plus the cross-cutting event-sourcing concepts. **Clubs, Courts,
-Bookings and Matches are listed as planned, with open questions attached and no
-committed model.**
+`CONTEXT.md` documents **Users**, **Auth** and **Skill rating** — the contexts that
+actually exist in code — plus the shared kernel and the cross-cutting event-sourcing
+concepts. **Nothing else has any committed vocabulary at all.**
+
+That is stronger than it used to be, and deliberately. The file once carried a Part 2 of
+planned contexts — Clubs, Courts, Bookings, Matches, Money, Now — with terms committed
+ahead of the code. The 2026-08-25 reset removed it along with the code it was written for,
+because a glossary entry for a context nobody is building reads as a decision when it is a
+guess, and the guesses were being cited as settled.
 
 Treat that honestly. It means:
 
-- Naming is provisional, not settled. Don't cite the planned table as if it were a
-  design.
-- Before writing code in one of those contexts, resolve its terms into Part 1 of the
+- There is no planned table to consult. If a term is not in `CONTEXT.md`, the project has
+  no position on it, and inventing one in passing is how it acquires one by accident.
+- Before writing code in a new context, resolve its terms into Part 1 of the
   glossary and record the shape in an ADR — including whether it is **event-sourced** or
   **persisted-with-events**, which is a real per-context decision
   ([ADR-0002](../adr/0002-event-sourced-user-aggregate.md)) and not a default to inherit.

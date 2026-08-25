@@ -1,7 +1,8 @@
 # Raketa Player App — Technical Vocabulary
 
 This file holds **player-app-only technical vocabulary**. It does **not** define domain
-language — those terms (User, Club, Court, Booking, statuses, events) live once in the
+language — those terms (User, Authority, Sport, Assessment, Skill rating, statuses,
+events) live once in the
 shared glossary [`../CONTEXT.md`](../CONTEXT.md), which all three apps obey. See
 [`../CONTEXT-MAP.md`](../CONTEXT-MAP.md) for the topology.
 
@@ -110,7 +111,7 @@ review comment and a test description all use the same word.
   `(app)`, `(onboarding)` — making the authorization boundary visible in the file tree.
 - **Guard** — the redirect in `(app)/_layout.tsx` keyed on session status. On SDK 52 this
   is a redirect, not a declarative protected route; those landed later. _Avoid_:
-  "middleware" (that is the club app's word, and it runs on a server).
+  "middleware" (that is a web server's word, and it runs on a server).
 - **Entry gate** — the _second_ redirect in `(app)/_layout.tsx`, deciding between the app
   and onboarding from two parallel reads: is a run unfinished, and does a rating exist.
   Distinct from the guard, and deliberately **not** part of session status — a rating

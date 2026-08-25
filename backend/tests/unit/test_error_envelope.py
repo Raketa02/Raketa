@@ -142,7 +142,7 @@ def test_unauthored_statuses_still_get_a_code():
 @pytest.mark.parametrize("surface", sorted(SURFACES))
 def test_the_envelope_is_a_schema_on_every_surface(surface):
     # Both clients generate an error *type*, rather than treating a failure body
-    # as untyped JSON — including the club surface, which has no paths yet.
+    # as untyped JSON — including a surface that has no paths yet.
     spec = build_surface_spec(surface, SURFACES[surface])
     schema = spec["components"]["schemas"][ERROR_SCHEMA_NAME]
 

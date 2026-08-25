@@ -4,7 +4,8 @@ Copy this folder to `src/features/<feature>/` when you start a feature. **Every*
 feature carries the full layer set, so an agent applies one rule instead of judgment
 (see [ADR-0009](../../../../docs/adr/0009-feature-first-clean-architecture-frontends.md)).
 
-This mirrors `frontend_club`'s structure on purpose: the two client apps are separate
+This mirrors the structure the club console used before the 2026-08-25 reset removed it —
+kept on purpose, because client apps in this repo are separate
 deployables that share no code, but they share a _shape_, so a rule you learn in one
 transfers to the other.
 
@@ -85,12 +86,12 @@ export const matchKeys = {
 a mutation is only retried when the endpoint is idempotent, accepts an idempotency key,
 or is explicitly safe to repeat.
 
-## Where this differs from the club app
+## Where this differs from a web client
 
 There is **no BFF**. A native app has no cookie jar, so `api/` calls FastAPI directly
 and attaches `Authorization: Bearer` from the OS keychain
 ([ADR-0008](../../../../docs/adr/0008-player-mobile-securestore-direct-api.md)).
-Everything above the `api/` layer is identical in shape to the club app.
+Everything above the `api/` layer is shape a web client would share.
 
 ## Tests
 

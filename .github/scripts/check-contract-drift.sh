@@ -4,9 +4,9 @@
 #
 #   bash .github/scripts/check-contract-drift.sh frontend_player
 #
-# The backend owns the API contract and emits it as two documents, one per
-# client (docs/adr/0006). Each client generates its wire types from its own
-# document. This asserts the two agree: regenerate, then look for a diff.
+# The backend owns the API contract and emits it as openapi.player.json
+# (docs/adr/0006). The client generates its wire types from that document.
+# This asserts the two agree: regenerate, then look for a diff.
 #
 #   exit 0  the committed wire types reproduce from the committed contract
 #   exit 1  drift — a contract change was shipped without its client types,
@@ -34,9 +34,9 @@ set -uo pipefail
 
 app="${1:-}"
 case "$app" in
-  frontend_player | frontend_club) ;;
+  frontend_player) ;;
   *)
-    echo "usage: $0 <frontend_player|frontend_club>" >&2
+    echo "usage: $0 <frontend_player>" >&2
     exit 2
     ;;
 esac

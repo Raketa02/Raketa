@@ -601,12 +601,18 @@ def _imports_zoneinfo(path: Path) -> bool:
 def test_no_engine_builds_a_zone_and_every_engine_may_hold_one() -> None:
     """An engine is *given* its zone, exactly as it is given `now`.
 
-    `Zone` is exported so that a club snapshot can name the type without importing
+    `Zone` is exported so that an engine can name the type without importing
     `zoneinfo`, and the export is what makes this walk necessary: constructing one
     resolves an IANA name against the tz database, which is a read of configuration
     and of the filesystem, and ADR-0015's purity rules forbid an engine both. The
     contracts cannot see this — the name comes from `app.kernel`, which engines may
     import — so it is a walk.
+
+    **No engine names a zone today.** RacketSkill asks questions and scores answers;
+    it has no clock and no place. This walk therefore passes vacuously, and it is
+    kept rather than deleted because the constraint is on the *layer*, not on the
+    one engine in it — the first engine to hold a zone is the one it is here for,
+    and it should not have to be rediscovered on that day.
     """
 
     engines = _modules_of(ROOT / "app" / "engines")
@@ -619,10 +625,7 @@ def test_no_engine_builds_a_zone_and_every_engine_may_hold_one() -> None:
         and node.func.id in ("Zone", "ZoneInfo")
     ]
     assert builders == [], builders
-    assert len(engines) >= 10, "the walk has lost the tree it is claiming about"
-    assert any(
-        "Zone" in path.read_text(encoding="utf-8") for path in engines
-    ), "no engine names a zone at all — this walk is asserting nothing"
+    assert len(engines) >= 5, "the walk has lost the tree it is claiming about"
 
 
 def test_zoneinfo_is_imported_in_exactly_one_module() -> None:

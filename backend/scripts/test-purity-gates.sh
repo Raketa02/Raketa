@@ -32,8 +32,6 @@ cd "$ROOT" || exit 2
 KERNEL_PROBE="$ROOT/app/kernel/_purity_probe.py"
 ENGINE_PROBE="$ROOT/app/engines/_purity_probe.py"
 OUTSIDE_PROBE="$ROOT/app/shared/_purity_probe.py"
-PAIRING_PROBE="$ROOT/app/engines/pairing/_purity_probe.py"
-MATCHFIT_PROBE="$ROOT/app/engines/matchfit/_purity_probe.py"
 APPLICATION_PROBE="$ROOT/app/application/_purity_probe.py"
 SHARED_DOMAIN_PROBE="$ROOT/app/shared/domain/_purity_probe.py"
 MODULE_DOMAIN_PROBE="$ROOT/app/modules/users/domain/_purity_probe.py"
@@ -47,7 +45,6 @@ AST_TEST="tests/unit/test_kernel_purity.py"
 
 clean() {
   rm -f "$KERNEL_PROBE" "$ENGINE_PROBE" "$OUTSIDE_PROBE" \
-        "$PAIRING_PROBE" "$MATCHFIT_PROBE" \
         "$APPLICATION_PROBE" "$SHARED_DOMAIN_PROBE" \
         "$MODULE_DOMAIN_PROBE" "$MODULE_APPLICATION_PROBE" "$MODULE_INFRA_PROBE"
   rm -rf "$NEW_CONTEXT_DIR"
@@ -68,9 +65,7 @@ done
 # `app/shared/clock.py`, the kernel probe's original target, and this is the
 # check that would have said so in one line instead of an assertion diff.
 for f in app/shared/ids.py \
-         app/engines/pairing/v1/__init__.py \
-         app/engines/matchfit/v1/__init__.py \
-         app/engines/forecast.py \
+         app/engines/racketskill/v3/__init__.py \
          app/core/config.py \
          app/core/exception_handlers.py \
          app/shared/domain/errors.py; do
@@ -191,42 +186,6 @@ probe "$KERNEL_PROBE" 'from datetime import datetime, timezone
 EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
 '
 expect green imports "the kernel importing datetime is allowed"
-clean
-
-# ---------------------------------------------------------------------------
-echo
-echo ".importlinter — the two matchmaking engines, fenced from each other"
-
-# The failure this fence exists to stop: Match Fit reaching for the pairing engine
-# instead of taking its output as an input value. An engine free to build its own
-# forecast can score a match against a pairing nobody was shown (docs/adr/0026).
-probe "$MATCHFIT_PROBE" 'from app.engines.pairing.v1 import PairingEngineV1
-
-ENGINE = PairingEngineV1()
-'
-expect red imports "Match Fit reaching for the pairing engine is refused" \
-  "app.engines.matchfit is not allowed to import app.engines.pairing" \
-  "app.engines.matchfit._purity_probe -> app.engines.pairing.v1"
-clean
-
-# Asserted in both directions, because a one-way fence is a fence somebody walks
-# round. The pairing engine must not learn that Match Fit exists either.
-probe "$PAIRING_PROBE" 'from app.engines.matchfit.v1 import MatchFitEngineV1
-
-ENGINE = MatchFitEngineV1()
-'
-expect red imports "the pairing engine reaching for Match Fit is refused" \
-  "app.engines.pairing is not allowed to import app.engines.matchfit"
-clean
-
-# And the legitimate direction, which is the whole point of the fence being drawn
-# where it is: the *output vocabulary* is shared, so Match Fit reads a forecast's
-# types without being able to produce one.
-probe "$MATCHFIT_PROBE" 'from app.engines.forecast import BalanceForecast, PairingAnalysis
-
-READS = (BalanceForecast, PairingAnalysis)
-'
-expect green imports "Match Fit reading the pairing engine's output types is allowed"
 clean
 
 # ---------------------------------------------------------------------------

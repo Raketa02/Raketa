@@ -3,10 +3,12 @@
 - **Status:** Accepted
 - **Date:** 2026-08-09
 
+> **Note — the 2026-08-25 reset.** It cites **ADR-0007** (the club console's cookie session), removed in the 2026-08-25 reset. This ADR's own decision, for the player app, is untouched. See the [ADR index](README.md#the-2026-08-25-reset--why-the-sequence-has-gaps). This ADR's body is left as written: an accepted ADR is immutable, and the reason a past decision looked right is itself information.
+
 ## Context
 
 The club web app protects its session by keeping it out of JavaScript entirely, in
-httpOnly cookies behind a BFF ([ADR-0007](0007-club-web-bff-httponly-cookie-session.md)).
+httpOnly cookies behind a BFF (**ADR-0007** *(removed)*).
 The obvious question is whether the player app should do the same, for consistency.
 
 It should not, because the premises differ:

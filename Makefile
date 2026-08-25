@@ -2,10 +2,9 @@
 # Raketa monorepo — root helpers.
 #
 # Each app owns its own commands: backend/Makefile, and the pnpm scripts in
-# frontend_club/ and frontend_player/. Targets here are only for things that
-# genuinely span apps.
+# frontend_player/. Targets here are only for things that genuinely span apps.
 # ----------------------------------------------------------------------------
-.PHONY: help gen-api openapi check check-backend check-club check-player \
+.PHONY: help gen-api openapi check check-backend check-player \
         test-hooks test-drift afk-install afk-build afk
 
 help:              ## list targets
@@ -14,14 +13,13 @@ help:              ## list targets
 # ----------------------------------------------------------------------------
 # API contract — the backend is the source of truth (docs/adr/0006).
 # ----------------------------------------------------------------------------
-openapi:           ## emit the contract as two documents (player + club)
+openapi:           ## emit the API contract (backend/openapi.player.json)
 	$(MAKE) -C backend openapi
 
-gen-api: openapi   ## regenerate BOTH clients' wire types from the contract
-	cd frontend_club   && pnpm gen:api
+gen-api: openapi   ## regenerate the client's wire types from the contract
 	cd frontend_player && pnpm gen:api
-	@echo "Regenerated frontend_club/src/generated/ and frontend_player/src/generated/"
-	@echo "Commit both, along with backend/openapi.player.json and backend/openapi.club.json."
+	@echo "Regenerated frontend_player/src/generated/."
+	@echo "Commit it along with backend/openapi.player.json."
 	@echo "CI diffs them (make test-drift covers the check itself)."
 
 # ----------------------------------------------------------------------------
@@ -30,13 +28,10 @@ gen-api: openapi   ## regenerate BOTH clients' wire types from the contract
 check-backend:     ## backend: lint + typecheck + test
 	$(MAKE) -C backend check
 
-check-club:        ## club web app: lint + typecheck + test
-	cd frontend_club && pnpm check
-
 check-player:      ## player app: lint + typecheck + test
 	cd frontend_player && pnpm check
 
-check: check-backend check-club check-player  ## every app's gate
+check: check-backend check-player  ## every app's gate
 
 # ----------------------------------------------------------------------------
 # Guardrails. Run after touching anything in .claude/hooks/.

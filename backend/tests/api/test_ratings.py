@@ -176,13 +176,16 @@ async def test_an_abandoned_assessment_produces_no_rating(client, valid_signup_p
 
 
 @pytest.mark.asyncio
-async def test_the_endpoint_is_on_the_player_surface_only():
-    from app.api.contract import build_surface_spec
-    from app.api.v1.club import club_api_router
-    from app.api.v1.player import player_api_router
+async def test_the_endpoint_is_on_the_emitted_player_surface():
+    """A route that is mounted but not *emitted* is a route no client can call.
 
-    player = build_surface_spec("player", player_api_router)
-    club = build_surface_spec("club", club_api_router)
+    `SURFACES` is what `make openapi` writes, so asserting through it — rather
+    than through the router directly — is what makes this a claim about the
+    document the client generates from.
+    """
 
+    from app.api.contract import SURFACES, build_surface_spec
+
+    assert list(SURFACES) == ["player"]
+    player = build_surface_spec("player", SURFACES["player"])
     assert "/api/v1/ratings" in player["paths"]
-    assert "/api/v1/ratings" not in club.get("paths", {})

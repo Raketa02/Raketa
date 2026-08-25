@@ -24,28 +24,21 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       backend: ${{ steps.filter.outputs.backend }}
-      club: ${{ steps.filter.outputs.club }}
       player: ${{ steps.filter.outputs.player }}
-      club_ready: ${{ steps.bootstrapped.outputs.club }}
       player_ready: ${{ steps.bootstrapped.outputs.player }}
     steps:
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v3
         id: filter
         with:
-          # Each client watches its OWN OpenAPI document as well as its own
+          # The client watches its OWN OpenAPI document as well as its own
           # directory. Without that, a backend pull request that regenerates the
           # contract matches only `backend`, no client job runs, and the drift
           # check below is dormant in precisely the case it exists to catch.
-          # `backend/**` already covers those documents for the backend job.
+          # `backend/**` already covers that document for the backend job.
           filters: |
             backend:
               - 'backend/**'
-              - '.github/workflows/ci.yml'
-            club:
-              - 'frontend_club/**'
-              - 'backend/openapi.club.json'
-              - '.github/scripts/**'
               - '.github/workflows/ci.yml'
             player:
               - 'frontend_player/**'
@@ -53,16 +46,15 @@ jobs:
               - '.github/scripts/**'
               - '.github/workflows/ci.yml'
 
-      # The two frontends ship as architecture + config; neither has been
-      # installed yet, so there is no lockfile to build from. Gate their jobs on
-      # one existing rather than failing every run until someone bootstraps them
+      # The frontend ships as architecture + config and may not have been
+      # installed yet, so there may be no lockfile to build from. Gate its job on
+      # one existing rather than failing every run until someone bootstraps it
       # — a permanently-red CI teaches people to ignore CI.
-      # Each job switches itself on the moment its pnpm-lock.yaml is committed.
+      # The job switches itself on the moment its pnpm-lock.yaml is committed.
       - id: bootstrapped
         run: |
-          for app in club player; do
+          for app in player; do
             case $app in
-              club)   dir=frontend_club   ;;
               player) dir=frontend_player ;;
             esac
             if [ -f "$dir/pnpm-lock.yaml" ]; then
@@ -135,40 +127,6 @@ jobs:
       # each one against a deliberately impure tree and asserts it goes red.
       - name: Purity gates still fire
         run: bash scripts/test-purity-gates.sh
-
-  club:
-    name: Club web — lint, typecheck, test, build
-    needs: changes
-    if: needs.changes.outputs.club == 'true' && needs.changes.outputs.club_ready == 'true'
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: frontend_club
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9.15.0
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-          cache-dependency-path: frontend_club/pnpm-lock.yaml
-      - name: Install deps
-        run: pnpm install --frozen-lockfile
-      # Inert until frontend_club is bootstrapped (#65): the whole job is gated
-      # on club_ready, so this step turns on by itself when the lockfile lands.
-      - name: Contract drift
-        working-directory: ${{ github.workspace }}
-        run: bash .github/scripts/check-contract-drift.sh frontend_club
-      - name: Lint
-        run: pnpm lint
-      - name: Typecheck
-        run: pnpm typecheck
-      - name: Test
-        run: pnpm test
-      - name: Build
-        run: pnpm build
 
   player:
     name: Player app — lint, typecheck, test

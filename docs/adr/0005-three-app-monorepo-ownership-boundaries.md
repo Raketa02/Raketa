@@ -3,6 +3,13 @@
 - **Status:** Accepted
 - **Date:** 2026-08-09
 
+> **Note — the 2026-08-25 reset.** This ADR is named for three apps; **two remain.** The
+> club console (`frontend_club/`) was removed when the repository was reset to sign-up,
+> sign-in and onboarding. The ownership rule this ADR decides is unchanged and is enforced
+> exactly as written — the guardrail hooks still fence a `frontend_club/` path, deliberately,
+> so that a second client is fenced on the day it lands rather than after its first cross-app
+> write. See the [ADR index](README.md#the-2026-08-25-reset--why-the-sequence-has-gaps).
+
 > **Scope note.** This decision stands unchanged.
 > [ADR-0021](0021-kernel-in-backend-clients-derive-by-comparison.md) re-examined it when a
 > shared computational core arrived — the case where a shared package is most tempting — and

@@ -1,7 +1,7 @@
 # Environments
 
 **The cross-app reference.** Four environments, named identically by the backend, the player
-app and the club app. This page is the authority on the vocabulary and the rules that follow
+app. This page is the authority on the vocabulary and the rules that follow
 from it; [ADR-0028](adr/0028-four-environment-model-and-typed-configuration.md) is the
 authority on *why*, and [ADR-0029](adr/0029-seed-data-through-aggregates-never-in-production.md)
 on how fake data is made.
@@ -17,7 +17,7 @@ word defined three times drifts three ways.
 | `local` | A developer's own machine. Docker Compose, a local Postgres, an Expo dev server, `next dev`. | **Yes — the only one.** |
 | `development` | A shared remote deployment: the first place code runs that is not somebody's laptop. | No — defined and validated, not provisioned. |
 | `staging` | A rehearsal for production. Same configuration profile, same refusals, different data. | No — defined and validated, not provisioned. |
-| `production` | What players and clubs use. | No — does not exist yet. |
+| `production` | What players use. | No — does not exist yet. |
 
 No domain is registered, so `development` and `staging` have no host and no database.
 Selecting one is a startup failure naming the missing variable — never a silent fallback.
@@ -33,7 +33,6 @@ refusals is what makes it a rehearsal rather than a fourth guess.
 | App | Variable | Notes |
 | --- | --- | --- |
 | `backend/` | `APP_ENV` | A strict `StrEnum`. `ENV` was renamed away because it collides with an ordinary shell variable. |
-| `frontend_club/` | `APP_ENV` | The same spelling as the backend. **Unprefixed on purpose** — Next cannot inline it into the client bundle, and no `NEXT_PUBLIC_` twin exists to drift. |
 | `frontend_player/` | `EXPO_PUBLIC_ENV` | Expo substitutes only `EXPO_PUBLIC_*` at build time, so the *name* cannot match. The **values** are identical, which is the part that matters. |
 
 Each app validates its own copy. There is no shared package: the three apps share no code
@@ -76,9 +75,6 @@ a migration or a seed run — not only for a process serving HTTP.
 | backend | `production` with wildcard `ALLOW_ORIGINS` **and** `ALLOW_CREDENTIALS` | Browsers reject the combination anyway, so it cannot be mistaken for working configuration. |
 | backend | a deployed environment with a non-`https://` entry in `ALLOW_ORIGINS` | A browser origin reached over a public network in the clear is a session cookie in the clear. |
 | backend | `production` with a `DB_SSL_MODE` that does not encrypt | Transport security should not be something anyone has to remember. |
-| club | `APP_ENV`, `BACKEND_API_URL`, `SESSION_COOKIE_NAME` or `NEXT_PUBLIC_APP_URL` missing or malformed | Validated in `instrumentation.ts` at server start, not lazily at first read. |
-| club | `SESSION_COOKIE_SECURE` is present at all | The flag is **derived** from `APP_ENV`. A variable that looks like it controls security and does not is worse than one that is absent. |
-| club | a deployed `NEXT_PUBLIC_APP_URL` that is not `https://` | The scheme rule, below. |
 | player | `EXPO_PUBLIC_API_URL` or `EXPO_PUBLIC_ENV` missing or malformed | Validated eagerly in the bootstrap sequence, so it lands on a startup screen naming the variable rather than three screens deep as a failed request. |
 | player | a deployed `EXPO_PUBLIC_API_URL` that is not `https://` | The scheme rule, below. |
 
@@ -112,8 +108,6 @@ question no application can answer for its operator.
 | App | Variable | Reached by | Rule |
 | --- | --- | --- | --- |
 | player | `EXPO_PUBLIC_API_URL` | a phone, over the internet | `https://` when deployed |
-| club | `NEXT_PUBLIC_APP_URL` | a browser | `https://` when deployed |
-| club | `BACKEND_API_URL` | the club app's own server tier | shape only — no scheme rule |
 | backend | `ALLOW_ORIGINS` entries | a browser (they *are* browser origins) | `https://` when deployed; the `*` wildcard is not an origin and is exempt |
 
 **Why `local` is unconstrained.** The rule used to require `http://` there. That refused an
@@ -148,16 +142,14 @@ URL that simply has no scheme. One typo, one complaint.
    carries no scheme rule.
 7. **A production build cannot switch environment.** The environment is fixed when the artefact
    is built, not chosen when it starts: the player app's is inlined by Expo's build-time
-   substitution, and the club app's badge is rendered by a Server Component reading a
-   server-only value. Nothing in either client reads a runtime switch, offers a picker, or
+   substitution. Nothing in the client reads a runtime switch, offers a picker, or
    lets a deep link, a query parameter or a debug menu repoint the app at another backend. A
    build that could be repointed is a build whose test results say nothing about where it will
    run. (The developer-facing environment switcher is deferred for the same reason it is
    currently pointless — there is nothing to switch to.)
 8. **The OpenAPI documents remain the source of truth for client types, in every environment.**
-   `backend/openapi.player.json` and `backend/openapi.club.json` are generated by the backend
-   and each client generates its wire types from its own
-   ([ADR-0006](adr/0006-backend-owns-api-contract.md)). No client hand-writes a DTO mirroring a
+   `backend/openapi.player.json` is generated by the backend and the client generates its wire
+   types from it ([ADR-0006](adr/0006-backend-owns-api-contract.md)). No client hand-writes a DTO mirroring a
    backend response, and **no environment is an excuse to**: a type that is "just for local" is
    a type nothing regenerates. CI regenerates and diffs, so a contract change shipped without
    its client types fails the build.
@@ -169,8 +161,8 @@ URL that simply has no scheme. One typo, one complaint.
    watching. (Nothing here is integrated yet. The rule is written before the first integration
    on purpose — it is much harder to introduce afterwards.)
 10. **`NODE_ENV` is the build mode, not the environment.** It has two values and describes how
-    the app was compiled; one production build serves staging and production alike. The club
-    app bans reading it outright, with a lint rule.
+    the app was compiled; one production build serves staging and production alike. A client
+    that could read it to decide behaviour should ban it outright, with a lint rule.
 
 ## Feature flags are not environment configuration
 
@@ -206,8 +198,7 @@ Which tier runs against which environment, and the one line that is not crossed.
 | Backend API (`backend/tests/api/`) | An in-memory SQLite database and an ASGI transport. No network. | The shared `client` fixture. Reuse it rather than standing up a second app or database. |
 | Client unit (Jest / Vitest) | Nothing. Pure functions, mocked ports. | Config parsers are pure functions from a raw record to a validated object, which is why they are tested exhaustively. |
 | Client component | A renderer, no network. | Asserts what a user can observe. |
-| Club BFF integration | The club app's route handlers with FastAPI stubbed. | Auth, tenancy, timeouts, error mapping. |
-| Contract | The two OpenAPI documents. | CI regenerates the clients' types and diffs. |
+| Contract | `backend/openapi.player.json`. | CI regenerates the client's types and diffs. |
 | End-to-end (Playwright) | `local` today. `development` or `staging` once either is provisioned. | Each test owns its data. |
 | Manual exploratory | `local`; `development` or `staging` once provisioned. | |
 
@@ -278,8 +269,8 @@ not `make`. Accounts are named for the state they represent and addressed on the
 
 The day a domain is registered, this is a configuration task rather than a redesign. In order:
 
-1. **Register the domain and provision the infrastructure** — a database, a host for the API,
-   a host for the club app. Reactivating the deployment path supersedes
+1. **Register the domain and provision the infrastructure** — a database and a host for the
+   API. Reactivating the deployment path supersedes
    [ADR-0010](adr/0010-local-first-development-aws-deferred.md) and needs its own ADR; the
    dormant pipeline's own reactivation steps are in the header of
    [`.github/workflows/deploy-ecs.yml`](../.github/workflows/deploy-ecs.yml) and in
@@ -290,18 +281,15 @@ The day a domain is registered, this is a configuration task rather than a redes
    until somebody says otherwise — `APP_HOST` and `WRITER_DB_URL` explicitly. Then
    `JWT_SECRET_KEY` (`openssl rand -hex 32`), `DB_SSL_MODE` (one of `require`, `verify-ca`,
    `verify-full`), and `ALLOW_ORIGINS` as an explicit `https://` list rather than a wildcard.
-4. **Set the club app's variables**: `APP_ENV`, `BACKEND_API_URL` (server-to-server — either
-   scheme), `NEXT_PUBLIC_APP_URL` (`https://`), `SESSION_COOKIE_NAME`. Do **not** set
-   `SESSION_COOKIE_SECURE`; it is derived, and its presence stops the server.
-5. **Set the player app's variables**: `EXPO_PUBLIC_ENV` and `EXPO_PUBLIC_API_URL`
+4. **Set the player app's variables**: `EXPO_PUBLIC_ENV` and `EXPO_PUBLIC_API_URL`
    (`https://`). At this point the per-environment bundle-identifier question deferred by
    [ADR-0028](adr/0028-four-environment-model-and-typed-configuration.md) becomes live for the
    first time, because there is finally a second backend to point a second variant at.
-6. **Point every external service at its sandbox credentials**, per rule 9. Live keys go to
+5. **Point every external service at its sandbox credentials**, per rule 9. Live keys go to
    `production` and nowhere else.
-7. **Seed it** — `development` and `staging` are seedable, and the accounts are the same edges
+6. **Seed it** — `development` and `staging` are seedable, and the accounts are the same edges
    a laptop gets.
-8. **Delete this list's assumptions as they stop being true.** The three "not provisioned"
+7. **Delete this list's assumptions as they stop being true.** The three "not provisioned"
    rows in the table at the top of this page, and the sentences in each app's `.env.example`
    saying only `local` runs, are the first things that become false.
 
@@ -312,6 +300,5 @@ The day a domain is registered, this is a configuration task rather than a redes
 | Why four environments, and why typed | [ADR-0028](adr/0028-four-environment-model-and-typed-configuration.md) |
 | Why seeds go through aggregates | [ADR-0029](adr/0029-seed-data-through-aggregates-never-in-production.md) |
 | The backend's settings, profile and refusals in detail | `backend/README.md`, `backend/CONTEXT.md` |
-| The club app's two schemas and the server-only boundary | `frontend_club/README.md`, `frontend_club/CLAUDE.md` |
 | The player app's config, app identity and badge | `frontend_player/README.md`, `frontend_player/docs/architecture.md` Part 14 |
 | What each variable is, per app | each app's `.env.example` |

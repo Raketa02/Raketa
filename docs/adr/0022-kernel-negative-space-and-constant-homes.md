@@ -3,6 +3,8 @@
 - **Status:** Accepted
 - **Date:** 2026-08-16
 
+> **Note — the 2026-08-25 reset.** It cites **ADR-0011** (the club design system), **ADR-0023** (money in integer grosze) and **ADR-0026** (the matchmaking snapshot contract), all removed in the 2026-08-25 reset. The kernel's money module went with ADR-0023; the two questions this ADR asks of a candidate constant are unchanged, and are what the surviving kernel is held to. See the [ADR index](README.md#the-2026-08-25-reset--why-the-sequence-has-gaps). This ADR's body is left as written: an accepted ADR is immutable, and the reason a past decision looked right is itself information.
+
 ## Context
 
 [ADR-0015](0015-engines-as-a-pure-versioned-layer.md) established a pure engines layer and a
@@ -48,7 +50,7 @@ collision probability at roughly 77,000 references — against a documented uniq
 `ref`, which turns a collision into a failed payment write.
 
 **`format` — Polish money strings and English sentences.** Its consumers here are two
-TypeScript clients with separate design systems ([ADR-0011](0011-club-console-design-system.md),
+TypeScript clients with separate design systems (**ADR-0011** *(removed)*,
 [ADR-0012](0012-player-app-design-system.md)). A preformatted string can only be one rendering,
 and one price needs three: struck-through beside its discounted twin, bare inside a tile whose
 header carries the unit, and plain on a row.
@@ -183,7 +185,7 @@ nothing about the domain, and a second implementation of it is a defect — so i
 public in the kernel and both engines now delegate. **A relocation, behaviour-identical, no
 number touched**, which is the same move this record reserves for `Level` and `Sigma`.
 
-The argument against was real enough to be worth writing down: [ADR-0026](0026-two-matchmaking-engines-one-snapshot-contract.md)
+The argument against was real enough to be worth writing down: **ADR-0026** *(removed)*
 fences the two engines from each other so that neither's arithmetic moves when the other's
 version moves, and a shared rule is shared. It does not apply here. That fence is
 engine↔engine, and both engines already stand on the kernel, which is what a kernel is for.
@@ -197,5 +199,5 @@ What each engine kept is its own *crossing* into the rule's domain — `pairing/
 a float, `matchfit/core` scales a ratio by a hundred and guards its range — because those
 are engine vocabulary and the rounding underneath is not.
 - Nothing here decides how the kernel's money or time types are *shaped* — see
-  [ADR-0023](0023-money-integer-grosze-gross-whole-zloty.md) and
+  **ADR-0023** *(removed)* and
   [ADR-0024](0024-instant-as-aware-datetime-minute-coordinates.md).

@@ -1,9 +1,9 @@
 """The player API surface.
 
-Every endpoint a player client (``frontend_player/``) may depend on. The club
-console generates its wire types from a *separate* document (see ``club.py``), so
-neither client can take a dependency on the other's contract
-(``docs/adr/0016-modular-monolith-two-api-surfaces.md``).
+Every endpoint the player client (``frontend_player/``) may depend on. It is the
+only surface this backend serves, and ``app/api/contract.py`` emits it as
+``openapi.player.json`` — the one document the client generates its wire types
+from (``docs/adr/0006-backend-owns-api-contract.md``).
 """
 
 from fastapi import APIRouter

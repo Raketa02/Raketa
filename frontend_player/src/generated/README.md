@@ -4,7 +4,7 @@
 From `frontend_player/`:
 
 ```bash
-cd ../backend && make openapi     # writes BOTH openapi.player.json and openapi.club.json
+cd ../backend && make openapi     # writes openapi.player.json
 cd ../frontend_player && pnpm gen:api
 # or, from the repo root:  make gen-api
 ```
@@ -14,7 +14,7 @@ The backend is the **single source of truth** for the API contract
 type that mirrors a backend response — regenerate instead, and commit the result.
 
 The contract is **two documents**, one per client — `backend/openapi.player.json` and
-`backend/openapi.club.json`. This app reads only the first; `frontend_club` generates its
+`backend/openapi.player.json`. This app reads it; a second client would generate its
 own copy from the second. The two apps share no code by design (ADR-0005); regenerating
 both from one emitter is what keeps them from drifting. `make gen-api` at the repo root
 does both at once.

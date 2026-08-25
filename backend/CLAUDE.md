@@ -3,7 +3,7 @@
 FastAPI on Clean Architecture (hexagonal ports & adapters) with DDD aggregates, event
 sourcing, and a transactional outbox. Python 3.11, Poetry.
 
-> The `backend/` app of a three-app monorepo — see the root [`CLAUDE.md`](../CLAUDE.md).
+> The `backend/` app of a two-app monorepo — see the root [`CLAUDE.md`](../CLAUDE.md).
 > Run every command from this directory. Never import from `../frontend_*`; a hook blocks
 > writes there. Shared docs: [`../CONTEXT.md`](../CONTEXT.md), [`../docs/adr/`](../docs/adr/).
 
@@ -17,7 +17,7 @@ make lint        # ruff check .          make format → ruff format .
 make typecheck   # mypy app
 make check       # lint + lint-imports + typecheck + test — the same gate CI runs
 make test-gates  # prove the kernel/engines purity gates still fire (CI runs it)
-make openapi     # emit openapi.player.json + openapi.club.json, one per client
+make openapi     # emit openapi.player.json — the contract the client generates from
 make up / down   # dev stack (Postgres 17 + API + Redis); make logs, make shell
 make migrate     # alembic upgrade head inside the API container
 make seed        # deterministic dev accounts (make seed-host to run it on the host)
@@ -41,8 +41,8 @@ call for deploying, it doesn't — say so.
   which is how it was broken for months, see #101)*
 - Call an external side effect (email, webhook, provider API) directly from a use case —
   emit a domain event instead.
-- Change public API behavior without calling it out in the plan first. **Two client apps
-  depend on this contract**, and neither is in your session to be fixed.
+- Change public API behavior without calling it out in the plan first. **The player app
+  depends on this contract**, and it is not in your session to be fixed.
 
 ## Architecture
 
@@ -89,8 +89,8 @@ Rules to preserve:
 - **A seed account is named for a state, and the name is checked.** The catalog is a list
   of edges — nothing yet, one open run, one abandoned, a rating at the edge of its band —
   and a rated scenario carries the band it promises, checked against the stored rating on
-  every run. Seed only what is **modeled**: Clubs, Courts, Bookings and Matches have no
-  aggregates, so they get no scenarios and no invented ones.
+  every run. Seed only what is **modeled**: Players, onboarding assessments and Skill
+  ratings have aggregates; nothing else does, so nothing else gets a scenario.
 - **New routes mount under `app/api/v1/router.py`;** keep the `/api/v1` prefix.
 - **Validate and normalize inside the value object**, not in the use case — see
   `app/modules/users/domain/value_objects.py`.
@@ -114,13 +114,13 @@ Rules to preserve:
 ## The API contract
 
 This app is the single source of truth for the API
-([ADR-0006](../docs/adr/0006-backend-owns-api-contract.md)). The contract is emitted as two
-documents — `openapi.player.json` and `openapi.club.json` — and each client generates its
-TypeScript wire types from its own (`make openapi`), so a response-shape change is
-load-bearing outside this directory. When you change one, run the `api-contract-change` skill.
+([ADR-0006](../docs/adr/0006-backend-owns-api-contract.md)). The contract is emitted as
+`openapi.player.json`, and the client generates its TypeScript wire types from it
+(`make openapi`), so a response-shape change is load-bearing outside this directory. When
+you change it, run the `api-contract-change` skill.
 
-Prefer additive changes. Removing or renaming a field breaks two shipped clients, one of
-which is a mobile app whose old versions stay installed on real phones for months.
+Prefer additive changes. Removing or renaming a field breaks a shipped client — a mobile
+app whose old versions stay installed on real phones for months.
 
 ## Testing — test first
 
@@ -142,7 +142,7 @@ tests.
   loads `.env` (`SettingsConfigDict(env_file=".env")`), so a file named `.env.local` is
   read by nothing. Required: `WRITER_DB_URL`, `JWT_SECRET_KEY`, `DB_SSL_MODE`.
 - **`APP_ENV` is a strict enum** over `local | development | staging | production`, the
-  same four names both clients use. Only `local` runs; selecting `development` or
+  same four names the client uses. Only `local` runs; selecting `development` or
   `staging` without `APP_HOST` and `WRITER_DB_URL` refuses to start, and so do five other
   dangerous configurations (see the README's refusal table). It also supplies the defaults
   for `DEBUG`, `LOG_LEVEL` and `LOG_JSON`, each still overridable. **The environment may
@@ -155,11 +155,12 @@ tests.
 
 ## Git & domain language
 
-Conventional Commits, scoped `api` or the module: `feat(bookings): reject overlapping
-slots`. Run `make check` before pushing; CI runs the same gate for `backend/**` changes.
+Conventional Commits, scoped `api` or the module: `feat(rating): revise a submitted
+answer`. Run `make check` before pushing; CI runs the same gate for `backend/**` changes.
 
 The shared glossary is [`../CONTEXT.md`](../CONTEXT.md); backend-only technical vocabulary
-is in [`CONTEXT.md`](CONTEXT.md). Never redefine a domain term locally. **Clubs, Courts,
-Bookings and Matches are listed but not yet modeled** — before writing code in one, resolve
-its terms into the glossary and record the aggregate shape in an ADR, including whether it
-is event-sourced or persisted-with-events.
+is in [`CONTEXT.md`](CONTEXT.md). Never redefine a domain term locally. **Only Users, Auth
+and Skill rating are modeled** — the rest of the racket-sport domain has no terms committed
+at all after the reset. Before writing a new context, resolve its terms into the glossary
+and record the aggregate shape in an ADR, including whether it is event-sourced or
+persisted-with-events.

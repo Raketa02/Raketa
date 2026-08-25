@@ -9,7 +9,7 @@ FastAPI over HTTPS and generating its wire types from `backend/openapi.player.js
 
 > The `frontend_player/` app of a three-app monorepo — see the root
 > [`CLAUDE.md`](../CLAUDE.md). Run every command from this directory. Never import from
-> `../backend/` or `../frontend_club/`; a hook blocks writes there. Shared docs:
+> `../backend/`; a hook blocks writes outside this app. Shared docs:
 > [`../CONTEXT.md`](../CONTEXT.md), [`../docs/adr/`](../docs/adr/).
 
 Two contracts predate the code and are **already settled** — read them before writing a
@@ -42,7 +42,7 @@ for `create-expo-app` — its default template contradicts ADR-0009 — and copy
 naming it — that is the guardrail working, not a bug.
 
 `EXPO_PUBLIC_ENV` is `local | development | staging | production`, the same four the
-backend and the club app use, and **only `local` runs today.** The environment fixes the
+backend uses, and **only `local` runs today.** The environment fixes the
 API URL's scheme — `https://` for the three deployed ones, either for `local` — so a
 laptop URL under a deployed name fails at launch naming both variables rather than
 shipping a build that points at nothing.
@@ -70,7 +70,8 @@ SDK 53.
 transforming with `node_modules/(?!…)` allowlists, and pnpm's default symlinked layout
 defeats them — React Native ships untranspiled Flow, so the first casualty is `jest`
 failing to parse `error-guard.js`. Hoisting is Expo's documented answer; it changes nothing
-architectural, and this app still shares no packages with `frontend_club`.
+architectural, and this app shares no packages with any other app — a rule that outlives
+the club console it was written against.
 
 Archivo (400–800) and IBM Plex Mono (400–600) are loaded with `expo-font` and **awaited
 before the splash screen hides** — a font that arrives late reflows every number on screen.
@@ -203,11 +204,12 @@ exists** — bootstrap validates it.
 
 ### Why there is no BFF here
 
-The club app routes everything through a server-side BFF with httpOnly cookies. This app
+A browser client would route everything through a server-side BFF with httpOnly cookies —
+the club console did, before it was removed in the 2026-08-25 reset. This app
 does not, and that is deliberate: a native app has no cookie jar and no shared-origin
 browser context, so the equivalent protection is the **OS keychain**
 ([ADR-0008](../docs/adr/0008-player-mobile-securestore-direct-api.md)). Don't "fix" the
-asymmetry by adding a proxy, and don't copy the club app's cookie code here.
+asymmetry by adding a proxy, and don't reach for a cookie session here.
 
 ## Mobile gotchas that bite once
 

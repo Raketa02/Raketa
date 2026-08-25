@@ -1,7 +1,7 @@
 # ADR-0009 — Feature-first Clean Architecture on both frontends
 
 - **Status:** Accepted, **narrowed to `frontend_player/` by
-  [ADR-0014](0014-club-console-production-architecture-standard.md)**
+  **ADR-0014** *(removed)***
 - **Date:** 2026-08-09
 
 > **Scope note.** This ADR governs **`frontend_player/` only.** The club app follows its
@@ -9,6 +9,8 @@
 > frontend. Read every "both frontends" below as "the player app". In particular, the
 > claim under *Consequences → Easier* that a rule transfers between the two clients no
 > longer holds.
+
+> **Note — the 2026-08-25 reset.** It cites **ADR-0014** (the club console's architecture standard), removed in the 2026-08-25 reset. This ADR now governs the only client there is, `frontend_player/`. See the [ADR index](README.md#the-2026-08-25-reset--why-the-sequence-has-gaps). This ADR's body is left as written: an accepted ADR is immutable, and the reason a past decision looked right is itself information.
 
 ## Context
 

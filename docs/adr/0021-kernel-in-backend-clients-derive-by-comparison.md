@@ -3,10 +3,12 @@
 - **Status:** Accepted
 - **Date:** 2026-08-16
 
-> **Scope note.** [ADR-0040](0040-one-ladder-resolves-a-situation.md) narrows this ADR on one
+> **Scope note.** **ADR-0040** *(removed)* narrows this ADR on one
 > point: the *"cross-application contract suite"* named below presumes clients derive, and for
 > the match ladder they do not. The fence there is the generated enum and an exhaustive switch
 > in each client's own build. Everything else here stands as written.
+
+> **Note — the 2026-08-25 reset.** It cites **ADR-0016** (two API surfaces) and **ADR-0040** (the situation ladder), both removed in the 2026-08-25 reset. The rule this ADR records — the kernel lives in the backend and a client derives only by comparison — is unchanged, and binds the one client that remains. See the [ADR index](README.md#the-2026-08-25-reset--why-the-sequence-has-gaps). This ADR's body is left as written: an accepted ADR is immutable, and the reason a past decision looked right is itself information.
 
 ## Context
 
@@ -39,7 +41,7 @@ The alternatives considered:
 - **A TypeScript kernel per client, alongside the Python one.** Two or three implementations
   of every rule — the failure the documents rank first — and it requires amending ADR-0005.
 - **A TypeScript kernel as a fourth deployable the backend calls.**
-  [ADR-0016](0016-modular-monolith-two-api-surfaces.md) already ruled on this shape: *"A pure
+  **ADR-0016** *(removed)* already ruled on this shape: *"A pure
   function behind a network call has no state to own and no independent lifecycle, so the hop
   buys no isolation that an import rule does not already give."*
 - **One Python kernel, with clients simply told not to derive.** Correct and unenforceable.

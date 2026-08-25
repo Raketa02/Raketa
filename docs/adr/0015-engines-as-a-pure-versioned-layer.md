@@ -11,6 +11,8 @@
 > `app.shared` was on neither `.importlinter` forbidden list, so an engine could reach a wall
 > clock with CI green.
 
+> **Note — the 2026-08-25 reset.** It cites **ADR-0016** (two API surfaces), removed in the 2026-08-25 reset. The engine layer itself survives the reset with one engine in it — RacketSkill; the pairing and Match Fit engines were removed, and the purity rules below are what a new engine is still held to. See the [ADR index](README.md#the-2026-08-25-reset--why-the-sequence-has-gaps). This ADR's body is left as written: an accepted ADR is immutable, and the reason a past decision looked right is itself information.
+
 ## Context
 
 Most of what makes Raketa a product rather than a booking form is computation, not CRUD.
@@ -47,7 +49,7 @@ The alternatives considered:
 - **An engine microservice.** A pure function behind a network call has no state to own
   and no independent lifecycle, so the hop buys no isolation that an import rule does not
   already give, while adding latency, a second contract to version, and a new failure
-  mode. See [ADR-0016](0016-modular-monolith-two-api-surfaces.md).
+  mode. See **ADR-0016** *(removed)*.
 - **A dedicated pure layer with an interface but no enforced purity.** Nothing then stops
   the next engine reaching for `datetime.now()` and silently becoming irreproducible.
 - **A dedicated pure layer beside `modules/`, with mechanically enforced import rules.**

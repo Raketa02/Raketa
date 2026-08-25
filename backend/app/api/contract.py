@@ -1,11 +1,15 @@
-"""Emit the API contract as two documents, one per client.
+"""Emit the API contract as ``openapi.player.json``.
 
-One backend deployable serves both surfaces (``docs/adr/0016``), but each client
-generates its wire types from its *own* document so neither can take a dependency
-on the other's contract (``docs/adr/0006``). ``make openapi`` runs this module;
-``make gen-api`` then points each client's codegen at its own file.
+The backend owns the contract and the player client generates its wire types
+from this document, never hand-writing a DTO that mirrors a response
+(``docs/adr/0006``). ``make openapi`` runs this module; ``make gen-api`` then
+points the client's codegen at the file it writes.
 
-    python -m app.api.contract           # writes both documents
+    python -m app.api.contract           # writes the document
+
+It is written as a *surface* rather than as "the app's OpenAPI" so that adding a
+second client later is mounting a second router here, not restructuring this
+file: ``build_surface_spec`` already generates one surface in isolation.
 """
 
 from __future__ import annotations
@@ -15,22 +19,20 @@ from pathlib import Path
 
 from fastapi import APIRouter, FastAPI
 
-from app.api.v1.club import club_api_router
 from app.api.v1.player import player_api_router
 from app.core.config import get_settings
 from app.core.exception_handlers import ErrorResponse
 
-# Written next to this backend's package root, alongside the sources both clients
-# read with ``openapi-typescript ../backend/openapi.<surface>.json``.
+# Written next to this backend's package root, alongside the source the client
+# reads with ``openapi-typescript ../backend/openapi.player.json``.
 _BACKEND_ROOT = Path(__file__).resolve().parents[2]
 
 SURFACES: dict[str, APIRouter] = {
     "player": player_api_router,
-    "club": club_api_router,
 }
 
 
-#: The name both clients generate their error type from.
+#: The name the client generates its error type from.
 ERROR_SCHEMA_NAME = "ErrorResponse"
 
 
@@ -38,11 +40,9 @@ def _document_error_envelope(spec: dict) -> dict:
     """Publish the error envelope as a schema on this surface.
 
     Registered on ``components`` directly rather than declared per operation:
-    the envelope is what *every* failure returns, on both surfaces, including
-    the ones no route can enumerate — an unrouted path, a rejected body, a
-    surface that has no paths yet. Attaching a guessed list of statuses to each
-    operation would document claims the code does not make, while leaving the
-    club document — which has no operations at all today — with no error type.
+    the envelope is what *every* failure returns, including the ones no route
+    can enumerate — an unrouted path, a rejected body. Attaching a guessed list
+    of statuses to each operation would document claims the code does not make.
     """
 
     schemas = spec.setdefault("components", {}).setdefault("schemas", {})
@@ -54,8 +54,8 @@ def build_surface_spec(title: str, router: APIRouter) -> dict:
     """Generate one surface's OpenAPI document in isolation.
 
     A throwaway app carrying only this surface's routes yields a document scoped
-    to exactly that surface — a player client never sees a club path and vice
-    versa.
+    to exactly that surface, so a second client added later cannot see the
+    first's paths.
     """
 
     settings = get_settings()

@@ -3,6 +3,8 @@
 - **Status:** Accepted
 - **Date:** 2026-08-09
 
+> **Note — the 2026-08-25 reset.** It cites **ADR-0016** (two API surfaces), removed in the 2026-08-25 reset. The contract is one document again, `backend/openapi.player.json`; the decision this ADR records — the backend owns it, and no client hand-writes a mirroring DTO — is unchanged. See the [ADR index](README.md#the-2026-08-25-reset--why-the-sequence-has-gaps). This ADR's body is left as written: an accepted ADR is immutable, and the reason a past decision looked right is itself information.
+
 ## Context
 
 Two independent clients consume the same API, and by

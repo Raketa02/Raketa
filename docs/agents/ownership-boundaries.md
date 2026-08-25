@@ -15,6 +15,13 @@ The decision behind it is
 | `frontend_player/…` | `player` | `frontend_player/**` + shared docs |
 | `frontend_club/…` | `club` | `frontend_club/**` + shared docs |
 
+> **`frontend_club/` no longer exists.** The club console was removed in the 2026-08-25
+> reset. Its row, and the `club` tier throughout the hooks and their test suite, are kept
+> **on purpose**: the fence costs nothing while the directory is absent, it is what makes
+> the machinery generic rather than a two-app special case, and the day a second client
+> lands it is already fenced instead of being fenced after the first cross-app write. Every
+> `frontend_club` example below is therefore about a path, not about an app that ships.
+
 "Shared docs" means the root glossary, `CONTEXT-MAP.md`, `docs/adr/` and `docs/agents/`.
 The boundary is about **code ownership**, not about preventing documentation — an agent
 that discovers a cross-cutting decision should be able to write the ADR.
@@ -28,7 +35,6 @@ So the ordinary workflow is simply:
 
 ```bash
 cd backend         && claude     # owns the backend
-cd frontend_club   && claude     # owns the club app
 cd frontend_player && claude     # owns the player app
 claude                           # started at the root: owns everything
 ```
@@ -36,7 +42,7 @@ claude                           # started at the root: owns everything
 Use the env var when the working directory can't be trusted to say what you mean:
 
 ```bash
-RKTA_TIER=club claude            # scoped to the club app wherever you launched it
+RKTA_TIER=player claude          # scoped to the player app wherever you launched it
 ```
 
 > **Note:** the working directory is the session's, and a `cd` inside a Bash tool call
@@ -145,7 +151,7 @@ guard is worth fixing, so report that instead.
 
 ## What this deliberately does not do
 
-- It does not prevent **reading** across apps. Understanding how the club app consumes an
+- It does not prevent **reading** across apps. Understanding how a client consumes an
   endpoint is legitimate and often necessary.
 - It does not sandbox the process. A determined script could bypass it; it is a guardrail
   against plausible mistakes, not a security boundary against an adversary.

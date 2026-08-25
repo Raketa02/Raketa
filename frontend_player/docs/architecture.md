@@ -12,7 +12,7 @@ in production.
   [ADR-0008](../../docs/adr/0008-player-mobile-securestore-direct-api.md). The runtime
   decisions it introduces are recorded in
   [ADR-0013](../../docs/adr/0013-player-app-runtime-architecture.md).
-- **Scope: `frontend_player/` only.** The club app shares the _shape_ of Parts 1, 6, 7
+- **Scope: `frontend_player/` only.** A web client would share the _shape_ of Parts 1, 6, 7
   and 9 but not this document, and never this code
   ([ADR-0005](../../docs/adr/0005-three-app-monorepo-ownership-boundaries.md)).
 - **The rule that generates the rest:** every piece of data and every kind of logic has
@@ -28,7 +28,7 @@ dependency direction, predictable data flow, and cheap change**.
 
 The source document proposes a directory layout. This repo had already chosen a
 compatible but differently-named one, and that choice is locked by an accepted ADR shared
-with the club app. **This repo's names win.** Translate as follows:
+with other clients. **This repo's names win.** Translate as follows:
 
 | Source document                      | Here                                  | Why the difference                                                                                                         |
 | ------------------------------------ | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
@@ -242,7 +242,7 @@ plain modules, hooks, or route-scoped providers.
 - timeout policy
 - observability hooks
 
-It must not know what a Match, Booking, Court or Club is.
+It must not know what an Assessment, a Skill rating or a Sport is.
 
 Feature `api/` modules are thin and named for operations:
 
@@ -462,8 +462,8 @@ diagnostic fallback, not the copy.
 
 ## Part 7 — TanStack Query
 
-Query owns **all** backend-derived asynchronous state: profile, match lists and details,
-club details, booking status, server-sourced notifications, remote settings. There is no
+Query owns **all** backend-derived asynchronous state: the current user, the sport
+registry, an assessment and its questions, a player's ratings. There is no
 `GET → set Zustand → read Zustand` path anywhere in this app.
 
 ### Query key factories
@@ -769,7 +769,7 @@ const EnvSchema = z.object({
 });
 ```
 
-The four names are the platform's, shared verbatim with the backend and the club app.
+The four names are the platform's, shared verbatim with the backend.
 `local` is a developer's own machine and is the only one that runs today; `development`
 and `staging` are validated but **not provisioned**, and there is no production
 deployment. Naming a laptop `development` — which is what this app did before the four
@@ -961,7 +961,7 @@ monitoring, a rollback plan, and code signing where the security bar requires it
 
 ### Released clients are immutable
 
-This is the constraint that makes mobile different from the club app: **old versions live
+This is the constraint that makes mobile different from a web client: **old versions live
 on real phones for months.** The backend must stay compatible with released clients for a
 defined support window. Prefer additive changes; for a breaking one, version the
 endpoint/schema, keep a transition period, measure active client versions, and force an
@@ -1000,7 +1000,7 @@ encodes:
 
 - generated wire types are importable only in `api/` and `mappers/`
 - `domain/` and `use-cases/` import no React, React Native, Expo or wire types
-- no imports from `../backend/` or `../frontend_club/`
+- no imports from `../backend/` or any sibling app
 - `@react-native-async-storage/async-storage` is banned outright
 - `expo-secure-store` is importable only inside `src/shared/lib/auth/`
 - `fetch` is configured only in `src/shared/lib/http/`; features call it through there

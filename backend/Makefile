@@ -47,7 +47,7 @@ typecheck:         ## mypy
 check: lint lint-imports typecheck test  ## the full local gate (matches CI)
 
 ## ----- API contract
-openapi:           ## emit the contract as two documents (player + club)
+openapi:           ## emit the API contract (openapi.player.json)
 	poetry run python -m app.api.contract
 
 ## ----- local docker

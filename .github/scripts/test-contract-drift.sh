@@ -19,9 +19,9 @@
 # bytes from a temporary copy on exit — including on failure or interrupt — so
 # it is safe to run on a dirty tree and preserves whatever was there.
 #
-# frontend_player is the only client exercised: frontend_club has no lockfile
-# and no node_modules until #65, so its generator cannot run. The club's half of
-# the check is asserted structurally below instead.
+# frontend_player is the only client there is, so it is the only one exercised.
+# The structural assertions below keep the CI wiring honest: a filter that stops
+# watching the contract document makes the drift check dormant in silence.
 # ---------------------------------------------------------------------------
 set -uo pipefail
 
@@ -171,38 +171,23 @@ filter_has player 'backend/openapi.player.json' \
   || bad "the player filter watches the player contract document" \
          "a backend-only pull request would not run the player job"
 
-filter_has club 'backend/openapi.club.json' \
-  && ok "the club filter watches the club contract document" \
-  || bad "the club filter watches the club contract document" \
-         "a backend-only pull request would not run the club job"
-
 filter_has player 'frontend_player/**' \
   && ok "the player filter still watches the player app" \
   || bad "the player filter still watches the player app"
 
-filter_has club 'frontend_club/**' \
-  && ok "the club filter still watches the club app" \
-  || bad "the club filter still watches the club app"
-
 # ---------------------------------------------------------------------------
 echo
-echo "ci.yml — both jobs run it, and the club's stays behind its gate"
+echo "ci.yml — the player job runs it, behind its bootstrap gate"
 
 grep -q 'check-contract-drift.sh frontend_player' "$CI_YML" \
   && ok "the player job runs the check" \
   || bad "the player job runs the check"
 
-grep -q 'check-contract-drift.sh frontend_club' "$CI_YML" \
-  && ok "the club job runs the check" \
-  || bad "the club job runs the check"
-
-# The club app has never been installed (#65). Its drift step must live inside
-# the job that already skips itself until a lockfile exists, not in a second job
-# that would install it.
-grep -q "needs.changes.outputs.club_ready == 'true'" "$CI_YML" \
-  && ok "the club job is still gated on being bootstrapped" \
-  || bad "the club job is still gated on being bootstrapped" \
-         "this issue must not switch the club job on — that is #65"
+# The drift step must live inside the job that already skips itself until a
+# lockfile exists, not in a second job that would install the app itself.
+grep -q "needs.changes.outputs.player_ready == 'true'" "$CI_YML" \
+  && ok "the player job is still gated on being bootstrapped" \
+  || bad "the player job is still gated on being bootstrapped"
 
 # ---------------------------------------------------------------------------
 echo

@@ -3,6 +3,8 @@
 - **Status:** Accepted
 - **Date:** 2026-08-09 *(captured retroactively from the existing implementation)*
 
+> **Note — the 2026-08-25 reset.** It cites **ADR-0007** (the club console's cookie session), removed in the 2026-08-25 reset along with the club app. The two-client threat-model argument below is the reason this ADR chose rotation, and it stands as written — one of the two clients simply no longer exists. See the [ADR index](README.md#the-2026-08-25-reset--why-the-sequence-has-gaps). This ADR's body is left as written: an accepted ADR is immutable, and the reason a past decision looked right is itself information.
+
 ## Context
 
 The API serves two clients with different threat models: a **web app** (XSS is the
@@ -28,7 +30,7 @@ We will issue **short-lived access JWTs plus long-lived, rotating refresh tokens
 - **Login returns one error** for both unknown-email and wrong-password
   (`InvalidCredentials`) — no account enumeration.
 - Each client stores these differently, per its own threat model:
-  [ADR-0007](0007-club-web-bff-httponly-cookie-session.md) (httpOnly cookies) and
+  **ADR-0007** *(removed)* (httpOnly cookies) and
   [ADR-0008](0008-player-mobile-securestore-direct-api.md) (OS keychain).
 
 ## Consequences
