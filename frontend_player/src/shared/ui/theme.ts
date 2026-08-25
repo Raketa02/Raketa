@@ -225,6 +225,10 @@ const radius = {
   daySquare: 10,
   seg: 10,
   segThumb: 8,
+  /** The availability grid's cell. A fresh token beside the dead `daySquare`: the slot
+   *  squares of the deleted 6.7 are NOT being restored, and a cell that borrowed their
+   *  radius would be the first step back toward a booking grid. */
+  availabilityCell: 10,
   avatar: 9,
   hourSquare: 9,
   rangeSquare: 9,
@@ -310,6 +314,59 @@ const size = {
     currentRadius: 3,
     gap: 3,
   },
+  /** The availability grid — 6.8. Seven rows of three, days DOWN and parts of the day
+   *  ACROSS, which is a touch decision and not a taste one: seven columns want
+   *  7 x 44 = 308pt against the 290pt of content the narrowest phone has, and no
+   *  hit-slop closes that. Laid out the other way the cell reaches the minimum by its own
+   *  geometry — the first control in the app that does — so there is no `hit` entry here.
+   *
+   *  `labelMaxRatio` caps the day-label column so Dynamic Type grows the labels without
+   *  starving the cells: at the cap the three still share 65,5pt each on that phone.
+   *  `footnoteMinHeight` is two lines of `type.tiny`, always laid out, so ticking the
+   *  first cell never moves the grid out from under the finger. */
+  availability: {
+    cellHeight: 44, // = minTouch, by geometry rather than by slop
+    gap: 6,
+    labelGutter: 9,
+    labelMaxRatio: 0.25,
+    tick: 12,
+    tickStroke: 2,
+    footnoteMinHeight: 2 * type.tiny.lineHeight,
+  },
+  /** The photo tile — 6.9. Three across the content width, 3:4 portrait, at the card
+   *  radius because a 90 x 121 tile is a card-sized surface.
+   *
+   *  `strip` is the foot strip: ONE slot with three mutually exclusive occupants — the
+   *  profile marker, the upload bar, the failure notice — which is what keeps a settled
+   *  photo undecorated. `remove` is a 28pt visual grown to 44 by `hit.photoRemove`, and
+   *  that square is anchored INSIDE the tile: 6.5 bounds horizontal slop by the neighbour,
+   *  and at a 9pt gap an overhanging target would reach 40,5. */
+  photoTile: {
+    columns: 3,
+    gap: 9,
+    aspectRatio: 0.75, // 3:4 portrait — RN's aspectRatio is width / height
+    strip: 18,
+    progressBar: 4, // = size.bar
+    progressInset: 6,
+    remove: 28,
+    addGlyph: 20,
+    addGlyphStroke: 2,
+  },
+  /** The radius slider — 6.10. The ROW is the touch surface, not the thumb: a press
+   *  anywhere on it moves the value there, which is what gets the control to 44 without a
+   *  `hit` entry and without two more targets beside it.
+   *
+   *  The thumb is the level bar's mark idiom in a circle — a `night` disc inside a
+   *  `surface` ring, because the fill behind it is `night` too and the ring is the whole
+   *  reason it reads. The minimum, maximum, step and default are NOT here: they are served
+   *  by `GET /player-profile/options`, exactly as the ring's ceiling is served on the
+   *  result (7.8). */
+  radiusSlider: {
+    row: 44, // = minTouch
+    trackHeight: 4, // = size.bar
+    thumb: 20,
+    thumbRing: 3,
+  },
   balanceBar: 24,
   sportDot: 6,
   infoGlyph: 14,
@@ -339,6 +396,9 @@ const hit = {
   seg: { top: 9, bottom: 9 },
   btn: { top: 5, bottom: 5 },
   infoMark: { top: 12, bottom: 12, left: 12, right: 12 },
+  /** Anchored inside the tile, not over its corner — see `size.photoTile`. All four sides
+   *  are equal because none of them crosses an edge. */
+  photoRemove: { top: 8, bottom: 8, left: 8, right: 8 },
 } as const;
 
 // ---------------------------------------------------------------------------
