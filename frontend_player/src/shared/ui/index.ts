@@ -48,6 +48,7 @@ export {
 } from './PhotoTile';
 export { InfoMark, Popover, type InfoMarkProps, type PopoverProps } from './Popover';
 export { QuestionNavigator, type QuestionNavigatorProps } from './QuestionNavigator';
+export { RadiusSlider, type RadiusSliderProps } from './RadiusSlider';
 export { Row, type RowProps, type RowVariant } from './Row';
 export { ScreenHeader, type ScreenHeaderProps } from './ScreenHeader';
 export { Tag, type TagProps, type TagVariant } from './Tag';

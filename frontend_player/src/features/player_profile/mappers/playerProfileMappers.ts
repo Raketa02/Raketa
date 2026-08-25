@@ -73,6 +73,15 @@ export function toProfileOptions(response: PlayerProfileOptionsResponse): Profil
       minimum: response.social_tag_selection.minimum_tags,
       maximum: response.social_tag_selection.maximum_tags,
     },
+    // The unit stays on every one of these, where the tag counts above lose theirs: inside
+    // the app a `minimum` beside a list of eighteen can only be a count, and a `minimum`
+    // beside a distance is one refactor away from being read as metres.
+    searchRadius: {
+      minimumKm: response.search_radius.minimum_km,
+      maximumKm: response.search_radius.maximum_km,
+      stepKm: response.search_radius.step_km,
+      defaultKm: response.search_radius.default_km,
+    },
   };
 }
 

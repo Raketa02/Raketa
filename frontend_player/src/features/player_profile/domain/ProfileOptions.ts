@@ -6,12 +6,12 @@
  * sports registry set: a closed set the backend owns, read over the API so that no client
  * hardcodes it and the picker cannot drift from what the commit re-validates against.
  *
- * One object for one round trip. The steps that need the rest of it — the Search radius
- * bounds — add their own field here when they are built; a field is only ever added, and
- * mapping one the app cannot yet use would be a shape invented before there is a control
- * to hold it.
+ * One object for one round trip. A field is only ever added, and only once there is a
+ * control to hold it — mapping a shape the app cannot yet use would be a shape invented
+ * before anything reads it.
  */
 
+import type { SearchRadiusBounds } from './searchRadius';
 import type { SocialTagSelectionBounds } from './socialTagSelection';
 import type { SocialTagVocabulary } from './SocialTag';
 
@@ -20,4 +20,6 @@ export interface ProfileOptions {
   readonly socialTagGroups: SocialTagVocabulary;
   /** How many of them a profile must hold. Both ends included. */
   readonly socialTagSelection: SocialTagSelectionBounds;
+  /** How far out a player may ask to look, and where the slider opens. */
+  readonly searchRadius: SearchRadiusBounds;
 }

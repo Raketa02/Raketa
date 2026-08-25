@@ -16,7 +16,8 @@ export { SocialTagsStep } from './components/SocialTagsStep';
 export { SocialPhotosStep } from './components/SocialPhotosStep';
 export { SocialAvailabilityStep } from './components/SocialAvailabilityStep';
 export { SocialLocationStep } from './components/SocialLocationStep';
-/** The two steps still standing in for themselves. Each ticket removes one from the union. */
+export { SocialRadiusStep } from './components/SocialRadiusStep';
+/** The one step still standing in for itself. Its ticket removes the last member. */
 export { SocialStepScreen, type UnbuiltSocialStep } from './components/SocialStepScreen';
 
 export { SOCIAL_STEPS, type SocialStep } from './domain/socialSteps';

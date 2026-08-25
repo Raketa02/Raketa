@@ -17,6 +17,7 @@ import { refreshTokens } from '@/features/auth/types';
 import { clearStoredTokens, resetSessionStatus, wireHttpCredentials } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import {
+  PROFILE_OPTIONS_PATH,
   launchSignedIn,
   resetLocation,
   stubGate as stubGateWith,
@@ -100,33 +101,43 @@ const STEPS = [
 ] as const;
 
 /**
- * The first step that still stands in for itself, and the one this suite answers to prove
- * the draft survives a walk.
+ * The one step that still stands in for itself, and the one this suite answers to prove a
+ * placeholder is still reachable and still records something.
  *
- * It moves as tickets land. Photos was it, then availability, then location, and all three
- * are the wrong step to have used anyway: each may be passed with nothing at all, so *an
- * answer that is still there* has to be asked of a step that insists on one.
+ * It moves as tickets land: photos was it, then availability, then location, then the
+ * radius. When the last of them is built this constant goes with it.
  */
-const FIRST_PLACEHOLDER_STEP = 4;
+const FIRST_PLACEHOLDER_STEP = 5;
+
+/**
+ * The step this suite gives a real answer to and comes back for.
+ *
+ * The **first** one, which is also the only one of the five built steps that insists on an
+ * answer: photos, the week, the location and the radius may each be walked past untouched,
+ * so *an answer that is still there* cannot be asked of any of them. Walking back to step
+ * one is also the longest round trip the part has.
+ */
+const ANSWERED_STEP = 0;
 
 /**
  * The steps of the six that may be walked past with nothing answered at all.
  *
- * Photos and the week are genuinely optional — no photo is fine, and a blank week means no
- * preference. **The location step is not**: it can be *passed* with nothing, at the cost of
- * search and matchmaking, and this walk is the one that pays it. That is why its forward
- * control is labelled differently, and why its own suite owns both answers.
+ * Four steps, four different reasons. Photos and the week are genuinely optional — no photo
+ * is fine, and a blank week means no preference. **The location step is not**: it can be
+ * *passed* with nothing, at the cost of search and matchmaking, and this walk is the one
+ * that pays it, which is why its forward control is labelled differently. The radius is not
+ * optional either — it opens at the **served default**, so walking past it without touching
+ * the slider is an answer rather than an absence.
  */
-const OPTIONAL_STEPS = [1, 2, 3];
+const OPTIONAL_STEPS = [1, 2, 3, 4];
 
 /**
  * Answer whatever step is on screen.
  *
- * Four of the six are built and each wants something different — two tags at the floor, and
- * nothing at all on the photos, availability and location steps, which continue from empty
- * for three different reasons. The rest still stand in for themselves. This suite is about
- * the walk, so it answers each of them the way that step wants and says nothing else about
- * any of them.
+ * Five of the six are built and each wants something different — two tags at the floor, and
+ * nothing at all on the four after it, which continue from empty for four different
+ * reasons. The last still stands in for itself. This suite is about the walk, so it answers
+ * each of them the way that step wants and says nothing else about any of them.
  */
 function answerTheStep(index: number) {
   if (index >= FIRST_PLACEHOLDER_STEP) {
@@ -147,9 +158,13 @@ function answerTheStep(index: number) {
  * Named per step rather than as one string: five of the six say *Continue* and one says
  * what it costs to leave it empty, and a helper that hunted for either would stop noticing
  * which screen it was on.
+ *
+ * **Waited for, not read.** Two of the six draw their control from the served options, and
+ * a suite that walks the part under fake timers can outrun a query whose cache was
+ * collected while nothing was observing it. Waiting is what a player does too.
  */
-function continueFrom(from: number) {
-  fireEvent.press(screen.getByLabelText(STEPS[from]!.forward));
+async function continueFrom(from: number) {
+  fireEvent.press(await screen.findByLabelText(STEPS[from]!.forward));
 }
 
 /** The first step's continue is blocked until its floor is met; the rest are not. */
@@ -163,7 +178,7 @@ async function continueFromTheFirstStep() {
 async function walkOnTo(index: number) {
   for (let step = 1; step < index; step += 1) {
     answerTheStep(step);
-    continueFrom(step);
+    await continueFrom(step);
     await waitFor(() => expect(screen).toHavePathname(STEPS[step + 1]!.path));
   }
 }
@@ -233,7 +248,7 @@ describe('walking forward through the second part', () => {
     await enterTheSocialSteps();
     await continueFromTheFirstStep();
     for (let step = 2; step < STEPS.length; step += 1) {
-      continueFrom(step - 1);
+      await continueFrom(step - 1);
     }
 
     await waitFor(() => expect(screen).toHavePathname('/opt-in'));
@@ -257,7 +272,7 @@ describe('walking back through the second part', () => {
     expect(screen.getByLabelText(STEPS[1]!.back!)).toBeTruthy();
 
     for (let index = 2; index < STEPS.length; index += 1) {
-      continueFrom(index - 1);
+      await continueFrom(index - 1);
       await waitFor(() => expect(screen).toHavePathname(STEPS[index]!.path));
       expect(screen.getByLabelText(STEPS[index]!.back!)).toBeTruthy();
     }
@@ -267,7 +282,7 @@ describe('walking back through the second part', () => {
     await enterTheSocialSteps();
     await continueFromTheFirstStep();
     for (let step = 2; step < STEPS.length; step += 1) {
-      continueFrom(step - 1);
+      await continueFrom(step - 1);
     }
     await waitFor(() => expect(screen).toHavePathname('/opt-in'));
 
@@ -290,23 +305,25 @@ describe('the draft the part holds', () => {
     // rest, and an answer they gave must still be there when they return to it.
     await enterTheSocialSteps();
     await continueFromTheFirstStep();
-    await walkOnTo(FIRST_PLACEHOLDER_STEP);
 
-    fireEvent.press(screen.getByLabelText('Answer this step'));
-    expect(await screen.findByLabelText('Answered')).toBeTruthy();
-
-    // Forward to the end, then all the way back.
-    for (let step = FIRST_PLACEHOLDER_STEP + 1; step < STEPS.length; step += 1) {
-      continueFrom(step - 1);
+    // Forward to the end, then all the way back to where the answer was given.
+    for (let step = 2; step < STEPS.length; step += 1) {
+      answerTheStep(step - 1);
+      await continueFrom(step - 1);
+      await waitFor(() => expect(screen).toHavePathname(STEPS[step]!.path));
     }
-    await waitFor(() => expect(screen).toHavePathname('/opt-in'));
-    for (let index = STEPS.length - 1; index > FIRST_PLACEHOLDER_STEP; index -= 1) {
+    for (let index = STEPS.length - 1; index > ANSWERED_STEP; index -= 1) {
       fireEvent.press(screen.getByLabelText(STEPS[index]!.back!));
       await waitFor(() => expect(screen).toHavePathname(STEPS[index - 1]!.path));
     }
 
-    expect(screen).toHavePathname(STEPS[FIRST_PLACEHOLDER_STEP]!.path);
-    expect(screen.getByLabelText('Answered')).toBeTruthy();
+    expect(screen).toHavePathname(STEPS[ANSWERED_STEP]!.path);
+    // Both tags still picked, and the continue no longer asking for a floor that is met.
+    expect((await screen.findByLabelText('Plays to win')).props.accessibilityState?.selected).toBe(
+      true,
+    );
+    expect(screen.getByLabelText('Here to improve').props.accessibilityState?.selected).toBe(true);
+    expect(screen.getByLabelText('Continue')).toBeTruthy();
   });
 
   it("keeps each step's answer to itself", async () => {
@@ -329,7 +346,7 @@ describe('the draft the part holds', () => {
     await continueFromTheFirstStep();
     for (let step = 2; step < STEPS.length; step += 1) {
       answerTheStep(step - 1);
-      continueFrom(step - 1);
+      await continueFrom(step - 1);
       await waitFor(() => expect(screen).toHavePathname(STEPS[step]!.path));
     }
     fireEvent.press(screen.getByLabelText('Answer this step'));
@@ -345,15 +362,17 @@ describe('the draft the part holds', () => {
     // them. This walk adds none, so nothing leaves here at all.
     expect(afterArrival.filter((request) => request.method !== 'GET')).toEqual([]);
 
-    // And the only thing read is who the player is, which step two's court poster is drawn
-    // from — the auth feature's own query rather than a second one against the same route.
-    // The count is not pinned because it cannot be: the router harness runs on fake timers
-    // and `waitFor` advances them, so Query's five-minute collection can fire mid-walk and
-    // the read happens once or not at all. What must not change is that there is nothing
-    // *else* in the list.
-    expect(afterArrival.map((request) => request.path)).toEqual(
-      afterArrival.map(() => '/api/v1/users/me'),
-    );
+    // And the only things read are who the player is — which step two's court poster is
+    // drawn from, through the auth feature's own query rather than a second one against the
+    // same route — and the served options, which step one's chips and step five's slider
+    // are both built from.
+    //
+    // Neither count is pinned, because neither can be: the router harness runs on fake
+    // timers and `waitFor` advances them, so Query's five-minute collection can fire
+    // mid-walk and either read happens once, twice or not at all. What must not change is
+    // that there is nothing *else* in the list.
+    const READ_ON_THE_WAY = ['/api/v1/users/me', PROFILE_OPTIONS_PATH];
+    expect(afterArrival.filter((request) => !READ_ON_THE_WAY.includes(request.path))).toEqual([]);
   });
 });
 
@@ -382,7 +401,7 @@ describe('a link naming a step in the middle of the part', () => {
 
     await continueFromTheFirstStep();
     for (let step = 2; step <= 4; step += 1) {
-      continueFrom(step - 1);
+      await continueFrom(step - 1);
       await waitFor(() => expect(screen).toHavePathname(STEPS[step]!.path));
     }
 

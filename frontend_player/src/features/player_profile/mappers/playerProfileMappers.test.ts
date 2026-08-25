@@ -90,3 +90,19 @@ describe('the served selection bounds', () => {
     expect(toProfileOptions(SERVED).socialTagSelection).toEqual({ minimum: 2, maximum: 6 });
   });
 });
+
+describe('the served radius bounds', () => {
+  /**
+   * The unit stays on every field, unlike the tag counts above. A bare `minimum` beside a
+   * distance is one refactor away from being read as metres — which is the same reason the
+   * backend spells it on the wire.
+   */
+  it('reads the range, the step and where the control opens', () => {
+    expect(toProfileOptions(SERVED).searchRadius).toEqual({
+      minimumKm: 1,
+      maximumKm: 50,
+      stepKm: 1,
+      defaultKm: 10,
+    });
+  });
+});

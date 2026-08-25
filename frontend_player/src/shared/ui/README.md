@@ -117,6 +117,17 @@ only pressable thing on it — there is no row, column or _weekends_ shortcut an
 component — and its selected state is a fill inversion **and** a tick, because twenty-one
 rectangles differing only in lightness are a texture. Every word is the caller's.
 
+**The radius slider** (6.10) is one number on a track, and **the row is the control rather
+than the thumb**: a press anywhere on its 44pt reaches the value at that point, which is
+what gets it to the touch minimum with no `hitSlop` and what stops a tap at the far end of
+the track doing nothing. It is `adjustable` with an `increment` and a `decrement`, because a
+drag-only slider is unusable with a screen reader and with a keyboard, and it announces the
+figure and the plain words as **one** value — the two are one fact drawn twice, and both are
+hidden from assistive technology here so they are not read a second and a third time. It knows
+**no step and no default, and no bound of its own**: the range it announces and the position
+it draws both arrive as props, because those four numbers are served and product's to
+retune — what reaches the component is where the thumb goes and what the figure says.
+
 **A feature never keeps a second copy of one of these.** If a primitive does not do what
 a screen needs, extend the primitive — the two auth-form controls that remain in
 `features/auth/components/AuthControls.tsx` are there because the design system genuinely
