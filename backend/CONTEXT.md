@@ -262,6 +262,30 @@ there; they are not repeated here.
   file really is small. Pillow's own guard is pointed at the same number, so the two agree
   by construction rather than by being maintained in step. _Avoid_: one cap standing in for
   both, a warning where a refusal belongs, checking size after decoding.
+- **Scheduled job** — work that runs because an interval elapsed, as an `asyncio` loop
+  hosted by the API process (`app/infrastructure/jobs/`,
+  [ADR-0092](../docs/adr/0092-periodic-jobs-as-embedded-loops.md)). Distinct from the
+  **`EventWorker`**, which drains a queue as fast as it fills; they share the loop and
+  nothing else. **A job must be idempotent and safe to run beside itself**, because with N
+  API processes it runs N times per interval with no lock anywhere — that requirement is
+  what let the platform avoid owning a scheduler at all. Registered in
+  `app/bootstrap/jobs.py`, built from the composition root, first run at startup rather
+  than after the first interval. _Avoid_: cron, beat, a leader election, a job that must
+  run exactly once.
+- **Uncommitted photo** — a photo the object store holds that no committed profile
+  currently names. It is the ordinary state of every upload between the upload and the
+  commit, and the permanent state of one whose commit never came; the **sweep** deletes
+  those older than the retention window. *Currently* is load-bearing: a photo dropped from
+  a profile is as unreachable as one never committed, so it is the same orphan. _Avoid_:
+  "orphan" as a status stored anywhere — it is a question asked of the store and the
+  stream, never a field.
+- **Retention window vs cadence** — the pair that must not swap places. *How old an
+  uncommitted photo must be before it is swept* is a rule a domain test can observe and
+  lives beside the size caps in `player_profile/domain/photos.py`; *how often the sweep
+  runs* is `PHOTO_SWEEP_INTERVAL_SECONDS` and is operational. The **environment may select
+  configuration; it may never select behaviour** — and a deletion the environment could
+  make happen sooner is exactly that. _Avoid_: a configurable retention window, a cadence
+  hard-coded in the domain.
 
 Add backend-specific technical terms here as they are resolved. Anything describing the
 *domain* belongs in the shared glossary instead.

@@ -57,7 +57,8 @@ split into four layers:
 - `presentation/` — FastAPI routes, request/response schemas, route dependencies.
 
 Cross-cutting ports (unit of work, event publisher/store) live in `app/application/ports/`;
-shared infra in `app/infrastructure/`; event-runtime assembly in `app/bootstrap/events.py`.
+shared infra in `app/infrastructure/`; event-runtime assembly in `app/bootstrap/events.py`
+and the register of scheduled jobs in `app/bootstrap/jobs.py`.
 
 Rules to preserve:
 
@@ -101,6 +102,16 @@ Rules to preserve:
   `.importlinter` forbids `PIL`, `pillow_heif`, `aioboto3`, `boto3` and `botocore` to
   every domain and application layer, **including through the adapter**, because a use
   case that constructs the transcoder itself has bypassed the port just as completely.
+- **Background work is an `asyncio` loop in the API process, and a job must be safe to
+  run beside itself** ([ADR-0092](../docs/adr/0092-periodic-jobs-as-embedded-loops.md)).
+  `PeriodicJob` (`app/infrastructure/jobs/`) is the whole mechanism — the outbox worker
+  is written on it too — and **`app/bootstrap/jobs.py` is where the next job goes**,
+  built from the composition root so it reaches the same bucket and event store a
+  request does. There is no cron, no beat process and no lock: with N API processes a
+  job runs N times per interval, so a job that cannot tolerate that needs a different
+  mechanism and its own ADR. The one job today is the uncommitted-photo sweep, whose
+  **retention window is domain and whose cadence is configuration** — those two must not
+  swap places.
 - **New routes mount under `app/api/v1/router.py`;** keep the `/api/v1` prefix.
 - **Validate and normalize inside the value object**, not in the use case — see
   `app/modules/users/domain/value_objects.py`.
@@ -161,7 +172,9 @@ tests.
   no `.env` needed. There is no `test` environment: a test run happens on somebody's
   laptop or a CI runner, and both are `local`.
 - The embedded event-delivery worker polls the outbox on startup; toggle with
-  `EVENT_DELIVERY_WORKER_ENABLED`.
+  `EVENT_DELIVERY_WORKER_ENABLED`. Scheduled jobs are toggled one at a time —
+  `PHOTO_SWEEP_ENABLED` today — and **every job's first run is at startup**, not after
+  its first interval, so a six-hourly job is observable on a laptop.
 
 ## Git & domain language
 

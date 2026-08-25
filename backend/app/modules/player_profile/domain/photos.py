@@ -61,6 +61,21 @@ MAX_STORED_LONG_EDGE_PX: Final = 1600
 #: the *declared dimensions*, read before any pixel is decoded, can.
 MAX_DECODED_PIXELS: Final = 40_000_000
 
+#: How long a photo that no profile references is kept before it is swept
+#: (``docs/adr/0091``, ``docs/adr/0092``).
+#:
+#: **Here rather than in configuration, with the two caps above and for the same
+#: reason:** it is a rule a domain test can observe. A window that were 24 hours
+#: on a laptop and one hour in production would be a *behaviour* the environment
+#: selected, and the deletion it decides is not reversible.
+#:
+#: Twenty-four hours is not a tuned number and is not trying to be. The social
+#: part of onboarding takes minutes, so anything an order of magnitude beyond
+#: that belongs to a commit that never happened; the distance between *minutes*
+#: and *a day* is what makes a wrong answer here need a client to have been
+#: paused overnight mid-step, and even then the cost is re-picking a photo.
+UNCOMMITTED_PHOTO_RETENTION_HOURS: Final = 24
+
 #: Quality of the stored JPEG. High enough that re-encoding is not visible at
 #: the size a photo is rendered, low enough that a stored photo is a fraction of
 #: what arrived.
@@ -128,6 +143,25 @@ class PhotoReviewVerdict:
     @property
     def is_flagged(self) -> bool:
         return self.decision is PhotoReviewDecision.FLAGGED
+
+
+@dataclass(frozen=True, slots=True)
+class StoredPhoto:
+    """A photo the store is holding, and when it took it.
+
+    What a listing yields, and the only thing the sweep needs about a candidate:
+    which photo it is, whose it is, and whether it is old enough to be asked
+    about. ``stored_at`` is the **store's** stamp — it is not carried in an
+    event and there is nowhere else to read it from, which is why the port
+    answers this question rather than the profile stream.
+
+    Deliberately carries no size and no metadata. A sweep that could read the
+    review verdict would invite a rule about flagged photos, and *whether a
+    photo is referenced* is the only question this job is allowed to ask.
+    """
+
+    ref: PhotoRef
+    stored_at: Instant
 
 
 @dataclass(frozen=True, slots=True)

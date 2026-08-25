@@ -29,20 +29,36 @@ container on a laptop.
 
 from __future__ import annotations
 
-from typing import Any, Mapping
+from typing import Any, AsyncGenerator, Iterable, Iterator, Mapping
 from uuid import UUID
 
 import aioboto3
 from botocore.client import Config
 from botocore.exceptions import ClientError
 
-from app.modules.player_profile.domain.photos import PhotoRef, TranscodedImage
+from app.kernel import Instant, instant
+from app.modules.player_profile.domain.photos import (
+    PhotoRef,
+    StoredPhoto,
+    TranscodedImage,
+)
 
 #: Under the owner, so that *whose photo is this* is answered by the key rather
 #: than by a lookup somebody could forget. A player asking for a photo id that
 #: is not theirs builds a key that has never existed, which is why the endpoint
 #: can answer *not found* without ever learning that the id is somebody else's.
 _KEY_TEMPLATE = "players/{owner_id}/photos/{photo_id}.jpg"
+
+#: Everything this application writes lives under here. The sweep lists with it
+#: as a prefix, so an object somebody put in the bucket for another purpose is
+#: never even enumerated — which is one of two independent reasons it cannot be
+#: deleted, the other being that its key would not parse.
+KEY_PREFIX = "players/"
+
+#: The extension the key template ends in. Named, because the parser below has
+#: to strip exactly what the template appended and a literal in two places is
+#: the pair that drifts.
+_KEY_SUFFIX = ".jpg"
 
 #: The 404s `head_object` reports. botocore spells the same absence two ways
 #: depending on the operation and the store, and MinIO and S3 do not agree, so
@@ -54,6 +70,56 @@ def object_key_for(owner_id: UUID, photo_id: UUID) -> str:
     """The key one photo lives at. A pure function, so the layout is testable."""
 
     return _KEY_TEMPLATE.format(owner_id=owner_id, photo_id=photo_id)
+
+
+def ref_from_object_key(key: str) -> PhotoRef | None:
+    """`object_key_for`'s inverse, or ``None`` for a key this app did not write.
+
+    The sweep needs it because a listing answers in keys and the rest of the
+    system speaks ``PhotoRef``. **Refusing rather than guessing is the whole
+    contract**: this function's output decides what a sweep is allowed to
+    delete, so anything that is not exactly the shape the template produces —
+    a stray object, a folder marker, a key from some future layout — comes back
+    ``None`` and is left alone. Deleting an object nobody can identify is not a
+    recoverable mistake.
+    """
+
+    if not key.startswith(KEY_PREFIX) or not key.endswith(_KEY_SUFFIX):
+        return None
+    parts = key.split("/")
+    if len(parts) != 4 or parts[2] != "photos":
+        return None
+    try:
+        owner_id = UUID(parts[1])
+        photo_id = UUID(parts[3][: -len(_KEY_SUFFIX)])
+    except ValueError:
+        return None
+    return PhotoRef(owner_id=owner_id, photo_id=photo_id)
+
+
+def stored_photos_in(contents: Iterable[Mapping[str, Any]]) -> Iterator[StoredPhoto]:
+    """The photos in one ``list_objects_v2`` page, in the order it listed them.
+
+    Pure, so the translation from *what a store said* to *what the sweep judges*
+    is testable with no store — which matters more here than anywhere else in
+    this adapter, because the thing on the other side of it is a delete.
+
+    ``LastModified`` is the stamp, and it is the only source there is: an
+    uploaded photo appears in no event stream until a commit names it. Every
+    S3-compatible store returns it timezone-aware; ``instant`` refuses it if one
+    ever does not, rather than letting a naive value be compared against a
+    cutoff and quietly answer by an offset.
+    """
+
+    for entry in contents:
+        key = entry.get("Key")
+        last_modified = entry.get("LastModified")
+        if not isinstance(key, str) or last_modified is None:
+            continue
+        ref = ref_from_object_key(key)
+        if ref is None:
+            continue
+        yield StoredPhoto(ref=ref, stored_at=instant(last_modified))
 
 
 def reports_an_absent_object(error: ClientError) -> bool:
@@ -140,6 +206,37 @@ class S3PhotoStorage:
                     return False
                 raise
             return True
+
+    async def stored_before(self, cutoff: Instant) -> AsyncGenerator[StoredPhoto, None]:
+        # Paged rather than listed: `list_objects_v2` answers a thousand keys at
+        # a time whatever the bucket holds, and the sweep's candidate set is
+        # every photo on the platform older than a day. The client stays open
+        # across the yields, which is what an `async with` around an async
+        # generator is for.
+        #
+        # There is no server-side filter on `LastModified` in the S3 API, so the
+        # cutoff is applied here and the whole prefix is walked either way. That
+        # is the honest cost of this shape, and the reason the sweep's cadence is
+        # measured in hours rather than minutes.
+        async with self._client(endpoint_url=self._endpoint_url) as s3:
+            paginator = s3.get_paginator("list_objects_v2")
+            async for page in paginator.paginate(
+                Bucket=self._bucket, Prefix=KEY_PREFIX
+            ):
+                for photo in stored_photos_in(page.get("Contents", [])):
+                    if photo.stored_at < cutoff:
+                        yield photo
+
+    async def delete(self, ref: PhotoRef) -> None:
+        # `DeleteObject` is idempotent: an absent key is a 204, not a 404. That
+        # is what the port promises callers and it is inherited rather than
+        # implemented — nothing here has to check first, and two sweeps racing
+        # on one orphan both succeed.
+        async with self._client(endpoint_url=self._endpoint_url) as s3:
+            await s3.delete_object(
+                Bucket=self._bucket,
+                Key=object_key_for(ref.owner_id, ref.photo_id),
+            )
 
     async def presigned_read_url(self, ref: PhotoRef, *, valid_for_seconds: int) -> str:
         # Signed against the *public* endpoint: the URL is opened by a phone, not

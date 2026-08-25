@@ -208,6 +208,22 @@ class Settings(BaseSettings):
     EVENT_DELIVERY_POLL_INTERVAL_SECONDS: float = 1.0
     EVENT_DELIVERY_BATCH_SIZE: int = 100
 
+    # --- scheduled jobs (docs/adr/0092)
+    #
+    # **How often the sweep runs is configuration; how old a photo must be before it
+    # sweeps one is not.** The retention window is a rule a domain test can observe
+    # and lives in `player_profile/domain/photos.py`; the cadence is operational and
+    # belongs here. Turning the job off changes nothing a domain test would see —
+    # orphans simply accumulate, which is the state the platform was in before it
+    # existed.
+    #
+    # Six hours rather than a day, because the window is a *promise about how long an
+    # orphan lives* and a daily cadence would stretch a 24-hour promise to 48. It is
+    # a full listing of the photo prefix each time — the S3 API has no server-side
+    # filter on `LastModified` — which is what keeps this in hours and not minutes.
+    PHOTO_SWEEP_ENABLED: bool = True
+    PHOTO_SWEEP_INTERVAL_SECONDS: float = 6 * 60 * 60
+
     @field_validator("APP_ENV", mode="before")
     @classmethod
     def _known_environment(cls, v):

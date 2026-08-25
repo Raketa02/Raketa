@@ -41,9 +41,11 @@ app/
   bootstrap/
     composition.py                Adapter factories — every port, no web framework
     events.py                     Runtime assembly for event catalog/dispatcher/worker
+    jobs.py                       The register of scheduled jobs — add the next one here
   infrastructure/
     database/                     SQLAlchemy engine, sessions, unit of work, ORM imports
     events/                       Event store, outbox, codec, delivery worker adapters
+    jobs/                         The periodic-job loop every scheduled job runs on
   modules/
     users/
       domain/                     User aggregate, value objects, domain events, ports
@@ -278,6 +280,8 @@ serving HTTP.
 | `EVENT_DELIVERY_WORKER_ENABLED` | Enables the embedded outbox worker. |
 | `EVENT_DELIVERY_POLL_INTERVAL_SECONDS` | Outbox worker poll interval. |
 | `EVENT_DELIVERY_BATCH_SIZE` | Max outbox rows processed per poll. |
+| `PHOTO_SWEEP_ENABLED` | Enables the uncommitted-photo sweep job. |
+| `PHOTO_SWEEP_INTERVAL_SECONDS` | How often the sweep runs. Not the retention window — see *Background Jobs*. |
 | `RUN_MIGRATIONS_ON_STARTUP` | Optional production startup migration toggle. |
 
 PostgreSQL URLs using `postgresql://` or `postgres://` are normalized to the
@@ -477,9 +481,43 @@ verdict is stored beside the bytes, and a flagged photo is still stored.
 the adapter**, and `make test-gates` drives probes through every arm of that
 contract.
 
-**Not yet built:** uploaded-but-uncommitted photos accumulate. The 24-hour sweep
-ADR-0091 calls for needs periodic-job machinery this platform does not have —
-there is an embedded outbox worker and nothing else — and it has its own ticket.
+Uploaded-but-uncommitted photos are swept after 24 hours by a scheduled job —
+see *Background Jobs* below.
+
+**Not yet built:** the on-court photo review. `PhotoReview` exists with a
+pass-through adapter that allows everything, and the screen's copy states the
+product rule without claiming an enforcement that is not running (ADR-0091).
+
+## Background Jobs
+
+Two kinds of background work run as `asyncio` tasks inside the API process, both
+started and stopped by the lifespan (ADR-0092). There is no cron, no beat
+process and no second deployable.
+
+- **The outbox drain** (`EventWorker`) polls `event_delivery_queue` every second
+  and dispatches to subscribed handlers. Its worker id is the lease its batches
+  claim rows under.
+- **Scheduled jobs** (`PeriodicJob`) run because an interval elapsed.
+  `app/bootstrap/jobs.py` is the register, and one job is in it today: the
+  **uncommitted-photo sweep**, which deletes every photo the object store has
+  held for more than 24 hours that no committed profile currently names.
+
+**A job may only be registered if it is idempotent and safe to run beside
+itself.** With N API processes a job runs N times per interval, at unrelated
+moments, and there is no lock anywhere — that is the price of not owning a
+scheduler, and ADR-0092 states it as a rule rather than a coincidence. The sweep
+qualifies because listing and the reference check are reads and `DeleteObject`
+is idempotent.
+
+The **retention window is domain and the cadence is configuration**, and the two
+must not be confused. *How old a photo must be before it is an orphan* is a rule
+a domain test can observe and lives in
+`app/modules/player_profile/domain/photos.py`; *how often the sweep runs* is
+`PHOTO_SWEEP_INTERVAL_SECONDS`. Turning the job off changes nothing a domain test
+would see — orphans simply accumulate.
+
+The first run of a job happens at startup rather than after the first interval,
+which is the only thing that makes a six-hourly job observable on a laptop.
 
 ## Testing And Quality
 
@@ -492,7 +530,8 @@ Test coverage is split by intent:
   delivery behavior.
 - Unit tests cover domain value objects, event-sourced aggregate behavior,
   refresh-token rules, current-user resolution, event-store version conflicts,
-  outbox delivery, and worker lifecycle.
+  outbox delivery, worker and job lifecycle, and the photo sweep in both
+  directions — an orphan past the window is removed, a referenced photo is not.
 
 Run tests:
 

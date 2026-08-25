@@ -70,4 +70,5 @@ If your work **contradicts** an existing ADR, surface it rather than silently ov
 - [0029 — Seed data goes through aggregates, and never runs in production](0029-seed-data-through-aggregates-never-in-production.md)
 - [0089 — The Player profile context is event-sourced](0089-player-profile-context-event-sourced.md) — *the first racket-sport aggregate keyed on the player rather than on (player, sport)*
 - [0090 — Onboarding is two parts, and the second one is per player](0090-onboarding-per-player-checkpoint.md) — *narrows `CONTEXT.md`'s "there is no onboarded player" invariant; 0017 and 0020 are untouched*
-- [0091 — Photo bytes live behind a port; MinIO locally, S3 deployed](0091-photo-storage-behind-a-port.md) — *does not wake the dormant deployment path of 0010*
+- [0091 — Photo bytes live behind a port; MinIO locally, S3 deployed](0091-photo-storage-behind-a-port.md) — *does not wake the dormant deployment path of 0010; the scheduler its Consequences say the platform lacks is supplied by 0092*
+- [0092 — Periodic jobs are embedded loops, and a job must be safe to run twice at once](0092-periodic-jobs-as-embedded-loops.md) — *supplies the scheduler 0091 recorded the platform as lacking; the outbox worker of 0003 is rewritten on it*

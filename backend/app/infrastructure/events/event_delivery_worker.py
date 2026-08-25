@@ -1,17 +1,36 @@
+"""The outbox drain: the platform's first background job, and now one of two.
+
+**What is here is what makes this job that job** — a session per tick, a batch
+built over it, and the worker identity the batch leases its rows under. The loop
+around it, the shutdown and the swallowed failure are ``PeriodicJob``'s
+(``app/infrastructure/jobs/``), which this delegates to rather than copies.
+
+That split was made when the photo sweep arrived (``docs/adr/0092``), and it is
+worth naming why: the two jobs are not the same *kind* of work — this one drains
+a queue at one-second intervals, the sweep runs a schedule every few hours — but they
+are the same *loop*, and a shutdown path written twice is one that is correct in
+one copy and not the other.
+
+**The worker id stays here.** It is not scheduling: it is the lease the outbox
+batch claims rows under, so two processes draining the same table do not deliver
+the same event twice. A generic loop has no business with it, and the sweep has
+no use for one — it needs no lease at all, which is the property that let ADR-0092
+avoid a leader election.
+"""
+
 from __future__ import annotations
 
-import asyncio
-import logging
 import socket
 from collections.abc import Callable
-from contextlib import suppress
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.application.events.deliver_event_batch import EventBatch
+from app.infrastructure.jobs import PeriodicJob
 from app.shared.ids import new_uuid
 
-logger = logging.getLogger(__name__)
+#: The job's name in the logs and on the asyncio task.
+JOB_NAME = "event-delivery-worker"
 
 EventBatchFactory = Callable[[AsyncSession], EventBatch]
 
@@ -29,52 +48,23 @@ class EventWorker:
     ) -> None:
         self._session_factory = session_factory
         self._batch_factory = batch_factory
-        self._poll_interval = poll_interval_seconds
         self._worker_id = worker_id or f"{socket.gethostname()}:{new_uuid()}"
-        self._stop_event = asyncio.Event()
-        self._task: asyncio.Task[None] | None = None
+        self._job = PeriodicJob(
+            name=JOB_NAME,
+            interval_seconds=poll_interval_seconds,
+            run=self._poll_once,
+            log_context={"worker_id": self._worker_id},
+        )
+
+    @property
+    def name(self) -> str:
+        return JOB_NAME
 
     def start(self) -> None:
-        if self._task is not None:
-            return
-        self._stop_event.clear()
-        self._task = asyncio.create_task(self._run(), name="event-delivery-worker")
+        self._job.start()
 
     async def stop(self) -> None:
-        if self._task is None:
-            return
-        self._stop_event.set()
-        try:
-            await asyncio.wait_for(self._task, timeout=5.0)
-        except asyncio.TimeoutError:
-            self._task.cancel()
-            with suppress(asyncio.CancelledError):
-                await self._task
-        finally:
-            self._task = None
-
-    async def _run(self) -> None:
-        logger.info(
-            "event-delivery-worker started",
-            extra={"worker_id": self._worker_id},
-        )
-        try:
-            while not self._stop_event.is_set():
-                try:
-                    await self._poll_once()
-                except Exception:
-                    logger.exception("event-delivery-worker poll failed")
-                try:
-                    await asyncio.wait_for(
-                        self._stop_event.wait(), timeout=self._poll_interval
-                    )
-                except asyncio.TimeoutError:
-                    pass
-        finally:
-            logger.info(
-                "event-delivery-worker stopped",
-                extra={"worker_id": self._worker_id},
-            )
+        await self._job.stop()
 
     async def _poll_once(self) -> None:
         async with self._session_factory() as session:

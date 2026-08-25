@@ -106,7 +106,11 @@ that path does wake, storage is already portable.
   comfortable lie in this ADR.
 - **The 24-hour sweep needs a scheduler the platform does not have.** There is an embedded
   `EventWorker` polling the outbox and nothing else; a periodic job is new machinery, and
-  until it exists orphaned blobs accumulate.
+  until it exists orphaned blobs accumulate. **Answered by
+  [ADR-0092](0092-periodic-jobs-as-embedded-loops.md)** (#142): the sweep runs today, as an
+  `asyncio` loop in the API process, on the condition that a job be safe to run beside
+  itself. The cost this bullet names was real and is now paid — recorded here rather than
+  edited away, because what it cost is why 0092 exists.
 - Photos are the first thing the platform stores that is expensive per unit and cannot be
   regenerated. Retention, export and deletion now have a binary corpus to account for, not
   only rows.

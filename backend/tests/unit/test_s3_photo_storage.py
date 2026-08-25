@@ -14,20 +14,26 @@ in presigned URL semantics, multipart edges or CORS.
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from urllib.parse import parse_qs, urlparse
 from uuid import UUID
 
 import pytest
 from botocore.exceptions import ClientError
 
+from app.kernel import InvariantViolated
 from app.modules.player_profile.domain.photos import PhotoRef
 from app.modules.player_profile.infrastructure.s3_photo_storage import (
+    KEY_PREFIX,
     S3PhotoStorage,
     object_key_for,
+    ref_from_object_key,
     reports_an_absent_object,
+    stored_photos_in,
 )
 
 ALICE = UUID("11111111-1111-1111-1111-111111111111")
+BOB = UUID("22222222-2222-2222-2222-222222222222")
 PHOTO = UUID("33333333-3333-3333-3333-333333333333")
 REF = PhotoRef(owner_id=ALICE, photo_id=PHOTO)
 
@@ -179,3 +185,106 @@ def test_a_broken_store_is_never_reported_as_an_absent_photo(code: str) -> None:
     error = ClientError({"Error": {"Code": code}}, "HeadObject")
 
     assert not reports_an_absent_object(error)
+
+
+# ---------------------------------------------------------------------------
+# Reading a listing back — the half the sweep's deletes rest on (#142)
+# ---------------------------------------------------------------------------
+
+
+def test_a_key_this_adapter_wrote_reads_back_as_the_same_ref() -> None:
+    """The round trip, which is the whole claim `ref_from_object_key` makes.
+
+    Written against `object_key_for` rather than against a literal, so the two
+    halves cannot drift apart while both look right on their own.
+    """
+
+    assert ref_from_object_key(object_key_for(ALICE, PHOTO)) == REF
+
+
+def test_every_key_this_adapter_writes_is_under_the_prefix_the_sweep_lists() -> None:
+    # If these disagreed the sweep would enumerate nothing and report a clean
+    # bucket forever — a silent no-op, not a failure.
+    assert object_key_for(ALICE, PHOTO).startswith(KEY_PREFIX)
+
+
+@pytest.mark.parametrize(
+    "key",
+    [
+        "players/",
+        "players/not-a-uuid/photos/33333333-3333-3333-3333-333333333333.jpg",
+        f"players/{ALICE}/photos/not-a-uuid.jpg",
+        f"players/{ALICE}/photos/{PHOTO}.png",
+        f"players/{ALICE}/avatars/{PHOTO}.jpg",
+        f"players/{ALICE}/photos/nested/{PHOTO}.jpg",
+        f"exports/{ALICE}/photos/{PHOTO}.jpg",
+        "",
+    ],
+    ids=[
+        "a folder marker",
+        "an owner that is not a uuid",
+        "a photo id that is not a uuid",
+        "some other extension",
+        "some other kind of object",
+        "a deeper layout",
+        "a different prefix entirely",
+        "nothing at all",
+    ],
+)
+def test_a_key_this_adapter_did_not_write_is_refused_rather_than_guessed(
+    key: str,
+) -> None:
+    """**This function decides what a sweep may delete.**
+
+    Anything that is not exactly the template's shape must come back `None`, so
+    an object nobody can identify is left where it is. A parser that guessed
+    here would be a parser that deletes somebody's data on a layout change.
+    """
+
+    assert ref_from_object_key(key) is None
+
+
+def test_a_listing_page_becomes_the_photos_it_named() -> None:
+    taken = datetime(2026, 8, 24, 9, 30, tzinfo=timezone.utc)
+    page = [{"Key": object_key_for(ALICE, PHOTO), "LastModified": taken}]
+
+    photos = list(stored_photos_in(page))
+
+    assert [photo.ref for photo in photos] == [REF]
+    assert photos[0].stored_at == taken
+
+
+def test_entries_a_listing_page_holds_that_are_not_photos_are_skipped() -> None:
+    """A bucket may hold objects this application did not write, and a page may
+    describe an entry without a stamp. Neither is a candidate, and neither is an
+    error — the sweep judges only what it can name."""
+
+    taken = datetime(2026, 8, 24, 9, 30, tzinfo=timezone.utc)
+    page = [
+        {"Key": "players/", "LastModified": taken},
+        {"Key": "some-other-tool/thing.bin", "LastModified": taken},
+        {"Key": object_key_for(ALICE, PHOTO)},
+        {"LastModified": taken},
+        {"Key": object_key_for(BOB, PHOTO), "LastModified": taken},
+    ]
+
+    assert [photo.ref.owner_id for photo in stored_photos_in(page)] == [BOB]
+
+
+def test_a_stamp_without_a_timezone_is_refused_rather_than_compared() -> None:
+    """Every S3-compatible store returns an aware `LastModified`.
+
+    If one ever does not, the value must not reach a comparison against the
+    cutoff: a naive datetime read as UTC is wrong by an offset, and the wrong
+    direction deletes a photo that is inside the window.
+    """
+
+    page = [
+        {
+            "Key": object_key_for(ALICE, PHOTO),
+            "LastModified": datetime(2026, 8, 24, 9, 30),
+        }
+    ]
+
+    with pytest.raises(InvariantViolated):
+        list(stored_photos_in(page))

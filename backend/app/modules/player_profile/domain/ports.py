@@ -19,12 +19,14 @@ answer and is invisible from here (``docs/adr/0091``).
 
 from __future__ import annotations
 
-from typing import Mapping, Protocol, runtime_checkable
+from typing import AsyncGenerator, Mapping, Protocol, runtime_checkable
 from uuid import UUID
 
+from app.kernel import Instant
 from app.modules.player_profile.domain.photos import (
     PhotoRef,
     PhotoReviewVerdict,
+    StoredPhoto,
     TranscodedImage,
 )
 from app.modules.player_profile.domain.profile import PlayerProfile
@@ -68,6 +70,45 @@ class PhotoStorage(Protocol):
         Pure computation in every S3-compatible store — a signature, not a round
         trip — so it says nothing about whether the object is there. Callers
         that need to know ask ``exists`` first.
+        """
+        ...
+
+    def stored_before(self, cutoff: Instant) -> AsyncGenerator[StoredPhoto, None]:
+        """Every photo this store took before `cutoff`, oldest bucket order.
+
+        **A stream rather than a list**, because the answer is unbounded: it is
+        every photo the platform holds that is older than a day, and a store
+        that grew past what one process can hold in memory would turn the sweep
+        from slow into fatal. An adapter pages; this iterates.
+
+        **An ``AsyncGenerator`` rather than an ``AsyncIterator``, deliberately:
+        the caller must be able to close it.** An adapter holds an open store
+        client across the yields, and a caller that abandoned the stream
+        mid-walk — because a delete raised — would leave that client to be
+        finalised whenever the event loop got round to it. Saying *generator* in
+        the type is what makes ``aclosing`` at the call site typecheck rather
+        than be a hopeful call on an object that may not answer it.
+
+        **Grouped by owner**, which is a promise and not an accident. Every
+        S3-compatible store lists lexicographically and the owner is the first
+        variable component of a key, so one player's photos arrive together —
+        which is what lets the sweep replay a profile once per owner rather than
+        once per photo.
+
+        The stamp is the store's own, and there is no other source for it: an
+        uploaded photo is not in any event stream until a commit names it, so
+        *when did this arrive* is a question only the store can answer.
+        """
+        ...
+
+    async def delete(self, ref: PhotoRef) -> None:
+        """Remove this photo. **Already gone is success, not an error.**
+
+        That is what makes a sweep safe to run beside itself: two of them
+        handed the same orphan both finish, and the loser deleting nothing is
+        the ordinary outcome rather than a failure to recover from. Every
+        S3-compatible store already behaves this way — an adapter that turned an
+        absent object into a raise would be inventing a failure.
         """
         ...
 
