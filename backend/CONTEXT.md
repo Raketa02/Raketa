@@ -198,6 +198,18 @@ there; they are not repeated here.
   Developing stops the seed by name. The band's edges come from the rating rather than
   from a second copy, so a re-cut band moves the claim with it. _Avoid_: a claim written as
   literal Levels, a check that only runs on the account this run happened to create.
+- **Served vocabulary** — a closed domain constant the platform owns, held in exactly one
+  module of the context that owns it and exposed **read-only** over the player API so no
+  client hardcodes it. Two exist: the `Sport` registry at `GET /api/v1/sports`, and the
+  Social tag vocabulary with the Search radius bounds at
+  `GET /api/v1/player-profile/options`. What crosses the wire is **ids, grouping and
+  numbers** — never a label, because the backend emits machine codes and never display
+  text, and a preformatted string can only be one rendering in one language. The rule is
+  enforced rather than remembered: a walk over `app/` fails on a string literal equal to a
+  tag id anywhere outside the vocabulary module, because the failure it prevents — the
+  onboarding picker and the profile editor holding two lists that have drifted — is
+  invisible until a player sees a tag the engine has never heard of. _Avoid_: a second
+  copy in a client, a served label, shipping the list in an app-store release.
 
 Add backend-specific technical terms here as they are resolved. Anything describing the
 *domain* belongs in the shared glossary instead.

@@ -601,6 +601,28 @@
           }
         ]
       }
+    },
+    "/api/v1/player-profile/options": {
+      "get": {
+        "tags": [
+          "player-profile"
+        ],
+        "summary": "The Social tag vocabulary and the Search radius bounds",
+        "description": "Read-only, unauthenticated, no request body. Tag **ids** and their grouping cross the wire; the label a player reads is the client's own copy.\n\nA tag id is permanent \u2014 it is persisted on profiles, so retiring a tag means dropping it from this response while continuing to honour it on the profiles that hold it. Ids are never reused and never renamed.\n\nBoth the group order and the tag order within a group are part of the contract: the picker renders what it is given rather than sorting.",
+        "operationId": "get_player_profile_options_api_v1_player_profile_options_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlayerProfileOptionsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -899,6 +921,27 @@
         "type": "object",
         "title": "LogoutResponse"
       },
+      "PlayerProfileOptionsResponse": {
+        "properties": {
+          "social_tag_groups": {
+            "items": {
+              "$ref": "#/components/schemas/SocialTagGroupResource"
+            },
+            "type": "array",
+            "title": "Social Tag Groups"
+          },
+          "search_radius": {
+            "$ref": "#/components/schemas/SearchRadiusBoundsResource"
+          }
+        },
+        "type": "object",
+        "required": [
+          "social_tag_groups",
+          "search_radius"
+        ],
+        "title": "PlayerProfileOptionsResponse",
+        "description": "Everything a client needs to *render* the profile steps, in one round trip.\n\nTwo facts rather than one endpoint each, because they are the same kind of\nthing \u2014 closed, read-only, and needed by the same part of onboarding at the\nsame moment."
+      },
       "QuestionResponse": {
         "properties": {
           "id": {
@@ -1140,6 +1183,109 @@
           "calibration_priority"
         ],
         "title": "ResultResponse"
+      },
+      "SearchRadiusBoundsResource": {
+        "properties": {
+          "minimum_km": {
+            "type": "integer",
+            "title": "Minimum Km",
+            "description": "Smallest radius a player may hold"
+          },
+          "maximum_km": {
+            "type": "integer",
+            "title": "Maximum Km",
+            "description": "Largest radius a player may hold"
+          },
+          "step_km": {
+            "type": "integer",
+            "title": "Step Km",
+            "description": "Granularity \u2014 whole kilometres"
+          },
+          "default_km": {
+            "type": "integer",
+            "title": "Default Km",
+            "description": "What the control opens at"
+          }
+        },
+        "type": "object",
+        "required": [
+          "minimum_km",
+          "maximum_km",
+          "step_km",
+          "default_km"
+        ],
+        "title": "SearchRadiusBoundsResource",
+        "description": "The range a Search radius may take, in whole kilometres.\n\nThe unit is in every field name on purpose: a bare ``minimum`` is one\nrefactor away from being read as metres."
+      },
+      "SocialTag": {
+        "type": "string",
+        "enum": [
+          "STAYS_FOR_A_DRINK",
+          "STRAIGHT_HOME_AFTER",
+          "TALKS_THROUGH_THE_MATCH",
+          "SETTLES_UP_ON_THE_SPOT",
+          "BOOKS_THE_NEXT_ONE",
+          "SHARES_A_LIFT",
+          "PLAYS_TO_WIN",
+          "LAUGHS_OFF_MISTAKES",
+          "ENCOURAGES_A_PARTNER",
+          "GENEROUS_ON_LINE_CALLS",
+          "QUIET_AND_FOCUSED",
+          "WARMS_UP_PROPERLY",
+          "HERE_TO_IMPROVE",
+          "HERE_TO_COMPETE",
+          "HERE_FOR_THE_EXERCISE",
+          "HERE_TO_MEET_PLAYERS",
+          "HERE_FOR_A_REGULAR_GAME",
+          "HERE_TO_GET_BACK_INTO_IT"
+        ],
+        "title": "SocialTag",
+        "description": "The closed set of tag ids. An id here is permanent."
+      },
+      "SocialTagGroup": {
+        "type": "string",
+        "enum": [
+          "AFTER_THE_MATCH",
+          "ON_THE_COURT",
+          "WHY_YOU_ARE_HERE"
+        ],
+        "title": "SocialTagGroup",
+        "description": "The three groups, which are about the game and nothing else."
+      },
+      "SocialTagGroupResource": {
+        "properties": {
+          "group": {
+            "$ref": "#/components/schemas/SocialTagGroup"
+          },
+          "tags": {
+            "items": {
+              "$ref": "#/components/schemas/SocialTagResource"
+            },
+            "type": "array",
+            "title": "Tags"
+          }
+        },
+        "type": "object",
+        "required": [
+          "group",
+          "tags"
+        ],
+        "title": "SocialTagGroupResource",
+        "description": "One of the three groups, with its tags in the order they are rendered."
+      },
+      "SocialTagResource": {
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/SocialTag",
+            "description": "Permanent id, persisted on profiles"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "title": "SocialTagResource",
+        "description": "One tag, as an id and nothing else \u2014 for now.\n\nAn object rather than a bare string deliberately: retiring a tag is\nanticipated (an id is honoured forever and hidden from the picker), and a\ntag that carries a field one day is an addition here, where an array of\nstrings would have to change element type \u2014 which breaks a shipped client."
       },
       "Sport": {
         "type": "string",
