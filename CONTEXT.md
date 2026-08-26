@@ -530,6 +530,21 @@ decision has actually settled appears here.
   only thing that can prove the floor wrong, and it exists only at scoring time. **Engine-internal
   and never returned to anybody**: a player may ask why somebody was shown, and nobody may ask who
   was withheld.
+- **Line-up** — *who* the four (or two) are. **Arrangement** is *which side each of them plays
+  on*: for any four there are exactly three, and the engine returns all three with a forecast
+  each, so choosing between them is a selection and never a calculation. The two are separate
+  words because the best-of-three forecast answers *are these the right people* while the
+  arranged forecast answers *is this the right way round*, and conflating them is how a screen
+  stops changing when somebody is moved across the net.
+- **Interest** — a player's own *yes* to a specific person, cited to the **Search** that
+  surfaced them. It is a human's judgement rather than the engine's, which is why it may lift
+  somebody above the **quality floor** where nothing the engine computes may. It outlives the
+  search it came from, and it is not a challenge — a challenge belongs to a context that does
+  not exist yet.
+- **Deal** — one invocation of the **deck**: an ordered batch of cards, shown one at a time. The
+  deal is the unit, not the card, because the deck's ordering — people who already said yes,
+  then liveness, then spread for variety — is a property of a whole deal and cannot be
+  evaluated a card at a time.
 - **Ruleset version** — the name of the frozen set of numbers a search used. **Engine version**
   is its sibling and means the *maths* changed. Stamped on every search, so a Fit stays
   interpretable after the numbers move
@@ -587,6 +602,17 @@ decision has actually settled appears here.
 - **The empty-result rate is a guardrail metric, never a target.** It is reported only paired
   with the return rate, and it is never on its own sufficient grounds to move the quality floor —
   which moves only in a record with a name on it.
+- **A weight is configuration; an evidence shape is contract.** A released ruleset may move
+  every number the engine holds without touching the API. Adding, removing or reshaping the
+  **evidence** a term reports is an API change, because the client generates its renderers from
+  it — and a reason the client cannot render is shown as a **named gap saying the app is out of
+  date**, never dropped silently. A breakdown that quietly stops adding up is the same class of
+  lie as a recomputed score, and worse for being invisible
+  ([ADR-0106](docs/adr/0106-evidence-vocabulary-is-contract-weights-are-configuration.md)).
+- **Absence has two spellings and they mean different things.** *Omitted* is *this does not
+  apply here*; *null* is *this applies and the answer is a measured nothing*. It is the
+  measured-versus-invented test carried to the wire, and the two generate as different types so
+  a client cannot treat them alike.
 - **A protected characteristic may gate; it may never score.** The value reaches candidate
   generation and gating and is **absent from the type handed to the scorer**, so no term can
   weigh it — the guarantee is a type boundary the build asserts, not a review checklist
