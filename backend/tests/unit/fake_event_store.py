@@ -16,8 +16,12 @@ load-bearing, so three rules are deliberate rather than convenient:
    that skipped encoding would pass a test the real query fails — a renamed field
    would simply return nothing, which is indistinguishable from "no run in
    progress".
-3. **Insertion order is preserved**, because "the newest open run wins" reads the
-   candidate scan in reverse.
+3. **Append order is modelled explicitly**, by a store-wide counter rather than
+   by dict insertion order. "The newest open run wins" reads the candidate scan
+   in reverse, so that order is load-bearing — and the real adapter now gets it
+   from a `sequence_no` column rather than from `occurred_at`, which cannot
+   order two streams opened in one commit. A double that leaned on Python dict
+   ordering would keep passing if the real query lost its ordering guarantee.
 """
 
 from __future__ import annotations
@@ -78,6 +82,7 @@ class _Row:
     schema_version: int
     payload: dict[str, object]
     occurred_at: datetime
+    sequence_no: int
 
 
 class InMemoryEventStore:
@@ -88,6 +93,10 @@ class InMemoryEventStore:
         # Insertion-ordered: streams in the order they were opened, rows in the
         # order they were appended.
         self._streams: dict[tuple[str, UUID], list[_Row]] = {}
+        # Stands in for the store's `sequence_no` identity column: one counter
+        # for the whole store, so rows on different streams get a defined
+        # relative order exactly as the database gives them one.
+        self._next_sequence_no = 1
         # Counted so a test can assert the store was never *asked*. An empty
         # append is a no-op here and in the real adapter, so counting rows alone
         # cannot tell "wrote nothing" from "never called".
@@ -123,11 +132,13 @@ class InMemoryEventStore:
                 schema_version=encoded.schema_version,
                 payload=encoded.payload,
                 occurred_at=event.occurred_at,
+                sequence_no=self._next_sequence_no + offset - 1,
             )
             for offset, (event, encoded) in enumerate(
                 ((event, self._codec.encode(event)) for event in pending), start=1
             )
         ]
+        self._next_sequence_no += len(rows)
         stream.extend(rows)
         return [self._to_stored(row) for row in rows]
 
@@ -140,14 +151,20 @@ class InMemoryEventStore:
     async def find_aggregate_ids_by_first_event(
         self, *, aggregate_type: str, payload_equals: Mapping[str, str]
     ) -> list[UUID]:
-        matched: list[UUID] = []
+        matched: list[tuple[int, UUID]] = []
         for (stream_type, aggregate_id), stream in self._streams.items():
             if stream_type != aggregate_type or not stream:
                 continue
-            opening = stream[0].payload
-            if all(opening.get(key) == value for key, value in payload_equals.items()):
-                matched.append(aggregate_id)
-        return matched
+            opening = stream[0]
+            if all(
+                opening.payload.get(key) == value
+                for key, value in payload_equals.items()
+            ):
+                matched.append((opening.sequence_no, aggregate_id))
+        # Sorted on the opening event's append position, which is what the real
+        # query's `ORDER BY sequence_no` returns. Sorting rather than trusting
+        # dict order is the point: it is the guarantee that is being doubled.
+        return [aggregate_id for _, aggregate_id in sorted(matched)]
 
     def _to_stored(self, row: _Row) -> StoredDomainEvent:
         # Decoded on the way out, exactly as the real adapter does, so a payload
@@ -163,6 +180,7 @@ class InMemoryEventStore:
         )
         return StoredDomainEvent(
             id=row.id,
+            sequence_no=row.sequence_no,
             aggregate_type=row.aggregate_type,
             aggregate_id=row.aggregate_id,
             version=row.version,

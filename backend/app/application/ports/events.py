@@ -61,8 +61,15 @@ class DomainEventStore(Protocol):
 
         The read side of an event-sourced index: a stream's opening event carries
         the fields it is keyed by (a player, a sport), so a lookup needs no
-        parallel table — it reads the streams directly. Ordered by when the stream
-        opened, oldest first.
+        parallel table — it reads the streams directly.
+
+        **Ordered by append order, oldest first** — the position each stream's
+        opening event took in the store, not the instant it claims. This is the
+        one read in the system that crosses streams, and callers tie-break on the
+        order (``_newest_open_by_sport`` scans it in reverse), so the guarantee is
+        part of the contract rather than an artefact of the query. Domain time
+        cannot supply it: two streams opened in one commit share an
+        ``occurred_at``.
         """
         ...
 

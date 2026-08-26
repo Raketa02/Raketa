@@ -47,6 +47,15 @@ there; they are not repeated here.
 - **Durable event name** — the stable `"<context>.<event>"` string plus integer version
   registered in the event catalog, e.g. `users.user_registered` / v1. It is the wire
   contract for stored history and is **independent of the Python class name**.
+- **Append order** (`sequence_no`) — the position a row took in `event_store`, assigned by
+  the database and the **only total order over the whole log**
+  ([ADR-0097](../docs/adr/0097-event-store-append-order-is-a-sequence-column.md)). It is
+  the table's primary key, and the only column a read that crosses streams may order by.
+  It is not a count: identity counters skip numbers on rollback. Distinguish it from
+  **version**, which orders one stream and says nothing about how two interleave, and from
+  `occurred_at`, the **domain moment** — one commit may append several events sharing an
+  instant, so domain time is not a tie-break and must never be used as one.
+  _Avoid_: "timestamp", "event number", "offset".
 - **Aggregate repository** — the port a use case loads and saves an **event-sourced
   aggregate** through, e.g. `AssessmentRepository`. It owns the aggregate-type name, the
   replay, the ownership scoping and the optimistic-concurrency bookkeeping, so a use case

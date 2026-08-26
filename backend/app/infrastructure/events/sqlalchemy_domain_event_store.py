@@ -68,8 +68,7 @@ class SqlAlchemyEventStore:
             await self._session.flush(objects=rows)
         except IntegrityError as exc:
             raise EventStreamVersionConflict(
-                f"Concurrent modification detected for "
-                f"{aggregate_type}/{aggregate_id}"
+                f"Concurrent modification detected for {aggregate_type}/{aggregate_id}"
             ) from exc
         return [_to_stored(row, self._codec) for row in rows]
 
@@ -95,14 +94,15 @@ class SqlAlchemyEventStore:
         )
         for key, value in payload_equals.items():
             query = query.where(EventStoreORM.payload[key].as_string() == value)
-        result = await self._session.execute(
-            query.order_by(EventStoreORM.occurred_at, EventStoreORM.version)
-        )
+        # Append order, not domain time. This read crosses streams, and
+        # `occurred_at` is not a total order over them: two streams opened in one
+        # commit share an instant, and Postgres is free to return such a tie
+        # either way round. `_newest_open_by_sport` scans this list in reverse to
+        # find the run to resume, so an undefined tie is an undefined answer.
+        result = await self._session.execute(query.order_by(EventStoreORM.sequence_no))
         return list(result.scalars().all())
 
-    async def _current_version(
-        self, *, aggregate_type: str, aggregate_id: UUID
-    ) -> int:
+    async def _current_version(self, *, aggregate_type: str, aggregate_id: UUID) -> int:
         result = await self._session.execute(
             select(func.coalesce(func.max(EventStoreORM.version), 0)).where(
                 EventStoreORM.aggregate_type == aggregate_type,
@@ -125,6 +125,7 @@ def _to_stored(row: EventStoreORM, codec: EventCodec) -> StoredDomainEvent:
     )
     return StoredDomainEvent(
         id=row.id,
+        sequence_no=row.sequence_no,
         aggregate_type=row.aggregate_type,
         aggregate_id=row.aggregate_id,
         version=row.version,
