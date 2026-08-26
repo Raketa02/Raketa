@@ -56,6 +56,16 @@ against an integer somebody dislikes. This is the constraint handed to
 The document's starting position of **52** is not adopted and not rejected here; it is simply
 not yet an answer to anything. It survives only if it satisfies the six.
 
+> **Resolved in [`ranking-weights.md`](ranking-weights.md) §10, and the failure this section
+> anticipated is the one that happened.** No weight vector satisfies the six in for-fun, and the
+> diagnosis was that neither instrument could do the job — the floor is now backed by a level
+> gate ([ADR-0103](../../adr/0103-where-the-curve-saturates-the-gate-begins.md)). **Case 3 is
+> excluded by that gate rather than by the floor**, so it no longer bounds the floor from below
+> and is replaced by **case 3′**, the worst pairing still admitted to scoring. **52 is refuted by
+> case 5** — the median stranger scores 46.0 in competitive, so 52 hides the case whose stated
+> job is to sit at the bar. The floor is **44**, and all six now carry explicit term-value
+> readings so they can be re-run by machine.
+
 - **Falsified by:** return rate of games arising from candidates just above the floor versus
   just below it. Requires the outcome half.
 - **Never relaxed, and the empty-result rate is never on its own sufficient grounds to move

@@ -439,8 +439,20 @@ Decided by [ADR-0093](docs/adr/0093-matcher-in-the-backend-with-a-pure-match-fit
 not yet built, and its vocabulary is still being resolved on the matchmaking map. Only what a
 decision has actually settled appears here.
 
+- **Fit** — how good the game would be, printed on the card as one number out of a hundred. A
+  weighted sum of the **terms**, renormalised over whichever of them produced evidence.
+- **Liveness** — how likely the game is to *happen*: whether they answer, whether they are
+  around, whether they would want it. It **reorders** the list and never enters Fit, so the one
+  number a player is asked to trust never quietly contains *"they open the app a lot"*.
+- **Term** — one question the engine asks about a pairing, returning a value in `[0,1]` and its
+  evidence. **Playing style** and **social vibe** are the two that read **Social tags**, and they
+  are split by *the claim a matrix entry makes*, never by which group a tag was printed in.
 - **Gate** — a hard exclusion applied before anything is scored. Not a weight, and no
   relaxation ever reaches one.
+- **Level gate** — the gate on how far apart two levels may be: a candidate is not a candidate
+  once Δμ reaches the searching mode's **own level tolerance**. There is one number per mode and
+  it is the same number the level curve already uses, so the gate and the curve can never drift
+  apart ([ADR-0103](docs/adr/0103-where-the-curve-saturates-the-gate-begins.md)).
 - **NoEvidence** — what a term returns when it has nothing to weigh. It is dropped from the sum
   and the remaining weights renormalise; it is never `0`, and never a neutral `0.5`.
 - **Quality floor** — the Fit below which a candidate is not shown at all. A **fixed** bar: no
@@ -490,6 +502,15 @@ decision has actually settled appears here.
   ([ADR-0098](docs/adr/0098-matcher-demands-as-executable-contracts.md)). `AtStakeQuery` is the
   odd one out: its provider **exists** and the rule it needs does not.
 
+- **Tag relationship matrix** — product's claims about how two **Social tags** relate: **matching**,
+  **complementary** or **clashing**, each entry naming which term it belongs to, which modes it
+  holds in, and — in doubles — whether it is about partners or opponents. It is a claim about how
+  people get on, not an implementation detail, so it is ruleset data and arguable without a code
+  review. A **second and separate** map, over `WHY_YOU_ARE_HERE` alone, sets the familiarity sign.
+- **Modifier budget** — the bound on everything the modifiers together may move a Fit, so no stack
+  of small adjustments can override the substance of a match. The **reliability floor** sits
+  outside it and is larger than all of it, deliberately.
+
 **Terms this context refuses**
 - **Game format** — *mixed doubles*, *women's doubles* and the like. Deliberately does not
   exist. A search carries a **Sport** and never a format; the sport fixes the seat count
@@ -504,6 +525,19 @@ decision has actually settled appears here.
 - **A safety gate is verified against live state, on the side that owns the truth.** The
   matcher proposes and the backend disposes: anything failing live verification is dropped from
   the answer before it reaches the client, and the shortlist is simply short by one.
+- **A term must never be blind over the range it is asked to score.** Where a term's curve
+  saturates — the same value for every input past a point — the engine has stopped having an
+  opinion, and a bar over a score cannot discriminate what the score cannot see. **Where the curve
+  saturates, the gate begins**
+  ([ADR-0103](docs/adr/0103-where-the-curve-saturates-the-gate-begins.md)). The mirror of the
+  invariant below, and found the same way: by a case the weights could not decide.
+- **A term's zero is its worst outcome, never its most common one.** A term whose typical
+  pairing scores nothing is not weighing what its weight claims — and a penalty that disappears
+  into a clamp at zero is a penalty that was never charged.
+- **A silent movement never exceeds the movement that owes an explanation.** Liveness explains
+  itself whenever it moves somebody into view, so a signal that may never be shown to either side
+  is bounded by that same threshold. The engine may move somebody quietly only by less than it
+  would owe a reason for.
 - **A gate may be honestly empty; a term may never be honestly neutral.** The test for a fact
   whose context does not exist yet is whether a zero would be *measured* or *invented*. No
   challenge has ever been sent by anyone, so an open-challenge count of zero is real and the

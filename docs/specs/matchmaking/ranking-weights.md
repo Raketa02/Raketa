@@ -1,0 +1,594 @@
+# The ranking weights, and what would prove each of them wrong
+
+Settles [#168](https://github.com/Raketa02/Raketa/issues/168) on the map
+[The matchmaking engine: who sits down, and why](https://github.com/Raketa02/Raketa/issues/155).
+
+Everything the matcher uses to **reorder a list**, as against
+[`the-five-numbers.md`](the-five-numbers.md), which decides whether a list exists at all. Each
+number here is a starting vector: an admitted hypothesis with a falsifying measurement attached,
+in the discipline §24 asks of itself and ADR-0015 already requires of engine constants.
+
+**None of it is measurable before the outcome half of the telemetry chain exists**, which needs
+`matches`, which is out of scope. What *can* be done now was done: the vector was **tested**
+against `the-five-numbers.md`'s six judged pairings rather than asserted, and the test found
+two defects the document had not — one in a term's arithmetic, one in the instrument being
+asked to refuse a bad match. Both are recorded below with what they cost.
+
+---
+
+## 1. The eight terms are seven columns and two claims
+
+§9.3 has eight terms; the prototype's `compat()` (`social-prototype-v1.html:1309`) has seven.
+Intent alignment accounts for one of the missing two. The other was never written down anywhere:
+**the prototype's single `vibe` term merges what the document splits into playing style (§9.3.6)
+and social vibe (§9.3.7)**.
+
+The document splits them **by tag group** — `ON_THE_COURT` on one side, `AFTER_THE_MATCH +
+WHY_YOU_ARE_HERE` on the other. That split cannot classify its own pair table. Of the eleven
+relationships §9.3.6 lists:
+
+| | Count | Examples |
+|---|--:|---|
+| Wholly inside `ON_THE_COURT` | **1** | `PLAYS_TO_WIN` ↔ `LAUGHS_OFF_MISTAKES` |
+| Wholly inside `AFTER_THE_MATCH` + `WHY_YOU_ARE_HERE` | 4 | `HERE_TO_MEET_PLAYERS` + `SHARES_A_LIFT` |
+| **Crossing the boundary** | **5** | `TALKS_THROUGH_THE_MATCH` ↔ `QUIET_AND_FOCUSED` |
+| Not a tag pair at all | 1 | `HERE_TO_IMPROVE` + *"a stronger, focused opponent"* — reads μ, and §9.3.6's own rule stands it down |
+
+The clearest case is the only clash the document marks **Real**: `TALKS_THROUGH_THE_MATCH` ↔
+`QUIET_AND_FOCUSED`, *"ruins the hour for both"* — unambiguously about the hour on court, and
+`TALKS_THROUGH_THE_MATCH` lives in `AFTER_THE_MATCH`.
+
+**The split is by relationship, not by tag.** Every entry in the relationship matrix carries a
+`column`, and a *matched* single tag falls to its own group's column. A term is therefore **not
+a group of tags; it is a group of claims about pairs** — and which claims are about the hour on
+court is exactly the kind of judgement §23 Q18 already assigns to product.
+
+The heading of §9.3.6 (*"the `ON_THE_COURT` group"*) and of §9.3.7 (*"`AFTER_THE_MATCH` +
+`WHY_YOU_ARE_HERE`"*) are wrong as written and are not the definition of either term.
+
+### The matrix entry
+
+Product-owned, served as ruleset data — §23 Q18 confirmed. §9.3.6's own table already scopes
+entries three ways it gives itself no field for (*"For-fun only"* twice, *"Partner relationship
+only"*, *"far worse as partners than as opponents"*), and its complementary rows explicitly
+claim some pairs beat a match, which one global `0.7` cannot express.
+
+```
+{ a, b,
+  kind:     MATCH | COMPLEMENT | CLASH,
+  column:   STYLE | VIBE,
+  modes:    [COMPETITIVE, FOR_FUN],
+  seats:    [PARTNER, OPPONENT],
+  strength | severity }
+```
+
+The **seat** dimension bites only in doubles (§9.9, still fog on the map), but it goes in the
+shape now or the group objective has nowhere to read it.
+
+**A column's tag domain is derived from the matrix** — the ids appearing in any entry carrying
+that column — never declared separately, so it re-derives itself the moment product edits an
+entry. A tag may appear in both domains; `PLAYS_TO_WIN` does.
+
+---
+
+## 2. The weights
+
+Adopted as §9.3's, and now **tested** rather than asserted. Weights sum to 100 within a mode
+before renormalisation (§10).
+
+| # | Term | Comp | Fun |
+|---|---|--:|--:|
+| 1 | Level fit | **26** | 11 |
+| 2 | Predicted balance | 17 | 6 |
+| 3 | Intent alignment | 14 | 14 |
+| 4 | Reliability | 13 | 9 |
+| 5 | Availability overlap | 11 | **16** |
+| 6 | Playing style | 9 | 11 |
+| 7 | Distance | 6 | 11 |
+| 8 | Social vibe | 4 | **22** |
+
+**Day one, reliability stands down** (§10) and the live seven renormalise — ×100/87 competitive,
+×100/91 for fun. This is the basis every number below is checked against, per §5:
+
+| | level | balance | intent | avail | style | distance | vibe |
+|---|--:|--:|--:|--:|--:|--:|--:|
+| **Competitive** | 29.9 | 19.5 | 16.1 | 12.6 | 10.3 | 6.9 | 4.6 |
+| **For fun** | 12.1 | 6.6 | 15.4 | 17.6 | 12.1 | 12.1 | 24.2 |
+
+**The inversion is the shape, and it survives the test.** For fun, social vibe is the largest
+term in the match — larger than level — because that is what *for fun* means, and it is a bigger
+shift than the prototype's `MM_W` makes.
+
+### The tag-stuffing constraint, as an inequality rather than an intention
+
+§9.3.6's rule 2 — *"six well-chosen tags must not outrank a good level match"* — is an
+intention, and intentions do not survive a weight release. Since both tag terms clamp to `[0,1]`,
+the maximum possible tag contribution is exactly `w_style + w_vibe`, and the rule becomes a pure
+weight constraint that needs no knowledge of φ or the matrix:
+
+```
+w_style + w_vibe  <  w_level × X / LEVEL_TOL_COMP           X = 0.30
+```
+
+`X = 0.30` is roughly half `LEVEL_TOL_COMP` — *a noticeably better game*.
+
+| Basis | Left | Right | |
+|---|--:|--:|--|
+| Day one (renormalised) | 14.9 | 16.3 | ✓ |
+| Full eight-term | 13.0 | 14.2 | ✓ |
+
+**Competitive only.** For fun has no such constraint, because in for-fun the tags are *supposed*
+to outrank level and saying otherwise would delete the inversion. What binds for-fun is §5's six
+pairings, which is stricter and better argued.
+
+- **Falsified by:** return rate by match profile — the ground truth for all eight (§24). And
+  return rate by shared-tag count: if flat, the tag terms are worth less than their weight says.
+
+---
+
+## 3. The level curves
+
+```
+Δμ = |μ_searcher − μ_candidate|
+
+competitive:  level = clamp(1 − Δμ / LEVEL_TOL_COMP, 0, 1)              LEVEL_TOL_COMP = 0.55
+for fun:      level = clamp(1 − max(0, Δμ − FUN_FREE_BAND)
+                                 / (LEVEL_TOL_FUN − FUN_FREE_BAND), 0, 1)
+                                                                        FUN_FREE_BAND  = 0.25
+                                                                        LEVEL_TOL_FUN  = 0.90
+```
+
+**The free band is adopted.** The document's argument holds where the prototype's does not: one
+curve at a lower weight still ranks your exact twin first, just more quietly, and *"a friendly
+against someone a quarter-point above you is no worse than one against your exact twin"* is a
+claim about the game, not about the weight.
+
+**The tolerance is absolute on μ, and the level term never calls `band_for`.** The shipped bands
+are deliberately uneven — NEW 0.5 wide, DEVELOPING 1.0, ESTABLISHED 1.1, ADVANCED 1.1
+(`backend/app/engines/racketskill/core.py`, *"that asymmetry is load-bearing"*) — so a fixed Δμ
+tolerance spans more than the whole NEW band and half of ESTABLISHED. That asymmetry exists
+because **evidence** is unevenly available down the scale, not because a tenth of a point means
+less at the top; the tolerance is a claim about how the game plays.
+
+- **Falsified by:** return rate by level gap, **split by band**. If the curve is right
+  absolutely, the split shows nothing. If pairs at Δμ 0.4 return as well as pairs at 0.1, the
+  curve is too steep. If the split *does* show something, tolerance is band-relative and this
+  section is wrong.
+- **`FUN_FREE_BAND` falsified by:** satisfaction and return rate for for-fun games inside versus
+  outside the band.
+
+**Both tolerances are also the level gate** ([ADR-0103](../../adr/0103-where-the-curve-saturates-the-gate-begins.md)).
+There is one number per mode, not two, so the gate and the curve can never drift apart.
+
+---
+
+## 4. Predicted balance
+
+§9.3.2 transfers, with [#164](https://github.com/Raketa02/Raketa/issues/164)'s promotion of the
+clamp bounds to the term's zero and one:
+
+```
+σ_pair = combine_sigma(σ_a, σ_b)
+pct    = clamp(100 − Δμ·145 − σ_pair·32, BALANCE_PCT_MIN, BALANCE_PCT_MAX)   35, 96
+value  = (pct − BALANCE_PCT_MIN) / (BALANCE_PCT_MAX − BALANCE_PCT_MIN)
+```
+
+**σ_pair is `combine_sigma`** — `backend/app/engines/racketskill/core.py:95`, *"the single place
+any engine is allowed to combine two standard deviations"*. The matcher calls the core; it does
+not re-derive the identity, and `√(σ_a² + σ_b²)` appearing in §9.3.2 is that function written
+out rather than a second definition of it.
+
+**The term goes blind at Δμ ≈ 0.34** for a typical σ_pair of 0.495 — that is where `pct` reaches
+its floor and stops discriminating. Recorded here because it is load-bearing for
+[ADR-0103](../../adr/0103-where-the-curve-saturates-the-gate-begins.md) and because it is not
+obvious from the formula.
+
+- **Falsified by:** Brier score of the forecast against confirmed results (§19.1). **The most
+  directly falsifiable numbers in the engine** — the 145 and the 32 are a forecast, and a
+  forecast is checkable.
+- **`BALANCE_PCT_MIN` / `MAX` falsified by:** the observed live range. If real pairings never
+  approach 96 or never approach 35, the normalisation is discriminating over a range that does
+  not exist.
+
+---
+
+## 5. The tag terms
+
+### The defect: the median outcome was scored as zero
+
+```
+style = clamp( dr(matches) + 0.7·dr(complements) − Σ clash_severity, 0, 1 )
+```
+
+This makes *"you two clash badly"* numerically identical to *"you two share nothing"*. The clash
+arm is invisible whenever there are no matches — which is most comparisons: two random four-tag
+draws from nineteen overlap **0.84 times** on average, so the *typical* pair scores at or near
+zero on a term carrying 36% of for-fun.
+
+This is the same defect §9.3.2 already identified in predicted balance — *"wastes the bottom 35
+points of the range"* — in a term nobody checked. The fix is the same move:
+
+```
+dr(n) = 1 − TAG_PHI ⁿ                                       TAG_PHI = 0.45
+raw   = dr(matches) + strength·dr(complements) − Σ severity    ∈ [−CLASH_CAP, 1]
+value = (raw + CLASH_CAP) / (1 + CLASH_CAP)
+```
+
+| raw | value | meaning |
+|---|--:|---|
+| −0.25 (capped clash) | **0.00** | a real clash, both ways |
+| 0 | **0.20** | no relationship fired — *different, not incompatible* |
+| 0.55 (one match) | 0.64 | |
+| 0.99 (six matches) | 0.99 | |
+
+**The term's zero becomes a real clash, not an absence of relationship** — and the clash arm
+becomes visible for the first time.
+
+### The constants
+
+| Constant | Value | Why |
+|---|--:|---|
+| `TAG_PHI` | 0.45 | 1 tag 0.55 · 2 tags 0.80 · 3 tags 0.91 · 6 tags 0.99. The second matched tag is worth less than the first, so tag-stuffing does not pay — and the platform caps selection at six precisely because it expects people to try |
+| `TAG_COMPLEMENT_STRENGTH` | 0.70 | The **default** for a complement entry that states none. A match is two people independently choosing the same string; a complement is product's editorial claim about two different ones, and the discount prices that — but §9.3.6 says some complements beat a match, so the matrix may override per entry |
+| `CLASH_SEVERITY_REAL` | 0.15 | |
+| `CLASH_SEVERITY_MILD` | 0.06 | |
+| `CLASH_CAP` | 0.25 | Binds at two Real clashes, or one Real plus two Mild |
+
+**Clash penalties are capped and smaller than match bonuses**, per §9.3.6 rule 3. One Real clash
+(0.15) is worth less than one match (0.55), and the full cap costs 2.6 points of 100 in
+competitive — enough to notice, nowhere near enough to bury anybody. Being wrong about a match
+costs a duller evening; being wrong about a clash unfairly buries a person, and the magnitudes
+are asymmetric because the costs are.
+
+### When a column stands down
+
+**A column stands down when either side holds no tag in that column's domain**; otherwise a nil
+result is a **measured** zero, worth 0.20. Both sides hold 2–6 tags by construction, so "we
+looked and found no relationship" is a real observation, while "they declared nothing about the
+hour on court" is not.
+
+Checked against `the-five-numbers.md`'s evidence gate: a player holding only `AFTER_THE_MATCH`
+tags stands playing style down and still fires **6 of 7** live terms, comfortably over the
+half-the-live-terms bar. It stays true that the evidence gate excludes nobody today.
+
+- **`TAG_PHI` falsified by:** return rate by shared-tag count. If flat, diminishing returns is
+  too weak.
+- **`CLASH_CAP` and the severities falsified by:** return rate of games with a scored clash,
+  against games with none.
+- **The normalisation falsified by:** the distribution of the raw score. If raw is bimodal at 0
+  and 0.55 rather than spread, the matrix is too sparse and the term is a shared-tag counter
+  wearing a matrix's clothes.
+
+---
+
+## 6. Reliability, decomposed by mode
+
+§9.3.4's table transfers unchanged.
+
+| Strand | Comp | Fun |
+|---|--:|--:|
+| Shows up | 25 | **32** |
+| Answers challenges | 22 | 22 |
+| Confirms results | **24** | 4 |
+| Keeps plans | 14 | 14 |
+| Settles up | 10 | 12 |
+| Sportsmanship | 5 | **16** |
+
+**The decomposition earns its complexity, and here is the proof rather than the assertion.**
+Take two candidates identical on four strands at 0.75:
+
+| | confirms | sportsmanship | **comp** | **fun** |
+|---|--:|--:|--:|--:|
+| P | 0.95 | 0.55 | **0.788** | 0.726 |
+| Q | 0.55 | 0.95 | 0.712 | **0.774** |
+
+The two modes order them **oppositely**. A single blended score cannot express that, which is
+§9.3.4's argument, now checkable: **the decomposition is justified for exactly as long as such a
+pair exists.** If a later ruleset flattens the two vectors until none does, the decomposition
+has stopped paying and should collapse to the published number.
+
+There are **three** blends of the same six strands in this system, and confusing them is a live
+risk: the published Player Score at `35/20/15/12/10/8`
+([`the-five-numbers.md`](the-five-numbers.md) §4), and these two. The reliability *floor* reads
+the published one — the one deliberate exception, recorded there.
+
+**Settles up will stand down past the other five.** Court money is out of scope
+([ADR-0098](../../adr/0098-matcher-demands-as-executable-contracts.md)), so when
+`player_score` lands the strand vector renormalises within itself exactly as §10 renormalises
+the terms.
+
+- **Falsified by:** ghost rate and answer rate regressed on each strand **separately**. A strand
+  that predicts nothing on its own is a strand whose weight belongs to its neighbours.
+
+---
+
+## 7. The modifiers
+
+`intent_opposed` was deleted by [`the-five-numbers.md`](the-five-numbers.md) §6. Two more
+changes here leave three.
+
+| Modifier | Range | Status |
+|---|--:|---|
+| **Calibration value** | 0 … +4 | Competitive only. **The only modifier whose input exists today** |
+| **Familiarity** | −4 … +5 | Needs `matches` (§8) |
+| **Welcoming record** | 0 … +4 | Range reserved; its content belongs to [#175](https://github.com/Raketa02/Raketa/issues/175) |
+| ~~Language~~ | ~~0 … +2~~ | **Struck** |
+| ~~Intent opposition~~ | ~~−6~~ | Deleted in `the-five-numbers.md` §6 |
+| Reliability floor breach | −11 | Outside the budget, derived as `MODIFIER_BUDGET + 1` |
+
+**`MODIFIER_BUDGET = ±10`, a clamp on the summed stack** rather than a per-modifier cap. On day
+one it is inert — calibration is the only modifier that can fire, so the stack's real range is
+`0 … +4` and only in competitive — and that is correct for the same reason the evidence gate is:
+standing insurance, in place before it is needed.
+
+**Language is struck rather than deferred.** It reads a field that exists nowhere in the backend
+and that no ticket creates; and the privacy line excludes **nationality** from the index by name,
+while a shared-language bonus is the nearest available proxy for it.
+[ADR-0096](../../adr/0096-gender-preference-mutual-gate-invisible-to-the-scorer.md)'s rule is
+*a protected characteristic may gate; it may never score* — this scores. If it returns it returns
+as its own decision under that rule, not as a leftover row in a table.
+
+**Calibration value is binary, not a ramp.** Its input is `calibration_priority` on the rating
+aggregate (`backend/app/engines/assessment.py:71`), which has two values — `standard` and
+`elevated`. §9.4 describes a 0…+4 range; the input supports 0 or +4 and nothing between. It
+applies only where a rating is at stake, so: competitive only, and it is **printed**, because a
+player is entitled to know when they are being matched partly for somebody else's benefit.
+
+- **Falsified by:** the fraction of shortlists where the stack clamp actually binds. If it never
+  binds, the budget is not doing the work its existence claims; if it binds often, the modifiers
+  are competing for a budget too small to hold them.
+
+---
+
+## 8. Familiarity
+
+[#164](https://github.com/Raketa02/Raketa/issues/164) settled the sign — adopted, reading
+**declared tags only**, the searcher's and never the candidate's, repetition winning a tie. Left
+open there: the range, the decay, and how a signed modifier sits in the budget.
+
+```
+strength = 0.5 ^ (days_since_last / FAMILIARITY_HALF_LIFE_DAYS)
+         × (1 − FAMILIARITY_DEPTH_PHI ⁿ)                       n = games played together
+
+repetition-seeking:   +5 × strength
+variety-seeking:      −4 × strength
+neither declared:     −4 × FAMILIARITY_DEFAULT_LEAN × strength
+```
+
+| Constant | Value | Why |
+|---|--:|---|
+| `FAMILIARITY_HALF_LIFE_DAYS` | 90 | An eight-month-old single game sits at **15%** of full — §9.4's *"effectively fresh again"* without pretending it never happened |
+| `FAMILIARITY_DEPTH_PHI` | 0.45 | Same value as `TAG_PHI`, a **separate constant with its own falsifier**. A coincidence of values must never become a shared constant |
+| `FAMILIARITY_DEFAULT_LEAN` | 0.5 | §9.4's *"mildly novelty-preferring"* default, at most −2 |
+
+**The arm is asymmetric on purpose, and it is §9.3.6 rule 3 again**: being wrong about a positive
+costs a duller evening; being wrong about a negative buries a person. `−4 … +5`.
+
+### The reading map
+
+Product-owned ruleset data, a **second and separate map** from the relationship matrix
+([#164](https://github.com/Raketa02/Raketa/issues/164)), exhaustive over the seven
+`WHY_YOU_ARE_HERE` ids:
+
+| Repetition | Variety | Neither |
+|---|---|---|
+| `HERE_FOR_A_REGULAR_GAME` | `HERE_TO_MEET_PLAYERS` | `HERE_TO_COMPETE` |
+| | `HERE_TO_GET_BACK_INTO_IT` | `HERE_FOR_THE_EXERCISE` |
+| | `HERE_TO_IMPROVE` | `OPEN_TO_MEET_SOMEONE` |
+
+Two are in *neither* on purpose: `HERE_TO_COMPETE` wants good opposition and says nothing about
+repetition; `HERE_FOR_THE_EXERCISE` says nothing about **who**. `OPEN_TO_MEET_SOMEONE` takes
+neither, settled by #164. Repetition wins a tie; an all-*neither* reader falls to the default
+lean.
+
+**This is not a double-count against the tag terms**, which also read these ids. The tag does not
+add points through familiarity — it **selects which direction familiarity points**. A selector is
+not an addend, which is precisely the distinction #164's strike of §9.4's σ clause turned on: the
+σ clause *added* value the calibration modifier had already paid for.
+
+- **`FAMILIARITY_HALF_LIFE_DAYS` falsified by:** acceptance rate on repeat pairings by days since
+  the last game. If it does not fall, familiarity is not decaying and the half-life is too long.
+- **The reading map falsified by:** repeat-pairing acceptance rate, split by the searcher's
+  reading. If repetition-seekers and variety-seekers accept repeats at the same rate, the map is
+  reading a tag that does not predict anything, and the whole sign flip goes with it.
+
+---
+
+## 9. Liveness
+
+`liveness_offset ∈ [−25, +25]`, never entering Fit, never shown as a number
+(§9.5, §12.2). `MOVE_NOTICE = 6`: anything moved more than that prints its dominant reason.
+
+### The contradiction, and the invariant that resolves it
+
+§9.5 says anything moved more than `MOVE_NOTICE` prints its dominant reason. §9.5.1 says a
+previous decline is *"never, under any circumstance, shown to either side"* — and gives it a dock
+of **−10**. Both cannot hold.
+
+> **A silent movement never exceeds the movement that owes an explanation:
+> `|silent movement| < MOVE_NOTICE`.**
+
+Enforced by the type system beside §12.2's two-numbers rule. Every Liveness signal is either
+printable, or bounded by the notice threshold.
+
+| Signal | Bound | Printable |
+|---|--:|---|
+| They said *Let's play* to you | +14 | ✓ — and it must be ([ADR-0099](../../adr/0099-relaxation-offers-the-searchers-own-asks.md)'s carve-out) |
+| Previous accept between you | +6 | ✓ |
+| Answer rate and speed | −6 … +6 | ✓ |
+| Recent activity | −5 … +4 | ✓ |
+| Overlap proximity | 0 … +4 | ✓ |
+| Current challenge load | −8 … 0 | ✓ as a coarse code, **never the number** — their inbox depth is theirs |
+| Reciprocal asymmetry | −12 … 0 | ✓ in *Why 78?*, not on the card |
+| **Previous decline between you** | **−6** *(was −10)* | ✗ never, either side |
+| **Exposure adjustment** | **−6 … +6** *(was −6 … +8)* | ✗ today |
+| ~~Radius asymmetry~~ | — | **Struck** — see below |
+
+[#175](https://github.com/Raketa02/Raketa/issues/175) may argue exposure into printability and
+take its +8 back; until it does, the invariant binds it.
+
+### Radius asymmetry was charged twice
+
+§9.3.8 docks a searcher who is outside the candidate's ring by −8. §9.5.2 then computes
+`fit_ba` — the candidate's Fit for the searcher — which **includes the candidate's own distance
+term against the candidate's own radius**. That is the same fact, priced twice.
+
+**The standalone dock goes**; reciprocal asymmetry keeps it, and prices it *proportionately*,
+which a flat −8 does not. `outside_their_radius` still prints on the card, exactly as
+[ADR-0099](../../adr/0099-relaxation-offers-the-searchers-own-asks.md) requires — the fact is
+unchanged, only the second charge disappears.
+
+### Reciprocal fit
+
+```
+fit_ba = Fit(candidate → searcher)
+asym   = max(0, fit_ab − fit_ba − ASYM_TOLERANCE)          ASYM_TOLERANCE = 12
+dock   = −min(12, asym × 0.5)
+```
+
+Computed over the **shortlist only** — after the quality floor, typically 20–40 rows — so it
+costs almost nothing.
+
+§9.5.2 says `fit_ba` runs *"under the candidate's declared intent as the mode"*. After
+[ADR-0094](../../adr/0094-play-intent-declared-per-sport-in-its-own-aggregate.md) a candidate may
+have declared **`NO_PREFERENCE`**, which is not a mode — and there must never be a
+`NO_PREFERENCE` weight vector, since `SearchMode` has two values and `PlayIntent` three by
+design.
+
+**A `NO_PREFERENCE` candidate's reverse fit runs under the searcher's mode.** They are
+indifferent about the kind of evening, so the game being proposed is the game they would be
+judging. This is [#164](https://github.com/Raketa02/Raketa/issues/164)'s deck rule generalised:
+**`NO_PREFERENCE` never selects a weight vector; it inherits one.**
+
+The reverse direction flips what the asymmetric terms measure — the availability denominator
+becomes the candidate's slots, per the glossary's *"the denominator is your slots"*, and distance
+runs against the candidate's radius.
+
+- **`ASYM_TOLERANCE` falsified by:** decline rate by asymmetry bucket.
+- **`MOVE_NOTICE` falsified by:** the fraction of shortlist rows printing a liveness reason. Near
+  zero and it explains nothing; near one and the explanation is noise.
+- **The interest constants** (`INTEREST_TTL = 21 d`, `OUTSTANDING_INTEREST_CAP = 20`,
+  `PASS_SUPPRESS = 30 d`) are §9.5.1's and belong to the deck's product decisions, still fog on
+  the map. They are not settled here.
+
+---
+
+## 10. `QUALITY_FLOOR` = 44
+
+[`the-five-numbers.md`](the-five-numbers.md) defined the floor by six judged pairings and handed
+the integer here. **The document's 52 is refuted**, and the case that refutes it is named.
+
+With [ADR-0103](../../adr/0103-where-the-curve-saturates-the-gate-begins.md)'s gate and §5's
+normalisation applied, on §2's day-one basis:
+
+| Case | Verdict | Comp | Fun |
+|---|---|--:|--:|
+| 1 · same level, three shared evenings, five minutes away, socially blank | Shown | 78.4 | 61.5 |
+| 2 · ideal level, even forecast, close — **no shared slot at all** | Shown | 72.9 | 52.6 |
+| **3′** · just inside the level gate, forecast at its floor, no slot, edge of the radius, no tag relationship | **Not shown** | 20.4 | 24.2 |
+| 4 · everything exceptional, competitive searcher, friendly-only candidate | Shown, low | 73.8 | — |
+| 5 · **the median stranger** — average on everything | Shown | **46.0** | 47.9 |
+| 6 · strong match well inside the searcher's radius, searcher outside theirs | Shown, docked | high | high |
+
+```
+24.2  <  QUALITY_FLOOR  ≤  46.0
+```
+
+**52 hides the median stranger in competitive**, and case 5's stated job is *"this is where the
+bar sits"*. That is the refutation in the form `the-five-numbers.md` requires of any change: not
+a number somebody dislikes, but the case that now decides differently.
+
+**44** is the largest integer that shows all six, less two points for the roundings in the
+readings, and twenty clear of the worst pairing the engine will still look at.
+
+Two things the table settles beyond the integer:
+
+- **Case 3 is replaced by case 3′.** Case 3 is now excluded by the gate rather than by the floor,
+  so it no longer bounds the floor from below. Case 3′ — the honest "nothing works" pairing — is
+  a sharper bound, because it is the worst thing still admitted to scoring.
+- **Case 6 is not binding only because the radius dock is Liveness.** Were it a Fit term it would
+  bind. The six cases confirm [ADR-0099](../../adr/0099-relaxation-offers-the-searchers-own-asks.md)'s
+  placement rather than restating it.
+
+### The cases are now a fixture
+
+`the-five-numbers.md` left the six in prose, which is why the constraint could sit unchecked. Each
+case now carries an explicit term-value reading, so the floor is **re-derivable by machine** at
+every ruleset release and at every term activation — and these are §20.1's first scenario
+fixtures.
+
+The readings are judgements and they are stated as such. The most sensitive is case 5's intent:
+read as `NO_PREFERENCE` (0.85), being *"nothing bad, nothing good"* literally. Reading it as
+aligned puts case 5 at 48.4; reading it as misaligned puts it at 38.0. **A change to a case
+reading moves the floor and lands as an ADR**, exactly as a change to the floor does.
+
+- **Falsified by:** return rate of games from candidates just above the floor versus just below
+  it. Requires the outcome half.
+
+---
+
+## 11. Which basis, and what happens when a term turns on
+
+§10 renormalises **per comparison**, so a candidate's Fit changes when a term turns on
+platform-wide even though nothing about the pairing changed. The floor is therefore read off
+**the day-one live set**, and **turning a term on is a ruleset release that re-runs the six cases
+and may move the floor.**
+
+The floor's *meaning* is what stays stable — *clears the six judged pairings under the terms
+currently live* — rather than its integer. The alternative, calibrating against the full
+eight-term vector, sets today's bar for a future that has not arrived and lets every day-one
+score drift against it silently.
+
+This costs nothing extra: `the-five-numbers.md` already requires every change to land as an ADR
+naming which of the cases it now decides differently. It adds one demand on
+[#169](https://github.com/Raketa02/Raketa/issues/169), which already carries it: **which terms
+produced evidence per scored candidate**, without which a Fit is uninterpretable a year later.
+
+---
+
+## 12. What the search-side telemetry must record for these
+
+In the shape [`the-five-numbers.md`](the-five-numbers.md) §7 uses, and additional to it. Every
+fact is search-time and cannot be reconstructed afterwards.
+
+| For | Record, per search |
+|---|---|
+| The level gate | How many candidates it excluded, and the **smallest Δμ among them** — the falsifier is the widest gap still admitted against the narrowest just refused |
+| The weights | The ruleset version, on every search, per §11 |
+| Tag terms | Raw score before normalisation, per scored candidate, and whether each column stood down. Distinguishes *a sparse matrix* from *incompatible people* |
+| Liveness | The offset applied, its dominant signal, and whether a reason printed. Separates *moved* from *moved and explained* |
+| Reciprocal asymmetry | `fit_ba` and the mode it was scored under. `NO_PREFERENCE` inherits, so the mode is not recoverable from the candidate's declaration |
+| Modifiers | Which fired, and whether the stack clamp bound |
+
+---
+
+## 13. Every constant, and what kills it
+
+| Constant | Start | Falsified by |
+|---|--:|---|
+| Competitive weights | §2 | Return rate by match profile |
+| For-fun weights | §2 | Same, split by mode |
+| Tag-stuffing `X` | 0.30 | Return rate by shared-tag count against level gap |
+| `LEVEL_TOL_COMP` | 0.55 | Return rate by level gap, split by band |
+| `LEVEL_TOL_FUN` | 0.90 | Same. **Also the level gate** — acceptance at Δμ 0.75 → tolerance |
+| `FUN_FREE_BAND` | 0.25 | Satisfaction inside vs outside the band |
+| `BALANCE` coefficients | 145, 32 | Brier score against confirmed results |
+| `BALANCE_PCT_MIN` / `MAX` | 35 / 96 | The observed live range |
+| Strand weights | §6 | Ghost and answer rate regressed per strand |
+| `TAG_PHI` | 0.45 | Return rate by shared-tag count |
+| `TAG_COMPLEMENT_STRENGTH` | 0.70 | Return rate of complement-scored games vs match-scored |
+| `CLASH_SEVERITY_REAL` / `MILD` | 0.15 / 0.06 | Return rate of games with a scored clash |
+| `CLASH_CAP` | 0.25 | How often it binds; and the raw-score distribution |
+| `MODIFIER_BUDGET` | ±10 | How often the stack clamp binds |
+| `FAMILIARITY_HALF_LIFE_DAYS` | 90 | Acceptance on repeat pairings by days since last |
+| `FAMILIARITY_DEPTH_PHI` | 0.45 | Acceptance by number of games together |
+| `FAMILIARITY_DEFAULT_LEAN` | 0.5 | Acceptance on repeats for readers with no reading tag |
+| The familiarity reading map | §8 | Repeat acceptance split by reading |
+| `MOVE_NOTICE` | 6 | Fraction of rows printing a liveness reason |
+| `ASYM_TOLERANCE` | 12 | Decline rate by asymmetry bucket |
+| Liveness signal bounds | §9 | Acceptance rate per signal, held out |
+| `QUALITY_FLOOR` | **44** | Return rate just above vs just below |
+
+**None of them is measurable before §19.2's telemetry chain exists.** That is why the chain is
+Phase 2 and not Phase 4, and why §12 above is a demand on the first search rather than on the
+first outcome.
