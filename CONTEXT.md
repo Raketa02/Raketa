@@ -270,6 +270,23 @@ of the code because this file asks for them in that order.
   who the platform *offers* you are different acts.
 - **Proposals opt-in** — the player's recorded answer to whether the recommendation engine
   may push games at them. It has **no default**: unanswered is neither yes nor no.
+- **Play intent** — what kind of game a player wants in **one sport**: `COMPETITIVE`,
+  `FOR_FUN` or `NO_PREFERENCE`. **Declared, per sport, and never inferred.** `NO_PREFERENCE`
+  is an explicit answer and never a null — *either suits me* and *I never opened that screen*
+  are different facts. Declared at the tail of every rating run that produced a rating, and
+  changed from the search screen rather than a settings screen
+  ([ADR-0094](docs/adr/0094-play-intent-declared-per-sport-in-its-own-aggregate.md)).
+- **Play intent declaration** — the **event-sourced aggregate** that holds one, one stream per
+  `(player, sport)`. Separate from the Player profile, which stays free of a sport dimension.
+- **Mode** — the *search's* setting: which of **Competitive** or **For fun** a player is
+  searching in **right now**. Two values, never three; a player with no preference still picks
+  a tab for tonight. *Defined here because Play intent cannot be defined without it; it belongs
+  to the matchmaking context and moves there when that context is written.*
+- **Intent alignment** — what a searcher's live **Mode** is worth against a candidate's
+  declared **Play intent**. Deliberately **asymmetric**: a social player in a competitive game
+  is mildly bored, a competitive player in a game where nobody keeps score has been cheated of
+  the only thing they came for. A **weight, never a gate** — and the one term that is never
+  relaxed when the pool is thin.
 - **Profile photo** — the first of a player's photos, and the one a player card shows. A
   player may hold up to three or none; none is not an absence but a **generated court
   poster**, derived from their identity so it is stable across devices.
@@ -288,6 +305,8 @@ of the code because this file asks for them in that order.
   - **SearchRadiusChanged** — `player_profile.search_radius_changed` / v1.
   - **ProposalsOptInAnswered** — `player_profile.proposals_opt_in_answered` / v1 — the
     answer, the copy version shown and the surface; the moment is the event's own.
+  - **PlayIntentDeclared** — `player_profile.play_intent_declared` / v1 — the sport, the value
+    and the surface it was declared on. Obeys the preference rule, not the consent rule.
 
 **Invariants**
 - **A tag id is permanent.** Ids are persisted on accounts, so retiring a tag means hiding
@@ -320,6 +339,21 @@ of the code because this file asks for them in that order.
   stream from which a device's own reading could be recovered — the same argument
   [ADR-0091](docs/adr/0091-photo-storage-behind-a-port.md) makes for re-encoding a photo
   rather than scrubbing its EXIF.
+- **A level is proved; a preference may be declared.** The founding rule bans a self-declared
+  *level*, and the reason is that misdeclaring one **pays** — a sandbagger farms wins against
+  people promised a fair game, so the declaration harms someone else. Play intent has no true
+  answer to check it against and misdeclaring it costs only the declarer an evening. That
+  distinction is owed to the player **in the interface**, on the intent step and wherever the
+  app refuses a self-declared level, not only in an ADR.
+- **A tag is not an intent.** `HERE_TO_COMPETE` is *why you are here at all*; Play intent is
+  *what tonight's game is*. Somebody tagged `HERE_TO_COMPETE` who declared `FOR_FUN` wants a
+  hard-fought friendly, and nothing may quietly overrule them. Reading tags as intent would
+  also count the same six strings in three different terms.
+- **Behaviour never rewrites a declaration.** Searches that disagree with a declared intent
+  raise a **prompt** and nothing else; the matcher never reads the disagreement and never
+  writes the value. The platform watches, notices, and deliberately declines to act.
+- **Intent is per sport, and never transfers between them.** The same person is plausibly a
+  competitive padel player and a social tennis player — the same reason levels do not transfer.
 - **A profile is one per player, and asking whether one exists is a legitimate question.**
   See the narrowed *there is no onboarded player* invariant above, and
   [ADR-0090](docs/adr/0090-onboarding-per-player-checkpoint.md).
