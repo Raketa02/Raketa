@@ -63,8 +63,18 @@ not yet an answer to anything. It survives only if it satisfies the six.
 > excluded by that gate rather than by the floor**, so it no longer bounds the floor from below
 > and is replaced by **case 3′**, the worst pairing still admitted to scoring. **52 is refuted by
 > case 5** — the median stranger scores 46.0 in competitive, so 52 hides the case whose stated
-> job is to sit at the bar. The floor is **44**, and all six now carry explicit term-value
-> readings so they can be re-run by machine.
+> job is to sit at the bar. The floor is **44**.
+
+> **And [#186](https://github.com/Raketa02/Raketa/issues/186) found that the term-value readings
+> §10 claimed to carry did not exist.** They are reconstructed in
+> [`the-judged-pairings.md`](the-judged-pairings.md) as a fixture of **inputs**
+> ([ADR-0122](../../adr/0122-a-judged-pairing-is-two-people-never-a-profile-of-scores.md)); the
+> recorded totals do not reproduce and are struck. **44 survives on `24.5 < FLOOR ≤ 44.5`** — half
+> a point. Two of the six were not one pairing each: **case 3′ is two**, because `ADR-0103`'s gate
+> is mode-relative, and **case 5 was re-judged**, because level fit and predicted balance read the
+> same input and no pairing is average on both. **Case 4's verdict is narrowed**: *"shown,
+> **low**"* is unachievable at 80.3 — it read low only while §6's deleted `intent_opposed`
+> existed — so the fixture asserts shown, above the floor, intent exactly `0.00`, reason printed.
 
 - **Falsified by:** return rate of games arising from candidates just above the floor versus
   just below it. Requires the outcome half.

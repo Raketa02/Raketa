@@ -524,44 +524,58 @@ normalisation applied, on §2's day-one basis:
 
 | Case | Verdict | Comp | Fun |
 |---|---|--:|--:|
-| 1 · same level, three shared evenings, five minutes away, socially blank | Shown | 78.4 | 61.5 |
-| 2 · ideal level, even forecast, close — **no shared slot at all** | Shown | 72.9 | 52.6 |
-| **3′** · just inside the level gate, forecast at its floor, no slot, edge of the radius, no tag relationship | **Not shown** | 20.4 | 24.2 |
-| 4 · everything exceptional, competitive searcher, friendly-only candidate | Shown, low | 73.8 | — |
-| 5 · **the median stranger** — average on everything | Shown | **46.0** | 47.9 |
-| 6 · strong match well inside the searcher's radius, searcher outside theirs | Shown, docked | high | high |
+| 1 · same level, full grid overlap, five minutes away, socially blank | Shown | 82.0 | 67.5 |
+| 2 · case 1 with the grid emptied — **no shared slot at all** | Shown | 69.3 | 49.9 |
+| **3′-comp** · just inside competitive's gate, forecast at its floor, no slot, edge of the radius | **Not shown** | 20.4 → **19.5** | — |
+| **3′-fun** · the same, just inside for-fun's gate | **Not shown** | — | 24.2 → **24.5** |
+| 4 · everything exceptional, competitive searcher, friendly-only candidate | Shown, reason printed | 73.8 → **80.3** | — |
+| 5 · **the median stranger** | Shown | 46.0 → **44.5** | 47.9 → **47.8** |
+| 6 · case 1 with the candidate's radius shrunk — searcher outside theirs | Shown, docked | 82.0 | 67.5 |
 
 ```
-24.2  <  QUALITY_FLOOR  ≤  46.0
+24.5  <  QUALITY_FLOOR  ≤  44.5
 ```
 
-**52 hides the median stranger in competitive**, and case 5's stated job is *"this is where the
+**52 hides the median stranger in both modes**, and case 5's stated job is *"this is where the
 bar sits"*. That is the refutation in the form `the-five-numbers.md` requires of any change: not
 a number somebody dislikes, but the case that now decides differently.
 
-**44** is the largest integer that shows all six, less two points for the roundings in the
-readings, and twenty clear of the worst pairing the engine will still look at.
+**44 stands**, and the bound above is arithmetic rather than judgement — but the margin is **half
+a point**, and the two points this section previously subtracted for *"the roundings in the
+readings"* are **spent, not inherited**: the readings are now exact over pinned inputs and there
+is nothing left to round.
 
 Two things the table settles beyond the integer:
 
-- **Case 3 is replaced by case 3′.** Case 3 is now excluded by the gate rather than by the floor,
-  so it no longer bounds the floor from below. Case 3′ — the honest "nothing works" pairing — is
-  a sharper bound, because it is the worst thing still admitted to scoring.
-- **Case 6 is not binding only because the radius dock is Liveness.** Were it a Fit term it would
-  bind. The six cases confirm [ADR-0099](../../adr/0099-relaxation-offers-the-searchers-own-asks.md)'s
-  placement rather than restating it.
+- **Case 3 is replaced by case 3′, and case 3′ is two pairings.** Case 3 is now excluded by the
+  gate rather than by the floor. `ADR-0103` gates at `Δμ ≥ LEVEL_TOL_mode`, which is mode-relative,
+  so *just inside the gate* describes a different person in each mode
+  ([ADR-0122](../../adr/0122-a-judged-pairing-is-two-people-never-a-profile-of-scores.md)).
+- **Case 6 is not binding only because the radius dock is Liveness.** It is now asserted as a
+  literal identity — `Fit(6) == Fit(1)` — which is the only form in which a machine can assert
+  that a fact moved nothing.
 
-### The cases are now a fixture
+### The cases are a fixture, and this section's earlier numbers are struck
 
-`the-five-numbers.md` left the six in prose, which is why the constraint could sit unchecked. Each
-case now carries an explicit term-value reading, so the floor is **re-derivable by machine** at
-every ruleset release and at every term activation — and these are §20.1's first scenario
-fixtures.
+**The seven totals this section used to record — `78.4 / 61.5`, `72.9 / 52.6`, `20.4 / 24.2`,
+`73.8`, `46.0 / 47.9`, *high* — do not reproduce, and are superseded rather than corrected.** The
+working behind them was never written down, and reconstructing it found that no coherent reading
+set produces them; that **case 4's `73.8` still carries the `intent_opposed` −6 that §7 records as
+deleted**; and that this section's own sensitivity line read the **for-fun** row's cell for a
+competitive misalignment.
 
-The readings are judgements and they are stated as such. The most sensitive is case 5's intent:
-read as `NO_PREFERENCE` (0.85), being *"nothing bad, nothing good"* literally. Reading it as
-aligned puts case 5 at 48.4; reading it as misaligned puts it at 38.0. **A change to a case
-reading moves the floor and lands as an ADR**, exactly as a change to the floor does.
+The fixture is [`judged-pairings.json`](judged-pairings.json), argued in
+[`the-judged-pairings.md`](the-judged-pairings.md) and ruled by
+[ADR-0122](../../adr/0122-a-judged-pairing-is-two-people-never-a-profile-of-scores.md): **a judged
+pairing is two people, never a profile of scores.** It holds *inputs* — μ, σ, grid cells,
+distance, both radii, tag ids, intent, gender, block and hold state, commit date — and every term
+value and every Fit is derived, so a formula change re-derives the whole fixture for free. That is
+what [ADR-0120](../../adr/0120-a-factor-reads-the-pair-or-it-is-not-a-factor.md) needed and did
+not have.
+
+**A change to a case reading still moves the floor and lands as an ADR**, exactly as a change to
+the floor does. And case 4's verdict is now narrower than `the-five-numbers.md` states: *"shown,
+**low**"* is unachievable at 80.3, and deleting `intent_opposed` is why.
 
 - **Falsified by:** return rate of games from candidates just above the floor versus just below
   it. Requires the outcome half.

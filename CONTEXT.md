@@ -460,6 +460,13 @@ decision has actually settled appears here.
   ([ADR-0099](docs/adr/0099-relaxation-offers-the-searchers-own-asks.md)). One floor for both
   modes and every sport, and it is defined by the **judged pairings** it must satisfy rather
   than by a chosen number.
+- **Judged pairing** — one of the named cases the quality floor must satisfy: **two people and a
+  verdict**, never a profile of term values. It is held as the *inputs* that describe them — the
+  levels, the grids, the distance, the tags, the declared intent — from which every term value is
+  derived, so a change to a formula re-derives the case rather than stranding it. A case whose
+  description names something mode-relative is **two** pairings; a case that describes two terms
+  reading the same input is re-judged rather than pinned to the values somebody wanted
+  ([ADR-0122](docs/adr/0122-a-judged-pairing-is-two-people-never-a-profile-of-scores.md)).
 - **Minimum shortlist** — how short a shortlist has to be before the response carries the
   relaxation rungs at all. It triggers nothing by itself; the engine still never widens on its
   own.

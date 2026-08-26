@@ -228,21 +228,32 @@ the availability column, written out — the first of the six that anybody has w
 **`QUALITY_FLOOR = 44` holds** — by seven tenths of a point in the worst reading, which is
 thinner than anybody should be comfortable with.
 
-### And the fixture that would settle it does not exist
+### And the fixture that would settle it now exists
 
-§10 states that each case *"now carries an explicit term-value reading"* and that the floor is
-*"re-derivable by machine"*. The document holds only the seven totals; there is no per-term
-table anywhere in `docs/specs/matchmaking/`. **This ticket is the first thing to need it and the
-first to find it missing** — which is why the bound above is a range rather than an arithmetic
-fact.
+§10 stated that each case *"now carries an explicit term-value reading"* and that the floor is
+*"re-derivable by machine"*. Neither was true: the document held only the seven totals, and **this
+ticket was the first thing to need the per-term table and the first to find it missing** — which
+is why the bound above is a range rather than an arithmetic fact.
 
-The availability column is written out above. The other six terms are
-[#186](https://github.com/Raketa02/Raketa/issues/186), blocking
-[#172](https://github.com/Raketa02/Raketa/issues/172): reconstructing them means re-making
-judgements that were made once and never recorded, which is original work and not an assembly
-pass.
+[#186](https://github.com/Raketa02/Raketa/issues/186) built it:
+[`judged-pairings.json`](judged-pairings.json), argued in
+[`the-judged-pairings.md`](the-judged-pairings.md) and ruled by
+[ADR-0122](../../adr/0122-a-judged-pairing-is-two-people-never-a-profile-of-scores.md). **It
+holds inputs rather than values, on this section's own lesson** — the range above exists precisely
+because the struck `proximity` factor's reading was never recorded, and a fixture of inputs
+re-derives instead of remembering.
 
----
+**It also replaced the range with a number, and moved it.** The reconstruction found that the
+recorded totals do not reproduce at all, so they are superseded rather than adjusted. Case 5's
+availability reading of **0.50 is unchanged**, but the case is re-judged onto pinned inputs
+(Δμ 0.275, two shared cells of four) and reads **44.5 competitive / 47.8 for fun**:
+
+```
+24.5  <  QUALITY_FLOOR  ≤  44.5          (was 24.2 < 44 ≤ 44.7)
+```
+
+`QUALITY_FLOOR = 44` still holds. The margin is **half a point** rather than seven tenths — the
+worst case this section could bound, arrived at exactly.
 
 ## 8. What moves elsewhere
 
