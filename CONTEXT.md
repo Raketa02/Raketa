@@ -424,6 +424,20 @@ decision has actually settled appears here.
   relaxation ever reaches one.
 - **NoEvidence** — what a term returns when it has nothing to weigh. It is dropped from the sum
   and the remaining weights renormalise; it is never `0`, and never a neutral `0.5`.
+- **Quality floor** — the Fit below which a candidate is not shown at all. A **fixed** bar: no
+  relaxation reaches it, and nothing lowers it in response to a thin pool
+  ([ADR-0099](docs/adr/0099-relaxation-offers-the-searchers-own-asks.md)).
+- **Relaxation rung** — an **offer** to relax one of the searcher's *own* asks — their times, or
+  their radius — with the real count of candidates it would add. Three exist, times first. The
+  player accepts; the engine never relaxes anything by itself, and an accepted widen is scoped to
+  that one search ([ADR-0099](docs/adr/0099-relaxation-offers-the-searchers-own-asks.md)).
+- **Pool description** — what the response carries when the shortlist is empty: how many players
+  of that sport are in range, structured, **counted after every gate**. It is the product in a
+  new market, and it is a number on a screen, so it counts real rows and never estimates.
+- **Guaranteed inclusion** — a candidate placed in the shortlist by something other than Fit. An
+  **interest lift** — a human's own *Let's play* — may sit below the quality floor with its
+  reason printed. The newcomer-window and zero-exposure lifts may **reorder** and never
+  **admit** below it.
 - **SearchContext** — the facts about *the searcher* that travel with one search rather than
   living in the index: their block set, and their pairwise history. The index row is per player,
   so a fact about a **pair** has nowhere else to be
@@ -460,6 +474,22 @@ decision has actually settled appears here.
   gate ships live and true-over-empty. Nobody has failed to turn up, because nobody has ever
   been due to — so a reliability strand of zero would be invented, and the term stands down
   instead ([ADR-0098](docs/adr/0098-matcher-demands-as-executable-contracts.md)).
+- **Relaxation may only relax what the searcher asked for.** Radius and their own availability
+  grid are asks, and an ask may be widened — by the player, on offer. A term, a weight, a
+  measurement and the quality floor are the engine's judgement about what makes a good game, and
+  scarcity is never a reason to move one. Raising scores until candidates clear a fixed bar is
+  lowering the bar, whatever the config file calls it
+  ([ADR-0099](docs/adr/0099-relaxation-offers-the-searchers-own-asks.md)).
+- **Availability overlap is evidence that a game can be arranged; it is never a proposed time.**
+  The matcher matches players and stops. No court is booked and nobody can promise a slot before
+  one exists, so the soonest shared slot is a reason on a card — *"you both play Saturday
+  mornings"* — and never a booking. Who plays when is agreed by the players themselves.
+- **A seat is never filled below the quality floor to complete a line-up.** The group is the
+  objective, so one bad seat is a bad evening for all four. A partial line-up, and what is
+  missing, is the honest answer.
+- **The empty-result rate is a guardrail metric, never a target.** It is reported only paired
+  with the return rate, and it is never on its own sufficient grounds to move the quality floor —
+  which moves only in a record with a name on it.
 - **A protected characteristic may gate; it may never score.** The value reaches candidate
   generation and gating and is **absent from the type handed to the scorer**, so no term can
   weigh it — the guarantee is a type boundary the build asserts, not a review checklist
