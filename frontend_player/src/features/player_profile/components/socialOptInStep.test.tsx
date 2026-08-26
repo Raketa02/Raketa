@@ -155,7 +155,7 @@ describe('what the step opens with', () => {
     expect(screen.queryByLabelText(/later/i)).toBeNull();
     expect(screen.queryByText(/maybe later/i)).toBeNull();
     // Back is the part's own move and reaches the step before this one, never past it.
-    expect(screen.getByLabelText('Back to How far will you travel?')).toBeTruthy();
+    expect(screen.getByLabelText('Back to How far should we look for players?')).toBeTruthy();
   });
 });
 
@@ -224,7 +224,7 @@ describe('answering it', () => {
     await reachTheOptInStep();
     fireEvent.press(control(NO));
 
-    fireEvent.press(control('Back to How far will you travel?'));
+    fireEvent.press(control('Back to How far should we look for players?'));
     await waitFor(() => expect(screen).toHavePathname('/radius'));
     fireEvent.press(await screen.findByLabelText('Continue'));
     await waitFor(() => expect(screen).toHavePathname('/opt-in'));

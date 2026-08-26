@@ -5,8 +5,10 @@
  * persisted** — not to the server, not to the device. It exists only to order the next few
  * assessments, and a sport left unselected today can be rated any time later.
  *
- * Each sport is rated independently and levels are never borrowed between them, which the
- * screen says out loud: with cross-sport transfer cut, it is now literally true.
+ * Each sport is rated independently and levels are never borrowed between them. **The screen
+ * no longer says so** — the picker is a list of sports and a control, and the rule shows up
+ * where it can be seen rather than asserted: one result screen per sport, each with its own
+ * evidence.
  *
  * Continuing starts the first selected sport's assessment and lands on its opening
  * question. It is `replace`, not `push`: a player walks back through the questionnaire
@@ -68,11 +70,6 @@ export function SportsPickerScreen() {
       <OnboardingChrome eyebrow="Raketa" title="Which sports do you play?" />
 
       <ScrollView contentContainerStyle={s.content}>
-        <Note variant="info">
-          Each sport gets its own level. They are never borrowed from one another — being strong at
-          tennis says nothing about your padel.
-        </Note>
-
         {/* Paused, not loading: `networkMode: 'online'` holds a query rather than
             failing it, so an offline player would otherwise watch a spinner forever. */}
         {sports.fetchStatus === 'paused' ? (

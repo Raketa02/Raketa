@@ -18,6 +18,7 @@
 
 import { stepCopy } from './socialStepPresentation';
 import {
+  PROPOSALS_OPT_IN_COPY_V1,
   OPT_IN_ANSWERS,
   OPT_IN_EYEBROW,
   OPT_IN_FINISH_BLOCKED_HINT,
@@ -33,7 +34,6 @@ import {
 const theWholeScreen = [
   stepCopy('opt-in').title,
   OPT_IN_EYEBROW,
-  stepCopy('opt-in').asks,
   OPT_IN_PROMISE_HEADING,
   ...OPT_IN_PROMISES.map((promise) => `${promise.term} — ${promise.detail}`),
   OPT_IN_SCOPE,
@@ -61,12 +61,11 @@ describe('the copy version', () => {
    * nobody was ever shown, which is a consent record that evidences nothing.
    */
   it('names exactly these words, so a reword cannot pass as an edit', () => {
-    expect(PROPOSALS_OPT_IN_COPY_VERSION).toBe('proposals-opt-in.v1');
+    expect(PROPOSALS_OPT_IN_COPY_VERSION).toBe('proposals-opt-in.v2');
     expect(theWholeScreen).toBe(
       [
         'May we suggest games?',
         'The one thing we ask before finishing',
-        'Whether the platform may put games in front of you.',
         'If you say yes',
         'You may receive — a game we think fits, when your week and theirs overlap',
         'You always answer — every game by hand — nothing is ever confirmed for you',
@@ -79,6 +78,18 @@ describe('the copy version', () => {
         'Choose yes or no above to finish',
       ].join('\n'),
     );
+  });
+});
+
+describe('the retired version', () => {
+  /**
+   * A retired identifier is kept, never deleted: an answer recorded against it points at the
+   * wording it was shown, and a version with no record of what it named evidences nothing.
+   * It must also never be what a fresh answer is stamped with.
+   */
+  it('is still named, and is not the one being stamped', () => {
+    expect(PROPOSALS_OPT_IN_COPY_V1).toBe('proposals-opt-in.v1');
+    expect(PROPOSALS_OPT_IN_COPY_VERSION).not.toBe(PROPOSALS_OPT_IN_COPY_V1);
   });
 });
 

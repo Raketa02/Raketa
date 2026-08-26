@@ -172,7 +172,7 @@ describe('the words on the step', () => {
     await reachThePhotosStep();
 
     expect(screen.getByText('Rackets mandatory, faces optional')).toBeTruthy();
-    expect(screen.getByText(/Photos show you on a court/)).toBeTruthy();
+    expect(screen.getByText(/Show yourself on a court/)).toBeTruthy();
     expect(screen.getByText(/Not a selfie, not the beach, not the gym mirror/)).toBeTruthy();
   });
 
@@ -186,10 +186,16 @@ describe('the words on the step', () => {
     }
   });
 
-  it('says that adding none is fine, before a player has to find out', async () => {
+  it('does not promise in advance that adding none is fine', async () => {
+    // Two lines of small print are gone — the one under the title and the one under the
+    // row. The eyebrow already says *up to three*, and the continue control is never
+    // disabled, so a player who adds nothing finds that out by pressing it. What carrying
+    // on without any actually gets you is said in the permission notes, at the one moment
+    // somebody is deciding it.
     await reachThePhotosStep();
 
-    expect(screen.getByText(/No photo is fine/)).toBeTruthy();
+    expect(screen.queryByText(/No photo is fine/)).toBeNull();
+    expect(screen.queryByText(/Up to three photos of you on a court/)).toBeNull();
   });
 });
 

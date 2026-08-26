@@ -47,11 +47,12 @@ export const SOCIAL_TAG_IDS = [
   'HERE_TO_MEET_PLAYERS',
   'HERE_FOR_A_REGULAR_GAME',
   'HERE_TO_GET_BACK_INTO_IT',
+  'OPEN_TO_MEET_SOMEONE',
 ] as const;
 
 export type SocialTagId = (typeof SOCIAL_TAG_IDS)[number];
 
-/** The three groups the eighteen are rendered under. Each is about the game and nothing else. */
+/** The three groups the nineteen are rendered under. Each is about the game and nothing else. */
 export const SOCIAL_TAG_GROUP_IDS = [
   'AFTER_THE_MATCH',
   'ON_THE_COURT',

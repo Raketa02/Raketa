@@ -173,7 +173,7 @@ export const RUNS_IN_PROGRESS_PATH = '/api/v1/assessments/in-progress';
 export const PROFILE_OPTIONS_PATH = '/api/v1/player-profile/options';
 
 /**
- * The eighteen Social tags in their three groups, the selection bounds and the radius
+ * The nineteen Social tags in their three groups, the selection bounds and the radius
  * bounds — as `GET /player-profile/options` answers.
  *
  * The order here is the order the picker must render, because the picker renders what it
@@ -212,6 +212,7 @@ export const PROFILE_OPTIONS_SERVED: Wire['PlayerProfileOptionsResponse'] = {
         { id: 'HERE_TO_MEET_PLAYERS' },
         { id: 'HERE_FOR_A_REGULAR_GAME' },
         { id: 'HERE_TO_GET_BACK_INTO_IT' },
+        { id: 'OPEN_TO_MEET_SOMEONE' },
       ],
     },
   ],

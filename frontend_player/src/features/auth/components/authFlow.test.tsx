@@ -207,6 +207,52 @@ describe('signing up', () => {
     expect(transport.requests).toHaveLength(0);
   });
 
+  /**
+   * **No account is created from a half-filled form**, which is the shape of the bug this
+   * was written against: a player reported reaching onboarding without having finished the
+   * repeat-password box. Nothing on this path allows it — the schema refuses an empty
+   * repeat, no request leaves, and the session machine does not move — so the assertion is
+   * here to keep it that way, next to the mismatch case that guards the other half.
+   *
+   * What can *look* like it is the phone: iOS strong-password autofill fills both
+   * `newPassword` boxes at once, so a player who typed into neither still has a complete,
+   * matching pair. The reveal control on both boxes is what makes that visible rather than
+   * mysterious.
+   */
+  it('creates nothing when the repeat is empty, and opens no session', async () => {
+    setSessionStatus('unauthenticated');
+
+    renderScreen(<SignUpScreen />);
+    fillSignUp('hunter2hunter2', '');
+    fireEvent.press(screen.getByLabelText('Create account'));
+
+    expect(await screen.findByText('Repeat your password.')).toBeTruthy();
+    expect(transport.requests).toHaveLength(0);
+    expect(getSessionStatus()).toBe('unauthenticated');
+  });
+
+  /**
+   * A password box that cannot be read back is the one place a typo costs a whole form: the
+   * player retypes both halves and is told a third time that they do not match, with no way
+   * to see which character is wrong.
+   */
+  it('lets each password box be read back on its own', async () => {
+    setSessionStatus('unauthenticated');
+
+    renderScreen(<SignUpScreen />);
+
+    const password = screen.getByLabelText('Password');
+    expect(password.props.secureTextEntry).toBe(true);
+
+    fireEvent.press(screen.getByLabelText('Show password'));
+    expect(screen.getByLabelText('Password').props.secureTextEntry).toBe(false);
+    // Revealing one says nothing about the other: it is a deliberate act on one box.
+    expect(screen.getByLabelText('Repeat password').props.secureTextEntry).toBe(true);
+
+    fireEvent.press(screen.getByLabelText('Hide password'));
+    expect(screen.getByLabelText('Password').props.secureTextEntry).toBe(true);
+  });
+
   it('puts a taken nickname under the nickname field', async () => {
     setSessionStatus('unauthenticated');
     transport.on('POST', '/api/v1/users', () =>

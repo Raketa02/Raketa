@@ -10,7 +10,16 @@
  * **Changing a sentence below is a new version, not an edit.** Bump the identifier, keep
  * the old one, and leave every answer already recorded pointing at the wording it was
  * actually shown. A silent re-word turns every standing yes into a record of something
- * nobody said.
+ * nobody said. That has happened once: `v2` dropped the line under the title, so `v1` is
+ * retired and retained below rather than overwritten.
+ *
+ * ## The two answers are buttons, and that changed no wording
+ *
+ * They were chips. A chip is a **filter** over content a player can already see (6.2), and
+ * these are the two answers to the screen's only question — the one press that opens the
+ * finish. Two full-width buttons say that; two pills in a row said *narrow this down*. The
+ * labels, their order and the never-pre-ticked line are untouched, which is why the change
+ * of control is not itself what bumped the version.
  *
  * ## The card was restructured from the source documents, and the reason is the rule
  *
@@ -52,10 +61,22 @@
  * The identifier stamped into the consent record beside the answer.
  *
  * Not the words themselves: the copy is the client's and is never stored server-side
- * (`copy_version` is a 1–64 character identifier on the wire). `v1` because this is the
- * first wording ever shown to anybody.
+ * (`copy_version` is a 1–64 character identifier on the wire).
  */
-export const PROPOSALS_OPT_IN_COPY_VERSION = 'proposals-opt-in.v1';
+export const PROPOSALS_OPT_IN_COPY_VERSION = 'proposals-opt-in.v2';
+
+/**
+ * **Retired, and kept.** The first wording ever shown to anybody. It differed from `v2` in
+ * one line: under the title it also read *Whether the platform may put games in front of
+ * you*, which `v2` drops — the card below already says what a yes means, and a step whose
+ * whole subject is one question does not need the question paraphrased above it.
+ *
+ * Nothing stamps this any more and nothing should. It is here because an answer already
+ * recorded against it points at *these* words, and a version identifier with no record of
+ * what it named is a consent record that evidences nothing. **Delete it and the earlier
+ * agreements become unreadable.**
+ */
+export const PROPOSALS_OPT_IN_COPY_V1 = 'proposals-opt-in.v1';
 
 /**
  * The chrome line, which replaces the plain *step 6 of 6* rather than joining it.

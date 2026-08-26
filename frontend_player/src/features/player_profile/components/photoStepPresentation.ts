@@ -10,6 +10,11 @@
  * stated without apology and without *you can only*. **The two are one decision** — do not
  * reword either independently of the other.
  *
+ * **The step no longer promises in advance that no photo is fine.** The eyebrow already says
+ * *up to three*, the continue control is never disabled, and the two permission notes say
+ * what carrying on without any gets you at the one moment a player is actually deciding it.
+ * A third line saying the same thing to somebody who had not asked was small print.
+ *
  * Every accessible name here exists because the tile it names carries its fact in a
  * drawing: the border says which photo leads and the foot strip says what an upload is
  * doing, and neither is legible to a screen reader (design-system 6.9).
@@ -31,21 +36,14 @@ export function photosEyebrow(): string {
 /**
  * The one thing this screen asks a player to understand, and the one it must not claim.
  *
- * *A photo here answers exactly one question, and it is not how you look.* That is the
- * whole argument for the rule, and it is why the note says what a photo is **for** rather
- * than listing what is banned.
+ * It says what a photo is **for** rather than listing what is banned, and it claims no
+ * check — there is no content review running in this build.
  */
 export const PHOTO_RULE_TITLE = 'Rackets mandatory, faces optional';
 
 export const PHOTO_RULE_BODY =
-  'Photos show you on a court — playing, or just after. Not a selfie, not the beach, not the ' +
-  'gym mirror. Faces are optional; the sport is not. A photo here answers exactly one ' +
-  'question, and it is not how you look — it is do I want to play this person?';
-
-/** Said before a player has to find out by leaving the step with nothing. */
-export const NO_PHOTO_IS_FINE =
-  'No photo is fine — you get a court poster of your own, and you can add photos any time ' +
-  'from your profile.';
+  'Show yourself on a court — mid-rally, or catching your breath afterwards. Not a selfie, ' +
+  'not the beach, not the gym mirror. Your face is up to you; the sport is not.';
 
 /**
  * The promote affordance, as a sentence under the row.
@@ -118,8 +116,8 @@ export const ACCESS_TITLE: Readonly<Record<Exclude<PhotoAccess, 'granted'>, stri
 };
 
 export const ACCESS_BODY: Readonly<Record<Exclude<PhotoAccess, 'granted'>, string>> = {
-  refused: `Press ${ADD_CONTROL_WORD} again to allow it. Or continue without any — no photo is fine.`,
-  blocked: `Turn it on for Raketa in Settings, then press ${ADD_CONTROL_WORD} again. Or continue without any — no photo is fine.`,
+  refused: `Press ${ADD_CONTROL_WORD} again to allow it. Or carry on without any — you get a court poster of your own either way.`,
+  blocked: `Turn it on for Raketa in Settings, then press ${ADD_CONTROL_WORD} again. Or carry on without any — you get a court poster of your own either way.`,
 };
 
 /**

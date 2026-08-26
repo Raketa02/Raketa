@@ -35,7 +35,7 @@ something, the location step, one foreground fix coarsened to about a kilometre 
 held, the radius step, a slider over the served bounds that opens at the served default, the
 Proposals opt-in, never pre-ticked and with a finish that stays closed until the player
 answers either way, and the **profile commit**: every answer in one idempotent
-`POST /players/me/profile`, after which the player walks the closing screens into the app).
+`POST /players/me/profile`, after which the player walks the data screen into the app).
 
 **Onboarding is two parts, and the part is the checkpoint unit**
 ([ADR-0090](../docs/adr/0090-onboarding-per-player-checkpoint.md)). Part one is the Skill
@@ -50,15 +50,22 @@ same values against the same rules
 sentence the Proposals opt-in card shows, together with the `copy_version` stamped beside
 the answer in the draft — consent gathered against one sentence is not consent to a
 different one, so re-wording that card is a **new version with the old one retained**,
-never an edit. It is the only file in this app whose strings are evidence.
+never an edit. It is the only file in this app whose strings are evidence. It stands at
+**`proposals-opt-in.v2`**, which dropped the line under the title; `v1` is retired and kept
+in the same file, because a version identifier with no record of what it named evidences
+nothing.
 
-**The closing screens sit on the far side of the second part.** The order is
-result → the six steps → the commit → done → data → the app, and it is the _pass_ that
-routes into the part (`nextDestination`, given whether a Player profile exists) as well as
-the entry gate. A player who is already set up — one resuming a run they left behind — goes
-straight to the closing screens instead. The done screen accounts for the ratings a walk
-produced, so it comes after the write that makes that account true of the account; entered
-with no pass running, it has nothing of its own to show and says so.
+**The ratings summary ends the first part, and it is the door into the second.** The order
+is result → **done** → the six steps → the commit → data → the app. The _pass_ routes as far
+as the summary and no further (`nextDestination`: _is there anything to account for_), and
+the **done screen** reads whether a Player profile is still owed and either enters the second
+part or continues to the data screen — one fact, read once, on the screen that acts on it. A
+player who is already set up — one resuming a run they left behind — passes straight through.
+The summary comes before the six steps rather than after the commit, because it is what a
+player just earned and the second part was otherwise standing between them and it; a Skill
+rating is written when the questionnaire completes, not when a profile is committed, so
+nothing on that screen was ever waiting on the commit to be true. Entered with no pass
+running, it has nothing of its own to show and says so.
 
 **The commit is the one mutation in this app a retry may repeat.** Its **commit key** is
 minted when the part is entered and lives exactly as long as the draft, so a double tap and a

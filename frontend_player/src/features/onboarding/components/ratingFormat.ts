@@ -38,8 +38,3 @@ export function formatRange(range: { readonly low: number; readonly high: number
 export function formatConfidence(value: number): string {
   return `${Math.round(value)}%`;
 }
-
-/** How much σ a range-widener added — the same scale as the Level, so the same shape. */
-export function formatSigma(value: number): string {
-  return decimal(value);
-}

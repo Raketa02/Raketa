@@ -210,14 +210,21 @@ describe('the verdict', () => {
     expect(screen.getByLabelText('Band: Established')).toBeTruthy();
   });
 
-  it('shows the reason Confidence landed where it did', async () => {
+  it("says the rating is provisional, in the app's own words rather than the engine's", async () => {
     await arriveAtTheResult();
 
-    // A low percentage has to read as a statement about the evidence rather than about
-    // the player, and the engine is what says so.
+    // The note used to be the engine's `confidence_reason`, which explained *why this
+    // Confidence and not another* — a true sentence answering a question a player meeting
+    // their first rating is not asking. What they need said is that the number is a starting
+    // point and that matches are what settle it, which is a claim about how Raketa works and
+    // so is the client's to make — for every rating, not only the ones the engine sent a
+    // reason with.
+    expect(await screen.findByText('This is a starting point, not a verdict')).toBeTruthy();
+    expect(screen.getByText(/best guess at where you sit/)).toBeTruthy();
+    expect(screen.getByText(/played a few matches/)).toBeTruthy();
     expect(
-      await screen.findByText('We have not seen you play yet, so this is a starting estimate.'),
-    ).toBeTruthy();
+      screen.queryByText('We have not seen you play yet, so this is a starting estimate.'),
+    ).toBeNull();
   });
 
   it('prints the band edges it was sent, never a set of its own', async () => {
@@ -258,25 +265,20 @@ describe('the verdict', () => {
 // ---------------------------------------------------------------------------
 
 describe('the evidence trail', () => {
-  it('keeps what moved the Level and what widened the range apart', async () => {
+  it('accounts for what moved the Level, and no longer itemises what widened the range', async () => {
     await arriveAtTheResult();
 
     expect(await screen.findByText('What moved your level')).toBeTruthy();
-    expect(screen.getByText('What widened your range')).toBeTruthy();
-
-    // Nothing appears in both, and the second list carries no direction: something that
-    // widened the range did not move the Level, and an arrow beside it would describe a
-    // different rating than the one produced.
     expect(screen.getByLabelText('Match execution: above your level, 3,10')).toBeTruthy();
     expect(screen.getByLabelText('Recent activity: below your level, 2,40')).toBeTruthy();
-    expect(screen.getByText('Time away from the game')).toBeTruthy();
-    expect(screen.queryByLabelText(/Time away from the game:.*level/)).toBeNull();
-  });
 
-  it('reports how much uncertainty a widener actually added', async () => {
-    await arriveAtTheResult();
-
-    expect(await screen.findByLabelText('Widened your range by 0,18')).toBeTruthy();
+    // The wideners still arrive and the mapper still reads them — nothing about the contract
+    // narrowed. They are not drawn: the range is on the verdict above, the note beside it
+    // says the estimate is provisional, and that is the whole of what the widening means to
+    // somebody who has not played a match yet.
+    expect(screen.queryByText('What widened your range')).toBeNull();
+    expect(screen.queryByText('Time away from the game')).toBeNull();
+    expect(screen.queryByLabelText(/Widened your range by/)).toBeNull();
   });
 
   it('renders the words the server wrote, and takes the direction it was given', async () => {
@@ -302,7 +304,7 @@ describe('the evidence trail', () => {
     expect(screen.getByText('Above')).toBeTruthy();
   });
 
-  it('says the range was widened rather than a side chosen, when answers disagreed', async () => {
+  it('never accuses the player when their answers disagreed, and never picks a side', async () => {
     await arriveAtTheResult({
       ...RESULT,
       calibration_priority: 'elevated',
@@ -321,47 +323,30 @@ describe('the evidence trail', () => {
       ],
     });
 
-    // A contradiction is never resolved by picking a side, and it never accuses the
-    // player. It is reported as a widener — with no direction — and its own words say
-    // what the app did about it.
-    expect(await screen.findByText('Answers pointing to different ranges')).toBeTruthy();
-    expect(screen.getByText(/we kept the range wider rather than picking one/)).toBeTruthy();
+    // The contradiction is not itemised any more — no widener list is drawn at all — and
+    // what remains is the part that was ever about the player: the estimate is queued for
+    // real matches, stated as a property of the estimate rather than as a judgement.
     expect(
-      screen.getByText(
-        'Some of your answers point to different ranges, so we kept your range wider.',
-      ),
+      await screen.findByText(/changes who you are matched with, never where you sit/),
     ).toBeTruthy();
-    // Stated as a property of the estimate, never as a judgement of the player.
-    expect(screen.getByText(/changes who you are matched with, never where you sit/)).toBeTruthy();
+    expect(screen.queryByText('Answers pointing to different ranges')).toBeNull();
+    expect(screen.queryByText(/we kept the range wider rather than picking one/)).toBeNull();
   });
 
-  it('renders a key it has never seen instead of dropping it', async () => {
-    // A phone that has not updated in eight months still shows a key added last week.
-    // This is the correctness requirement of the whole trail: a widener missing from the
-    // screen leaves a range nothing on it accounts for.
+  it('renders a contribution whose direction it has never seen instead of dropping it', async () => {
+    // A phone that has not updated in eight months still shows a category added last week.
+    // This is the correctness requirement of the trail: a contribution missing from the
+    // screen leaves a Level nothing on it accounts for.
     await arriveAtTheResult({
       ...RESULT,
       factors: [
         { key: 'moon-phase', label: 'Something added later', direction: 'sideways', level: 2.9 },
       ],
-      uncertainty_factors: [
-        {
-          key: 'tidal-range',
-          label: 'A widener from a future engine',
-          detail: 'It widened the range for a reason this build has never heard of.',
-          sigma_added: 0.09,
-        },
-      ],
     });
-
-    expect(await screen.findByText('A widener from a future engine')).toBeTruthy();
-    expect(
-      screen.getByText('It widened the range for a reason this build has never heard of.'),
-    ).toBeTruthy();
 
     // The unreadable direction costs the row its mark and nothing else — no arrow is
     // guessed, and the category and its level still appear.
-    expect(screen.getByLabelText('Something added later: 2,90')).toBeTruthy();
+    expect(await screen.findByLabelText('Something added later: 2,90')).toBeTruthy();
     expect(screen.queryByText('Above')).toBeNull();
     expect(screen.queryByText('Below')).toBeNull();
   });

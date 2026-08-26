@@ -52,5 +52,5 @@ export { RadiusSlider, type RadiusSliderProps } from './RadiusSlider';
 export { Row, type RowProps, type RowVariant } from './Row';
 export { ScreenHeader, type ScreenHeaderProps } from './ScreenHeader';
 export { Tag, type TagProps, type TagVariant } from './Tag';
-export { behindOverlay, type FocusTarget } from './overlay';
+export { behindOverlay, useReducedMotion, type FocusTarget } from './overlay';
 export { theme, type BandKey, type SportKey, type Theme } from './theme';

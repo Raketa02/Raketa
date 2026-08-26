@@ -29,27 +29,20 @@
  * it is a state transition on the server and there is nothing to undo — so only the
  * departure failed, and the player must be able to try it again.
  *
- * ## The end of the queue is not the end of onboarding
+ * ## The end of the queue is the end of the **first part**, and nothing further
  *
- * Onboarding is two parts, and the second one is where a Player profile is collected. So
- * the last sport does not lead to the closing screens for a player who has not committed
- * one — it leads to the six social steps, and the commit at the end of them leads to the
- * closing screens. That ordering is the spec's, and it is what gives the last social step
- * something to continue to.
- *
- * **Whether a profile exists is the auth feature's answer**, read through the query the gate
- * already asks rather than a second one against the same route. A launch that has not
- * answered it yet reads as *has one*, which is the fail-safe direction: the closing screens
- * lead to the app, the gate there has the last word, and it will turn a player who really is
- * owed the second part straight into it. The other default walks a set-up player through six
- * steps and ends on a commit the server refuses.
+ * Whatever a player still owes — the six social steps, if they have no Player profile yet —
+ * they are owed their ratings first: the last sport leads to the summary of what this walk
+ * produced, and the done screen is where the second part is entered from. So this hook no
+ * longer reads whether a profile exists, and does not route into `player_profile/` at all.
+ * One screen further on, one fact read once. Before that, the summary sat on the far side of
+ * six more questions and a commit, which put the whole second part between a player and the
+ * number they had just spent a minute per sport producing.
  */
 
 import { useRouter } from 'expo-router';
 import { useCallback, useRef } from 'react';
 
-import { useCurrentUser } from '@/features/auth/types';
-import { SOCIAL_STEPS_ENTRY } from '@/features/player_profile/types';
 import type { AppError } from '@/shared/errors';
 
 import type { Sport } from '../domain/Sport';
@@ -115,32 +108,19 @@ export interface PassAdvance {
  * `rate` is not here: it needs an assessment started before there is anything to navigate
  * to, which is the whole of what `advance` does beyond this table.
  */
-function leavesTo(destination: PassDestination): '/done' | typeof SOCIAL_STEPS_ENTRY | '/' {
-  switch (destination.kind) {
-    case 'closing':
-      return '/done';
-    case 'social-steps':
-      // Where the second part begins is the feature that owns it saying so — the entry gate
-      // reaches for the same value, and two files spelling the route was two places to
-      // change it.
-      return SOCIAL_STEPS_ENTRY;
-    default:
-      return '/';
-  }
+function leavesTo(destination: PassDestination): '/done' | '/' {
+  return destination.kind === 'closing' ? '/done' : '/';
 }
 
 export function useAdvanceThroughPass(sport: Sport): PassAdvance {
   const router = useRouter();
   const pass = useOnboardingPass((state) => state.pass);
-  const player = useCurrentUser();
   const start = useStartAssessment();
   const startNext = start.mutate;
 
   const departing = useRef(false);
 
-  // See the note above on why *not yet answered* reads as *has one*.
-  const hasPlayerProfile = player.data?.hasPlayerProfile ?? true;
-  const destination = nextDestination(pass, sport, { hasPlayerProfile });
+  const destination = nextDestination(pass, sport);
 
   const showResultOf = useCallback(
     (assessmentId: string) => {
@@ -180,17 +160,17 @@ export function useAdvanceThroughPass(sport: Sport): PassAdvance {
   const stopHere = useCallback(() => {
     if (departing.current) return;
     departing.current = true;
-    router.replace(leavesTo(stopDestination(pass, { hasPlayerProfile })));
-  }, [hasPlayerProfile, pass, router]);
+    router.replace(leavesTo(stopDestination(pass)));
+  }, [pass, router]);
 
   const advance = useCallback(() => {
     if (departing.current) return;
     departing.current = true;
 
     if (destination.kind !== 'rate') {
-      // The end of the queue, routed by what the pass produced and what the player still
-      // owes: setting up when it is not done, the closing screens when it is, and the app
-      // when there is nothing to account for. Every one of them is a `replace`.
+      // The end of the queue, routed by what this pass produced: the summary when it made a
+      // rating, and the app when there is nothing to account for. What the player still owes
+      // is the done screen's question. Both are a `replace`.
       router.replace(leavesTo(destination));
       return;
     }

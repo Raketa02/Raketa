@@ -9,7 +9,15 @@
 
 import { Link } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button, theme } from '@/shared/ui';
@@ -99,8 +107,18 @@ export function SignInScreen() {
 
           <View style={s.footer}>
             <Text style={s.footerText}>New to Raketa?</Text>
-            <Link href="/sign-up" style={s.footerLink}>
-              Create an account
+            {/* `asChild`, so the tappable thing is a real 44pt control rather than a line
+                of text. A `Link` renders a `Text`, whose reachable area is exactly the
+                glyphs — inside a `ScrollView`, a press that drifts a pixel becomes a scroll
+                gesture instead, which is what made this take several attempts (6.5). */}
+            <Link href="/sign-up" asChild>
+              <Pressable
+                accessibilityRole="link"
+                accessibilityLabel="Create an account"
+                style={({ pressed }) => [s.footerTarget, pressed ? s.footerPressed : undefined]}
+              >
+                <Text style={s.footerLink}>Create an account</Text>
+              </Pressable>
             </Link>
           </View>
         </ScrollView>
@@ -135,5 +153,13 @@ const s = StyleSheet.create({
     gap: theme.space.xs,
   },
   footerText: { ...theme.type.tiny, color: theme.color.muted },
+  // 44 by its own geometry rather than by slop: the target sits in a wrapping row, so
+  // horizontal slop would be bounded by whatever ends up beside it (6.5).
+  footerTarget: {
+    minHeight: theme.size.minTouch,
+    justifyContent: 'center',
+    paddingHorizontal: theme.space.xs,
+  },
+  footerPressed: { opacity: 0.6 },
   footerLink: { ...theme.type.rlValue, color: theme.color.ink },
 });

@@ -11,11 +11,18 @@
  * means *ended badly*. Adding a red note is a design-system change, in its own commit,
  * with its computed contrast — not something a screen invents on the way past.
  *
+ * **The reveal control belongs to the field, not to the screen that uses it.** A password
+ * box that cannot be read back is the one place where a typo costs a whole form: the
+ * player retypes both halves and is told a third time that they do not match, with no way
+ * to see which character is wrong. So `reveal` is a property of the field, the control
+ * lives inside the box it operates on, and the accessible name says which field it is
+ * about — two of them on one screen are otherwise two buttons both called *Show*.
+ *
  * Every value still comes from the theme: a placeholder is not an excuse for a literal.
  */
 
 import { forwardRef, useState } from 'react';
-import { StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native';
 
 import { theme } from '@/shared/ui/theme';
 
@@ -23,6 +30,14 @@ export interface AuthFieldProps extends Omit<TextInputProps, 'style'> {
   readonly label: string;
   /** Shown under the field and announced. Absent when the field is fine. */
   readonly error?: string;
+  /**
+   * Offer a show / hide control inside the box.
+   *
+   * Only meaningful on a field that starts masked, so it is opt-in rather than derived
+   * from `secureTextEntry`: an app is entitled to a masked field nobody may read back,
+   * and deriving it would take that decision away from the screen.
+   */
+  readonly reveal?: boolean;
 }
 
 /**
@@ -33,31 +48,63 @@ export interface AuthFieldProps extends Omit<TextInputProps, 'style'> {
  * reader — and anyone who looked away — with an unlabelled box.
  */
 export const AuthField = forwardRef<TextInput, AuthFieldProps>(function AuthField(
-  { label, error, ...inputProps },
+  { label, error, reveal = false, ...inputProps },
   ref,
 ) {
   const [focused, setFocused] = useState(false);
+  /**
+   * Held per field, and it starts masked every time the field is mounted.
+   *
+   * Revealing is a deliberate act on one box, so it is neither remembered across screens
+   * nor shared between the two password boxes on the sign-up form — a player who unmasked
+   * one to check a typo has said nothing about the other.
+   */
+  const [revealed, setRevealed] = useState(false);
+  const masked = inputProps.secureTextEntry === true && !revealed;
 
   return (
     <View style={s.field}>
       <Text style={s.label}>{label}</Text>
-      <TextInput
-        ref={ref}
-        {...inputProps}
-        accessibilityLabel={label}
-        // State is carried by the border colour AND by the message below, never by
-        // colour alone.
-        style={[s.input, focused && s.inputFocused, error !== undefined && s.inputError]}
-        placeholderTextColor={theme.color.muted}
-        onFocus={(event) => {
-          setFocused(true);
-          inputProps.onFocus?.(event);
-        }}
-        onBlur={(event) => {
-          setFocused(false);
-          inputProps.onBlur?.(event);
-        }}
-      />
+
+      {/* The border lives on the box rather than on the input, because the reveal control
+          sits inside the same box and a border drawn around the input alone would cut it
+          out of the field it belongs to. */}
+      <View style={[s.box, focused && s.boxFocused, error !== undefined && s.boxError]}>
+        <TextInput
+          ref={ref}
+          {...inputProps}
+          secureTextEntry={masked}
+          accessibilityLabel={label}
+          // State is carried by the border colour AND by the message below, never by
+          // colour alone.
+          style={s.input}
+          placeholderTextColor={theme.color.muted}
+          onFocus={(event) => {
+            setFocused(true);
+            inputProps.onFocus?.(event);
+          }}
+          onBlur={(event) => {
+            setFocused(false);
+            inputProps.onBlur?.(event);
+          }}
+        />
+
+        {reveal ? (
+          <Pressable
+            accessibilityRole="button"
+            // Named for the field it operates on: *Show* alone is two identical buttons
+            // on a form with a password and a repeat password.
+            accessibilityLabel={`${revealed ? 'Hide' : 'Show'} ${label.toLowerCase()}`}
+            accessibilityState={{ expanded: revealed }}
+            onPress={() => setRevealed((shown) => !shown)}
+            hitSlop={theme.hit.btn}
+            style={({ pressed }) => [s.reveal, pressed ? s.revealPressed : undefined]}
+          >
+            <Text style={s.revealWord}>{revealed ? 'Hide' : 'Show'}</Text>
+          </Pressable>
+        ) : null}
+      </View>
+
       {error !== undefined ? (
         <Text style={s.fieldError} accessibilityRole="alert">
           {error}
@@ -89,23 +136,42 @@ const s = StyleSheet.create({
     color: theme.color.ink,
     textTransform: 'uppercase',
   },
-  input: {
-    ...theme.type.rlValue,
-    color: theme.color.ink,
+  box: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: theme.color.surface,
     borderWidth: 1,
     borderColor: theme.color.line,
     borderRadius: theme.radius.btn,
-    paddingHorizontal: theme.space.md,
     // Height, not a fixed font size: the box grows with the OS text setting instead of
     // clipping at large accessibility sizes.
     minHeight: theme.size.btnXl,
   },
-  inputFocused: {
+  boxFocused: {
     borderColor: theme.color.ink,
   },
-  inputError: {
+  boxError: {
     borderColor: theme.color.red,
+  },
+  input: {
+    ...theme.type.rlValue,
+    color: theme.color.ink,
+    flex: 1,
+    paddingHorizontal: theme.space.md,
+    minHeight: theme.size.btnXl,
+  },
+  // No fill and no border: it is a word inside a box that already has both, and a second
+  // bordered surface inside the field would read as a second field.
+  reveal: {
+    justifyContent: 'center',
+    paddingHorizontal: theme.space.md,
+    alignSelf: 'stretch',
+  },
+  revealPressed: { opacity: 0.6 },
+  revealWord: {
+    ...theme.type.btn,
+    color: theme.color.ink,
+    textTransform: 'uppercase',
   },
   fieldError: {
     ...theme.type.tiny,

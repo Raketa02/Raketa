@@ -2,65 +2,47 @@
  * The evidence trail — the lower half of the result screen, and the point of it.
  *
  * The verdict alone is a number without an account of itself, and a rating is never only a
- * number. **The trail is two lists and they stay apart**, because they answer different
- * questions: what moved the Level, and what widened the range. Nothing appears in both, and
- * **the second list has no direction** — something that widened the range did not move the
- * Level, and drawing it with an arrow would describe a different rating than the one
- * produced.
+ * number. **The trail is one list: what moved the Level.**
  *
- * One card with a fold between the halves, not two cards: it is one account.
+ * **What widened the range is no longer drawn.** The engine still sends it and the mapper
+ * still reads it — `AssessmentResult.wideners` is the contract and nothing here narrows it
+ * — but a player meeting their first rating does not need σ arithmetic itemised at them.
+ * The range itself is on the verdict above, the note beside it says the estimate is
+ * provisional, and that is the whole of what the widening means to somebody who has not
+ * played a match yet. Restoring the list is a rendering decision, not a data one.
  *
- * **Every word below the headings is the server's.** Labels, details and the confidence
- * sentence are authored there so they can be corrected without an App Store release, and
- * directions are computed by the engine rather than derived here. What this file owns is
- * where a row sits and what shape it takes — including the fallback that keeps a key this
- * build has never seen on the screen instead of dropping it.
+ * **Every word below the heading is the server's.** Labels and details are authored there
+ * so they can be corrected without an App Store release, and directions are computed by the
+ * engine rather than derived here. What this file owns is where a row sits and what shape
+ * it takes.
  */
 
 import { StyleSheet, Text, View } from 'react-native';
 
-import { Card, Hairline, Note, Row, theme } from '@/shared/ui';
+import { Card, Row, theme } from '@/shared/ui';
 
-import type { EvidenceContribution, RangeWidener } from '../domain/AssessmentResult';
+import type { EvidenceContribution } from '../domain/AssessmentResult';
 
-import { directionMark, widenerVariant } from './evidencePresentation';
-import { formatLevel, formatSigma } from './ratingFormat';
+import { directionMark } from './evidencePresentation';
+import { formatLevel } from './ratingFormat';
 
 export interface EvidenceTrailProps {
   readonly contributions: readonly EvidenceContribution[];
-  readonly wideners: readonly RangeWidener[];
 }
 
-export function EvidenceTrail({ contributions, wideners }: EvidenceTrailProps) {
-  // A run can produce one and not the other — a beginner's single answer moves the Level
-  // and widens nothing — so each half appears only when it has something to say.
-  if (contributions.length === 0 && wideners.length === 0) return null;
+export function EvidenceTrail({ contributions }: EvidenceTrailProps) {
+  // A run with nothing to account for draws nothing at all, rather than an empty card
+  // under a heading promising an account.
+  if (contributions.length === 0) return null;
 
   return (
     <Card>
-      {contributions.length > 0 ? (
-        <View>
-          <Text style={s.heading}>What moved your level</Text>
-          {contributions.map((contribution, index) => (
-            <ContributionRow
-              key={contribution.key}
-              contribution={contribution}
-              divided={index > 0}
-            />
-          ))}
-        </View>
-      ) : null}
-
-      {wideners.length > 0 ? (
-        <Hairline style={contributions.length === 0 ? s.unfolded : undefined}>
-          <Text style={s.heading}>What widened your range</Text>
-          <View style={s.wideners}>
-            {wideners.map((widener) => (
-              <WidenerNote key={widener.key} widener={widener} />
-            ))}
-          </View>
-        </Hairline>
-      ) : null}
+      <View>
+        <Text style={s.heading}>What moved your level</Text>
+        {contributions.map((contribution, index) => (
+          <ContributionRow key={contribution.key} contribution={contribution} divided={index > 0} />
+        ))}
+      </View>
     </Card>
   );
 }
@@ -107,28 +89,6 @@ function ContributionRow({
   );
 }
 
-/**
- * One thing that widened the range, with how much uncertainty it actually added.
- *
- * A note rather than a row, because a widener carries a sentence and a row is a line. The
- * emphasis comes from the key where this build recognises it and from the default where it
- * does not — **an unknown key renders, it never vanishes.**
- */
-function WidenerNote({ widener }: { readonly widener: RangeWidener }) {
-  const added = formatSigma(widener.sigmaAdded);
-
-  return (
-    <Note variant={widenerVariant(widener.key)} title={widener.label}>
-      <View style={s.widener}>
-        <Text style={s.detail}>{widener.detail}</Text>
-        <Text style={s.added} accessibilityLabel={`Widened your range by ${added}`}>
-          {`+${added}`}
-        </Text>
-      </View>
-    </Note>
-  );
-}
-
 const s = StyleSheet.create({
   heading: {
     ...theme.type.eyebrow,
@@ -136,14 +96,8 @@ const s = StyleSheet.create({
     textTransform: 'uppercase',
     marginBottom: theme.space.xxs,
   },
-  // Where there is no first half, the fold has nothing to fold away from.
-  unfolded: { borderTopWidth: 0, marginTop: 0, paddingTop: 0 },
-  wideners: { gap: theme.space.xs },
   direction: { flexDirection: 'row', alignItems: 'center', gap: theme.space.xs },
   glyph: { ...theme.type.tag, color: theme.color.muted },
   word: { ...theme.type.rlValue, color: theme.color.muted },
   level: { ...theme.num.xs, ...theme.tabular, color: theme.color.ink },
-  widener: { flexDirection: 'row', alignItems: 'flex-start', gap: theme.space.sm },
-  detail: { ...theme.type.tiny, color: theme.color.ink, flex: 1 },
-  added: { ...theme.num.xs, ...theme.tabular, color: theme.color.muted },
 });

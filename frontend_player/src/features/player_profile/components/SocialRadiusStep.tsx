@@ -5,6 +5,18 @@
  * arrives: a distance is a distance *from* somewhere, and the screen before this one is
  * where that somewhere was given.
  *
+ * **The title asks about the search, not about the journey.** *How far will you travel* was
+ * a question about a commitment nobody is held to; the number is the edge of a search and
+ * the weighting on a proposal, and a player who answered the old question honestly would
+ * have set it lower than they wanted.
+ *
+ * **The title is the whole of what the screen says.** The line under it and the note under
+ * the slider are both gone: the title asks the question, the figure answers it, and the
+ * plain-word reading beneath the figure (*across your town*) is what a distance means to
+ * somebody who does not think in kilometres. `stepCopy('radius').asks` is still the table's
+ * entry for this step — the chrome of all six is one table — and this screen no longer
+ * draws it.
+ *
  * ## A slider, and not the four fixed chips both source specifications drew
  *
  * A deliberate departure, recorded in the parent spec. Four jumps are four opinions about
@@ -32,7 +44,7 @@
 
 import { useRouter } from 'expo-router';
 import { useEffect } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { recoveryMessage } from '@/shared/errors';
 import { Button, Note, RadiusSlider, theme } from '@/shared/ui';
@@ -52,9 +64,7 @@ import { SocialStepLayout } from './SocialStepLayout';
 import { SOCIAL_STEP_PATH } from './socialStepRoutes';
 import { stepCopy } from './socialStepPresentation';
 import {
-  RADIUS_BODY,
   RADIUS_LABEL,
-  RADIUS_TITLE,
   radiusFigure,
   radiusWords,
   spokenRadius,
@@ -102,8 +112,6 @@ export function SocialRadiusStep() {
         )
       }
     >
-      <Text style={s.asks}>{stepCopy('radius').asks}</Text>
-
       {/* Paused, not loading: `networkMode: 'online'` holds a query rather than failing it,
           so an offline player would otherwise watch a spinner forever. */}
       {options.fetchStatus === 'paused' ? (
@@ -146,24 +154,10 @@ export function SocialRadiusStep() {
           accessibilityValueText={spokenRadius(radius)}
         />
       )}
-
-      {/* After the control rather than before it. The location step explains first because
-          a permission prompt a player did not expect is refused by people who would have
-          said yes; nothing here prompts for anything, and what this note carries is what
-          the number *does* — which is read against a distance the player has already set.
-
-          `info` rather than `amber`: this explains what the product does with the answer,
-          and amber means *watch this, reversible, not yet wrong* — a status about the
-          player's own answer rather than an explanation of the app (design-system 1.3). */}
-      <Note variant="info" title={RADIUS_TITLE}>
-        {RADIUS_BODY}
-      </Note>
     </SocialStepLayout>
   );
 }
 
 const s = StyleSheet.create({
-  /** Secondary text is always `tiny` in `muted` — what this step asks. */
-  asks: { ...theme.type.tiny, color: theme.color.muted },
   failure: { gap: theme.space.sm },
 });

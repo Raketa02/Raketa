@@ -416,14 +416,20 @@ describe('walking into the questionnaire', () => {
     await waitFor(() => expect(screen).toHavePathname('/sports'));
   }
 
-  it('sets expectations before the first question', async () => {
+  it('sets expectations before the first question, in two cards and no more', async () => {
     stubGate();
     await launchSignedIn();
     await waitFor(() => expect(screen).toHavePathname('/welcome'));
 
     expect(screen.getByText('You get a starting level for each sport')).toBeTruthy();
     expect(screen.getByText('It takes about a minute per sport')).toBeTruthy();
-    expect(screen.getByText('Nothing here is permanent')).toBeTruthy();
+
+    // *Nothing here is permanent* and the note about answering for a normal match were both
+    // true and both cut: this screen's job is to get a player into the questionnaire, and
+    // the result screen says what a starting estimate is worth at the moment there is one to
+    // say it about.
+    expect(screen.queryByText('Nothing here is permanent')).toBeNull();
+    expect(screen.queryByText(/not your best day/)).toBeNull();
   });
 
   it('counts the sports chosen on the control that continues', async () => {

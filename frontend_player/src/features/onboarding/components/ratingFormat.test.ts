@@ -4,7 +4,7 @@
  * reflowing when a level goes from 2,71 to 2,80.
  */
 
-import { formatConfidence, formatLevel, formatRange, formatSigma } from './ratingFormat';
+import { formatConfidence, formatLevel, formatRange } from './ratingFormat';
 
 describe('levels', () => {
   it('writes two decimals with a comma, whatever the value arrived as', () => {
@@ -32,12 +32,5 @@ describe('confidence', () => {
     // being read as "28,4% sure", and nothing on the screen compares two of them.
     expect(formatConfidence(28)).toBe('28%');
     expect(formatConfidence(28.4)).toBe('28%');
-  });
-});
-
-describe('what a widener added', () => {
-  it('is written on the same scale as the level, so it has the same shape', () => {
-    expect(formatSigma(0.18)).toBe('0,18');
-    expect(formatSigma(0.1834)).toBe('0,18');
   });
 });

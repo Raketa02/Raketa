@@ -4,7 +4,7 @@
  * **Specified since the document was locked and built only now** (Part 16, 2026-08-25).
  * The app shipped the tag first, which is deliberately never pressable, so the rule *a
  * pressable pill is a chip* had nothing to point at until the social tags step wanted
- * eighteen of them.
+ * nineteen of them.
  *
  * **Selected is ink-filled, not coral.** Coral is the action colour and a selected filter
  * is a state — the same argument `PressableCard` makes for the selected card (5.1).

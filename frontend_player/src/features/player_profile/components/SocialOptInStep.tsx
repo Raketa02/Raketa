@@ -6,6 +6,19 @@
  * of those is a moral event. This one is a record of what a person agreed to, which is why
  * it is the step with the frozen copy, the pinned version identifier and no third control.
  *
+ * ## The two answers are buttons
+ *
+ * They were chips, and a chip is a **filter** over content the player can already see (6.2).
+ * These are the two answers to the screen's only question and the one press that opens the
+ * finish, so they are the size of an answer: stacked, full width, the given one filled and
+ * the other outlined. Neither is `primary` — coral is the one accent (1.2) and the finish
+ * has it — and `accessibilityState.selected` is announced by both, because *not chosen* and
+ * *not a choice* are different things to be told.
+ *
+ * **No wording changed with the control**, which is why that alone did not bump the copy
+ * version. What did is the line that used to sit under the title, now gone: see
+ * `optInPresentation`, where `v1` is retired and retained.
+ *
  * ## Never pre-answered, and no way past it that is not an answer
  *
  * Neither control is selected on arrival, and the finish is closed until one of them is.
@@ -53,7 +66,7 @@ import { Fragment } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { recoveryMessage } from '@/shared/errors';
-import { Button, Card, Chip, Hairline, Note, theme } from '@/shared/ui';
+import { Button, Card, Hairline, Note, theme } from '@/shared/ui';
 
 import { mayFinish, type CommitStanding } from '../domain/profileCommit';
 import { optInStanding } from '../domain/proposalsOptIn';
@@ -83,18 +96,21 @@ import {
   PROPOSALS_OPT_IN_COPY_VERSION,
 } from './optInPresentation';
 import { SocialStepLayout } from './SocialStepLayout';
-import { stepCopy } from './socialStepPresentation';
 
 /**
- * Where the part leads once the server has it: the closing screens, then the app.
+ * Where the part leads once the server has it: what Raketa keeps, and then the app.
+ *
+ * **Not the ratings summary — the player has already seen it.** It is the screen the second
+ * part is now entered *from*, so landing back on it after the commit would show a player the
+ * same account of the same walk twice, with the second one following six questions that had
+ * nothing to do with it.
  *
  * A route literal rather than an import, and that is the boundary working. What follows the
- * commit is onboarding's — the summary of the ratings this walk produced, and what Raketa
- * keeps — and this feature owns the profile rather than the flow that collects it. Written
- * here, beside the one press that goes there, rather than in `socialStepRoutes`: that table
- * is the six steps, and the six steps stop before this.
+ * commit is onboarding's, and this feature owns the profile rather than the flow that
+ * collects it. Written here, beside the one press that goes there, rather than in
+ * `socialStepRoutes`: that table is the six steps, and the six steps stop before this.
  */
-const AFTER_THE_PART = '/done';
+const AFTER_THE_PART = '/data';
 
 /**
  * Why the finish will not move, for whoever cannot see that it will not.
@@ -221,8 +237,6 @@ export function SocialOptInStep() {
         </>
       }
     >
-      <Text style={s.asks}>{stepCopy('opt-in').asks}</Text>
-
       <Card>
         <Text style={s.heading}>{OPT_IN_PROMISE_HEADING}</Text>
 
@@ -268,27 +282,37 @@ export function SocialOptInStep() {
       <Text style={s.smallPrint}>{OPT_IN_NEVER_PRE_TICKED}</Text>
 
       {/* The order is the copy's, not this screen's — No first, because the option a screen
-          puts first is the one it reads as recommending. */}
+          puts first is the one it reads as recommending.
+
+          **Buttons, and full width.** These were chips, and a chip is a filter over content
+          the player can already see (6.2) — a row of two pills reads as *narrow this down*.
+          These are the two answers to the only question on the screen, so they are the size
+          of an answer. Neither is `primary`: coral is the one accent (1.2) and the finish
+          below has it, so the answer that has been given is `dark` and the other is
+          `secondary` — a luminance inversion, the same thing the chip's ink fill was doing.
+          `selected` carries the same fact for whoever sees neither, and it is announced by
+          both controls rather than only by the chosen one. */}
       <View style={s.answers}>
-        {OPT_IN_ANSWERS.map(({ accepted, label }) => (
-          <Chip
-            key={label}
-            label={label}
-            // Selection is the chip's ink fill — a luminance inversion rather than a change
-            // of hue — **and** `accessibilityState.selected`, which the chip always
-            // announces, selected or not. Neither half is the whole fact.
-            selected={standing.kind === 'answered' && standing.accepted === accepted}
-            onPress={() => say(accepted)}
-          />
-        ))}
+        {OPT_IN_ANSWERS.map(({ accepted, label }) => {
+          const chosen = standing.kind === 'answered' && standing.accepted === accepted;
+
+          return (
+            <Button
+              key={label}
+              label={label}
+              size="lg"
+              variant={chosen ? 'dark' : 'secondary'}
+              selected={chosen}
+              onPress={() => say(accepted)}
+            />
+          );
+        })}
       </View>
     </SocialStepLayout>
   );
 }
 
 const s = StyleSheet.create({
-  /** Secondary text is always `tiny` in `muted` — what this step asks. */
-  asks: { ...theme.type.tiny, color: theme.color.muted },
   // The card carries no gap of its own: `Hairline` owns the space around each fold, and
   // this is the one step between the heading and the first promise, which has no fold.
   promises: { marginTop: theme.space.xs },
@@ -298,7 +322,8 @@ const s = StyleSheet.create({
   // role is for text that is genuinely secondary to something else on the screen.
   detail: { ...theme.type.tiny, color: theme.color.ink },
   smallPrint: { ...theme.type.tiny, color: theme.color.muted },
-  // Wrapping rather than a fixed row: both labels name what they do, so at a large OS text
-  // size they become two full-width lines rather than two clipped words.
-  answers: { flexDirection: 'row', flexWrap: 'wrap', gap: theme.space.xs },
+  // Stacked, not a row: both labels are a sentence naming what they do, and two of those
+  // side by side on a phone are two clipped words. The gap is the one between stacked
+  // controls in an action group.
+  answers: { gap: theme.space.sm },
 });

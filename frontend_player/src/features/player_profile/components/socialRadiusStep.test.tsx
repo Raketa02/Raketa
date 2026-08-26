@@ -262,7 +262,7 @@ describe('the answer the part holds', () => {
     fireEvent.press(screen.getByLabelText('Continue'));
     await waitFor(() => expect(screen).toHavePathname('/opt-in'));
 
-    fireEvent.press(screen.getByLabelText('Back to How far will you travel?'));
+    fireEvent.press(screen.getByLabelText('Back to How far should we look for players?'));
     await waitFor(() => expect(screen).toHavePathname('/radius'));
 
     // Awaited, not read: the bounds are a query with no observer while the player is on
@@ -274,15 +274,21 @@ describe('the answer the part holds', () => {
 
 describe('what the step says the number does', () => {
   /**
-   * The glossary's whole point: the radius **filters when the player searches and weights
-   * when the engine proposes**. Saying only the first would let a player set a small radius
-   * believing it removes them from everything; saying only the second would make the
-   * control look advisory when a search obeys it exactly.
+   * The title asks the question the number actually answers. *How far will you travel* asked
+   * a player to commit to a journey — which is not what a search radius is, and a player who
+   * answered it honestly would set it lower than they wanted.
    */
-  it('says both of the things the same number does', async () => {
+  it('asks about the search rather than about the journey', async () => {
     await reachTheRadiusStep();
 
-    expect(screen.getByText(/nobody further out comes back/)).toBeTruthy();
-    expect(screen.getByText(/players closer to you come first/)).toBeTruthy();
+    expect(screen.getByText('How far should we look for players?')).toBeTruthy();
+    expect(screen.queryByText(/How far will you travel/)).toBeNull();
+  });
+
+  it('leaves the explanation to the title and the reading, with no note under the slider', async () => {
+    await reachTheRadiusStep();
+
+    expect(screen.queryByText(/nobody further out comes back/)).toBeNull();
+    expect(screen.queryByText(/players closer to you come first/)).toBeNull();
   });
 });

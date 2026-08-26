@@ -88,7 +88,7 @@ const STEPS = [
   },
   {
     path: '/radius',
-    title: 'How far will you travel?',
+    title: 'How far should we look for players?',
     eyebrow: 'Setting up · Step 5 of 6',
     back: 'Back to Where do you play?',
     forward: 'Continue',
@@ -97,7 +97,7 @@ const STEPS = [
     path: '/opt-in',
     title: 'May we suggest games?',
     eyebrow: 'The one thing we ask before finishing',
-    back: 'Back to How far will you travel?',
+    back: 'Back to How far should we look for players?',
     forward: 'Finish — show me players',
   },
 ] as const;

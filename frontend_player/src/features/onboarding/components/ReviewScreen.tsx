@@ -29,6 +29,12 @@
  *
  * The three loading branches are the question screen's, for the same reasons: a paused
  * query is offline rather than broken, and a failed read gets a message and a retry.
+ *
+ * **Getting the level does not pass back through this screen.** The completion navigates
+ * from under the calculating view once its hold is up, rather than dropping the hold and
+ * letting the effect below route on the next render — that render is one frame of the
+ * answer list between the spinner and the rating, and a player reads it as a glitch in the
+ * one moment the flow is trying to make feel like an event.
  */
 
 import { useEffect, useRef, useState } from 'react';
@@ -87,11 +93,12 @@ export function ReviewScreen({ assessmentId, sport }: ReviewScreenProps) {
    * The rating is being made, and the screen says so for at least as long as that is worth
    * saying.
    *
-   * **It also holds the routing below.** The finished step is in hand the moment the
-   * request lands, so without this the result would replace the calculating screen after a
-   * frame — which reads as a glitch rather than as the moment the rating came into
-   * existence. When it drops, whatever the run now says is where the player goes, and that
-   * is the one place the destination is decided.
+   * **Once it is on, only a failure takes it off.** A successful completion navigates
+   * straight from under the calculating screen and leaves this flag standing, so the review
+   * is never drawn again between the hold ending and the result arriving — that one frame
+   * of the answer list is the blink this replaced. The effect below is what used to
+   * navigate, and it still does for every *other* way a run can turn out to be over; the
+   * ordinary path no longer goes through it.
    */
   const [calculating, setCalculating] = useState(false);
 
@@ -142,7 +149,24 @@ export function ReviewScreen({ assessmentId, sport }: ReviewScreenProps) {
     });
 
     complete.mutate(undefined, {
-      onSuccess: () => void held.then(() => setCalculating(false)),
+      /**
+       * Straight to the result, with `calculating` left standing. Dropping it first would
+       * re-render this screen for the frame before the router moved, which is exactly the
+       * flash of "Check your answers" the player saw between the spinner and their rating.
+       * `showResultOf` carries the departure latch, so a run that finished some other way in
+       * the meantime cannot navigate on top of this.
+       *
+       * **A rating is not the only thing that resolves this call.** The use-case treats
+       * `assessment_not_stopped` as a re-read rather than a failure, so a run that was
+       * answered on a second device comes back here *successfully* and still asking. That
+       * one has no result to show, so the wait ends and the effect above routes it — to the
+       * outstanding question, or out of a run somebody abandoned elsewhere.
+       */
+      onSuccess: (finished) =>
+        void held.then(() => {
+          if (runStanding(finished) === 'rated') showResultOf(assessmentId);
+          else setCalculating(false);
+        }),
       // A failure has nothing to hold for: the screen the player is waiting on cannot
       // arrive, so the wait ends and the message takes its place beside the retry.
       onError: () => setCalculating(false),
@@ -201,21 +225,13 @@ export function ReviewScreen({ assessmentId, sport }: ReviewScreenProps) {
             </View>
           ) : null}
 
-          {answers.length > 0 ? (
-            <>
-              <Text style={s.intro}>
-                {`This is everything your ${name} level will be built from. Tap an answer to change it — nothing is recorded until you get your level.`}
-              </Text>
-
-              {answers.map((answered) => (
-                <ReviewEntry
-                  key={`${answered.position}-${answered.question.id}`}
-                  answered={answered}
-                  onPress={() => showQuestionAt(assessmentId, answered.position)}
-                />
-              ))}
-            </>
-          ) : null}
+          {answers.map((answered) => (
+            <ReviewEntry
+              key={`${answered.position}-${answered.question.id}`}
+              answered={answered}
+              onPress={() => showQuestionAt(assessmentId, answered.position)}
+            />
+          ))}
         </ScrollView>
 
         {standing === 'stopped' ? (
@@ -307,7 +323,6 @@ const s = StyleSheet.create({
     gap: theme.space.sm,
   },
   failure: { gap: theme.space.sm },
-  intro: { ...theme.type.tiny, color: theme.color.muted },
   entryEyebrow: {
     ...theme.type.eyebrow,
     color: theme.color.muted,

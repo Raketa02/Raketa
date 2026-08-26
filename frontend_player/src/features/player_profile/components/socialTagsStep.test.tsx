@@ -46,7 +46,7 @@ const RATING: Wire['RatingResponse'] = {
 };
 
 /**
- * The eighteen labels, in the order the fixture serves them.
+ * Every label, in the order the fixture serves them.
  *
  * Written out rather than derived from the presentation table: a test that asked the code
  * for the words would agree with any words at all, including none.
@@ -70,6 +70,7 @@ const EVERY_TAG_IN_ORDER = [
   'Here to meet players',
   'Here for a regular game',
   'Here to get back into it',
+  'Open to meet someone',
 ];
 
 /** Six presses that fill the served ceiling exactly. */
@@ -129,10 +130,10 @@ afterEach(() => {
 // ---------------------------------------------------------------------------
 
 describe('the vocabulary the step offers', () => {
-  it('renders the eighteen tags under their three headings, in the order they were served', async () => {
+  it('renders every served tag under its heading, in the order it was served', async () => {
     await reachTheTagsStep();
 
-    // Story 15: eighteen options must not read as an undifferentiated wall.
+    // Story 15: nineteen options must not read as an undifferentiated wall.
     expect(screen.getByText('After the match')).toBeTruthy();
     expect(screen.getByText('On the court')).toBeTruthy();
     expect(screen.getByText("Why you're here")).toBeTruthy();
@@ -143,7 +144,7 @@ describe('the vocabulary the step offers', () => {
   });
 
   it('offers a shorter vocabulary when a shorter one is served, rather than its own', async () => {
-    // The one property that proves the eighteen came from the server: serve two and the
+    // The one property that proves the vocabulary came from the server: serve two and the
     // screen shows two. A hardcoded picker passes every other test in this file.
     await reachTheTagsStep({
       ...PROFILE_OPTIONS_SERVED,
@@ -164,12 +165,27 @@ describe('the vocabulary the step offers', () => {
     expect(screen.UNSAFE_queryAllByType(TextInput)).toEqual([]);
   });
 
-  it('says the tags are about the game and not about looks or age', async () => {
-    // Story 23. What kind of product this is, said on the screen that would be the obvious
-    // place to ask for something else.
+  it('says nothing above the chips at all', async () => {
+    // The line under the title and the note about what the tags are *for* are both gone:
+    // the three group headings say what each set is about, and a screen of options reads
+    // faster
+    // with nothing stacked on top of them. Story 23's claim is kept by the vocabulary
+    // itself — every one of them is about the game — rather than by a sentence
+    // asserting it.
     await reachTheTagsStep();
 
-    expect(screen.getByText(/not how you look/)).toBeTruthy();
+    expect(screen.queryByText(/not how you look/)).toBeNull();
+    expect(screen.queryByText(/another player would recognise you by/)).toBeNull();
+  });
+
+  it('draws each chip with an emoji and announces it without one', async () => {
+    // The glyph is what lets a player find the chip they meant among nineteen. It is
+    // decoration: a screen reader announcing its name would be reading the layout aloud
+    // rather than the choice, so the accessible name is the words alone.
+    await reachTheTagsStep();
+
+    expect(await screen.findByText('🏆 Plays to win')).toBeTruthy();
+    expect(screen.getByLabelText('Plays to win')).toBeTruthy();
   });
 });
 

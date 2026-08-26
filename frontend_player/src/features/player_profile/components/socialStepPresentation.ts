@@ -42,7 +42,13 @@ const COPY: Readonly<Record<SocialStep, StepCopy>> = {
     asks: 'The area you play in, read once from your device and rounded.',
   },
   radius: {
-    title: 'How far will you travel?',
+    /**
+     * **The question is about the search, not about the journey.** *How far will you travel*
+     * asked a player to commit to a distance they would drive, which is not what the number
+     * does: it is the edge of their search and the weighting on a proposal, and nobody is
+     * ever held to it. A player who read the old title honestly would set it low.
+     */
+    title: 'How far should we look for players?',
     asks: 'How far out to look for other players.',
   },
   'opt-in': {

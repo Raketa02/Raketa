@@ -36,7 +36,6 @@
  * entry gate as a pure function, tested without mounting anything.
  */
 
-import type { EntryInput } from './entryDecision';
 import type { Sport } from './Sport';
 
 /** A run that produced a Skill rating. **Identifiers only** — see above. */
@@ -173,31 +172,16 @@ export type PassDestination =
   /** The next sport the player chose. */
   | { readonly kind: 'rate'; readonly sport: Sport }
   /**
-   * Onboarding's **second part**, from its first step.
+   * The summary of what this pass produced — *your starting ratings*.
    *
-   * The part after this one, for a player who has not committed a Player profile — the six
-   * social steps, then the commit, and the closing screens on the far side of it
-   * ([ADR-0090](../../../../../docs/adr/0090-onboarding-per-player-checkpoint.md)).
+   * **It is the end of the first part, not the end of onboarding.** What follows it is the
+   * done screen's to decide, because that is where the fact it turns on — whether this
+   * player still owes a Player profile — is read. This rule's job stops at *is there
+   * anything to account for*.
    */
-  | { readonly kind: 'social-steps' }
-  /** The closing screens: the summary of what this pass produced, then what is kept. */
   | { readonly kind: 'closing' }
   /** Straight into the app. */
   | { readonly kind: 'app' };
-
-/**
- * What the pass has to be told about the player to answer where they go next.
- *
- * One fact, spelled the way `EntryInput` spells it, and it is a **parameter** rather than
- * something this module reaches for — a rule that fetched would not be one.
- *
- * **Unknown must read as `true`.** A launch that has not answered *does this player have a
- * profile* is not a licence to walk them into six steps they may have finished months ago;
- * the closing screens lead to the app, and the gate there has the last word and will send
- * them into the second part if that is where they belong. The other default sends a player
- * with a profile through the part again, ending on a commit the server refuses.
- */
-type PlayerProfileFact = Pick<EntryInput, 'hasPlayerProfile'>;
 
 /**
  * Where a player who **stops before the end of the queue** goes.
@@ -207,25 +191,26 @@ type PlayerProfileFact = Pick<EntryInput, 'hasPlayerProfile'>;
  * answering both is what stops the two from drifting into different answers to *is there
  * anything to account for*.
  *
- * Three answers, in this order:
+ * Two answers, and the question is only ever the one this pass can answer by itself:
  *
  * - **Nothing rated in this pass → the app**, and the entry gate answers from there. There
  *   is no account to give, and this pass knows nothing about ratings an earlier walk made
  *   or about a part left unfinished; the gate knows both. Answering *stop* with screens
  *   about a walk that produced nothing would be the wrong response to what was asked.
- * - **A rating and no Player profile → the second part.** Setting up is not finished, and
- *   the closing screens belong on the other side of it: the done screen accounts for this
- *   pass, and it is the commit that makes what it accounts for true of the account.
- * - **A rating and a profile → the closing screens**, which is what this used to answer for
- *   everybody. It is now the *finished* player's answer — the one resuming a run they left
- *   behind after they had already been set up.
+ * - **Anything rated → the summary.** The ratings this walk produced are what the player
+ *   just earned, and they see them at the moment they finish earning them.
+ *
+ * **Whether a Player profile is still owed is no longer read here.** It used to be: a
+ * player without one was sent into the second part and shown their ratings only after the
+ * commit, on the theory that the summary should follow the write that completes the
+ * account. That put six more questions between a player and the number they had just spent
+ * a minute per sport producing. The summary now comes first for everybody, and the done
+ * screen is where the second part is entered from — one screen further on, where the
+ * profile fact is read once and acted on once.
  */
-export function stopDestination(
-  pass: OnboardingPass | undefined,
-  { hasPlayerProfile }: PlayerProfileFact,
-): PassDestination {
+export function stopDestination(pass: OnboardingPass | undefined): PassDestination {
   if (pass === undefined || pass.rated.length === 0) return { kind: 'app' };
-  return hasPlayerProfile ? { kind: 'closing' } : { kind: 'social-steps' };
+  return { kind: 'closing' };
 }
 
 /**
@@ -233,10 +218,8 @@ export function stopDestination(
  *
  * **Finished and abandoned land in the same place**, which is why one rule answers for
  * both. Abandoning is the player saying stop, and it is still the end of that sport: if
- * any sport in the pass was rated, they leave the way the player who finished does —
- * through setting up, if it is not done, and then the closing screens either way, where the
- * done screen accounts for the ratings they made and the data screen says what was kept and
- * that no one can hand-edit a Level. Ending on an abandonment is not a reason to be told
+ * any sport in the pass was rated, they leave the way the player who finished does — to the
+ * summary of what this walk produced. Ending on an abandonment is not a reason to be told
  * none of that.
  *
  * **When the pass produced nothing, it goes straight to the app.** There is no account to
@@ -249,16 +232,12 @@ export function stopDestination(
  * resumed run into the app rather than to a summary of the ratings an *earlier* walk
  * produced — that walk ended when they reached the app, and its ratings went with it.
  */
-export function nextDestination(
-  pass: OnboardingPass | undefined,
-  sport: Sport,
-  standing: PlayerProfileFact,
-): PassDestination {
+export function nextDestination(pass: OnboardingPass | undefined, sport: Sport): PassDestination {
   if (pass === undefined) return { kind: 'app' };
 
   const at = pass.queue.indexOf(sport);
   const next = at === -1 ? undefined : pass.queue[at + 1];
 
   if (next !== undefined) return { kind: 'rate', sport: next };
-  return stopDestination(pass, standing);
+  return stopDestination(pass);
 }

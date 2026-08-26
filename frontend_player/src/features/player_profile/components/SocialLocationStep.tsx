@@ -28,16 +28,25 @@
  * sees — the same split the three steps before it made, and for the same reason: the
  * profile editor will obey these rules from a screen that looks nothing like this one.
  *
- * **Only the coarse area is ever drawn.** The figure on screen is the same pair the draft
- * holds and the same pair the commit will send; there is no precise reading anywhere above
- * the hook that could be rendered by accident.
+ * ## No coordinates are drawn at all
+ *
+ * The area used to be printed back as a degree pair. It is not any more, and the change is
+ * not only cosmetic: *the precise fix never leaves the hook* was already true, and now **no
+ * reading of any kind reaches the screen**. What a player gets instead is the control they
+ * pressed turning green and saying `Location saved` — the fact they actually wanted, which
+ * is *did that work*, rather than two numbers they cannot check and did not ask for. The
+ * area still goes to the draft and the commit exactly as before.
+ *
+ * The green is `Button`'s `settled` variant, and the **words change with it**: a state
+ * carried by a fill alone is a state nobody who cannot see the fill is told about.
  */
 
 import { useRouter } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { useEffect, useRef, type ReactNode } from 'react';
+import { Animated, StyleSheet, View } from 'react-native';
 
 import { openAppSettings } from '@/shared/lib/platform';
-import { Button, Card, Note, Row, theme } from '@/shared/ui';
+import { Button, Note, theme, useReducedMotion } from '@/shared/ui';
 
 import { stepAfter } from '../domain/socialSteps';
 import { useLocationStep } from '../hooks/useLocationStep';
@@ -48,24 +57,21 @@ import { stepCopy } from './socialStepPresentation';
 import {
   ACCESS_BODY,
   ACCESS_TITLE,
-  AREA_LABEL,
-  AREA_PRECISION_LINE,
-  AREA_UNSET_LINE,
   NO_FIX_BODY,
   NO_FIX_TITLE,
   OPEN_SETTINGS,
+  READ_AGAIN_HINT,
   READING_WORD,
-  USE_MY_LOCATION,
+  captureLabel,
+  continueLabel,
   WHY_BODY,
   WHY_TITLE,
-  areaLine,
-  continueLabel,
-  spokenArea,
 } from './locationPresentation';
 
 export function SocialLocationStep() {
   const router = useRouter();
   const { area, standing, capture } = useLocationStep();
+  const settled = area !== undefined;
 
   // Where continuing leads is the step order's answer, not this screen's.
   const next = stepAfter('location');
@@ -90,8 +96,6 @@ export function SocialLocationStep() {
         )
       }
     >
-      <Text style={s.note}>{stepCopy('location').asks}</Text>
-
       {/* `info` rather than `amber`: this explains what the product does with the answer,
           and amber means *watch this, reversible, not yet wrong* — a status about the
           player's own answer rather than an explanation of the app (design-system 1.3). */}
@@ -100,34 +104,21 @@ export function SocialLocationStep() {
       </Note>
 
       {/* The one accent, and only ever one of it (design-system 1.2): the ask is the coral
-          control while there is no area, and the action bar's continue takes it once there
-          is — at which point pressing this again only re-reads something already answered. */}
-      <Button
-        label={USE_MY_LOCATION}
-        variant={area === undefined ? 'primary' : 'secondary'}
-        size="lg"
-        busy={standing.reading}
-        busyLabel={READING_WORD}
-        onPress={() => void capture()}
-        accessibilityHint="Asks your phone for your position, once"
-      />
-
-      {area !== undefined ? (
-        <Card style={s.area}>
-          {/* One accessibility element: a coordinate pair read a screen apart from the
-              words that name it is two halves of a fact (design-system 5.5). */}
-          <Row
-            label={AREA_LABEL}
-            value={<Text style={s.figure}>{areaLine(area)}</Text>}
-            accessibilityLabel={spokenArea(area)}
-          />
-          <Text style={s.note}>{AREA_PRECISION_LINE}</Text>
-        </Card>
-      ) : standing.access === 'unasked' ? (
-        // Said only while it is true. A phone that has already been asked and answered has
-        // read something, whether or not it could place itself.
-        <Text style={s.note}>{AREA_UNSET_LINE}</Text>
-      ) : null}
+          control while there is no area, and once there is one it goes green and says so
+          while the action bar's continue takes the accent. Pressing it then re-reads
+          something already answered, which is why it stays a control and says which act it
+          is now offering. */}
+      <SettlingControl settled={settled}>
+        <Button
+          label={captureLabel(area)}
+          variant={settled ? 'settled' : 'primary'}
+          size="lg"
+          busy={standing.reading}
+          busyLabel={READING_WORD}
+          onPress={() => void capture()}
+          accessibilityHint={settled ? READ_AGAIN_HINT : 'Asks your phone for your position, once'}
+        />
+      </SettlingControl>
 
       {refusal === undefined ? null : (
         // Announced: a player who has just dismissed an OS dialog is looking at the
@@ -154,11 +145,52 @@ export function SocialLocationStep() {
   );
 }
 
+/**
+ * The one moment on this step that moves: the control arriving at *settled*.
+ *
+ * A **fade**, which is the only kind of motion the design system has for something that is
+ * not an overlay (12.1) — the control is redrawn green with new words underneath, and the
+ * fade is what stops that reading as a flicker. It plays once per transition and never on
+ * the way back, because there is no way back: an area, once read, is only ever replaced by
+ * another one.
+ *
+ * **Skipped entirely when the OS asks for reduced motion**, in which case the settled state
+ * simply is. Nothing is carried by the animation — the fill and the label both say it — so
+ * a player who never sees it has been told the same thing.
+ */
+function SettlingControl({
+  settled,
+  children,
+}: {
+  readonly settled: boolean;
+  readonly children: ReactNode;
+}) {
+  const reduced = useReducedMotion();
+  const fade = useRef(new Animated.Value(1)).current;
+  /** What the last render was told, so a re-render on some other state does not replay it. */
+  const wasSettled = useRef(settled);
+
+  useEffect(() => {
+    const arrived = settled && !wasSettled.current;
+    wasSettled.current = settled;
+    if (!arrived) return;
+
+    if (reduced) {
+      fade.setValue(1);
+      return;
+    }
+
+    fade.setValue(0);
+    Animated.timing(fade, {
+      toValue: 1,
+      duration: theme.motion.fade,
+      useNativeDriver: true,
+    }).start();
+  }, [settled, reduced, fade]);
+
+  return <Animated.View style={{ opacity: fade }}>{children}</Animated.View>;
+}
+
 const s = StyleSheet.create({
-  /** Secondary text is always `tiny` in `muted` — what this step asks, and its two lines. */
-  note: { ...theme.type.tiny, color: theme.color.muted },
-  area: { gap: theme.space.xxs },
-  /** A figure, so mono and tabular: design-system 1.4 admits no exception. */
-  figure: { ...theme.num.xs, ...theme.tabular, color: theme.color.ink },
   settings: { alignItems: 'flex-start' },
 });

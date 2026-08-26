@@ -8,46 +8,57 @@
  *
  * The copy is honest in both directions, which is the harder half:
  *
- * - **What is kept is said plainly**, because *about a kilometre* is a fact a player can
- *   check against the figure on screen. A screen that said "we respect your privacy" and
- *   showed six decimal places would be a screen nobody should believe.
+ * - **What is kept is said plainly.** *About a kilometre* is the whole promise, and it is
+ *   stated before the prompt rather than after it. A screen that said "we respect your
+ *   privacy" and left the reader to guess what that meant would be a screen nobody should
+ *   believe.
  * - **What a refusal costs is named, not implied.** Location is what discovery is built
  *   on: a player without an area cannot search and cannot be matched. Saying so is not a
  *   dark pattern — hiding it until the app is empty would be.
  *
  * The refused / blocked split is the photos step's, for the same reason: pressing the
  * control again is the whole answer to one of them and achieves nothing on the other.
+ *
+ * ## The coordinates are not words on this screen, and there are none here to write
+ *
+ * The area used to be printed back as a degree pair. It no longer is: a player has no use
+ * for their own latitude, cannot check it, and a screen full of figures reads as *this is
+ * what we took* rather than *this is what we rounded away*. What replaced it is a control
+ * that says it is done — `LOCATION_SAVED` — so the whole of what this file writes about the
+ * area is now the promise and the confirmation. **The formatters that drew the pair are
+ * gone rather than left unused**, which is what makes *the precise fix never reaches a
+ * screen* true of one fewer file.
  */
 
 import type { LocationArea } from '../domain/ProfileDraft';
-import { LOCATION_AREA_DECIMALS } from '../domain/locationArea';
 
 import type { LocationAccess } from '../hooks/useLocationStep';
 
-/** The one control that reaches the device — named twice below, so it is named once here. */
+/** The one control that reaches the device — named several times below, so once here. */
 export const USE_MY_LOCATION = 'Use my location';
 
 /** Swapped in while the device is being read. A busy button is not a disabled one. */
 export const READING_WORD = 'Reading your area…';
 
+/**
+ * What the same control says once there is an area.
+ *
+ * **The words, not only the green**, and this is the half the design system insists on: a
+ * control that carried *done* in a fill alone would carry it for nobody who cannot see the
+ * fill. Pressing it again re-reads, which is why it stays a control rather than becoming a
+ * label.
+ */
+export const LOCATION_SAVED = 'Location saved';
+
+/** What pressing the settled control would do — it is not the same act as the first press. */
+export const READ_AGAIN_HINT = 'Reads your area again';
+
 export const WHY_TITLE = 'Why Raketa asks';
 
 export const WHY_BODY =
-  'Raketa puts you in front of players near you, and finds them near you — your area is ' +
-  'what both of those are worked out from. We read your position once, round it to about ' +
-  'a kilometre, and keep only the rounded area. Never your exact position, and never while ' +
-  'you are doing something else.';
-
-/** The heading over the area itself, and the word the row is announced with. */
-export const AREA_LABEL = 'Your area';
-
-export const AREA_PRECISION_LINE =
-  'About a kilometre across. Your exact position is not kept — not on this phone, and not ' +
-  'by the platform.';
-
-/** Said under the control before anything has been read, so the ask is not a surprise. */
-export const AREA_UNSET_LINE =
-  'Nothing is read until you press it, and the first press is where your phone asks you.';
+  'We show you players near you, and show you to them — so we need a rough idea of where ' +
+  'you play. One reading, rounded to about a kilometre, and that rounded area is all we ' +
+  'keep. Not your exact position, and nothing at all while you are off doing something else.';
 
 export const ACCESS_TITLE: Readonly<
   Record<Exclude<LocationAccess, 'unasked' | 'granted'>, string>
@@ -94,27 +105,7 @@ export function continueLabel(area: LocationArea | undefined): string {
   return area === undefined ? WITHOUT_AN_AREA_LABEL : WITH_AN_AREA_LABEL;
 }
 
-/** The area as it is drawn: two decimals, comma-separated, and the hemisphere as a letter. */
-export function areaLine(area: LocationArea): string {
-  return `${degrees(area.latitude)}° ${area.latitude < 0 ? 'S' : 'N'} · ${degrees(area.longitude)}° ${
-    area.longitude < 0 ? 'W' : 'E'
-  }`;
-}
-
-/** The same fact with the symbols spelled out, for whoever is listening rather than looking. */
-export function spokenArea(area: LocationArea): string {
-  const latitude = `${degrees(area.latitude)} degrees ${area.latitude < 0 ? 'south' : 'north'}`;
-  const longitude = `${degrees(area.longitude)} degrees ${area.longitude < 0 ? 'west' : 'east'}`;
-  return `${AREA_LABEL}: ${latitude}, ${longitude}`;
-}
-
-/**
- * A magnitude, in this app's decimal convention — the hemisphere carries the sign.
- *
- * `toFixed` and a substitution rather than `toLocaleString`, for the reason `ratingFormat`
- * gives: Hermes ships without full ICU data, so a locale-aware formatter puts a comma on
- * one device and a point on another for the same place.
- */
-function degrees(value: number): string {
-  return Math.abs(value).toFixed(LOCATION_AREA_DECIMALS).replace('.', ',');
+/** What the control that reads the device says, given whether there is already an area. */
+export function captureLabel(area: LocationArea | undefined): string {
+  return area === undefined ? USE_MY_LOCATION : LOCATION_SAVED;
 }

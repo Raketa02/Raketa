@@ -19,9 +19,16 @@
  *   so that a questionnaire's maximum fills the ring. Everyone leaves onboarding at or
  *   below the ceiling; the tick is what stops a short arc reading as failure, and it is
  *   what keeps the same component honest when matches later push Confidence to 75%.
- * - **Nothing on this screen decides anything about the rating.** Labels and sentences are
- *   the server's, directions are the engine's, and the client renders them in the order it
- *   was given them.
+ * - **Nothing on this screen decides anything about the rating.** Every label and every
+ *   figure on the verdict and in the trail is the server's, directions are the engine's,
+ *   and the client renders them in the order it was given them.
+ * - **The note under the verdict is the app's own, and it is the one sentence here that is.**
+ *   It used to be the engine's `confidenceReason`, which explained *why this Confidence and
+ *   not another* — a true sentence answering a question a player meeting their first rating
+ *   is not asking. What they need said, in words, is that the number is provisional and that
+ *   matches are what settle it. That is a product claim about how Raketa works, so it is
+ *   client copy, and it is shown for every rating rather than only when the engine happened
+ *   to send a reason.
  *
  * The popovers are rendered as **siblings** of the screen root, never inside it: the root
  * spreads `behindOverlay` while one is open, and an overlay inside that element would hide
@@ -37,6 +44,9 @@
  *
  * Either way the summary comes first: the done screen is where a run is accounted for, and
  * a player who stopped after one rating is owed that account as much as one who finished.
+ * **That is now true of every player**, including one who still owes a Player profile — the
+ * six social steps used to sit between the last rating and the screen that shows it, and
+ * they now sit on the far side of it.
  *
  * **None of that is decided here.** `useAdvanceThroughPass` owns the whole transition and
  * the question screen calls the same hook, so the two screens cannot answer differently
@@ -127,13 +137,15 @@ type MarkRefs = Readonly<Record<ExplainerKey, MutableRefObject<View | null>>>;
 const CALIBRATION_ELEVATED = 'elevated';
 
 /**
- * The two things the last sport can lead to, as the control that leads there.
+ * What the last sport leads to, as the control that leads there.
  *
- * Which one is shown is the pass's answer and never this screen's — the same destination
- * `advance` acts on, read here only to label the control it presses.
+ * **One label, because there is now one destination.** The end of the queue is the end of
+ * the first part for everybody: the summary of what this walk produced. Whether six more
+ * steps follow it is the done screen's question, so this screen no longer needs to know —
+ * and no longer says *Finish setting up* to a player who is about to be shown their
+ * ratings.
  */
 const SEE_YOUR_RATINGS = 'See your ratings';
-const FINISH_SETUP = 'Finish setting up';
 
 export interface ResultScreenProps {
   readonly assessmentId: string;
@@ -236,8 +248,13 @@ export function ResultScreen({ assessmentId, sport }: ResultScreenProps) {
             <Verdict result={result} marks={marks} onExplain={setExplainer} />
           ) : null}
 
-          {result?.confidenceReason !== undefined ? (
-            <Note variant="info">{result.confidenceReason.sentence}</Note>
+          {result !== undefined ? (
+            <Note variant="info" title="This is a starting point, not a verdict">
+              {`We worked this out from a handful of questions, so think of it as our best guess at ` +
+                `where you sit. We won't be sure until you have played a few matches — that is what ` +
+                `tells us whether we got you right, and it is what tightens the range. Play, and this ` +
+                `settles itself.`}
+            </Note>
           ) : null}
 
           {result !== undefined && result.calibrationPriority === CALIBRATION_ELEVATED ? (
@@ -247,9 +264,7 @@ export function ResultScreen({ assessmentId, sport }: ResultScreenProps) {
             </Note>
           ) : null}
 
-          {result !== undefined ? (
-            <EvidenceTrail contributions={result.contributions} wideners={result.wideners} />
-          ) : null}
+          {result !== undefined ? <EvidenceTrail contributions={result.contributions} /> : null}
         </ScrollView>
 
         <View style={s.action}>
@@ -265,21 +280,10 @@ export function ResultScreen({ assessmentId, sport }: ResultScreenProps) {
           ) : null}
 
           {next === undefined ? (
-            // The last sport, and the label names what is actually next. For most players
-            // that is onboarding's second part — six short steps and the commit that
-            // creates their Player profile — and only after it the summary of what this
-            // walk produced. Promising ratings to a player about to answer six more
-            // questions would be the screen mis-describing its own control.
-            <Button
-              label={onwards.destination.kind === 'social-steps' ? FINISH_SETUP : SEE_YOUR_RATINGS}
-              size="lg"
-              onPress={onwards.advance}
-              accessibilityHint={
-                onwards.destination.kind === 'social-steps'
-                  ? 'A few quick questions before you are in'
-                  : undefined
-              }
-            />
+            // The last sport, and the label names what is actually next: the summary of
+            // this walk. It is the same screen whether or not the player still owes a
+            // Player profile — the done screen asks that, one press further on.
+            <Button label={SEE_YOUR_RATINGS} size="lg" onPress={onwards.advance} />
           ) : (
             <>
               <Button

@@ -23,6 +23,12 @@
  * (`CONTEXT.md`) — the same number answering two questions. Saying only the first would
  * let a player set a small radius believing it removes them from everything; saying only
  * the second would make the control look advisory when a search obeys it exactly.
+ *
+ * **The step no longer draws that note.** Its title now asks the question the number
+ * actually answers — *how far should we look for players* — and the reading under the figure
+ * carries the rest. `RADIUS_TITLE` and `RADIUS_BODY` stay here for the profile editor, where
+ * a radius is changed rather than set for the first time and *what does this actually do* is
+ * a question somebody is genuinely asking.
  */
 
 import { topOfScale, type SearchRadiusBounds } from '../domain/searchRadius';

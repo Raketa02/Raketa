@@ -2,6 +2,19 @@
  * The done screen: everything this onboarding pass produced, in one place, and what it is
  * worth.
  *
+ * **It is the end of the first part now, not the end of onboarding.** It used to sit on the
+ * far side of the six social steps and their commit, on the argument that the summary should
+ * follow the write that makes it true of the account. What that cost was the whole of the
+ * second part standing between a player and the number they had just spent a minute per
+ * sport producing — so the summary comes first, and **this screen is the door into the
+ * second part** for a player who still owes one. A player who does not continues to the data
+ * screen exactly as before, and the commit at the end of the six now lands there instead.
+ *
+ * The argument it gave up is real and small: a player who reads this and then abandons the
+ * second part has been shown ratings that are theirs either way — a Skill rating is written
+ * when the questionnaire completes, not when a profile is committed — so nothing here was
+ * ever waiting on that write to become true.
+ *
  * **The cards are what the player just walked through, not what they are rated at.** The
  * two differ for anyone who arrived here with a rating already — a resumed tennis run
  * belonging to a player rated at padel — and this screen answers the first question. The
@@ -28,6 +41,8 @@ import { useRouter } from 'expo-router';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useCurrentUser } from '@/features/auth/types';
+import { SOCIAL_STEPS_ENTRY } from '@/features/player_profile/types';
 import { Button, Card, Hairline, Note, Row, theme } from '@/shared/ui';
 
 import { confidenceLimit, type ConfidenceLimit } from '../domain/confidenceLimit';
@@ -67,8 +82,37 @@ const CONFIDENCE_LIMIT_NOTE: Readonly<Record<ConfidenceLimit, (ceiling: number) 
     `This sits below the ${ceiling}% a questionnaire can prove, because your answers left more to settle rather than because of the ceiling.`,
 };
 
+/**
+ * The two things this screen can continue to, and the words that name each.
+ *
+ * A player who still owes a Player profile goes to the second part, and the label says so
+ * rather than saying *Continue* to somebody about to answer six more questions.
+ */
+const INTO_THE_SECOND_PART = {
+  label: 'Finish setting up',
+  hint: 'A few quick questions before you are in',
+} as const;
+
+const ONWARDS = {
+  label: 'Continue',
+  hint: 'Shows what Raketa keeps and what it never does with it',
+} as const;
+
 export function DoneScreen() {
   const router = useRouter();
+  /**
+   * Whether the second part is still owed — the one fact that decides where this screen
+   * leads, read once, here.
+   *
+   * **Not yet answered reads as *has one***, which is the fail-safe direction and the same
+   * default the pass used to apply: the data screen leads to the app, the entry gate there
+   * has the last word, and it turns a player who really is owed the second part straight
+   * into it. The other default walks a set-up player through six steps and ends on a commit
+   * the server refuses.
+   */
+  const player = useCurrentUser();
+  const owesTheSecondPart = !(player.data?.hasPlayerProfile ?? true);
+  const onwards = owesTheSecondPart ? INTO_THE_SECOND_PART : ONWARDS;
   // Empty with no pass running, which is the same as a pass that rated nothing: this
   // screen accounts for *this* walk, and there is nothing to account for. Reachable only
   // by deep link — the flow arrives here through the pass that produced the cards.
@@ -119,10 +163,13 @@ export function DoneScreen() {
 
       <View style={s.action}>
         <Button
-          label="Continue"
+          label={onwards.label}
           size="lg"
-          onPress={() => router.replace('/data')}
-          accessibilityHint="Shows what Raketa keeps and what it never does with it"
+          // Where the second part begins is the feature that owns it saying so — the entry
+          // gate reaches for the same value, and two files spelling `/tags` was two places
+          // to change it.
+          onPress={() => router.replace(owesTheSecondPart ? SOCIAL_STEPS_ENTRY : '/data')}
+          accessibilityHint={onwards.hint}
         />
       </View>
     </SafeAreaView>

@@ -33,6 +33,11 @@
  * There is no content review running in this build. The note says what a photo is for and
  * what it should show; it does not say we look, because we do not
  * (`photoStepPresentation`).
+ *
+ * **Two lines of small print are gone**: the line under the title, and the one under the row
+ * saying that no photo is fine. Neither was untrue — the ceiling and the *or none at all*
+ * are both in the eyebrow, and the continue control is never disabled, so a player who adds
+ * nothing finds that out by pressing it rather than by being promised it in advance.
  */
 
 import { useRouter } from 'expo-router';
@@ -65,7 +70,6 @@ import {
   CEILING_BODY,
   CEILING_TITLE,
   FAILED_WORD,
-  NO_PHOTO_IS_FINE,
   PHOTO_RULE_BODY,
   PHOTO_RULE_TITLE,
   POSTER_LABEL,
@@ -138,8 +142,6 @@ export function SocialPhotosStep() {
         )
       }
     >
-      <Text style={s.note}>{stepCopy('photos').asks}</Text>
-
       <Note variant="info" title={PHOTO_RULE_TITLE}>
         {PHOTO_RULE_BODY}
       </Note>
@@ -197,8 +199,6 @@ export function SocialPhotosStep() {
           {failure.message}
         </Note>
       ))}
-
-      <Text style={s.note}>{NO_PHOTO_IS_FINE}</Text>
     </SocialStepLayout>
   );
 }

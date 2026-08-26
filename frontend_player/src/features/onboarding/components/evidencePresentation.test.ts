@@ -1,26 +1,9 @@
 /**
- * The two resolutions the evidence trail makes, and the fallback that is the point of
- * both: a key or a direction this build has never seen must still reach the screen.
+ * The one resolution the evidence trail makes, and the fallback that is the point of it: a
+ * direction this build has never seen must not become an invented arrow.
  */
 
-import { directionMark, widenerVariant } from './evidencePresentation';
-
-describe('what widened the range', () => {
-  it('emphasises the two keys it recognises, and neither is a failure colour', () => {
-    // A contradiction is `watch this, reversible, not yet wrong` — never coral and never
-    // red. The app did not pick a side and is not accusing anybody of anything.
-    expect(widenerVariant('answers-disagreed')).toBe('amber');
-    expect(widenerVariant('time-away')).toBe('info');
-  });
-
-  it('renders a key it has never seen with the default treatment', () => {
-    // The correctness requirement, not a nicety: old versions live on real phones for
-    // months, and a widener missing from the trail leaves a player reading a range that
-    // nothing on the screen accounts for.
-    expect(widenerVariant('lunar-cycle')).toBe('base');
-    expect(widenerVariant('')).toBe('base');
-  });
-});
+import { directionMark } from './evidencePresentation';
 
 describe('which way a category pulled', () => {
   it('carries a shape and a word for each direction the engine computes', () => {

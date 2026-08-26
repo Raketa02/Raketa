@@ -81,7 +81,7 @@ const PROFILE: Wire['PlayerProfileResponse'] = {
   search_radius_km: 10,
   proposals_opt_in: {
     accepted: true,
-    copy_version: 'proposals-opt-in.v1',
+    copy_version: 'proposals-opt-in.v2',
     surface: 'ONBOARDING',
     answered_at: '2026-08-25T10:00:00Z',
   },
@@ -226,7 +226,7 @@ describe('finishing the part', () => {
       // The served default, written into the draft when the step opened — so a screen the
       // player walked straight past is still a screen they answered.
       search_radius_km: 10,
-      proposals_opt_in: { accepted: true, copy_version: 'proposals-opt-in.v1' },
+      proposals_opt_in: { accepted: true, copy_version: 'proposals-opt-in.v2' },
     });
   });
 
@@ -238,7 +238,7 @@ describe('finishing the part', () => {
     fireEvent.press(finish());
     await waitFor(() => expect(commits()).toHaveLength(1));
 
-    expect(bodyOf(commits()[0])?.proposals_opt_in.copy_version).toBe('proposals-opt-in.v1');
+    expect(bodyOf(commits()[0])?.proposals_opt_in.copy_version).toBe('proposals-opt-in.v2');
   });
 
   it('sends a declined opt-in as a recorded no, and finishes just the same', async () => {
@@ -254,9 +254,12 @@ describe('finishing the part', () => {
 
     expect(bodyOf(commits()[0])?.proposals_opt_in).toEqual({
       accepted: false,
-      copy_version: 'proposals-opt-in.v1',
+      copy_version: 'proposals-opt-in.v2',
     });
-    await waitFor(() => expect(screen).toHavePathname('/done'));
+    // The data screen, not the summary: a player reaches the second part *from* the
+    // summary now, so landing back on it would show the same account of the same walk
+    // twice — the second time after six questions that had nothing to do with it.
+    await waitFor(() => expect(screen).toHavePathname('/data'));
   });
 
   it('says it is finishing rather than announcing itself disabled, while it is in flight', async () => {
@@ -294,7 +297,7 @@ describe('finishing the part', () => {
     // way back has to be the one that reaches the server.
     await reachTheFinish();
 
-    fireEvent.press(screen.getByLabelText('Back to How far will you travel?'));
+    fireEvent.press(screen.getByLabelText('Back to How far should we look for players?'));
     await waitFor(() => expect(screen).toHavePathname('/radius'));
     // One served step further out, through the control a player who cannot drag uses.
     fireEvent(await screen.findByLabelText('How far to look'), 'accessibilityAction', {
@@ -393,7 +396,7 @@ describe('a double tap on the finish', () => {
     // one render behind the finger; the key is the defence.
     fireEvent.press(finish());
     fireEvent.press(finish());
-    await waitFor(() => expect(screen).toHavePathname('/done'));
+    await waitFor(() => expect(screen).toHavePathname('/data'));
 
     // **Exactly one profile**, whatever reached the socket. Every request carried the same
     // key, so the server created one and answered the repeat with it; a key minted per press
@@ -443,7 +446,7 @@ describe('a failed commit', () => {
 
     stubCommit();
     fireEvent.press(finish());
-    await waitFor(() => expect(screen).toHavePathname('/done'));
+    await waitFor(() => expect(screen).toHavePathname('/data'));
 
     // Two attempts, one key, one profile. The failed attempt may well have reached the
     // server and been recorded before the connection dropped; the retry replays it rather
@@ -476,22 +479,15 @@ describe('once the commit has landed', () => {
   async function commitAndLeave() {
     await reachTheFinish();
     fireEvent.press(finish());
-    await waitFor(() => expect(screen).toHavePathname('/done'));
+    // **The data screen, not the summary.** The ratings summary is the screen a player now
+    // enters the second part *from*, so the commit lands one screen further on: what Raketa
+    // keeps, and then the app.
+    await waitFor(() => expect(screen).toHavePathname('/data'));
   }
 
-  it('continues into the closing screens and then the app', async () => {
+  it('continues into what is kept, and then the app', async () => {
     await commitAndLeave();
 
-    // **The done screen accounts for the walk that produced the ratings, and this player's
-    // did not happen in this process** — they were rated, killed the app during the second
-    // part, and the gate turned them back into it on the next launch. So the summary has
-    // nothing of its own to show and says exactly that, rather than listing ratings it
-    // cannot attribute to anything the player just did. The walk that *does* arrive with a
-    // pass is the last test in this file, and it lists the rating it produced.
-    expect(await screen.findByText(/no ratings from this session to show/)).toBeTruthy();
-
-    fireEvent.press(screen.getByLabelText('Continue'));
-    await waitFor(() => expect(screen).toHavePathname('/data'));
     expect(screen.getByText('What we keep from setting up')).toBeTruthy();
 
     fireEvent.press(screen.getByLabelText('Start playing'));
@@ -502,12 +498,10 @@ describe('once the commit has landed', () => {
   it('offers no way back into the second part', async () => {
     await commitAndLeave();
 
-    // Nothing behind the done screen: every move inside the part replaced, so there is no
+    // Nothing behind the data screen: every move inside the part replaced, so there is no
     // history entry holding one of the six, and the part itself is over.
     expect(screen.queryByLabelText(/^Back to /)).toBeNull();
 
-    fireEvent.press(screen.getByLabelText('Continue'));
-    await waitFor(() => expect(screen).toHavePathname('/data'));
     fireEvent.press(screen.getByLabelText('Start playing'));
 
     expect(await screen.findByText('Inside the app')).toBeTruthy();
@@ -589,10 +583,11 @@ describe('arriving from the last result', () => {
     result: RESULT,
   };
 
-  it('continues straight into the six steps, and the closing screens come after them', async () => {
-    // The one walk that proves the order: finishing a rating and finishing setting up are
-    // one act, so the result leads into the second part rather than into a summary the
-    // player has not earned the end of yet.
+  it('shows the ratings the walk produced, and only then the six steps', async () => {
+    // The one walk that proves the order. A player is owed the number they just spent a
+    // minute per sport producing **before** anything else is asked of them, so the result
+    // leads to the summary, the summary is the door into the second part, and the commit at
+    // the end of the six lands on what Raketa keeps.
     stubGate();
     stubProfileOptions(transport);
     stubLocation(fakeLocation({ fix: FIX }));
@@ -617,8 +612,21 @@ describe('arriving from the last result', () => {
     fireEvent.press(screen.getByLabelText('Confirm answer'));
     await waitFor(() => expect(screen).toHavePathname(`/result/${PADEL_ID}`));
 
-    // Not *See your ratings*: what is actually next is six more screens, and a control that
-    // promised a summary would be the screen mis-describing itself.
+    // The last sport leads to the summary, whatever else the player still owes.
+    fireEvent.press(await screen.findByLabelText('See your ratings'));
+    await waitFor(() => expect(screen).toHavePathname('/done'));
+
+    // With the rating this walk produced on it — the account the player earned, given to
+    // them at the moment they earned it rather than six screens later.
+    expect(await screen.findByLabelText('Padel level: 2,71')).toBeTruthy();
+
+    // And the summary is the door into the second part. The control says so, rather than
+    // saying *Continue* to somebody about to answer six more questions.
+    //
+    // Awaited, because *does this player still owe a profile* is a read, and until it lands
+    // the screen takes the fail-safe answer — *they are set up* — and offers the plain
+    // continue. That default is the safe one either way: it leads to the data screen and
+    // then to the gate, which turns a player who really is owed the part straight into it.
     fireEvent.press(await screen.findByLabelText('Finish setting up'));
     await waitFor(() => expect(screen).toHavePathname('/tags'));
 
@@ -627,9 +635,8 @@ describe('arriving from the last result', () => {
     fireEvent.press(screen.getByLabelText(YES));
     fireEvent.press(finish());
 
-    // And only now the closing screens, with the rating this walk produced on them.
-    await waitFor(() => expect(screen).toHavePathname('/done'));
-    expect(await screen.findByLabelText('Padel level: 2,71')).toBeTruthy();
+    // The commit lands on what is kept, not back on the summary they have already read.
+    await waitFor(() => expect(screen).toHavePathname('/data'));
     expect(commits()).toHaveLength(1);
   });
 });

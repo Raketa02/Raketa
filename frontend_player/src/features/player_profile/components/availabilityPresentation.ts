@@ -14,6 +14,11 @@
  *
  * The footnote's two messages share one reserved slot, and 6.8 caps it at two lines of
  * `tiny`. A third line is an amendment, not a copy tweak.
+ *
+ * **The onboarding step draws neither the promise note nor the footnote any more** — it is
+ * the grid and nothing else. Both are kept here for the profile editor, which is where a
+ * week is read back rather than given for the first time, and where a count of ticked slots
+ * is something a player is actually looking for.
  */
 
 import type { AvailabilitySlot, DayPart, Weekday } from '../domain/ProfileDraft';

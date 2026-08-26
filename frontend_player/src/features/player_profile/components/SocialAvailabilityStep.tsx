@@ -11,9 +11,15 @@
  *
  * Nothing is ticked on arrival and nothing is ticked on the player's behalf. A pre-seeded
  * slot is a claim the player never made that silently becomes a matchmaking input — so the
- * grid starts blank, the forward control is enabled at zero, and the footnote says what the
- * blank means before it says what it costs. **Blank means no preference, never unavailable**,
- * and it excludes the player from nothing.
+ * grid starts blank and the forward control is enabled at zero. **Blank means no preference,
+ * never unavailable**, and it excludes the player from nothing.
+ *
+ * **The screen is the grid, and nothing else.** The line under the title, the note about
+ * what the week is for, and the footnote under the grid were all cut: seven rows of three
+ * ticks are self-evident, and three paragraphs of reassurance around them made the one thing
+ * to do on this screen the smallest thing on it. `availabilityFootnote` and the promise copy
+ * are kept in `availabilityPresentation` — the profile editor is where a week is read back
+ * and counted, and that is the screen those sentences were really written for.
  *
  * ## Nothing here decides anything
  *
@@ -32,29 +38,15 @@
  */
 
 import { useRouter } from 'expo-router';
-import { StyleSheet, Text } from 'react-native';
 
-import { AvailabilityGrid, Button, Note, theme } from '@/shared/ui';
+import { AvailabilityGrid, Button } from '@/shared/ui';
 
 import type { AvailabilitySlot } from '../domain/ProfileDraft';
-import {
-  DAY_PARTS,
-  WEEKDAYS,
-  toggleCell,
-  isTicked,
-  weekStanding,
-} from '../domain/availabilityWeek';
+import { DAY_PARTS, WEEKDAYS, toggleCell, isTicked } from '../domain/availabilityWeek';
 import { stepAfter } from '../domain/socialSteps';
 import { useProfileDraft } from '../store/profileDraft.store';
 
-import {
-  AVAILABILITY_PROMISE_BODY,
-  AVAILABILITY_PROMISE_TITLE,
-  availabilityFootnote,
-  cellLabel,
-  dayLabel,
-  dayPartHead,
-} from './availabilityPresentation';
+import { cellLabel, dayLabel, dayPartHead } from './availabilityPresentation';
 import { SocialStepLayout } from './SocialStepLayout';
 import { SOCIAL_STEP_PATH } from './socialStepRoutes';
 import { stepCopy } from './socialStepPresentation';
@@ -75,8 +67,9 @@ export function SocialAvailabilityStep() {
       step="availability"
       action={
         next === undefined ? null : (
-          // Never disabled, at zero slots or at twenty-one. A control that made a player
-          // tick something to get past would be the step contradicting its own footnote.
+          // Never disabled, at zero slots or at twenty-one. Blank is an answer — no
+          // preference — and a control that made a player tick something to get past would
+          // turn that into a requirement nobody decided on.
           <Button
             label="Continue"
             size="lg"
@@ -86,15 +79,6 @@ export function SocialAvailabilityStep() {
         )
       }
     >
-      <Text style={s.asks}>{stepCopy('availability').asks}</Text>
-
-      {/* `info` rather than `amber`: this explains what the product does with the answer,
-          and amber means *watch this, reversible, not yet wrong* — a status about the
-          player's own answer rather than an explanation of the app (design-system 1.3). */}
-      <Note variant="info" title={AVAILABILITY_PROMISE_TITLE}>
-        {AVAILABILITY_PROMISE_BODY}
-      </Note>
-
       <AvailabilityGrid
         columnHeads={DAY_PARTS.map(dayPartHead)}
         rows={WEEKDAYS.map((day) => ({
@@ -107,12 +91,7 @@ export function SocialAvailabilityStep() {
             accessibilityLabel: cellLabel({ day, part }),
           })),
         }))}
-        footnote={availabilityFootnote(weekStanding(week))}
       />
     </SocialStepLayout>
   );
 }
-
-const s = StyleSheet.create({
-  asks: { ...theme.type.tiny, color: theme.color.muted },
-});

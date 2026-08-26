@@ -205,30 +205,32 @@ describe('continuing', () => {
 });
 
 describe('what the step says', () => {
-  it('explains what an empty week means, without blocking it', async () => {
+  /**
+   * **It is the grid and nothing else.** The line under the title, the note about what the
+   * week is for, and the footnote under it were all cut: seven rows of three ticks are
+   * self-evident, and three paragraphs of reassurance around them made the one thing to do
+   * on the screen the smallest thing on it.
+   *
+   * The rules they stated are unchanged and are asserted where they can be: an empty week
+   * continues, and nothing is ticked on anybody's behalf.
+   */
+  it('draws no prose around the grid at all', async () => {
     await reachTheAvailabilityStep();
 
-    // The consequence, and the true half first: no preference, never unavailable.
-    expect(screen.getByText(/no preference, never unavailable/i)).toBeTruthy();
-    expect(screen.getByLabelText('Continue').props.accessibilityState?.disabled).toBeFalsy();
+    expect(screen.queryByText(/no preference, never unavailable/i)).toBeNull();
+    expect(screen.queryByText('A preference, not a promise')).toBeNull();
+    expect(screen.queryByText(/nobody ever sees this as a calendar/i)).toBeNull();
+    expect(screen.queryByText(/Your ordinary week/)).toBeNull();
   });
 
-  it('replaces that line with the count once anything is ticked', async () => {
+  it('counts nothing at a player either, ticked or not', async () => {
     await reachTheAvailabilityStep();
 
     fireEvent.press(screen.getByLabelText('Monday morning'));
-    expect(screen.getByText(/^1 slot ticked/)).toBeTruthy();
-    expect(screen.queryByText(/no preference, never unavailable/i)).toBeNull();
 
-    fireEvent.press(screen.getByLabelText('Friday evening'));
-    expect(screen.getByText(/^2 slots ticked/)).toBeTruthy();
-  });
-
-  it('says the week is a preference and not a promise, and never a calendar', async () => {
-    await reachTheAvailabilityStep();
-
-    expect(screen.getByText('A preference, not a promise')).toBeTruthy();
-    expect(screen.getByText(/nobody ever sees this as a calendar/i)).toBeTruthy();
+    expect(screen.queryByText(/slot ticked/)).toBeNull();
+    // And an empty week still continues, which is what the cut footnote was there to say.
+    expect(screen.getByLabelText('Continue').props.accessibilityState?.disabled).toBeFalsy();
   });
 
   it('offers no clock time, no hour and no date anywhere', async () => {

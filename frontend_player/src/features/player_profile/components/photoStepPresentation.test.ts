@@ -11,9 +11,9 @@ import { AppError } from '@/shared/errors';
 import type { ProfilePhoto } from '../domain/photoCollection';
 
 import {
+  ACCESS_BODY,
   ADD_CONTROL_WORD,
   CEILING_TITLE,
-  NO_PHOTO_IS_FINE,
   PHOTO_RULE_BODY,
   PHOTO_RULE_TITLE,
   POSTER_LABEL,
@@ -35,9 +35,9 @@ const uploaded = photo({ kind: 'uploaded', photoId: 'photo-1' });
 describe('the rule the step states', () => {
   it('says what a photo must show, and what it must not', () => {
     expect(PHOTO_RULE_TITLE).toBe('Rackets mandatory, faces optional');
-    expect(PHOTO_RULE_BODY).toContain('Photos show you on a court');
+    expect(PHOTO_RULE_BODY).toContain('Show yourself on a court');
     expect(PHOTO_RULE_BODY).toContain('Not a selfie, not the beach, not the gym mirror');
-    expect(PHOTO_RULE_BODY).toContain('Faces are optional; the sport is not');
+    expect(PHOTO_RULE_BODY).toContain('Your face is up to you; the sport is not');
   });
 
   it('claims no check, because none is running', () => {
@@ -45,13 +45,16 @@ describe('the rule the step states', () => {
     // the player something untrue about how the product works.
     for (const claim of [/we check/i, /review/i, /moderat/i, /approv/i, /verif/i, /scan/i]) {
       expect(PHOTO_RULE_BODY).not.toMatch(claim);
-      expect(NO_PHOTO_IS_FINE).not.toMatch(claim);
+      for (const body of Object.values(ACCESS_BODY)) expect(body).not.toMatch(claim);
     }
   });
 
-  it('says adding none is fine, and what a player gets instead', () => {
-    expect(NO_PHOTO_IS_FINE).toContain('No photo is fine');
-    expect(NO_PHOTO_IS_FINE).toContain('court poster of your own');
+  it('says what carrying on without a photo gets you, where the player is deciding it', () => {
+    // The step no longer promises this in advance to somebody who has not asked. It is said
+    // in the two notes a player actually meets when the pictures are not going to happen.
+    for (const body of Object.values(ACCESS_BODY)) {
+      expect(body).toContain('court poster of your own');
+    }
   });
 });
 

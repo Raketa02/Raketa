@@ -5,11 +5,25 @@
  * it belongs to, so it is rendered under that box rather than in the banner. A player
  * told "that nickname is taken" above a four-field form still has to work out which box
  * to change.
+ *
+ * **Both password boxes can be read back.** This is the one form in the app that asks for
+ * the same secret twice and refuses on a mismatch, so a typo nobody can see costs the
+ * player the whole form — and, on a phone whose keychain filled one box and not the other,
+ * makes it impossible to tell what actually happened. Each box reveals on its own; showing
+ * one says nothing about the other.
  */
 
 import { Link } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button, theme } from '@/shared/ui';
@@ -103,6 +117,7 @@ export function SignUpScreen() {
               onChangeText={setPassword}
               error={errorFor('password')}
               secureTextEntry
+              reveal
               autoCapitalize="none"
               autoComplete="new-password"
               textContentType="newPassword"
@@ -114,6 +129,7 @@ export function SignUpScreen() {
               onChangeText={setConfirmPassword}
               error={errorFor('confirmPassword')}
               secureTextEntry
+              reveal
               autoCapitalize="none"
               autoComplete="new-password"
               textContentType="newPassword"
@@ -133,8 +149,16 @@ export function SignUpScreen() {
 
           <View style={s.footer}>
             <Text style={s.footerText}>Already have an account?</Text>
-            <Link href="/sign-in" style={s.footerLink}>
-              Sign in
+            {/* The same 44pt target the sign-in screen's link wears, and for the same
+                reason — see `SignInScreen`. */}
+            <Link href="/sign-in" asChild>
+              <Pressable
+                accessibilityRole="link"
+                accessibilityLabel="Sign in"
+                style={({ pressed }) => [s.footerTarget, pressed ? s.footerPressed : undefined]}
+              >
+                <Text style={s.footerLink}>Sign in</Text>
+              </Pressable>
             </Link>
           </View>
         </ScrollView>
@@ -169,5 +193,11 @@ const s = StyleSheet.create({
     gap: theme.space.xs,
   },
   footerText: { ...theme.type.tiny, color: theme.color.muted },
+  footerTarget: {
+    minHeight: theme.size.minTouch,
+    justifyContent: 'center',
+    paddingHorizontal: theme.space.xs,
+  },
+  footerPressed: { opacity: 0.6 },
   footerLink: { ...theme.type.rlValue, color: theme.color.ink },
 });

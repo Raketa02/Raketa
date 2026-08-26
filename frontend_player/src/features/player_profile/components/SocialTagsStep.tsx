@@ -1,10 +1,16 @@
 /**
  * Step one of onboarding's second part: **what kind of player are you?**
  *
- * Eighteen chips in three groups, of which a player picks between two and six. There is no
+ * Nineteen chips in three groups, of which a player picks between two and six. There is no
  * free-text field anywhere on this screen and there is not going to be one: that is what
  * keeps the product's promise about what it asks (story 22), and it is the reason the
  * vocabulary is closed and served rather than typed.
+ *
+ * **The screen says nothing above the chips.** The line under the title and the note about
+ * what the tags are *for* were both cut: the three group headings already say what each set
+ * is about, and a screen of options reads faster with nothing stacked on top of them. The
+ * eyebrow still carries the rule — pick two to six — which is the one thing a player has to
+ * know before they start pressing.
  *
  * ## Nothing here decides anything
  *
@@ -25,7 +31,7 @@
  *
  * Design-system Part 8 rails chips horizontally, and that pattern is for *filters* over
  * content the player can already see. Here the chips **are** the content, and a rail would
- * hide most of eighteen options off the right edge of a step whose whole job is to show
+ * hide most of nineteen options off the right edge of a step whose whole job is to show
  * them. Wrapping is also what Part 13 asks for when the OS text size grows.
  */
 
@@ -49,6 +55,7 @@ import {
   socialTagCeilingTitle,
   socialTagGroupHeading,
   socialTagLabel,
+  socialTagName,
   socialTagsContinueLabel,
   socialTagsEyebrow,
 } from './socialTagPresentation';
@@ -93,7 +100,7 @@ export function SocialTagsStep() {
       action={
         standing === undefined || next === undefined ? null : (
           <>
-            {/* Pinned to the action bar rather than left above eighteen chips: a player who
+            {/* Pinned to the action bar rather than left above nineteen chips: a player who
                 pressed a seventh may be scrolled to the bottom of the third group, and a
                 refusal they have to scroll back up to find is a screen that did nothing.
                 `alert` announces it as well, for whoever is not looking at either. */}
@@ -114,15 +121,6 @@ export function SocialTagsStep() {
         )
       }
     >
-      <Text style={s.asks}>{stepCopy('tags').asks}</Text>
-
-      {/* Story 23: what kind of product this is, said on the screen that would otherwise be
-          the obvious place to ask for something else. */}
-      <Note variant="info">
-        These are about your game — not how you look, and not how old you are. Pick the ones another
-        player would recognise you by.
-      </Note>
-
       {/* Paused, not loading: `networkMode: 'online'` holds a query rather than failing it,
           so an offline player would otherwise watch a spinner forever. */}
       {options.fetchStatus === 'paused' ? (
@@ -177,6 +175,9 @@ function TagGroup({ group, selection, onPressTag }: TagGroupProps) {
           <Chip
             key={tagId}
             label={socialTagLabel(tagId)}
+            // The words without the glyph: the emoji is what makes nineteen chips findable
+            // by eye, and reading its name aloud would announce the layout, not the choice.
+            accessibilityLabel={socialTagName(tagId)}
             selected={selection.includes(tagId)}
             onPress={() => onPressTag(tagId)}
           />
@@ -187,7 +188,6 @@ function TagGroup({ group, selection, onPressTag }: TagGroupProps) {
 }
 
 const s = StyleSheet.create({
-  asks: { ...theme.type.tiny, color: theme.color.muted },
   failure: { gap: theme.space.sm },
   group: { gap: theme.space.xs, paddingTop: theme.space.xs },
   heading: { ...theme.type.flab, color: theme.color.ink, textTransform: 'uppercase' },

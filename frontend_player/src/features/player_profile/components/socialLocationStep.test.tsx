@@ -43,7 +43,7 @@ import { useProfileDraft } from '../store/profileDraft.store';
 import {
   ACCESS_BODY,
   ACCESS_TITLE,
-  AREA_UNSET_LINE,
+  LOCATION_SAVED,
   NO_FIX_TITLE,
   OPEN_SETTINGS,
   USE_MY_LOCATION,
@@ -69,17 +69,29 @@ const RATING: Wire['RatingResponse'] = {
 /**
  * A reading with metres in it, and the area it falls in.
  *
- * The two are stated separately on purpose: every assertion about what is drawn and what is
- * kept names `AREA`, and `PRECISE` appears only where the point is that it is **not** there.
+ * The two are stated separately on purpose: every assertion about what is *kept* names
+ * `AREA_KEPT`, and `PRECISE` appears only where the point is that it is **not** there.
  */
 const PRECISE = { latitude: 41.3874, longitude: 2.1686, accuracyMetres: 12 };
-const AREA_DRAWN = '41,39° N · 2,17° E';
-const AREA_SPOKEN = 'Your area: 41,39 degrees north, 2,17 degrees east';
 const AREA_KEPT = { latitude: 41.39, longitude: 2.17 };
 
 /** Somewhere else entirely — what a player who travelled comes back to the app holding. */
 const ELSEWHERE = { latitude: 40.4168, longitude: -3.7038, accuracyMetres: 20 };
-const ELSEWHERE_DRAWN = '40,42° N · 3,70° W';
+const ELSEWHERE_KEPT = { latitude: 40.42, longitude: -3.7 };
+
+/**
+ * Whether the step is holding an area, read the way a player reads it: off the one control
+ * that asks for one.
+ *
+ * **Nothing on this screen prints a coordinate any more**, so the control's own words are
+ * where the state is legible — `Use my location` before, `Location saved` after. That is
+ * also the assertion the design system wants made: the green fill is never the whole fact,
+ * so a suite that could only see the fill would be testing the wrong half.
+ */
+const areaShown = () => screen.queryByLabelText(LOCATION_SAVED) !== null;
+
+/** What the draft is holding. The only place an area is observable now, so it is read. */
+const areaKept = () => useProfileDraft.getState().draft?.location;
 
 let transport: Transport;
 let device: FakeLocation;
@@ -165,10 +177,10 @@ describe('arriving on the step', () => {
     expect(device.reads).toBe(0);
   });
 
-  it('reads nothing until the player presses, and says so', async () => {
+  it('reads nothing until the player presses, and the control says which act it offers', async () => {
     await reachTheLocationStep();
 
-    expect(screen.queryByText(AREA_DRAWN)).toBeNull();
+    expect(areaShown()).toBe(false);
     expect(screen.getByLabelText(USE_MY_LOCATION)).toBeTruthy();
   });
 });
@@ -178,7 +190,7 @@ describe('arriving on the step', () => {
 // ---------------------------------------------------------------------------
 
 describe('granting the permission', () => {
-  it('captures one fix and shows the area it falls in', async () => {
+  it('captures one fix and says so on the control that asked for it', async () => {
     await reachTheLocationStep();
 
     await askTheDevice();
@@ -187,44 +199,41 @@ describe('granting the permission', () => {
     // One fix. Nothing here watches, polls or subscribes — a stream of positions is a
     // movement trail, which is a different privacy class from the one that was asked about.
     expect(device.reads).toBe(1);
-    expect(await screen.findByText(AREA_DRAWN)).toBeTruthy();
+    expect(await screen.findByLabelText(LOCATION_SAVED)).toBeTruthy();
   });
 
   /**
-   * The reading had metres in it and the screen has a kilometre. Story 55: what is held is
-   * coarse, and the fix that produced it is not recoverable from anything on this screen.
+   * Story 55, and now the stronger claim: **no reading of any kind reaches the screen.** The
+   * precise fix never left the hook and the coarse pair is not printed either — a player has
+   * no use for their own latitude, and a screen of figures reads as *this is what we took*
+   * rather than *this is what we rounded away*.
    */
-  it('never draws the reading the device gave it', async () => {
+  it('draws no coordinate at all, coarse or precise', async () => {
     await reachTheLocationStep();
     await askTheDevice();
-    await screen.findByText(AREA_DRAWN);
+    await screen.findByLabelText(LOCATION_SAVED);
 
     expect(screen.queryByText(/3874|1686/)).toBeNull();
     expect(screen.queryByText(/12 m|accuracy/i)).toBeNull();
-  });
-
-  /** The coordinate pair and the words that name it are one thing, or they are two halves. */
-  it('reads the area out with the symbols spelled', async () => {
-    await reachTheLocationStep();
-    await askTheDevice();
-
-    expect(await screen.findByLabelText(AREA_SPOKEN)).toBeTruthy();
+    // The coarse pair, in every shape this app would have written it in.
+    expect(screen.queryByText(/41,39|2,17|41\.39|2\.17/)).toBeNull();
+    expect(screen.queryByText(/degrees/i)).toBeNull();
   });
 
   it('holds the coarse area in the part draft, and only the coarse one', async () => {
     await reachTheLocationStep();
     await askTheDevice();
-    await screen.findByText(AREA_DRAWN);
+    await screen.findByLabelText(LOCATION_SAVED);
 
-    // The one direct read of the draft in this suite — see the note at the top. What is
-    // kept is the pair on screen, which is also the pair the commit will send.
-    expect(useProfileDraft.getState().draft?.location).toEqual(AREA_KEPT);
+    // The draft is where an area is observable now, and what is kept is the rounded pair —
+    // which is also the pair the commit will send.
+    expect(areaKept()).toEqual(AREA_KEPT);
   });
 
   it('continues plainly once there is an area', async () => {
     await reachTheLocationStep();
     await askTheDevice();
-    await screen.findByText(AREA_DRAWN);
+    await screen.findByLabelText(LOCATION_SAVED);
 
     fireEvent.press(screen.getByLabelText(WITH_AN_AREA_LABEL));
 
@@ -248,9 +257,9 @@ describe('refusing the permission', () => {
 
     expect(await screen.findByText(ACCESS_TITLE.refused)).toBeTruthy();
     expect(screen.getByText(ACCESS_BODY.refused)).toBeTruthy();
-    // No fix was read: the port answers none without a permission, and nothing here
-    // pretends otherwise by drawing an area anyway.
-    expect(screen.queryByText(AREA_DRAWN)).toBeNull();
+    // No fix was read: the port answers none without a permission, and the control does not
+    // pretend otherwise by claiming to have saved something.
+    expect(areaShown()).toBe(false);
   });
 
   /**
@@ -268,7 +277,7 @@ describe('refusing the permission', () => {
     await waitFor(() => expect(screen).toHavePathname('/radius'));
     // Nothing was claimed on their behalf. An unanswered location is absent, never a zero
     // pair, and the commit will find it exactly as the player left it.
-    expect(useProfileDraft.getState().draft?.location).toBeUndefined();
+    expect(areaKept()).toBeUndefined();
   });
 
   it('offers the prompt again on the next press', async () => {
@@ -281,7 +290,7 @@ describe('refusing the permission', () => {
     device.answer = 'granted';
     await askTheDevice();
 
-    expect(await screen.findByText(AREA_DRAWN)).toBeTruthy();
+    expect(await screen.findByLabelText(LOCATION_SAVED)).toBeTruthy();
     expect(screen.queryByText(ACCESS_TITLE.refused)).toBeNull();
   });
 
@@ -296,7 +305,7 @@ describe('refusing the permission', () => {
 
     expect(device.state).toBe('denied');
     expect(device.reads).toBe(0);
-    expect(screen.queryByText(AREA_DRAWN)).toBeNull();
+    expect(areaShown()).toBe(false);
   });
 });
 
@@ -347,18 +356,18 @@ describe('a phone that cannot place itself', () => {
   });
 
   /**
-   * The line under the control is a claim about what has happened, and on a phone that was
-   * already allowed it has happened — silently, on arrival. Copy that says otherwise is the
-   * kind that survives a redesign, because nobody re-reads a sentence they believe.
+   * The silent read on arrival found nothing, and nobody asked for it. So the control still
+   * says *use my location* — claiming an area would be a lie — and nothing scolds, because
+   * a walk past a basement is not something the player did.
    */
-  it('does not tell an already-allowed player that nothing has been read', async () => {
+  it('says nothing at all about a read nobody asked for', async () => {
     device = fakeLocation({ state: 'granted', fix: null });
 
     await reachTheLocationStep();
 
     await waitFor(() => expect(device.reads).toBe(1));
-    expect(screen.queryByText(AREA_UNSET_LINE)).toBeNull();
-    // And it does not scold either: nobody asked for that read, so nothing reports it.
+    expect(areaShown()).toBe(false);
+    expect(screen.getByLabelText(USE_MY_LOCATION)).toBeTruthy();
     expect(screen.queryByText(NO_FIX_TITLE)).toBeNull();
   });
 });
@@ -368,19 +377,21 @@ describe('a phone that cannot place itself', () => {
 // ---------------------------------------------------------------------------
 
 describe('foregrounding the app with the permission granted', () => {
-  it('re-reads the fix, so what is on screen is near where the player is', async () => {
+  it('re-reads the fix, so what is held is near where the player is', async () => {
     await reachTheLocationStep();
     await askTheDevice();
-    await screen.findByText(AREA_DRAWN);
+    await screen.findByLabelText(LOCATION_SAVED);
 
     // The player went somewhere and came back. Story 58: the moment an area can silently
-    // stop being true is the one where they were elsewhere in between.
+    // stop being true is the one where they were elsewhere in between. With nothing drawn,
+    // the draft is where the replacement is observable — so it is read here.
     device.fix = ELSEWHERE;
     await leaveAndReturn();
 
-    expect(await screen.findByText(ELSEWHERE_DRAWN)).toBeTruthy();
+    await waitFor(() => expect(areaKept()).toEqual(ELSEWHERE_KEPT));
     expect(device.reads).toBe(2);
-    expect(screen.queryByText(AREA_DRAWN)).toBeNull();
+    // And the control does not flicker back: it was settled and it stays settled.
+    expect(areaShown()).toBe(true);
   });
 
   it('re-reads on arrival too, when the permission is already granted', async () => {
@@ -388,9 +399,9 @@ describe('foregrounding the app with the permission granted', () => {
 
     await reachTheLocationStep();
 
-    // Nobody was prompted — the permission was already there — and the area is on screen
-    // without the player having had to press anything.
-    expect(await screen.findByText(AREA_DRAWN)).toBeTruthy();
+    // Nobody was prompted — the permission was already there — and the control is already
+    // settled without the player having had to press anything.
+    expect(await screen.findByLabelText(LOCATION_SAVED)).toBeTruthy();
     expect(device.reads).toBe(1);
   });
 });
@@ -403,7 +414,7 @@ describe('walking away from the step and back', () => {
   it('finds the same area, without asking the device again', async () => {
     await reachTheLocationStep();
     await askTheDevice();
-    await screen.findByText(AREA_DRAWN);
+    await screen.findByLabelText(LOCATION_SAVED);
 
     fireEvent.press(screen.getByLabelText(WITH_AN_AREA_LABEL));
     await waitFor(() => expect(screen).toHavePathname('/radius'));
@@ -411,7 +422,8 @@ describe('walking away from the step and back', () => {
     fireEvent.press(screen.getByLabelText('Back to Where do you play?'));
     await waitFor(() => expect(screen).toHavePathname('/location'));
 
-    expect(await screen.findByText(AREA_DRAWN)).toBeTruthy();
+    expect(await screen.findByLabelText(LOCATION_SAVED)).toBeTruthy();
+    expect(areaKept()).toEqual(AREA_KEPT);
     // The permission is granted by now, so arriving re-reads — and the pair is the same
     // one, which is why nothing about the screen changed.
     expect(device.state).toBe('granted');

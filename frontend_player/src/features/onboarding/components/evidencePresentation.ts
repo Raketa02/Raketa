@@ -7,41 +7,14 @@
  * constant moves the explanation with it. **This file decides nothing about the rating.** It
  * answers one question per row: how do I draw what I was sent?
  *
- * **Render uniformly, emphasise what you recognise.** Two keys have a treatment of their
- * own; everything else takes the default. **An unrecognised key renders with the default
- * treatment and is never dropped** — old app versions live on real phones for months, and a
- * key the engine adds next week has to reach a phone that last updated in the spring. That
- * is a correctness requirement, not a nicety: a widener silently missing from the trail
- * would leave a player reading a range that nothing on the screen accounts for.
+ * **A direction this build cannot read draws no mark at all**, rather than a default one.
+ * A word this build cannot read is not grounds for drawing an arrow — the row still shows
+ * what the category said, which is the part the client did not invent, and old app versions
+ * live on real phones for months.
  *
- * The same rule applies to a direction, and there the fallback is *no mark at all* rather
- * than a default one. A word this build cannot read is not grounds for drawing an arrow —
- * the row still shows what the category said, which is the part the client did not invent.
+ * The widener treatment that used to live here is gone with the list it drew — see
+ * `EvidenceTrail`. The data is still mapped; nothing renders it.
  */
-
-import type { NoteVariant } from '@/shared/ui';
-
-/**
- * The engine's widener keys, as of this build. They are matched, never authored: what a key
- * *means* is the server's `label` and `detail`, and neither is restated here.
- */
-const CONTRADICTION = 'answers-disagreed';
-const TIME_AWAY = 'time-away';
-
-/**
- * A contradiction is `amber` — *watch this, reversible, not yet wrong*. It is emphatically
- * not `coral` and not `red`: the app did not pick a side and is not accusing anybody, and a
- * failure colour would read as one. Time away is `info`, which explains rather than states.
- * Everything else is `base`.
- */
-const VARIANT_BY_KEY: Readonly<Record<string, NoteVariant>> = {
-  [CONTRADICTION]: 'amber',
-  [TIME_AWAY]: 'info',
-};
-
-export function widenerVariant(key: string): NoteVariant {
-  return VARIANT_BY_KEY[key] ?? 'base';
-}
 
 export interface DirectionMark {
   /** A shape, so the direction survives not being able to see colour. */

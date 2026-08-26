@@ -1,50 +1,42 @@
 /**
- * How an area is written, and how it is read out.
+ * The words on the location step, without a renderer.
  *
- * The figures are the assertion worth having: an area is written to exactly two decimal
- * places whatever the number, because a place that printed as `41,4` and a place that
- * printed as `41,39` would look like two different kinds of answer when they are the same
- * kind — and because the second decimal is where *about a kilometre* is visible at all.
+ * **Nothing here writes a coordinate, and that is the assertion worth having.** The step
+ * used to print the area back as a degree pair and no longer does — a player cannot check
+ * their own latitude, and the fact they wanted was *did that work*. So the two things pinned
+ * below are the two labels that carry the state instead, and the promise the copy makes
+ * about what is kept.
  */
 
 import {
+  LOCATION_SAVED,
+  USE_MY_LOCATION,
+  WHY_BODY,
   WITHOUT_AN_AREA_LABEL,
   WITH_AN_AREA_LABEL,
-  areaLine,
+  captureLabel,
   continueLabel,
-  spokenArea,
 } from './locationPresentation';
 
-describe('an area, written', () => {
-  it('names both hemispheres it is in', () => {
-    expect(areaLine({ latitude: 41.39, longitude: 2.17 })).toBe('41,39° N · 2,17° E');
-    expect(areaLine({ latitude: -34.6, longitude: -58.38 })).toBe('34,60° S · 58,38° W');
-  });
+const AN_AREA = { latitude: 41.39, longitude: 2.17 };
 
-  /** Comma decimals, two places — the house convention every figure in this app follows. */
-  it('always shows both decimals, so two areas are the same shape of answer', () => {
-    expect(areaLine({ latitude: 41.4, longitude: 2 })).toBe('41,40° N · 2,00° E');
-  });
-
-  /** The equator and the meridian are north and east of nothing, and a sign would say otherwise. */
-  it('reads zero as north and east rather than as a sign', () => {
-    expect(areaLine({ latitude: 0, longitude: 0 })).toBe('0,00° N · 0,00° E');
+describe('the control that reads the device', () => {
+  /**
+   * The green fill is never the whole fact (Part 13, *never colour alone*): the words on the
+   * control change with it, so a player who cannot see the fill is told the same thing.
+   */
+  it('says which act it is offering, and changes once there is an area', () => {
+    expect(captureLabel(undefined)).toBe(USE_MY_LOCATION);
+    expect(captureLabel(AN_AREA)).toBe(LOCATION_SAVED);
   });
 });
 
-describe('an area, read out', () => {
-  /**
-   * The degree mark and the middle dot are decoration to a screen reader — one is announced
-   * as "degrees" by some and skipped by others, and the dot is silence. The spoken form
-   * says the words instead.
-   */
-  it('says the words the symbols stand for', () => {
-    expect(spokenArea({ latitude: 41.39, longitude: 2.17 })).toBe(
-      'Your area: 41,39 degrees north, 2,17 degrees east',
-    );
-    expect(spokenArea({ latitude: -34.6, longitude: -58.38 })).toBe(
-      'Your area: 34,60 degrees south, 58,38 degrees west',
-    );
+describe('what the step promises about the reading', () => {
+  it('states the rounding, and that the exact position is not what is kept', () => {
+    // The sentence that has to earn the OS prompt. It may be re-worded; it may not stop
+    // saying either of these, because both are properties of the code above it.
+    expect(WHY_BODY).toContain('about a kilometre');
+    expect(WHY_BODY).toContain('Not your exact position');
   });
 });
 
@@ -56,6 +48,6 @@ describe('the control that continues', () => {
    */
   it('says what continuing costs when there is no area', () => {
     expect(continueLabel(undefined)).toBe(WITHOUT_AN_AREA_LABEL);
-    expect(continueLabel({ latitude: 41.39, longitude: 2.17 })).toBe(WITH_AN_AREA_LABEL);
+    expect(continueLabel(AN_AREA)).toBe(WITH_AN_AREA_LABEL);
   });
 });
