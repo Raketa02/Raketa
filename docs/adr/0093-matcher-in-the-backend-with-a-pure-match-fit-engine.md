@@ -156,6 +156,11 @@ in a codebase to lift into a service:
    worker. Restated as `bytes_per_row × rows × workers × 2` exceeding half the container's
    memory limit, which a 1 GB container reaches at ~32 000 players on four workers, not at
    "several cities".)*
+   *(Amended again by [ADR-0112](0112-the-snapshot-is-a-per-partition-container-bound-once.md):
+   the `× 2` was budgeting a duplicate of every row during a refresh that no longer
+   duplicates any of them — a delta refresh copies row **references** from the container it
+   replaces. The trigger is `bytes_per_row × rows × workers`, which the same 1 GB container
+   reaches at roughly **64 000 players** on four workers.)*
 
 None of the four can fire this year, which is the point of naming them.
 

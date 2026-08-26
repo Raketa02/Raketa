@@ -4,15 +4,39 @@
 - **Date:** 2026-08-25
 
 > **Amended 2026-08-26 by [ADR-0107](0107-the-player-card-is-assembled-outside-the-engine.md):
-> the condition this record deferred the photo check on has expired.** The argument below is
-> *"nobody can see another player's photo yet. There is no matchmaking, **no player card** and
-> no discovery, so a check today protects nothing, while a false reject blocks a real player on
-> their first day."* ADR-0107 creates the player card, so every photo becomes visible to
-> strangers. The `PhotoReview` port and its pass-through adapter stand as decided, and the
-> soft-warn-never-hard-block ruling stands — what has gone is the asymmetry it rested on, since
-> a passed photo is no longer seen by nobody. Filed as
-> [#181](https://github.com/Raketa02/Raketa/issues/181); nothing else in this record changes,
-> and the deferral is left as written because the reason it expired is the useful part.
+> the condition this record deferred the photo check on now has an expiry date, and it is the
+> day the player card ships.** The argument below is *"nobody can see another player's photo
+> yet. There is no matchmaking, **no player card** and no discovery, so a check today protects
+> nothing, while a false reject blocks a real player on their first day."* ADR-0107 decides the
+> player card, so every photo is *destined* to become visible to strangers. The `PhotoReview`
+> port and its pass-through adapter stand as decided, and the soft-warn-never-hard-block ruling
+> stands. Filed as [#181](https://github.com/Raketa02/Raketa/issues/181).
+>
+> **Read the tense carefully, because the first draft of this note got it wrong.** ADR-0107 is a
+> decision on the matchmaking map ([#155](https://github.com/Raketa02/Raketa/issues/155)), and
+> that map plans rather than builds. `app/modules/` is `auth`, `player_profile`, `rating` and
+> `users`; `player_card` appears nowhere in `app/`. So the condition expired **in the decision
+> record, not in running code** — today nobody can still see another player's photo, and the
+> argument below still holds against the tree as it stands, and this note says *has an expiry
+> date* where it first said *has expired*.
+>
+> **The expiry is a deadline, not a blocker.** What ends the deferral is narrower than *the
+> engine works*: it is the first route that returns `player_card.photo_id` to a client that
+> renders it. [ADR-0096](0096-gender-preference-mutual-gate-invisible-to-the-scorer.md) keeps
+> photos out of `ScorableCandidate` altogether, so a complete scorer exposes none — only
+> ADR-0107's card assembly does. #181 depends on no matchmaking code and must simply *land
+> before* that commit, or there is a window in which photos are visible and unreviewed.
+>
+> One correction to the asymmetry the deferral rested on, in the other direction. This record
+> reasons about *"a false reject blocks a real player on their first day"*, and the code that
+> implements it cannot do that: `PhotoReviewDecision` is `ALLOWED` and `FLAGGED` with
+> deliberately no `REJECTED`, and `UploadPhoto` stores a flagged photo rather than refusing it.
+> A false positive costs a player a warning, not a blocked signup. What building the checker
+> early would actually cost is a heavyweight inference dependency carried by every install, CI
+> run and image for as long as the card is unbuilt — which is the reason to wait, and is not the
+> reason written below. The deferral is left as written because the reason it was made is the
+> useful part; this paragraph records that the *price* of getting it wrong was smaller than the
+> prose claims.
 
 ## Context
 

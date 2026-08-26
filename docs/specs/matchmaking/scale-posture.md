@@ -100,7 +100,15 @@ which amends ADR-0093's prose versions. In short:
 | Trigger | Fires at | Today |
 | --- | --- | ---: |
 | **1** — request latency contends with scoring | p99 of one scoring call > **20 ms**, or duty cycle > **0.25**, on one worker over 15 min | 11.4 ms / 0.07 |
-| **4** — the index no longer fits beside the API | `bytes_per_row × rows × workers × 2` > **50%** of the container memory limit | ~80 000 rows on four workers of a 1 GB container |
+| **4** — the index no longer fits beside the API | `bytes_per_row × rows × workers` > **50%** of the container memory limit | ~160 000 rows on four workers of a 1 GB container |
+
+> **The `× 2` was struck by [ADR-0112](../../adr/0112-the-snapshot-is-a-per-partition-container-bound-once.md).**
+> It budgeted a refresh peak that duplicated every row, and
+> [#173](https://github.com/Raketa02/Raketa/issues/173) made the refresh a **delta** that
+> copies row *references* from the container it replaces — so the steady state never holds
+> two copies of a row, and the trigger fires at roughly **64 000 players** rather than
+> ~32 000. The `× 2` returns the day a refresh implementation stops sharing references,
+> which is the constant's falsifier.
 
 **Both ship instrumented in the first build**, as fixed-name structured log records:
 

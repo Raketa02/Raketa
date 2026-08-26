@@ -147,6 +147,16 @@ as a claim with no trigger at all.
 > **Trigger 4 has fired when `bytes_per_row × rows × GUNICORN_WORKERS × 2` — the measured
 > refresh peak — exceeds 50% of the container's memory limit.**
 
+**Amended by [ADR-0112](0112-the-snapshot-is-a-per-partition-container-bound-once.md): the
+`× 2` is struck.** It budgeted a duplicate of every row during a refresh, and the refresh
+this ADR assumed was a cold rebuild. #173 made it a **delta** that copies row *references*
+from the container it replaces and decodes only the rows that moved, so the steady state
+never holds two copies of a row. The trigger is
+`bytes_per_row × rows × GUNICORN_WORKERS` > 50% of the limit — roughly **64 000 players** on
+four workers of a 1 GB container, not ~32 000. A trigger computed against a peak that does
+not occur fires early, which is the same defect in the other direction as the one this
+section was written to fix.
+
 The module computes this at every index load, from the **actual** worker count and the
 cgroup limit, and **warns**. It never refuses to start: refusing would take sign-in down to
 protect a feature the matcher owns. The answer to the warning is a representation change and

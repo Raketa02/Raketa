@@ -549,9 +549,23 @@ decision has actually settled appears here.
   is its sibling and means the *maths* changed. Stamped on every search, so a Fit stays
   interpretable after the numbers move
   ([ADR-0093](docs/adr/0093-matcher-in-the-backend-with-a-pure-match-fit-engine.md)).
+- **Candidate index** — the matcher's picture of the city: one row per `(player, sport)`,
+  rebuilt by replaying the events the owning contexts already record. It **owns no truth** — if
+  it and the backend ever disagree, the backend is right and the index is rebuilt. It holds
+  **only facts a player changes about themselves**; every fact that must be true at the moment
+  it is read is deliberately not in it, which is why being stale costs quality and can never
+  cost safety
+  ([ADR-0111](docs/adr/0111-the-index-holds-only-what-a-player-changes-about-themselves.md)).
+- **Snapshot** — one immutable copy of a partition of the **candidate index**, taken once at the
+  start of a search and held for its whole life. It is what makes a search reproducible: the
+  index cannot move underneath one that is already running
+  ([ADR-0112](docs/adr/0112-the-snapshot-is-a-per-partition-container-bound-once.md)).
 - **Snapshot version** — how much of the world the engine had seen when a search ran. With the
   ruleset version and the moment, it is what makes a past search reproducible rather than merely
-  remembered.
+  remembered. It means **everything up to and including this is applied** — a *contiguous*
+  prefix of the event store's append order, never simply the highest number seen, because an
+  append is assigned its position before it commits
+  ([ADR-0110](docs/adr/0110-the-index-tails-the-log-the-outbox-delivers-side-effects.md)).
 - **Player card** — who a candidate *is*, as against how well the game would go. A **closed
   list** — nickname, photo, area, whole kilometres, Social tags, level and band, counted games —
   and it is assembled by the backend **after** the engine returns, on the seam **at stake**
