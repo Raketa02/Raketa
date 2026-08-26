@@ -28,10 +28,11 @@ ports & adapters), DDD, and event sourcing.
 These are the authority for their terms. There is no Part 2: after the reset, no term is
 committed ahead of *a decision*, and a speculative list of context names is not one. A
 context that does not appear below has no vocabulary yet — resolve its terms into this file
-before writing it, which is what the last section below is: **Player profile** is settled in
-an accepted ADR and is being built, and its terms are here because that is the order this
-file asks for, not because the code landed first. Every other section describes code that
-exists in `backend/app/` today.
+before writing it, which is what the last three sections below are: **Player profile** is
+settled in an accepted ADR and is being built, and **Blocks** and **Matchmaking** are settled
+in accepted ADRs and are not built at all. Their terms are here because that is the order
+this file asks for, not because the code landed first. Every other section describes code
+that exists in `backend/app/` today.
 
 ### Skill rating (`backend/app/modules/rating/`)
 
@@ -357,6 +358,64 @@ of the code because this file asks for them in that order.
 - **A profile is one per player, and asking whether one exists is a legitimate question.**
   See the narrowed *there is no onboarded player* invariant above, and
   [ADR-0090](docs/adr/0090-onboarding-per-player-checkpoint.md).
+
+### Blocks (`backend/app/modules/blocks/`)
+
+One player deciding they do not want to be shown another, ever again. Settled by
+[ADR-0095](docs/adr/0095-block-directed-record-symmetric-effect-gates-fail-closed.md); not
+yet built.
+
+- **Block** — an **event-sourced aggregate**, one stream per **ordered** `(blocker, blocked)`
+  pair, with a deterministic stream id derived from that pair. **The record is directed; the
+  effect is symmetric.** `A → B` and `B → A` are two independent blocks, so one being lifted
+  never lifts the other.
+- **Blocker** / **blocked** — the two sides of the ordered pair. The words name the *record*,
+  never an experience: neither party can discover which way it went.
+- **Block events** (durable name / version):
+  - **PlayerBlocked** — `blocks.player_blocked` / v1 — the pair and the surface it was made
+    from. **No reason, and no free text.**
+  - **PlayerUnblocked** — `blocks.player_unblocked` / v1 — the pair.
+- **BlockQuery** — the port that answers *is either of these two blocked by the other*. One
+  port, consulted by every surface that shows one player to another.
+- **Hold** — the platform stopping a player from starting anything new while an unsettled case
+  is open against them. A **held account** is an account under a Hold. Nothing can place one
+  today, because the `cases` context does not exist.
+- **AccountHoldQuery** — the port the Hold gate reads. Its only adapter today is
+  **`NoHoldsExist`**, named for the fact it asserts rather than for being empty.
+- **Report** — *not a term yet.* The wider reporting and moderation story is out of scope; if a
+  reason for a block is ever wanted, it belongs to a Report and not to a Block.
+
+**Invariants**
+- **A block works both ways, immediately and silently.** Each disappears from the other's view
+  on every surface where the platform shows one player to another. Neither is notified, and no
+  response shape can carry a block or a decline — asserted by a test, not by review.
+- **A block is forward-looking.** It removes each from the other's *future* proposals and
+  listings. It does not reach into a game already agreed or a chat already open; what it does
+  to an open challenge is a demand on the unbuilt `matches` context, not a decision this
+  context makes.
+- **Blocking is idempotent, and blocking yourself is an error.** A second block appends
+  nothing, in the shape of `disable()`; a self-block raises rather than no-ops.
+- **No cap, no cooldown, no rate limit.** Friction on the one control a person has is a tax
+  paid to solve a problem the platform does not have.
+- **Erasure reaches both sides.** Erasing a player erases every stream they appear in, on
+  either side of the pair — which is why a block is never a field on somebody's profile.
+
+### Matchmaking (`backend/app/modules/matchmaking/`)
+
+Decided by [ADR-0093](docs/adr/0093-matcher-in-the-backend-with-a-pure-match-fit-engine.md);
+not yet built, and its vocabulary is still being resolved on the matchmaking map. Only what a
+decision has actually settled appears here.
+
+- **Gate** — a hard exclusion applied before anything is scored. Not a weight, and no
+  relaxation ever reaches one.
+
+**Invariants**
+- **A term that cannot be evaluated stands down. A gate that cannot be evaluated excludes.**
+  Absent evidence makes a term renounce its weight and the rest renormalise; absent evidence
+  makes a gate *fail closed*. An absent gate is an open door, never a standing-down signal.
+- **A safety gate is verified against live state, on the side that owns the truth.** The
+  matcher proposes and the backend disposes: anything failing live verification is dropped from
+  the answer before it reaches the client, and the shortlist is simply short by one.
 
 ## Cross-cutting concepts
 
