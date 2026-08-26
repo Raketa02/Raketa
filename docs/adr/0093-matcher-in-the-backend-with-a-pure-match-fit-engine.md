@@ -140,6 +140,9 @@ in a codebase to lift into a service:
 
 1. **Request latency measurably contends with scoring** — sign-in or profile requests degrade
    when a city is busy, traced to the scoring loop sharing the process.
+   *(Amended by [ADR-0101](0101-partition-derived-never-a-matching-criterion.md): stated as
+   p99 of one scoring call > 20 ms, or duty cycle > 0.25, on one worker over fifteen
+   minutes — measured, and instrumented from the first build.)*
 2. **Scoring capacity and request capacity visibly diverge** — one needs scaling and the other
    does not.
 3. **The deploy becomes the bottleneck on learning** — the runtime ruleset store exists, real
@@ -148,6 +151,11 @@ in a codebase to lift into a service:
 4. **The index no longer fits comfortably in memory beside the API** — §7.2 sizes a
    50 000-player city at 32 MB; several cities at gigabyte scale expires the "it is just a
    function call" argument.
+   *(Amended by [ADR-0101](0101-partition-derived-never-a-matching-criterion.md): §7.2's
+   32 MB is wrong by an order of magnitude — measured, 782 bytes a row, held once per
+   worker. Restated as `bytes_per_row × rows × workers × 2` exceeding half the container's
+   memory limit, which a 1 GB container reaches at ~32 000 players on four workers, not at
+   "several cities".)*
 
 None of the four can fire this year, which is the point of naming them.
 

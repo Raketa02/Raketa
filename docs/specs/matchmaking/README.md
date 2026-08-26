@@ -8,7 +8,10 @@ because it appears in either file. What is decided lives in ADRs, in the root
 [`CONTEXT.md`](../../../CONTEXT.md), and in the spec set this map produces beside them —
 today [`consumer-driven-contracts.md`](consumer-driven-contracts.md), which records what the
 matcher demands of `player_score`, `matches` and `cases` — and, since
-[#164](https://github.com/Raketa02/Raketa/issues/164), of `rating`.
+[#164](https://github.com/Raketa02/Raketa/issues/164), of `rating` — and
+[`scale-posture.md`](scale-posture.md), which records what the engine is designed for, the
+measured cost of a search in CPython, and the ladder that is climbed before ADR-0093 is
+reversed.
 
 Charted by [The matchmaking engine: who sits down, and why](https://github.com/Raketa02/Raketa/issues/155);
 landed by [Land the matchmaking input documents in the repo](https://github.com/Raketa02/Raketa/issues/156)
@@ -74,6 +77,8 @@ is no upstream to re-sync from.
 | §9.8 · §9.7 | The relaxation ladder has four rungs — familiarity, distance, availability, level — applied one at a time by the engine and announced afterwards, and `MAX_RELAXATION_RUNG = 4` | A term that cannot be evaluated stands down; a term may **never** be honestly neutral, the test being whether a zero would be *measured* or *invented*; and the environment may never select behaviour a domain test could observe | **The rules win.** [ADR-0099](../../adr/0099-relaxation-offers-the-searchers-own-asks.md): candidate generation is `shard ∧ sport ∧ box ∧ gates`, so familiarity (a modifier), availability overlap (a term) and level fit (a term) exclude nobody. Rungs 1, 3 and 4 raise scores against a fixed floor instead of widening the catchment — the Wikimedia move — and rung 3 converts a **measured** zero into `NoEvidence`. **Rungs 1, 3 and 4 are struck.** The ladder becomes three rungs over the searcher's *own asks* — times, radius ×1.5, radius ×2.0 — **offered rather than applied**, since only the player can widen their grid truthfully. The stopping rung stays a number for [#167](https://github.com/Raketa02/Raketa/issues/167) |
 | §9.2 · §9.7 | *Guaranteed inclusions* — interest-lifted, newcomer-window and zero-exposure candidates — **bypass the fit cut**; and §9.7 says that below `QUALITY_FLOOR` a candidate is *"not shown at all"* | Both cannot be true at once | **§9.7 wins, with one carve-out.** [ADR-0099](../../adr/0099-relaxation-offers-the-searchers-own-asks.md): an **interest lift is a human's own yes** and outranks the engine's opinion, so it may sit below the floor with its reason printed. The newcomer-window and zero-exposure lifts may **reorder** but never **admit** below the floor — exposure fairness is not a reason to show somebody a bad evening |
 | §9.8 | The empty response carries a `pool_description` string — *"Four padel players within 8 km this week"* | The kernel *"emits values and stable machine codes, never display text"*, and the map extends it to the matcher unchanged | **The rule wins.** [ADR-0099](../../adr/0099-relaxation-offers-the-searchers-own-asks.md): `{sport, radius_km_used, players_in_range, window, post_gate: true}` plus reason codes, and the client writes the sentence. The count is always **post-gate** and no pre-gate count is ever carried, because [ADR-0096](../../adr/0096-gender-preference-mutual-gate-invisible-to-the-scorer.md)'s ninth gate makes the two differ per searcher and the delta would be readable — which a block must never be |
+| §9.2 · §7.2 · §17 | The shard key is *"a shard, not a matching criterion"* — and §9.2's generation predicate then opens with `shard_key == searcher.shard_key`, ANDed with the sport, the box and the gates | An equality inside the generation conjunction **excludes**; and no relaxation rung may widen anything the searcher did not themselves ask for, so nothing reaches it | **The rule wins, against the document's own stated rule.** [ADR-0101](../../adr/0101-partition-derived-never-a-matching-criterion.md): the conjunct is struck and **the box is the only spatial truth**. The partition is *derived* — `(sport)` today, `(sport, cell)` at trigger 4 — so there is no field for a future conjunct to attach to, and no metro boundary that can be wrong about a person. `shard_key` is **not a field**: nothing in this backend produces one, it is derivable from the area for reporting, and a schema test asserts it absent beside §7.2's forbidden name, photo and precise location. §9.2's guaranteed inclusions and everything else in §7.2 transfer |
+| §9.9 | `K` — the doubles candidate cap — *"moves; it is a config change, not a rewrite"* | A number that can destroy the latency budget is not configuration | **True in Go, false in Python.** The enumeration is cubic with a flat per-combination cost: K=15 is 2.08 ms, **K=32 is 20 ms**, K=48 is 69 ms, K=64 is 169 ms. [`scale-posture.md`](scale-posture.md) sets **`K = 24`** — 27% of the 90 ms line-up budget once derated — as a ruleset constant with an **engine-side ceiling that refuses to load a ruleset exceeding it**, on §11's own malformed-ruleset rule. Everything else in §9.9 transfers |
 
 ---
 
@@ -111,9 +116,11 @@ has to say *which* one.
 
 None of the three is authoritative and the discrepancy is not the interesting part: the
 measured figure is **782 bytes a row as plain Python objects**, and it is held once per
-worker. See [`docs/research/matcher-scale-in-python.md`](../../research/matcher-scale-in-python.md)
-and [ADR-0093's trigger 4](../../adr/0093-matcher-in-the-backend-with-a-pure-match-fit-engine.md),
-which [#165](https://github.com/Raketa02/Raketa/issues/165) restates in rows.
+worker. See [`docs/research/matcher-scale-in-python.md`](../../research/matcher-scale-in-python.md).
+[ADR-0101](../../adr/0101-partition-derived-never-a-matching-criterion.md) has since restated
+ADR-0093's trigger 4 in **rows and workers**, and
+[`scale-posture.md`](scale-posture.md) carries the measured table — so quote neither §7.2 nor
+§17 for a size, and **write every threshold in rows, never in players**.
 
 The sections a ticket is most likely to want:
 
