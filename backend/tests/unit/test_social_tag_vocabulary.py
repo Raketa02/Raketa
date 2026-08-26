@@ -1,14 +1,21 @@
-"""The Social tag vocabulary: eighteen permanent ids, three groups, one home.
+"""The Social tag vocabulary: nineteen permanent ids, three groups, one home.
 
 Two claims are load-bearing here and neither is about behaviour.
 
-**Ids are permanent**, because they are persisted on profiles forever. So the
-eighteen are written out *in this file* rather than read from the module under
-test: a test that reads the constant it is checking passes just as happily after
-a rename, which is precisely the change that must not happen quietly. Retiring a
+**Ids are permanent**, because they are persisted on profiles forever. So they
+are written out *in this file* rather than read from the module under test: a
+test that reads the constant it is checking passes just as happily after a
+rename, which is precisely the change that must not happen quietly. Retiring a
 tag means dropping it from the served vocabulary and continuing to honour it on
 the profiles that hold it — and that change should redden this file, be argued
-with, and then be made here too.
+with, and then be made here too. **Adding one should redden it too**, which is
+what happened on 2026-08-26 when ``OPEN_TO_MEET_SOMEONE`` was appended to
+``WHY_YOU_ARE_HERE`` — an addition rather than an edit, with nothing above it
+moved and nothing retired.
+
+**The closed-vocabulary tripwire below was not widened to admit it**, and must
+not be for anything else either: an id that needs the guard relaxed is an id that
+belongs to a different product.
 
 **The vocabulary has one home**, so the last test walks the source for a second
 copy. A string literal equal to a tag id anywhere else in ``app/`` is the drift
@@ -71,6 +78,7 @@ EXPECTED: tuple[tuple[str, tuple[str, ...]], ...] = (
             "HERE_TO_MEET_PLAYERS",
             "HERE_FOR_A_REGULAR_GAME",
             "HERE_TO_GET_BACK_INTO_IT",
+            "OPEN_TO_MEET_SOMEONE",
         ),
     ),
 )
@@ -78,7 +86,7 @@ EXPECTED: tuple[tuple[str, tuple[str, ...]], ...] = (
 EXPECTED_IDS = frozenset(tag for _, tags in EXPECTED for tag in tags)
 
 
-def test_the_vocabulary_is_exactly_the_eighteen_ids_in_their_served_order():
+def test_the_vocabulary_is_exactly_these_ids_in_their_served_order():
     served = tuple(
         (group.value, tuple(tag.value for tag in tags))
         for group, tags in SOCIAL_TAG_VOCABULARY.items()
@@ -86,10 +94,13 @@ def test_the_vocabulary_is_exactly_the_eighteen_ids_in_their_served_order():
     assert served == EXPECTED
 
 
-def test_there_are_eighteen_tags_in_three_groups():
-    assert len(SocialTag) == 18
+def test_there_are_nineteen_tags_in_three_groups():
+    # The groups are not evenly sized and never had to be: what was specified is
+    # the three groups, and nothing renders a group's count. The even split the
+    # first eighteen happened to have ended when the nineteenth was appended.
+    assert len(SocialTag) == 19
     assert len(SocialTagGroup) == 3
-    assert sum(len(tags) for tags in SOCIAL_TAG_VOCABULARY.values()) == 18
+    assert sum(len(tags) for tags in SOCIAL_TAG_VOCABULARY.values()) == 19
 
 
 def test_every_tag_belongs_to_exactly_one_group():

@@ -4,8 +4,8 @@ The vocabulary's own invariants are unit-tested; this file is about the wire:
 what a client actually receives, that it needs nothing to ask for it, and that
 the contract document the client generates from carries the shapes.
 
-The eighteen ids are written out here as well as in the unit test, deliberately.
-That test guards the constant; this one guards the *response*, and a mapper that
+The ids are written out here as well as in the unit test, deliberately. That
+test guards the constant; this one guards the *response*, and a mapper that
 dropped a group or re-sorted the tags would leave the constant untouched.
 """
 
@@ -52,6 +52,7 @@ EXPECTED_GROUPS: list[tuple[str, list[str]]] = [
             "HERE_TO_MEET_PLAYERS",
             "HERE_FOR_A_REGULAR_GAME",
             "HERE_TO_GET_BACK_INTO_IT",
+            "OPEN_TO_MEET_SOMEONE",
         ],
     ),
 ]
@@ -70,14 +71,14 @@ async def test_the_vocabulary_is_served_grouped_and_in_order(client):
 
 
 @pytest.mark.asyncio
-async def test_eighteen_tags_are_served(client):
+async def test_nineteen_tags_are_served(client):
     resp = await client.get(OPTIONS_PATH)
     tags = [
         tag["id"] for group in resp.json()["social_tag_groups"] for tag in group["tags"]
     ]
 
-    assert len(tags) == 18
-    assert len(set(tags)) == 18
+    assert len(tags) == 19
+    assert len(set(tags)) == 19
 
 
 @pytest.mark.asyncio

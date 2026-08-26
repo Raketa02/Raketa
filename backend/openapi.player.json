@@ -1718,7 +1718,8 @@
           "HERE_FOR_THE_EXERCISE",
           "HERE_TO_MEET_PLAYERS",
           "HERE_FOR_A_REGULAR_GAME",
-          "HERE_TO_GET_BACK_INTO_IT"
+          "HERE_TO_GET_BACK_INTO_IT",
+          "OPEN_TO_MEET_SOMEONE"
         ],
         "title": "SocialTag",
         "description": "The closed set of tag ids. An id here is permanent."

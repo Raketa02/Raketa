@@ -1,4 +1,4 @@
-"""The Social tag vocabulary: eighteen ids, three groups, closed.
+"""The Social tag vocabulary: nineteen ids, three groups, closed.
 
 A player describes what kind of player they are by holding **2 to 6** of these
 (``../../../../CONTEXT.md``). The vocabulary is *closed and platform-owned* —
@@ -37,6 +37,27 @@ list was still cheap: the profile commit had not shipped, no profile held an id,
 and a replacement was an edit to this file, two tests and the contract. It is not
 cheap any more. From here an id is honoured forever, so changing the vocabulary
 means retiring an id and adding another beside it — never editing a line below.
+
+**A nineteenth was added on 2026-08-26: ``OPEN_TO_MEET_SOMEONE``**, at the end of
+``WHY_YOU_ARE_HERE``. It is an addition and not an edit — nothing above it moved,
+nothing was retired — which is the one shape of change this vocabulary permits.
+The even six-per-group split goes with it, and was never a rule: what the parent
+specified was the three groups, and nothing renders a group's count.
+
+Two things about it are worth writing down rather than leaving to be
+rediscovered. **It sits at the edge of this module's own rule** — a tag is about
+the game, never about the person — and it is the closest any id comes to that
+line, because *meeting someone* is a reason for being here rather than a way of
+playing. It is on the game side of the line as written: it is a **motive**, which
+is what ``WHY_YOU_ARE_HERE`` collects, it is player-stated rather than inferred,
+and it claims nothing about anybody's age, looks or body. The tripwire in
+``tests/unit/test_social_tag_vocabulary.py`` was not touched or widened to admit
+it, and it must not be: an id that needs the guard relaxed is an id that belongs
+to a different product.
+
+**It is deliberately not ``HERE_TO_MEET_PLAYERS``**, which it sits beside. That
+one is about finding people to play with; this one is not, and folding the two
+would take a distinction a player drew and discard it. Both stand.
 """
 
 from __future__ import annotations
@@ -88,6 +109,7 @@ class SocialTag(str, Enum):
     HERE_TO_MEET_PLAYERS = "HERE_TO_MEET_PLAYERS"
     HERE_FOR_A_REGULAR_GAME = "HERE_FOR_A_REGULAR_GAME"
     HERE_TO_GET_BACK_INTO_IT = "HERE_TO_GET_BACK_INTO_IT"
+    OPEN_TO_MEET_SOMEONE = "OPEN_TO_MEET_SOMEONE"
 
 
 #: The vocabulary as it is served: groups in order, tags in order within each.
@@ -120,6 +142,10 @@ SOCIAL_TAG_VOCABULARY: Mapping[SocialTagGroup, tuple[SocialTag, ...]] = (
                 SocialTag.HERE_TO_MEET_PLAYERS,
                 SocialTag.HERE_FOR_A_REGULAR_GAME,
                 SocialTag.HERE_TO_GET_BACK_INTO_IT,
+                # Appended, never inserted: the order within a group is part of
+                # the contract, and moving an existing tag is a visible change to
+                # every picker that has already rendered it.
+                SocialTag.OPEN_TO_MEET_SOMEONE,
             ),
         }
     )
@@ -131,7 +157,7 @@ class SocialTagSelectionBounds:
     """How many tags a selection must hold to be one.
 
     The unit is in both field names for the reason it is on the radius bounds: a
-    bare ``minimum`` beside a vocabulary of eighteen reads as a count of
+    bare ``minimum`` beside a vocabulary of nineteen reads as a count of
     something, and which something is exactly what a client would guess wrong.
     """
 
@@ -304,11 +330,11 @@ def _in_vocabulary_order(tags: Iterable[SocialTag]) -> list[SocialTag]:
 def _validate_vocabulary() -> None:
     """Refuse to import a vocabulary that has drifted from its own enum.
 
-    The enum and the grouping are two lists of the same eighteen things, so they
-    can disagree: a tag added to the enum and forgotten here would be a legal id
-    that no picker ever shows, and one listed twice would render twice. Checked
-    on import rather than in a test alone, because the failure it prevents is a
-    tag id that exists on the wire and in nobody's picker.
+    The enum and the grouping are two lists of the same tags, so they can
+    disagree: a tag added to the enum and forgotten here would be a legal id that
+    no picker ever shows, and one listed twice would render twice. Checked on
+    import rather than in a test alone, because the failure it prevents is a tag
+    id that exists on the wire and in nobody's picker.
 
     The ceiling is checked against the same list, because a ceiling above the
     vocabulary is a rule no player could break and a counter that never fills.
