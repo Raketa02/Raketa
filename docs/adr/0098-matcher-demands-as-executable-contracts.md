@@ -3,6 +3,18 @@
 - **Status:** Accepted
 - **Date:** 2026-08-26
 
+> **Amended 2026-08-26 by [ADR-0114](0114-a-newcomer-may-not-be-declined.md) and
+> [`the-newcomer-path.md`](../specs/matchmaking/the-newcomer-path.md): opponent variety is
+> withdrawn from the contract.** It was demanded on behalf of two consumers — familiarity's sign
+> flip (§9.4) and the welcoming-record modifier.
+> [#164](https://github.com/Raketa02/Raketa/issues/164) struck the first as a statistic that does
+> not exist; [#175](https://github.com/Raketa02/Raketa/issues/175) struck the second as an input
+> the style and vibe terms already pay for. **A consumer-driven contract with no consumer is
+> withdrawn, not carried**: the whole discipline is that a demand is executable against a
+> provider, and a demand nobody reads is a demand nobody notices going wrong. The six strands,
+> the two standing-down powers and everything else below are untouched. If a later term wants
+> variety, it returns as that term's demand and signs for it.
+
 ## Context
 
 Of the eight Fit terms in
@@ -80,8 +92,9 @@ the fact**, never by how fresh it has to be.
 **2. Every demanded fact crosses as a value, its evidence, and when it was last observed.**
 For each of the six strands: the published value, the **numerator and denominator** behind it,
 and the moment of the most recent observation. Sportsmanship crosses as its mean and the number
-of ratings. **Opponent variety is demanded as a seventh published statistic that is explicitly
-not a strand** and never blended into the printed score. The unit of observation is named for
+of ratings. ~~**Opponent variety is demanded as a seventh published statistic that is explicitly
+not a strand** and never blended into the printed score.~~ **Withdrawn** — see the amendment
+above. The unit of observation is named for
 each strand in the contract spec; two people reading it compute the same denominator.
 
 **3. The matcher reads what the player is shown, and never re-derives it.** Its entire policy

@@ -3,6 +3,16 @@
 - **Status:** Accepted
 - **Date:** 2026-08-26
 
+> **Amended 2026-08-26 by [`the-newcomer-path.md`](../specs/matchmaking/the-newcomer-path.md)
+> §5: the ruling below stands, and two of its three subjects stop being *guaranteed inclusions*
+> at all.** Since only the interest lift admits anybody, `inclusion_reason` described one of its
+> three values. `NEWCOMER_WINDOW` becomes a printable **liveness reason** and `ZERO_EXPOSURE`
+> becomes telemetry that never crosses the wire; `inclusion_reason` narrows to `INTEREST_LIFT`
+> and stays a union so the next reason that genuinely admits somebody has somewhere to go. The
+> substance is unchanged — **exposure fairness is still not a reason to show somebody a bad
+> evening** — and the newcomer window's one real power is elsewhere: it exempts from
+> **minimum evidence**, which is not the quality floor.
+
 ## Context
 
 [`docs/specs/matchmaking/matchmaking-engine.md`](../specs/matchmaking/matchmaking-engine.md)
@@ -123,7 +133,7 @@ danger, **the quality floor itself**.
 lift is a human's own yes and outranks the engine's opinion**, so an interest-lifted candidate
 may sit below the floor **with its reason printed**. The newcomer-window and zero-exposure lifts
 may **reorder** but never **admit** below the floor: exposure fairness is not a reason to show
-somebody a bad evening.
+somebody a bad evening. *(Both accordingly leave `inclusion_reason` — see the amendment above.)*
 
 **A candidate's own radius stays a Liveness dock and never becomes a gate at a relaxed rung**
 (§9.3.8's reasoning is undisturbed). A gate that switches on with scarcity is the same disease.

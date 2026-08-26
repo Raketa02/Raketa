@@ -311,7 +311,7 @@ changes here leave three.
 |---|--:|---|
 | **Calibration value** | 0 … +4 | Competitive only. **The only modifier whose input exists today** |
 | **Familiarity** | −4 … +5 | Needs `matches` (§8) |
-| **Welcoming record** | 0 … +4 | Range reserved; its content belongs to [#175](https://github.com/Raketa02/Raketa/issues/175) |
+| **Welcoming record** | 0 … +4 | **Settled by [#175](https://github.com/Raketa02/Raketa/issues/175):** one input — *has played opponents whose rating was still settling* — from the `rating` port. Needs `matches`. Printed |
 | ~~Language~~ | ~~0 … +2~~ | **Struck** |
 | ~~Intent opposition~~ | ~~−6~~ | Deleted in `the-five-numbers.md` §6 |
 | Reliability floor breach | −11 | Outside the budget, derived as `MODIFIER_BUDGET + 1` |
@@ -320,6 +320,16 @@ changes here leave three.
 one it is inert — calibration is the only modifier that can fire, so the stack's real range is
 `0 … +4` and only in competitive — and that is correct for the same reason the evidence gate is:
 standing insurance, in place before it is needed.
+
+**`NEWCOMER_ABSORPTION_CAP` keeps its rule and refuses its integer.**
+[ADR-0114](../../adr/0114-a-newcomer-may-not-be-declined.md) bounds how often one player is
+volunteered into a **newcomer's** shortlist — counted per week per sport on the exposure ledger,
+and binding by **dropping** the welcoming modifier and the newcomer reorder, never by withholding.
+The number cannot be set here for [`the-five-numbers.md`](the-five-numbers.md)'s reason: with no
+players there is no distribution to sit it in, and with `matches` absent the modifier it bounds
+never fires, so on day one any integer is untestable. Its falsifier is written and its value is
+not: **answer rate of the players who absorb the most newcomer appearances, regressed on
+absorption.** If answer rate does not fall as absorption rises, the cap guards nothing.
 
 **Language is struck rather than deferred.** It reads a field that exists nowhere in the backend
 and that no ticket creates; and the privacy line excludes **nationality** from the index by name,
@@ -421,11 +431,19 @@ printable, or bounded by the notice threshold.
 | Current challenge load | −8 … 0 | ✓ as a coarse code, **never the number** — their inbox depth is theirs |
 | Reciprocal asymmetry | −12 … 0 | ✓ in *Why 78?*, not on the card |
 | **Previous decline between you** | **−6** *(was −10)* | ✗ never, either side |
-| **Exposure adjustment** | **−6 … +6** *(was −6 … +8)* | ✗ today |
+| **Newcomer lift** | **+8** *(reclaimed)* | ✓ — [#175](https://github.com/Raketa02/Raketa/issues/175) |
+| **Exposure adjustment** | **−6 … +6** *(was −6 … +8)* | ✗ |
 | ~~Radius asymmetry~~ | — | **Struck** — see below |
 
-[#175](https://github.com/Raketa02/Raketa/issues/175) may argue exposure into printability and
-take its +8 back; until it does, the invariant binds it.
+[#175](https://github.com/Raketa02/Raketa/issues/175) **argued it, and split the signal rather
+than winning it whole.** §14.2's lift was one row here and two codes on the wire, with opposite
+printability arguments: *they're new — this game does most of its work for them* is a sentence
+the product wants said, while *you are seeing this person because nobody has been shown them all
+week* is a third party's unpopularity, which the searcher is owed no version of. So the **newcomer
+lift speaks and reclaims its +8**, honestly — the invariant binds *silent* movement — and the
+**exposure adjustment stays silent at ±6**, where the invariant holds it. Two signals, two bounds,
+two printabilities, and `|silent movement| < MOVE_NOTICE` is satisfied by construction rather than
+by a cap that flattened both. See [`the-newcomer-path.md`](the-newcomer-path.md) §5.
 
 ### Radius asymmetry was charged twice
 

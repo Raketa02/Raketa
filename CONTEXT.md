@@ -480,10 +480,28 @@ decision has actually settled appears here.
 - **Pool description** — what the response carries when the shortlist is empty: how many players
   of that sport are in range, structured, **counted after every gate**. It is the product in a
   new market, and it is a number on a screen, so it counts real rows and never estimates.
-- **Guaranteed inclusion** — a candidate placed in the shortlist by something other than Fit. An
-  **interest lift** — a human's own *Let's play* — may sit below the quality floor with its
-  reason printed. The newcomer-window and zero-exposure lifts may **reorder** and never
-  **admit** below it.
+- **Guaranteed inclusion** — a candidate placed in the shortlist by something other than Fit.
+  There is exactly one: an **interest lift**, a human's own *Let's play*, which may sit below the
+  quality floor with its reason printed. The newcomer and zero-exposure lifts **reorder** and
+  never **admit**, so neither is a guaranteed inclusion — the first is a printable liveness
+  reason, the second is recorded and never told to anybody.
+- **Newcomer** — a player before their first game, and never for longer than **14 days** from the
+  profile commit that made them searchable. A **predicate over a date, never a stored flag**: a
+  flag would need a loop to keep it true, and a date needs nothing. The games half is the
+  definition and the days are a ceiling, so it terminates even while nothing counts games.
+- **Newcomer window** — the period a Newcomer is in, and it has exactly one power: **minimum
+  evidence does not apply**. It bends nothing else — not the quality floor, not a gate, not a
+  Block. It also **tightens the level gate for both sides of the pairing**, and it lifts the
+  Newcomer in other players' lists, printed. When it closes on somebody who never played, nothing
+  happens: what catches them afterwards is the ordinary exposure lift, which never expires
+  ([ADR-0113](docs/adr/0113-newness-changes-the-gate-never-the-weights.md)).
+- **Welcoming record** — a candidate who has **played opponents whose rating was still settling**.
+  One input and printed, because it is the only evidence that says somebody is *willing to play
+  a stranger who might be bad*: sportsmanship says they are pleasant and opponent variety says
+  they get around, and both are already scored elsewhere. **A player may never decline being
+  matched to a Newcomer** — that is a preference over people that protects nobody, and the
+  pressure it would relieve is bounded instead, by capping how often the engine volunteers
+  anybody ([ADR-0114](docs/adr/0114-a-newcomer-may-not-be-declined.md)).
 - **SearchContext** — the facts about *the searcher* that travel with one search rather than
   living in the index: their block set, and their pairwise history. The index row is per player,
   so a fact about a **pair** has nowhere else to be

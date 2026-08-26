@@ -197,7 +197,7 @@ candidate: {
   degraded_terms: [ term ],
   modifiers: [ { code, points } ],
   liveness_reasons: [ code ],
-  inclusion_reason?: INTEREST_LIFT | NEWCOMER_WINDOW | ZERO_EXPOSURE,
+  inclusion_reason?: INTEREST_LIFT,
   at_stake?: { win_delta, loss_delta },
   would_be_forecast?: <Forecast>
 }
@@ -217,6 +217,17 @@ comparison, so which terms fired *is* the reading.
 
 **No liveness number.** Reasons only. There is no field to write one to
 ([ADR-0106](../../adr/0106-evidence-vocabulary-is-contract-weights-are-configuration.md) §5).
+
+**`inclusion_reason` carries one code, and that is a correction rather than a loss.**
+[#175](https://github.com/Raketa02/Raketa/issues/175) found the field describing one of its three
+values: since [ADR-0099](../../adr/0099-relaxation-offers-the-searchers-own-asks.md) only the
+interest lift **admits** anybody, and the other two **reorder**. So `NEWCOMER_WINDOW` moves to
+`liveness_reasons[]`, where a printable reorder belongs, and `ZERO_EXPOSURE` **never crosses the
+wire at all** — *you are seeing this person because nobody has been shown them all week* is a
+third party's unpopularity, and the searcher is owed no version of it. It stays in
+`search_candidate.inclusion_reason`, which keeps all three values: **the store is open where the
+wire is closed**, and `ZERO_EXPOSURE` is the first code that lives only there. The field stays a
+union of one so the next reason that genuinely admits somebody has somewhere to go.
 
 **`at_stake` is filled by the backend, never the matcher** — the one candidate field with a
 different author. It is `AtStakeQuery` over `rating`

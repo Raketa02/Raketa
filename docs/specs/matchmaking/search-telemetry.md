@@ -114,7 +114,7 @@ person did about it.
 | `degraded_terms` | `text[]` of the terms that returned `NoEvidence`. Lifted out of the blob so §19.3's per-term `NoEvidence` rate — *"a term quietly dying is invisible otherwise"* — is an array query with a GIN index rather than a JSONB scan. Also the **renormalisation basis**, without which a Fit is uninterpretable a year later |
 | `modifiers` | JSONB, each with its code |
 | `liveness_reasons` | `text[]` |
-| `inclusion_reason` | Nullable: `INTEREST_LIFT` \| `NEWCOMER_WINDOW` \| `ZERO_EXPOSURE` — the **Guaranteed inclusion** the glossary carries |
+| `inclusion_reason` | Nullable: `INTEREST_LIFT` \| `NEWCOMER_WINDOW` \| `ZERO_EXPOSURE`. **All three are kept here; only `INTEREST_LIFT` crosses the wire** ([#175](https://github.com/Raketa02/Raketa/issues/175)) — the other two reorder rather than admit, `NEWCOMER_WINDOW` ships to the client as a liveness reason, and `ZERO_EXPOSURE` is the first code that lives only in the store |
 | `withheld_reason` | `NEAR_MISS` only: `BELOW_FLOOR` \| `INSUFFICIENT_EVIDENCE` |
 | `missing_terms` | `text[]`, for `INSUFFICIENT_EVIDENCE`. Distinguishes *nobody was good enough* from *nobody was known enough* |
 | `reliability_penalty_applied` | |

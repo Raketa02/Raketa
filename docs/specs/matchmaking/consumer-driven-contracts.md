@@ -84,13 +84,20 @@ Two more are worth stating because they will surprise a reader:
   24/4, 14/14, 10/12, 5/16. Both are right. This is precisely why the matcher must read strands
   and not the blend.
 
-### Opponent variety
+### Opponent variety — **withdrawn**
 
-Demanded as a **seventh published statistic that is explicitly not a strand** and is never
-blended into the printed score. It is a per-player summary over that player's whole history —
-the same shape as a strand, and the wrong shape for the pairwise read below. It feeds the
-familiarity sign flip (§9.4) and the welcoming-record modifier. The matcher must not derive a
-second opinion about the same fact from match history.
+Demanded as a **seventh published statistic that is explicitly not a strand**, on behalf of two
+consumers: the familiarity sign flip (§9.4) and the welcoming-record modifier.
+[#164](https://github.com/Raketa02/Raketa/issues/164) struck the first — the sign reads declared
+tags only. [#175](https://github.com/Raketa02/Raketa/issues/175) struck the second — variety says
+you get around, not that you are willing to play somebody who might be bad, and the welcoming
+record reduces to its one input the tag terms do not already pay for.
+
+**A consumer-driven contract with no consumer is withdrawn, not carried.** The whole discipline is
+that a demand is executable against a provider; a demand nobody reads is a demand nobody notices
+going wrong, and a contract suite is exactly where an unread row goes quietly stale. ADR-0098 is
+amended to say so. If a later term wants variety, it returns as **that term's** demand and signs
+for it — which also means it arrives with a consumer who can say what shape it needs.
 
 ### The absence rule, and the two standing-down powers
 
