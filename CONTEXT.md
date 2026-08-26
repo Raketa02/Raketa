@@ -340,9 +340,14 @@ of the code because this file asks for them in that order.
 **Invariants**
 - **A tag id is permanent.** Ids are persisted on accounts, so retiring a tag means hiding
   it from the picker while continuing to honour it — never reusing or renaming it.
-- **Blank means "no preference", never "leave me out".** An empty availability grid is a
-  valid answer: it scores no overlap and it excludes the player from nothing. An unanswered
-  field is never a negative filter.
+- **At least one slot, and blank is absent rather than zero.** The availability grid is
+  **required** at profile commit — one ticked cell of the twenty-one is a real answer, none is
+  not an answer at all. Where a blank grid is nevertheless met — cleared afterwards, or
+  committed before the rule — it means *we do not know*, and the availability term stands down;
+  it is never scored as no overlap and never as any time
+  ([ADR-0102](docs/adr/0102-silence-is-never-scored.md)). **An unanswered field is never a
+  negative filter**, and requiring the field is how that invariant is kept rather than
+  weighed.
 - **The grid is never shown to anybody as a calendar.** Not to matched players, not as
   free/busy, not exported. Only the *count* of shared slots and the name of the next shared
   one are ever rendered — overlap is a fact about a pair, a calendar is a fact about a
@@ -440,7 +445,22 @@ decision has actually settled appears here.
   and the remaining weights renormalise; it is never `0`, and never a neutral `0.5`.
 - **Quality floor** — the Fit below which a candidate is not shown at all. A **fixed** bar: no
   relaxation reaches it, and nothing lowers it in response to a thin pool
-  ([ADR-0099](docs/adr/0099-relaxation-offers-the-searchers-own-asks.md)).
+  ([ADR-0099](docs/adr/0099-relaxation-offers-the-searchers-own-asks.md)). One floor for both
+  modes and every sport, and it is defined by the **judged pairings** it must satisfy rather
+  than by a chosen number.
+- **Minimum shortlist** — how short a shortlist has to be before the response carries the
+  relaxation rungs at all. It triggers nothing by itself; the engine still never widens on its
+  own.
+- **Reliability floor** — a flat dock, printed with its reason, on a candidate whose **published
+  Player Score** is below the bar. Not part of the modifier budget and larger than all of it, so
+  a stack of small positives can never erase a recent no-show. It is a **dock and not an
+  exclusion**: an otherwise excellent match still appears, low, with the reason shown — where a
+  player wants somebody gone entirely, that is a Block. The one place the matcher reads the
+  blended score instead of the six strands, because it is the number the player can see.
+- **Minimum evidence** — the least the engine must know about *one specific candidate* before
+  showing them to anybody. A **gate**, never an adjustment to their score, and a fraction of the
+  terms live for the platform rather than a count. It reads gaps particular to that person and
+  never platform-wide absence, so a term nobody has yet gates nobody.
 - **Relaxation rung** — an **offer** to relax one of the searcher's *own* asks — their times, or
   their radius — with the real count of candidates it would add. Three exist, times first. The
   player accepts; the engine never relaxes anything by itself, and an accepted widen is scoped to
