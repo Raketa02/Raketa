@@ -39,9 +39,14 @@ The clearest case is the only clash the document marks **Real**: `TALKS_THROUGH_
 `TALKS_THROUGH_THE_MATCH` lives in `AFTER_THE_MATCH`.
 
 **The split is by relationship, not by tag.** Every entry in the relationship matrix carries a
-`column`, and a *matched* single tag falls to its own group's column. A term is therefore **not
-a group of tags; it is a group of claims about pairs** — and which claims are about the hour on
-court is exactly the kind of judgement §23 Q18 already assigns to product.
+`column`, **`MATCH` entries included** — a match is a row and not a rule
+([ADR-0115](../../adr/0115-a-tag-about-the-person-may-be-shown-never-scored.md)), so a matched
+tag's column may differ from its group's and a tag that may not match simply has no row. An
+earlier draft of this section had a matched single tag fall to its own group's column, which
+would have made the derived-domain rule below false and would have decided
+`OPEN_TO_MEET_SOMEONE` by accident. A term is therefore **not a group of tags; it is a group of
+claims about pairs** — and which claims are about the hour on court is exactly the kind of
+judgement §23 Q18 already assigns to product.
 
 The heading of §9.3.6 (*"the `ON_THE_COURT` group"*) and of §9.3.7 (*"`AFTER_THE_MATCH` +
 `WHY_YOU_ARE_HERE`"*) are wrong as written and are not the definition of either term.
@@ -67,7 +72,12 @@ shape now or the group objective has nowhere to read it.
 
 **A column's tag domain is derived from the matrix** — the ids appearing in any entry carrying
 that column — never declared separately, so it re-derives itself the moment product edits an
-entry. A tag may appear in both domains; `PLAYS_TO_WIN` does.
+entry. A tag may appear in both domains, and a tag with no entry at all is in neither.
+
+**The thirty-seven rows are [`tag-relationship-matrix.md`](tag-relationship-matrix.md)**, settled
+by [#179](https://github.com/Raketa02/Raketa/issues/179): eighteen matches, twelve complements,
+seven clashes, the derived domains at **STYLE 10 of 19 / VIBE 12 of 19**, and the firing, seat
+and disjointness rules the shape above does not state.
 
 ---
 
@@ -229,7 +239,7 @@ becomes visible for the first time.
 | Constant | Value | Why |
 |---|--:|---|
 | `TAG_PHI` | 0.45 | 1 tag 0.55 · 2 tags 0.80 · 3 tags 0.91 · 6 tags 0.99. The second matched tag is worth less than the first, so tag-stuffing does not pay — and the platform caps selection at six precisely because it expects people to try |
-| `TAG_COMPLEMENT_STRENGTH` | 0.70 | The **default** for a complement entry that states none. A match is two people independently choosing the same string; a complement is product's editorial claim about two different ones, and the discount prices that — but §9.3.6 says some complements beat a match, so the matrix may override per entry |
+| `TAG_COMPLEMENT_STRENGTH` | 0.70 | The **default** for a complement entry that states none. A match is two people independently choosing the same string; a complement is product's editorial claim about two different ones, and the discount prices that. An entry may override **upward to a ceiling of 1.00 and never below the default** — §9.3.6's *"sometimes better than a match"* is narrowed by [ADR-0115](../../adr/0115-a-tag-about-the-person-may-be-shown-never-scored.md), because parity is the most an editorial claim can be worth against two people's agreement. Two rows take 1.00 |
 | `CLASH_SEVERITY_REAL` | 0.15 | |
 | `CLASH_SEVERITY_MILD` | 0.06 | |
 | `CLASH_CAP` | 0.25 | Binds at two Real clashes, or one Real plus two Mild |
@@ -255,9 +265,14 @@ half-the-live-terms bar. It stays true that the evidence gate excludes nobody to
   too weak.
 - **`CLASH_CAP` and the severities falsified by:** return rate of games with a scored clash,
   against games with none.
-- **The normalisation falsified by:** the distribution of the raw score. If raw is bimodal at 0
-  and 0.55 rather than spread, the matrix is too sparse and the term is a shared-tag counter
-  wearing a matrix's clothes.
+- **The matrix falsified by:** the **coverage rate** — the fraction of scored pairs in which at
+  least one complement or clash row fires, over a rolling month, against
+  `MATRIX_COVERAGE_FLOOR = 0.20`. Below it the matrix is decorative and either gains rows or the
+  two terms collapse to a shared-tag count under a name that says so
+  ([`tag-relationship-matrix.md`](tag-relationship-matrix.md) §6). This **replaces** the
+  raw-score-distribution test proposed here: `dr(n)` takes seven values, so raw is discrete by
+  construction and lumpy at 0 and 0.55 whatever the matrix contains — the test would have fired
+  on day one against a perfect matrix. The distribution stays a reported statistic.
 
 ---
 
