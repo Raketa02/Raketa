@@ -31,7 +31,9 @@ context that does not appear below has no vocabulary yet — resolve its terms i
 before writing it, which is what the last three sections below are: **Player profile** is
 settled in an accepted ADR and is being built, and **Blocks** and **Matchmaking** are settled
 in accepted ADRs and are not built at all. Their terms are here because that is the order
-this file asks for, not because the code landed first. Every other section describes code
+this file asks for, not because the code landed first. **Player Score** is a further step out
+again: nothing about it is decided, and it appears only because the matcher has contracted six
+words it will read, and the words are the player's, not the matcher's. Every other section describes code
 that exists in `backend/app/` today.
 
 ### Skill rating (`backend/app/modules/rating/`)
@@ -420,6 +422,23 @@ decision has actually settled appears here.
 
 - **Gate** — a hard exclusion applied before anything is scored. Not a weight, and no
   relaxation ever reaches one.
+- **NoEvidence** — what a term returns when it has nothing to weigh. It is dropped from the sum
+  and the remaining weights renormalise; it is never `0`, and never a neutral `0.5`.
+- **SearchContext** — the facts about *the searcher* that travel with one search rather than
+  living in the index: their block set, and their pairwise history. The index row is per player,
+  so a fact about a **pair** has nowhere else to be
+  ([ADR-0098](docs/adr/0098-matcher-demands-as-executable-contracts.md)).
+- **Pairwise history** — what happened between the searcher and one other player: **accepted**,
+  **declined**, **played**, **planned-never-played**. Four outcomes the matcher keeps distinct,
+  because a pair who ghosted each other is not a pair who played.
+- **Origin key** — the `(search_id, position)` a challenge was sent from, carried by the
+  challenge itself. Required, never optional: a search not joined to its outcome is evidence
+  that no longer exists, and there is no backfill.
+- **PlayerScoreQuery** / **MatchHistoryQuery** — the two ports naming what the matcher demands of
+  `player_score` and `matches`, beside **AccountHoldQuery** for `cases`. One provider signs one
+  contract. Their only adapters today are **`NoPlayerScoresExist`** and
+  **`NoMatchHistoryExists`**, named for the facts they assert
+  ([ADR-0098](docs/adr/0098-matcher-demands-as-executable-contracts.md)).
 
 **Terms this context refuses**
 - **Game format** — *mixed doubles*, *women's doubles* and the like. Deliberately does not
@@ -435,10 +454,46 @@ decision has actually settled appears here.
 - **A safety gate is verified against live state, on the side that owns the truth.** The
   matcher proposes and the backend disposes: anything failing live verification is dropped from
   the answer before it reaches the client, and the shortlist is simply short by one.
+- **A gate may be honestly empty; a term may never be honestly neutral.** The test for a fact
+  whose context does not exist yet is whether a zero would be *measured* or *invented*. No
+  challenge has ever been sent by anyone, so an open-challenge count of zero is real and the
+  gate ships live and true-over-empty. Nobody has failed to turn up, because nobody has ever
+  been due to — so a reliability strand of zero would be invented, and the term stands down
+  instead ([ADR-0098](docs/adr/0098-matcher-demands-as-executable-contracts.md)).
 - **A protected characteristic may gate; it may never score.** The value reaches candidate
   generation and gating and is **absent from the type handed to the scorer**, so no term can
   weigh it — the guarantee is a type boundary the build asserts, not a review checklist
   ([ADR-0096](docs/adr/0096-gender-preference-mutual-gate-invisible-to-the-scorer.md)).
+
+### Player Score — demanded, not designed
+
+What the platform has watched a player *do*, as distinct from how well they play. **One number
+in the UI, six strands underneath it**, and the matcher reads the strands separately because
+*confirms results* is close to worthless for a friendly and close to essential for a counted
+game ([ADR-0098](docs/adr/0098-matcher-demands-as-executable-contracts.md)). Nothing about this
+context is decided and nothing is built; the six words are here because the player reads all
+six on their own screen, so they are the product's language before they are the matcher's.
+
+- **Player Score** — the blended number a player sees. Computed from what happened, never from
+  opinions and never from results: **losing costs nothing here.**
+- **Strand** — one of the six things the score is made of. Each is a record of opportunities and
+  what came of them, and each is published in its own right.
+  - **Shows up** — whether the game gets played at all.
+  - **Answers challenges** — whether a challenge gets an answer inside its window.
+  - **Confirms results** — whether a counted game gets confirmed, so it *counts*.
+  - **Keeps plans** — whether an agreed plan survives to its day without a late change.
+  - **Settles up** — whether a court share that fell due was settled without a case.
+  - **Sportsmanship** — what opponents said afterwards. A mean, not a ratio.
+- **Opponent variety** — how widely a player spreads their games. Published beside the strands
+  and **explicitly not one of them**; never blended into the Player Score.
+
+**Invariants**
+- **No record is not a bad record.** A player without a score is not bad and not average — the
+  reliability term stands down and the other terms carry the match. The same principle the
+  rating engine already applies to skill.
+- **The score is a memory, and it fades with new evidence.** Decay belongs here, on the side
+  that owns the record; a consumer that applies its own would be counting the same forgetting
+  twice.
 
 ## Cross-cutting concepts
 
