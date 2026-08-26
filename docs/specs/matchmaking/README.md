@@ -84,6 +84,24 @@ and they are stable, because the file does not change.
   bold marks the four the design document surfaced itself; 1–14 came from the earlier
   mechanics document. Cite as `§23 Q7`.
 
+**And one place the arithmetic does not agree with itself.** Found while resolving
+[#161](https://github.com/Raketa02/Raketa/issues/161), and verified against the source: the
+index sizing is stated three incompatible ways, so a ticket quoting "the document's number"
+has to say *which* one.
+
+- **§7.2** says *"approximately 160 bytes per row"* and *"a city of 50 000 players across four
+  sports is roughly 32 MB"*. That arithmetic needs **4 rows per player**.
+- **§17's capacity table** says *"candidate rows (player × sport) ~2.5 × players"* — which at
+  160 bytes is **20 MB**, not the 32 MB the same table then repeats.
+- **§17's sharding note** says *"10⁶ rows per instance (~200 MB)"*, which is **200 bytes a
+  row**, not 160.
+
+None of the three is authoritative and the discrepancy is not the interesting part: the
+measured figure is **782 bytes a row as plain Python objects**, and it is held once per
+worker. See [`docs/research/matcher-scale-in-python.md`](../../research/matcher-scale-in-python.md)
+and [ADR-0093's trigger 4](../../adr/0093-matcher-in-the-backend-with-a-pure-match-fit-engine.md),
+which [#165](https://github.com/Raketa02/Raketa/issues/165) restates in rows.
+
 The sections a ticket is most likely to want:
 
 | Want | Section |

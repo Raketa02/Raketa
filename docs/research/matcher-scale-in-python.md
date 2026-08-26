@@ -8,7 +8,7 @@ decides what to do about these numbers, and
 [The matcher's picture of the city](https://github.com/Raketa02/Raketa/issues/173) decides how
 a search reads the index. The job here is to replace the design document's **Go** performance
 claims with **measured CPython** ones, and to put a number on the two
-[ADR-0093](adr/0093-matcher-in-the-backend-with-a-pure-match-fit-engine.md) reversal triggers
+[ADR-0093](../adr/0093-matcher-in-the-backend-with-a-pure-match-fit-engine.md) reversal triggers
 this ticket exists to make measurable.
 
 Every claim carries one of three tags:
