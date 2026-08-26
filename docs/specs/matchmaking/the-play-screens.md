@@ -52,12 +52,26 @@ backend after `matchfit` returns — the same seam `at_stake` already rides
 ([ADR-0107](../../adr/0107-the-player-card-is-assembled-outside-the-engine.md)).
 
 ```
-player_card: { nickname, photo_id?, area_code, distance_km,
+candidate:   { player_id, fit, distance_km, player_card, ... }
+player_card: { nickname, photo_id?, area_code,
                social_tags[], level, band, counted_games }
 ```
 
-Closed list. `distance_km` is an **integer**; `photo_id` is **omitted** (not null) when the
-player has no photo, and the client draws the generated court poster.
+Closed list. `photo_id` is **omitted** (not null) when the player has no photo, and the client
+draws the generated court poster.
+
+> **`distance_km` sits on the candidate and not inside the card**, matching
+> [`the-two-contracts.md`](the-two-contracts.md) §4. An earlier draft of this section had it
+> inside the card, which is the one placement ADR-0107 rules out: **a card says only what its
+> subject published**, and every field on it is a fact about *that person alone*. A distance is a
+> fact about a **pair** — it is the distance term's own reading, computed by the engine against
+> the searcher's centroid, where every other field of the card is assembled by the backend from
+> what the player themselves put there. Putting it on the card would make it the single field
+> whose value changes depending on who is looking.
+>
+> It is an **integer**, and it is **omitted** rather than `0` when the distance term stood down —
+> the two spellings of absence ([ADR-0106](../../adr/0106-evidence-vocabulary-is-contract-weights-are-configuration.md)
+> §4), which is what lets *Closest* sort a stood-down row last instead of first.
 
 **Never on a card, ever:**
 

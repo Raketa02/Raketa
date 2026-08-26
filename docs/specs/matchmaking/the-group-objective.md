@@ -36,9 +36,9 @@ quality floor.
 not the search*, so every pair containing a newcomer takes `LEVEL_TOL_COMP` in both modes,
 whoever ran the search.
 
-**The mechanism is one `K × K` bitmask**, precomputed once per line-up — 276 pair triples at
-`K = 24` — after which a combination is admissible iff its three candidate-pairs are set. Three
-lookups against 6 072 evaluations; `O(K²)` against a cubic enumeration.
+**The mechanism is one `K × K` bitmask**, precomputed once per line-up — **276 candidate pairs**
+at `K = 24`, which is `C(24,2)` — after which a combination is admissible iff its three
+candidate-pairs are set. Three lookups per combination; `O(K²)` against a cubic enumeration.
 
 **One class of gate is deliberately left searcher-only:** ADR-0098's pending-pair set — *do these
 two already have an open challenge* — is a `matches` fact that fails **soft**, and a soft gate
@@ -211,7 +211,7 @@ the glossary's two forecasts stay two words. The new fact the builder can state 
 | | | |
 | --- | --: | --- |
 | Measured today (`scale-posture.md` §6) | 8.2 ms | 6 072 evaluations, M3 Max; 27% of the 90 ms budget derated |
-| `O(K²)` precompute | ~1.7 ms | 276 admissibility triples, 552 seat-scoped tag readings, 276 intent comparisons |
+| `O(K²)` precompute | ~1.7 ms | 276 admissibility bits, 552 seat-scoped tag readings, 276 intent comparisons |
 | Per combination | ~1.0 ms | three cross lookups, one 21-bit grid `AND` + popcount |
 | Per arrangement | ~0.3 ms | one seat-delta lookup |
 | **Estimated** | **~11 ms** | **25–38% of budget derated**, against 27% today |
@@ -281,7 +281,8 @@ telemetry layer is worth its two rows.
 
 ## 5. What the response carries
 
-**`G` is recorded and never returned as a number.** It chose these four over 2 023 combinations,
+**`G` is recorded and never returned as a number.** It chose these four over the other **1 770**
+combinations — `C(23,3) − 1`, on §3.2's corrected basis, because §9.9 fixes the viewer's seat —
 and the third refusal — *never a number it cannot explain in one sentence with the evidence named*
 — applies. A second score the player must trust is worse than none: it competes with Fit and
 nobody can act on it. The **evidence** half is paid by one closed reason code naming **the term
@@ -337,7 +338,7 @@ be unfalsifiable and §5's reason code unreproducible.
 | Counters | combinations enumerated · refused by the pairwise gate · refused by the floor |
 | `max(fit_rank)` among the seated | `K`'s replacement falsifier |
 
-Two rows, not 2 024: enough to replay the choice and compute the margin, and no more than any
+Two rows, not 1 771: enough to replay the choice and compute the margin, and no more than any
 question anybody has asked. It inherits #169's rules unchanged — **written before the answer is
 returned, never expires, and no route ever returns it.** A runner-up combination is a
 group-shaped near miss, and *a player may ask why somebody was shown, and nobody may ask who was

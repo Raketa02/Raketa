@@ -307,10 +307,10 @@ of the code because this file asks for them in that order.
   ([ADR-0094](docs/adr/0094-play-intent-declared-per-sport-in-its-own-aggregate.md)).
 - **Play intent declaration** — the **event-sourced aggregate** that holds one, one stream per
   `(player, sport)`. Separate from the Player profile, which stays free of a sport dimension.
-- **Mode** — the *search's* setting: which of **Competitive** or **For fun** a player is
-  searching in **right now**. Two values, never three; a player with no preference still picks
-  a tab for tonight. *Defined here because Play intent cannot be defined without it; it belongs
-  to the matchmaking context and moves there when that context is written.*
+- **Mode** — *defined in the Matchmaking section below, where it belongs.* It is named here only
+  because **Play intent** cannot be defined without it, and the two are the pair most easily
+  confused: **Mode is the search's setting right now; Play intent is the player's standing
+  declaration.**
 - **Intent alignment** — what a searcher's live **Mode** is worth against a candidate's
   declared **Play intent**. Deliberately **asymmetric**: a social player in a competitive game
   is mildly bored, a competitive player in a game where nobody keeps score has been cheated of
@@ -436,11 +436,50 @@ yet built.
 ### Matchmaking (`backend/app/modules/matchmaking/`)
 
 Decided by [ADR-0093](docs/adr/0093-matcher-in-the-backend-with-a-pure-match-fit-engine.md);
-not yet built, and its vocabulary is still being resolved on the matchmaking map. Only what a
-decision has actually settled appears here.
+**designed and not yet built.** Thirty ADRs (0093–0122) and the spec set at
+[`docs/specs/matchmaking/`](docs/specs/matchmaking/) settle it; the pipeline is assembled in one
+place, with the precedence rule for reading them, in
+[`the-engine.md`](docs/specs/matchmaking/the-engine.md). Only what a decision has actually settled
+appears here.
 
+- **Match Fit** — the **pure scorer**: the engine that turns one pairing into a **Fit** and its
+  evidence. It has no clock, no randomness, no state and no database, and the type it is handed
+  carries no protected characteristic, which is what makes the privacy line a build assertion
+  rather than a review checklist. The stateful half of the matcher — the index, the ledgers, the
+  telemetry — is the **module** beside it and is deliberately not an engine
+  ([ADR-0093](docs/adr/0093-matcher-in-the-backend-with-a-pure-match-fit-engine.md)).
+- **Mode** — the *search's* setting: which of **Competitive** or **For fun** a player is
+  searching in **right now**. **Two values, never three.** A player with no preference still picks
+  a tab for tonight, which is exactly why it is not **Play intent**: an intent is a standing
+  declaration per sport with three values, a Mode is one search's choice. They are separate types
+  so confusing them is a compile error, and `NO_PREFERENCE` never selects a weight vector — it
+  **inherits** one.
 - **Fit** — how good the game would be, printed on the card as one number out of a hundred. A
   weighted sum of the **terms**, renormalised over whichever of them produced evidence.
+- **Evidence** — what a **term** hands back beside its value: the fact it read, structured, in a
+  **closed vocabulary** the API contract enumerates. Never a sentence — the engine emits codes and
+  the client writes the words. Adding, removing or reshaping one is an **API change**, where
+  moving a weight is free; and a kind a client cannot render is shown as a **named gap saying the
+  app is out of date**, never dropped, because a breakdown that quietly stops adding up is the
+  same class of lie as a recomputed score
+  ([ADR-0106](docs/adr/0106-evidence-vocabulary-is-contract-weights-are-configuration.md)).
+- **Modifier** — a small, printed adjustment applied to a Fit after the **terms** are summed, for
+  something true of the pairing that no term reads. The whole stack is clamped by the **modifier
+  budget**, so modifiers may colour a match and can never decide one. A modifier that re-charges
+  evidence a term already weighed is deleted rather than tuned: **the same fact may not move a
+  score twice.**
+- **Ruleset** — the frozen, named, dated set of **numbers** a search ran under: every weight,
+  tolerance, bound and cap, plus the **tag relationship matrix**. **It is not a profile.** A
+  Player profile is a person's own account of themselves; a Ruleset is the product's opinion about
+  who should meet whom, and the two words must never be swapped — reusing *profile* here would be
+  the first sentence of a confusing incident review. Immutable once released, so a new set is a
+  new name and never an edit, and **never selected by the environment**: all four environments run
+  the same numbers unless somebody deliberately releases a differently-named one.
+- **Partition** — how the **candidate index** is divided so that a search scans a fraction of the
+  city. **Derived, never stored and never a matching criterion**: it is computed from the area
+  centroid, so there is no field a future filter could attach to and no metro boundary that can be
+  wrong about a person. A search never spans two sports
+  ([ADR-0101](docs/adr/0101-partition-derived-never-a-matching-criterion.md)).
 - **Liveness** — how likely the game is to *happen*: whether they answer, whether they are
   around, whether they would want it. It **reorders** the list and never enters Fit, so the one
   number a player is asked to trust never quietly contains *"they open the app a lot"*.
@@ -623,10 +662,11 @@ decision has actually settled appears here.
   append is assigned its position before it commits
   ([ADR-0110](docs/adr/0110-the-index-tails-the-log-the-outbox-delivers-side-effects.md)).
 - **Player card** — who a candidate *is*, as against how well the game would go. A **closed
-  list** — nickname, photo, area, whole kilometres, Social tags, level and band, counted games —
-  and it is assembled by the backend **after** the engine returns, on the seam **at stake**
-  already rides, because the scorer is forbidden every field on it. There is no name in this
-  platform, only a **Nickname**
+  list** — nickname, photo, area, Social tags, level and band, counted games — and it is assembled
+  by the backend **after** the engine returns, on the seam **at stake** already rides, because the
+  scorer is forbidden every field on it. There is no name in this platform, only a **Nickname**.
+  **The distance is not on it**: a card says only what its subject published, and a distance is a
+  fact about a *pair*, so it is the one field that would change depending on who was looking
   ([ADR-0107](docs/adr/0107-the-player-card-is-assembled-outside-the-engine.md)).
 - **Forecast** — how the game would go, for a set of people. Three readings of one type and the
   words are not interchangeable: the **best-of-three** forecast answers *are these the right

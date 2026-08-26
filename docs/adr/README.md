@@ -35,6 +35,26 @@ This is a reset, not a reversal. Nothing in the removed set was judged *wrong*; 
 judged premature. Anything rebuilt gets a fresh ADR at the next free number, argued from
 the code that exists then.
 
+## The matchmaking sequence, 0093–0122
+
+Thirty consecutive records decide the matchmaking engine, charted on
+[The matchmaking engine: who sits down, and why](https://github.com/Raketa02/Raketa/issues/155)
+and assembled in [`docs/specs/matchmaking/the-engine.md`](../specs/matchmaking/the-engine.md),
+which also states **which document wins on which question**. They are ordinary ADRs and the index
+below carries each one's own relationships; three repo-wide records are touched often enough that
+their standing is stated once here rather than inferred thirty times.
+
+| Record | Standing after the sequence |
+| --- | --- |
+| **[0005](0005-three-app-monorepo-ownership-boundaries.md)** — monorepo ownership | **Untouched.** 0093 rejected the input document's fourth deployable, so no `matcher/` exists, no fourth ownership fence was added, and the hook's `frontend_club/` arm remains the template for the day a genuinely new app lands |
+| **[0015](0015-engines-as-a-pure-versioned-layer.md)** — engines are a pure layer | **Distinguished, never amended.** Its rejection of an *engine microservice* stands verbatim because none was built. The document's counter — the matcher owns state — is accepted in full and answered by 0093's split: the state was never engine material, and `matchfit` is as pure as RacketSkill. Match Fit is the **second** engine, which is the case `.importlinter`'s own comment said to write the engine-to-engine fence for |
+| **[0022](0022-kernel-negative-space-and-constant-homes.md)** — no display text, and where a constant lives | **Extended twice, unbroken.** 0099 carries its no-presentation rule to the pool description, and **0106 finishes it**: a weight is configuration and an *evidence shape* is contract, which closed a hole neither 0022 nor 0006 could see — an opaque blob generating as `Record<string, unknown>` is 0006's exact failure arriving through a gap in the schema rather than a broken rule |
+
+Three further repo-wide records were amended by the sequence and say so in their own text:
+**0091** (its photo-check deferral expired when 0107 created the player card — [#181](https://github.com/Raketa02/Raketa/issues/181)),
+**0092** (0110's cursor row is taken `FOR UPDATE` so the no-lock rule stays literally true rather than by exemption),
+and **0003** (the outbox keeps delivering side effects and is **not** what feeds the index — 0110).
+
 ## When to write one
 
 Write an ADR when a choice would be expensive to reverse, when you had to argue yourself

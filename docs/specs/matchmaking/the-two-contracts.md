@@ -150,9 +150,18 @@ search: {
   pool: { sport, radius_km_used, players_in_range, window, post_gate: true },
   rung_offers: [ { rung, ask: TIMES | RADIUS, radius_km?, slot?,
                    candidates_above_floor, window } ] | null,
-  radius_clamp: bool
+  radius_clamp: bool,
+  sorts_available: [ BEST_FIT | CLOSEST | EVENEST | MOST_RELIABLE ]
 }
 ```
+
+**`sorts_available[]` was added by [#171](https://github.com/Raketa02/Raketa/issues/171) and is
+recorded here** — [`the-play-screens.md`](the-play-screens.md) §4 decides it, and it belongs in
+this shape because it is a fact about *the search* and not about a candidate. A closed vocabulary,
+server-driven: a client deriving offerability from `degraded_terms` would be encoding a
+sort-to-term mapping, which is the objection that promoted `distance_km` in the first place.
+*Most reliable* is absent from the list on day one and the control **is not drawn** — a visible
+control that reorders nothing is the product lying quietly.
 
 **The staged pool counts do not cross the wire.** `n_generated`, `excluded_by_gate`,
 `n_scored`, `n_cleared_floor` live on the record, where an analyst reads them. The client gets
@@ -259,13 +268,24 @@ the last row there are rung offers or an honest empty state.
 
 ```
 lineup: {
-  arrangements: [ { pairing_id, is_current, is_best,
+  arrangements: [ { pairing_id, is_current, is_best, is_evenest,
                     sides: { A: [seat], B: [seat] },
                     forecast: <Forecast> } ],
   seats: [ { side, seat_index, relationship: SELF | PARTNER | OPPONENT,
-             candidate? , unfilled_reason?: code } ]
+             candidate? , unfilled_reason?: code } ],
+  group_reason: EVENEST_ARRANGEMENT | STRONGEST_WEAKEST_SEAT | BEST_AVERAGE_FIT
+              | MOST_SHARED_SLOTS   | GROUP_RAPPORT
 }
 ```
+
+**`group_reason` and `is_evenest` are [#180](https://github.com/Raketa02/Raketa/issues/180)'s
+additions**, specified in [`the-group-objective.md`](the-group-objective.md) §5 and recorded in
+this shape. `is_best` now means ***best by `G`***; `is_evenest` is the min-gap arrangement *Even
+it out* selects, and the two are separate booleans because the new fact the builder can state is
+that they **differ** — which happens precisely when a four's levels are near-equal and balance has
+nothing left to say. **`G` itself is never returned**: a second score the player must trust is
+worse than none, so the evidence half is paid by one closed code naming the term with the largest
+margin between the winning combination and the runner-up.
 
 **All three arrangements cross, each with its own forecast.** There are exactly three pairings
 of four people and `arrange()` already walks all of them to pick the min-gap one. Returning

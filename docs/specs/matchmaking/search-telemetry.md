@@ -70,7 +70,7 @@ Generation is `sport ∧ box ∧ gates` — the shard conjunct is struck
 | Column | Notes |
 |---|---|
 | `n_generated` | After the box, before the gates |
-| `excluded_by_gate` | JSONB histogram, one key per gate reason code — the ten gates of §9.1 plus [ADR-0096](../../adr/0096-gender-preference-mutual-gate-invisible-to-the-scorer.md)'s and [ADR-0103](../../adr/0103-where-the-curve-saturates-the-gate-begins.md)'s. Counts only; **no candidate is named at this layer** |
+| `excluded_by_gate` | JSONB histogram, one key per gate reason code — **ten in all**: §9.1's **eight**, plus [ADR-0096](../../adr/0096-gender-preference-mutual-gate-invisible-to-the-scorer.md)'s ninth and [ADR-0103](../../adr/0103-where-the-curve-saturates-the-gate-begins.md)'s tenth. (This row said *"the ten gates of §9.1 plus"* those two, which counts twelve; §9.1 lists eight and the roster is enumerated once in [`the-engine.md`](the-engine.md) §3.) Counts only; **no candidate is named at this layer** |
 | `n_scored` | Cleared every gate and was given a Fit |
 | `n_cleared_floor` | |
 | `n_returned` | Shortlist length. **Also the redaction detector** — compared against the count of `band = RETURNED` rows, a mismatch means erasure removed a candidate's row from a search that survived ([ADR-0118](../../adr/0118-a-past-search-is-not-reproducible.md) §6). It is load-bearing rather than redundant and is never denormalised away |
