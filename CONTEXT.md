@@ -271,6 +271,18 @@ of the code because this file asks for them in that order.
   who the platform *offers* you are different acts.
 - **Proposals opt-in** — the player's recorded answer to whether the recommendation engine
   may push games at them. It has **no default**: unanswered is neither yes nor no.
+- **Gender** — `WOMAN`, `MAN` or `PREFER_NOT_TO_SAY`, held on the Player profile. **Per
+  person, never per sport**, self-declared and freely changed. It is a statement about **which
+  searches a player wishes to appear in**, not a ruling by the platform on who anybody is:
+  `PREFER_NOT_TO_SAY` matches an unconstrained search only, and is an explicit answer rather
+  than a null — the same shape as Play intent's `NO_PREFERENCE`. Required at profile creation.
+  **Never rendered on a card and never carried by a response**
+  ([ADR-0096](docs/adr/0096-gender-preference-mutual-gate-invisible-to-the-scorer.md)).
+- **Gender preference** — who a player is willing to be matched with: `WOMEN_ONLY`, `MEN_ONLY`
+  or `ANY`. Durable, optional, defaulting to `ANY`. **Mutual, never one-directional** — it
+  governs both what a player sees and whether they can be seen, so it protects an inbox and not
+  only a search. A **gate, never a weight, and never relaxed**. A search may narrow it for that
+  search and may never widen it past another player's.
 - **Play intent** — what kind of game a player wants in **one sport**: `COMPETITIVE`,
   `FOR_FUN` or `NO_PREFERENCE`. **Declared, per sport, and never inferred.** `NO_PREFERENCE`
   is an explicit answer and never a null — *either suits me* and *I never opened that screen*
@@ -409,6 +421,13 @@ decision has actually settled appears here.
 - **Gate** — a hard exclusion applied before anything is scored. Not a weight, and no
   relaxation ever reaches one.
 
+**Terms this context refuses**
+- **Game format** — *mixed doubles*, *women's doubles* and the like. Deliberately does not
+  exist. A search carries a **Sport** and never a format; the sport fixes the seat count
+  (`backend/app/kernel/sports.py`, which refuses a `Format` dimension for the same reason). Who
+  may sit in a seat is answered by **Gender preference**, which is about people and says so
+  ([ADR-0096](docs/adr/0096-gender-preference-mutual-gate-invisible-to-the-scorer.md)).
+
 **Invariants**
 - **A term that cannot be evaluated stands down. A gate that cannot be evaluated excludes.**
   Absent evidence makes a term renounce its weight and the rest renormalise; absent evidence
@@ -416,6 +435,10 @@ decision has actually settled appears here.
 - **A safety gate is verified against live state, on the side that owns the truth.** The
   matcher proposes and the backend disposes: anything failing live verification is dropped from
   the answer before it reaches the client, and the shortlist is simply short by one.
+- **A protected characteristic may gate; it may never score.** The value reaches candidate
+  generation and gating and is **absent from the type handed to the scorer**, so no term can
+  weigh it — the guarantee is a type boundary the build asserts, not a review checklist
+  ([ADR-0096](docs/adr/0096-gender-preference-mutual-gate-invisible-to-the-scorer.md)).
 
 ## Cross-cutting concepts
 
