@@ -18,7 +18,7 @@ by accident.**
 
 ---
 
-## The four ports
+## The five ports
 
 One provider signs one contract. The split is by who supplies the fact, never by how fresh it
 has to be.
@@ -29,8 +29,9 @@ has to be.
 | `MatchHistoryQuery` | `matches` | The searcher's pairwise history, the per-player open-challenge count, and the origin key |
 | `AccountHoldQuery` | `cases` | One live boolean per player. Already standing from [ADR-0095](../../adr/0095-block-directed-record-symmetric-effect-gates-fail-closed.md) |
 | `AtStakeQuery` | `rating` | What a counted win and a counted loss against one opponent would do to the searcher's Level |
+| `AccountStatusQuery` | `users` | The set of accounts that may not be shown. Gate 8, from [ADR-0124](../../adr/0124-the-matcher-gates-account-state-never-age.md) |
 
-**The fourth one is different, and the difference is stated rather than left to be noticed.**
+**The last two are different, and the difference is stated rather than left to be noticed.**
 `player_score`, `matches` and `cases` **do not exist**. `rating` does — it is at
 `backend/app/modules/rating/`, with its engine at `app/engines/racketskill/`, and the matcher
 already reads μ and σ from it. What is missing is not a context but a **rule**: the
@@ -39,6 +40,14 @@ map. The port is here anyway, in this document rather than a second one, because
 this file is being *the one place* a build agent finds every demand the matcher makes outward.
 Splitting it by does-the-provider-exist would make a reader check two places to be sure they
 had them all.
+
+`users` exists outright, with **nothing missing at all** — `is_active` ships, `UserDisabled`
+ships, and `auth` already refuses a disabled account four ways. `AccountStatusQuery` is therefore
+the one port with a **real adapter on day one**, and the contract suite runs against it rather
+than against a fake standing in for an unwritten context. It is here for the same reason
+`AtStakeQuery` is: this file is *the one place* a build agent finds every demand the matcher makes
+outward, and splitting it by does-the-provider-exist would make a reader check two places to be
+sure they had them all.
 
 Delivery of the indexed half is the backend's existing transactional outbox
 ([ADR-0003](../../adr/0003-transactional-outbox-for-event-delivery.md)), as §7.3 describes.
@@ -155,6 +164,7 @@ tell them apart.
 | --- | --- | --- |
 | Block set (`BlockQuery`, ADR-0095) | **The search refuses** | A gate that cannot be evaluated excludes |
 | Hold flag (`AccountHoldQuery`, ADR-0095) | **The search refuses** | Same |
+| Disabled set (`AccountStatusQuery`, ADR-0124) | **The search refuses** | Same. Read **once per search as a set**, beside the block set — never a per-row query |
 | Pairwise history | **Fails soft** — familiarity and the previous-decline signal stand down, the search proceeds | Losing a game because we could not remember who you played in March is a worse outcome than a slightly duller list |
 | Open challenge between the pair | **Fails soft** | §7.5's *the matcher proposes, the backend disposes* re-verifies on the shortlist. It is embarrassment with a backstop, not a safety failure |
 
@@ -182,10 +192,46 @@ only the demand that the other end carry the key.
 both directions — a held *searcher* is refused at the entry point, not merely hidden from
 others — and fail-closed. Its only adapter today is `NoHoldsExist`.
 
+**`AccountHoldQuery` is not `AccountStatusQuery`, and they are not merged.** *Held* and
+*disabled* are different truths, from different contexts, with different lifecycles and different
+remedies. One boolean with two meanings is a gate that fails for unrelated reasons under one
+reason code (ADR-0124).
+
 **The matcher never reads `cases` to score.** A held player is both excluded by the gate and
 carrying a low *settles up*. **That double reach is intended.** It is written down here so
 nobody later tidies away the apparent duplication by removing one of them: the gate is absolute
 and the strand is weighed, and they answer different questions about the same event.
+
+---
+
+## `AccountStatusQuery`
+
+**The set of account ids that may not be shown**, resolved live from `users` **once per search**
+and applied at generation as a set membership — the block set's shape, and never a query per
+candidate row.
+
+| | |
+| --- | --- |
+| **Direction** | **Candidate-side only** |
+| **On failure** | **Closed** — the search refuses |
+| **Freshness** | Live. **Never an index column** |
+| **Told** | **Nobody** — invisible to the searcher, like a block |
+
+**Candidate-side only is a fact, not a leniency.** ADR-0095 makes the Hold bidirectional because
+a *held* player can still log in and run a search. A **disabled** one cannot get past
+`get_current_user`, so `auth` closes the searcher side before the matcher is reached; a second
+check there would assert something the request could not have carried.
+
+**Never an index column.** A stale *active* flag means a disabled account is shown to a stranger,
+which makes staleness cost **safety** — the one thing
+[ADR-0111](../../adr/0111-the-index-holds-only-what-a-player-changes-about-themselves.md) exists
+to prevent. Account state is also not a fact a player changes *about themselves*: an
+administrator may change it.
+
+**What the contract does not cover.** Account **erasure** — nothing in this repository deletes an
+account, and erasure is a platform-wide obligation rather than a matchmaking demand. If it
+arrives, it arrives as a change to what this port means by *may not be shown*, and the gate's
+name does not change.
 
 ---
 

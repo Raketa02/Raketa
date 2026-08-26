@@ -214,13 +214,21 @@ helped**. So the valve is a bound on the ask, not a switch.
 | **Who is told** | **Nobody** |
 
 **Never withheld**, because withholding makes a thin pool thinner for the one person who can
-least afford it. §14.4's withholding is a remedy for a *measured* full inbox; this cap has no
-such evidence, only a suspicion of load.
+least afford it. This section once let §14.4's withholding stand as the *measured* exception —
+a remedy for a full inbox somebody had counted, where this cap has only a suspicion of load.
+**[#189](https://github.com/Raketa02/Raketa/issues/189) found the distinction is about the wrong
+party and removed the exception**: the measurement is of the *candidate's* inbox while the cost
+is paid by everyone searching, and no relaxation rung reaches a gate. §14.4's withholding is
+**deleted**, its third rung becoming the bottom step of the sink at `−12`
+([ADR-0125](../../adr/0125-a-full-inbox-sinks-a-player-never-withholds-them.md)). So this
+section's rule is now the *only* rule and not the strict half of two: **the engine bounds how
+hard it pushes somebody, and never removes them from the pool.**
 
 **Nobody is told, because nothing has happened to them.** Their list is unchanged and their inbox
 is unchanged; the only thing that moved is how often the engine volunteers them. §14.4's rule —
-*the person whose inbox is full is told, the searcher is not* — is about a fact the player can
-already see. This one has no symptom.
+*the person whose inbox is full is told, the searcher is not* — survives the deletion above and is
+about a fact the player can already see: it is `count(open challenges)`, owed by the app when they
+next open it, and the engine emits nothing for it. This one has no symptom at all.
 
 The magnitude belongs with the weights. That the cap exists, and what it counts, is settled here.
 

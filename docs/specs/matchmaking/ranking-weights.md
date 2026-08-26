@@ -485,7 +485,7 @@ neighbour that *is* genuinely type-enforced; this one had been borrowing its cre
 | Answer rate and speed | −6 … +6 | ✓ |
 | Recent activity | −5 … +4 | ✓ |
 | Overlap proximity | 0 … +4 | ✓ |
-| Current challenge load | −8 … 0 | ✓ as a coarse code, **never the number** — their inbox depth is theirs |
+| **Current challenge load** | **−12 … 0** *(was −8 … 0)* | ✓ as a coarse code, **never the number** — their inbox depth is theirs |
 | Reciprocal asymmetry | −12 … 0 | ✓ in *Why 78?*, not on the card |
 | **Previous decline between you** | **−6** *(was −10)* | ✗ never, either side |
 | **Newcomer lift** | **+8** *(reclaimed)* | ✓ — [#175](https://github.com/Raketa02/Raketa/issues/175) |
@@ -540,6 +540,31 @@ judging. This is [#164](https://github.com/Raketa02/Raketa/issues/164)'s deck ru
 The reverse direction flips what the asymmetric terms measure — the availability denominator
 becomes the candidate's slots, per the glossary's *"the denominator is your slots"*, and distance
 runs against the candidate's radius.
+
+### The challenge-load rungs, and the cliff that is not there
+
+[#189](https://github.com/Raketa02/Raketa/issues/189) found §14.4's **third** rung had never been
+ruled on: at eight open challenges the player was *withheld from generation for 24 h* — an
+exclusion, so a gate, in no roster and no constant table.
+[ADR-0125](../../adr/0125-a-full-inbox-sinks-a-player-never-withholds-them.md) **deletes it and
+adopts §14.4's three thresholds whole**, changing only the third's effect:
+
+```
+open_challenges ≥ 3  →  −4          ≥ 5  →  −8          ≥ 8  →  −12
+```
+
+The bound moves from `−8 … 0` to **`−12 … 0`** because the sink now carries the job alone, and
+`−12` is anchored twice rather than chosen: **strictly below the `+14` interest lift**, so a
+player who said *Let's play* to you still surfaces at `+2` net however full their inbox is —
+[ADR-0099](../../adr/0099-relaxation-offers-the-searchers-own-asks.md)'s carve-out, now
+load-bearing for a second reason, since **a human's own ask outranks the engine's opinion of that
+human's popularity** — and **equal to reciprocal asymmetry's −12**, the other *this candidate is a
+bad bet for you* signal. It stays printable as a coarse code, so ADR-0123's silent budget and its
+roster test are untouched.
+
+- **`CHALLENGE_LOAD` falsified by:** answer rate by open-challenge bucket. If answer rate does not
+  fall as load rises, the signal is measuring nothing and all three rungs are noise. Owner
+  `RobertConstantin02`.
 
 - **`ASYM_TOLERANCE` falsified by:** decline rate by asymmetry bucket.
 - **`MOVE_NOTICE` falsified by:** the fraction of shortlist rows printing a liveness reason. Near

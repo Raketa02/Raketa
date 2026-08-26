@@ -56,6 +56,15 @@ exists in the store now.
 `player_profile.photos_changed` is **not** consumed: ADR-0107 assembles the player card
 outside the engine, so no photo fact reaches the index.
 
+**`users` is not consumed either, and that is deliberate rather than an omission.**
+`UserDisabled` never reaches this index: an *active* column that could be stale would make
+staleness cost **safety**, which is the one thing §3's invariant exists to prevent — and account
+state is not a fact a player changes *about themselves*, since an administrator may change it.
+Gate 8 reads it **live**, as a set, beside the block set
+([ADR-0124](../../adr/0124-the-matcher-gates-account-state-never-age.md)). Until that gate is
+built, **a disabled account keeps its row and remains a candidate** — the gap this file's source
+list made invisible for as long as nobody asked what *eligibility* meant.
+
 `RatingInitialised` carries everything the row needs except `counted_games`, which belongs to
 `matches` and is `0` today.
 

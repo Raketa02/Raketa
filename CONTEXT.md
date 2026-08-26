@@ -415,6 +415,15 @@ yet built.
   today, because the `cases` context does not exist.
 - **AccountHoldQuery** — the port the Hold gate reads. Its only adapter today is
   **`NoHoldsExist`**, named for the fact it asserts rather than for being empty.
+- **Disabled account** — an account that may no longer be used at all. **Not a Hold**: a Hold
+  stops a player starting anything new while a case is open and they can still sign in and
+  search; a disabled account cannot sign in. Two gates that sound alike, from two contexts, with
+  different lifecycles and different remedies — so a rule about *account state* must always say
+  which one it means
+  ([ADR-0124](docs/adr/0124-the-matcher-gates-account-state-never-age.md)).
+- **AccountStatusQuery** — the port the *account active* gate reads: the set of accounts that may
+  not be shown, candidate-side only, because a disabled account cannot run a search in the first
+  place.
 - **Report** — *not a term yet.* The wider reporting and moderation story is out of scope; if a
   reason for a block is ever wanted, it belongs to a Report and not to a Block.
 
@@ -436,7 +445,7 @@ yet built.
 ### Matchmaking (`backend/app/modules/matchmaking/`)
 
 Decided by [ADR-0093](docs/adr/0093-matcher-in-the-backend-with-a-pure-match-fit-engine.md);
-**designed and not yet built.** Thirty ADRs (0093–0122) and the spec set at
+**designed and not yet built.** Thirty-three ADRs (0093–0125) and the spec set at
 [`docs/specs/matchmaking/`](docs/specs/matchmaking/) settle it; the pipeline is assembled in one
 place, with the precedence rule for reading them, in
 [`the-engine.md`](docs/specs/matchmaking/the-engine.md). Only what a decision has actually settled
@@ -487,7 +496,15 @@ appears here.
   evidence. **Playing style** and **social vibe** are the two that read **Social tags**, and they
   are split by *the claim a matrix entry makes*, never by which group a tag was printed in.
 - **Gate** — a hard exclusion applied before anything is scored. Not a weight, and no
-  relaxation ever reaches one.
+  relaxation ever reaches one. A gate that cannot be evaluated **excludes**, where a term that
+  cannot be evaluated stands down. **Age is not a gate**: whether somebody may hold an account at
+  all is a platform precondition in `users`, an attestation at sign-up and **never a date of
+  birth**, so *may you hold an account* and *may these two be shown to each other* stay different
+  questions in different contexts
+  ([ADR-0124](docs/adr/0124-the-matcher-gates-account-state-never-age.md)). **A full inbox is not
+  a gate either** — it sinks a player in the ranking and never removes them, because withholding
+  makes a thin pool thinner and no relaxation rung could reach them
+  ([ADR-0125](docs/adr/0125-a-full-inbox-sinks-a-player-never-withholds-them.md)).
 - **Level gate** — the gate on how far apart two levels may be: a candidate is not a candidate
   once Δμ reaches the searching mode's **own level tolerance**. There is one number per mode and
   it is the same number the level curve already uses, so the gate and the curve can never drift

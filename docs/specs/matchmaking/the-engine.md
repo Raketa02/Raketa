@@ -167,7 +167,7 @@ one, at any rung, ever.
 | 5 | **An open challenge already exists between you** | live, from `MatchHistoryQuery` | **soft** — §7.5's re-verify is the backstop | `NoMatchHistoryExists` |
 | 6 | **Missing or unapproved photo** | `PhotoReview` | — | ⚠ **live and inert** — ADR-0091's adapter passes everything through; [#181](https://github.com/Raketa02/Raketa/issues/181) |
 | 7 | **Proposals opt-in explicitly `false`** | **gates the push, not the person** — reads `initiation`, never `surface` | — | ✅ live |
-| 8 | **Below the age or eligibility threshold** | ⚠ **no policy, no field, no decision** | — | ⚠ **open** — §18 |
+| 8 | **Account active** | live `AccountStatusQuery` against `users`, **candidate-side only** | **closed** | ✅ **live** — [ADR-0124](../../adr/0124-the-matcher-gates-account-state-never-age.md) |
 | 9 | **Gender preference, mutually satisfied** | both directions; the value reaches gating and **never the scorer** | **closed** | ✅ live once [#182](https://github.com/Raketa02/Raketa/issues/182) lands — [ADR-0096](../../adr/0096-gender-preference-mutual-gate-invisible-to-the-scorer.md) |
 | 10 | **Level** — `Δμ < LEVEL_TOL_mode` | **the same number the curve uses**, so gate and curve cannot drift | — | ✅ live — [ADR-0103](../../adr/0103-where-the-curve-saturates-the-gate-begins.md) |
 
@@ -188,9 +188,35 @@ introduced.
 commit ([ADR-0102](../../adr/0102-silence-is-never-scored.md)); a grid that is blank anyway means
 *we do not know*, and the **term stands down**.
 
-**An eleventh exclusion exists in the input document and has never been ruled on:** §14.4
-withholds a player from generation for 24 h at eight open challenges. Its liveness half is
-adopted (§8); the withholding half is not in this table because nobody decided it. See §18.
+**Row 8 held two rules, and neither was the one it looked like**
+([ADR-0124](../../adr/0124-the-matcher-gates-account-state-never-age.md)). §9.1's *"below the age
+or eligibility threshold — whatever that policy turns out to be"* is the only row that ever named
+a policy instead of a provider.
+
+- **The age half leaves this map.** Nothing in `backend/app` collects a date of birth and §7.2
+  forbids the index to hold one, so the gate had no input — but ADR-0096 *permits* an age gate, so
+  the privacy line is not what refuses it. What refuses it is that **there is no policy**: *may
+  you hold an account* is not *may these two be shown to each other*. The platform is **adults
+  only**, by an **attestation at sign-up — one boolean, never a date** — in `users`, filed outside
+  the map as [#191](https://github.com/Raketa02/Raketa/issues/191). If minors are ever admitted, an under-18 pairing rule is **reopened**, not amended in.
+- **The eligibility half was a live exclusion nobody had named.** `is_active` ships today and
+  `auth` refuses a disabled account four ways — and §2 above tails `player_profile`, `rating` and
+  `auth`, **never `users`**, so a disabled account keeps its index row and stays a candidate
+  indefinitely. Gate 8 now reads it: a **fifth port**, resolved **once per search as a set**
+  beside the block set, **candidate-side only** because `auth` closes the searcher side before
+  the matcher is reached, failing **closed** like gates 1 and 2, and **told to nobody**. Never an
+  index column — a stale *active* flag makes staleness cost **safety**, which is the one thing
+  ADR-0111 exists to prevent. The word *eligibility* is struck rather than reassigned; a club or
+  league rule would be its own named gate, and account **erasure** stays fog.
+
+**The eleventh exclusion in the input document is not a gate.** §14.4 withheld a player from
+generation for 24 h at eight open challenges. Its liveness half was already adopted (§8); the
+withholding half is **deleted**, and §14.4's three thresholds are adopted whole with only the
+third's *effect* changed — `≥3 → −4`, `≥5 → −8`, `≥8 → −12`
+([ADR-0125](../../adr/0125-a-full-inbox-sinks-a-player-never-withholds-them.md)). The sink plus
+the shortlist cap does everything the withholding did, except in a thin pool — where withholding
+was wrong anyway, because **when there is nobody else, showing the busy person beats showing
+nobody.**
 
 ---
 
@@ -443,7 +469,7 @@ asserted centrally over every response type rather than per route.
 | Answer rate and speed | −6 … +6 | ✓ |
 | Recent activity | −5 … +4 | ✓ — read as ***this week* … *dormant***, not *Active now*; it is projected from `auth` refresh-token events and resolves **days** |
 | Overlap proximity | 0 … +4 | ✓ |
-| Current challenge load | −8 … 0 | ✓ **as a coarse code, never the number** — their inbox depth is theirs |
+| Current challenge load | **−12 … 0** | ✓ **as a coarse code, never the number** — their inbox depth is theirs |
 | Reciprocal asymmetry | −12 … 0 | ✓ in *Why 78?*, not on the card |
 | **Previous decline between you** | **−6** | ✗ never, either side |
 | **Exposure adjustment** | **−6 … +6** | ✗ |
@@ -833,6 +859,8 @@ it makes a Liveness-bounds change undiffable.
 | At stake | **omitted** | the result-update rule (`rating` exists; the rule does not) |
 | Familiarity · welcoming record | `NoEvidence` | `matches` |
 | Blocks · holds | **wired, true-over-empty** | `blocks`, `cases` |
+| **Gate 8 — account active** | ✅ **live** | — the only outward port whose provider ships ([ADR-0124](../../adr/0124-the-matcher-gates-account-state-never-age.md)) |
+| **Challenge load, all three rungs** | **wired, never binds** | `matches` — and it now *sinks* at `−12` rather than withholding ([ADR-0125](../../adr/0125-a-full-inbox-sinks-a-player-never-withholds-them.md)) |
 | Minimum evidence | **live and inert** | — it excludes nobody today, on purpose |
 | `NEWCOMER_ABSORPTION_CAP` | **wired, never binds** | `matches` |
 | Newcomer window and its `+8` | ✅ **live** | — |
@@ -913,10 +941,18 @@ about the rungs that widen: **B ⊆ C, and both ⊇ the strict set.**
 
 ## 18. What is still open
 
-**Two decisions, and they are tickets rather than gaps this file may close by picking.** Each
-lands back in the section marked ⚠ above.
+**One decision, and it is a ticket rather than a gap this file may close by picking.** It lands
+back in the section marked ⚠ above.
 
-**One is closed.** [#188](https://github.com/Raketa02/Raketa/issues/188)'s silent-movement
+**Two are closed.** [#189](https://github.com/Raketa02/Raketa/issues/189)'s two exclusions are
+settled by [ADR-0124](../../adr/0124-the-matcher-gates-account-state-never-age.md) — §9.1's row 8
+held two rules, the age half leaves for `users` as an attestation and the eligibility half becomes
+**gate 8, Account active**, live on day one — and by
+[ADR-0125](../../adr/0125-a-full-inbox-sinks-a-player-never-withholds-them.md) — §14.4's
+withholding is **deleted**, its three thresholds adopted whole at `−4 / −8 / −12`, anchored below
+the `+14` interest lift. §3 and §8 above carry them.
+
+**And** [#188](https://github.com/Raketa02/Raketa/issues/188)'s silent-movement
 invariant is settled by
 [ADR-0123](../../adr/0123-silence-is-budgeted-per-player-at-the-notice-threshold.md) — `≤`, the
 budget is per **player** on the signed silent net, no signal weakens, and §9.5's printing promise
@@ -924,7 +960,6 @@ becomes a consequence of the clamp rather than a rule to police. §8 above carri
 
 | | Question | Lands in |
 | --- | --- | --- |
-| [#189](https://github.com/Raketa02/Raketa/issues/189) | **The two exclusions nobody ruled on** — §9.1's age/eligibility gate, which reads a field the privacy line forbids the index to hold, and §14.4's withholding at eight open challenges | §3 |
 | [#190](https://github.com/Raketa02/Raketa/issues/190) | **Stage 7, and the shape of the list** — diversity's λ, window and similarity weights (one of which reads raw tag ids), the deck's raised λ and deal size, and the unnamed `n_returned ≤ 20` | §9, §10.1, §10.3 |
 
 **And what is deliberately deferred rather than open** — see the map's *Not yet specified*: the
