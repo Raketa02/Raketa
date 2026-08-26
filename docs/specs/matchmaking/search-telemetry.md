@@ -73,7 +73,8 @@ Generation is `sport ∧ box ∧ gates` — the shard conjunct is struck
 | `excluded_by_gate` | JSONB histogram, one key per gate reason code — the ten gates of §9.1 plus [ADR-0096](../../adr/0096-gender-preference-mutual-gate-invisible-to-the-scorer.md)'s and [ADR-0103](../../adr/0103-where-the-curve-saturates-the-gate-begins.md)'s. Counts only; **no candidate is named at this layer** |
 | `n_scored` | Cleared every gate and was given a Fit |
 | `n_cleared_floor` | |
-| `n_returned` | Shortlist length |
+| `n_returned` | Shortlist length. **Also the redaction detector** — compared against the count of `band = RETURNED` rows, a mismatch means erasure removed a candidate's row from a search that survived ([ADR-0118](../../adr/0118-a-past-search-is-not-reproducible.md) §6). It is load-bearing rather than redundant and is never denormalised away |
+| `n_near_miss_recorded` | How many layer-3 rows were written, `0 … NEAR_MISS_RECORDED`. The same detector for the near-miss band, which `best_withheld_fit` cannot provide because it is a value and not a count. Added by [#183](https://github.com/Raketa02/Raketa/issues/183) |
 | `best_withheld_fit` | The Fit of the best candidate that did not clear. Nullable — null means nothing was withheld, which is not the same as `0` |
 | `pool_description` | ADR-0099's shape: `{sport, radius_km_used, players_in_range, window, post_gate: true}`. Written on **every** search, not only empty ones — a thin pool and a broken floor are indistinguishable without it. Codes, never a sentence (ADR-0022) |
 | `latency_ms_by_stage` | JSONB. §19.3's operational half |
@@ -114,6 +115,7 @@ person did about it.
 | `degraded_terms` | `text[]` of the terms that returned `NoEvidence`. Lifted out of the blob so §19.3's per-term `NoEvidence` rate — *"a term quietly dying is invisible otherwise"* — is an array query with a GIN index rather than a JSONB scan. Also the **renormalisation basis**, without which a Fit is uninterpretable a year later |
 | `modifiers` | JSONB, each with its code |
 | `liveness_reasons` | `text[]` |
+| `liveness_signals` | JSONB — the **raw input value** per liveness signal, never the offset it produced. The offset is a function of the ruleset's bounds, so storing it makes a Liveness-bounds change undiffable: a replay cannot re-derive under new bounds what it only has the old bounds' answer to. Added by [#183](https://github.com/Raketa02/Raketa/issues/183), which corrects [`ranking-weights.md`](ranking-weights.md) §12's *the offset applied* to *the inputs that produced it* |
 | `inclusion_reason` | Nullable: `INTEREST_LIFT` \| `NEWCOMER_WINDOW` \| `ZERO_EXPOSURE`. **All three are kept here; only `INTEREST_LIFT` crosses the wire** ([#175](https://github.com/Raketa02/Raketa/issues/175)) — the other two reorder rather than admit, `NEWCOMER_WINDOW` ships to the client as a liveness reason, and `ZERO_EXPOSURE` is the first code that lives only in the store |
 | `withheld_reason` | `NEAR_MISS` only: `BELOW_FLOOR` \| `INSUFFICIENT_EVIDENCE` |
 | `missing_terms` | `text[]`, for `INSUFFICIENT_EVIDENCE`. Distinguishes *nobody was good enough* from *nobody was known enough* |
@@ -185,5 +187,5 @@ row (ADR-0104 §3), so this is the only deletion path there is.
 
 | Constant | Value | What would falsify it |
 |---|---|---|
-| `NEAR_MISS_RECORDED` | **10** | A floor investigation that needs a distribution ten rows cannot show. The top row is the load-bearing one; the other nine are the shape around it |
+| `NEAR_MISS_RECORDED` | **10** | **Two things now.** A floor investigation that needs a distribution ten rows cannot show — the top row is the load-bearing one and the other nine are the shape around it. And a **ruleset diff whose promotions saturate the band**: if every recorded near-miss crossed the floor, the diff understated the change and the window is too narrow ([ADR-0118](../../adr/0118-a-past-search-is-not-reproducible.md) §4) |
 | Table-size revisit trigger | **100 M `search_candidate` rows** | Reached — at which point retention is tiered rather than reconsidered from scratch (ADR-0104 §3) |

@@ -589,7 +589,7 @@ fact is search-time and cannot be reconstructed afterwards.
 | The level gate | How many candidates it excluded, and the **smallest Δμ among them** — the falsifier is the widest gap still admitted against the narrowest just refused |
 | The weights | The ruleset version, on every search, per §11 |
 | Tag terms | Raw score before normalisation, per scored candidate, and whether each column stood down. Distinguishes *a sparse matrix* from *incompatible people* |
-| Liveness | The offset applied, its dominant signal, and whether a reason printed. Separates *moved* from *moved and explained* |
+| Liveness | The **raw signal values**, the dominant signal, and whether a reason printed. Separates *moved* from *moved and explained* — and the offset is deliberately **not** what is stored: it is a function of the ruleset's bounds, so recording it makes a Liveness-bounds change undiffable ([ADR-0118](../../adr/0118-a-past-search-is-not-reproducible.md) §8). `search_candidate.liveness_signals` carries the inputs; the offset is re-derived |
 | Reciprocal asymmetry | `fit_ba` and the mode it was scored under. `NO_PREFERENCE` inherits, so the mode is not recoverable from the candidate's declaration |
 | Modifiers | Which fired, and whether the stack clamp bound |
 

@@ -584,6 +584,15 @@ decision has actually settled appears here.
   is its sibling and means the *maths* changed. Stamped on every search, so a Fit stays
   interpretable after the numbers move
   ([ADR-0093](docs/adr/0093-matcher-in-the-backend-with-a-pure-match-fit-engine.md)).
+- **Ruleset release** — the act of moving from one **ruleset version** to the next. Two kinds,
+  and which one it is decides what can answer for it: a **weight-only** release moves numbers
+  that multiply what a term already reported, and every search ever recorded can be re-scored
+  under it; a **shape-class** release changes what a term *reports* — a curve, a tolerance, a
+  term turned on — and no past search can speak to it, because the values it would need were
+  never stored. The kind is **derived, never declared**
+  ([ADR-0118](docs/adr/0118-a-past-search-is-not-reproducible.md)), and a release is signed by
+  the person accountable for the **quality floor**
+  ([ADR-0119](docs/adr/0119-a-ruleset-ships-on-an-offline-diff-and-a-deploy.md)).
 - **Candidate index** — the matcher's picture of the city: one row per `(player, sport)`,
   rebuilt by replaying the events the owning contexts already record. It **owns no truth** — if
   it and the backend ever disagree, the backend is right and the index is rebuilt. It holds
@@ -596,8 +605,13 @@ decision has actually settled appears here.
   index cannot move underneath one that is already running
   ([ADR-0112](docs/adr/0112-the-snapshot-is-a-per-partition-container-bound-once.md)).
 - **Snapshot version** — how much of the world the engine had seen when a search ran. With the
-  ruleset version and the moment, it is what makes a past search reproducible rather than merely
-  remembered. It means **everything up to and including this is applied** — a *contiguous*
+  ruleset version and the moment, it names the world a Fit was computed against, which is what
+  keeps an old breakdown **interpretable**. It does not make a past search **reproducible**:
+  three of a search's four inputs — the live block set and pairwise history, the held account,
+  and the ledgers — are deliberately not recorded, so a search is explainable forever and can
+  never be re-run
+  ([ADR-0118](docs/adr/0118-a-past-search-is-not-reproducible.md)). It means
+  **everything up to and including this is applied** — a *contiguous*
   prefix of the event store's append order, never simply the highest number seen, because an
   append is assigned its position before it commits
   ([ADR-0110](docs/adr/0110-the-index-tails-the-log-the-outbox-delivers-side-effects.md)).
