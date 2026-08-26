@@ -214,5 +214,13 @@ So multi-country is **trigger 4 plus one clock parameter**:
   evaluated against *now*. **The zone is an input to the derivation, never `Europe/Warsaw`
   baked into it.** One parameter today; a rewrite if it is skipped.
 
+  **It has a second reader, and still only one parameter.**
+  [ADR-0120](../../adr/0120-a-factor-reads-the-pair-or-it-is-not-a-factor.md) keeps the next
+  shared slot as the availability card's sentence, derived by
+  `next_shared(shared, today: IsoWeekday)` — the same `window_of` signature, the same day
+  resolution, the same caller resolving *today*. Part-of-day resolution was refused precisely so
+  that this stayed one input rather than two
+  ([`the-availability-term.md`](the-availability-term.md) §2).
+
 **And the non-commitment, stated so it is not read into the promise:** currency, language and
 legal data residency are not matcher concerns, and nothing here says anything about them.

@@ -109,6 +109,14 @@ before renormalisation (§10).
 term in the match — larger than level — because that is what *for fun* means, and it is a bigger
 shift than the prototype's `MM_W` makes.
 
+**Availability overlap carried a weight here with no formula behind it**, and it is settled in
+[`the-availability-term.md`](the-availability-term.md):
+`availability = |shared| / |mine|`, the glossary's ratio and nothing else. §9.3.5's
+`significance`, `staleness` and `proximity` are struck — none of the three reads the pair
+([ADR-0120](../../adr/0120-a-factor-reads-the-pair-or-it-is-not-a-factor.md)). The weights are
+unchanged at 11 / 16, and §10's floor is re-checked there against the availability column of the
+six cases.
+
 ### The tag-stuffing constraint, as an inequality rather than an intention
 
 §9.3.6's rule 2 — *"six well-chosen tags must not outrank a good level match"* — is an
@@ -621,6 +629,14 @@ fact is search-time and cannot be reconstructed afterwards.
 | `ASYM_TOLERANCE` | 12 | Decline rate by asymmetry bucket |
 | Liveness signal bounds | §9 | Acceptance rate per signal, held out |
 | `QUALITY_FLOOR` | **44** | Return rate just above vs just below |
+
+**Availability overlap contributes no row, and that is the answer rather than an omission.**
+The term is `|shared| / |mine|` and has no constants at all
+([ADR-0120](../../adr/0120-a-factor-reads-the-pair-or-it-is-not-a-factor.md)); its **shape** is
+three claims and each owes a falsifier, in
+[`the-availability-term.md`](the-availability-term.md) §4. It is named here because a table
+titled *every constant* is exactly where a term with none goes unnoticed — which is how §24 lost
+it for as long as it did.
 
 **None of them is measurable before §19.2's telemetry chain exists.** That is why the chain is
 Phase 2 and not Phase 4, and why §12 above is a demand on the first search rather than on the

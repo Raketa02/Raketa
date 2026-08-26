@@ -114,17 +114,20 @@ Three good pairwise overlaps do not imply a four-way one. A searcher free Monday
 with no common slot**.
 
 ```
-group_avail    = significance₄ · proximity₄ · staleness₄
-
-significance₄  = |shared₄| / min over the four of |their declared slots|
-proximity₄     = exp( −days_to_next_shared₄ / PROX_TAU )          PROX_TAU = 5 d
-staleness₄     = min over the four of §9.3.5's staleness
+group_avail    = significance₄ = |shared₄| / min over the four of |their declared slots|
 ```
 
-**No new constant.** `PROX_TAU`, `significance` and the staleness bounds are §9.3.5's own;
-§9.3.5's asymmetric `overlap` — *"the denominator is your slots"* — does not generalise, because
-among four people there is no *mine*. `staleness₄` takes the **minimum** because the weakest grid
-sets the confidence, which is ADR-0098's shape.
+**No constant at all.** §9.3.5's asymmetric `overlap` — *"the denominator is your slots"* — does
+not generalise, because among four people there is no *mine*, so `significance₄` is the group's
+**only** coverage factor.
+
+**`proximity₄` and `staleness₄` are struck**, with their pairwise originals
+([ADR-0120](../../adr/0120-a-factor-reads-the-pair-or-it-is-not-a-factor.md),
+[`the-availability-term.md`](the-availability-term.md)): staleness reads account age and
+proximity reads which weekday the search ran, and neither is a fact about the four. `PROX_TAU` is
+deleted. `significance₄` survives the same record because the argument against it is local to the
+pairwise term — there it is identically equal to `overlap` for most of the market, and here there
+is no `overlap` for it to duplicate. **X4 below turns on `|shared₄|` and is untouched.**
 
 **A term, not a gate.** The pairwise term does not gate at zero either, and ADR-0099 rung A
 relaxes exactly these times. An empty intersection zeroes the whole term — 16 / 20 points — and
@@ -259,7 +262,6 @@ finding: at group level the tag arms break ties and intent moves scores.
 | `w_cross` | 8 / 20 | Return rate of **the two players who did not search**, by their cross reading. If flat, the cross idea is wrong at the root |
 | `w_crossmin` | 6 / 14 | Return rate of the player in the *worst* cross pair, against the other two |
 | `w_avail` | 16 / 20 | Challenge-to-played conversion for line-ups with zero four-way slots against non-zero |
-| `PROX_TAU` | 5 d | Acceptance by days to the next shared slot (inherited from §9.3.5) |
 | `significance₄` | §2.3 | The observed live range. If it never leaves the top of its range it discriminates over a range that does not exist |
 | The seat delta | §3.1 | **How often `is_best ≠ is_evenest`.** If never, the argmax is decoration |
 | `K` | 24 | `max(fit_rank)` among the seated, 95th percentile against `K` — **replaces §24's, which cannot fire** |
@@ -349,11 +351,17 @@ withheld.*
 `ranking-weights.md` settled level, balance, tags, reliability, modifiers, familiarity, liveness
 and the floor. **Availability overlap appears only as a weight** — 11 / **16**, the second-heaviest
 for-fun term at 17.6 renormalised — and its formula, `PROX_TAU`, the 0.55 / 0.25 / 0.20 split and
-the staleness bounds appear in **no row of §13's constant table**. Its closing clause, *"either
-grid empty → `NoEvidence`"*, is **dead**: [ADR-0102](../../adr/0102-silence-is-never-scored.md)
-made the grid required and removed the case.
+the staleness bounds appear in **no row of §13's constant table**. **The rest is filed rather
+than absorbed**, because adopting the second-heaviest for-fun term inside a doubles ticket is the
+decision-by-silence this map keeps refusing.
 
-§2.3 takes the three factors the group term needs — `significance`, `PROX_TAU`, the staleness
-bounds — and gives them §13 rows; the dead clause is struck here rather than left standing. **The
-rest is filed rather than absorbed**, because adopting the second-heaviest for-fun term inside a
-doubles ticket is the decision-by-silence this map keeps refusing.
+> **Resolved, and §2.3 above is rewritten by it.**
+> [`the-availability-term.md`](the-availability-term.md) and
+> [ADR-0120](../../adr/0120-a-factor-reads-the-pair-or-it-is-not-a-factor.md): the pairwise term
+> is `|shared| / |mine|` and nothing else, so **`proximity₄` and `staleness₄` leave this document
+> with their originals** and `PROX_TAU` loses its row. `significance₄` stays — the case against
+> it is that it duplicates `overlap`, and among four people there is no `overlap`. **Two things
+> this section got wrong** are corrected there: the closing clause *"either grid empty →
+> `NoEvidence`"* is **not** dead — ADR-0102 removed the case at profile commit and kept the rule
+> in its own part 3 — and the missing constants were never a §13 gap to fill, because the term
+> settles with **no constants at all**.
