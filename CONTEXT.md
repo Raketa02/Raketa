@@ -552,6 +552,28 @@ decision has actually settled appears here.
 - **Snapshot version** — how much of the world the engine had seen when a search ran. With the
   ruleset version and the moment, it is what makes a past search reproducible rather than merely
   remembered.
+- **Player card** — who a candidate *is*, as against how well the game would go. A **closed
+  list** — nickname, photo, area, whole kilometres, Social tags, level and band, counted games —
+  and it is assembled by the backend **after** the engine returns, on the seam **at stake**
+  already rides, because the scorer is forbidden every field on it. There is no name in this
+  platform, only a **Nickname**
+  ([ADR-0107](docs/adr/0107-the-player-card-is-assembled-outside-the-engine.md)).
+- **Forecast** — how the game would go, for a set of people. Three readings of one type and the
+  words are not interchangeable: the **best-of-three** forecast answers *are these the right
+  people*, the **arranged** forecast answers *is this the right way round*, and a
+  **provisional** forecast answers the same question with a seat still empty, reading a
+  half-empty side as if the missing player matched the one already there. Provisional is a
+  property **of** the forecast and never a flag beside it, so the number cannot be rendered
+  without its caveat. Filling the last seat makes the provisional figure and the arranged figure
+  the same number, asserted rather than hoped
+  ([ADR-0108](docs/adr/0108-a-forecast-is-a-route-not-a-search.md)).
+- **Concern** — the engine's own statement that one term of a match is genuinely weak, keyed to
+  that term. *What counts as weak* is a judgement about weights and curves and is made where they
+  live; how many to show is the client's. A card shows one, the breakdown shows all of them.
+- **Pass** — *not today*, on a deck card. **Write-only**: it is recorded, it suppresses, and no
+  response ever carries one — not to the passer, not as a count. It carries its **Origin key**,
+  because the only thing that could prove its suppression window wrong is the pass rate on
+  re-shown profiles.
 
 **Terms this context refuses**
 - **Game format** — *mixed doubles*, *women's doubles* and the like. Deliberately does not
@@ -559,6 +581,18 @@ decision has actually settled appears here.
   (`backend/app/kernel/sports.py`, which refuses a `Format` dimension for the same reason). Who
   may sit in a seat is answered by **Gender preference**, which is about people and says so
   ([ADR-0096](docs/adr/0096-gender-preference-mutual-gate-invisible-to-the-scorer.md)).
+- **Activity recency** — *active 2 hours ago*, a green dot, *active today*. Deliberately does not
+  exist on any surface. It is a Liveness input, so it reaches a screen the one way Liveness is
+  allowed to: as a **reason** about the pairing's chances — *usually answers within a day* — never
+  as a fact about a stranger's phone. This product has no presence indicator
+  ([ADR-0107](docs/adr/0107-the-player-card-is-assembled-outside-the-engine.md)).
+- **A bio.** No player-authored free text reaches a card. The Social tag vocabulary is closed for
+  the same reason, and the sentence a player might write about themselves is a moderation surface
+  before it is a feature.
+- **An interest inbox** — any list, count or badge of who has said *Let's play* to you. The signal
+  exists only on the promise that it is silent, and a yes given under that promise is not consent
+  to appear in somebody's inbox
+  ([ADR-0109](docs/adr/0109-a-read-back-names-what-it-withholds.md)).
 
 **Invariants**
 - **A term that cannot be evaluated stands down. A gate that cannot be evaluated excludes.**
@@ -617,6 +651,34 @@ decision has actually settled appears here.
   generation and gating and is **absent from the type handed to the scorer**, so no term can
   weigh it — the guarantee is a type boundary the build asserts, not a review checklist
   ([ADR-0096](docs/adr/0096-gender-preference-mutual-gate-invisible-to-the-scorer.md)).
+- **A card says only what its subject published.** Everything on a **Player card** is something
+  the player themselves put there — a photo, an area, their tags, a level they proved. Nothing
+  the platform merely *observed* about them reaches a stranger's screen. That is what rules out
+  activity recency, which the engine does compute and may not show, and it is the line that
+  separates a fact a player offered from a fact a system noticed
+  ([ADR-0107](docs/adr/0107-the-player-card-is-assembled-outside-the-engine.md)).
+- **A silent signal never becomes an inbox.** *Let's play* was collected on the promise that
+  nobody is notified and it becomes visible only when one of you goes looking for a game. So a
+  one-sided yes reaches its recipient exactly one way — as an **interest lift** on a card, in a
+  search *they* chose to run, with the reason printed. Re-reading banked yeses as consent to a
+  screen that lists them is changing the terms after the fact
+  ([ADR-0109](docs/adr/0109-a-read-back-names-what-it-withholds.md)).
+- **A withheld row is stated, never vanished.** Reading a stored search back re-checks the gates
+  that fail closed, so a person who has since blocked you is not rendered — and the response
+  *says* a row was withheld rather than returning nineteen where twenty were recorded. The record
+  stays immutable; what is live is the gate. A list that quietly gets shorter is the same class of
+  lie as a breakdown that quietly stops adding up
+  ([ADR-0109](docs/adr/0109-a-read-back-names-what-it-withholds.md)).
+- **A forecast may be recomputed; a search may only be read.** A forecast's inputs are its
+  arguments and a frozen ruleset, so asking twice gives the same answer and no record is needed to
+  prove it. A search's inputs include an index that has moved, so only the stored row can say what
+  it saw. That asymmetry is the whole reason a search is permanently recorded and a forecast is
+  not — and the day a forecast stops being deterministic it becomes a search
+  ([ADR-0108](docs/adr/0108-a-forecast-is-a-route-not-a-search.md)).
+- **A fact the product promised not to surface is asserted absent from every response shape,
+  once.** Passes, declines, blocks, incoming-and-not-mutual interest, Liveness numbers, pre-gate
+  pool counts. A test per route passes forever and then somebody adds a route; the assertion is
+  central, over every response type the contract publishes.
 
 ### Player Score — demanded, not designed
 

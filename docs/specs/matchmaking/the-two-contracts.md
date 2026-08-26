@@ -78,6 +78,23 @@ endpoint would put a nullable field in the contract whose meaning is *"wrong end
 slimmer one — the same. A test asserts a round trip through the record reproduces the
 response.
 
+> **Narrowed by [ADR-0109](../../adr/0109-a-read-back-names-what-it-withholds.md).** The
+> read-back **re-verifies the fail-closed gates** and withholds a row for somebody who has since
+> blocked the searcher — [ADR-0095](../../adr/0095-block-directed-record-symmetric-effect-gates-fail-closed.md)
+> reaches every surface that shows one player to another, and a stored search is that surface
+> with a longer memory. A withheld row is **stated, never vanished**. So the assertion is: the
+> round trip reproduces **the recorded answer plus live gate state**, over the record's *fields*
+> — not a byte-identical payload, since the photo URL is re-minted per response by design
+> ([ADR-0107](../../adr/0107-the-player-card-is-assembled-outside-the-engine.md)). Both halves
+> are asserted. Written down because a test drafted against the whole payload will fail on a
+> re-verified row and the temptation will be to loosen it.
+
+**Three more routes exist, added by [#171](https://github.com/Raketa02/Raketa/issues/171)** and
+specified in [`the-play-screens.md`](the-play-screens.md): `POST /forecasts`
+([ADR-0108](../../adr/0108-a-forecast-is-a-route-not-a-search.md) — deliberately records
+nothing), `POST /passes`, and `GET /interest`. The four above are the ones that create searches,
+and that is what §1 is about.
+
 ### `POST /searches` is deliberately not idempotent
 
 Two taps are two searches. The index moved between them, and §19's denominator is *searches
@@ -172,7 +189,10 @@ Carried in full on every returned row, on every route, on the `POST` and on the 
 
 ```
 candidate: {
-  player_id, fit,
+  player_id, fit, distance_km,
+  player_card: { nickname, photo_id?, area_code, social_tags[],
+                 level, band, counted_games },
+  concerns: [ { term } ],
   terms: [ { term, weight, value, contribution, evidence: <closed union> } ],
   degraded_terms: [ term ],
   modifiers: [ { code, points } ],
@@ -205,6 +225,16 @@ returns, because ADR-0021 forbids the client computing it and ADR-0098 forbids t
 re-deriving it. **Omitted in for-fun** (meaningless — §23 Q11) and **omitted today in
 competitive** (`NoResultUpdateRuleExists`). The card shows no block either way and the client
 needs no branch.
+
+**`player_card`, `distance_km` and `concerns` are [#171](https://github.com/Raketa02/Raketa/issues/171)'s
+additions.** The card is attached by the **backend** after `matchfit` returns — the second field
+family with a different author, for the same reason as `at_stake` — and its contents are a closed
+list with two permanent refusals in it, a bio and activity recency
+([ADR-0107](../../adr/0107-the-player-card-is-assembled-outside-the-engine.md)). `distance_km` is
+promoted out of the distance term's evidence and is an **integer**, so the *Closest* sort reads a
+field rather than reaching into a variant. `concerns` is the engine's own statement that a term is
+genuinely weak — §12's warning line, judged where the weights are rather than by a client
+thresholding a value. Detail in [`the-play-screens.md`](the-play-screens.md) §1.
 
 **The near-miss band is never returned.** Layer 3 of the telemetry is engine-internal, on the
 line §21 draws around passes and declines.
@@ -386,7 +416,10 @@ stranger.
 
 ## 10. What this file does not decide
 
-- **What each Play screen needs from any of this** — [#171](https://github.com/Raketa02/Raketa/issues/171).
+- ~~**What each Play screen needs from any of this**~~ — settled by
+  [#171](https://github.com/Raketa02/Raketa/issues/171) in
+  [`the-play-screens.md`](the-play-screens.md), which added three routes and two candidate field
+  families to this file.
 - **The `unfilled_reason` vocabulary and the doubles objective** — [#180](https://github.com/Raketa02/Raketa/issues/180).
 - **The staleness threshold behind `index_stale` / `index_too_stale`, and `snapshot_version`** — [#173](https://github.com/Raketa02/Raketa/issues/173).
 - **`INTEREST_TTL`, `OUTSTANDING_INTEREST_CAP`, `PASS_SUPPRESS`** — the deck's product decisions, still fog.

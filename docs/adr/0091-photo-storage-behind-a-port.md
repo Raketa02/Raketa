@@ -3,6 +3,17 @@
 - **Status:** Accepted
 - **Date:** 2026-08-25
 
+> **Amended 2026-08-26 by [ADR-0107](0107-the-player-card-is-assembled-outside-the-engine.md):
+> the condition this record deferred the photo check on has expired.** The argument below is
+> *"nobody can see another player's photo yet. There is no matchmaking, **no player card** and
+> no discovery, so a check today protects nothing, while a false reject blocks a real player on
+> their first day."* ADR-0107 creates the player card, so every photo becomes visible to
+> strangers. The `PhotoReview` port and its pass-through adapter stand as decided, and the
+> soft-warn-never-hard-block ruling stands — what has gone is the asymmetry it rested on, since
+> a passed photo is no longer seen by nobody. Filed as
+> [#181](https://github.com/Raketa02/Raketa/issues/181); nothing else in this record changes,
+> and the deferral is left as written because the reason it expired is the useful part.
+
 ## Context
 
 The social steps of onboarding let a player attach up to three photos to their Player profile
