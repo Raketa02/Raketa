@@ -57,6 +57,13 @@ A rating is **never only a number**.
   2,7–3,8 · **Advanced** 3,9–5,0.
 - **Rating status** — **Initial Estimate** (onboarding output, no counted matches) →
   **Calibrating** (real matches started, still moving) → **Stable**.
+- **At stake** — what a counted win and a counted loss against one specific opponent would do
+  to a player's Level, shown before they commit to the game. A **pair** of signed deltas, and a
+  fact **this context owns**: it reads the rating engine's own update rule, so nobody else may
+  compute it — not the client ([ADR-0021](docs/adr/0021-kernel-in-backend-clients-derive-by-comparison.md):
+  a rule, not a comparison), and not the matcher, which reads what a player is shown and never
+  re-derives it. It exists only for games that would be counted. **The rule it needs is not
+  written yet**, so today the value is *absent* rather than zero.
 - **Volatility** — how fast the estimate currently appears to be moving.
 - **Assessment** — an **event-sourced aggregate**: one adaptive questionnaire run, for one
   player and one sport.
@@ -265,6 +272,13 @@ of the code because this file asks for them in that order.
 - **Availability overlap** — how much of a player's own declared week another player covers.
   Deliberately **asymmetric**: the denominator is *your* slots, because the question it
   answers is *how much of my week does this person cover*.
+- **Window** — the coarse shape of a searcher's declared week, as one of `TODAY`, `TOMORROW`,
+  `WEEKEND`, `THIS_WEEK`, `ANY`. **Derived from the grid, never chosen** — there is no picker,
+  because a picked window is a second availability declaration free to contradict the one the
+  whole engine just matched on. It is derived from *the grid the search actually ran on*, so a
+  widened search can carry a different window from the profile. It is what the person answering
+  a challenge is told they are agreeing to; it is **not a proposed time**, and the players agree
+  the hour themselves ([ADR-0100](docs/adr/0100-challenge-window-derived-never-chosen.md)).
 - **Location area** — where a player plays, held coarsely. The precise fix that produced it
   is never a shareable value.
 - **Search radius** — the distance around a player's Location area within which they want to
@@ -449,10 +463,12 @@ decision has actually settled appears here.
   challenge itself. Required, never optional: a search not joined to its outcome is evidence
   that no longer exists, and there is no backfill.
 - **PlayerScoreQuery** / **MatchHistoryQuery** — the two ports naming what the matcher demands of
-  `player_score` and `matches`, beside **AccountHoldQuery** for `cases`. One provider signs one
-  contract. Their only adapters today are **`NoPlayerScoresExist`** and
-  **`NoMatchHistoryExists`**, named for the facts they assert
-  ([ADR-0098](docs/adr/0098-matcher-demands-as-executable-contracts.md)).
+  `player_score` and `matches`, beside **AccountHoldQuery** for `cases` and **AtStakeQuery** for
+  `rating`. One provider signs one contract. Their only adapters today are
+  **`NoPlayerScoresExist`**, **`NoMatchHistoryExists`** and **`NoResultUpdateRuleExists`**, named
+  for the facts they assert
+  ([ADR-0098](docs/adr/0098-matcher-demands-as-executable-contracts.md)). `AtStakeQuery` is the
+  odd one out: its provider **exists** and the rule it needs does not.
 
 **Terms this context refuses**
 - **Game format** — *mixed doubles*, *women's doubles* and the like. Deliberately does not

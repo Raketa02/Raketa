@@ -1,4 +1,4 @@
-# What the matcher demands of `player_score`, `matches` and `cases`
+# What the matcher demands of `player_score`, `matches`, `cases` — and of `rating`
 
 The matcher declares the facts it requires. Whoever builds those contexts satisfies the
 contract however they like — **this document has no opinion on their aggregates, events,
@@ -18,7 +18,7 @@ by accident.**
 
 ---
 
-## The three ports
+## The four ports
 
 One provider signs one contract. The split is by who supplies the fact, never by how fresh it
 has to be.
@@ -28,6 +28,17 @@ has to be.
 | `PlayerScoreQuery` | `player_score` | The six strands with their evidence, and opponent variety |
 | `MatchHistoryQuery` | `matches` | The searcher's pairwise history, the per-player open-challenge count, and the origin key |
 | `AccountHoldQuery` | `cases` | One live boolean per player. Already standing from [ADR-0095](../../adr/0095-block-directed-record-symmetric-effect-gates-fail-closed.md) |
+| `AtStakeQuery` | `rating` | What a counted win and a counted loss against one opponent would do to the searcher's Level |
+
+**The fourth one is different, and the difference is stated rather than left to be noticed.**
+`player_score`, `matches` and `cases` **do not exist**. `rating` does — it is at
+`backend/app/modules/rating/`, with its engine at `app/engines/racketskill/`, and the matcher
+already reads μ and σ from it. What is missing is not a context but a **rule**: the
+result-update rule and its K-factor, which arrive with `matches` and are out of scope on this
+map. The port is here anyway, in this document rather than a second one, because the value of
+this file is being *the one place* a build agent finds every demand the matcher makes outward.
+Splitting it by does-the-provider-exist would make a reader check two places to be sure they
+had them all.
 
 Delivery of the indexed half is the backend's existing transactional outbox
 ([ADR-0003](../../adr/0003-transactional-outbox-for-event-delivery.md)), as §7.3 describes.
@@ -171,6 +182,39 @@ and the strand is weighed, and they answer different questions about the same ev
 
 ---
 
+## `AtStakeQuery`
+
+**A pair of signed deltas for one `(searcher, opponent, sport)`**, and the game must be one that
+would be counted. It is what the competitive candidate card shows up front — `+0,07` against
+`−0,05` — computed from both ratings and the searcher's own confidence. Added by
+[The six places the prototype and the design document disagree](https://github.com/Raketa02/Raketa/issues/164),
+which kept a prototype behaviour the design document never mentions.
+
+**Nobody but `rating` may compute it, and that is why there is a port here at all.** The
+number needs the result-update rule — a K-factor over the searcher's confidence, and an
+expected score over the two μ values. Three parties could plausibly do the arithmetic and none
+of them may:
+
+- **The client** cannot, under
+  [ADR-0021](../../adr/0021-kernel-in-backend-clients-derive-by-comparison.md). This is a rule
+  with constants, not a countdown toward a supplied instant.
+- **The matcher** cannot, under this document's own standing rule: it reads what the player is
+  shown and never re-derives it. A K-factor is the rating engine's opinion about the rating
+  engine, and a second implementation of it is exactly the failure ADR-0021 exists to prevent.
+- **This document** cannot specify the maths, for the same reason it has no opinion on how
+  `matches` works internally. It demands the fact and stops.
+
+**For-fun games are never counted** (§23 Q11), so the field is competitive-only — which the
+prototype already enforces at `:2460`. In for-fun it is not absent-because-unavailable; it is
+**meaningless**, and the card renders nothing.
+
+**Today the rule does not exist**, so the only adapter is `NoResultUpdateRuleExists` and the
+field is **absent, never zero**. A zero here would be invented — it would claim a counted game
+against this opponent moves the searcher's Level by nothing, which is false about every
+opponent. The card simply omits the block.
+
+---
+
 ## What happens while none of these contexts exist
 
 The rule, and it will be faced again by every context that lands later:
@@ -187,15 +231,16 @@ The test is whether a zero would be **measured** or **invented**.
 | The six strands, opponent variety | **`NoEvidence`** | Nobody has failed to turn up because nobody has ever been due to. A zero here would be *invented*, and no record is not a bad record |
 | Pairwise history → familiarity | **`NoEvidence`** | *You have never played this person* is true of everyone, and a modifier firing identically on every candidate changes no ranking while printing a sentence on every card |
 | Origin key | Demanded from day one | The search half of §19.2's chain ships now; the outcome half joins it when `matches` lands |
+| At stake | **Absent** | Nobody's Level has ever moved on a result, because the rule that moves it is not written. A zero would claim a counted game changes nothing, which is false about every opponent — so the field is omitted and the card shows no block |
 
 ---
 
 ## How the demand is made binding
 
 **The contract suite is parameterised over every registered implementation of each port,
-including the null one.** `NoPlayerScoresExist` and `NoMatchHistoryExists` prove the
-degradation table above, green, today — named for the facts they assert rather than for being
-empty, in `NoHoldsExist`'s style.
+including the null one.** `NoPlayerScoresExist`, `NoMatchHistoryExists` and
+`NoResultUpdateRuleExists` prove the degradation table above, green, today — named for the
+facts they assert rather than for being empty, in `NoHoldsExist`'s style.
 
 Registering a real adapter enrols it in the suite automatically. It either satisfies the
 contract or the build is red. **There is no skipped test to go stale**, and no version of

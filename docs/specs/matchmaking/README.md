@@ -7,7 +7,8 @@ They are **input material, not accepted design.** Nothing in either file is deci
 because it appears in either file. What is decided lives in ADRs, in the root
 [`CONTEXT.md`](../../../CONTEXT.md), and in the spec set this map produces beside them —
 today [`consumer-driven-contracts.md`](consumer-driven-contracts.md), which records what the
-matcher demands of `player_score`, `matches` and `cases`.
+matcher demands of `player_score`, `matches` and `cases` — and, since
+[#164](https://github.com/Raketa02/Raketa/issues/164), of `rating`.
 
 Charted by [The matchmaking engine: who sits down, and why](https://github.com/Raketa02/Raketa/issues/155);
 landed by [Land the matchmaking input documents in the repo](https://github.com/Raketa02/Raketa/issues/156)
