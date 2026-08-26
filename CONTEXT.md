@@ -510,6 +510,33 @@ decision has actually settled appears here.
 - **Modifier budget** — the bound on everything the modifiers together may move a Fit, so no stack
   of small adjustments can override the substance of a match. The **reliability floor** sits
   outside it and is larger than all of it, deliberately.
+- **Search** — one invocation of the engine, with an id, permanently recorded before its answer
+  is returned. **A returned search is a recorded search**: if the record cannot be written the
+  search fails, because the id *is* the answer's identity — without it there is no *Why 78?*, no
+  **Origin key**, and no way to say *Let's play*
+  ([ADR-0104](docs/adr/0104-the-search-record-is-the-answer-and-never-expires.md)).
+- **Surface** — which of the four things a search is: a ranked **shortlist**, a seated
+  **line-up**, the **deck**, or **completing a half-built game**. One engine and one pipeline
+  with different terminal stages; the last is optimised for the existing group and not for the
+  searcher, and says so. Distinct from **initiation**, which is who asked.
+- **Initiation** — whether a search was run by a person or pushed by the platform. It gates the
+  push and never the person: a player who declined proposals still appears in a search another
+  player deliberately ran. Orthogonal to **Surface** — the deck has both kinds.
+- **Returned candidate** — somebody the response actually carried, with their Fit and its whole
+  breakdown kept exactly as it was computed. The searcher may read their own; nobody else may
+  read them at all.
+- **Near miss** — the best candidates that were scored and did **not** clear the **quality
+  floor**, kept with the same breakdown and a reason. *The best match we refused to show* is the
+  only thing that can prove the floor wrong, and it exists only at scoring time. **Engine-internal
+  and never returned to anybody**: a player may ask why somebody was shown, and nobody may ask who
+  was withheld.
+- **Ruleset version** — the name of the frozen set of numbers a search used. **Engine version**
+  is its sibling and means the *maths* changed. Stamped on every search, so a Fit stays
+  interpretable after the numbers move
+  ([ADR-0093](docs/adr/0093-matcher-in-the-backend-with-a-pure-match-fit-engine.md)).
+- **Snapshot version** — how much of the world the engine had seen when a search ran. With the
+  ruleset version and the moment, it is what makes a past search reproducible rather than merely
+  remembered.
 
 **Terms this context refuses**
 - **Game format** — *mixed doubles*, *women's doubles* and the like. Deliberately does not
