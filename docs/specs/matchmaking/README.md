@@ -55,7 +55,11 @@ is no upstream to re-sync from.
 
 <!-- one row per conflict found while working the map; the ADR wins in every one -->
 
-_None recorded yet._
+| § | What the document says | What the rule says | How it is resolved |
+| --- | --- | --- | --- |
+| §4 | The matcher is a separate deployable written in Go at `matcher/`, reached over internal HTTP | Apps in this repo are independently deployable and the boundary is HTTP; and a computation engine is a pure layer, **never** a microservice — *"a pure function behind a network call has no state to own and no independent lifecycle"* | **The rules win.** [ADR-0093](../../adr/0093-matcher-in-the-backend-with-a-pure-match-fit-engine.md) puts the matcher in the backend: the pure scorer at `app/engines/matchfit/`, the index and ledgers at `app/modules/matchmaking/`. The document's counter — *the matcher is not a pure function* — is accepted, and answered by the split rather than by a fourth app. **§15 and §16 are discarded; §9 transfers unchanged**, exactly as §4.4 says it would |
+| §11 | The weights are configuration, hot-reloaded at runtime from a config store | A number that is an admitted hypothesis lives with the engine version that uses it, frozen, and hashed into that version's output — *term weights* are the named example | **Both, at two levels.** [ADR-0093](../../adr/0093-matcher-in-the-backend-with-a-pure-match-fit-engine.md): the **engine version** stamps how the maths works, the **ruleset version** stamps what the numbers were. A ruleset is a named, dated, frozen dataset, immutable once released, embedded with the code today. The runtime store is deferred; when it lands it changes only where the file is read from, never what the stamp guarantees |
+| §11 | A ruleset may be overridden at runtime per deployment | The environment may select configuration defaults; it may **never** select behaviour a domain test could observe | **The rule wins.** A weight is the product's opinion about who a player should meet — behaviour, not a setting. All four environments run the same numbers unless a differently-named ruleset is deliberately released |
 
 ---
 
