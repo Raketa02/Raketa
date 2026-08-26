@@ -720,10 +720,15 @@ appears here.
 - **A term's zero is its worst outcome, never its most common one.** A term whose typical
   pairing scores nothing is not weighing what its weight claims — and a penalty that disappears
   into a clamp at zero is a penalty that was never charged.
-- **A silent movement never exceeds the movement that owes an explanation.** Liveness explains
-  itself whenever it moves somebody into view, so a signal that may never be shown to either side
-  is bounded by that same threshold. The engine may move somebody quietly only by less than it
-  would owe a reason for.
+- **A silent movement never exceeds the movement that owes an explanation — per player, not per
+  signal.** Liveness explains itself whenever it moves somebody into view, so the signals that may
+  never be shown to either side share **one budget**, equal to that same threshold, clamped on
+  their signed net. A bound on each signal separately is not a guarantee about a person, who is
+  moved by the sum; and the bound is *at* the threshold rather than under it, because movement of
+  exactly that size is what the promise already excuses. The engine may move somebody quietly only
+  by no more than it would owe a reason for — which makes the reason **exist** whenever it is owed,
+  rather than making it a rule to be policed
+  ([ADR-0123](docs/adr/0123-silence-is-budgeted-per-player-at-the-notice-threshold.md)).
 - **A gate may be honestly empty; a term may never be honestly neutral.** The test for a fact
   whose context does not exist yet is whether a zero would be *measured* or *invented*. No
   challenge has ever been sent by anyone, so an open-challenge count of zero is real and the

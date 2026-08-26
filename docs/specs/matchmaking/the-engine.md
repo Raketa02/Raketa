@@ -11,7 +11,7 @@ Settles [#172](https://github.com/Raketa02/Raketa/issues/172), the terminal tick
 file that argued it, and a decision stated twice is a decision free to drift. What is here is
 the **order** — which stage runs when, what each one reads, and who owns it — plus the handful of
 places where assembling the set exposed a contradiction. Those are marked ⚠ in place and
-catalogued in §18; three of them are **open decisions and are tickets**, not gaps this file may
+catalogued in §18; two of them are **open decisions and are tickets**, not gaps this file may
 close by picking.
 
 The **three refusals** bind every line below, and a proposal that breaks one is refused rather
@@ -449,13 +449,43 @@ asserted centrally over every response type rather than per route.
 | **Exposure adjustment** | **−6 … +6** | ✗ |
 | ~~Radius asymmetry~~ | — | **struck** — `fit_ba` already prices it |
 
-**The printing rule, and ⚠ the invariant that is currently unsatisfiable as written.** §9.5 says
-anything moved **more than** `MOVE_NOTICE = 6` prints its dominant reason.
-[`ranking-weights.md`](ranking-weights.md) §9 states the reconciling invariant as
-`|silent movement| < MOVE_NOTICE` — strictly less — and then sets two silent signals at **exactly
-6**. Both spellings also bind a *signal* where the promise is about a player's *movement*, and two
-silent signals at their bounds move somebody **12 points with nothing to print**. This is an open
-decision, not a typo to tidy; see §18.
+**The printing rule, and the budget that makes it provable.** §9.5 says anything moved **more
+than** `MOVE_NOTICE = 6` prints its dominant reason. That promise is about a **player**;
+[`ranking-weights.md`](ranking-weights.md) §9 bound a **signal**, strictly, and was red against
+the two silent constants shipping beside it. Settled by
+[ADR-0123](../../adr/0123-silence-is-budgeted-per-player-at-the-notice-threshold.md):
+
+```
+liveness_offset = Σ printable  +  clamp(Σ silent, −MOVE_NOTICE, +MOVE_NOTICE)
+```
+
+**The silent stack is budgeted per player at `MOVE_NOTICE`, on the signed net** —
+`MODIFIER_BUDGET`'s shape one stage earlier (§6). The inequality is `≤`, matching §9.5's own
+*more than*, so **no signal weakens**: previous decline stays −6, exposure stays ±6. Only the net
+is observable, so a −6 decline beside a +6 exposure adjustment nets to zero and there is nothing
+to explain.
+
+**The notice rule is then a consequence, not a rule to police.** If `|Σ silent| ≤ MOVE_NOTICE`
+and `|liveness_offset| > MOVE_NOTICE`, then `|Σ printable| > 0` — a printable signal
+**necessarily** exists. Two clauses replace one:
+
+- **Notice.** `|liveness_offset| > MOVE_NOTICE` ⇒ at least one liveness reason is emitted.
+- **Ranking.** *Dominant* is the largest **printable** contributor; liveness reasons join §5.4's
+  ranked list. A printed reason is **true but not complete** — the card may name a −3 signal on a
+  candidate moved −9 — and that is not §5.3's *breakdown that quietly stops adding up*, which is a
+  rule about **Fit**, the thing that crosses as a number. Liveness crosses as reasons only, so
+  there is nothing to add up; the unstated remainder is bounded at `MOVE_NOTICE` by construction.
+  Silent signals are absent from the ranking and are **not** a client-renderable gap — §5.3's
+  *named gap* is version skew, not deliberate silence.
+
+**What the type asserts, and what a test asserts.** A liveness signal is a closed union of
+`Printable(code, points)` and `Silent(points)`; `Liveness` has **one** constructor, it takes the
+two lists, and it applies the clamp — there is no path to an offset that skipped it. The
+arithmetic is three build-failing tests: the silent net stays within budget over every signal at
+every bound; `|offset| > MOVE_NOTICE ⇒ reasons ≠ ∅`; and a **roster test** pinning the silent set
+to exactly `{previous_decline, exposure_adjustment}` and its reachable net range. Today that
+range is **`[−12, +6]`**, so the upper clamp is unreachable and the clamp only ever cuts a
+*bury* — a property of the roster, not of the rule, which is what the roster test is for.
 
 **Reciprocal fit.** `fit_ba = Fit(candidate → searcher)`;
 `asym = max(0, fit_ab − fit_ba − ASYM_TOLERANCE)` at `ASYM_TOLERANCE = 12`;
@@ -883,12 +913,17 @@ about the rungs that widen: **B ⊆ C, and both ⊇ the strict set.**
 
 ## 18. What is still open
 
-**Three decisions, and they are tickets rather than gaps this file may close by picking.** Each
+**Two decisions, and they are tickets rather than gaps this file may close by picking.** Each
 lands back in the section marked ⚠ above.
+
+**One is closed.** [#188](https://github.com/Raketa02/Raketa/issues/188)'s silent-movement
+invariant is settled by
+[ADR-0123](../../adr/0123-silence-is-budgeted-per-player-at-the-notice-threshold.md) — `≤`, the
+budget is per **player** on the signed silent net, no signal weakens, and §9.5's printing promise
+becomes a consequence of the clamp rather than a rule to police. §8 above carries it.
 
 | | Question | Lands in |
 | --- | --- | --- |
-| [#188](https://github.com/Raketa02/Raketa/issues/188) | **The silent-movement invariant.** `<` or `≤`, and per-signal or per-player. Two silent signals at their stated bounds move somebody 12 points with nothing to print | §8 |
 | [#189](https://github.com/Raketa02/Raketa/issues/189) | **The two exclusions nobody ruled on** — §9.1's age/eligibility gate, which reads a field the privacy line forbids the index to hold, and §14.4's withholding at eight open challenges | §3 |
 | [#190](https://github.com/Raketa02/Raketa/issues/190) | **Stage 7, and the shape of the list** — diversity's λ, window and similarity weights (one of which reads raw tag ids), the deck's raised λ and deal size, and the unnamed `n_returned ≤ 20` | §9, §10.1, §10.3 |
 

@@ -439,10 +439,44 @@ previous decline is *"never, under any circumstance, shown to either side"* — 
 of **−10**. Both cannot hold.
 
 > **A silent movement never exceeds the movement that owes an explanation:
-> `|silent movement| < MOVE_NOTICE`.**
+> `|Σ silent| ≤ MOVE_NOTICE` — per player, not per signal.**
 
-Enforced by the type system beside §12.2's two-numbers rule. Every Liveness signal is either
-printable, or bounded by the notice threshold.
+**The invariant as first written was `< MOVE_NOTICE` and bound each signal on its own.** Both
+halves were wrong, and
+[ADR-0123](../../adr/0123-silence-is-budgeted-per-player-at-the-notice-threshold.md) fixes them
+together. Strict `<` was **stricter than the promise it enforces** — §9.5's threshold is *more
+than* 6, so movement of exactly 6 owes no explanation — and it was red against the two silent
+constants in the table below. And a bound on a **signal** cannot deliver a guarantee about a
+**player**, who is moved by the sum: previous decline at −6 beside a negative exposure adjustment
+is twelve points with nothing to print.
+
+```
+liveness_offset = Σ printable  +  clamp(Σ silent, −MOVE_NOTICE, +MOVE_NOTICE)
+```
+
+**The silent stack is budgeted, not the silent signal** — `MODIFIER_BUDGET`'s shape one stage
+earlier. So **no signal weakens**: previous decline keeps −6 and exposure keeps ±6, and the
+budget binds only when both fire hard on one candidate, where what it cuts is *silence* rather
+than either signal. The bound is on the **signed net**, because the only thing a searcher can
+observe is position and position is the net: a −6 decline beside a +6 exposure adjustment nets to
+zero and there is nothing to explain.
+
+**The printing promise then falls out of the arithmetic.** With `|Σ silent| ≤ MOVE_NOTICE`, any
+player moved more than `MOVE_NOTICE` has `|Σ printable| > 0` — a printable signal *necessarily*
+exists. Two clauses replace §9.5's one sentence: **notice** — over the threshold, at least one
+liveness reason is emitted; **ranking** — *dominant* means the largest **printable** contributor.
+A printed reason is true but not complete, and the unstated remainder is bounded at
+`MOVE_NOTICE`, which is the movement the product already decided owes nothing.
+
+**What is a type and what is a test.** The type enforces the *separation and the funnel* — a
+signal is a closed union of `Printable(code, points)` and `Silent(points)`, and `Liveness` has one
+constructor, taking the two lists and applying the clamp. The **arithmetic** is three
+build-failing tests: the silent net within budget over every signal at every bound;
+`|offset| > MOVE_NOTICE ⇒ reasons ≠ ∅`; and a **roster test** pinning the silent set to exactly
+`{previous_decline, exposure_adjustment}` and its reachable net range. Today that range is
+`[−12, +6]`, so the upper clamp is unreachable and the clamp only ever cuts a *bury* — true of
+the roster, not of the rule, which is what the roster test is for. §12.2's two-numbers rule is the
+neighbour that *is* genuinely type-enforced; this one had been borrowing its credibility.
 
 | Signal | Bound | Printable |
 |---|--:|---|
@@ -464,9 +498,11 @@ printability arguments: *they're new — this game does most of its work for the
 the product wants said, while *you are seeing this person because nobody has been shown them all
 week* is a third party's unpopularity, which the searcher is owed no version of. So the **newcomer
 lift speaks and reclaims its +8**, honestly — the invariant binds *silent* movement — and the
-**exposure adjustment stays silent at ±6**, where the invariant holds it. Two signals, two bounds,
-two printabilities, and `|silent movement| < MOVE_NOTICE` is satisfied by construction rather than
-by a cap that flattened both. See [`the-newcomer-path.md`](the-newcomer-path.md) §5.
+**exposure adjustment stays silent at ±6**, where the budget holds it. Two signals, two bounds,
+two printabilities, and neither is flattened by a cap. See
+[`the-newcomer-path.md`](the-newcomer-path.md) §5. It leaves exactly **two** signals in the silent
+set, which is what [ADR-0123](../../adr/0123-silence-is-budgeted-per-player-at-the-notice-threshold.md)
+budgets and what its roster test pins.
 
 ### Radius asymmetry was charged twice
 
@@ -611,7 +647,7 @@ fact is search-time and cannot be reconstructed afterwards.
 | The level gate | How many candidates it excluded, and the **smallest Δμ among them** — the falsifier is the widest gap still admitted against the narrowest just refused |
 | The weights | The ruleset version, on every search, per §11 |
 | Tag terms | Raw score before normalisation, per scored candidate, and whether each column stood down. Distinguishes *a sparse matrix* from *incompatible people* |
-| Liveness | The **raw signal values**, the dominant signal, and whether a reason printed. Separates *moved* from *moved and explained* — and the offset is deliberately **not** what is stored: it is a function of the ruleset's bounds, so recording it makes a Liveness-bounds change undiffable ([ADR-0118](../../adr/0118-a-past-search-is-not-reproducible.md) §8). `search_candidate.liveness_signals` carries the inputs; the offset is re-derived |
+| Liveness | The **raw signal values**, the dominant signal, and whether a reason printed. Separates *moved* from *moved and explained* — and the offset is deliberately **not** what is stored: it is a function of the ruleset's bounds, so recording it makes a Liveness-bounds change undiffable ([ADR-0118](../../adr/0118-a-past-search-is-not-reproducible.md) §8). `search_candidate.liveness_signals` carries the inputs; the offset is re-derived. **Whether the silent budget clamped is re-derived the same way** — a query over the stored inputs and the ruleset version, never a column ([ADR-0123](../../adr/0123-silence-is-budgeted-per-player-at-the-notice-threshold.md)). The **Modifiers** row below records its clamp directly instead; #183's argument would collapse the two, and that is a telemetry question rather than this one |
 | Reciprocal asymmetry | `fit_ba` and the mode it was scored under. `NO_PREFERENCE` inherits, so the mode is not recoverable from the candidate's declaration |
 | Modifiers | Which fired, and whether the stack clamp bound |
 
@@ -639,7 +675,7 @@ fact is search-time and cannot be reconstructed afterwards.
 | `FAMILIARITY_DEPTH_PHI` | 0.45 | Acceptance by number of games together |
 | `FAMILIARITY_DEFAULT_LEAN` | 0.5 | Acceptance on repeats for readers with no reading tag |
 | The familiarity reading map | §8 | Repeat acceptance split by reading |
-| `MOVE_NOTICE` | 6 | Fraction of rows printing a liveness reason |
+| `MOVE_NOTICE` | 6 | Fraction of rows printing a liveness reason. **It does two jobs**: it is also the silent stack's budget, deliberately one constant and not two, because two can drift apart in a ruleset edit and break the printing guarantee silently ([ADR-0123](../../adr/0123-silence-is-budgeted-per-player-at-the-notice-threshold.md)). Its second falsifier is **how often the silent clamp binds** — never, and the per-player rule was theoretical; often, and previous decline and a negative exposure adjustment are routinely stacking |
 | `ASYM_TOLERANCE` | 12 | Decline rate by asymmetry bucket |
 | Liveness signal bounds | §9 | Acceptance rate per signal, held out |
 | `QUALITY_FLOOR` | **44** | Return rate just above vs just below |
