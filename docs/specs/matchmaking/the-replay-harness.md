@@ -44,9 +44,122 @@ A ruleset moves weights; the index produces values.
 | Cost | One SQL query | One in-process run |
 | Runs in CI | No — restore only (ADR-0118 §7) | **Yes**, hermetic |
 
-The synthetic corpus needs a stated construction — population size, level distribution, tag
-draw, grid density, area spread — and a review whenever the density hypothesis moves. A fixture
-that drifts away from the city it stands for keeps producing confident diffs about nobody.
+The synthetic corpus's construction is in §2.1. **It does not stand for the city and does not
+try to** — [ADR-0121](../../adr/0121-a-fixture-stands-for-a-comparison-never-for-a-city.md).
+
+---
+
+## 2.1 The synthetic corpus, constructed
+
+Settles [#185](https://github.com/Raketa02/Raketa/issues/185).
+[ADR-0121](../../adr/0121-a-fixture-stands-for-a-comparison-never-for-a-city.md).
+
+**Every number this harness prints is a comparison** — baseline ruleset against candidate over
+the *same* population — and §5 already forbids it a materiality threshold, so it makes no
+absolute claim about anything. A neutral population orders two rulesets correctly. What it
+cannot do is tell you what the empty-result rate *is*, and the report says so on its face.
+
+### Two densities, one generator
+
+| | `thin` | `dense` |
+|---|---|---|
+| Players per sport per area | **20** | **2 000** |
+| Stands for | the launch market — [#161](https://github.com/Raketa02/Raketa/issues/161)'s measured figure, where 63% of searches return under five candidates | a plausible year-one single city, 30× below trigger 4 |
+| Newcomer fraction | **100%** — what a launch factually is | **25%** |
+
+**Sports: PADEL and TENNIS.** One doubles and one singles — the minimum that exercises both the
+group objective and a shortlist where `G` does not run (`the-group-objective.md` §3). All four
+would quadruple the run to reach no additional branch.
+
+**Geography: one metro, several districts, spread deliberately wider than the median radius**,
+so ADR-0099's ×1.5 and ×2.0 rungs have real candidates to count instead of structural zeroes.
+
+### The draws
+
+Uniform wherever the repository supplies no shape. A non-uniform draw is admissible **only where
+something already states one**, and there is exactly one.
+
+| Field | Draw | Source of the bounds |
+|---|---|---|
+| Social tags | uniform over the **nineteen** ids, count uniform over the served **2–6** | `social_tags.py`, product-confirmed 2026-08-25 |
+| Availability grid | uniform over the **twenty-one** cells, ≥ 1 ([ADR-0102](../../adr/0102-silence-is-never-scored.md)) | `availability.py` — 7 days × MORNING/AFTERNOON/EVENING |
+| Search radius | uniform over **1–50 km**, step 1 | `search_radius.py` |
+| Play intent | uniform over the **three** values | [ADR-0094](../../adr/0094-play-intent-declared-per-sport-in-its-own-aggregate.md) |
+| Gender · preference | uniform over theirs | [ADR-0096](../../adr/0096-gender-preference-mutual-gate-invisible-to-the-scorer.md) |
+| **Level μ** | **truncated normal, centre 2.8, σ 0.6**, clamped to 1.0–5.0 | **the one departure — argued below** |
+| **Player σ** | **≈ 0.34** | every rating today is an *Initial Estimate* |
+| Profile commit date | a named window **straddling ADR-0113's fourteen days**, to hit the fraction above | never an emergent side effect of when the fixture was written |
+
+**Why μ is not uniform.** Uniform over the scale puts a quarter of the population in ADVANCED,
+clears `LEVEL_TOL_COMP` for only ~26% of pairs, and under-samples close pairs — where
+**predicted balance goes blind past Δμ ≈ 0.34** (`ranking-weights.md` §4). A spread that rarely
+produces near-twins never exercises the discriminating region of a term carrying 19.5 of 100
+competitive. The centre is read off §20.1's own walkthrough players — **2.71, 2.92, 2.75, 2.35,
+3.40, 2.50** — the only stated sample of this market that exists. σ ≈ 0.34 back-solves §4's
+typical σ_pair of 0.495 from the document's own newcomer, stamped "±0,34".
+
+**And its cost, printed rather than discovered:** σ near-constant makes `combine_sigma`
+near-constant, so predicted balance is effectively a function of Δμ alone and **the corpus never
+exercises the ×32 σ coefficient.** A fourth named approximation, beside ADR-0118 §8's three.
+
+### The `SearchContext`, and what is deliberately absent
+
+**The corpus exercises what a ruleset can move.**
+
+| Fact | In the corpus | Why |
+|---|---|---|
+| Blocks | **Yes**, ~1 per 20 players — **invented, and stated as invented** | ADR-0116 puts them in the `K × K` admissibility mask; a corpus with none over-reports admissible combinations |
+| Interest · exposure · suppression ledgers | **Yes**, by a **coverage rule, not a rate** — `INTEREST_LIFT`, `NEWCOMER_WINDOW` and `ZERO_EXPOSURE` each fire for ≥ 1 row per density | A rule survives a population resize where a percentage does not. These are also the three rows ADR-0118 §8 makes the *recorded* corpus carry forward unrecomputed — recomputing them is something only this corpus can do |
+| Held accounts | **No** | Binary, never relaxed, no constant — no ruleset release can change what it does. Its coverage is §20.2's *"no gated player ever appears"* and ADR-0098's contract suite |
+| Pairwise history · open challenges | **No** | Same, and the provider is `NoMatchHistoryExists` |
+
+### The clock
+
+**A fixed Wednesday instant, stated with its reason.** ADR-0100's derived window rides on the
+response and `TODAY | TOMORROW | WEEKEND | THIS_WEEK` are thresholds against *now* — on a
+Saturday, `TODAY` and `WEEKEND` collapse and two of the four become unreachable. ADR-0120's
+`next_shared(shared, today)` writes the availability card's sentence off the same weekday.
+Mid-week is the only position from which all four are reachable and distinct.
+
+### The searches
+
+Every player runs `SHORTLIST` in **both modes**. Every *n*-th player **by id order** runs
+`LINEUP`, `FILL_SEATS` and `DECK` — a rule, never a sample, because a rule survives a resize.
+The collision is real: `SHORTLIST` is 1.00 µs per surviving candidate and a line-up is 2 024
+combinations × 3 arrangements at `K = 24` (`scale-posture.md` §6). **Per-surface search counts
+are printed**, so the coverage is on the face of the report.
+
+### The adversarial tail
+
+Uniform draws under-sample the rare arms — [#179](https://github.com/Raketa02/Raketa/issues/179)'s
+seven clash rows, the ×2.0 rung, floor crossings in both directions. A small stated tail of
+constructed players makes them fire, and is **excluded from every rate denominator and printed
+as its own block**. Coverage is asserted off the tail; rates are read off the neutral body.
+
+### What it is not
+
+**§20.1's scenarios are a second artifact, not a slice of this one.** They are hand-authored,
+carry complete expected responses, and assert verdicts. In particular
+[#186](https://github.com/Raketa02/Raketa/issues/186)'s six judged pairings are **not corpus
+members**: they define `QUALITY_FLOOR`, so measuring a floor change against a population
+containing them tests a ruleset against its own definition. Both are built from the same
+builders, tag ids and clock, so a domain change breaks them together.
+
+### When it goes stale
+
+**By contradiction, never by resemblance.** Each parameter is paired with the query that measures
+its live counterpart on [ADR-0104](../../adr/0104-the-search-record-is-the-answer-and-never-expires.md)'s
+never-expiring record — median candidates generated per search, level-gate exclusion rate, floor
+clearance rate, tag-overlap distribution, empty-result rate. The corpus is reviewed when one
+leaves its stated band. **A periodic report, never a trigger in code.**
+
+ADR-0118's *"a review whenever the density hypothesis moves"* survives as a **floor** on this,
+mandatory the day the hypothesis resolves — not as the whole rule, because a rule that waits on
+fog may never fire.
+
+> This review has **nowhere to be read**. It is the sixth signal on the map's missing operational
+> surface, and the second — after #179's `MATRIX_COVERAGE_FLOOR` — that is a report rather than a
+> log record.
 
 ---
 
@@ -146,7 +259,8 @@ which is the discipline `ranking-weights.md` §13 and §24 already apply to ever
 | Half | Mechanism | What it proves |
 |---|---|---|
 | **Synthetic** | Committed artifact; `check-ruleset-diff.sh` regenerates and diffs in CI; `make test-ruleset-diff` proves the check still fires | A ruleset edited without regenerating its diff **fails the build** |
-| **Determinism** | CI regenerates under a **different `PYTHONHASHSEED`** than produced the committed file | Whole-pipeline determinism, continuously — ADR-0105 §2 asserts it over one test. The sanctioned §4 exception, second instance |
+| **The population** | Seeded generator in code, **its output committed as a file**; CI regenerates and requires byte-identity ([ADR-0121](../../adr/0121-a-fixture-stands-for-a-comparison-never-for-a-city.md) §5) | A generator edit arrives as a **visible population diff** instead of silently rewriting every past comparison. The repo's generate-commit-diff idiom, third instance |
+| **Determinism** | CI regenerates under a **different `PYTHONHASHSEED`** than produced the committed file | **Generation and pipeline in one assertion** — ADR-0105 §2 asserts the pipeline over one test, and the generator is where a set of generated ids would be ordered unnoticed. The sanctioned §4 exception, second instance |
 | **Recorded** | CI asserts the PR body carries a report block naming its corpus window and coverage | **Presence, not truth.** Half this gate is a signature and that is said out loud |
 | **Runtime** | Validation at startup; a bad ruleset **fails the deploy** and the old pods keep serving | §11's *"the previous one keeps serving"*, restated for an embedded ruleset with no hot reload |
 
@@ -174,6 +288,12 @@ which is the discipline `ranking-weights.md` §13 and §24 already apply to ever
 
 ## 9. Constants introduced
 
-None. `NEAR_MISS_RECORDED = 10` gains a **second falsifier** — promotions saturating the band —
-and `K = 24`'s engine-side ceiling (`scale-posture.md` §6) is enforced by §7's runtime row rather
-than restated here.
+**No ruleset constants.** `NEAR_MISS_RECORDED = 10` gains a **second falsifier** — promotions
+saturating the band — and `K = 24`'s engine-side ceiling (`scale-posture.md` §6) is enforced by
+§7's runtime row rather than restated here.
+
+§2.1 introduces **seven generator parameters**, none of which is read by scoring and none of
+which is a ruleset constant:
+[ADR-0121](../../adr/0121-a-fixture-stands-for-a-comparison-never-for-a-city.md) carries the
+table and a falsifier for each. `CORPUS_BLOCK_RATE` is the one openly invented number here, and
+it is the first thing replaced the day the telemetry has a measured rate.

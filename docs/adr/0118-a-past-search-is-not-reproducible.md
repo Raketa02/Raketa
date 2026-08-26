@@ -187,6 +187,14 @@ count** is the synthetic corpus's to produce, because it needs generation at a w
 - **The synthetic corpus is a fixture with all a fixture's failure modes.** A population that
   drifts away from the city it stands for will keep producing confident diffs about nobody. It
   needs a stated construction and a review whenever the density hypothesis moves.
+
+  > **Narrowed by [ADR-0121](0121-a-fixture-stands-for-a-comparison-never-for-a-city.md).** The
+  > construction is supplied, and the framing of this sentence is corrected rather than kept: the
+  > corpus does not stand for the city and cannot, so *drift away from the city* has no evaluable
+  > test while the city is unbuilt. It goes stale by **contradiction** — a named generator
+  > parameter leaving its band against ADR-0104's record — and the density-hypothesis review
+  > survives as a **floor** on that rather than as the whole rule. The decision above is
+  > untouched.
 - **`snapshot_version` is not spent by this decision and is not wasted either.** It stamps the
   world a Fit was computed against, which is what makes an old breakdown interpretable, and it
   remains the input a full replay would need if the live-truth half ever becomes recordable.

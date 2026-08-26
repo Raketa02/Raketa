@@ -296,5 +296,21 @@ there; they are not repeated here.
   make happen sooner is exactly that. _Avoid_: a configurable retention window, a cadence
   hard-coded in the domain.
 
+- **Synthetic corpus** — the generated population the replay harness runs a candidate
+  **ruleset release** against, at two densities, with a fixed clock and a fixed
+  `SearchContext` ([ADR-0121](../docs/adr/0121-a-fixture-stands-for-a-comparison-never-for-a-city.md)).
+  **It stands for a comparison, never for a city.** Every number the harness prints is
+  baseline-against-candidate over the *same* population, so what it owes is ordering, and
+  an absolute rate is a claim it never makes — which is why the draws are neutral wherever
+  nothing in the repository states a shape, and why the one departure is argued in the
+  spec and printed on the report. Its **seeded generator is code and its output is a
+  committed file**, so a generator edit arrives as a visible population diff rather than
+  silently rewriting every past comparison, and CI regenerating under a different
+  `PYTHONHASHSEED` asserts generation and pipeline together. It goes stale by
+  **contradiction** — a named parameter leaving its band against the search record — never
+  by ceasing to resemble anything. _Avoid_: "realistic", "production-like", a fixture whose
+  correlations nobody measured, folding §20.1's scenarios or the six judged pairings into
+  it.
+
 Add backend-specific technical terms here as they are resolved. Anything describing the
 *domain* belongs in the shared glossary instead.
