@@ -298,7 +298,9 @@ and the UI build is its own effort. The effort that builds these screens inherit
 
 ## 12. What this file does not decide
 
-- **The `unfilled_reason` vocabulary and the doubles objective** — [#180](https://github.com/Raketa02/Raketa/issues/180).
+- ~~**The `unfilled_reason` vocabulary and the doubles objective**~~ — settled by
+  [#180](https://github.com/Raketa02/Raketa/issues/180) in
+  [`the-group-objective.md`](the-group-objective.md).
 - **`INTEREST_TTL`, `OUTSTANDING_INTEREST_CAP`, `PASS_SUPPRESS`** — the deck's product numbers, still fog.
 - **The staleness threshold behind `index_stale`** — [#173](https://github.com/Raketa02/Raketa/issues/173).
 - **The tag relationship matrix** — [#179](https://github.com/Raketa02/Raketa/issues/179).

@@ -554,6 +554,23 @@ decision has actually settled appears here.
   words because the best-of-three forecast answers *are these the right people* while the
   arranged forecast answers *is this the right way round*, and conflating them is how a screen
   stops changing when somebody is moved across the net.
+- **Group objective** — what the engine maximises when it seats four people, as against **Fit**,
+  which is about one pairing. A four holds **six pairs and the searcher is in three**, so a term
+  earns its place in the objective only by reading something no seat's Fit read: the **cross
+  pairs**, the four-way availability, the arrangement, and the **seat delta**. It is never shown
+  as a number and has no floor — nothing is seated because its objective cleared a bar, only
+  because it beat every other combination — and one closed reason code names the term that
+  decided it ([ADR-0117](docs/adr/0117-a-group-term-reads-only-what-fit-did-not.md)).
+- **Cross pair** — a pair inside a **line-up** that contains no searcher: three of a four's six.
+  Invisible to every **Fit** by construction, because Fit is always about the searcher and
+  somebody. Read by the **group objective** through the same functions Fit uses, so *how do these
+  two get on* has one implementation called six times — three printed, three scored.
+- **Seat delta** — what a pair's reading gains when it stops being unseated. A pair on a
+  shortlist reads the forgiving **opponent** entries of the **tag relationship matrix**; seating
+  somebody as a partner is when the harsher partner entries apply. Zero for opponent seats by
+  construction. **It never re-scores a Fit** — the card says the same number in the builder as in
+  the list, because a Fit that moves when somebody crosses the net is *Why 78?* failing on the one
+  screen that promises to show its working.
 - **Interest** — a player's own *yes* to a specific person, cited to the **Search** that
   surfaced them. It is a human's judgement rather than the engine's, which is why it may lift
   somebody above the **quality floor** where nothing the engine computes may. It outlives the
@@ -665,6 +682,14 @@ decision has actually settled appears here.
 - **A seat is never filled below the quality floor to complete a line-up.** The group is the
   objective, so one bad seat is a bad evening for all four. A partial line-up, and what is
   missing, is the honest answer.
+- **In a four, every gate binds all six pairs.** A block, a **gender preference** and a level
+  tolerance are checked between every two people who would share the court, not only between the
+  searcher and each of them — a player shares ninety minutes with all three, and a gate that
+  only ever asks about the person who happened to run the search is not protecting anybody else
+  in the game. Eligibility for a *seat* is a property of a combination rather than of a
+  candidate, so it cannot be spent when candidates are generated; the price is that a four can be
+  impossible where candidates are plentiful, which is a partial line-up with a reason
+  ([ADR-0116](docs/adr/0116-in-a-four-every-gate-binds-all-six-pairs.md)).
 - **The empty-result rate is a guardrail metric, never a target.** It is reported only paired
   with the return rate, and it is never on its own sufficient grounds to move the quality floor —
   which moves only in a record with a name on it.

@@ -67,7 +67,7 @@ claim some pairs beat a match, which one global `0.7` cannot express.
   strength | severity }
 ```
 
-The **seat** dimension bites only in doubles (§9.9, still fog on the map), but it goes in the
+The **seat** dimension bites only in doubles (§9.9), but it goes in the
 shape now or the group objective has nowhere to read it.
 
 **A column's tag domain is derived from the matrix** — the ids appearing in any entry carrying

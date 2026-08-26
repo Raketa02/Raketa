@@ -39,8 +39,10 @@ pairs below use this, and the ruleset validator enforces it.
 **Where no seat is assigned, a pair reads the `OPPONENT` row; a `PARTNER`-only row does not fire
 at all.** §9.3.6 rule 3 — being wrong about a clash buries a person — so the unseated shortlist
 takes the more forgiving reading, and the harsher one applies only once somebody is being seated
-as a partner, which is [The doubles group objective](https://github.com/Raketa02/Raketa/issues/180)'s
-job. Singles and unseated doubles therefore read identically, which is one fewer rule.
+as a partner, which is [`the-group-objective.md`](the-group-objective.md) §2.2's **seat delta** —
+added for the searcher's partner pair, and exactly zero for the two opponent seats because
+unseated already reads `OPPONENT`. Singles and unseated doubles therefore read identically, which
+is one fewer rule.
 
 **One matrix, all four sports, and no `sport` field — ever.** A tag relationship is a claim about
 people; *levels never transfer between sports* is a claim about **proof**, not about temperament.

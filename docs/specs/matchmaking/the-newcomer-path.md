@@ -302,13 +302,20 @@ where the wire is closed
 | Doubles seats | ✓ | ✓ | ✓ |
 | The doubles **group objective** | — | — | — |
 
-Gates bind every seat by construction: ADR-0096's ninth gate is applied **before** §9.9
-enumerates, precisely so no seat can escape one, and §2's tightened tolerance inherits that
-unchanged. The welcoming record is a Fit modifier, so it rides wherever Fit is computed.
+Gates bind every seat, and §2's tightened tolerance inherits that. **The reading of *every
+seat* has since been corrected** — ADR-0096's ninth gate was applied before §9.9 enumerates and
+bound every seat *against the searcher*, leaving the three pairs a searcher is not in gated
+against nobody. [ADR-0116](../../adr/0116-in-a-four-every-gate-binds-all-six-pairs.md) makes all
+six bind, and carries §2's tolerance with it: **every pair containing a newcomer takes
+`LEVEL_TOL_COMP`, whoever ran the search** — because gating only the newcomer's own pairs with
+the searcher recreates exactly the hole §2 was written to close. The price is named there: in a
+for-fun four, three of six pairs narrow from 0.90 to 0.55, and at launch density a newcomer's
+first doubles game may frequently be a partial line-up. The welcoming record is a Fit modifier,
+so it rides wherever Fit is computed.
 
-**What a newcomer does to a four-player objective is not settled here.**
-[The doubles group objective](https://github.com/Raketa02/Raketa/issues/180) owns it, and
-inherits one written constraint rather than re-deriving it:
+**What a newcomer does to a four-player objective is settled by**
+[The doubles group objective](https://github.com/Raketa02/Raketa/issues/180), which took this
+constraint unchanged rather than re-deriving it:
 
 > **A newcomer is never seated below the quality floor to complete a four.**
 

@@ -143,6 +143,15 @@ enumerates combinations — so the group objective is drawn from an already-elig
 never sees the constraint. A player shares a court with all four for ninety minutes; binding
 only the partner seat would be incoherent.
 
+*(Amended by [ADR-0116](0116-in-a-four-every-gate-binds-all-six-pairs.md): **every seat** was
+read here as every seat **against the searcher**, who is in only three of a four's six pairs —
+leaving a `WOMEN_ONLY` player open to every man a third party seats beside her, which is the
+failure mutuality was chosen to prevent. Eligibility for a seat is a property of a combination,
+so the other three pairs are checked inside enumeration as an admissibility mask. This ADR's own
+sentence is the argument, applied one step further than it was applied. The group objective still
+never **scores** on the constraint, and the fenced scorer type is untouched — the mask is built in
+the module where the I/O is, before the pure scorer is called.)*
+
 **Seats already accepted are facts, not candidates.** Changing a preference changes future
 searches; it never retroactively evicts somebody who has already said yes.
 

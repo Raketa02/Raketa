@@ -285,10 +285,11 @@ individual match than an empty builder would have given them. The screen has to 
 
 **A seat may be unfilled and the line-up is still a `200`** — a partial line-up is the honest
 answer, and no seat is ever filled below `QUALITY_FLOOR` to complete a four (ADR-0099).
-**The `unfilled_reason` vocabulary, and whether *three of four* is a different shape from
-*nobody*, belong to
-[The doubles group objective](https://github.com/Raketa02/Raketa/issues/180)** — this file
-fixes only that the slot and the code exist.
+**The `unfilled_reason` vocabulary is settled** by
+[`the-group-objective.md`](the-group-objective.md) §5.1: `NO_CANDIDATE_ABOVE_FLOOR`,
+`NO_ADMISSIBLE_COMBINATION`, `POOL_EXHAUSTED`, `NO_SHARED_SLOTS`. ***Three of four* is not a
+different shape from *nobody*** — both are this shape, with one or three seats carrying a reason,
+and there is no separate empty state for a line-up.
 
 ### The forecast
 
@@ -431,7 +432,10 @@ stranger.
   [#171](https://github.com/Raketa02/Raketa/issues/171) in
   [`the-play-screens.md`](the-play-screens.md), which added three routes and two candidate field
   families to this file.
-- **The `unfilled_reason` vocabulary and the doubles objective** — [#180](https://github.com/Raketa02/Raketa/issues/180).
+- ~~**The `unfilled_reason` vocabulary and the doubles objective**~~ — settled by
+  [#180](https://github.com/Raketa02/Raketa/issues/180) in
+  [`the-group-objective.md`](the-group-objective.md), which also makes `is_best` mean *best by
+  `G`* rather than *evenest* (§3.1) and adds `group_reason` to the line-up envelope (§5).
 - **The staleness threshold behind `index_stale` / `index_too_stale`, and `snapshot_version`** — [#173](https://github.com/Raketa02/Raketa/issues/173).
 - **`INTEREST_TTL`, `OUTSTANDING_INTEREST_CAP`, `PASS_SUPPRESS`** — the deck's product decisions, still fog.
 - **The tag relationship matrix behind the style and vibe evidence codes** — [#179](https://github.com/Raketa02/Raketa/issues/179).
