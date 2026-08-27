@@ -33,6 +33,11 @@ from app.modules.player_profile.domain.events import (
     PlayerProfileCreated,
     ProposalsOptInAnswered,
 )
+from app.modules.player_profile.domain.gender import (
+    DEFAULT_GENDER_PREFERENCE,
+    Gender,
+    GenderPreference,
+)
 from app.modules.player_profile.domain.photos import PhotoRef, TranscodedImage
 from app.modules.player_profile.infrastructure.event_sourced_player_profile_repository import (  # noqa: E501
     EventSourcedPlayerProfileRepository,
@@ -102,6 +107,8 @@ def a_command(**overrides) -> CommitPlayerProfileCommand:
         latitude=51.5073509,
         longitude=-0.1277583,
         search_radius_km=10,
+        gender=Gender.WOMAN,
+        gender_preference=GenderPreference.WOMEN_ONLY,
         proposals_opt_in=True,
         consent_copy_version="proposals-2026-08",
         consent_surface=ConsentSurface.ONBOARDING,
@@ -135,9 +142,7 @@ async def test_the_precise_fix_never_reaches_the_stream(harness: Harness):
     """Coarsened on the way in, so there is no version of this stream from which
     the device's own reading could be recovered."""
 
-    await harness.commit().execute(
-        a_command(latitude=51.5073509, longitude=-0.1277583)
-    )
+    await harness.commit().execute(a_command(latitude=51.5073509, longitude=-0.1277583))
 
     created = harness.publisher.published[0]
     assert (created.latitude, created.longitude) == (51.51, -0.13)
@@ -361,3 +366,36 @@ async def test_asking_whether_a_profile_exists_replays_nothing(harness: Harness)
     await harness.has_profile().execute(PLAYER)
 
     assert harness.store.appends == appends_before
+
+
+async def test_the_gender_answer_and_the_preference_reach_the_creating_event():
+    """Both ride on the commit that creates the profile, because gender is
+    required at profile creation and profile creation is one request
+    (``docs/adr/0096``)."""
+
+    harness = Harness()
+
+    await harness.commit().execute(
+        a_command(
+            gender=Gender.PREFER_NOT_TO_SAY,
+            gender_preference=GenderPreference.MEN_ONLY,
+        )
+    )
+
+    created = harness.publisher.published[0]
+    assert isinstance(created, PlayerProfileCreated)
+    assert created.gender == "PREFER_NOT_TO_SAY"
+    assert created.gender_preference == "MEN_ONLY"
+
+
+async def test_a_commit_that_names_no_preference_records_the_unconstrained_one():
+    """`ANY` is what never having expressed a preference *is*, so the default
+    survives the whole path rather than being re-decided at each layer."""
+
+    harness = Harness()
+
+    await harness.commit().execute(
+        a_command(gender_preference=DEFAULT_GENDER_PREFERENCE)
+    )
+
+    assert harness.publisher.published[0].gender_preference == "ANY"

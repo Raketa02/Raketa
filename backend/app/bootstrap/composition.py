@@ -53,10 +53,14 @@ from app.modules.auth.infrastructure.sqlalchemy_refresh_token_repository import 
     SqlAlchemyRefreshTokenRepository,
 )
 from app.modules.player_profile.domain.ports import (
+    PlayIntentDeclarationRepository,
     ImageTranscoder,
     PhotoReview,
     PhotoStorage,
     PlayerProfileRepository,
+)
+from app.modules.player_profile.infrastructure.event_sourced_play_intent_declaration_repository import (  # noqa: E501
+    EventSourcedPlayIntentDeclarationRepository,
 )
 from app.modules.player_profile.infrastructure.event_sourced_player_profile_repository import (  # noqa: E501
     EventSourcedPlayerProfileRepository,
@@ -247,3 +251,23 @@ def build_player_profile_repository(
     answer for another's.
     """
     return EventSourcedPlayerProfileRepository(event_store=event_store, events=events)
+
+
+def build_play_intent_declaration_repository(
+    *,
+    event_store: DomainEventStore,
+    events: DomainEventPublisher,
+) -> PlayIntentDeclarationRepository:
+    """Per unit of work, for the same reason the profile's is.
+
+    **Declared before its first caller exists**, which is unusual here and is
+    deliberate: the aggregate and its durable contract landed with #182 so that
+    the index has an event to read, while the write path — the rating tail, the
+    search screen's inline offer and ``PUT /api/v1/play-intents/{sport}`` — is
+    ADR-0094's own build. This line is what that build wires to rather than
+    re-deciding, and it is one line so that the re-decision never happens
+    somewhere else.
+    """
+    return EventSourcedPlayIntentDeclarationRepository(
+        event_store=event_store, events=events
+    )

@@ -57,6 +57,7 @@ def a_body(**overrides) -> dict:
         "location": {"latitude": 51.5073509, "longitude": -0.1277583},
         "search_radius_km": SEARCH_RADIUS_BOUNDS.default_km,
         "proposals_opt_in": {"accepted": True, "copy_version": "proposals-2026-08"},
+        "gender": "WOMAN",
     }
     body.update(overrides)
     return body
@@ -136,8 +137,9 @@ async def test_a_commit_with_no_availability_slots_is_refused(client):
 
 async def test_photo_ids_are_committed_in_the_order_they_were_arranged(client):
     headers = await auth_headers(client)
-    first, second = await upload_photo(client, headers), await upload_photo(
-        client, headers
+    first, second = (
+        await upload_photo(client, headers),
+        await upload_photo(client, headers),
     )
 
     response = await commit(client, headers, a_body(photo_ids=[second, first]))
@@ -351,3 +353,86 @@ async def test_one_players_profile_does_not_answer_for_another(client):
     assert (await client.get("/api/v1/users/me", headers=bob)).json()[
         "has_player_profile"
     ] is False
+
+
+# ---------------------------------------------------------------------------
+# Gender, over the wire
+# ---------------------------------------------------------------------------
+
+
+async def test_a_commit_without_a_gender_answer_is_refused(client):
+    """Required, and refused as a *shape* rather than with a code.
+
+    That is the opposite of the availability floor and the opt-in beside it, and
+    the difference is that this question has no unanswered state to model:
+    ``PREFER_NOT_TO_SAY`` is a real answer a player can choose, so a body with
+    no `gender` at all is a client that does not implement the contract, not a
+    player who declined (``docs/adr/0096``).
+    """
+
+    headers = await auth_headers(client)
+    body = a_body()
+    del body["gender"]
+
+    response = await commit(client, headers, body)
+
+    assert response.status_code == 422, response.text
+
+
+async def test_a_gender_this_platform_does_not_serve_is_refused(client):
+    """A closed set fixed by the record, not a served vocabulary a client can
+    hold a different version of — so there is nothing here for the domain to
+    refuse that the type has not already refused."""
+
+    headers = await auth_headers(client)
+
+    response = await commit(client, headers, a_body(gender="OTHER"))
+
+    assert response.status_code == 422, response.text
+
+
+async def test_prefer_not_to_say_is_accepted_like_any_other_answer(client):
+    headers = await auth_headers(client)
+
+    response = await commit(client, headers, a_body(gender="PREFER_NOT_TO_SAY"))
+
+    assert response.status_code == 201, response.text
+
+
+async def test_a_commit_that_names_no_preference_is_accepted(client):
+    """The asymmetry: the answer about oneself is required, the preference over
+    others is optional and defaults to `ANY`."""
+
+    headers = await auth_headers(client)
+    body = a_body()
+    assert "gender_preference" not in body
+
+    response = await commit(client, headers, body)
+
+    assert response.status_code == 201, response.text
+
+
+async def test_a_narrowed_preference_is_accepted(client):
+    headers = await auth_headers(client)
+
+    response = await commit(client, headers, a_body(gender_preference="WOMEN_ONLY"))
+
+    assert response.status_code == 201, response.text
+
+
+async def test_no_gender_value_ever_comes_back_out(client):
+    """``docs/adr/0096`` §6, asserted rather than remembered.
+
+    The body is only ever the caller's own profile, so nothing here would leak a
+    third party's answer — but the moment one response shape carries it, *which*
+    shapes may becomes a judgement made per endpoint instead of a line nobody
+    has to re-argue. This is that line.
+    """
+
+    headers = await auth_headers(client)
+
+    body = (await commit(client, headers, a_body(gender="WOMAN"))).json()
+
+    assert "gender" not in body
+    assert "gender_preference" not in body
+    assert "WOMAN" not in str(body)

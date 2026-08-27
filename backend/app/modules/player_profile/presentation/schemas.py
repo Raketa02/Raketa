@@ -10,7 +10,9 @@ bounded integer, so that an id outside the vocabulary or a radius outside the
 served range is refused by the *domain* — with a code a client can branch on and
 act from — rather than by schema validation, which can only say that some field
 somewhere was wrong. What is constrained here is what has no served vocabulary
-to disagree with: a weekday is 1–7 because that is what a weekday is.
+to disagree with: a weekday is 1–7 because that is what a weekday is, and
+``Gender`` and ``GenderPreference`` are closed sets fixed by ``docs/adr/0096``
+that no endpoint publishes and no client can hold a different version of.
 """
 
 from __future__ import annotations
@@ -30,6 +32,11 @@ from app.modules.player_profile.domain.consent import (
     MAX_COPY_VERSION_LENGTH,
     ConsentSurface,
     ProposalsOptIn,
+)
+from app.modules.player_profile.domain.gender import (
+    DEFAULT_GENDER_PREFERENCE,
+    Gender,
+    GenderPreference,
 )
 from app.modules.player_profile.domain.location import LocationArea
 from app.modules.player_profile.domain.photos import PresignedPhoto
@@ -324,6 +331,29 @@ class CommitPlayerProfileRequest(BaseModel):
         ),
     )
     proposals_opt_in: ProposalsOptInRequest
+    gender: Gender = Field(
+        ...,
+        description=(
+            "The player's own answer, asked once. Required — `PREFER_NOT_TO_SAY` "
+            "is a first-class answer and is what a player who does not want to "
+            "say sends; there is no way to send nothing. It matches only "
+            "unconstrained searches, which costs its holder reach, and the "
+            "client is what says so at the moment of asking."
+        ),
+    )
+    gender_preference: GenderPreference = Field(
+        default=DEFAULT_GENDER_PREFERENCE,
+        description=(
+            "Who this player is willing to be matched with. Optional, and "
+            "`ANY` when it is not sent.\n\n"
+            "**It is mutual and durable.** It governs what reaches this player "
+            "as well as what this player sees, so narrowing it makes them "
+            "invisible to the excluded side entirely — including to searchers "
+            "who asked for anybody. The client must say so at the moment of "
+            "setting; learning it from silence is not acceptable. A single "
+            "search may narrow this further and nothing may widen past it."
+        ),
+    )
 
     def availability_cells(self) -> list[tuple[int, str]]:
         return [slot.as_cell() for slot in self.availability]
@@ -357,6 +387,17 @@ class PlayerProfileResponse(BaseModel):
 
     The same body whether the commit created the profile or replayed an earlier
     one, so a client that only wants its profile needs no branch on the status.
+
+    **No gender value comes back out**, and that is a rule rather than an
+    oversight (``docs/adr/0096`` §6): a preference crosses the wire *in*, on a
+    search; no response shape carries a gender out and no card renders one.
+    This body is only ever the caller's own profile, so nothing here would leak
+    a third party's answer — the field is left off anyway, because the moment
+    one response shape carries it, *which* shapes may is a judgement call made
+    per endpoint instead of a line nobody has to re-argue. Nothing reads it back
+    today: onboarding sends it once, and there is no profile editor. When one
+    exists, adding it here is an addition to this document and ADR-0096's
+    ticket's to make.
 
     **Fields are only ever added.** A shipped mobile app parses this document for
     months after it stops being built.

@@ -29,6 +29,7 @@ from app.modules.player_profile.application.sweep_uncommitted_photos import (
 )
 from app.modules.player_profile.domain.consent import ConsentSurface
 from app.modules.player_profile.domain.availability import AvailabilityGrid
+from app.modules.player_profile.domain.gender import Gender
 from app.modules.player_profile.domain.location import LocationArea
 from app.modules.player_profile.domain.photos import (
     UNCOMMITTED_PHOTO_RETENTION_HOURS,
@@ -131,6 +132,7 @@ class Harness:
             availability=AvailabilityGrid.of_cells([(6, "MORNING")]),
             location=LocationArea.around(52.23, 21.01),
             search_radius=SearchRadius.chosen(10),
+            gender=Gender.PREFER_NOT_TO_SAY,
             proposals_opt_in_accepted=True,
             consent_copy_version="v1",
             consent_surface=ConsentSurface.ONBOARDING,

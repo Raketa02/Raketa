@@ -1,15 +1,19 @@
-"""The seams this context is built on: the photo path's three, and the profile's.
+"""The seams this context is built on: the photo path's three, and two aggregates'.
 
 Each is here rather than in ``app/application/ports/`` because each is the
 Player profile context's own: a photo belongs to a profile, and no other context
 has one. Cross-cutting ports — the unit of work, the event store, the publisher
 — stay where they are.
 
-``PlayerProfileRepository`` is the **aggregate repository** kind, not the
-read-model kind: it is how a use case reaches an event-sourced aggregate without
-knowing that it is event-sourced, owning the aggregate-type name, the replay and
-the optimistic-concurrency bookkeeping (ADR-0018). See ``backend/CONTEXT.md`` for
-the distinction, and ADR-0089 for why this context is event-sourced.
+``PlayerProfileRepository`` and ``PlayIntentDeclarationRepository`` are both the
+**aggregate repository** kind, not the read-model kind: each is how a use case
+reaches an event-sourced aggregate without knowing that it is event-sourced,
+owning the aggregate-type name, the replay and the optimistic-concurrency
+bookkeeping (ADR-0018). See ``backend/CONTEXT.md`` for the distinction, and
+ADR-0089 for why this context is event-sourced. **Two of them, because this
+context has two aggregates**: the profile is keyed on the player and a Play
+intent declaration on ``(player, sport)`` (``docs/adr/0094``), which is a
+difference in identity and therefore a difference in port.
 
 **Nothing in this file names a vendor.** ``PhotoStorage`` says *put these bytes
 under this reference and give me a short-lived URL for them*; whether that is
@@ -22,12 +26,15 @@ from __future__ import annotations
 from typing import AsyncGenerator, Mapping, Protocol, runtime_checkable
 from uuid import UUID
 
-from app.kernel import Instant
+from app.kernel import Instant, Sport
 from app.modules.player_profile.domain.photos import (
     PhotoRef,
     PhotoReviewVerdict,
     StoredPhoto,
     TranscodedImage,
+)
+from app.modules.player_profile.domain.play_intent_declaration import (
+    PlayIntentDeclaration,
 )
 from app.modules.player_profile.domain.profile import PlayerProfile
 
@@ -199,5 +206,41 @@ class PlayerProfileRepository(Protocol):
         immediately after the commit that creates the profile, and a read model
         that has not caught up would send a player who has just finished the
         social steps back into them.
+        """
+        ...
+
+
+@runtime_checkable
+class PlayIntentDeclarationRepository(Protocol):
+    """Loads and saves PlayIntentDeclaration aggregates.
+
+    Keyed on the **pair**, because the stream is: there is no declaration id to
+    pass, and a caller cannot ask this port a question that is not scoped to one
+    player in one sport. That is the same hazard-closing shape
+    ``PlayerProfileRepository`` has for the player alone.
+    """
+
+    async def load(
+        self, *, player_id: UUID, sport: Sport
+    ) -> PlayIntentDeclaration | None:
+        """This pair's standing declaration, replayed from its stream, or nothing.
+
+        ``None`` rather than a raise: *rated but not yet declared* is the
+        ordinary state of every player between finishing a rating run and
+        answering the tail, and ADR-0094 makes an undeclared **candidate** a
+        common path rather than an exception. A caller distinguishes *open the
+        stream* from *append to it* by this answer and by nothing else.
+        """
+        ...
+
+    async def save(self, declaration: PlayIntentDeclaration) -> None:
+        """Append the aggregate's pending events and publish them.
+
+        Appends and publishes; it does **not** commit, for the reason no
+        repository in this codebase does — the transaction boundary is a
+        decision about the *command*.
+
+        A no-op when nothing is pending, which is what lets a re-declaration of
+        the value already held be saved without growing the stream.
         """
         ...

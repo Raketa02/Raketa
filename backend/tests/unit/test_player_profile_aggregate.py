@@ -27,12 +27,19 @@ from app.modules.player_profile.domain.errors import (
 )
 from app.modules.player_profile.domain.events import (
     AvailabilityChanged,
+    GenderChanged,
+    GenderPreferenceChanged,
     LocationChanged,
     PhotosChanged,
     PlayerProfileCreated,
     ProposalsOptInAnswered,
     SearchRadiusChanged,
     SocialTagsChanged,
+)
+from app.modules.player_profile.domain.gender import (
+    DEFAULT_GENDER_PREFERENCE,
+    Gender,
+    GenderPreference,
 )
 from app.modules.player_profile.domain.location import LocationArea
 from app.modules.player_profile.domain.profile import (
@@ -68,6 +75,7 @@ def a_profile(**overrides) -> PlayerProfile:
         ),
         location=LocationArea.around(51.5074, -0.1278),
         search_radius=SearchRadius.chosen(kilometres=10),
+        gender=Gender.WOMAN,
         proposals_opt_in_accepted=True,
         consent_copy_version="proposals-2026-08",
         consent_surface=ConsentSurface.ONBOARDING,
@@ -134,6 +142,8 @@ def test_a_created_profile_replays_to_itself():
         profile.search_radius,
         profile.proposals_opt_in,
         profile.idempotency_key,
+        profile.gender,
+        profile.gender_preference,
     )
 
     rebuilt = replayed(profile)
@@ -145,6 +155,8 @@ def test_a_created_profile_replays_to_itself():
         rebuilt.search_radius,
         rebuilt.proposals_opt_in,
         rebuilt.idempotency_key,
+        rebuilt.gender,
+        rebuilt.gender_preference,
     ) == expected
     assert rebuilt.version == 2, "two events, two versions"
 
@@ -203,6 +215,8 @@ def test_each_preference_has_its_own_change_event():
     profile.change_availability(AvailabilityGrid.blank(), occurred_at=LATER)
     profile.change_location(LocationArea.around(48.85, 2.35), occurred_at=LATER)
     profile.change_search_radius(SearchRadius.chosen(kilometres=25), occurred_at=LATER)
+    profile.change_gender(Gender.PREFER_NOT_TO_SAY, occurred_at=LATER)
+    profile.change_gender_preference(GenderPreference.WOMEN_ONLY, occurred_at=LATER)
 
     assert [type(event) for event in profile.pull_events()] == [
         SocialTagsChanged,
@@ -210,6 +224,8 @@ def test_each_preference_has_its_own_change_event():
         AvailabilityChanged,
         LocationChanged,
         SearchRadiusChanged,
+        GenderChanged,
+        GenderPreferenceChanged,
     ]
 
 
@@ -219,14 +235,12 @@ def test_a_preference_set_to_what_it_already_is_records_nothing():
 
     profile = replayed(a_profile())
 
-    profile.change_social_tags(
-        SocialTagSelection.from_ids(TAGS), occurred_at=LATER
-    )
+    profile.change_social_tags(SocialTagSelection.from_ids(TAGS), occurred_at=LATER)
     profile.change_search_radius(SearchRadius.chosen(kilometres=10), occurred_at=LATER)
-    profile.change_location(
-        LocationArea.around(51.5074, -0.1278), occurred_at=LATER
-    )
+    profile.change_location(LocationArea.around(51.5074, -0.1278), occurred_at=LATER)
     profile.change_photos([], occurred_at=LATER)
+    profile.change_gender(Gender.WOMAN, occurred_at=LATER)
+    profile.change_gender_preference(DEFAULT_GENDER_PREFERENCE, occurred_at=LATER)
 
     assert profile.pull_events() == []
 
@@ -264,9 +278,7 @@ def test_the_standing_answer_is_the_latest_one_and_the_history_is_the_stream():
 
     assert rebuilt.proposals_opt_in is not None
     assert rebuilt.proposals_opt_in.accepted is False
-    answers = [
-        event for event in events if isinstance(event, ProposalsOptInAnswered)
-    ]
+    answers = [event for event in events if isinstance(event, ProposalsOptInAnswered)]
     assert [answer.accepted for answer in answers] == [True, False], (
         "both answers survive — the change is appended, never applied over the "
         "top of the one it replaces"
@@ -344,3 +356,114 @@ def test_a_profile_cannot_be_created_without_an_opt_in_answer():
 
     with pytest.raises(InvariantViolated):
         a_profile(proposals_opt_in_accepted=None)
+
+
+# ---------------------------------------------------------------------------
+# Gender, and the two things its absence must never be confused with
+# ---------------------------------------------------------------------------
+
+
+def test_the_creating_event_carries_the_gender_answer_and_the_preference():
+    """Both are on the *creating* event and neither gets a commit of its own:
+    gender is required at profile creation (``docs/adr/0096``), and profile
+    creation is one request."""
+
+    profile = a_profile(gender=Gender.MAN, gender_preference=GenderPreference.MEN_ONLY)
+
+    created, _consent = profile.pull_events()
+
+    assert created.gender == "MAN"
+    assert created.gender_preference == "MEN_ONLY"
+
+
+def test_a_profile_that_names_no_preference_is_created_holding_any():
+    """The asymmetry ADR-0096 draws: the answer about oneself is required, the
+    preference over others is optional and *no constraint* is what its absence
+    already means."""
+
+    profile = a_profile()
+
+    assert profile.gender_preference is DEFAULT_GENDER_PREFERENCE
+    assert profile.pull_events()[0].gender_preference == "ANY"
+
+
+def test_prefer_not_to_say_is_an_answer_and_is_recorded_as_one():
+    """It is not a null and not a skip. A player who chooses it has answered,
+    and the event says so in the same field every other answer uses."""
+
+    profile = a_profile(gender=Gender.PREFER_NOT_TO_SAY)
+
+    assert profile.pull_events()[0].gender == "PREFER_NOT_TO_SAY"
+
+
+def test_a_profile_committed_before_the_question_existed_holds_no_gender():
+    """The fold must keep absence absent.
+
+    This is the stream of a profile created before ADR-0096 — the creating event
+    exactly as it was written, with the two fields that did not exist then still
+    unset. Folding that into ``PREFER_NOT_TO_SAY`` would have the profile claim
+    an answer nobody gave, and a gate downstream would then read a fabricated
+    self-declaration as a real one.
+    """
+
+    before_the_question_existed = PlayerProfileCreated(
+        player_id=PLAYER,
+        social_tags=TAGS,
+        photo_ids=(),
+        availability=("2:EVENING",),
+        latitude=51.51,
+        longitude=-0.13,
+        search_radius_km=10,
+        idempotency_key="commit-1",
+        occurred_at=CREATED_AT,
+    )
+
+    profile = PlayerProfile.from_history([before_the_question_existed])
+
+    assert profile.gender is None
+    # The preference is not the same case: optional, and `ANY` is what never
+    # having expressed one *is*.
+    assert profile.gender_preference is GenderPreference.ANY
+
+
+def test_answering_for_the_first_time_on_an_older_profile_is_a_change():
+    """Which is what makes ADR-0096's *existing players are asked on next open*
+    reachable at all: there is no value to be equal to, so the no-op rule does
+    not swallow the first answer."""
+
+    profile = PlayerProfile.from_history(
+        [
+            PlayerProfileCreated(
+                player_id=PLAYER,
+                social_tags=TAGS,
+                photo_ids=(),
+                availability=("2:EVENING",),
+                latitude=51.51,
+                longitude=-0.13,
+                search_radius_km=10,
+                idempotency_key="commit-1",
+                occurred_at=CREATED_AT,
+            )
+        ]
+    )
+
+    profile.change_gender(Gender.WOMAN, occurred_at=LATER)
+
+    assert [type(event) for event in profile.pull_events()] == [GenderChanged]
+    assert profile.gender is Gender.WOMAN
+
+
+def test_gender_and_the_preference_replay_from_their_own_events():
+    """*Self-declared, freely changed* is a property of the stream, not of a
+    setter: the latest event of each kind is the state."""
+
+    profile = replayed(a_profile(gender=Gender.WOMAN))
+    profile.change_gender(Gender.MAN, occurred_at=LATER)
+    profile.change_gender_preference(GenderPreference.MEN_ONLY, occurred_at=LATER)
+
+    rebuilt = PlayerProfile.from_history(
+        a_profile(gender=Gender.WOMAN).pull_events() + profile.pull_events()
+    )
+
+    assert rebuilt.gender is Gender.MAN
+    assert rebuilt.gender_preference is GenderPreference.MEN_ONLY

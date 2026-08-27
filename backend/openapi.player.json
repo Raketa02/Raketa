@@ -631,7 +631,7 @@
           "player-profile"
         ],
         "summary": "Commit every answer from onboarding's second part",
-        "description": "Idempotent per `Idempotency-Key`. The same key twice creates one profile and returns the same body \u2014 the second call answers 200 and records nothing.\n\n**Every rule the picker enforced is re-validated here.** The tag vocabulary, the tag floor and ceiling and the radius bounds are all served by `GET /player-profile/options` so a client can build controls that cannot produce an illegal value \u2014 and a disabled button is not a validation. Photo ids are checked to exist *and* to belong to the caller.\n\n**The availability grid is required**, at least one of its twenty-one cells. Silence about when a player usually plays is never scored as a zero, so it is asked for rather than guessed at. The minimum is exactly one and is not served \u2014 it is fixed, and a client holds it as a constant.\n\n**The proposals opt-in has no default.** Send the player's actual answer; `null` is refused rather than treated as a no. The answer is recorded with the moment, the copy version shown and the surface, because consent is evidenced rather than asserted.",
+        "description": "Idempotent per `Idempotency-Key`. The same key twice creates one profile and returns the same body \u2014 the second call answers 200 and records nothing.\n\n**Every rule the picker enforced is re-validated here.** The tag vocabulary, the tag floor and ceiling and the radius bounds are all served by `GET /player-profile/options` so a client can build controls that cannot produce an illegal value \u2014 and a disabled button is not a validation. Photo ids are checked to exist *and* to belong to the caller.\n\n**The availability grid is required**, at least one of its twenty-one cells. Silence about when a player usually plays is never scored as a zero, so it is asked for rather than guessed at. The minimum is exactly one and is not served \u2014 it is fixed, and a client holds it as a constant.\n\n**The proposals opt-in has no default.** Send the player's actual answer; `null` is refused rather than treated as a no. The answer is recorded with the moment, the copy version shown and the surface, because consent is evidenced rather than asserted.\n\n**`gender` is required and `gender_preference` is not.** The first is asked once, here, with `PREFER_NOT_TO_SAY` a first-class answer \u2014 there is no unanswered state to send, so a missing or unknown value is a 422 rather than a coded refusal. The second defaults to `ANY`, is durable, and gates **both directions**: narrowing it also hides this player from the side it excludes. Neither value ever comes back out of this API.",
         "operationId": "commit_player_profile_api_v1_players_me_profile_post",
         "security": [
           {
@@ -990,6 +990,15 @@
           },
           "proposals_opt_in": {
             "$ref": "#/components/schemas/ProposalsOptInRequest"
+          },
+          "gender": {
+            "$ref": "#/components/schemas/Gender",
+            "description": "The player's own answer, asked once. Required \u2014 `PREFER_NOT_TO_SAY` is a first-class answer and is what a player who does not want to say sends; there is no way to send nothing. It matches only unconstrained searches, which costs its holder reach, and the client is what says so at the moment of asking."
+          },
+          "gender_preference": {
+            "$ref": "#/components/schemas/GenderPreference",
+            "description": "Who this player is willing to be matched with. Optional, and `ANY` when it is not sent.\n\n**It is mutual and durable.** It governs what reaches this player as well as what this player sees, so narrowing it makes them invisible to the excluded side entirely \u2014 including to searchers who asked for anybody. The client must say so at the moment of setting; learning it from silence is not acceptable. A single search may narrow this further and nothing may widen past it.",
+            "default": "ANY"
           }
         },
         "type": "object",
@@ -998,7 +1007,8 @@
           "availability",
           "location",
           "search_radius_km",
-          "proposals_opt_in"
+          "proposals_opt_in",
+          "gender"
         ],
         "title": "CommitPlayerProfileRequest",
         "description": "Every answer from onboarding's second part, in one body.\n\n**Photos are the only field with a default**, because holding none is a\nlegitimate answer to *add some photos*. Everything else is something this\nrequest must actually carry \u2014 a location, a radius, a tag selection, an\nanswer to the proposals question, and **a week with something ticked in it**\n(``docs/adr/0102``).\n\nThe week's *floor* is not spelled here, and that is the same decision the tag\nselection's is: an empty list passes this schema and is refused by the domain\nwith ``availability_grid_empty``, so the client gets a code it can branch on\nand a recovery it can offer, rather than a 422 that can only say some field\nsomewhere was wrong."
@@ -1125,6 +1135,26 @@
         ],
         "title": "FactorResponse",
         "description": "One evidence category's row: what it says, and which way it pulled.\n\n``direction`` is one of ``up`` / ``down`` / ``neutral``, computed by the\nengine from that category's own evidence against the final estimate. The\nclient never derives it \u2014 a client-side arrow is a second opinion about the\narithmetic, and two clients would eventually hold two of them."
+      },
+      "Gender": {
+        "type": "string",
+        "enum": [
+          "WOMAN",
+          "MAN",
+          "PREFER_NOT_TO_SAY"
+        ],
+        "title": "Gender",
+        "description": "What a player says about themselves \u2014 self-declared, freely changed.\n\nPer person and never per sport, which is what keeps it on ``PlayerProfile``\nrather than beside a rating (ADR-0089's cardinality, unchanged).\n\nThis is **a statement about which searches a player wishes to appear in**,\nnot a ruling by the platform on who anybody is. A player whose identity is\nnot on this list picks the answer that puts them where they want to be seen,\nor takes ``PREFER_NOT_TO_SAY`` and appears in unconstrained searches only.\nThe platform adjudicates nothing."
+      },
+      "GenderPreference": {
+        "type": "string",
+        "enum": [
+          "WOMEN_ONLY",
+          "MEN_ONLY",
+          "ANY"
+        ],
+        "title": "GenderPreference",
+        "description": "Who a player is willing to be matched with \u2014 durable, not per search.\n\n**Durable rather than per-search because the gate is mutual.** It has to be\nevaluated against a player when somebody *else* searches and they are not\npresent, and a per-search setting cannot bind that direction at all. A\nper-search override may **narrow** this, never widen past it."
       },
       "HTTPValidationError": {
         "properties": {
@@ -1360,7 +1390,7 @@
           "updated_at"
         ],
         "title": "PlayerProfileResponse",
-        "description": "A player's profile as it now stands.\n\nThe same body whether the commit created the profile or replayed an earlier\none, so a client that only wants its profile needs no branch on the status.\n\n**Fields are only ever added.** A shipped mobile app parses this document for\nmonths after it stops being built."
+        "description": "A player's profile as it now stands.\n\nThe same body whether the commit created the profile or replayed an earlier\none, so a client that only wants its profile needs no branch on the status.\n\n**No gender value comes back out**, and that is a rule rather than an\noversight (``docs/adr/0096`` \u00a76): a preference crosses the wire *in*, on a\nsearch; no response shape carries a gender out and no card renders one.\nThis body is only ever the caller's own profile, so nothing here would leak\na third party's answer \u2014 the field is left off anyway, because the moment\none response shape carries it, *which* shapes may is a judgement call made\nper endpoint instead of a line nobody has to re-argue. Nothing reads it back\ntoday: onboarding sends it once, and there is no profile editor. When one\nexists, adding it here is an addition to this document and ADR-0096's\nticket's to make.\n\n**Fields are only ever added.** A shipped mobile app parses this document for\nmonths after it stops being built."
       },
       "ProposalsOptInRequest": {
         "properties": {

@@ -11,6 +11,13 @@ which are facts about somebody acting in the player app, not about an account.
 The identity behind both is the same ``UserId`` (``../../../../CONTEXT.md`` —
 *Player*), and the noun is the one the domain uses for what is being described.
 
+**The gender answer rides on this same commit** and does not get an endpoint of
+its own (``docs/adr/0096``): it is required at profile creation, and profile
+creation is one request. Which *screen* asks it, and where that screen sits in
+onboarding's second part, is ADR-0096's to design and is not decided here — what
+is decided here is only that the answer arrives with the others or the profile is
+not created.
+
 The `Idempotency-Key` header is required rather than optional, deliberately.
 This is the request a player makes once, at the end of six steps, on whatever
 connection they have — precisely the control that gets double-tapped and the
@@ -134,7 +141,14 @@ IdempotencyKeyDep = Annotated[
         "**The proposals opt-in has no default.** Send the player's actual "
         "answer; `null` is refused rather than treated as a no. The answer is "
         "recorded with the moment, the copy version shown and the surface, "
-        "because consent is evidenced rather than asserted."
+        "because consent is evidenced rather than asserted.\n\n"
+        "**`gender` is required and `gender_preference` is not.** The first is "
+        "asked once, here, with `PREFER_NOT_TO_SAY` a first-class answer — "
+        "there is no unanswered state to send, so a missing or unknown value "
+        "is a 422 rather than a coded refusal. The second defaults to `ANY`, "
+        "is durable, and gates **both directions**: narrowing it also hides "
+        "this player from the side it excludes. Neither value ever comes back "
+        "out of this API."
     ),
 )
 async def commit_player_profile(
@@ -154,6 +168,8 @@ async def commit_player_profile(
             latitude=payload.location.latitude,
             longitude=payload.location.longitude,
             search_radius_km=payload.search_radius_km,
+            gender=payload.gender,
+            gender_preference=payload.gender_preference,
             proposals_opt_in=payload.proposals_opt_in.accepted,
             consent_copy_version=payload.proposals_opt_in.copy_version,
             # The surface is this route's own fact, not the client's to declare.

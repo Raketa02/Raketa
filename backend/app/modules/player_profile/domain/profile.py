@@ -7,7 +7,7 @@ the pull toward a sport dimension here is deliberate, and ADR-0090 depends on th
 cardinality: *does a Player profile exist* is a per-player question with a
 per-player answer, and it is what onboarding's second part is checkpointed on.
 
-**Creation is two events, not one.** ``PlayerProfileCreated`` carries the five
+**Creation is two events, not one.** ``PlayerProfileCreated`` carries the seven
 preferences; ``ProposalsOptInAnswered`` carries the consent. They are appended
 together, in one transaction, and a profile cannot be created without both —
 ``create`` takes the opt-in as a required argument and there is no way to reach
@@ -57,12 +57,19 @@ from app.modules.player_profile.domain.errors import (
 )
 from app.modules.player_profile.domain.events import (
     AvailabilityChanged,
+    GenderChanged,
+    GenderPreferenceChanged,
     LocationChanged,
     PhotosChanged,
     PlayerProfileCreated,
     ProposalsOptInAnswered,
     SearchRadiusChanged,
     SocialTagsChanged,
+)
+from app.modules.player_profile.domain.gender import (
+    DEFAULT_GENDER_PREFERENCE,
+    Gender,
+    GenderPreference,
 )
 from app.modules.player_profile.domain.location import LocationArea
 from app.modules.player_profile.domain.search_radius import SearchRadius
@@ -108,6 +115,19 @@ class PlayerProfile:
     availability: AvailabilityGrid
     location: LocationArea
     search_radius: SearchRadius
+    #: The player's own answer to the gender question (``docs/adr/0096``).
+    #:
+    #: ``None`` is **not** an answer and is unreachable through ``create``: it
+    #: is a profile committed before anybody was asked, and the only way to hold
+    #: one is to replay such a stream. It is never read as
+    #: ``PREFER_NOT_TO_SAY``, which is a player's own choice — a gate that
+    #: cannot be evaluated excludes rather than guesses
+    #: (``../../../../CONTEXT.md``, via ADR-0095), and that rule is the reason
+    #: the absence is kept distinguishable instead of being folded away here.
+    gender: Gender | None
+    #: Who this player is willing to be matched with. Optional and defaulting to
+    #: ``ANY``, so unlike ``gender`` there is nothing for its absence to mean.
+    gender_preference: GenderPreference
     #: The latest answer. Never ``None`` on a created profile — ``create``
     #: requires one — but the field is optional because ``_empty`` exists before
     #: any event has been applied.
@@ -156,6 +176,8 @@ class PlayerProfile:
         availability: AvailabilityGrid,
         location: LocationArea,
         search_radius: SearchRadius,
+        gender: Gender,
+        gender_preference: GenderPreference = DEFAULT_GENDER_PREFERENCE,
         proposals_opt_in_accepted: bool,
         consent_copy_version: str,
         consent_surface: ConsentSurface,
@@ -173,6 +195,15 @@ class PlayerProfile:
         The opt-in arrives as its three primitive facts rather than as a
         ``ProposalsOptIn``, because the moment is the event's ``occurred_at`` and
         assembling the record here is what guarantees the two cannot disagree.
+
+        **``gender`` is required and ``gender_preference`` is not**, and the
+        asymmetry is ADR-0096's: the answer about oneself is asked once, here,
+        with ``PREFER_NOT_TO_SAY`` a first-class choice — because optional
+        collection silently shrinks the constrained pool at exactly the moment
+        the pool is smallest — while a preference over others defaults to
+        ``ANY``, which is what *no constraint* already means. Requiring it is
+        enforced by the type: there is no value of ``Gender`` that means
+        *unanswered*, so there is no branch here to forget.
         """
 
         ordered_photos = photo_order(photo_ids)
@@ -189,6 +220,8 @@ class PlayerProfile:
                 search_radius_km=search_radius.kilometres,
                 idempotency_key=idempotency_key,
                 occurred_at=occurred_at,
+                gender=gender.value,
+                gender_preference=gender_preference.value,
             )
         )
         # Appended by the creating commit exactly as a later change appends it,
@@ -221,9 +254,7 @@ class PlayerProfile:
             )
         )
 
-    def change_photos(
-        self, photo_ids: Sequence[UUID], *, occurred_at: Instant
-    ) -> None:
+    def change_photos(self, photo_ids: Sequence[UUID], *, occurred_at: Instant) -> None:
         ordered = photo_order(photo_ids)
         if ordered == self.photo_ids:
             return
@@ -269,6 +300,50 @@ class PlayerProfile:
             SearchRadiusChanged(
                 player_id=self.player_id,
                 search_radius_km=radius.kilometres,
+                occurred_at=occurred_at,
+            )
+        )
+
+    def change_gender(self, gender: Gender, *, occurred_at: Instant) -> None:
+        """Record a new answer to the gender question.
+
+        Gender is *"self-declared, freely changed"* (``docs/adr/0096``), so this
+        exists from the day the field does rather than being a later addition —
+        a value a player may not correct is a value the platform has ruled on,
+        which is the one thing this field is not.
+
+        A no-op when nothing moved, like every preference beside it. A profile
+        replayed from a stream older than the field holds ``None``, and
+        answering it for the first time is therefore a change and records one.
+        """
+
+        if gender == self.gender:
+            return
+        self._record_that(
+            GenderChanged(
+                player_id=self.player_id,
+                gender=gender.value,
+                occurred_at=occurred_at,
+            )
+        )
+
+    def change_gender_preference(
+        self, preference: GenderPreference, *, occurred_at: Instant
+    ) -> None:
+        """Record a new durable answer to *who am I willing to play with*.
+
+        **Durable rather than per search**, because the gate it feeds is mutual:
+        it is evaluated against this player when somebody else searches and this
+        player is not present, which a per-search setting could not bind at all.
+        A single search may narrow this; nothing may widen past it.
+        """
+
+        if preference == self.gender_preference:
+            return
+        self._record_that(
+            GenderPreferenceChanged(
+                player_id=self.player_id,
+                gender_preference=preference.value,
                 occurred_at=occurred_at,
             )
         )
@@ -319,6 +394,11 @@ class PlayerProfile:
                 latitude=event.latitude, longitude=event.longitude
             )
             self.search_radius = SearchRadius.recorded(event.search_radius_km)
+            # Absent stays absent. A stream written before the question existed
+            # decodes with ``gender`` unset, and folding that into a value would
+            # make the profile claim an answer nobody gave.
+            self.gender = Gender(event.gender) if event.gender is not None else None
+            self.gender_preference = GenderPreference(event.gender_preference)
             self.idempotency_key = event.idempotency_key
             self.created_at = instant(event.occurred_at)
             self._touch(event.occurred_at)
@@ -343,6 +423,14 @@ class PlayerProfile:
             return
         if isinstance(event, SearchRadiusChanged):
             self.search_radius = SearchRadius.recorded(event.search_radius_km)
+            self._touch(event.occurred_at)
+            return
+        if isinstance(event, GenderChanged):
+            self.gender = Gender(event.gender)
+            self._touch(event.occurred_at)
+            return
+        if isinstance(event, GenderPreferenceChanged):
+            self.gender_preference = GenderPreference(event.gender_preference)
             self._touch(event.occurred_at)
             return
         if isinstance(event, ProposalsOptInAnswered):
