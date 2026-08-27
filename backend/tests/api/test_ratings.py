@@ -16,6 +16,7 @@ BOB = {
     "password1": "hunter22!",
     "password2": "hunter22!",
     "nickname": "bob",
+    "adult_attested": True,
 }
 
 

@@ -157,6 +157,7 @@ async def test_a_rejected_body_never_echoes_what_was_sent(client):
             "password1": "hunter22!",
             "password2": "hunter22!",
             "nickname": "alice",
+            "adult_attested": True,
         },
     )
 

@@ -267,6 +267,11 @@ async def _ensure_registered(
             email=account.email,
             nickname=account.nickname,
             password=SEED_PASSWORD,
+            # A seeded account attests like any other, because it is registered
+            # through the aggregate rather than around it (``docs/adr/0029``).
+            # The claim is the fixture's, made on behalf of a player who does
+            # not exist, and it never leaves a developer's machine.
+            adult_attested=True,
         )
     )
     return user.id, True

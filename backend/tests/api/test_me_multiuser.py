@@ -8,12 +8,14 @@ async def test_me_returns_distinct_user_per_token(client):
         "password1": "hunter22!",
         "password2": "hunter22!",
         "nickname": "alice",
+        "adult_attested": True,
     }
     bob = {
         "email": "bob@example.com",
         "password1": "hunter22!",
         "password2": "hunter22!",
         "nickname": "bob",
+        "adult_attested": True,
     }
 
     a_signup = await client.post("/api/v1/users", json=alice)

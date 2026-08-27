@@ -180,8 +180,23 @@ Identity and account state.
 - **RawPassword** — the plaintext at the boundary; 8–128 chars with ≥1 letter and ≥1
   digit. Carrying it as a type is what prevents hashing an unchecked string.
 - **HashedPassword** — non-empty bcrypt hash; the only password form ever persisted.
+- **Adult attestation** — the player's own claim, given at sign-up, that they are an adult.
+  **One boolean, and never a date of birth.** The platform is adults only, and that is a
+  precondition of *holding an account* rather than a gate on who may be shown to whom
+  ([ADR-0124](docs/adr/0124-the-matcher-gates-account-state-never-age.md)) — *may you hold an
+  account* and *may these two be shown to each other* are different questions belonging to
+  different contexts. It is a value object that cannot be constructed from a missing or
+  negative answer, so no registration exists without one.
+  **It is not age verification** and claims nothing of the sort: it records that the question
+  was asked and answered. Nothing downstream ever asks *how old* — only *may they be here* —
+  so there is no age, band or date anywhere in the system to read, and the candidate index
+  fails its build if a date of birth appears.
 - **User events** (durable name / version):
-  - **UserRegistered** — `users.user_registered` / v1 — first event of every stream.
+  - **UserRegistered** — `users.user_registered` / v1 — first event of every stream. Carries
+    the **Adult attestation** as an optional boolean appended after `occurred_at`: `true` is
+    the attestation, and **absent means the account was registered before the question
+    existed**, never a quieter *no*. There is no backfill — inventing a claim nobody made is
+    the one thing an attestation must not do.
   - **UserDisabled** — `users.user_disabled` / v1.
   - **UserPromotedToAdmin** — `users.user_promoted_to_admin` / v1.
 
@@ -189,6 +204,11 @@ Identity and account state.
 - Email and nickname are **unique** — `RegisterUser` reads both before insert and
   raises `EmailAlreadyRegistered` / `NicknameAlreadyTaken` (a domain conflict, not a
   database constraint violation).
+- **An account requires an Adult attestation, and a default is not one.** `RegisterUser`
+  refuses without it — `AdultAttestationRequired`, a 400 — before it reads the email or the
+  nickname, so a caller who answered nothing learns nothing about which of either is taken.
+  The client writes the sentence; the backend only names the code
+  ([ADR-0022](docs/adr/0022-kernel-negative-space-and-constant-homes.md)).
 - **`disable()` is idempotent** — a no-op on an already-inactive user.
 - **An inactive user cannot be promoted** — raises `InactiveUserCannotBePromoted`.
 - `promote_to_admin()` is a no-op if already `ADMIN`.

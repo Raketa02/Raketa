@@ -1966,6 +1966,11 @@
             "minLength": 2,
             "pattern": "^[A-Za-z0-9_.-]+$",
             "title": "Nickname"
+          },
+          "adult_attested": {
+            "type": "boolean",
+            "title": "Adult Attested",
+            "description": "The player's own claim that they are an adult. Required, and required to be `true`: the platform is adults only and that is a precondition of holding an account. `false` is refused with `adult_attestation_required`, and the client writes the sentence. **Not a date of birth and not age verification** \u2014 this records that the question was asked and answered, and nothing more."
           }
         },
         "type": "object",
@@ -1973,7 +1978,8 @@
           "email",
           "password1",
           "password2",
-          "nickname"
+          "nickname",
+          "adult_attested"
         ],
         "title": "UserCreateRequest"
       },
