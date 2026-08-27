@@ -366,6 +366,62 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/blocks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Block a player
+         * @description The two of you disappear from each other's view everywhere, immediately, silently, in **both** directions.
+         *
+         *     **Idempotent.** Blocking somebody already blocked records nothing and answers 204.
+         *
+         *     **No cap, no cooldown and no rate limit**, and none will be added.
+         *
+         *     **There is no reason field.** A reason belongs to a report, and this is not one.
+         *
+         *     **Neither side is notified**, in either direction, and no response in this API reveals a block to the blocked party.
+         *
+         *     **The record is directed and the effect is symmetric.** Your block of them and their block of you are independent: lifting yours never lifts theirs, and neither of you can discover which way one went.
+         *
+         *     **It is forward-looking.** It removes each of you from the other's future listings; it does not reach into anything already agreed.
+         */
+        post: operations["block_player_api_v1_blocks_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/blocks/{player_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Unblock a player
+         * @description Lifts **your** block of this player, immediately.
+         *
+         *     **It lifts one direction.** If they have also blocked you, that block stands and the two of you stay invisible to each other — and nothing here tells you so.
+         *
+         *     **Idempotent, and it never 404s.** Unblocking somebody you never blocked answers 204 and records nothing, because a different answer would be this API reporting on somebody else's state.
+         */
+        delete: operations["unblock_player_api_v1_blocks__player_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -436,6 +492,34 @@ export interface components {
             /** Upper */
             upper: number;
         };
+        /**
+         * BlockPlayerRequest
+         * @description *Do not show me this person again.*
+         *
+         *     ``surface`` is a closed set the client already holds — the four screens that
+         *     show one player to another — and it is validated here rather than by the
+         *     domain because there is no served vocabulary for a client to hold a stale
+         *     version of. Nothing branches on it.
+         *
+         *     **There is no reason field and there never will be.** A reason for a block
+         *     belongs to a Report, and a request shape is where one would be added first.
+         */
+        BlockPlayerRequest: {
+            /**
+             * Player Id
+             * Format: uuid
+             * @description The player to block. The blocker is the authenticated caller and is never sent.
+             */
+            player_id: string;
+            /** @description Which screen the block was made from. Recorded as context; no rule reads it. */
+            surface: components["schemas"]["BlockSurface"];
+        };
+        /**
+         * BlockSurface
+         * @description The four surfaces of `search-telemetry.md` §2, as a block records them.
+         * @enum {string}
+         */
+        BlockSurface: "SHORTLIST" | "LINEUP" | "FILL_SEATS" | "DECK";
         /**
          * CommitPlayerProfileRequest
          * @description Every answer from onboarding's second part, in one body.
@@ -1747,6 +1831,84 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["PhotoResponse"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    block_player_api_v1_blocks_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BlockPlayerRequest"];
+            };
+        };
+        responses: {
+            /** @description The block stands. Also the answer when it already stood — blocking is idempotent and a second call records nothing. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `cannot_block_yourself` — the caller named themselves as the other party. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `concurrent_modification` — two blocks of this player raced and this one lost. Retry: the retry is the idempotent no-op. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unblock_player_api_v1_blocks__player_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                player_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Your block of this player is lifted. Also the answer when there was nothing to lift — the two cases are deliberately indistinguishable. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

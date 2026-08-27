@@ -35,6 +35,8 @@ import pytest
 from app.bootstrap.composition import (
     build_assessment_engine,
     build_assessment_repository,
+    build_block_query,
+    build_block_repository,
     build_clock,
     build_domain_event_store,
     build_event_publisher,
@@ -149,6 +151,11 @@ async def test_every_port_is_built_from_a_session_and_the_settings(session_facto
             # durable contract landed with #182 so the candidate index has an
             # event to read, while ADR-0094's write path is its own build.
             build_play_intent_declaration_repository(event_store=store, events=events),
+            # Also declared before their first caller: every surface that shows
+            # one player to another consults `BlockQuery` (`docs/adr/0095` §7),
+            # and none of those surfaces is built.
+            build_block_repository(event_store=store, events=events),
+            build_block_query(session),
             # No session: photos are bytes in an object store, not rows. What
             # they need instead is the settings — the bucket and which store —
             # which is the other half of what this module promises a caller

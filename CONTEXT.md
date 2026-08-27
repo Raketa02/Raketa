@@ -29,12 +29,13 @@ These are the authority for their terms. There is no Part 2: after the reset, no
 committed ahead of *a decision*, and a speculative list of context names is not one. A
 context that does not appear below has no vocabulary yet — resolve its terms into this file
 before writing it, which is what the last three sections below are: **Player profile** is
-settled in an accepted ADR and is being built, and **Blocks** and **Matchmaking** are settled
-in accepted ADRs and are not built at all. Their terms are here because that is the order
-this file asks for, not because the code landed first. **Player Score** is a further step out
-again: nothing about it is decided, and it appears only because the matcher has contracted six
-words it will read, and the words are the player's, not the matcher's. Every other section describes code
-that exists in `backend/app/` today.
+settled in an accepted ADR and is being built, **Blocks** is settled in an accepted ADR and
+is now built, and **Matchmaking** is settled in accepted ADRs and is not built at all. Their
+terms are here because that is the order this file asks for, not because the code landed
+first. **Player Score** is a further step out again: nothing about it is decided, and it
+appears only because the matcher has contracted six words it will read, and the words are
+the player's, not the matcher's. Every other section describes code that exists in
+`backend/app/` today.
 
 ### Skill rating (`backend/app/modules/rating/`)
 
@@ -427,8 +428,9 @@ of the code because this file asks for them in that order.
 ### Blocks (`backend/app/modules/blocks/`)
 
 One player deciding they do not want to be shown another, ever again. Settled by
-[ADR-0095](docs/adr/0095-block-directed-record-symmetric-effect-gates-fail-closed.md); not
-yet built.
+[ADR-0095](docs/adr/0095-block-directed-record-symmetric-effect-gates-fail-closed.md) and
+**built**: the aggregate, its two events, the `BlockQuery` port and two routes. The surfaces
+that will consult the port do not exist yet, which is why it is wired and has no caller.
 
 - **Block** — an **event-sourced aggregate**, one stream per **ordered** `(blocker, blocked)`
   pair, with a deterministic stream id derived from that pair. **The record is directed; the
@@ -439,9 +441,19 @@ yet built.
 - **Block events** (durable name / version):
   - **PlayerBlocked** — `blocks.player_blocked` / v1 — the pair and the surface it was made
     from. **No reason, and no free text.**
+    - **Block surface** — which of the four screens that show one player to another the block
+      was made from: `SHORTLIST`, `LINEUP`, `FILL_SEATS`, `DECK` — the same roster
+      [`search-telemetry.md`](docs/specs/matchmaking/search-telemetry.md) §2 calls **Surface**,
+      and deliberately not extended. Client-asserted context recorded beside the fact; **no
+      rule reads it**, in the shape of the Play intent surface. Unblocking records none,
+      because it happens in one place.
   - **PlayerUnblocked** — `blocks.player_unblocked` / v1 — the pair.
 - **BlockQuery** — the port that answers *is either of these two blocked by the other*. One
-  port, consulted by every surface that shows one player to another.
+  port, consulted by every surface that shows one player to another, in two shapes: the
+  searcher's whole **exclusion set** for generation, and the **pairwise** question for
+  re-verifying a row before a response leaves. **It fails closed** — it raises rather than
+  answering *nobody is blocked* when it cannot read the state, because an empty answer it
+  cannot stand behind is a safety control switching itself off under load.
 - **Hold** — the platform stopping a player from starting anything new while an unsettled case
   is open against them. A **held account** is an account under a Hold. Nothing can place one
   today, because the `cases` context does not exist.

@@ -831,6 +831,108 @@
           }
         }
       }
+    },
+    "/api/v1/blocks": {
+      "post": {
+        "tags": [
+          "blocks"
+        ],
+        "summary": "Block a player",
+        "description": "The two of you disappear from each other's view everywhere, immediately, silently, in **both** directions.\n\n**Idempotent.** Blocking somebody already blocked records nothing and answers 204.\n\n**No cap, no cooldown and no rate limit**, and none will be added.\n\n**There is no reason field.** A reason belongs to a report, and this is not one.\n\n**Neither side is notified**, in either direction, and no response in this API reveals a block to the blocked party.\n\n**The record is directed and the effect is symmetric.** Your block of them and their block of you are independent: lifting yours never lifts theirs, and neither of you can discover which way one went.\n\n**It is forward-looking.** It removes each of you from the other's future listings; it does not reach into anything already agreed.",
+        "operationId": "block_player_api_v1_blocks_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BlockPlayerRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "The block stands. Also the answer when it already stood \u2014 blocking is idempotent and a second call records nothing."
+          },
+          "400": {
+            "description": "`cannot_block_yourself` \u2014 the caller named themselves as the other party.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`concurrent_modification` \u2014 two blocks of this player raced and this one lost. Retry: the retry is the idempotent no-op.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/blocks/{player_id}": {
+      "delete": {
+        "tags": [
+          "blocks"
+        ],
+        "summary": "Unblock a player",
+        "description": "Lifts **your** block of this player, immediately.\n\n**It lifts one direction.** If they have also blocked you, that block stands and the two of you stay invisible to each other \u2014 and nothing here tells you so.\n\n**Idempotent, and it never 404s.** Unblocking somebody you never blocked answers 204 and records nothing, because a different answer would be this API reporting on somebody else's state.",
+        "operationId": "unblock_player_api_v1_blocks__player_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "player_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Player Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Your block of this player is lifted. Also the answer when there was nothing to lift \u2014 the two cases are deliberately indistinguishable."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -952,6 +1054,38 @@
           "upper"
         ],
         "title": "BandResponse"
+      },
+      "BlockPlayerRequest": {
+        "properties": {
+          "player_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Player Id",
+            "description": "The player to block. The blocker is the authenticated caller and is never sent."
+          },
+          "surface": {
+            "$ref": "#/components/schemas/BlockSurface",
+            "description": "Which screen the block was made from. Recorded as context; no rule reads it."
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_id",
+          "surface"
+        ],
+        "title": "BlockPlayerRequest",
+        "description": "*Do not show me this person again.*\n\n``surface`` is a closed set the client already holds \u2014 the four screens that\nshow one player to another \u2014 and it is validated here rather than by the\ndomain because there is no served vocabulary for a client to hold a stale\nversion of. Nothing branches on it.\n\n**There is no reason field and there never will be.** A reason for a block\nbelongs to a Report, and a request shape is where one would be added first."
+      },
+      "BlockSurface": {
+        "type": "string",
+        "enum": [
+          "SHORTLIST",
+          "LINEUP",
+          "FILL_SEATS",
+          "DECK"
+        ],
+        "title": "BlockSurface",
+        "description": "The four surfaces of `search-telemetry.md` \u00a72, as a block records them."
       },
       "CommitPlayerProfileRequest": {
         "properties": {

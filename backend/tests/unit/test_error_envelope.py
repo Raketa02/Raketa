@@ -42,6 +42,7 @@ from app.shared.domain.errors import (
 # Imported for their side effect: every error module must be loaded before the
 # subclass walk below can see its classes.
 from app.modules.auth.domain import errors as auth_errors  # noqa: F401
+from app.modules.blocks.domain import errors as blocks_errors  # noqa: F401
 from app.modules.matchmaking.domain import (  # noqa: F401
     errors as matchmaking_errors,
 )

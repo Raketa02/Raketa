@@ -647,7 +647,17 @@ class FailPosture(str, Enum):
 #: blocks fail **closed** beside the two gates here, while the exposure and
 #: suppression ledgers fail **soft**, because applying *a gate that cannot be
 #: evaluated excludes* to a courtesy would empty the deck rather than protect
-#: anybody. They join this table when they are built.
+#: anybody. The ledgers join this table when they are built.
+#:
+#: **Blocks are built and are deliberately not a row here** (#203). Every port
+#: below is one the *matcher* declares of a context it does not write, and its
+#: posture is the matcher's reading of somebody else's fact. ``BlockQuery`` is
+#: the other arrangement: ADR-0095 §7 makes it the Blocks context's **own** port,
+#: declared once and consulted by every surface that shows one player to another,
+#: and its fail-closed posture is asserted where the port lives
+#: (``modules/blocks/domain/ports.py``) rather than restated per consumer. A
+#: second declaration of it here would be a second place for that posture to be
+#: set, which is the failure this table exists to prevent.
 #: ``AtStakeQuery``'s row is **derived rather than quoted** — the spec's table
 #: predates the port and has no line for it. It follows from what the card does:
 #: an unanswerable at-stake block is simply not drawn, which is what the card

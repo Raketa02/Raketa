@@ -54,6 +54,13 @@ from app.modules.auth.infrastructure.password_hasher import BcryptPasswordHasher
 from app.modules.auth.infrastructure.sqlalchemy_refresh_token_repository import (
     SqlAlchemyRefreshTokenRepository,
 )
+from app.modules.blocks.domain.ports import BlockQuery, BlockRepository
+from app.modules.blocks.infrastructure.event_sourced_block_query import (
+    EventSourcedBlockQuery,
+)
+from app.modules.blocks.infrastructure.event_sourced_block_repository import (
+    EventSourcedBlockRepository,
+)
 from app.modules.matchmaking.domain.ports import (
     AccountHoldQuery,
     AccountStatusQuery,
@@ -181,6 +188,47 @@ def build_refresh_token_repository(session: AsyncSession) -> RefreshTokenReposit
 
 def build_user_repository(session: AsyncSession) -> UserRepository:
     return SqlAlchemyUserRepository(session)
+
+
+# --------------------------------------------------------------------------
+# Blocks
+# --------------------------------------------------------------------------
+
+
+def build_block_repository(
+    *,
+    event_store: DomainEventStore,
+    events: DomainEventPublisher,
+) -> BlockRepository:
+    """Per unit of work, for the same reason every aggregate repository is.
+
+    It remembers the stream versions it loaded, so it must never be longer-lived
+    than the transaction it was built beside: one request's versions must never
+    answer for another's.
+    """
+    return EventSourcedBlockRepository(event_store=event_store, events=events)
+
+
+def build_block_query(
+    session: AsyncSession,
+    *,
+    runtime: EventRuntime | None = None,
+) -> BlockQuery:
+    """The one place a block is read, and the only implementation there will be.
+
+    Over the **log**, because ``docs/adr/0095`` §4 dropped the advisory copy: the
+    candidate index holds no block data at all, so there is no projection to
+    choose between. It takes the codec from the event runtime rather than
+    declaring the durable names a second time, for the reason the candidate index
+    tail does — a re-declared published contract drifts silently.
+
+    **Declared before its first caller exists**, deliberately: every surface that
+    shows one player to another consults this port (``docs/adr/0095`` §7) and
+    none of them is built. This line is what those surfaces wire to rather than
+    re-deciding, and it is one line so the re-decision never happens somewhere
+    else.
+    """
+    return EventSourcedBlockQuery(session, (runtime or get_event_runtime()).codec)
 
 
 # --------------------------------------------------------------------------
