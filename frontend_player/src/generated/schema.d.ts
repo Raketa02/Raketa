@@ -307,7 +307,7 @@ export interface paths {
          *
          *     **Every rule the picker enforced is re-validated here.** The tag vocabulary, the tag floor and ceiling and the radius bounds are all served by `GET /player-profile/options` so a client can build controls that cannot produce an illegal value — and a disabled button is not a validation. Photo ids are checked to exist *and* to belong to the caller.
          *
-         *     **An empty availability grid is accepted.** Blank means no preference; it is never read as *leave me out*, and it excludes the player from nothing.
+         *     **The availability grid is required**, at least one of its twenty-one cells. Silence about when a player usually plays is never scored as a zero, so it is asked for rather than guessed at. The minimum is exactly one and is not served — it is fixed, and a client holds it as a constant.
          *
          *     **The proposals opt-in has no default.** Send the player's actual answer; `null` is refused rather than treated as a no. The answer is recorded with the moment, the copy version shown and the surface, because consent is evidenced rather than asserted.
          */
@@ -438,11 +438,17 @@ export interface components {
          * CommitPlayerProfileRequest
          * @description Every answer from onboarding's second part, in one body.
          *
-         *     Photos and availability default to empty because both are legitimately
-         *     blank: a player may hold no photos, and **a blank week means "no preference"
-         *     and never "leave me out"**. Nothing else has a default — a location, a
-         *     radius, a tag selection and an answer to the proposals question are all
-         *     things this request must actually carry.
+         *     **Photos are the only field with a default**, because holding none is a
+         *     legitimate answer to *add some photos*. Everything else is something this
+         *     request must actually carry — a location, a radius, a tag selection, an
+         *     answer to the proposals question, and **a week with something ticked in it**
+         *     (``docs/adr/0102``).
+         *
+         *     The week's *floor* is not spelled here, and that is the same decision the tag
+         *     selection's is: an empty list passes this schema and is refused by the domain
+         *     with ``availability_grid_empty``, so the client gets a code it can branch on
+         *     and a recovery it can offer, rather than a 422 that can only say some field
+         *     somewhere was wrong.
          */
         CommitPlayerProfileRequest: {
             /**
@@ -457,9 +463,9 @@ export interface components {
             photo_ids?: string[];
             /**
              * Availability
-             * @description The cells of the week this player ticked. **An empty list is a valid answer** and means no preference — it is never read as unavailable. Repeated cells are collapsed.
+             * @description The cells of the week this player ticked. **At least one of the twenty-one** — an empty list is refused with `availability_grid_empty`. The minimum is exactly one and is not served: it is fixed, so a client holds it as a constant. Repeated cells are collapsed, and the floor is counted after that.
              */
-            availability?: components["schemas"]["AvailabilitySlotResource"][];
+            availability: components["schemas"]["AvailabilitySlotResource"][];
             location: components["schemas"]["LocationAreaResource"];
             /**
              * Search Radius Km
@@ -1594,6 +1600,8 @@ export interface operations {
              *     `duplicate_social_tag` — the same tag id arrived twice.
              *
              *     `search_radius_out_of_bounds` — outside the served range, or off its step.
+             *
+             *     `availability_grid_empty` — nothing ticked on the week. At least one of the twenty-one cells; the minimum is exactly one and is not served.
              *
              *     `proposals_opt_in_not_answered` — the answer was `null`. Ask the question; do not send `false` on the player's behalf.
              *

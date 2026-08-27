@@ -469,6 +469,24 @@ describe('a failed commit', () => {
     expect(screen).toHavePathname('/opt-in');
     expect(commits()).toHaveLength(1);
   });
+
+  it('asks for the week itself when the server refuses an empty one', async () => {
+    // The step will not continue on a blank grid, and the commit refuses one anyway — a
+    // disabled control is absent from a replayed request and from an older build. When the
+    // refusal arrives, *try again* is the one sentence that is not true: the identical body
+    // fails identically, so the screen names the answer and offers the step that takes it.
+    await reachTheFinish();
+    transport.on('POST', COMMIT_PATH, () => errorResponse(400, 'availability_grid_empty'));
+
+    fireEvent.press(finish());
+
+    expect(await screen.findByText(/One ticked slot of the twenty-one is enough/)).toBeTruthy();
+    expect(screen.queryByText(/Try again — this can only ever set you up once/)).toBeNull();
+
+    // And the way back, which is the half a player cannot do without.
+    fireEvent.press(screen.getByLabelText('Set when you usually play'));
+    await waitFor(() => expect(screen).toHavePathname('/availability'));
+  });
 });
 
 // ---------------------------------------------------------------------------

@@ -26,7 +26,13 @@ import { installTransport, type Transport, type Wire } from '@/test-support/tran
 import { DAY_PARTS, WEEKDAYS, WEEK_CELLS, everyCell } from '../domain/availabilityWeek';
 import { useProfileDraft } from '../store/profileDraft.store';
 
-import { cellLabel, dayLabel, dayPartHead } from './availabilityPresentation';
+import {
+  availabilityContinueLabel,
+  availabilityEyebrow,
+  cellLabel,
+  dayLabel,
+  dayPartHead,
+} from './availabilityPresentation';
 
 /** One rating: the first part is behind this player, and the second one is not. */
 const RATING: Wire['RatingResponse'] = {
@@ -182,14 +188,43 @@ describe('pressing a cell', () => {
 // ---------------------------------------------------------------------------
 
 describe('continuing', () => {
-  it('is offered at zero slots, and advances', async () => {
+  it('is closed at zero slots, and names what is missing rather than going grey alone', async () => {
+    // The floor ADR-0102 put on the week. A blank grid was being read as a *measured* zero
+    // by a matcher nobody had told, so the question is asked rather than guessed at.
     await reachTheAvailabilityStep();
+
+    const advance = screen.getByLabelText(availabilityContinueLabel({ kind: 'empty' }));
+    expect(advance.props.accessibilityState?.disabled).toBe(true);
+
+    fireEvent.press(advance);
+    expect(screen).toHavePathname('/availability');
+  });
+
+  it('opens on the first tick — one of twenty-one is the whole floor', async () => {
+    await reachTheAvailabilityStep();
+
+    fireEvent.press(screen.getByLabelText('Saturday morning'));
 
     const advance = screen.getByLabelText('Continue');
     expect(advance.props.accessibilityState?.disabled).toBeFalsy();
 
     fireEvent.press(advance);
     await waitFor(() => expect(screen).toHavePathname('/location'));
+  });
+
+  it('closes again if the player unticks their last slot', async () => {
+    // The floor blocks continuing, never correcting: the last cell comes off like any
+    // other, and what changes is the control rather than the press.
+    await reachTheAvailabilityStep();
+
+    fireEvent.press(screen.getByLabelText('Saturday morning'));
+    fireEvent.press(screen.getByLabelText('Saturday morning'));
+
+    expect(ticked()).toEqual([]);
+    expect(
+      screen.getByLabelText(availabilityContinueLabel({ kind: 'empty' })).props.accessibilityState
+        ?.disabled,
+    ).toBe(true);
   });
 
   it('is offered at twenty-one slots too', async () => {
@@ -217,10 +252,19 @@ describe('what the step says', () => {
   it('draws no prose around the grid at all', async () => {
     await reachTheAvailabilityStep();
 
-    expect(screen.queryByText(/no preference, never unavailable/i)).toBeNull();
+    expect(screen.queryByText(/never that you are unavailable/i)).toBeNull();
     expect(screen.queryByText('A preference, not a promise')).toBeNull();
     expect(screen.queryByText(/nobody ever sees this as a calendar/i)).toBeNull();
     expect(screen.queryByText(/Your ordinary week/)).toBeNull();
+  });
+
+  it('states the floor in the chrome, where a player reads it before pressing anything', async () => {
+    // A required answer is not a nudge, and a player facing a dead control deserves the
+    // sentence that explains it — the tag step's argument, and the same one here. The rule
+    // rides on the eyebrow rather than becoming a paragraph over the grid.
+    await reachTheAvailabilityStep();
+
+    expect(screen.getByText(availabilityEyebrow())).toBeTruthy();
   });
 
   it('counts nothing at a player either, ticked or not', async () => {
@@ -229,8 +273,6 @@ describe('what the step says', () => {
     fireEvent.press(screen.getByLabelText('Monday morning'));
 
     expect(screen.queryByText(/slot ticked/)).toBeNull();
-    // And an empty week still continues, which is what the cut footnote was there to say.
-    expect(screen.getByLabelText('Continue').props.accessibilityState?.disabled).toBeFalsy();
   });
 
   it('offers no clock time, no hour and no date anywhere', async () => {
@@ -273,6 +315,7 @@ describe('the week the player ticked', () => {
 
     fireEvent.press(screen.getByLabelText('Monday morning'));
     fireEvent.press(screen.getByLabelText('Continue'));
+
     await waitFor(() => expect(screen).toHavePathname('/location'));
 
     // Nothing is written until the one commit at the end of the part, which is what makes

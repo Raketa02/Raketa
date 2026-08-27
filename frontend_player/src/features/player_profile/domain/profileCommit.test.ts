@@ -39,12 +39,19 @@ describe('a draft with every answer given', () => {
     });
   });
 
-  it('is ready with no photos and a blank week', () => {
-    // Both are genuinely empty answers — a player may hold no photos, and a blank week
-    // means *no preference* and never *leave me out*. Reading either as unanswered would
-    // block a player on a question they already answered.
+  it('is ready with no photos', () => {
+    // Photos are a genuinely empty answer — a player may hold none — so reading an empty
+    // list as *unanswered* would block them on a question they already answered.
+    const standing = readyToCommit(recordAnswer(answeredDraft(), { photoIds: [] }));
+
+    expect(standing.kind).toBe('ready');
+  });
+
+  it('is ready on one ticked cell of twenty-one', () => {
+    // The floor is exactly one. One tick is a real answer, and the near-total absence of
+    // overlap that follows is a *measured* near-zero (ADR-0102).
     const standing = readyToCommit(
-      recordAnswer(answeredDraft(), { photoIds: [], availability: [] }),
+      recordAnswer(answeredDraft(), { availability: [{ day: 6, part: 'morning' }] }),
     );
 
     expect(standing.kind).toBe('ready');
@@ -79,6 +86,15 @@ describe('a draft still missing an answer', () => {
     expect(standing).toEqual({ kind: 'incomplete', missing: ['proposals-opt-in'] });
   });
 
+  it('names a week with nothing ticked', () => {
+    // The week stopped being a genuinely empty answer when ADR-0102 gave it a floor:
+    // silence about when a player usually plays is never scored, so it is asked for.
+    // Photos keep the exemption — none is still an answer to *add some photos*.
+    const standing = readyToCommit(recordAnswer(answeredDraft(), { availability: [] }));
+
+    expect(standing).toEqual({ kind: 'incomplete', missing: ['availability'] });
+  });
+
   it('names a radius that was never seeded', () => {
     // The radius step writes the served default the moment it knows it, so this is the
     // step that was never reached rather than a player who declined to choose.
@@ -92,7 +108,7 @@ describe('a draft still missing an answer', () => {
 
     expect(standing).toEqual({
       kind: 'incomplete',
-      missing: ['location', 'search-radius', 'proposals-opt-in'],
+      missing: ['availability', 'location', 'search-radius', 'proposals-opt-in'],
     });
   });
 });
@@ -103,7 +119,7 @@ describe('no part running at all', () => {
     // the part. Committing one would create a profile nobody was asked for.
     expect(readyToCommit(undefined)).toEqual({
       kind: 'incomplete',
-      missing: ['location', 'search-radius', 'proposals-opt-in'],
+      missing: ['availability', 'location', 'search-radius', 'proposals-opt-in'],
     });
   });
 });
@@ -111,7 +127,8 @@ describe('no part running at all', () => {
 describe('where a missing answer is fixed', () => {
   it('names the step that asked for it, never the one that noticed', () => {
     // The commit is only ever attempted from the last step, and the last step can fix
-    // exactly one of the three. The other two are somewhere behind it.
+    // exactly one of the four. The other three are somewhere behind it.
+    expect(STEP_THAT_ASKS.availability).toBe('availability');
     expect(STEP_THAT_ASKS.location).toBe('location');
     expect(STEP_THAT_ASKS['search-radius']).toBe('radius');
     expect(STEP_THAT_ASKS['proposals-opt-in']).toBe('opt-in');

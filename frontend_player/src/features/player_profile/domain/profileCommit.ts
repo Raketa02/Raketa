@@ -11,17 +11,22 @@
  * mapper simply cannot hold a missing answer — nothing downstream has to remember to check,
  * and no future caller can assemble a body out of a half-answered draft.
  *
- * ## The three that can be missing are the three the draft spells `| undefined`
+ * ## Three are the fields the draft spells `| undefined`, and the fourth is the week
  *
- * Photos and the week are never among them: both are genuinely empty answers, and reading
- * an empty list as *unanswered* would block a player on a question they have already
- * answered (`ProfileDraft` — *empty and absent are different*).
+ * **Photos are the only genuinely empty answer left.** A player may hold none, and reading
+ * an empty list as *unanswered* would block them on a question they have already answered
+ * (`ProfileDraft` — *empty and absent are different*). The week used to be read the same
+ * way and no longer is: ADR-0102 gave the grid a floor of one, because silence about when
+ * somebody usually plays is never scored — so an empty week is a question still to be
+ * answered rather than an answer of *no preference*. It is the one `MissingAnswer` that is
+ * a rule rather than an `undefined`, which is exactly what `ANSWER_HELD` is for.
  *
- * The tag selection is not among them either, and its absence here is deliberate. The floor
- * and the ceiling are **served** by `GET /player-profile/options`, so a rule that knows
- * nothing about them cannot enforce them; the picker refuses to continue below the floor
- * with the served number in hand, and the commit re-validates. What this file answers is
- * the narrower question a draft can answer on its own.
+ * The tag selection is still not among them, and its absence here is deliberate. That floor
+ * and ceiling are **served** by `GET /player-profile/options`, so a rule that knows nothing
+ * about them cannot enforce them; the picker refuses to continue below the floor with the
+ * served number in hand, and the commit re-validates. **The reason does not transfer to the
+ * week**: its minimum is not served — it is exactly one, fixed by the record — so this file
+ * can hold it, and `AVAILABILITY_FLOOR` is where it is written down once.
  *
  * ## What is missing is a list, not a boolean
  *
@@ -68,8 +73,18 @@ export interface ProfileCommit {
   readonly proposalsOptIn: ProposalsOptIn;
 }
 
+/**
+ * How many cells of the week a commit must carry. **One of the twenty-one.**
+ *
+ * A constant here rather than a served number, and that is the backend's call recorded on
+ * this side: it is fixed by ADR-0102 rather than owned by product, so it is held the way
+ * the photo cap is held and `GET /player-profile/options` does not carry it. The commit
+ * re-validates against the same one and refuses with `availability_grid_empty`.
+ */
+export const AVAILABILITY_FLOOR = 1;
+
 /** An answer the commit needs and the draft has not got. Named for the step that asks it. */
-export type MissingAnswer = 'location' | 'search-radius' | 'proposals-opt-in';
+export type MissingAnswer = 'availability' | 'location' | 'search-radius' | 'proposals-opt-in';
 
 export type CommitReadiness =
   /** Every answer is in. `commit` is the body, and it could not have been built without them. */
@@ -78,13 +93,18 @@ export type CommitReadiness =
   | { readonly kind: 'incomplete'; readonly missing: readonly MissingAnswer[] };
 
 /**
- * The three, in the order the steps ask for them, and how to tell whether a draft holds one.
+ * The four, in the order the steps ask for them, and how to tell whether a draft holds one.
  *
  * **One list and one order**, which is what the `missing` report is filtered out of — the
- * alternative was the three names written twice, kept in step by hand, and one edit away
+ * alternative was the four names written twice, kept in step by hand, and one edit away
  * from a screen sending a player back to the wrong step.
+ *
+ * Three of them are a field being present. The week is a **count**, which is why this is a
+ * table of predicates rather than a list of keys: an answer the draft can hold and still be
+ * short of needs somewhere to say so.
  */
 const ANSWER_HELD: Readonly<Record<MissingAnswer, (draft: ProfileDraft) => boolean>> = {
+  availability: (draft) => draft.availability.length >= AVAILABILITY_FLOOR,
   location: (draft) => draft.location !== undefined,
   'search-radius': (draft) => draft.searchRadiusKm !== undefined,
   'proposals-opt-in': (draft) => draft.proposalsOptIn !== undefined,
@@ -110,6 +130,11 @@ export function readyToCommit(draft: ProfileDraft | undefined): CommitReadiness 
   if (location === undefined || searchRadiusKm === undefined || proposalsOptIn === undefined) {
     return { kind: 'incomplete', missing };
   }
+
+  // The week has no narrowing to do — `readonly AvailabilitySlot[]` is already the commit's
+  // type — so the floor is checked against the report rather than against the field again.
+  // One rule, read twice, is one rule; two counts of the same list would be two.
+  if (missing.length > 0) return { kind: 'incomplete', missing };
 
   return {
     kind: 'ready',
@@ -260,6 +285,7 @@ export function commitToSend(standing: CommitStanding): ProfileCommit | undefine
  * that does.
  */
 export const STEP_THAT_ASKS: Readonly<Record<MissingAnswer, SocialStep>> = {
+  availability: 'availability',
   location: 'location',
   'search-radius': 'radius',
   'proposals-opt-in': 'opt-in',

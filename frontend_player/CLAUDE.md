@@ -30,8 +30,9 @@ sports picker, the adaptive question loop, the explained result, and the summary
 screens a player leaves through) and `player_profile` (onboarding's **second part**, complete: six
 steps over a client-held draft, and the one write that ends them — the Social tags picker,
 2 to 6 chips from a served vocabulary, the photos step, up to three court photos or none,
-the availability grid, seven days by three parts of the day and blank until a player ticks
-something, the location step, one foreground fix coarsened to about a kilometre before it is
+the availability grid, seven days by three parts of the day, blank on arrival and requiring
+one ticked cell of the twenty-one before it continues
+([ADR-0102](../docs/adr/0102-silence-is-never-scored.md)), the location step, one foreground fix coarsened to about a kilometre before it is
 held, the radius step, a slider over the served bounds that opens at the served default, the
 Proposals opt-in, never pre-ticked and with a finish that stays closed until the player
 answers either way, and the **profile commit**: every answer in one idempotent
@@ -75,12 +76,20 @@ request that names one, including the replay a 401 rotation makes. A failed comm
 draft, keeps the player on the step, offers the control that failed as the retry, and claims
 nothing. `commitStanding` and `mayFinish` own when the finish opens — a rule, not a
 `disabled={…}` expression — and `readyToCommit` under them is what makes a partial commit
-unrepresentable. Two things hold the finish shut. **No Location area**: location is a core
+unrepresentable. Three things hold the finish shut. **No Location area**: location is a core
 requirement for discovery, `CommitPlayerProfileRequest` requires it, and the last step asks
 once more with the way back one press away rather than trapping a player on step four behind
-an OS prompt. **A photo still going up**: uploads outlive the step that started them, and the
+an OS prompt. **A blank availability grid**: the week has a floor of one cell since
+ADR-0102, so silence about when somebody plays is asked for rather than scored as a zero —
+step three already refuses to continue on one, and this is the same rule read at the end.
+**A photo still going up**: uploads outlive the step that started them, and the
 body names photos by the ids the server gave back, so committing mid-upload would silently
 drop a picture the player watched arrive. That one asks for nothing and opens itself.
+
+A failed commit whose `code` names an answer — `availability_grid_empty` today — is drawn as
+that answer rather than as _try again_, with the control back to the step that takes it: the
+commit re-validates every rule a picker enforced, and re-sending the identical body would
+fail identically.
 
 `src/shared/lib/platform/` owns everything the app knows about the device: the Query
 focus and online wirings, and two **platform ports** — `LocationPort` over `expo-location`

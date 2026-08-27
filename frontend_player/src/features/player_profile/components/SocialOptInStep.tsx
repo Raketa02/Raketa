@@ -57,6 +57,15 @@
  * short of is the area — the location step names that cost when a player passes it, and this
  * is where it is collected, with the way back one press away.
  *
+ * There is a third, and it is the seam between the two: **a failure whose code names an
+ * answer.** The commit re-validates every rule a picker enforced, so `availability_grid_empty`
+ * can arrive from a build that predates the week's floor or from a replayed request — and
+ * *try again* is then the one sentence that is not true, because the identical body fails
+ * identically. It is drawn as the failure it is, in the words of the answer it names, with
+ * the same control back to the step that takes it. The finish stays pressable, exactly as it
+ * does after any other correctable refusal; what changes is that the screen no longer
+ * promises that pressing it is enough.
+ *
  * The sequencing is `useCommitProfile`'s and the rule about what a complete part is is
  * `readyToCommit`'s. What is left here is what a player sees and touches.
  */
@@ -82,6 +91,7 @@ import {
   UPLOADING_HINT,
   UPLOADING_TITLE,
   answerStillWanted,
+  answerTheCommitRefused,
 } from './commitPresentation';
 import { pathThatAsks } from './socialStepRoutes';
 import {
@@ -163,6 +173,16 @@ export function SocialOptInStep() {
    */
   const wanted = answerStillWanted(commit.kind === 'incomplete' ? commit.missing : []);
   /**
+   * The same question, asked by the server instead of by the draft.
+   *
+   * **The commit re-validates what the pickers already enforced** — a disabled control is
+   * absent from a replayed request and from an older build — so a refusal naming an answer
+   * is a real thing to render rather than an impossible one. When it arrives it replaces
+   * the generic *try again*: retrying the identical body fails identically, and what the
+   * player needs is the step that takes the answer.
+   */
+  const refused = commit.kind === 'failed' ? answerTheCommitRefused(commit.error) : undefined;
+  /**
    * Whether the finish takes a press. **The rule is `mayFinish`'s**, and the only thing left
    * here is drawing it.
    *
@@ -188,7 +208,13 @@ export function SocialOptInStep() {
               worked, which is the one claim a failed commit must not make. */}
           {commit.kind === 'failed' ? (
             <Note variant="coral" title={COMMIT_FAILED_TITLE} accessibilityRole="alert">
-              {`${recoveryMessage(commit.error)} ${COMMIT_FAILED_BODY}`}
+              {/* A refusal that names an answer says so instead of `recoveryMessage`'s
+                  category sentence and the promise that pressing again is enough. Both
+                  would be untrue here: the same body fails the same way, and the thing that
+                  fixes it is a step behind this one. Nothing was lost either way. */}
+              {refused === undefined
+                ? `${recoveryMessage(commit.error)} ${COMMIT_FAILED_BODY}`
+                : refused.copy.body}
             </Note>
           ) : null}
 
@@ -207,6 +233,18 @@ export function SocialOptInStep() {
                 onPress={() => router.replace(pathThatAsks(wanted.answer))}
               />
             </>
+          ) : null}
+
+          {/* The way back, for a refusal. The coral note above already carries the words —
+              a second one under it would say the same thing twice — so what is left is the
+              control, which is the half a player cannot do without. */}
+          {refused !== undefined ? (
+            <Button
+              label={refused.copy.label}
+              variant="secondary"
+              size="lg"
+              onPress={() => router.replace(pathThatAsks(refused.answer))}
+            />
           ) : null}
 
           {/* A photo the player watched go up, still going. There is nothing to answer and

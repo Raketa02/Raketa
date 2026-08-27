@@ -91,6 +91,9 @@ async function reachTheOptInStep() {
   fireEvent.press(screen.getByLabelText('Continue'));
 
   await waitFor(() => expect(screen).toHavePathname('/availability'));
+  // The week has a floor of one since ADR-0102, so walking past this step means answering
+  // it. A single cell is the whole of what it asks for.
+  fireEvent.press(screen.getByLabelText('Wednesday evening'));
   fireEvent.press(screen.getByLabelText('Continue'));
 
   await waitFor(() => expect(screen).toHavePathname('/location'));

@@ -7,13 +7,34 @@
  * are covered here anyway, because a screen that only handles the case somebody predicted
  * is a screen with a blank state, and the way to keep the unpredicted one honest is to
  * drive it.
+ *
+ * The week arrives from **both** directions since ADR-0102 gave it a floor: a draft that
+ * holds no ticked cell, and a commit the server refused with `availability_grid_empty`.
+ * They are asked for in the same words on purpose — which side noticed is not something a
+ * player has any use for — and that is asserted rather than left to two tables that could
+ * drift into two sentences.
  */
+
+import { AppError, networkUnavailable } from '@/shared/errors';
 
 import type { MissingAnswer } from '../domain/profileCommit';
 
-import { answerStillWanted } from './commitPresentation';
+import { answerStillWanted, answerTheCommitRefused } from './commitPresentation';
+
+/** A refusal off the wire, as `mapErrorResponse` would have built it. */
+const refusal = (code: string) =>
+  new AppError('validation', 'requires-user-correction', 'diagnostic', { code, status: 400 });
 
 describe('the answer the last step asks for', () => {
+  it('is the week, when nothing was ticked on it', () => {
+    // ADR-0102 gave the grid a floor of one, so a blank week is an answer still wanted
+    // rather than an answer of *no preference*.
+    const wanted = answerStillWanted(['availability', 'proposals-opt-in']);
+
+    expect(wanted?.answer).toBe('availability');
+    expect(wanted?.copy.label).toBe('Set when you usually play');
+  });
+
   it('is the area, when that is what the player continued past', () => {
     const wanted = answerStillWanted(['location', 'proposals-opt-in']);
 
@@ -48,8 +69,8 @@ describe('the answer the last step asks for', () => {
 
   it('names a step to go back to for every answer that has one', () => {
     // The exhaustiveness the table is typed for, driven rather than asserted by the compiler
-    // alone: a fourth answer added to `MissingAnswer` arrives here as a missing entry.
-    const goesBack: readonly MissingAnswer[] = ['location', 'search-radius'];
+    // alone: a further answer added to `MissingAnswer` arrives here as a missing entry.
+    const goesBack: readonly MissingAnswer[] = ['availability', 'location', 'search-radius'];
 
     for (const answer of goesBack) {
       const wanted = answerStillWanted([answer]);
@@ -57,5 +78,37 @@ describe('the answer the last step asks for', () => {
       expect(wanted?.copy.title.length).toBeGreaterThan(0);
       expect(wanted?.copy.finishHint.length).toBeGreaterThan(0);
     }
+  });
+});
+
+describe('a commit the server refused', () => {
+  it('reads the week off `availability_grid_empty`, and offers the step that asks it', () => {
+    // **The commit re-validates what the picker already enforced.** A disabled control is
+    // absent from a replayed request and from a build that predates the floor, so this
+    // refusal is a real thing to render rather than an impossible one.
+    const refused = answerTheCommitRefused(refusal('availability_grid_empty'));
+
+    expect(refused?.answer).toBe('availability');
+    expect(refused?.copy.label).toBe('Set when you usually play');
+  });
+
+  it('says the same words the draft would have said about the same answer', () => {
+    // Which side noticed is not the player's to care about: they are being asked for the
+    // same thing either way, so they are asked for it in the same sentence.
+    expect(answerTheCommitRefused(refusal('availability_grid_empty'))).toEqual(
+      answerStillWanted(['availability']),
+    );
+  });
+
+  it('names nothing for a refusal about something no step can fix', () => {
+    // The generic failure still has the recovery sentence and the promise that nothing was
+    // lost. What this table adds is only ever a step to go back to.
+    expect(answerTheCommitRefused(refusal('player_profile_already_exists'))).toBeUndefined();
+  });
+
+  it('names nothing for a failure that carries no code at all', () => {
+    // A transport failure never reached the backend, so there is no code to branch on —
+    // and branching on the message instead is what this table exists not to do.
+    expect(answerTheCommitRefused(networkUnavailable())).toBeUndefined();
   });
 });
