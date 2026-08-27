@@ -126,7 +126,7 @@ two subprocesses with different `PYTHONHASHSEED` values, and the seed is **never
 
 ## 2. The pipeline
 
-Nine stages. **Stages 1–7 are shared by every surface; only stage 8 differs** — which is the
+Eight stages. **Stages 1–6 are shared by every surface; only stage 7 differs** — which is the
 whole reason there is one engine rather than three.
 
 ```
@@ -138,18 +138,22 @@ whole reason there is one engine rather than three.
   4  MODIFY        three modifiers, ±10 stack, each prints                   §6
   5  QUALITY FLOOR below it, not shown at all. minimum evidence beside it    §7
   6  LIVENESS      reorders. never enters Fit. never crosses as a number     §8
-  7  DIVERSIFY     greedy spread over the top of the list          ⚠ OPEN    §9
-  8  TERMINAL      shortlist │ line-up → group objective → arrange │ deck    §10
-  9  EXPLAIN       evidence codes, ranked by contribution                    §5.4
+  7  TERMINAL      shortlist │ line-up → group objective → arrange │ deck    §10
+  8  EXPLAIN       evidence codes, ranked by contribution                    §5.4
 ```
 
-**Two structural changes the input document's own diagram does not show:**
+**Three structural changes the input document's own diagram does not show:**
 
 - **Stage 5 no longer loops.** §9's `too few above it → relax one rung, GOTO 2` is struck. The
   strict answer returns, carrying **offers** ([ADR-0099](../../adr/0099-relaxation-offers-the-searchers-own-asks.md), §11).
 - **Stage 1 runs twice for doubles.** A pairwise gate cannot be spent at generation, because
   eligibility for a *seat* is a property of a **combination**
   ([ADR-0116](../../adr/0116-in-a-four-every-gate-binds-all-six-pairs.md), §10.2).
+- **The document's stage 7 is gone**, so its terminal and explain stages move up one
+  ([ADR-0126](../../adr/0126-position-moves-on-a-fact-about-the-player-never-about-the-list.md), §9).
+  The document's own numbering already skips a stage — **there is no Stage 5 in it** — and this
+  file does not inherit a second hole: the stages here are contiguous, and a citation of the
+  document's *Stage 7* resolves at §9 below, where it is struck.
 
 ---
 
@@ -363,7 +367,7 @@ stops adding up is the same class of lie as a recomputed score, and worse for be
 **Releasing a ruleset that adds, removes or reshapes a variant is an API change**: `make gen-api`
 in the same commit, or `check-contract-drift.sh` goes red. Moving a weight is free.
 
-### 5.4 Stage 9 — explaining
+### 5.4 Stage 8 — explaining
 
 **The engine ranks the reasons by contribution; the client picks how many to show.** The ordering
 is arithmetic and is not the client's. The full breakdown ships with the search rather than
@@ -513,6 +517,13 @@ to exactly `{previous_decline, exposure_adjustment}` and its reachable net range
 range is **`[−12, +6]`**, so the upper clamp is unreachable and the clamp only ever cuts a
 *bury* — a property of the roster, not of the rule, which is what the roster test is for.
 
+**The roster test is about this stage, and the guarantee is about the whole pipeline.** That gap
+is what let §9.6's spread move a player 8 points, one stage later, with the test green
+([ADR-0126](../../adr/0126-position-moves-on-a-fact-about-the-player-never-about-the-list.md)).
+§17.3 now carries the wider property — *the silent roster is the whole of silent movement* — so a
+future stage that moves a row without a reason arrives as a red test rather than as a green one
+somewhere else.
+
 **Reciprocal fit.** `fit_ba = Fit(candidate → searcher)`;
 `asym = max(0, fit_ab − fit_ba − ASYM_TOLERANCE)` at `ASYM_TOLERANCE = 12`;
 `dock = −min(12, asym × 0.5)`. Computed over the **shortlist only**, after the floor, so it costs
@@ -523,29 +534,63 @@ distance runs against the candidate's radius.
 
 ---
 
-## 9. Stage 7 — diversity ⚠ OPEN
+## 9. The stage that is not there — diversity, struck
 
-§9.6 places a greedy maximal-marginal-relevance pass over the top of the list, constrained by the
-floor: **diversification may reorder, never promote a candidate below it.** That constraint is
-consistent with everything the map decided and is adopted.
+§9.6 placed a greedy maximal-marginal-relevance pass over the top of every list — λ = 8 over the
+top 12, similarity `0.35·level_bucket + 0.25·distance_ring + 0.20·intent + 0.20·tag_jaccard` — and
+§9.11 raised λ to 14 for the deck. **Both are struck**
+([ADR-0126](../../adr/0126-position-moves-on-a-fact-about-the-player-never-about-the-list.md)).
+It is the one stage no ticket on the map ever read.
 
-**Everything else about this stage is unadopted, and the map never looked at it.** Its λ, its
-window, its four similarity weights and the deck's raised λ appear in no spec file, no ADR and no
-constant table on this map — and `ranking-weights.md` §13, titled *every constant*, **dropped a
-row §24 actually had**. One of its similarity components reads **raw tag ids**, which is the
-construction [ADR-0115](../../adr/0115-a-tag-about-the-person-may-be-shown-never-scored.md) struck
-from the group objective.
+**It moves no number, and that is why the rule it breaks is easy to miss.** `fit` is untouched;
+*Why 78?* still adds up. What it moves is **position**, and the promise about position is §9.5's,
+which [ADR-0123](../../adr/0123-silence-is-budgeted-per-player-at-the-notice-threshold.md) made
+provable two tickets earlier: a silent movement never exceeds the movement that owes an
+explanation. λ = 8 exceeds `MOVE_NOTICE = 6` — one stage after the roster test that asserts
+nothing does, so **the test stays green and the guarantee is false**.
 
-A build agent must **not** implement this stage from §9.6 unreviewed. See §18.
+**It could not be given a reason.** *You are fourth because the three above you resemble each
+other* is a fact about the **other rows**; ADR-0106's vocabulary is closed and every code in it is
+a statement about the candidate. Three of its four similarity components — `level_bucket`,
+`distance_ring`, `tag_jaccard` — are defined in no file on this map, so adopting it meant
+inventing two binning schemes and a set similarity first, at roughly eight constants rather than
+four. `tag_jaccard` is
+[ADR-0115](../../adr/0115-a-tag-about-the-person-may-be-shown-never-scored.md)'s struck
+construction reaching further than it ever did: two people who both ticked `OPEN_TO_MEET_SOMEONE`
+are counted similar and one of them is pushed down. And at launch density it does nothing at all —
+**63% of searches return under five candidates** — while its own falsifier needs the experiment the
+runtime ruleset store was deferred for.
+
+**The rule that replaces it, for the next spread that wants in:** *position moves on a fact about
+the player, never on a fact about the list.* Name a printable reason, or enter the silent stack and
+share ADR-0123's **one** budget at `MOVE_NOTICE` — one budget over all silent movement, never one
+per stage.
+
+**What still spreads a list, and is not this.** The **exposure adjustment** at ±6 is silent,
+budgeted and candidate-side — fairness about who gets shown across many searches, not variety
+inside one. `PASS_SUPPRESS` and the deck's three-band order do the deck's version. Neither becomes
+a diversity pass by standing where one used to be.
+
+The cost is named rather than hidden: at a density this product does not have, the top of a list
+may be five similar profiles. It returns as its own argued record when there is a pool dense enough
+for that to happen **and** `search_candidate` rows to prove it — held meanwhile as fog on the map,
+*the list reads like a leaderboard*.
 
 ---
 
-## 10. Stage 8 — the terminal stages
+## 10. Stage 7 — the terminal stages
 
 ### 10.1 Shortlist
 
-Ranked by `rank_key`, bounded and unpaginated. ⚠ The bound is stated as `n_returned ≤ 20` in two
-files and is a constant with no name and no falsifier — §18.
+Ranked by `rank_key`, bounded and unpaginated at **`SHORTLIST_MAX = 20`**. There is no page two;
+past the last row there are rung offers or an honest empty state.
+
+**It does not bind at launch and cannot be wrong yet** — with `QUALITY_FLOOR = 44` and 63% of
+searches under five candidates, it is a bound on a mature city's list. It is a ruleset constant
+like any other and carries a falsifier it cannot yet run — **interest and challenge rate by
+position**: if nothing past position 12 ever converts, 20 is decoration and the honest number is
+smaller. It was unnamed for the same reason the stage above it was unexamined, and naming it is
+most of what was owed.
 
 ### 10.2 Line-up — doubles
 
@@ -633,8 +678,24 @@ change to the mapping does not rewrite history.
 
 **The relaxation ladder does not reach the deck.** Its own exclusions — passed within
 `PASS_SUPPRESS`, already asked, already has an open game with you — are gates, and their numbers
-are the deck's remaining product decisions, still fog on the map. ⚠ The deal's **size** and its
-raised λ are unset (§9, §18).
+are the deck's remaining product decisions, still fog on the map.
+
+**A deal is `DECK_DEAL_MAX = 10` cards, and the constant is a cap and never a target.** A deal is
+scored once and its liveness ages as the player taps through, so a deal of forty is stale by the
+bottom and writes forty candidate rows nobody looks at. Falsified by **the deepest position
+reached per deal**: if the median deal is exhausted, it is too small; if p90 stops before position
+four, the tail is scored for nobody.
+
+**A spent deal deals again** — a new search, a new `search_id`, the same exclusions plus everybody
+already dealt. Exhausting a *deal* is not exhausting the *pool*, and the two were one sentence
+until this was asked: the honest empty state belongs to a fresh deal that came back with nothing,
+never to a player who has seen ten of forty.
+
+**The deck's ordering is its own and its variety is that order** — people who already said yes,
+then high liveness, then the rest — plus `PASS_SUPPRESS`. §9.11's raised λ is struck with the
+stage it belonged to (§9): a card at a time makes order the whole experience, which is the
+stronger case for a spread and still not strong enough to buy a move nobody can be given a reason
+for.
 
 **A pass is write-only**, carries the Origin key, and **no route ever returns one**. There is no
 *Show them again*: it voids a 30-day suppression on one tap, makes the constant unmeasurable, and
@@ -744,14 +805,19 @@ Ruleset
   liveness           { signal bounds, move_notice, asym_tolerance }
   group              { w_bal, w_seatfit, w_minfit, w_cross, w_crossmin, w_avail, K }
   floors             { quality_floor, min_shortlist, minimum_evidence_fraction }
+  shape              { shortlist_max(20), deck_deal_max(10) }
   relaxation         { rungs A/B/C, multipliers 1.5/2.0 }
   telemetry          { near_miss_recorded }
-  diversity          { ⚠ UNDECIDED — §9, §18 }
   interest           { ⚠ ttl_days, cap, pass_suppress_days — still fog }
 ```
 
 **Struck from §11's shape:** the `newcomer` mode, `w_intent` / `w_tag` (ADR-0117 replaced them),
-`max_rung`, the ordered-rung list, and `score_min` — a key nothing in the design ever defines.
+`max_rung`, the ordered-rung list, `score_min` — a key nothing in the design ever defines — and
+**`diversity` entire**, whose stage is struck (§9,
+[ADR-0126](../../adr/0126-position-moves-on-a-fact-about-the-player-never-about-the-list.md)).
+`shape` is the two constants that decide how long each surface's answer is, and they are here
+rather than under `floors` because a floor decides whether somebody is shown at all and these
+decide only where the list stops.
 
 **Validated on load**, and a malformed ruleset **refuses to load while the previous one keeps
 serving**; it never falls back to defaults, because a matcher that silently falls back is one
@@ -926,7 +992,7 @@ margin is half a point.
 | **Renormalised weights sum correctly for every subset of live terms** | §10 is the property that lets this ship at all |
 | **Provisional == arranged** the moment the last seat is filled | one implementation produces both figures |
 | **Modifier totals stay inside the budget**, for every generated combination | |
-| **Diversity never promotes a below-floor candidate** | ⚠ the rest of stage 7 is §18's |
+| **The silent roster is the whole of silent movement** — position is a function of `fit`, the printable liveness signals and the clamped silent net, and of **nothing else** | ADR-0123's roster test is a test about stage 6; the stage that broke its guarantee ran one stage later and left it green ([ADR-0126](../../adr/0126-position-moves-on-a-fact-about-the-player-never-about-the-list.md)) |
 | **`Fit(case 6) == Fit(case 1)` identically** | the only form in which a machine can assert that a named fact moved **nothing** |
 | **`arrange()` returns `argmax G`**, brute-forced over all three | not the min-gap pairing — that is *Even it out*, a different word |
 | **Rebuild-equals-tail**: tail a fixture incrementally, rebuild it from zero, require the tables identical | proves the projection is a pure function of the log. **Never a wall-clock bound** — that is a flaky test that gets muted |
@@ -941,8 +1007,13 @@ about the rungs that widen: **B ⊆ C, and both ⊇ the strict set.**
 
 ## 18. What is still open
 
-**One decision, and it is a ticket rather than a gap this file may close by picking.** It lands
-back in the section marked ⚠ above.
+**Nothing this file may close by picking.** Every decision the map owed the engine is made; the
+section that held the last one is §9, and what stands there is a strike. The ⚠ marks that remain
+are **dependencies, not questions** — the photo gate live and inert behind
+[#181](https://github.com/Raketa02/Raketa/issues/181), the grid and the gender contracts behind
+[#176](https://github.com/Raketa02/Raketa/issues/176)–[#182](https://github.com/Raketa02/Raketa/issues/182),
+rung A's eviction shape recorded rather than open, and the deck's three interest constants, which
+are fog on the map and product's to set.
 
 **Two are closed.** [#189](https://github.com/Raketa02/Raketa/issues/189)'s two exclusions are
 settled by [ADR-0124](../../adr/0124-the-matcher-gates-account-state-never-age.md) — §9.1's row 8
@@ -958,9 +1029,12 @@ invariant is settled by
 budget is per **player** on the signed silent net, no signal weakens, and §9.5's printing promise
 becomes a consequence of the clamp rather than a rule to police. §8 above carries it.
 
-| | Question | Lands in |
-| --- | --- | --- |
-| [#190](https://github.com/Raketa02/Raketa/issues/190) | **Stage 7, and the shape of the list** — diversity's λ, window and similarity weights (one of which reads raw tag ids), the deck's raised λ and deal size, and the unnamed `n_returned ≤ 20` | §9, §10.1, §10.3 |
+**And** [#190](https://github.com/Raketa02/Raketa/issues/190)'s stage is settled by
+[ADR-0126](../../adr/0126-position-moves-on-a-fact-about-the-player-never-about-the-list.md) —
+**stage 7 is struck in both places**, the pipeline is eight stages, and *position moves on a fact
+about the player, never on a fact about the list*. Its two neighbours outlive it as ordinary
+constants: `SHORTLIST_MAX = 20` (§10.1) and `DECK_DEAL_MAX = 10` with a spent deal dealing again
+(§10.3). §2, §8, §9, §10.1, §10.3 and §17.3 above carry them.
 
 **And what is deliberately deferred rather than open** — see the map's *Not yet specified*: the
 runtime ruleset store, the deck's three interest constants, the density hypothesis, standing

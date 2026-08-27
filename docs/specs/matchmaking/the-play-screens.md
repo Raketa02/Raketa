@@ -200,9 +200,13 @@ last seat and the provisional figure and the arranged figure are the same number
 
 ## 7. Match me — the deck
 
-`POST /deck`, sport only. One deal, one `search_id`, an ordered batch. The weight vector is
-resolved backend-side from the viewer's declared intent, `NO_PREFERENCE → fun`, and no `mode`
-crosses ([`the-two-contracts.md`](the-two-contracts.md) §6).
+`POST /deck`, sport only. One deal, one `search_id`, an ordered batch of at most
+**`DECK_DEAL_MAX` = 10** cards. The weight vector is resolved backend-side from the viewer's
+declared intent, `NO_PREFERENCE → fun`, and no `mode` crosses
+([`the-two-contracts.md`](the-two-contracts.md) §6).
+
+**A spent deal deals again**, as a new request with a new `search_id`. The screen runs out of
+cards long before the pool does, and only a fresh deal that comes back empty is the empty state.
 
 **A pass is `POST /passes`, carrying the Origin key** — `(search_id, position)`, required. It
 needs the origin because `PASS_SUPPRESS`'s own falsifier is *the pass rate on re-shown
@@ -214,7 +218,7 @@ its enforcement is a schema test over every response type.
 
 **There is no *Show them again*.** The prototype offers a button clearing every pass at once.
 It makes `PASS_SUPPRESS` unmeasurable and makes the suppression a suggestion, and it solves a
-problem a real pool does not have. The exhausted deck is the honest empty state: the pool
+problem a real pool does not have. The **exhausted pool** is the honest empty state: the pool
 description, and the count of the player's **own outgoing** yeses still waiting.
 
 **A mutual yes is told to both, and arranging the game is theirs.** The challenge belongs to

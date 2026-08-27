@@ -675,6 +675,7 @@ fact is search-time and cannot be reconstructed afterwards.
 | Liveness | The **raw signal values**, the dominant signal, and whether a reason printed. Separates *moved* from *moved and explained* — and the offset is deliberately **not** what is stored: it is a function of the ruleset's bounds, so recording it makes a Liveness-bounds change undiffable ([ADR-0118](../../adr/0118-a-past-search-is-not-reproducible.md) §8). `search_candidate.liveness_signals` carries the inputs; the offset is re-derived. **Whether the silent budget clamped is re-derived the same way** — a query over the stored inputs and the ruleset version, never a column ([ADR-0123](../../adr/0123-silence-is-budgeted-per-player-at-the-notice-threshold.md)). The **Modifiers** row below records its clamp directly instead; #183's argument would collapse the two, and that is a telemetry question rather than this one |
 | Reciprocal asymmetry | `fit_ba` and the mode it was scored under. `NO_PREFERENCE` inherits, so the mode is not recoverable from the candidate's declaration |
 | Modifiers | Which fired, and whether the stack clamp bound |
+| The shape of the list | **Nothing new.** `SHORTLIST_MAX` and `DECK_DEAL_MAX` are falsified by `position` on `search_candidate` against interests and passes, both of which already carry the **Origin key**. A deck card is passed or it is said yes to — there is no third thing a player does with one — so the deepest position **acted on** is the depth reached, and the deal's falsifier runs off rows that exist for other reasons. It is stated here because the two constants were unnamed long enough to look like they owed a column |
 
 ---
 
@@ -704,6 +705,18 @@ fact is search-time and cannot be reconstructed afterwards.
 | `ASYM_TOLERANCE` | 12 | Decline rate by asymmetry bucket |
 | Liveness signal bounds | §9 | Acceptance rate per signal, held out |
 | `QUALITY_FLOOR` | **44** | Return rate just above vs just below |
+| `SHORTLIST_MAX` | 20 | Interest and challenge rate **by position**. Nothing past position 12 converting means 20 is decoration |
+| `DECK_DEAL_MAX` | 10 | The **deepest position reached per deal**. Median deal exhausted ⇒ too small; p90 stopping before position four ⇒ the tail is scored for nobody |
+
+**Diversity contributes no row, and this time the absence is the decision.** §24 carried
+`Diversity λ | 8 | challenge rate on positions 2–5 with and without`, and this table's first draft
+dropped it — the same failure named below, in the other direction. It is not restored:
+[ADR-0126](../../adr/0126-position-moves-on-a-fact-about-the-player-never-about-the-list.md)
+strikes the stage in both places, because a spread moves **position** by more than the movement
+that owes an explanation ([ADR-0123](../../adr/0123-silence-is-budgeted-per-player-at-the-notice-threshold.md))
+and there is no reason it could print. `λ`, the window, the four similarity weights and the deck's
+raised `λ` are **deleted, not deferred**. Should a spread ever return, it arrives with a printable
+reason or inside ADR-0123's one silent budget — and it earns its row then.
 
 **Availability overlap contributes no row, and that is the answer rather than an omission.**
 The term is `|shared| / |mine|` and has no constants at all

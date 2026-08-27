@@ -259,8 +259,10 @@ thresholding a value. Detail in [`the-play-screens.md`](the-play-screens.md) §1
 **The near-miss band is never returned.** Layer 3 of the telemetry is engine-internal, on the
 line §21 draws around passes and declines.
 
-**The shortlist is bounded and unpaginated** — `n_returned ≤ 20`. There is no page two; past
-the last row there are rung offers or an honest empty state.
+**The shortlist is bounded and unpaginated** — `n_returned ≤ SHORTLIST_MAX`, **20**. There is no
+page two; past the last row there are rung offers or an honest empty state. The bound is ruleset
+data and not a contract number, so a client never reads 20 from anywhere: it renders the rows it
+is given ([`ranking-weights.md`](ranking-weights.md) §13).
 
 ---
 
@@ -342,10 +344,18 @@ per sort tap is latency spent on nothing.
 `POST /api/v1/deck` takes **`sport` only** and returns one deal: an ordered batch of cards,
 one `search` row, one `search_id` shared by every card in the deal.
 
+**A deal is at most `DECK_DEAL_MAX` cards, 10**, and a spent deal deals again — a new request, a
+new `search_id`, the same exclusions plus everybody already dealt. **Exhausting a deal is not
+exhausting the pool**: the honest empty state belongs to a fresh deal that came back with nothing,
+never to a player who has seen ten of forty.
+
 **One-at-a-time is how the deck is shown, not how it is computed.** §9.11's ordering policy —
-people who already said yes, then high liveness above the floor, then the rest spread for
-variety with λ raised to 14 — is a property of a whole deal and cannot be evaluated one card
-at a time. Per-card searches would also make the deck the highest-volume writer in the system
+people who already said yes, then high liveness above the floor, then the rest — is a property of
+a whole deal and cannot be evaluated one card at a time. **Its third band is no longer spread:**
+§9.11's λ = 14 is struck with the stage it belonged to
+([ADR-0126](../../adr/0126-position-moves-on-a-fact-about-the-player-never-about-the-list.md)), so
+the deck's variety is that three-band order and `PASS_SUPPRESS`, and nothing in a deal moves on a
+fact about the other cards. Per-card searches would also make the deck the highest-volume writer in the system
 by an order of magnitude for no analytic gain: the interesting unit is the deal, and *which
 card was accepted* is `position` on `search_candidate`, which already exists.
 

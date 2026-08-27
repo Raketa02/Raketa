@@ -543,6 +543,14 @@ appears here.
 - **Pool description** — what the response carries when the shortlist is empty: how many players
   of that sport are in range, structured, **counted after every gate**. It is the product in a
   new market, and it is a number on a screen, so it counts real rows and never estimates.
+- **Silent movement** — a change to a candidate's **position** that prints no reason. It is
+  bounded, per **player** and not per signal, at the same threshold above which a movement owes an
+  explanation, so the promise is arithmetic rather than policy
+  ([ADR-0123](docs/adr/0123-silence-is-budgeted-per-player-at-the-notice-threshold.md)). Only two
+  signals are silent, and both are facts about that player. **Position moves on a fact about the
+  player, never on a fact about the shape of the list** — which is what refuses a diversity spread:
+  *you are fourth because the three above you resemble each other* is true of nobody on the screen
+  ([ADR-0126](docs/adr/0126-position-moves-on-a-fact-about-the-player-never-about-the-list.md)).
 - **Guaranteed inclusion** — a candidate placed in the shortlist by something other than Fit.
   There is exactly one: an **interest lift**, a human's own *Let's play*, which may sit below the
   quality floor with its reason printed. The newcomer and zero-exposure lifts **reorder** and
@@ -639,10 +647,11 @@ appears here.
   somebody above the **quality floor** where nothing the engine computes may. It outlives the
   search it came from, and it is not a challenge — a challenge belongs to a context that does
   not exist yet.
-- **Deal** — one invocation of the **deck**: an ordered batch of cards, shown one at a time. The
-  deal is the unit, not the card, because the deck's ordering — people who already said yes,
-  then liveness, then spread for variety — is a property of a whole deal and cannot be
-  evaluated a card at a time.
+- **Deal** — one invocation of the **deck**: a bounded, ordered batch of cards, shown one at a
+  time. The deal is the unit, not the card, because the deck's ordering — people who already said
+  yes, then liveness, then the rest — is a property of a whole deal and cannot be evaluated a card
+  at a time. A **spent deal** is not an empty pool: it deals again, as a new **Search**, and only a
+  fresh deal that comes back with nothing is the **pool description**.
 - **Ruleset version** — the name of the frozen set of numbers a search used. **Engine version**
   is its sibling and means the *maths* changed. Stamped on every search, so a Fit stays
   interpretable after the numbers move
