@@ -21,6 +21,7 @@ from app.modules.player_profile.application.commit_player_profile import (
 from app.modules.player_profile.application.has_player_profile import HasPlayerProfile
 from app.modules.player_profile.domain.consent import ConsentSurface
 from app.modules.player_profile.domain.errors import (
+    AvailabilityGridEmpty,
     PhotoNotFound,
     PlayerProfileAlreadyExists,
     ProposalsOptInNotAnswered,
@@ -142,12 +143,27 @@ async def test_the_precise_fix_never_reaches_the_stream(harness: Harness):
     assert (created.latitude, created.longitude) == (51.51, -0.13)
 
 
-async def test_a_commit_with_no_availability_slots_is_accepted(harness: Harness):
-    """Blank is a valid answer — no preference, never *leave me out*."""
+async def test_a_commit_with_no_availability_slots_is_refused(harness: Harness):
+    """The grid has a floor of one (ADR-0102), and this is where it binds.
 
-    committed = await harness.commit().execute(a_command(availability=[]))
+    Blank is not read as *no preference* any more, and it is not read as a
+    measured zero either — it is refused, so the question is answered rather
+    than guessed at.
+    """
 
-    assert len(committed.profile.availability) == 0
+    with pytest.raises(AvailabilityGridEmpty):
+        await harness.commit().execute(a_command(availability=[]))
+
+    assert harness.uow.commits == 0, "a refused commit records nothing"
+
+
+async def test_one_ticked_slot_is_enough_to_commit(harness: Harness):
+    """The minimum is exactly one — a player who only plays Saturday mornings
+    must be able to say precisely that."""
+
+    committed = await harness.commit().execute(a_command(availability=[(6, "MORNING")]))
+
+    assert committed.profile.availability.codes == ("6:MORNING",)
 
 
 async def test_committed_photos_are_the_ones_the_player_uploaded(harness: Harness):

@@ -116,15 +116,20 @@ async def test_the_location_that_comes_back_is_coarser_than_the_one_sent(client)
     assert body["location"] == {"latitude": 51.51, "longitude": -0.13}
 
 
-async def test_a_commit_with_no_availability_slots_is_accepted(client):
-    """Blank means no preference. It is a valid answer, not a missing one."""
+async def test_a_commit_with_no_availability_slots_is_refused(client):
+    """The floor of one, on the wire, with a code of its own (ADR-0102).
+
+    A 400 with ``availability_grid_empty`` rather than a shapeless 422: `code` is
+    the only half a client may branch on, and *go back and tick a cell* is not
+    any other refusal's recovery.
+    """
 
     headers = await auth_headers(client)
 
     response = await commit(client, headers, a_body(availability=[]))
 
-    assert response.status_code == 201, response.text
-    assert response.json()["availability"] == []
+    assert response.status_code == 400, response.text
+    assert response.json()["code"] == "availability_grid_empty"
 
 
 async def test_photo_ids_are_committed_in_the_order_they_were_arranged(client):

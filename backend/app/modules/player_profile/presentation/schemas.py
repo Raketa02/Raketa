@@ -274,11 +274,17 @@ class ProposalsOptInRequest(BaseModel):
 class CommitPlayerProfileRequest(BaseModel):
     """Every answer from onboarding's second part, in one body.
 
-    Photos and availability default to empty because both are legitimately
-    blank: a player may hold no photos, and **a blank week means "no preference"
-    and never "leave me out"**. Nothing else has a default — a location, a
-    radius, a tag selection and an answer to the proposals question are all
-    things this request must actually carry.
+    **Photos are the only field with a default**, because holding none is a
+    legitimate answer to *add some photos*. Everything else is something this
+    request must actually carry — a location, a radius, a tag selection, an
+    answer to the proposals question, and **a week with something ticked in it**
+    (``docs/adr/0102``).
+
+    The week's *floor* is not spelled here, and that is the same decision the tag
+    selection's is: an empty list passes this schema and is refused by the domain
+    with ``availability_grid_empty``, so the client gets a code it can branch on
+    and a recovery it can offer, rather than a 422 that can only say some field
+    somewhere was wrong.
     """
 
     social_tag_ids: list[str] = Field(
@@ -300,11 +306,13 @@ class CommitPlayerProfileRequest(BaseModel):
         ),
     )
     availability: list[AvailabilitySlotResource] = Field(
-        default_factory=list,
+        ...,
         description=(
-            "The cells of the week this player ticked. **An empty list is a "
-            "valid answer** and means no preference — it is never read as "
-            "unavailable. Repeated cells are collapsed."
+            "The cells of the week this player ticked. **At least one of the "
+            "twenty-one** — an empty list is refused with "
+            "`availability_grid_empty`. The minimum is exactly one and is not "
+            "served: it is fixed, so a client holds it as a constant. Repeated "
+            "cells are collapsed, and the floor is counted after that."
         ),
     )
     location: LocationAreaResource

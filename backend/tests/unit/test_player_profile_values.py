@@ -22,6 +22,7 @@ from app.modules.player_profile.domain.consent import (
     answerable_copy_version,
 )
 from app.modules.player_profile.domain.errors import (
+    AvailabilityGridEmpty,
     DuplicateSocialTag,
     SearchRadiusOutOfBounds,
     SocialTagSelectionOutOfBounds,
@@ -173,12 +174,41 @@ def test_a_radius_already_on_a_stream_is_not_re_checked():
 # ---------------------------------------------------------------------------
 
 
-def test_a_blank_grid_is_a_grid():
-    """The invariant the commit rests on: blank means no preference, and is an
-    answer rather than the absence of one."""
+def test_the_write_path_refuses_a_week_with_nothing_ticked():
+    """The floor ADR-0102 put on the grid: at least one of the twenty-one.
+
+    ``of_cells`` is the command path's entry point, so this is the one place a
+    player's own answer is counted — and a commit that ticked nothing is refused
+    with a code of its own rather than recorded as a measured zero.
+    """
+
+    with pytest.raises(AvailabilityGridEmpty):
+        AvailabilityGrid.of_cells(())
+
+
+def test_one_ticked_cell_is_enough():
+    """The minimum is exactly one, and one tick is a real answer: a player who
+    only ever plays Saturday mornings must be able to say precisely that."""
+
+    grid = AvailabilityGrid.of_cells([(6, "MORNING")])
+
+    assert grid.codes == ("6:MORNING",)
+
+
+def test_the_fold_still_accepts_a_blank_grid():
+    """**The write path refuses; the fold accepts** — ``social_tags``' split,
+    verbatim.
+
+    A profile committed before the floor existed keeps its blank grid, and a
+    player may clear their week afterwards. Neither is a stream a replay may
+    refuse to rehydrate, so ``blank``, ``of`` and ``from_codes`` are unchanged:
+    a blank grid met anyway is *absent*, never zero (ADR-0102 part 3).
+    """
 
     assert len(AvailabilityGrid.blank()) == 0
     assert AvailabilityGrid.blank().codes == ()
+    assert AvailabilityGrid.of(()).codes == ()
+    assert AvailabilityGrid.from_codes(()).codes == ()
 
 
 def test_a_repeated_cell_is_collapsed_rather_than_refused():

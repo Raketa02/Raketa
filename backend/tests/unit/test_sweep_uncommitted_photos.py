@@ -128,7 +128,7 @@ class Harness:
                 ("PLAYS_TO_WIN", "HERE_TO_IMPROVE")
             ),
             photo_ids=[ref.photo_id for ref in refs],
-            availability=AvailabilityGrid.of_cells(()),
+            availability=AvailabilityGrid.of_cells([(6, "MORNING")]),
             location=LocationArea.around(52.23, 21.01),
             search_radius=SearchRadius.chosen(10),
             proposals_opt_in_accepted=True,
