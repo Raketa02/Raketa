@@ -1,0 +1,6 @@
+# Built by `make -C native`; a binary artefact, not source.
+native/libscan.dylib
+native/libscan.so
+native/*.o
+.venv/
+__pycache__/

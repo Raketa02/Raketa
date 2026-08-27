@@ -47,6 +47,15 @@ there; they are not repeated here.
 - **Durable event name** — the stable `"<context>.<event>"` string plus integer version
   registered in the event catalog, e.g. `users.user_registered` / v1. It is the wire
   contract for stored history and is **independent of the Python class name**.
+- **Append order** (`sequence_no`) — the position a row took in `event_store`, assigned by
+  the database and the **only total order over the whole log**
+  ([ADR-0097](../docs/adr/0097-event-store-append-order-is-a-sequence-column.md)). It is
+  the table's primary key, and the only column a read that crosses streams may order by.
+  It is not a count: identity counters skip numbers on rollback. Distinguish it from
+  **version**, which orders one stream and says nothing about how two interleave, and from
+  `occurred_at`, the **domain moment** — one commit may append several events sharing an
+  instant, so domain time is not a tie-break and must never be used as one.
+  _Avoid_: "timestamp", "event number", "offset".
 - **Aggregate repository** — the port a use case loads and saves an **event-sourced
   aggregate** through, e.g. `AssessmentRepository`. It owns the aggregate-type name, the
   replay, the ownership scoping and the optimistic-concurrency bookkeeping, so a use case
@@ -286,6 +295,22 @@ there; they are not repeated here.
   configuration; it may never select behaviour** — and a deletion the environment could
   make happen sooner is exactly that. _Avoid_: a configurable retention window, a cadence
   hard-coded in the domain.
+
+- **Synthetic corpus** — the generated population the replay harness runs a candidate
+  **ruleset release** against, at two densities, with a fixed clock and a fixed
+  `SearchContext` ([ADR-0121](../docs/adr/0121-a-fixture-stands-for-a-comparison-never-for-a-city.md)).
+  **It stands for a comparison, never for a city.** Every number the harness prints is
+  baseline-against-candidate over the *same* population, so what it owes is ordering, and
+  an absolute rate is a claim it never makes — which is why the draws are neutral wherever
+  nothing in the repository states a shape, and why the one departure is argued in the
+  spec and printed on the report. Its **seeded generator is code and its output is a
+  committed file**, so a generator edit arrives as a visible population diff rather than
+  silently rewriting every past comparison, and CI regenerating under a different
+  `PYTHONHASHSEED` asserts generation and pipeline together. It goes stale by
+  **contradiction** — a named parameter leaving its band against the search record — never
+  by ceasing to resemble anything. _Avoid_: "realistic", "production-like", a fixture whose
+  correlations nobody measured, folding §20.1's scenarios or the six judged pairings into
+  it.
 
 Add backend-specific technical terms here as they are resolved. Anything describing the
 *domain* belongs in the shared glossary instead.

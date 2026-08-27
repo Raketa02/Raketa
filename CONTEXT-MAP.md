@@ -27,6 +27,15 @@ A **polyglot monorepo** with two independently deployable apps that realize the
 > multi-app repo, because that is what it is again the moment a second client returns — and
 > the guardrail hooks still fence `frontend_club/` for exactly that reason.
 
+> **The matchmaking engine did not add a third app, and that was a decision rather than an
+> omission.** Its input document recommends a fourth deployable in Go at `matcher/`;
+> [ADR-0093](docs/adr/0093-matcher-in-the-backend-with-a-pure-match-fit-engine.md) puts it in the
+> backend instead — the stateful half as a module, the scorer as the **second engine** beside
+> RacketSkill. So there is no `matcher/CLAUDE.md`, no fourth ownership fence and no second CI
+> lane, and the only new topology is a spec set under `docs/specs/matchmaking/`. The two engines
+> may not import each other, which is why `.importlinter` now carries two `forbidden` contracts
+> rather than one: two engines that can reach each other develop two opinions about a level.
+
 ## How the domain language is split
 
 An `Assessment` means the same thing in both apps. To stop the ubiquitous language
@@ -131,6 +140,8 @@ else lives one layer down. See
 │   ├── agents/               ← ownership boundaries, domain-doc consumption
 │   ├── environments.md       ← THE four environment names + deployment contract
 │   ├── specs/player-app/     ← the player app's product + architecture specifications
+│   ├── specs/matchmaking/    ← the matchmaking engine: the spec set + the two frozen inputs
+│   │                            the-engine.md is the entry point and states precedence
 │   └── value-formatting.md   ← the rendering table the client implements
 ├── backend/                  ← FastAPI  (CLAUDE.md + CONTEXT.md + its own docs/)
 ├── frontend_player/          ← Expo     (CLAUDE.md + CONTEXT.md)

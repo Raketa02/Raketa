@@ -1,0 +1,294 @@
+# The candidate index — what builds it, what a search reads, and how stale it may be
+
+> Resolves [#173](https://github.com/Raketa02/Raketa/issues/173). Decisions are in
+> [ADR-0110](../../adr/0110-the-index-tails-the-log-the-outbox-delivers-side-effects.md),
+> [ADR-0111](../../adr/0111-the-index-holds-only-what-a-player-changes-about-themselves.md)
+> and [ADR-0112](../../adr/0112-the-snapshot-is-a-per-partition-container-bound-once.md).
+> This file holds the commitments that are not decisions: the event list, the row, the
+> cursor mechanics, the refresh, and what CI asserts.
+
+---
+
+## 1. The shape, in one picture
+
+```
+event_store (ordered by sequence_no — ADR-0097)
+      │
+      │  tail reader, PeriodicJob @ 1 s, cursor row FOR UPDATE
+      │  contiguous prefix only; gaps stepped over under an xmin horizon
+      ▼
+candidate_row  (player_id, sport)  +  applied_through_sequence_no
+      │
+      │  delta refresh, PeriodicJob @ 2 s, per worker, per partition
+      │  references copied; only moved rows decoded; gc.freeze() after
+      ▼
+CandidateSource.snapshot(partition) ──▶ one immutable container
+      │
+      │  bound ONCE into SearchContext at entry
+      ▼
+app/engines/matchfit/   ── pure. never reads anything. ──
+```
+
+The outbox (`event_delivery_queue`) is **not** in this picture. It keeps delivering side
+effects, out of append order, leased once per platform. Two subscriptions, two guarantees
+(ADR-0110).
+
+---
+
+## 2. What feeds it
+
+### 2.1 Live contracts, consumed today
+
+Every one of these is registered in `app/modules/*/application/event_subscriptions.py` and
+exists in the store now.
+
+| Event | Moves |
+|---|---|
+| `player_profile.created` / v1 | Creates the rows: tags, grid, area, radius, opt-in — **and, once #182 lands, gender and gender preference** |
+| `player_profile.social_tags_changed` / v1 | `tags`, `tags_updated_at` |
+| `player_profile.availability_changed` / v1 | `grid`, `grid_updated_at` |
+| `player_profile.location_changed` / v1 | `area`, centroid |
+| `player_profile.search_radius_changed` / v1 | `search_radius_km` |
+| `player_profile.proposals_opt_in_answered` / v1 | `proposals_opt_in` |
+| `rating.rating_initialised` / v1 | μ, σ, `confidence`, band, `status`, `calibration_priority` |
+| `auth.refresh_token_issued` / v1 · `auth.refresh_token_rotated` / v1 | `last_active_at` — see §2.3 |
+
+`player_profile.photos_changed` is **not** consumed: ADR-0107 assembles the player card
+outside the engine, so no photo fact reaches the index.
+
+**`users` is not consumed either, and that is deliberate rather than an omission.**
+`UserDisabled` never reaches this index: an *active* column that could be stale would make
+staleness cost **safety**, which is the one thing §3's invariant exists to prevent — and account
+state is not a fact a player changes *about themselves*, since an administrator may change it.
+Gate 8 reads it **live**, as a set, beside the block set
+([ADR-0124](../../adr/0124-the-matcher-gates-account-state-never-age.md)). Until that gate is
+built, **a disabled account keeps its row and remains a candidate** — the gap this file's source
+list made invisible for as long as nobody asked what *eligibility* meant.
+
+`RatingInitialised` carries everything the row needs except `counted_games`, which belongs to
+`matches` and is `0` today.
+
+### 2.2 Contracts this map's decisions require, which do not exist
+
+Four demands on `player_profile`, filed as a build ticket outside this map
+([#182](https://github.com/Raketa02/Raketa/issues/182)) in the pattern #176 and #181
+established:
+
+| Needed | Because |
+|---|---|
+| `gender` and `gender_preference` on `player_profile.created` | ADR-0096 makes both required at profile creation |
+| `player_profile.play_intent_declared` / v1 | ADR-0094 |
+| `player_profile.gender_changed` / v1 | ADR-0096: gender is *"self-declared, freely changed"* |
+| `player_profile.gender_preference_changed` / v1 | ADR-0096: the preference is durable and a player may narrow it |
+
+**The rule, which outlives the list:** *a fact the index holds must arrive as an event, or it
+is not in the index.* It is what makes §7.4's rebuild true rather than aspirational.
+
+### 2.3 `last_active_at`, and what it actually means
+
+Nothing in `backend/app` records when a player was last active — not a column, not an event.
+`last_active_at` is projected from `auth.refresh_token_issued|rotated` against
+`REFRESH_TOKEN_EXPIRE_SECONDS = 86400`, so **it resolves days, not hours, and it means *last
+session refresh***.
+
+§9.5's *Recent activity* row is therefore read as ***this week* … *dormant***, not *Active
+now* vs *3 days ago*. The −5 … +4 bounds are unchanged (that is the discrimination they were
+buying), the *Active now* end is unreachable, and ADR-0106 §5 had already refused to print
+*"active 2 hours ago"* to a player under any name. Full argument in ADR-0111.
+
+### 2.4 What is deliberately absent
+
+`player_score`, the six strands and `opponent_variety` are **not columns**. ADR-0098 made them
+ports; today's registered implementation is `NoPlayerScoresExist`. A column that is `null` for
+every row for a year is an invitation to read it as a measured zero, which ADR-0098 forbids.
+When the provider lands they arrive as **denormalised columns fed by this same tail reader** —
+never as a per-row port call, which the scale research priced at **+0.58 ms**.
+
+Blocks, holds, history and the open-challenge set are not columns either, and never will be —
+they are the facts ADR-0111 forbids the index to hold. §7.5's advisory-copy sentence is
+superseded by ADR-0095 and ADR-0098.
+
+---
+
+## 3. The row
+
+Identity is `(player_id, sport)` — ADR-0101, and never `(player, sport, area)`. The row holds
+a *set* of area references (size one today) so a row reachable from two cells costs a pointer,
+not a duplicate row.
+
+Three assertions guard it, all build-failing:
+
+1. **No `shard_key` field** (ADR-0101) — no field exists for a future conjunct to attach to.
+2. **No name, photo, email, date of birth, nationality or precise location** (§7.2's rule).
+   Gender is present and fenced: it reaches generation and gating and is **absent from the type
+   handed to `app/engines/matchfit/`** (ADR-0096).
+3. **No reference cycles** — `__slots__`, primitive fields, no back-pointer to the container.
+   This is what makes `gc.freeze()` safe (ADR-0112, §5 below).
+
+Measured at **782 bytes a row** as `__slots__` objects, held once per gunicorn worker.
+
+---
+
+## 4. The tail reader
+
+A `PeriodicJob` at **1 s**, the cadence `EventWorker` already runs at.
+
+1. Take the single cursor row **`FOR UPDATE`**. A concurrent run blocks, then reads the
+   advanced cursor and finds nothing to do — which is how ADR-0092's *idempotent and safe
+   beside itself* stays literally true with no leader election and no lease to leak.
+2. Read `event_store WHERE sequence_no > cursor ORDER BY sequence_no`, bounded batch.
+3. Apply the **contiguous prefix only**. `sequence_no` is assigned at `INSERT`, not at
+   `COMMIT`, so a transaction holding 100 may commit after one holding 101 — a reader that
+   consumes to `max(sequence_no)` records a watermark that is a lie about what it has seen.
+4. A hole is either an in-flight transaction or an aborted one, and the two look identical
+   from here. `pg_snapshot_xmin(pg_current_snapshot())` decides: once no transaction old enough
+   to fill the hole is still running, the hole is permanent and the cursor **steps over it**.
+   Without this, one aborted append stalls the projection forever.
+5. Apply the batch and advance the cursor **in one transaction**. The cursor *is* the
+   idempotency; there is no at-least-once delivery here to defend against.
+6. Stamp each moved row with `applied_through_sequence_no`.
+
+**§7.3's four-field row stamp is struck.** `(event_type, schema_version, occurred_at,
+event_id)` was designed against at-least-once HTTP delivery this design does not have, and its
+`occurred_at` comparison is ADR-0097's rejected non-order wearing a different hat — ADR-0089
+guarantees those ties exist.
+
+**On SQLite** (the test suite) there is no snapshot horizon and no concurrent appender: the
+run asserts contiguity and the gap-stepping path is exercised against Postgres or not at all.
+Recorded in ADR-0110 as a place the suite is weaker than production.
+
+### The watermark
+
+`snapshot_version` = the cursor's value, and it means **everything up to and including this is
+applied** — the literal sentence
+[`search-telemetry.md`](search-telemetry.md) §6 demanded, true by construction rather than by
+argument. It is what makes ADR-0104's unexpiring search record reproducible, and it is the
+input the replay harness was missing.
+
+---
+
+## 5. What a search reads
+
+`CandidateSource.snapshot(partition)` returns **one immutable container**, at container
+granularity (54 ns; per-row is +0.58 ms).
+
+- **Per partition, not per index.** `(sport)` today, `(sport, cell)` at trigger 4 (ADR-0101),
+  so the shape survives that day without a rewrite. Generation is `sport ∧ box ∧ gates` and a
+  search never spans two sports.
+- **Bound once, at entry**, into the `SearchContext`. A refresh mid-search rebinds an
+  attribute — atomic under the GIL — while the running search keeps its container alive by
+  reference. That is `atomic.Pointer` in Python, and it is the whole of §13's *the index cannot
+  move underneath a running search*.
+- **Refreshed by delta at 2 s**, per worker (§17's p50 target). The new container copies
+  references from the outgoing one and decodes only rows whose `applied_through_sequence_no`
+  moved. There is no derived spatial structure to rebuild: the bounding box is 18.5 ns/row
+  against 1.00 µs per surviving candidate, which is what killed §9.2's cell map.
+- **`gc.freeze()` after every load and refresh.** One automatic gen-2 collection over a live
+  index cost **57.9 ms stop-the-world**, ~30× the search it interrupted; frozen, four
+  collections totalling 1.1 ms, max 0.4 ms. Safe because a `CandidateRow` has no reference
+  cycles, so refcounting frees an outgoing row the moment the last container drops it.
+
+**§15.3's slogan narrows: the *pure scorer* never touches a database.** The search does —
+ADR-0095's live block set, ADR-0098's history and the Redis ledgers are all read before
+`matchfit` is called, and carried in the `SearchContext`.
+
+### The `× 2` that is no longer there
+
+A delta refresh shares row references, so the steady state never holds two copies of a row.
+**Trigger 4 loses its `× 2`** and becomes `bytes_per_row × rows × workers` > half the
+container limit — roughly **64 000 players** at four workers on a 1 GB container, not ~32 000.
+ADR-0093 and ADR-0101 are amended in place (ADR-0112).
+
+---
+
+## 6. How stale it may be
+
+Two budgets, not one, and neither is what §18 said it was.
+
+| | Value | What it is |
+|---|---|---|
+| §17 index staleness | p50 **2 s**, p99 **15 s** | A **target on the refresh loop**. Missing it raises an alert. No behaviour changes |
+| §18 lag < 15 min | serve normally | — |
+| §18 lag 15 min – 24 h | serve, record `index_stale`, alarm | **Internal.** On ADR-0104's search record and in the structured logs, never on ADR-0106's envelope |
+| §18 lag > 24 h | **refuse** — the honest empty state | A **quality** ladder, not a safety stop |
+
+**§18's stated reason for the refusal is false and is replaced.** It refuses because *"a
+day-old index can put a held or blocked player in front of somebody"* — but ADR-0095, ADR-0098
+and ADR-0109 between them took every live-truth fact out of the index and put it in the
+`SearchContext` with a backend re-verify. The refusal survives on quality: a day-old index
+means stale μ, grids and intent, and a shortlist built from those is §18's own worst outcome —
+a confident bad list.
+
+**The invariant that replaces it, and that a future column is tested against:**
+
+> **The index holds only facts a player changes about themselves. Every fact that must be live
+> is never in it.**
+
+*What happens to a search that reads a row the backend has already changed:* nothing, by
+design. The index is allowed to be wrong about slow facts; it cannot be wrong about live ones,
+because it does not hold any. The backend re-verifies the returned rows (ADR-0095, ADR-0098),
+and a stored search read back later re-verifies again and states its withholdings (ADR-0109).
+
+---
+
+## 7. Rebuild
+
+**A `make` target built from `app/bootstrap/composition.py`** — never an admin route. A button
+that drops and rebuilds the index is a button eventually pressed in the wrong place, and
+ADR-0092's register is for loops, not one-shot operations.
+
+**CI asserts the equality, not the clock:** tail a fixture incrementally, rebuild the same
+fixture from zero, require the two tables to be **identical**. That one property proves the
+projection is a pure function of the log, that ADR-0097's total order does the job it was
+written for, and that ADR-0105's determinism has a stable input.
+
+A wall-clock bound on a shared runner is a flaky test that gets muted. The five-minute figure
+stays a metric the rebuild command logs. Measured, projection is not the constraint: **959 000
+events/s on one core — 1.0 s of CPU for a 50 000-player city.** The read and the write batching
+set the wall clock.
+
+---
+
+## 8. The geo cell — the rule, not the integer
+
+ADR-0101 makes the partition `(sport)` today and `(sport, cell)` at trigger 4. The cell **size
+is not chosen here**, and that is deliberate: it is calibrated against a real population's
+clustering, and trigger 4 is ~64 000 players away. Choosing it now would repeat
+[#167](https://github.com/Raketa02/Raketa/issues/167)'s `QUALITY_FLOOR` mistake — a number that
+cannot be calibrated is not an answer, it is a placeholder that later reads as a decision.
+
+What *is* fixed, because it is forced by geometry:
+
+- A 50 km `SearchRadius` at ADR-0099's ×2.0 rung makes a box up to **200 km across**.
+- **A cell edge is at least the largest possible box edge**, so a box touches at most four
+  cells and the number a search must union is bounded by geometry rather than by population.
+- The partition key **derives from the area centroid** (ADR-0101 — there is no field for it to
+  attach to).
+- The row holds a **set** of area references, so a row reachable from two cells costs a
+  pointer, never a duplicate row. Row identity stays `(player, sport)`.
+
+---
+
+## 9. What this hands onward
+
+- **To the replay harness** ([#183](https://github.com/Raketa02/Raketa/issues/183)):
+  `snapshot_version` now identifies a reconstructible index state, which is the input
+  ADR-0105 said a *past*-search replay was still missing. Determinism already ships as a
+  two-subprocess property test; replaying a past search is now expressible.
+- **To `player_profile`** ([#182](https://github.com/Raketa02/Raketa/issues/182)): the four
+  event contracts in §2.2.
+- **To whoever owns `player_score`:** the strands land as denormalised columns on this row,
+  fed by this tail reader, not as a per-row port call. ADR-0098's contract suite already fixes
+  the shape.
+- **To the operational surface, still fog:** `index_stale` and the two trigger instruments emit
+  structured log records, and there is still nowhere to read them.
+
+---
+
+## 10. Constants introduced
+
+| Constant | Value | What would falsify it |
+|---|---|---|
+| Tail reader interval | **1 s** | The contiguous prefix routinely falling behind by more than one tick's worth of appends — i.e. batches consistently hitting their bound |
+| Snapshot refresh interval | **2 s** | §17's p50 target moving, or a delta refresh whose cost stops being dominated by the pointer copy |
+| Trigger 4 (amended) | `bytes_per_row × rows × workers` > 50% of the container limit | A refresh implementation that stops sharing row references, which would put the `× 2` back |
