@@ -11,8 +11,11 @@
  * — and a second copy of the path is exactly the drift `README.md` says this barrel exists
  * to prevent.
  *
- * The colour is the caller's, because it is always the inverse of whatever it sits on and
- * only the caller knows that. Both callers fill with `ink`, so both pass `surface`.
+ * **It takes no props, and the colour is not one of them.** A tick is only ever drawn on
+ * the `ink` fill that 6.8's selected state inverts to, so `surface` is the only value there
+ * has ever been — the app's one white, with no separate `white` token, at 17,50:1 on `ink`.
+ * A `color` prop would be a choice offered to callers that neither of them has, and the
+ * contrast figure would then be stated at every call site instead of held here.
  */
 
 import Svg, { Path } from 'react-native-svg';
@@ -21,18 +24,13 @@ import { theme } from './theme';
 
 const PATH = 'M 2.5 6.5 L 5 9 L 9.5 3.5';
 
-export interface TickProps {
-  /** The stroke colour. `surface` on an `ink` fill is 17,50:1. */
-  readonly color: string;
-}
-
-export function Tick({ color }: TickProps) {
+export function Tick() {
   const { tick, tickStroke } = theme.size.availability;
   return (
     <Svg width={tick} height={tick} viewBox={`0 0 ${tick} ${tick}`}>
       <Path
         d={PATH}
-        stroke={color}
+        stroke={theme.color.surface}
         strokeWidth={tickStroke}
         strokeLinecap="round"
         strokeLinejoin="round"

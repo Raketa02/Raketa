@@ -645,6 +645,17 @@ rather than granted it:
 | Photo remove control ([6.9](#69-the-photo-tile-and-picker)) | 28                          | `{ top: 8, bottom: 8, left: 8, right: 8 }`       |
 | Radius slider row ([6.10](#610-the-radius-slider))          | 44 tall, full content width | none — the **row** is the surface, not the thumb |
 
+Sign-up's age question adds a fifth, built the radius slider's way:
+
+| Control                                  | Visual                               | `hitSlop`                                                 |
+| ---------------------------------------- | ------------------------------------ | --------------------------------------------------------- |
+| Tick box row ([6.11](#611-the-tick-box)) | box 20 × 20, row 44 tall, full width | none — the **row** is the surface, box and label together |
+
+**A `hitSlop` around the box would have been the wrong answer here**, not merely a second
+one. Growing a 20pt square to 44 leaves the sentence beside it inert, so the target stops
+where the words start — and the words are what a player reads before deciding. The row is
+the control for the same reason the slider's is.
+
 **The photo remove control is the case the neighbour rule would have got wrong.** Its 44pt
 square is anchored _inside_ its tile rather than over the tile's corner. Tiles sit 9pt
 apart, so a target overhanging the edge could take at most 4,5pt from the gap and would
@@ -672,6 +683,16 @@ chip's:
 | Photo remove control ([6.9](#69-the-photo-tile-and-picker)) | `opacity: .7`                                                            |
 | Photo add control ([6.9](#69-the-photo-tile-and-picker))    | `borderColor: coral` — the card's state ([5.1](#51-card--the-workhorse)) |
 | Radius slider ([6.10](#610-the-radius-slider))              | **none** — the thumb moving to the finger _is_ the feedback              |
+
+Sign-up's age question adds a sixth, and it takes the availability cell's:
+
+| Element                                  | Pressed                                                      |
+| ---------------------------------------- | ------------------------------------------------------------ |
+| Tick box row ([6.11](#611-the-tick-box)) | `opacity: .7`, over either of its two states, on the **row** |
+
+The dimming is on the row rather than on the box, because the row is the target: a box that
+dimmed while the sentence beside it did not would say the two are separate things, which is
+the reading 6.5 already refuses.
 
 **The add control takes the card's press state and the photo tile does not**, though they
 are the same rectangle. The add control is a pressable card-shaped surface with a border to
@@ -743,7 +764,7 @@ directions: the grid has no floor, no ceiling, and no rule that could close one 
 greyed cell would be the screen claiming a constraint the domain does not have.
 
 **The selected state is a fill inversion _and_ a tick, and the tick is the half that
-matters.** Inverting to `ink` is a 17,5:1 luminance change rather than a change of hue, so
+matters.** Inverting to `ink` is a 17,50:1 luminance change rather than a change of hue, so
 it survives colour blindness on its own — but a cell is a bare rectangle with nothing else
 in it, and 21 rectangles differing only in lightness is a texture. The tick is the shape
 [Part 13](#part-13--accessibility) asks for, and it is what makes a ticked week readable as
@@ -1052,7 +1073,7 @@ pressed  opacity .7, over any of those
 
 **It borrows 6.8's cell rather than inventing a second ticked thing.** The selected state is
 a fill inversion _and_ a tick for the reason [6.8](#68-the-availability-grid) gives: the
-inversion is a 17,5:1 luminance change that survives colour blindness on its own, and the
+inversion is a 17,50:1 luminance change that survives colour blindness on its own, and the
 tick is the shape [Part 13](#part-13--accessibility) asks for. A box carrying its state in
 fill alone is a stain rather than an answer. The tick is the same path at the same 12 × 12,
 drawn from the same tokens.
@@ -1756,7 +1777,7 @@ unchangeable one; it is one whose changes are recorded rather than absorbed.
 | 2026-08-25 | [6.9](#69-the-photo-tile-and-picker)              | The remove control had a size, a target, a position and a press state, and no fill or mark                                                                                                          | **Specified**: a solid `night` square with a white mark at the `tag` radius, inset from the tile's corner by its own 8pt slop                                                                                                                                                                                                                                                                                                                     | Found while building the section. Every other object on the tile states what it is drawn on and this one did not, and the two obvious fills are both wrong for the reason the strip's own paragraph gives — a translucent scrim over an unknown photograph has an unknown ratio, and [9.1](#91-bottom-sheet)'s `line2` close circle is a paper-surface object that disappears over a bright sky                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | 2026-08-25 | [6.10](#610-the-radius-slider)                    | —                                                                                                                                                                                                   | **New section.** The radius slider: the 44pt **row** is the touch surface rather than the thumb, a `line2` track with a `night` fill and a `night` thumb inside a 3pt `surface` ring, the figure in a width-reserved box and the plain words beneath it, no ticks and no end labels, and `adjustable` with increment and decrement. Registered in [6.5](#65-touch-targets) and [6.6](#66-press-states)                                            | The load-bearing rule is the one that reads as an omission: **the minimum, the maximum, the step and the default are not in this document and not in `theme.ts`**. They are served by `GET /player-profile/options`, they are re-validated on the write path, and they are product's to retune — so a slider shipping `1` and `50` compiled in would be a second, staler copy of a rule the server already owns, in builds already on phones. That is the ceiling precedent of [7.8](#78-the-confidence-ring), and the reason the scale is the full **served** range rather than a fixed one. The row rather than the thumb being the touch surface is what gets the control to 44pt without a `hitSlop` entry; `adjustable` with increment and decrement is the part sliders universally ship without, and a drag-only slider is unusable with a screen reader                                                                                |
 | 2026-08-26 | [6.1](#61-button)                                 | Three variants: `primary`, `dark`, `secondary`                                                                                                                                                      | A fourth, **`settled`** — `mintInk` filled, white label, brightening to `mint` on press                                                                                                                                                                                                                                                                                                                                                           | The location step needed a control whose **state is the message**: the area has been read, and pressing again would only read it a second time. Every existing variant says something else — `primary` claims the accent a screen may only spend once ([1.2](#12-the-one-accent-rule)), `secondary` reads as the lesser of two actions, and `dark` is a filled action with no meaning attached. Mint is this system's word for _settled, safe, covered_ ([1.3](#13-semantic-colour)), so it is the only colour that could carry it, and Rule C picks `mintInk` over `mint` at 4.07:1. It brightens on press exactly as `primary` does, with the same momentary exception. **Its label changes with its fill**, which is what keeps it inside _never colour alone_ ([Part 13](#part-13--accessibility)) — the variant is half of a state and the screen owns the other half                                                                     |
-| 2026-08-27 | [6.11](#611-the-tick-box)                         | There was no tick box, and no specified control for a claim a player either makes or does not                                                                                                       | **Specified**: 6.8's cell at 20pt with 6.8's own tick, the whole row as the touch surface, no pre-ticked state, and a refused border drawn only while unticked                                                                                                                                                                                                                                                                                    | The sign-up form has to ask whether the player is an adult ([ADR-0124](../../docs/adr/0124-the-matcher-gates-account-state-never-age.md)), and Part 6 specified exactly one ticked thing — a grid cell. Left unrecorded, the form would have invented a second idea of what _ticked_ looks like beside the one that exists, which is what [15.1](#151-adding-a-component) is for. Added through it: no new colour, no new radius, and the one new size is 6.8's cell brought down to the height a line of text wants                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| 2026-08-27 | [6.11](#611-the-tick-box)                         | There was no tick box, and no specified control for a claim a player either makes or does not                                                                                                       | **Specified**: 6.8's cell at 20pt with 6.8's own tick, the whole row as the touch surface, no pre-ticked state, and a refused border drawn only while unticked. Registered in [6.5](#65-touch-targets) and [6.6](#66-press-states)                                                                                                                                                                                                                | The sign-up form has to ask whether the player is an adult ([ADR-0124](../../docs/adr/0124-the-matcher-gates-account-state-never-age.md)), and Part 6 specified exactly one ticked thing — a grid cell. Left unrecorded, the form would have invented a second idea of what _ticked_ looks like beside the one that exists, which is what [15.1](#151-adding-a-component) is for. Added through it: no new colour, no new radius, and the one new size is 6.8's cell brought down to the height a line of text wants                                                                                                                                                                                                                                                                                                                                                                                                                           |
 
 # Part 17 — What the reset removed
 

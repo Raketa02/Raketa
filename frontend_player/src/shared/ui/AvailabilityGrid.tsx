@@ -172,9 +172,7 @@ function Cell({ cell }: { readonly cell: AvailabilityGridCell }) {
         pressed ? s.cellPressed : undefined,
       ]}
     >
-      {/* `surface` is the app's one white; there is no separate `white` token,
-          deliberately. On `ink` it is 17,50:1. */}
-      {cell.selected ? <Tick color={theme.color.surface} /> : null}
+      {cell.selected ? <Tick /> : null}
     </Pressable>
   );
 }

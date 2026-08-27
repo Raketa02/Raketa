@@ -103,8 +103,9 @@ a box that arrives ticked is a claim the player never made, and that is the enti
 component exists. The words are the caller's.
 
 `Tick` is 6.8's mark extracted, because two controls now draw it and a second copy of a
-12 × 12 path is exactly the drift this folder exists to prevent. Its colour is the caller's —
-it is always the inverse of the fill under it.
+12 × 12 path is exactly the drift this folder exists to prevent. It takes **no props**: a
+tick is only ever drawn on the `ink` fill 6.8's selected state inverts to, so `surface` is
+the only colour there has ever been, and it is held there once with its contrast figure.
 
 `CourtPoster` (6.9) is the third, and the one with **no size at all**: the court is
 described in `viewBox` units and the caller gives it a box, so one drawing serves a 90pt

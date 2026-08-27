@@ -8,7 +8,7 @@
  *
  * It borrows rather than invents: the selected state is
  * [6.8](../../../docs/design-system.md#68-the-availability-grid)'s cell — a fill inversion
- * *and* a tick — because the inversion is a 17,5:1 luminance change that survives colour
+ * *and* a tick — because the inversion is a 17,50:1 luminance change that survives colour
  * blindness while the tick is the shape [Part 13](../../../docs/design-system.md#part-13--accessibility)
  * asks for. A box carrying its state in fill alone is a stain, not an answer.
  *
@@ -30,7 +30,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { theme } from './theme';
 import { Tick } from './Tick';
 
-const box = theme.size.tickBox;
+const geometry = theme.size.tickBox;
 
 export interface TickBoxProps {
   /** The claim, in the player's own voice. Also the accessible name. */
@@ -65,8 +65,7 @@ export function TickBox({ label, checked, onChange, error, disabled = false }: T
             error !== undefined && !checked ? s.boxError : undefined,
           ]}
         >
-          {/* `surface` is the app's one white; on `ink` it is 17,50:1. */}
-          {checked ? <Tick color={theme.color.surface} /> : null}
+          {checked ? <Tick /> : null}
         </View>
         <Text style={s.label}>{label}</Text>
       </Pressable>
@@ -86,12 +85,12 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.space.sm,
-    minHeight: box.row,
+    minHeight: geometry.row,
   },
   rowPressed: { opacity: 0.7 },
   box: {
-    width: box.box,
-    height: box.box,
+    width: geometry.box,
+    height: geometry.box,
     borderRadius: theme.radius.availabilityCell,
     borderWidth: 1,
     borderColor: theme.color.line,

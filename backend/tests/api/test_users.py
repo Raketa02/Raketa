@@ -36,8 +36,17 @@ async def test_signup_refuses_an_unanswered_age_question(client, valid_signup_pa
 
 @pytest.mark.asyncio
 async def test_signup_refuses_a_body_that_never_asked(client, valid_signup_payload):
-    # Omitting the field is a malformed body rather than an answer — the field
-    # is required, so nothing defaults an attestation into existence.
+    """A body that never asked is malformed, and that is the deliberate half.
+
+    It could have been given a schema default of ``False`` and reached the typed
+    400 like an unticked box does, which would put both *no answer* bodies into
+    one renderable shape. **Required wins anyway**, because required is what
+    makes the generated client type non-optional: a field defaulted here is
+    ``adult_attested?: boolean`` on the client, and *forgot to ask* stops being a
+    compile error over there. Refusing a malformed body with the validation
+    envelope is the correct treatment of a body no shipped client sends.
+    """
+
     payload = {k: v for k, v in valid_signup_payload.items() if k != "adult_attested"}
     resp = await client.post("/api/v1/users", json=payload)
 

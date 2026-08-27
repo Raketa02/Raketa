@@ -63,9 +63,21 @@ def test_registering_records_the_attestation_on_the_first_event():
     assert registered.adult_attested is True
 
 
+def test_the_refusal_is_the_only_way_false_is_reachable():
+    # ``False`` is representable on the event, because a boolean is. It is not
+    # *reachable*: this type refuses it before an event can be built, so no
+    # stream can carry one. ``test_user_event_codec`` holds the other half —
+    # that an absent field is ``None`` and never ``False``.
+    with pytest.raises(AdultAttestationRequired):
+        AdultAttestation(False)
+
+
 def test_a_stream_written_before_the_question_existed_still_replays():
     # No backfill: an account created before this keeps no attestation, and
-    # ``None`` says exactly that rather than inventing a claim nobody made.
+    # ``None`` says exactly that rather than inventing a claim nobody made. The
+    # decode this stands for is asserted through the real codec in
+    # ``test_user_event_codec``; what is asserted here is that the aggregate
+    # rebuilds from such a stream at all.
     now = datetime.now(timezone.utc)
     registered = UserRegistered(
         user_id=new_uuid(),
