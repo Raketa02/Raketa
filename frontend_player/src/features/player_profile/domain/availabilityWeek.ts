@@ -17,9 +17,10 @@
  *
  * **The floor is one cell of the twenty-one** (ADR-0102), and it binds where a week is
  * *given*: the step will not continue on an empty one, and the commit refuses one. It is
- * not served — it is fixed — so unlike the tag bounds it is a number this side may know;
- * `AVAILABILITY_FLOOR` in `profileCommit` is where it is written down, beside the rule that
- * reports it as a missing answer.
+ * not served — it is fixed — so unlike the tag bounds it is a rule this side may hold, and
+ * `weekStanding` below is the whole of where it is held. The step draws its control from
+ * that answer and `readyToCommit` reports a missing answer from it, so there is no second
+ * place a floor of one is written and no second place to forget to move it.
  *
  * **There is no bulk selection either**, and it is absent from this file rather than merely
  * unbuilt in the screen: a row, a column or a *weekends* shortcut is a claim about what

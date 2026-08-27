@@ -28,9 +28,10 @@
  * player reads before they start pressing, and the control names what is missing on top of
  * that. A dead control with no sentence anywhere is the shape this step must not take.
  *
- * **The number is written here**, unlike the tag floor, and that is the backend's call: the
- * availability minimum is not served, it is fixed. `AVAILABILITY_FLOOR` holds it; these
- * sentences say *one* in words because a rule a player reads is a sentence, not a figure.
+ * **The number is spelled out here**, unlike the tag floor, and that is the backend's call:
+ * the availability minimum is not served, it is fixed, so there is no figure to wait for
+ * and quote. These sentences say *one* in words because a rule a player reads is a sentence
+ * rather than a figure — the rule itself is `weekStanding`'s, and nothing here decides it.
  */
 
 import type { AvailabilitySlot, DayPart, Weekday } from '../domain/ProfileDraft';

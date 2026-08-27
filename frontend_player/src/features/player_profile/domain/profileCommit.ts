@@ -25,8 +25,10 @@
  * and ceiling are **served** by `GET /player-profile/options`, so a rule that knows nothing
  * about them cannot enforce them; the picker refuses to continue below the floor with the
  * served number in hand, and the commit re-validates. **The reason does not transfer to the
- * week**: its minimum is not served — it is exactly one, fixed by the record — so this file
- * can hold it, and `AVAILABILITY_FLOOR` is where it is written down once.
+ * week**: its minimum is not served — it is exactly one, fixed by the record — so this side
+ * may know it. It is not written down here either, though: `weekStanding` already decides
+ * whether a week is empty, the availability step already draws its control from that
+ * answer, and a second spelling of the floor beside it would be the rule decided twice.
  *
  * ## What is missing is a list, not a boolean
  *
@@ -53,6 +55,7 @@
 
 import type { AppError } from '@/shared/errors';
 
+import { weekStanding } from './availabilityWeek';
 import { uploadsInFlight, type ProfilePhoto } from './photoCollection';
 import type { AvailabilitySlot, LocationArea, ProfileDraft, ProposalsOptIn } from './ProfileDraft';
 import type { SocialTagId } from './SocialTag';
@@ -73,16 +76,6 @@ export interface ProfileCommit {
   readonly proposalsOptIn: ProposalsOptIn;
 }
 
-/**
- * How many cells of the week a commit must carry. **One of the twenty-one.**
- *
- * A constant here rather than a served number, and that is the backend's call recorded on
- * this side: it is fixed by ADR-0102 rather than owned by product, so it is held the way
- * the photo cap is held and `GET /player-profile/options` does not carry it. The commit
- * re-validates against the same one and refuses with `availability_grid_empty`.
- */
-export const AVAILABILITY_FLOOR = 1;
-
 /** An answer the commit needs and the draft has not got. Named for the step that asks it. */
 export type MissingAnswer = 'availability' | 'location' | 'search-radius' | 'proposals-opt-in';
 
@@ -99,12 +92,14 @@ export type CommitReadiness =
  * alternative was the four names written twice, kept in step by hand, and one edit away
  * from a screen sending a player back to the wrong step.
  *
- * Three of them are a field being present. The week is a **count**, which is why this is a
- * table of predicates rather than a list of keys: an answer the draft can hold and still be
- * short of needs somewhere to say so.
+ * Three of them are a field being present. The week is a **standing**, which is why this is
+ * a table of predicates rather than a list of keys: an answer the draft can hold and still
+ * be short of needs somewhere to say so. It asks `weekStanding` rather than counting the
+ * list itself, so the floor is one function's answer — the same one the availability step's
+ * control is drawn from, and the same one that would move if the floor ever did.
  */
 const ANSWER_HELD: Readonly<Record<MissingAnswer, (draft: ProfileDraft) => boolean>> = {
-  availability: (draft) => draft.availability.length >= AVAILABILITY_FLOOR,
+  availability: (draft) => weekStanding(draft.availability).kind === 'ticked',
   location: (draft) => draft.location !== undefined,
   'search-radius': (draft) => draft.searchRadiusKm !== undefined,
   'proposals-opt-in': (draft) => draft.proposalsOptIn !== undefined,
@@ -125,16 +120,19 @@ export function readyToCommit(draft: ProfileDraft | undefined): CommitReadiness 
   const missing = EVERY_ANSWER.filter((answer) => !ANSWER_HELD[answer](draft));
   const { location, searchRadiusKm, proposalsOptIn } = draft;
 
-  // The three narrowings say the same thing the filter above just said, to the compiler
-  // rather than to a screen — and they are what make `ProfileCommit` constructible at all.
-  if (location === undefined || searchRadiusKm === undefined || proposalsOptIn === undefined) {
+  // **One guard, because it is one question.** The three narrowings say to the compiler what
+  // the filter above just said to a screen — and they are what make `ProfileCommit`
+  // constructible at all. The week has no narrowing to do, since `readonly
+  // AvailabilitySlot[]` is already the commit's type, so it is carried by `missing` alone;
+  // counting the list a second time here would be the floor decided twice.
+  if (
+    missing.length > 0 ||
+    location === undefined ||
+    searchRadiusKm === undefined ||
+    proposalsOptIn === undefined
+  ) {
     return { kind: 'incomplete', missing };
   }
-
-  // The week has no narrowing to do — `readonly AvailabilitySlot[]` is already the commit's
-  // type — so the floor is checked against the report rather than against the field again.
-  // One rule, read twice, is one rule; two counts of the same list would be two.
-  if (missing.length > 0) return { kind: 'incomplete', missing };
 
   return {
     kind: 'ready',
