@@ -47,9 +47,12 @@ from app.engines.matchfit.core import (
 )
 from app.engines.matchfit.ruleset import (
     BalanceRules,
+    DistanceRules,
+    ExplanationRules,
     FamiliarityRules,
     Floors,
     GroupRules,
+    IntentRules,
     InterestRules,
     LivenessRules,
     ModeRules,
@@ -64,6 +67,7 @@ from app.engines.matchfit.ruleset import (
     TagRules,
     TelemetryRules,
 )
+from app.modules.player_profile.domain.play_intent import PlayIntent
 from app.modules.player_profile.domain.social_tags import SocialTag
 
 VERSION = "2026.08.26-a"
@@ -381,6 +385,42 @@ RULESET = Ruleset(
             ),
         }
     ),
+    # The six cells, unamended from ADR-0094's table. **`NO_PREFERENCE` is
+    # nearly as good as a match** — these players are the glue, and punishing
+    # the honest middle would teach everybody to declare a side. The two zeros
+    # are not symmetric: a competitive searcher meeting a declared friendly
+    # reads 0.00, where a for-fun searcher meeting a declared competitor reads
+    # 0.35, because a competitor will play a friendly and the reverse ruins the
+    # evening for one of them.
+    #
+    # Falsified by acceptance rate across the six cells: if the 0.35 cell
+    # accepts like the 0.85 one, the asymmetry is imagined.
+    intent=IntentRules(
+        alignment=MappingProxyType(
+            {
+                SearchMode.COMPETITIVE: MappingProxyType(
+                    {
+                        PlayIntent.COMPETITIVE.value: 1.00,
+                        PlayIntent.FOR_FUN.value: 0.00,
+                        PlayIntent.NO_PREFERENCE.value: 0.85,
+                    }
+                ),
+                SearchMode.FOR_FUN: MappingProxyType(
+                    {
+                        PlayIntent.COMPETITIVE.value: 0.35,
+                        PlayIntent.FOR_FUN.value: 1.00,
+                        PlayIntent.NO_PREFERENCE.value: 0.85,
+                    }
+                ),
+            }
+        ),
+        same_evening=MappingProxyType(
+            {
+                SearchMode.COMPETITIVE: PlayIntent.COMPETITIVE.value,
+                SearchMode.FOR_FUN: PlayIntent.FOR_FUN.value,
+            }
+        ),
+    ),
     tags=TagRules(
         # 1 tag 0.55 · 2 tags 0.80 · 3 tags 0.91 · 6 tags 0.99. The second matched
         # tag is worth less than the first, so tag-stuffing does not pay — and the
@@ -421,6 +461,19 @@ RULESET = Ruleset(
         sigma_coefficient=32.0,
         pct_min=35,
         pct_max=96,
+    ),
+    # Full marks inside 70% of the searcher's own ring, zero at 115% of it. The
+    # curve is generous at the top because inside two thirds of the radius you
+    # said you would travel, one kilometre more is not a fact about the evening;
+    # it costs from there and is still worth a third of the term at the ring
+    # itself, where the gate cuts.
+    #
+    # Falsified by acceptance rate by distance as a fraction of the searcher's
+    # own radius. If acceptance is flat out to the ring the curve is too steep,
+    # and if it falls away well inside 70% the shoulder is in the wrong place.
+    distance=DistanceRules(
+        full_marks_within=0.70,
+        zero_at=1.15,
     ),
     # 70 is roughly *you have missed something like a fifth of what you committed
     # to*. It is a **dock, not an exclusion**: refusing to show a genuinely good
@@ -558,6 +611,14 @@ RULESET = Ruleset(
         ),
     ),
     telemetry=TelemetryRules(near_miss_recorded=10),
+    # Five points of a hundred. The smallest weight any term carries on the
+    # day-one basis is social vibe's 4.6 competitive, so a lower bar would let a
+    # term warn about a shortfall it cannot produce even by reading zero.
+    #
+    # Falsified by the fraction of shown candidates carrying no concern at all:
+    # if almost every card warns about something, the line has stopped being a
+    # warning and become a caption.
+    explanation=ExplanationRules(concern_points=5),
     interest=InterestRules(
         # 21 rather than 7: a yes is silent, and a player who searches once a
         # fortnight would never see most of a week-long one. The failure that

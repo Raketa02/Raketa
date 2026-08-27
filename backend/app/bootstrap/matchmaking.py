@@ -17,7 +17,13 @@ engine, the platform's vocabularies and the API contract at once.
    missing from it would fall to the default lean and read as *this player has no
    preference about repetition*, which is a claim about them rather than a gap in
    a table.
-3. **Every evidence kind the ruleset can emit is present in the wire union**
+3. **Every declaration the intent table prices is a Play intent this platform
+   serves, and the table is exhaustive over them.** The engine holds a
+   declaration as the machine code it already is, for the reason it holds a tag
+   id that way; a cell keyed on a string nobody declares is a cell that can never
+   be read, and a declaration with no cell would stand a term down for a player
+   who answered the question.
+4. **Every evidence kind the ruleset can emit is present in the wire union**
    (``docs/adr/0106``). Two serialisations of one set of facts exist on purpose —
    storage stays open where the wire is closed — and this is the one check that
    stands between them. It is a **load failure rather than a lint** because the
@@ -41,6 +47,7 @@ from app.engines.matchfit.ruleset import Ruleset
 from app.kernel import invariant
 from app.modules.matchmaking.infrastructure.rulesets import LIVE_RULESET
 from app.modules.matchmaking.presentation.evidence import WIRE_EVIDENCE_KINDS
+from app.modules.player_profile.domain.play_intent import PlayIntent
 from app.modules.player_profile.domain.social_tags import (
     SOCIAL_TAG_VOCABULARY,
     SocialTag,
@@ -59,6 +66,7 @@ def verify_ruleset(ruleset: Ruleset = LIVE_RULESET) -> Ruleset:
 
     _verify_tag_ids(ruleset)
     _verify_familiarity_map(ruleset)
+    _verify_intent_table(ruleset)
     _verify_evidence_kinds(ruleset)
     return ruleset
 
@@ -94,6 +102,36 @@ def _verify_familiarity_map(ruleset: Ruleset) -> None:
         f"{SocialTagGroup.WHY_YOU_ARE_HERE.value}: missing "
         f"{sorted(expected - read)}, unexpected {sorted(read - expected)}",
     )
+
+
+def _verify_intent_table(ruleset: Ruleset) -> None:
+    """The six cells are the three declarations, twice, and nothing else.
+
+    Exhaustive in both directions, because the two failures are different and
+    both silent. A cell keyed on a string nobody declares can never be read; a
+    declaration with no cell stands the term down and renormalises it away — for
+    a player who answered the question, which is the one case a stand-down must
+    never mean.
+
+    ``same_evening`` is checked against the same vocabulary rather than against
+    ``SearchMode``'s spellings: the two enums share two strings today and that is
+    a coincidence the arithmetic is deliberately not allowed to lean on.
+    """
+
+    declared = {intent.value for intent in PlayIntent}
+    for mode, row in ruleset.intent.alignment.items():
+        priced = set(row)
+        invariant(
+            priced == declared,
+            f"{mode.value} does not price every Play intent: missing "
+            f"{sorted(declared - priced)}, unexpected {sorted(priced - declared)}",
+        )
+    for mode, declaration in ruleset.intent.same_evening.items():
+        invariant(
+            declaration in declared,
+            f"{mode.value} reads {declaration!r} as its own evening, and no "
+            f"player can declare it",
+        )
 
 
 def _verify_evidence_kinds(ruleset: Ruleset) -> None:

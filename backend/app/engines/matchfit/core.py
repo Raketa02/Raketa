@@ -102,6 +102,24 @@ class Term(str, Enum):
         return EvidenceKind[self.name]
 
 
+class LevelDirection(str, Enum):
+    """Which side of the searcher a candidate's Level sits on.
+
+    A code and not a sign on ``delta``, because the client's sentence differs in
+    all three cases and a renderer deriving *"above"* from a sign is the display
+    logic the presentation boundary exists to keep out.
+
+    It lives here rather than beside the wire shape for the reason
+    ``EvidenceKind`` does: the engine computes it and the schema publishes it, so
+    a second spelling on the schema's side would be two answers to *which way is
+    up*. A module may import an engine; the reverse is the fence.
+    """
+
+    ABOVE = "ABOVE"
+    LEVEL = "LEVEL"
+    BELOW = "BELOW"
+
+
 class ReliabilityStrand(str, Enum):
     """The six strands a reliability reading is built from, read separately.
 

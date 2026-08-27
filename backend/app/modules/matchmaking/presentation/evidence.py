@@ -68,27 +68,18 @@ generates as ``field?: T | null`` and says neither thing.
 
 from __future__ import annotations
 
-from enum import Enum
 from typing import Annotated, Literal, Union
 
 from pydantic import BaseModel, Field
 
-from app.engines.matchfit.core import EvidenceKind, ReliabilityStrand, SearchMode
+from app.engines.matchfit.core import (
+    EvidenceKind,
+    LevelDirection,
+    ReliabilityStrand,
+    SearchMode,
+)
 from app.modules.player_profile.domain.availability import DAYS_IN_THE_GRID, DayPart
 from app.modules.player_profile.domain.play_intent import PlayIntent
-
-
-class LevelDirection(str, Enum):
-    """Which side of the searcher a candidate's level sits on.
-
-    A code and not a sign on ``delta``, because the client's sentence differs in
-    all three cases and a renderer deriving *"above"* from a sign is the display
-    logic this boundary exists to keep out.
-    """
-
-    ABOVE = "ABOVE"
-    LEVEL = "LEVEL"
-    BELOW = "BELOW"
 
 
 class SharedSlot(BaseModel):

@@ -558,6 +558,87 @@ class InterestRules:
 
 
 @dataclass(frozen=True)
+class IntentRules:
+    """The six cells: the searcher's Mode against the candidate's declaration.
+
+    Two modes by three declarations, and the arities differ on purpose
+    (``docs/adr/0094``). **A declaration crosses as the machine code it already
+    is** — a ``PlayIntent`` is a module's closed vocabulary and an engine may not
+    import one — so the columns are keyed by string here and checked against the
+    served vocabulary in the composition root, exactly as the tag ids are.
+
+    **Intent is a weight and not a gate.** A directly opposite declaration reads
+    the table's zero and takes no further charge: the zero is the whole answer,
+    and a second dock would be a gate wearing a modifier's clothes. Not declaring
+    at all is not a cell — the term stands down and renormalises away, which is
+    how declaring against the searcher already costs strictly more than silence.
+    """
+
+    #: One row per mode, one cell per declaration. The rows must agree on their
+    #: columns, so *the six cells* is a rectangle rather than two lists that
+    #: happen to be the same length today.
+    alignment: Mapping[SearchMode, Mapping[str, float]]
+    #: Which declaration each mode reads as **its own kind of evening** — what
+    #: makes the evidence's ``aligned`` a fact about two declarations rather than
+    #: a threshold quietly read off a weight. It is a map and not a comparison of
+    #: two enums' spellings, because the two enums are deliberately different
+    #: types and a shared spelling is a coincidence the arithmetic must not lean
+    #: on.
+    same_evening: Mapping[SearchMode, str]
+
+
+@dataclass(frozen=True)
+class DistanceRules:
+    """Where the distance curve starts costing, and where it reaches zero.
+
+    Both are fractions of **the searcher's own ring**, never kilometres: a ten
+    kilometre searcher and a fifty kilometre one have each said what far means to
+    them, and a constant in kilometres would overrule one of them.
+
+    ``full_marks_within`` is where the curve leaves 1.00 and ``zero_at`` is where
+    it reaches 0.00, so the slope needs no third constant — it is the gap between
+    them, and there is no way to move one of the two and leave the curve
+    inconsistent. **Zero sits past the ring**, so a candidate standing exactly on
+    it still scores: the hard cut at the ring is a gate, and a curve that reached
+    zero there would charge for the gate twice.
+    """
+
+    full_marks_within: float
+    zero_at: float
+
+
+@dataclass(frozen=True)
+class ExplanationRules:
+    """What makes a term weak enough to be worth warning about.
+
+    ``concerns[]`` is **the engine's own statement** that a term is genuinely
+    weak, and it carries the term and nothing else. A client thresholding a value
+    would be that judgement in TypeScript, written differently in every client;
+    the breakdown beside it does carry every term's weight and value, so what
+    stops a client re-deciding weakness is not that the numbers are withheld but
+    that the engine has already answered — and the answer is a list a card can
+    render without arithmetic.
+
+    The judgement is over **points forgone**, ``weight × (1 − value)``, and not
+    over the raw value, because weakness is a property of the pairing and not of
+    the term: a low social vibe costs 3.7 points of a competitive match and 19.3
+    of a friendly, and only one of those is worth a line on a card. Reading the
+    renormalised weight makes the same term concern-worthy in one mode and not in
+    the other for free, which is what *for fun* means.
+
+    **The cap is the client's**: a card shows one, *Why 78?* shows all of them.
+    Capping here would throw away exactly the rows that explain a low Fit on the
+    screen built to explain it.
+    """
+
+    #: The bar, in points of a hundred. Anchored rather than picked: the smallest
+    #: weight any term carries on the day-one basis is social vibe's 4.6
+    #: competitive, so a bar under five would let a term raise a warning about a
+    #: shortfall it could not produce even by reading zero.
+    concern_points: int
+
+
+@dataclass(frozen=True)
 class Ruleset:
     """A named, dated, frozen dataset of every number the engine uses.
 
@@ -575,8 +656,10 @@ class Ruleset:
     version: str
     released_on: str
     modes: Mapping[SearchMode, ModeRules]
+    intent: IntentRules
     tags: TagRules
     balance: BalanceRules
+    distance: DistanceRules
     reliability: ReliabilityRules
     modifiers: ModifierRules
     liveness: LivenessRules
@@ -586,6 +669,7 @@ class Ruleset:
     relaxation: RelaxationRules
     telemetry: TelemetryRules
     interest: InterestRules
+    explanation: ExplanationRules
 
     def emittable_evidence_kinds(self) -> frozenset[EvidenceKind]:
         """Every evidence variant this ruleset can put on the wire.
@@ -635,8 +719,10 @@ def validate_ruleset(ruleset: Ruleset) -> Ruleset:
         f"a ruleset must weight every search mode: "
         f"{sorted(m.value for m in ruleset.modes)}",
     )
+    _validate_intent(ruleset.intent)
     _validate_tags(ruleset.tags)
     _validate_balance(ruleset.balance)
+    _validate_distance(ruleset.distance)
     _validate_reliability(ruleset.reliability)
     _validate_modifiers(ruleset.modifiers)
     _validate_liveness(ruleset.liveness)
@@ -645,6 +731,7 @@ def validate_ruleset(ruleset: Ruleset) -> Ruleset:
     _validate_relaxation(ruleset.relaxation)
     _validate_telemetry(ruleset.telemetry)
     _validate_interest(ruleset.interest)
+    _validate_explanation(ruleset.explanation)
     return ruleset
 
 
@@ -828,6 +915,67 @@ def _validate_relationship(row: TagRelationship, default_strength: float) -> Non
         return
     invariant(row.severity is not None, f"a clash row carries no severity: {row.pair}")
     invariant(row.strength is None, f"a clash row carries a strength: {row.pair}")
+
+
+def _validate_intent(intent: IntentRules) -> None:
+    invariant(
+        set(intent.alignment) == set(SearchMode),
+        f"a ruleset must read intent in every mode: "
+        f"{sorted(m.value for m in intent.alignment)}",
+    )
+    rows = list(intent.alignment.values())
+    invariant(all(row for row in rows), "a mode reads intent against no declaration")
+    # The table is *six cells* and not two lists that happen to be the same
+    # length today: a declaration priced in one mode and absent from the other is
+    # a candidate whose Fit depends on which tab the searcher is on for a reason
+    # nobody wrote down.
+    columns = {frozenset(row) for row in rows}
+    invariant(
+        len(columns) == 1,
+        f"the two modes price different declarations: {[sorted(row) for row in rows]}",
+    )
+    invariant(
+        all(0.0 <= cell <= 1.0 for row in rows for cell in row.values()),
+        f"an intent cell outside [0, 1]: {[dict(row) for row in rows]!r}",
+    )
+    invariant(
+        set(intent.same_evening) == set(SearchMode),
+        f"every mode must name the declaration it reads as its own: "
+        f"{sorted(m.value for m in intent.same_evening)}",
+    )
+    for mode, declaration in intent.same_evening.items():
+        invariant(
+            declaration in intent.alignment[mode],
+            f"{mode.value} reads {declaration} as its own evening and does not "
+            f"price it",
+        )
+    # Two modes reading the same declaration as their own would make one of them
+    # unreachable as an alignment and the other's zero unwritable.
+    invariant(
+        len(set(intent.same_evening.values())) == len(SearchMode),
+        f"two modes claim the same declaration: {dict(intent.same_evening)!r}",
+    )
+
+
+def _validate_distance(distance: DistanceRules) -> None:
+    invariant(
+        0 < distance.full_marks_within < distance.zero_at,
+        f"the distance curve does not descend: full marks within "
+        f"{distance.full_marks_within}, zero at {distance.zero_at}",
+    )
+    # The hard cut at the ring is a gate. A curve reaching zero at or inside it
+    # would charge for that gate a second time, in a term.
+    invariant(
+        distance.zero_at > 1,
+        f"the distance curve reaches zero inside the ring: {distance.zero_at}",
+    )
+
+
+def _validate_explanation(explanation: ExplanationRules) -> None:
+    invariant(
+        0 < explanation.concern_points <= WEIGHT_TOTAL,
+        f"a concern bar outside (0, {WEIGHT_TOTAL}]: {explanation.concern_points}",
+    )
 
 
 def _validate_balance(balance: BalanceRules) -> None:

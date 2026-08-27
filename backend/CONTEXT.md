@@ -376,6 +376,20 @@ there; they are not repeated here.
   and the day the runtime store lands it replaces this package rather than growing beside
   it. _Avoid_: "config", "settings" — the environment may select configuration and may
   never select a ruleset.
+- **Scorable candidate** — the type the **Match Fit** scorer is handed, in
+  `app/engines/matchfit/scorable.py`. It carries **no gender, no name, no photo, no
+  birthdate, no precise location and no shard key**, which is what makes *a term cannot
+  read a protected characteristic* literally true rather than aspirational: the value is
+  not in the process. `tests/unit/test_scorable_candidate_fence.py` **walks the source
+  transitively**, through every type a field is annotated with, and fails the build on a
+  forbidden word — a shallow check would pass a candidate holding a whole player profile
+  behind one innocent field name. Three kinds of fact live on it and the difference is
+  load-bearing: the candidate's own facts, the **pair's** facts measured outside because
+  the fence puts them there (`combine_sigma` is RacketSkill's and one engine may not import
+  another), and the facts a pure process cannot have — today's weekday, and how old a
+  Player Score is, because `datetime` is forbidden to this layer outright. _Avoid_:
+  "candidate row" for it — that is the index's, on the other side of the fence, and it
+  legitimately holds gender.
 - **Wire evidence union** — the closed, discriminated set of **Evidence** variants in
   `app/modules/matchmaking/presentation/evidence.py`, keyed by `kind`. The engine's
   `EvidenceKind` supplies the discriminator strings so the two halves cannot spell one

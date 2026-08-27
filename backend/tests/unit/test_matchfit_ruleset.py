@@ -61,6 +61,7 @@ from app.modules.matchmaking.infrastructure.rulesets import (
 from app.modules.matchmaking.infrastructure.rulesets import (
     r2026_08_26_a as dataset_module,
 )
+from app.modules.player_profile.domain.play_intent import PlayIntent
 from app.modules.player_profile.domain.social_tags import SocialTag
 
 #: ``backend/app``, derived from a module inside it rather than from this file's
@@ -630,6 +631,149 @@ def test_the_three_interest_numbers_and_the_near_miss_depth() -> None:
 
 
 # ---------------------------------------------------------------------------
+# Intent, distance and the concern bar — the three blocks the scorer reads
+
+
+def test_the_intent_table_is_six_cells_and_the_two_zeros_are_not_symmetric() -> None:
+    """A competitive searcher meeting a declared friendly reads nothing at all;
+    a for-fun searcher meeting a declared competitor still reads something.
+
+    A competitor will play a friendly, and the reverse ruins the evening for one
+    of them — so the asymmetry is the claim, and pinning it here is what stops a
+    later release flattening it by accident.
+    """
+
+    alignment = LIVE_RULESET.intent.alignment
+    assert sum(len(row) for row in alignment.values()) == 6
+    competitive = alignment[SearchMode.COMPETITIVE]
+    friendly = alignment[SearchMode.FOR_FUN]
+    assert competitive[PlayIntent.FOR_FUN.value] == 0.00
+    assert friendly[PlayIntent.COMPETITIVE.value] > 0.00
+    # The honest middle is nearly as good as a match, in both modes and equally.
+    assert (
+        competitive[PlayIntent.NO_PREFERENCE.value]
+        == friendly[PlayIntent.NO_PREFERENCE.value]
+        == 0.85
+    )
+
+
+def test_an_intent_table_that_prices_different_declarations_per_mode_refuses() -> None:
+    """*Six cells* is a rectangle, not two lists the same length today.
+
+    A declaration priced in one mode and absent from the other would stand the
+    term down for a player who answered the question — but only on one tab, for
+    a reason nobody wrote down.
+    """
+
+    row = dict(LIVE_RULESET.intent.alignment[SearchMode.FOR_FUN])
+    row["SOMETHING_ELSE"] = row.pop(PlayIntent.NO_PREFERENCE.value)
+    with pytest.raises(InvariantViolated, match="price different declarations"):
+        validate_ruleset(_with_intent_row(SearchMode.FOR_FUN, row))
+
+
+def test_an_intent_cell_outside_the_terms_own_range_refuses_to_load() -> None:
+    row = dict(LIVE_RULESET.intent.alignment[SearchMode.COMPETITIVE])
+    row[PlayIntent.NO_PREFERENCE.value] = 1.4
+    with pytest.raises(InvariantViolated, match=r"outside \[0, 1\]"):
+        validate_ruleset(_with_intent_row(SearchMode.COMPETITIVE, row))
+
+
+def test_a_mode_must_name_the_declaration_it_reads_as_its_own_evening() -> None:
+    """``aligned`` is a fact about two declarations and never a threshold read
+    off a weight — the two enums share two spellings today and that is a
+    coincidence the arithmetic is not allowed to lean on."""
+
+    with pytest.raises(InvariantViolated, match="does not price"):
+        validate_ruleset(
+            dataclasses.replace(
+                LIVE_RULESET,
+                intent=dataclasses.replace(
+                    LIVE_RULESET.intent,
+                    same_evening=MappingProxyType(
+                        {
+                            SearchMode.COMPETITIVE: "A_THIRD_THING",
+                            SearchMode.FOR_FUN: PlayIntent.FOR_FUN.value,
+                        }
+                    ),
+                ),
+            )
+        )
+
+
+def test_two_modes_may_not_read_the_same_declaration_as_their_own() -> None:
+    """It would make one mode's alignment unreachable and the other's zero
+    unwritable — two tabs claiming the same evening."""
+
+    with pytest.raises(InvariantViolated, match="claim the same declaration"):
+        validate_ruleset(
+            dataclasses.replace(
+                LIVE_RULESET,
+                intent=dataclasses.replace(
+                    LIVE_RULESET.intent,
+                    same_evening=MappingProxyType(
+                        {mode: PlayIntent.FOR_FUN.value for mode in SearchMode}
+                    ),
+                ),
+            )
+        )
+
+
+def test_the_distance_curve_runs_from_seventy_percent_of_the_ring_to_115() -> None:
+    """Both are fractions of the searcher's own ring and never kilometres: a ten
+    kilometre searcher and a fifty kilometre one each said what far means to
+    them, and a constant in kilometres would overrule one of them."""
+
+    assert LIVE_RULESET.distance.full_marks_within == 0.70
+    assert LIVE_RULESET.distance.zero_at == 1.15
+
+
+def test_a_distance_curve_that_does_not_descend_refuses_to_load() -> None:
+    with pytest.raises(InvariantViolated, match="does not descend"):
+        validate_ruleset(_with_distance(full_marks_within=1.20, zero_at=1.15))
+
+
+def test_a_distance_curve_reaching_zero_inside_the_ring_refuses_to_load() -> None:
+    """The hard cut at the ring is a gate. A curve reaching zero at or inside it
+    would charge for that gate a second time, in a term."""
+
+    with pytest.raises(InvariantViolated, match="inside the ring"):
+        validate_ruleset(_with_distance(full_marks_within=0.50, zero_at=1.00))
+
+
+def test_the_concern_bar_sits_at_or_above_the_lightest_term_on_the_live_basis() -> None:
+    """Anchored rather than picked.
+
+    The smallest weight any term carries on the day-one renormalised basis is
+    social vibe's 4.6 competitive, so a bar under it would let a term raise a
+    warning about a shortfall it cannot produce even by reading zero — and a
+    warning line that fires on nothing has stopped being a warning.
+    """
+
+    weights = LIVE_RULESET.modes[SearchMode.COMPETITIVE].weights
+    live = {
+        term: weight for term, weight in weights.items() if term is not Term.RELIABILITY
+    }
+    basis = sum(live.values())
+    lightest = min(weight * 100 / basis for weight in live.values())
+    assert LIVE_RULESET.explanation.concern_points >= lightest
+
+
+def test_a_concern_bar_of_nothing_refuses_to_load() -> None:
+    """Every term with any shortfall at all would raise a warning, which is a
+    caption rather than a concern."""
+
+    with pytest.raises(InvariantViolated, match="concern bar"):
+        validate_ruleset(
+            dataclasses.replace(
+                LIVE_RULESET,
+                explanation=dataclasses.replace(
+                    LIVE_RULESET.explanation, concern_points=0
+                ),
+            )
+        )
+
+
+# ---------------------------------------------------------------------------
 # Emittable evidence
 
 
@@ -682,5 +826,27 @@ def _with_extra_row(row: TagRelationship) -> Ruleset:
         LIVE_RULESET,
         tags=dataclasses.replace(
             tags, relationship_matrix=tags.relationship_matrix + (row,)
+        ),
+    )
+
+
+def _with_intent_row(mode: SearchMode, row: dict[str, float]) -> Ruleset:
+    alignment = dict(LIVE_RULESET.intent.alignment)
+    alignment[mode] = MappingProxyType(row)
+    return dataclasses.replace(
+        LIVE_RULESET,
+        intent=dataclasses.replace(
+            LIVE_RULESET.intent, alignment=MappingProxyType(alignment)
+        ),
+    )
+
+
+def _with_distance(*, full_marks_within: float, zero_at: float) -> Ruleset:
+    return dataclasses.replace(
+        LIVE_RULESET,
+        distance=dataclasses.replace(
+            LIVE_RULESET.distance,
+            full_marks_within=full_marks_within,
+            zero_at=zero_at,
         ),
     )

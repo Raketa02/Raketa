@@ -20,7 +20,7 @@ import pytest
 from pydantic import BaseModel, TypeAdapter, ValidationError
 
 from app.bootstrap.matchmaking import verify_ruleset
-from app.engines.matchfit.core import EvidenceKind, Term
+from app.engines.matchfit.core import EvidenceKind, SearchMode, Term
 from app.engines.matchfit.ruleset import Ruleset, validate_ruleset
 from app.kernel import InvariantViolated
 from app.modules.matchmaking.infrastructure.rulesets import LIVE_RULESET
@@ -33,6 +33,7 @@ from app.modules.matchmaking.presentation.evidence import (
     ReliabilityEvidence,
     SocialVibeEvidence,
 )
+from app.modules.player_profile.domain.play_intent import PlayIntent
 from app.modules.player_profile.domain.social_tags import (
     SOCIAL_TAG_VOCABULARY,
     SocialTag,
@@ -221,6 +222,44 @@ def test_a_familiarity_map_reading_a_tag_from_another_group_refuses_to_load() ->
     wide[SocialTag.PLAYS_TO_WIN.value] = next(iter(wide.values()))
     with pytest.raises(InvariantViolated, match="not exhaustive"):
         verify_ruleset(_reading(wide))
+
+
+def test_the_intent_table_prices_every_declaration_this_platform_serves() -> None:
+    """Exhaustive in both directions, because the two failures differ.
+
+    A cell keyed on a string nobody declares can never be read; a declaration
+    with no cell stands the term down and renormalises it away — for a player who
+    answered the question, which is the one case a stand-down must never mean.
+    """
+
+    declared = {intent.value for intent in PlayIntent}
+    for row in LIVE_RULESET.intent.alignment.values():
+        assert set(row) == declared
+
+
+def test_a_ruleset_missing_a_declaration_refuses_to_load() -> None:
+    thinned = dict(LIVE_RULESET.intent.alignment[SearchMode.FOR_FUN])
+    thinned.pop(PlayIntent.NO_PREFERENCE.value)
+    with pytest.raises(InvariantViolated, match="does not price every Play intent"):
+        verify_ruleset(_intent_row(SearchMode.FOR_FUN, thinned))
+
+
+def test_a_ruleset_pricing_a_declaration_nobody_can_make_refuses_to_load() -> None:
+    invented = dict(LIVE_RULESET.intent.alignment[SearchMode.COMPETITIVE])
+    invented["HERE_FOR_THE_BEER"] = 0.5
+    with pytest.raises(InvariantViolated, match="does not price every Play intent"):
+        verify_ruleset(_intent_row(SearchMode.COMPETITIVE, invented))
+
+
+def _intent_row(mode: SearchMode, row: dict[str, float]) -> Ruleset:
+    alignment = dict(LIVE_RULESET.intent.alignment)
+    alignment[mode] = MappingProxyType(row)
+    return dataclasses.replace(
+        LIVE_RULESET,
+        intent=dataclasses.replace(
+            LIVE_RULESET.intent, alignment=MappingProxyType(alignment)
+        ),
+    )
 
 
 @pytest.mark.parametrize(

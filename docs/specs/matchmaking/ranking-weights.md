@@ -252,6 +252,18 @@ becomes visible for the first time.
 | `CLASH_SEVERITY_MILD` | 0.06 | |
 | `CLASH_CAP` | 0.25 | Binds at two Real clashes, or one Real plus two Mild |
 
+**`strength · dr(complements)` is written for one discount, and the shipped matrix does not
+have one.** Two rows sit at parity beside ten at the default, so *which* complement takes the
+first and largest increment is a question the single-strength form cannot ask, and #205 had to
+answer it to compute anything at all. `dr` is a sum of shrinking increments,
+`Σ (1 − TAG_PHI)·TAG_PHI ⁱ`, so the arm is that sum with each increment priced at one row's own
+strength, **strongest first**. Two properties pin it, and both are asserted rather than
+described: it is *identically* `strength · dr(n)` whenever every fired row carries the same
+strength — the form this table names — and taking the increments in descending strength is what
+makes **adding a complement row never subtract**, which pairing them in any other order does not
+guarantee. A pairing scored lower for having one more thing in common is not a reading anybody
+could defend on a card.
+
 **Clash penalties are capped and smaller than match bonuses**, per §9.3.6 rule 3. One Real clash
 (0.15) is worth less than one match (0.55), and the full cap costs 2.6 points of 100 in
 competitive — enough to notice, nowhere near enough to bury anybody. Being wrong about a match
@@ -714,6 +726,9 @@ fact is search-time and cannot be reconstructed afterwards.
 | `MOVE_NOTICE` | 6 | Fraction of rows printing a liveness reason. **It does two jobs**: it is also the silent stack's budget, deliberately one constant and not two, because two can drift apart in a ruleset edit and break the printing guarantee silently ([ADR-0123](../../adr/0123-silence-is-budgeted-per-player-at-the-notice-threshold.md)). Its second falsifier is **how often the silent clamp binds** — never, and the per-player rule was theoretical; often, and previous decline and a negative exposure adjustment are routinely stacking |
 | `ASYM_TOLERANCE` | 12 | Decline rate by asymmetry bucket |
 | Liveness signal bounds | §9 | Acceptance rate per signal, held out |
+| The intent table | §5.2 | Acceptance rate across the six cells. If the `0.35` cell accepts like the `0.85` one, the asymmetry between the two zeros is imagined |
+| `DISTANCE_FULL_MARKS_WITHIN` / `ZERO_AT` | 0.70 / 1.15 | Acceptance rate by distance **as a fraction of the searcher's own radius**. Flat out to the ring ⇒ too steep; falling away well inside 70% ⇒ the shoulder is in the wrong place. Both are fractions and never kilometres, so a ten-kilometre searcher and a fifty-kilometre one are each read against what they said far means |
+| `CONCERN_POINTS` | 5 | The fraction of shown candidates carrying no concern at all. If almost every card warns about something the line has stopped being a warning and become a caption. Anchored rather than picked: the lightest term on the day-one basis is social vibe's 4.6 competitive, so a lower bar would let a term warn about a shortfall it cannot produce even by reading zero |
 | `QUALITY_FLOOR` | **44** | Return rate just above vs just below |
 | `SHORTLIST_MAX` | 20 | Interest and challenge rate **by position**. Nothing past position 12 converting means 20 is decoration |
 | `DECK_DEAL_MAX` | 10 | The **deepest position reached per deal**. Median deal exhausted ⇒ too small; p90 stopping before position four ⇒ the tail is scored for nobody |

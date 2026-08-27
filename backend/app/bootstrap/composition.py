@@ -38,6 +38,8 @@ from app.application.ports import DomainEventPublisher, DomainEventStore, UnitOf
 from app.bootstrap.events import EventRuntime, get_event_runtime
 from app.core.config import Settings
 from app.engines.assessment import AssessmentEngine
+from app.engines.matchfit.scoring import MatchFit
+from app.engines.matchfit.v1 import MatchFitV1
 from app.engines.racketskill.v3 import RacketSkillEngineV3
 from app.infrastructure.clock import SystemClock
 from app.infrastructure.database.unit_of_work import AsyncSqlAlchemyUnitOfWork
@@ -335,3 +337,16 @@ def build_match_history_query(session: AsyncSession) -> MatchHistoryQuery:
 def build_at_stake_query(session: AsyncSession) -> AtStakeQuery:
     """``rating`` ships; the rule that moves a Level on a result does not."""
     return NoResultUpdateRuleExists()
+
+
+def build_match_fit_engine() -> MatchFit:
+    """The concrete scorer version is chosen here, and nowhere else.
+
+    The same rule the assessment engine follows (``docs/adr/0015``): a caller
+    depends on the ``MatchFit`` abstraction, so swapping ``v1`` for a version
+    that computes a term differently is this line and no other. Nothing asks for
+    one yet — the search that does arrives with the routes — and it is wired now
+    for the reason the five ports above are: a choice of implementation belongs
+    in a composition root whether or not a caller has turned up to make it.
+    """
+    return MatchFitV1()
