@@ -378,7 +378,10 @@ that `mode` is `NULL` exactly when `surface = DECK`.
 
 **The relaxation ladder does not reach the deck** (ADR-0099): no rung offers, no
 `pool_description` ladder. The deck's own exclusions — passed within `PASS_SUPPRESS`, already
-asked, already has an open game with you — are gates, and their numbers are still fog.
+asked, already has an open game with you — are gates, and their numbers are **set**:
+`PASS_SUPPRESS = 30 d`, `INTEREST_TTL = 21 d`, `OUTSTANDING_INTEREST_CAP = 20` per sport
+([#194](https://github.com/Raketa02/Raketa/issues/194)). **None of the three crosses the wire as
+a number** — see §7.
 
 ---
 
@@ -393,9 +396,30 @@ surfaced it — days against a search run once — and a nested route would say 
 `search_id` **refused, never linked as null**, because a silently dropped link is a denominator
 that lies.
 
-**Idempotent per `(from, to, sport)`** — a second yes returns `200` and creates nothing. The
-cap is checked; `INTEREST_TTL` and `OUTSTANDING_INTEREST_CAP` remain in the map's fog and are
-not set here.
+**Idempotent per `(from, to, sport)`** — a second yes returns `200` and creates nothing.
+
+**The cap is hard, and it is shown before it bites.** `OUTSTANDING_INTEREST_CAP = 20` **per
+sport**, and the write is **refused** at the cap with a closed reason code
+([ADR-0127](../../adr/0127-a-signal-expires-or-is-refused-never-quietly-decays.md)). §9.5.1's
+*soft* cap — *past it the oldest decays faster* — is refused: it reaches backwards and shortens
+the life of yeses already sent, under a rule the player was never told, because a twenty-first
+arrived. **Outstanding** means sent, unexpired and **not yet mutual**; a mutual has been answered
+and is no longer in flight.
+
+`GET /api/v1/interest` carries the **per-sport `outstanding` count and the `cap` in force**,
+because a cap the player cannot see is a refusal they cannot predict. Every outgoing row carries
+**`expires_at`**, dated when the yes was created — `INTEREST_TTL = 21 d`. On expiry the row is
+simply gone: there is no *expired* state and no archive, because a list of yeses that were not
+returned is the inverted shape of what
+[ADR-0109](../../adr/0109-a-read-back-names-what-it-withholds.md) refused.
+
+**Which side of ADR-0106's line all three sit on.** All three numbers are **ruleset
+configuration**; none is a contract fact. What is *contract* is three shapes around them —
+`expires_at` on an outgoing row, the `outstanding` / `cap` pair plus the refusal code, and, for
+`PASS_SUPPRESS`, **nothing at all**. So: **the client never hardcodes any of the three and never
+computes an expiry.** It renders a number the backend sent and reads a moment the backend
+computed — which is the whole reason ADR-0106 drew the line where it did, since a phone in
+somebody's hand can be months behind the backend.
 
 Interest is the deck's own mechanic and is in scope. The **challenge** it may become belongs to
 `matches`, which is not.
@@ -467,5 +491,7 @@ stranger.
   [`the-group-objective.md`](the-group-objective.md), which also makes `is_best` mean *best by
   `G`* rather than *evenest* (§3.1) and adds `group_reason` to the line-up envelope (§5).
 - **The staleness threshold behind `index_stale` / `index_too_stale`, and `snapshot_version`** — [#173](https://github.com/Raketa02/Raketa/issues/173).
-- **`INTEREST_TTL`, `OUTSTANDING_INTEREST_CAP`, `PASS_SUPPRESS`** — the deck's product decisions, still fog.
+- ~~**`INTEREST_TTL`, `OUTSTANDING_INTEREST_CAP`, `PASS_SUPPRESS`**~~ — **set** by
+  [#194](https://github.com/Raketa02/Raketa/issues/194): 21 d flat, 20 per sport refusing, 30 d
+  deck-only. All three are configuration; §7 carries the three contract shapes around them.
 - **The tag relationship matrix behind the style and vibe evidence codes** — [#179](https://github.com/Raketa02/Raketa/issues/179).

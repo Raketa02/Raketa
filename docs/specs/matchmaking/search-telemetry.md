@@ -78,6 +78,7 @@ Generation is `sport ∧ box ∧ gates` — the shard conjunct is struck
 | `best_withheld_fit` | The Fit of the best candidate that did not clear. Nullable — null means nothing was withheld, which is not the same as `0` |
 | `pool_description` | ADR-0099's shape: `{sport, radius_km_used, players_in_range, window, post_gate: true}`. Written on **every** search, not only empty ones — a thin pool and a broken floor are indistinguishable without it. Codes, never a sentence (ADR-0022) |
 | `searcher_slot_count` | How many of the twenty-one grid cells the searcher had ticked. The availability term's **denominator**, and per-search rather than per-candidate because the near-miss band pays per-candidate costs ten rows at a time. Added by [#184](https://github.com/Raketa02/Raketa/issues/184) — it is the input to the falsifier for [ADR-0120](../../adr/0120-a-factor-reads-the-pair-or-it-is-not-a-factor.md)'s asymmetry, and there is no other row it could live on |
+| `n_excluded_by_suppression` | **Deck deals only**, null elsewhere. How many candidates a **live** pass suppression removed from this deal. It is the only thing that distinguishes *your own passes emptied your deck* from *the pool is empty* — the failure mode that makes `PASS_SUPPRESS` five-numbers-shaped, and one nobody can see from any screen because no route returns a pass. Added by [#194](https://github.com/Raketa02/Raketa/issues/194) |
 | `latency_ms_by_stage` | JSONB. §19.3's operational half |
 
 **Empty results are recorded exactly like any other search**, with `n_returned = 0`. There is no
@@ -116,15 +117,24 @@ person did about it.
 | `degraded_terms` | `text[]` of the terms that returned `NoEvidence`. Lifted out of the blob so §19.3's per-term `NoEvidence` rate — *"a term quietly dying is invisible otherwise"* — is an array query with a GIN index rather than a JSONB scan. Also the **renormalisation basis**, without which a Fit is uninterpretable a year later |
 | `modifiers` | JSONB, each with its code |
 | `liveness_reasons` | `text[]` |
-| `liveness_signals` | JSONB — the **raw input value** per liveness signal, never the offset it produced. The offset is a function of the ruleset's bounds, so storing it makes a Liveness-bounds change undiffable: a replay cannot re-derive under new bounds what it only has the old bounds' answer to. Added by [#183](https://github.com/Raketa02/Raketa/issues/183), which corrects [`ranking-weights.md`](ranking-weights.md) §12's *the offset applied* to *the inputs that produced it* |
+| `liveness_signals` | JSONB — the **raw input value** per liveness signal, never the offset it produced. **For the interest signal the raw input is the age of the yes in days, never the boolean** — [ADR-0127](../../adr/0127-a-signal-expires-or-is-refused-never-quietly-decays.md) makes the `+14` flat, so a boolean would be the *sufficient* input and the age would be lost to a Redis TTL within the month. It is the entire x-axis of *acceptance by age of yes*, and it is `their_slot_count`'s argument one signal over: a strike that is not recorded becomes irreversible by accident, and re-admitting a taper would be undiffable.  The offset is a function of the ruleset's bounds, so storing it makes a Liveness-bounds change undiffable: a replay cannot re-derive under new bounds what it only has the old bounds' answer to. Added by [#183](https://github.com/Raketa02/Raketa/issues/183), which corrects [`ranking-weights.md`](ranking-weights.md) §12's *the offset applied* to *the inputs that produced it* |
 | `shared_count` | Grid cells both players ticked. With `search.searcher_slot_count` this **is** the availability term, so the value in `terms` is checkable against its own inputs |
 | `their_slot_count` | The candidate's ticked cells. **Nothing reads it** — [ADR-0120](../../adr/0120-a-factor-reads-the-pair-or-it-is-not-a-factor.md) struck `significance`, whose denominator it was. Recorded so that a ruleset re-admitting the factor is re-derivable over the corpus reaching back to the first search; **a strike that is not recorded becomes irreversible by accident**, which is [#183](https://github.com/Raketa02/Raketa/issues/183)'s `liveness_signals` argument one term over |
 | `days_away` | Days to the next shared slot, at day resolution (`next_shared(shared, today)`). Nullable — null means nothing is shared, which is not `0`. Also unread by scoring, and recorded because it is the input to the falsifier for **striking** proximity: acceptance rate by `days_away`, held out |
 | `inclusion_reason` | Nullable: `INTEREST_LIFT` \| `NEWCOMER_WINDOW` \| `ZERO_EXPOSURE`. **All three are kept here; only `INTEREST_LIFT` crosses the wire** ([#175](https://github.com/Raketa02/Raketa/issues/175)) — the other two reorder rather than admit, `NEWCOMER_WINDOW` ships to the client as a liveness reason, and `ZERO_EXPOSURE` is the first code that lives only in the store |
+| `suppression_lapsed` | `boolean`, **deck deals only**, null elsewhere. Whether this pairing had a pass whose 30-day suppression had already lapsed — that is, whether this card is a **re-show**. Without it only plain pass rate is computable, never *pass rate on re-shown profiles*, which is the only falsifier `PASS_SUPPRESS` has. It reads the **durable pass record**, not Redis, for the reason in §6 |
 | `withheld_reason` | `NEAR_MISS` only: `BELOW_FLOOR` \| `INSUFFICIENT_EVIDENCE` |
 | `missing_terms` | `text[]`, for `INSUFFICIENT_EVIDENCE`. Distinguishes *nobody was good enough* from *nobody was known enough* |
 | `reliability_penalty_applied` | |
 | `reliability_penalty_decisive` | Whether the penalty is what put them below the floor — **docked** versus **docked out** |
+
+**Two demands are satisfied without a column, and it is worth saying which.** *Whether an
+interest lift admitted somebody below the floor* is derivable — `inclusion_reason =
+INTEREST_LIFT` with `fit` below the floor of the stamped `ruleset_version`. And *yeses that
+expired having never lifted anybody* is a join, not a flag: a durable interest row whose
+`expires_at` has passed with no `search_candidate` row in its lifetime carrying
+`inclusion_reason = INTEREST_LIFT` for that pair. Both were listed as demands in
+[`the-five-numbers.md`](the-five-numbers.md) §7 and neither costs storage.
 
 Primary key `(search_id, band, position)`; an index on `player_id` for erasure. An index on
 `(searcher_id, at)` lives on `search` — time ordering comes from there, which is why `uuid4` is
@@ -151,7 +161,7 @@ returns a near-miss row for a player to act on.
 
 ---
 
-## 5. The six demands of `the-five-numbers.md` §7, ticked off
+## 5. The demands of `the-five-numbers.md` §7, ticked off
 
 | Demand | Satisfied by |
 |---|---|
@@ -161,10 +171,42 @@ returns a near-miss row for a player to act on.
 | Shortlist length, and whether the rung offers were computed | `n_returned`, `rung_offers` (null = not computed) |
 | Which rungs were offered, each one's real count, which was taken, and the radius clamp | `rung_offers`, `radius_clamp_bit`, `rung_taken` + `offered_by_search_id` on the accepting search |
 | Whether the reliability penalty fired, and whether it was decisive | `reliability_penalty_applied`, `reliability_penalty_decisive` |
+| Age of the yes per lifted candidate, and whether the lift admitted below the floor | `liveness_signals` (age in **days**, never a boolean); the admission is **derived** from `inclusion_reason = INTEREST_LIFT` and `fit` against the stamped ruleset's floor |
+| Yeses that expired having never lifted anybody | **Derived**: a lapsed durable interest row with no `INTEREST_LIFT` row for the pair in its lifetime. The one falsifier here that runs without `matches` |
+| Cards a live suppression excluded, per deal; and whether a card is a **re-show** | `n_excluded_by_suppression` on `search`; `suppression_lapsed` on `search_candidate` — both reading the **durable pass record** (§6) |
+| Refusals at the cap, and the distribution of outstanding counts | **Not here.** Both are facts about the interest **write**, not about a search — §6 |
 
 ---
 
-## 6. What this hands onward
+## 6. The two ledgers this spec now depends on
+
+[#194](https://github.com/Raketa02/Raketa/issues/194) put two facts inside this spec's reach that
+were not previously here, and one of them cost a storage change.
+
+**The pass record is durable; the suppression is not.** `PASS_SUPPRESS`'s only falsifier is *pass
+rate on **re-shown** profiles*, and until now a pass lived solely as a Redis suppression with a
+30-day TTL. A **lapsed** suppression leaves no trace the pair was ever passed — so at the exact
+moment the re-show happens, the fact that makes it a re-show has expired. The **Origin key** on
+`POST /passes` was bought for this falsifier and pays only half of it: it records where a pass
+came from, never that a later card is the same person coming back.
+
+So the pass becomes a durable row — `(passer, passed, sport, at, search_id, position)` — and the
+30-day suppression stays the Redis TTL, derived from it
+([`the-engine.md`](the-engine.md) §12). Suppression still **fails soft**, and the split is why
+that stays true: the **gate** is the cache, the **evidence** is the row. Unlike an interest, a
+pass record does not expire; nothing in this design deletes a row except erasure (ADR-0104 §3),
+and this joins that rule.
+
+**The cap's falsifier is not a search fact and does not live here.** Refusals at
+`OUTSTANDING_INTEREST_CAP` and the distribution of outstanding counts per player are facts about
+the interest **write**. The distribution needs no new storage — it is a query over the durable
+interest ledger. The refusals are a **counter**, keyed by sport, on the write path; a raw count
+alone cannot tell *20 is too low* from *somebody is saying yes to everybody*, which is why the
+distribution is named beside it rather than instead of it.
+
+---
+
+## 7. What this hands onward
 
 Two demands leave this spec unanswered on purpose, in the shape
 [ADR-0098](../../adr/0098-matcher-demands-as-executable-contracts.md) uses.
@@ -181,13 +223,16 @@ here means *everything up to and including this is applied*.
 
 **To whoever builds erasure — the deletion.** There is no erasure event, no account deletion, and
 no code path in `app/` that removes a player. When one exists: erasing a player deletes their
-`search` rows **and** their `search_candidate` rows **in both roles** — as searcher and as
+`search` rows **and** their `search_candidate` rows **in both roles** — and, from
+[#194](https://github.com/Raketa02/Raketa/issues/194), their **pass records in both roles** and
+their interest rows, since neither now expires out from under an erasure the way a Redis key
+did — as searcher and as
 recorded candidate — and the denominator loses them. Nothing else in this design ever deletes a
 row (ADR-0104 §3), so this is the only deletion path there is.
 
 ---
 
-## 7. Constants introduced
+## 8. Constants introduced
 
 | Constant | Value | What would falsify it |
 |---|---|---|

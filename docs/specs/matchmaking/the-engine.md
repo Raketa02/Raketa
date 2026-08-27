@@ -467,7 +467,7 @@ asserted centrally over every response type rather than per route.
 
 | Signal | Bound | Prints |
 | --- | ---: | --- |
-| They said *Let's play* to you | +14 | ✓ — **and it must** |
+| They said *Let's play* to you | **+14, flat** | ✓ — **and it must** |
 | Newcomer lift | **+8** | ✓ |
 | Previous accept between you | +6 | ✓ |
 | Answer rate and speed | −6 … +6 | ✓ |
@@ -478,6 +478,14 @@ asserted centrally over every response type rather than per route.
 | **Previous decline between you** | **−6** | ✗ never, either side |
 | **Exposure adjustment** | **−6 … +6** | ✗ |
 | ~~Radius asymmetry~~ | — | **struck** — `fit_ba` already prices it |
+
+**`+14` is flat for the whole life of the yes and then absent — it does not taper.** §9.5.1's
+decay over the final 7 days is refused by
+[ADR-0127](../../adr/0127-a-signal-expires-or-is-refused-never-quietly-decays.md): the age of the
+yes **already crosses** as evidence (`days_ago`), so a decay charges one fact twice, once
+visibly and once not, and prints the same sentence at day 2 and day 20 from two different
+positions. Note what would *not* have caught it — a decaying lift is **printable**, so ADR-0123's
+silent budget never sees it and the roster test below stays green.
 
 **The printing rule, and the budget that makes it provable.** §9.5 says anything moved **more
 than** `MOVE_NOTICE = 6` prints its dominant reason. That promise is about a **player**;
@@ -678,7 +686,24 @@ change to the mapping does not rewrite history.
 
 **The relaxation ladder does not reach the deck.** Its own exclusions — passed within
 `PASS_SUPPRESS`, already asked, already has an open game with you — are gates, and their numbers
-are the deck's remaining product decisions, still fog on the map.
+are set ([#194](https://github.com/Raketa02/Raketa/issues/194)): **`PASS_SUPPRESS = 30 days`,
+`INTEREST_TTL = 21 days`, `OUTSTANDING_INTEREST_CAP = 20` per sport.**
+
+**`PASS_SUPPRESS` is deck-only, one-directional, and never escalates**
+([ADR-0128](../../adr/0128-a-pass-is-about-my-deck-a-block-is-about-a-person.md)). It reaches no
+other surface — a passed player is a full candidate in the shortlist, the line-up and a forecast,
+immediately — it suppresses in the passer's deck and never in the other person's, and a second
+pass on the same person buys the same 30 days and no more. §9.5.1's *repeated passes are a soft
+signal respected quietly* is struck: it cannot print, it cannot enter ADR-0123's closed silent
+roster, and where it leads is a **Block**, which exists and requires somebody to mean it. All
+three boundaries are the opposite of ADR-0095's, because **a pass is a statement about my deck
+and a block is a statement about a person**. The named cost: pass on somebody tonight, find them
+third in your shortlist tomorrow.
+
+**`INTEREST_TTL` expiry returns a person to the deck.** *Already asked* lapses with the yes, so
+the same person may be dealt again 21 days later — a fresh chance rather than a loop, and part of
+why 21 rather than 30 (
+[`the-five-numbers.md`](the-five-numbers.md) §8).
 
 **A deal is `DECK_DEAL_MAX = 10` cards, and the constant is a cap and never a target.** A deal is
 scored once and its liveness ages as the player taps through, so a deal of forty is stale by the
@@ -752,7 +777,8 @@ searcher how many people a mutual gate hid from them.
 | Ledger | Where | Why | Fails |
 | --- | --- | --- | --- |
 | **Interest** | **durable**, in the module | the only thing here a human would miss — a person reached out to another person | — |
-| Suppression | Redis, TTL | a courtesy | **soft** |
+| **Pass** | **durable**, in the module | its constant's only falsifier is *pass rate on **re-shown** profiles*, and a Redis suppression that lapses leaves no trace that the pair was ever passed — so the falsifier the Origin key was bought for is uncomputable. The record is telemetry; the **live suppression stays the Redis TTL below**, derived from it | — |
+| Suppression | Redis, TTL, derived from the pass record | a courtesy | **soft** |
 | Exposure | Redis, TTL | losing a week of *who was shown to whom* costs nobody a fact | **soft** |
 | ~~Search results~~ | — | **deleted** — §8.3's `search:{id}` at a 30-minute TTL held the same Fit as §19.2's table, free to disagree, in the one place §8.3 calls disagreement fatal | — |
 | ~~Standing searches~~ | — | out of scope; still fog on the map | — |
@@ -762,7 +788,11 @@ should not: applying *a gate that cannot be evaluated excludes* to suppression w
 deck rather than protect anybody**. Suppression is a courtesy; a block is a safety control.
 
 **Nothing here is event-sourced**, and interest is durable without being an aggregate with a life
-story: it is a small fact with an expiry date.
+story: it is a small fact with an expiry date. The same is true of a pass, with one difference:
+**an interest expires, a pass record does not.** The 30-day *suppression* lapses; the row saying
+the pass happened is kept, because [#194](https://github.com/Raketa02/Raketa/issues/194) found
+that its constant's falsifier needs exactly the fact a TTL destroys. Suppression still fails
+soft, and the split is why: the **gate** is the cache, the **evidence** is the row.
 
 **The sweeper's loops, after the map.** Loops are ADR-0092 `PeriodicJob`s.
 
@@ -808,7 +838,7 @@ Ruleset
   shape              { shortlist_max(20), deck_deal_max(10) }
   relaxation         { rungs A/B/C, multipliers 1.5/2.0 }
   telemetry          { near_miss_recorded }
-  interest           { ⚠ ttl_days, cap, pass_suppress_days — still fog }
+  interest           { ttl_days(21), cap(20, per sport), pass_suppress_days(30) }
 ```
 
 **Struck from §11's shape:** the `newcomer` mode, `w_intent` / `w_tag` (ADR-0117 replaced them),
@@ -1012,8 +1042,8 @@ section that held the last one is §9, and what stands there is a strike. The �
 are **dependencies, not questions** — the photo gate live and inert behind
 [#181](https://github.com/Raketa02/Raketa/issues/181), the grid and the gender contracts behind
 [#176](https://github.com/Raketa02/Raketa/issues/176)–[#182](https://github.com/Raketa02/Raketa/issues/182),
-rung A's eviction shape recorded rather than open, and the deck's three interest constants, which
-are fog on the map and product's to set.
+rung A's eviction shape recorded rather than open. **The deck's three interest constants are no
+longer among them** — see below.
 
 **Two are closed.** [#189](https://github.com/Raketa02/Raketa/issues/189)'s two exclusions are
 settled by [ADR-0124](../../adr/0124-the-matcher-gates-account-state-never-age.md) — §9.1's row 8
@@ -1036,8 +1066,16 @@ about the player, never on a fact about the list*. Its two neighbours outlive it
 constants: `SHORTLIST_MAX = 20` (§10.1) and `DECK_DEAL_MAX = 10` with a spent deal dealing again
 (§10.3). §2, §8, §9, §10.1, §10.3 and §17.3 above carry them.
 
+**And** [#194](https://github.com/Raketa02/Raketa/issues/194)'s three deck numbers are set —
+`INTEREST_TTL = 21 d` flat, `OUTSTANDING_INTEREST_CAP = 20` per sport and refusing, and
+`PASS_SUPPRESS = 30 d` deck-only — by
+[ADR-0127](../../adr/0127-a-signal-expires-or-is-refused-never-quietly-decays.md) and
+[ADR-0128](../../adr/0128-a-pass-is-about-my-deck-a-block-is-about-a-person.md). **This closes
+the last ⚠ in §13's ruleset**, and it moved one thing that was not a number: the pass ledger
+becomes durable (§12), because the falsifier the Origin key was bought for cannot be computed
+from a suppression that has lapsed. §8, §10.3, §12 and §13 above carry them.
+
 **And what is deliberately deferred rather than open** — see the map's *Not yet specified*: the
-runtime ruleset store, the deck's three interest constants, the density hypothesis, standing
-search, the operational surface these six reports have nowhere to be read on, and the fact that
+runtime ruleset store, the density hypothesis, standing search, the operational surface these six reports have nowhere to be read on, and the fact that
 **nothing in this repository can push anything**, so two people who both said yes find out by
 opening the app.

@@ -216,7 +216,33 @@ profiles*, which is unmeasurable otherwise.
 not to the passer, not as a count, not as *"you have passed on 12 people"*. §21's refusal, and
 its enforcement is a schema test over every response type.
 
-**There is no *Show them again*.** The prototype offers a button clearing every pass at once.
+**`PASS_SUPPRESS` = 30 days, and it has three boundaries**
+([ADR-0128](../../adr/0128-a-pass-is-about-my-deck-a-block-is-about-a-person.md)), all of them
+the opposite of a Block's, because **a pass is a statement about my deck and a block is a
+statement about a person**:
+
+- **Deck only.** It never reaches the shortlist, the line-up or a forecast. A passed player is a
+  full candidate everywhere else, immediately. The deck is a judgement surface — one person, yes
+  or no — while a search is a question about the pool, and a search that hides people because of
+  a swipe lies about the city. **The named cost: pass on somebody tonight, find them third in
+  your shortlist tomorrow.** If that reads as the product ignoring you, the fix is a sentence on
+  the deck about what a pass does, never a wider suppression.
+- **One-directional.** My pass suppresses in **my** deck and nowhere else, keeping §9.5.1's own
+  promise that a pass *costs the other person nothing* literally true. A block has to be
+  symmetric or it is worth nothing; a pass carries no claim about the other person at all.
+- **Never escalates.** A second pass buys the same 30 days. §9.5.1's *repeated passes are a soft
+  signal respected quietly* is struck — it cannot print, it cannot enter ADR-0123's closed silent
+  roster, and where it leads is a Block, which exists, is reversible, and requires somebody to
+  mean it. A second pass is only possible 30 days after the first, so anybody who wants more has
+  had a month to reach for the gesture that means it.
+
+**And the pass record is durable, though the suppression is not.** The falsifier is *pass rate on
+**re-shown** profiles*, and a Redis suppression that has lapsed leaves no trace the pair was ever
+passed — so the Origin key alone does not pay for it after all. The row is kept; the 30-day
+suppression stays the Redis TTL, derived from it (`the-engine.md` §12). The gate is the cache,
+the evidence is the row.
+
+**There is still no *Show them again*.** The prototype offers a button clearing every pass at once.
 It makes `PASS_SUPPRESS` unmeasurable and makes the suppression a suggestion, and it solves a
 problem a real pool does not have. The **exhausted pool** is the honest empty state: the pool
 description, and the count of the player's **own outgoing** yeses still waiting.
@@ -319,7 +345,10 @@ and the UI build is its own effort. The effort that builds these screens inherit
 - ~~**The `unfilled_reason` vocabulary and the doubles objective**~~ — settled by
   [#180](https://github.com/Raketa02/Raketa/issues/180) in
   [`the-group-objective.md`](the-group-objective.md).
-- **`INTEREST_TTL`, `OUTSTANDING_INTEREST_CAP`, `PASS_SUPPRESS`** — the deck's product numbers, still fog.
+- ~~**`INTEREST_TTL`, `OUTSTANDING_INTEREST_CAP`, `PASS_SUPPRESS`**~~ — **set** by
+  [#194](https://github.com/Raketa02/Raketa/issues/194) (ADR-0127, ADR-0128). §7 carries the pass
+  half; `GET /interest` now returns `expires_at` per outgoing row and the per-sport
+  `outstanding` / `cap` pair.
 - **The staleness threshold behind `index_stale`** — [#173](https://github.com/Raketa02/Raketa/issues/173).
 - **The tag relationship matrix** — [#179](https://github.com/Raketa02/Raketa/issues/179).
 - **The Play screens' interface** — out of scope on this map.

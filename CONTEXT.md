@@ -646,7 +646,17 @@ appears here.
   surfaced them. It is a human's judgement rather than the engine's, which is why it may lift
   somebody above the **quality floor** where nothing the engine computes may. It outlives the
   search it came from, and it is not a challenge — a challenge belongs to a context that does
-  not exist yet.
+  not exist yet. **A yes is a statement about *now*, so it expires** — at 21 days, flat until
+  then and then absent, never tapering, because the age of the yes is already printed on the card
+  and a fading lift would charge for it a second time invisibly
+  ([ADR-0127](docs/adr/0127-a-signal-expires-or-is-refused-never-quietly-decays.md)). The expiry
+  is **dated when the yes is made**, never announced when it lands.
+- **Outstanding interest** — an **Interest** that is sent, **unexpired**, and **not yet
+  mutual**. It is what the cap counts: a mutual has been answered and is no longer in flight, and
+  an expired yes is not interest at all. Without the word, *how many yeses you may have out* is
+  three different numbers. The cap is **per sport**, **hard** — the write is refused, never
+  quietly aged away — and **shown before it bites**, because a cap the player cannot see is a
+  refusal they cannot predict.
 - **Deal** — one invocation of the **deck**: a bounded, ordered batch of cards, shown one at a
   time. The deal is the unit, not the card, because the deck's ordering — people who already said
   yes, then liveness, then the rest — is a property of a whole deal and cannot be evaluated a card
@@ -709,7 +719,14 @@ appears here.
 - **Pass** — *not today*, on a deck card. **Write-only**: it is recorded, it suppresses, and no
   response ever carries one — not to the passer, not as a count. It carries its **Origin key**,
   because the only thing that could prove its suppression window wrong is the pass rate on
-  re-shown profiles.
+  re-shown profiles. **A pass is a statement about my deck, where a Block is a statement about a
+  person** ([ADR-0128](docs/adr/0128-a-pass-is-about-my-deck-a-block-is-about-a-person.md)), and
+  every boundary follows from that: the suppression is **deck-only** and never reaches a search,
+  which is a question about the city that a swipe may not edit; it is **one-directional**, so it
+  costs the other person nothing, literally; and it **never escalates** — a second pass buys the
+  same 30 days, because a pass that hardens toward permanence is a Block nobody consented to. The
+  **suppression** lapses at 30 days; the **record** of the pass does not, because a lapsed
+  suppression leaves no trace that a re-shown card is a re-show.
 
 **Terms this context refuses**
 - **Game format** — *mixed doubles*, *women's doubles* and the like. Deliberately does not

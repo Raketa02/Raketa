@@ -1,22 +1,51 @@
-# The five numbers that decide whether the product says nothing at all
+# The numbers that decide whether the product says nothing at all
 
-Settles [#167](https://github.com/Raketa02/Raketa/issues/167) on the map
+Settles [#167](https://github.com/Raketa02/Raketa/issues/167) and, for two of its numbers,
+[#194](https://github.com/Raketa02/Raketa/issues/194) on the map
 [The matchmaking engine: who sits down, and why](https://github.com/Raketa02/Raketa/issues/155).
 
-Most of the matcher's constants are a starting vector in a config file. These five are
-**product decisions wearing a config file's clothes**, because each one decides whether a
-player is shown somebody or shown an apology. They are set here, with an argument, a
-falsifying measurement, and a named owner — never a provenance.
+Most of the matcher's constants are a starting vector in a config file. These are **product
+decisions wearing a config file's clothes**, because each one decides whether a player is shown
+somebody or shown an apology. They are set here, with an argument, a falsifying measurement, and
+a named owner — never a provenance.
 
-**Owner of all five: `RobertConstantin02`.** With one developer the name confers no authority;
+> **There are seven, and the file was called *the five numbers* until
+> [#194](https://github.com/Raketa02/Raketa/issues/194) added `INTEREST_TTL` and
+> `PASS_SUPPRESS` (§8, §9).** The title stops being a count rather than the count being wrong:
+> the discipline below is the document's content, and splitting it across two files so that
+> *five* stayed true would mean the next person reading it finds one half. Expect a further one.
+>
+> **The section numbers are chronological, not ranked**, and the two newest sit at the end rather
+> than at §6 — several accepted ADRs cite §7 as *the telemetry demands* and §6 as *the deleted
+> penalty*, and a record already accepted should not have its pointers silently re-aimed.
+
+## The test, so the eighth number does not need a debate
+
+A number belongs in this file when **both** are true:
+
+1. **Moving it changes what somebody is shown** — not how they are ranked, not what they may do:
+   whether a person appears at all, or whether the answer is empty.
+2. **Nothing on any screen would say so.**
+
+Applied to the three constants [#194](https://github.com/Raketa02/Raketa/issues/194) settled,
+they split on the *second* clause, which is the one that does the work. `INTEREST_TTL` moves
+what is admitted below the quality floor, invisibly — in. `PASS_SUPPRESS` can empty a deck in a
+thin pool, and no route returns a pass, so nobody can see it happen — in. The
+`OUTSTANDING_INTEREST_CAP` decides whether a player may **act**, hides nobody, and
+[ADR-0127](../../adr/0127-a-signal-expires-or-is-refused-never-quietly-decays.md) §4 made its
+bite visible the instant it happens — out. It is an ordinary ruleset row with a falsifier, in
+[`ranking-weights.md`](ranking-weights.md) §13.
+
+**Owner of all seven: `RobertConstantin02`.** With one developer the name confers no authority;
 that is not its job. It is so that the next person to hold one of these inherits a named
-handover rather than a config file with no history. Any change to any of the five **lands as
+handover rather than a config file with no history. Any change to any of them **lands as
 an ADR that names who moved it** ([ADR-0099](../../adr/0099-relaxation-offers-the-searchers-own-asks.md)),
 and for the quality floor the ADR must additionally name **which of the six judged cases below
 it now decides differently**.
 
-**None of the five is measurable before the outcome half of the telemetry chain exists**,
-which needs `matches`, which is out of scope. They are decided by argued judgement, shipped
+**Almost none of these is measurable before the outcome half of the telemetry chain exists**,
+which needs `matches`, which is out of scope. §8 and §9 are the exceptions and only partly:
+each carries one falsifier that runs on day one, which is why §7's table grew. They are decided by argued judgement, shipped
 with their falsifier attached, and revisited when the evidence exists. The falsifiers are
 therefore also **demands on the search-side telemetry** (§6) — a search-time fact that is not
 recorded from the first search cannot be reconstructed later, and a number whose falsifier can
@@ -255,8 +284,10 @@ The six cells of the alignment table are unchanged and were settled in
 Handed to [The search-side telemetry](https://github.com/Raketa02/Raketa/issues/169) as a
 demand, in the shape [ADR-0098](../../adr/0098-matcher-demands-as-executable-contracts.md) used
 for the contexts that do not exist. **Every fact here is search-time and cannot be
-reconstructed afterwards.** Without them, all five falsifiers above are unrunnable even on the
-day outcomes arrive.
+reconstructed afterwards** — and [ADR-0118](../../adr/0118-a-past-search-is-not-reproducible.md)
+makes that final: a past search is explainable forever and is not reproducible, so a fact not
+written down at scoring time is gone. Without them, the falsifiers above are unrunnable even on
+the day outcomes arrive.
 
 | For | Record, per search | Why it cannot wait |
 |---|---|---|
@@ -266,6 +297,78 @@ day outcomes arrive.
 | **`MIN_SHORTLIST`** | Shortlist length, and whether the rung offers were computed | Take-up by length is the falsifier |
 | **Widening ceiling** | Which rungs were offered, each one's real count, which was taken, and the radius clamp if it bit | Acceptance rate per rung; and the clamp tells you how many searchers are already at the ceiling |
 | **Reliability bar** | Whether the penalty fired for each scored candidate, and whether it was what put them below the floor | Separates *docked* from *docked out* |
+| **`INTEREST_TTL`** | Per lifted candidate, the **age in days** of the yes that lifted them, and **whether the lift admitted them below the floor** | The age lives in Redis behind a TTL, so a year later it is unrecoverable — and it is the entire x-axis of *acceptance by age of yes*. The admission flag is what the TTL actually costs: how many below-floor rows it bought |
+| **`INTEREST_TTL`** | **Yeses that expired having never lifted anybody** — the other person never ran a search | The one falsifier here that runs on **day one**, without `matches`. If most yeses expire unfired, 21 days is answering the wrong question and the pool is too quiet |
+| **`PASS_SUPPRESS`** | Per deal, **how many cards a live suppression excluded**; and per card, whether that pairing had a **lapsed** suppression | The first distinguishes *your own passes emptied your deck* from *the pool is empty* — the failure mode that puts this constant in this file. Without the second, only plain pass rate is computable, never *re-shown* pass rate, which is the falsifier §24 names |
+| **`OUTSTANDING_INTEREST_CAP`** | On the interest **write**, not on a search: refusals at the cap, and the **distribution** of outstanding counts per player | A raw refusal count cannot tell *20 is too low* from *somebody is saying yes to everybody* — only the shape of the distribution can, and the second is the behaviour the cap exists to catch. The cap is not five-numbers-shaped; its falsifier is recorded here because it is the same store |
 
 Nothing here is a display string, and nothing here crosses the wire outward — this is the
 engine's own record ([ADR-0022](../../adr/0022-kernel-negative-space-and-constant-homes.md)).
+
+---
+
+## 8. `INTEREST_TTL` — 21 days, flat, then absent
+
+Settled by [ADR-0127](../../adr/0127-a-signal-expires-or-is-refused-never-quietly-decays.md),
+which also refuses §9.5.1's linear decay over the final 7 days.
+
+**It is here because an interest lift is the only guaranteed inclusion left.** ADR-0099 as
+amended lets a human's own *Let's play* **admit** a candidate below `QUALITY_FLOOR`, where
+nothing the engine computes may. So the TTL is the second number in this file that decides
+whether somebody is shown at all — and unlike the floor, its expiry arrives on an ordinary
+morning with no event attached.
+
+**Why 21 and not 7.** The TTL looks like a claim about people — *do you still mean it* — and at
+this pool size that is the wrong axis. A yes is **silent**: nobody is told, and it fires only
+when the other person happens to run a search. A player who searches once a fortnight will never
+see most of a 7-day yes. The failure that costs the product is *the yes never fired*, not *the
+yes was stale*, and 21 days is chosen against that one.
+
+**Why flat.** `days_ago` already crosses as evidence, so the card can say *"said yes 18 days
+ago"*. A decay would charge for the same fact a second time, invisibly, and print the same
+sentence at day 2 and day 20 while the row sat somewhere else — *Why 78?* failing on the screen
+whose whole promise is showing its working.
+
+**What expiry does, exactly.** The lift stops. *Already asked* is a deck exclusion, so the person
+**re-enters the deck** and may be dealt again — read as a fresh chance rather than a loop, which
+is part of why 21 rather than 30. Every outgoing row carried `expires_at` from the day it was
+created, so nothing about this arrives as a surprise (ADR-0127 §5).
+
+**Falsified by:** acceptance rate of interest-lifted candidates **by age of the yes** — needs
+`matches`. And, on day one, by **yeses that expired having never lifted anybody**: if most yeses
+expire unfired, 21 days is answering the wrong question and the real problem is that nobody is
+searching. Owner `RobertConstantin02`.
+
+**The cost, named.** A candidate admitted below the floor on a 20-day-old yes, with the reason
+printed, is not there the next morning. In a thin pool that is a visibly shorter list, and the
+decay §9.5.1 asked for would have faded them instead. The cliff is taken because a fade is
+unexplainable and a cliff is at least dated.
+
+---
+
+## 9. `PASS_SUPPRESS` — 30 days, deck only, never escalating
+
+Settled by [ADR-0128](../../adr/0128-a-pass-is-about-my-deck-a-block-is-about-a-person.md).
+
+**It is here for the second clause, not the first.** Plenty of constants hide somebody. This one
+hides them **and nobody can see it happening** — a pass is write-only, no route returns one in
+any shape, and *Show them again* was struck for making the suppression a suggestion. In a thin
+pool it is one of the few things that turns a non-empty pool into an **empty deck**, and the
+player whose taps caused it has no surface that would say so.
+
+**30 days, and a second pass means nothing more.** §9.5.1's *"repeated passes on the same person
+are a soft signal respected quietly"* is struck: it cannot print, it cannot enter ADR-0123's
+closed silent roster, and where it leads is a **Block** — which exists, is symmetric, is
+reversible, and requires somebody to mean it.
+
+**Deck only, and one-directional.** It never reaches the shortlist, the line-up or a forecast,
+and it never touches the other person's deck. Both boundaries are argued in ADR-0128; the short
+form is that a search is a question about the city and a swipe may not edit the answer.
+
+**Falsified by:** pass rate on **re-shown** profiles — already paid for by the **Origin key** on
+`POST /passes`, which makes this the one number in this file whose falsifier runs without
+`matches`. Owner `RobertConstantin02`.
+
+**The cost, named.** You can pass on somebody tonight and find them third in your shortlist
+tomorrow. If that reads as the product ignoring you, the fix is a sentence on the deck about what
+a pass does — never a wider suppression.

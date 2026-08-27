@@ -569,9 +569,18 @@ roster test are untouched.
 - **`ASYM_TOLERANCE` falsified by:** decline rate by asymmetry bucket.
 - **`MOVE_NOTICE` falsified by:** the fraction of shortlist rows printing a liveness reason. Near
   zero and it explains nothing; near one and the explanation is noise.
-- **The interest constants** (`INTEREST_TTL = 21 d`, `OUTSTANDING_INTEREST_CAP = 20`,
-  `PASS_SUPPRESS = 30 d`) are §9.5.1's and belong to the deck's product decisions, still fog on
-  the map. They are not settled here.
+- **The interest constants** are settled by
+  [#194](https://github.com/Raketa02/Raketa/issues/194) and **two of the three left this file**.
+  `INTEREST_TTL = 21 d` and `PASS_SUPPRESS = 30 d` are five-numbers-shaped and live in
+  [`the-five-numbers.md`](the-five-numbers.md) §8 and §9 — each moves what somebody is shown and
+  nothing on any screen would say so. **`OUTSTANDING_INTEREST_CAP = 20` per sport stays here**,
+  as an ordinary row: it decides whether a player may *act*, hides nobody, and
+  [ADR-0127](../../adr/0127-a-signal-expires-or-is-refused-never-quietly-decays.md) §4 made its
+  bite visible the instant it lands. **Falsified by:** refusals at the cap **and the
+  distribution of outstanding counts per player** — a refusal count alone cannot tell *20 is too
+  low* from *somebody is saying yes to everybody*, and the second is the behaviour the cap
+  exists to catch. Owner `RobertConstantin02`. The related `+14` interest lift is §9's and is
+  **flat**: ADR-0127 refuses §9.5.1's taper, because `days_ago` already crosses as evidence.
 
 ---
 
@@ -675,6 +684,7 @@ fact is search-time and cannot be reconstructed afterwards.
 | Liveness | The **raw signal values**, the dominant signal, and whether a reason printed. Separates *moved* from *moved and explained* — and the offset is deliberately **not** what is stored: it is a function of the ruleset's bounds, so recording it makes a Liveness-bounds change undiffable ([ADR-0118](../../adr/0118-a-past-search-is-not-reproducible.md) §8). `search_candidate.liveness_signals` carries the inputs; the offset is re-derived. **Whether the silent budget clamped is re-derived the same way** — a query over the stored inputs and the ruleset version, never a column ([ADR-0123](../../adr/0123-silence-is-budgeted-per-player-at-the-notice-threshold.md)). The **Modifiers** row below records its clamp directly instead; #183's argument would collapse the two, and that is a telemetry question rather than this one |
 | Reciprocal asymmetry | `fit_ba` and the mode it was scored under. `NO_PREFERENCE` inherits, so the mode is not recoverable from the candidate's declaration |
 | Modifiers | Which fired, and whether the stack clamp bound |
+| The deck's interest constants | **One row, and two departures.** `OUTSTANDING_INTEREST_CAP = 20` per sport is falsified by refusals at the cap plus the **distribution** of outstanding counts. `INTEREST_TTL` and `PASS_SUPPRESS` are five-numbers-shaped and carry their falsifiers in [`the-five-numbers.md`](the-five-numbers.md) §8–§9 — including the two that run **without** `matches`: yeses that expired having never lifted anybody, and pass rate on re-shown profiles. The last of those cost a storage change: a lapsed Redis suppression leaves no trace, so the pass **record** is durable ([ADR-0128](../../adr/0128-a-pass-is-about-my-deck-a-block-is-about-a-person.md)) |
 | The shape of the list | **Nothing new.** `SHORTLIST_MAX` and `DECK_DEAL_MAX` are falsified by `position` on `search_candidate` against interests and passes, both of which already carry the **Origin key**. A deck card is passed or it is said yes to — there is no third thing a player does with one — so the deepest position **acted on** is the depth reached, and the deal's falsifier runs off rows that exist for other reasons. It is stated here because the two constants were unnamed long enough to look like they owed a column |
 
 ---
