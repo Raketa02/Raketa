@@ -35,6 +35,7 @@ import {
 } from '@/test-support/transport';
 
 import { authKeys } from '../hooks/authKeys';
+import { ADULT_ATTESTATION_MISSING, ADULT_LABEL } from '../schemas/authForms';
 import { refreshTokens } from '../use-cases/refreshTokens';
 import { signIn } from '../use-cases/signIn';
 
@@ -157,6 +158,9 @@ describe('signing up', () => {
     fireEvent.changeText(screen.getByLabelText('Nickname'), 'ada');
     fireEvent.changeText(screen.getByLabelText('Password'), password);
     fireEvent.changeText(screen.getByLabelText('Repeat password'), confirm);
+    // Ticked here rather than in the screen, because nothing may arrive ticked: an
+    // attestation nobody made is the one thing this form must not be able to send.
+    fireEvent.press(screen.getByLabelText(ADULT_LABEL));
   }
 
   it('creates the account, signs in, and lands in a live session', async () => {
@@ -193,7 +197,71 @@ describe('signing up', () => {
       nickname: 'ada',
       password1: 'hunter2hunter2',
       password2: 'hunter2hunter2',
+      adult_attested: true,
     });
+  });
+
+  /**
+   * **Nothing arrives ticked, and the form cannot send a claim the player did not make.**
+   * The box is the whole of the age rule on this side of the wire (ADR-0124): a pre-ticked
+   * one would send an attestation nobody gave, which is the single failure mode an
+   * attestation exists to rule out.
+   */
+  it('never arrives ticked', () => {
+    setSessionStatus('unauthenticated');
+
+    renderScreen(<SignUpScreen />);
+
+    expect(screen.getByLabelText(ADULT_LABEL).props.accessibilityState?.checked).toBe(false);
+  });
+
+  /**
+   * The refusal is a refusal and not a closed button. A disabled *Create account* would
+   * leave a player looking at a control that does nothing and no sentence saying why
+   * ([ADR-0089](../../../../../docs/adr/0089-player-profile-context-event-sourced.md)), so
+   * the button presses, the form refuses, and it says what is missing.
+   */
+  it('refuses an unanswered age question before a round trip, and says so', async () => {
+    setSessionStatus('unauthenticated');
+
+    renderScreen(<SignUpScreen />);
+    fillSignUp();
+    // Untick: the answer is now explicitly *no*, which is not an answer this form sends.
+    fireEvent.press(screen.getByLabelText(ADULT_LABEL));
+    fireEvent.press(screen.getByLabelText('Create account'));
+
+    expect(await screen.findByText(ADULT_ATTESTATION_MISSING)).toBeTruthy();
+    expect(transport.requests).toHaveLength(0);
+    expect(getSessionStatus()).toBe('unauthenticated');
+  });
+
+  /**
+   * The server re-refuses what the box enforced, and this is the branch that renders it.
+   * An older build, or a replayed request, can carry a body this form would not have sent
+   * — and *try again* would be the one sentence that is not true, because the identical
+   * body fails identically.
+   */
+  it("renders the server's refusal under the box that takes the answer", async () => {
+    setSessionStatus('unauthenticated');
+    transport.on('POST', '/api/v1/users', () =>
+      json(
+        {
+          code: 'adult_attestation_required',
+          message: 'registration requires an adult attestation',
+          trace_id: 'trace-test',
+          details: { field: 'adult_attested' },
+        } satisfies Wire['ErrorResponse'],
+        400,
+      ),
+    );
+
+    renderScreen(<SignUpScreen />);
+    fillSignUp();
+    fireEvent.press(screen.getByLabelText('Create account'));
+
+    expect(await screen.findByText(ADULT_ATTESTATION_MISSING)).toBeTruthy();
+    expect(transport.requestsTo('POST', '/api/v1/auth/login')).toHaveLength(0);
+    expect(getSessionStatus()).toBe('unauthenticated');
   });
 
   it('catches a password mismatch before a round trip', async () => {

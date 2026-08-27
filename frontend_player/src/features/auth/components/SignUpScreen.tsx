@@ -1,6 +1,20 @@
 /**
  * Create an account.
  *
+ * **It asks one question that is not about the account**: whether the player is an adult.
+ * The platform is adults only and that is a precondition of holding an account rather than
+ * a rule about who is shown to whom
+ * ([ADR-0124](../../../../../docs/adr/0124-the-matcher-gates-account-state-never-age.md)),
+ * so this form is where it is asked. What is collected is an **attestation** — one boolean,
+ * never a date of birth, and **not age verification**. There is no date picker here and
+ * this screen is not where the first one arrives.
+ *
+ * The box is never ticked on arrival, and the *Create account* button is never disabled by
+ * it. A closed control is not a validation ([ADR-0089](../../../../../docs/adr/0089-player-profile-context-event-sourced.md)):
+ * the press goes through, the form refuses, and it says what is missing under the box that
+ * takes the answer. The same sentence renders when the server refuses the same thing by
+ * code, because a body this form would not have sent can still arrive from an older build.
+ *
  * A server-side conflict — the email is taken, the nickname is taken — carries the field
  * it belongs to, so it is rendered under that box rather than in the banner. A player
  * told "that nickname is taken" above a four-field form still has to work out which box
@@ -26,10 +40,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Button, theme } from '@/shared/ui';
+import { Button, TickBox, theme } from '@/shared/ui';
 
 import { useSignUp } from '../hooks/useAuthActions';
-import { signUpSchema, validate, type FieldErrors } from '../schemas/authForms';
+import { ADULT_LABEL, signUpSchema, validate, type FieldErrors } from '../schemas/authForms';
 
 import { AuthField, AuthNotice } from './AuthControls';
 import { authErrorField, authErrorMessage } from './authErrorMessage';
@@ -39,6 +53,12 @@ export function SignUpScreen() {
   const [nickname, setNickname] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  /**
+   * **False on arrival, and there is no path that starts it anywhere else.** A pre-ticked
+   * box is a claim the player never made, which is the one thing an attestation exists to
+   * rule out (ADR-0124).
+   */
+  const [adultAttested, setAdultAttested] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
   const signUp = useSignUp();
@@ -49,6 +69,7 @@ export function SignUpScreen() {
       nickname,
       password,
       confirmPassword,
+      adultAttested,
     });
 
     if (!result.ok) {
@@ -61,6 +82,7 @@ export function SignUpScreen() {
       email: result.values.email,
       nickname: result.values.nickname,
       password: result.values.password,
+      adultAttested: result.values.adultAttested,
     });
   };
 
@@ -136,6 +158,17 @@ export function SignUpScreen() {
               returnKeyType="go"
               onSubmitEditing={submit}
               editable={!signUp.isPending}
+            />
+
+            {/* Below the four boxes and above the button, because it is the last thing a
+                player agrees to rather than another detail about the account, and because
+                a refusal has to be visible from the control that provoked it. */}
+            <TickBox
+              label={ADULT_LABEL}
+              checked={adultAttested}
+              onChange={setAdultAttested}
+              error={errorFor('adultAttested')}
+              disabled={signUp.isPending}
             />
           </View>
 

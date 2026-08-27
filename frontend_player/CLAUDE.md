@@ -25,7 +25,8 @@ feature, not after:
 `src/app/_layout.tsx` composes the providers and `src/shared/lib/bootstrap` runs the one
 ordered startup sequence. Above that: the HTTP client with its 401 → refresh → retry
 rotation, the `AppError` family, `shared/lib/auth` over the keychain, and three features —
-`auth` (sign up, sign in, session restore), `onboarding` (the entry gate, welcome, the
+`auth` (sign up — including the **adult attestation**, the one question on that form that is
+not about the account — sign in, session restore), `onboarding` (the entry gate, welcome, the
 sports picker, the adaptive question loop, the explained result, and the summary and data
 screens a player leaves through) and `player_profile` (onboarding's **second part**, complete: six
 steps over a client-held draft, and the one write that ends them — the Social tags picker,
@@ -37,6 +38,18 @@ held, the radius step, a slider over the served bounds that opens at the served 
 Proposals opt-in, never pre-ticked and with a finish that stays closed until the player
 answers either way, and the **profile commit**: every answer in one idempotent
 `POST /players/me/profile`, after which the player walks the data screen into the app).
+
+**Sign-up asks whether the player is an adult, and it is an attestation.** The platform is
+adults only, and that is a precondition of _holding an account_ rather than a rule about who
+is shown to whom ([ADR-0124](../docs/adr/0124-the-matcher-gates-account-state-never-age.md)).
+What the form collects is **one boolean — never a date of birth**, and it is **not age
+verification**: there is no date picker anywhere in this app and this is not where the first
+one arrives. The box is never pre-ticked, _Create account_ is never disabled by it, and the
+refusal is a sentence under the box rather than a closed control
+([ADR-0089](../docs/adr/0089-player-profile-context-event-sourced.md)). The same sentence
+renders when the server refuses by `adult_attestation_required` — an older build or a
+replayed request can carry a body this form would not have sent, and _try again_ would then
+be the one thing that is not true.
 
 **Onboarding is two parts, and the part is the checkpoint unit**
 ([ADR-0090](../docs/adr/0090-onboarding-per-player-checkpoint.md)). Part one is the Skill
@@ -115,8 +128,8 @@ has gone out, and buying that would mean a second transport.
 `src/shared/ui/` holds the design-system primitives built so far — the cards, note, row,
 hairline, button, tag, chip, bar, header, the overlays and drawn objects the result screen
 needed (bottom sheet, popover, level bar, confidence ring), the photo tile with its
-generated court poster, the availability grid and the radius slider; the rest arrive with
-the features that need them. **Build outward from the structure below** rather than reaching
+generated court poster, the availability grid and the radius slider, and the tick box with
+the tick both it and the grid draw; the rest arrive with the features that need them. **Build outward from the structure below** rather than reaching
 for `create-expo-app` — its default template contradicts ADR-0009 — and copy the shape of
 `src/features/auth/` or `src/features/onboarding/` rather than inventing a second one.
 

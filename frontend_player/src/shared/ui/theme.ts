@@ -367,6 +367,18 @@ const size = {
     thumb: 20,
     thumbRing: 3,
   },
+  /** The tick box — 6.11. 6.8's availability cell at the size a line of text wants, and
+   *  the same 12 x 12 tick inside it: `availability.tick` and `availability.tickStroke`
+   *  are read from there rather than restated, because it is the same mark and two copies
+   *  of it are two marks to keep in step.
+   *
+   *  The ROW is the touch surface — box and label together — which is what gets the
+   *  control to 44 without a `hit` entry, the way the radius slider's row does. A 20pt
+   *  square with slop around it would be a target that stops at the words. */
+  tickBox: {
+    box: 20,
+    row: 44, // = minTouch
+  },
   balanceBar: 24,
   sportDot: 6,
   infoGlyph: 14,

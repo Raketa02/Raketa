@@ -32,6 +32,32 @@ export const signInSchema = z.object({
 export type SignInInput = z.input<typeof signInSchema>;
 export type SignInValues = z.output<typeof signInSchema>;
 
+/**
+ * The one question on this form that is not about the account.
+ *
+ * The platform is adults only, and that is a precondition of holding an account rather
+ * than a rule about who gets shown to whom
+ * ([ADR-0124](../../../../../docs/adr/0124-the-matcher-gates-account-state-never-age.md)).
+ * What is collected is an **attestation** — the player's own claim, one boolean — and
+ * never a date of birth: there is no date picker here and this is not the ticket that
+ * introduces the first one.
+ *
+ * The label is the claim in the player's own voice, because it is what they are asserting
+ * rather than a rule being read at them.
+ */
+export const ADULT_LABEL = 'I am 18 or over';
+
+/**
+ * The sentence for an unanswered age question — **one sentence, shown from two places.**
+ *
+ * The box refuses before a round trip, and the server refuses again with
+ * `adult_attestation_required` on a body this form would not have sent (an older build, a
+ * replayed request). Both land under the same control and mean the same thing, so two
+ * copies of it would be two sentences to keep in step. `authErrorMessage` reads this one.
+ */
+export const ADULT_ATTESTATION_MISSING =
+  'Confirm that you are 18 or over — Raketa is for adults only.';
+
 export const signUpSchema = z
   .object({
     email,
@@ -46,6 +72,12 @@ export const signUpSchema = z
       .min(8, 'Use at least 8 characters.')
       .max(128, "That's longer than 128 characters."),
     confirmPassword: z.string().min(1, 'Repeat your password.'),
+    // `refine` rather than `z.literal(true)`: an unticked box is `false`, which is a
+    // boolean, and only the value is wrong. The message is what a player reads either
+    // way, and this is the one that says which of the two it is.
+    adultAttested: z.boolean().refine((given) => given, {
+      message: ADULT_ATTESTATION_MISSING,
+    }),
   })
   .refine((values) => values.password === values.confirmPassword, {
     // Attached to the field the player must fix, not to the form, so the message lands
