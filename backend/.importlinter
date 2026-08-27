@@ -14,11 +14,15 @@
 # what enforces them.
 #
 # Engines are also fenced from *each other* when two of them answer questions that
-# could be confused. Only one engine ships today — RacketSkill — so no such contract
-# is written here; the pair that used to be (Pairing and Match Fit, docs/adr/0026)
-# went with their code. The shape to copy when a second engine lands: two `forbidden`
-# contracts and not one, because a single contract with overlapping source and
-# forbidden lists would also forbid each package from importing itself.
+# could be confused. **Two ship today** — RacketSkill and Match Fit (docs/adr/0093) —
+# and the pair below is the shape this comment used to describe in advance: two
+# `forbidden` contracts and not one, because a single contract with overlapping
+# source and forbidden lists would also forbid each package from importing itself.
+# The question they could be confused about is a *level*: RacketSkill defines μ, σ,
+# the bands and the σ-combination rule, and Match Fit reads them by calling
+# `racketskill/core` through the module that composes them — never by re-deriving
+# one. Two engines with two opinions about a level is the failure this fence exists
+# for, and ADR-0093 names it by name.
 #
 # `datetime` is forbidden to the **engines only**. The kernel's time module is its
 # one legitimate home; an engine receives an instant rather than constructing one.
@@ -121,6 +125,24 @@ forbidden_modules =
     secrets
     time
     datetime
+allow_indirect_imports = true
+
+[importlinter:contract:racketskill-does-not-know-match-fit]
+name = The RacketSkill engine does not import the Match Fit engine
+type = forbidden
+source_modules =
+    app.engines.racketskill
+forbidden_modules =
+    app.engines.matchfit
+allow_indirect_imports = true
+
+[importlinter:contract:match-fit-does-not-know-racketskill]
+name = The Match Fit engine does not import the RacketSkill engine
+type = forbidden
+source_modules =
+    app.engines.matchfit
+forbidden_modules =
+    app.engines.racketskill
 allow_indirect_imports = true
 
 [importlinter:contract:kernel-is-innermost]

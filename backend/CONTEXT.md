@@ -340,5 +340,27 @@ there; they are not repeated here.
   correlations nobody measured, folding §20.1's scenarios or the six judged pairings into
   it.
 
+- **Ruleset store** — where the released **Ruleset** datasets live:
+  `app/modules/matchmaking/infrastructure/rulesets/`, a package rather than a table,
+  because a ruleset ships embedded with the code and the runtime store is deferred
+  ([ADR-0093](../docs/adr/0093-matcher-in-the-backend-with-a-pure-match-fit-engine.md)).
+  **The engine owns the shape and the module owns the data**, and the fence forces the
+  split rather than taste: a ruleset names Social tag ids, an engine may not import a
+  module, and retyping the nineteen inside `app/engines/matchfit/` would be a second copy
+  of a closed vocabulary — which `tests/unit/test_social_tag_vocabulary.py` refuses
+  outright. So `Ruleset` and `validate_ruleset` are the engine's, every dataset is here,
+  and the day the runtime store lands it replaces this package rather than growing beside
+  it. _Avoid_: "config", "settings" — the environment may select configuration and may
+  never select a ruleset.
+- **Wire evidence union** — the closed, discriminated set of **Evidence** variants in
+  `app/modules/matchmaking/presentation/evidence.py`, keyed by `kind`. The engine's
+  `EvidenceKind` supplies the discriminator strings so the two halves cannot spell one
+  differently. **A ruleset that can emit a kind this union does not publish refuses to
+  load** — checked in `app/bootstrap/matchmaking.py`, which is where the ruleset and the
+  contract are both visible, and a **load failure rather than a lint** because the drift
+  is silent for exactly as long as nobody releases a ruleset with a new kind
+  ([ADR-0106](../docs/adr/0106-evidence-vocabulary-is-contract-weights-are-configuration.md)).
+  _Avoid_: "terms blob" for it — the store is open where the wire is closed, on purpose.
+
 Add backend-specific technical terms here as they are resolved. Anything describing the
 *domain* belongs in the shared glossary instead.

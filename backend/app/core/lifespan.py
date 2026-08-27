@@ -11,6 +11,13 @@ that hosts them.
 forgets is one that holds a database connection open past `dispose_engine`, and
 the symptom is a container that takes its whole grace period to die rather than
 anything that looks like a bug.
+
+**One thing here starts nothing and is a refusal.** The matcher's ruleset is
+validated before anything else runs, so that a malformed one **fails the deploy**
+rather than serving — with an embedded ruleset there is no hot reload to fall
+back through, so *the previous one keeps serving* means the old pods are still up
+(``docs/adr/0119``). It never falls back to defaults, because a matcher that
+silently falls back is one that quietly A/B tests against itself.
 """
 
 import logging
@@ -22,6 +29,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.bootstrap.events import build_event_delivery_worker
 from app.bootstrap.jobs import build_scheduled_jobs
+from app.bootstrap.matchmaking import verify_ruleset
 from app.core.config import Settings
 from app.infrastructure.database.engine import (
     dispose_engine,
@@ -36,6 +44,12 @@ logger = logging.getLogger(__name__)
 def build_lifespan(settings: Settings):
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+        # Before the database, before any background work: a ruleset that cannot
+        # be believed must stop this process rather than start beside it. It
+        # reads no setting and takes no argument from here — the four
+        # environments run the same numbers.
+        verify_ruleset()
+
         init_engine(settings)
 
         # Every piece of background work takes a session per tick, so one factory
