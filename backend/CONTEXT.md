@@ -364,6 +364,25 @@ there; they are not repeated here.
   correlations nobody measured, folding §20.1's scenarios or the six judged pairings into
   it.
 
+- **Judged-pairings harness** — `scripts/judged_pairings.py`, the machine that reads
+  `docs/specs/matchmaking/judged-pairings.json`, scores its six cases against the **live
+  ruleset**, and writes every derived number back: the fixture's own readings, the tables
+  in `the-judged-pairings.md`, and `ranking-weights.md` §10. The fixture holds **inputs and
+  one verdict per case** and nothing derived is typed into it
+  ([ADR-0122](../docs/adr/0122-a-judged-pairing-is-two-people-never-a-profile-of-scores.md)),
+  so a formula change re-derives the whole thing and arrives as a diff a reviewer must
+  argue for. It does one thing a diff cannot: it re-derives the **floor bound**,
+  `max(Fit | not shown) < QUALITY_FLOOR ≤ min(Fit | shown)`, and exits red when the
+  configured integer leaves it — which is what `ranking-weights.md` §11 always demanded of
+  a ruleset release and could not enforce against prose. It is the **only** scorer in the
+  loop: `tests/unit/test_matchfit_judged_pairings.py` scores through it too, because a
+  second harness is a second answer and the tables would agree with the tests while both
+  disagreed with the engine. _Avoid_: calling it a corpus or a replay — it is pass/fail
+  against named verdicts over six pairings, where the **synthetic corpus** above asks how a
+  ruleset moves a population and has no floor in it
+  ([ADR-0121](../docs/adr/0121-a-fixture-stands-for-a-comparison-never-for-a-city.md) bars
+  the six from that corpus as circular).
+
 - **Ruleset store** — where the released **Ruleset** datasets live:
   `app/modules/matchmaking/infrastructure/rulesets/`, a package rather than a table,
   because a ruleset ships embedded with the code and the runtime store is deferred

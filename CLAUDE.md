@@ -53,6 +53,18 @@ the hooks themselves, `make gen-api`.
   [`.github/scripts/check-poetry-pin-drift.sh`](.github/scripts/check-poetry-pin-drift.sh)
   (`make poetry-pin`, proven still to fire by `make test-poetry-pin`). Poetry 2.x
   unbundled `poetry export`, so a site that exports also installs `poetry-plugin-export`.
+- **The six judged pairings are derived, never typed.**
+  `docs/specs/matchmaking/judged-pairings.json` holds them as *inputs* plus one verdict per
+  case ([ADR-0122](docs/adr/0122-a-judged-pairing-is-two-people-never-a-profile-of-scores.md));
+  every term value, every renormalised weight and every Fit is re-derived by the live ruleset
+  and written back into the tables in `the-judged-pairings.md` and `ranking-weights.md` §10.
+  Regenerate with `make gen-judged-pairings` and commit the result — CI regenerates and diffs,
+  so a hand-edited table fails the build, and **a diff there is a design change that must be
+  argued for in the pull request**. The same run re-derives `QUALITY_FLOOR`'s bound —
+  `max(Fit | not shown) < QUALITY_FLOOR ≤ min(Fit | shown)` — and goes red when the configured
+  integer leaves it, which is what `ranking-weights.md` §11 demanded and could not enforce
+  against prose ([`.github/scripts/check-judged-pairings.sh`](.github/scripts/check-judged-pairings.sh),
+  `make judged-pairings`, proven still to fire by `make test-judged-pairings`).
 - **One session changes one app.** A `PreToolUse` hook blocks writes that cross an app
   boundary. A block is information — surface it, don't route around it. See
   [`docs/agents/ownership-boundaries.md`](docs/agents/ownership-boundaries.md).
@@ -98,8 +110,8 @@ guardrail doing its job.
 
 After changing either hook, run `make test-hooks` (65 assertions). A guardrail that
 silently stops matching is worse than none, because you stop watching for it. The same
-argument is why `make test-drift` and `make test-poetry-pin` exist: each drives its check
-against a deliberately broken tree and asserts it goes red.
+argument is why `make test-drift`, `make test-poetry-pin` and `make test-judged-pairings`
+exist: each drives its check against a deliberately broken tree and asserts it goes red.
 
 ## Agent skills
 

@@ -602,21 +602,27 @@ roster test are untouched.
 the integer here. **The document's 52 is refuted**, and the case that refutes it is named.
 
 With [ADR-0103](../../adr/0103-where-the-curve-saturates-the-gate-begins.md)'s gate and §5's
-normalisation applied, on §2's day-one basis:
+normalisation applied, on §2's day-one basis. **The table is generated** from
+[`judged-pairings.json`](judged-pairings.json) by `make gen-judged-pairings`, and a hand edit
+to it fails the build:
 
+<!-- generated: judged-totals — `make gen-judged-pairings`; do not edit by hand -->
 | Case | Verdict | Comp | Fun |
 |---|---|--:|--:|
 | 1 · same level, full grid overlap, five minutes away, socially blank | Shown | 82.0 | 67.5 |
 | 2 · case 1 with the grid emptied — **no shared slot at all** | Shown | 69.3 | 49.9 |
-| **3′-comp** · just inside competitive's gate, forecast at its floor, no slot, edge of the radius | **Not shown** | 20.4 → **19.5** | — |
-| **3′-fun** · the same, just inside for-fun's gate | **Not shown** | — | 24.2 → **24.5** |
-| 4 · everything exceptional, competitive searcher, friendly-only candidate | Shown, reason printed | 73.8 → **80.3** | — |
-| 5 · **the median stranger** | Shown | 46.0 → **44.5** | 47.9 → **47.8** |
+| **3'-comp** · just inside competitive's gate, forecast at its floor, no slot, edge of the radius | **Not shown** | 19.5 | — |
+| **3'-fun** · the same, just inside for-fun's gate | **Not shown** | — | 24.5 |
+| 4 · everything exceptional, competitive searcher, friendly-only candidate | Shown, reason printed | 80.3 | — |
+| 5 · **the median stranger** | Shown | 44.5 | 47.8 |
 | 6 · case 1 with the candidate's radius shrunk — searcher outside theirs | Shown, docked | 82.0 | 67.5 |
+<!-- /generated: judged-totals -->
 
+<!-- generated: floor-bound — `make gen-judged-pairings`; do not edit by hand -->
 ```
 24.5  <  QUALITY_FLOOR  ≤  44.5
 ```
+<!-- /generated: floor-bound -->
 
 **52 hides the median stranger in both modes**, and case 5's stated job is *"this is where the
 bar sits"*. That is the refutation in the form `the-five-numbers.md` requires of any change: not
@@ -680,6 +686,18 @@ This costs nothing extra: `the-five-numbers.md` already requires every change to
 naming which of the cases it now decides differently. It adds one demand on
 [#169](https://github.com/Raketa02/Raketa/issues/169), which already carries it: **which terms
 produced evidence per scored candidate**, without which a Fit is uninterpretable a year later.
+
+**And it is now mechanical rather than a sentence.** `make judged-pairings` re-runs the six
+against the live ruleset and prints the bound the verdicts leave —
+
+```
+max(Fit | not shown)  <  QUALITY_FLOOR  ≤  min(Fit | shown)
+```
+
+— failing when the configured integer sits outside it, from either side. Turning a term on
+moves every renormalised weight at once, so this is the release that finds out; the reader is
+[`backend/scripts/judged_pairings.py`](../../../backend/scripts/judged_pairings.py) and it runs
+in CI on every backend pull request.
 
 ---
 

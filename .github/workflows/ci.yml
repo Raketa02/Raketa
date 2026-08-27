@@ -41,6 +41,10 @@ jobs:
               - 'backend/**'
               - '.github/scripts/**'
               - '.github/workflows/ci.yml'
+              # The judged-pairings tables live in the specs and are generated
+              # from the backend's engine. Without this the drift check is
+              # dormant in precisely the pull request that hand-edits one.
+              - 'docs/specs/matchmaking/**'
             player:
               - 'frontend_player/**'
               - 'backend/openapi.player.json'
@@ -121,7 +125,7 @@ jobs:
       # pyproject.toml scopes to the kernel and the engines would have been
       # enforced nowhere. A gate the pipeline does not run is not a gate.
       - name: Typecheck
-        run: poetry run mypy app
+        run: poetry run mypy app scripts
       - name: Test
         env:
           WRITER_DB_URL: postgresql+asyncpg://raketa_user:raketa_pwd@localhost:5432/raketa
@@ -129,6 +133,13 @@ jobs:
           DB_SSL_MODE: disable
           JWT_SECRET_KEY: ci-secret-do-not-use-in-prod
         run: poetry run pytest tests --cov=app --cov-report=xml -q
+      # The six judged pairings, re-derived against the live ruleset: the tables
+      # in the specs must reproduce, and QUALITY_FLOOR must still sit inside
+      # max(Fit | not shown) < floor <= min(Fit | shown). After the tests,
+      # because it regenerates files and a failing suite is the cheaper signal.
+      - name: Judged pairings
+        working-directory: ${{ github.workspace }}
+        run: bash .github/scripts/check-judged-pairings.sh
       # Last, and for the reason test-hooks.sh and test-contract-drift.sh exist:
       # the three purity gates above were all added to a tree that already
       # satisfied them, so none of them has ever been seen to fail. This drives
@@ -138,6 +149,12 @@ jobs:
       - name: Poetry pin drift check still fires
         working-directory: ${{ github.workspace }}
         run: bash .github/scripts/test-poetry-pin-drift.sh
+      # It perturbs the fixture and the two documents in the workspace and
+      # restores them. Both halves are driven: a table nobody regenerated, and a
+      # floor that has left its judged bound from either side.
+      - name: Judged-pairings check still fires
+        working-directory: ${{ github.workspace }}
+        run: bash .github/scripts/test-judged-pairings.sh
 
   player:
     name: Player app — lint, typecheck, test

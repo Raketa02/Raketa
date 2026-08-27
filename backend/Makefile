@@ -41,8 +41,11 @@ test-gates:        ## verify the kernel/engines purity gates still fire
 format:            ## ruff format
 	poetry run ruff format .
 
+# `scripts` as well as `app`: the judged-pairings harness runs the engine over a
+# spec and writes tables back into it, and an implicit `Any` in the machine that
+# derives a Fit is the same defect there as it is one directory over.
 typecheck:         ## mypy
-	poetry run mypy app
+	poetry run mypy app scripts
 
 check: lint lint-imports typecheck test  ## the full local gate (matches CI)
 

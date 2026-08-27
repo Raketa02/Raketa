@@ -14,7 +14,7 @@ Run via the Makefile from `backend/`:
 ```bash
 make test        # poetry run pytest tests -q
 make lint        # ruff check .          make format → ruff format .
-make typecheck   # mypy app
+make typecheck   # mypy app scripts
 make check       # lint + lint-imports + typecheck + test — the same gate CI runs
 make test-gates  # prove the kernel/engines purity gates still fire (CI runs it)
 make openapi     # emit openapi.player.json — the contract the client generates from
