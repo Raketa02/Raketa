@@ -32,6 +32,7 @@ from __future__ import annotations
 from types import MappingProxyType
 
 from app.engines.matchfit.core import (
+    ChallengeLoad,
     ClashSeverity,
     FamiliarityReading,
     GroupTerm,
@@ -47,6 +48,7 @@ from app.engines.matchfit.core import (
 )
 from app.engines.matchfit.ruleset import (
     BalanceRules,
+    ChallengeLoadRung,
     DistanceRules,
     ExplanationRules,
     FamiliarityRules,
@@ -555,8 +557,31 @@ RULESET = Ruleset(
                 ),
             }
         ),
+        # §14.4's three thresholds, adopted whole by `docs/adr/0125` — only the
+        # third's *effect* changed, from a 24-hour withholding to the sink's own
+        # floor. They are the one liveness signal read from a count rather than
+        # from a normalised reading, because they are the one set of thresholds
+        # somebody measured before this map existed.
+        #
+        # Falsified by answer rate by open-challenge bucket. If answer rate does
+        # not fall as load rises, the signal is measuring nothing and all three
+        # rungs are noise.
+        challenge_load_rungs=(
+            ChallengeLoadRung(at_least=3, points=-4, prints=ChallengeLoad.SOME),
+            ChallengeLoadRung(at_least=5, points=-8, prints=ChallengeLoad.BUSY),
+            ChallengeLoadRung(at_least=8, points=-12, prints=ChallengeLoad.FULL),
+        ),
         move_notice=6,
         asymmetry_tolerance=12,
+        # `dock = −min(12, asym × 0.5)`. Half a point of dock per point of
+        # shortfall past the tolerance, saturating at a shortfall of 24 — which
+        # is twice the tolerance, so a candidate has to be as far past the head
+        # start again as the head start itself before the sink bottoms out.
+        #
+        # Falsified with the tolerance beside it: decline rate by asymmetry
+        # bucket. If decline rate is flat across the buckets, the shortfall
+        # predicts nothing and the slope is docking people for arithmetic.
+        asymmetry_slope=0.5,
     ),
     group=GroupRules(
         weights=MappingProxyType(

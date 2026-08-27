@@ -18,11 +18,14 @@ from app.engines.matchfit.scorable import (
     CombinedUncertainty,
     GridCell,
     LevelReading,
+    LivenessFacts,
     MeanObservation,
+    ModifierFacts,
     RatioObservation,
     ReliabilityRecord,
     ScorableCandidate,
     Searcher,
+    SharedHistory,
     StrandObservation,
 )
 from app.engines.racketskill.core import combine_sigma, confidence_percent
@@ -150,3 +153,57 @@ def sigma_pair(a: float, b: float) -> float:
     """
 
     return combine_sigma(a, b)
+
+
+def modifier_facts(
+    *,
+    calibration_elevated: bool = False,
+    shared_history: SharedHistory | None = None,
+    welcomed_settling_opponents: bool | None = None,
+) -> ModifierFacts:
+    """Stage 4's inputs, defaulted to **day one**: nothing fires.
+
+    The defaults are the platform as it actually is rather than a neutral
+    pairing — calibration is standard, ``matches`` does not exist, so familiarity
+    and the welcoming record have no answer. A test that wants a modifier states
+    the fact that produces it, which is the only way the day-one claim in
+    ``the-engine.md`` §6 stays checkable as the providers land.
+    """
+
+    return ModifierFacts(
+        calibration_elevated=calibration_elevated,
+        shared_history=shared_history,
+        welcomed_settling_opponents=welcomed_settling_opponents,
+    )
+
+
+def liveness_facts(
+    *,
+    interest_days_ago: int | None = None,
+    newcomer: bool = False,
+    previously_accepted: bool = False,
+    previously_declined: bool = False,
+    answer_rate: float | None = None,
+    recent_activity: float | None = None,
+    overlap_proximity: float | None = None,
+    open_challenges: int | None = None,
+    exposure: float | None = None,
+) -> LivenessFacts:
+    """Stage 6's inputs, defaulted to a candidate nothing is known about.
+
+    Every default is ``None`` or ``False`` — *not looked at* rather than
+    *measured neutral* — so a liveness test that states one fact is asserting
+    that fact's own contribution to the offset and nothing else.
+    """
+
+    return LivenessFacts(
+        interest_days_ago=interest_days_ago,
+        newcomer=newcomer,
+        previously_accepted=previously_accepted,
+        previously_declined=previously_declined,
+        answer_rate=answer_rate,
+        recent_activity=recent_activity,
+        overlap_proximity=overlap_proximity,
+        open_challenges=open_challenges,
+        exposure=exposure,
+    )

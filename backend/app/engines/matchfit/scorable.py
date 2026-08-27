@@ -361,3 +361,133 @@ def _no_repeated_cell(grid: tuple[GridCell, ...]) -> None:
         len(set(grid)) == len(grid),
         f"a grid with a cell ticked twice: {[(int(c.day), c.part) for c in grid]}",
     )
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class SharedHistory:
+    """What the two of them have already played together. A fact about the pair.
+
+    ``days_since_last_game`` and the count are the two inputs familiarity's decay
+    reads — ``0.5 ^ (days / half_life) × (1 − φⁿ)`` — and they arrive measured
+    rather than as a strength, because the half-life and φ are ruleset numbers
+    and a provider that had already applied them would be a second place for them
+    to live.
+
+    **Absence has one spelling: no history at all.** A pair who have never played
+    carry ``None`` rather than a zero-game record, on the rule this whole layer
+    runs on — a zero here would be an invented one, and it would decay from full
+    strength like a game somebody actually played.
+    """
+
+    days_since_last_game: int
+    games_played_together: int
+
+    def __post_init__(self) -> None:
+        invariant(
+            self.days_since_last_game >= 0,
+            f"a game played in the future: {self.days_since_last_game} days",
+        )
+        invariant(
+            self.games_played_together >= 1,
+            "a shared history of no games is an absence, and an absence is "
+            f"spelled by carrying no history at all: {self.games_played_together}",
+        )
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class ModifierFacts:
+    """What stage 4 reads, and nothing a term may see.
+
+    Separate from ``ScorableCandidate`` because every field on that type is read
+    by a term or printed as that term's evidence, and none of these is: a
+    modifier is applied *after* the eight terms and prints a line of its own. It
+    crosses the same fence — the walk in
+    ``tests/unit/test_scorable_candidate_fence.py`` reads this type as a root —
+    because *what is in the process* is the claim, not *what a term reads*.
+
+    **Two of the three cannot fire today and say so by being absent**, rather
+    than by arriving as a false or a zero. Familiarity and the welcoming record
+    both need ``matches``, which is unwritten; calibration is the one modifier
+    whose input exists.
+    """
+
+    #: The candidate's ``calibration_priority``, as the binary it is. Not a ramp:
+    #: the rating aggregate has two values, and a 0…+4 range read off a field
+    #: with two states is 0 or +4. **Competitive only** — it applies where a
+    #: rating is at stake — and it prints, because a player is entitled to know
+    #: when they are being matched partly for somebody else's benefit.
+    calibration_elevated: bool
+    #: ``None`` when the two of them have never played.
+    shared_history: SharedHistory | None
+    #: The welcoming record, reduced to its one unpaid input (#175): *has played
+    #: opponents whose rating was still settling*. ``None`` is **no answer** and
+    #: not *no*, because the provider is ``matches`` and it does not exist.
+    welcomed_settling_opponents: bool | None
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class LivenessFacts:
+    """What stage 6 reads: ten facts that move a position and never a number.
+
+    **Four of the ten arrive as a reading in ``[0, 1]`` rather than as a
+    measurement**, and that is a decision rather than a convenience. A signal's
+    *points* are ruleset data; the curve from *days since they last opened the
+    app* to a reading is a **measurement**, and it belongs on the other side of
+    the fence with the clock and the ledgers. Putting it here would mean
+    inventing a threshold per signal — four curves nobody measured, in the one
+    file whose whole discipline is that every number has a falsifier.
+
+    **The full inbox is the exception, and it is the exception on purpose.** Its
+    three thresholds were measured and published (§14.4) and ``docs/adr/0125``
+    adopted them whole, so it reads the count and the ruleset holds the rungs.
+
+    **A fact that is not there is ``None``, never a neutral reading.** A signal
+    that does not fire is absent from the offset rather than present at zero, and
+    a 0.5 standing in for *we did not look* is the invented neutral this layer
+    refuses everywhere else.
+    """
+
+    #: How long ago they said *Let's play* to the searcher, when a live one
+    #: exists. The lift is **flat for the whole life of the yes and then absent**
+    #: (``docs/adr/0127``) — the age crosses as evidence and a taper would charge
+    #: one fact twice — so this is read as *whether*, and printed as *how long*.
+    interest_days_ago: int | None
+    #: Whether the candidate is inside the newcomer window.
+    newcomer: bool
+    previously_accepted: bool
+    previously_declined: bool
+    #: How well and how fast they answer challenges, as one reading.
+    answer_rate: float | None
+    #: *This week* … *dormant*, projected outside from refresh-token events.
+    recent_activity: float | None
+    #: How soon the next slot the two of them share comes round.
+    overlap_proximity: float | None
+    #: How many challenges are sitting unanswered in their inbox. A **count**,
+    #: because this is the one signal whose thresholds were measured.
+    open_challenges: int | None
+    #: How little the candidate has been shown this week, from the exposure
+    #: ledger. Silent, and the searcher is owed no version of it.
+    exposure: float | None
+
+    def __post_init__(self) -> None:
+        for field, reading in (
+            ("answer_rate", self.answer_rate),
+            ("recent_activity", self.recent_activity),
+            ("overlap_proximity", self.overlap_proximity),
+            ("exposure", self.exposure),
+        ):
+            invariant(
+                reading is None or 0.0 <= reading <= 1.0,
+                f"{field} read {reading}, which is outside [0, 1]",
+            )
+        invariant(
+            self.interest_days_ago is None or self.interest_days_ago >= 0,
+            f"a *Let's play* sent in the future: {self.interest_days_ago} days",
+        )
+        invariant(
+            self.open_challenges is None or self.open_challenges >= 0,
+            f"a negative inbox: {self.open_challenges}",
+        )

@@ -41,6 +41,7 @@ from typing import Mapping, TypeVar
 
 from app.engines.matchfit.core import (
     K_CEILING,
+    ChallengeLoad,
     ClashSeverity,
     EvidenceKind,
     FamiliarityReading,
@@ -351,6 +352,28 @@ class ModifierRules:
 
 
 @dataclass(frozen=True)
+class ChallengeLoadRung:
+    """One step of the full-inbox sink: a depth, what it costs, and its code.
+
+    ``docs/adr/0125`` deleted the withholding at eight open challenges and
+    **adopted §14.4's three thresholds whole**, changing only the third's effect.
+    They are here rather than in the arithmetic because they are numbers, and
+    every number the engine uses lives in one dated dataset — but the *shape* is
+    a rung and not a curve, because that is what was adopted: three measured
+    depths, not a slope somebody fitted through them.
+
+    ``prints`` is the coarse code the rung crosses as, carried by the rung rather
+    than derived from its position, so moving a threshold cannot silently
+    re-point a code at a different depth. **The number itself never crosses** —
+    their inbox depth is theirs.
+    """
+
+    at_least: int
+    points: int
+    prints: ChallengeLoad
+
+
+@dataclass(frozen=True)
 class SignalBound:
     """One liveness signal's range, and whether it owes the player a sentence.
 
@@ -394,8 +417,19 @@ class LivenessRules:
     offset_minimum: int
     offset_maximum: int
     signals: Mapping[LivenessSignal, SignalBound]
+    #: The full-inbox sink, deepest last. It is the one signal that reads a
+    #: **count** rather than a normalised reading, because it is the one whose
+    #: thresholds were measured and published before this map existed — the rest
+    #: would need a curve invented here, and a number nobody measured is a number
+    #: somebody picked.
+    challenge_load_rungs: tuple[ChallengeLoadRung, ...]
     move_notice: int
     asymmetry_tolerance: int
+    #: How steeply a reciprocal shortfall past the tolerance docks — ``dock =
+    #: −min(bound, asym × slope)``. It is priced **proportionately** and not as a
+    #: flat charge, which is what replaced the struck radius-asymmetry dock: that
+    #: one charged a fact the candidate's own distance term had already priced.
+    asymmetry_slope: float
 
     def silent_signals(self) -> tuple[LivenessSignal, ...]:
         """The signals that never print, in enum order.
@@ -1063,6 +1097,10 @@ def _validate_liveness(liveness: LivenessRules) -> None:
         liveness.asymmetry_tolerance > 0,
         f"asymmetry tolerance: {liveness.asymmetry_tolerance}",
     )
+    invariant(
+        0 < liveness.asymmetry_slope <= 1,
+        f"asymmetry slope: {liveness.asymmetry_slope}",
+    )
 
     interest = liveness.signals[LivenessSignal.INTEREST_RECEIVED]
     # A human's own ask outranks the engine's opinion of that human's
@@ -1083,6 +1121,55 @@ def _validate_liveness(liveness: LivenessRules) -> None:
         liveness.signals[LivenessSignal.NEWCOMER_LIFT].printable,
         "the newcomer lift must print: *they're new* is a sentence the product "
         "wants said, where *nobody has been shown them* is not",
+    )
+    # Last, because the rungs are about how a bound is *reached* and everything
+    # above is about the bound itself: a ruleset that widened the sink past the
+    # interest lift owes that answer before it owes an answer about its ladder.
+    _validate_challenge_load(liveness)
+
+
+def _validate_challenge_load(liveness: LivenessRules) -> None:
+    """The sink's three rungs: deeper costs more, and the deepest reaches the bound.
+
+    ``docs/adr/0125`` adopted §14.4's thresholds **whole**, so what is checked
+    here is that they are still a ladder and still the same ladder the signal's
+    own bound describes. The last rung must reach the bound exactly: a sink that
+    stopped short would leave a bound nothing can produce, which is the shape of
+    a number somebody widened and then forgot to spend.
+    """
+
+    rungs = liveness.challenge_load_rungs
+    bound = liveness.signals[LivenessSignal.CHALLENGE_LOAD].points
+    invariant(bool(rungs), "a full-inbox sink with no rungs in it")
+    invariant(
+        len({rung.prints for rung in rungs}) == len(rungs),
+        f"two rungs of the full-inbox sink print the same code: "
+        f"{[rung.prints.value for rung in rungs]}",
+    )
+    previous: ChallengeLoadRung | None = None
+    for rung in rungs:
+        invariant(rung.at_least >= 1, f"a full-inbox rung at {rung.at_least} open")
+        invariant(
+            bound.minimum <= rung.points <= bound.maximum,
+            f"a full-inbox rung at {rung.points} reaches past the signal's own "
+            f"bound {bound.minimum}…{bound.maximum}",
+        )
+        if previous is not None:
+            invariant(
+                rung.at_least > previous.at_least,
+                f"the full-inbox rungs are not deepest last: {previous.at_least} "
+                f"then {rung.at_least}",
+            )
+            invariant(
+                rung.points < previous.points,
+                f"a deeper inbox costs no more than a shallower one: "
+                f"{previous.points} then {rung.points}",
+            )
+        previous = rung
+    invariant(
+        rungs[-1].points == bound.minimum,
+        f"the deepest rung sinks {rungs[-1].points} where the signal is bounded "
+        f"at {bound.minimum}: a bound nothing can reach",
     )
 
 

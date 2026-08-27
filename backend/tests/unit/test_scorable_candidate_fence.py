@@ -39,7 +39,20 @@ FENCED = Path(scorable.__file__)
 #: so the searcher is walked beside the candidate: a rule that let the searcher
 #: carry a birthdate would be a rule about who may be *read*, not about what is
 #: in the process.
-FENCED_TYPES = ("ScorableCandidate", "Searcher")
+#:
+#: **Stages 4 and 6 cross it too, and their inputs are roots here.** A modifier
+#: and a liveness signal are not terms — they are applied after the eight and
+#: they print their own lines — so the sentence a review would reach for, *a term
+#: cannot read a protected characteristic*, does not cover them. The claim this
+#: walk makes is the wider one and the only one worth making: **the value is not
+#: in the process**. A welcoming record that read a nationality would break the
+#: same rule a term would, one stage later.
+FENCED_TYPES = (
+    "ScorableCandidate",
+    "Searcher",
+    "ModifierFacts",
+    "LivenessFacts",
+)
 
 #: What may never be reachable from a fenced type, as whole words of an
 #: identifier. Words rather than substrings, so ``area_code`` is not read as
@@ -193,6 +206,11 @@ def test_the_walk_reaches_the_fields_it_claims_to_guard() -> None:
         # Two hops in, through `reliability` and into the record's own strands.
         "ReliabilityRecord.published_score",
         "GridCell.part",
+        # Stage 4's own root, and the pair fact one hop inside it.
+        "ModifierFacts.calibration_elevated",
+        "SharedHistory.games_played_together",
+        # Stage 6's, which is flat and has nothing inside it to reach.
+        "LivenessFacts.open_challenges",
     } <= reached
 
 

@@ -524,6 +524,14 @@ appears here.
 - **Liveness** — how likely the game is to *happen*: whether they answer, whether they are
   around, whether they would want it. It **reorders** the list and never enters Fit, so the one
   number a player is asked to trust never quietly contains *"they open the app a lot"*.
+- **Challenge load** — how many challenges are sitting unanswered in a candidate's inbox. It
+  **sinks** them and never withholds them: an exclusion is a **Gate**, and the gate roster is
+  enumerated and closed, so a full inbox joins **Liveness** instead
+  ([ADR-0125](docs/adr/0125-a-full-inbox-sinks-a-player-never-withholds-them.md)). It crosses to
+  a searcher as a **coarse code and never the number** — `SOME`, `BUSY`, `FULL` — because their
+  inbox depth is theirs and *they have a lot on* is the whole of what a searcher is owed about a
+  third party's unanswered mail. The deepest rung is anchored strictly below the interest lift,
+  so somebody who said *Let's play* to you still surfaces however full their inbox is.
 - **Term** — one question the engine asks about a pairing, returning a value in `[0,1]` and its
   evidence. **Playing style** and **social vibe** are the two that read **Social tags**, and they
   are split by *the claim a matrix entry makes*, never by which group a tag was printed in.

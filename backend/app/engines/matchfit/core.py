@@ -241,6 +241,27 @@ class LivenessSignal(str, Enum):
     EXPOSURE_ADJUSTMENT = "EXPOSURE_ADJUSTMENT"
 
 
+class ChallengeLoad(str, Enum):
+    """How full a candidate's inbox is, as a **coarse code and never the number**.
+
+    ``docs/adr/0125`` deletes the withholding at eight open challenges and adopts
+    §14.4's three thresholds whole as a Liveness sink. What survives of the
+    measurement on the wire is this: their inbox depth is theirs, and *they have
+    a lot on* is the whole of what a searcher is owed about a third party's
+    unanswered mail.
+
+    **There is no fourth code for an empty inbox.** A signal that does not fire
+    is absent from the list rather than present at zero, so an unloaded candidate
+    prints nothing at all — which is a different statement from *we counted and
+    it was low*. Each rung names its own code in the ruleset, so a threshold
+    moving does not silently re-point a code at a different depth.
+    """
+
+    SOME = "SOME"
+    BUSY = "BUSY"
+    FULL = "FULL"
+
+
 class Modifier(str, Enum):
     """The three modifiers that survive, plus the penalty that sits outside them.
 

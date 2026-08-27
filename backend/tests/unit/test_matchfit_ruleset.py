@@ -28,6 +28,7 @@ import pytest
 from app.core.config import Environment
 from app.engines.matchfit.core import (
     K_CEILING,
+    ChallengeLoad,
     ClashSeverity,
     EvidenceKind,
     FamiliarityReading,
@@ -42,6 +43,7 @@ from app.engines.matchfit.core import (
     Term,
 )
 from app.engines.matchfit.ruleset import (
+    ChallengeLoadRung,
     ModeRules,
     PointRange,
     Ruleset,
@@ -521,6 +523,117 @@ def test_the_interest_lift_must_print() -> None:
                 liveness=dataclasses.replace(
                     liveness, signals=MappingProxyType(silenced)
                 ),
+            )
+        )
+
+
+def test_the_full_inbox_sink_is_fourteen_fours_three_rungs() -> None:
+    """§14.4's thresholds, adopted **whole** by ``docs/adr/0125``.
+
+    Only the third's effect changed — a 24-hour withholding became the sink's own
+    floor — so the depths and the two shallower docks are the input document's
+    own, unedited. Each rung names the coarse code it prints, so a threshold
+    moving cannot silently re-point a code at a different depth.
+    """
+
+    rungs = LIVE_RULESET.liveness.challenge_load_rungs
+    assert [(rung.at_least, rung.points) for rung in rungs] == [
+        (3, -4),
+        (5, -8),
+        (8, -12),
+    ]
+    assert [rung.prints for rung in rungs] == [
+        ChallengeLoad.SOME,
+        ChallengeLoad.BUSY,
+        ChallengeLoad.FULL,
+    ]
+
+
+@pytest.mark.parametrize(
+    ("rungs", "match"),
+    [
+        pytest.param((), "no rungs", id="empty"),
+        pytest.param(
+            (
+                ChallengeLoadRung(at_least=5, points=-4, prints=ChallengeLoad.SOME),
+                ChallengeLoadRung(at_least=3, points=-8, prints=ChallengeLoad.BUSY),
+                ChallengeLoadRung(at_least=8, points=-12, prints=ChallengeLoad.FULL),
+            ),
+            "not deepest last",
+            id="out-of-order",
+        ),
+        pytest.param(
+            (
+                ChallengeLoadRung(at_least=3, points=-8, prints=ChallengeLoad.SOME),
+                ChallengeLoadRung(at_least=5, points=-4, prints=ChallengeLoad.BUSY),
+                ChallengeLoadRung(at_least=8, points=-12, prints=ChallengeLoad.FULL),
+            ),
+            "costs no more",
+            id="deeper-costs-less",
+        ),
+        pytest.param(
+            (
+                ChallengeLoadRung(at_least=3, points=-4, prints=ChallengeLoad.SOME),
+                ChallengeLoadRung(at_least=5, points=-8, prints=ChallengeLoad.SOME),
+                ChallengeLoadRung(at_least=8, points=-12, prints=ChallengeLoad.FULL),
+            ),
+            "print the same code",
+            id="duplicate-code",
+        ),
+        pytest.param(
+            (
+                ChallengeLoadRung(at_least=3, points=-4, prints=ChallengeLoad.SOME),
+                ChallengeLoadRung(at_least=5, points=-6, prints=ChallengeLoad.BUSY),
+                ChallengeLoadRung(at_least=8, points=-8, prints=ChallengeLoad.FULL),
+            ),
+            "a bound nothing can reach",
+            id="short-of-the-bound",
+        ),
+        pytest.param(
+            (
+                ChallengeLoadRung(at_least=3, points=-4, prints=ChallengeLoad.SOME),
+                ChallengeLoadRung(at_least=5, points=-8, prints=ChallengeLoad.BUSY),
+                ChallengeLoadRung(at_least=8, points=-20, prints=ChallengeLoad.FULL),
+            ),
+            "reaches past the signal",
+            id="past-the-bound",
+        ),
+    ],
+)
+def test_a_malformed_full_inbox_sink_refuses_to_load(
+    rungs: tuple[ChallengeLoadRung, ...], match: str
+) -> None:
+    """The ladder is checked rather than trusted, in both directions.
+
+    A sink that stopped short of its own bound would leave a number nothing can
+    produce — the shape of a bound somebody widened and forgot to spend — and one
+    that reached past it would sink a candidate further than the roster says any
+    signal may.
+    """
+
+    with pytest.raises(InvariantViolated, match=match):
+        validate_ruleset(
+            dataclasses.replace(
+                LIVE_RULESET,
+                liveness=dataclasses.replace(
+                    LIVE_RULESET.liveness, challenge_load_rungs=rungs
+                ),
+            )
+        )
+
+
+def test_the_reciprocal_dock_is_priced_proportionately_and_not_flat() -> None:
+    """The struck radius dock's replacement: a slope over the shortfall past the
+    tolerance, saturating at the signal's own bound."""
+
+    liveness = LIVE_RULESET.liveness
+    assert liveness.asymmetry_tolerance == 12
+    assert liveness.asymmetry_slope == 0.5
+    with pytest.raises(InvariantViolated, match="asymmetry slope"):
+        validate_ruleset(
+            dataclasses.replace(
+                LIVE_RULESET,
+                liveness=dataclasses.replace(liveness, asymmetry_slope=0.0),
             )
         )
 

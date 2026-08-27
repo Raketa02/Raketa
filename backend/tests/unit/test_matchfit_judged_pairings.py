@@ -45,6 +45,8 @@ from typing import Any
 import pytest
 
 from app.engines.matchfit.core import Term
+from app.engines.matchfit.ranking import ModifiedFit, ModifierStack
+from app.engines.matchfit.v1 import Refusal, admits
 from app.modules.matchmaking.infrastructure.rulesets import LIVE_RULESET
 from scripts.judged_pairings import (
     FIXTURE,
@@ -79,6 +81,14 @@ RECORDED = [
 ]
 
 IDS = [f"{reading.case_id}-{reading.mode_key}" for reading in DERIVED]
+
+#: Stage 4 as day one runs it: nothing fires, so the modified number is the Fit
+#: and the two stages below read the readings above unchanged.
+EMPTY_STACK = ModifierStack(fired=(), floor_breach=None, rules=LIVE_RULESET.modifiers)
+
+#: Reliability is the whole of *absent platform-wide* today — weighted here, with
+#: no provider — so it is nobody's own gap.
+DAY_ONE_ABSENT = frozenset({Term.RELIABILITY})
 
 
 def _by_id(case_id: str, mode_key: str) -> Reading:
@@ -313,6 +323,56 @@ def test_the_quality_floor_still_sits_inside_the_bound_the_six_leave() -> None:
     )
     assert bound.highest_hidden == pytest.approx(_by_id("3′-fun", "fun").fit.points)
     assert bound.lowest_shown == pytest.approx(_by_id("5", "comp").fit.points)
+
+
+def test_fifty_two_is_refuted_by_the_median_stranger_in_both_modes() -> None:
+    """The refutation the input document's integer never had, in the form
+    ``the-five-numbers.md`` §1 demands of any change to the floor.
+
+    Not *a number somebody dislikes* but **the case that now decides
+    differently**: case 5's stated job is *this is where the bar sits*, and 52
+    hides them in competitive and in for fun. It is asserted rather than recorded
+    in prose because the moment a term turns on and case 5 rises past 52, the
+    reason 44 was chosen has quietly stopped applying — and this is the test that
+    says so.
+    """
+
+    stranger = [_by_id("5", mode_key) for mode_key in MODES]
+    assert len(stranger) == 2
+    for reading in stranger:
+        assert reading.is_shown, "case 5's verdict is *shown*: it sits at the bar"
+        assert reading.fit.points < 52, (
+            f"52 no longer hides the median stranger in {reading.mode_key} "
+            f"({reading.fit.points:.2f}) — the refutation of the input document's "
+            f"floor has expired and the integer needs re-arguing"
+        )
+        assert reading.fit.points >= LIVE_RULESET.floors.quality_floor
+
+
+def test_the_minimum_evidence_gate_excludes_none_of_the_six() -> None:
+    """*Today it excludes nobody, and that is the point.*
+
+    The gate is standing insurance, in place before the day *we know nothing
+    about this person* could quietly become a passing score — so the claim worth
+    pinning is that it is inert over the only pinned pairings this repository
+    has, including case 2, whose grid is deliberately empty, and case 1, whose
+    tags fire nothing at all.
+
+    It will stop being true silently, on the day a term turns on for the platform
+    while one of these six has a gap of their own. That is the day this test is
+    for.
+    """
+
+    for reading in DERIVED:
+        outcome = admits(
+            ModifiedFit(fit=reading.fit, modifiers=EMPTY_STACK),
+            LIVE_RULESET,
+            DAY_ONE_ABSENT,
+        )
+        assert outcome.refusal is not Refusal.TOO_LITTLE_EVIDENCE, (
+            f"case {reading.case_id} ({reading.mode_key}) now fails the evidence "
+            f"gate at {len(outcome.fired)}/{len(outcome.live)}"
+        )
 
 
 def test_the_floor_bound_refuses_a_fixture_with_nothing_on_one_side() -> None:

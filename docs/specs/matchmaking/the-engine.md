@@ -479,6 +479,22 @@ asserted centrally over every response type rather than per route.
 | **Exposure adjustment** | **−6 … +6** | ✗ |
 | ~~Radius asymmetry~~ | — | **struck** — `fit_ba` already prices it |
 
+**The coarse code the full inbox prints is `SOME` / `BUSY` / `FULL`**, one per rung, carried by
+the rung rather than derived from its position — so moving a threshold cannot silently re-point a
+code at a different depth. There is no fourth code for an empty inbox: a signal that does not fire
+is absent from the list, which is a different statement from *we counted and it was low*.
+
+**Only the full inbox reads a measurement; the ramped signals arrive as a reading in `[0, 1]` and
+are priced linearly across their own bound.** The curve from *days since they last opened the app*
+to a reading is a measurement and lives on the other side of the fence with the clock and the
+ledgers; putting it inside the engine would mean inventing a threshold per signal — six or seven
+constants nobody measured, in the one place whose whole discipline is that every number carries a
+falsifier. The full inbox is the exception because its three thresholds **were** measured (§14.4)
+and [ADR-0125](../../adr/0125-a-full-inbox-sinks-a-player-never-withholds-them.md) adopted them
+whole. **Points are whole numbers**, because every bound in the roster is an integer and so is
+`MOVE_NOTICE` — a fractional offset would make *moved more than six* depend on a rounding nobody
+wrote down.
+
 **`+14` is flat for the whole life of the yes and then absent — it does not taper.** §9.5.1's
 decay over the final 7 days is refused by
 [ADR-0127](../../adr/0127-a-signal-expires-or-is-refused-never-quietly-decays.md): the age of the

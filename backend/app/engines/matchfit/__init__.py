@@ -27,11 +27,20 @@ Three things live here, and the split between them is the point:
     is also where the deferred runtime store will land, since *its arrival
     changes only where the file is read from*.
 
+``scoring`` and ``ranking``
+    The two answers a version returns and the one quantity it never serialises.
+    ``Fit`` is the printed number and the whole of the working behind it;
+    ``ranking`` holds the modifier stack that adjusts it, the Liveness offset
+    that reorders without entering it, and the ``rank_key`` where the two meet —
+    a bare ``float``, because a quantity with no shape has no field it could be
+    written to.
+
 ``v1`` and its successors
     A version is a directory that is never deleted, because the maths a result
     was computed with must stay readable forever. It holds the scorer: what
     crosses the privacy fence, the evidence a term explains itself in, the eight
-    terms, and the renormalisation that turns them into one printed number.
+    terms, the renormalisation that turns them into one printed number, and the
+    three stages either side of it — the modifiers, the floor and Liveness.
 
 **Two version stamps ride on every result and they mean different things**
 (``docs/adr/0093``, ``docs/adr/0106``): the **engine version** says how the maths
