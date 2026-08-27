@@ -20,9 +20,9 @@
 #                min(Fit | shown), from either side
 #
 # Every case perturbs a real file in place and restores the original bytes on
-# exit — including on failure or interrupt. It still needs the three generated
-# files to be COMMITTED and clean: the green case asserts the working tree
-# reproduces from HEAD, and a dirty tree is drift by construction.
+# exit — including on failure or interrupt — so it is safe to run on a dirty
+# tree and preserves whatever was there. It needs no git: the check compares a
+# file against what regenerating it produces, never against HEAD.
 # ---------------------------------------------------------------------------
 set -uo pipefail
 
@@ -40,24 +40,36 @@ fail=0
 ok()  { pass=$((pass + 1)); printf '  ok    %s\n' "$1"; }
 bad() { fail=$((fail + 1)); printf '  FAIL  %s\n' "$1"; [ $# -gt 1 ] && printf '        %s\n' "$2"; }
 
-expect_exit() { # <want> <name>
-  local want="$1" name="$2" got
-  bash "$CHECK" >/dev/null 2>&1
-  got=$?
-  [ "$got" = "$want" ] && ok "$name" || bad "$name" "want exit $want, got $got"
+# The check is run ONCE per perturbation and its output and exit code are held
+# here, because the check REPAIRS what it finds: a second invocation would see a
+# regenerated tree, exit 0 and say nothing, and every assertion about the
+# failure message would miss for the wrong reason.
+OUT=""
+CODE=0
+
+run_check() {
+  # Captured rather than piped into grep: `set -o pipefail` above makes a
+  # pipeline take the check's exit 1, so `check | grep -q` would report a miss
+  # on every case that correctly went red.
+  OUT=$(bash "$CHECK" 2>&1)
+  CODE=$?
 }
 
-expect_says() { # <needle> <name>
-  # The check's output is captured before it is searched rather than piped into
-  # grep: `set -o pipefail` above makes a pipeline take the check's exit 1, so
-  # `check | grep -q` reports a miss on every case that correctly went red.
-  local needle="$1" name="$2" out
-  out=$(bash "$CHECK" 2>&1)
-  if printf '%s' "$out" | grep -qF "$needle"; then
-    ok "$name"
+had_exit() { # <want> <name>
+  [ "$CODE" = "$1" ] && ok "$2" || bad "$2" "want exit $1, got $CODE"
+}
+
+said() { # <needle> <name>
+  if printf '%s' "$OUT" | grep -qF "$1"; then
+    ok "$2"
   else
-    bad "$name" "output never mentioned '$needle'"
+    bad "$2" "output never mentioned '$1'"
   fi
+}
+
+expect_exit() { # <want> <name>
+  run_check
+  had_exit "$1" "$2"
 }
 
 # `jq` is not assumed — CI's backend job has Python and nothing else guaranteed.
@@ -104,9 +116,12 @@ echo "a hand-edited generated table"
 # in the document instead of in the ruleset. Nothing about the engine changed,
 # so only regeneration catches it.
 sed -i.bak 's/\*\*82\.0\*\*/**83.0**/' "$JUDGED" && rm -f "$JUDGED.bak"
-expect_exit 1 "a table edited by hand is drift"
-expect_says "JUDGED-PAIRINGS DRIFT" "the failure names the drift"
-expect_says "make gen-judged-pairings" "the failure says what to run"
+run_check
+had_exit 1 "a table edited by hand is drift"
+said "JUDGED-PAIRINGS DRIFT" "the failure names the drift"
+said "the-judged-pairings.md" "the failure names the file that did not reproduce"
+said "git add" "the failure says what to run"
+said "argued for in the pull request" "the failure says a diff here is a design change"
 restore
 
 # `ranking-weights.md` §10 is generated from the same fixture and is the table
@@ -140,14 +155,17 @@ echo "the floor's re-derivation, from both sides"
 # the six cases and may move the floor. Both directions are failures and they
 # are different failures, so both are named.
 edit_fixture "$(by_id "3'-fun")['verdict'] = 'shown'"
-expect_exit 1 "a floor that now hides a case judged shown fails"
-expect_says "hides a case judged shown" "the failure names which side broke"
-expect_says "QUALITY FLOOR" "the failure says it is the floor and not a table"
+run_check
+had_exit 1 "a floor that now hides a case judged shown fails"
+said "hides a case judged shown" "the failure names which side broke"
+said "QUALITY FLOOR" "the failure says it is the floor and not a table"
+said "land as an ADR" "the failure says what moving a verdict costs"
 restore
 
 edit_fixture "$(by_id 5)['verdict'] = 'not_shown'"
-expect_exit 1 "a floor that now shows a case judged hidden fails"
-expect_says "shows a case judged hidden" "the failure names the other side"
+run_check
+had_exit 1 "a floor that now shows a case judged hidden fails"
+said "shows a case judged hidden" "the failure names the other side"
 restore
 
 # The bound is read across a split, and a fixture with nothing on one side of it

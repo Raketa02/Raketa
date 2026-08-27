@@ -25,14 +25,20 @@
 #           shipped without regenerating; or the floor no longer holds
 #   exit 2  the check could not run (no poetry, no fixture, no markers)
 #
+# **What it compares is the file on disk against what regenerating it produces,
+# and never the working tree against HEAD.** Regeneration overwrites the
+# evidence, so by the time git could be asked the hand edit is already gone —
+# which reports an uncommitted hand edit as clean and, worse, reports a
+# perfectly regenerated but not-yet-committed table as drift. Snapshotting
+# first is right in both directions and needs no git at all.
+#
+# **It leaves the files regenerated**, which is the fix and not a side effect:
+# the failure below tells you to commit them. `make gen-judged-pairings` is the
+# same run without the comparison.
+#
 # It runs the backend's OWN harness rather than restating the derivation, and
 # that harness is the one tests/unit/test_matchfit_judged_pairings.py scores its
 # cases through. Two harnesses would be two answers, and the second one drifts.
-#
-# What git compares is the working tree against HEAD, so the hand-edit case is
-# the committed one: an uncommitted hand edit is simply overwritten by the
-# regeneration and there is nothing to report — correctly, since CI only ever
-# sees what was committed.
 #
 # Tested by .github/scripts/test-judged-pairings.sh (`make test-judged-pairings`).
 # A check that has never once failed is indistinguishable from one that cannot.
@@ -42,10 +48,10 @@ set -uo pipefail
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 
 # The three files the harness regenerates. Named here as well as there so the
-# diff is scoped to exactly what was generated: diffing docs/specs/matchmaking/
-# as a directory would report an edit to a neighbouring spec as judged-pairings
-# drift, which is the sort of false failure that teaches people to ignore a
-# check.
+# comparison is scoped to exactly what was generated: watching
+# docs/specs/matchmaking/ as a directory would report an edit to a neighbouring
+# spec as judged-pairings drift, which is the sort of false failure that teaches
+# people to ignore a check.
 GENERATED=(
   "docs/specs/matchmaking/judged-pairings.json"
   "docs/specs/matchmaking/the-judged-pairings.md"
@@ -56,11 +62,16 @@ for f in "${GENERATED[@]}"; do
   [ -f "$ROOT/$f" ] || { echo "missing: $f" >&2; exit 2; }
 done
 
+BEFORE=$(mktemp -d) || exit 2
+trap 'rm -rf "$BEFORE"' EXIT INT TERM
+for f in "${GENERATED[@]}"; do
+  cp "$ROOT/$f" "$BEFORE/$(basename "$f")" || exit 2
+done
+
 cd "$ROOT/backend" || exit 2
 
-out=$(poetry run python -m scripts.judged_pairings 2>&1)
+poetry run python -m scripts.judged_pairings
 derived=$?
-echo "$out"
 
 case "$derived" in
   0) ;;
@@ -83,9 +94,12 @@ esac
 
 cd "$ROOT" || exit 2
 
-drift=$(git status --porcelain -- "${GENERATED[@]}")
+drifted=()
+for f in "${GENERATED[@]}"; do
+  cmp -s "$BEFORE/$(basename "$f")" "$ROOT/$f" || drifted+=("$f")
+done
 
-if [ -z "$drift" ]; then
+if [ ${#drifted[@]} -eq 0 ]; then
   echo
   echo "OK — every judged-pairings table reproduces from the fixture."
   exit 0
@@ -105,26 +119,32 @@ cat >&2 <<EOF
   JUDGED-PAIRINGS DRIFT
 ────────────────────────────────────────────────────────────────────────────
 
-  Re-deriving the six against the live ruleset — named at the top of the
-  output above — produced tables different from the ones committed. Either a
-  ruleset or a formula changed and the fixture was not regenerated with it, or
-  a generated table was edited by hand — it never should be.
+  Re-deriving the six against the live ruleset — named at the top of the output
+  above — produced files different from the ones on disk. Either a ruleset or a
+  formula changed and the fixture was not regenerated with it, or a generated
+  table was edited by hand — it never should be.
 
   **A diff here is a design change and must be argued for in the pull request**
   (matchmaking-engine.md §20.1). Regenerating is not the whole fix: say which
   case now reads differently and why, and if a verdict moved, land the ADR
   the-five-numbers.md §1 requires.
 
-  Fix — from the repository root:
+  Did not reproduce:
 
-      make gen-judged-pairings
-      git add ${GENERATED[*]}
+$(printf '      %s\n' "${drifted[@]}")
+
+  They have been regenerated in place — this check and `make gen-judged-pairings`
+  run the same derivation. Read the diff, then:
+
+      git add ${drifted[*]}
 
 ────────────────────────────────────────────────────────────────────────────
 EOF
 
-echo >&2
-echo "  The diff:" >&2
-git --no-pager diff -- "${GENERATED[@]}" >&2
+for f in "${drifted[@]}"; do
+  echo >&2
+  echo "  --- $f: on disk → re-derived" >&2
+  diff -u "$BEFORE/$(basename "$f")" "$ROOT/$f" >&2
+done
 
 exit 1
