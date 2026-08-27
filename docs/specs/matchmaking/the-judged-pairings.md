@@ -66,8 +66,8 @@ blocks either direction, no holds. These six cases test the **scorer**.
 | 1 | fun | 0.000 | 1.000 | 0.813 | 0.850 | 1.000 | 0.200 | 1.000 | 0.200 | **67.5** | Shown |
 | 2 | comp | 0.000 | 1.000 | 0.813 | 0.850 | 0.000 | 0.200 | 1.000 | 0.200 | **69.3** | Shown |
 | 2 | fun | 0.000 | 1.000 | 0.813 | 0.850 | 0.000 | 0.200 | 1.000 | 0.200 | **49.9** | Shown |
-| 3'-comp | comp | 0.540 | 0.018 | 0.000 | 0.850 | 0.000 | 0.200 | 0.333 | 0.200 | **19.5** | **Not shown** |
-| 3'-fun | fun | 0.890 | 0.015 | 0.000 | 0.850 | 0.000 | 0.200 | 0.333 | 0.200 | **24.5** | **Not shown** |
+| 3′-comp | comp | 0.540 | 0.018 | 0.000 | 0.850 | 0.000 | 0.200 | 0.333 | 0.200 | **19.5** | **Not shown** |
+| 3′-fun | fun | 0.890 | 0.015 | 0.000 | 0.850 | 0.000 | 0.200 | 0.333 | 0.200 | **24.5** | **Not shown** |
 | 4 | comp | 0.000 | 1.000 | 0.813 | 0.000 | 1.000 | 1.000 | 1.000 | 1.000 | **80.3** | Shown, reason printed |
 | 5 | comp | 0.275 | 0.500 | 0.160 | 0.850 | 0.500 | 0.200 | 0.500 | 0.200 | **44.5** | Shown |
 | 5 | fun | 0.275 | 0.962 | 0.160 | 0.850 | 0.500 | 0.200 | 0.500 | 0.200 | **47.8** | Shown |
@@ -137,10 +137,12 @@ group objective ordered contrasts instead of judged verdicts.
 Because the searcher is shared, two candidates differ from case 1's in exactly one input — which
 proves what the prose only asserts.
 
+<!-- generated: one-line-assertions — `make gen-judged-pairings`; do not edit by hand -->
 | | Differs by | Assertion |
 |---|---|---|
 | **Case 2** | `shared_cells` 4 → 0 | Fit falls by exactly the availability weight — **12.64 competitive, 17.58 for fun**. Availability overlap is evidence a game can be *arranged*, and its absence costs its weight and not a point more |
 | **Case 6** | candidate radius 10 → 1 km | `Fit(6) == Fit(1)` **identically**. The searcher sitting outside the candidate's ring is a Liveness dock and never enters Fit ([ADR-0099](../../adr/0099-relaxation-offers-the-searchers-own-asks.md)) |
+<!-- /generated: one-line-assertions -->
 
 Case 6's identity is the only form in which a machine can assert that a named fact moved
 **nothing** — which is the whole of its verdict.
@@ -182,17 +184,21 @@ Two discrepancies are explained rather than merely observed:
 
 | Recorded | Reconstructed | Explanation |
 |---|---|---|
-| Case 4 · **73.8** | **80.3** | 80.3 − 6.0 = 74.3. The §10 table still carries `intent_opposed` −6, which §6 **deleted** and §7 records as deleted — **the table predates its own §7** |
+| Case 4 · **73.8** | **80.3** | 80.3 − 6.0 = 74.3. The §10 table still carried `intent_opposed` −6, which §6 **deleted** and §7 records as deleted — **the table predated its own §7** |
 | §10's *"misaligned puts case 5 at 38.0"* | **32.3** | 46.0 − 38.0 = 8.0 = 16.092 × 0.50, i.e. intent `0.35` — the **for-fun** row's competitive-candidate cell. Competitive misaligned is `0.00` |
 
-The §10 totals are **struck**. They are superseded rather than corrected, because fitting readings
-to a remembered total is the failure a fixture exists to prevent.
+The §10 totals were **struck**. They were superseded rather than corrected, because fitting
+readings to a remembered total is the failure a fixture exists to prevent — and they are recorded
+as struck in [`ranking-weights.md`](ranking-weights.md) §10's own subsection, which is the only
+place they still appear. **§10's table is now generated** and carries the re-derived numbers
+alone: a table printing *recorded → reconstructed* would be a table half of which nothing
+re-derives, which is how the seven totals above came to be wrong in the first place.
 
 ## 8. What this owes, and what it does not
 
 **The reader is built, and it is [#187](https://github.com/Raketa02/Raketa/issues/187).**
 *This map plans; it does not build* — so the machine landed in its own ticket, and it is
-[`backend/scripts/judged_pairings.py`](../../../backend/scripts/judged_pairings.py):
+[`backend/scripts/judged_pairings/`](../../../backend/scripts/judged_pairings):
 
 - **Every table above is generated.** `make gen-judged-pairings` re-derives the six against the
   live ruleset and writes §3, §6 and [`ranking-weights.md`](ranking-weights.md) §10 back into

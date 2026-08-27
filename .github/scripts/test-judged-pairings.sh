@@ -154,7 +154,7 @@ echo "the floor's re-derivation, from both sides"
 # `ranking-weights.md` §11: turning a term on is a ruleset release that re-runs
 # the six cases and may move the floor. Both directions are failures and they
 # are different failures, so both are named.
-edit_fixture "$(by_id "3'-fun")['verdict'] = 'shown'"
+edit_fixture "$(by_id "3′-fun")['verdict'] = 'shown'"
 run_check
 had_exit 1 "a floor that now hides a case judged shown fails"
 said "hides a case judged shown" "the failure names which side broke"

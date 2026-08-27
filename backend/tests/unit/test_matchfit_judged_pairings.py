@@ -47,22 +47,18 @@ import pytest
 from app.engines.matchfit.core import Term
 from app.modules.matchmaking.infrastructure.rulesets import LIVE_RULESET
 from scripts.judged_pairings import (
-    COLUMNS,
     FIXTURE,
-    JUDGED_DOC,
     MODES,
-    WEIGHTS_DOC,
     Reading,
+    Unreadable,
     floor_bound,
     read_fixture,
     readings,
-    render_bound,
-    render_counterfactual,
-    render_readings,
-    render_totals,
+    regions,
     replace_region,
-    score_case,
+    weekday,
 )
+from scripts.judged_pairings.deriving import COLUMNS
 from tests.unit.matchfit_builders import sigma_pair
 
 JUDGED = read_fixture()
@@ -237,7 +233,7 @@ def test_the_case_that_exists_to_test_intent_reads_exactly_zero() -> None:
 
 
 @pytest.mark.parametrize(
-    ("case_id", "mode_key"), [("3'-comp", "comp"), ("3'-fun", "fun")]
+    ("case_id", "mode_key"), [("3′-comp", "comp"), ("3′-fun", "fun")]
 )
 def test_case_three_prime_is_admitted_to_scoring_and_lands_below_the_floor(
     case_id: str, mode_key: str
@@ -315,7 +311,7 @@ def test_the_quality_floor_still_sits_inside_the_bound_the_six_leave() -> None:
         f"QUALITY_FLOOR = {bound.configured} is outside "
         f"{bound.highest_hidden:.2f} < floor <= {bound.lowest_shown:.2f}"
     )
-    assert bound.highest_hidden == pytest.approx(_by_id("3'-fun", "fun").fit.points)
+    assert bound.highest_hidden == pytest.approx(_by_id("3′-fun", "fun").fit.points)
     assert bound.lowest_shown == pytest.approx(_by_id("5", "comp").fit.points)
 
 
@@ -326,24 +322,30 @@ def test_the_floor_bound_refuses_a_fixture_with_nothing_on_one_side() -> None:
     shape of failure the re-derivation exists to prevent.
     """
 
-    from scripts.judged_pairings import Unreadable
-
     shown_only = [reading for reading in DERIVED if reading.is_shown]
     with pytest.raises(Unreadable):
         floor_bound(shown_only, LIVE_RULESET)
 
 
+#: Every generated region in every document — enumerated by the harness itself,
+#: so a table added to it without a test here is impossible rather than merely
+#: unlikely.
+REGIONS = [
+    (document, name, body)
+    for document, bodies in regions(
+        JUDGED, DERIVED, floor_bound(DERIVED, LIVE_RULESET)
+    ).items()
+    for name, body in bodies
+]
+
+
 @pytest.mark.parametrize(
     ("document", "region", "body"),
-    [
-        (JUDGED_DOC, "judged-readings", lambda: render_readings(DERIVED)),
-        (JUDGED_DOC, "blank-counterfactual", lambda: render_counterfactual(DERIVED)),
-        (WEIGHTS_DOC, "judged-totals", lambda: render_totals(DERIVED)),
-    ],
-    ids=["judged-readings", "blank-counterfactual", "judged-totals"],
+    REGIONS,
+    ids=[f"{document.stem}:{name}" for document, name, _ in REGIONS],
 )
-def test_a_generated_table_reproduces_from_the_fixture(
-    document: Any, region: str, body: Any
+def test_a_generated_region_reproduces_from_the_fixture(
+    document: Any, region: str, body: str
 ) -> None:
     """The documents' tables are what this ruleset derives, byte for byte.
 
@@ -353,28 +355,27 @@ def test_a_generated_table_reproduces_from_the_fixture(
     """
 
     text = document.read_text(encoding="utf-8")
-    assert replace_region(text, region, body(), document) == text
+    assert replace_region(text, region, body, document) == text
 
 
-@pytest.mark.parametrize(
-    "document", [JUDGED_DOC, WEIGHTS_DOC], ids=["judged", "weights"]
-)
-def test_both_documents_print_the_same_re_derived_bound(document: Any) -> None:
+def test_every_document_that_prints_the_bound_prints_the_same_one() -> None:
     """One bound, in two documents, and neither of them typed by hand."""
 
-    text = document.read_text(encoding="utf-8")
-    body = render_bound(floor_bound(DERIVED, LIVE_RULESET))
-    assert replace_region(text, "floor-bound", body, document) == text
+    printing = [name for _, name, _ in REGIONS if name == "floor-bound"]
+    assert len(printing) == 2, "the bound is printed in both specs, not one"
 
 
-def test_the_case_a_search_would_score_is_the_case_the_tables_print() -> None:
-    """The harness scores through ``score``, and nothing else scores here.
+def test_the_clock_the_readings_were_taken_under_is_the_fixture_s_own() -> None:
+    """The Wednesday is read off the fixture and never assumed here.
 
-    Named because the tables and these assertions would agree with each other
-    perfectly while both disagreeing with the engine, if the harness had ever
-    grown its own arithmetic. It has not: this re-scores one case through the
-    same entry point and asserts the recorded reading is that call's answer.
+    It is an input: on a Saturday ``TODAY`` and ``WEEKEND`` collapse into one
+    cell, which is the fixture's own stated reason for the day it pins. A clock
+    somebody moves has to move the readings, and a clock that contradicts its own
+    parenthesised name has to fail rather than be quietly believed.
     """
 
-    rescored = score_case(JUDGED, CASES["5"], "comp")
-    assert rescored.points == _by_id("5", "comp").fit.points
+    assert int(weekday(JUDGED["clock"])) == 3
+    with pytest.raises(Unreadable):
+        weekday("2026-09-02 (Saturday)")
+    with pytest.raises(Unreadable):
+        weekday("next Tuesday")

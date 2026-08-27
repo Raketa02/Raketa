@@ -364,7 +364,7 @@ there; they are not repeated here.
   correlations nobody measured, folding §20.1's scenarios or the six judged pairings into
   it.
 
-- **Judged-pairings harness** — `scripts/judged_pairings.py`, the machine that reads
+- **Judged-pairings harness** — `scripts/judged_pairings/`, the package that reads
   `docs/specs/matchmaking/judged-pairings.json`, scores its six cases against the **live
   ruleset**, and writes every derived number back: the fixture's own readings, the tables
   in `the-judged-pairings.md`, and `ranking-weights.md` §10. The fixture holds **inputs and

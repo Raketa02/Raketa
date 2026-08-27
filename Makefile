@@ -9,7 +9,7 @@
         test-judged-pairings poetry-pin test-poetry-pin afk-install afk-build afk
 
 help:              ## list targets
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS=":.*?## "}; {printf "\033[36m%-16s\033[0m %s\n", $$1, $$2}'
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS=":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
 # ----------------------------------------------------------------------------
 # API contract — the backend is the source of truth (docs/adr/0006).

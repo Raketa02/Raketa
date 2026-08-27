@@ -140,7 +140,7 @@
       }
     },
     {
-      "id": "3'-comp",
+      "id": "3′-comp",
       "verdict": "not_shown",
       "label": "just inside competitive's gate, forecast at its floor, no slot, edge of the radius",
       "intent": "NO_PREFERENCE",
@@ -176,7 +176,7 @@
       }
     },
     {
-      "id": "3'-fun",
+      "id": "3′-fun",
       "verdict": "not_shown",
       "label": "the same, just inside for-fun's gate",
       "intent": "NO_PREFERENCE",

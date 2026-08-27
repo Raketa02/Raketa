@@ -611,8 +611,8 @@ to it fails the build:
 |---|---|--:|--:|
 | 1 · same level, full grid overlap, five minutes away, socially blank | Shown | 82.0 | 67.5 |
 | 2 · case 1 with the grid emptied — **no shared slot at all** | Shown | 69.3 | 49.9 |
-| **3'-comp** · just inside competitive's gate, forecast at its floor, no slot, edge of the radius | **Not shown** | 19.5 | — |
-| **3'-fun** · the same, just inside for-fun's gate | **Not shown** | — | 24.5 |
+| **3′-comp** · just inside competitive's gate, forecast at its floor, no slot, edge of the radius | **Not shown** | 19.5 | — |
+| **3′-fun** · the same, just inside for-fun's gate | **Not shown** | — | 24.5 |
 | 4 · everything exceptional, competitive searcher, friendly-only candidate | Shown, reason printed | 80.3 | — |
 | 5 · **the median stranger** | Shown | 44.5 | 47.8 |
 | 6 · case 1 with the candidate's radius shrunk — searcher outside theirs | Shown, docked | 82.0 | 67.5 |
@@ -696,7 +696,7 @@ max(Fit | not shown)  <  QUALITY_FLOOR  ≤  min(Fit | shown)
 
 — failing when the configured integer sits outside it, from either side. Turning a term on
 moves every renormalised weight at once, so this is the release that finds out; the reader is
-[`backend/scripts/judged_pairings.py`](../../../backend/scripts/judged_pairings.py) and it runs
+[`backend/scripts/judged_pairings/`](../../../backend/scripts/judged_pairings) and it runs
 in CI on every backend pull request.
 
 ---

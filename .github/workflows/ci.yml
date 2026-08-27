@@ -42,9 +42,14 @@ jobs:
               - '.github/scripts/**'
               - '.github/workflows/ci.yml'
               # The judged-pairings tables live in the specs and are generated
-              # from the backend's engine. Without this the drift check is
+              # from the backend's engine. Without these the drift check is
               # dormant in precisely the pull request that hand-edits one.
-              - 'docs/specs/matchmaking/**'
+              # Named file by file, not 'docs/specs/matchmaking/**': the whole
+              # backend job is a Postgres suite, and a neighbouring spec's
+              # typo should not run it.
+              - 'docs/specs/matchmaking/judged-pairings.json'
+              - 'docs/specs/matchmaking/the-judged-pairings.md'
+              - 'docs/specs/matchmaking/ranking-weights.md'
             player:
               - 'frontend_player/**'
               - 'backend/openapi.player.json'

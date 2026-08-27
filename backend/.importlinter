@@ -223,3 +223,19 @@ forbidden_modules =
     botocore
     aiohttp
 allow_indirect_imports = false
+
+# `scripts/` holds the offline machines — the ones that read a document, run the
+# engine over it and write the answer back. `scripts/__init__.py` says nothing
+# under `app/` may import from here, and this is what makes that true: the
+# harness reaches into `docs/` and shells out at a shape no shipped code should
+# depend on, and a use case importing it would put a repository path in a
+# request. The direction it forbids is the only one that is wrong — `scripts`
+# imports `app` on every line, which is the whole point of it.
+[importlinter:contract:the-app-never-imports-its-offline-tooling]
+name = No shipped code imports scripts/
+type = forbidden
+source_modules =
+    app
+forbidden_modules =
+    scripts
+allow_indirect_imports = false

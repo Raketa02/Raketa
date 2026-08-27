@@ -86,7 +86,17 @@ plugins = ["sqlalchemy.ext.mypy.plugin", "pydantic.mypy"]
 # `app.kernel` itself, so without them the two package `__init__` files would be
 # the one place strict did not reach.
 [[tool.mypy.overrides]]
-module = ["app.kernel", "app.kernel.*", "app.engines", "app.engines.*"]
+module = [
+    "app.kernel",
+    "app.kernel.*",
+    "app.engines",
+    "app.engines.*",
+    # The judged-pairings harness derives Fits and writes them into the specs.
+    # An implicit `Any` in the machine that re-derives the quality floor is the
+    # same defect it is one directory over, so it takes the same settings.
+    "scripts.judged_pairings",
+    "scripts.judged_pairings.*",
+]
 warn_unused_ignores = true
 warn_return_any = true
 disallow_any_generics = true
