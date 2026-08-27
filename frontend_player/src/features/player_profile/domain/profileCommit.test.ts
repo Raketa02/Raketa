@@ -10,7 +10,7 @@ import {
   STEP_THAT_ASKS,
 } from './profileCommit';
 
-/** Everything the six steps collect, all of it answered. The ordinary end of the part. */
+/** Everything the seven steps collect, all of it answered. The ordinary end of the part. */
 function answeredDraft(): ProfileDraft {
   return recordAnswer(emptyDraft(), {
     socialTagIds: ['PLAYS_TO_WIN', 'HERE_TO_IMPROVE'],
@@ -19,6 +19,11 @@ function answeredDraft(): ProfileDraft {
     location: { latitude: 41.39, longitude: 2.16 },
     searchRadiusKm: 10,
     proposalsOptIn: { accepted: true, copyVersion: 'proposals-opt-in.v1' },
+    gender: 'woman',
+    // Not written by `answeredDraft` because a player never has to: `emptyDraft` already
+    // holds `any`. It is named here anyway, so a test that narrows it is visibly changing
+    // something the part carries rather than filling something it was short of.
+    genderPreference: 'any',
   });
 }
 
@@ -35,6 +40,8 @@ describe('a draft with every answer given', () => {
         location: { latitude: 41.39, longitude: 2.16 },
         searchRadiusKm: 10,
         proposalsOptIn: { accepted: true, copyVersion: 'proposals-opt-in.v1' },
+        gender: 'woman',
+        genderPreference: 'any',
       },
     });
   });
@@ -108,8 +115,28 @@ describe('a draft still missing an answer', () => {
 
     expect(standing).toEqual({
       kind: 'incomplete',
-      missing: ['availability', 'location', 'search-radius', 'proposals-opt-in'],
+      missing: ['availability', 'location', 'search-radius', 'gender', 'proposals-opt-in'],
     });
+  });
+
+  it('names an unanswered question about the player, and never the preference beside it', () => {
+    // The two are asked on one screen and are not the same kind of thing: the answer about
+    // the player is required, and the preference over others is `any` until somebody
+    // narrows it. A report that listed both would send a player back to fix something they
+    // already hold.
+    const standing = readyToCommit(recordAnswer(answeredDraft(), { gender: undefined }));
+
+    expect(standing).toEqual({ kind: 'incomplete', missing: ['gender'] });
+  });
+
+  it('is ready on a narrowed preference exactly as on the widest one', () => {
+    // Narrowing is an answer, not a problem to be resolved before finishing. What it costs
+    // the player is said on the step that takes it, not here.
+    const narrowed = readyToCommit(
+      recordAnswer(answeredDraft(), { genderPreference: 'women-only' }),
+    );
+
+    expect(narrowed.kind).toBe('ready');
   });
 });
 
@@ -119,7 +146,7 @@ describe('no part running at all', () => {
     // the part. Committing one would create a profile nobody was asked for.
     expect(readyToCommit(undefined)).toEqual({
       kind: 'incomplete',
-      missing: ['availability', 'location', 'search-radius', 'proposals-opt-in'],
+      missing: ['availability', 'location', 'search-radius', 'gender', 'proposals-opt-in'],
     });
   });
 });
@@ -127,8 +154,9 @@ describe('no part running at all', () => {
 describe('where a missing answer is fixed', () => {
   it('names the step that asked for it, never the one that noticed', () => {
     // The commit is only ever attempted from the last step, and the last step can fix
-    // exactly one of the four. The other three are somewhere behind it.
+    // exactly one of the five. The other four are somewhere behind it.
     expect(STEP_THAT_ASKS.availability).toBe('availability');
+    expect(STEP_THAT_ASKS.gender).toBe('gender');
     expect(STEP_THAT_ASKS.location).toBe('location');
     expect(STEP_THAT_ASKS['search-radius']).toBe('radius');
     expect(STEP_THAT_ASKS['proposals-opt-in']).toBe('opt-in');

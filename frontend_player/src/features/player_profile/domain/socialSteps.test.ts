@@ -1,7 +1,7 @@
 /**
  * The second part's step sequence, with no renderer and no router.
  *
- * Six screens in one order, and the two boundaries that are rules rather than layout: the
+ * Seven screens in one order, and the two boundaries that are rules rather than layout: the
  * first step has nothing behind it, and the last has nothing in front of it until the
  * commit exists.
  */
@@ -10,15 +10,31 @@ import { emptyDraft } from './ProfileDraft';
 import { SOCIAL_STEPS, admissionToStep, stepAfter, stepBefore, stepPosition } from './socialSteps';
 
 describe('the order of the second part', () => {
-  it('asks the six questions in the order the spec sets', () => {
+  it('asks the seven questions in the order the spec sets', () => {
     expect(SOCIAL_STEPS).toEqual([
       'tags',
       'photos',
       'availability',
       'location',
       'radius',
+      'gender',
       'opt-in',
     ]);
+  });
+
+  it('asks who last of the matching questions, and never among the tags', () => {
+    // Not incidental either. The tags step says what kind of player somebody is; the week,
+    // the area, the radius and this one narrow who the platform will put in front of them,
+    // and a preference over who you play with is one of those rather than another
+    // description of yourself.
+    expect(SOCIAL_STEPS.indexOf('gender')).toBeGreaterThan(SOCIAL_STEPS.indexOf('radius'));
+    expect(SOCIAL_STEPS.indexOf('gender')).toBeGreaterThan(SOCIAL_STEPS.indexOf('tags'));
+  });
+
+  it('ends on the question whose answer opens the commit', () => {
+    // The opt-in is last because it is the consent that ends the part and the step that
+    // carries the finish — nothing may come after it, whatever else is added.
+    expect(SOCIAL_STEPS[SOCIAL_STEPS.length - 1]).toBe('opt-in');
   });
 
   it('asks where before how far', () => {
@@ -34,12 +50,13 @@ describe('moving forward', () => {
     expect(stepAfter('photos')).toBe('availability');
     expect(stepAfter('availability')).toBe('location');
     expect(stepAfter('location')).toBe('radius');
-    expect(stepAfter('radius')).toBe('opt-in');
+    expect(stepAfter('radius')).toBe('gender');
+    expect(stepAfter('gender')).toBe('opt-in');
   });
 
   it('has nothing after the last step', () => {
     // What follows the last step is the commit, and a commit is not a step. Answering
-    // "opt-in" with a seventh screen here is how a part would gain one by accident.
+    // "opt-in" with an eighth screen here is how a part would gain one by accident.
     expect(stepAfter('opt-in')).toBeUndefined();
   });
 });
@@ -50,7 +67,8 @@ describe('moving back', () => {
     expect(stepBefore('availability')).toBe('photos');
     expect(stepBefore('location')).toBe('availability');
     expect(stepBefore('radius')).toBe('location');
-    expect(stepBefore('opt-in')).toBe('radius');
+    expect(stepBefore('gender')).toBe('radius');
+    expect(stepBefore('opt-in')).toBe('gender');
   });
 
   it('has nothing before the first step', () => {
@@ -62,9 +80,9 @@ describe('moving back', () => {
 });
 
 describe('where a step sits', () => {
-  it('counts from one, out of six', () => {
-    expect(stepPosition('tags')).toEqual({ index: 1, total: 6 });
-    expect(stepPosition('opt-in')).toEqual({ index: 6, total: 6 });
+  it('counts from one, out of seven', () => {
+    expect(stepPosition('tags')).toEqual({ index: 1, total: 7 });
+    expect(stepPosition('opt-in')).toEqual({ index: 7, total: 7 });
   });
 });
 

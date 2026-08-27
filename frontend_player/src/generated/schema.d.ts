@@ -310,6 +310,8 @@ export interface paths {
          *     **The availability grid is required**, at least one of its twenty-one cells. Silence about when a player usually plays is never scored as a zero, so it is asked for rather than guessed at. The minimum is exactly one and is not served — it is fixed, and a client holds it as a constant.
          *
          *     **The proposals opt-in has no default.** Send the player's actual answer; `null` is refused rather than treated as a no. The answer is recorded with the moment, the copy version shown and the surface, because consent is evidenced rather than asserted.
+         *
+         *     **`gender` is required and `gender_preference` is not.** The first is asked once, here, with `PREFER_NOT_TO_SAY` a first-class answer — there is no unanswered state to send, so a missing or unknown value is a 422 rather than a coded refusal. The second defaults to `ANY`, is durable, and gates **both directions**: narrowing it also hides this player from the side it excludes. Neither value ever comes back out of this API.
          */
         post: operations["commit_player_profile_api_v1_players_me_profile_post"];
         delete?: never;
@@ -473,6 +475,15 @@ export interface components {
              */
             search_radius_km: number;
             proposals_opt_in: components["schemas"]["ProposalsOptInRequest"];
+            /** @description The player's own answer, asked once. Required — `PREFER_NOT_TO_SAY` is a first-class answer and is what a player who does not want to say sends; there is no way to send nothing. It matches only unconstrained searches, which costs its holder reach, and the client is what says so at the moment of asking. */
+            gender: components["schemas"]["Gender"];
+            /**
+             * @description Who this player is willing to be matched with. Optional, and `ANY` when it is not sent.
+             *
+             *     **It is mutual and durable.** It governs what reaches this player as well as what this player sees, so narrowing it makes them invisible to the excluded side entirely — including to searchers who asked for anybody. The client must say so at the moment of setting; learning it from silence is not acceptable. A single search may narrow this further and nothing may widen past it.
+             * @default ANY
+             */
+            gender_preference: components["schemas"]["GenderPreference"];
         };
         /**
          * ConfidenceReasonResponse
@@ -562,6 +573,32 @@ export interface components {
             /** Level */
             level: number;
         };
+        /**
+         * Gender
+         * @description What a player says about themselves — self-declared, freely changed.
+         *
+         *     Per person and never per sport, which is what keeps it on ``PlayerProfile``
+         *     rather than beside a rating (ADR-0089's cardinality, unchanged).
+         *
+         *     This is **a statement about which searches a player wishes to appear in**,
+         *     not a ruling by the platform on who anybody is. A player whose identity is
+         *     not on this list picks the answer that puts them where they want to be seen,
+         *     or takes ``PREFER_NOT_TO_SAY`` and appears in unconstrained searches only.
+         *     The platform adjudicates nothing.
+         * @enum {string}
+         */
+        Gender: "WOMAN" | "MAN" | "PREFER_NOT_TO_SAY";
+        /**
+         * GenderPreference
+         * @description Who a player is willing to be matched with — durable, not per search.
+         *
+         *     **Durable rather than per-search because the gate is mutual.** It has to be
+         *     evaluated against a player when somebody *else* searches and they are not
+         *     present, and a per-search setting cannot bind that direction at all. A
+         *     per-search override may **narrow** this, never widen past it.
+         * @enum {string}
+         */
+        GenderPreference: "WOMEN_ONLY" | "MEN_ONLY" | "ANY";
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -687,6 +724,17 @@ export interface components {
          *
          *     The same body whether the commit created the profile or replayed an earlier
          *     one, so a client that only wants its profile needs no branch on the status.
+         *
+         *     **No gender value comes back out**, and that is a rule rather than an
+         *     oversight (``docs/adr/0096`` §6): a preference crosses the wire *in*, on a
+         *     search; no response shape carries a gender out and no card renders one.
+         *     This body is only ever the caller's own profile, so nothing here would leak
+         *     a third party's answer — the field is left off anyway, because the moment
+         *     one response shape carries it, *which* shapes may is a judgement call made
+         *     per endpoint instead of a line nobody has to re-argue. Nothing reads it back
+         *     today: onboarding sends it once, and there is no profile editor. When one
+         *     exists, adding it here is an addition to this document and ADR-0096's
+         *     ticket's to make.
          *
          *     **Fields are only ever added.** A shipped mobile app parses this document for
          *     months after it stops being built.

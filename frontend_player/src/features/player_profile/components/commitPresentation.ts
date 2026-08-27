@@ -96,6 +96,12 @@ export interface MissingAnswerCopy {
  * radius means that step was never reached at all. It gets a real sentence anyway, because a
  * screen that only handles the case somebody predicted is a screen with a blank state.
  *
+ * **The gender answer is here for the reason the week is**: the gender step will not
+ * continue without one, so an absent answer at the end means the draft reached this screen
+ * some other way. It names the answer about the player and never the preference beside it —
+ * that one is unconstrained until somebody narrows it, so there is no version of this part
+ * in which it can be outstanding.
+ *
  * The proposals question has no entry: it is asked on this very screen, so what is missing
  * is not a step to go back to but the two controls immediately above the finish. That is
  * `optInPresentation`'s hint, and it stays there with the rest of the consent copy.
@@ -120,6 +126,12 @@ export const MISSING_ANSWER_COPY: Readonly<
     body: 'How far out to look is what turns your area into a set of players. Setting up finishes once you have chosen a distance.',
     label: 'Set how far you will travel',
     finishHint: 'Set how far you will travel to finish',
+  },
+  gender: {
+    title: 'We still need one answer about you',
+    body: 'Matching you with the right players starts with who you are playing as. Prefer not to say is an answer too — it is never shown on your profile either way.',
+    label: 'Answer who you play as',
+    finishHint: 'Answer who you play as to finish',
   },
 };
 
@@ -153,7 +165,7 @@ export function answerStillWanted(
  *
  * **The feature's own `code` table**, which is the half `recoveryMessage` deliberately
  * leaves to whoever owns the endpoint: a recovery category can say *check the details above
- * and try again*, and a screen with six steps behind it has to say **which** detail and
+ * and try again*, and a screen with seven steps behind it has to say **which** detail and
  * offer the way back.
  *
  * It is keyed by the wire code and never by the message — the message is a diagnostic the

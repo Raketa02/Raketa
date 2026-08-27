@@ -164,7 +164,7 @@ describe('where a launch lands', () => {
     await launchSignedIn();
 
     await waitFor(() => expect(screen).toHavePathname('/tags'));
-    expect(screen.getByText('Setting up · Step 1 of 6')).toBeTruthy();
+    expect(screen.getByText('Setting up · Step 1 of 7')).toBeTruthy();
     // The first step, never the one they were on. The draft is client-held and died with
     // the process, so there is no middle of the part to be resumed to.
     expect(screen.queryByText('Inside the app')).toBeNull();

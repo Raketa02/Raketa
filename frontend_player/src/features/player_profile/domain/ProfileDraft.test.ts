@@ -1,8 +1,8 @@
 /**
  * The draft, with no store and no renderer.
  *
- * What is being pinned here is that recording one answer leaves the other five alone —
- * which is the whole promise the part makes when it says back and forward are free.
+ * What is being pinned here is that recording one answer leaves the others alone — which
+ * is the whole promise the part makes when it says back and forward are free.
  */
 
 import { emptyDraft, recordAnswer } from './ProfileDraft';
@@ -13,7 +13,12 @@ describe('a draft that has been started', () => {
 
     // A blank week and no photos are legitimate *answers* — an empty grid means no
     // preference and never "leave me out" — so those two start as empty lists rather than
-    // as absences. The three that must actually be answered start absent.
+    // as absences. The four that must actually be answered start absent.
+    //
+    // `genderPreference` is neither: it starts at a **value**, because unconstrained is
+    // what having narrowed nothing already means. It is the one field here that a step
+    // cannot have failed to collect, and reading its default as an absence would invent a
+    // fifth outstanding answer nobody is short of.
     expect(draft).toEqual({
       socialTagIds: [],
       photoIds: [],
@@ -21,6 +26,8 @@ describe('a draft that has been started', () => {
       location: undefined,
       searchRadiusKm: undefined,
       proposalsOptIn: undefined,
+      gender: undefined,
+      genderPreference: 'any',
     });
   });
 });

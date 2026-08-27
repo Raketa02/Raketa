@@ -161,7 +161,7 @@ describe('what the step opens at', () => {
     await reachTheRadiusStep();
 
     fireEvent.press(screen.getByLabelText('Continue'));
-    await waitFor(() => expect(screen).toHavePathname('/opt-in'));
+    await waitFor(() => expect(screen).toHavePathname('/gender'));
   });
 });
 
@@ -263,7 +263,7 @@ describe('the answer the part holds', () => {
     expect(drawn('12 km')).toBeTruthy();
 
     fireEvent.press(screen.getByLabelText('Continue'));
-    await waitFor(() => expect(screen).toHavePathname('/opt-in'));
+    await waitFor(() => expect(screen).toHavePathname('/gender'));
 
     fireEvent.press(screen.getByLabelText('Back to How far should we look for players?'));
     await waitFor(() => expect(screen).toHavePathname('/radius'));

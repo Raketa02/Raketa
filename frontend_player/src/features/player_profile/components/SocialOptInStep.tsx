@@ -1,7 +1,7 @@
 /**
- * Step six of onboarding's second part: **may we suggest games?**
+ * Step seven of onboarding's second part: **may we suggest games?**
  *
- * The last of the six, and the only one that collects **consent**. Everything else the part
+ * The last of the seven, and the only one that collects **consent**. Everything else the part
  * asks for is a preference — a preference can be wrong, corrected, or left blank, and none
  * of those is a moral event. This one is a record of what a person agreed to, which is why
  * it is the step with the frozen copy, the pinned version identifier and no third control.
@@ -44,9 +44,9 @@
  *
  * ## This is where the part is written, and it is the only place that is
  *
- * The answer and its copy version go into the client-held draft like the five before it, and
+ * The answer and its copy version go into the client-held draft like the six before it, and
  * then the finish sends **the whole of it in one request**
- * ([ADR-0090](../../../../../docs/adr/0090-onboarding-per-player-checkpoint.md)). Not six
+ * ([ADR-0090](../../../../../docs/adr/0090-onboarding-per-player-checkpoint.md)). Not seven
  * writes: a partial commit — the tags saved and the consent lost — is the worst outcome this
  * part has available to it.
  *
@@ -118,14 +118,14 @@ import { SocialStepLayout } from './SocialStepLayout';
  * A route literal rather than an import, and that is the boundary working. What follows the
  * commit is onboarding's, and this feature owns the profile rather than the flow that
  * collects it. Written here, beside the one press that goes there, rather than in
- * `socialStepRoutes`: that table is the six steps, and the six steps stop before this.
+ * `socialStepRoutes`: that table is the seven steps, and the seven steps stop before this.
  */
 const AFTER_THE_PART = '/data';
 
 /**
  * Why the finish will not move, for whoever cannot see that it will not.
  *
- * Three closed reasons and they are genuinely different: an answer one of the five earlier
+ * Three closed reasons and they are genuinely different: an answer one of the six earlier
  * steps asks for, a photo still arriving, and the question on this very screen. Only the
  * last is `optInPresentation`'s — reaching for *choose yes or no above to finish* in either
  * of the other two would tell a player to do something they have already done.
@@ -261,7 +261,7 @@ export function SocialOptInStep() {
             label={OPT_IN_FINISH_LABEL}
             size="lg"
             // Closed until answered, open on either answer — and closed again for a part
-            // that is short of something the six steps must carry. Both are `readyToCommit`
+            // that is short of something the seven steps must carry. Both are `readyToCommit`
             // reporting, so *no* can never be mistaken for *not yet*.
             disabled={!open}
             // Blocked while the request is in flight, which is the courtesy. The defence is

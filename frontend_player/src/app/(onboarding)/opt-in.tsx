@@ -1,4 +1,4 @@
-/** Step six of onboarding's second part. See `tags.tsx` for the rule this obeys. */
+/** Step seven of onboarding's second part. See `tags.tsx` for the rule this obeys. */
 
 import { Redirect } from 'expo-router';
 

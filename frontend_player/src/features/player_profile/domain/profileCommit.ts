@@ -57,6 +57,7 @@ import type { AppError } from '@/shared/errors';
 
 import { weekStanding } from './availabilityWeek';
 import { uploadsInFlight, type ProfilePhoto } from './photoCollection';
+import type { Gender, GenderPreference } from './gender';
 import type { AvailabilitySlot, LocationArea, ProfileDraft, ProposalsOptIn } from './ProfileDraft';
 import type { SocialTagId } from './SocialTag';
 import type { SocialStep } from './socialSteps';
@@ -74,10 +75,19 @@ export interface ProfileCommit {
   readonly location: LocationArea;
   readonly searchRadiusKm: number;
   readonly proposalsOptIn: ProposalsOptIn;
+  /** Narrowed from the draft's `| undefined`: the commit requires an answer. */
+  readonly gender: Gender;
+  /**
+   * Not narrowed, because the draft never holds it absent. It is carried explicitly rather
+   * than defaulted at the wire, so *what an unconstrained player sends* is one value decided
+   * in one place.
+   */
+  readonly genderPreference: GenderPreference;
 }
 
 /** An answer the commit needs and the draft has not got. Named for the step that asks it. */
-export type MissingAnswer = 'availability' | 'location' | 'search-radius' | 'proposals-opt-in';
+export type MissingAnswer =
+  'availability' | 'location' | 'search-radius' | 'gender' | 'proposals-opt-in';
 
 export type CommitReadiness =
   /** Every answer is in. `commit` is the body, and it could not have been built without them. */
@@ -86,13 +96,13 @@ export type CommitReadiness =
   | { readonly kind: 'incomplete'; readonly missing: readonly MissingAnswer[] };
 
 /**
- * The four, in the order the steps ask for them, and how to tell whether a draft holds one.
+ * The five, in the order the steps ask for them, and how to tell whether a draft holds one.
  *
  * **One list and one order**, which is what the `missing` report is filtered out of — the
  * alternative was the four names written twice, kept in step by hand, and one edit away
  * from a screen sending a player back to the wrong step.
  *
- * Three of them are a field being present. The week is a **standing**, which is why this is
+ * Four of them are a field being present. The week is a **standing**, which is why this is
  * a table of predicates rather than a list of keys: an answer the draft can hold and still
  * be short of needs somewhere to say so. It asks `weekStanding` rather than counting the
  * list itself, so the floor is one function's answer — the same one the availability step's
@@ -102,6 +112,9 @@ const ANSWER_HELD: Readonly<Record<MissingAnswer, (draft: ProfileDraft) => boole
   availability: (draft) => weekStanding(draft.availability).kind === 'ticked',
   location: (draft) => draft.location !== undefined,
   'search-radius': (draft) => draft.searchRadiusKm !== undefined,
+  // The gender answer, and **not** the preference beside it: `any` is what having narrowed
+  // nothing means, so the preference cannot be absent and has nothing to report here.
+  gender: (draft) => draft.gender !== undefined,
   'proposals-opt-in': (draft) => draft.proposalsOptIn !== undefined,
 };
 
@@ -118,9 +131,9 @@ export function readyToCommit(draft: ProfileDraft | undefined): CommitReadiness 
   if (draft === undefined) return { kind: 'incomplete', missing: EVERY_ANSWER };
 
   const missing = EVERY_ANSWER.filter((answer) => !ANSWER_HELD[answer](draft));
-  const { location, searchRadiusKm, proposalsOptIn } = draft;
+  const { location, searchRadiusKm, proposalsOptIn, gender } = draft;
 
-  // **One guard, because it is one question.** The three narrowings say to the compiler what
+  // **One guard, because it is one question.** The four narrowings say to the compiler what
   // the filter above just said to a screen — and they are what make `ProfileCommit`
   // constructible at all. The week has no narrowing to do, since `readonly
   // AvailabilitySlot[]` is already the commit's type, so it is carried by `missing` alone;
@@ -129,7 +142,8 @@ export function readyToCommit(draft: ProfileDraft | undefined): CommitReadiness 
     missing.length > 0 ||
     location === undefined ||
     searchRadiusKm === undefined ||
-    proposalsOptIn === undefined
+    proposalsOptIn === undefined ||
+    gender === undefined
   ) {
     return { kind: 'incomplete', missing };
   }
@@ -146,6 +160,10 @@ export function readyToCommit(draft: ProfileDraft | undefined): CommitReadiness 
       location,
       searchRadiusKm,
       proposalsOptIn,
+      gender,
+      // Carried, never defaulted here: the draft holds `any` from the moment the part is
+      // entered, so this is the player's answer whether or not they touched the control.
+      genderPreference: draft.genderPreference,
     },
   };
 }
@@ -286,5 +304,6 @@ export const STEP_THAT_ASKS: Readonly<Record<MissingAnswer, SocialStep>> = {
   availability: 'availability',
   location: 'location',
   'search-radius': 'radius',
+  gender: 'gender',
   'proposals-opt-in': 'opt-in',
 };

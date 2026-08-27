@@ -36,20 +36,20 @@ describe('the eyebrow', () => {
   it('carries the served rule alongside the position', () => {
     // Story 18: the floor is learned by reading the screen rather than by being stopped.
     expect(socialTagsEyebrow({ minimum: 2, maximum: 6 })).toBe(
-      'Setting up · Step 1 of 6 · Pick 2 to 6',
+      'Setting up · Step 1 of 7 · Pick 2 to 6',
     );
   });
 
   it('quotes the numbers that were served, not the ones this build expects', () => {
     expect(socialTagsEyebrow({ minimum: 3, maximum: 5 })).toBe(
-      'Setting up · Step 1 of 6 · Pick 3 to 5',
+      'Setting up · Step 1 of 7 · Pick 3 to 5',
     );
   });
 
   it('states the position alone until the bounds have arrived', () => {
     // A range with a blank in it is a rule stated wrong, which is worse than a rule not yet
     // stated — and the chips it governs are not on screen yet either.
-    expect(socialTagsEyebrow(undefined)).toBe('Setting up · Step 1 of 6');
+    expect(socialTagsEyebrow(undefined)).toBe('Setting up · Step 1 of 7');
   });
 });
 

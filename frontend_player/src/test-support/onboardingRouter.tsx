@@ -29,6 +29,7 @@ import OnboardingLayout from '@/app/(onboarding)/_layout';
 import OptInRoute from '@/app/(onboarding)/opt-in';
 import PhotosRoute from '@/app/(onboarding)/photos';
 import QuestionRoute from '@/app/(onboarding)/question/[assessmentId]';
+import GenderRoute from '@/app/(onboarding)/gender';
 import RadiusRoute from '@/app/(onboarding)/radius';
 import ResultRoute from '@/app/(onboarding)/result/[assessmentId]';
 import ReviewRoute from '@/app/(onboarding)/review/[assessmentId]';
@@ -68,6 +69,7 @@ export const ONBOARDING_ROUTES = {
   '(onboarding)/availability': AvailabilityRoute,
   '(onboarding)/location': LocationRoute,
   '(onboarding)/radius': RadiusRoute,
+  '(onboarding)/gender': GenderRoute,
   '(onboarding)/opt-in': OptInRoute,
 };
 

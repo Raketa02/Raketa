@@ -340,18 +340,25 @@ of the code because this file asks for them in that order.
   player may hold up to three or none; none is not an absence but a **generated court
   poster**, derived from their identity so it is stable across devices.
 - **Profile commit** — the single idempotent request that ends onboarding's second part,
-  carrying all six answers at once. Nothing is written before it, so leaving mid-part
+  carrying all seven answers at once. Nothing is written before it, so leaving mid-part
   restarts at step 1 ([ADR-0090](docs/adr/0090-onboarding-per-player-checkpoint.md)). Keyed
   by a client-supplied **idempotency key**, which the creating event carries so a retry is
   recognised from the stream itself rather than from a table beside it.
 - **Player profile events** (durable name / version):
   - **PlayerProfileCreated** — `player_profile.created` / v1 — the commit, carrying every
-    preference and the idempotency key. **Not the opt-in.**
+    preference and the idempotency key. **Not the opt-in.** It gained `gender` and
+    `gender_preference` after profiles existed and **stayed v1**: both are appended with
+    defaults so rows written before the question decode unchanged, and an absent `gender`
+    means *committed before anybody was asked* — never a quieter `PREFER_NOT_TO_SAY`, which
+    is an answer somebody chose. Nothing is backfilled.
   - **SocialTagsChanged** — `player_profile.social_tags_changed` / v1.
   - **PhotosChanged** — `player_profile.photos_changed` / v1.
   - **AvailabilityChanged** — `player_profile.availability_changed` / v1.
   - **LocationChanged** — `player_profile.location_changed` / v1.
   - **SearchRadiusChanged** — `player_profile.search_radius_changed` / v1.
+  - **GenderChanged** — `player_profile.gender_changed` / v1 — gender is self-declared and
+    freely changed, so the correction has an event from the day the field does.
+  - **GenderPreferenceChanged** — `player_profile.gender_preference_changed` / v1.
   - **ProposalsOptInAnswered** — `player_profile.proposals_opt_in_answered` / v1 — the
     answer, the copy version shown and the surface; the moment is the event's own.
   - **PlayIntentDeclared** — `player_profile.play_intent_declared` / v1 — the sport, the value
@@ -408,6 +415,11 @@ of the code because this file asks for them in that order.
   writes the value. The platform watches, notices, and deliberately declines to act.
 - **Intent is per sport, and never transfers between them.** The same person is plausibly a
   competitive padel player and a social tennis player — the same reason levels do not transfer.
+- **A narrowed preference costs the player reach, and they are told at the moment of
+  setting.** Mutuality means `WOMEN_ONLY` also makes its holder invisible to men entirely,
+  including men who searched `ANY` — the half nobody would guess. The backend emits the
+  reason; the client says the sentence, and learning it from an empty inbox is not
+  acceptable ([ADR-0096](docs/adr/0096-gender-preference-mutual-gate-invisible-to-the-scorer.md)).
 - **A profile is one per player, and asking whether one exists is a legitimate question.**
   See the narrowed *there is no onboarded player* invariant above, and
   [ADR-0090](docs/adr/0090-onboarding-per-player-checkpoint.md).
