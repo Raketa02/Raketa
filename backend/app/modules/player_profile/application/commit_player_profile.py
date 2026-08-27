@@ -137,6 +137,8 @@ class CommitPlayerProfile:
             availability=grid,
             location=area,
             search_radius=radius,
+            gender=command.gender,
+            gender_preference=command.gender_preference,
             proposals_opt_in_accepted=command.proposals_opt_in,
             consent_copy_version=command.consent_copy_version,
             consent_surface=command.consent_surface,

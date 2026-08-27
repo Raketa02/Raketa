@@ -1,0 +1,12 @@
+# Pinned exactly, because this image is a model as much as it is a program: a
+# resolver picking a different `transformers` on a rebuild would change the
+# numbers the backend records, and nothing about a green suite would say so.
+#
+# CPU-only torch. The GPU wheels are several times the size and there is no GPU
+# on the machine this runs on.
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.5.1
+transformers==4.46.3
+pillow==11.0.0
+fastapi==0.115.6
+uvicorn==0.32.1

@@ -24,6 +24,7 @@
 
 import type { components } from '@/generated/schema';
 
+import type { Gender, GenderPreference } from '../domain/gender';
 import type { ProfileOptions } from '../domain/ProfileOptions';
 import type { DayPart } from '../domain/ProfileDraft';
 import type { ProfileCommit } from '../domain/profileCommit';
@@ -40,6 +41,8 @@ type WireSocialTag = components['schemas']['SocialTag'];
 type WireSocialTagGroup = components['schemas']['SocialTagGroup'];
 type CommitPlayerProfileRequest = components['schemas']['CommitPlayerProfileRequest'];
 type WireDayPart = components['schemas']['DayPart'];
+type WireGender = components['schemas']['Gender'];
+type WireGenderPreference = components['schemas']['GenderPreference'];
 
 /**
  * One spelling, not two.
@@ -122,6 +125,32 @@ const WIRE_DAY_PART: Readonly<Record<DayPart, WireDayPart>> = {
 };
 
 /**
+ * The two gender vocabularies, in the two spellings that exist.
+ *
+ * Tables rather than `gender.toUpperCase()`, and the reason is the day parts' rather than
+ * the tag ids': these are **enums the app speaks in its own words**, not ids it stores and
+ * sends back, so a fourth value on either side stops this file compiling instead of
+ * producing a string the other end has never heard of. `prefer-not-to-say` would not even
+ * survive a cast, which is the shape of bug a table cannot have.
+ *
+ * **Neither comes back.** No response shape this app reads carries a gender value out
+ * ([ADR-0096](../../../../../docs/adr/0096-gender-preference-mutual-gate-invisible-to-the-scorer.md)
+ * §6), so these are one-directional by the contract and not by omission — there is nothing
+ * to write an inbound half of.
+ */
+const WIRE_GENDER: Readonly<Record<Gender, WireGender>> = {
+  woman: 'WOMAN',
+  man: 'MAN',
+  'prefer-not-to-say': 'PREFER_NOT_TO_SAY',
+};
+
+const WIRE_GENDER_PREFERENCE: Readonly<Record<GenderPreference, WireGenderPreference>> = {
+  'women-only': 'WOMEN_ONLY',
+  'men-only': 'MEN_ONLY',
+  any: 'ANY',
+};
+
+/**
  * Everything the second part collected, as the one body that ends it.
  *
  * It takes a `ProfileCommit` and not a draft, which is the whole of what keeps a partial
@@ -153,5 +182,10 @@ export function toCommitRequest(commit: ProfileCommit): CommitPlayerProfileReque
       accepted: commit.proposalsOptIn.accepted,
       copy_version: commit.proposalsOptIn.copyVersion,
     },
+    gender: WIRE_GENDER[commit.gender],
+    // Sent always, including when it is `ANY`. The field has a default on the wire and the
+    // app could omit it — it does not, because *what an unconstrained player sends* would
+    // then be decided by whichever side was read last.
+    gender_preference: WIRE_GENDER_PREFERENCE[commit.genderPreference],
   };
 }

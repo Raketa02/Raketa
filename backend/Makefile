@@ -54,7 +54,7 @@ openapi:           ## emit the API contract (openapi.player.json)
 build-dev:         ## build dev image
 	$(COMPOSE_LOCAL) build
 
-up:                ## bring up the dev stack (Postgres 17 + API + Redis)
+up:                ## bring up the dev stack (Postgres 17 + API + MinIO + photo-review + Redis)
 	$(COMPOSE_LOCAL) up -d
 
 down:              ## tear down the dev stack

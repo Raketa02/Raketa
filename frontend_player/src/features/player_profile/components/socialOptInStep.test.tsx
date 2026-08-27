@@ -68,7 +68,7 @@ const finish = () => control(OPT_IN_FINISH_LABEL);
 const recorded = () => useProfileDraft.getState().draft?.proposalsOptIn;
 
 /**
- * A launch by a player the gate owes the second part to, walked to the last of the six.
+ * A launch by a player the gate owes the second part to, walked to the last of the seven.
  *
  * **The area is captured on the way through**, which is not incidental to this suite: the
  * finish is closed for a part that is short of one, and a walk that skipped it would prove
@@ -91,6 +91,9 @@ async function reachTheOptInStep() {
   fireEvent.press(screen.getByLabelText('Continue'));
 
   await waitFor(() => expect(screen).toHavePathname('/availability'));
+  // The week has a floor of one since ADR-0102, so walking past this step means answering
+  // it. A single cell is the whole of what it asks for.
+  fireEvent.press(screen.getByLabelText('Wednesday evening'));
   fireEvent.press(screen.getByLabelText('Continue'));
 
   await waitFor(() => expect(screen).toHavePathname('/location'));
@@ -99,6 +102,13 @@ async function reachTheOptInStep() {
 
   await waitFor(() => expect(screen).toHavePathname('/radius'));
   fireEvent.press(await screen.findByLabelText('Continue'));
+
+  // The answer about the player, which the gender step will not continue without. The
+  // preference beside it is left at its opening `Anyone` — narrowing, and what narrowing
+  // costs, is that step's own suite.
+  await waitFor(() => expect(screen).toHavePathname('/gender'));
+  fireEvent.press(await screen.findByLabelText('Woman'));
+  fireEvent.press(screen.getByLabelText('Continue'));
 
   await waitFor(() => expect(screen).toHavePathname('/opt-in'));
   await screen.findByLabelText(OPT_IN_FINISH_LABEL);
@@ -155,7 +165,7 @@ describe('what the step opens with', () => {
     expect(screen.queryByLabelText(/later/i)).toBeNull();
     expect(screen.queryByText(/maybe later/i)).toBeNull();
     // Back is the part's own move and reaches the step before this one, never past it.
-    expect(screen.getByLabelText('Back to How far should we look for players?')).toBeTruthy();
+    expect(screen.getByLabelText('Back to Who do you want to play with?')).toBeTruthy();
   });
 });
 
@@ -224,8 +234,8 @@ describe('answering it', () => {
     await reachTheOptInStep();
     fireEvent.press(control(NO));
 
-    fireEvent.press(control('Back to How far should we look for players?'));
-    await waitFor(() => expect(screen).toHavePathname('/radius'));
+    fireEvent.press(control('Back to Who do you want to play with?'));
+    await waitFor(() => expect(screen).toHavePathname('/gender'));
     fireEvent.press(await screen.findByLabelText('Continue'));
     await waitFor(() => expect(screen).toHavePathname('/opt-in'));
 

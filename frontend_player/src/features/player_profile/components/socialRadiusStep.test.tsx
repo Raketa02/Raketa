@@ -84,6 +84,9 @@ async function reachTheRadiusStep(served?: Wire['PlayerProfileOptionsResponse'])
   fireEvent.press(screen.getByLabelText('Continue'));
 
   await waitFor(() => expect(screen).toHavePathname('/availability'));
+  // The week has a floor of one since ADR-0102, so walking past this step means answering
+  // it. A single cell is the whole of what it asks for.
+  fireEvent.press(screen.getByLabelText('Wednesday evening'));
   fireEvent.press(screen.getByLabelText('Continue'));
 
   await waitFor(() => expect(screen).toHavePathname('/location'));
@@ -158,7 +161,7 @@ describe('what the step opens at', () => {
     await reachTheRadiusStep();
 
     fireEvent.press(screen.getByLabelText('Continue'));
-    await waitFor(() => expect(screen).toHavePathname('/opt-in'));
+    await waitFor(() => expect(screen).toHavePathname('/gender'));
   });
 });
 
@@ -260,7 +263,7 @@ describe('the answer the part holds', () => {
     expect(drawn('12 km')).toBeTruthy();
 
     fireEvent.press(screen.getByLabelText('Continue'));
-    await waitFor(() => expect(screen).toHavePathname('/opt-in'));
+    await waitFor(() => expect(screen).toHavePathname('/gender'));
 
     fireEvent.press(screen.getByLabelText('Back to How far should we look for players?'));
     await waitFor(() => expect(screen).toHavePathname('/radius'));

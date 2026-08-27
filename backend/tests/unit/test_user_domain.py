@@ -10,6 +10,7 @@ from app.modules.users.domain.events import (
 )
 from app.modules.users.domain.user import User
 from app.modules.users.domain.value_objects import (
+    AdultAttestation,
     Authority,
     Email,
     HashedPassword,
@@ -51,6 +52,7 @@ def test_user_promote_to_admin_flips_flags():
         email=Email("a@b.com"),
         nickname=Nickname("alice"),
         password_hash=HashedPassword("hash"),
+        attestation=AdultAttestation(True),
         occurred_at=registered_at,
     )
     user.pull_events()
@@ -120,6 +122,7 @@ def test_user_disable_records_user_disabled_event():
         email=Email("alice@example.com"),
         nickname=Nickname("alice"),
         password_hash=HashedPassword("hash"),
+        attestation=AdultAttestation(True),
         occurred_at=registered_at,
     )
     user.pull_events()
@@ -165,6 +168,7 @@ def test_user_register_records_user_registered_event():
         email=Email("alice@example.com"),
         nickname=Nickname("alice"),
         password_hash=HashedPassword("hash"),
+        attestation=AdultAttestation(True),
         occurred_at=occurred_at,
     )
 
@@ -179,6 +183,7 @@ def test_user_register_records_user_registered_event():
             is_admin=False,
             is_active=True,
             occurred_at=occurred_at,
+            adult_attested=True,
         )
     ]
     assert user.pull_events() == []

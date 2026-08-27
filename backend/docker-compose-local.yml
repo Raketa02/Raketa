@@ -59,6 +59,10 @@ services:
       PHOTO_STORAGE_BUCKET: raketa-player-photos
       PHOTO_STORAGE_ACCESS_KEY: raketa_photos
       PHOTO_STORAGE_SECRET_KEY: raketa_photos_pwd
+      # The on-court photo check — keep in step with the `photo-review` service
+      # below. A server-to-server URL: no phone and no browser ever opens it.
+      PHOTO_REVIEW_ENDPOINT_URL: http://photo-review:8000
+      PHOTO_REVIEW_TIMEOUT_SECONDS: "10"
       PYTHONPYCACHEPREFIX: /tmp/pycache
       WATCHFILES_FORCE_POLLING: "true"
     ports:
@@ -129,6 +133,44 @@ services:
         mc mb --ignore-existing local/raketa-player-photos &&
         mc anonymous set none local/raketa-player-photos
     restart: "no"
+
+  # The on-court photo check: a CLIP model behind one HTTP route
+  # (../docs/adr/0129-the-photo-check-is-a-sidecar-the-backend-asks.md).
+  #
+  # **The API deliberately does not `depends_on` this.** It is the second
+  # required container and by far the slowest to become ready — a gigabyte of
+  # model weights loaded at startup — and waiting for it would put that on the
+  # front of every `make up`. It does not have to: the client fails open, so a
+  # sidecar still loading costs an upload its verdict and never costs a player
+  # their photo. What that trade buys, and what it costs, is written down in the
+  # ADR rather than left to be discovered from a note in a bucket.
+  #
+  # The image is built here rather than pulled. There is no CLIP-over-HTTP image
+  # worth trusting a player's photo to, and baking the weights in is what lets a
+  # laptop with no network still bring the stack up. The first build is slow.
+  photo-review:
+    build:
+      context: ./docker/photo-review
+    image: raketa_photo_review:dev
+    container_name: raketa_photo_review
+    restart: unless-stopped
+    networks:
+      - backend
+    ports:
+      # 8100 rather than 8000, which the API already has. Published only so that
+      # the documented host-run path — `cp .env.example .env`, uvicorn on the
+      # host — can reach it; the containerised stack talks over the compose
+      # network and would not need it. Nothing outside this machine should.
+      - "8100:8000"
+    healthcheck:
+      # 503 until the weights are loaded, which is what makes this meaningful.
+      test:
+        - CMD-SHELL
+        - "python -c \"import urllib.request;urllib.request.urlopen('http://127.0.0.1:8000/health')\""
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 120s
 
   redis:
     image: redis:7.2

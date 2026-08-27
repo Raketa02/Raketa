@@ -16,7 +16,7 @@
  *
  * Forward is **not** here. Every step continues on its own terms — one is blocked until a
  * floor is met, one may be passed with nothing answered at all — and a shared control that
- * took a `disabled` and a `label` would be the six steps' differences squeezed through one
+ * took a `disabled` and a `label` would be the seven steps' differences squeezed through one
  * prop list.
  */
 

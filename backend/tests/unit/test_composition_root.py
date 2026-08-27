@@ -42,6 +42,7 @@ from app.bootstrap.composition import (
     build_password_hasher,
     build_photo_review,
     build_photo_storage,
+    build_play_intent_declaration_repository,
     build_player_profile_repository,
     build_refresh_token_repository,
     build_skill_rating_repository,
@@ -144,13 +145,17 @@ async def test_every_port_is_built_from_a_session_and_the_settings(session_facto
             build_assessment_repository(event_store=store, events=events),
             build_skill_rating_repository(event_store=store, events=events),
             build_player_profile_repository(event_store=store, events=events),
+            # Declared before its first caller exists: the aggregate and its
+            # durable contract landed with #182 so the candidate index has an
+            # event to read, while ADR-0094's write path is its own build.
+            build_play_intent_declaration_repository(event_store=store, events=events),
             # No session: photos are bytes in an object store, not rows. What
             # they need instead is the settings — the bucket and which store —
             # which is the other half of what this module promises a caller
             # outside a request.
             build_photo_storage(settings),
             build_image_transcoder(),
-            build_photo_review(),
+            build_photo_review(settings),
         ]
 
     assert all(port is not None for port in built)
@@ -175,6 +180,7 @@ async def test_a_registration_runs_through_the_factories_alone(session_factory):
                 email="composed@example.test",
                 nickname="composed",
                 password="hunter22!",
+                adult_attested=True,
             )
         )
 
@@ -299,7 +305,7 @@ async def test_the_photo_path_is_assembled_without_a_session_or_a_request():
     use_case = UploadPhoto(
         storage=build_photo_storage(settings),
         transcoder=build_image_transcoder(),
-        review=build_photo_review(),
+        review=build_photo_review(settings),
         clock=build_clock(),
         url_valid_for_minutes=settings.PHOTO_URL_VALID_FOR_MINUTES,
     )

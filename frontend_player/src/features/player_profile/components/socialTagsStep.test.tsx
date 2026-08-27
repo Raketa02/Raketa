@@ -199,7 +199,7 @@ describe('the floor', () => {
     // stopped, so the numbers are in the chrome and not only inside a disabled label.
     await reachTheTagsStep();
 
-    expect(screen.getByText('Setting up · Step 1 of 6 · Pick 2 to 6')).toBeTruthy();
+    expect(screen.getByText('Setting up · Step 1 of 7 · Pick 2 to 6')).toBeTruthy();
   });
 
   it('blocks continuing with nothing picked, and says how many are missing', async () => {

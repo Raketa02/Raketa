@@ -27,6 +27,8 @@
  * means *not asked yet*, and it is never quietly read as no.
  */
 
+import type { Gender, GenderPreference } from './gender';
+import { DEFAULT_GENDER_PREFERENCE } from './gender';
 import type { SocialTagId } from './SocialTag';
 
 /** Which part of a day one ticked cell of the availability grid belongs to. */
@@ -93,6 +95,18 @@ export interface ProfileDraft {
   readonly searchRadiusKm: number | undefined;
   /** Absent means *not answered*, which is neither yes nor no. */
   readonly proposalsOptIn: ProposalsOptIn | undefined;
+  /**
+   * The player's own answer. Absent until the step asks, and **never read as
+   * `prefer-not-to-say`** — that is an answer somebody chose, and this is the question not
+   * having been put yet.
+   */
+  readonly gender: Gender | undefined;
+  /**
+   * Who they are willing to be matched with. **Never absent**, because `any` is what having
+   * narrowed nothing already means — the one field here that starts at a value rather than
+   * at a blank or an empty list.
+   */
+  readonly genderPreference: GenderPreference;
 }
 
 /** A part that has just been entered: nothing answered, and nothing claimed on anyone's behalf. */
@@ -104,6 +118,10 @@ export function emptyDraft(): ProfileDraft {
     location: undefined,
     searchRadiusKm: undefined,
     proposalsOptIn: undefined,
+    gender: undefined,
+    // Not `undefined`: unconstrained is a real answer and it is the one every player starts
+    // from, so there is nothing here for a step to have failed to collect.
+    genderPreference: DEFAULT_GENDER_PREFERENCE,
   };
 }
 

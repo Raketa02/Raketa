@@ -7,6 +7,7 @@ from typing import Sequence
 from uuid import UUID
 
 from app.modules.player_profile.domain.consent import ConsentSurface
+from app.modules.player_profile.domain.gender import Gender, GenderPreference
 
 
 @dataclass(frozen=True, slots=True)
@@ -58,6 +59,21 @@ class CommitPlayerProfileCommand:
     ``idempotency_key`` is what the client called this commit. The same key twice
     is the same commit — one profile, one answer — which is why a double-tapped
     confirm on a slow connection costs nothing (``docs/adr/0089``).
+
+    ``gender`` and ``gender_preference`` are the second and third enums, and they
+    are enums here for ``ConsentSurface``'s reason: each is a closed set the
+    boundary *selects from* rather than constructs, so there is nothing for the
+    domain to refuse that the type has not already refused. Neither is a string —
+    unlike a tag id, whose vocabulary is *served* and can therefore disagree with
+    what a client holds.
+
+    **``gender`` has no ``None`` and that is the difference from
+    ``proposals_opt_in``.** Both questions are required, and they are required
+    differently: the opt-in has a nullable type because *unanswered* is a third
+    state a client can legitimately be in and must be refused with a code that
+    says *ask the question*. Gender has ``PREFER_NOT_TO_SAY`` — a real answer to
+    the same effect — so there is no unanswered state to model and nothing to
+    refuse at this layer (``docs/adr/0096``).
     """
 
     player_id: UUID
@@ -69,6 +85,8 @@ class CommitPlayerProfileCommand:
     latitude: float
     longitude: float
     search_radius_km: int
+    gender: Gender
+    gender_preference: GenderPreference
     proposals_opt_in: bool | None
     consent_copy_version: str
     consent_surface: ConsentSurface

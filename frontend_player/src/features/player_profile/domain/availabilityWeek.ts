@@ -6,13 +6,21 @@
  * an ordinary week, not an entry in a diary, and there is nothing here for an hour to be
  * stored in.
  *
- * ## No floor, no ceiling, no cell that refuses
+ * ## No ceiling, and no cell that refuses — but there is a floor
  *
  * Every cell toggles, always, in both directions. That is why this returns a week rather
- * than the three-armed change `toggleSocialTag` returns: there is no state a press could be
- * turned away from, so a `refused` arm would be a type describing a rule the domain does not
- * have. An empty week is a complete answer — *blank means no preference, never leave me
- * out* — and a full one is legal too.
+ * than the three-armed change `toggleSocialTag` returns: there is no state a *press* could
+ * be turned away from, so a `refused` arm would be a type describing a rule the domain does
+ * not have. A full week is legal, and the last tick comes off like any other — the floor
+ * blocks continuing, never correcting, exactly as the tag ceiling blocks adding and never
+ * removing.
+ *
+ * **The floor is one cell of the twenty-one** (ADR-0102), and it binds where a week is
+ * *given*: the step will not continue on an empty one, and the commit refuses one. It is
+ * not served — it is fixed — so unlike the tag bounds it is a rule this side may hold, and
+ * `weekStanding` below is the whole of where it is held. The step draws its control from
+ * that answer and `readyToCommit` reports a missing answer from it, so there is no second
+ * place a floor of one is written and no second place to forget to move it.
  *
  * **There is no bulk selection either**, and it is absent from this file rather than merely
  * unbuilt in the screen: a row, a column or a *weekends* shortcut is a claim about what
@@ -78,10 +86,10 @@ export function toggleCell(
  * What this week amounts to — the two things a screen has anything to say about.
  *
  * A **count**, never a sentence: the words belong to whichever screen is asking, and there
- * are going to be two of them. And deliberately not a `standing` that could block anything —
- * both arms continue. `empty` is its own arm rather than a count of nought because the empty
- * week is the one the product has something to explain about, and a screen that had to
- * compare a number to zero would be re-deciding that here.
+ * are going to be two of them. `empty` is its own arm rather than a count of nought because
+ * the empty week is the one the product has something to say about — and, since ADR-0102,
+ * the one a step will not continue from. A screen that had to compare a number to zero
+ * would be re-deciding the floor every time it drew a control.
  */
 export type WeekStanding =
   { readonly kind: 'empty' } | { readonly kind: 'ticked'; readonly count: number };

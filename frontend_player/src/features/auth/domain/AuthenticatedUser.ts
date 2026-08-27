@@ -51,4 +51,18 @@ export interface Registration {
   readonly email: string;
   readonly nickname: string;
   readonly password: string;
+  /**
+   * The player's own claim that they are an adult — an **attestation**, one boolean, and
+   * never a date of birth
+   * ([ADR-0124](../../../../../docs/adr/0124-the-matcher-gates-account-state-never-age.md)).
+   *
+   * Required rather than optional, and there is no `false` this app sends: the form
+   * refuses before a round trip and the server refuses again by code. Typing it as a
+   * boolean the caller must supply is what makes *forgot to ask* unrepresentable, which is
+   * the only failure an attestation exists to rule out.
+   *
+   * This is the one thing on this interface the platform is not entitled to assume. It is
+   * also **not age verification**: it records that the question was asked and answered.
+   */
+  readonly adultAttested: boolean;
 }

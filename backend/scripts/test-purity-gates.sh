@@ -457,7 +457,7 @@ clean
 
 # ---------------------------------------------------------------------------
 echo
-echo ".importlinter — the imaging and object-store libraries fenced out"
+echo ".importlinter — the imaging, object-store and HTTP-client libraries fenced out"
 
 # ADR-0091 puts photo bytes behind a `PhotoStorage` port and the re-encode behind an
 # `ImageTranscoder` port. "Behind a port" is only true while nothing on the inside can
@@ -514,6 +514,28 @@ TRANSCODER = PillowImageTranscoder()
 '
 expect red imports "a use case reaching the library *through the adapter* is refused" \
   "app.modules.users.application is not allowed to import PIL"
+clean
+
+# ADR-0129 puts the on-court photo check behind the same kind of seam, and it is the
+# one most likely to be reached around: `aiohttp` is already a runtime dependency and
+# "just call the sidecar" is a shorter line than "take a port". Both arms, because the
+# adapter arm is the one a code review passes.
+probe "$MODULE_APPLICATION_PROBE" 'import aiohttp
+
+TIMEOUT = aiohttp.ClientTimeout
+'
+expect red imports "a use case importing the HTTP client is refused" \
+  "app.modules.users.application is not allowed to import aiohttp"
+clean
+
+probe "$MODULE_APPLICATION_PROBE" 'from app.modules.player_profile.infrastructure.clip_photo_review import (
+    ClipSidecarPhotoReview,
+)
+
+REVIEW = ClipSidecarPhotoReview
+'
+expect red imports "a use case reaching the sidecar *through its adapter* is refused" \
+  "app.modules.users.application is not allowed to import aiohttp"
 clean
 
 # The legitimate direction, which is what the fence is for: the adapter is on the

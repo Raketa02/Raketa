@@ -23,7 +23,11 @@ from app.core.config import get_settings  # noqa: E402
 from app.infrastructure.database.base import Base  # noqa: E402
 from app.infrastructure.database.session import get_db  # noqa: E402
 from app.main import create_app  # noqa: E402  (also registers ORM models)
+from app.modules.player_profile.infrastructure.passthrough_photo_review import (  # noqa: E402,E501
+    PassThroughPhotoReview,
+)
 from app.modules.player_profile.presentation.dependencies import (  # noqa: E402
+    get_photo_review,
     get_photo_storage,
 )
 from tests.unit.fake_photo_storage import InMemoryPhotoStorage  # noqa: E402
@@ -64,8 +68,26 @@ def photo_storage():
     return InMemoryPhotoStorage()
 
 
+@pytest.fixture
+def photo_review():
+    """The reviewer every API test runs against, and it concludes nothing.
+
+    Overridden on `client` for the same reason the store is: **no test in this
+    suite needs the photo-review sidecar running.** A CLIP container is a
+    gigabyte of model weights, and a suite that only passes with one up is a
+    suite CI cannot be trusted to run.
+
+    It is a pass-through rather than a flagging stub because a review verdict is
+    not what any of these tests is about — the ones that *are* about it request
+    this fixture and replace it, and the rule itself is asserted over floats in
+    `tests/unit/test_photo_review_policy.py`.
+    """
+
+    return PassThroughPhotoReview()
+
+
 @pytest_asyncio.fixture
-async def client(session_factory, photo_storage):
+async def client(session_factory, photo_storage, photo_review):
     get_settings.cache_clear()
     app = create_app()
 
@@ -79,6 +101,7 @@ async def client(session_factory, photo_storage):
 
     app.dependency_overrides[get_db] = _get_db_override
     app.dependency_overrides[get_photo_storage] = lambda: photo_storage
+    app.dependency_overrides[get_photo_review] = lambda: photo_review
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
@@ -92,4 +115,5 @@ def valid_signup_payload():
         "password1": "hunter22!",
         "password2": "hunter22!",
         "nickname": "alice",
+        "adult_attested": True,
     }

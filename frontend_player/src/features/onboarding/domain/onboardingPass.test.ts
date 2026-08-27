@@ -161,7 +161,7 @@ describe('where the player goes after a sport', () => {
   });
 
   it('does not read whether a Player profile is still owed, because that is a later screen', () => {
-    // The summary used to sit on the far side of the six social steps for a player who had
+    // The summary used to sit on the far side of the seven social steps for a player who had
     // not committed a profile — which put the whole second part between them and the number
     // they had just produced. It comes first for everybody now, and the done screen is
     // where the second part is entered from. This rule answers one question: is there

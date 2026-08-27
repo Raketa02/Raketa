@@ -13,6 +13,7 @@ from app.modules.users.domain.events import (
     UserRegistered,
 )
 from app.modules.users.domain.value_objects import (
+    AdultAttestation,
     Authority,
     Email,
     HashedPassword,
@@ -63,8 +64,16 @@ class User:
         email: Email,
         nickname: Nickname,
         password_hash: HashedPassword,
+        attestation: AdultAttestation,
         occurred_at: datetime,
     ) -> "User":
+        """Open an account, which is the one moment the age rule is enforced.
+
+        The attestation arrives as a type that cannot be constructed from a
+        missing or negative answer, so there is no branch here to forget: a
+        registration either has one or was never built (``docs/adr/0124``).
+        """
+
         user = cls._empty()
         user._record_that(
             UserRegistered(
@@ -76,6 +85,7 @@ class User:
                 is_admin=False,
                 is_active=True,
                 occurred_at=occurred_at,
+                adult_attested=attestation.value,
             )
         )
         return user
@@ -100,6 +110,14 @@ class User:
             self.authority = Authority(event.authority)
             self.is_admin = event.is_admin
             self.is_active = event.is_active
+            # ``adult_attested`` is deliberately not folded into state. It is a
+            # precondition of the account existing, answered once and never
+            # asked again — no later command reads it, and no rule anywhere
+            # varies by it (``docs/adr/0124``). Holding it here would also make
+            # it a field ``_to_domain`` cannot fill, because the projection has
+            # no column for it: a ``User`` read back from the read model would
+            # report *nobody attested* about a player who did. The stream is the
+            # record, and the stream keeps it.
             self.created_at = None
             self.updated_at = None
             self.version += 1

@@ -15,7 +15,10 @@ import { signIn } from './signIn';
 /**
  * The password is sent twice because the backend asks for both halves and checks them
  * server-side. The form checks the match too, so the player is told before a round trip
- * — but the server's copy of the rule is the one that counts.
+ * — but the server's copy of the rule is the one that counts. The **adult attestation**
+ * travels the same way and for the same reason: the box refuses locally, and
+ * `adult_attestation_required` is the server refusing a body this app would not have sent
+ * ([ADR-0124](../../../../../docs/adr/0124-the-matcher-gates-account-state-never-age.md)).
  *
  * If registration succeeds and the sign-in that follows fails, the account exists and
  * the session does not. That is deliberately not "cleaned up": there is no endpoint to
@@ -29,6 +32,10 @@ export async function signUp(registration: Registration): Promise<void> {
     nickname: registration.nickname,
     password1: registration.password,
     password2: registration.password,
+    // Sent as the player gave it. Nothing here coerces it to `true`: a caller that could
+    // pass `false` and have it corrected would be a second place the attestation is
+    // decided, and the whole point is that only the player decides it.
+    adult_attested: registration.adultAttested,
   });
 
   await signIn({ email: registration.email, password: registration.password });

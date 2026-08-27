@@ -77,8 +77,8 @@ Built so far, by the onboarding slice: `Button`, `Card` (+ `PressableCard`), `No
 `Bar`, `ScreenHeader`, `Tag`, `Chip`, `Hairline`, `BottomSheet`, `CloseControl`,
 `DarkCard`, `Row`, `LevelBar`, `ConfidenceRing`, `Popover` (+ `InfoMark`), `InfoGlyph`,
 and by the second part's photos step: `PhotoRow` with `PhotoTile`, `PhotoAddTile` and
-`PhotoPosterTile`, plus `CourtPoster`; and by its availability step: `AvailabilityGrid`.
-Import them from `@/shared/ui`.
+`PhotoPosterTile`, plus `CourtPoster`; and by its availability step: `AvailabilityGrid`
+with `Tick`; and by sign-up's age question: `TickBox`. Import them from `@/shared/ui`.
 
 **Overlays.** `BottomSheet` and `Popover` are both real modals, and 9.1's and 7.6's "it is
 a real modal" is three separate obligations rather than one prop — read `overlay.ts` and
@@ -94,12 +94,25 @@ their values are `theme.size.levelBar` and `theme.size.ring*`, and both keep a f
 Both take a `variant`/repaint for the dark card, because React Native has no colour
 cascade.
 
+**The tick box** (6.11) is one box and one claim beside it, for a statement a player either
+makes or does not. It **borrows the availability cell rather than inventing a second ticked
+thing** — same 20 → 12 geometry, same `Tick`, same fill inversion — and the whole row is the
+target, because a 20pt square is well under the touch minimum and a label outside the
+control is a word beside the thing to hit. It takes `checked` and **has no default for it**:
+a box that arrives ticked is a claim the player never made, and that is the entire reason the
+component exists. The words are the caller's.
+
+`Tick` is 6.8's mark extracted, because two controls now draw it and a second copy of a
+12 × 12 path is exactly the drift this folder exists to prevent. It takes **no props**: a
+tick is only ever drawn on the `ink` fill 6.8's selected state inverts to, so `surface` is
+the only colour there has ever been, and it is held there once with its contrast figure.
+
 `CourtPoster` (6.9) is the third, and the one with **no size at all**: the court is
 described in `viewBox` units and the caller gives it a box, so one drawing serves a 90pt
 tile and a 27pt avatar. It varies in geometry and never in colour, and the framing that
 varies is the _caller's_ — the design system's contract is that one player id produces one
 poster, and which crop an id maps to belongs to the feature, exactly as the ring's ceiling
-belongs to the engine. It, `ConfidenceRing` and the availability grid's tick are what need
+belongs to the engine. It, `ConfidenceRing` and `Tick` are what need
 `react-native-svg`.
 
 **The photo tile** (6.9) is a row before it is a tile: `PhotoRow` is always three slots

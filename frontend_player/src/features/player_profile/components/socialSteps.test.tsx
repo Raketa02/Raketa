@@ -43,61 +43,71 @@ const RATING: Wire['RatingResponse'] = {
 };
 
 /**
- * The six steps in order: what each says it is, what its eyebrow reads, the back control it
- * offers, and the label it continues with.
+ * The seven steps in order: what each says it is, what its eyebrow reads, the back control
+ * it offers, and the label it continues with.
  *
- * **The eyebrow is per step rather than composed from the index**, because two of the six
- * do something else with the line. The first carries its own rule as well as its position —
- * the tag floor belongs on the screen rather than only inside a disabled button. The last
- * gives the position up entirely: *before finishing* already says where the player is, and
- * what that line has to carry is that one question is the whole of what is left.
+ * **The eyebrow is per step rather than composed from the index**, because three of the
+ * seven do something else with the line. Two carry a rule as well as a position — the tag floor
+ * and the week's floor of one both belong on the screen rather than only inside a disabled
+ * button. The last gives the position up entirely: *before finishing* already says where
+ * the player is, and what that line has to carry is that one question is the whole of what
+ * is left.
  *
- * `forward` is *Continue* on four of the six. The location step names what leaving without
+ * `forward` is *Continue* on five of the seven. The location step names what leaving without
  * an area costs, because a location is what search and matchmaking are worked out from —
  * and this walk is the one that leaves without one. The last step finishes rather than
- * continuing: there is nothing in front of it but the commit.
+ * continuing: there is nothing in front of it but the commit. The week's control also says
+ * what is missing while nothing is ticked, but this walk answers every step it is on, so
+ * *Continue* is what it meets.
  */
 const STEPS = [
   {
     path: '/tags',
     title: 'What kind of player are you?',
-    eyebrow: 'Setting up · Step 1 of 6 · Pick 2 to 6',
+    eyebrow: 'Setting up · Step 1 of 7 · Pick 2 to 6',
     back: undefined,
     forward: 'Continue',
   },
   {
     path: '/photos',
     title: 'Your court photos',
-    eyebrow: 'Setting up · Step 2 of 6 · On-court only — up to three',
+    eyebrow: 'Setting up · Step 2 of 7 · On-court only — up to three',
     back: 'Back to What kind of player are you?',
     forward: 'Continue',
   },
   {
     path: '/availability',
     title: 'When do you usually play?',
-    eyebrow: 'Setting up · Step 3 of 6',
+    eyebrow: 'Setting up · Step 3 of 7 · Tick at least one',
     back: 'Back to Your court photos',
     forward: 'Continue',
   },
   {
     path: '/location',
     title: 'Where do you play?',
-    eyebrow: 'Setting up · Step 4 of 6',
+    eyebrow: 'Setting up · Step 4 of 7',
     back: 'Back to When do you usually play?',
     forward: 'Continue without matching',
   },
   {
     path: '/radius',
     title: 'How far should we look for players?',
-    eyebrow: 'Setting up · Step 5 of 6',
+    eyebrow: 'Setting up · Step 5 of 7',
     back: 'Back to Where do you play?',
+    forward: 'Continue',
+  },
+  {
+    path: '/gender',
+    title: 'Who do you want to play with?',
+    eyebrow: 'Setting up · Step 6 of 7',
+    back: 'Back to How far should we look for players?',
     forward: 'Continue',
   },
   {
     path: '/opt-in',
     title: 'May we suggest games?',
     eyebrow: 'The one thing we ask before finishing',
-    back: 'Back to How far should we look for players?',
+    back: 'Back to Who do you want to play with?',
     forward: 'Finish — show me players',
   },
 ] as const;
@@ -108,41 +118,64 @@ const OPT_IN = { yes: 'Yes — suggest games', no: "No — don't suggest games" 
 /**
  * The step this suite gives a real answer to and comes back for.
  *
- * The **first** one, which is also the only one of the five built steps that insists on an
- * answer: photos, the week, the location and the radius may each be walked past untouched,
- * so *an answer that is still there* cannot be asked of any of them. Walking back to step
- * one is also the longest round trip the part has.
+ * The **first** one. The week insists on an answer too since ADR-0102, but photos, the
+ * location and the radius may each be walked past untouched, and walking back to step one
+ * is the longest round trip the part has — which is what this is really measuring.
  */
 const ANSWERED_STEP = 0;
 
 /**
- * The steps of the six that may be walked past with nothing answered at all.
+ * The steps of the seven that may be walked past with nothing answered at all.
  *
- * Four steps, four different reasons. Photos and the week are genuinely optional — no photo
- * is fine, and a blank week means no preference. **The location step is not**: it can be
- * *passed* with nothing, at the cost of search and matchmaking, and this walk is the one
- * that pays it, which is why its forward control is labelled differently. The radius is not
- * optional either — it opens at the **served default**, so walking past it without touching
- * the slider is an answer rather than an absence.
+ * Three steps, three different reasons. Photos are genuinely optional — no photo is a
+ * complete answer to *add some photos*. **The location step is not**: it can be *passed*
+ * with nothing, at the cost of search and matchmaking, and this walk is the one that pays
+ * it, which is why its forward control is labelled differently. The radius is not optional
+ * either — it opens at the **served default**, so walking past it without touching the
+ * slider is an answer rather than an absence.
+ *
+ * **The week left this list**, and it is the only step that ever has. It was here for the
+ * same reason photos are, and ADR-0102 took the reason away: a blank grid was being scored
+ * as a measured zero, so it is asked for rather than guessed at.
+ *
+ * **The gender step never joined it.** Half of that screen *is* pre-answered — the
+ * preference opens unconstrained, which is what every player already holds — but the answer
+ * about the player is required and has no default anybody may give on their behalf.
  */
-const OPTIONAL_STEPS = [1, 2, 3, 4];
+const OPTIONAL_STEPS = [1, 3, 4];
 
 /**
  * Answer whatever step is on screen.
  *
- * Each of the six wants something different — two tags at the floor, nothing at all on the
- * four after it for four different reasons, and one of two answers on the last, which has
- * no default in either direction. This suite is about the walk, so it answers each of them
- * the way that step wants and says nothing else about any of them.
+ * Each of the seven wants something different — two tags at the floor, one cell of the week,
+ * nothing at all on the three that may be walked past, one answer about the player, and one
+ * of two answers on the last,
+ * which has no default in either direction. This suite is about the walk, so it answers
+ * each of them the way that step wants and says nothing else about any of them.
  */
 function answerTheStep(index: number) {
   if (index === STEPS.length - 1) {
     fireEvent.press(screen.getByLabelText(OPT_IN.yes));
     return;
   }
-  // Optional, and each has its own suite: the photos step reaches the device, and the
-  // availability grid ships empty on purpose.
+  // Optional, and each has its own suite: the photos step reaches the device, the location
+  // step can be passed at a cost it names, and the radius opens at the served default.
   if (OPTIONAL_STEPS.includes(index)) return;
+
+  // The week's floor is one of twenty-one, so one cell is the whole of what step three
+  // asks for. Its own suite is where the grid itself is exercised.
+  if (STEPS[index]!.path === '/availability') {
+    fireEvent.press(screen.getByLabelText('Wednesday evening'));
+    return;
+  }
+
+  // The answer about the player, which is the half of that screen with no default. The
+  // preference below it is already `Anyone` and is left alone here — its own suite is where
+  // narrowing, and what narrowing costs, is exercised.
+  if (STEPS[index]!.path === '/gender') {
+    fireEvent.press(screen.getByLabelText('Woman'));
+    return;
+  }
 
   fireEvent.press(screen.getByLabelText('Plays to win'));
   fireEvent.press(screen.getByLabelText('Here to improve'));
@@ -151,11 +184,11 @@ function answerTheStep(index: number) {
 /**
  * Press the forward control of the step at `from`.
  *
- * Named per step rather than as one string: five of the six say *Continue* and one says
+ * Named per step rather than as one string: six of the seven say *Continue* and one says
  * what it costs to leave it empty, and a helper that hunted for either would stop noticing
  * which screen it was on.
  *
- * **Waited for, not read.** Two of the six draw their control from the served options, and
+ * **Waited for, not read.** Two of the seven draw their control from the served options, and
  * a suite that walks the part under fake timers can outrun a query whose cache was
  * collected while nothing was observing it. Waiting is what a player does too.
  */
@@ -222,7 +255,7 @@ afterEach(() => {
 // ---------------------------------------------------------------------------
 
 describe('walking forward through the second part', () => {
-  it('visits the six steps in order, each saying where in the part it is', async () => {
+  it('visits the seven steps in order, each saying where in the part it is', async () => {
     await enterTheSocialSteps();
 
     for (const [index, step] of STEPS.entries()) {
@@ -244,15 +277,13 @@ describe('walking forward through the second part', () => {
   it('ends at the last step, which finishes rather than continuing', async () => {
     await enterTheSocialSteps();
     await continueFromTheFirstStep();
-    for (let step = 2; step < STEPS.length; step += 1) {
-      await continueFrom(step - 1);
-    }
+    await walkOnTo(STEPS.length - 1);
 
     await waitFor(() => expect(screen).toHavePathname('/opt-in'));
     // Nothing in front of it: what follows the last step is the commit, and a commit is not
     // a screen. So there is no *Continue* here — the one control that leaves is the finish.
     expect(screen.queryByLabelText('Continue')).toBeNull();
-    expect(screen.getByLabelText(STEPS[5]!.forward)).toBeTruthy();
+    expect(screen.getByLabelText(STEPS[6]!.forward)).toBeTruthy();
   });
 
   it('will not finish a part that walked past the area, and offers the way back to it', async () => {
@@ -263,15 +294,13 @@ describe('walking forward through the second part', () => {
     // player on step four behind an OS prompt.
     await enterTheSocialSteps();
     await continueFromTheFirstStep();
-    for (let step = 2; step < STEPS.length; step += 1) {
-      await continueFrom(step - 1);
-    }
+    await walkOnTo(STEPS.length - 1);
     await waitFor(() => expect(screen).toHavePathname('/opt-in'));
 
     // Answered either way — so what is holding the finish is not the consent question.
     fireEvent.press(screen.getByLabelText(OPT_IN.yes));
 
-    const finish = screen.getByLabelText(STEPS[5]!.forward);
+    const finish = screen.getByLabelText(STEPS[6]!.forward);
     expect(finish.props.accessibilityState?.disabled).toBe(true);
     // Not merely grey: the reason is on screen, and it is readable without sight.
     expect(finish.props.accessibilityHint).toBe('Set the area you play in to finish');
@@ -298,6 +327,7 @@ describe('walking back through the second part', () => {
     expect(screen.getByLabelText(STEPS[1]!.back!)).toBeTruthy();
 
     for (let index = 2; index < STEPS.length; index += 1) {
+      answerTheStep(index - 1);
       await continueFrom(index - 1);
       await waitFor(() => expect(screen).toHavePathname(STEPS[index]!.path));
       expect(screen.getByLabelText(STEPS[index]!.back!)).toBeTruthy();
@@ -307,9 +337,7 @@ describe('walking back through the second part', () => {
   it('leads from every step to the one before it, all the way back to the first', async () => {
     await enterTheSocialSteps();
     await continueFromTheFirstStep();
-    for (let step = 2; step < STEPS.length; step += 1) {
-      await continueFrom(step - 1);
-    }
+    await walkOnTo(STEPS.length - 1);
     await waitFor(() => expect(screen).toHavePathname('/opt-in'));
 
     for (let index = STEPS.length - 1; index > 0; index -= 1) {
@@ -383,7 +411,7 @@ describe('the draft the part holds', () => {
 
     // The part is the checkpoint unit: **nothing is written until the one commit at the
     // end**, which is why moving between steps is free in both directions and why leaving
-    // restarts at step one. Not one write, in either direction, on any of the six.
+    // restarts at step one. Not one write, in either direction, on any of the seven.
     //
     // A photo is the one thing the part does send, and only when a player adds one — the
     // bytes go up as they are picked and become part of a profile when the commit names
@@ -428,10 +456,7 @@ describe('a link naming a step in the middle of the part', () => {
     await enterTheSocialSteps();
 
     await continueFromTheFirstStep();
-    for (let step = 2; step <= 4; step += 1) {
-      await continueFrom(step - 1);
-      await waitFor(() => expect(screen).toHavePathname(STEPS[step]!.path));
-    }
+    await walkOnTo(4);
 
     expect(screen).toHavePathname('/radius');
   });

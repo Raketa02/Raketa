@@ -1,11 +1,14 @@
-"""The Player profile context's domain events — one stream, keyed on the player.
+"""The Player profile context's domain events — two streams, and what each carries.
 
 Events carry **primitive** fields, so their wire format survives any later
 refactor of the Python types: a tag as its ``str`` id, a photo as its ``str``
-uuid, an availability slot as its code, a location as two floats. Nothing here
-holds a value object, and nothing here holds display text.
+uuid, an availability slot as its code, a location as two floats, a gender and an
+intent as their machine codes. Nothing here holds a value object, and nothing
+here holds display text.
 
-Seven events, and they fall into three kinds.
+Ten events. Nine belong to the profile's own stream, keyed on the player, and
+they fall into three kinds; the tenth belongs to a **second aggregate** in this
+context and is kept here because a context's durable names have one home.
 
 **One creation.** ``PlayerProfileCreated`` is the single commit that ends
 onboarding's second part, carrying every preference at once (``docs/adr/0089``).
@@ -14,10 +17,11 @@ lets the same request arriving twice be recognised as the same request without a
 table beside the stream to keep in step with it. The key is evidence about a
 *write*, not about the player, and it is on the creating event only.
 
-**Five preference changes**, for the profile screen that edits the same values
-later: tags, photos, availability, location and radius. Each carries the whole
-new value rather than a delta, because a preference is small, replay stays a
-fold, and *what was it before* is answered by the event before it.
+**Seven preference changes**, for the profile screen that edits the same values
+later: tags, photos, availability, location, radius, gender and gender
+preference. Each carries the whole new value rather than a delta, because a
+preference is small, replay stays a fold, and *what was it before* is answered by
+the event before it.
 
 **One consent answer.** ``ProposalsOptInAnswered`` carries the answer, the copy
 version shown and the surface — and its own ``occurred_at`` is the moment. It is
@@ -26,10 +30,25 @@ consent history is one sequence with no special first case: a reader that wants
 every answer a player ever gave replays this one event type and needs to know
 nothing about how the profile began.
 
+**One declaration, on its own stream.** ``PlayIntentDeclared`` is keyed
+``(player, sport)`` and is not a fact about the profile at all
+(``docs/adr/0094``) — see ``play_intent_declaration.py``. It is registered under
+``player_profile.play_intent_declared`` because the aggregate lives in this
+context, and it is the reason this module's first line no longer says *one
+stream*.
+
 **Adding a field to ``ProposalsOptInAnswered`` means a new catalog version.**
 Events are a published contract, and this is the event most likely to be asked to
 carry more later — a jurisdiction, a policy id, the surface's own version. The
 existing rows must keep decoding, which is what the version is for.
+
+**Appending an optional field to an event that already has rows does not.**
+``PlayerProfileCreated`` gained ``gender`` and ``gender_preference`` after
+profiles existed, and both are declared last, with defaults, so a row written
+before the question existed still decodes into this class — the pattern
+``UserRegistered.adult_attested`` and ``AssessmentCompleted`` already follow. The
+durable name stays ``player_profile.created`` / v1. The two are not symmetrical
+about what their absence *means*, and each says so on its own field.
 """
 
 from __future__ import annotations
@@ -37,6 +56,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID
+
+from app.modules.player_profile.domain.gender import DEFAULT_GENDER_PREFERENCE
 
 
 @dataclass(frozen=True)
@@ -64,6 +85,24 @@ class PlayerProfileCreated:
     #: request is answerable from the stream itself.
     idempotency_key: str
     occurred_at: datetime
+    #: The player's own answer, as a ``Gender`` code (``docs/adr/0096``).
+    #:
+    #: **Required at profile creation, and yet nullable here — the two are not
+    #: in conflict.** ``None`` is a profile committed before anybody was asked,
+    #: and it says only that. It is emphatically **not** a quieter
+    #: ``PREFER_NOT_TO_SAY``: that value is an answer a player chose, and
+    #: backfilling absence to it would invent the one thing a self-declaration
+    #: must never be invented. Nothing on the write path can produce ``None`` —
+    #: ``PlayerProfile.create`` requires a ``Gender`` — so it is reachable only
+    #: by replaying history, which is exactly what it is for. No backfill.
+    gender: str | None = None
+    #: Who this player is willing to be matched with, as a ``GenderPreference``
+    #: code. Unlike ``gender`` this has a real default and its absence is not a
+    #: separate fact: the preference is optional and a player who has never
+    #: expressed one holds ``ANY`` (``docs/adr/0096`` §2), so a row written
+    #: before the field existed decodes to the same thing an unconstrained
+    #: player answers today.
+    gender_preference: str = DEFAULT_GENDER_PREFERENCE.value
 
     def __post_init__(self) -> None:
         _retuple(self, "social_tags", "photo_ids", "availability")
@@ -128,6 +167,48 @@ class SearchRadiusChanged:
 
 
 @dataclass(frozen=True)
+class GenderChanged:
+    """A new answer to the gender question — *"self-declared, freely changed"*.
+
+    Its own event rather than a re-issued ``PlayerProfileCreated``, for the
+    reason every preference change here has one: the creating event is also the
+    idempotency record of a commit that happens once, and a player editing an
+    answer years later is not making that commit again.
+
+    A preference and not a consent, so it obeys the preference rule: a
+    transition to the value already held records nothing. There is no wording to
+    evidence a gender against and no question of *which words did they answer* —
+    which is precisely the thing ``ProposalsOptInAnswered`` is the exception for.
+    """
+
+    player_id: UUID
+    gender: str
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class GenderPreferenceChanged:
+    """A new durable answer to *who am I willing to be matched with*.
+
+    **Durable, and it has effects the player must be told about at the moment of
+    setting** — narrowing makes them invisible to the excluded side entirely,
+    including to searchers who asked for anybody (``docs/adr/0096`` §3). This
+    event records the change; the sentence is the client's, chosen from a reason
+    code (``docs/adr/0022``). Learning it from silence is not acceptable, and
+    nothing here can enforce that — which is why it is written down here.
+
+    **Seats already accepted are facts, not candidates.** Changing a preference
+    changes future searches and never retroactively evicts somebody who has
+    already said yes, so nothing downstream of this event may treat it as a
+    reason to undo an agreement.
+    """
+
+    player_id: UUID
+    gender_preference: str
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
 class ProposalsOptInAnswered:
     """One answer to the proposals question, with what makes it evidence.
 
@@ -147,6 +228,37 @@ class ProposalsOptInAnswered:
     player_id: UUID
     accepted: bool
     copy_version: str
+    surface: str
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class PlayIntentDeclared:
+    """What kind of game this player wants, in **one** sport.
+
+    The only event on the ``PlayIntentDeclaration`` stream, and the only event in
+    this module that is not about the profile. It carries the pair its stream is
+    keyed on — ``player_id`` and ``sport`` — and **not** the stream id itself:
+    that id is a pure function of the pair (``ids.py``), so carrying it would be
+    a second copy of one fact and a second place for it to disagree.
+
+    ``surface`` is a ``PlayIntentSurface`` code, following ``ConsentSurface``'s
+    precedent in this same context. It is client-asserted, and it is safe to be
+    because nothing branches on it (``docs/adr/0094``).
+
+    A **preference**, so a declaration of the value already held records
+    nothing. That is deliberately the opposite of ``ProposalsOptInAnswered``,
+    which is beside it in this module: there is no wording to evidence an intent
+    against, so re-declaring the same value evidences nothing that the previous
+    event did not already say.
+    """
+
+    player_id: UUID
+    #: The sport, as ``Sport.value``. Never a set and never a mapping: one
+    #: declaration is about one sport, which is what makes *intent does not
+    #: transfer between sports* structural rather than remembered.
+    sport: str
+    intent: str
     surface: str
     occurred_at: datetime
 

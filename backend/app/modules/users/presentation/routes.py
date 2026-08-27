@@ -42,6 +42,7 @@ async def register_user(
             email=payload.email,
             nickname=payload.nickname,
             password=payload.password1,
+            adult_attested=payload.adult_attested,
         )
     )
     return UserResponse.from_domain(user)

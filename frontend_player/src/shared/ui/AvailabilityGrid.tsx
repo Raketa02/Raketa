@@ -48,14 +48,11 @@
  */
 
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
 
 import { theme } from './theme';
+import { Tick } from './Tick';
 
 const grid = theme.size.availability;
-
-/** The tick, drawn in a 12 x 12 box — the design system's own geometry, not a glyph. */
-const TICK = `M 2.5 6.5 L 5 9 L 9.5 3.5`;
 
 export interface AvailabilityGridCell {
   readonly key: string;
@@ -175,20 +172,7 @@ function Cell({ cell }: { readonly cell: AvailabilityGridCell }) {
         pressed ? s.cellPressed : undefined,
       ]}
     >
-      {cell.selected ? (
-        <Svg width={grid.tick} height={grid.tick} viewBox={`0 0 ${grid.tick} ${grid.tick}`}>
-          <Path
-            d={TICK}
-            // `surface` is the app's one white; there is no separate `white` token,
-            // deliberately. On `ink` it is 17,50:1.
-            stroke={theme.color.surface}
-            strokeWidth={grid.tickStroke}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            fill="none"
-          />
-        </Svg>
-      ) : null}
+      {cell.selected ? <Tick /> : null}
     </Pressable>
   );
 }

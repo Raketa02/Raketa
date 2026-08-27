@@ -21,7 +21,8 @@ ports, and Docker images are built separately for development and production.
 - Event-sourced `User` aggregate with durable event stream persistence.
 - Transactional outbox and embedded event-delivery worker.
 - Async SQLAlchemy persistence with Alembic migrations.
-- Player photo upload and retrieval, behind an S3-compatible storage port.
+- Player photo upload and retrieval, behind an S3-compatible storage port, with
+  the on-court check run by a CLIP sidecar over HTTP.
 - Dockerized local development and production runtime images.
 
 ## Architecture
@@ -146,7 +147,7 @@ The main ports are defined as Python protocols:
 | `PendingOutbox` | Fetch and mark outbox delivery rows | `SqlAlchemyOutboxRepository` |
 | `PhotoStorage` | Store and sign URLs for photo bytes | `S3PhotoStorage` (MinIO locally) |
 | `ImageTranscoder` | Re-encode an upload to the stored format | `PillowImageTranscoder` |
-| `PhotoReview` | Whether a photo meets the on-court rule | `PassThroughPhotoReview` |
+| `PhotoReview` | Whether a photo meets the on-court rule | `ClipSidecarPhotoReview` (a container, over HTTP) |
 
 This keeps use cases testable without depending directly on infrastructure.
 
@@ -280,6 +281,8 @@ serving HTTP.
 | `EVENT_DELIVERY_WORKER_ENABLED` | Enables the embedded outbox worker. |
 | `EVENT_DELIVERY_POLL_INTERVAL_SECONDS` | Outbox worker poll interval. |
 | `EVENT_DELIVERY_BATCH_SIZE` | Max outbox rows processed per poll. |
+| `PHOTO_REVIEW_ENDPOINT_URL` | Where the photo-review sidecar is. Server-to-server; no scheme rule. |
+| `PHOTO_REVIEW_TIMEOUT_SECONDS` | The whole budget for one review. Exceeding it fails open. |
 | `PHOTO_SWEEP_ENABLED` | Enables the uncommitted-photo sweep job. |
 | `PHOTO_SWEEP_INTERVAL_SECONDS` | How often the sweep runs. Not the retention window — see *Background Jobs*. |
 | `RUN_MIGRATIONS_ON_STARTUP` | Optional production startup migration toggle. |
@@ -303,6 +306,11 @@ The development compose file starts:
 - `minio`: S3-compatible object storage for player photos, with a persistent
   named volume. The S3 API is on `9000` and the browser console on `9001`.
 - `minio-init`: creates the photo bucket and exits.
+- `photo-review`: the on-court photo check — a CLIP model behind one HTTP route,
+  on `8100`. Built from `docker/photo-review/` with the weights baked in, so the
+  first build is slow and a container start needs no network. **The API does not
+  wait for it**: the client fails open, so a sidecar still loading costs an
+  upload its verdict and never costs a player their photo.
 - `redis`: Redis 7.2, available for future integrations.
 
 The API container waits for Postgres, runs `alembic upgrade head`, then starts
@@ -470,23 +478,54 @@ server-to-server address this API calls, and `PHOTO_STORAGE_PUBLIC_ENDPOINT_URL`
 is the public-network address a *phone* opens. SigV4 signs the host, so a URL
 signed for `http://minio:9000` is invalid everywhere a device can reach.
 
-A `PhotoReview` port exists with a pass-through adapter. Nothing checks the
-on-court rule today, and that is deliberate rather than pending: nobody can see
-another player's photo yet, so a check protects nothing while a false reject
-stops a real player on their first day. When it lands it **soft-warns** — the
-verdict is stored beside the bytes, and a flagged photo is still stored.
-
 `.importlinter` holds the ports open: no domain or application layer may import
-`PIL`, `pillow_heif`, `aioboto3`, `boto3` or `botocore`, directly **or through
-the adapter**, and `make test-gates` drives probes through every arm of that
-contract.
+`PIL`, `pillow_heif`, `aioboto3`, `boto3`, `botocore` or `aiohttp`, directly
+**or through the adapter**, and `make test-gates` drives probes through every arm
+of that contract.
 
 Uploaded-but-uncommitted photos are swept after 24 hours by a scheduled job —
 see *Background Jobs* below.
 
-**Not yet built:** the on-court photo review. `PhotoReview` exists with a
-pass-through adapter that allows everything, and the screen's copy states the
-product rule without claiming an enforcement that is not running (ADR-0091).
+## The On-Court Photo Check
+
+The product rule is that a profile photo shows a racket sport on a court. It is
+checked behind the **`PhotoReview` port**, server-side because a client-side
+check is trivially bypassed, and it **soft-warns rather than hard-blocks**: a
+flagged photo is stored, and the verdict rides on the object as metadata
+([ADR-0091](../docs/adr/0091-photo-storage-behind-a-port.md),
+[ADR-0129](../docs/adr/0129-the-photo-check-is-a-sidecar-the-backend-asks.md)).
+
+**The model runs in a sidecar, not in this process.** `ClipSidecarPhotoReview` is
+a thin `aiohttp` client; `docker/photo-review/` is the service. Its image is
+**3.2 GB** — `torch`, its BLAS stack and 605 MB of weights — and keeping that out
+of `poetry install`, out of every CI run and out of the API image is the whole
+point. The model can also be swapped without a backend release.
+
+**The rule stays here; only the arithmetic goes over the wire.** The sidecar is
+asked *how close is this image to each of these captions* and answers one raw
+cosine similarity per caption. Which captions, how those become a confidence and
+where the line sits are in `app/modules/player_profile/domain/photos.py`, beside
+the size caps and for the same reason: they are behaviour a domain test can
+observe, and a photo flagged on a laptop and allowed in production is exactly
+what the environment rule forbids. `PHOTO_REVIEW_ENDPOINT_URL` and
+`PHOTO_REVIEW_TIMEOUT_SECONDS` are the configuration, and neither can change a
+verdict.
+
+**Every verdict records its evidence** — the model, the prompt-set fingerprint,
+the confidence and the raw similarity vector, in the `review-note` metadata key,
+on allowed photos as much as flagged ones. The threshold shipping today is an
+explicit placeholder; this is what lets a real one be derived later by reading
+stored objects instead of re-running inference over the corpus.
+
+**It fails open.** An unreachable, slow, refusing or unusably-answering sidecar
+yields `allowed` with a note naming which of those it was, from a closed set. A
+reviewer that turned its own outage into a failed upload would refuse a real
+player's first photo for a reason that is not about the photo.
+
+**Nothing a player sees has changed yet.** No route returns a verdict and the
+screen's copy states the product rule without claiming enforcement — the soft
+warning is a `frontend_player/` change and its own ticket. What runs today is the
+measurement that a threshold can eventually be chosen from.
 
 ## Background Jobs
 

@@ -186,7 +186,7 @@ forbidden_modules =
 allow_indirect_imports = true
 
 [importlinter:contract:a-business-layer-cannot-reach-an-imaging-or-object-store-library]
-name = No domain or application layer imports an imaging or object-store library
+name = No domain or application layer imports an imaging, object-store or HTTP-client library
 type = forbidden
 source_modules =
     app.application
@@ -199,4 +199,5 @@ forbidden_modules =
     aioboto3
     boto3
     botocore
+    aiohttp
 allow_indirect_imports = false

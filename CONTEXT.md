@@ -180,8 +180,23 @@ Identity and account state.
 - **RawPassword** — the plaintext at the boundary; 8–128 chars with ≥1 letter and ≥1
   digit. Carrying it as a type is what prevents hashing an unchecked string.
 - **HashedPassword** — non-empty bcrypt hash; the only password form ever persisted.
+- **Adult attestation** — the player's own claim, given at sign-up, that they are an adult.
+  **One boolean, and never a date of birth.** The platform is adults only, and that is a
+  precondition of *holding an account* rather than a gate on who may be shown to whom
+  ([ADR-0124](docs/adr/0124-the-matcher-gates-account-state-never-age.md)) — *may you hold an
+  account* and *may these two be shown to each other* are different questions belonging to
+  different contexts. It is a value object that cannot be constructed from a missing or
+  negative answer, so no registration exists without one.
+  **It is not age verification** and claims nothing of the sort: it records that the question
+  was asked and answered. Nothing downstream ever asks *how old* — only *may they be here* —
+  so there is no age, band or date anywhere in the system to read, and the candidate index
+  fails its build if a date of birth appears.
 - **User events** (durable name / version):
-  - **UserRegistered** — `users.user_registered` / v1 — first event of every stream.
+  - **UserRegistered** — `users.user_registered` / v1 — first event of every stream. Carries
+    the **Adult attestation** as an optional boolean appended after `occurred_at`: `true` is
+    the attestation, and **absent means the account was registered before the question
+    existed**, never a quieter *no*. There is no backfill — inventing a claim nobody made is
+    the one thing an attestation must not do.
   - **UserDisabled** — `users.user_disabled` / v1.
   - **UserPromotedToAdmin** — `users.user_promoted_to_admin` / v1.
 
@@ -189,6 +204,11 @@ Identity and account state.
 - Email and nickname are **unique** — `RegisterUser` reads both before insert and
   raises `EmailAlreadyRegistered` / `NicknameAlreadyTaken` (a domain conflict, not a
   database constraint violation).
+- **An account requires an Adult attestation, and a default is not one.** `RegisterUser`
+  refuses without it — `AdultAttestationRequired`, a 400 — before it reads the email or the
+  nickname, so a caller who answered nothing learns nothing about which of either is taken.
+  The client writes the sentence; the backend only names the code
+  ([ADR-0022](docs/adr/0022-kernel-negative-space-and-constant-homes.md)).
 - **`disable()` is idempotent** — a no-op on an already-inactive user.
 - **An inactive user cannot be promoted** — raises `InactiveUserCannotBePromoted`.
 - `promote_to_admin()` is a no-op if already `ADMIN`.
@@ -320,18 +340,25 @@ of the code because this file asks for them in that order.
   player may hold up to three or none; none is not an absence but a **generated court
   poster**, derived from their identity so it is stable across devices.
 - **Profile commit** — the single idempotent request that ends onboarding's second part,
-  carrying all six answers at once. Nothing is written before it, so leaving mid-part
+  carrying all seven answers at once. Nothing is written before it, so leaving mid-part
   restarts at step 1 ([ADR-0090](docs/adr/0090-onboarding-per-player-checkpoint.md)). Keyed
   by a client-supplied **idempotency key**, which the creating event carries so a retry is
   recognised from the stream itself rather than from a table beside it.
 - **Player profile events** (durable name / version):
   - **PlayerProfileCreated** — `player_profile.created` / v1 — the commit, carrying every
-    preference and the idempotency key. **Not the opt-in.**
+    preference and the idempotency key. **Not the opt-in.** It gained `gender` and
+    `gender_preference` after profiles existed and **stayed v1**: both are appended with
+    defaults so rows written before the question decode unchanged, and an absent `gender`
+    means *committed before anybody was asked* — never a quieter `PREFER_NOT_TO_SAY`, which
+    is an answer somebody chose. Nothing is backfilled.
   - **SocialTagsChanged** — `player_profile.social_tags_changed` / v1.
   - **PhotosChanged** — `player_profile.photos_changed` / v1.
   - **AvailabilityChanged** — `player_profile.availability_changed` / v1.
   - **LocationChanged** — `player_profile.location_changed` / v1.
   - **SearchRadiusChanged** — `player_profile.search_radius_changed` / v1.
+  - **GenderChanged** — `player_profile.gender_changed` / v1 — gender is self-declared and
+    freely changed, so the correction has an event from the day the field does.
+  - **GenderPreferenceChanged** — `player_profile.gender_preference_changed` / v1.
   - **ProposalsOptInAnswered** — `player_profile.proposals_opt_in_answered` / v1 — the
     answer, the copy version shown and the surface; the moment is the event's own.
   - **PlayIntentDeclared** — `player_profile.play_intent_declared` / v1 — the sport, the value
@@ -388,6 +415,11 @@ of the code because this file asks for them in that order.
   writes the value. The platform watches, notices, and deliberately declines to act.
 - **Intent is per sport, and never transfers between them.** The same person is plausibly a
   competitive padel player and a social tennis player — the same reason levels do not transfer.
+- **A narrowed preference costs the player reach, and they are told at the moment of
+  setting.** Mutuality means `WOMEN_ONLY` also makes its holder invisible to men entirely,
+  including men who searched `ANY` — the half nobody would guess. The backend emits the
+  reason; the client says the sentence, and learning it from an empty inbox is not
+  acceptable ([ADR-0096](docs/adr/0096-gender-preference-mutual-gate-invisible-to-the-scorer.md)).
 - **A profile is one per player, and asking whether one exists is a legitimate question.**
   See the narrowed *there is no onboarded player* invariant above, and
   [ADR-0090](docs/adr/0090-onboarding-per-player-checkpoint.md).

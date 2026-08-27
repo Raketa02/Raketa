@@ -17,6 +17,7 @@ export { SocialPhotosStep } from './components/SocialPhotosStep';
 export { SocialAvailabilityStep } from './components/SocialAvailabilityStep';
 export { SocialLocationStep } from './components/SocialLocationStep';
 export { SocialRadiusStep } from './components/SocialRadiusStep';
+export { SocialGenderStep } from './components/SocialGenderStep';
 export { SocialOptInStep } from './components/SocialOptInStep';
 
 export { SOCIAL_STEPS, type SocialStep } from './domain/socialSteps';
@@ -36,6 +37,7 @@ export type {
   ProposalsOptIn,
   Weekday,
 } from './domain/ProfileDraft';
+export type { Gender, GenderPreference } from './domain/gender';
 
 /**
  * Whether a link may drop a player onto a step in the middle of the part. The *decision* is

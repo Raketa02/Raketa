@@ -53,16 +53,20 @@ from app.modules.auth.infrastructure.sqlalchemy_refresh_token_repository import 
     SqlAlchemyRefreshTokenRepository,
 )
 from app.modules.player_profile.domain.ports import (
+    PlayIntentDeclarationRepository,
     ImageTranscoder,
     PhotoReview,
     PhotoStorage,
     PlayerProfileRepository,
 )
+from app.modules.player_profile.infrastructure.event_sourced_play_intent_declaration_repository import (  # noqa: E501
+    EventSourcedPlayIntentDeclarationRepository,
+)
 from app.modules.player_profile.infrastructure.event_sourced_player_profile_repository import (  # noqa: E501
     EventSourcedPlayerProfileRepository,
 )
-from app.modules.player_profile.infrastructure.passthrough_photo_review import (
-    PassThroughPhotoReview,
+from app.modules.player_profile.infrastructure.clip_photo_review import (
+    ClipSidecarPhotoReview,
 )
 from app.modules.player_profile.infrastructure.pillow_image_transcoder import (
     PillowImageTranscoder,
@@ -215,16 +219,24 @@ def build_image_transcoder() -> ImageTranscoder:
     return PillowImageTranscoder()
 
 
-def build_photo_review() -> PhotoReview:
-    """The pass-through reviewer, which allows everything.
+def build_photo_review(settings: Settings) -> PhotoReview:
+    """The on-court check, as a client of the sidecar that holds the model.
 
     The concrete reviewer is chosen here and nowhere else, for the same reason
-    the engine version is: when the real on-court check lands it replaces this
-    line, and no use case, route or test of the upload path changes shape
-    (`docs/adr/0091`).
+    the engine version is — and this line is the whole of what changed when the
+    real check landed: no use case, route or test of the upload path changed
+    shape (`docs/adr/0091`, `docs/adr/0129`).
+
+    Constructing this opens no connection and reaches no model. Both arguments
+    it takes are operational — where the sidecar is, and how long it may take —
+    and neither can change a verdict; the prompts and the threshold are in
+    `player_profile/domain/photos.py` where a domain test can see them.
     """
 
-    return PassThroughPhotoReview()
+    return ClipSidecarPhotoReview(
+        endpoint_url=settings.PHOTO_REVIEW_ENDPOINT_URL,
+        timeout_seconds=settings.PHOTO_REVIEW_TIMEOUT_SECONDS,
+    )
 
 
 def build_player_profile_repository(
@@ -239,3 +251,23 @@ def build_player_profile_repository(
     answer for another's.
     """
     return EventSourcedPlayerProfileRepository(event_store=event_store, events=events)
+
+
+def build_play_intent_declaration_repository(
+    *,
+    event_store: DomainEventStore,
+    events: DomainEventPublisher,
+) -> PlayIntentDeclarationRepository:
+    """Per unit of work, for the same reason the profile's is.
+
+    **Declared before its first caller exists**, which is unusual here and is
+    deliberate: the aggregate and its durable contract landed with #182 so that
+    the index has an event to read, while the write path — the rating tail, the
+    search screen's inline offer and ``PUT /api/v1/play-intents/{sport}`` — is
+    ADR-0094's own build. This line is what that build wires to rather than
+    re-deciding, and it is one line so that the re-decision never happens
+    somewhere else.
+    """
+    return EventSourcedPlayIntentDeclarationRepository(
+        event_store=event_store, events=events
+    )

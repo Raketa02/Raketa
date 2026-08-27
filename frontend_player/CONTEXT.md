@@ -157,12 +157,17 @@ profile editor that later edits the same values.
   _Avoid_: "paused run", "saved run" — both suggest a server-side state, and there is
   none; "abandoned run" — that **is** a server-side transition and is the permanent way
   out, where this is the temporary one.
-- **Social step** — one of the **six** screens of onboarding's **second part**: tags,
-  photos, availability, location, radius, opt-in, in that order. The step names are the
-  route segments, so `/radius` is the screen that asks for a Search radius and there is no
-  second spelling of the six. **The part is the unit, not the step** — back and forward move
-  freely between steps and never cross out of the part, the first step has no back control,
-  and the last is followed by the profile commit rather than by a seventh screen
+- **Social step** — one of the **seven** screens of onboarding's **second part**: tags,
+  photos, availability, location, radius, gender, opt-in, in that order. The step names are
+  the route segments, so `/radius` is the screen that asks for a Search radius and there is
+  no second spelling of the seven. The order is not arbitrary at two points: **location
+  before radius**, because a distance is a distance _from_ somewhere, and **gender with the
+  matching constraints rather than with the tags**, because a preference over who you play
+  with narrows who is put in front of you rather than describing you. **The opt-in is
+  always last** — it is the consent that ends the part and the step that carries the finish.
+  **The part is the unit, not the step** — back and forward move freely between steps and
+  never cross out of the part, the first step has no back control, and the last is followed
+  by the profile commit rather than by an eighth screen
   ([ADR-0090](../docs/adr/0090-onboarding-per-player-checkpoint.md)). _Avoid_: "wizard
   step", "page"; also "onboarding step" for a question in the questionnaire — that is a
   **position** in a run, and the two move by different rules.
@@ -176,8 +181,8 @@ profile editor that later edits the same values.
   deliberate.
 - **Profile commit** — the Profile draft with **every answer present**, and the one request
   that carries it. A distinct type from the draft on purpose: three of the draft's fields
-  are legitimately absent while a player is walking the part, and none of them may be
-  absent in what is sent — so a partial commit is unrepresentable rather than merely
+  are legitimately absent while a player is walking the part — four, since the gender step
+  — and none of them may be absent in what is sent — so a partial commit is unrepresentable rather than merely
   avoided. It is built in one place (`readyToCommit`), which also names what is still
   wanted so the last step can ask for it rather than only refuse. **Where the part stands**
   folds that together with how the one request is going — outstanding · waiting on an upload
@@ -192,6 +197,16 @@ profile editor that later edits the same values.
   connection do. A disabled control is the courtesy; this is the defence. _Avoid_:
   "request id" — that is the per-request correlation id `shared/lib/http` sets, and it is
   deliberately different on every attempt.
+- **Gender preference reach** — what narrowing the preference costs its holder, as a
+  **reason code** rather than a sentence. The gate is mutual, so `WOMEN_ONLY` does not only
+  filter what a player sees — it hides them from every man, including men who searched for
+  anybody, and that is the half nobody would guess. The rule decides _whether there is a
+  cost_; this app's copy says it, on the step, **at the moment of the press**. Learning it
+  from an empty inbox is not acceptable
+  ([ADR-0096](../docs/adr/0096-gender-preference-mutual-gate-invisible-to-the-scorer.md)).
+  _Avoid_: "filter" — a filter is one-directional and this deliberately is not; "privacy
+  setting" — it changes who is matched, not what is shown, and neither value is ever drawn
+  on any surface but the step that takes it.
 - **Photo workbench** — the pictures the photos step is holding, each with the upload it is
   in the middle of, beside the Profile draft and in the same store. Not an answer: a local
   `file://` URI is worthless to the server and an upload in flight has nothing to commit, so
@@ -200,7 +215,7 @@ profile editor that later edits the same values.
   invariant; two would be two things to reset and a sync somebody forgets. _Avoid_: "photo
   state", "upload queue" — the queue is one promise chain inside the step's hook, and it is
   not what this holds.
-- **Profile options** — the **one read** the six steps are drawn from: the Social tag
+- **Profile options** — the **one read** the seven steps are drawn from: the Social tag
   vocabulary with its grouping, how many tags a profile must hold, and the Search radius
   bounds. Reference data owned by TanStack Query, fetched once for the whole part, and the
   reason no client restates a vocabulary or a bound the commit re-validates against. Ids and

@@ -14,6 +14,17 @@ class UserCreateRequest(BaseModel):
     nickname: str = Field(
         ..., min_length=2, max_length=64, pattern=r"^[A-Za-z0-9_.-]+$"
     )
+    adult_attested: bool = Field(
+        ...,
+        description=(
+            "The player's own claim that they are an adult. Required, and "
+            "required to be `true`: the platform is adults only and that is a "
+            "precondition of holding an account. `false` is refused with "
+            "`adult_attestation_required`, and the client writes the sentence. "
+            "**Not a date of birth and not age verification** — this records "
+            "that the question was asked and answered, and nothing more."
+        ),
+    )
 
     @field_validator("password2")
     @classmethod

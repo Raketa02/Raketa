@@ -111,7 +111,10 @@ describe('the served radius bounds', () => {
 });
 
 describe('the body that ends the part', () => {
-  /** A whole part's worth of answers: two tags, two photos, two cells, an area and a yes. */
+  /**
+   * A whole part's worth of answers: two tags, two photos, two cells, an area, an answer
+   * about the player and a yes.
+   */
   const COMMIT: ProfileCommit = {
     socialTagIds: ['PLAYS_TO_WIN', 'HERE_TO_IMPROVE'],
     photoIds: ['photo-a', 'photo-b'],
@@ -122,9 +125,11 @@ describe('the body that ends the part', () => {
     location: { latitude: 41.39, longitude: 2.16 },
     searchRadiusKm: 12,
     proposalsOptIn: { accepted: true, copyVersion: 'proposals-opt-in.v1' },
+    gender: 'woman',
+    genderPreference: 'any',
   };
 
-  it('carries every answer the six steps collected, in one body', () => {
+  it('carries every answer the seven steps collected, in one body', () => {
     expect(toCommitRequest(COMMIT)).toEqual({
       social_tag_ids: ['PLAYS_TO_WIN', 'HERE_TO_IMPROVE'],
       photo_ids: ['photo-a', 'photo-b'],
@@ -135,6 +140,8 @@ describe('the body that ends the part', () => {
       location: { latitude: 41.39, longitude: 2.16 },
       search_radius_km: 12,
       proposals_opt_in: { accepted: true, copy_version: 'proposals-opt-in.v1' },
+      gender: 'WOMAN',
+      gender_preference: 'ANY',
     });
   });
 
@@ -165,6 +172,32 @@ describe('the body that ends the part', () => {
       accepted: false,
       copy_version: 'proposals-opt-in.v1',
     });
+  });
+
+  it('spells each gender answer the way the contract does', () => {
+    // A table and not a cast, for the day parts' reason: `prefer-not-to-say` would not
+    // survive one, and a fourth value on either side must stop the mapper compiling rather
+    // than produce a string the other end has never heard of.
+    expect(toCommitRequest({ ...COMMIT, gender: 'man' }).gender).toBe('MAN');
+    expect(toCommitRequest({ ...COMMIT, gender: 'prefer-not-to-say' }).gender).toBe(
+      'PREFER_NOT_TO_SAY',
+    );
+  });
+
+  it('sends the widest preference as itself rather than leaving the field out', () => {
+    // The field has a default on the wire, so an omission would land the same value — by a
+    // second route, decided on the other side. What an unconstrained player sends is one
+    // decision, made here.
+    expect(toCommitRequest({ ...COMMIT, genderPreference: 'any' }).gender_preference).toBe('ANY');
+  });
+
+  it('spells a narrowed preference the way the contract does', () => {
+    expect(toCommitRequest({ ...COMMIT, genderPreference: 'women-only' }).gender_preference).toBe(
+      'WOMEN_ONLY',
+    );
+    expect(toCommitRequest({ ...COMMIT, genderPreference: 'men-only' }).gender_preference).toBe(
+      'MEN_ONLY',
+    );
   });
 
   it('spells each part of the day the way the contract does', () => {

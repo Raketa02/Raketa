@@ -3,14 +3,16 @@
 Each carries its own wire code, because they arrive on the same status from the
 same endpoint and ask the client for different recoveries: pick a different file,
 pick a smaller file, the file is broken, the photo you asked for is not there —
-and, for the commit, re-read the vocabulary, drop a tag, move the slider, or ask
-the consent question you skipped.
+and, for the commit, re-read the vocabulary, drop a tag, move the slider, tick a
+slot of the week, or ask the consent question you skipped.
 
 **The commit's refusals are 400s, and every one of them is something a client
 already had the information to prevent.** The tag vocabulary, the floor and the
-ceiling and the radius bounds are all served at `GET /player-profile/options`,
-so a picker built from that response cannot produce any of these. They are
-refused here anyway, because a disabled button is not a validation
+ceiling and the radius bounds are all served at `GET /player-profile/options`;
+the availability floor is not served but is *fixed* — exactly one slot, by
+``docs/adr/0102`` — so a client holds it as a constant and knows it just as
+surely. Either way a picker built from what it has cannot produce any of these.
+They are refused here anyway, because a disabled button is not a validation
 (``docs/adr/0089``): it is absent from a replayed request, from an older build,
 and from anything that is not the app.
 
@@ -24,7 +26,7 @@ application, its own 413 will arrive without a code and that is the moment to
 reconsider.
 
 The same reasoning puts every one of the commit's refusals on 400 and gives each
-its own code, so that seven failures of one request stay seven distinct
+its own code, so that eight failures of one request stay eight distinct
 recoveries on the wire.
 """
 
@@ -146,6 +148,36 @@ class SearchRadiusOutOfBounds(BadRequestError):
 
     def __init__(self) -> None:
         super().__init__("This is not a Search radius a player may hold.")
+
+
+class AvailabilityGridEmpty(BadRequestError):
+    """The commit arrived with nothing ticked on the 7 × 3 availability grid.
+
+    **At least one slot of the twenty-one** (``docs/adr/0102``). This is a sport
+    application; when a player usually plays is not optional information, and the
+    minimum is exactly one because one tick is a real answer — a player who only
+    ever plays Saturday mornings must be able to say precisely that.
+
+    Its own code rather than a shapeless 422, for the reason every other commit
+    refusal has one: ``code`` is the only half a client may branch on, and the
+    recovery here is specific and is not any other refusal's — go back to the
+    week and tick a cell.
+
+    **The number is not served.** Unlike the tag floor it is fixed by the record
+    rather than by product, so both sides hold it as a constant, the way the
+    photo cap is held. Nothing in the message repeats it either: a client that
+    reached this has a picker that should not have let it.
+
+    This refuses a *commit*, and only a commit. A player may still clear their week
+    afterwards through ``change_availability``, and a profile committed before this
+    floor existed keeps its blank grid — a blank grid encountered anyway is
+    **absent**, never zero (ADR-0102 part 3).
+    """
+
+    code = "availability_grid_empty"
+
+    def __init__(self) -> None:
+        super().__init__("The availability grid has no slots ticked.")
 
 
 class ProposalsOptInNotAnswered(BadRequestError):

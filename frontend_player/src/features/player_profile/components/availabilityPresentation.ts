@@ -19,10 +19,25 @@
  * the grid and nothing else. Both are kept here for the profile editor, which is where a
  * week is read back rather than given for the first time, and where a count of ticked slots
  * is something a player is actually looking for.
+ *
+ * ## The floor is in the eyebrow, not only in a grey button
+ *
+ * ADR-0102 made one tick of twenty-one required. The tag step's copy already settled where
+ * a rule like that belongs — *"a player should learn how many tags are wanted by reading
+ * the screen, not by being stopped by it"* — so the week states its floor in the chrome the
+ * player reads before they start pressing, and the control names what is missing on top of
+ * that. A dead control with no sentence anywhere is the shape this step must not take.
+ *
+ * **The number is spelled out here**, unlike the tag floor, and that is the backend's call:
+ * the availability minimum is not served, it is fixed, so there is no figure to wait for
+ * and quote. These sentences say *one* in words because a rule a player reads is a sentence
+ * rather than a figure — the rule itself is `weekStanding`'s, and nothing here decides it.
  */
 
 import type { AvailabilitySlot, DayPart, Weekday } from '../domain/ProfileDraft';
 import type { WeekStanding } from '../domain/availabilityWeek';
+
+import { stepEyebrow } from './socialStepPresentation';
 
 /** The full day, for the name a cell announces. Nothing abbreviates when it is spoken. */
 const DAY_NAME: Readonly<Record<Weekday, string>> = {
@@ -91,16 +106,42 @@ export const AVAILABILITY_PROMISE_BODY =
   '— you are never held to it.';
 
 /**
- * The line under the grid — the consequence of a blank week, or the count.
+ * The step's eyebrow, carrying **the rule as well as the position**.
  *
- * **The blank week's line is not a warning and it does not block anything.** It says what
- * blank means before it says what it costs, in that order, because a player who reads only
- * the first half must still come away with the true half: *no preference*, never
- * *unavailable*, and it excludes them from nothing.
+ * The precedent is `socialTagsEyebrow`: a required answer is something a player should meet
+ * by reading the screen rather than by being stopped by it. No served number to wait for
+ * here — the floor is one and fixed — so this is unconditional, where the tag one falls
+ * back to the plain position line until the bounds arrive.
+ */
+export function availabilityEyebrow(): string {
+  return `${stepEyebrow('availability')} · Tick at least one`;
+}
+
+/**
+ * What the continue control says.
+ *
+ * A blocked control names what is missing rather than merely being grey, exactly as the tag
+ * step's does. There is no countdown to run: the floor is one, so the control is either
+ * asking for a tick or it is not.
+ */
+export function availabilityContinueLabel(standing: WeekStanding): string {
+  return standing.kind === 'empty' ? 'Tick at least one slot to continue' : 'Continue';
+}
+
+/**
+ * The line under the grid — what a blank week means, or the count.
+ *
+ * Onboarding does not draw this any more; the profile editor will, and that is a screen
+ * where a week genuinely can be emptied again. **So the blank line no longer names a cost,
+ * because there is not one to name.** It used to say *it leaves no overlap for anyone to
+ * share* — a measured zero invented out of silence, which is precisely the reading ADR-0102
+ * withdrew. A week nobody gave is *absent*: it is left out of the matching rather than
+ * counted against the player, and the half that survives unchanged is the one that always
+ * mattered — never *unavailable*.
  */
 export function availabilityFootnote(standing: WeekStanding): string {
   if (standing.kind === 'empty') {
-    return 'Nothing ticked means no preference, never unavailable. It leaves no overlap for anyone to share.';
+    return 'Nothing ticked means we do not know when you play, never that you are unavailable.';
   }
   const slots = standing.count === 1 ? '1 slot' : `${standing.count} slots`;
   return `${slots} ticked. Overlap with another player is counted from these.`;

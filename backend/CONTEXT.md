@@ -257,13 +257,41 @@ there; they are not repeated here.
   server-to-server address and the URL a *phone* opens is a public-network one, and SigV4
   signs the host. _Avoid_: a public bucket, a long window, signing before checking, signing
   against the internal endpoint.
-- **Photo review port** — the seam the on-court content check will drop into, with a
-  pass-through adapter today. It **soft-warns and never blocks**: the verdict rides on the
-  stored object as metadata, and a flagged photo is still stored. Deferring the checker is
-  safe for a stated reason rather than by neglect — nobody can see another player's photo
-  yet, so a check protects nothing while a false reject stops a real player on their first
-  day. _Avoid_: a `REJECTED` verdict nothing has earned, copy claiming a check that is not
-  running, a client-side check.
+- **Photo review port** — the seam the on-court content check sits behind
+  (`app/modules/player_profile/domain/ports.py`, [ADR-0091](../docs/adr/0091-photo-storage-behind-a-port.md),
+  [ADR-0129](../docs/adr/0129-the-photo-check-is-a-sidecar-the-backend-asks.md)). It runs
+  server-side, because a client-side check is trivially bypassed, and it **soft-warns and
+  never blocks**: the verdict rides on the stored object as metadata, and a flagged photo
+  is still stored. The port says *look at this image and tell me what you conclude*, so
+  nothing above it knows whether the answer came from a model, a pass-through, or a queue
+  of humans. _Avoid_: a `REJECTED` verdict nothing has earned, a third decision value for
+  *the reviewer was unreachable*, copy claiming an enforcement that is not running, a
+  client-side check.
+- **Photo review sidecar** — the container that holds the model, reached over HTTP
+  (`docker/photo-review/`, `ClipSidecarPhotoReview`). It answers **one raw cosine
+  similarity per caption** and holds **no policy**: not the captions, not the temperature,
+  not the threshold, and no concept of a verdict. Those are the backend's, beside the size
+  caps in `player_profile/domain/photos.py`, because they are behaviour a domain test can
+  observe — so the rule is re-tunable with no change to the service and the model is
+  swappable with no backend release. Keeping `torch` out of the API image is what let the
+  check ship ahead of the player card rather than behind it. _Avoid_: a threshold or a
+  prompt in `app/core/config.py`, the sidecar returning a decision, the API waiting for the
+  container to be ready.
+- **Review evidence** — what a verdict records beside its decision, in the `review-note`
+  metadata key: the model, the prompt-set fingerprint, the confidence and the raw
+  similarity vector — on allowed photos as much as flagged ones. It is what makes today's
+  threshold safe to be a **declared placeholder**: a real one is derived later by reading
+  stored objects, without re-running inference over the corpus. The fingerprint is derived
+  from the captions as asked rather than declared, so it cannot describe a set it does not
+  match. _Avoid_: recording only the decision, a hand-maintained prompt-set version, a note
+  a player could ever be shown.
+- **Fails open** — what the reviewer does when it cannot be asked: `allowed`, with a note
+  naming which failure it was, from a closed set (`timeout`, `transport`, `status`,
+  `malformed`). A reviewer that turned its own outage into a failed upload would refuse a
+  real player's first photo for a reason that is not about the photo. The set is closed
+  because *which photos need re-reviewing* has to be a query, not a guess. _Avoid_: an
+  upload that fails when the sidecar is down, an unavailability recorded as an ordinary
+  allowed verdict, a free-text reason.
 - **Decode cap** — the ceiling on an image's *declared* dimensions, read from the header
   before a pixel is allocated, and a **separate question from the byte cap**. Both PNG and
   HEIF compress uniform data enormously, so a file well inside the byte cap can decode to

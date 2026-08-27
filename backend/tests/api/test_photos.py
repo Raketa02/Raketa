@@ -26,12 +26,14 @@ ALICE = {
     "password1": "hunter22!",
     "password2": "hunter22!",
     "nickname": "alice-photos",
+    "adult_attested": True,
 }
 BOB = {
     "email": "bob.photos@example.com",
     "password1": "hunter22!",
     "password2": "hunter22!",
     "nickname": "bob-photos",
+    "adult_attested": True,
 }
 
 

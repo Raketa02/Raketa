@@ -25,17 +25,45 @@ feature, not after:
 `src/app/_layout.tsx` composes the providers and `src/shared/lib/bootstrap` runs the one
 ordered startup sequence. Above that: the HTTP client with its 401 → refresh → retry
 rotation, the `AppError` family, `shared/lib/auth` over the keychain, and three features —
-`auth` (sign up, sign in, session restore), `onboarding` (the entry gate, welcome, the
+`auth` (sign up — including the **adult attestation**, the one question on that form that is
+not about the account — sign in, session restore), `onboarding` (the entry gate, welcome, the
 sports picker, the adaptive question loop, the explained result, and the summary and data
-screens a player leaves through) and `player_profile` (onboarding's **second part**, complete: six
+screens a player leaves through) and `player_profile` (onboarding's **second part**, complete: seven
 steps over a client-held draft, and the one write that ends them — the Social tags picker,
 2 to 6 chips from a served vocabulary, the photos step, up to three court photos or none,
-the availability grid, seven days by three parts of the day and blank until a player ticks
-something, the location step, one foreground fix coarsened to about a kilometre before it is
-held, the radius step, a slider over the served bounds that opens at the served default, the
-Proposals opt-in, never pre-ticked and with a finish that stays closed until the player
+the availability grid, seven days by three parts of the day, blank on arrival and requiring
+one ticked cell of the twenty-one before it continues
+([ADR-0102](../docs/adr/0102-silence-is-never-scored.md)), the location step, one foreground fix coarsened to about a kilometre before it is
+held, the radius step, a slider over the served bounds that opens at the served default, the gender
+step, one required answer about the player and one optional preference over who they are
+matched with ([ADR-0096](../docs/adr/0096-gender-preference-mutual-gate-invisible-to-the-scorer.md)),
+the Proposals opt-in, never pre-ticked and with a finish that stays closed until the player
 answers either way, and the **profile commit**: every answer in one idempotent
 `POST /players/me/profile`, after which the player walks the data screen into the app).
+
+**Sign-up asks whether the player is an adult, and it is an attestation.** The platform is
+adults only, and that is a precondition of _holding an account_ rather than a rule about who
+is shown to whom ([ADR-0124](../docs/adr/0124-the-matcher-gates-account-state-never-age.md)).
+What the form collects is **one boolean — never a date of birth**, and it is **not age
+verification**: there is no date picker anywhere in this app and this is not where the first
+one arrives. The box is never pre-ticked, _Create account_ is never disabled by it, and the
+refusal is a sentence under the box rather than a closed control
+([ADR-0089](../docs/adr/0089-player-profile-context-event-sourced.md)). The same sentence
+renders when the server refuses by `adult_attestation_required` — an older build or a
+replayed request can carry a body this form would not have sent, and _try again_ would then
+be the one thing that is not true.
+
+**The gender step says what narrowing costs, at the moment of the press.** The preference
+is a **mutual** gate: setting _Women only_ does not only filter what a player sees, it hides
+them from every man — including men who searched for anybody. That half is the one nobody
+would guess, and **learning it from an empty inbox is not acceptable**, so the note is
+rendered the instant a narrowing option is chosen and goes away when it is widened again.
+The rule that decides whether there is a cost is `gender.reachOf`; the sentence is
+`genderPresentation`'s. The answer about the player is **required and never pre-selected** —
+_Prefer not to say_ is a choice somebody makes, not a default given on their behalf — while
+the preference beside it opens at _Anyone_, which is the value every profile already
+carries. **Neither value ever comes back out of the API** (ADR-0096 §6), so this step is the
+only surface in the app either one is ever seen on.
 
 **Onboarding is two parts, and the part is the checkpoint unit**
 ([ADR-0090](../docs/adr/0090-onboarding-per-player-checkpoint.md)). Part one is the Skill
@@ -56,12 +84,12 @@ in the same file, because a version identifier with no record of what it named e
 nothing.
 
 **The ratings summary ends the first part, and it is the door into the second.** The order
-is result → **done** → the six steps → the commit → data → the app. The _pass_ routes as far
+is result → **done** → the seven steps → the commit → data → the app. The _pass_ routes as far
 as the summary and no further (`nextDestination`: _is there anything to account for_), and
 the **done screen** reads whether a Player profile is still owed and either enters the second
 part or continues to the data screen — one fact, read once, on the screen that acts on it. A
 player who is already set up — one resuming a run they left behind — passes straight through.
-The summary comes before the six steps rather than after the commit, because it is what a
+The summary comes before the seven steps rather than after the commit, because it is what a
 player just earned and the second part was otherwise standing between them and it; a Skill
 rating is written when the questionnaire completes, not when a profile is committed, so
 nothing on that screen was ever waiting on the commit to be true. Entered with no pass
@@ -75,12 +103,20 @@ request that names one, including the replay a 401 rotation makes. A failed comm
 draft, keeps the player on the step, offers the control that failed as the retry, and claims
 nothing. `commitStanding` and `mayFinish` own when the finish opens — a rule, not a
 `disabled={…}` expression — and `readyToCommit` under them is what makes a partial commit
-unrepresentable. Two things hold the finish shut. **No Location area**: location is a core
+unrepresentable. Three things hold the finish shut. **No Location area**: location is a core
 requirement for discovery, `CommitPlayerProfileRequest` requires it, and the last step asks
 once more with the way back one press away rather than trapping a player on step four behind
-an OS prompt. **A photo still going up**: uploads outlive the step that started them, and the
+an OS prompt. **A blank availability grid**: the week has a floor of one cell since
+ADR-0102, so silence about when somebody plays is asked for rather than scored as a zero —
+step three already refuses to continue on one, and this is the same rule read at the end.
+**A photo still going up**: uploads outlive the step that started them, and the
 body names photos by the ids the server gave back, so committing mid-upload would silently
 drop a picture the player watched arrive. That one asks for nothing and opens itself.
+
+A failed commit whose `code` names an answer — `availability_grid_empty` today — is drawn as
+that answer rather than as _try again_, with the control back to the step that takes it: the
+commit re-validates every rule a picker enforced, and re-sending the identical body would
+fail identically.
 
 `src/shared/lib/platform/` owns everything the app knows about the device: the Query
 focus and online wirings, and two **platform ports** — `LocationPort` over `expo-location`
@@ -106,8 +142,9 @@ has gone out, and buying that would mean a second transport.
 `src/shared/ui/` holds the design-system primitives built so far — the cards, note, row,
 hairline, button, tag, chip, bar, header, the overlays and drawn objects the result screen
 needed (bottom sheet, popover, level bar, confidence ring), the photo tile with its
-generated court poster, the availability grid and the radius slider; the rest arrive with
-the features that need them. **Build outward from the structure below** rather than reaching
+generated court poster, the availability grid and the radius slider, and the tick box with
+the tick both it and the grid draw; the rest arrive with the features that need
+them. **Build outward from the structure below** rather than reaching
 for `create-expo-app` — its default template contradicts ADR-0009 — and copy the shape of
 `src/features/auth/` or `src/features/onboarding/` rather than inventing a second one.
 

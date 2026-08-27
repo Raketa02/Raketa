@@ -307,9 +307,11 @@ export interface paths {
          *
          *     **Every rule the picker enforced is re-validated here.** The tag vocabulary, the tag floor and ceiling and the radius bounds are all served by `GET /player-profile/options` so a client can build controls that cannot produce an illegal value — and a disabled button is not a validation. Photo ids are checked to exist *and* to belong to the caller.
          *
-         *     **An empty availability grid is accepted.** Blank means no preference; it is never read as *leave me out*, and it excludes the player from nothing.
+         *     **The availability grid is required**, at least one of its twenty-one cells. Silence about when a player usually plays is never scored as a zero, so it is asked for rather than guessed at. The minimum is exactly one and is not served — it is fixed, and a client holds it as a constant.
          *
          *     **The proposals opt-in has no default.** Send the player's actual answer; `null` is refused rather than treated as a no. The answer is recorded with the moment, the copy version shown and the surface, because consent is evidenced rather than asserted.
+         *
+         *     **`gender` is required and `gender_preference` is not.** The first is asked once, here, with `PREFER_NOT_TO_SAY` a first-class answer — there is no unanswered state to send, so a missing or unknown value is a 422 rather than a coded refusal. The second defaults to `ANY`, is durable, and gates **both directions**: narrowing it also hides this player from the side it excludes. Neither value ever comes back out of this API.
          */
         post: operations["commit_player_profile_api_v1_players_me_profile_post"];
         delete?: never;
@@ -438,11 +440,17 @@ export interface components {
          * CommitPlayerProfileRequest
          * @description Every answer from onboarding's second part, in one body.
          *
-         *     Photos and availability default to empty because both are legitimately
-         *     blank: a player may hold no photos, and **a blank week means "no preference"
-         *     and never "leave me out"**. Nothing else has a default — a location, a
-         *     radius, a tag selection and an answer to the proposals question are all
-         *     things this request must actually carry.
+         *     **Photos are the only field with a default**, because holding none is a
+         *     legitimate answer to *add some photos*. Everything else is something this
+         *     request must actually carry — a location, a radius, a tag selection, an
+         *     answer to the proposals question, and **a week with something ticked in it**
+         *     (``docs/adr/0102``).
+         *
+         *     The week's *floor* is not spelled here, and that is the same decision the tag
+         *     selection's is: an empty list passes this schema and is refused by the domain
+         *     with ``availability_grid_empty``, so the client gets a code it can branch on
+         *     and a recovery it can offer, rather than a 422 that can only say some field
+         *     somewhere was wrong.
          */
         CommitPlayerProfileRequest: {
             /**
@@ -457,9 +465,9 @@ export interface components {
             photo_ids?: string[];
             /**
              * Availability
-             * @description The cells of the week this player ticked. **An empty list is a valid answer** and means no preference — it is never read as unavailable. Repeated cells are collapsed.
+             * @description The cells of the week this player ticked. **At least one of the twenty-one** — an empty list is refused with `availability_grid_empty`. The minimum is exactly one and is not served: it is fixed, so a client holds it as a constant. Repeated cells are collapsed, and the floor is counted after that.
              */
-            availability?: components["schemas"]["AvailabilitySlotResource"][];
+            availability: components["schemas"]["AvailabilitySlotResource"][];
             location: components["schemas"]["LocationAreaResource"];
             /**
              * Search Radius Km
@@ -467,6 +475,15 @@ export interface components {
              */
             search_radius_km: number;
             proposals_opt_in: components["schemas"]["ProposalsOptInRequest"];
+            /** @description The player's own answer, asked once. Required — `PREFER_NOT_TO_SAY` is a first-class answer and is what a player who does not want to say sends; there is no way to send nothing. It matches only unconstrained searches, which costs its holder reach, and the client is what says so at the moment of asking. */
+            gender: components["schemas"]["Gender"];
+            /**
+             * @description Who this player is willing to be matched with. Optional, and `ANY` when it is not sent.
+             *
+             *     **It is mutual and durable.** It governs what reaches this player as well as what this player sees, so narrowing it makes them invisible to the excluded side entirely — including to searchers who asked for anybody. The client must say so at the moment of setting; learning it from silence is not acceptable. A single search may narrow this further and nothing may widen past it.
+             * @default ANY
+             */
+            gender_preference: components["schemas"]["GenderPreference"];
         };
         /**
          * ConfidenceReasonResponse
@@ -556,6 +573,32 @@ export interface components {
             /** Level */
             level: number;
         };
+        /**
+         * Gender
+         * @description What a player says about themselves — self-declared, freely changed.
+         *
+         *     Per person and never per sport, which is what keeps it on ``PlayerProfile``
+         *     rather than beside a rating (ADR-0089's cardinality, unchanged).
+         *
+         *     This is **a statement about which searches a player wishes to appear in**,
+         *     not a ruling by the platform on who anybody is. A player whose identity is
+         *     not on this list picks the answer that puts them where they want to be seen,
+         *     or takes ``PREFER_NOT_TO_SAY`` and appears in unconstrained searches only.
+         *     The platform adjudicates nothing.
+         * @enum {string}
+         */
+        Gender: "WOMAN" | "MAN" | "PREFER_NOT_TO_SAY";
+        /**
+         * GenderPreference
+         * @description Who a player is willing to be matched with — durable, not per search.
+         *
+         *     **Durable rather than per-search because the gate is mutual.** It has to be
+         *     evaluated against a player when somebody *else* searches and they are not
+         *     present, and a per-search setting cannot bind that direction at all. A
+         *     per-search override may **narrow** this, never widen past it.
+         * @enum {string}
+         */
+        GenderPreference: "WOMEN_ONLY" | "MEN_ONLY" | "ANY";
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -681,6 +724,17 @@ export interface components {
          *
          *     The same body whether the commit created the profile or replayed an earlier
          *     one, so a client that only wants its profile needs no branch on the status.
+         *
+         *     **No gender value comes back out**, and that is a rule rather than an
+         *     oversight (``docs/adr/0096`` §6): a preference crosses the wire *in*, on a
+         *     search; no response shape carries a gender out and no card renders one.
+         *     This body is only ever the caller's own profile, so nothing here would leak
+         *     a third party's answer — the field is left off anyway, because the moment
+         *     one response shape carries it, *which* shapes may is a judgement call made
+         *     per endpoint instead of a line nobody has to re-argue. Nothing reads it back
+         *     today: onboarding sends it once, and there is no profile editor. When one
+         *     exists, adding it here is an addition to this document and ADR-0096's
+         *     ticket's to make.
          *
          *     **Fields are only ever added.** A shipped mobile app parses this document for
          *     months after it stops being built.
@@ -1031,6 +1085,11 @@ export interface components {
             password2: string;
             /** Nickname */
             nickname: string;
+            /**
+             * Adult Attested
+             * @description The player's own claim that they are an adult. Required, and required to be `true`: the platform is adults only and that is a precondition of holding an account. `false` is refused with `adult_attestation_required`, and the client writes the sentence. **Not a date of birth and not age verification** — this records that the question was asked and answered, and nothing more.
+             */
+            adult_attested: boolean;
         };
         /**
          * UserResponse
@@ -1594,6 +1653,8 @@ export interface operations {
              *     `duplicate_social_tag` — the same tag id arrived twice.
              *
              *     `search_radius_out_of_bounds` — outside the served range, or off its step.
+             *
+             *     `availability_grid_empty` — nothing ticked on the week. At least one of the twenty-one cells; the minimum is exactly one and is not served.
              *
              *     `proposals_opt_in_not_answered` — the answer was `null`. Ask the question; do not send `false` on the player's behalf.
              *

@@ -3,6 +3,18 @@
 - **Status:** Accepted
 - **Date:** 2026-08-25
 
+> **Superseded on the photo check, 2026-08-27, by
+> [ADR-0129](0129-the-photo-check-is-a-sidecar-the-backend-asks.md): the deferral is over and
+> the checker is built.** It runs in a sidecar reached over HTTP rather than in this process,
+> which is what deleted the dependency cost the deferral was actually resting on — so it landed
+> *ahead* of the player card rather than behind it, in a tree that is measure-only by
+> construction. What that record does **not** change: the `PhotoReview` port and its seam, the
+> soft-warn-never-hard-block ruling, the CLIP-over-YOLO licence and model-fit findings, and the
+> `PassThroughPhotoReview` adapter, which stays as the standing proof that the seam worked — the
+> checker arrived and no use case, route or test of the upload path changed shape. The
+> amendment below is kept as written, because how the expiry date was reasoned about is the
+> useful part of it.
+
 > **Amended 2026-08-26 by [ADR-0107](0107-the-player-card-is-assembled-outside-the-engine.md):
 > the condition this record deferred the photo check on now has an expiry date, and it is the
 > day the player card ships.** The argument below is *"nobody can see another player's photo

@@ -6,11 +6,36 @@ preference is ever expressed here, and it is a **preference, not a promise** —
 ticked slot is never a commitment, a hold, or a bookable time, which is why
 nothing in this module has a duration, a date or a timezone in it.
 
-**Blank is a valid answer and means "no preference".** An empty grid is not a
-player who is never free and not an unanswered question: it scores no overlap and
-it excludes the player from nothing. That is why the grid has no minimum, and why
-the commit accepts one with no slots at all while refusing a selection of one tag
-(``docs/adr/0089``).
+**The grid is required, and its floor is exactly one cell of the twenty-one**
+(``docs/adr/0102``). This is a sport application; when a player usually plays is
+not optional information. One tick is a real answer — a player who only ever
+plays Saturday mornings must be able to say precisely that, and the near-total
+absence of overlap that follows is a **measured** near-zero. A higher minimum
+would be the platform telling people what their week looks like.
+
+**A blank grid met anyway is *absent*, never zero.** Requiring the field at
+commit does not make blank grids impossible: a player may clear their week
+afterwards, and profiles committed before the floor existed still hold one.
+Where one is encountered, the matcher's availability term stands down with no
+evidence rather than scoring a nought — because the player never said they are
+never free, they said nothing, and *an unanswered field is never a negative
+filter*. That neighbour survives and is now kept by construction rather than by
+weighing: the floor removes the unanswered case at the only place a player
+answers.
+
+Which is why the floor lives in ``of_cells`` and nowhere else. ``of``, ``blank``
+and ``from_codes`` must keep taking an empty grid, or a rule adopted today would
+retroactively refuse to rehydrate a profile that was legal when it was written.
+
+``social_tags`` states that split as *"the write path refuses; the fold accepts"*,
+and here it is narrower than that: **the commit path refuses.**
+``PlayerProfile.change_availability`` is a write too, and it accepts a blank grid
+deliberately — a player may clear their week after committing, and the minimum
+binds the answer they are asked for rather than every later edit of it.
+
+**The floor is not served.** Unlike the tag floor and ceiling it is fixed by the
+record rather than by product, so a client holds it as a constant the way it
+holds the photo cap, and ``GET /player-profile/options`` does not carry it.
 
 **The day is the kernel's ``IsoWeekday``**, not a weekday enum of this context's
 own. Monday-first is already what ISO means, and a second spelling of the days of
@@ -33,6 +58,7 @@ from enum import StrEnum
 from typing import Final, Iterable
 
 from app.kernel import IsoWeekday, invariant, iso_weekday
+from app.modules.player_profile.domain.errors import AvailabilityGridEmpty
 
 #: How many days the grid covers. Named rather than written as ``7`` at each use
 #: so that "the ordinary week" is one fact and not four.
@@ -142,13 +168,21 @@ class AvailabilityGrid:
 
     @classmethod
     def blank(cls) -> "AvailabilityGrid":
-        """No preference. The answer a player who ticked nothing gave."""
+        """A week with nothing ticked. **Not a way past the floor.**
+
+        No commit path reaches this: ``of_cells`` is what a player's answer
+        arrives through and it refuses an empty grid. What this is for is a grid
+        that has to exist without being an answer — a profile that held one
+        before the floor did, and a player who clears their week afterwards. A
+        grid built here means *we do not know*, and the matcher reads it that way
+        (ADR-0102 part 3).
+        """
 
         return cls()
 
     @classmethod
     def of_cells(cls, cells: Iterable[tuple[int, str]]) -> "AvailabilityGrid":
-        """The grid these ``(weekday, part)`` pairs make.
+        """The grid these ``(weekday, part)`` pairs make. **At least one.**
 
         The command path's entry point, so that a *command* carries primitives
         from the boundary and the domain is what turns them into slots
@@ -156,12 +190,25 @@ class AvailabilityGrid:
         pair that is not a cell, because the boundary schema constrains the day
         to 1–7 and the part to the three there are: reaching this with anything
         else means a caller inside the application built it.
+
+        **This is the one place the floor is enforced**, because it is the one
+        place a player's own answer arrives. Nothing ticked is refused with
+        ``AvailabilityGridEmpty`` — a *refusal* rather than a broken
+        precondition, because it is a legitimate thing for a client to send and
+        the client's recovery is to go back to the week and tick a cell.
+
+        Counted **after** the fold, so a client that sent Tuesday morning three
+        times is at one and not at three: the count is of cells, which is what
+        the player ticked, and never of what arrived.
         """
 
-        return cls.of(
+        grid = cls.of(
             AvailabilitySlot(day=iso_weekday(day), part=_part(part))
             for day, part in cells
         )
+        if not grid.slots:
+            raise AvailabilityGridEmpty()
+        return grid
 
     @classmethod
     def from_codes(cls, codes: Iterable[str]) -> "AvailabilityGrid":

@@ -1,5 +1,5 @@
 /**
- * The end of onboarding: the six steps, the one write that ends them, and the app.
+ * The end of onboarding: the seven steps, the one write that ends them, and the app.
  *
  * Driven through the real route tree with only the socket faked, like every other flow suite
  * here — the router, the http client, the mappers, the use case, the hooks, the draft and the
@@ -8,7 +8,7 @@
  * they left them, presses finish once, and every one of those answers reaches the server in a
  * single request that cannot be made twice.
  *
- * The walk itself — the order of the six, the back control, the draft surviving a round trip
+ * The walk itself — the order of the seven, the back control, the draft surviving a round trip
  * — is `socialSteps.test.tsx`. This one is about the commit: what is in the body, what the
  * key protects, what a failure leaves behind, and where the player ends up.
  */
@@ -141,7 +141,7 @@ async function enterTheSocialSteps() {
   await waitFor(() => expect(screen).toHavePathname('/tags'));
 }
 
-/** Two tags at the floor, which is the only step of the six that insists on an answer. */
+/** Two tags at the floor, which is the only step of the seven that insists on an answer. */
 async function answerTheTags() {
   fireEvent.press(await screen.findByLabelText('Plays to win'));
   fireEvent.press(screen.getByLabelText('Here to improve'));
@@ -155,7 +155,10 @@ async function answerTheTags() {
  * No photo, because this walk adds none and none is a complete answer. One cell of the week,
  * because a blank one is an answer too and a body carrying an empty list proves less than
  * one carrying the cell that was actually ticked. The area from the device. The radius left
- * at the served default, which is an answer the step wrote when it opened.
+ * at the served default, which is an answer the step wrote when it opened. *Woman* on the
+ * gender step, because that half of it has no default and the part cannot finish without an
+ * answer; the preference beside it is left at its opening `Anyone`, which is what every
+ * player holds until somebody narrows it.
  */
 async function walkOnToTheLastStep() {
   fireEvent.press(screen.getByLabelText('Continue'));
@@ -170,6 +173,10 @@ async function walkOnToTheLastStep() {
   await waitFor(() => expect(screen).toHavePathname('/radius'));
 
   fireEvent.press(await screen.findByLabelText('Continue'));
+  await waitFor(() => expect(screen).toHavePathname('/gender'));
+
+  fireEvent.press(screen.getByLabelText('Woman'));
+  fireEvent.press(screen.getByLabelText('Continue'));
   await waitFor(() => expect(screen).toHavePathname('/opt-in'));
 }
 
@@ -206,13 +213,13 @@ afterEach(() => {
 // ---------------------------------------------------------------------------
 
 describe('finishing the part', () => {
-  it('sends every answer from all six steps in one request', async () => {
+  it('sends every answer from all seven steps in one request', async () => {
     await reachTheFinish();
 
     fireEvent.press(finish());
     await waitFor(() => expect(commits()).toHaveLength(1));
 
-    // One write, not six. A partial commit — the tags saved and the consent lost — is the
+    // One write, not seven. A partial commit — the tags saved and the consent lost — is the
     // worst outcome this part has available to it, which is why the whole of it is one body.
     expect(bodyOf(commits()[0])).toEqual({
       social_tag_ids: ['PLAYS_TO_WIN', 'HERE_TO_IMPROVE'],
@@ -227,6 +234,11 @@ describe('finishing the part', () => {
       // player walked straight past is still a screen they answered.
       search_radius_km: 10,
       proposals_opt_in: { accepted: true, copy_version: 'proposals-opt-in.v2' },
+      gender: 'WOMAN',
+      // The widest preference, sent as itself for the reason the empty photo list is: the
+      // field has a default on the wire, and an omission would land the same value by a
+      // second route decided on the other side.
+      gender_preference: 'ANY',
     });
   });
 
@@ -297,12 +309,16 @@ describe('finishing the part', () => {
     // way back has to be the one that reaches the server.
     await reachTheFinish();
 
+    fireEvent.press(screen.getByLabelText('Back to Who do you want to play with?'));
+    await waitFor(() => expect(screen).toHavePathname('/gender'));
     fireEvent.press(screen.getByLabelText('Back to How far should we look for players?'));
     await waitFor(() => expect(screen).toHavePathname('/radius'));
     // One served step further out, through the control a player who cannot drag uses.
     fireEvent(await screen.findByLabelText('How far to look'), 'accessibilityAction', {
       nativeEvent: { actionName: 'increment' },
     });
+    fireEvent.press(screen.getByLabelText('Continue'));
+    await waitFor(() => expect(screen).toHavePathname('/gender'));
     fireEvent.press(screen.getByLabelText('Continue'));
     await waitFor(() => expect(screen).toHavePathname('/opt-in'));
 
@@ -469,6 +485,24 @@ describe('a failed commit', () => {
     expect(screen).toHavePathname('/opt-in');
     expect(commits()).toHaveLength(1);
   });
+
+  it('asks for the week itself when the server refuses an empty one', async () => {
+    // The step will not continue on a blank grid, and the commit refuses one anyway — a
+    // disabled control is absent from a replayed request and from an older build. When the
+    // refusal arrives, *try again* is the one sentence that is not true: the identical body
+    // fails identically, so the screen names the answer and offers the step that takes it.
+    await reachTheFinish();
+    transport.on('POST', COMMIT_PATH, () => errorResponse(400, 'availability_grid_empty'));
+
+    fireEvent.press(finish());
+
+    expect(await screen.findByText(/One ticked slot of the twenty-one is enough/)).toBeTruthy();
+    expect(screen.queryByText(/Try again — this can only ever set you up once/)).toBeNull();
+
+    // And the way back, which is the half a player cannot do without.
+    fireEvent.press(screen.getByLabelText('Set when you usually play'));
+    await waitFor(() => expect(screen).toHavePathname('/availability'));
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -499,7 +533,7 @@ describe('once the commit has landed', () => {
     await commitAndLeave();
 
     // Nothing behind the data screen: every move inside the part replaced, so there is no
-    // history entry holding one of the six, and the part itself is over.
+    // history entry holding one of the seven, and the part itself is over.
     expect(screen.queryByLabelText(/^Back to /)).toBeNull();
 
     fireEvent.press(screen.getByLabelText('Start playing'));
@@ -583,11 +617,11 @@ describe('arriving from the last result', () => {
     result: RESULT,
   };
 
-  it('shows the ratings the walk produced, and only then the six steps', async () => {
+  it('shows the ratings the walk produced, and only then the seven steps', async () => {
     // The one walk that proves the order. A player is owed the number they just spent a
     // minute per sport producing **before** anything else is asked of them, so the result
     // leads to the summary, the summary is the door into the second part, and the commit at
-    // the end of the six lands on what Raketa keeps.
+    // the end of the seven lands on what Raketa keeps.
     stubGate();
     stubProfileOptions(transport);
     stubLocation(fakeLocation({ fix: FIX }));

@@ -7,12 +7,19 @@
  * anywhere in this product, and a precision the domain has nowhere to put would be a
  * promise the player is then held to.
  *
- * ## It ships empty, and an empty week continues
+ * ## It ships empty, and one tick is required to leave it
  *
- * Nothing is ticked on arrival and nothing is ticked on the player's behalf. A pre-seeded
- * slot is a claim the player never made that silently becomes a matchmaking input — so the
- * grid starts blank and the forward control is enabled at zero. **Blank means no preference,
- * never unavailable**, and it excludes the player from nothing.
+ * Nothing is ticked on arrival and nothing is ticked on the player's behalf — a pre-seeded
+ * slot is a claim the player never made that silently becomes a matchmaking input. That is
+ * unchanged and is not the same rule as the floor: **the grid starts blank, and it does not
+ * continue blank.**
+ *
+ * ADR-0102 gave the week a floor of one of the twenty-one, because a blank grid was being
+ * read as a *measured* zero by a matcher nobody had told, on a question nobody was ever
+ * asked. So the forward control is closed at zero — and, because a required answer is not a
+ * nudge, the screen says why: the eyebrow carries the rule and the control names what is
+ * missing. That is the tag step's settled shape, and it is settled for the same reason —
+ * a player facing a dead control deserves the sentence that explains it.
  *
  * **The screen is the grid, and nothing else.** The line under the title, the note about
  * what the week is for, and the footnote under the grid were all cut: seven rows of three
@@ -42,11 +49,23 @@ import { useRouter } from 'expo-router';
 import { AvailabilityGrid, Button } from '@/shared/ui';
 
 import type { AvailabilitySlot } from '../domain/ProfileDraft';
-import { DAY_PARTS, WEEKDAYS, toggleCell, isTicked } from '../domain/availabilityWeek';
+import {
+  DAY_PARTS,
+  WEEKDAYS,
+  toggleCell,
+  isTicked,
+  weekStanding,
+} from '../domain/availabilityWeek';
 import { stepAfter } from '../domain/socialSteps';
 import { useProfileDraft } from '../store/profileDraft.store';
 
-import { cellLabel, dayLabel, dayPartHead } from './availabilityPresentation';
+import {
+  availabilityContinueLabel,
+  availabilityEyebrow,
+  cellLabel,
+  dayLabel,
+  dayPartHead,
+} from './availabilityPresentation';
 import { SocialStepLayout } from './SocialStepLayout';
 import { SOCIAL_STEP_PATH } from './socialStepRoutes';
 import { stepCopy } from './socialStepPresentation';
@@ -59,20 +78,27 @@ export function SocialAvailabilityStep() {
   // Where continuing leads is the step order's answer, not this screen's.
   const next = stepAfter('availability');
   const week = draft?.availability ?? [];
+  // The floor is `weekStanding`'s to report and this screen's only to draw. Comparing a
+  // length to zero here would be the rule decided a second time, in a `disabled={…}`.
+  const standing = weekStanding(week);
 
   const press = (cell: AvailabilitySlot) => answer({ availability: toggleCell(week, cell) });
 
   return (
     <SocialStepLayout
       step="availability"
+      // The rule travels with the position, so a player meets the floor by reading the
+      // screen rather than by being stopped by it.
+      eyebrow={availabilityEyebrow()}
       action={
         next === undefined ? null : (
-          // Never disabled, at zero slots or at twenty-one. Blank is an answer — no
-          // preference — and a control that made a player tick something to get past would
-          // turn that into a requirement nobody decided on.
+          // Closed at zero and open from the first tick — never at a ceiling, because
+          // twenty-one is a legal answer and the last cell comes off like any other. The
+          // label says what is missing rather than leaving the control merely grey.
           <Button
-            label="Continue"
+            label={availabilityContinueLabel(standing)}
             size="lg"
+            disabled={standing.kind === 'empty'}
             onPress={() => router.replace(SOCIAL_STEP_PATH[next])}
             accessibilityHint={`Goes to ${stepCopy(next).title}`}
           />

@@ -22,6 +22,8 @@
  * not happen is the one thing this screen must never do.
  */
 
+import type { AppError } from '@/shared/errors';
+
 import type { MissingAnswer } from '../domain/profileCommit';
 
 /** What the finish promises, once there is something for it to promise. */
@@ -76,6 +78,12 @@ export interface MissingAnswerCopy {
 /**
  * What the last step says about each answer it cannot finish without.
  *
+ * **The week is here because ADR-0102 made it an answer rather than a blank.** It is the
+ * one entry a player can reach by going forward rather than by skipping: the availability
+ * step will not continue on an empty grid, so an unticked week at the end means the draft
+ * was carried past that step some other way — a build from before the floor, a restored
+ * draft — and the honest thing is to name the step and offer the way back to it.
+ *
  * **The area is the one a player actually meets.** The location step can be left with none —
  * it names that cost on the control that leaves it, and this is where the cost is
  * collected: search and matchmaking have one spatial input, and a profile without it takes
@@ -88,6 +96,12 @@ export interface MissingAnswerCopy {
  * radius means that step was never reached at all. It gets a real sentence anyway, because a
  * screen that only handles the case somebody predicted is a screen with a blank state.
  *
+ * **The gender answer is here for the reason the week is**: the gender step will not
+ * continue without one, so an absent answer at the end means the draft reached this screen
+ * some other way. It names the answer about the player and never the preference beside it —
+ * that one is unconstrained until somebody narrows it, so there is no version of this part
+ * in which it can be outstanding.
+ *
  * The proposals question has no entry: it is asked on this very screen, so what is missing
  * is not a step to go back to but the two controls immediately above the finish. That is
  * `optInPresentation`'s hint, and it stays there with the rest of the consent copy.
@@ -95,6 +109,12 @@ export interface MissingAnswerCopy {
 export const MISSING_ANSWER_COPY: Readonly<
   Record<Exclude<MissingAnswer, 'proposals-opt-in'>, MissingAnswerCopy>
 > = {
+  availability: {
+    title: 'We still need your ordinary week',
+    body: 'One ticked slot of the twenty-one is enough. Without any there is nothing to compare with another player’s week — and a week nobody gave is never read as never free, so we would rather ask than guess it.',
+    label: 'Set when you usually play',
+    finishHint: 'Set when you usually play to finish',
+  },
   location: {
     title: 'We still need the area you play in',
     body: 'Finding players near you works from one thing: roughly where you play. Without it there is nowhere to search from and no one to match you with, so this is the one answer setting up cannot finish without.',
@@ -106,6 +126,12 @@ export const MISSING_ANSWER_COPY: Readonly<
     body: 'How far out to look is what turns your area into a set of players. Setting up finishes once you have chosen a distance.',
     label: 'Set how far you will travel',
     finishHint: 'Set how far you will travel to finish',
+  },
+  gender: {
+    title: 'We still need one answer about you',
+    body: 'Matching you with the right players starts with who you are playing as. Prefer not to say is an answer too — it is never shown on your profile either way.',
+    label: 'Answer who you play as',
+    finishHint: 'Answer who you play as to finish',
   },
 };
 
@@ -131,5 +157,44 @@ export function answerStillWanted(
     (candidate): candidate is Exclude<MissingAnswer, 'proposals-opt-in'> =>
       candidate !== 'proposals-opt-in',
   );
+  return answer === undefined ? undefined : { answer, copy: MISSING_ANSWER_COPY[answer] };
+}
+
+/**
+ * The commit's refusals that name an answer a step asks for.
+ *
+ * **The feature's own `code` table**, which is the half `recoveryMessage` deliberately
+ * leaves to whoever owns the endpoint: a recovery category can say *check the details above
+ * and try again*, and a screen with seven steps behind it has to say **which** detail and
+ * offer the way back.
+ *
+ * It is keyed by the wire code and never by the message — the message is a diagnostic the
+ * backend writes for a log, and branching on it would ship English into every locale and
+ * let a copy edit on the server change what an installed app does.
+ *
+ * One entry today. It is a table rather than an `if` because the commit has eight refusals
+ * and the others will want their own sentences the moment a screen can produce one.
+ */
+const ANSWER_THE_COMMIT_REFUSED: Readonly<
+  Record<string, Exclude<MissingAnswer, 'proposals-opt-in'>>
+> = {
+  availability_grid_empty: 'availability',
+};
+
+/**
+ * Which answer a failed commit was refused for, if it names one.
+ *
+ * **The commit re-validates what the picker already enforced**, exactly as it does for
+ * tags: a disabled button is absent from a replayed request and from an older build, so
+ * this refusal is reachable even though the availability step will not continue without a
+ * tick. When it arrives, *try again* is the wrong sentence — retrying the same body fails
+ * identically — so the screen asks for the answer and offers the step that takes it.
+ *
+ * The same words as an answer the draft is short of, which is not a coincidence worth
+ * removing: the player is being asked for the same thing, and the fact that one was noticed
+ * here and the other on the server is not theirs to care about.
+ */
+export function answerTheCommitRefused(error: AppError): AnswerStillWanted | undefined {
+  const answer = error.code === undefined ? undefined : ANSWER_THE_COMMIT_REFUSED[error.code];
   return answer === undefined ? undefined : { answer, copy: MISSING_ANSWER_COPY[answer] };
 }
