@@ -52,6 +52,22 @@ from app.modules.auth.infrastructure.password_hasher import BcryptPasswordHasher
 from app.modules.auth.infrastructure.sqlalchemy_refresh_token_repository import (
     SqlAlchemyRefreshTokenRepository,
 )
+from app.modules.matchmaking.domain.ports import (
+    AccountHoldQuery,
+    AccountStatusQuery,
+    AtStakeQuery,
+    MatchHistoryQuery,
+    PlayerScoreQuery,
+)
+from app.modules.matchmaking.infrastructure.absent_providers import (
+    NoHoldsExist,
+    NoMatchHistoryExists,
+    NoPlayerScoresExist,
+    NoResultUpdateRuleExists,
+)
+from app.modules.matchmaking.infrastructure.users_account_status import (
+    UsersAccountStatus,
+)
 from app.modules.player_profile.domain.ports import (
     PlayIntentDeclarationRepository,
     ImageTranscoder,
@@ -271,3 +287,51 @@ def build_play_intent_declaration_repository(
     return EventSourcedPlayIntentDeclarationRepository(
         event_store=event_store, events=events
     )
+
+
+# --------------------------------------------------------------------------
+# Matchmaking — the five outward ports
+# --------------------------------------------------------------------------
+#
+# Built before a use case asks for one, deliberately and for the reason the play
+# intent repository above is: these are ``docs/adr/0098``'s consumer-driven
+# contracts, and the search that reads them arrives later. **This is the live
+# wiring**, and it is one line per port so the choice of implementation is made
+# here rather than re-made wherever a search is assembled. The register in
+# ``app/bootstrap/matcher_demands.py`` is what enrols each of them in the
+# contract suite.
+
+
+def build_account_hold_query(session: AsyncSession) -> AccountHoldQuery:
+    """``cases`` does not exist, so nothing can hold an account.
+
+    Takes the session every other builder takes even though this one needs
+    nothing, so that swapping in a real adapter when ``cases`` lands changes this
+    line and no caller.
+    """
+    return NoHoldsExist()
+
+
+def build_account_status_query(session: AsyncSession) -> AccountStatusQuery:
+    """Gate 8, live — the only outward port whose provider ships.
+
+    Built over ``users``' own repository rather than over the session directly,
+    so the set read stays the provider's and this line stays a choice of
+    implementation.
+    """
+    return UsersAccountStatus(build_user_repository(session))
+
+
+def build_player_score_query(session: AsyncSession) -> PlayerScoreQuery:
+    """``player_score`` does not exist, so nobody has a Player Score."""
+    return NoPlayerScoresExist()
+
+
+def build_match_history_query(session: AsyncSession) -> MatchHistoryQuery:
+    """``matches`` does not exist, so nobody has played anybody."""
+    return NoMatchHistoryExists()
+
+
+def build_at_stake_query(session: AsyncSession) -> AtStakeQuery:
+    """``rating`` ships; the rule that moves a Level on a result does not."""
+    return NoResultUpdateRuleExists()

@@ -108,6 +108,22 @@ going wrong, and a contract suite is exactly where an unread row goes quietly st
 amended to say so. If a later term wants variety, it returns as **that term's** demand and signs
 for it — which also means it arrives with a consumer who can say what shape it needs.
 
+### The published score, demanded once and read by one consumer
+
+Beside the six strands, and **not instead of them**: the **published Player Score** the player
+sees on their own profile, the 35/20/15/12/10/8 blend, out of a hundred.
+
+It has exactly one consumer — the **reliability floor**, whose `published_score_bar` is already
+ruleset data (`app/engines/matchfit/ruleset.py`, `ReliabilityRules`). It is **the one deliberate
+place the matcher reads the blend instead of the strands**, and it is written down here so it
+does not later read as an oversight or as this contract being quietly relaxed: a penalty
+justified by a figure that exists nowhere a human can look is unexplainable, and a player working
+their visible score back up must be able to watch the penalty lift.
+
+**It may never be weighed as a term, and it may never stand in for the strands.** A reading with
+no strand in it is not a reading — which is what stops *shipped as one blended number* passing
+through this door instead of the front one.
+
 ### The absence rule, and the two standing-down powers
 
 **No record is not a bad record.** A player without a score is not `0.5` and not `0`: the term
@@ -149,9 +165,17 @@ time.
 
 | Demanded | Bound | Why |
 | --- | --- | --- |
-| The searcher's pairwise counterparts, each outcome distinguishable — **accepted**, **declined**, **played**, **planned-never-played** — with their moments | The most recent **500** | A searcher has played tens of people. An unbounded read is how one long-standing player's search becomes slow for everyone |
+| The searcher's pairwise counterparts, each outcome distinguishable — **accepted**, **declined**, **played**, **planned-never-played** — each **tallied**: how many times, and when it last happened | The most recent **500** **counterparts**, not events | A searcher has played tens of people. An unbounded read is how one long-standing player's search becomes slow for everyone |
 | Every challenge currently open between the searcher and anyone | **Unbounded** | It is a §7.5 never-stale fact and it is small by construction |
 | Open challenge count, **per player** | The index row | Not pairwise. Advisory, for ranking on load (§7.2, §14.4) — never the last word |
+| **The late-change threshold** — how close to the scheduled moment a change has to be to count as *late* | One published number for the platform | Demanded here rather than of `player_score` because *late* is a fact about a **plan**, and the context that owns plans owns what the word means. It takes no pair, no plan and no case, which is what makes a per-case judgement unexpressible |
+
+**A count and not a latest outcome, because familiarity needs both halves.** `strength` is
+`0.5 ^ (days_since_last / FAMILIARITY_HALF_LIFE_DAYS) × (1 − FAMILIARITY_DEPTH_PHI ⁿ)`, where
+`n` is **games played together** ([`ranking-weights.md`](ranking-weights.md) §8). One outcome and
+one moment per counterpart feeds the decay and never the depth. Tallying also keeps an accept
+visible under a later decline, which a single latest outcome erases — and the previous-decline
+signal and familiarity would then both be reading the same lost history.
 
 **A ghost game is two facts, and they go different places.** As a per-player reliability signal
 it is `player_score`'s input and the matcher never sees it separately. As a **pairwise** outcome
@@ -167,6 +191,8 @@ tell them apart.
 | Disabled set (`AccountStatusQuery`, ADR-0124) | **The search refuses** | Same. Read **once per search as a set**, beside the block set — never a per-row query |
 | Pairwise history | **Fails soft** — familiarity and the previous-decline signal stand down, the search proceeds | Losing a game because we could not remember who you played in March is a worse outcome than a slightly duller list |
 | Open challenge between the pair | **Fails soft** | §7.5's *the matcher proposes, the backend disposes* re-verifies on the shortlist. It is embarrassment with a backstop, not a safety failure |
+| The six strands (`PlayerScoreQuery`) | **Fails soft** — the reliability term stands down | Which is what it already does for every player today, so a failure costs a term and never the search |
+| At stake (`AtStakeQuery`) | **Fails soft** — the block is not drawn | Derived rather than quoted: it is what the card already does while the rule does not exist |
 
 These are separate reads carried in one context object. Bundling them into one read would make
 the strictest fact's failure mode everybody's.

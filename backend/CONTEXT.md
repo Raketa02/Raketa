@@ -94,6 +94,30 @@ there; they are not repeated here.
   has no version bookkeeping. **The trap:** `UserRepository` is this kind despite its name
   and despite `User` being an event-sourced aggregate — it is the projection side, not the
   write side. It keeps its name; read the shape, not the noun.
+- **Outward port** — a port this backend defines and **another context implements**, rather
+  than one it implements itself. The five in `modules/matchmaking/domain/ports.py` are the
+  only ones today ([ADR-0098](../docs/adr/0098-matcher-demands-as-executable-contracts.md)):
+  the matcher names the facts it needs and has no opinion on the provider's aggregates,
+  storage or state machines. Distinguish it from a repository port, which this backend both
+  defines and adapts. _Avoid_: "external port", "integration".
+- **Null object** — an adapter for an outward port whose provider **does not exist**, named
+  for the fact it asserts and never for being empty: `NoHoldsExist`, not
+  `NullAccountHoldQuery`, because *null* reads as *not wired yet* and these are wired. It is
+  not a stub or a fake — it returns what is *true today*, and stops being true on the day its
+  provider lands. The rule it obeys is **a gate may be honestly empty; a term may never be
+  honestly neutral**, and the test is whether a zero would be **measured** or **invented**.
+  _Avoid_: stub, dummy, placeholder, no-op adapter.
+- **Register** (`app/bootstrap/matcher_demands.py`) — the list of every implementation of
+  every outward port, one row each, read by the **demand suite** in `tests/demands/` and
+  by nothing else. It lives in the composition root because choosing implementations is what
+  a composition root is for, and because a module may not import `app.bootstrap`. Registering
+  an adapter enrols it in the suite; **a port with no row is a red build**, because an empty
+  `parametrize` collects as *skipped* and a skipped test is one nobody is watching.
+  It is ADR-0098's **contract suite**, and the directory is deliberately not called that:
+  [`docs/environments.md`](../docs/environments.md)'s **Contract** tier already means
+  `openapi.player.json` drift, and two suites called *contract* is how a green build starts
+  being read as the wrong assurance. _Avoid_: registry (the ruleset store and the event
+  catalog are already spoken for), provider list.
 
 - **Environment** — one of exactly four: `local`, `development`, `staging`, `production`,
   spelled identically by both apps and carried by `APP_ENV`. `local` is a developer's

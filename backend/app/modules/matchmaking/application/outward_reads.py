@@ -1,0 +1,77 @@
+"""Performing an outward read under the posture its port declared.
+
+The **rule** lives with the ports — ``FAIL_POSTURE`` is a claim about each demand
+and belongs beside the demand. The **execution** is here, because awaiting
+somebody's callable and turning a provider's failure into a refusal is
+orchestration rather than a port.
+
+One function reading the table, rather than a `try` at every call site: a caller
+cannot quietly soften a gate by handing it a default, and cannot forget to soften
+a term, because the same function refuses the mismatch in both directions.
+"""
+
+from __future__ import annotations
+
+from typing import Any, Awaitable, Callable, TypeVar
+
+from app.kernel import invariant
+from app.modules.matchmaking.domain.errors import GateDataUnavailable
+from app.modules.matchmaking.domain.ports import FAIL_POSTURE, FailPosture
+
+_T = TypeVar("_T")
+
+
+class _Missing:
+    """No stood-down answer was offered. Distinct from ``None``, which is one."""
+
+
+_MISSING: Any = _Missing()
+
+
+async def read_demand(
+    port: type,
+    read: Callable[[], Awaitable[_T]],
+    *,
+    stood_down: _T = _MISSING,
+) -> _T:
+    """Perform one outward read under the posture its port declared.
+
+    Takes a callable rather than an awaitable so the refusal happens before the
+    provider is touched at all.
+
+    **The soft branch catches broadly, and that is deliberate.** A provider that
+    raises and a provider that answers something malformed are the same event to
+    a term — it could not be evaluated — and standing down is the right answer to
+    both. What keeps that from being silent is the per-term ``NoEvidence`` rate in
+    the telemetry, which is load-bearing rather than garnish: a degraded search
+    otherwise looks exactly like a duller one.
+    """
+
+    posture = FAIL_POSTURE.get(port)
+    invariant(
+        posture is not None,
+        f"{port.__name__} has not said how it fails",
+    )
+    offered = not isinstance(stood_down, _Missing)
+    if posture is FailPosture.CLOSED:
+        invariant(
+            not offered,
+            f"{port.__name__} fails closed and has no degraded answer to fall "
+            "through to",
+        )
+        try:
+            return await read()
+        except GateDataUnavailable:
+            raise
+        except Exception as failure:
+            raise GateDataUnavailable(
+                f"{port.__name__} could not be evaluated"
+            ) from failure
+    invariant(
+        offered,
+        f"{port.__name__} fails soft, so the caller says what it stands down to",
+    )
+    try:
+        return await read()
+    except Exception:
+        return stood_down

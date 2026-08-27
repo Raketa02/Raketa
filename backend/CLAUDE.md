@@ -167,6 +167,11 @@ tests.
   classes implementing the `Protocol` (see `tests/unit/test_resolve_current_user.py`).
 - `tests/api/` — full HTTP flows via the `client` fixture (HTTPX ASGI + in-memory SQLite).
   Reuse fixtures from `tests/conftest.py` rather than standing up new app/db instances.
+- `tests/demands/` — the matcher's **outward demands**, parameterised over every
+  implementation registered in `app/bootstrap/matcher_demands.py`
+  ([ADR-0098](../docs/adr/0098-matcher-demands-as-executable-contracts.md)). Adding a row
+  to the register enrols an adapter; a port with no row fails the suite. Not named
+  *contract* — that word already means `openapi.player.json` drift here.
 - Async by default (`asyncio_mode = "auto"`) — no `@pytest.mark.asyncio`.
 
 ## Environment gotchas

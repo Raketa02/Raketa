@@ -897,8 +897,13 @@ six on their own screen, so they are the product's language before they are the 
   - **Keeps plans** — whether an agreed plan survives to its day without a late change.
   - **Settles up** — whether a court share that fell due was settled without a case.
   - **Sportsmanship** — what opponents said afterwards. A mean, not a ratio.
-- **Opponent variety** — how widely a player spreads their games. Published beside the strands
-  and **explicitly not one of them**; never blended into the Player Score.
+- **Opponent variety** — how widely a player spreads their games. **Not demanded of
+  `player_score` any more:** it was contracted on behalf of two consumers and
+  [#164](https://github.com/Raketa02/Raketa/issues/164) and
+  [#175](https://github.com/Raketa02/Raketa/issues/175) struck both, so ADR-0098 was amended to
+  withdraw it — *a consumer-driven contract with no consumer is withdrawn, not carried*. The word
+  survives as product language for the Player Score screen; if a later term wants the statistic,
+  it returns as that term's demand and signs for it.
 
 **Invariants**
 - **No record is not a bad record.** A player without a score is not bad and not average — the

@@ -14,5 +14,8 @@ receives an already-gated, already-fenced set. Splitting the gates by kind —
 judgement call in it is not a fence.
 
 The context arrives in pieces. What is here today is the half of the contract
-that a ruleset is checked against: **the closed evidence vocabulary**.
+that a ruleset is checked against — **the closed evidence vocabulary** — and the
+half the matcher demands of everybody else: **the five outward ports** in
+``domain/ports.py``, four of whose providers do not exist and each of which
+answers honestly anyway (``docs/adr/0098``).
 """
