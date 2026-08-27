@@ -68,11 +68,13 @@ list made invisible for as long as nobody asked what *eligibility* meant.
 `RatingInitialised` carries everything the row needs except `counted_games`, which belongs to
 `matches` and is `0` today.
 
-### 2.2 Contracts this map's decisions require, which do not exist
+### 2.2 Contracts this map's decisions required — **all four have landed**
 
 Four demands on `player_profile`, filed as a build ticket outside this map
 ([#182](https://github.com/Raketa02/Raketa/issues/182)) in the pattern #176 and #181
-established:
+established. Every one is now registered in
+`backend/app/modules/player_profile/application/event_subscriptions.py` and consumed by the
+projection:
 
 | Needed | Because |
 |---|---|
@@ -292,3 +294,76 @@ What *is* fixed, because it is forced by geometry:
 | Tail reader interval | **1 s** | The contiguous prefix routinely falling behind by more than one tick's worth of appends — i.e. batches consistently hitting their bound |
 | Snapshot refresh interval | **2 s** | §17's p50 target moving, or a delta refresh whose cost stops being dominated by the pointer copy |
 | Trigger 4 (amended) | `bytes_per_row × rows × workers` > 50% of the container limit | A refresh implementation that stops sharing row references, which would put the `× 2` back |
+
+---
+
+## 11. Where this lives, now that it is built
+
+Resolved by [#202](https://github.com/Raketa02/Raketa/issues/202). Every commitment above has
+a file and a test; this table is the map between them, so that changing one of them is
+obviously a change to the other.
+
+| Commitment | Code | What fails if it breaks |
+|---|---|---|
+| §2 The fold, pure and per-event | `matchmaking/domain/candidate_projection.py` | `test_candidate_projection.py` — including that the register and the dispatch are exhaustive over each other |
+| §3 The row, and its three fences | `matchmaking/domain/candidate_index.py` | `test_candidate_row_fence.py` (source walk + a cycle walk over a real row), `test_candidate_index_schema.py` (the tables) |
+| §4 Contiguity and the horizon | `matchmaking/domain/candidate_tail.py`, `…/infrastructure/snapshot_horizon.py` | `test_candidate_index_tail_plan.py` — every ordering, with no database in the way |
+| §4 The tick, the cursor, the stamps | `matchmaking/infrastructure/candidate_index_tail.py` | `test_candidate_index_tail.py` |
+| §5 The container, bound once, delta-refreshed | `matchmaking/domain/candidate_snapshot.py`, `…/infrastructure/candidate_snapshot_source.py` | `test_candidate_snapshot_source.py` — reference **identity**, not equality |
+| §6 Two budgets | `matchmaking/domain/index_staleness.py` | `test_candidate_index_staleness.py` |
+| §7 Rebuild | `matchmaking/infrastructure/rebuild_candidate_index.py`, `…/rebuild_cli.py`, `make rebuild-candidate-index` | `test_candidate_index_rebuild_equals_tail.py` |
+
+**Four things the build settled that this document had left open, and each is a decision
+rather than a detail.**
+
+1. **The index is two tables, not one.** A search reads `(player, sport)`; a player edits
+   their profile once. `candidate_player_facts` holds what a person says about themselves and
+   `candidate_row` holds what is true of them in one sport, because the fold may not look
+   anything up — and a profile edit that had to know which sports its author is rated in
+   would be exactly that lookup. **A row enters a snapshot only when both halves exist**,
+   which is said with a join rather than with columns full of nulls a term would eventually
+   read as a measured zero.
+2. **`applied_through_sequence_no` carries the moving event's own number, never the batch's
+   end.** §7.4 asks for the two tables to be *identical*, and a batch-end stamp differs on
+   every row between a tail at 1 s and a rebuild that swallows the log whole — while the
+   projection is perfectly correct. Per-event stamping costs the delta refresh nothing: a row
+   moved after a container's version still stamps past that version, which is the only
+   question the refresh asks.
+3. **The row's area has no `area_code`, and its absence is deliberate.** The coarse centroid
+   is the only spatial truth the index has and is what the bounding box reads; the
+   human-readable area a player card prints is assembled outside the engine (ADR-0107) and has
+   **no producer in this repository**. Deriving one here would be inventing a naming scheme
+   nobody has calibrated — §8's own argument about the geo cell, one field over. It is handed
+   onward with the rest of §9.
+4. **`gc.freeze()` runs after every load and after every refresh *that decoded a row*.** The
+   freeze promotes **everything currently tracked** into the permanent generation, not only the
+   rows just built — so freezing on a refresh with nothing new would permanently promote
+   whatever requests happened to be in flight, every two seconds, for ever. That is a slow leak
+   bought for nothing: with no newly decoded row there is no collection for the freeze to
+   avoid. The 57.9 ms it *is* buying is paid wherever there is something to buy. **This narrows
+   ADR-0112's "after every load and refresh" and is the one place this build did not take that
+   ADR literally** — worth an amendment if anybody disagrees.
+
+---
+
+**What this build did not close, stated rather than implied.**
+
+- **The degradation ladder has no caller.** `freshness_of` is written and tested, and nothing
+  in `app/` refuses on it — because the thing that would is a *search*, and there is no search
+  yet. The same goes for §5's *bound once into the `SearchContext` at entry*: the container
+  half is built and immutable, and there is no `SearchContext` to bind it into. Both are the
+  next ticket's, not this one's, and neither is a gap that a later reader should mistake for an
+  oversight.
+- **The instruments emit and there is still nowhere to read them.** `snapshot_version` goes on
+  every tail tick, and the refresh loop logs the lag, the rung (`index_freshness` — which is
+  `index_stale` by another name, internal exactly as §6 requires) and whether §17's p99 was
+  missed, at `WARNING` when it was. Structured log records, and no operational surface behind
+  them, exactly as §9 said.
+- **The tail reader logs a line every tick, including the ticks that did nothing.** *The reader
+  ran and found nothing* and *the reader did not run* are the two states a stalled projection
+  has to be distinguishable by, and a stalled projection is otherwise silent where a stalled
+  outbox is eventually visible as a missing side effect.
+- **A rebuild that stops short says so and exits non-zero.** On PostgreSQL a tick applies
+  nothing both at the end of the log and while waiting on an unsettled hole; a run that exited
+  quietly on the second would have rebuilt a *prefix* while reporting success, which is
+  `rebuild == tail` failing where nobody would look.

@@ -245,6 +245,30 @@ class Settings(BaseSettings):
     PHOTO_SWEEP_ENABLED: bool = True
     PHOTO_SWEEP_INTERVAL_SECONDS: float = 6 * 60 * 60
 
+    # --- the candidate index (docs/adr/0110, docs/adr/0112)
+    #
+    # **Two loops with two different jobs, and both cadences are configuration.**
+    # The tail reader folds the log into the index; the snapshot refresh rebuilds
+    # this worker's containers from what moved. Turning either off changes no
+    # rule a domain test could observe — the index simply stops moving, which is
+    # the state the platform was in before it existed.
+    #
+    # **What is emphatically not here is the staleness ladder.** Serve under
+    # 15 minutes, flag to 24 hours, refuse past it — those live in
+    # `matchmaking/domain/index_staleness.py`, because a refusal the environment
+    # could switch off is a rule that is true on a laptop and false in
+    # production. The two must not swap places, exactly as the photo sweep's
+    # retention window and cadence must not.
+    CANDIDATE_INDEX_ENABLED: bool = True
+    #: The cadence `EventWorker` already runs at, so no new number is invented.
+    #: Its falsifier is batches consistently hitting the bound below.
+    CANDIDATE_INDEX_TAIL_INTERVAL_SECONDS: float = 1.0
+    #: §17's p50 index-staleness target, matched directly.
+    CANDIDATE_INDEX_REFRESH_INTERVAL_SECONDS: float = 2.0
+    #: How many log rows one tick may look at, so a projection restarted against
+    #: a long log does bounded work per tick rather than one huge transaction.
+    CANDIDATE_INDEX_BATCH_SIZE: int = 500
+
     @field_validator("APP_ENV", mode="before")
     @classmethod
     def _known_environment(cls, v):

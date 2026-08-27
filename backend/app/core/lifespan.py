@@ -25,8 +25,11 @@ from contextlib import asynccontextmanager
 from typing import AsyncIterator
 
 from fastapi import FastAPI
-from sqlalchemy.ext.asyncio import async_sessionmaker
 
+from app.bootstrap.composition import (
+    build_background_session_factory,
+    build_candidate_source,
+)
 from app.bootstrap.events import build_event_delivery_worker
 from app.bootstrap.jobs import build_scheduled_jobs
 from app.bootstrap.matchmaking import verify_ruleset
@@ -60,11 +63,18 @@ def build_lifespan(settings: Settings):
         # Assigned whether or not anything is registered: an attribute that only
         # sometimes exists is one every reader has to guard against.
         app.state.scheduled_jobs = []
+        # Likewise. **One per process, and this is where the one lives**
+        # (``docs/adr/0112``): the refresh loop rebuilds it and a search binds a
+        # container from it, so a second instance anywhere would be a second
+        # index that nothing keeps in step with the first.
+        app.state.candidate_source = None
 
-        if settings.EVENT_DELIVERY_WORKER_ENABLED or settings.PHOTO_SWEEP_ENABLED:
-            session_factory = async_sessionmaker(
-                get_engine(), expire_on_commit=False, autoflush=False
-            )
+        if (
+            settings.EVENT_DELIVERY_WORKER_ENABLED
+            or settings.PHOTO_SWEEP_ENABLED
+            or settings.CANDIDATE_INDEX_ENABLED
+        ):
+            session_factory = build_background_session_factory(get_engine())
 
             if settings.EVENT_DELIVERY_WORKER_ENABLED:
                 worker = build_event_delivery_worker(
@@ -78,8 +88,15 @@ def build_lifespan(settings: Settings):
                 app.state.event_delivery_worker = worker
                 background.append(worker)
 
+            if settings.CANDIDATE_INDEX_ENABLED:
+                app.state.candidate_source = build_candidate_source(
+                    session_factory=session_factory
+                )
+
             jobs = build_scheduled_jobs(
-                session_factory=session_factory, settings=settings
+                session_factory=session_factory,
+                settings=settings,
+                candidate_source=app.state.candidate_source,
             )
             # Only the scheduled jobs, not the outbox drain beside them: this
             # attribute is what somebody reads to answer *which jobs is this

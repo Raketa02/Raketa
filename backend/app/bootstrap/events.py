@@ -48,6 +48,16 @@ from app.modules.users.application.event_subscriptions import (
 class EventRuntime:
     codec: JsonEventCodec
     dispatcher: EventDispatcher
+    #: The durable-name register the codec was built over.
+    #:
+    #: Carried beside the codec rather than left inside it because a **reader of
+    #: the log** needs the mapping in the other direction: the candidate index
+    #: projects a fixed list of *event classes* and has to know which durable
+    #: names those are before it decides whether to decode a row at all
+    #: (``docs/adr/0110``). Re-declaring those names beside the projection would
+    #: be a second copy of a published contract, and the drift would be silent
+    #: for exactly as long as nobody renamed one.
+    catalog: EventCatalog
 
     def create_publisher_for(self, *, session: AsyncSession) -> EventPublisher:
         return EventPublisher(
@@ -91,6 +101,7 @@ def build_event_runtime() -> EventRuntime:
     return EventRuntime(
         codec=JsonEventCodec(catalog),
         dispatcher=dispatcher,
+        catalog=catalog,
     )
 
 

@@ -17,6 +17,7 @@ ECS_SERVICE      ?= raketa-service
 
 .PHONY: help install test lint lint-imports format typecheck check test-gates openapi \
         build-dev up down logs ps shell migrate seed seed-host \
+        rebuild-candidate-index rebuild-candidate-index-host \
         build-prod ecr-login ecr-push ecs-deploy
 
 help:
@@ -85,6 +86,17 @@ seed:              ## seed deterministic dev accounts into the running stack's d
 
 seed-host:         ## the same seed from the host — needs .env, like host-run uvicorn
 	poetry run python -m app.seeds
+
+## ----- the candidate index (docs/adr/0110)
+## The index is a projection of the event log, so a corrupt one is a command and
+## not an incident: this empties the tables and folds the whole log back in.
+## There is deliberately no admin route — a button that drops and rebuilds an
+## index is a button eventually pressed in the wrong place.
+rebuild-candidate-index:  ## rebuild the candidate index from the event log, in the running stack
+	$(COMPOSE_LOCAL) exec api python -m app.modules.matchmaking.infrastructure.rebuild_cli
+
+rebuild-candidate-index-host: ## the same rebuild from the host — needs .env, like seed-host
+	poetry run python -m app.modules.matchmaking.infrastructure.rebuild_cli
 
 ## ----- production / ECR / ECS
 ## DORMANT — AWS deployment is not in use; development is entirely local

@@ -21,6 +21,7 @@ make openapi     # emit openapi.player.json — the contract the client generate
 make up / down   # dev stack (Postgres + API + MinIO + photo-review + Redis); logs, shell
 make migrate     # alembic upgrade head inside the API container
 make seed        # deterministic dev accounts (make seed-host to run it on the host)
+make rebuild-candidate-index  # fold the log back into the index (…-host on the host)
 ```
 
 One test: `poetry run pytest tests/unit/test_user_domain.py::test_name`.
@@ -123,9 +124,32 @@ Rules to preserve:
   built from the composition root so it reaches the same bucket and event store a
   request does. There is no cron, no beat process and no lock: with N API processes a
   job runs N times per interval, so a job that cannot tolerate that needs a different
-  mechanism and its own ADR. The one job today is the uncommitted-photo sweep, whose
-  **retention window is domain and whose cadence is configuration** — those two must not
-  swap places.
+  mechanism and its own ADR. Three jobs today — the uncommitted-photo sweep, whose
+  **retention window is domain and whose cadence is configuration** (those two must not
+  swap places), and the candidate index's two loops below.
+- **The candidate index tails the log; the outbox delivers side effects**
+  ([ADR-0110](../docs/adr/0110-the-index-tails-the-log-the-outbox-delivers-side-effects.md),
+  [ADR-0111](../docs/adr/0111-the-index-holds-only-what-a-player-changes-about-themselves.md),
+  [ADR-0112](../docs/adr/0112-the-snapshot-is-a-per-partition-container-bound-once.md)).
+  The platform's first read model, and **the same domain event now has two consumers with
+  different guarantees** — hold both in your head. `CandidateIndexTail` reads `event_store`
+  by `sequence_no`, takes the one cursor row `FOR UPDATE`, and applies **only the contiguous
+  prefix**, because a position is assigned at `INSERT` and not at `COMMIT`. A hole is stepped
+  over only once the snapshot horizon proves it permanent — **and never on SQLite**, which has
+  neither a horizon nor a concurrent appender, so that path is exercised against Postgres or
+  not at all. `DatabaseCandidateSource` holds one immutable container per partition per
+  process, refreshes it by copying row references, and calls `gc.freeze()` after every load and
+  after every refresh that decoded a row — **not** after one that decoded none, because the
+  freeze promotes everything tracked and would otherwise leak whatever was in flight, every two
+  seconds, for ever.
+  Three rules that outlive the code: **the index holds only facts a player changes about
+  themselves** (every live-truth fact travels in the search context instead — a column for one
+  would make staleness cost safety); **the partition is derived and there is no shard-key
+  field**; and **`rebuild == tail`**, which is why every stamp is the moving event's own
+  sequence number and never a batch boundary. Repair is `make rebuild-candidate-index` and
+  **there is no admin route** — a walk over `app/api/` and every `presentation/` fails the
+  build if one appears. The staleness **ladder** is domain
+  (`matchmaking/domain/index_staleness.py`); only the two cadences are configuration.
 - **New routes mount under `app/api/v1/router.py`;** keep the `/api/v1` prefix.
 - **Validate and normalize inside the value object**, not in the use case — see
   `app/modules/users/domain/value_objects.py`.

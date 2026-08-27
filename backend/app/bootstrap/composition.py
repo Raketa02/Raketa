@@ -32,7 +32,7 @@ way `build_assessment_repository` takes its two.
 
 from __future__ import annotations
 
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from app.application.ports import DomainEventPublisher, DomainEventStore, UnitOfWork
 from app.bootstrap.events import EventRuntime, get_event_runtime
@@ -61,11 +61,26 @@ from app.modules.matchmaking.domain.ports import (
     MatchHistoryQuery,
     PlayerScoreQuery,
 )
+from app.modules.matchmaking.infrastructure.rebuild_candidate_index import (
+    RebuildCandidateIndex,
+)
 from app.modules.matchmaking.infrastructure.absent_providers import (
     NoHoldsExist,
     NoMatchHistoryExists,
     NoPlayerScoresExist,
     NoResultUpdateRuleExists,
+)
+from app.modules.matchmaking.infrastructure.candidate_index_tail import (
+    CandidateIndexTail,
+)
+from app.modules.matchmaking.infrastructure.candidate_snapshot_source import (
+    DatabaseCandidateSource,
+)
+from app.modules.matchmaking.infrastructure.snapshot_horizon import (
+    DialectSnapshotHorizon,
+    NoSnapshotHorizon,
+    PostgresSnapshotHorizon,
+    SnapshotHorizon,
 )
 from app.modules.matchmaking.infrastructure.users_account_status import (
     UsersAccountStatus,
@@ -350,3 +365,95 @@ def build_match_fit_engine() -> MatchFit:
     in a composition root whether or not a caller has turned up to make it.
     """
     return MatchFitV1()
+
+
+# --------------------------------------------------------------------------
+# Matchmaking — the candidate index
+# --------------------------------------------------------------------------
+#
+# The index has one writer, one per-worker reader and one one-shot repair, and
+# all three are built here so that a rebuild run from a ``make`` target gets the
+# wiring the API's own tail reader gets rather than a second opinion about it —
+# which is the whole reason this module exists (``docs/adr/0110``).
+
+
+def build_background_session_factory(
+    engine: AsyncEngine,
+) -> async_sessionmaker[AsyncSession]:
+    """How every background run gets its session. **One spelling, one place.**
+
+    ``expire_on_commit=False`` so a report built from an object survives the
+    commit that ends the run, and ``autoflush=False`` because a loop should not
+    be issuing statements at moments nobody chose. Both matter to what runs on
+    them, so a second copy of this line is a second set of session semantics that
+    nothing keeps in step with the first.
+    """
+
+    return async_sessionmaker(engine, expire_on_commit=False, autoflush=False)
+
+
+def build_snapshot_horizon() -> SnapshotHorizon:
+    """Whether a hole in the log can be proven permanent, on this database.
+
+    **The two implementations are chosen here**; the dispatcher only routes, per
+    session, on the dialect the session is bound to. Never on the environment —
+    which holes a reader steps over is behaviour a test can observe, and
+    ``docs/adr/0028`` reserves the environment for configuration.
+    """
+
+    return DialectSnapshotHorizon(
+        by_dialect={"postgresql": PostgresSnapshotHorizon()},
+        otherwise=NoSnapshotHorizon(),
+    )
+
+
+def build_candidate_index_tail(*, settings: Settings) -> CandidateIndexTail:
+    """The index's only writer.
+
+    It reads the **log**, not the outbox: the outbox orders by
+    ``(created_at, id)`` and mints a row id unrelated to the event's, so an
+    outbox subscriber could never name the ``sequence_no`` that
+    ``snapshot_version`` is (``docs/adr/0110``). Two subscriptions, two
+    guarantees.
+    """
+
+    runtime = get_event_runtime()
+    return CandidateIndexTail(
+        codec=runtime.codec,
+        catalog=runtime.catalog,
+        horizon=build_snapshot_horizon(),
+        clock=build_clock(),
+        batch_size=settings.CANDIDATE_INDEX_BATCH_SIZE,
+    )
+
+
+def build_candidate_source(
+    *, session_factory: async_sessionmaker[AsyncSession]
+) -> DatabaseCandidateSource:
+    """This worker's own index. **One per process**, and never per request.
+
+    A per-request source would rebuild the container a search was supposed to
+    bind once, which is the whole of what ``docs/adr/0112`` buys.
+    """
+
+    return DatabaseCandidateSource(
+        session_factory=session_factory, empty_at=build_clock().now()
+    )
+
+
+def build_rebuild_candidate_index(
+    *,
+    session_factory: async_sessionmaker[AsyncSession],
+    settings: Settings,
+) -> RebuildCandidateIndex:
+    """The repair, reached by a ``make`` target and never by a route.
+
+    A button that drops and rebuilds the index is a button eventually pressed in
+    the wrong place.
+    """
+
+    return RebuildCandidateIndex(
+        session_factory=session_factory,
+        tail=build_candidate_index_tail(settings=settings),
+        clock=build_clock(),
+    )

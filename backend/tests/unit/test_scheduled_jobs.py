@@ -19,7 +19,12 @@ from uuid import UUID
 
 import app.bootstrap.jobs as jobs_module
 from app.bootstrap.composition import build_clock
-from app.bootstrap.jobs import PHOTO_SWEEP_JOB, build_scheduled_jobs
+from app.bootstrap.jobs import (
+    CANDIDATE_INDEX_REFRESH_JOB,
+    CANDIDATE_INDEX_TAIL_JOB,
+    PHOTO_SWEEP_JOB,
+    build_scheduled_jobs,
+)
 from app.core.config import get_settings
 from app.kernel import instant
 from app.modules.player_profile.domain.photos import PhotoRef, TranscodedImage
@@ -38,7 +43,7 @@ def test_the_sweep_is_registered_and_carries_the_configured_cadence():
     the README as configuration that changes nothing.
     """
 
-    settings = get_settings().model_copy(update={"PHOTO_SWEEP_INTERVAL_SECONDS": 900.0})
+    settings = _only_the_sweep(PHOTO_SWEEP_INTERVAL_SECONDS=900.0)
 
     jobs = build_scheduled_jobs(session_factory=None, settings=settings)
 
@@ -50,9 +55,57 @@ def test_a_job_that_is_turned_off_is_not_registered():
     """Off is off — not built and then never started, which would still hold
     whatever its construction reached for."""
 
-    settings = get_settings().model_copy(update={"PHOTO_SWEEP_ENABLED": False})
+    settings = get_settings().model_copy(
+        update={"PHOTO_SWEEP_ENABLED": False, "CANDIDATE_INDEX_ENABLED": False}
+    )
 
     assert build_scheduled_jobs(session_factory=None, settings=settings) == []
+
+
+def test_the_candidate_index_registers_two_loops_and_not_one():
+    """The tail writes the shared tables; the refresh rebuilds this worker's own.
+
+    Two jobs rather than one with two phases, because they are safe beside
+    themselves for opposite reasons: the tail because a single cursor row taken
+    ``FOR UPDATE`` serialises it, the refresh because being **per worker** is the
+    behaviour wanted rather than the cost paid (``docs/adr/0092``,
+    ``docs/adr/0112``).
+    """
+
+    settings = get_settings().model_copy(update={"PHOTO_SWEEP_ENABLED": False})
+    source = object()
+
+    jobs = build_scheduled_jobs(
+        session_factory=None, settings=settings, candidate_source=source
+    )
+
+    assert [job.name for job in jobs] == [
+        CANDIDATE_INDEX_TAIL_JOB,
+        CANDIDATE_INDEX_REFRESH_JOB,
+    ]
+    assert [job.interval_seconds for job in jobs] == [1.0, 2.0]
+
+
+def test_the_refresh_is_not_registered_without_an_index_to_refresh():
+    """A process holding no source has nothing to rebuild.
+
+    The tail still runs: writing the tables is shared work and does not depend on
+    this process serving a search from them.
+    """
+
+    settings = get_settings().model_copy(update={"PHOTO_SWEEP_ENABLED": False})
+
+    jobs = build_scheduled_jobs(
+        session_factory=None, settings=settings, candidate_source=None
+    )
+
+    assert [job.name for job in jobs] == [CANDIDATE_INDEX_TAIL_JOB]
+
+
+def _only_the_sweep(**overrides):
+    return get_settings().model_copy(
+        update={"CANDIDATE_INDEX_ENABLED": False, **overrides}
+    )
 
 
 async def test_the_sweep_job_runs_end_to_end_through_the_real_wiring(
@@ -75,7 +128,7 @@ async def test_the_sweep_job_runs_end_to_end_through_the_real_wiring(
     storage.now = instant(build_clock().now() - timedelta(days=365))
     await storage.put(orphan, IMAGE, metadata={})
 
-    settings = get_settings()
+    settings = _only_the_sweep()
     (sweep,) = build_scheduled_jobs(session_factory=session_factory, settings=settings)
 
     with caplog.at_level(logging.INFO):
@@ -103,7 +156,7 @@ async def test_a_photo_inside_the_window_survives_the_wired_job(
     await storage.put(fresh, IMAGE, metadata={})
 
     (sweep,) = build_scheduled_jobs(
-        session_factory=session_factory, settings=get_settings()
+        session_factory=session_factory, settings=_only_the_sweep()
     )
     await sweep.run_once()
 

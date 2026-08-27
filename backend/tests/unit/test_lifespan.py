@@ -46,8 +46,10 @@ def stub_engine(monkeypatch):
 
     monkeypatch.setattr(lifespan_module, "init_engine", lambda settings: None)
     monkeypatch.setattr(lifespan_module, "get_engine", lambda: object())
+    # The lifespan asks the composition root for its session factory now, so
+    # that is the name a test with no engine has to stand in for.
     monkeypatch.setattr(
-        lifespan_module, "async_sessionmaker", lambda *args, **kwargs: "sessions"
+        lifespan_module, "build_background_session_factory", lambda engine: "sessions"
     )
 
     async def dispose_engine() -> None:
@@ -143,7 +145,11 @@ async def test_no_background_work_at_all_reaches_for_no_engine(monkeypatch):
     an unconditional factory is a startup crash rather than an unused object.
     """
 
-    settings = _settings(EVENT_DELIVERY_WORKER_ENABLED=False, PHOTO_SWEEP_ENABLED=False)
+    settings = _settings(
+        EVENT_DELIVERY_WORKER_ENABLED=False,
+        PHOTO_SWEEP_ENABLED=False,
+        CANDIDATE_INDEX_ENABLED=False,
+    )
     app = FastAPI()
     app.state.event_runtime = object()
     disposed: list[bool] = []
@@ -160,6 +166,10 @@ async def test_no_background_work_at_all_reaches_for_no_engine(monkeypatch):
 
     async with lifespan_module.build_lifespan(settings)(app):
         assert app.state.scheduled_jobs == []
+        # The index's own source is one of the things that must not have been
+        # built: it takes a session factory, and building one is what this test
+        # exists to prove did not happen.
+        assert app.state.candidate_source is None
 
     assert disposed == [True]
 

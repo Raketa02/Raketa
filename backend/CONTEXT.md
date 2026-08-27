@@ -419,5 +419,82 @@ there; they are not repeated here.
   ([ADR-0106](../docs/adr/0106-evidence-vocabulary-is-contract-weights-are-configuration.md)).
   _Avoid_: "terms blob" for it — the store is open where the wire is closed, on purpose.
 
+- **Tail reader** — `CandidateIndexTail`, the **candidate index's only writer**. It
+  subscribes to `event_store` in `sequence_no` order and **not** to the outbox, and the two
+  are different subscriptions with different guarantees
+  ([ADR-0110](../docs/adr/0110-the-index-tails-the-log-the-outbox-delivers-side-effects.md)):
+  the outbox delivers side effects once, eventually, out of append order and under a row id
+  unrelated to the event's, so an outbox subscriber could never name the number
+  **snapshot version** is. It takes the single **index cursor** row `FOR UPDATE` for the tick,
+  so a concurrent run **blocks, then reads the advanced cursor and finds nothing to do** —
+  which is how ADR-0092's *idempotent and safe beside itself* stays literally true with no
+  leader election and no lease to leak. _Avoid_: "consumer", "subscriber", "handler" — a
+  **handler** is an outbox subscriber and is the other subscription.
+- **Contiguous prefix** — how far one tick may advance the watermark. `sequence_no` is
+  assigned at `INSERT` and not at `COMMIT`, so a transaction holding 100 may commit after one
+  holding 101, and a reader that consumed to `max(sequence_no)` would record a watermark that
+  is a lie about what it has seen. The tick applies rows up to the last *contiguous* number
+  and no further, which is what makes *everything up to and including this is applied* true by
+  construction rather than by argument. _Avoid_: "high-water mark" for the raw maximum — that
+  number is exactly what this refuses to record.
+- **Snapshot horizon** — what tells an in-flight append apart from an aborted one. A hole in
+  the log is either, and the two are indistinguishable from a reader's side, so the cursor
+  records `pg_snapshot_xmin(pg_current_snapshot())` when it first sees the hole and steps over
+  it once the horizon has moved past that value — every transaction running then has ended, so
+  nothing can fill it. **`None` on SQLite**, where there is no horizon and no concurrent
+  appender: the suite asserts contiguity and the gap-stepping path is exercised against
+  PostgreSQL or not at all, which is a place the suite is **weaker than production** and is
+  recorded rather than papered over. _Avoid_: a wall-clock safety lag — it spends the whole
+  freshness budget on a race whose real duration is milliseconds.
+- **Candidate row** vs **player facts** — the index is two tables because a search reads
+  `(player, sport)` and a player edits their profile once. `candidate_player_facts` holds what
+  a person says about themselves; `candidate_row` holds what is true of them in one sport, and
+  a row **enters a snapshot only when both halves exist** — a player rated before onboarding
+  finished has no grid and no area, and one who onboarded and rated nothing has no Level.
+  Said with a join, never with columns full of nulls a term would eventually read as a
+  measured zero. `CandidateRow` (the in-memory join) is `slots=True`, frozen, primitive and
+  **cycle-free**, which is what makes `gc.freeze()` safe
+  ([ADR-0112](../docs/adr/0112-the-snapshot-is-a-per-partition-container-bound-once.md)) and is
+  walked by `tests/unit/test_candidate_row_fence.py`. It legitimately holds **gender** — the
+  mutual gate reads it and the engine never sees it — which is the one place this fence and the
+  **Scorable candidate**'s differ. _Avoid_: "scorable candidate" for it, and vice versa.
+- **`applied_through_sequence_no`** — the stamp on every projected row, and ADR-0110's
+  replacement for §7.3's four-field row stamp (which was designed against at-least-once HTTP
+  delivery this design does not have). It is written with **the sequence number of the event
+  that moved the row**, never with the batch's own end, so it is independent of how the log
+  happened to be cut into batches — which is what makes **rebuild == tail** an equality over
+  whole tables rather than over the columns somebody remembered to exclude. A profile edit
+  restamps every one of that player's rows, so a delta refresh asks one question of one table.
+- **`rebuild == tail`** — the property the whole projection rests on
+  (`tests/unit/test_candidate_index_rebuild_equals_tail.py`). Tail a fixture incrementally,
+  empty the tables, rebuild the same fixture from zero, require the two identical. It proves
+  the projection is a **pure function of the log**, that **append order** does the job it was
+  written for, and that determinism has a stable input — and it is what would actually be false
+  if a projection had a bug. **Never a wall-clock bound**: a five-minute assertion on a shared
+  runner is a flaky test that gets muted, so the timing figure stays a metric the rebuild
+  command logs. The repair is `make rebuild-candidate-index` and **there is no admin route**,
+  asserted by a walk over `app/api/` and every `presentation/`.
+- **Candidate source** — `DatabaseCandidateSource`, **one per process**, holding one immutable
+  container per **partition**. A refresh rebuilds the containers from the rows whose stamp
+  moved — never past its own `snapshot_version`, or the container would not *be* the index at
+  the version it claims — **copying references** for the rest, and publishing them by rebinding
+  one attribute —
+  atomic under the GIL, which is what `atomic.Pointer` means in this process model. A search
+  binds a container **once, at entry**, so a refresh mid-search cannot move the index
+  underneath it. Because the steady state never holds two copies of a row, ADR-0093's and
+  ADR-0101's **trigger 4 loses its `× 2`**. _Avoid_: a per-request source, or a port that
+  answers questions *about* rows — per-row granularity was priced at **+0.58 ms** and doubles
+  the walk, and this shape exists to make it unavailable.
+- **Index staleness: two budgets** — a **target** and a **ladder**, and reading them as one
+  number is the mistake `matchmaking/domain/index_staleness.py` exists to prevent. The target is
+  the refresh loop's p50 2 s / p99 15 s: missing it raises an alert and **changes no
+  behaviour**. The ladder is serve under 15 minutes, serve and record `index_stale` to 24
+  hours, **refuse** past it — and the refusal stands on **quality**, not safety, because every
+  live-truth fact was taken out of the index by ADR-0095, ADR-0098 and ADR-0109. Anyone who
+  later moves a live-truth fact in has to come back and re-argue that, which is why the reason
+  is written down rather than the number. The ladder is **domain and never configuration**; the
+  two cadences are configuration. _Avoid_: putting the ladder in `config.py`, or `index_stale`
+  on the wire — §18 itself says the player sees nothing at that rung.
+
 Add backend-specific technical terms here as they are resolved. Anything describing the
 *domain* belongs in the shared glossary instead.
