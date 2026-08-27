@@ -168,10 +168,10 @@ class AvailabilityGridEmpty(BadRequestError):
     photo cap is held. Nothing in the message repeats it either: a client that
     reached this has a picker that should not have let it.
 
-    This refuses a *commit*. A player may still clear their week afterwards
-    through ``change_availability``, and a profile committed before this floor
-    existed keeps its blank grid — a blank grid encountered anyway is **absent**,
-    never zero (ADR-0102 part 3).
+    This refuses a *commit*, and only a commit. A player may still clear their week
+    afterwards through ``change_availability``, and a profile committed before this
+    floor existed keeps its blank grid — a blank grid encountered anyway is
+    **absent**, never zero (ADR-0102 part 3).
     """
 
     code = "availability_grid_empty"

@@ -23,10 +23,15 @@ filter*. That neighbour survives and is now kept by construction rather than by
 weighing: the floor removes the unanswered case at the only place a player
 answers.
 
-Which is why the floor lives in ``of_cells`` and nowhere else. **The write path
-refuses; the fold accepts** — ``social_tags``' split, verbatim: ``of``, ``blank``
+Which is why the floor lives in ``of_cells`` and nowhere else. ``of``, ``blank``
 and ``from_codes`` must keep taking an empty grid, or a rule adopted today would
 retroactively refuse to rehydrate a profile that was legal when it was written.
+
+``social_tags`` states that split as *"the write path refuses; the fold accepts"*,
+and here it is narrower than that: **the commit path refuses.**
+``PlayerProfile.change_availability`` is a write too, and it accepts a blank grid
+deliberately — a player may clear their week after committing, and the minimum
+binds the answer they are asked for rather than every later edit of it.
 
 **The floor is not served.** Unlike the tag floor and ceiling it is fixed by the
 record rather than by product, so a client holds it as a constant the way it
