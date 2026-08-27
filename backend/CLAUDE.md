@@ -18,7 +18,7 @@ make typecheck   # mypy app
 make check       # lint + lint-imports + typecheck + test — the same gate CI runs
 make test-gates  # prove the kernel/engines purity gates still fire (CI runs it)
 make openapi     # emit openapi.player.json — the contract the client generates from
-make up / down   # dev stack (Postgres 17 + API + MinIO + Redis); make logs, make shell
+make up / down   # dev stack (Postgres + API + MinIO + photo-review + Redis); logs, shell
 make migrate     # alembic upgrade head inside the API container
 make seed        # deterministic dev accounts (make seed-host to run it on the host)
 ```
@@ -99,9 +99,23 @@ Rules to preserve:
   data. Every port method takes a `PhotoRef` (owner **and** photo id), so ownership is the
   port's contract rather than each caller's memory. **Every upload is re-encoded to JPEG**,
   which is how EXIF — and the GPS in it — is stripped reliably rather than best-effort.
-  `.importlinter` forbids `PIL`, `pillow_heif`, `aioboto3`, `boto3` and `botocore` to
-  every domain and application layer, **including through the adapter**, because a use
-  case that constructs the transcoder itself has bypassed the port just as completely.
+  `.importlinter` forbids `PIL`, `pillow_heif`, `aioboto3`, `boto3`, `botocore` and
+  `aiohttp` to every domain and application layer, **including through the adapter**,
+  because a use case that constructs the transcoder itself has bypassed the port just as
+  completely.
+- **The on-court photo check runs in a sidecar, and the rule it applies does not**
+  ([ADR-0129](../docs/adr/0129-the-photo-check-is-a-sidecar-the-backend-asks.md)).
+  `ClipSidecarPhotoReview` is an `aiohttp` client; `docker/photo-review/` is a CLIP model
+  behind one HTTP route that answers raw cosine similarities and holds **no policy**. The
+  prompt set, the temperature and the threshold live in
+  `player_profile/domain/photos.py` beside the size caps — behaviour a domain test can
+  observe, never configuration — and `PHOTO_REVIEW_ENDPOINT_URL` /
+  `PHOTO_REVIEW_TIMEOUT_SECONDS` cannot change a verdict. It **soft-warns and fails
+  open**: a flagged photo is stored, and an unreachable sidecar yields `allowed` with a
+  note saying so, because an outage is not a conclusion about an image. Every verdict
+  records the similarity vector it was taken from, which is what makes today's
+  placeholder threshold safe. **No test needs the container** — `tests/conftest.py`
+  overrides the port, as it does the store.
 - **Background work is an `asyncio` loop in the API process, and a job must be safe to
   run beside itself** ([ADR-0092](../docs/adr/0092-periodic-jobs-as-embedded-loops.md)).
   `PeriodicJob` (`app/infrastructure/jobs/`) is the whole mechanism — the outbox worker

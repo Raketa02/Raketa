@@ -56,8 +56,12 @@ def get_image_transcoder() -> ImageTranscoder:
 ImageTranscoderDep = Annotated[ImageTranscoder, Depends(get_image_transcoder)]
 
 
-def get_photo_review() -> PhotoReview:
-    return build_photo_review()
+def get_photo_review(settings: SettingsDep) -> PhotoReview:
+    # Per request, like the store beside it: the adapter holds a URL and a
+    # timeout and no connection, and an HTTP session is opened per review for
+    # the reason the object store opens a client per call — an `aiohttp` session
+    # binds to the loop it was made on.
+    return build_photo_review(settings)
 
 
 PhotoReviewDep = Annotated[PhotoReview, Depends(get_photo_review)]

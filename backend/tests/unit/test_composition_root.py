@@ -150,7 +150,7 @@ async def test_every_port_is_built_from_a_session_and_the_settings(session_facto
             # outside a request.
             build_photo_storage(settings),
             build_image_transcoder(),
-            build_photo_review(),
+            build_photo_review(settings),
         ]
 
     assert all(port is not None for port in built)
@@ -300,7 +300,7 @@ async def test_the_photo_path_is_assembled_without_a_session_or_a_request():
     use_case = UploadPhoto(
         storage=build_photo_storage(settings),
         transcoder=build_image_transcoder(),
-        review=build_photo_review(),
+        review=build_photo_review(settings),
         clock=build_clock(),
         url_valid_for_minutes=settings.PHOTO_URL_VALID_FOR_MINUTES,
     )

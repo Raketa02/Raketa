@@ -203,6 +203,27 @@ class Settings(BaseSettings):
     #: quantity — it is *short enough that a leaked URL stops being one*.
     PHOTO_URL_VALID_FOR_MINUTES: int = 5
 
+    # --- the on-court photo check (docs/adr/0129)
+    #
+    # **Where the checker is and how long it may take are configuration; what it
+    # asks and where the line sits are not.** The prompt set and the threshold
+    # are behaviour a domain test can observe — a photo flagged on a laptop and
+    # allowed in production would be exactly the thing this module's first rule
+    # forbids — so they live in `app/modules/player_profile/domain/photos.py` and
+    # cannot be set from the environment. Neither setting below can change a
+    # verdict; they can only decide whether one is reached.
+    #
+    # A server-to-server URL, like `PHOTO_STORAGE_ENDPOINT_URL` and carrying no
+    # scheme rule for the same reason: no browser and no phone ever opens it.
+    PHOTO_REVIEW_ENDPOINT_URL: str = "http://photo-review:8000"
+    #: The whole budget for one review, connection included. Generous, because
+    #: the far side is CPU inference on an image and a timeout costs a photo its
+    #: verdict; bounded, because it sits inline on the upload request and an
+    #: unbounded wait would hold the connection open for as long as the sidecar
+    #: was wedged. Exceeding it is not an error a player sees — the adapter fails
+    #: open and records that it did.
+    PHOTO_REVIEW_TIMEOUT_SECONDS: float = 10.0
+
     # --- domain event delivery
     EVENT_DELIVERY_WORKER_ENABLED: bool = True
     EVENT_DELIVERY_POLL_INTERVAL_SECONDS: float = 1.0

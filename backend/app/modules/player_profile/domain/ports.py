@@ -137,11 +137,17 @@ class ImageTranscoder(Protocol):
 class PhotoReview(Protocol):
     """Whether a photo looks like the product's rule says it should.
 
-    The rule is that a photo shows a racket sport on a court. **Nothing enforces
-    it today** — the pass-through adapter allows everything, and the screen's
-    copy states the rule without claiming an enforcement that is not running
-    (``docs/adr/0091``). The seam exists from day one so that adding the real
-    checker changes no call site.
+    The rule is that a photo shows a racket sport on a court, and it is checked
+    — server-side, because a client-side check is trivially bypassed, and by a
+    sidecar holding the model rather than by this process (``docs/adr/0129``).
+    Nothing in this file knows that: the port says *look at this image and tell
+    me what you conclude*, and the answer arrives the same way whether it came
+    from a model, from a pass-through, or from a queue of humans.
+
+    **It soft-warns; it never blocks** — a flagged photo is stored, and the
+    verdict rides on the object (``docs/adr/0091``). The seam was defined a
+    release before the checker existed so that the checker would change no call
+    site, and it did not.
     """
 
     async def review(self, image: TranscodedImage) -> PhotoReviewVerdict: ...
