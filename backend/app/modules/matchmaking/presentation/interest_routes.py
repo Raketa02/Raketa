@@ -33,7 +33,7 @@ from app.modules.matchmaking.application.commands import (
 )
 from app.modules.matchmaking.application.express_interest import ExpressedInterest
 from app.modules.matchmaking.application.read_interest import InterestSummary
-from app.modules.matchmaking.domain.interest import Interest
+from app.modules.matchmaking.domain.interest import Interest, OutstandingCount
 from app.modules.matchmaking.presentation.dependencies import (
     ExpressInterestDep,
     ReadInterestDep,
@@ -166,15 +166,10 @@ async def read_interest(
 
 
 def _expressed(expressed: ExpressedInterest) -> ExpressedInterestResponse:
-    yes = expressed.interest
     return ExpressedInterestResponse(
-        interest=_row(yes),
+        interest=_row(expressed.interest),
         mutual=expressed.mutual,
-        outstanding=OutstandingSchema(
-            sport=yes.sport,
-            outstanding=expressed.outstanding,
-            cap=expressed.cap,
-        ),
+        outstanding=_count(expressed.outstanding),
     )
 
 
@@ -182,12 +177,15 @@ def _summary(summary: InterestSummary) -> InterestListResponse:
     return InterestListResponse(
         outgoing=[_row(row) for row in summary.outgoing],
         mutual=[_row(row) for row in summary.mutual],
-        outstanding=[
-            OutstandingSchema(
-                sport=entry.sport, outstanding=entry.outstanding, cap=entry.cap
-            )
-            for entry in summary.outstanding
-        ],
+        outstanding=[_count(entry) for entry in summary.outstanding],
+    )
+
+
+def _count(entry: OutstandingCount) -> OutstandingSchema:
+    """One sport's standing, rendered the one way both routes render it."""
+
+    return OutstandingSchema(
+        sport=entry.sport, outstanding=entry.outstanding, cap=entry.cap
     )
 
 

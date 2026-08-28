@@ -247,7 +247,7 @@ def build_interest_expiry_job(
 
     async def run() -> None:
         async with session_factory() as session:
-            report = await LapseExpiredInterest(
+            lapsed = await LapseExpiredInterest(
                 clock=clock,
                 interest=build_interest_ledger(session),
                 unit_of_work=build_unit_of_work(session),
@@ -256,8 +256,8 @@ def build_interest_expiry_job(
             "interest expiry loop finished",
             extra={
                 "job": INTEREST_EXPIRY_JOB,
-                "removed": report.removed,
-                "never_lifted": report.never_lifted,
+                "removed": lapsed.removed,
+                "never_lifted": lapsed.never_lifted,
             },
         )
 

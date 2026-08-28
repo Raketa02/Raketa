@@ -33,10 +33,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 from typing import final
+from uuid import UUID
 
 from app.application.ports import UnitOfWork
 from app.engines.matchfit.ruleset import Ruleset
-from app.kernel import Clock
+from app.kernel import Clock, Sport
 from app.modules.matchmaking.application.commands import ExpressInterestCommand
 from app.modules.matchmaking.domain.errors import (
     OriginSearchNotFound,
@@ -46,6 +47,7 @@ from app.modules.matchmaking.domain.interest import (
     Interest,
     InterestLedger,
     OriginKey,
+    OutstandingCount,
     expires_at,
 )
 from app.modules.matchmaking.domain.search_store import SearchStore
@@ -67,8 +69,10 @@ class ExpressedInterest:
     """
 
     interest: Interest
-    outstanding: int
-    cap: int
+    #: Where this sport now stands against its cap — **the same type the screen
+    #: renders**, so the number after a tap and the number on the list cannot be
+    #: two different readings of one rule.
+    outstanding: OutstandingCount
     mutual: bool
     created: bool
 
@@ -106,13 +110,11 @@ class ExpressInterest:
         if standing is not None:
             return await self._answer(standing, now=now, created=False)
 
-        outstanding = await self._interest.outstanding(
-            player_id=command.from_player_id, sport=command.sport, now=now
-        )
-        if outstanding >= rules.outstanding_cap_per_sport:
+        standing_count = await self._counted(command.from_player_id, command.sport, now)
+        if standing_count.reached:
             raise OutstandingInterestCapReached(
-                f"you already have {outstanding} outstanding *Let's play* yeses "
-                f"for {command.sport.value}"
+                f"you already have {standing_count.outstanding} outstanding "
+                f"*Let's play* yeses for {command.sport.value}"
             )
 
         yes = Interest(
@@ -176,9 +178,6 @@ class ExpressInterest:
         yes to.
         """
 
-        outstanding = await self._interest.outstanding(
-            player_id=yes.from_player_id, sport=yes.sport, now=now
-        )
         theirs = await self._interest.find(
             from_player_id=yes.to_player_id,
             to_player_id=yes.from_player_id,
@@ -187,8 +186,24 @@ class ExpressInterest:
         )
         return ExpressedInterest(
             interest=yes,
-            outstanding=outstanding,
-            cap=self._ruleset.interest.outstanding_cap_per_sport,
+            outstanding=await self._counted(yes.from_player_id, yes.sport, now),
             mutual=theirs is not None,
             created=created,
+        )
+
+    async def _counted(
+        self, player_id: UUID, sport: Sport, now: datetime
+    ) -> OutstandingCount:
+        """This sport's live count beside the cap in force.
+
+        One helper, so the number the cap is checked against and the number the
+        answer carries are the same read of the same rule. A sport absent from
+        the ledger's answer has nothing in flight, which is the zero it is.
+        """
+
+        counts = await self._interest.outstanding(player_id=player_id, now=now)
+        return OutstandingCount(
+            sport=sport,
+            outstanding=counts.get(sport, 0),
+            cap=self._ruleset.interest.outstanding_cap_per_sport,
         )

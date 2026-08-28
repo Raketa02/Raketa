@@ -82,7 +82,13 @@ Rules to preserve:
   test.
 - **State changes emit domain events.** Use cases persist them through
   `DomainEventStore.append` and enqueue them on the transactional outbox in the same
-  transaction; handlers perform side effects after commit.
+  transaction; handlers perform side effects after commit. **One deliberate exception,
+  and it is the matchmaking module's two durable ledgers** — the `search` record and
+  `interest` (`the-engine.md` §12: *nothing here is event-sourced*, and an interest is
+  *durable without being an aggregate with a life story*). Both are small facts with no
+  life story and nothing downstream reacts to one being written: a lift is a read on the
+  next search, and a mutual is what two rows facing each other already say. A new context
+  does **not** inherit this — it needs the same argument made in an ADR.
 - **Seeds execute use cases, never SQL.** `app/seeds/` creates deterministic development
   accounts through the same use cases a request runs, wired from the composition root, so
   a seeded aggregate has the event stream and the outbox rows a real one has. A structural

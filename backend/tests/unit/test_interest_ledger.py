@@ -19,6 +19,7 @@ from datetime import datetime, timedelta, timezone
 from uuid import UUID, uuid4
 
 import pytest
+from sqlalchemy.exc import IntegrityError
 
 from app.engines.matchfit.core import SearchMode
 from app.kernel import Sport
@@ -295,9 +296,7 @@ async def test_a_lapsed_yes_is_invisible_to_every_read(ledger, session):
         is None
     )
     assert await ledger.outgoing(player_id=ADA, now=later) == ()
-    assert await ledger.outstanding(
-        player_id=ADA, sport=Sport.PADEL, now=later
-    ) == 0
+    assert await ledger.outstanding(player_id=ADA, now=later) == {}
     assert (
         await ledger.days_ago_towards(
             player_id=BEA, sport=Sport.PADEL, senders=[ADA], now=later
@@ -317,18 +316,18 @@ async def test_outstanding_counts_what_is_in_flight_and_not_what_came_back(
 
     await _yes(ledger, session, sender=ADA, recipient=BEA)
     await _yes(ledger, session, sender=ADA, recipient=CAI)
-    assert await ledger.outstanding(
-        player_id=ADA, sport=Sport.PADEL, now=NOW
-    ) == 2
+    await _yes(ledger, session, sender=ADA, recipient=BEA, sport=Sport.TENNIS)
+    assert await ledger.outstanding(player_id=ADA, now=NOW) == {
+        Sport.PADEL: 2,
+        Sport.TENNIS: 1,
+    }, "the cap is per sport, and one read answers for every one of them"
 
     await _yes(ledger, session, sender=BEA, recipient=ADA)
 
-    assert await ledger.outstanding(
-        player_id=ADA, sport=Sport.PADEL, now=NOW
-    ) == 1
-    assert await ledger.outstanding(
-        player_id=ADA, sport=Sport.TENNIS, now=NOW
-    ) == 0, "the cap is per sport"
+    assert await ledger.outstanding(player_id=ADA, now=NOW) == {
+        Sport.PADEL: 1,
+        Sport.TENNIS: 1,
+    }
 
 
 async def test_a_mutual_answers_in_this_players_own_rows(ledger, session):
@@ -436,3 +435,59 @@ async def test_the_ledger_does_not_commit_for_its_caller(ledger, session):
         )
         is None
     )
+
+
+async def test_a_lapsed_yes_may_be_sent_again_before_anything_has_swept_it(
+    ledger, session
+):
+    """**The sweep is a tidy-up and is never load-bearing for a write.**
+
+    A lapsed row still occupies its key until the loop gets to it, and the key
+    *is* ``(from, to, sport)``. If the write collided with it, saying *Let's
+    play* again to somebody whose earlier yes expired would fail for up to an
+    hour — and for ever with the loop switched off, which every docstring in
+    this feature says is a safe thing to do.
+    """
+
+    first = await _yes(ledger, session, sender=ADA, recipient=BEA)
+    later = NOW + timedelta(days=TTL + 3)
+
+    again = Interest(
+        from_player_id=ADA,
+        to_player_id=BEA,
+        sport=Sport.PADEL,
+        at=later,
+        expires_at=expires_at(later, TTL),
+        origin=first.origin,
+    )
+    await ledger.record(again)
+
+    standing = await ledger.find(
+        from_player_id=ADA, to_player_id=BEA, sport=Sport.PADEL, now=later
+    )
+    assert standing == again
+    assert standing.expires_at > first.expires_at, "the fresh yes kept the old expiry"
+    assert len(await ledger.outgoing(player_id=ADA, now=later)) == 1
+
+
+async def test_a_live_yes_is_never_replaced_by_the_write_path(ledger, session):
+    """The replacement above is scoped to a row that is **already lapsed**.
+
+    Stated as its own case because the delete is the dangerous half: a predicate
+    one character wider would silently re-date a yes on every tap, which is the
+    unbounded life ``docs/adr/0127`` refused.
+    """
+
+    first = await _yes(ledger, session, sender=ADA, recipient=BEA)
+
+    with pytest.raises(IntegrityError):
+        await ledger.record(
+            Interest(
+                from_player_id=ADA,
+                to_player_id=BEA,
+                sport=Sport.PADEL,
+                at=NOW + timedelta(days=1),
+                expires_at=expires_at(NOW + timedelta(days=1), TTL),
+                origin=first.origin,
+            )
+        )

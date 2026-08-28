@@ -119,6 +119,47 @@ async def test_a_second_tap_creates_nothing_and_extends_nothing(
     assert len(listed["outgoing"]) == 1, "a second tap became a second row"
 
 
+async def test_a_lapsed_yes_can_be_sent_again_without_waiting_for_the_sweep(
+    client, session_factory, searcher, a_city
+):
+    """**The expiry loop is a tidy-up and never load-bearing for a write.**
+
+    A lapsed row still occupies its key until the sweep gets to it, and the key
+    is exactly `(from, to, sport)`. Nothing here waits for the loop: the yes
+    lapsed, so the next one is a **new** yes with its own expiry, at `201`.
+
+    Written as an HTTP case because the failure it guards is a `500` — the one
+    shape of refusal this feature has no code for, and the one a player would
+    hit by doing the most ordinary thing there is: asking again, later.
+    """
+
+    found = (await world.search(client, searcher["token"])).json()
+    first = await world.express_interest(
+        client,
+        searcher["token"],
+        player_id=a_city,
+        search_id=found["search"]["search_id"],
+    )
+    assert first.status_code == 201, first.text
+    await _age_every_yes(session_factory, by=timedelta(days=30))
+
+    again = await world.search(client, searcher["token"])
+    second = await world.express_interest(
+        client,
+        searcher["token"],
+        player_id=a_city,
+        search_id=again.json()["search"]["search_id"],
+    )
+
+    assert second.status_code == 201, second.text
+    assert (
+        second.json()["interest"]["expires_at"]
+        != first.json()["interest"]["expires_at"]
+    ), "the lapsed yes was resurrected rather than replaced"
+    listed = (await world.read_interest(client, searcher["token"])).json()
+    assert len(listed["outgoing"]) == 1
+
+
 async def test_a_yes_citing_somebody_elses_search_is_refused(
     client, session_factory, candidate_source, searcher, a_city
 ):

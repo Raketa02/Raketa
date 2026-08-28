@@ -64,8 +64,23 @@ class SqlAlchemyInterestLedger:
         return None if row is None else _interest(row)
 
     async def record(self, interest: Interest) -> None:
-        """Add one yes. The caller commits."""
+        """Add one yes, over any lapsed one it replaces. The caller commits.
 
+        The delete is scoped to a row that is **already lapsed at the moment the
+        new yes is sent**, so it can never remove one that still stands: a live
+        yes is what :meth:`find` returns, and the use case never reaches here
+        holding one. Without it, the primary key would hold a row nobody can see
+        and refuse a player their next yes until the sweep caught up.
+        """
+
+        await self._session.execute(
+            delete(InterestORM).where(
+                InterestORM.from_player_id == interest.from_player_id,
+                InterestORM.to_player_id == interest.to_player_id,
+                InterestORM.sport == interest.sport.value,
+                InterestORM.expires_at <= interest.at,
+            )
+        )
         self._session.add(
             InterestORM(
                 from_player_id=interest.from_player_id,
@@ -80,34 +95,32 @@ class SqlAlchemyInterestLedger:
         await self._session.flush()
 
     async def outstanding(
-        self, *, player_id: UUID, sport: Sport, now: datetime
-    ) -> int:
-        """Sent, unexpired and **not yet mutual** — the cap's own denominator.
+        self, *, player_id: UUID, now: datetime
+    ) -> Mapping[Sport, int]:
+        """Sent, unexpired and **not yet mutual**, per sport — the cap's own
+        denominator.
+
+        One grouped read for every sport rather than a query each, which is the
+        shape the port asks for and the shape the screen needs: the cap is shown
+        before it bites, so a list of four counts is the ordinary case and not
+        the unusual one.
 
         The mutual half is a ``NOT EXISTS`` over the same table facing the other
-        way rather than a second query the caller subtracts, because the count on
+        way rather than a second query somebody subtracts, because the count on
         the screen and the count the cap is checked against have to be one
         expression: two would drift the first time somebody optimised one.
         """
 
-        theirs = aliased(InterestORM)
-        answered = exists().where(
-            theirs.from_player_id == InterestORM.to_player_id,
-            theirs.to_player_id == InterestORM.from_player_id,
-            theirs.sport == InterestORM.sport,
-            theirs.expires_at > now,
-        )
-        count = await self._session.scalar(
-            select(func.count())
-            .select_from(InterestORM)
+        rows = await self._session.execute(
+            select(InterestORM.sport, func.count())
             .where(
                 InterestORM.from_player_id == player_id,
-                InterestORM.sport == sport.value,
                 InterestORM.expires_at > now,
-                ~answered,
+                ~_answered_back(now),
             )
+            .group_by(InterestORM.sport)
         )
-        return int(count or 0)
+        return {Sport(sport): int(count) for sport, count in rows.all()}
 
     async def outgoing(
         self, *, player_id: UUID, now: datetime
@@ -115,17 +128,11 @@ class SqlAlchemyInterestLedger:
         """Every live yes this player sent, newest first."""
 
         rows = await self._session.scalars(
-            select(InterestORM)
-            .where(
-                InterestORM.from_player_id == player_id,
-                InterestORM.expires_at > now,
-            )
-            .order_by(
-                InterestORM.sent_at.desc(),
-                # A total order, so two yeses sent in one transaction do not
-                # swap places between two renders of the same list.
-                InterestORM.to_player_id.asc(),
-                InterestORM.sport.asc(),
+            _newest_first(
+                select(InterestORM).where(
+                    InterestORM.from_player_id == player_id,
+                    InterestORM.expires_at > now,
+                )
             )
         )
         return tuple(_interest(row) for row in rows)
@@ -135,23 +142,13 @@ class SqlAlchemyInterestLedger:
     ) -> tuple[Interest, ...]:
         """This player's own live yeses that came back."""
 
-        theirs = aliased(InterestORM)
         rows = await self._session.scalars(
-            select(InterestORM)
-            .where(
-                InterestORM.from_player_id == player_id,
-                InterestORM.expires_at > now,
-                exists().where(
-                    theirs.from_player_id == InterestORM.to_player_id,
-                    theirs.to_player_id == InterestORM.from_player_id,
-                    theirs.sport == InterestORM.sport,
-                    theirs.expires_at > now,
-                ),
-            )
-            .order_by(
-                InterestORM.sent_at.desc(),
-                InterestORM.to_player_id.asc(),
-                InterestORM.sport.asc(),
+            _newest_first(
+                select(InterestORM).where(
+                    InterestORM.from_player_id == player_id,
+                    InterestORM.expires_at > now,
+                    _answered_back(now),
+                )
             )
         )
         return tuple(_interest(row) for row in rows)
@@ -225,6 +222,39 @@ class SqlAlchemyInterestLedger:
         )
         await self._session.execute(delete(InterestORM).where(due))
         return Lapsed(removed=int(removed or 0), never_lifted=int(unfired or 0))
+
+
+def _answered_back(now: datetime):
+    """*Their* live yes, facing back at this row's own. **Written once.**
+
+    Two queries need it and they must agree: the count the cap is checked
+    against and the list of mutuals are the same predicate read positively and
+    negatively, so a second spelling would let *outstanding* and *mutual* drift
+    into overlapping — a yes that is in neither list, or in both.
+    """
+
+    theirs = aliased(InterestORM)
+    return exists().where(
+        theirs.from_player_id == InterestORM.to_player_id,
+        theirs.to_player_id == InterestORM.from_player_id,
+        theirs.sport == InterestORM.sport,
+        theirs.expires_at > now,
+    )
+
+
+def _newest_first(statement):
+    """The order both outgoing lists are read in, and it is **total**.
+
+    Newest first is what the screen wants; the two columns after it are what
+    keeps two yeses sent in one transaction from swapping places between two
+    renders of the same list.
+    """
+
+    return statement.order_by(
+        InterestORM.sent_at.desc(),
+        InterestORM.to_player_id.asc(),
+        InterestORM.sport.asc(),
+    )
 
 
 def _interest(row: InterestORM) -> Interest:

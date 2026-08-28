@@ -26,21 +26,11 @@ delete or it is never taken at all.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import final
 
 from app.application.ports import UnitOfWork
 from app.kernel import Clock
 from app.modules.matchmaking.domain.interest import InterestLedger, Lapsed
-
-
-@final
-@dataclass(frozen=True, slots=True)
-class LapseReport:
-    """What one tick removed, for the log line that carries the falsifier."""
-
-    removed: int
-    never_lifted: int
 
 
 @final
@@ -58,9 +48,15 @@ class LapseExpiredInterest:
         self._interest = interest
         self._uow = unit_of_work
 
-    async def execute(self) -> LapseReport:
-        lapsed: Lapsed = await self._interest.lapse(now=self._clock.now())
+    async def execute(self) -> Lapsed:
+        """Sweep, commit, and hand back what the ledger counted.
+
+        It returns the ledger's own :class:`Lapsed` rather than a report of its
+        own: a second type with the same two fields would be a second place for
+        *what one sweep cost* to be defined, and the only caller — the job's log
+        line — wants exactly the two numbers the ledger already produced.
+        """
+
+        lapsed = await self._interest.lapse(now=self._clock.now())
         await self._uow.commit()
-        return LapseReport(
-            removed=lapsed.removed, never_lifted=lapsed.never_lifted
-        )
+        return lapsed

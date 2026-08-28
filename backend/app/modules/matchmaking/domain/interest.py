@@ -161,6 +161,33 @@ class Lapsed:
         )
 
 
+@final
+@dataclass(frozen=True, slots=True)
+class OutstandingCount:
+    """One sport's live count, and the cap it is counted against.
+
+    The pair travels together and is never split: a count with no cap is a
+    number, and a cap with no count is a rule. What a player is owed is *how
+    close am I*, which is the two of them side by side — and it is one type
+    rather than two loose fields so that the tap's answer and the screen's list
+    cannot come to disagree about what they are showing (``docs/adr/0127`` §4).
+    """
+
+    sport: Sport
+    outstanding: int
+    cap: int
+
+    def __post_init__(self) -> None:
+        invariant(self.outstanding >= 0, f"a negative count: {self.outstanding}")
+        invariant(self.cap >= 1, f"an interest cap of {self.cap}")
+
+    @property
+    def reached(self) -> bool:
+        """Whether one more yes would be refused."""
+
+        return self.outstanding >= self.cap
+
+
 @runtime_checkable
 class InterestLedger(Protocol):
     """The durable record of every *Let's play*, and the only shapes it answers in.
@@ -202,13 +229,30 @@ class InterestLedger(Protocol):
 
         The transaction boundary is the command's decision, exactly as it is for
         the search record beside it.
+
+        **A lapsed row for the same pair and sport is replaced**, because the
+        identity of a yes is ``(from, to, sport)`` and a lapsed one is *gone* —
+        it is simply still occupying its key until the sweep gets to it. Without
+        this, saying *Let's play* again to somebody whose earlier yes expired
+        would fail for as long as the sweep had not run: :meth:`find` is bounded
+        by ``now`` and would report nothing standing, and the write would then
+        collide with a row nobody can see. That would make the sweep
+        load-bearing for **writes**, which is exactly what :meth:`lapse`'s
+        docstring promises it is not.
+
+        The named cost: a lapsed yes replaced this way is not counted by
+        :meth:`lapse`, so it is missing from *yeses that expired having never
+        lifted anybody*. It is the narrow case of the same person re-asking the
+        same person inside one sweep interval, and the alternative — keeping the
+        row and refusing the new yes — would refuse a player something they are
+        owed in order to protect a statistic.
         """
         ...
 
     async def outstanding(
-        self, *, player_id: UUID, sport: Sport, now: datetime
-    ) -> int:
-        """How many of this player's yeses are still in flight, in this sport.
+        self, *, player_id: UUID, now: datetime
+    ) -> Mapping[Sport, int]:
+        """How many of this player's yeses are still in flight, per sport.
 
         **Outstanding means sent, unexpired and not yet mutual** — a mutual has
         been answered and is no longer in flight (``docs/adr/0127`` §3). That
@@ -216,6 +260,13 @@ class InterestLedger(Protocol):
         write and another on the screen that shows it is a refusal the player
         cannot predict, which is the exact failure §4 of that record exists to
         prevent.
+
+        **Every sport in one read**, rather than a query per sport, on this
+        port's own rule. The write path wants one number and the screen wants
+        them all, and two methods would be two definitions of *outstanding* the
+        moment somebody optimised one. A sport with nothing in flight is
+        **absent**, and a caller reads that as the zero it is — there is no sport
+        in which a yes cannot be sent.
         """
         ...
 

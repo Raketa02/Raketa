@@ -37,22 +37,11 @@ from app.kernel import Clock, Sport
 from app.modules.blocks.domain.ports import BlockQuery
 from app.modules.matchmaking.application.commands import ReadInterestCommand
 from app.modules.matchmaking.application.outward_reads import live_block_set
-from app.modules.matchmaking.domain.interest import Interest, InterestLedger
-
-
-@final
-@dataclass(frozen=True, slots=True)
-class OutstandingPerSport:
-    """One sport's live count, and the cap it is counted against.
-
-    The pair travels together and is never split: a count with no cap is a
-    number, and a cap with no count is a rule. What the player is owed is *how
-    close am I*, which is the two of them side by side.
-    """
-
-    sport: Sport
-    outstanding: int
-    cap: int
+from app.modules.matchmaking.domain.interest import (
+    Interest,
+    InterestLedger,
+    OutstandingCount,
+)
 
 
 @final
@@ -69,7 +58,7 @@ class InterestSummary:
 
     outgoing: tuple[Interest, ...]
     mutual: tuple[Interest, ...]
-    outstanding: tuple[OutstandingPerSport, ...]
+    outstanding: tuple[OutstandingCount, ...]
 
 
 @final
@@ -112,7 +101,7 @@ class ReadInterest:
 
     async def _outstanding(
         self, player_id: UUID, now: datetime
-    ) -> tuple[OutstandingPerSport, ...]:
+    ) -> tuple[OutstandingCount, ...]:
         """The count and the cap for **every** sport, whether or not it is used.
 
         Every sport rather than only the ones with rows, because the screen that
@@ -122,18 +111,19 @@ class ReadInterest:
         itself is per sport and the same integer today; it is sent per sport
         anyway, so a ruleset that differentiates them is a data change rather
         than a contract one.
+
+        One read of the ledger and then the roster, rather than a query per
+        sport: the sports the player has nothing out in are exactly the ones the
+        ledger has nothing to say about, and asking it four times to be told
+        *nothing* three times is the query-per-row shape this module refuses
+        everywhere else.
         """
 
         cap = self._ruleset.interest.outstanding_cap_per_sport
-        counted: list[OutstandingPerSport] = []
-        for sport in Sport:
-            counted.append(
-                OutstandingPerSport(
-                    sport=sport,
-                    outstanding=await self._interest.outstanding(
-                        player_id=player_id, sport=sport, now=now
-                    ),
-                    cap=cap,
-                )
+        counts = await self._interest.outstanding(player_id=player_id, now=now)
+        return tuple(
+            OutstandingCount(
+                sport=sport, outstanding=counts.get(sport, 0), cap=cap
             )
-        return tuple(counted)
+            for sport in Sport
+        )

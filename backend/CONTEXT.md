@@ -523,15 +523,16 @@ there; they are not repeated here.
   `OUTSTANDING_INTEREST_CAP` are ruleset rows and only the sweep's cadence is
   configuration. _Avoid_: a `state` or `expired_at` column — a yes is live or gone
   ([ADR-0127](../docs/adr/0127-a-signal-expires-or-is-refused-never-quietly-decays.md)).
-- **Origin key** — the `(origin_search_id, origin_position)` pair on an interest row: which
-  search surfaced this person and where they sat in it. **Two columns, never a third
-  table** — the link is 1:1, and when `matches` lands the chain is
-  `match ← interest ← search`, still foreign keys. The position is read off the cited
-  search's own **returned** rows rather than sent by the client, so it is true by
-  construction; a citation that cannot be proved is **refused, never linked as null**,
-  because a silently dropped link is a denominator that lies. _Avoid_: making the column
-  nullable "for now" — the whole value of the key is that *interests per search* has no
-  missing rows.
+- **The origin key's columns** — `origin_search_id` and `origin_position` on the
+  `interest` row. The **term** is the root glossary's
+  ([`../CONTEXT.md`](../CONTEXT.md)) and is not restated here; what is technical is
+  where it lives and how it is filled. **Two columns, never a third table** — the link
+  is 1:1, and when `matches` lands the chain is `match ← interest ← search`, still
+  foreign keys. The position is read off the cited search's own **returned** rows rather
+  than sent by the client, so it is true by construction, and a citation that cannot be
+  proved raises `origin_search_not_found` rather than writing a null. _Avoid_: making
+  either column nullable "for now" — the whole value of the key is that *interests per
+  search* has no missing rows.
 - **Fail-soft ledger** — how *exposure and suppression fail soft* stops being prose.
   `FailSoftExposureLedger` and `FailSoftSuppressionLedger` wrap any implementation and
   degrade every operation to the **empty answer**, and the composition root never hands out
