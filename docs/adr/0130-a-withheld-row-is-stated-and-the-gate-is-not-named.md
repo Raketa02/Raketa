@@ -96,10 +96,45 @@ time from sources that keep moving. They are now recorded
 `photo_id`; the URL is minted per response* taken literally, and it is what makes both
 routes render the same type through one function.
 
+**Three things about the *search* route changed on the way, and are named here
+rather than left in a docstring.**
+
+1. **`sorts_available` now reads whole kilometres on both routes.** *Closest* used
+   to be judged on the measurement; the record stores the integer the wire
+   carries, so judging on the measurement would make the two routes disagree
+   about whether a control is honest. It is also the more correct of the two:
+   offerability is a claim about what the **client** could do with the rows it
+   holds, and the client holds an integer — two candidates 3.2 km and 3.4 km away
+   are one distance to it. The visible effect is that a narrow spread that used
+   to draw *Closest* no longer does, which is the rule working rather than
+   loosening.
+2. **`sorts_available` is a third departure from *the recorded answer*.** ADR-0109
+   named two — a re-verified row and a re-minted photo link. This adds one, and
+   deliberately: after a withholding the reader is holding different rows, and a
+   control that would now reorder nothing must not be drawn. The round-trip test
+   asserts the envelope reproduces when nothing was withheld, which is where the
+   original clause bites.
+3. **A held reader is refused their own old answers**, with the same
+   `account_held` the search returns. A held player can still sign in, so
+   refusing them a fresh search while handing back this morning's would be the
+   hold ending at the one route that remembers.
+
+**`withheld` will sometimes mean *we cannot check*, and that is the fail-closed
+rule working.** The mutual gender preference is the only fail-closed gate whose
+other half lives on the index row, so a candidate the partition no longer holds
+has no preference to read — and *a gate that cannot be evaluated excludes*. A
+reader cannot tell that case from a block, which is the same indistinguishability
+this record is built on; what it costs is that a withheld row is a slightly
+weaker signal about the world than *somebody blocked you* would be. The
+alternative — treating *not indexed* as *still fine* — is serving a row on a gate
+nobody evaluated, and that is the failure this whole route exists to prevent.
+
 **And the read-back costs slightly more than ADR-0109 priced it at.** That record said *a
 lookup plus a block-set read*; the mutual gender gate makes it a lookup, three set reads and
 one snapshot binding, because gender is the one fail-closed gate whose other half lives on
-the index row. The staleness ladder is deliberately **not** applied — it refuses on ranking
+the index row — and resolving twenty ids inside that container is a pass over the partition,
+because `CandidateSource` deliberately answers with the container and never with questions
+about rows ([ADR-0112](0112-the-snapshot-is-a-per-partition-container-bound-once.md)). The staleness ladder is deliberately **not** applied — it refuses on ranking
 quality ([ADR-0111](0111-the-index-holds-only-what-a-player-changes-about-themselves.md))
 and a read-back ranks nothing — but a candidate the index no longer holds has no preference
 to read, so that gate cannot be evaluated, and *a gate that cannot be evaluated excludes*.

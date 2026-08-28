@@ -51,6 +51,7 @@ from app.engines.matchfit.scorable import (
     ScorableCandidate,
     Searcher,
 )
+from app.engines.matchfit.core import Term
 from app.engines.matchfit.scoring import Fit, MatchFit
 from app.engines.matchfit.v1 import (
     Admission,
@@ -76,6 +77,7 @@ from app.modules.matchmaking.domain.candidate_snapshot import CandidateSnapshot
 from app.modules.matchmaking.domain.geography import (
     Point,
     bounding_box,
+    whole_kilometres,
 )
 from app.modules.matchmaking.domain.geography import distance_km as measure_distance
 from app.modules.matchmaking.domain.measurements import Overlap, overlap_of
@@ -177,6 +179,25 @@ class Scored:
 
         fired = set(self.admission.fired)
         return tuple(term.value for term in self.admission.live if term not in fired)
+
+    @property
+    def shown_distance_km(self) -> int | None:
+        """Whole kilometres, as the wire carries them — or ``None``.
+
+        ``None`` when the distance term stood down, which is **omitted** on the
+        wire and is not a zero: a candidate whose distance could not be read is
+        not next door, and the absence is what lets *Closest* sort them last
+        instead of first.
+
+        It is derived here, once, because three readers need the same answer and
+        must not disagree: the response, the recorded row, and the sort that says
+        whether *Closest* is honest. Two of those three are read back a month
+        later against the third.
+        """
+
+        if Term.DISTANCE in self.fit.degraded_terms:
+            return None
+        return whole_kilometres(self.generated.distance_km)
 
     @property
     def reliability_penalty_applied(self) -> bool:

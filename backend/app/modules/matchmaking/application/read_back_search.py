@@ -70,7 +70,7 @@ from app.modules.matchmaking.domain.searches import (
     SearchRecord,
     SortOption,
 )
-from app.modules.matchmaking.domain.sorting import Sortable, sorts_available
+from app.modules.matchmaking.domain.sorting import of_record, sorts_available
 from app.modules.player_profile.domain.ports import PlayerProfileRepository
 
 
@@ -154,7 +154,7 @@ class ReadBackSearch:
                 for row in rows
             ),
             sorts_available=sorts_available(
-                tuple(_sortable(row) for row in shown)
+                tuple(of_record(row) for row in shown)
             ),
         )
 
@@ -224,8 +224,7 @@ class ReadBackSearch:
             if not gender_satisfied(
                 searcher_gender=profile.gender,
                 searcher_preference=profile.gender_preference,
-                their_gender=_gender_of(indexed.get(str(player_id))),
-                their_preference=_preference_of(indexed.get(str(player_id))),
+                theirs=indexed.get(str(player_id)),
             )
         )
 
@@ -237,6 +236,12 @@ class ReadBackSearch:
         The container is bound once, exactly as a search binds it — a read-back
         that took two snapshots would be a read-back the index could move
         underneath, which is the same rule and not a weaker version of it.
+
+        Resolving twenty ids costs **one pass over the partition**, and that is
+        the port's shape rather than an oversight: ``CandidateSource`` answers
+        with the container and never with questions about rows
+        (``docs/adr/0112``), because a source that answered per-row questions is
+        a source a search could call inside its walk.
         """
 
         wanted = {str(player_id) for player_id in player_ids}
@@ -246,30 +251,3 @@ class ReadBackSearch:
             for row in snapshot.rows
             if row.player_id in wanted
         }
-
-
-def _gender_of(row: CandidateRow | None) -> str | None:
-    return None if row is None else row.gender
-
-
-def _preference_of(row: CandidateRow | None) -> str | None:
-    return None if row is None else row.gender_preference
-
-
-def _sortable(row: SearchCandidateRecord) -> Sortable:
-    """What a sort reads on a row that has already been recorded.
-
-    ``reliability`` is ``None`` for every row, and that is a **stated limit
-    rather than an oversight**: the published Player Score is not on the record,
-    so *Most reliable* cannot be offered honestly here and is therefore not
-    drawn. It is inert today — the reliability term stands down for everybody, so
-    the live search does not draw it either — and the day ``player_score`` ships,
-    the fix is a recorded reading, never a control this route guesses at.
-    """
-
-    return Sortable(
-        player_id=str(row.player_id),
-        fit=row.fit,
-        distance_km=row.distance_km,
-        reliability=None,
-    )

@@ -57,7 +57,7 @@ from app.modules.matchmaking.domain.errors import (
     SearchNotRecorded,
     SportNotRated,
 )
-from app.modules.matchmaking.domain.geography import Point, whole_kilometres
+from app.modules.matchmaking.domain.geography import Point
 from app.modules.matchmaking.domain.ledgers import ExposureLedger, week_of
 from app.modules.matchmaking.domain.ports import (
     AccountHoldQuery,
@@ -128,6 +128,27 @@ class AnsweredCandidate:
     #: unavailable, and ``None`` today in competitive, because the result-update
     #: rule does not exist. The card draws no block either way.
     at_stake: AtStake | None
+
+    def recorded_card(self) -> RecordedCard:
+        """The card as it was shown, from the two sources that assembled it.
+
+        The nickname and the photo id come from ``users`` through
+        :class:`PlayerCardSource`; the area, the tags, the Level and its band are
+        already on the index row, because those are facts a player changes about
+        themselves. Assembled once, here, and **both the response and the
+        read-back render this one** — so the card on the wire and the card in the
+        record cannot disagree about what was shown.
+        """
+
+        indexed = self.scored.generated.row
+        return RecordedCard(
+            nickname=self.card.nickname,
+            photo_id=self.card.photo_id,
+            area_code=self.scored.fenced.area_code,
+            social_tags=tuple(indexed.social_tags),
+            level=indexed.mu,
+            band=indexed.band,
+        )
 
 
 @final
@@ -258,7 +279,7 @@ class RunShortlistSearch:
                         row.scored,
                         CandidateBand.RETURNED,
                         position,
-                        card=_recorded_card(row),
+                        card=row.recorded_card(),
                         at_stake=row.at_stake,
                     )
                     for position, row in enumerate(rows, start=1)
@@ -529,14 +550,10 @@ class RunShortlistSearch:
             reliability_penalty_applied=row.reliability_penalty_applied,
             reliability_penalty_decisive=row.reliability_penalty_decisive(floor),
             concerns=tuple(term.value for term in row.fit.concerns),
-            # ``None`` and never a zero when the term stood down: a candidate
-            # whose distance could not be read is not next door, and the wire
-            # omits the field rather than sending one.
-            distance_km=(
-                None
-                if Term.DISTANCE in row.fit.degraded_terms
-                else whole_kilometres(row.generated.distance_km)
-            ),
+            # ``None`` and never a zero when the term stood down, decided once on
+            # ``Scored`` so the recorded row, the response and the sort cannot
+            # come to three answers about one distance.
+            distance_km=row.shown_distance_km,
             card=card,
             at_stake=at_stake,
         )
@@ -569,28 +586,6 @@ class RunShortlistSearch:
             week=week_of(now),
             player_ids=[UUID(row.player_id) for row in returned],
         )
-
-
-def _recorded_card(row: AnsweredCandidate) -> RecordedCard:
-    """The card as it was shown, from the two sources that assembled it.
-
-    The nickname and the photo id come from ``users`` through
-    :class:`PlayerCardSource`; the area, the tags, the Level and its band are
-    already on the index row, because those are facts a player changes about
-    themselves. It is assembled once, here, and both the response and the
-    read-back render *this* — so the card on the wire and the card in the record
-    cannot disagree about what was shown.
-    """
-
-    indexed = row.scored.generated.row
-    return RecordedCard(
-        nickname=row.card.nickname,
-        photo_id=row.card.photo_id,
-        area_code=row.scored.fenced.area_code,
-        social_tags=tuple(indexed.social_tags),
-        level=indexed.mu,
-        band=indexed.band,
-    )
 
 
 def _counts(shortlist: Shortlist, n_returned: int) -> StagedCounts:

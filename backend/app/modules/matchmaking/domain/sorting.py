@@ -40,9 +40,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Callable, Sequence, final
 
-from app.engines.matchfit.core import Term
-from app.modules.matchmaking.domain.geography import whole_kilometres
-from app.modules.matchmaking.domain.searches import SortOption
+from app.modules.matchmaking.domain.searches import (
+    SearchCandidateRecord,
+    SortOption,
+)
 from app.modules.matchmaking.domain.shortlist import Scored
 
 #: What a row with nothing to sort on is worth. Larger than any real distance and
@@ -85,24 +86,44 @@ class Sortable:
 def of_scored(row: Scored) -> Sortable:
     """What the search that just ran reads its own rows as.
 
-    The distance is rounded to the whole kilometres the wire carries, and dropped
-    entirely when the term stood down — so a stood-down row sorts last here
-    exactly as it does on the wire, where the field is omitted.
+    The distance is ``Scored``'s own — the whole kilometres the wire carries,
+    absent when the term stood down — rather than the measurement, so a
+    stood-down row sorts last here exactly as it does on the wire.
     """
 
     return Sortable(
         player_id=row.player_id,
         fit=row.modified.points,
-        distance_km=(
-            None
-            if Term.DISTANCE in row.fit.degraded_terms
-            else whole_kilometres(row.generated.distance_km)
-        ),
+        distance_km=row.shown_distance_km,
         reliability=(
             None
             if row.fenced.reliability is None
             else float(row.fenced.reliability.published_score)
         ),
+    )
+
+
+def of_record(row: SearchCandidateRecord) -> Sortable:
+    """What a search read back reads its own rows as.
+
+    Beside :func:`of_scored` rather than in the read-back, because the two are
+    one decision — *what a sort is allowed to see* — and a mapping written in
+    another layer is a second answer to it.
+
+    ``reliability`` is ``None`` for every recorded row, and that is a **stated
+    limit rather than an oversight**: the published Player Score is not on the
+    record, so *Most reliable* cannot be offered honestly on a read-back and is
+    therefore not drawn. It is inert today — the reliability term stands down for
+    everybody, so the live search does not draw it either — and the day
+    ``player_score`` ships, the fix is a recorded reading, never a control this
+    route guesses at.
+    """
+
+    return Sortable(
+        player_id=str(row.player_id),
+        fit=row.fit,
+        distance_km=row.distance_km,
+        reliability=None,
     )
 
 

@@ -157,8 +157,7 @@ def _gender_satisfied(row: CandidateRow, context: SearchContext) -> bool:
     return gender_satisfied(
         searcher_gender=context.searcher.gender,
         searcher_preference=context.searcher.gender_preference,
-        their_gender=row.gender,
-        their_preference=row.gender_preference,
+        theirs=row,
     )
 
 
@@ -166,8 +165,7 @@ def gender_satisfied(
     *,
     searcher_gender: Gender | None,
     searcher_preference: GenderPreference,
-    their_gender: str | None,
-    their_preference: str | None,
+    theirs: CandidateRow | None,
 ) -> bool:
     """Both preferences, both directions. **Closed, and told to nobody.**
 
@@ -177,20 +175,23 @@ def gender_satisfied(
     reads a gender at all, which is why an unanswered question costs nothing
     until somebody's safety setting depends on it.
 
-    It takes four facts rather than a row and a context because the same gate is
-    evaluated in two places — inside a search, and again when a stored search is
-    read back an hour later (``docs/adr/0109``) — and a second implementation of
-    a mutual safety gate is exactly the thing that ends up satisfied in one place
-    and not the other. ``their_preference`` is ``None`` when there is no row to
-    read one from at all, which is a gate that cannot be evaluated and therefore
-    excludes.
+    It takes the searcher's two facts and the other side's **row** rather than a
+    whole ``SearchContext``, because the same gate is evaluated in two places —
+    inside a search, and again when a stored search is read back an hour later
+    (``docs/adr/0109``) — and a second implementation of a mutual safety gate is
+    exactly the thing that ends up satisfied in one place and not the other.
+
+    ``theirs`` is ``None`` when the index holds no row for that player at all,
+    which is a gate that **cannot be evaluated** and therefore excludes.
     """
 
-    theirs = None if their_preference is None else _preference(their_preference)
     if theirs is None:
         return False
-    return _satisfies(searcher_preference, _gender(their_gender)) and _satisfies(
-        theirs, searcher_gender
+    preference = _preference(theirs.gender_preference)
+    if preference is None:
+        return False
+    return _satisfies(searcher_preference, _gender(theirs.gender)) and _satisfies(
+        preference, searcher_gender
     )
 
 

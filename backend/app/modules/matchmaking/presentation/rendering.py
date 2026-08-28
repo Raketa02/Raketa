@@ -31,6 +31,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.kernel import InvariantViolated
+
 from app.modules.matchmaking.application.read_back_search import ReadBackAnswer
 from app.modules.matchmaking.application.run_shortlist_search import ShortlistAnswer
 from app.modules.matchmaking.domain.searches import (
@@ -41,7 +43,6 @@ from app.modules.matchmaking.domain.searches import (
     SortOption,
 )
 from app.modules.matchmaking.presentation.schemas import (
-    OMITTED,
     CandidateSchema,
     ConcernSchema,
     OptimisedFor,
@@ -117,12 +118,27 @@ def _envelope(
 
 
 def _candidate(
-    row: SearchCandidateRecord, *, withheld: Any = OMITTED
+    row: SearchCandidateRecord, *, withheld: bool | None = None
 ) -> CandidateSchema:
+    """One recorded row on the wire.
+
+    ``withheld`` is ``None`` for *do not mention it at all* — the `POST`, where
+    every row is live by construction — and ``False`` on a read-back, where the
+    gates were re-evaluated and this row still stands. It is never ``True`` here:
+    a withheld row is a different type and never reaches this function.
+    """
+
+    card = row.card
+    if card is None:  # pragma: no cover — the record's own invariant refuses one
+        # A ``RETURNED`` row holds a card by construction: the biconditional on
+        # ``SearchCandidateRecord`` says so, and a row whose card could not be
+        # assembled was dropped before it was ever written. Refused in the
+        # kernel's own shape rather than rendered with a hole where a person is.
+        raise InvariantViolated("a returned row with no card reached the wire")
     fields: dict[str, Any] = {
         "player_id": row.player_id,
         "fit": row.fit,
-        "player_card": _card(row.card),
+        "player_card": _card(card),
         "concerns": [ConcernSchema(term=term) for term in row.concerns],
         # The same mappings the record stores. One serialiser, two consumers:
         # the wire validates it into the discriminated union and the store keeps
@@ -149,25 +165,21 @@ def _candidate(
             "win_delta": row.at_stake.win_delta,
             "loss_delta": row.at_stake.loss_delta,
         }
-    if withheld is not OMITTED:
+    if withheld is not None:
         fields["withheld"] = withheld
     return CandidateSchema.model_validate(fields)
 
 
-def _card(card: RecordedCard | None) -> PlayerCardSchema:
+def _card(card: RecordedCard) -> PlayerCardSchema:
     """The card as it was shown, from the row that recorded it.
 
     ``counted_games`` is never passed: the games ledger has no provider in this
     build, so the field does not apply and a zero would be an invented one.
 
-    A ``RETURNED`` row always carries a card — the record's own invariant says
-    so, and a row whose card could not be assembled was dropped before it was
-    ever written — so the ``None`` branch here is unreachable and refuses rather
-    than rendering a card with no person on it.
+    It takes a card and never an absence, so *a row with no person on it* is not
+    a state this function has to have an opinion about.
     """
 
-    if card is None:  # pragma: no cover - refused by the record's invariant
-        raise ValueError("a returned row with no card reached the wire")
     fields: dict[str, Any] = {
         "nickname": card.nickname,
         "area_code": card.area_code,

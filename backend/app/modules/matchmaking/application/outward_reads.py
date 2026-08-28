@@ -8,6 +8,12 @@ orchestration rather than a port.
 One function reading the table, rather than a `try` at every call site: a caller
 cannot quietly soften a gate by handing it a default, and cannot forget to soften
 a term, because the same function refuses the mismatch in both directions.
+
+:func:`live_block_set` sits beside it and does the same job for the one outward
+read whose posture is **not** in that table: ``BlockQuery`` is not a matcher
+demand, it declares its own fail-closed posture where the port lives, and what is
+left over is the translation this module already owns — somebody else's outage
+becoming the matcher's own refusal.
 """
 
 from __future__ import annotations
