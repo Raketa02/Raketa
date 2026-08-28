@@ -36,8 +36,8 @@ from typing import final
 from app.engines.matchfit.core import SearchMode
 from app.modules.matchmaking.domain.candidate_index import CandidateRow
 from app.modules.matchmaking.domain.search_context import (
-    NEWCOMER_WINDOW,
     SearchContext,
+    is_new_at,
 )
 from app.modules.matchmaking.domain.searches import SearchInitiation
 from app.modules.player_profile.domain.gender import Gender, GenderPreference
@@ -226,7 +226,6 @@ def _level_close_enough(row: CandidateRow, context: SearchContext) -> bool:
 
 
 def _either_is_new(row: CandidateRow, context: SearchContext) -> bool:
-    return (
-        context.now - row.profile_created_at < NEWCOMER_WINDOW
-        or context.searcher.is_new_at(context.now)
+    return is_new_at(row.profile_created_at, context.now) or (
+        context.searcher.is_new_at(context.now)
     )

@@ -26,6 +26,7 @@ does not take dictation.
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
@@ -289,3 +290,36 @@ async def search(client, token: str, mode: str = "COMPETITIVE", sport: Sport = S
 #: inside the staleness ladder's first rung, so nothing here is testing the
 #: refusal by accident.
 A_MOMENT_LATER = timedelta(minutes=1)
+
+
+def override(client, dependency, factory) -> None:
+    """Replace one dependency on the running application, for one test.
+
+    The `client` fixture holds the app rather than exposing it, so reaching for
+    it is a private access — written **once, here**, with the reason attached,
+    rather than three times in a test module. What it buys is the only way to
+    drive a refusal that lives behind a provider: the fail-closed reads and the
+    index are wired per request, so breaking one on purpose is a dependency
+    override and nothing else.
+    """
+
+    client._transport.app.dependency_overrides[dependency] = factory  # noqa: SLF001
+
+
+def rewind_the_index(source, by: timedelta) -> None:
+    """Move the index's *caught up at* backwards, without moving the clock.
+
+    The staleness ladder reads the gap between the two, and a test that moved the
+    clock instead would also move every newcomer window and every activity
+    reading in the same search — so it would be testing four things and
+    asserting one.
+
+    It rebinds the container the way a refresh does rather than mutating one,
+    because a snapshot is replaced and never edited.
+    """
+
+    source._snapshots = {  # noqa: SLF001 — a container has no setter, by design
+        partition: replace(snapshot, caught_up_at=snapshot.caught_up_at - by)
+        for partition, snapshot in source._snapshots.items()  # noqa: SLF001
+    }
+    source._caught_up_at = source._caught_up_at - by  # noqa: SLF001

@@ -167,6 +167,36 @@ def test_a_sort_that_would_reorder_nothing_is_not_offered():
     )
 
 
+def test_a_sort_whose_readings_are_all_equal_is_never_offered():
+    """The failure a naive check misses, and the one *Most reliable* is.
+
+    Every sort ends on the player id, so a sort whose readings are all equal
+    resorts the list into **id order** — a different order, carrying nothing.
+    Drawn, that control offers the player a reshuffle by player id and calls it
+    *most reliable*.
+
+    The rows below are deliberately in an order the ids do not agree with, which
+    is what makes the naive check say *yes* here.
+    """
+
+    descending = (
+        build.row(1, mu=build.SEARCHER_MU - 0.4),
+        build.row(2, mu=build.SEARCHER_MU - 0.2),
+        build.row(3, mu=build.SEARCHER_MU),
+    )
+    returned = _run(build.context(descending)).returned
+
+    assert _ids(returned) != sorted(_ids(returned)), (
+        "the fixture agrees with id order, so it asserts nothing"
+    )
+    offered = sorts_available(returned)
+    assert SortOption.MOST_RELIABLE not in offered, (
+        "the reliability term stands down for everybody, so nothing tells these "
+        "rows apart"
+    )
+    assert SortOption.CLOSEST not in offered, "they are all at the same address"
+
+
 def test_closest_is_offered_when_it_would_actually_reorder():
     """And *Most reliable* is not, for as long as the reliability term stands
     down for everybody — a fact re-derived per search rather than hardcoded."""

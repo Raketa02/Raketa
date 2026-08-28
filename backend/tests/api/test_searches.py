@@ -13,8 +13,11 @@ answer, and that a whole list of facts never crosses at all.
 
 from __future__ import annotations
 
+from datetime import timedelta
+
 import pytest
 
+from app.modules.matchmaking.domain.errors import MatchmakingUnavailable
 from tests.api import matchmaking_world as world
 
 
@@ -427,6 +430,96 @@ async def test_the_envelope_carries_the_facts_about_the_search(
     )
     for staged in ("n_generated", "n_scored", "n_cleared_floor", "excluded_by_gate"):
         assert staged not in envelope and staged not in envelope["pool"]
+
+
+async def test_a_reason_that_only_reorders_never_crosses_the_wire(
+    client, session_factory, candidate_source, searcher
+):
+    """**The store is open where the wire is closed.**
+
+    Every candidate here has been shown to nobody this week, so every recorded
+    row carries an inclusion reason — and none of them may cross, because
+    *nobody has been shown them all week* is a third party's unpopularity and the
+    searcher is owed no version of it.
+    """
+
+    await world.a_candidate(client, session_factory, "unseen", mu=searcher["mu"])
+    await world.fold_the_log(session_factory, candidate_source)
+
+    response = await world.search(client, searcher["token"])
+    body = response.json()
+
+    recorded = await world.recorded_candidates(
+        session_factory, body["search"]["search_id"]
+    )
+    assert [row.inclusion_reason for row in recorded] == ["ZERO_EXPOSURE"]
+    assert all("inclusion_reason" not in row for row in body["candidates"])
+    assert "ZERO_EXPOSURE" not in response.text
+    assert "NEWCOMER_WINDOW" not in response.text
+
+
+async def test_a_process_with_no_index_says_so_and_never_answers_empty(
+    client, searcher
+):
+    """**Never a fallback.** A search with no index is not a search with a
+    smaller pool — and an empty shortlist would be indistinguishable on the wire
+    from *there is nobody near you*. The 503 says which."""
+
+    from app.modules.matchmaking.presentation.dependencies import (
+        get_candidate_source,
+    )
+
+    def _no_index():
+        raise MatchmakingUnavailable("the candidate index is not running")
+
+    world.override(client, get_candidate_source, _no_index)
+
+    response = await world.search(client, searcher["token"])
+
+    assert response.status_code == 503, response.text
+    assert response.json()["code"] == "matchmaking_unavailable"
+
+
+async def test_an_index_a_day_behind_refuses_over_http(
+    client, session_factory, candidate_source, searcher
+):
+    """The refusal stands on **quality, not safety** — every fact staleness can
+    cost is a fact about who is worth meeting."""
+
+    await world.a_candidate(client, session_factory, "somebody", mu=searcher["mu"])
+    await world.fold_the_log(session_factory, candidate_source)
+    world.rewind_the_index(candidate_source, timedelta(hours=25))
+
+    response = await world.search(client, searcher["token"])
+
+    assert response.status_code == 503, response.text
+    assert response.json()["code"] == "index_too_stale"
+
+
+async def test_a_block_set_that_cannot_be_read_refuses_over_http(
+    client, session_factory, candidate_source, searcher
+):
+    """*A gate that cannot be evaluated excludes* — and its own code, because a
+    503 about the platform is a different sentence from a 403 about you."""
+
+    from app.modules.blocks.domain.errors import BlockStateUnavailable
+    from app.modules.blocks.presentation.dependencies import get_block_query
+
+    class Unreachable:
+        async def exclusions_for(self, player_id):
+            raise BlockStateUnavailable("the block store is unreachable")
+
+        async def blocked_between(self, first, second):
+            raise BlockStateUnavailable("the block store is unreachable")
+
+    await world.a_candidate(client, session_factory, "somebody", mu=searcher["mu"])
+    await world.fold_the_log(session_factory, candidate_source)
+    world.override(client, get_block_query, Unreachable)
+
+    response = await world.search(client, searcher["token"])
+
+    assert response.status_code == 503, response.text
+    assert response.json()["code"] == "gate_data_unavailable"
 
 
 async def test_the_route_is_on_the_emitted_player_surface():

@@ -72,8 +72,8 @@ from app.modules.matchmaking.domain.ports import (
     StrandObservation as PublishedStrand,
 )
 from app.modules.matchmaking.domain.search_context import (
-    NEWCOMER_WINDOW,
     SearchContext,
+    is_new_at,
 )
 from app.modules.player_profile.domain.availability import AvailabilitySlot, DayPart
 
@@ -110,7 +110,11 @@ def searcher_of(context: SearchContext) -> Searcher:
 
 
 def candidate_of(
-    row: CandidateRow, context: SearchContext, *, distance_km: float
+    row: CandidateRow,
+    context: SearchContext,
+    *,
+    distance_km: float,
+    player_uuid: UUID,
 ) -> ScorableCandidate:
     """One index row, as the scorer is allowed to see it.
 
@@ -130,12 +134,14 @@ def candidate_of(
         distance_km=distance_km,
         combined=_combined(context.searcher.sigma, row.sigma),
         reliability=reliability_record_of(
-            context.terms.player_scores.get(UUID(row.player_id)), context.now
+            context.terms.player_scores.get(player_uuid), context.now
         ),
     )
 
 
-def modifier_facts_of(row: CandidateRow, context: SearchContext) -> ModifierFacts:
+def modifier_facts_of(
+    row: CandidateRow, context: SearchContext, player_uuid: UUID
+) -> ModifierFacts:
     """What stage 4 reads. **Two of the three cannot fire today.**
 
     Familiarity and the welcoming record both need ``matches``, which is
@@ -144,7 +150,7 @@ def modifier_facts_of(row: CandidateRow, context: SearchContext) -> ModifierFact
     answer* and emphatically not *no*.
     """
 
-    counterpart = context.terms.counterparts.get(UUID(row.player_id))
+    counterpart = context.terms.counterparts.get(player_uuid)
     return ModifierFacts(
         calibration_elevated=row.calibration_priority != CALIBRATION_STANDARD,
         shared_history=_shared_history(counterpart, context.now),
@@ -153,7 +159,10 @@ def modifier_facts_of(row: CandidateRow, context: SearchContext) -> ModifierFact
 
 
 def liveness_facts_of(
-    row: CandidateRow, context: SearchContext, overlap: Overlap
+    row: CandidateRow,
+    context: SearchContext,
+    overlap: Overlap,
+    player_uuid: UUID,
 ) -> LivenessFacts:
     """What stage 6 reads: ten facts that move a position and never a number.
 
@@ -167,19 +176,18 @@ def liveness_facts_of(
     in this repository has ever sent one.
     """
 
-    player_id = UUID(row.player_id)
-    counterpart = context.terms.counterparts.get(player_id)
+    counterpart = context.terms.counterparts.get(player_uuid)
     return LivenessFacts(
         interest_days_ago=None,
-        newcomer=context.now - row.profile_created_at < NEWCOMER_WINDOW,
+        newcomer=is_new_at(row.profile_created_at, context.now),
         previously_accepted=_has(counterpart, PairwiseOutcome.ACCEPTED),
         previously_declined=_has(counterpart, PairwiseOutcome.DECLINED),
         answer_rate=None,
         recent_activity=recent_activity_reading(row.last_active_at, context.now),
         overlap_proximity=overlap_proximity_reading(overlap.days_away),
-        open_challenges=context.terms.open_challenge_counts.get(player_id),
+        open_challenges=context.terms.open_challenge_counts.get(player_uuid),
         exposure=exposure_reading(
-            context.terms.times_shown.get(player_id, 0),
+            context.terms.times_shown.get(player_uuid, 0),
             context.terms.busy_threshold,
         ),
     )

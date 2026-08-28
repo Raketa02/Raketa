@@ -19,16 +19,16 @@ from typing import Any
 
 from app.engines.matchfit.core import Term
 from app.modules.matchmaking.application.record_rows import (
-    evidence_payload,
     liveness_reason_codes,
     modifier_rows,
+    term_rows,
 )
 from app.modules.matchmaking.application.run_shortlist_search import (
     AnsweredCandidate,
     ShortlistAnswer,
 )
 from app.modules.matchmaking.domain.geography import whole_kilometres
-from app.modules.matchmaking.domain.searches import SearchRecord
+from app.modules.matchmaking.domain.searches import InclusionReason, SearchRecord
 from app.modules.matchmaking.presentation.schemas import (
     CandidateSchema,
     ConcernSchema,
@@ -37,6 +37,7 @@ from app.modules.matchmaking.presentation.schemas import (
     PoolSchema,
     SearchEnvelope,
     ShortlistResponse,
+    WireInclusionReason,
 )
 
 
@@ -84,16 +85,11 @@ def _candidate(row: AnsweredCandidate) -> CandidateSchema:
         "fit": scored.modified.points,
         "player_card": _card(row),
         "concerns": [ConcernSchema(term=term) for term in scored.fit.concerns],
-        "terms": [
-            {
-                "term": term.term,
-                "weight": term.weight,
-                "value": term.value,
-                "contribution": term.contribution,
-                "evidence": evidence_payload(term.evidence),
-            }
-            for term in scored.fit.terms
-        ],
+        # The same mapping the record stores. One serialiser, two consumers:
+        # the wire validates it into the discriminated union and the store keeps
+        # it opaque, so the published shape and the stored blob cannot drift into
+        # disagreeing about a field name.
+        "terms": list(term_rows(scored.fit)),
         "degraded_terms": list(scored.fit.degraded_terms),
         "modifiers": list(modifier_rows(scored.modified.modifiers)),
         "liveness_reasons": list(liveness_reason_codes(scored.liveness)),
@@ -102,12 +98,13 @@ def _candidate(row: AnsweredCandidate) -> CandidateSchema:
         # Omitted rather than sent as zero when the term stood down, which is
         # what lets *Closest* sort a stood-down row last instead of first.
         fields["distance_km"] = whole_kilometres(scored.generated.distance_km)
-    if scored.inclusion_reason is not None:
-        # Only a reason that **admits** somebody crosses. The two that reorder
-        # stay in the store: one ships as a Liveness reason instead, and the
-        # other is a third party's unpopularity the searcher is owed no version
-        # of.
-        fields["inclusion_reason"] = scored.inclusion_reason
+    if scored.inclusion_reason is InclusionReason.INTEREST_LIFT:
+        # **Only a reason that admits somebody crosses**, and the test is the
+        # value rather than its presence: the store holds three and two of them
+        # merely reorder. `NEWCOMER_WINDOW` reaches the client as a Liveness
+        # reason instead, and `ZERO_EXPOSURE` never crosses at all — *nobody has
+        # been shown them all week* is a third party's unpopularity.
+        fields["inclusion_reason"] = WireInclusionReason.INTEREST_LIFT
     if row.at_stake is not None:
         fields["at_stake"] = {
             "win_delta": row.at_stake.win_delta,

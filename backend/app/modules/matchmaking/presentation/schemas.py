@@ -45,11 +45,7 @@ from pydantic import BaseModel, Field
 
 from app.engines.matchfit.core import SearchMode, Term
 from app.kernel import Sport
-from app.modules.matchmaking.domain.searches import (
-    InclusionReason,
-    SearchSurface,
-    SortOption,
-)
+from app.modules.matchmaking.domain.searches import SearchSurface, SortOption
 from app.modules.matchmaking.presentation.evidence import Evidence
 from app.modules.player_profile.domain.availability import Window
 
@@ -108,6 +104,27 @@ class LivenessReason(StrEnum):
     CHALLENGE_LOAD_SOME = "CHALLENGE_LOAD_SOME"
     CHALLENGE_LOAD_BUSY = "CHALLENGE_LOAD_BUSY"
     CHALLENGE_LOAD_FULL = "CHALLENGE_LOAD_FULL"
+
+
+class WireInclusionReason(StrEnum):
+    """Why this person is in the list at all — **and it is a union of one.**
+
+    The store keeps three values and the wire publishes this one, which is the
+    whole of ``the-two-contracts.md`` §4's *the store is open where the wire is
+    closed*. Only an **interest lift** admits anybody; the other two **reorder**,
+    and a reorder is not a reason a searcher is owed:
+
+    - ``NEWCOMER_WINDOW`` reaches the client as a Liveness reason instead, which
+      is where a printable reorder belongs.
+    - ``ZERO_EXPOSURE`` never crosses at all. *You are seeing this person because
+      nobody has been shown them all week* is a third party's unpopularity, and
+      the searcher is owed no version of it.
+
+    It stays an enum of one rather than a bare literal so the next reason that
+    genuinely **admits** somebody has somewhere to go.
+    """
+
+    INTEREST_LIFT = "INTEREST_LIFT"
 
 
 class ModifierCode(StrEnum):
@@ -393,12 +410,15 @@ class CandidateSchema(BaseModel):
             "is no field here a Liveness number could be written to."
         ),
     )
-    inclusion_reason: InclusionReason = Field(
+    inclusion_reason: WireInclusionReason = Field(
         default=OMITTED,
         description=(
             "Why this person is in the list at all, when the reason is one the "
-            "searcher is owed. A union of one: only an interest lift **admits** "
-            "anybody. Omitted otherwise."
+            "searcher is owed. **A union of one**: only an interest lift "
+            "*admits* anybody, and the two reasons that merely reorder stay in "
+            "the store — one reaches you as a liveness reason instead, and the "
+            "other is a third party's unpopularity you are owed no version of. "
+            "Omitted otherwise."
         ),
     )
     at_stake: AtStakeSchema = Field(
@@ -442,6 +462,7 @@ class ShortlistResponse(BaseModel):
 #: is enumerated once for code rather than collected by eye.
 PUBLISHED_VOCABULARIES: tuple[type[StrEnum], ...] = (
     OptimisedFor,
+    WireInclusionReason,
     LivenessReason,
     ModifierCode,
 )

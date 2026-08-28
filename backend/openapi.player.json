@@ -1276,8 +1276,8 @@
             "description": "Why this person moved, ranked by how far. **Codes only** \u2014 there is no field here a Liveness number could be written to."
           },
           "inclusion_reason": {
-            "$ref": "#/components/schemas/InclusionReason",
-            "description": "Why this person is in the list at all, when the reason is one the searcher is owed. A union of one: only an interest lift **admits** anybody. Omitted otherwise."
+            "$ref": "#/components/schemas/WireInclusionReason",
+            "description": "Why this person is in the list at all, when the reason is one the searcher is owed. **A union of one**: only an interest lift *admits* anybody, and the two reasons that merely reorder stay in the store \u2014 one reaches you as a liveness reason instead, and the other is a third party's unpopularity you are owed no version of. Omitted otherwise."
           },
           "at_stake": {
             "$ref": "#/components/schemas/AtStakeSchema",
@@ -1639,16 +1639,6 @@
         ],
         "title": "InProgressAssessmentsResponse",
         "description": "Every unfinished run this player holds \u2014 empty when they hold none.\n\nEmpty is the ordinary answer for a new account and for a player who has\nfinished everything they started, so it is a 200 with an empty list rather\nthan a 404 or the singular form's 204.\n\nOrdered by the sport registry, so a caller that wants one run can take the\nfirst entry."
-      },
-      "InclusionReason": {
-        "type": "string",
-        "enum": [
-          "INTEREST_LIFT",
-          "NEWCOMER_WINDOW",
-          "ZERO_EXPOSURE"
-        ],
-        "title": "InclusionReason",
-        "description": "Why this candidate is in the answer at all. **The store is open where the\nwire is closed** (``the-two-contracts.md`` \u00a74).\n\nAll three are kept here; only ``INTEREST_LIFT`` crosses the wire, because it\nis the only one that **admits** anybody. ``NEWCOMER_WINDOW`` reorders and\nships to the client as a Liveness reason instead; ``ZERO_EXPOSURE`` never\ncrosses at all \u2014 *you are seeing this person because nobody has been shown\nthem all week* is a third party's unpopularity, and the searcher is owed no\nversion of it."
       },
       "IntentAlignmentEvidence": {
         "properties": {
@@ -3291,6 +3281,14 @@
         ],
         "title": "Window",
         "description": "When a game found on a grid would plausibly be played. **A code, never a\nsentence** \u2014 *\"tonight\"* is the client's word (``docs/adr/0022``).\n\n**Derived, never chosen** (``docs/adr/0100``). There is no window picker\nanywhere: a player changes their window by changing their grid, which is the\nsame act that changes their matches. One control, one meaning.\n\nIt is a **label on the search**, not a proposed time \u2014 the grid is still\nnever rendered to anybody as a calendar, and this says only how soon the week\nit ran on comes round."
+      },
+      "WireInclusionReason": {
+        "type": "string",
+        "enum": [
+          "INTEREST_LIFT"
+        ],
+        "title": "WireInclusionReason",
+        "description": "Why this person is in the list at all \u2014 **and it is a union of one.**\n\nThe store keeps three values and the wire publishes this one, which is the\nwhole of ``the-two-contracts.md`` \u00a74's *the store is open where the wire is\nclosed*. Only an **interest lift** admits anybody; the other two **reorder**,\nand a reorder is not a reason a searcher is owed:\n\n- ``NEWCOMER_WINDOW`` reaches the client as a Liveness reason instead, which\n  is where a printable reorder belongs.\n- ``ZERO_EXPOSURE`` never crosses at all. *You are seeing this person because\n  nobody has been shown them all week* is a third party's unpopularity, and\n  the searcher is owed no version of it.\n\nIt stays an enum of one rather than a bare literal so the next reason that\ngenuinely **admits** somebody has somewhere to go."
       }
     },
     "securitySchemes": {

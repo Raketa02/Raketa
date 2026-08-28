@@ -29,7 +29,13 @@ from typing import Annotated
 from fastapi import Depends, Request
 from redis.asyncio import Redis
 
-from app.api.dependencies import ClockDep, DbSession, UnitOfWorkDep
+from app.api.dependencies import (
+    ClockDep,
+    DbSession,
+    DomainEventStoreDep,
+    EventPublisherDep,
+    UnitOfWorkDep,
+)
 from app.bootstrap.composition import (
     build_absent_terms,
     build_account_hold_query,
@@ -100,6 +106,8 @@ def get_run_shortlist_search(
     db: DbSession,
     clock: ClockDep,
     uow: UnitOfWorkDep,
+    event_store: DomainEventStoreDep,
+    events: EventPublisherDep,
     candidates: CandidateSourceDep,
     profiles: PlayerProfileRepositoryDep,
     ratings: SkillRatingRepositoryDep,
@@ -136,7 +144,9 @@ def get_run_shortlist_search(
         player_scores=player_scores,
         at_stake=build_at_stake_query(db),
         exposure=exposure,
-        cards=build_player_card_source(db),
+        cards=build_player_card_source(
+            session=db, event_store=event_store, events=events
+        ),
         absent_terms=build_absent_terms(player_scores),
     )
 

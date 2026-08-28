@@ -56,6 +56,17 @@ from app.modules.player_profile.domain.play_intent import PlayIntent
 NEWCOMER_WINDOW = timedelta(days=14)
 
 
+def is_new_at(profile_created_at: datetime, now: datetime) -> bool:
+    """Whether a profile committed then is still inside its newcomer window.
+
+    **A date, never a flag**, and one reading of it: the searcher's side, the
+    candidate's side and the level gate's *either side* all ask here, so a change
+    to what *new* means cannot land on two of the three.
+    """
+
+    return now - profile_created_at < NEWCOMER_WINDOW
+
+
 @final
 @dataclass(frozen=True, slots=True)
 class SearcherFacts:
@@ -94,7 +105,7 @@ class SearcherFacts:
     def is_new_at(self, now: datetime) -> bool:
         """Whether the searcher is still inside their newcomer window."""
 
-        return now - self.profile_created_at < NEWCOMER_WINDOW
+        return is_new_at(self.profile_created_at, now)
 
 
 @final

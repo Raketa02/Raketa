@@ -1,24 +1,27 @@
-"""The two card fields the index does not hold, read in two queries.
+"""The two card fields the candidate index deliberately does not hold.
 
-**A nickname comes from ``users``, which the index does not tail at all**, and a
-photo id comes from the profile stream, which the index deliberately does not
-project — ``candidate_projection`` refuses ``player_profile.photos_changed`` by
-name, because the card is assembled outside the engine.
+**A nickname belongs to ``users``**, which the index does not tail at all, and a
+photo list belongs to the **Player profile**, which the index deliberately does
+not project — ``candidate_projection`` refuses ``player_profile.photos_changed``
+by name, because the card is assembled outside the engine (``docs/adr/0107``).
 
-**Two queries for the whole shortlist, never a query per row.** This runs after
-the floor, so it is at most twenty players even when the pool is five hundred.
+**It reads each provider's own port and never their tables.** The rule its
+neighbour ``users_account_status`` states applies here twice over: a ``select``
+over ``UserORM``, or a walk over the profile streams in ``event_store``, would
+make the matcher a second reader of somebody else's schema — and the second is
+worse than the first, because it would also be a second implementation of how a
+profile is folded.
 
-**It reads the log rather than replaying twenty aggregates.** Loading each
-profile would be twenty stream reads to answer one question about the last event
-of each — and the question is genuinely about the latest value of one field, not
-about the aggregate. So the photo read is one query over the two contracts that
-carry a whole photo list, taking the last of them per stream. That is a read
-model in everything but name, and the day it needs an index it gets one; the
-alternative today is twenty replays on the live search path.
+**It runs after the floor**, so it is at most twenty players even when the pool
+is five hundred: one set read for the nicknames, and one profile per surviving
+row. The per-row read is the price of not owning somebody else's storage, and it
+is bounded by the shortlist rather than by the city. If it ever stops being
+affordable, the fix is a read model **on the provider's side** with a port over
+it, not a query written here.
 
-**A URL is never minted here.** ``docs/adr/0107``: photos are served through
-short-lived presigned links and a search record is kept for ever, so what travels
-is the id. The link is the client's next request.
+**A URL is never minted.** Photos are served through short-lived presigned links
+and a search record is kept for ever, so what travels is the id. The link is the
+client's next request.
 """
 
 from __future__ import annotations
@@ -26,79 +29,54 @@ from __future__ import annotations
 from typing import Collection, Mapping
 from uuid import UUID
 
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.infrastructure.events.event_store_model import EventStoreORM
 from app.modules.matchmaking.domain.cards import CardIdentity
-from app.modules.player_profile.infrastructure.event_sourced_player_profile_repository import (  # noqa: E501
-    PLAYER_PROFILE_AGGREGATE,
-)
-from app.modules.users.infrastructure.sqlalchemy_user_model import UserORM
-
-#: The two contracts that carry a whole photo list. Both are *whole new value*
-#: events — the projection rule the index is built on — so the last one on a
-#: stream is the player's current list, and no earlier row has to be folded.
-_PHOTO_CONTRACTS = (
-    "player_profile.created",
-    "player_profile.photos_changed",
-)
+from app.modules.player_profile.domain.ports import PlayerProfileRepository
+from app.modules.users.domain.ports import UserRepository
 
 
 class PlayerCardIdentities:
-    """``PlayerCardSource`` over ``users`` and the profile streams."""
+    """``PlayerCardSource`` over the ``users`` and Player profile ports."""
 
-    def __init__(self, session: AsyncSession) -> None:
-        self._session = session
+    def __init__(
+        self, *, users: UserRepository, profiles: PlayerProfileRepository
+    ) -> None:
+        self._users = users
+        self._profiles = profiles
 
     async def identities_for(
         self, player_ids: Collection[UUID]
     ) -> Mapping[UUID, CardIdentity]:
         """Each of these players' nickname and first photo.
 
-        A player ``users`` has never heard of is **absent from the answer**
-        rather than present with a blank name: a card with no nickname is not a
-        card, and the caller drops the row before the record is written so that
-        ``n_returned`` and the rows stored still agree.
+        **The nickname is what decides whether there is a card at all.** A player
+        ``users`` has never heard of is absent from the answer rather than
+        present with a blank name, and the caller drops the row before the record
+        is written so that ``n_returned`` and the rows stored still agree.
+
+        A missing *photo*, by contrast, is an ordinary state: the card is drawn
+        and the client draws the generated court poster.
         """
 
         if not player_ids:
             return {}
-        wanted = list(player_ids)
-        photos = await self._photos(wanted)
-        nicknames = await self._session.execute(
-            select(UserORM.id, UserORM.nickname).where(UserORM.id.in_(wanted))
-        )
+        nicknames = await self._users.find_nicknames_of(player_ids)
         return {
             player_id: CardIdentity(
-                nickname=nickname, photo_id=photos.get(player_id)
+                nickname=nickname, photo_id=await self._first_photo(player_id)
             )
-            for player_id, nickname in nicknames.all()
+            for player_id, nickname in nicknames.items()
         }
 
-    async def _photos(self, player_ids: list[UUID]) -> dict[UUID, UUID]:
-        """The first photo id per player, from the latest list each published.
+    async def _first_photo(self, player_id: UUID) -> UUID | None:
+        """The photo a card shows — **the first**, because order is meaning in a
+        player's photo list.
 
-        Ordered by ``sequence_no`` — the store's only total order — and the last
-        row per stream wins, which is the same rule the index's own tail applies
-        and for the same reason: a position is the log's order, and
-        ``occurred_at`` is not.
+        ``None`` when they have none, which is not an absence to report: the
+        glossary calls a player with no photo *"not an absence but a generated
+        court poster"*, so the field is simply omitted and the client draws one.
         """
 
-        rows = await self._session.execute(
-            select(EventStoreORM.aggregate_id, EventStoreORM.payload)
-            .where(
-                EventStoreORM.aggregate_type == PLAYER_PROFILE_AGGREGATE,
-                EventStoreORM.aggregate_id.in_(player_ids),
-                EventStoreORM.event_type.in_(_PHOTO_CONTRACTS),
-            )
-            .order_by(EventStoreORM.sequence_no)
-        )
-        latest: dict[UUID, UUID] = {}
-        for player_id, payload in rows.all():
-            ids = payload.get("photo_ids") or ()
-            if ids:
-                latest[player_id] = UUID(str(ids[0]))
-            else:
-                latest.pop(player_id, None)
-        return latest
+        profile = await self._profiles.load(player_id)
+        if profile is None or not profile.photo_ids:
+            return None
+        return profile.photo_ids[0]

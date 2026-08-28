@@ -27,6 +27,7 @@ from pydantic import BaseModel
 
 from app.engines.matchfit.core import ChallengeLoad, LivenessSignal
 from app.modules.matchmaking.infrastructure.rulesets import LIVE_RULESET
+from app.modules.matchmaking.domain.searches import InclusionReason
 from app.modules.matchmaking.presentation.schemas import (
     OMITTED,
     CandidateSchema,
@@ -36,6 +37,7 @@ from app.modules.matchmaking.presentation.schemas import (
     RunSearchRequest,
     SearchEnvelope,
     ShortlistResponse,
+    WireInclusionReason,
 )
 
 #: Every model on this route, so a model added without a rule is a model this
@@ -145,6 +147,49 @@ def test_the_liveness_reason_vocabulary_is_exactly_the_printable_roster():
     assert {reason.value for reason in LivenessReason} == expected
     for quiet in silent:
         assert quiet.value not in {reason.value for reason in LivenessReason}
+
+
+def test_the_wire_publishes_one_inclusion_reason_and_the_store_keeps_three():
+    """**The store is open where the wire is closed.**
+
+    Only an interest lift *admits* anybody. The other two reorder, and a reorder
+    is not a reason a searcher is owed: ``NEWCOMER_WINDOW`` reaches the client as
+    a Liveness reason instead, and ``ZERO_EXPOSURE`` — *nobody has been shown
+    them all week* — is a third party's unpopularity that must not cross in any
+    shape, including as one value of an enum a client can read off the schema.
+    """
+
+    assert {reason.value for reason in WireInclusionReason} == {"INTEREST_LIFT"}
+    assert {reason.value for reason in InclusionReason} == {
+        "INTEREST_LIFT",
+        "NEWCOMER_WINDOW",
+        "ZERO_EXPOSURE",
+    }
+    # The **values** a client generates, not the prose beside them: the schema's
+    # own descriptions name the two withheld codes on purpose, in the sentence
+    # explaining why they are withheld.
+    published = _enumerated(CandidateSchema.model_json_schema())
+    assert "INTEREST_LIFT" in published
+    for withheld in ("ZERO_EXPOSURE", "NEWCOMER_WINDOW"):
+        assert withheld not in published, (
+            f"{withheld} is a value the candidate schema publishes"
+        )
+
+
+def _enumerated(schema: object) -> set[str]:
+    """Every value any ``enum`` in this document offers, however nested."""
+
+    found: set[str] = set()
+    if isinstance(schema, dict):
+        for key, value in schema.items():
+            if key == "enum" and isinstance(value, list):
+                found |= {str(item) for item in value}
+            else:
+                found |= _enumerated(value)
+    elif isinstance(schema, list):
+        for item in schema:
+            found |= _enumerated(item)
+    return found
 
 
 def test_the_modifier_vocabulary_is_the_roster_plus_the_dock_outside_it():

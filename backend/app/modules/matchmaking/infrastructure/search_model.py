@@ -35,6 +35,7 @@ from sqlalchemy import (
     JSON,
     BigInteger,
     Boolean,
+    CheckConstraint,
     DateTime,
     Float,
     ForeignKey,
@@ -42,7 +43,7 @@ from sqlalchemy import (
     Integer,
     String,
 )
-from sqlalchemy.dialects.postgresql import ARRAY
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy_utils.types.uuid import UUIDType
 
@@ -57,6 +58,12 @@ SNAPSHOT_SEQUENCE = BigInteger().with_variant(Integer(), "sqlite")
 #: JSON where the test suite runs.
 CODE_ARRAY = ARRAY(String()).with_variant(JSON(), "sqlite")
 
+#: An opaque blob. **``JSONB`` where it will be queried**, the same variant the
+#: event store's own payload column uses: these are read by an analyst asking
+#: questions of a shape no relational schema could hold, and `JSON` on PostgreSQL
+#: stores the text and indexes nothing.
+BLOB = JSON().with_variant(JSONB(), "postgresql")
+
 
 class SearchORM(Base):
     """One engine invocation, and everything counted about it."""
@@ -66,6 +73,19 @@ class SearchORM(Base):
         # Time ordering comes from here, which is why a ``uuid4`` id is enough
         # and a time-ordered UUID buys nothing.
         Index("ix_search_searcher_at", "searcher_id", "at"),
+        # **A check constraint, not a convention.** ``mode`` is ``NULL`` exactly
+        # on the deck, which has no mode and scores against a declared Play
+        # intent instead; ``intent_read`` is the mirror. The record type asserts
+        # the same pair, and both are worth having: one refuses a row this build
+        # could write, and the other refuses a row any writer could.
+        CheckConstraint(
+            "(mode IS NULL) = (surface = 'DECK')",
+            name="ck_search_mode_null_exactly_on_the_deck",
+        ),
+        CheckConstraint(
+            "(intent_read IS NOT NULL) = (surface = 'DECK')",
+            name="ck_search_intent_read_set_exactly_on_the_deck",
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(UUIDType(binary=False), primary_key=True)
@@ -98,7 +118,7 @@ class SearchORM(Base):
     n_generated: Mapped[int] = mapped_column(Integer, nullable=False)
     #: A histogram over the ten gate codes. **Counts only; no candidate is named
     #: at this layer.**
-    excluded_by_gate: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    excluded_by_gate: Mapped[dict[str, Any]] = mapped_column(BLOB, nullable=False)
     n_scored: Mapped[int] = mapped_column(Integer, nullable=False)
     n_cleared_floor: Mapped[int] = mapped_column(Integer, nullable=False)
     #: Also the redaction detector. **Never denormalised away.**
@@ -110,11 +130,11 @@ class SearchORM(Base):
     best_withheld_fit: Mapped[float | None] = mapped_column(Float, nullable=True)
     #: Written on **every** search: a thin pool and a broken floor are
     #: indistinguishable without it.
-    pool_description: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    pool_description: Mapped[dict[str, Any]] = mapped_column(BLOB, nullable=False)
     #: The availability term's denominator, per search rather than per candidate.
     searcher_slot_count: Mapped[int] = mapped_column(Integer, nullable=False)
     radius_clamp_bit: Mapped[bool] = mapped_column(Boolean, nullable=False)
-    latency_ms_by_stage: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    latency_ms_by_stage: Mapped[dict[str, Any]] = mapped_column(BLOB, nullable=False)
 
 
 class SearchCandidateORM(Base):
@@ -144,16 +164,16 @@ class SearchCandidateORM(Base):
     #: **Deliberately opaque.** Stamped with the search's ``ruleset_version``,
     #: and its shape is allowed to change between rulesets — which is exactly
     #: what a relational schema would fight.
-    terms: Mapped[list[Any]] = mapped_column(JSON, nullable=False)
+    terms: Mapped[list[Any]] = mapped_column(BLOB, nullable=False)
     #: Lifted out of the blob: the renormalisation basis, without which a Fit is
     #: uninterpretable a year later.
     degraded_terms: Mapped[list[str]] = mapped_column(CODE_ARRAY, nullable=False)
-    modifiers: Mapped[list[Any]] = mapped_column(JSON, nullable=False)
+    modifiers: Mapped[list[Any]] = mapped_column(BLOB, nullable=False)
     liveness_reasons: Mapped[list[str]] = mapped_column(CODE_ARRAY, nullable=False)
     #: The **raw input** per signal, never the offset it produced: an offset is a
     #: function of the ruleset's bounds, so storing it would make a bounds change
     #: undiffable.
-    liveness_signals: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    liveness_signals: Mapped[dict[str, Any]] = mapped_column(BLOB, nullable=False)
     #: With ``search.searcher_slot_count`` this **is** the availability term, so
     #: the value in ``terms`` is checkable against its own inputs.
     shared_count: Mapped[int] = mapped_column(Integer, nullable=False)

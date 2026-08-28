@@ -39,7 +39,6 @@ from dataclasses import dataclass, replace
 from typing import Mapping, final
 from uuid import UUID
 
-from app.engines.matchfit.core import Term
 from app.engines.matchfit.ranking import (
     Liveness,
     ModifiedFit,
@@ -81,8 +80,8 @@ from app.modules.matchmaking.domain.geography import (
 from app.modules.matchmaking.domain.geography import distance_km as measure_distance
 from app.modules.matchmaking.domain.measurements import Overlap, overlap_of
 from app.modules.matchmaking.domain.search_context import (
-    NEWCOMER_WINDOW,
     SearchContext,
+    is_new_at,
 )
 from app.modules.matchmaking.domain.searches import (
     InclusionReason,
@@ -104,6 +103,10 @@ class Generated:
     row: CandidateRow
     distance_km: float
     overlap: Overlap
+    #: The candidate's id as the live reads key them. Parsed **once**, here,
+    #: because the index spells an id as a string for the gate walk's sake and
+    #: everything downstream of the gates asks the ports about it.
+    player_uuid: UUID
 
 
 @final
@@ -283,6 +286,7 @@ def generate(context: SearchContext) -> Generation:
                 row=row,
                 distance_km=distance,
                 overlap=overlap_of(searcher_slots, slots_of(row), today),
+                player_uuid=UUID(row.player_id),
             )
         )
     return Generation(
@@ -306,12 +310,20 @@ def score_all(
     ruleset = context.ruleset
     scored: list[Scored] = []
     for candidate in generation.admitted:
-        fenced = candidate_of(candidate.row, context, distance_km=candidate.distance_km)
+        fenced = candidate_of(
+            candidate.row,
+            context,
+            distance_km=candidate.distance_km,
+            player_uuid=candidate.player_uuid,
+        )
         fit = engine.score(searcher=searcher, candidate=fenced, ruleset=ruleset)
         modified = ModifiedFit(
             fit=fit,
             modifiers=modify(
-                searcher, fenced, modifier_facts_of(candidate.row, context), ruleset
+                searcher,
+                fenced,
+                modifier_facts_of(candidate.row, context, candidate.player_uuid),
+                ruleset,
             ),
         )
         scored.append(
@@ -391,7 +403,12 @@ def _with_liveness(
 ) -> Scored:
     """One admitted candidate's offset, its reciprocal, and its rank key."""
 
-    facts = liveness_facts_of(row.generated.row, context, row.generated.overlap)
+    facts = liveness_facts_of(
+        row.generated.row,
+        context,
+        row.generated.overlap,
+        row.generated.player_uuid,
+    )
     reciprocal = _reciprocal(row, context, engine, searcher)
     liveness = read_signals(facts, context.ruleset, reciprocal)
     return replace(
@@ -501,25 +518,10 @@ def _inclusion_reason(row: Scored, context: SearchContext) -> InclusionReason | 
 
     if _is_new(row.generated.row, context):
         return InclusionReason.NEWCOMER_WINDOW
-    if context.terms.times_shown.get(UUID(row.player_id), 0) == 0:
+    if context.terms.times_shown.get(row.generated.player_uuid, 0) == 0:
         return InclusionReason.ZERO_EXPOSURE
     return None
 
 
 def _is_new(row: CandidateRow, context: SearchContext) -> bool:
-    """Whether this candidate is still inside their newcomer window.
-
-    **A date, never a flag**: computed where it is read, from the profile commit
-    the index already holds, because a stored boolean goes stale hourly.
-    """
-
-    return context.now - row.profile_created_at < NEWCOMER_WINDOW
-
-
-#: The terms whose provider does not exist on this platform at all. Kept as a
-#: name here so that a reader of the pipeline can see what
-#: :attr:`SearchContext.absent_terms` is for; the value itself is decided in the
-#: composition root, because *no provider exists* is a fact about the wiring and
-#: a ruleset that could declare it would be a weight release deciding which
-#: contexts are built.
-PLATFORM_WIDE_ABSENCE_TODAY: frozenset[Term] = frozenset({Term.RELIABILITY})
+    return is_new_at(row.profile_created_at, context.now)

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Collection, Optional, Protocol, runtime_checkable
+from typing import Collection, Mapping, Optional, Protocol, runtime_checkable
 from uuid import UUID
 
 from app.modules.users.domain.events import UserRegistered
@@ -28,5 +28,24 @@ class UserRepository(Protocol):
         shortlist and asks once per search. Ids this context has never seen are
         simply absent from the answer — an unknown id is not a disabled account,
         and reporting it as one would make a typo look like a safety verdict.
+        """
+        ...
+
+    async def find_nicknames_of(
+        self, user_ids: Collection[UUID]
+    ) -> Mapping[UUID, str]:
+        """What each of these accounts is called, as one set read.
+
+        Asked by the matcher, which puts a **nickname** on a player card and
+        holds no name of its own (``docs/adr/0107``) — and answered here rather
+        than by a reader of this context's table, on the rule its neighbour above
+        states: a consumer-driven contract is satisfied by the **provider**, and
+        ``users`` owns what an account is called and where that is stored.
+
+        A mapping and not a per-id question, because the caller has a whole
+        shortlist and asks once. **An id this context has never seen is simply
+        absent from the answer** — the caller drops the row rather than drawing a
+        card with a blank name, and inventing a placeholder here would be this
+        context answering for an account it does not have.
         """
         ...

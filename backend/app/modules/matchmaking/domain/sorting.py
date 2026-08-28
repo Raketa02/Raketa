@@ -12,15 +12,24 @@ already carried, which is why the whole breakdown ships with the search: the
 client sorts rows it holds, and the backend's only job is saying which controls
 are honest.
 
-**Offerability is computed, never asserted.** A sort is available exactly when
-applying it produces an order different from the one returned — so a shortlist of
-one row offers nothing, a shortlist already in Fit order does not offer *Best
-fit*, and neither of those is a special case anybody has to remember.
+**Offerability is computed, never asserted**, and it takes two things to be
+offerable: the readings must **tell the rows apart**, and applying them must
+produce a different order from the one returned. Both halves are load-bearing.
+
+The first is the one that is easy to miss. Every sort ends on the player id, so a
+sort whose readings are all equal — three candidates at one address, or a term
+that stood down for everybody — resorts the list into **id order** and looks like
+a reorder while carrying no information at all. That is exactly how *Most
+reliable* would be drawn today, and the spec is explicit that it must not be: the
+reliability term stands down for everybody, so the control **is not drawn**.
+
+The second keeps the rest honest: a shortlist of one row offers nothing, and a
+shortlist already in Fit order does not offer *Best fit*.
 """
 
 from __future__ import annotations
 
-from typing import Callable, Iterable, Sequence
+from typing import Callable, Sequence
 
 from app.engines.matchfit.core import Term
 from app.modules.matchmaking.domain.searches import SortOption
@@ -61,9 +70,15 @@ def sorts_available(returned: Sequence[Scored]) -> tuple[SortOption, ...]:
 def _reorders(
     returned: Sequence[Scored], key: Callable[[Scored], tuple[float, str]]
 ) -> bool:
-    """Whether this sort would put the rows in a different order."""
+    """Whether this sort would tell the rows apart **and** put them in a
+    different order."""
 
     if len(returned) < 2:
+        return False
+    if len({key(row)[0] for row in returned}) < 2:
+        # Every row reads the same, so the only thing left to sort on is the
+        # tie-break the returned order already used. Drawing that control would
+        # offer the player a reshuffle by player id.
         return False
     resorted = sorted(returned, key=key)
     return [row.player_id for row in resorted] != [row.player_id for row in returned]
@@ -99,8 +114,4 @@ def _by_reliability(row: Scored) -> tuple[float, str]:
 def _reading(row: Scored, term: Term, value: float) -> float:
     """``value`` when the term fired for this row, and *last* when it stood down."""
 
-    return value if term not in _degraded(row) else _LAST
-
-
-def _degraded(row: Scored) -> Iterable[Term]:
-    return row.fit.degraded_terms
+    return value if term not in row.fit.degraded_terms else _LAST
