@@ -18,7 +18,7 @@ import pytest
 from app.engines.matchfit.v1 import MatchFitV1
 from app.modules.matchmaking.domain.searches import SortOption
 from app.modules.matchmaking.domain.shortlist import run
-from app.modules.matchmaking.domain.sorting import sorts_available
+from app.modules.matchmaking.domain.sorting import of_scored, sorts_available
 from app.modules.matchmaking.infrastructure.rulesets import LIVE_RULESET
 from tests.unit import matchmaking_builders as build
 
@@ -31,6 +31,17 @@ def _run(context):
 
 def _ids(rows) -> list[str]:
     return [row.player_id for row in rows]
+
+
+def _offered(returned):
+    """The controls this answer can honestly draw.
+
+    ``sorts_available`` reads a :class:`Sortable` rather than a scored row, so
+    that the search that just ran and the search read back an hour later reach
+    one implementation. ``of_scored`` is the search's own half of that mapping.
+    """
+
+    return sorts_available(tuple(of_scored(row) for row in returned))
 
 
 def test_a_gated_player_never_appears_in_either_band():
@@ -159,10 +170,10 @@ def test_a_sort_that_would_reorder_nothing_is_not_offered():
     """A visible control that reorders nothing is the product lying quietly."""
 
     alone = _run(build.context((build.row(1),)))
-    assert sorts_available(alone.returned) == ()
+    assert _offered(alone.returned) == ()
 
     identical = _run(build.context(tuple(build.row(n) for n in range(1, 4))))
-    assert SortOption.CLOSEST not in sorts_available(identical.returned), (
+    assert SortOption.CLOSEST not in _offered(identical.returned), (
         "three candidates at the same address cannot be sorted by distance"
     )
 
@@ -189,7 +200,7 @@ def test_a_sort_whose_readings_are_all_equal_is_never_offered():
     assert _ids(returned) != sorted(_ids(returned)), (
         "the fixture agrees with id order, so it asserts nothing"
     )
-    offered = sorts_available(returned)
+    offered = _offered(returned)
     assert SortOption.MOST_RELIABLE not in offered, (
         "the reliability term stands down for everybody, so nothing tells these "
         "rows apart"
@@ -206,7 +217,7 @@ def test_closest_is_offered_when_it_would_actually_reorder():
         build.row(2, latitude=51.51),
         build.row(3, latitude=51.53),
     )
-    offered = sorts_available(_run(build.context(spread)).returned)
+    offered = _offered(_run(build.context(spread)).returned)
 
     assert SortOption.CLOSEST in offered
     assert SortOption.MOST_RELIABLE not in offered

@@ -194,3 +194,19 @@ class SearchCandidateORM(Base):
     reliability_penalty_decisive: Mapped[bool] = mapped_column(
         Boolean, nullable=False
     )
+    #: The terms the engine judged genuinely weak, over points forgone. An array
+    #: for the same shape of query ``degraded_terms`` is one for, and stored
+    #: rather than re-derived because the judgement belongs to the ruleset this
+    #: row is stamped with.
+    concerns: Mapped[list[str]] = mapped_column(CODE_ARRAY, nullable=False)
+    #: Whole kilometres, as the wire carried it. Null when the distance term
+    #: stood down, which is **omitted** on the wire and is not a zero.
+    distance_km: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    #: The card **as it was shown**, so a read-back answers the search that ran
+    #: rather than the one that would run now. It holds a ``photo_id`` and never
+    #: a URL: a presigned link is dead within the hour and this row is kept
+    #: forever (``docs/adr/0107``).
+    player_card: Mapped[dict[str, Any] | None] = mapped_column(BLOB, nullable=True)
+    #: What a counted game would have been worth then. Null in for fun, where a
+    #: counted result is meaningless rather than unavailable.
+    at_stake: Mapped[dict[str, Any] | None] = mapped_column(BLOB, nullable=True)

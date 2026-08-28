@@ -16,10 +16,12 @@ import pytest
 
 from app.engines.matchfit.core import SearchMode
 from app.kernel import Sport
+from app.modules.matchmaking.domain.ports import AtStake
 from app.modules.matchmaking.domain.searches import (
     CandidateBand,
     InclusionReason,
     PoolDescription,
+    RecordedCard,
     SearchCandidateRecord,
     SearchInitiation,
     SearchRecord,
@@ -35,6 +37,7 @@ from app.modules.player_profile.domain.availability import Window
 AT = datetime(2026, 8, 26, 18, 0, tzinfo=timezone.utc)
 SEARCHER = UUID("11111111-1111-1111-1111-111111111111")
 STRANGER = UUID("22222222-2222-2222-2222-222222222222")
+PHOTO = UUID("33333333-3333-3333-3333-333333333333")
 
 
 def _candidate(band: CandidateBand, position: int) -> SearchCandidateRecord:
@@ -62,6 +65,28 @@ def _candidate(band: CandidateBand, position: int) -> SearchCandidateRecord:
         missing_terms=() if band is CandidateBand.RETURNED else ("SOCIAL_VIBE",),
         reliability_penalty_applied=False,
         reliability_penalty_decisive=False,
+        concerns=("SOCIAL_VIBE",),
+        distance_km=4,
+        # The card is recorded on the row that showed it, so a near miss — shown
+        # to nobody — carries none, and neither does it carry a counted game's
+        # price.
+        card=(
+            RecordedCard(
+                nickname="ada",
+                photo_id=PHOTO,
+                area_code="LDN-CENTRAL",
+                social_tags=("PLAYS_TO_WIN",),
+                level=2.7,
+                band="Improver",
+            )
+            if band is CandidateBand.RETURNED
+            else None
+        ),
+        at_stake=(
+            AtStake(win_delta=0.07, loss_delta=-0.05)
+            if band is CandidateBand.RETURNED
+            else None
+        ),
     )
 
 
@@ -120,15 +145,63 @@ async def test_a_record_round_trips_through_the_columns_it_is_stored_in(store):
     await adapter.record(record)
     await session.commit()
 
-    rows = await adapter.returned_rows_for(
-        search_id=record.id, searcher_id=SEARCHER
-    )
+    read = await adapter.find(search_id=record.id, searcher_id=SEARCHER)
 
+    assert read is not None
+    rows = read.returned
     assert [row.position for row in rows] == [1, 2]
     assert rows[0].terms[0]["term"] == "LEVEL_FIT"
     assert rows[0].degraded_terms == ("RELIABILITY",)
     assert rows[0].liveness_signals["INTEREST_RECEIVED"] is None
     assert rows[0].inclusion_reason is InclusionReason.ZERO_EXPOSURE
+
+
+async def test_the_whole_row_that_was_shown_comes_back(store):
+    """**The record is self-contained**, because nothing it was assembled from
+    remembers what it said an hour ago.
+
+    A nickname changes, a Level moves, a player leaves an area, and a Level delta
+    is priced against ratings that keep moving — so a read-back that re-read them
+    would answer a different search and call it the same one. The card, the
+    concerns, the distance and the at-stake block are on the row.
+    """
+
+    adapter, session = store
+    record = _record()
+    await adapter.record(record)
+    await session.commit()
+
+    row = (await adapter.find(search_id=record.id, searcher_id=SEARCHER)).returned[0]
+
+    assert row.card is not None
+    assert row.card.nickname == "ada"
+    assert row.card.photo_id == PHOTO, "an id, never a URL"
+    assert row.card.social_tags == ("PLAYS_TO_WIN",)
+    assert row.concerns == ("SOCIAL_VIBE",)
+    assert row.distance_km == 4
+    assert row.at_stake == AtStake(win_delta=0.07, loss_delta=-0.05)
+
+
+async def test_the_search_row_comes_back_whole_beside_its_candidates(store):
+    """One read, one search: a second method for the envelope would be a second
+    chance to fetch one search's counters beside another's candidates."""
+
+    adapter, session = store
+    record = _record()
+    await adapter.record(record)
+    await session.commit()
+
+    read = await adapter.find(search_id=record.id, searcher_id=SEARCHER)
+
+    assert read is not None
+    assert read.id == record.id
+    assert read.at == AT, "a stored moment reads back as the UTC it was written as"
+    assert read.sport is Sport.PADEL
+    assert read.mode is SearchMode.COMPETITIVE
+    assert read.counts.n_returned == 2
+    assert read.counts.excluded_by_gate == {"BLOCKED": 1}
+    assert read.pool_description.window is Window.THIS_WEEK
+    assert read.best_withheld_fit == 41.0
 
 
 async def test_the_near_miss_band_is_stored_and_has_no_read_path(store):
@@ -140,12 +213,11 @@ async def test_the_near_miss_band_is_stored_and_has_no_read_path(store):
     await adapter.record(record)
     await session.commit()
 
-    rows = await adapter.returned_rows_for(
-        search_id=record.id, searcher_id=SEARCHER
-    )
+    read = await adapter.find(search_id=record.id, searcher_id=SEARCHER)
 
-    assert all(row.band is CandidateBand.RETURNED for row in rows)
-    assert len(rows) == 2, "the near-miss row came back"
+    assert read is not None
+    assert all(row.band is CandidateBand.RETURNED for row in read.candidates)
+    assert len(read.candidates) == 2, "the near-miss row came back"
     assert not hasattr(adapter, "near_misses_for")
 
 
@@ -160,14 +232,10 @@ async def test_a_stranger_reads_nothing_and_cannot_tell_why(store):
     await adapter.record(record)
     await session.commit()
 
-    foreign = await adapter.returned_rows_for(
-        search_id=record.id, searcher_id=STRANGER
-    )
-    unknown = await adapter.returned_rows_for(
-        search_id=uuid4(), searcher_id=SEARCHER
-    )
+    foreign = await adapter.find(search_id=record.id, searcher_id=STRANGER)
+    unknown = await adapter.find(search_id=uuid4(), searcher_id=SEARCHER)
 
-    assert foreign == () == unknown
+    assert foreign is None is unknown
 
 
 async def test_the_store_does_not_commit_for_its_caller(store):
@@ -206,6 +274,50 @@ def test_a_returned_row_may_not_carry_a_withheld_reason():
             missing_terms=(),
             reliability_penalty_applied=False,
             reliability_penalty_decisive=False,
+            concerns=(),
+            distance_km=None,
+            card=None,
+            at_stake=None,
+        )
+
+
+def test_a_near_miss_may_not_carry_a_card():
+    """A near miss was **shown to nobody**, so there is no card it could have
+    shown — and a row carrying one would be layer 3 holding a person's nickname
+    for a screen it may never reach."""
+
+    from app.kernel import InvariantViolated
+
+    with pytest.raises(InvariantViolated):
+        SearchCandidateRecord(
+            band=CandidateBand.NEAR_MISS,
+            position=1,
+            player_id=uuid4(),
+            fit=20.0,
+            terms=(),
+            degraded_terms=(),
+            modifiers=(),
+            liveness_reasons=(),
+            liveness_signals={},
+            shared_count=0,
+            their_slot_count=0,
+            days_away=None,
+            inclusion_reason=None,
+            withheld_reason=WithheldReason.BELOW_FLOOR,
+            missing_terms=(),
+            reliability_penalty_applied=False,
+            reliability_penalty_decisive=False,
+            concerns=(),
+            distance_km=None,
+            card=RecordedCard(
+                nickname="ada",
+                photo_id=None,
+                area_code="LDN-CENTRAL",
+                social_tags=(),
+                level=2.7,
+                band="Improver",
+            ),
+            at_stake=None,
         )
 
 

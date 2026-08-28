@@ -186,8 +186,8 @@ class Store:
             raise RuntimeError("the search table is unreachable")
         self.written.append(search)
 
-    async def returned_rows_for(self, **_: object) -> tuple:  # pragma: no cover
-        return ()
+    async def find(self, **_: object) -> None:  # pragma: no cover
+        return None
 
 
 @dataclass
@@ -396,7 +396,7 @@ async def test_an_index_inside_the_ladders_middle_rung_serves_and_records_it():
     )
 
     assert answer.record.index_stale is True
-    assert answer.rows, "a stale-but-serving index still answers"
+    assert answer.record.returned, "a stale-but-serving index still answers"
 
 
 async def test_a_record_that_cannot_be_written_fails_the_search():
@@ -443,7 +443,7 @@ async def test_an_empty_shortlist_is_still_recorded():
     store = Store()
     answer = await use_case(store=store).execute(a_command())
 
-    assert answer.rows == ()
+    assert answer.record.returned == ()
     assert store.written[0].counts.n_returned == 0
     assert store.written[0].pool_description.players_in_range == 0
 
@@ -483,7 +483,9 @@ async def test_a_row_whose_card_cannot_be_assembled_is_dropped_before_the_record
         store=store,
     ).execute(a_command())
 
-    assert [row.scored.player_id for row in answer.rows] == [known.player_id]
+    assert [str(row.player_id) for row in answer.record.returned] == [
+        known.player_id
+    ]
     assert store.written[0].counts.n_returned == 1
 
 
@@ -496,7 +498,7 @@ async def test_at_stake_is_omitted_in_for_fun_by_the_methods_own_name():
         a_command(SearchMode.FOR_FUN)
     )
 
-    assert all(row.at_stake is None for row in answer.rows)
+    assert all(row.at_stake is None for row in answer.record.returned)
 
 
 async def test_the_record_carries_both_stamps_and_the_snapshot_version():

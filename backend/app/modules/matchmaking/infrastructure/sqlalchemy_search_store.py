@@ -13,19 +13,30 @@ be a method somebody reaches for.
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from typing import Any, Mapping, Sequence
 from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.engines.matchfit.core import SearchMode
+from app.kernel import Sport
+from app.modules.matchmaking.domain.ports import AtStake
 from app.modules.matchmaking.domain.searches import (
     CandidateBand,
     InclusionReason,
+    PoolDescription,
+    RecordedCard,
     SearchCandidateRecord,
+    SearchInitiation,
     SearchRecord,
+    SearchSurface,
+    StagedCounts,
     WithheldReason,
 )
+from app.modules.player_profile.domain.availability import Window
+from app.modules.player_profile.domain.play_intent import PlayIntent
 from app.modules.matchmaking.infrastructure.search_model import (
     SearchCandidateORM,
     SearchORM,
@@ -50,29 +61,38 @@ class SqlAlchemySearchStore:
             self._session.add(_candidate_row(search.id, candidate))
         await self._session.flush()
 
-    async def returned_rows_for(
+    async def find(
         self, *, search_id: UUID, searcher_id: UUID
-    ) -> tuple[SearchCandidateRecord, ...]:
-        """This searcher's own ``RETURNED`` rows, in position order.
+    ) -> SearchRecord | None:
+        """This searcher's own search, with its ``RETURNED`` rows in position order.
 
         **The two filters are the authorization rule**, not an optimisation: the
-        join on ``search.searcher_id`` is what makes a stranger's ``search_id``
-        answer empty, and the band predicate is what makes layer 3 unreachable
+        predicate on ``searcher_id`` is what makes a stranger's ``search_id``
+        answer nothing, and the band predicate is what makes layer 3 unreachable
         from anywhere. Neither is a clause a caller may pass — there is no
         argument for either.
         """
 
+        found = await self._session.execute(
+            select(SearchORM).where(
+                SearchORM.id == search_id,
+                SearchORM.searcher_id == searcher_id,
+            )
+        )
+        search = found.scalar_one_or_none()
+        if search is None:
+            return None
         rows = await self._session.execute(
             select(SearchCandidateORM)
-            .join(SearchORM, SearchORM.id == SearchCandidateORM.search_id)
             .where(
                 SearchCandidateORM.search_id == search_id,
-                SearchORM.searcher_id == searcher_id,
                 SearchCandidateORM.band == CandidateBand.RETURNED.value,
             )
             .order_by(SearchCandidateORM.position)
         )
-        return tuple(_candidate_record(row) for row in rows.scalars())
+        return _search_record(
+            search, tuple(_candidate_record(row) for row in rows.scalars())
+        )
 
 
 def _search_row(search: SearchRecord) -> SearchORM:
@@ -113,6 +133,72 @@ def _search_row(search: SearchRecord) -> SearchORM:
     )
 
 
+def _search_record(
+    row: SearchORM, candidates: tuple[SearchCandidateRecord, ...]
+) -> SearchRecord:
+    """The search row, read back as the record it was written from.
+
+    The counters and the pool description come back too, even though no route
+    sends them anywhere: the record is one thing, and a reader that assembled
+    half of it would be a second, narrower notion of what a search *is*. What may
+    leave the building is decided at the wire, in ``presentation/``, which is the
+    only place that decision is written down.
+    """
+
+    pool = row.pool_description
+    return SearchRecord(
+        id=row.id,
+        searcher_id=row.searcher_id,
+        sport=Sport(row.sport),
+        mode=None if row.mode is None else SearchMode(row.mode),
+        intent_read=None if row.intent_read is None else PlayIntent(row.intent_read),
+        surface=SearchSurface(row.surface),
+        initiation=SearchInitiation(row.initiation),
+        at=_utc(row.at),
+        engine_version=row.engine_version,
+        ruleset_version=row.ruleset_version,
+        snapshot_version=row.snapshot_version,
+        trace_id=row.trace_id,
+        index_stale=row.index_stale,
+        counts=StagedCounts(
+            n_generated=row.n_generated,
+            excluded_by_gate=dict(row.excluded_by_gate),
+            n_scored=row.n_scored,
+            n_cleared_floor=row.n_cleared_floor,
+            n_returned=row.n_returned,
+            n_near_miss_recorded=row.n_near_miss_recorded,
+        ),
+        best_withheld_fit=row.best_withheld_fit,
+        pool_description=PoolDescription(
+            sport=Sport(pool["sport"]),
+            radius_km_used=pool["radius_km_used"],
+            players_in_range=pool["players_in_range"],
+            window=Window(pool["window"]),
+            post_gate=pool["post_gate"],
+        ),
+        searcher_slot_count=row.searcher_slot_count,
+        radius_clamp_bit=row.radius_clamp_bit,
+        latency_ms_by_stage=dict(row.latency_ms_by_stage),
+        candidates=candidates,
+    )
+
+
+def _utc(value: datetime) -> datetime:
+    """A stored moment, read back as the UTC it was written as.
+
+    PostgreSQL's ``timestamptz`` carries the offset and SQLite does not: it
+    stores the text and hands back a naive ``datetime``. Attaching UTC here is a
+    statement about the storage rather than about the clock — the value was
+    written as UTC, so reading it as anything else would move it — and it happens
+    at the one seam where a stored column becomes a domain value rather than
+    being a fact every reader has to remember.
+    """
+
+    if value.tzinfo is None or value.utcoffset() is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value
+
+
 def _candidate_row(
     search_id: UUID, candidate: SearchCandidateRecord
 ) -> SearchCandidateORM:
@@ -143,7 +229,43 @@ def _candidate_row(
         missing_terms=list(candidate.missing_terms),
         reliability_penalty_applied=candidate.reliability_penalty_applied,
         reliability_penalty_decisive=candidate.reliability_penalty_decisive,
+        concerns=list(candidate.concerns),
+        distance_km=candidate.distance_km,
+        player_card=_card_blob(candidate.card),
+        at_stake=(
+            None
+            if candidate.at_stake is None
+            else {
+                "win_delta": candidate.at_stake.win_delta,
+                "loss_delta": candidate.at_stake.loss_delta,
+            }
+        ),
     )
+
+
+def _card_blob(card: RecordedCard | None) -> dict[str, Any] | None:
+    """The card as one blob rather than six columns.
+
+    It is written and read whole, never queried into, and it is the one part of
+    the row whose shape belongs to a *response* rather than to the engine — so a
+    relational spread of it would be six columns nothing ever selects
+    individually, and six chances for a card to be stored half-assembled.
+
+    The ``photo_id`` goes down as text because a blob has no UUID type; it is a
+    photo **id and never a URL**, which is the whole of what makes it storable in
+    a row kept for ever.
+    """
+
+    if card is None:
+        return None
+    return {
+        "nickname": card.nickname,
+        "photo_id": None if card.photo_id is None else str(card.photo_id),
+        "area_code": card.area_code,
+        "social_tags": list(card.social_tags),
+        "level": card.level,
+        "band": card.band,
+    }
 
 
 def _candidate_record(row: SearchCandidateORM) -> SearchCandidateRecord:
@@ -171,6 +293,31 @@ def _candidate_record(row: SearchCandidateORM) -> SearchCandidateRecord:
         missing_terms=tuple(row.missing_terms),
         reliability_penalty_applied=row.reliability_penalty_applied,
         reliability_penalty_decisive=row.reliability_penalty_decisive,
+        concerns=tuple(row.concerns),
+        distance_km=row.distance_km,
+        card=_recorded_card(row.player_card),
+        at_stake=(
+            None
+            if row.at_stake is None
+            else AtStake(
+                win_delta=row.at_stake["win_delta"],
+                loss_delta=row.at_stake["loss_delta"],
+            )
+        ),
+    )
+
+
+def _recorded_card(blob: Mapping[str, Any] | None) -> RecordedCard | None:
+    if blob is None:
+        return None
+    photo_id = blob["photo_id"]
+    return RecordedCard(
+        nickname=blob["nickname"],
+        photo_id=None if photo_id is None else UUID(photo_id),
+        area_code=blob["area_code"],
+        social_tags=tuple(blob["social_tags"]),
+        level=blob["level"],
+        band=blob["band"],
     )
 
 

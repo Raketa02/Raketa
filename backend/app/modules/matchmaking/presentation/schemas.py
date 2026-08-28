@@ -1,4 +1,4 @@
-"""The shortlist's wire shapes — one envelope, one candidate, no third thing.
+"""The shortlist's wire shapes — one envelope, and a row that is a person or not.
 
 **The full breakdown ships with the search, not behind a tap.** *Why 78?* is the
 moment the product's central claim is tested, and a spinner there is the claim
@@ -27,6 +27,14 @@ emitted contract rather than route by route.
 engine-internal: a player may ask why somebody was shown; nobody may ask who was
 withheld. There is no schema here it could arrive in.
 
+**A row is a candidate or a tombstone, and the second one carries no person.**
+The read-back re-evaluates the gates that fail closed, and a row they no longer
+admit keeps its place and states that it is withheld (``docs/adr/0109``). It is a
+**union rather than a candidate with holes**, so *render a card for somebody the
+product has agreed to stop showing* is not a shape this contract can hold — and
+the tombstone names no gate, because ``docs/adr/0095`` says the other side sees
+no trace anywhere in any response and a read-back is not an exception to that.
+
 **The staged pool counts do not cross.** ``n_generated``, ``excluded_by_gate``,
 ``n_scored`` and ``n_cleared_floor`` live on the record. The client gets the
 post-gate description and nothing else, because the mutual gender gate makes a
@@ -38,7 +46,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import StrEnum
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -365,8 +373,24 @@ class CandidateSchema(BaseModel):
     attached by the backend after the scorer returns — the card, the at-stake
     block and the distance. None of them is a fact the scorer may see, and none
     may be computed by the client.
+
+    On a read-back this row means *the live gates still admit this person*, and
+    it says so: ``withheld`` is ``false``, positively, rather than absent. A row
+    the gates no longer admit is a :class:`WithheldRowSchema` instead, and the
+    two are a union precisely so that **rendering a person the product has agreed
+    not to show is not a shape this contract can hold** (``docs/adr/0109``).
     """
 
+    #: ``false`` on a read-back, and **omitted on a fresh search**, where every
+    #: row is live by construction and the question does not arise.
+    withheld: Literal[False] = Field(
+        default=OMITTED,
+        description=(
+            "Present only on a read-back, where it is always `false`: the "
+            "fail-closed gates were re-evaluated and this row still stands. A "
+            "row they no longer admit arrives as the withheld shape instead."
+        ),
+    )
     player_id: UUID
     fit: float = Field(
         ...,
@@ -439,6 +463,39 @@ class CandidateSchema(BaseModel):
     )
 
 
+class WithheldRowSchema(BaseModel):
+    """A row that was recorded, and that the live gates no longer admit.
+
+    **Stated, never vanished.** A read-back that quietly returned nineteen rows
+    where twenty were recorded is the same class of lie as a breakdown that
+    quietly stops adding up, and worse for being invisible — so the row keeps its
+    place in the list and says what happened to it.
+
+    **It names no gate, and it carries no person.** The four fail-closed gates
+    are a block either way, a hold, an account that may not be shown, and the
+    mutual gender preference; naming which one fired would tell a searcher that a
+    particular person blocked them, was suspended, or changed a safety setting.
+    ``docs/adr/0095`` is explicit that *neither party is ever notified and the
+    other side sees no trace anywhere in any response*, and that rule does not
+    weaken because the surface has a longer memory. So this shape has one field,
+    and there is nowhere on it for a reason, an id, a card or a breakdown to be
+    written.
+
+    The searcher loses nothing they are owed: they saw this row when they ran the
+    search, and what has changed since is only that the product will no longer
+    show it to them.
+    """
+
+    withheld: Literal[True] = Field(
+        ...,
+        description=(
+            "Always `true`. This row was recorded and is no longer shown: the "
+            "fail-closed gates were re-evaluated at read time and one of them "
+            "excludes it now. **Which one is deliberately not said.**"
+        ),
+    )
+
+
 class ShortlistResponse(BaseModel):
     """The whole answer: one envelope, and at most twenty rows.
 
@@ -448,11 +505,15 @@ class ShortlistResponse(BaseModel):
     """
 
     search: SearchEnvelope
-    candidates: list[CandidateSchema] = Field(
+    candidates: list[CandidateSchema | WithheldRowSchema] = Field(
         ...,
         description=(
             "Ranked. **An empty list is a `200`** — the honest empty state is an "
-            "answer, not a failure."
+            "answer, not a failure.\n\n"
+            "A read-back may carry withheld rows: the record is immutable and "
+            "the gates are live, so a row the product has since agreed not to "
+            "show keeps its place and states that it is withheld. Branch on "
+            "`withheld` — a fresh search never carries one."
         ),
     )
 

@@ -1,4 +1,4 @@
-"""The matchmaking context's refusals — seven codes, distinct at three statuses.
+"""The matchmaking context's refusals — eight codes, distinct at four statuses.
 
 **Distinct codes at the same status, because a client must be able to tell a
 transient outage from a refusal about *you*.* Three of these are 503 and mean
@@ -8,7 +8,8 @@ fail-closed read failed, the index is too far behind to be trusted. A single
 is off* into one line the client cannot branch on.
 
 **An empty shortlist is a ``200``.** The honest empty state is an answer, not a
-failure, and nothing here is raised for it.
+failure, and nothing here is raised for it — on the search that produced it and
+on the read-back a month later alike.
 
 **Never a fallback list.** When the engine is down the feature is down. A
 hand-rolled backend ranker arriving as a hotfix is how a second, worse,
@@ -21,7 +22,12 @@ from __future__ import annotations
 
 from http import HTTPStatus
 
-from app.shared.domain.errors import AppError, ConflictError, ForbiddenError
+from app.shared.domain.errors import (
+    AppError,
+    ConflictError,
+    ForbiddenError,
+    NotFoundError,
+)
 
 
 class GateDataUnavailable(AppError):
@@ -124,6 +130,24 @@ class PlayIntentNotDeclared(ConflictError):
     """
 
     code = "play_intent_not_declared"
+
+
+class SearchNotFound(NotFoundError):
+    """No search of yours has that id.
+
+    **A search that belongs to somebody else answers exactly as one that never
+    existed**, and the sameness is the authorization rule rather than a
+    convenience: an answer that separated them would tell a caller whether a
+    stranger's ``search_id`` is real, which is a directory of other people's
+    searches read one probe at a time.
+
+    A search that returned nobody is **not** this. It is a `200` with an empty
+    list, exactly as it was on the day it ran — the honest empty state is an
+    answer, and a read-back that turned it into a 404 would forget a search that
+    happened.
+    """
+
+    code = "search_not_found"
 
 
 class AccountHeld(ForbiddenError):

@@ -152,6 +152,23 @@ def _photo(row: CandidateRow) -> bool:
 
 
 def _gender_satisfied(row: CandidateRow, context: SearchContext) -> bool:
+    """The mutual gate, over an index row inside a running search."""
+
+    return gender_satisfied(
+        searcher_gender=context.searcher.gender,
+        searcher_preference=context.searcher.gender_preference,
+        their_gender=row.gender,
+        their_preference=row.gender_preference,
+    )
+
+
+def gender_satisfied(
+    *,
+    searcher_gender: Gender | None,
+    searcher_preference: GenderPreference,
+    their_gender: str | None,
+    their_preference: str | None,
+) -> bool:
     """Both preferences, both directions. **Closed, and told to nobody.**
 
     Absence is not a quieter ``PREFER_NOT_TO_SAY``: a preference that *needs* a
@@ -159,14 +176,21 @@ def _gender_satisfied(row: CandidateRow, context: SearchContext) -> bool:
     gate that cannot be evaluated excludes. A pair who both ask for anybody never
     reads a gender at all, which is why an unanswered question costs nothing
     until somebody's safety setting depends on it.
+
+    It takes four facts rather than a row and a context because the same gate is
+    evaluated in two places — inside a search, and again when a stored search is
+    read back an hour later (``docs/adr/0109``) — and a second implementation of
+    a mutual safety gate is exactly the thing that ends up satisfied in one place
+    and not the other. ``their_preference`` is ``None`` when there is no row to
+    read one from at all, which is a gate that cannot be evaluated and therefore
+    excludes.
     """
 
-    searcher = context.searcher
-    theirs = _preference(row.gender_preference)
+    theirs = None if their_preference is None else _preference(their_preference)
     if theirs is None:
         return False
-    return _satisfies(searcher.gender_preference, _gender(row.gender)) and _satisfies(
-        theirs, searcher.gender
+    return _satisfies(searcher_preference, _gender(their_gender)) and _satisfies(
+        theirs, searcher_gender
     )
 
 

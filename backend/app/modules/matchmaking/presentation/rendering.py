@@ -1,6 +1,6 @@
 """Turning the answer into the response, and omitting what does not apply.
 
-**Every omitted field is omitted here, by not being passed.** The route is
+**Every omitted field is omitted here, by not being passed.** The routes are
 declared ``response_model_exclude_unset=True``, so a field this module does not
 name is absent from the JSON — which is the whole mechanism behind
 ``docs/adr/0106`` §4's first spelling. A field this module passes as ``None`` is
@@ -11,25 +11,37 @@ the reason codes all arrive decided; the card and the at-stake block arrive
 attached. What is left is naming fields — and a renderer that did arithmetic
 would be a second implementation of a domain rule in the one layer nobody tests
 for it.
+
+**Both routes render the record**, and that is what makes the round trip true by
+construction rather than by a test that happens to pass. The search that has just
+run and the search read back a month later reach :func:`_candidate` with the same
+type — a ``SearchCandidateRecord`` — so there is no shape a fresh response could
+carry that a stored one could not reproduce. The two departures the round trip
+allows itself are the whole of the difference between these two functions: a row
+the live gates now withhold, and a photo link minted per response
+(``docs/adr/0109``, ``docs/adr/0107``).
+
+**A withheld row carries no person.** It is a different type, not a candidate
+with holes: there is no ``player_id`` on it and no card, so a client cannot
+resurrect somebody the product has agreed to stop showing, and a renderer cannot
+leak one by forgetting a branch.
 """
 
 from __future__ import annotations
 
 from typing import Any
 
-from app.engines.matchfit.core import Term
-from app.modules.matchmaking.application.record_rows import (
-    liveness_reason_codes,
-    modifier_rows,
-    term_rows,
+from app.modules.matchmaking.application.read_back_search import ReadBackAnswer
+from app.modules.matchmaking.application.run_shortlist_search import ShortlistAnswer
+from app.modules.matchmaking.domain.searches import (
+    InclusionReason,
+    RecordedCard,
+    SearchCandidateRecord,
+    SearchRecord,
+    SortOption,
 )
-from app.modules.matchmaking.application.run_shortlist_search import (
-    AnsweredCandidate,
-    ShortlistAnswer,
-)
-from app.modules.matchmaking.domain.geography import whole_kilometres
-from app.modules.matchmaking.domain.searches import InclusionReason, SearchRecord
 from app.modules.matchmaking.presentation.schemas import (
+    OMITTED,
     CandidateSchema,
     ConcernSchema,
     OptimisedFor,
@@ -38,20 +50,46 @@ from app.modules.matchmaking.presentation.schemas import (
     SearchEnvelope,
     ShortlistResponse,
     WireInclusionReason,
+    WithheldRowSchema,
 )
 
 
 def render(answer: ShortlistAnswer) -> ShortlistResponse:
-    """The whole response, from the answer the use case produced."""
+    """The whole response, from the record the use case just wrote.
+
+    Every row is live by construction — the gates were evaluated moments ago —
+    so ``withheld`` is not passed at all, and the field does not appear.
+    """
 
     return ShortlistResponse(
-        search=_envelope(answer),
-        candidates=[_candidate(row) for row in answer.rows],
+        search=_envelope(answer.record, answer.sorts_available),
+        candidates=[_candidate(row) for row in answer.record.returned],
     )
 
 
-def _envelope(answer: ShortlistAnswer) -> SearchEnvelope:
-    record: SearchRecord = answer.record
+def render_read_back(answer: ReadBackAnswer) -> ShortlistResponse:
+    """The same response, a month later, minus who we may no longer show.
+
+    **The list keeps its length and its order.** A withheld row holds its place
+    and says what happened to it; a row that still stands says so positively,
+    because *we re-checked and this one is fine* is the other half of the
+    statement and a client should not have to infer it from an absence.
+    """
+
+    return ShortlistResponse(
+        search=_envelope(answer.record, answer.sorts_available),
+        candidates=[
+            WithheldRowSchema(withheld=True)
+            if row.withheld
+            else _candidate(row.recorded, withheld=False)
+            for row in answer.rows
+        ],
+    )
+
+
+def _envelope(
+    record: SearchRecord, sorts: tuple[SortOption, ...]
+) -> SearchEnvelope:
     pool = record.pool_description
     return SearchEnvelope(
         search_id=record.id,
@@ -74,31 +112,32 @@ def _envelope(answer: ShortlistAnswer) -> SearchEnvelope:
             post_gate=pool.post_gate,
         ),
         radius_clamp=record.radius_clamp_bit,
-        sorts_available=list(answer.sorts_available),
+        sorts_available=list(sorts),
     )
 
 
-def _candidate(row: AnsweredCandidate) -> CandidateSchema:
-    scored = row.scored
+def _candidate(
+    row: SearchCandidateRecord, *, withheld: Any = OMITTED
+) -> CandidateSchema:
     fields: dict[str, Any] = {
-        "player_id": scored.player_id,
-        "fit": scored.modified.points,
-        "player_card": _card(row),
-        "concerns": [ConcernSchema(term=term) for term in scored.fit.concerns],
-        # The same mapping the record stores. One serialiser, two consumers:
+        "player_id": row.player_id,
+        "fit": row.fit,
+        "player_card": _card(row.card),
+        "concerns": [ConcernSchema(term=term) for term in row.concerns],
+        # The same mappings the record stores. One serialiser, two consumers:
         # the wire validates it into the discriminated union and the store keeps
         # it opaque, so the published shape and the stored blob cannot drift into
         # disagreeing about a field name.
-        "terms": list(term_rows(scored.fit)),
-        "degraded_terms": list(scored.fit.degraded_terms),
-        "modifiers": list(modifier_rows(scored.modified.modifiers)),
-        "liveness_reasons": list(liveness_reason_codes(scored.liveness)),
+        "terms": [dict(term) for term in row.terms],
+        "degraded_terms": list(row.degraded_terms),
+        "modifiers": [dict(modifier) for modifier in row.modifiers],
+        "liveness_reasons": list(row.liveness_reasons),
     }
-    if Term.DISTANCE not in scored.fit.degraded_terms:
+    if row.distance_km is not None:
         # Omitted rather than sent as zero when the term stood down, which is
         # what lets *Closest* sort a stood-down row last instead of first.
-        fields["distance_km"] = whole_kilometres(scored.generated.distance_km)
-    if scored.inclusion_reason is InclusionReason.INTEREST_LIFT:
+        fields["distance_km"] = row.distance_km
+    if row.inclusion_reason is InclusionReason.INTEREST_LIFT:
         # **Only a reason that admits somebody crosses**, and the test is the
         # value rather than its presence: the store holds three and two of them
         # merely reorder. `NEWCOMER_WINDOW` reaches the client as a Liveness
@@ -110,24 +149,32 @@ def _candidate(row: AnsweredCandidate) -> CandidateSchema:
             "win_delta": row.at_stake.win_delta,
             "loss_delta": row.at_stake.loss_delta,
         }
+    if withheld is not OMITTED:
+        fields["withheld"] = withheld
     return CandidateSchema.model_validate(fields)
 
 
-def _card(row: AnsweredCandidate) -> PlayerCardSchema:
-    """The card, from what the index already held plus the two reads beside it.
+def _card(card: RecordedCard | None) -> PlayerCardSchema:
+    """The card as it was shown, from the row that recorded it.
 
     ``counted_games`` is never passed: the games ledger has no provider in this
     build, so the field does not apply and a zero would be an invented one.
+
+    A ``RETURNED`` row always carries a card — the record's own invariant says
+    so, and a row whose card could not be assembled was dropped before it was
+    ever written — so the ``None`` branch here is unreachable and refuses rather
+    than rendering a card with no person on it.
     """
 
-    indexed = row.scored.generated.row
+    if card is None:  # pragma: no cover - refused by the record's invariant
+        raise ValueError("a returned row with no card reached the wire")
     fields: dict[str, Any] = {
-        "nickname": row.card.nickname,
-        "area_code": row.scored.fenced.area_code,
-        "social_tags": list(indexed.social_tags),
-        "level": indexed.mu,
-        "band": indexed.band,
+        "nickname": card.nickname,
+        "area_code": card.area_code,
+        "social_tags": list(card.social_tags),
+        "level": card.level,
+        "band": card.band,
     }
-    if row.card.photo_id is not None:
-        fields["photo_id"] = row.card.photo_id
+    if card.photo_id is not None:
+        fields["photo_id"] = card.photo_id
     return PlayerCardSchema.model_validate(fields)

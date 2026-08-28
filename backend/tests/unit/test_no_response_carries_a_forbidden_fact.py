@@ -18,7 +18,9 @@ added to a candidate row, in a diff where nothing looks wrong.
 - **a decline, a pass** — a refusal is not a notification, and a pass is
   write-only.
 - **a withheld or near-miss row** — *a player may ask why somebody was shown;
-  nobody may ask who was withheld.*
+  nobody may ask who was withheld.* One field is admitted against this rule and
+  is named in ``PERMITTED`` with its reason: the read-back's own ``withheld``,
+  which says a row **it already showed** is no longer shown and names nobody.
 - **a birthdate or an age** — nothing in this backend collects one, and no gate
   may reopen it here.
 - **a real name** — the platform holds a **nickname**, and nothing may derive a
@@ -81,7 +83,19 @@ FORBIDDEN: dict[str, tuple[object, ...]] = {
 #: reason it is not the thing the rule was written about. Kept as a named list
 #: rather than by loosening a rule, so admitting one is a decision somebody
 #: writes down instead of a signal quietly getting weaker.
-PERMITTED: dict[str, str] = {}
+PERMITTED: dict[str, str] = {
+    "withheld": (
+        "The read-back's statement that a row it recorded is no longer shown "
+        "(ADR-0109), and **not** the fact this rule was written about. That one "
+        "is layer 3 — *who did not clear the floor* — and it is a person the "
+        "searcher was never shown, named to them for the first time; this is a "
+        "person they were shown this morning, and all it says is that the "
+        "product has stopped showing them. It carries no id, no card and no "
+        "gate: `withheld_reason` and `near_miss_count` are still refused, which "
+        "is what keeps this an exemption for one field rather than a weakened "
+        "rule."
+    ),
+}
 
 
 def words(name: str) -> set[str]:

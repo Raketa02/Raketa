@@ -186,6 +186,15 @@ Rules to preserve:
   bind one snapshot and every live gate fact, run the pipeline, record and commit, then
   write exposure *after* the commit. **Never a fallback list:** when the engine raises the
   feature is down, and there is deliberately nothing to catch it with.
+  **`GET /api/v1/searches/{id}` reads one back, and it is not a cache**
+  ([ADR-0109](../docs/adr/0109-a-read-back-names-what-it-withholds.md),
+  [ADR-0130](../docs/adr/0130-a-withheld-row-is-stated-and-the-gate-is-not-named.md)). The
+  record is immutable and the four fail-closed gates — block, hold, account state, mutual
+  gender — are re-evaluated live, so a row they no longer admit **keeps its place and states
+  that it is withheld** while naming no gate and carrying no person. That is why both routes
+  render `SearchRecord` through one function and why the row records the card, the concerns,
+  the whole-kilometre distance and the at-stake block: what a read-back cannot reproduce off
+  the row, it would have to re-read from sources that have moved on.
 - **New routes mount under `app/api/v1/router.py`;** keep the `/api/v1` prefix.
 - **Validate and normalize inside the value object**, not in the use case — see
   `app/modules/users/domain/value_objects.py`.

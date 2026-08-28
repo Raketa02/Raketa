@@ -36,10 +36,12 @@ from app.engines.matchfit.core import SearchMode, Term
 from app.engines.matchfit.ruleset import Ruleset
 from app.engines.matchfit.scoring import MatchFit
 from app.kernel import Clock, Instant, InvariantViolated, Sport
-from app.modules.blocks.domain.errors import BlockStateUnavailable
 from app.modules.blocks.domain.ports import BlockQuery
 from app.modules.matchmaking.application.commands import RunShortlistSearchCommand
-from app.modules.matchmaking.application.outward_reads import read_demand
+from app.modules.matchmaking.application.outward_reads import (
+    live_block_set,
+    read_demand,
+)
 from app.modules.matchmaking.domain.cards import CardIdentity, PlayerCardSource
 from app.modules.matchmaking.domain.candidate_index import Partition
 from app.modules.matchmaking.domain.candidate_snapshot import (
@@ -48,7 +50,6 @@ from app.modules.matchmaking.domain.candidate_snapshot import (
 )
 from app.modules.matchmaking.domain.errors import (
     AccountHeld,
-    GateDataUnavailable,
     IndexTooStale,
     MatchmakingUnavailable,
     PlayerProfileNotCommitted,
@@ -56,7 +57,7 @@ from app.modules.matchmaking.domain.errors import (
     SearchNotRecorded,
     SportNotRated,
 )
-from app.modules.matchmaking.domain.geography import Point
+from app.modules.matchmaking.domain.geography import Point, whole_kilometres
 from app.modules.matchmaking.domain.ledgers import ExposureLedger, week_of
 from app.modules.matchmaking.domain.ports import (
     AccountHoldQuery,
@@ -79,6 +80,7 @@ from app.modules.matchmaking.domain.search_store import SearchStore
 from app.modules.matchmaking.domain.searches import (
     CandidateBand,
     PoolDescription,
+    RecordedCard,
     SearchCandidateRecord,
     SearchInitiation,
     SearchRecord,
@@ -92,7 +94,7 @@ from app.modules.matchmaking.domain.shortlist import (
     ids_in_box,
     run,
 )
-from app.modules.matchmaking.domain.sorting import sorts_available
+from app.modules.matchmaking.domain.sorting import of_scored, sorts_available
 from app.modules.matchmaking.application.record_rows import (
     liveness_reason_codes,
     liveness_signal_inputs,
@@ -131,10 +133,22 @@ class AnsweredCandidate:
 @final
 @dataclass(frozen=True, slots=True)
 class ShortlistAnswer:
-    """What the route renders: the record, the rows, and the honest sort list."""
+    """What the route renders: **the record, and the honest sort list.**
+
+    There is deliberately no second copy of the rows. The record is the answer's
+    identity (``docs/adr/0104``), so rendering anything else would be rendering
+    something the read-back an hour later could not reproduce — and the two
+    routes would drift the way two serialisers of one shape always do. The
+    renderer reads ``record.returned``, which is the one way a candidate leaves a
+    record at all.
+
+    ``sorts_available`` is beside it rather than on it because it is not a fact
+    about the search: it is a statement about *these rows*, recomputed over
+    whatever the reader is actually shown, and a read-back that withheld half the
+    list must not go on offering a control that would now reorder nothing.
+    """
 
     record: SearchRecord
-    rows: tuple[AnsweredCandidate, ...]
     sorts_available: tuple[SortOption, ...]
 
 
@@ -240,11 +254,26 @@ class RunShortlistSearch:
             latency_ms_by_stage=stages,
             candidates=(
                 tuple(
-                    self._recorded(row, CandidateBand.RETURNED, position, context)
-                    for position, row in enumerate(returned, start=1)
+                    self._recorded(
+                        row.scored,
+                        CandidateBand.RETURNED,
+                        position,
+                        card=_recorded_card(row),
+                        at_stake=row.at_stake,
+                    )
+                    for position, row in enumerate(rows, start=1)
                 )
                 + tuple(
-                    self._recorded(row, CandidateBand.NEAR_MISS, position, context)
+                    self._recorded(
+                        row,
+                        CandidateBand.NEAR_MISS,
+                        position,
+                        # A near miss was shown to nobody, so there is no card to
+                        # record and no counted game to price: neither was ever
+                        # read for this row.
+                        card=None,
+                        at_stake=None,
+                    )
                     for position, row in enumerate(shortlist.near_misses, start=1)
                 )
             ),
@@ -253,8 +282,9 @@ class RunShortlistSearch:
         await self._note_exposure(command.sport, now, returned)
         return ShortlistAnswer(
             record=record,
-            rows=rows,
-            sorts_available=sorts_available(returned),
+            sorts_available=sorts_available(
+                tuple(of_scored(row) for row in returned)
+            ),
         )
 
     # -- the searcher's own facts -------------------------------------------
@@ -340,7 +370,7 @@ class RunShortlistSearch:
             radius_km=searcher.radius_km,
             excluding=searcher.player_id,
         )
-        blocked = await self._blocked(searcher.player_id)
+        blocked = await live_block_set(self._blocks, searcher.player_id)
         held = await read_demand(
             AccountHoldQuery, lambda: self._holds.held_among(in_box)
         )
@@ -405,21 +435,6 @@ class RunShortlistSearch:
             absent_terms=self._absent_terms,
         )
 
-    async def _blocked(self, searcher_id: UUID) -> frozenset[UUID]:
-        """The searcher's live block set. **Fails closed, like every safety gate.**
-
-        ``BlockQuery`` declares its posture where the port lives rather than in
-        the matcher's table, so it is translated here into the matcher's own
-        refusal — a 503 about the platform, distinct from the 403 about *you*.
-        """
-
-        try:
-            return await self._blocks.exclusions_for(searcher_id)
-        except BlockStateUnavailable as unavailable:
-            raise GateDataUnavailable(
-                "the block set could not be evaluated"
-            ) from unavailable
-
     # -- the two families with a different author ----------------------------
 
     async def _attach(
@@ -480,8 +495,20 @@ class RunShortlistSearch:
         row: Scored,
         band: CandidateBand,
         position: int,
-        context: SearchContext,
+        *,
+        card: RecordedCard | None,
+        at_stake: AtStake | None,
     ) -> SearchCandidateRecord:
+        """One row of the record — **the whole row that was shown, not a summary.**
+
+        The card, the at-stake block and the distance are recorded beside the
+        breakdown because none of the three can be reconstructed later: a
+        nickname changes, a Level moves, a player leaves an area, and a Level
+        delta is priced against ratings that keep moving. A read-back that
+        re-read them would answer a different search and call it the same one
+        (``docs/adr/0109``).
+        """
+
         floor = self._ruleset.floors.quality_floor
         return SearchCandidateRecord(
             band=band,
@@ -501,6 +528,17 @@ class RunShortlistSearch:
             missing_terms=row.missing_terms,
             reliability_penalty_applied=row.reliability_penalty_applied,
             reliability_penalty_decisive=row.reliability_penalty_decisive(floor),
+            concerns=tuple(term.value for term in row.fit.concerns),
+            # ``None`` and never a zero when the term stood down: a candidate
+            # whose distance could not be read is not next door, and the wire
+            # omits the field rather than sending one.
+            distance_km=(
+                None
+                if Term.DISTANCE in row.fit.degraded_terms
+                else whole_kilometres(row.generated.distance_km)
+            ),
+            card=card,
+            at_stake=at_stake,
         )
 
     async def _record(self, record: SearchRecord) -> None:
@@ -531,6 +569,28 @@ class RunShortlistSearch:
             week=week_of(now),
             player_ids=[UUID(row.player_id) for row in returned],
         )
+
+
+def _recorded_card(row: AnsweredCandidate) -> RecordedCard:
+    """The card as it was shown, from the two sources that assembled it.
+
+    The nickname and the photo id come from ``users`` through
+    :class:`PlayerCardSource`; the area, the tags, the Level and its band are
+    already on the index row, because those are facts a player changes about
+    themselves. It is assembled once, here, and both the response and the
+    read-back render *this* — so the card on the wire and the card in the record
+    cannot disagree about what was shown.
+    """
+
+    indexed = row.scored.generated.row
+    return RecordedCard(
+        nickname=row.card.nickname,
+        photo_id=row.card.photo_id,
+        area_code=row.scored.fenced.area_code,
+        social_tags=tuple(indexed.social_tags),
+        level=indexed.mu,
+        band=indexed.band,
+    )
 
 
 def _counts(shortlist: Shortlist, n_returned: int) -> StagedCounts:

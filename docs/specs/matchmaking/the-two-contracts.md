@@ -88,6 +88,12 @@ response.
 > ([ADR-0107](../../adr/0107-the-player-card-is-assembled-outside-the-engine.md)). Both halves
 > are asserted. Written down because a test drafted against the whole payload will fail on a
 > re-verified row and the temptation will be to loosen it.
+>
+> **And narrowed again by [ADR-0130](../../adr/0130-a-withheld-row-is-stated-and-the-gate-is-not-named.md).**
+> A withheld row is stated and the **gate is not named** — `withheld: BLOCKED` is the trace
+> [ADR-0095](../../adr/0095-block-directed-record-symmetric-effect-gates-fail-closed.md) says
+> the other side sees nowhere in any response. It is a separate wire shape carrying one field,
+> so a withheld row has no id and no card to render.
 
 **Three more routes exist, added by [#171](https://github.com/Raketa02/Raketa/issues/171)** and
 specified in [`the-play-screens.md`](the-play-screens.md): `POST /forecasts`

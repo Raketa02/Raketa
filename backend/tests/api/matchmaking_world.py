@@ -323,3 +323,83 @@ def rewind_the_index(source, by: timedelta) -> None:
         for partition, snapshot in source._snapshots.items()  # noqa: SLF001
     }
     source._caught_up_at = source._caught_up_at - by  # noqa: SLF001
+
+
+async def read_back(client, token: str, search_id):
+    return await client.get(
+        f"/api/v1/searches/{search_id}", headers=auth(token)
+    )
+
+
+def an_empty_index(source):
+    """The same index, holding nobody. **A source, not a mutated snapshot.**
+
+    A container is replaced and never edited, so this wraps rather than reaching
+    into one — and it keeps the partition's own version and *caught up at*, so a
+    test using it is testing an index that holds nobody rather than an index that
+    is broken or a day behind.
+    """
+
+    class Empty:
+        def snapshot(self, partition):
+            return replace(source.snapshot(partition), rows=())
+
+    return Empty()
+
+
+class HoldingEverybody:
+    """``AccountHoldQuery`` saying yes about whoever it is asked about.
+
+    The hold has no producer in this build — nothing can hold anybody, which is
+    why the gate ships true-over-empty — so the only way to drive it over HTTP is
+    to replace the query. It answers **only about ids it was asked about**, which
+    is the port's own contract and not a shortcut taken here.
+    """
+
+    async def held_among(self, player_ids):
+        return frozenset(player_ids)
+
+
+def hold_everybody(client) -> None:
+    from app.modules.matchmaking.presentation.dependencies import (
+        get_account_hold_query,
+    )
+
+    override(client, get_account_hold_query, HoldingEverybody)
+
+
+def hold_only(client, *player_ids) -> None:
+    """A hold on these players and **nobody else** — the reader included out.
+
+    Which is what makes the candidate-side assertion mean something: a stand-in
+    that held everybody would refuse the request at the entry point and never
+    reach the row.
+    """
+
+    from app.modules.matchmaking.presentation.dependencies import (
+        get_account_hold_query,
+    )
+
+    held = frozenset(player_ids)
+
+    class Holding:
+        async def held_among(self, asked):
+            return frozenset(asked) & held
+
+    override(client, get_account_hold_query, Holding)
+
+
+def may_not_show(client, *player_ids) -> None:
+    """``users`` refusing to have these candidates shown, and saying so to nobody."""
+
+    from app.modules.matchmaking.presentation.dependencies import (
+        get_account_status_query,
+    )
+
+    unshowable = frozenset(player_ids)
+
+    class Unshowable:
+        async def may_not_be_shown(self, candidate_ids):
+            return frozenset(candidate_ids) & unshowable
+
+    override(client, get_account_status_query, Unshowable)

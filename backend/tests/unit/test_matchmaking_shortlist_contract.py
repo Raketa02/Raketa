@@ -38,6 +38,7 @@ from app.modules.matchmaking.presentation.schemas import (
     SearchEnvelope,
     ShortlistResponse,
     WireInclusionReason,
+    WithheldRowSchema,
 )
 
 #: Every model on this route, so a model added without a rule is a model this
@@ -46,6 +47,7 @@ MODELS: tuple[type[BaseModel], ...] = (
     ShortlistResponse,
     SearchEnvelope,
     CandidateSchema,
+    WithheldRowSchema,
     PlayerCardSchema,
     RunSearchRequest,
 )
@@ -56,6 +58,10 @@ OMITTED_FIELDS = {
     (CandidateSchema, "inclusion_reason"): "nothing admitted them; they simply fit",
     (CandidateSchema, "at_stake"): "for fun, or no result-update rule",
     (CandidateSchema, "would_be_forecast"): "no seat is open on a shortlist",
+    (CandidateSchema, "withheld"): (
+        "a fresh search, where every row is live by construction and the "
+        "question does not arise"
+    ),
     (PlayerCardSchema, "photo_id"): "they have no photo; the client draws the poster",
     (PlayerCardSchema, "counted_games"): "the games ledger has no provider",
 }
@@ -214,3 +220,49 @@ def test_the_request_carries_asks_and_never_a_fact_about_the_searcher():
 
 def test_the_response_has_two_halves_and_no_third_thing():
     assert set(ShortlistResponse.model_fields) == {"search", "candidates"}
+
+
+def test_a_withheld_row_carries_the_statement_and_nothing_else():
+    """**Stated, never vanished — and never a person.**
+
+    A read-back re-evaluates the gates that fail closed, and a row they no longer
+    admit keeps its place in the list. What it may not keep is anybody's
+    identity: rendering a card, or even an id, for somebody the product has
+    agreed to stop showing is the exact failure ``docs/adr/0095`` was written to
+    prevent, arriving through the one route nobody thought of as a surface.
+
+    It is a **separate shape** rather than a candidate with holes, so that is a
+    property of the type rather than of whoever writes the renderer next.
+    """
+
+    assert set(WithheldRowSchema.model_fields) == {"withheld"}
+    published = _enumerated(WithheldRowSchema.model_json_schema())
+    assert published <= {"True", "true"}
+
+
+def test_a_withheld_row_names_no_gate():
+    """``docs/adr/0109`` §1 asked for the coarse gate spelling beside the
+    statement; ``docs/adr/0095`` says *the other side sees no trace anywhere in
+    any response*, and that is the one that wins.
+
+    *Withheld: BLOCKED* is precisely that trace, delivered to the person the
+    block was meant to be invisible to. A hold and an account state are
+    moderation facts about somebody else, and a gender preference is a safety
+    setting only its owner may read (``docs/adr/0096``). So the four causes are
+    indistinguishable, and there is no field here for one to arrive through.
+    """
+
+    document = str(ShortlistResponse.model_json_schema())
+    for gate in ("BLOCKED", "HELD_ACCOUNT", "ACCOUNT_INACTIVE", "GENDER_PREFERENCE"):
+        assert gate not in document, f"{gate} is a value this contract publishes"
+
+
+def test_the_two_row_shapes_are_the_only_things_a_candidate_list_holds():
+    """One candidate and one tombstone. A third shape would be a third render
+    path, and the near-miss band is exactly what would eventually arrive in it."""
+
+    candidates = ShortlistResponse.model_fields["candidates"].annotation
+    assert set(get_args(get_args(candidates)[0])) == {
+        CandidateSchema,
+        WithheldRowSchema,
+    }

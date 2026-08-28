@@ -33,6 +33,7 @@ from uuid import UUID
 
 from app.engines.matchfit.core import SearchMode
 from app.kernel import Sport, invariant
+from app.modules.matchmaking.domain.ports import AtStake
 from app.modules.player_profile.domain.availability import Window
 from app.modules.player_profile.domain.play_intent import PlayIntent
 
@@ -191,6 +192,39 @@ class StagedCounts:
 
 @final
 @dataclass(frozen=True, slots=True)
+class RecordedCard:
+    """The player card **as it was shown**, kept on the row that showed it.
+
+    The card is assembled outside the engine (``docs/adr/0107``) from two
+    sources — the index row and ``users`` — and neither of them remembers what it
+    said an hour ago. A read-back that re-read them would answer a *different*
+    search: a nickname changed since, a Level that has moved, an area the player
+    has left. So the card is recorded here, and the round trip reproduces the
+    answer that was given rather than the one that would be given now.
+
+    **A photo id, never a URL.** A presigned link is dead within the hour and
+    this row is kept forever, so what is stored is the id and the link is minted
+    per response — the one difference the round-trip assertion allows itself
+    (``docs/adr/0109``).
+
+    There is no ``counted_games``: the games ledger has no provider in this
+    build, and a stored zero would be an invented measurement rather than an
+    absent one.
+    """
+
+    nickname: str
+    #: ``None`` when they had no photo, and the client drew the generated court
+    #: poster. **Not a measured zero** — there is no photo to point at.
+    photo_id: UUID | None
+    area_code: str
+    social_tags: tuple[str, ...]
+    #: Their Level as RacketSkill published it *then*.
+    level: float
+    band: str
+
+
+@final
+@dataclass(frozen=True, slots=True)
 class SearchCandidateRecord:
     """One recorded candidate, in either band.
 
@@ -230,12 +264,33 @@ class SearchCandidateRecord:
     #: Whether the penalty is what put them below the floor — **docked** versus
     #: **docked out**.
     reliability_penalty_decisive: bool
+    #: The terms the engine judged genuinely weak, over **points forgone**. Kept
+    #: as codes rather than re-derived on a read-back: the judgement belongs to
+    #: the ruleset this row is stamped with, and re-deriving it under a later one
+    #: would answer a question about a search that never ran.
+    concerns: tuple[str, ...]
+    #: Whole kilometres, as the wire carried it. ``None`` when the distance term
+    #: stood down — which is **omitted** on the wire and not a zero, and is what
+    #: lets a stood-down row sort last instead of first.
+    distance_km: int | None
+    #: The card as it was shown. Present on a ``RETURNED`` row and absent on a
+    #: near miss, which was never shown to anybody — a biconditional, so *a
+    #: returned row with nobody on it* is unrepresentable rather than merely
+    #: unwritten, and the renderer's ``None`` branch is unreachable.
+    card: RecordedCard | None
+    #: What a counted game would have been worth **then**. ``None`` in for fun,
+    #: where a counted result is meaningless rather than unavailable.
+    at_stake: AtStake | None
 
     def __post_init__(self) -> None:
         invariant(self.position >= 1, f"a position below one: {self.position}")
         invariant(
             (self.withheld_reason is None) == (self.band is CandidateBand.RETURNED),
             f"a {self.band.value} row with withheld reason {self.withheld_reason}",
+        )
+        invariant(
+            (self.card is not None) == (self.band is CandidateBand.RETURNED),
+            f"a {self.band.value} row with card {self.card}",
         )
 
 
@@ -296,11 +351,23 @@ class SearchRecord:
             (self.intent_read is not None) == on_the_deck,
             f"a {self.surface.value} search with intent_read {self.intent_read}",
         )
-        returned = sum(
-            1 for row in self.candidates if row.band is CandidateBand.RETURNED
-        )
         invariant(
-            returned == self.counts.n_returned,
-            f"n_returned says {self.counts.n_returned} and {returned} rows were "
-            "written: the redaction detector must start out agreeing",
+            len(self.returned) == self.counts.n_returned,
+            f"n_returned says {self.counts.n_returned} and {len(self.returned)} "
+            "rows were written: the redaction detector must start out agreeing",
+        )
+
+    @property
+    def returned(self) -> tuple[SearchCandidateRecord, ...]:
+        """The rows the response carried, in position order.
+
+        **The one way a candidate leaves this record.** Every renderer reads
+        here rather than filtering ``candidates`` itself, because the filter
+        that keeps layer 3 inside the building should exist once and be testable
+        once — a near-miss row reaching a screen would be a band predicate
+        somebody dropped in a renderer nobody thought of as a surface.
+        """
+
+        return tuple(
+            row for row in self.candidates if row.band is CandidateBand.RETURNED
         )

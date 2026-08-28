@@ -14,7 +14,11 @@ from __future__ import annotations
 
 from typing import Any, Awaitable, Callable, TypeVar
 
+from uuid import UUID
+
 from app.kernel import invariant
+from app.modules.blocks.domain.errors import BlockStateUnavailable
+from app.modules.blocks.domain.ports import BlockQuery
 from app.modules.matchmaking.domain.errors import GateDataUnavailable
 from app.modules.matchmaking.domain.ports import FAIL_POSTURE, FailPosture
 
@@ -75,3 +79,27 @@ async def read_demand(
         return await read()
     except Exception:
         return stood_down
+
+
+async def live_block_set(blocks: BlockQuery, player_id: UUID) -> frozenset[UUID]:
+    """This player's live block set, in either direction. **Fails closed.**
+
+    ``BlockQuery`` is not in ``FAIL_POSTURE`` and must not be: it is not one of
+    the matcher's outward demands, and its posture is asserted where the port
+    lives (``docs/adr/0095``) rather than re-declared in a table here. What is
+    left for this module is the same translation :func:`read_demand` performs —
+    somebody else's outage becoming the matcher's own refusal, a 503 about the
+    platform rather than a 403 about *you*.
+
+    It is a function rather than a line in two use cases because **both** the
+    search and its read-back evaluate this gate, and a safety gate that is
+    translated in one place and swallowed in the other is the failure the whole
+    fail-closed rule exists to prevent.
+    """
+
+    try:
+        return await blocks.exclusions_for(player_id)
+    except BlockStateUnavailable as unavailable:
+        raise GateDataUnavailable(
+            "the block set could not be evaluated"
+        ) from unavailable

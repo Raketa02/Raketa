@@ -916,7 +916,11 @@ and ADR-0098 forbids the matcher re-deriving it), and `distance_km`.
 
 **`GET /searches/{id}` re-verifies the fail-closed gates and states what it withholds.** The
 record stays immutable; the gate is live. A withheld row is **stated, never vanished** — a list
-that quietly gets shorter is the same class of lie as a breakdown that quietly stops adding up.
+that quietly gets shorter is the same class of lie as a breakdown that quietly stops adding up —
+and it **names no gate**
+([ADR-0130](../../adr/0130-a-withheld-row-is-stated-and-the-gate-is-not-named.md)): a block, a
+hold, an account state and the mutual gender preference reach the wire as one indistinguishable
+statement, on a separate row shape that carries no id and no card.
 The round-trip test asserts **the recorded answer plus live gate state, over the record's
 fields** — never a byte-identical payload, since the photo URL is re-minted per response by
 design. Written down because a test drafted naively will fail on a row that is *supposed* to

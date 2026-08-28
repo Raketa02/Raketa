@@ -1,4 +1,4 @@
-"""*Find me a game* — one route, and it is deliberately not idempotent.
+"""*Find me a game*, and *show me that again* — two routes over one shape.
 
 **Two taps are two searches.** The index moved between them, and the product's
 own denominator is *searches run*: collapsing a double tap would put a lie in the
@@ -21,17 +21,33 @@ is an answer, not a failure — and it is recorded exactly like any other search
 When the engine is down the feature is down; a hand-rolled backend ranker
 arriving as a hotfix is how a second, worse, unexplainable ranking implementation
 enters the system permanently.
+
+**The read-back returns the same schema, and it is not a cache.** The record is
+immutable and never expires, so *Why 78?* opens a month later; but the gates that
+fail closed are re-evaluated live, because a stored result that could resurrect
+somebody who blocked the searcher in between is a safety hole wearing a cache's
+clothes (``docs/adr/0109``). A row those gates no longer admit keeps its place in
+the list and **states that it is withheld** — a list that quietly gets shorter is
+the same class of lie as a breakdown that quietly stops adding up.
 """
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Request, status
+from uuid import UUID
+
+from fastapi import APIRouter, Path, Request, status
 
 from app.core.exception_handlers import ErrorResponse
 from app.core.tracing import trace_id_for
 from app.modules.matchmaking.application.commands import RunShortlistSearchCommand
-from app.modules.matchmaking.presentation.dependencies import RunShortlistSearchDep
-from app.modules.matchmaking.presentation.rendering import render
+from app.modules.matchmaking.application.read_back_search import (
+    ReadBackSearchCommand,
+)
+from app.modules.matchmaking.presentation.dependencies import (
+    ReadBackSearchDep,
+    RunShortlistSearchDep,
+)
+from app.modules.matchmaking.presentation.rendering import render, render_read_back
 from app.modules.matchmaking.presentation.schemas import (
     RunSearchRequest,
     ShortlistResponse,
@@ -119,3 +135,71 @@ async def run_search(
         )
     )
     return render(answer)
+
+
+@router.get(
+    "/{search_id}",
+    response_model=ShortlistResponse,
+    # The same rule the `POST` is declared under, for the same reason: an
+    # omitted field is genuinely absent from the JSON rather than present as
+    # `null`. It is what makes `withheld` appear on a read-back and nowhere else.
+    response_model_exclude_unset=True,
+    status_code=status.HTTP_200_OK,
+    responses={
+        status.HTTP_200_OK: {
+            "description": (
+                "The recorded answer, **plus live gate state**. The same schema "
+                "the `POST` returned — not a fuller one and not a slimmer one — "
+                "with any row the fail-closed gates no longer admit **stated as "
+                "withheld** rather than quietly missing."
+            ),
+        },
+        status.HTTP_403_FORBIDDEN: {
+            "model": ErrorResponse,
+            "description": (
+                "`account_held` — this account is under a live hold. The hold "
+                "points both ways, and it points at old answers too."
+            ),
+        },
+        status.HTTP_404_NOT_FOUND: {
+            "model": ErrorResponse,
+            "description": (
+                "`search_not_found` — no search of **yours** has that id. A "
+                "search belonging to somebody else answers exactly as one that "
+                "never existed."
+            ),
+        },
+        status.HTTP_503_SERVICE_UNAVAILABLE: {
+            "model": ErrorResponse,
+            "description": (
+                "`gate_data_unavailable` — a fail-closed gate could not be "
+                "re-evaluated, so the answer is refused rather than served "
+                "unverified.\n\n"
+                "`matchmaking_unavailable` — there is no index in this process "
+                "to read the other side of the gender gate from."
+            ),
+        },
+    },
+    summary="Read a shortlist back",
+    description=(
+        "Returns a search you ran earlier, in **the same shape the `POST` "
+        "returned it**, so *Why 78?* opens as fast a month later as it did on "
+        "the day.\n\n"
+        "**The record is immutable; the gates are live.** Blocks, holds, "
+        "account state and the mutual gender preference are re-evaluated at "
+        "read time, and nothing is rewritten by doing so.\n\n"
+        "**A row those gates now exclude is stated as withheld** — it keeps its "
+        "place in the list, carries no person, and does not say which gate "
+        "fired. Branch on `withheld`.\n\n"
+        "**A searcher may read their own search and nobody else's.**"
+    ),
+)
+async def read_search_back(
+    user: CurrentUserDep,
+    use_case: ReadBackSearchDep,
+    search_id: UUID = Path(..., description="The answer's identity, from the POST"),
+) -> ShortlistResponse:
+    answer = await use_case.execute(
+        ReadBackSearchCommand(search_id=search_id, reader_id=user.id)
+    )
+    return render_read_back(answer)

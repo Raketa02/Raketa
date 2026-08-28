@@ -25,13 +25,23 @@ reliability term stands down for everybody, so the control **is not drawn**.
 
 The second keeps the rest honest: a shortlist of one row offers nothing, and a
 shortlist already in Fit order does not offer *Best fit*.
+
+**It reads a reading and never a candidate.** :class:`Sortable` is the whole of
+what a sort needs, and it exists so that the search that just ran and the search
+read back an hour later reach one implementation rather than two — a second
+answer to *which controls are honest* is exactly the drift this module was
+written to prevent. It is also the reason ``distance_km`` is on the recorded row:
+a sort whose reading the record does not hold cannot be offered on a read-back,
+and the honest failure is a control **not drawn** rather than one that lies.
 """
 
 from __future__ import annotations
 
-from typing import Callable, Sequence
+from dataclasses import dataclass
+from typing import Callable, Sequence, final
 
 from app.engines.matchfit.core import Term
+from app.modules.matchmaking.domain.geography import whole_kilometres
 from app.modules.matchmaking.domain.searches import SortOption
 from app.modules.matchmaking.domain.shortlist import Scored
 
@@ -42,7 +52,61 @@ from app.modules.matchmaking.domain.shortlist import Scored
 _LAST = float("inf")
 
 
-def sorts_available(returned: Sequence[Scored]) -> tuple[SortOption, ...]:
+@final
+@dataclass(frozen=True, slots=True)
+class Sortable:
+    """One returned row, as a sort sees it. **Three readings and an id.**
+
+    Deliberately not a candidate. A sort has no business with a card, a
+    breakdown or a band, and a type that carried them would be a type the next
+    sort could reach into — which is how *Closest* would end up reading the
+    distance evidence again.
+
+    ``None`` is *this row has no reading for that sort*, and it sorts **last**.
+    It is not a zero: a candidate whose distance term stood down is not next
+    door.
+    """
+
+    player_id: str
+    fit: float
+    #: **Whole kilometres, as the wire carries them** — not the measurement.
+    #: Offerability is a claim about what the *client* could do with the rows it
+    #: holds, and the client holds an integer: two candidates 3.2 km and 3.4 km
+    #: away are one distance to it, so a control promising to tell them apart
+    #: would reorder nothing it could show. It is also what makes the read-back
+    #: agree with the search, which records the same integer.
+    distance_km: int | None
+    #: The **published** Player Score, not the matcher's blend, because *Most
+    #: reliable*'s promise is *these are the people your own screens call
+    #: reliable*.
+    reliability: float | None
+
+
+def of_scored(row: Scored) -> Sortable:
+    """What the search that just ran reads its own rows as.
+
+    The distance is rounded to the whole kilometres the wire carries, and dropped
+    entirely when the term stood down — so a stood-down row sorts last here
+    exactly as it does on the wire, where the field is omitted.
+    """
+
+    return Sortable(
+        player_id=row.player_id,
+        fit=row.modified.points,
+        distance_km=(
+            None
+            if Term.DISTANCE in row.fit.degraded_terms
+            else whole_kilometres(row.generated.distance_km)
+        ),
+        reliability=(
+            None
+            if row.fenced.reliability is None
+            else float(row.fenced.reliability.published_score)
+        ),
+    )
+
+
+def sorts_available(returned: Sequence[Sortable]) -> tuple[SortOption, ...]:
     """The controls this answer can honestly draw, in the vocabulary's own order.
 
     ``EVENEST`` is absent from every shortlist and present in the vocabulary on
@@ -68,7 +132,7 @@ def sorts_available(returned: Sequence[Scored]) -> tuple[SortOption, ...]:
 
 
 def _reorders(
-    returned: Sequence[Scored], key: Callable[[Scored], tuple[float, str]]
+    returned: Sequence[Sortable], key: Callable[[Sortable], tuple[float, str]]
 ) -> bool:
     """Whether this sort would tell the rows apart **and** put them in a
     different order."""
@@ -84,34 +148,27 @@ def _reorders(
     return [row.player_id for row in resorted] != [row.player_id for row in returned]
 
 
-def _by_fit(row: Scored) -> tuple[float, str]:
+def _by_fit(row: Sortable) -> tuple[float, str]:
     """*Best fit* — the printed number, descending. Ties break on the player id,
     exactly as the returned order's do, so a tie is never what makes a sort look
     offerable."""
 
-    return (-row.modified.points, row.player_id)
+    return (-row.fit, row.player_id)
 
 
-def _by_distance(row: Scored) -> tuple[float, str]:
-    """*Closest* — whole kilometres ascending, a stood-down reading last."""
+def _by_distance(row: Sortable) -> tuple[float, str]:
+    """*Closest* — kilometres ascending, a stood-down reading last."""
 
-    return (_reading(row, Term.DISTANCE, row.generated.distance_km), row.player_id)
+    return (
+        _LAST if row.distance_km is None else float(row.distance_km),
+        row.player_id,
+    )
 
 
-def _by_reliability(row: Scored) -> tuple[float, str]:
+def _by_reliability(row: Sortable) -> tuple[float, str]:
     """*Most reliable* — the published Player Score, descending.
 
-    It reads the **published** figure and not the matcher's blend, because the
-    control's promise is *these are the people your own screens call reliable*.
     A row whose reliability term stood down sorts last rather than at zero.
     """
 
-    record = row.fenced.reliability
-    published = _LAST if record is None else -float(record.published_score)
-    return (published, row.player_id)
-
-
-def _reading(row: Scored, term: Term, value: float) -> float:
-    """``value`` when the term fired for this row, and *last* when it stood down."""
-
-    return value if term not in row.fit.degraded_terms else _LAST
+    return (_LAST if row.reliability is None else -row.reliability, row.player_id)

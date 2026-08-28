@@ -52,10 +52,12 @@ from app.bootstrap.composition import (
 )
 from app.infrastructure.redis_client import get_redis
 from app.modules.blocks.presentation.dependencies import BlockQueryDep
+from app.modules.matchmaking.application.read_back_search import ReadBackSearch
 from app.modules.matchmaking.application.run_shortlist_search import RunShortlistSearch
 from app.modules.matchmaking.domain.candidate_snapshot import CandidateSource
 from app.modules.matchmaking.domain.errors import MatchmakingUnavailable
 from app.modules.matchmaking.domain.ledgers import ExposureLedger, SuppressionLedger
+from app.modules.matchmaking.domain.ports import AccountHoldQuery, AccountStatusQuery
 from app.modules.player_profile.presentation.dependencies import (
     PlayerProfileRepositoryDep,
     PlayIntentDeclarationRepositoryDep,
@@ -102,6 +104,33 @@ def get_candidate_source(request: Request) -> CandidateSource:
 CandidateSourceDep = Annotated[CandidateSource, Depends(get_candidate_source)]
 
 
+def get_account_hold_query(db: DbSession) -> AccountHoldQuery:
+    """Whether an account is under a live hold. **Declared, like every gate.**
+
+    It is a line here rather than a call inside a use case's factory for the
+    reason ``get_block_query`` is: both surfaces that evaluate this gate — the
+    search and its read-back — should wire to one declaration, and a gate the
+    test suite cannot reach is a gate whose fail-closed posture is asserted only
+    in prose.
+    """
+
+    return build_account_hold_query(db)
+
+
+AccountHoldQueryDep = Annotated[AccountHoldQuery, Depends(get_account_hold_query)]
+
+
+def get_account_status_query(db: DbSession) -> AccountStatusQuery:
+    """The set of accounts that may not be shown. Candidate-side, fails closed."""
+
+    return build_account_status_query(db)
+
+
+AccountStatusQueryDep = Annotated[
+    AccountStatusQuery, Depends(get_account_status_query)
+]
+
+
 def get_run_shortlist_search(
     db: DbSession,
     clock: ClockDep,
@@ -113,6 +142,8 @@ def get_run_shortlist_search(
     ratings: SkillRatingRepositoryDep,
     declarations: PlayIntentDeclarationRepositoryDep,
     blocks: BlockQueryDep,
+    holds: AccountHoldQueryDep,
+    account_status: AccountStatusQueryDep,
     exposure: ExposureLedgerDep,
 ) -> RunShortlistSearch:
     """The shortlist use case, assembled per request.
@@ -138,8 +169,8 @@ def get_run_shortlist_search(
         ratings=ratings,
         declarations=declarations,
         blocks=blocks,
-        holds=build_account_hold_query(db),
-        account_status=build_account_status_query(db),
+        holds=holds,
+        account_status=account_status,
         history=build_match_history_query(db),
         player_scores=player_scores,
         at_stake=build_at_stake_query(db),
@@ -154,3 +185,37 @@ def get_run_shortlist_search(
 RunShortlistSearchDep = Annotated[
     RunShortlistSearch, Depends(get_run_shortlist_search)
 ]
+
+
+def get_read_back_search(
+    db: DbSession,
+    candidates: CandidateSourceDep,
+    profiles: PlayerProfileRepositoryDep,
+    blocks: BlockQueryDep,
+    holds: AccountHoldQueryDep,
+    account_status: AccountStatusQueryDep,
+) -> ReadBackSearch:
+    """The read-back, assembled per request. **Six collaborators, no engine.**
+
+    It reads a record and re-evaluates four gates; it never scores, so there is
+    no ruleset here and no ``MatchFit``. The absence is the point — a use case
+    holding a scorer is a use case that can quietly start re-ranking a stored
+    answer, which is the one thing an immutable record may not do.
+
+    The candidate source is the process's, exactly as it is for a search: the
+    mutual gender gate reads the other side's preference off the index row, so a
+    process with no index cannot evaluate that gate and says so with the same
+    503 rather than withholding everybody.
+    """
+
+    return ReadBackSearch(
+        searches=build_search_store(db),
+        profiles=profiles,
+        candidates=candidates,
+        blocks=blocks,
+        holds=holds,
+        account_status=account_status,
+    )
+
+
+ReadBackSearchDep = Annotated[ReadBackSearch, Depends(get_read_back_search)]

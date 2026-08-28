@@ -1010,6 +1010,87 @@
           }
         ]
       }
+    },
+    "/api/v1/searches/{search_id}": {
+      "get": {
+        "tags": [
+          "searches"
+        ],
+        "summary": "Read a shortlist back",
+        "description": "Returns a search you ran earlier, in **the same shape the `POST` returned it**, so *Why 78?* opens as fast a month later as it did on the day.\n\n**The record is immutable; the gates are live.** Blocks, holds, account state and the mutual gender preference are re-evaluated at read time, and nothing is rewritten by doing so.\n\n**A row those gates now exclude is stated as withheld** \u2014 it keeps its place in the list, carries no person, and does not say which gate fired. Branch on `withheld`.\n\n**A searcher may read their own search and nobody else's.**",
+        "operationId": "read_search_back_api_v1_searches__search_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "search_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The answer's identity, from the POST",
+              "title": "Search Id"
+            },
+            "description": "The answer's identity, from the POST"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The recorded answer, **plus live gate state**. The same schema the `POST` returned \u2014 not a fuller one and not a slimmer one \u2014 with any row the fail-closed gates no longer admit **stated as withheld** rather than quietly missing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShortlistResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`account_held` \u2014 this account is under a live hold. The hold points both ways, and it points at old answers too.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`search_not_found` \u2014 no search of **yours** has that id. A search belonging to somebody else answers exactly as one that never existed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`gate_data_unavailable` \u2014 a fail-closed gate could not be re-evaluated, so the answer is refused rather than served unverified.\n\n`matchmaking_unavailable` \u2014 there is no index in this process to read the other side of the gender gate from.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1219,6 +1300,12 @@
       },
       "CandidateSchema": {
         "properties": {
+          "withheld": {
+            "type": "boolean",
+            "const": false,
+            "title": "Withheld",
+            "description": "Present only on a read-back, where it is always `false`: the fail-closed gates were re-evaluated and this row still stands. A row they no longer admit arrives as the withheld shape instead."
+          },
           "player_id": {
             "type": "string",
             "format": "uuid",
@@ -1300,7 +1387,7 @@
           "liveness_reasons"
         ],
         "title": "CandidateSchema",
-        "description": "One row of the shortlist: the pairing, and the person.\n\nThree field families have a **different author** from the rest and are\nattached by the backend after the scorer returns \u2014 the card, the at-stake\nblock and the distance. None of them is a fact the scorer may see, and none\nmay be computed by the client."
+        "description": "One row of the shortlist: the pairing, and the person.\n\nThree field families have a **different author** from the rest and are\nattached by the backend after the scorer returns \u2014 the card, the at-stake\nblock and the distance. None of them is a fact the scorer may see, and none\nmay be computed by the client.\n\nOn a read-back this row means *the live gates still admit this person*, and\nit says so: ``withheld`` is ``false``, positively, rather than absent. A row\nthe gates no longer admit is a :class:`WithheldRowSchema` instead, and the\ntwo are a union precisely so that **rendering a person the product has agreed\nnot to show is not a shape this contract can hold** (``docs/adr/0109``)."
       },
       "CommitPlayerProfileRequest": {
         "properties": {
@@ -2761,11 +2848,18 @@
           },
           "candidates": {
             "items": {
-              "$ref": "#/components/schemas/CandidateSchema"
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/CandidateSchema"
+                },
+                {
+                  "$ref": "#/components/schemas/WithheldRowSchema"
+                }
+              ]
             },
             "type": "array",
             "title": "Candidates",
-            "description": "Ranked. **An empty list is a `200`** \u2014 the honest empty state is an answer, not a failure."
+            "description": "Ranked. **An empty list is a `200`** \u2014 the honest empty state is an answer, not a failure.\n\nA read-back may carry withheld rows: the record is immutable and the gates are live, so a row the product has since agreed not to show keeps its place and states that it is withheld. Branch on `withheld` \u2014 a fresh search never carries one."
           }
         },
         "type": "object",
@@ -3289,6 +3383,22 @@
         ],
         "title": "WireInclusionReason",
         "description": "Why this person is in the list at all \u2014 **and it is a union of one.**\n\nThe store keeps three values and the wire publishes this one, which is the\nwhole of ``the-two-contracts.md`` \u00a74's *the store is open where the wire is\nclosed*. Only an **interest lift** admits anybody; the other two **reorder**,\nand a reorder is not a reason a searcher is owed:\n\n- ``NEWCOMER_WINDOW`` reaches the client as a Liveness reason instead, which\n  is where a printable reorder belongs.\n- ``ZERO_EXPOSURE`` never crosses at all. *You are seeing this person because\n  nobody has been shown them all week* is a third party's unpopularity, and\n  the searcher is owed no version of it.\n\nIt stays an enum of one rather than a bare literal so the next reason that\ngenuinely **admits** somebody has somewhere to go."
+      },
+      "WithheldRowSchema": {
+        "properties": {
+          "withheld": {
+            "type": "boolean",
+            "const": true,
+            "title": "Withheld",
+            "description": "Always `true`. This row was recorded and is no longer shown: the fail-closed gates were re-evaluated at read time and one of them excludes it now. **Which one is deliberately not said.**"
+          }
+        },
+        "type": "object",
+        "required": [
+          "withheld"
+        ],
+        "title": "WithheldRowSchema",
+        "description": "A row that was recorded, and that the live gates no longer admit.\n\n**Stated, never vanished.** A read-back that quietly returned nineteen rows\nwhere twenty were recorded is the same class of lie as a breakdown that\nquietly stops adding up, and worse for being invisible \u2014 so the row keeps its\nplace in the list and says what happened to it.\n\n**It names no gate, and it carries no person.** The four fail-closed gates\nare a block either way, a hold, an account that may not be shown, and the\nmutual gender preference; naming which one fired would tell a searcher that a\nparticular person blocked them, was suspended, or changed a safety setting.\n``docs/adr/0095`` is explicit that *neither party is ever notified and the\nother side sees no trace anywhere in any response*, and that rule does not\nweaken because the surface has a longer memory. So this shape has one field,\nand there is nowhere on it for a reason, an id, a card or a breakdown to be\nwritten.\n\nThe searcher loses nothing they are owed: they saw this row when they ran the\nsearch, and what has changed since is only that the product will no longer\nshow it to them."
       }
     },
     "securitySchemes": {

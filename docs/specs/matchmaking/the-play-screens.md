@@ -278,9 +278,11 @@ a silently shorter list ([ADR-0106](../../adr/0106-evidence-vocabulary-is-contra
 **Never:** a Liveness number, a near-miss row, a pre-gate pool count, another player's
 breakdown.
 
-**The read-back re-verifies and names what it withholds**
+**The read-back re-verifies and states what it withholds**
 ([ADR-0109](../../adr/0109-a-read-back-names-what-it-withholds.md)). The record is immutable;
-the response is the recorded answer **plus live gate state**. The round-trip test asserts both
+the response is the recorded answer **plus live gate state**. It does **not** name the gate
+([ADR-0130](../../adr/0130-a-withheld-row-is-stated-and-the-gate-is-not-named.md)) — the row
+says only that it is withheld, and carries no person. The round-trip test asserts both
 halves — and it is asserted over the record's fields, not over a byte-identical payload, since
 the photo URL is re-minted per response by design
 ([ADR-0107](../../adr/0107-the-player-card-is-assembled-outside-the-engine.md)).

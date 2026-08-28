@@ -19,10 +19,7 @@ from __future__ import annotations
 from typing import Protocol, runtime_checkable
 from uuid import UUID
 
-from app.modules.matchmaking.domain.searches import (
-    SearchCandidateRecord,
-    SearchRecord,
-)
+from app.modules.matchmaking.domain.searches import SearchRecord
 
 
 @runtime_checkable
@@ -49,14 +46,24 @@ class SearchStore(Protocol):
         """
         ...
 
-    async def returned_rows_for(
+    async def find(
         self, *, search_id: UUID, searcher_id: UUID
-    ) -> tuple[SearchCandidateRecord, ...]:
-        """This searcher's own returned rows, in position order.
+    ) -> SearchRecord | None:
+        """This searcher's own search, with its ``RETURNED`` rows in position order.
 
-        Empty for a search that is unknown, that belongs to somebody else, or
-        that returned nobody — **the three are deliberately indistinguishable**,
-        because an answer that separated them would tell a caller whether a
-        stranger's ``search_id`` exists.
+        **The whole record and not the rows alone**, because the read-back
+        renders an envelope as well as a list, and a second method for the search
+        row would be a second chance to fetch one search's counters beside
+        another's candidates.
+
+        ``None`` for a search that is unknown *and* for one that belongs to
+        somebody else — **the two are deliberately indistinguishable**, because
+        an answer that separated them would tell a caller whether a stranger's
+        ``search_id`` exists. A search that returned nobody is a record with no
+        candidates, which is an answer and not an absence.
+
+        The near-miss band is never loaded. It is not filtered out downstream and
+        there is no argument here that could ask for it: *a player may ask why
+        somebody was shown; nobody may ask who was withheld.*
         """
         ...
