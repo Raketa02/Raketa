@@ -13,7 +13,10 @@ acceptance test below re-derives.
 
 from __future__ import annotations
 
+import dataclasses
+
 from app.engines.matchfit.core import ReliabilityStrand, SearchMode
+from app.engines.matchfit.ruleset import Ruleset
 from app.engines.matchfit.scorable import (
     CombinedUncertainty,
     GridCell,
@@ -41,6 +44,28 @@ DAY_PARTS = tuple(part.value for part in DayPart)
 SEARCHER_MU = 2.80
 SEARCHER_SIGMA = 0.34
 WEDNESDAY = iso_weekday(3)
+
+
+def capped_at(appearances: int, ruleset: Ruleset | None = None) -> Ruleset:
+    """The live ruleset with the one integer it refuses, supplied.
+
+    ``NEWCOMER_ABSORPTION_CAP`` ships as ``None`` — *the constant keeps its rule
+    and refuses its integer* — so every test that wants the cap to **bind** has
+    to say so out loud. Built here rather than in each suite because three files
+    want it and a fourth copy is where two of them stop meaning the same thing;
+    the day-one claim, that the shipped ruleset never binds, then stays a
+    separate assertion against ``LIVE_RULESET`` rather than an assumption.
+    """
+
+    from app.modules.matchmaking.infrastructure.rulesets import LIVE_RULESET
+
+    base = LIVE_RULESET if ruleset is None else ruleset
+    return dataclasses.replace(
+        base,
+        modifiers=dataclasses.replace(
+            base.modifiers, newcomer_absorption_cap=appearances
+        ),
+    )
 
 
 def cells(*specs: tuple[int, DayPart]) -> tuple[GridCell, ...]:
@@ -160,6 +185,7 @@ def modifier_facts(
     calibration_elevated: bool = False,
     shared_history: SharedHistory | None = None,
     welcomed_settling_opponents: bool | None = None,
+    newcomer_appearances: int | None = None,
 ) -> ModifierFacts:
     """Stage 4's inputs, defaulted to **day one**: nothing fires.
 
@@ -174,6 +200,7 @@ def modifier_facts(
         calibration_elevated=calibration_elevated,
         shared_history=shared_history,
         welcomed_settling_opponents=welcomed_settling_opponents,
+        newcomer_appearances=newcomer_appearances,
     )
 
 
@@ -181,6 +208,7 @@ def liveness_facts(
     *,
     interest_days_ago: int | None = None,
     newcomer: bool = False,
+    newcomer_appearances: int | None = None,
     previously_accepted: bool = False,
     previously_declined: bool = False,
     answer_rate: float | None = None,
@@ -199,6 +227,7 @@ def liveness_facts(
     return LivenessFacts(
         interest_days_ago=interest_days_ago,
         newcomer=newcomer,
+        newcomer_appearances=newcomer_appearances,
         previously_accepted=previously_accepted,
         previously_declined=previously_declined,
         answer_rate=answer_rate,

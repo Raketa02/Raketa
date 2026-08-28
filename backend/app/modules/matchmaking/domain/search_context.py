@@ -62,6 +62,26 @@ def is_new_at(profile_created_at: datetime, now: datetime) -> bool:
     **A date, never a flag**, and one reading of it: the searcher's side, the
     candidate's side and the level gate's *either side* all ask here, so a change
     to what *new* means cannot land on two of the three.
+
+    **The window has two halves and only one of them is readable today.** *New
+    until their first game* is the definition and reads ``matches``, which does
+    not exist — there is no counted game anywhere in this backend, so the half is
+    **inert** rather than stubbed. *Never longer than fourteen days* is the
+    ceiling and reads ``profile_created_at``, which every index row and every
+    profile carries, so it is live from build one.
+
+    The ceiling is what makes the window terminate while the definition cannot be
+    read, and it is deliberately **not** the definition: a player fourteen days
+    in who has played nothing still leaves the window, and falls back on the
+    exposure floor, which lifts anybody shown zero times this week
+    (``the-newcomer-path.md`` §8). A window that extended while unused would be a
+    permanent subsidy for the players the engine knows least about.
+
+    Nothing here stands in for the missing half. A default of *they have played
+    nobody* would be true, and would also be the invented measurement this map
+    refuses everywhere else — the ceiling already bounds the subsidy, so the
+    absent half costs the product nothing until ``matches`` lands and can shorten
+    it honestly.
     """
 
     return now - profile_created_at < NEWCOMER_WINDOW
@@ -161,6 +181,15 @@ class LiveTermFacts:
     player_scores: Mapping[UUID, PlayerScoreReading]
     #: How often each candidate has been shown this week, in this sport.
     times_shown: Mapping[UUID, int]
+    #: How often each candidate has been volunteered into a **newcomer's**
+    #: shortlist this week, in this sport — ``NEWCOMER_ABSORPTION_CAP``'s tally.
+    #:
+    #: **Empty on every search a newcomer did not run**, and that is the read not
+    #: being taken rather than a bucket that came back quiet: the cap bounds the
+    #: ask, so the only search it can bind in is one that is itself adding to
+    #: somebody's absorption. :func:`absorption_tally` is where the two are told
+    #: apart, once, so no reader has to remember which emptiness it is holding.
+    newcomer_appearances: Mapping[UUID, int]
     #: What *shown more often than most* means this week, or ``None`` when no
     #: roll has published one yet.
     busy_threshold: int | None
@@ -188,6 +217,22 @@ class SearchContext:
     #: the composition root, because *no provider exists* is a fact about the
     #: wiring rather than about the numbers.
     absent_terms: frozenset[Term]
+
+    def absorption_tally(self, player_id: UUID) -> int | None:
+        """How often this candidate has been volunteered into a newcomer's list.
+
+        ``None`` — *there is nothing to bound* — on every search a newcomer did
+        not run, which is where the difference between the cap's two emptinesses
+        is drawn. A zero would say *we counted and they have absorbed nothing*,
+        and past a cap of one that is a different sentence.
+
+        Read by both stages the cap drops something in, through one method, so
+        stage 4 and stage 6 cannot come to two answers about one tally.
+        """
+
+        if not self.searcher.is_new_at(self.now):
+            return None
+        return self.terms.newcomer_appearances.get(player_id, 0)
 
     @property
     def today(self) -> IsoWeekday:

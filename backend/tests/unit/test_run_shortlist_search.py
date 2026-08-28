@@ -232,7 +232,7 @@ class ARefusingEngine:
         raise InvariantViolated("a candidate row this scorer cannot read")
 
 
-def a_profile() -> PlayerProfile:
+def a_profile(*, committed_at: datetime = build.SETTLED) -> PlayerProfile:
     return PlayerProfile.create(
         player_id=SEARCHER,
         social_tags=SocialTagSelection.from_ids(build.TAGS),
@@ -248,7 +248,7 @@ def a_profile() -> PlayerProfile:
         consent_copy_version="proposals-2026-08",
         consent_surface=ConsentSurface.ONBOARDING,
         idempotency_key="commit-1",
-        occurred_at=Instant(build.SETTLED),
+        occurred_at=Instant(committed_at),
     )
 
 
@@ -463,6 +463,42 @@ async def test_the_exposure_write_happens_after_the_commit_and_never_gates_it():
         sport=SPORT, week=week_of(Instant(NOW)), player_ids=[UUID(row.player_id)]
     )
     assert shown[UUID(row.player_id)] == 1
+
+
+async def test_a_newcomers_search_writes_both_counts_and_an_ordinary_one_does_not():
+    """The absorption tally is *appearances in a newcomer's list*, so it is
+    written by the searches that make one and by no others.
+
+    Two counts in one bucket. Being volunteered into a newcomer's list is being
+    shown, plus one further fact about who was looking — so the newcomer's search
+    writes both families over the same rows, and a settled player's search moves
+    only the first.
+    """
+
+    from app.modules.matchmaking.domain.ledgers import week_of
+
+    week = week_of(Instant(NOW))
+    row = build.row(1)
+    ids = [UUID(row.player_id)]
+
+    settled = InMemoryExposureLedger(FixedClock())
+    await use_case(rows=(row,), exposure=settled).execute(a_command())
+
+    newcomer = InMemoryExposureLedger(FixedClock())
+    await use_case(
+        rows=(row,),
+        profile=a_profile(committed_at=NOW - timedelta(days=2)),
+        exposure=newcomer,
+    ).execute(a_command())
+
+    async def volunteered(ledger: InMemoryExposureLedger) -> int:
+        counts = await ledger.times_shown_to_a_newcomer(
+            sport=SPORT, week=week, player_ids=ids
+        )
+        return counts[ids[0]]
+
+    assert await volunteered(settled) == 0
+    assert await volunteered(newcomer) == 1
 
 
 async def test_a_row_whose_card_cannot_be_assembled_is_dropped_before_the_record():

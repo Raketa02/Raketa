@@ -45,6 +45,7 @@ from app.modules.player_profile.domain.play_intent import PlayIntent
 from app.modules.player_profile.domain.availability import DayPart
 from tests.unit.matchfit_builders import (
     candidate,
+    capped_at,
     cells,
     liveness_facts,
     modifier_facts,
@@ -372,6 +373,27 @@ def test_the_newcomer_lift_reclaims_its_points_by_speaking() -> None:
     assert lifted.offset == 8
     assert lifted.dominant is not None
     assert lifted.dominant.signal is LivenessSignal.NEWCOMER_LIFT
+
+
+def test_the_absorption_cap_drops_the_reorder_and_leaves_the_window_alone() -> None:
+    """Past the cap the lift goes and the candidate is still new.
+
+    The two are deliberately separate facts on the same bag. The window is what
+    the level gate reads and what the minimum-evidence exemption reads, and
+    neither of those is the engine's thumb — the cap bounds *how often the engine
+    volunteers somebody*, so it may only take the reorder.
+    """
+
+    capped = capped_at(2)
+    facts = liveness_facts(newcomer=True, newcomer_appearances=2)
+
+    absorbed_lift = read_signals(facts, capped)
+    assert facts.newcomer is True
+    assert absorbed_lift.offset == 0
+    assert absorbed_lift.printable == ()
+
+    # And the shipped ruleset refuses the integer, so the same facts lift.
+    assert read_signals(facts, LIVE_RULESET).offset == 8
 
 
 @pytest.mark.parametrize(

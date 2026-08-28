@@ -20,11 +20,20 @@ asserted in the suite. A renamed key is not an error anybody sees: it is a
 ledger that is permanently empty, and a permanently empty exposure ledger looks
 exactly like a quiet week.
 
-**One hash per ``(sport, week)``, one field per player.** When
-``NEWCOMER_ABSORPTION_CAP`` gets an integer it is counted here too — *same
-shape, same cadence, no second ledger* (``the-newcomer-path.md`` §5) — as a
-second field family inside this hash rather than a second key, so that one
-expiry covers both and neither can be read half-present.
+**One hash per ``(sport, week)``, and two field families inside it.** The plain
+field is *how often this player was shown*; the ``nc:`` field is
+``NEWCOMER_ABSORPTION_CAP``'s tally, *how often they were volunteered into a
+newcomer's list* — *same shape, same cadence, no second ledger*
+(``the-newcomer-path.md`` §5). A second family in this hash rather than a second
+key, so that one expiry covers both and neither can be read half-present.
+
+**The prefix is on the newer family and not on both.** Prefixing the original
+would have been tidier and would also have silently emptied every bucket in
+flight, which is the failure this file's own docstring names two paragraphs up:
+a renamed key is a ledger that looks exactly like a quiet week. So the tally
+carries the prefix, and the read that walks the whole hash — ``all_times_shown``
+— filters to the unprefixed family rather than trying to parse the other as an
+id.
 """
 
 from __future__ import annotations
@@ -53,6 +62,18 @@ def exposure_key(sport: Sport, week: ExposureWeek) -> str:
     """``expo:{sport}:{week}`` — the week's bucket for one sport."""
 
     return f"expo:{sport.value}:{week.label}"
+
+
+#: What marks a field as the newcomer-absorption tally rather than an appearance
+#: count. A prefix on the field and never a key of its own: the two families
+#: expire together or the cap reads a tally that outlived the week it counts.
+NEWCOMER_FIELD_PREFIX = "nc:"
+
+
+def newcomer_field(player_id: UUID) -> str:
+    """``nc:{player}`` — one player's absorption tally inside the week's hash."""
+
+    return f"{NEWCOMER_FIELD_PREFIX}{player_id}"
 
 
 def busy_threshold_key(sport: Sport, week: ExposureWeek) -> str:
@@ -136,11 +157,55 @@ class RedisExposureLedger:
             for player_id, value in zip(ids, values, strict=True)
         }
 
+    async def record_shown_to_a_newcomer(
+        self,
+        *,
+        sport: Sport,
+        week: ExposureWeek,
+        player_ids: Collection[UUID],
+    ) -> None:
+        if not player_ids:
+            return
+
+        key = exposure_key(sport, week)
+        async with self._client.pipeline(transaction=False) as pipe:
+            for player_id in player_ids:
+                pipe.hincrby(key, newcomer_field(player_id), 1)
+            pipe.expire(key, EXPOSURE_TTL_SECONDS)
+            await pipe.execute()
+
+    async def times_shown_to_a_newcomer(
+        self,
+        *,
+        sport: Sport,
+        week: ExposureWeek,
+        player_ids: Collection[UUID],
+    ) -> Mapping[UUID, int]:
+        ids = list(player_ids)
+        if not ids:
+            return {}
+
+        values = await self._client.hmget(
+            exposure_key(sport, week), [newcomer_field(one) for one in ids]
+        )
+        return {
+            player_id: _count(value)
+            for player_id, value in zip(ids, values, strict=True)
+        }
+
     async def all_times_shown(
         self, *, sport: Sport, week: ExposureWeek
     ) -> Mapping[UUID, int]:
+        # The one read that walks the whole hash, so it is the one that has to
+        # know the bucket holds two families. Filtered rather than parsed
+        # defensively: a tally field is a legal member of this hash, not a
+        # malformed id, and the roll's percentile is over appearances.
         fields = await self._client.hgetall(exposure_key(sport, week))
-        return {UUID(field): _count(value) for field, value in fields.items()}
+        return {
+            UUID(field): _count(value)
+            for field, value in fields.items()
+            if not field.startswith(NEWCOMER_FIELD_PREFIX)
+        }
 
     async def publish_busy_threshold(
         self, *, sport: Sport, week: ExposureWeek, threshold: int
@@ -211,7 +276,9 @@ __all__ = [
     "SECONDS_PER_DAY",
     "RedisExposureLedger",
     "RedisSuppressionLedger",
+    "NEWCOMER_FIELD_PREFIX",
     "busy_threshold_key",
     "exposure_key",
+    "newcomer_field",
     "suppression_key",
 ]

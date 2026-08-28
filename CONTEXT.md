@@ -789,10 +789,13 @@ appears here.
   evening, so it may never admit anybody below the **quality floor**
   ([ADR-0099](docs/adr/0099-relaxation-offers-the-searchers-own-asks.md)). *Shown more often than
   most* is the week's ninetieth percentile, republished hourly rather than computed per search.
-  The same ledger will carry `NEWCOMER_ABSORPTION_CAP` — how often one player is volunteered
-  into a **newcomer's** shortlist — which binds by dropping a lift and **never** by withholding
-  anybody, and **nobody is told**, because nothing has happened to them. That count is not kept
-  yet: the cap *keeps its rule and refuses its integer*, so there is nothing for it to bind on.
+  The same ledger carries `NEWCOMER_ABSORPTION_CAP` — how often one player is volunteered
+  into a **newcomer's** shortlist — as a second count in the same weekly bucket, which binds by
+  dropping a lift and **never** by withholding anybody, and **nobody is told**, because nothing
+  has happened to them. The count is kept; the cap *keeps its rule and refuses its integer*, so
+  nothing binds on it yet. Counting it first is deliberate: the cap's falsifier is answer rate
+  regressed on absorption, and an integer chosen against weeks of real tallies is one somebody
+  can defend.
   _Avoid_: "impressions", "visibility".
 
 **Terms this context refuses**

@@ -29,6 +29,7 @@ from app.engines.matchfit.ranking import ModifiedFit, ModifierPoints, ModifierSt
 from app.engines.matchfit.ruleset import BUDGETED_MODIFIERS
 from app.engines.matchfit.scorable import SharedHistory
 from app.engines.matchfit.v1 import (
+    absorbed,
     calibration_value,
     familiarity,
     modify,
@@ -43,6 +44,7 @@ from app.modules.matchmaking.infrastructure.rulesets import LIVE_RULESET
 from app.modules.player_profile.domain.social_tags import SocialTag
 from tests.unit.matchfit_builders import (
     candidate,
+    capped_at,
     modifier_facts,
     record,
     searcher,
@@ -260,6 +262,79 @@ def test_the_welcoming_record_reads_one_input_and_no_answer_is_not_a_no() -> Non
         Modifier.WELCOMING_RECORD,
         float(RULES.ranges[Modifier.WELCOMING_RECORD].maximum),
     )
+
+
+# ---------------------------------------------------------------------------
+# The absorption cap — wired, and never binding
+# ---------------------------------------------------------------------------
+
+CAPPED_AT_TWO = capped_at(2)
+
+
+def test_the_shipped_ruleset_never_binds_the_cap() -> None:
+    """**Wired, never binding.** The tally is counted, carried and read, and no
+    comparison against a ``None`` cap can be true — so a player volunteered a
+    thousand times this week keeps every point the record earns them."""
+
+    assert LIVE_RULESET.modifiers.newcomer_absorption_cap is None
+    assert not absorbed(1000, LIVE_RULESET.modifiers)
+    assert (
+        welcoming_record(
+            modifier_facts(
+                welcomed_settling_opponents=True, newcomer_appearances=1000
+            ),
+            LIVE_RULESET,
+        )
+        is not None
+    )
+
+
+def test_a_search_that_is_not_a_newcomers_has_nothing_to_bound() -> None:
+    """``None`` appearances is *this search is not a newcomer's*, and it is a
+    different fact from a counted zero — the bound is on the ask, so a search
+    adding nothing to somebody's absorption may not take anything away for it."""
+
+    assert not absorbed(None, CAPPED_AT_TWO.modifiers)
+    assert absorbed(0, CAPPED_AT_TWO.modifiers) is False
+
+
+def test_the_cap_binds_at_it_and_not_past_it() -> None:
+    """*How often* — the appearance that reaches the cap is the last one the
+    engine volunteers them for."""
+
+    rules = CAPPED_AT_TWO.modifiers
+    assert not absorbed(1, rules)
+    assert absorbed(2, rules)
+    assert absorbed(3, rules)
+
+
+def test_past_the_cap_the_welcoming_modifier_is_dropped_and_nothing_else() -> None:
+    """The record is still true; the engine has stopped paying for it.
+
+    ``docs/adr/0114``: *it removes the engine's thumb, not the player* — so the
+    stack loses the welcoming line and keeps whatever else fired, and no shape
+    here can withhold anybody.
+    """
+
+    welcomed = modifier_facts(
+        welcomed_settling_opponents=True, calibration_elevated=True
+    )
+    absorbed_too_often = modifier_facts(
+        welcomed_settling_opponents=True,
+        calibration_elevated=True,
+        newcomer_appearances=2,
+    )
+
+    freely = modify(searcher(), candidate(), welcomed, CAPPED_AT_TWO)
+    capped = modify(searcher(), candidate(), absorbed_too_often, CAPPED_AT_TWO)
+
+    assert {entry.modifier for entry in freely.fired} == {
+        Modifier.WELCOMING_RECORD,
+        Modifier.CALIBRATION_VALUE,
+    }
+    assert {entry.modifier for entry in capped.fired} == {
+        Modifier.CALIBRATION_VALUE
+    }
 
 
 # ---------------------------------------------------------------------------

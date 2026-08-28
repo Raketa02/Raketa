@@ -425,6 +425,24 @@ class ModifierFacts:
     #: opponents whose rating was still settling*. ``None`` is **no answer** and
     #: not *no*, because the provider is ``matches`` and it does not exist.
     welcomed_settling_opponents: bool | None
+    #: How often this candidate has already been volunteered into a **newcomer's**
+    #: shortlist this week, in this sport — ``NEWCOMER_ABSORPTION_CAP``'s tally.
+    #:
+    #: ``None`` when the search asking is not a newcomer's, which is the only
+    #: search the cap counts and the only one it can bind in: the bound is on
+    #: *the ask*, so a search that adds nothing to somebody's absorption may not
+    #: take anything away for it either.
+    #:
+    #: The **count** crosses and never the verdict, because the cap that prices
+    #: it is ruleset data (``docs/adr/0106``) — a bool decided outside would be a
+    #: released number applied where nothing could re-derive it.
+    newcomer_appearances: int | None
+
+    def __post_init__(self) -> None:
+        invariant(
+            self.newcomer_appearances is None or self.newcomer_appearances >= 0,
+            f"a negative absorption tally: {self.newcomer_appearances}",
+        )
 
 
 @final
@@ -457,6 +475,16 @@ class LivenessFacts:
     interest_days_ago: int | None
     #: Whether the candidate is inside the newcomer window.
     newcomer: bool
+    #: The same absorption tally :class:`ModifierFacts` carries, read here for
+    #: the other half of what the cap drops: past it, the welcoming modifier and
+    #: **the newcomer-driven reorder** both go, and the player ranks on their
+    #: merits (``docs/adr/0114``).
+    #:
+    #: One fact read by two stages rather than one stage passing it to the
+    #: other: stage 4 and stage 6 are separate calls over separate bags, and a
+    #: stage that took its neighbour's would be reading a fact it has no
+    #: business holding.
+    newcomer_appearances: int | None
     previously_accepted: bool
     previously_declined: bool
     #: How well and how fast they answer challenges, as one reading.
@@ -490,4 +518,8 @@ class LivenessFacts:
         invariant(
             self.open_challenges is None or self.open_challenges >= 0,
             f"a negative inbox: {self.open_challenges}",
+        )
+        invariant(
+            self.newcomer_appearances is None or self.newcomer_appearances >= 0,
+            f"a negative absorption tally: {self.newcomer_appearances}",
         )

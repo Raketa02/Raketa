@@ -103,7 +103,21 @@ def liveness_signal_inputs(row: Scored) -> Mapping[str, Any]:
         return {}
     inputs: dict[str, Any] = {
         LivenessSignal.INTEREST_RECEIVED.value: facts.interest_days_ago,
-        LivenessSignal.NEWCOMER_LIFT.value: facts.newcomer,
+        # Two raw inputs, because two produce the lift: the window, and the
+        # absorption tally the cap drops it on. Storing only the window would
+        # make a cap change undiffable in exactly the way storing the offset
+        # would make a bounds change undiffable, and the tally is also the
+        # x-axis of the cap's own falsifier.
+        #
+        # It is the one key whose shape has changed — a bool became a mapping —
+        # and the blob is open precisely so that it can (`docs/adr/0106`). The
+        # alternative was a second top-level key, which would have made the
+        # mapping's key set something other than the signal roster, and that
+        # roster is what makes *a signal is never read* a checkable claim.
+        LivenessSignal.NEWCOMER_LIFT.value: {
+            "newcomer": facts.newcomer,
+            "newcomer_appearances": facts.newcomer_appearances,
+        },
         LivenessSignal.PREVIOUS_ACCEPT.value: facts.previously_accepted,
         LivenessSignal.PREVIOUS_DECLINE.value: facts.previously_declined,
         LivenessSignal.ANSWER_RATE_AND_SPEED.value: facts.answer_rate,

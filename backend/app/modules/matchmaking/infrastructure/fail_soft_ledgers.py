@@ -127,6 +127,39 @@ class FailSoftExposureLedger(_FailSoft):
             {player_id: 0 for player_id in player_ids},
         )
 
+    async def record_shown_to_a_newcomer(
+        self,
+        *,
+        sport: Sport,
+        week: ExposureWeek,
+        player_ids: Collection[UUID],
+    ) -> None:
+        await self._softly(
+            "record_shown_to_a_newcomer",
+            lambda: self._inner.record_shown_to_a_newcomer(
+                sport=sport, week=week, player_ids=player_ids
+            ),
+            None,
+        )
+
+    async def times_shown_to_a_newcomer(
+        self,
+        *,
+        sport: Sport,
+        week: ExposureWeek,
+        player_ids: Collection[UUID],
+    ) -> Mapping[UUID, int]:
+        # Zero for everybody, which is the answer that binds nothing: a cap that
+        # bound because a cache was restarting would drop a lift on a suspicion
+        # of a suspicion.
+        return await self._softly(
+            "times_shown_to_a_newcomer",
+            lambda: self._inner.times_shown_to_a_newcomer(
+                sport=sport, week=week, player_ids=player_ids
+            ),
+            {player_id: 0 for player_id in player_ids},
+        )
+
     async def all_times_shown(
         self, *, sport: Sport, week: ExposureWeek
     ) -> Mapping[UUID, int]:

@@ -30,7 +30,12 @@ from __future__ import annotations
 
 from app.engines.matchfit.core import FamiliarityReading, Modifier, SearchMode
 from app.engines.matchfit.ranking import ModifierPoints, ModifierStack
-from app.engines.matchfit.ruleset import BUDGETED_MODIFIERS, Ruleset, TagRules
+from app.engines.matchfit.ruleset import (
+    BUDGETED_MODIFIERS,
+    ModifierRules,
+    Ruleset,
+    TagRules,
+)
 from app.engines.matchfit.scorable import (
     ModifierFacts,
     ScorableCandidate,
@@ -147,6 +152,46 @@ def reading_for(tags: tuple[str, ...], rules: TagRules) -> FamiliarityReading:
     return FamiliarityReading.NEITHER
 
 
+def absorbed(appearances: int | None, rules: ModifierRules) -> bool:
+    """Whether the engine has volunteered this player to newcomers often enough.
+
+    ``NEWCOMER_ABSORPTION_CAP`` bounds **the ask** and never the person
+    (``docs/adr/0114``): past it, the welcoming modifier and the newcomer-driven
+    reorder are dropped and the player still ranks on their merits. Nobody is
+    withheld, nobody is told, and there is no shape here that could withhold
+    anybody — this answers a question about a *lift*, and the gate roster is
+    somewhere else entirely.
+
+    **Two of the three ways this is false are the day-one ones**, and both are
+    spelled apart rather than collapsed into one falsy test. ``appearances is
+    None`` is *this search is not a newcomer's*, so there is nothing to bound; a
+    ``None`` cap is *the constant keeps its rule and refuses its integer*
+    (``the-engine.md`` §6), so the tally is counted and carried and no comparison
+    against it can be true. **Wired, and never binding.**
+
+    At the cap and not past it, because the cap is *how often* — the appearance
+    that reaches it is the last one the engine volunteers them for.
+
+    **It reads the candidate's own tally, whoever the candidate is**, which is
+    ``docs/adr/0114`` §3 taken at its word: *the welcoming modifier and the
+    newcomer-driven reorder are dropped*. Those two reach different people — the
+    welcoming record is a veteran's, the lift is a newcomer's — so the cap
+    bounds whichever thumb the engine had on this candidate rather than
+    selecting a population to bound. That is deliberate and not an oversight: a
+    newcomer volunteered into every other newcomer's list is absorbing the same
+    load the cap exists to bound, and either way the player keeps every point
+    the eight terms gave them and is never withheld. The reading is recorded
+    here because the issue's own sentence names *an experienced player*, and a
+    reader finding the broader rule later is owed the argument rather than left
+    to assume a bug.
+    """
+
+    cap = rules.newcomer_absorption_cap
+    if cap is None or appearances is None:
+        return False
+    return appearances >= cap
+
+
 def welcoming_record(facts: ModifierFacts, ruleset: Ruleset) -> ModifierOutcome:
     """Whether the candidate has played opponents whose rating was still settling.
 
@@ -162,11 +207,18 @@ def welcoming_record(facts: ModifierFacts, ruleset: Ruleset) -> ModifierOutcome:
     the same outcome today — collapsing them into one falsy test is how *we have
     not asked* silently becomes *we asked and they have not*, and the day the
     provider lands is the day the difference starts costing somebody points.
+
+    **Past the absorption cap it is dropped rather than reduced.** The record is
+    still true; what has changed is that the engine stops paying for it, which is
+    the whole of what *bounding the ask* means — the player keeps every point the
+    eight terms gave them.
     """
 
     if facts.welcomed_settling_opponents is None:
         return None
     if not facts.welcomed_settling_opponents:
+        return None
+    if absorbed(facts.newcomer_appearances, ruleset.modifiers):
         return None
     return ModifierPoints(
         modifier=Modifier.WELCOMING_RECORD,

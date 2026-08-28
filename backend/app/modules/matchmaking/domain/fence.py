@@ -148,6 +148,10 @@ def modifier_facts_of(
     unwritten, and they say so by being absent rather than by arriving as a
     ``False`` or a zero. ``welcomed_settling_opponents`` is ``None`` meaning *no
     answer* and emphatically not *no*.
+
+    The absorption tally crosses even so, and is not waiting on ``matches`` with
+    the modifier it bounds: it is counted from searches, which this build runs.
+    **Wired, and never binding** while the cap refuses its integer.
     """
 
     counterpart = context.terms.counterparts.get(player_uuid)
@@ -155,6 +159,7 @@ def modifier_facts_of(
         calibration_elevated=row.calibration_priority != CALIBRATION_STANDARD,
         shared_history=_shared_history(counterpart, context.now),
         welcomed_settling_opponents=None,
+        newcomer_appearances=context.absorption_tally(player_uuid),
     )
 
 
@@ -180,6 +185,9 @@ def liveness_facts_of(
     return LivenessFacts(
         interest_days_ago=None,
         newcomer=is_new_at(row.profile_created_at, context.now),
+        # The same call stage 4 made, so one cap cannot drop the modifier and
+        # leave the reorder standing.
+        newcomer_appearances=context.absorption_tally(player_uuid),
         previously_accepted=_has(counterpart, PairwiseOutcome.ACCEPTED),
         previously_declined=_has(counterpart, PairwiseOutcome.DECLINED),
         answer_rate=None,

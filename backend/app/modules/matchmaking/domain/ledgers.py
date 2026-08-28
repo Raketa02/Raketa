@@ -123,13 +123,20 @@ class ExposureLedger(Protocol):
     **returned** rows, not the generated ones, because the ledger's whole
     subject is *who was seen*.
 
-    **One count per player, and no second one yet.**
-    ``NEWCOMER_ABSORPTION_CAP`` will be counted here too — appearances in a
-    **newcomer's** shortlist, *same shape, same cadence, no second ledger*
-    (``the-newcomer-path.md`` §5) — and it is deliberately not built: the
-    constant *keeps its rule and refuses its integer* (``the-engine.md`` §6), so
-    nothing can read a tally that nothing can bind on. It arrives with the
-    number, as a second field family in the same bucket.
+    **Two counts per player, in one bucket.** The second is
+    ``NEWCOMER_ABSORPTION_CAP``'s tally — appearances in a **newcomer's**
+    shortlist, *same shape, same cadence, no second ledger*
+    (``the-newcomer-path.md`` §5) — written as a second field family inside the
+    same ``(sport, week)`` bucket rather than a key of its own, so that one
+    expiry covers both and neither can be read half-present.
+
+    **It is wired and it never binds**, because the constant *keeps its rule and
+    refuses its integer* (``the-engine.md`` §6): with
+    ``newcomer_absorption_cap = None`` the tally is counted, carried and read,
+    and no comparison against it can be true. Counting it now is what makes the
+    integer arguable later — the cap's own falsifier is a regression of answer
+    rate on absorption, and a number chosen against a week of tallies is a
+    number somebody can defend.
     """
 
     async def record_shown(
@@ -175,6 +182,52 @@ class ExposureLedger(Protocol):
         representable is *the store did not answer* — that degrades to all
         zeroes, and the module docstring says why that collapse is safe here and
         would be indefensible for a gate.
+        """
+        ...
+
+    async def record_shown_to_a_newcomer(
+        self,
+        *,
+        sport: Sport,
+        week: ExposureWeek,
+        player_ids: Collection[UUID],
+    ) -> None:
+        """Add one **newcomer** appearance each to the week's bucket.
+
+        Written only by a search a newcomer ran, and over the same rows
+        :meth:`record_shown` was given — being volunteered into a newcomer's
+        list is being shown, plus one further fact about who was looking. So the
+        caller makes the two writes together, and this one never names somebody
+        the other was not given.
+
+        **They are two writes and not one, so they can be lost apart.** Both
+        fail soft, so an outage can drop either and leave the other, and neither
+        count is evidence for anything — the durable answer to *who was shown*
+        is the search record. A tally slightly under its appearances is a cap
+        that binds slightly late, which is the right way round for a bound whose
+        whole posture is *never withhold*.
+
+        Additive, unordered and empty-tolerant, for the reasons
+        :meth:`record_shown` is.
+        """
+        ...
+
+    async def times_shown_to_a_newcomer(
+        self,
+        *,
+        sport: Sport,
+        week: ExposureWeek,
+        player_ids: Collection[UUID],
+    ) -> Mapping[UUID, int]:
+        """How often each of these was volunteered into a newcomer's list.
+
+        Read on a newcomer's search and on no other, because that is the only
+        search the cap can bind in: the bound is on *the ask*, and dropping a
+        player's lift in a search that is not adding to their absorption would
+        take something from them for a load incurred somewhere else.
+
+        Answers about every id it was asked about, zeroes included, on
+        :meth:`times_shown`'s rule and for its reason.
         """
         ...
 

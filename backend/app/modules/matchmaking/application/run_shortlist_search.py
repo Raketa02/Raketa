@@ -233,8 +233,16 @@ class RunShortlistSearch:
                 "the candidate index is more than a day behind the log"
             )
 
+        # *Is this a newcomer's search* is decided once, here, and handed to
+        # both halves of the absorption tally. The read skips and the write
+        # happens on one answer, so the bucket cannot be read on a search that
+        # will not add to it, or added to on a search that never read it.
+        for_a_newcomer = searcher.is_new_at(now)
+
         with _Timed(stages, "read_gates"):
-            context = await self._context(searcher, snapshot, now, command)
+            context = await self._context(
+                searcher, snapshot, now, command, for_a_newcomer
+            )
 
         with _Timed(stages, "pipeline"):
             try:
@@ -300,7 +308,7 @@ class RunShortlistSearch:
             ),
         )
         await self._record(record)
-        await self._note_exposure(command.sport, now, returned)
+        await self._note_exposure(command.sport, now, returned, for_a_newcomer)
         return ShortlistAnswer(
             record=record,
             sorts_available=sorts_available(
@@ -375,6 +383,7 @@ class RunShortlistSearch:
         snapshot: CandidateSnapshot,
         now: Instant,
         command: RunShortlistSearchCommand,
+        for_a_newcomer: bool,
     ) -> SearchContext:
         """Every live fact, resolved **once per search as a set**, never per row.
 
@@ -431,6 +440,15 @@ class RunShortlistSearch:
             sport=command.sport, week=week, player_ids=in_box
         )
         busy = await self._exposure.busy_threshold(sport=command.sport, week=week)
+        # The absorption tally is read on a newcomer's search and on no other,
+        # because that is the only search the cap can bind in — and skipping the
+        # read is why the empty mapping on every other search means *not asked*
+        # rather than *nobody has absorbed anything*.
+        absorption: Mapping[UUID, int] = {}
+        if for_a_newcomer:
+            absorption = await self._exposure.times_shown_to_a_newcomer(
+                sport=command.sport, week=week, player_ids=in_box
+            )
         return SearchContext(
             searcher=searcher,
             surface=SearchSurface.SHORTLIST,
@@ -450,6 +468,7 @@ class RunShortlistSearch:
                 open_challenge_counts=loads,
                 player_scores=dict(scores),
                 times_shown=shown,
+                newcomer_appearances=absorption,
                 busy_threshold=busy,
             ),
             ruleset=self._ruleset,
@@ -570,7 +589,11 @@ class RunShortlistSearch:
             ) from failure
 
     async def _note_exposure(
-        self, sport: Sport, now: Instant, returned: tuple[Scored, ...]
+        self,
+        sport: Sport,
+        now: Instant,
+        returned: tuple[Scored, ...],
+        for_a_newcomer: bool,
     ) -> None:
         """Add one appearance each to the week's bucket. **After the commit.**
 
@@ -579,13 +602,20 @@ class RunShortlistSearch:
         duller list. It is deliberately outside the transaction and outside the
         refusal above — a search that ran and was recorded is a search that
         happened, whatever Redis thought.
+
+        **A newcomer's search writes both families**, over the same rows: being
+        volunteered into a newcomer's list is being shown, plus one further fact
+        about who was looking. Two writes rather than a flag on one, because they
+        are two counts and the cap reads only the second.
         """
 
-        await self._exposure.record_shown(
-            sport=sport,
-            week=week_of(now),
-            player_ids=[UUID(row.player_id) for row in returned],
-        )
+        week = week_of(now)
+        shown = [UUID(row.player_id) for row in returned]
+        await self._exposure.record_shown(sport=sport, week=week, player_ids=shown)
+        if for_a_newcomer:
+            await self._exposure.record_shown_to_a_newcomer(
+                sport=sport, week=week, player_ids=shown
+            )
 
 
 def _counts(shortlist: Shortlist, n_returned: int) -> StagedCounts:

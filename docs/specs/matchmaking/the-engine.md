@@ -978,7 +978,7 @@ it makes a Liveness-bounds change undiffable.
 | **Gate 8 — account active** | ✅ **live** | — the only outward port whose provider ships ([ADR-0124](../../adr/0124-the-matcher-gates-account-state-never-age.md)) |
 | **Challenge load, all three rungs** | **wired, never binds** | `matches` — and it now *sinks* at `−12` rather than withholding ([ADR-0125](../../adr/0125-a-full-inbox-sinks-a-player-never-withholds-them.md)) |
 | Minimum evidence | **live and inert** | — it excludes nobody today, on purpose |
-| `NEWCOMER_ABSORPTION_CAP` | **wired, never binds** | `matches` |
+| `NEWCOMER_ABSORPTION_CAP` | **wired, never binds** | — the tally is counted from searches and read on every newcomer's; what is missing is the **integer**, which stays refused until there are weeks of it to choose against |
 | Newcomer window and its `+8` | ✅ **live** | — |
 | The photo gate | ⚠ **live and inert** | [#181](https://github.com/Raketa02/Raketa/issues/181) |
 | Availability grid required | ⚠ | [#176](https://github.com/Raketa02/Raketa/issues/176)–[#178](https://github.com/Raketa02/Raketa/issues/178) |

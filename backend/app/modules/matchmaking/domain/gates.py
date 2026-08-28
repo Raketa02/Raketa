@@ -30,10 +30,12 @@ means *we do not know*, and the availability term stands down.
 
 from __future__ import annotations
 
+from datetime import datetime
 from enum import Enum
 from typing import final
 
 from app.engines.matchfit.core import SearchMode
+from app.engines.matchfit.ruleset import Ruleset
 from app.modules.matchmaking.domain.candidate_index import CandidateRow
 from app.modules.matchmaking.domain.search_context import (
     SearchContext,
@@ -231,6 +233,29 @@ def _preference(code: str) -> GenderPreference | None:
 
 
 def _level_close_enough(row: CandidateRow, context: SearchContext) -> bool:
+    """The level gate for the one pair a shortlist is about: searcher, candidate."""
+
+    return level_close_enough(
+        mu_a=context.searcher.mu,
+        mu_b=row.mu,
+        a_created_at=context.searcher.profile_created_at,
+        b_created_at=row.profile_created_at,
+        mode=context.searcher.mode,
+        ruleset=context.ruleset,
+        now=context.now,
+    )
+
+
+def level_close_enough(
+    *,
+    mu_a: float,
+    mu_b: float,
+    a_created_at: datetime,
+    b_created_at: datetime,
+    mode: SearchMode,
+    ruleset: Ruleset,
+    now: datetime,
+) -> bool:
     """``|Δμ| < LEVEL_TOL``, at the tolerance the curve itself saturates at.
 
     **Newness changes the gate, never the weights** (``docs/adr/0113``). While
@@ -239,18 +264,21 @@ def _level_close_enough(row: CandidateRow, context: SearchContext) -> bool:
     search, because gating only the newcomer's own search leaves the bad first
     game arriving through the veteran's list. No constant is introduced: the
     tighter number is the one the competitive mode already carries.
+
+    **It takes two people and not a searcher and a row**, which is what makes
+    the rule survive into a four. ``docs/adr/0116`` binds every gate across all
+    **six** pairs of a line-up, and carries this tolerance with it — *every pair
+    containing a newcomer takes ``LEVEL_TOL_COMP``, whoever ran the search* —
+    and the three cross pairs contain no searcher at all. A gate written against
+    a ``SearchContext`` could only ever answer for the three pairs the searcher
+    is in, which is precisely the hole ADR-0113 was written to close, reopened
+    one enumeration later. So the pair is the argument, here, before there is a
+    line-up to get it wrong.
     """
 
-    ruleset = context.ruleset
-    tolerance = ruleset.modes[context.searcher.mode].level_tolerance
-    if _either_is_new(row, context):
+    tolerance = ruleset.modes[mode].level_tolerance
+    if is_new_at(a_created_at, now) or is_new_at(b_created_at, now):
         tolerance = min(
             tolerance, ruleset.modes[SearchMode.COMPETITIVE].level_tolerance
         )
-    return abs(row.mu - context.searcher.mu) < tolerance
-
-
-def _either_is_new(row: CandidateRow, context: SearchContext) -> bool:
-    return is_new_at(row.profile_created_at, context.now) or (
-        context.searcher.is_new_at(context.now)
-    )
+    return abs(mu_a - mu_b) < tolerance

@@ -24,6 +24,13 @@ measured and published (§14.4), and ``docs/adr/0125`` adopted them whole. The
 tenth, reciprocal asymmetry, is arithmetic over two Fits and reads nothing at
 all.
 
+**The newcomer lift is the one flag that reads a second fact**, and the second
+fact is the absorption cap's tally rather than anything about the candidate's
+newness. Past the cap the lift is dropped and the welcoming modifier goes with
+it — the engine stops preferring somebody it has volunteered to newcomers often
+enough — and the predicate is ``modifiers.absorbed`` rather than a copy, because
+one cap dropping two things in two stages is one rule.
+
 **Points are whole numbers.** Every bound in the roster is an integer, so is
 ``MOVE_NOTICE``, and the printing guarantee is an inequality over them — a
 fractional offset would make *moved more than six* depend on a rounding nobody
@@ -46,6 +53,7 @@ from app.engines.matchfit.ranking import (
 )
 from app.engines.matchfit.ruleset import IntentRules, LivenessRules, Ruleset
 from app.engines.matchfit.scorable import LivenessFacts
+from app.engines.matchfit.v1.modifiers import absorbed
 from app.kernel import invariant
 
 
@@ -113,7 +121,12 @@ def read_signals(
         challenge_load(facts.open_challenges, rules),
         reciprocal_asymmetry(reciprocal, rules),
         _flag(LivenessSignal.PREVIOUS_DECLINE, facts.previously_declined, rules),
-        _flag(LivenessSignal.NEWCOMER_LIFT, facts.newcomer, rules),
+        _flag(
+            LivenessSignal.NEWCOMER_LIFT,
+            facts.newcomer
+            and not absorbed(facts.newcomer_appearances, ruleset.modifiers),
+            rules,
+        ),
         _ramp(LivenessSignal.EXPOSURE_ADJUSTMENT, facts.exposure, rules),
     )
     invariant(

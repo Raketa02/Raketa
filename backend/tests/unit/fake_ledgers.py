@@ -66,6 +66,11 @@ class InMemoryExposureLedger:
     def __init__(self, clock: Clock) -> None:
         self._clock = clock
         self._counts: dict[tuple[Sport, ExposureWeek], dict[UUID, int]] = {}
+        # The second field family of the same bucket, and it shares that
+        # bucket's expiry stamp for the reason the Redis adapter shares its key:
+        # a tally that outlived the appearances it counts is a cap binding on a
+        # week nobody can look at.
+        self._absorbed: dict[tuple[Sport, ExposureWeek], dict[UUID, int]] = {}
         self._thresholds: dict[tuple[Sport, ExposureWeek], int] = {}
         self._expires_at: dict[tuple[str, Sport, ExposureWeek], Instant] = {}
 
@@ -93,6 +98,32 @@ class InMemoryExposureLedger:
     ) -> Mapping[UUID, int]:
         self._expire()
         bucket = self._counts.get((sport, week), {})
+        return {player_id: bucket.get(player_id, 0) for player_id in player_ids}
+
+    async def record_shown_to_a_newcomer(
+        self,
+        *,
+        sport: Sport,
+        week: ExposureWeek,
+        player_ids: Collection[UUID],
+    ) -> None:
+        self._expire()
+        if not player_ids:
+            return
+        bucket = self._absorbed.setdefault((sport, week), {})
+        for player_id in player_ids:
+            bucket[player_id] = bucket.get(player_id, 0) + 1
+        self._touch("counts", sport, week)
+
+    async def times_shown_to_a_newcomer(
+        self,
+        *,
+        sport: Sport,
+        week: ExposureWeek,
+        player_ids: Collection[UUID],
+    ) -> Mapping[UUID, int]:
+        self._expire()
+        bucket = self._absorbed.get((sport, week), {})
         return {player_id: bucket.get(player_id, 0) for player_id in player_ids}
 
     async def all_times_shown(
@@ -131,6 +162,7 @@ class InMemoryExposureLedger:
             del self._expires_at[key]
             if held == "counts":
                 self._counts.pop((sport, week), None)
+                self._absorbed.pop((sport, week), None)
             else:
                 self._thresholds.pop((sport, week), None)
 

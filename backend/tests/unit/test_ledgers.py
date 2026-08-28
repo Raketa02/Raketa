@@ -143,6 +143,12 @@ def test_neither_port_can_answer_a_question_about_the_past():
     assert exposure_methods == {
         "record_shown",
         "times_shown",
+        # The absorption tally is a second **count**, not a second question: it
+        # answers *how often*, in this week's bucket, exactly as the appearance
+        # count does. Nothing here can say when somebody was volunteered, or to
+        # whom, and both of those are on the durable search row.
+        "record_shown_to_a_newcomer",
+        "times_shown_to_a_newcomer",
         "all_times_shown",
         "publish_busy_threshold",
         "busy_threshold",
@@ -303,6 +309,77 @@ async def test_republishing_the_threshold_replaces_it(ledgers):
     )
 
     assert await ledgers.exposure.busy_threshold(sport=Sport.PADEL, week=WEEK) == 9
+
+
+# ---------------------------------------------------------------------------
+# The absorption tally — the second field family in the same bucket
+# ---------------------------------------------------------------------------
+
+
+async def test_the_absorption_tally_starts_at_a_measured_zero(ledgers):
+    """Nobody has been volunteered to anybody, and the answer says so per id."""
+
+    volunteered = uuid4()
+
+    assert await ledgers.exposure.times_shown_to_a_newcomer(
+        sport=Sport.PADEL, week=WEEK, player_ids=[volunteered]
+    ) == {volunteered: 0}
+
+
+async def test_the_two_counts_are_separate_and_neither_reads_the_other(ledgers):
+    """One bucket, two families, and a search that is not a newcomer's adds to
+    exactly one of them.
+
+    This is what makes the cap's own falsifier answerable: *appearances* and
+    *appearances in a newcomer's list* are different denominators, and a tally
+    that moved with every search would be the first count under a second name.
+    """
+
+    volunteered = uuid4()
+
+    await ledgers.exposure.record_shown(
+        sport=Sport.PADEL, week=WEEK, player_ids=[volunteered, volunteered]
+    )
+    await ledgers.exposure.record_shown_to_a_newcomer(
+        sport=Sport.PADEL, week=WEEK, player_ids=[volunteered]
+    )
+
+    assert await ledgers.exposure.times_shown(
+        sport=Sport.PADEL, week=WEEK, player_ids=[volunteered]
+    ) == {volunteered: 2}
+    assert await ledgers.exposure.times_shown_to_a_newcomer(
+        sport=Sport.PADEL, week=WEEK, player_ids=[volunteered]
+    ) == {volunteered: 1}
+
+
+async def test_the_roll_counts_appearances_and_never_the_tally(ledgers):
+    """``all_times_shown`` is the roll's input, and the roll's percentile is over
+    *how often people were shown* — a bucket that handed it both families would
+    count half the population twice and move the busy threshold with it."""
+
+    volunteered = uuid4()
+
+    await ledgers.exposure.record_shown_to_a_newcomer(
+        sport=Sport.PADEL, week=WEEK, player_ids=[volunteered]
+    )
+
+    assert await ledgers.exposure.all_times_shown(sport=Sport.PADEL, week=WEEK) == {}
+
+
+async def test_the_tally_expires_with_the_appearances_beside_it(ledgers):
+    """One bucket, one expiry. A tally that outlived its week would bind a cap
+    on absorption nobody can look up."""
+
+    volunteered = uuid4()
+    await ledgers.exposure.record_shown_to_a_newcomer(
+        sport=Sport.PADEL, week=WEEK, player_ids=[volunteered]
+    )
+
+    ledgers.advance(days=EXPOSURE_RETENTION_WEEKS * 7 + 1)
+
+    assert await ledgers.exposure.times_shown_to_a_newcomer(
+        sport=Sport.PADEL, week=WEEK, player_ids=[volunteered]
+    ) == {volunteered: 0}
 
 
 # ---------------------------------------------------------------------------
@@ -514,6 +591,12 @@ async def test_a_week_of_exposure_is_one_key():
 
     await exposure.record_shown(
         sport=Sport.PADEL, week=WEEK, player_ids=[uuid4(), uuid4()]
+    )
+
+    assert redis.keys_held() == {exposure_key(Sport.PADEL, WEEK)}
+
+    await exposure.record_shown_to_a_newcomer(
+        sport=Sport.PADEL, week=WEEK, player_ids=[uuid4()]
     )
 
     assert redis.keys_held() == {exposure_key(Sport.PADEL, WEEK)}

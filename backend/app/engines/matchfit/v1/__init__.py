@@ -34,6 +34,7 @@ from app.engines.matchfit.v1.liveness import (
 )
 from app.engines.matchfit.v1.modifiers import (
     ModifierOutcome,
+    absorbed,
     calibration_value,
     familiarity,
     modify,
@@ -66,6 +67,7 @@ __all__ = [
     "Refusal",
     "TermOutcome",
     "TermReading",
+    "absorbed",
     "admits",
     "availability_overlap",
     "calibration_value",
