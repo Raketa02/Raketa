@@ -5,7 +5,7 @@ of contexts it does not build; this is the matcher's *own* store, and the
 distinction is the same one between a repository and a consumer-driven contract
 everywhere else in this backend.
 
-**Two methods, and the second one's signature is the authorization rule.**
+**Every method's signature is the authorization rule.**
 ``search-telemetry.md`` §3: *the searcher may read their own ``RETURNED`` rows
 and nothing else.* Expressed as a filter inside an adapter, that rule is one
 ``WHERE`` clause somebody can drop; expressed here, there is no method that could
@@ -16,10 +16,33 @@ somebody was shown; nobody may ask who was withheld.
 
 from __future__ import annotations
 
-from typing import Protocol, runtime_checkable
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Protocol, final, runtime_checkable
 from uuid import UUID
 
+from app.engines.matchfit.core import SearchMode
+from app.kernel import Sport
 from app.modules.matchmaking.domain.searches import SearchRecord
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class SearchModeReading:
+    """One search, reduced to the four columns the drift loop reads.
+
+    A type of its own rather than a whole :class:`SearchRecord`, because the loop
+    walks a day of searches and a record carries every row each of them returned.
+    It is also the fence: *what the drift detector may see* is four columns and a
+    reader cannot widen it by accident.
+    """
+
+    searcher_id: UUID
+    sport: Sport
+    #: ``None`` on the deck, which has no mode and cannot disagree with a
+    #: declaration in the way §6.3 means.
+    mode: SearchMode | None
+    at: datetime
 
 
 @runtime_checkable
@@ -65,5 +88,37 @@ class SearchStore(Protocol):
         The near-miss band is never loaded. It is not filtered out downstream and
         there is no argument here that could ask for it: *a player may ask why
         somebody was shown; nobody may ask who was withheld.*
+        """
+        ...
+
+    async def widenings_taken(
+        self, *, searcher_id: UUID, sport: Sport, radius_km: int
+    ) -> int:
+        """How often this searcher has already taken a widening to this radius.
+
+        The input to *make a repeatedly-taken widening permanent*, and it counts
+        **this radius** rather than any widening: a player who took 15 km twice
+        and 20 km once has not asked for 20 km twice, and offering to save the
+        wrong number is worse than not offering.
+
+        It reads the search rows, which is the only place a taken rung is
+        recorded — the profile is deliberately untouched by a widen, so there is
+        nothing else that remembers one.
+        """
+        ...
+
+    async def modes_since(
+        self, *, since: datetime, limit: int
+    ) -> tuple["SearchModeReading", ...]:
+        """Every search run since a moment, newest first, for the drift loop.
+
+        **Not a route's read, and it never becomes one.** It answers about every
+        searcher, which is why it takes no ``searcher_id`` and returns nothing a
+        response could carry: four columns, no candidate rows, no near misses.
+        The loop it feeds raises a prompt and changes no value.
+
+        ``limit`` is a bound on one tick's work rather than a page: a loop that
+        could read an unbounded day is a loop that falls over on the first busy
+        one, and a prompt missed today is raised again tomorrow.
         """
         ...

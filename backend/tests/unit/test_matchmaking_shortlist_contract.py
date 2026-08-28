@@ -213,9 +213,23 @@ def test_the_modifier_vocabulary_is_the_roster_plus_the_dock_outside_it():
 def test_the_request_carries_asks_and_never_a_fact_about_the_searcher():
     """**There is no radius here, and there never will be.** A stale radius from
     a phone is a gate evaluated on a lie, and this is the field it would arrive
-    through."""
+    through.
 
-    assert set(RunSearchRequest.model_fields) == {"sport", "mode"}
+    Five fields, and every one of them is an *ask*. The two that widen a search
+    name an **offer** rather than a value — the radius a rung goes to is read off
+    the offering search's own record — so the closest thing here to a fact about
+    the searcher is a week they are asking about tonight, which is the one ask
+    that looks like a fact and is not.
+    """
+
+    assert set(RunSearchRequest.model_fields) == {
+        "sport",
+        "mode",
+        "availability_override",
+        "offered_by_search_id",
+        "rung",
+    }
+    assert "radius" not in " ".join(RunSearchRequest.model_fields)
 
 
 def test_the_response_has_two_halves_and_no_third_thing():

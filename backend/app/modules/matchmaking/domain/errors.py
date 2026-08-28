@@ -1,4 +1,4 @@
-"""The matchmaking context's refusals — eight codes, distinct at four statuses.
+"""The matchmaking context's refusals — nine codes, distinct at four statuses.
 
 **Distinct codes at the same status, because a client must be able to tell a
 transient outage from a refusal about *you*.* Three of these are 503 and mean
@@ -130,6 +130,24 @@ class PlayIntentNotDeclared(ConflictError):
     """
 
     code = "play_intent_not_declared"
+
+
+class RungOfferNotFound(ConflictError):
+    """This search cites a rung that was never offered to it.
+
+    **An accepted widen is a new search citing the one that offered it**
+    (``docs/adr/0099``), and the citation is checked rather than trusted: the
+    radius a rung widens to is read off the offering search's own record, so a
+    client that could name a rung nobody offered would have found the per-search
+    radius input this contract does not have.
+
+    It refuses instead of falling back to the strict search, because the two
+    answers are different searches and the one the player asked for is the widened
+    one. Silently running the narrow one would put a lie in the record: a row
+    saying a rung was taken beside a pool that was never widened.
+    """
+
+    code = "rung_offer_not_found"
 
 
 class SearchNotFound(NotFoundError):

@@ -17,6 +17,11 @@ import pytest
 from app.engines.matchfit.core import SearchMode
 from app.kernel import Sport
 from app.modules.matchmaking.domain.ports import AtStake
+from app.modules.matchmaking.domain.relaxation import (
+    RelaxationAsk,
+    Rung,
+    RungOffer,
+)
 from app.modules.matchmaking.domain.searches import (
     CandidateBand,
     InclusionReason,
@@ -35,6 +40,11 @@ from app.modules.matchmaking.infrastructure.sqlalchemy_search_store import (
 from app.modules.player_profile.domain.availability import Window
 
 AT = datetime(2026, 8, 26, 18, 0, tzinfo=timezone.utc)
+#: The week the search ran on. Four cells across four days, which ``window_of``
+#: reads as ``THIS_WEEK`` — the same window the pool description carries, because
+#: the read-back **re-derives** it from this grid rather than reading the label.
+GRID = ("1:EVENING", "3:EVENING", "5:EVENING", "6:MORNING")
+OFFERED_BY = UUID("22222222-2222-2222-2222-222222222222")
 SEARCHER = UUID("11111111-1111-1111-1111-111111111111")
 STRANGER = UUID("22222222-2222-2222-2222-222222222222")
 PHOTO = UUID("33333333-3333-3333-3333-333333333333")
@@ -122,8 +132,27 @@ def _record(searcher_id: UUID = SEARCHER) -> SearchRecord:
             players_in_range=8,
             window=Window.THIS_WEEK,
         ),
-        searcher_slot_count=4,
-        radius_clamp_bit=False,
+        searcher_grid=GRID,
+        searcher_slot_count=len(GRID),
+        radius_clamp_bit=True,
+        rung_offers=(
+            RungOffer(
+                rung=Rung.A,
+                ask=RelaxationAsk.TIMES,
+                candidates_above_floor=3,
+                window=Window.ANY,
+                slot="2:EVENING",
+            ),
+            RungOffer(
+                rung=Rung.B,
+                ask=RelaxationAsk.RADIUS,
+                candidates_above_floor=5,
+                window=Window.THIS_WEEK,
+                radius_km=15,
+            ),
+        ),
+        offered_by_search_id=OFFERED_BY,
+        rung_taken=Rung.B,
         latency_ms_by_stage={"pipeline": 3},
         candidates=returned + near,
     )
@@ -351,8 +380,12 @@ def test_the_redaction_detector_must_agree_with_the_rows_written():
                         "index_stale",
                         "best_withheld_fit",
                         "pool_description",
+                        "searcher_grid",
                         "searcher_slot_count",
                         "radius_clamp_bit",
+                        "rung_offers",
+                        "offered_by_search_id",
+                        "rung_taken",
                         "latency_ms_by_stage",
                         "candidates",
                     )

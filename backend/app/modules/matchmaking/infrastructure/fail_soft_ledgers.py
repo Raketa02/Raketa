@@ -1,7 +1,7 @@
 """Where *the ledgers fail soft* stops being prose and starts being enforced.
 
 **A gate that cannot be evaluated excludes; a term that cannot be evaluated
-stands down** (``docs/adr/0095``). The two ledgers are on the second side, and
+stands down** (``docs/adr/0095``). The three ledgers here are on the second side, and
 it is worth saying out loud because the rule reads like it should not reach
 them: applying *exclude what you could not check* to a suppression would
 **empty the deck rather than protect anybody**, and applying it to exposure
@@ -52,6 +52,7 @@ from app.modules.matchmaking.domain.ledgers import (
     ExposureWeek,
     SuppressionLedger,
 )
+from app.modules.matchmaking.domain.prompts import Prompt, PromptLedger
 
 logger = logging.getLogger(__name__)
 
@@ -229,4 +230,46 @@ class FailSoftSuppressionLedger(_FailSoft):
                 passer_id=passer_id, candidate_ids=candidate_ids
             ),
             frozenset(),
+        )
+
+
+class FailSoftPromptLedger(_FailSoft):
+    """A ``PromptLedger`` whose outage costs a question and nothing else.
+
+    The degraded read is *no prompt standing*, which is the same thing the
+    ledger's own emptiness means and is the safe direction in both halves: a
+    question that was not asked this week is asked next week, where a question
+    asked about a value that has since changed is the platform being wrong out
+    loud. The degraded write is the same trade seen from the loop's end — the
+    next tick raises it again.
+    """
+
+    _ledger = "prompt"
+
+    def __init__(self, inner: PromptLedger) -> None:
+        self._inner = inner
+
+    async def raise_prompt(
+        self,
+        *,
+        player_id: UUID,
+        prompt: Prompt,
+        sport: Sport | None = None,
+        detail: str | None = None,
+    ) -> None:
+        await self._softly(
+            "raise_prompt",
+            lambda: self._inner.raise_prompt(
+                player_id=player_id, prompt=prompt, sport=sport, detail=detail
+            ),
+            None,
+        )
+
+    async def raised_for(
+        self, *, player_id: UUID, sport: Sport
+    ) -> Mapping[Prompt, str | None]:
+        return await self._softly(
+            "raised_for",
+            lambda: self._inner.raised_for(player_id=player_id, sport=sport),
+            {},
         )

@@ -278,12 +278,30 @@ async def recorded_candidates(
         return list(rows.scalars())
 
 
-async def search(client, token: str, mode: str = "COMPETITIVE", sport: Sport = SPORT):
-    return await client.post(
-        "/api/v1/searches",
-        json={"sport": sport.value, "mode": mode},
-        headers=auth(token),
-    )
+async def search(
+    client,
+    token: str,
+    mode: str = "COMPETITIVE",
+    sport: Sport = SPORT,
+    *,
+    availability_override: list[dict] | None = None,
+    offered_by_search_id: str | None = None,
+    rung: str | None = None,
+):
+    """One tap. The three optional asks are **omitted** unless a test sends one.
+
+    Omitted rather than sent as null, because that is the only spelling the
+    contract has: a client says *use my profile's week* by not mentioning one.
+    """
+
+    body: dict = {"sport": sport.value, "mode": mode}
+    if availability_override is not None:
+        body["availability_override"] = availability_override
+    if offered_by_search_id is not None:
+        body["offered_by_search_id"] = offered_by_search_id
+    if rung is not None:
+        body["rung"] = rung
+    return await client.post("/api/v1/searches", json=body, headers=auth(token))
 
 
 #: How long after the log's last event a search is taken to run. Comfortably
@@ -403,3 +421,37 @@ def may_not_show(client, *player_ids) -> None:
             return frozenset(candidate_ids) & unshowable
 
     override(client, get_account_status_query, Unshowable)
+
+
+async def _profile(session_factory, player_id: UUID):
+    """The searcher's own profile, replayed from the log.
+
+    There is no `GET` for it — onboarding writes one and nothing reads it back
+    over HTTP yet — so *the profile is untouched* is asserted where the profile
+    actually lives, which is also the only place a silent write would show up.
+    """
+
+    from app.bootstrap.composition import (
+        build_domain_event_store,
+        build_event_publisher,
+        build_player_profile_repository,
+    )
+
+    async with session_factory() as session:
+        repository = build_player_profile_repository(
+            event_store=build_domain_event_store(session),
+            events=build_event_publisher(session),
+        )
+        return await repository.load(player_id)
+
+
+async def saved_radius_km(session_factory, player_id: UUID) -> int:
+    profile = await _profile(session_factory, player_id)
+    assert profile is not None
+    return profile.search_radius.kilometres
+
+
+async def saved_grid(session_factory, player_id: UUID) -> tuple[str, ...]:
+    profile = await _profile(session_factory, player_id)
+    assert profile is not None
+    return profile.availability.codes

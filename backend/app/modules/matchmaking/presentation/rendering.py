@@ -35,6 +35,8 @@ from app.kernel import InvariantViolated
 
 from app.modules.matchmaking.application.read_back_search import ReadBackAnswer
 from app.modules.matchmaking.application.run_shortlist_search import ShortlistAnswer
+from app.modules.matchmaking.domain.prompts import RaisedPrompt
+from app.modules.matchmaking.domain.relaxation import RungOffer
 from app.modules.matchmaking.domain.searches import (
     InclusionReason,
     RecordedCard,
@@ -48,6 +50,8 @@ from app.modules.matchmaking.presentation.schemas import (
     OptimisedFor,
     PlayerCardSchema,
     PoolSchema,
+    PromptSchema,
+    RungOfferSchema,
     SearchEnvelope,
     ShortlistResponse,
     WireInclusionReason,
@@ -63,7 +67,9 @@ def render(answer: ShortlistAnswer) -> ShortlistResponse:
     """
 
     return ShortlistResponse(
-        search=_envelope(answer.record, answer.sorts_available),
+        search=_envelope(
+            answer.record, answer.sorts_available, prompts=answer.prompts
+        ),
         candidates=[_candidate(row) for row in answer.record.returned],
     )
 
@@ -89,9 +95,23 @@ def render_read_back(answer: ReadBackAnswer) -> ShortlistResponse:
 
 
 def _envelope(
-    record: SearchRecord, sorts: tuple[SortOption, ...]
+    record: SearchRecord,
+    sorts: tuple[SortOption, ...],
+    *,
+    prompts: tuple[RaisedPrompt, ...] | None = None,
 ) -> SearchEnvelope:
+    """The search's own facts, and the two that are about *now*.
+
+    ``prompts`` is ``None`` for *do not mention it at all* — the read-back, where
+    a month-old question would be asked about a value that has since moved — and
+    a list on the `POST`, where an empty one honestly says the search raised
+    none.
+    """
+
     pool = record.pool_description
+    fields: dict[str, Any] = {}
+    if prompts is not None:
+        fields["prompts"] = [_prompt(raised) for raised in prompts]
     return SearchEnvelope(
         search_id=record.id,
         at=record.at,
@@ -114,7 +134,47 @@ def _envelope(
         ),
         radius_clamp=record.radius_clamp_bit,
         sorts_available=list(sorts),
+        # **`None` and an empty list are different answers.** `None` is *the
+        # offers were not computed at all*; `[]` is *computed, and there is
+        # nothing left to offer* — which is the honest empty state, where the
+        # pool description beside it is the whole of what can be said.
+        rung_offers=(
+            None
+            if record.rung_offers is None
+            else [_offer(offer) for offer in record.rung_offers]
+        ),
+        **fields,
     )
+
+
+def _offer(offer: RungOffer) -> RungOfferSchema:
+    """One rung as it crosses. The payload field its ask does not use is omitted,
+    not sent as null: a radius rung has no slot, rather than a slot of nothing."""
+
+    fields: dict[str, Any] = {
+        "rung": offer.rung,
+        "ask": offer.ask,
+        "candidates_above_floor": offer.candidates_above_floor,
+        "window": offer.window,
+    }
+    if offer.radius_km is not None:
+        fields["radius_km"] = offer.radius_km
+    if offer.slot is not None:
+        fields["slot"] = offer.slot
+    return RungOfferSchema.model_validate(fields)
+
+
+def _prompt(raised: RaisedPrompt) -> PromptSchema:
+    """One standing question, carrying only the value it is asking about."""
+
+    fields: dict[str, Any] = {"prompt": raised.prompt}
+    if raised.radius_km is not None:
+        fields["radius_km"] = raised.radius_km
+    if raised.slots:
+        fields["slots"] = list(raised.slots)
+    if raised.mode is not None:
+        fields["mode"] = raised.mode
+    return PromptSchema.model_validate(fields)
 
 
 def _candidate(

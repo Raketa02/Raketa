@@ -307,6 +307,32 @@ class Settings(BaseSettings):
     EXPOSURE_ROLL_ENABLED: bool = True
     EXPOSURE_ROLL_INTERVAL_SECONDS: float = 60 * 60
 
+    # --- the two prompt loops
+    # (docs/adr/0092, docs/adr/0099, matchmaking-engine.md §6.3)
+    #
+    # **Each raises a question and changes no value**, which is what makes both
+    # of them safe to turn off: the platform simply stops asking. Nothing a
+    # domain test can observe moves — a search still runs on the same grid at the
+    # same radius against the same floor, and the two per-search prompts, which
+    # are facts about the search in front of you rather than about a history, are
+    # raised on the request path and are not switchable at all.
+    #
+    # **What is emphatically not here is any of the four thresholds.** How many
+    # searches make a drift, how many takes make a habit, how old a grid has to
+    # be and how long a raised prompt lives are rules a domain test can observe,
+    # and they live in `matchmaking/domain/prompts.py`. An environment that could
+    # move one would be an environment deciding when a player gets asked about
+    # their own profile — which is the same class of error as an environment that
+    # could move the quality floor.
+    #
+    # Daily, matching §14.5's own cadence for the drift detector. Both read a
+    # window wider than their interval, so a missed tick or a deploy does not
+    # create a day nobody's drift was noticed in.
+    INTENT_DRIFT_ENABLED: bool = True
+    INTENT_DRIFT_INTERVAL_SECONDS: float = 24 * 60 * 60
+    GRID_STALENESS_ENABLED: bool = True
+    GRID_STALENESS_INTERVAL_SECONDS: float = 24 * 60 * 60
+
     @field_validator("APP_ENV", mode="before")
     @classmethod
     def _known_environment(cls, v):

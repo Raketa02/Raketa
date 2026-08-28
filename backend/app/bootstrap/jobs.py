@@ -39,8 +39,11 @@ from app.bootstrap.composition import (
     build_event_publisher,
     build_exposure_ledger,
     build_photo_storage,
+    build_play_intent_declaration_repository,
     build_player_profile_repository,
+    build_prompt_ledger,
     build_roll_exposure,
+    build_search_store,
 )
 from app.core.config import Settings
 from app.infrastructure.jobs import PeriodicJob
@@ -51,6 +54,12 @@ from app.modules.matchmaking.domain.index_staleness import (
 )
 from app.modules.matchmaking.infrastructure.candidate_snapshot_source import (
     DatabaseCandidateSource,
+)
+from app.modules.matchmaking.application.detect_intent_drift import (
+    DetectIntentDrift,
+)
+from app.modules.matchmaking.application.offer_to_refresh_stale_grids import (
+    OfferToRefreshStaleGrids,
 )
 from app.modules.player_profile.application.sweep_uncommitted_photos import (
     SweepUncommittedPhotos,
@@ -71,6 +80,13 @@ CANDIDATE_INDEX_REFRESH_JOB = "candidate-index-refresh"
 
 #: The exposure roll's name in the logs and on its asyncio task.
 EXPOSURE_ROLL_JOB = "exposure-roll"
+
+#: The two prompt loops. Neither changes a value — **each raises a question and
+#: stops** — and they are two jobs rather than one because they read two
+#: different things: the search rows, and the index's picture of who ticked what
+#: and when. A job that read both would fail as a unit for either's reason.
+INTENT_DRIFT_JOB = "intent-drift"
+GRID_STALENESS_JOB = "availability-staleness"
 
 
 def build_scheduled_jobs(
@@ -145,7 +161,122 @@ def build_scheduled_jobs(
                 "to build_scheduled_jobs"
             )
         jobs.append(build_exposure_roll_job(client=redis_client, settings=settings))
+    if settings.INTENT_DRIFT_ENABLED or settings.GRID_STALENESS_ENABLED:
+        if redis_client is None:
+            raise ValueError(
+                "a prompt loop is enabled, but no redis client was passed to "
+                "build_scheduled_jobs"
+            )
+        if settings.INTENT_DRIFT_ENABLED:
+            if session_factory is None:
+                raise ValueError(
+                    "the intent drift loop is enabled, but no session factory "
+                    "was passed to build_scheduled_jobs"
+                )
+            jobs.append(
+                build_intent_drift_job(
+                    session_factory=session_factory,
+                    client=redis_client,
+                    settings=settings,
+                )
+            )
+        if settings.GRID_STALENESS_ENABLED and candidate_source is not None:
+            # Absent a source this is simply not registered, exactly as the
+            # index refresh is: a process with no picture of the city has no
+            # grids to find stale, and there is nothing here to fall back to.
+            jobs.append(
+                build_grid_staleness_job(
+                    source=candidate_source,
+                    client=redis_client,
+                    settings=settings,
+                )
+            )
     return jobs
+
+
+def build_intent_drift_job(
+    *,
+    session_factory: async_sessionmaker[AsyncSession],
+    client: Redis,
+    settings: Settings,
+) -> PeriodicJob:
+    """Notice when searches keep disagreeing with a declaration, and **ask**.
+
+    **Idempotent and safe beside itself with no lock** (``docs/adr/0092``): it is
+    a reader whose only write is a prompt keyed by ``(player, sport)``, so four
+    processes raising it four times a day leave exactly what one raise leaves.
+    It writes no value anywhere — that refusal is the point of the loop, not an
+    implementation detail of it.
+    """
+
+    prompts = build_prompt_ledger(client)
+    clock = build_clock()
+
+    async def run() -> None:
+        async with session_factory() as session:
+            report = await DetectIntentDrift(
+                searches=build_search_store(session),
+                declarations=build_play_intent_declaration_repository(
+                    event_store=build_domain_event_store(session),
+                    events=build_event_publisher(session),
+                ),
+                prompts=prompts,
+                clock=clock,
+            ).execute()
+        logger.info(
+            "intent drift loop finished",
+            extra={
+                "job": INTENT_DRIFT_JOB,
+                "searches_read": report.searches_read,
+                "pairs_examined": report.pairs_examined,
+                "prompts_raised": report.prompts_raised,
+            },
+        )
+
+    return PeriodicJob(
+        name=INTENT_DRIFT_JOB,
+        interval_seconds=settings.INTENT_DRIFT_INTERVAL_SECONDS,
+        run=run,
+    )
+
+
+def build_grid_staleness_job(
+    *,
+    source: DatabaseCandidateSource,
+    client: Redis,
+    settings: Settings,
+) -> PeriodicJob:
+    """Offer to refresh a week that has stopped describing a week.
+
+    **Idempotent and safe beside itself with no lock**: it reads this process's
+    own snapshot and writes one prompt per player, the same prompt every tick
+    while the grid stays old. It takes no session for the same reason the
+    exposure roll does not — the index is already in memory, and asking the
+    database for what the process is holding would be a second answer to one
+    question.
+    """
+
+    prompts = build_prompt_ledger(client)
+    clock = build_clock()
+
+    async def run() -> None:
+        report = await OfferToRefreshStaleGrids(
+            candidates=source, prompts=prompts, clock=clock
+        ).execute()
+        logger.info(
+            "availability staleness loop finished",
+            extra={
+                "job": GRID_STALENESS_JOB,
+                "grids_examined": report.grids_examined,
+                "prompts_raised": report.prompts_raised,
+            },
+        )
+
+    return PeriodicJob(
+        name=GRID_STALENESS_JOB,
+        interval_seconds=settings.GRID_STALENESS_INTERVAL_SECONDS,
+        run=run,
+    )
 
 
 def build_exposure_roll_job(

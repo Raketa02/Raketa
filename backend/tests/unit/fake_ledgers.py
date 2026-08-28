@@ -30,6 +30,7 @@ from app.modules.matchmaking.domain.ledgers import (
     EXPOSURE_RETENTION_WEEKS,
     ExposureWeek,
 )
+from app.modules.matchmaking.domain.prompts import PROMPT_TTL, Prompt
 
 
 class MovableClock:
@@ -194,3 +195,47 @@ class InMemorySuppressionLedger:
             for candidate_id in candidate_ids
             if self._expires_at.get((passer_id, candidate_id), now) > now
         )
+
+
+class InMemoryPromptLedger:
+    """Standing questions, with the same shared expiry the hash has.
+
+    One expiry per **player**, refreshed by every raise, because that is what an
+    ``EXPIRE`` on a hash does — and a fake whose prompts expired one at a time
+    would let a test pass against a behaviour the adapter does not have.
+    """
+
+    def __init__(self, clock: Clock) -> None:
+        self._clock = clock
+        self._raised: dict[UUID, dict[tuple[Prompt, Sport | None], str | None]] = {}
+        self._expires_at: dict[UUID, Instant] = {}
+
+    async def raise_prompt(
+        self,
+        *,
+        player_id: UUID,
+        prompt: Prompt,
+        sport: Sport | None = None,
+        detail: str | None = None,
+    ) -> None:
+        self._expire()
+        self._raised.setdefault(player_id, {})[(prompt, sport)] = detail
+        self._expires_at[player_id] = instant(self._clock.now() + PROMPT_TTL)
+
+    async def raised_for(
+        self, *, player_id: UUID, sport: Sport
+    ) -> Mapping[Prompt, str | None]:
+        self._expire()
+        return {
+            prompt: detail
+            for (prompt, about), detail in self._raised.get(player_id, {}).items()
+            if about is None or about is sport
+        }
+
+    def _expire(self) -> None:
+        now = self._clock.now()
+        for player_id in [
+            player for player, at in self._expires_at.items() if at <= now
+        ]:
+            del self._expires_at[player_id]
+            self._raised.pop(player_id, None)

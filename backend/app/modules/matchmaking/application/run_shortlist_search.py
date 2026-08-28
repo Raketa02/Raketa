@@ -54,6 +54,7 @@ from app.modules.matchmaking.domain.errors import (
     MatchmakingUnavailable,
     PlayerProfileNotCommitted,
     PlayIntentNotDeclared,
+    RungOfferNotFound,
     SearchNotRecorded,
     SportNotRated,
 )
@@ -76,6 +77,17 @@ from app.modules.matchmaking.domain.search_context import (
     SearchContext,
     SearcherFacts,
 )
+from app.modules.matchmaking.domain.prompts import (
+    REPEATED_WIDENINGS,
+    Prompt,
+    PromptLedger,
+    RaisedPrompt,
+)
+from app.modules.matchmaking.domain.relaxation import (
+    RelaxationAsk,
+    Rung,
+    RungOffer,
+)
 from app.modules.matchmaking.domain.search_store import SearchStore
 from app.modules.matchmaking.domain.searches import (
     CandidateBand,
@@ -95,13 +107,18 @@ from app.modules.matchmaking.domain.shortlist import (
     run,
 )
 from app.modules.matchmaking.domain.sorting import of_scored, sorts_available
+from app.modules.matchmaking.domain.widening import Ladder, ladder_for
 from app.modules.matchmaking.application.record_rows import (
     liveness_reason_codes,
     liveness_signal_inputs,
     modifier_rows,
     term_rows,
 )
-from app.modules.player_profile.domain.availability import window_of
+from app.modules.player_profile.domain.availability import (
+    AvailabilityGrid,
+    AvailabilitySlot,
+    window_of,
+)
 from app.modules.player_profile.domain.ports import (
     PlayerProfileRepository,
     PlayIntentDeclarationRepository,
@@ -153,6 +170,23 @@ class AnsweredCandidate:
 
 @final
 @dataclass(frozen=True, slots=True)
+class _AskedFor:
+    """The two asks this one search runs on, and where they came from.
+
+    ``rung_taken`` and ``offered_by_search_id`` are set together or not at all:
+    **an accepted widen is a new search citing the one that offered it**, and the
+    pair is what makes take-up per rung a join over two rows rather than a flag
+    on one that could be written without the other.
+    """
+
+    grid: AvailabilityGrid
+    radius_km: int
+    rung_taken: Rung | None = None
+    offered_by_search_id: UUID | None = None
+
+
+@final
+@dataclass(frozen=True, slots=True)
 class ShortlistAnswer:
     """What the route renders: **the record, and the honest sort list.**
 
@@ -171,6 +205,12 @@ class ShortlistAnswer:
 
     record: SearchRecord
     sorts_available: tuple[SortOption, ...]
+    #: The questions this search raises and does not answer. Beside the record
+    #: rather than on it for the same reason as the sorts: a prompt is a fact
+    #: about *now* — the grid you improvised a moment ago, the widening you keep
+    #: taking, the drift a loop noticed yesterday — and a read-back a month later
+    #: must not re-ask a question whose answer has since been given.
+    prompts: tuple[RaisedPrompt, ...] = ()
 
 
 @final
@@ -197,6 +237,7 @@ class RunShortlistSearch:
         at_stake: AtStakeQuery,
         exposure: ExposureLedger,
         cards: PlayerCardSource,
+        prompts: PromptLedger,
         absent_terms: frozenset[Term],
     ) -> None:
         self._clock = clock
@@ -216,6 +257,7 @@ class RunShortlistSearch:
         self._at_stake = at_stake
         self._exposure = exposure
         self._cards = cards
+        self._prompts = prompts
         self._absent_terms = absent_terms
 
     async def execute(self, command: RunShortlistSearchCommand) -> ShortlistAnswer:
@@ -223,8 +265,17 @@ class RunShortlistSearch:
         stages: dict[str, int] = {}
 
         with _Timed(stages, "read_searcher"):
-            searcher = await self._searcher_facts(command)
-        await self._refuse_a_held_searcher(searcher.player_id)
+            declared = await self._searcher_facts(command)
+        await self._refuse_a_held_searcher(declared.player_id)
+
+        # **What this one search runs on**, which is the profile's own answer
+        # unless the player asked otherwise: a grid they improvised on the search
+        # screen, or the widening a rung offer promised them. Applied here, once,
+        # so that everything downstream — the box, the radius gate, the distance
+        # term, the availability denominator, the window and the recorded grid —
+        # reads one set of facts and cannot disagree about what was asked for.
+        asked = await self._asked_for(command, declared)
+        searcher = replace(declared, grid=asked.grid, radius_km=asked.radius_km)
 
         snapshot = self._candidates.snapshot(Partition.for_sport(command.sport))
         freshness = snapshot.freshness_at(now)
@@ -256,6 +307,8 @@ class RunShortlistSearch:
             rows = await self._attach(shortlist.returned, context)
 
         returned = tuple(row.scored for row in rows)
+        with _Timed(stages, "relaxation"):
+            ladder = self._ladder(context, shortlist, shown=len(rows))
         record = SearchRecord(
             id=new_uuid(),
             searcher_id=searcher.player_id,
@@ -278,8 +331,12 @@ class RunShortlistSearch:
                 players_in_range=shortlist.players_in_range,
                 window=window_of(searcher.grid, context.today),
             ),
+            searcher_grid=searcher.grid.codes,
             searcher_slot_count=len(searcher.grid),
-            radius_clamp_bit=False,
+            radius_clamp_bit=False if ladder is None else ladder.radius_clamped,
+            rung_offers=None if ladder is None else ladder.offers,
+            offered_by_search_id=asked.offered_by_search_id,
+            rung_taken=asked.rung_taken,
             latency_ms_by_stage=stages,
             candidates=(
                 tuple(
@@ -314,7 +371,180 @@ class RunShortlistSearch:
             sorts_available=sorts_available(
                 tuple(of_scored(row) for row in returned)
             ),
+            # After the commit, deliberately. A prompt is a courtesy read over a
+            # row that now exists — *how often have I taken this widening* counts
+            # this search too — and a question the platform could not ask is
+            # never a reason to fail a search that ran.
+            prompts=await self._raised(command, asked, profile_grid=declared.grid),
         )
+
+    # -- what this one search was asked for ----------------------------------
+
+    async def _asked_for(
+        self, command: RunShortlistSearchCommand, searcher: SearcherFacts
+    ) -> "_AskedFor":
+        """The grid and the radius this search runs on. **Never a profile edit.**
+
+        Two asks can move them, and neither writes anything: a grid the player
+        edited on the search screen for this evening, and a rung offer they took.
+        The profile keeps its own answers, and the app offers to save either one
+        afterwards through the routes that own those fields (``docs/adr/0099``
+        §3).
+
+        **The widening is read off the offering search's record and never off the
+        request.** That is what keeps *there is no per-search radius input* true:
+        the only radius this backend will run a search at is one it published
+        itself, on a row it wrote.
+        """
+
+        grid = (
+            searcher.grid
+            if command.availability_override is None
+            else AvailabilityGrid.of_cells(command.availability_override)
+        )
+        if command.rung is None and command.offered_by_search_id is None:
+            return _AskedFor(grid=grid, radius_km=searcher.radius_km)
+        if command.rung is None or command.offered_by_search_id is None:
+            raise RungOfferNotFound(
+                "a rung and the search that offered it travel together"
+            )
+        offer = await self._cited_offer(
+            command, command.offered_by_search_id, command.rung
+        )
+        if offer.ask is RelaxationAsk.RADIUS and offer.radius_km is not None:
+            return _AskedFor(
+                grid=grid,
+                radius_km=offer.radius_km,
+                rung_taken=command.rung,
+                offered_by_search_id=command.offered_by_search_id,
+            )
+        slot = AvailabilitySlot.from_code(str(offer.slot))
+        return _AskedFor(
+            # A set, so a client that also sent the widened grid as its override
+            # lands in exactly the same place as one that sent nothing.
+            grid=AvailabilityGrid.of((*grid.slots, slot)),
+            radius_km=searcher.radius_km,
+            rung_taken=command.rung,
+            offered_by_search_id=command.offered_by_search_id,
+        )
+
+    async def _cited_offer(
+        self, command: RunShortlistSearchCommand, search_id: UUID, rung: Rung
+    ) -> RungOffer:
+        """The offer this search claims to be accepting, from the row that made it.
+
+        Four ways this refuses, and they are one code on purpose: the search does
+        not exist, it belongs to somebody else, it computed no offers, or it
+        offered no such rung. Telling them apart would answer *does this
+        ``search_id`` exist* for a stranger's id, which is the question the
+        read-back's own 404 already declines to answer.
+        """
+
+        cited = await self._searches.find(
+            search_id=search_id, searcher_id=command.searcher_id
+        )
+        if cited is not None and cited.sport is command.sport:
+            for offer in cited.rung_offers or ():
+                if offer.rung is rung:
+                    return offer
+        raise RungOfferNotFound(f"no rung {rung.value} was offered by that search")
+
+    # -- the ladder ----------------------------------------------------------
+
+    def _ladder(
+        self, context: SearchContext, shortlist: Shortlist, *, shown: int
+    ) -> Ladder | None:
+        """Every rung available to this searcher, priced — or nothing at all.
+
+        ``MIN_SHORTLIST`` **decides only whether this runs**. It triggers no
+        widening, changes no threshold and reaches no gate: past it the engine
+        computes what relaxing the searcher's own asks would be worth, and the
+        player takes one or does not (``docs/adr/0099`` §3).
+
+        The count it reads is the rows the response actually carries — after a
+        card that could not be assembled dropped one — because that is the list
+        the player is looking at when they decide whether they want another
+        option.
+        """
+
+        if shown >= self._ruleset.floors.min_shortlist:
+            return None
+        try:
+            return ladder_for(
+                context,
+                self._engine,
+                strict_above_floor=shortlist.counts.n_cleared_floor,
+            )
+        except InvariantViolated as broken:
+            raise MatchmakingUnavailable(
+                f"the matcher refused to price a rung: {broken}"
+            ) from broken
+
+    # -- the prompts ---------------------------------------------------------
+
+    async def _raised(
+        self,
+        command: RunShortlistSearchCommand,
+        asked: "_AskedFor",
+        *,
+        profile_grid: AvailabilityGrid,
+    ) -> tuple[RaisedPrompt, ...]:
+        """Every question this search raises. **None of them changes a value.**
+
+        Two are facts about this search and are free here; two were computed by a
+        loop and are one lookup. The order is the vocabulary's own, so a client
+        rendering the first one it understands gets the same one twice for the
+        same search.
+        """
+
+        raised: list[RaisedPrompt] = []
+        if asked.grid != profile_grid:
+            raised.append(
+                RaisedPrompt(
+                    prompt=Prompt.KEEP_THESE_TIMES, slots=asked.grid.codes
+                )
+            )
+        if await self._keeps_taking_this_widening(command, asked):
+            raised.append(
+                RaisedPrompt(
+                    prompt=Prompt.KEEP_THIS_RADIUS, radius_km=asked.radius_km
+                )
+            )
+        standing = await self._prompts.raised_for(
+            player_id=command.searcher_id, sport=command.sport
+        )
+        for prompt in (Prompt.UPDATE_PLAY_INTENT, Prompt.REFRESH_YOUR_TIMES):
+            if prompt not in standing:
+                continue
+            if prompt is Prompt.UPDATE_PLAY_INTENT:
+                raised.append(
+                    RaisedPrompt(
+                        prompt=prompt,
+                        mode=standing[prompt] or command.mode.value,
+                    )
+                )
+            else:
+                raised.append(RaisedPrompt(prompt=prompt))
+        return tuple(raised)
+
+    async def _keeps_taking_this_widening(
+        self, command: RunShortlistSearchCommand, asked: "_AskedFor"
+    ) -> bool:
+        """Whether this radius has been taken often enough to be worth keeping.
+
+        It counts **this** radius and not any widening, and it counts this search
+        too — the row is already committed — so the threshold is a plain
+        *how many times*, with no off-by-one hiding in a comment.
+        """
+
+        if asked.rung_taken is None or asked.rung_taken is Rung.A:
+            return False
+        taken = await self._searches.widenings_taken(
+            searcher_id=command.searcher_id,
+            sport=command.sport,
+            radius_km=asked.radius_km,
+        )
+        return taken >= REPEATED_WIDENINGS
 
     # -- the searcher's own facts -------------------------------------------
 

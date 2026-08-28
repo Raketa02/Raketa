@@ -34,6 +34,7 @@ from uuid import UUID
 from app.engines.matchfit.core import SearchMode
 from app.kernel import Sport, invariant
 from app.modules.matchmaking.domain.ports import AtStake
+from app.modules.matchmaking.domain.relaxation import Rung, RungOffer
 from app.modules.player_profile.domain.availability import Window
 from app.modules.player_profile.domain.play_intent import PlayIntent
 
@@ -333,11 +334,32 @@ class SearchRecord:
     #: was withheld, which is not the same as ``0``.
     best_withheld_fit: float | None
     pool_description: PoolDescription
+    #: The grid this search actually **ran on**, as slot codes — the profile's
+    #: grid, or the one a rung-A widening improvised for this one search. It is
+    #: recorded because the window is *re-derived* from it rather than read back
+    #: as a stored label (``the-two-contracts.md`` §3): a label read back is how
+    #: a stale window ships the day ``window_of`` changes, and a derivation from
+    #: this grid and this row's own ``at`` reproduces the answer that was given.
+    searcher_grid: tuple[str, ...]
     #: How many of the twenty-one grid cells the searcher had ticked. The
     #: availability term's **denominator**, per search rather than per candidate.
     searcher_slot_count: int
-    #: Whether the widening ceiling clamped to the profile's own maximum.
+    #: Whether the widening ceiling clamped to the profile's own maximum. It is
+    #: true for the searcher already **at** the maximum too, whose ladder has no
+    #: radius rung on it at all — counting them is the whole job of the bit.
     radius_clamp_bit: bool
+    #: Which rungs were offered, each with its real count. ``None`` is *the
+    #: offers were not computed at all* — the shortlist cleared
+    #: ``MIN_SHORTLIST`` — and an empty tuple is *computed, and none available*.
+    #: The difference is `MIN_SHORTLIST`'s own falsifier, read off these rows.
+    rung_offers: tuple[RungOffer, ...] | None
+    #: The search whose offer this one accepts. **An accepted widen is a new
+    #: search citing the one that offered it**, never a silent profile edit, so
+    #: take-up per rung is a join over two rows rather than a flag on one.
+    offered_by_search_id: UUID | None
+    #: Which rung this search took. Set on the **accepting** search, beside the
+    #: citation, and never on the search that made the offer.
+    rung_taken: Rung | None
     latency_ms_by_stage: Mapping[str, int]
     candidates: tuple[SearchCandidateRecord, ...]
 
@@ -355,6 +377,17 @@ class SearchRecord:
             len(self.returned) == self.counts.n_returned,
             f"n_returned says {self.counts.n_returned} and {len(self.returned)} "
             "rows were written: the redaction detector must start out agreeing",
+        )
+        invariant(
+            (self.rung_taken is None) == (self.offered_by_search_id is None),
+            f"a search taking rung {self.rung_taken} cited "
+            f"{self.offered_by_search_id}: a rung is taken from an offer, and "
+            "the pair is what makes take-up a join",
+        )
+        invariant(
+            self.searcher_slot_count == len(self.searcher_grid),
+            f"a slot count of {self.searcher_slot_count} over a grid of "
+            f"{len(self.searcher_grid)} cells",
         )
 
     @property

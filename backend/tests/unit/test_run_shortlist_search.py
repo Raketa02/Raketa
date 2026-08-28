@@ -53,6 +53,7 @@ from app.modules.matchmaking.domain.index_staleness import (
     STALENESS_ALARM_AFTER,
     STALENESS_REFUSAL_AFTER,
 )
+from app.modules.matchmaking.domain.relaxation import Rung
 from app.modules.matchmaking.domain.searches import SearchRecord
 from app.modules.matchmaking.infrastructure.absent_providers import (
     NoHoldsExist,
@@ -77,7 +78,7 @@ from app.modules.player_profile.domain.search_radius import SearchRadius
 from app.modules.player_profile.domain.social_tags import SocialTagSelection
 from app.modules.rating.domain.skill_rating import SkillRating
 from tests.unit import matchmaking_builders as build
-from tests.unit.fake_ledgers import InMemoryExposureLedger
+from tests.unit.fake_ledgers import InMemoryExposureLedger, InMemoryPromptLedger
 
 NOW = build.NOW
 SEARCHER = build.SEARCHER_ID
@@ -301,6 +302,7 @@ def use_case(
     engine=None,
     caught_up_at: datetime = NOW,
     exposure: InMemoryExposureLedger | None = None,
+    prompts=None,
 ) -> RunShortlistSearch:
     store = store or Store()
     work = work or Work(store=store)
@@ -325,13 +327,26 @@ def use_case(
         at_stake=NoResultUpdateRuleExists(),
         exposure=exposure or InMemoryExposureLedger(FixedClock()),
         cards=cards or Cards(),
+        prompts=prompts or InMemoryPromptLedger(FixedClock()),
         absent_terms=frozenset({Term.RELIABILITY}),
     )
 
 
-def a_command(mode: SearchMode = SearchMode.COMPETITIVE) -> RunShortlistSearchCommand:
+def a_command(
+    mode: SearchMode = SearchMode.COMPETITIVE,
+    *,
+    availability_override: tuple[tuple[int, str], ...] | None = None,
+    offered_by_search_id: UUID | None = None,
+    rung: Rung | None = None,
+) -> RunShortlistSearchCommand:
     return RunShortlistSearchCommand(
-        searcher_id=SEARCHER, sport=SPORT, mode=mode, trace_id="trace-1"
+        searcher_id=SEARCHER,
+        sport=SPORT,
+        mode=mode,
+        availability_override=availability_override,
+        offered_by_search_id=offered_by_search_id,
+        rung=rung,
+        trace_id="trace-1",
     )
 
 

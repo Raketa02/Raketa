@@ -48,6 +48,7 @@ from app.bootstrap.composition import (
     build_player_score_query,
     build_ruleset,
     build_search_store,
+    build_prompt_ledger,
     build_suppression_ledger,
 )
 from app.infrastructure.redis_client import get_redis
@@ -58,6 +59,7 @@ from app.modules.matchmaking.domain.candidate_snapshot import CandidateSource
 from app.modules.matchmaking.domain.errors import MatchmakingUnavailable
 from app.modules.matchmaking.domain.ledgers import ExposureLedger, SuppressionLedger
 from app.modules.matchmaking.domain.ports import AccountHoldQuery, AccountStatusQuery
+from app.modules.matchmaking.domain.prompts import PromptLedger
 from app.modules.player_profile.presentation.dependencies import (
     PlayerProfileRepositoryDep,
     PlayIntentDeclarationRepositoryDep,
@@ -82,6 +84,13 @@ def get_suppression_ledger(store: EphemeralStoreDep) -> SuppressionLedger:
 
 
 SuppressionLedgerDep = Annotated[SuppressionLedger, Depends(get_suppression_ledger)]
+
+
+def get_prompt_ledger(store: EphemeralStoreDep) -> PromptLedger:
+    return build_prompt_ledger(store)
+
+
+PromptLedgerDep = Annotated[PromptLedger, Depends(get_prompt_ledger)]
 
 
 def get_candidate_source(request: Request) -> CandidateSource:
@@ -145,6 +154,7 @@ def get_run_shortlist_search(
     holds: AccountHoldQueryDep,
     account_status: AccountStatusQueryDep,
     exposure: ExposureLedgerDep,
+    prompts: PromptLedgerDep,
 ) -> RunShortlistSearch:
     """The shortlist use case, assembled per request.
 
@@ -178,6 +188,7 @@ def get_run_shortlist_search(
         cards=build_player_card_source(
             session=db, event_store=event_store, events=events
         ),
+        prompts=prompts,
         absent_terms=build_absent_terms(player_scores),
     )
 

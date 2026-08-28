@@ -62,8 +62,17 @@ class FakeRedis:
 
     async def hincrby(self, name: str, key: str, amount: int = 1) -> int:
         hash_ = self._hash(name)
-        hash_[key] = hash_.get(key, 0) + amount
+        # Through ``int`` on the way in, because a hash holds text and Redis
+        # increments what it can parse — the exposure ledger's fields and the
+        # prompt ledger's live in the same shape here as they do there.
+        hash_[key] = int(hash_.get(key, 0)) + amount
         return hash_[key]
+
+    async def hset(self, name: str, key: str, value: Any) -> int:
+        hash_ = self._hash(name)
+        existed = key in hash_
+        hash_[key] = str(value)
+        return 0 if existed else 1
 
     async def hmget(self, name: str, keys: Iterable[str]) -> list[str | None]:
         hash_ = self._read_hash(name)
@@ -107,12 +116,12 @@ class FakeRedis:
             return False
         return key in self._values
 
-    def _hash(self, name: str) -> dict[str, int]:
+    def _hash(self, name: str) -> dict[str, Any]:
         if not self._live(name):
             self._values[name] = {}
         return self._values[name]
 
-    def _read_hash(self, name: str) -> dict[str, int]:
+    def _read_hash(self, name: str) -> dict[str, Any]:
         return self._values[name] if self._live(name) else {}
 
 
@@ -136,6 +145,10 @@ class FakePipeline:
 
     def hincrby(self, name: str, key: str, amount: int = 1) -> "FakePipeline":
         self._queued.append(("hincrby", (name, key, amount), {}))
+        return self
+
+    def hset(self, name: str, key: str, value: Any) -> "FakePipeline":
+        self._queued.append(("hset", (name, key, value), {}))
         return self
 
     def expire(self, name: str, seconds: int) -> "FakePipeline":

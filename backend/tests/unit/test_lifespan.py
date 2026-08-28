@@ -150,6 +150,8 @@ async def test_no_background_work_at_all_reaches_for_no_engine(monkeypatch):
         PHOTO_SWEEP_ENABLED=False,
         CANDIDATE_INDEX_ENABLED=False,
         EXPOSURE_ROLL_ENABLED=False,
+        INTENT_DRIFT_ENABLED=False,
+        GRID_STALENESS_ENABLED=False,
     )
     app = FastAPI()
     app.state.event_runtime = object()

@@ -45,6 +45,10 @@ from uuid import UUID
 
 from app.kernel import Instant, Sport, invariant
 from app.modules.matchmaking.domain.ports import FailPosture
+# The third ephemeral ledger, declared with its own vocabulary in ``prompts.py``
+# because a standing question is not an exposure count — but registered here,
+# where *how a ledger fails* is stated once for all of them.
+from app.modules.matchmaking.domain.prompts import PromptLedger
 
 #: How many weeks of exposure the ledger keeps before the store drops it.
 #:
@@ -332,7 +336,7 @@ class SuppressionLedger(Protocol):
         ...
 
 
-#: How each ledger fails. **Both soft, and stated where the ports live.**
+#: How each ledger fails. **All soft, and stated where the ports live.**
 #:
 #: Not a row in ``ports.py``'s ``FAIL_POSTURE`` — see the note beside that table.
 #: These two are the matchmaking module's **own** ports, not demands it makes of
@@ -355,9 +359,14 @@ class SuppressionLedger(Protocol):
 LEDGER_FAIL_POSTURE: Mapping[type, FailPosture] = {
     ExposureLedger: FailPosture.SOFT,
     SuppressionLedger: FailPosture.SOFT,
+    PromptLedger: FailPosture.SOFT,
 }
 
 #: The module's ephemeral store, as the suite in ``tests/unit/test_ledgers.py``
 #: walks it. Two lists that check each other, in the idiom ``MATCHER_DEMANDS``
 #: established beside ``FAIL_POSTURE``.
-EPHEMERAL_LEDGERS: tuple[type, ...] = (ExposureLedger, SuppressionLedger)
+EPHEMERAL_LEDGERS: tuple[type, ...] = (
+    ExposureLedger,
+    SuppressionLedger,
+    PromptLedger,
+)

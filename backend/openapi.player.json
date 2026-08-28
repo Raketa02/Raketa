@@ -940,7 +940,7 @@
           "searches"
         ],
         "summary": "Find me a game",
-        "description": "Returns a ranked shortlist of at most **twenty** people worth messaging, **unpaginated** \u2014 there is no page two, and past the last row there is an honest empty state.\n\n**The breakdown ships with the search, not behind a tap.** Every term, its weight, its value, its contribution and the evidence it read ride on every row, because *Why 78?* has to open instantly.\n\n**Send asks, never facts.** Your radius, grid, tags, rating, intent and gender preference are read from your profile at request time. There is no per-search radius input.\n\n**Competitive and for fun select different weight vectors**, and the list visibly inverts between them.\n\n**Deliberately not idempotent.** Two taps are two searches.\n\n**Re-sorting costs no round trip:** `search.sorts_available` says which controls to draw, and a sort that would reorder nothing is not in it.",
+        "description": "Returns a ranked shortlist of at most **twenty** people worth messaging, **unpaginated** \u2014 there is no page two, and past the last row there is an honest empty state.\n\n**The breakdown ships with the search, not behind a tap.** Every term, its weight, its value, its contribution and the evidence it read ride on every row, because *Why 78?* has to open instantly.\n\n**Send asks, never facts.** Your radius, grid, tags, rating, intent and gender preference are read from your profile at request time. There is no per-search radius input.\n\n**Relaxation is offered, never applied.** When the shortlist comes back short the envelope carries `rung_offers` \u2014 your times, then your radius x1.5, then x2.0 \u2014 each with a **real** count from a genuine re-run and its own window. Taking one is a **new search citing this one**: post again with `offered_by_search_id` and `rung`. Your saved preferences stay yours, and **the quality floor is never relaxed**, so *nobody tonight* stays a real answer.\n\n**Competitive and for fun select different weight vectors**, and the list visibly inverts between them.\n\n**Deliberately not idempotent.** Two taps are two searches.\n\n**Re-sorting costs no round trip:** `search.sorts_available` says which controls to draw, and a sort that would reorder nothing is not in it.",
         "operationId": "run_search_api_v1_searches_post",
         "requestBody": {
           "content": {
@@ -974,7 +974,7 @@
             }
           },
           "409": {
-            "description": "`sport_not_rated` \u2014 you hold no rating for this sport.\n\n`play_intent_not_declared` \u2014 you have not said what kind of evening you are after for it.\n\n`player_profile_not_committed` \u2014 there is no profile to read a radius, a grid or an area from.",
+            "description": "`sport_not_rated` \u2014 you hold no rating for this sport.\n\n`play_intent_not_declared` \u2014 you have not said what kind of evening you are after for it.\n\n`player_profile_not_committed` \u2014 there is no profile to read a radius, a grid or an area from.\n\n`rung_offer_not_found` \u2014 you cited a rung no search of yours offered. The widening is read off the offer, never off the request, so an unknown citation is refused rather than run narrow and recorded as widened.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2238,6 +2238,49 @@
         "title": "PredictedBalanceEvidence",
         "description": "How even the game is forecast to be, and how sure of that the platform is.\n\n``pct`` is the forecast the player is shown; ``confidence`` is the platform's\nexisting \u03c3 transform and never a second spelling of certainty."
       },
+      "Prompt": {
+        "type": "string",
+        "enum": [
+          "KEEP_THESE_TIMES",
+          "KEEP_THIS_RADIUS",
+          "UPDATE_PLAY_INTENT",
+          "REFRESH_YOUR_TIMES"
+        ],
+        "title": "Prompt",
+        "description": "What the app is offering to ask. **Codes, never sentences.**\n\nThe kernel's rule reaches the matcher unchanged (``docs/adr/0022``): the\nbackend emits a code and the client writes the words. *\"Keep 15 km?\"* is one\nphrasing of ``KEEP_THIS_RADIUS`` in one language, and a backend that shipped\nit would own the copy for every client that ever exists."
+      },
+      "PromptSchema": {
+        "properties": {
+          "prompt": {
+            "$ref": "#/components/schemas/Prompt",
+            "description": "Which question, as a code"
+          },
+          "radius_km": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Radius Km",
+            "description": "The widening you keep taking"
+          },
+          "slots": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Slots",
+            "description": "The week this search actually ran on, as codes"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/SearchMode",
+            "description": "The mode your recent searches keep choosing"
+          }
+        },
+        "type": "object",
+        "required": [
+          "prompt"
+        ],
+        "title": "PromptSchema",
+        "description": "A question the app is offering to ask. **It never changes a value.**\n\nThe platform notices that you improvised a week, that you keep widening to\nthe same radius, that your searches disagree with what you declared, or that\nthe week on your profile is months old \u2014 and in every case it asks. The\npayload is the value already in play, so the sheet can show the change rather\nthan describe it."
+      },
       "ProposalsOptInRequest": {
         "properties": {
           "accepted": {
@@ -2455,6 +2498,15 @@
         ],
         "title": "RefreshRequest"
       },
+      "RelaxationAsk": {
+        "type": "string",
+        "enum": [
+          "TIMES",
+          "RADIUS"
+        ],
+        "title": "RelaxationAsk",
+        "description": "Which of the searcher's own asks a rung relaxes.\n\nThe vocabulary is closed at two because there are exactly two asks a searcher\nmakes: when they can play, and how far they will go. A third value would be\nthe engine relaxing something the player never asked for, which is the line\n``docs/adr/0099`` draws."
+      },
       "ReliabilityEvidence": {
         "properties": {
           "kind": {
@@ -2602,6 +2654,24 @@
           "mode": {
             "$ref": "#/components/schemas/SearchMode",
             "description": "Competitive or for fun \u2014 the weight vector for this one search, and nothing else. Two values, where a Play intent has three."
+          },
+          "availability_override": {
+            "items": {
+              "$ref": "#/components/schemas/AvailabilitySlotResource"
+            },
+            "type": "array",
+            "title": "Availability Override",
+            "description": "The week to run **this one search** against, when the player edited it on the search screen. Omit to use the grid on your profile \u2014 **omit it, never send `null`**.\n\n**It is an ask and never a correction.** Nothing here writes your profile; the app offers to save it afterwards."
+          },
+          "offered_by_search_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Offered By Search Id",
+            "description": "The search whose relaxation offer this one accepts. **Taking a rung is a new search citing the one that offered it**, never a silent change to your saved preferences."
+          },
+          "rung": {
+            "$ref": "#/components/schemas/Rung",
+            "description": "Which rung of that search's offer you are taking. Sent with `offered_by_search_id` or not at all \u2014 and the widening itself is **not** sent: the backend reads it off the offer it made."
           }
         },
         "type": "object",
@@ -2611,6 +2681,58 @@
         ],
         "title": "RunSearchRequest",
         "description": "What a client may send. **Asks only, never a fact about the searcher.**\n\nThere is deliberately **no radius here, and there never will be.** The\nsearcher's ask *is* their profile radius, read at request time; widening\nhappens only by taking a rung offer. A radius supplied by a phone is a gate\nevaluated on a lie, and this is the field it would arrive through."
+      },
+      "Rung": {
+        "type": "string",
+        "enum": [
+          "A",
+          "B",
+          "C"
+        ],
+        "title": "Rung",
+        "description": "Which rung of the ladder an offer is.\n\nThree values and no more. They are letters rather than numbers because\n``docs/adr/0099`` rebuilt the ladder from scratch and a rung ``1`` would\ninvite a reader to line it up against \u00a79.8's struck rung 1, which relaxed\nsomething else entirely."
+      },
+      "RungOfferSchema": {
+        "properties": {
+          "rung": {
+            "$ref": "#/components/schemas/Rung",
+            "description": "Which rung. The list is in the engine's recommended order \u2014 times first, because a slot you were already free in costs nothing where distance costs travel on every game forever \u2014 but the order is a recommendation and any rung may be taken directly."
+          },
+          "ask": {
+            "$ref": "#/components/schemas/RelaxationAsk",
+            "description": "Which of **your own** asks it relaxes. A rung never touches a measurement, a term, a weight, or the quality floor."
+          },
+          "candidates_above_floor": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Candidates Above Floor",
+            "description": "How many people would clear the quality floor at this rung, from a genuine re-run. The number on the button is true."
+          },
+          "window": {
+            "$ref": "#/components/schemas/Window",
+            "description": "This rung's **own** window. A challenge sliding from `WEEKEND` to `THIS_WEEK` is part of what widening costs, and you see it before you pay it."
+          },
+          "radius_km": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Radius Km",
+            "description": "The widened radius, on a `RADIUS` rung. Always inside the same 1-50 km your own slider holds: a relaxation never offers a radius you could not have set yourself, so a searcher already at 50 km is offered no radius rung at all."
+          },
+          "slot": {
+            "type": "string",
+            "title": "Slot",
+            "description": "The one cell this rung would add to your week, on a `TIMES` rung, as `day:PART`. For this search only."
+          }
+        },
+        "type": "object",
+        "required": [
+          "rung",
+          "ask",
+          "candidates_above_floor",
+          "window"
+        ],
+        "title": "RungOfferSchema",
+        "description": "One rung of the relaxation ladder, priced. **Offered, never applied.**\n\nThe engine computes what relaxing one of *your own* asks would be worth and\nhands you the number; it never takes the offer for you, because only you can\nsay truthfully that you are free on a Saturday.\n\n**The count is real.** It comes from re-running the whole search at this\nrung \u2014 not from an estimate, and not from the strict count plus something."
       },
       "ScoredTermSchema": {
         "properties": {
@@ -2747,6 +2869,29 @@
             "type": "array",
             "title": "Sorts Available",
             "description": "Which re-sorts the client may draw over rows it already holds. **A sort that would reorder nothing is not in this list**, and the control is not drawn \u2014 a visible control that does nothing is the product lying quietly. Re-sorting costs no round trip."
+          },
+          "rung_offers": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/RungOfferSchema"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rung Offers",
+            "description": "What relaxing your own asks would be worth, each with a real count from a genuine re-run.\n\n**`null` means the offers were not computed at all** \u2014 your shortlist was long enough that nobody needed them. An empty list means they were computed and there is nothing left to offer, which is the honest empty state: the pool beside it is the whole answer."
+          },
+          "prompts": {
+            "items": {
+              "$ref": "#/components/schemas/PromptSchema"
+            },
+            "type": "array",
+            "title": "Prompts",
+            "description": "Questions this search raises, each of which changes nothing until you answer it. Present on a search and **omitted on a read-back**, where a month-old question would be asked about a value that has since moved."
           }
         },
         "type": "object",
@@ -2761,7 +2906,8 @@
           "index_stale",
           "pool",
           "radius_clamp",
-          "sorts_available"
+          "sorts_available",
+          "rung_offers"
         ],
         "title": "SearchEnvelope",
         "description": "Every fact about *the search*, as opposed to about a candidate.\n\nOne object, identical on every route that creates a search: one renderer, one\ntype."

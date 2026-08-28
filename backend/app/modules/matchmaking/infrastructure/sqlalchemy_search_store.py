@@ -17,12 +17,18 @@ from datetime import datetime, timezone
 from typing import Any, Mapping, Sequence
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.engines.matchfit.core import SearchMode
-from app.kernel import Sport
+from app.kernel import Sport, iso_weekday
 from app.modules.matchmaking.domain.ports import AtStake
+from app.modules.matchmaking.domain.relaxation import (
+    RelaxationAsk,
+    Rung,
+    RungOffer,
+)
+from app.modules.matchmaking.domain.search_store import SearchModeReading
 from app.modules.matchmaking.domain.searches import (
     CandidateBand,
     InclusionReason,
@@ -35,7 +41,11 @@ from app.modules.matchmaking.domain.searches import (
     StagedCounts,
     WithheldReason,
 )
-from app.modules.player_profile.domain.availability import Window
+from app.modules.player_profile.domain.availability import (
+    AvailabilityGrid,
+    Window,
+    window_of,
+)
 from app.modules.player_profile.domain.play_intent import PlayIntent
 from app.modules.matchmaking.infrastructure.search_model import (
     SearchCandidateORM,
@@ -94,6 +104,61 @@ class SqlAlchemySearchStore:
             search, tuple(_candidate_record(row) for row in rows.scalars())
         )
 
+    async def widenings_taken(
+        self, *, searcher_id: UUID, sport: Sport, radius_km: int
+    ) -> int:
+        """How often this searcher has already widened to this radius.
+
+        It counts the **radius** and not the rung: rung B on a 10 km profile and
+        rung C on a 7 km one both land on 15 km, and what the offer to save it
+        would write is the number, not the letter.
+        """
+
+        counted = await self._session.execute(
+            select(func.count())
+            .select_from(SearchORM)
+            .where(
+                SearchORM.searcher_id == searcher_id,
+                SearchORM.sport == sport.value,
+                SearchORM.rung_taken.is_not(None),
+                SearchORM.pool_description["radius_km_used"].as_integer()
+                == radius_km,
+            )
+        )
+        return int(counted.scalar_one())
+
+    async def modes_since(
+        self, *, since: datetime, limit: int
+    ) -> tuple[SearchModeReading, ...]:
+        """Every search run since a moment, newest first. **Four columns.**
+
+        The drift loop's whole read. It selects the columns rather than the ORM
+        row so that *what the detector may see* is visible in one line here — a
+        loop handed whole records would be one refactor away from reading a
+        candidate.
+        """
+
+        rows = await self._session.execute(
+            select(
+                SearchORM.searcher_id,
+                SearchORM.sport,
+                SearchORM.mode,
+                SearchORM.at,
+            )
+            .where(SearchORM.at >= since)
+            .order_by(SearchORM.at.desc())
+            .limit(limit)
+        )
+        return tuple(
+            SearchModeReading(
+                searcher_id=searcher_id,
+                sport=Sport(sport),
+                mode=None if mode is None else SearchMode(mode),
+                at=_utc(at),
+            )
+            for searcher_id, sport, mode, at in rows.all()
+        )
+
 
 def _search_row(search: SearchRecord) -> SearchORM:
     pool = search.pool_description
@@ -120,6 +185,11 @@ def _search_row(search: SearchRecord) -> SearchORM:
         n_returned=search.counts.n_returned,
         n_near_miss_recorded=search.counts.n_near_miss_recorded,
         best_withheld_fit=search.best_withheld_fit,
+        # ``search-telemetry.md``'s own shape, window included, because an
+        # analyst reading this column cannot call ``window_of`` in SQL. **It is
+        # the analyst's copy and nothing reads it back**: the record re-derives
+        # the window from ``searcher_grid`` and ``at``, so the wire has one
+        # source and a label written today cannot outlive the rule that made it.
         pool_description={
             "sport": pool.sport.value,
             "radius_km_used": pool.radius_km_used,
@@ -127,9 +197,47 @@ def _search_row(search: SearchRecord) -> SearchORM:
             "window": pool.window.value,
             "post_gate": pool.post_gate,
         },
+        searcher_grid=list(search.searcher_grid),
         searcher_slot_count=search.searcher_slot_count,
         radius_clamp_bit=search.radius_clamp_bit,
+        rung_offers=(
+            None
+            if search.rung_offers is None
+            else [_offer_blob(offer) for offer in search.rung_offers]
+        ),
+        offered_by_search_id=search.offered_by_search_id,
+        rung_taken=None if search.rung_taken is None else search.rung_taken.value,
         latency_ms_by_stage=dict(search.latency_ms_by_stage),
+    )
+
+
+def _offer_blob(offer: RungOffer) -> dict[str, Any]:
+    """One rung offer, whole. **The window is stored with it, and derived once.**
+
+    Unlike the search's own window — re-derived from ``searcher_grid`` on the way
+    out — a rung's window belongs to a grid that was never run and is nowhere
+    else on this row. It is the offer's own fact, so it is stored as part of the
+    offer, and the two live together or the count and its cost could disagree.
+    """
+
+    return {
+        "rung": offer.rung.value,
+        "ask": offer.ask.value,
+        "candidates_above_floor": offer.candidates_above_floor,
+        "window": offer.window.value,
+        "radius_km": offer.radius_km,
+        "slot": offer.slot,
+    }
+
+
+def _offer(blob: Mapping[str, Any]) -> RungOffer:
+    return RungOffer(
+        rung=Rung(blob["rung"]),
+        ask=RelaxationAsk(blob["ask"]),
+        candidates_above_floor=blob["candidates_above_floor"],
+        window=Window(blob["window"]),
+        radius_km=blob["radius_km"],
+        slot=blob["slot"],
     )
 
 
@@ -173,11 +281,27 @@ def _search_record(
             sport=Sport(pool["sport"]),
             radius_km_used=pool["radius_km_used"],
             players_in_range=pool["players_in_range"],
-            window=Window(pool["window"]),
+            # **Re-derived, never read back.** ``the-two-contracts.md`` §3: a
+            # stored label is how a stale window ships the day ``window_of``
+            # changes. The two inputs are both on this row — the grid the search
+            # ran on, and the day it ran — so the derivation reproduces the
+            # answer that was given rather than the one that would be given now.
+            window=window_of(
+                AvailabilityGrid.from_codes(row.searcher_grid),
+                iso_weekday(_utc(row.at).isoweekday()),
+            ),
             post_gate=pool["post_gate"],
         ),
+        searcher_grid=tuple(row.searcher_grid),
         searcher_slot_count=row.searcher_slot_count,
         radius_clamp_bit=row.radius_clamp_bit,
+        rung_offers=(
+            None
+            if row.rung_offers is None
+            else tuple(_offer(blob) for blob in row.rung_offers)
+        ),
+        offered_by_search_id=row.offered_by_search_id,
+        rung_taken=None if row.rung_taken is None else Rung(row.rung_taken),
         latency_ms_by_stage=dict(row.latency_ms_by_stage),
         candidates=candidates,
     )

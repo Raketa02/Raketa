@@ -595,6 +595,14 @@ appears here.
   their radius — with the real count of candidates it would add. Three exist, times first. The
   player accepts; the engine never relaxes anything by itself, and an accepted widen is scoped to
   that one search ([ADR-0099](docs/adr/0099-relaxation-offers-the-searchers-own-asks.md)).
+- **Prompt** — a question the platform raises about a value it can see drifting, and **never a
+  change to that value**. Four exist — keep the times you improvised for one search, keep a
+  widening you keep taking, update a declaration your searches keep disagreeing with, and
+  refresh a week you described months ago — and each ends at an offer on a screen. It is the
+  one place the platform watches, notices, and deliberately declines to act
+  ([ADR-0094](docs/adr/0094-play-intent-declared-per-sport-in-its-own-aggregate.md),
+  [ADR-0099](docs/adr/0099-relaxation-offers-the-searchers-own-asks.md)). It crosses as a
+  **code** with the value already in play beside it; the client writes the sentence.
 - **Pool description** — what the response carries when the shortlist is empty: how many players
   of that sport are in range, structured, **counted after every gate**. It is the product in a
   new market, and it is a number on a screen, so it counts real rows and never estimates.

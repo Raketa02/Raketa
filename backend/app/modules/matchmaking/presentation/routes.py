@@ -86,7 +86,11 @@ router = APIRouter(prefix="/searches", tags=["searches"])
                 "`play_intent_not_declared` — you have not said what kind of "
                 "evening you are after for it.\n\n"
                 "`player_profile_not_committed` — there is no profile to read a "
-                "radius, a grid or an area from."
+                "radius, a grid or an area from.\n\n"
+                "`rung_offer_not_found` — you cited a rung no search of yours "
+                "offered. The widening is read off the offer, never off the "
+                "request, so an unknown citation is refused rather than run "
+                "narrow and recorded as widened."
             ),
         },
         status.HTTP_503_SERVICE_UNAVAILABLE: {
@@ -110,6 +114,13 @@ router = APIRouter(prefix="/searches", tags=["searches"])
         "**Send asks, never facts.** Your radius, grid, tags, rating, intent "
         "and gender preference are read from your profile at request time. "
         "There is no per-search radius input.\n\n"
+        "**Relaxation is offered, never applied.** When the shortlist comes "
+        "back short the envelope carries `rung_offers` — your times, then your "
+        "radius x1.5, then x2.0 — each with a **real** count from a genuine "
+        "re-run and its own window. Taking one is a **new search citing this "
+        "one**: post again with `offered_by_search_id` and `rung`. Your saved "
+        "preferences stay yours, and **the quality floor is never relaxed**, so "
+        "*nobody tonight* stays a real answer.\n\n"
         "**Competitive and for fun select different weight vectors**, and the "
         "list visibly inverts between them.\n\n"
         "**Deliberately not idempotent.** Two taps are two searches.\n\n"
@@ -129,6 +140,17 @@ async def run_search(
             searcher_id=user.id,
             sport=payload.sport,
             mode=payload.mode,
+            # Primitives, because building a grid is the domain's job and not
+            # the boundary's.
+            availability_override=(
+                None
+                if payload.availability_override is None
+                else tuple(
+                    cell.as_cell() for cell in payload.availability_override
+                )
+            ),
+            offered_by_search_id=payload.offered_by_search_id,
+            rung=payload.rung,
             # The request's own `X-Request-ID`, so that *"it showed me somebody
             # strange"* reaches the exact log line a year later.
             trace_id=trace_id_for(request),

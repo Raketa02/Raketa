@@ -33,6 +33,7 @@ from app.modules.matchmaking.infrastructure.candidate_snapshot_source import (  
 from app.modules.matchmaking.presentation.dependencies import (  # noqa: E402
     get_candidate_source,
     get_exposure_ledger,
+    get_prompt_ledger,
     get_suppression_ledger,
 )
 from app.modules.player_profile.presentation.dependencies import (  # noqa: E402
@@ -41,6 +42,7 @@ from app.modules.player_profile.presentation.dependencies import (  # noqa: E402
 )
 from tests.unit.fake_ledgers import (  # noqa: E402
     InMemoryExposureLedger,
+    InMemoryPromptLedger,
     InMemorySuppressionLedger,
 )
 from tests.unit.fake_photo_storage import InMemoryPhotoStorage  # noqa: E402
@@ -124,6 +126,13 @@ def suppression_ledger():
 
 
 @pytest.fixture
+def prompt_ledger():
+    """The prompt ledger every API test runs against. See above."""
+
+    return InMemoryPromptLedger(build_clock())
+
+
+@pytest.fixture
 def candidate_source(session_factory):
     """The one candidate index this process has, for the length of one test.
 
@@ -149,6 +158,7 @@ async def client(
     photo_review,
     exposure_ledger,
     suppression_ledger,
+    prompt_ledger,
     candidate_source,
 ):
     get_settings.cache_clear()
@@ -167,6 +177,7 @@ async def client(
     app.dependency_overrides[get_photo_review] = lambda: photo_review
     app.dependency_overrides[get_exposure_ledger] = lambda: exposure_ledger
     app.dependency_overrides[get_suppression_ledger] = lambda: suppression_ledger
+    app.dependency_overrides[get_prompt_ledger] = lambda: prompt_ledger
     app.dependency_overrides[get_candidate_source] = lambda: candidate_source
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:

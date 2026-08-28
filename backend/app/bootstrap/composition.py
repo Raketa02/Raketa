@@ -74,13 +74,16 @@ from app.modules.matchmaking.domain.ports import (
 from app.modules.matchmaking.application.roll_exposure import RollExposure
 from app.modules.matchmaking.domain.cards import PlayerCardSource
 from app.modules.matchmaking.domain.ledgers import ExposureLedger, SuppressionLedger
+from app.modules.matchmaking.domain.prompts import PromptLedger
 from app.modules.matchmaking.domain.search_store import SearchStore
 from app.modules.matchmaking.infrastructure.fail_soft_ledgers import (
     FailSoftExposureLedger,
+    FailSoftPromptLedger,
     FailSoftSuppressionLedger,
 )
 from app.modules.matchmaking.infrastructure.redis_ledgers import (
     RedisExposureLedger,
+    RedisPromptLedger,
     RedisSuppressionLedger,
 )
 from app.modules.matchmaking.infrastructure.rebuild_candidate_index import (
@@ -512,7 +515,8 @@ def build_match_fit_engine() -> MatchFit:
 # --------------------------------------------------------------------------
 #
 # **Every ledger leaves here wrapped, and that is the point of building them
-# here.** Exposure and suppression fail soft (``the-two-contracts.md`` §8), and
+# here.** Exposure, suppression and the prompts fail soft
+# (``the-two-contracts.md`` §8), and
 # a posture applied by the composition root is one no caller can be handed
 # without. An unwrapped ``RedisExposureLedger`` is a correct adapter and a wrong
 # dependency: it raises, and a raise on either of these paths empties a surface
@@ -533,6 +537,16 @@ def build_suppression_ledger(client: Redis) -> SuppressionLedger:
     """Whom this player has recently passed on, failing soft."""
 
     return FailSoftSuppressionLedger(RedisSuppressionLedger(client))
+
+
+def build_prompt_ledger(client: Redis) -> PromptLedger:
+    """The questions a loop left standing for a player, failing soft.
+
+    The softest of the three: an outage here costs one inline offer, on one
+    search, and the loop that raised it raises it again tomorrow.
+    """
+
+    return FailSoftPromptLedger(RedisPromptLedger(client))
 
 
 def build_roll_exposure(exposure: ExposureLedger) -> RollExposure:

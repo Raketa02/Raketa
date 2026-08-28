@@ -53,8 +53,14 @@ from pydantic import BaseModel, Field
 
 from app.engines.matchfit.core import SearchMode, Term
 from app.kernel import Sport
+from app.modules.matchmaking.domain.prompts import Prompt
+from app.modules.matchmaking.domain.relaxation import RelaxationAsk, Rung
 from app.modules.matchmaking.domain.searches import SearchSurface, SortOption
 from app.modules.matchmaking.presentation.evidence import Evidence
+# **The same cell shape the profile route takes**, deliberately reused rather
+# than restated: asking for a week in two shapes is how availability data goes
+# stale, and one client grid editor should be able to post to either route.
+from app.modules.player_profile.presentation.schemas import AvailabilitySlotResource
 from app.modules.player_profile.domain.availability import Window
 
 
@@ -166,6 +172,32 @@ class RunSearchRequest(BaseModel):
             "and nothing else. Two values, where a Play intent has three."
         ),
     )
+    availability_override: list[AvailabilitySlotResource] = Field(
+        OMITTED,
+        description=(
+            "The week to run **this one search** against, when the player "
+            "edited it on the search screen. Omit to use the grid on your "
+            "profile — **omit it, never send `null`**.\n\n"
+            "**It is an ask and never a correction.** Nothing here writes your "
+            "profile; the app offers to save it afterwards."
+        ),
+    )
+    offered_by_search_id: UUID = Field(
+        OMITTED,
+        description=(
+            "The search whose relaxation offer this one accepts. **Taking a "
+            "rung is a new search citing the one that offered it**, never a "
+            "silent change to your saved preferences."
+        ),
+    )
+    rung: Rung = Field(
+        OMITTED,
+        description=(
+            "Which rung of that search's offer you are taking. Sent with "
+            "`offered_by_search_id` or not at all — and the widening itself is "
+            "**not** sent: the backend reads it off the offer it made."
+        ),
+    )
 
 
 class PoolSchema(BaseModel):
@@ -199,6 +231,90 @@ class PoolSchema(BaseModel):
     post_gate: bool = Field(
         True,
         description="Always true. It travels so the count cannot be misread.",
+    )
+
+
+class RungOfferSchema(BaseModel):
+    """One rung of the relaxation ladder, priced. **Offered, never applied.**
+
+    The engine computes what relaxing one of *your own* asks would be worth and
+    hands you the number; it never takes the offer for you, because only you can
+    say truthfully that you are free on a Saturday.
+
+    **The count is real.** It comes from re-running the whole search at this
+    rung — not from an estimate, and not from the strict count plus something.
+    """
+
+    rung: Rung = Field(
+        ...,
+        description=(
+            "Which rung. The list is in the engine's recommended order — times "
+            "first, because a slot you were already free in costs nothing where "
+            "distance costs travel on every game forever — but the order is a "
+            "recommendation and any rung may be taken directly."
+        ),
+    )
+    ask: RelaxationAsk = Field(
+        ...,
+        description=(
+            "Which of **your own** asks it relaxes. A rung never touches a "
+            "measurement, a term, a weight, or the quality floor."
+        ),
+    )
+    candidates_above_floor: int = Field(
+        ...,
+        ge=0,
+        description=(
+            "How many people would clear the quality floor at this rung, from a "
+            "genuine re-run. The number on the button is true."
+        ),
+    )
+    window: Window = Field(
+        ...,
+        description=(
+            "This rung's **own** window. A challenge sliding from `WEEKEND` to "
+            "`THIS_WEEK` is part of what widening costs, and you see it before "
+            "you pay it."
+        ),
+    )
+    radius_km: int = Field(
+        OMITTED,
+        ge=1,
+        description=(
+            "The widened radius, on a `RADIUS` rung. Always inside the same 1-50 "
+            "km your own slider holds: a relaxation never offers a radius you "
+            "could not have set yourself, so a searcher already at 50 km is "
+            "offered no radius rung at all."
+        ),
+    )
+    slot: str = Field(
+        OMITTED,
+        description=(
+            "The one cell this rung would add to your week, on a `TIMES` rung, "
+            "as `day:PART`. For this search only."
+        ),
+    )
+
+
+class PromptSchema(BaseModel):
+    """A question the app is offering to ask. **It never changes a value.**
+
+    The platform notices that you improvised a week, that you keep widening to
+    the same radius, that your searches disagree with what you declared, or that
+    the week on your profile is months old — and in every case it asks. The
+    payload is the value already in play, so the sheet can show the change rather
+    than describe it.
+    """
+
+    prompt: Prompt = Field(..., description="Which question, as a code")
+    radius_km: int = Field(
+        OMITTED, ge=1, description="The widening you keep taking"
+    )
+    slots: list[str] = Field(
+        OMITTED, description="The week this search actually ran on, as codes"
+    )
+    mode: SearchMode = Field(
+        OMITTED, description="The mode your recent searches keep choosing"
     )
 
 
@@ -248,6 +364,26 @@ class SearchEnvelope(BaseModel):
             "**A sort that would reorder nothing is not in this list**, and the "
             "control is not drawn — a visible control that does nothing is the "
             "product lying quietly. Re-sorting costs no round trip."
+        ),
+    )
+    rung_offers: list[RungOfferSchema] | None = Field(
+        ...,
+        description=(
+            "What relaxing your own asks would be worth, each with a real "
+            "count from a genuine re-run.\n\n"
+            "**`null` means the offers were not computed at all** — your "
+            "shortlist was long enough that nobody needed them. An empty list "
+            "means they were computed and there is nothing left to offer, which "
+            "is the honest empty state: the pool beside it is the whole answer."
+        ),
+    )
+    prompts: list[PromptSchema] = Field(
+        OMITTED,
+        description=(
+            "Questions this search raises, each of which changes nothing until "
+            "you answer it. Present on a search and **omitted on a read-back**, "
+            "where a month-old question would be asked about a value that has "
+            "since moved."
         ),
     )
 

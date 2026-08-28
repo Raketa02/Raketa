@@ -86,6 +86,14 @@ class SearchORM(Base):
             "(intent_read IS NOT NULL) = (surface = 'DECK')",
             name="ck_search_intent_read_set_exactly_on_the_deck",
         ),
+        # The other pair that must never be half-written. A rung is taken *from
+        # an offer*, so a row naming one without citing the search that made it
+        # is a take-up figure with no denominator — and the join the falsifier
+        # needs is exactly these two columns.
+        CheckConstraint(
+            "(rung_taken IS NULL) = (offered_by_search_id IS NULL)",
+            name="ck_search_rung_taken_cites_its_offer",
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(UUIDType(binary=False), primary_key=True)
@@ -131,9 +139,30 @@ class SearchORM(Base):
     #: Written on **every** search: a thin pool and a broken floor are
     #: indistinguishable without it.
     pool_description: Mapped[dict[str, Any]] = mapped_column(BLOB, nullable=False)
+    #: The grid this search **ran on** — the profile's own, or the one a rung-A
+    #: widening improvised for this search alone. It is stored so the window is
+    #: **re-derived** from it rather than read back as a label: a stored label is
+    #: how a stale window ships the day ``window_of`` changes, where this grid
+    #: and this row's own ``at`` reproduce the answer that was given.
+    searcher_grid: Mapped[list[str]] = mapped_column(CODE_ARRAY, nullable=False)
     #: The availability term's denominator, per search rather than per candidate.
     searcher_slot_count: Mapped[int] = mapped_column(Integer, nullable=False)
     radius_clamp_bit: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    #: Which rungs were offered and each one's real count. **``NULL`` means the
+    #: offers were not computed at all** — the shortlist cleared ``MIN_SHORTLIST``
+    #: — where an empty list means computed and none available. That difference
+    #: is ``MIN_SHORTLIST``'s own falsifier, and it is read off these rows.
+    rung_offers: Mapped[list[Any] | None] = mapped_column(BLOB, nullable=True)
+    #: The search whose offer this one accepts. A self-reference rather than a
+    #: flag, because take-up per rung is *the pair* — what was offered, and what
+    #: the same person did next — and a boolean cannot join.
+    offered_by_search_id: Mapped[UUID | None] = mapped_column(
+        UUIDType(binary=False),
+        ForeignKey("search.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
+    #: Which rung this search took, on the **accepting** row.
+    rung_taken: Mapped[str | None] = mapped_column(String(1), nullable=True)
     latency_ms_by_stage: Mapped[dict[str, Any]] = mapped_column(BLOB, nullable=False)
 
 

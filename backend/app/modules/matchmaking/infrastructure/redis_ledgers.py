@@ -1,4 +1,4 @@
-"""The two ledgers, in Redis. **The first Redis in this application.**
+"""The three ledgers, in Redis. **The first Redis in this application.**
 
 Chosen by what it costs to lose (``docs/adr/0093``): these are mutable, shared
 across processes, and cheap to lose, so they get TTL-native storage rather than
@@ -49,6 +49,7 @@ from app.modules.matchmaking.domain.ledgers import (
     EXPOSURE_RETENTION_WEEKS,
     ExposureWeek,
 )
+from app.modules.matchmaking.domain.prompts import PROMPT_TTL, Prompt
 
 SECONDS_PER_DAY = 24 * 60 * 60
 
@@ -104,6 +105,80 @@ def suppression_key(passer_id: UUID, passed_id: UUID) -> str:
     """
 
     return f"suppress:{passer_id}:{passed_id}"
+
+
+def prompt_key(player_id: UUID) -> str:
+    """``prompt:{player}`` — every question standing for one player.
+
+    One key rather than one per prompt, because a search reads them together and
+    a hash is one round trip where four keys are four. The sport lives in the
+    *field* for the same reason the newcomer tally does: two families that expire
+    together cannot be read half-present.
+    """
+
+    return f"prompt:{player_id}"
+
+
+def prompt_field(prompt: Prompt, sport: Sport | None) -> str:
+    """``{code}`` for a prompt about the player, ``{code}:{sport}`` about a sport.
+
+    The availability grid is one week and not seven, so *refresh your times* has
+    no sport to be about; a drifting declaration is per sport, because intent is.
+    """
+
+    return prompt.value if sport is None else f"{prompt.value}:{sport.value}"
+
+
+class RedisPromptLedger:
+    """Standing questions, as one expiring hash per player.
+
+    **A prompt is a courtesy and this is the whole of its storage.** Nothing
+    durable is owed: a question that was never asked leaves nothing to
+    reconstruct, and both raisers are loops that will raise it again tomorrow if
+    it is still true. That is also what makes the shared expiry safe — a prompt
+    whose condition stopped holding stops being asked within days rather than
+    standing until somebody answers a question that no longer applies.
+    """
+
+    def __init__(self, client: Redis) -> None:
+        self._client = client
+
+    async def raise_prompt(
+        self,
+        *,
+        player_id: UUID,
+        prompt: Prompt,
+        sport: Sport | None = None,
+        detail: str | None = None,
+    ) -> None:
+        key = prompt_key(player_id)
+        async with self._client.pipeline(transaction=False) as pipe:
+            # `HSET` over the same field, so a loop running in four processes
+            # four times a day leaves exactly what one run leaves.
+            pipe.hset(key, prompt_field(prompt, sport), detail or "")
+            # Refreshed on every raise rather than set once: the prompt is alive
+            # for as long as something keeps saying it is true.
+            pipe.expire(key, int(PROMPT_TTL.total_seconds()))
+            await pipe.execute()
+
+    async def raised_for(
+        self, *, player_id: UUID, sport: Sport
+    ) -> Mapping[Prompt, str | None]:
+        stored = await self._client.hgetall(prompt_key(player_id))
+        raised: dict[Prompt, str | None] = {}
+        for field, detail in stored.items():
+            code, _, about = str(field).partition(":")
+            if about and about != sport.value:
+                # Another sport's drift. Not this search's business, and reading
+                # it here is how a padel prompt turns up on a tennis screen.
+                continue
+            if code not in Prompt.__members__:
+                # A code this build does not know. Retired, or raised by a
+                # deployment ahead of this one — either way it is dropped rather
+                # than crossing as a prompt nobody can render.
+                continue
+            raised[Prompt[code]] = str(detail) or None
+        return raised
 
 
 class RedisExposureLedger:

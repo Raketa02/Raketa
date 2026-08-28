@@ -25,6 +25,8 @@ from app.bootstrap.jobs import (
     CANDIDATE_INDEX_REFRESH_JOB,
     CANDIDATE_INDEX_TAIL_JOB,
     EXPOSURE_ROLL_JOB,
+    GRID_STALENESS_JOB,
+    INTENT_DRIFT_JOB,
     PHOTO_SWEEP_JOB,
     build_scheduled_jobs,
 )
@@ -143,6 +145,8 @@ def _nothing_but(**overrides):
             "PHOTO_SWEEP_ENABLED": False,
             "CANDIDATE_INDEX_ENABLED": False,
             "EXPOSURE_ROLL_ENABLED": False,
+            "INTENT_DRIFT_ENABLED": False,
+            "GRID_STALENESS_ENABLED": False,
             **overrides,
         }
     )
@@ -297,3 +301,94 @@ async def test_a_roll_against_an_unreachable_store_neither_raises_nor_publishes(
         if hasattr(record, "players_counted")
     )
 
+
+# ---------------------------------------------------------------------------
+# The two prompt loops
+# ---------------------------------------------------------------------------
+
+
+def test_the_drift_loop_is_registered_and_carries_the_configured_cadence():
+    """Daily, matching §14.5's own cadence — and read from the settings, so the
+    number in the templates is configuration that changes something."""
+
+    settings = _nothing_but(
+        INTENT_DRIFT_ENABLED=True, INTENT_DRIFT_INTERVAL_SECONDS=3600.0
+    )
+
+    jobs = build_scheduled_jobs(
+        session_factory=UNUSED_SESSIONS, settings=settings, redis_client=FakeRedis()
+    )
+
+    assert [job.name for job in jobs] == [INTENT_DRIFT_JOB]
+    assert jobs[0].interval_seconds == 3600.0
+
+
+def test_the_staleness_backstop_is_registered_and_carries_its_cadence():
+    settings = _nothing_but(
+        GRID_STALENESS_ENABLED=True, GRID_STALENESS_INTERVAL_SECONDS=7200.0
+    )
+
+    jobs = build_scheduled_jobs(
+        session_factory=UNUSED_SESSIONS,
+        settings=settings,
+        candidate_source=object(),
+        redis_client=FakeRedis(),
+    )
+
+    assert [job.name for job in jobs] == [GRID_STALENESS_JOB]
+    assert jobs[0].interval_seconds == 7200.0
+
+
+def test_the_backstop_is_not_registered_without_an_index_to_read():
+    """A process holding no picture of the city has no grids to find stale, and
+    there is nothing here to fall back to."""
+
+    settings = _nothing_but(GRID_STALENESS_ENABLED=True)
+
+    jobs = build_scheduled_jobs(
+        session_factory=UNUSED_SESSIONS,
+        settings=settings,
+        candidate_source=None,
+        redis_client=FakeRedis(),
+    )
+
+    assert jobs == []
+
+
+def test_a_prompt_loop_without_a_store_to_leave_a_question_in_refuses():
+    """Loudly, as every other job here does: *the loop is off* and *the loop was
+    enabled and silently dropped* have one symptom — nobody is ever asked."""
+
+    settings = _nothing_but(INTENT_DRIFT_ENABLED=True)
+
+    with pytest.raises(ValueError, match="redis"):
+        build_scheduled_jobs(session_factory=UNUSED_SESSIONS, settings=settings)
+
+
+def test_the_drift_loop_without_a_session_factory_refuses():
+    settings = _nothing_but(INTENT_DRIFT_ENABLED=True)
+
+    with pytest.raises(ValueError, match="session factory"):
+        build_scheduled_jobs(
+            session_factory=None, settings=settings, redis_client=FakeRedis()
+        )
+
+
+async def test_the_drift_loop_runs_end_to_end_through_the_real_wiring(
+    session_factory, caplog
+):
+    """The session, the store and the declaration repository really are assembled
+    per run — and a quiet day is logged as a quiet day rather than as silence."""
+
+    settings = _nothing_but(INTENT_DRIFT_ENABLED=True)
+    (drift,) = build_scheduled_jobs(
+        session_factory=session_factory, settings=settings, redis_client=FakeRedis()
+    )
+
+    with caplog.at_level(logging.INFO):
+        await drift.run_once()
+
+    assert any(
+        record.message == "intent drift loop finished" and record.searches_read == 0
+        for record in caplog.records
+    )

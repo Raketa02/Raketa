@@ -72,7 +72,17 @@ async def test_a_search_reads_back_as_the_answer_it_gave(
 
     assert read.status_code == 200, read.text
     body = read.json()
-    assert body["search"] == posted["search"], "the envelope is a recorded fact"
+    # **Every recorded fact, and the one thing that is not one.** `prompts` is a
+    # statement about *now* — the week you improvised a moment ago, the widening
+    # you keep taking, the drift a loop noticed yesterday — so it ships on the
+    # search and is omitted here rather than re-asking a month-old question about
+    # a value that has since moved. Everything else round-trips.
+    assert "prompts" not in body["search"]
+    assert body["search"] == {
+        field: value
+        for field, value in posted["search"].items()
+        if field != "prompts"
+    }, "the envelope is a recorded fact"
     assert len(body["candidates"]) == len(posted["candidates"])
     for again, first in zip(body["candidates"], posted["candidates"], strict=True):
         assert again["withheld"] is False, "a live row says so, positively"

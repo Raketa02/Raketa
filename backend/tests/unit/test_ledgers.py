@@ -1,4 +1,4 @@
-"""What the two ephemeral ledgers promise, over **every** implementation.
+"""What the three ephemeral ledgers promise, over **every** implementation.
 
 One suite, parameterised over the in-memory ledgers the HTTP suite runs against
 and the Redis adapters that ship — the idiom ``tests/demands/`` established for
@@ -39,19 +39,24 @@ from app.modules.matchmaking.domain.ledgers import (
     week_of,
 )
 from app.modules.matchmaking.domain.ports import FailPosture
+from app.modules.matchmaking.domain.prompts import PROMPT_TTL, Prompt, PromptLedger
 from app.modules.matchmaking.infrastructure.fail_soft_ledgers import (
     FailSoftExposureLedger,
+    FailSoftPromptLedger,
     FailSoftSuppressionLedger,
 )
 from app.modules.matchmaking.infrastructure.redis_ledgers import (
     RedisExposureLedger,
+    RedisPromptLedger,
     RedisSuppressionLedger,
     busy_threshold_key,
     exposure_key,
+    prompt_key,
     suppression_key,
 )
 from tests.unit.fake_ledgers import (
     InMemoryExposureLedger,
+    InMemoryPromptLedger,
     InMemorySuppressionLedger,
     MovableClock,
 )
@@ -61,6 +66,7 @@ from tests.unit.fake_redis import BrokenRedis, FakeRedis
 NOW = instant(datetime(2026, 8, 26, 12, 0, tzinfo=timezone.utc))
 WEEK = week_of(NOW)
 DAY_SECONDS = 24 * 60 * 60
+ALICE = uuid4()
 
 
 class Ledgers:
@@ -73,10 +79,12 @@ class Ledgers:
             self.redis: FakeRedis | None = None
             self.exposure = InMemoryExposureLedger(self.clock)
             self.suppression = InMemorySuppressionLedger(self.clock)
+            self.prompts = InMemoryPromptLedger(self.clock)
         else:
             self.redis = FakeRedis()
             self.exposure = RedisExposureLedger(self.redis)
             self.suppression = RedisSuppressionLedger(self.redis)
+            self.prompts = RedisPromptLedger(self.redis)
 
     def advance(self, *, days: float) -> None:
         """Move both clocks together, so *later* means one thing.
@@ -101,11 +109,11 @@ def ledgers(request) -> Ledgers:
 # ---------------------------------------------------------------------------
 
 
-def test_both_ledgers_say_how_they_fail():
+def test_every_ledger_says_how_it_fails():
     assert set(LEDGER_FAIL_POSTURE) == set(EPHEMERAL_LEDGERS)
 
 
-def test_both_ledgers_fail_soft():
+def test_every_ledger_fails_soft():
     """The one classification this module exists to get right.
 
     ``docs/adr/0095``'s *a gate that cannot be evaluated excludes* reads like it
@@ -115,11 +123,15 @@ def test_both_ledgers_fail_soft():
 
     assert LEDGER_FAIL_POSTURE[ExposureLedger] is FailPosture.SOFT
     assert LEDGER_FAIL_POSTURE[SuppressionLedger] is FailPosture.SOFT
+    # A question nobody could be asked is the softest of the three: it costs one
+    # inline offer, on one search, and the loop raises it again tomorrow.
+    assert LEDGER_FAIL_POSTURE[PromptLedger] is FailPosture.SOFT
 
 
 def test_every_implementation_answers_the_port_it_claims(ledgers):
     assert isinstance(ledgers.exposure, ExposureLedger)
     assert isinstance(ledgers.suppression, SuppressionLedger)
+    assert isinstance(ledgers.prompts, PromptLedger)
 
 
 def test_neither_port_can_answer_a_question_about_the_past():
@@ -478,6 +490,99 @@ async def test_passing_again_after_a_lapse_starts_a_new_window(ledgers):
 
 
 # ---------------------------------------------------------------------------
+# The prompt ledger — a standing question, and never a value
+# ---------------------------------------------------------------------------
+
+
+async def test_nothing_is_being_asked_to_begin_with(ledgers):
+    assert (
+        await ledgers.prompts.raised_for(player_id=ALICE, sport=Sport.PADEL) == {}
+    )
+
+
+async def test_a_raised_prompt_stands_until_it_expires(ledgers):
+    await ledgers.prompts.raise_prompt(
+        player_id=ALICE, prompt=Prompt.REFRESH_YOUR_TIMES
+    )
+
+    standing = await ledgers.prompts.raised_for(player_id=ALICE, sport=Sport.PADEL)
+
+    assert standing == {Prompt.REFRESH_YOUR_TIMES: None}
+
+
+async def test_a_prompt_lapses_with_nothing_re_raising_it(ledgers):
+    """The loop that raised it raises it again tomorrow if it is still true — and
+    a question whose condition stopped holding stops being asked within days
+    rather than standing until somebody answers it."""
+
+    await ledgers.prompts.raise_prompt(
+        player_id=ALICE, prompt=Prompt.REFRESH_YOUR_TIMES
+    )
+
+    ledgers.advance(days=PROMPT_TTL.days + 1)
+
+    assert (
+        await ledgers.prompts.raised_for(player_id=ALICE, sport=Sport.PADEL) == {}
+    )
+
+
+async def test_raising_the_same_prompt_twice_leaves_one(ledgers):
+    """Idempotent, which ``docs/adr/0092`` requires before a loop may raise it in
+    four processes a day."""
+
+    for _ in range(4):
+        await ledgers.prompts.raise_prompt(
+            player_id=ALICE,
+            prompt=Prompt.UPDATE_PLAY_INTENT,
+            sport=Sport.PADEL,
+            detail="COMPETITIVE",
+        )
+
+    assert await ledgers.prompts.raised_for(player_id=ALICE, sport=Sport.PADEL) == {
+        Prompt.UPDATE_PLAY_INTENT: "COMPETITIVE"
+    }
+
+
+async def test_one_sports_drift_is_not_another_sports_business(ledgers):
+    """A padel prompt turning up on a tennis screen would be the platform asking
+    about a value the search in front of the player does not use."""
+
+    await ledgers.prompts.raise_prompt(
+        player_id=ALICE,
+        prompt=Prompt.UPDATE_PLAY_INTENT,
+        sport=Sport.PADEL,
+        detail="COMPETITIVE",
+    )
+
+    assert (
+        await ledgers.prompts.raised_for(player_id=ALICE, sport=Sport.TENNIS) == {}
+    )
+
+
+async def test_a_prompt_about_the_player_is_read_on_every_sport(ledgers):
+    """The availability grid is one week and not seven."""
+
+    await ledgers.prompts.raise_prompt(
+        player_id=ALICE, prompt=Prompt.REFRESH_YOUR_TIMES
+    )
+
+    for sport in (Sport.PADEL, Sport.TENNIS):
+        assert Prompt.REFRESH_YOUR_TIMES in await ledgers.prompts.raised_for(
+            player_id=ALICE, sport=sport
+        )
+
+
+async def test_one_players_questions_are_not_anothers(ledgers):
+    await ledgers.prompts.raise_prompt(
+        player_id=ALICE, prompt=Prompt.REFRESH_YOUR_TIMES
+    )
+
+    assert (
+        await ledgers.prompts.raised_for(player_id=uuid4(), sport=Sport.PADEL) == {}
+    )
+
+
+# ---------------------------------------------------------------------------
 # The posture: an outage degrades ordering and repetition, and nothing else
 # ---------------------------------------------------------------------------
 
@@ -488,6 +593,24 @@ def _unreachable() -> tuple[FailSoftExposureLedger, FailSoftSuppressionLedger]:
         FailSoftExposureLedger(RedisExposureLedger(broken)),
         FailSoftSuppressionLedger(RedisSuppressionLedger(broken)),
     )
+
+
+def _unreachable_prompts() -> FailSoftPromptLedger:
+    return FailSoftPromptLedger(RedisPromptLedger(BrokenRedis()))
+
+
+async def test_an_outage_costs_a_question_and_never_a_search():
+    """The degraded read is *no prompt standing*, which is the same thing the
+    ledger's own emptiness means — and the safe direction: a question that was
+    not asked this week is asked next week, where a question asked about a value
+    that has since changed is the platform being wrong out loud."""
+
+    prompts = _unreachable_prompts()
+
+    assert await prompts.raised_for(player_id=ALICE, sport=Sport.PADEL) == {}
+    # And the write: a loop whose raise could not land raises it again on its
+    # next tick, so nothing is failed over a courtesy.
+    await prompts.raise_prompt(player_id=ALICE, prompt=Prompt.REFRESH_YOUR_TIMES)
 
 
 async def test_an_outage_never_empties_a_deck():
@@ -576,6 +699,9 @@ def test_the_keys_are_the_ones_the_spec_names():
         == "expo:p90:PADEL:2026-W35"
     )
     assert suppression_key(passer, passed) == f"suppress:{passer}:{passed}"
+    # One key per **player**, because a search reads every standing question in
+    # one round trip and four keys would be four.
+    assert prompt_key(ALICE) == f"prompt:{ALICE}"
 
 
 async def test_a_week_of_exposure_is_one_key():
