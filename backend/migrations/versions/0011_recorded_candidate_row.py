@@ -33,16 +33,21 @@ tables on this same branch, against a platform with no deployed environment; the
 columns arrive with the route that reads them, which is the pattern `0010`'s own
 docstring set for the columns three later tickets add.
 
-Revision ID: 0011_search_candidate_records_the_answer
+Revision ID: 0011_recorded_candidate_row
 Revises: 0010_search_telemetry
 Create Date: 2026-08-28
+
+The revision id is short because `alembic_version.version_num` is
+`VARCHAR(32)`: a longer one applies its DDL and then fails writing the stamp,
+which leaves the schema ahead of the version table. The **filename** carries the
+sentence; the id only has to be unique.
 """
 
 import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision = "0011_search_candidate_records_the_answer"
+revision = "0011_recorded_candidate_row"
 down_revision = "0010_search_telemetry"
 branch_labels = None
 depends_on = None

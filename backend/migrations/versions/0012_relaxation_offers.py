@@ -30,9 +30,14 @@ follow, and each holds a search-time fact that cannot be reconstructed later —
 this same branch against a platform with no deployed environment, and the columns
 arrive with the code that reads them.
 
-Revision ID: 0012_relaxation_offers_and_the_grid_a_search_ran_on
-Revises: 0011_search_candidate_records_the_answer
+Revision ID: 0012_relaxation_offers
+Revises: 0011_recorded_candidate_row
 Create Date: 2026-08-28
+
+The revision id is short because `alembic_version.version_num` is
+`VARCHAR(32)`: a longer one applies its DDL and then fails writing the stamp,
+which leaves the schema ahead of the version table. The **filename** carries the
+sentence; the id only has to be unique.
 """
 
 import sqlalchemy as sa
@@ -40,8 +45,8 @@ from alembic import op
 from sqlalchemy.dialects import postgresql
 from sqlalchemy_utils.types.uuid import UUIDType
 
-revision = "0012_relaxation_offers_and_the_grid_a_search_ran_on"
-down_revision = "0011_search_candidate_records_the_answer"
+revision = "0012_relaxation_offers"
+down_revision = "0011_recorded_candidate_row"
 branch_labels = None
 depends_on = None
 

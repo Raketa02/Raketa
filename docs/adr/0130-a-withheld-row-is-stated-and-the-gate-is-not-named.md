@@ -92,7 +92,7 @@ one every screen uses, in order to describe a case that only ever occurs on the 
 recorded answer*, so everything on a row has to come off the row; the card, the concerns,
 the whole-kilometre distance and the at-stake block were previously assembled at response
 time from sources that keep moving. They are now recorded
-(`0011_search_candidate_records_the_answer`), which is ADR-0107's *the record stores a
+(`0011_recorded_candidate_row`), which is ADR-0107's *the record stores a
 `photo_id`; the URL is minted per response* taken literally, and it is what makes both
 routes render the same type through one function.
 
