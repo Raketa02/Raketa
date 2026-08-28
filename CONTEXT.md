@@ -779,6 +779,18 @@ appears here.
   same 30 days, because a pass that hardens toward permanence is a Block nobody consented to. The
   **suppression** lapses at 30 days; the **record** of the pass does not, because a lapsed
   suppression leaves no trace that a re-shown card is a re-show.
+- **Exposure** — how often a player has been **shown** in somebody's answer, counted per sport
+  per week. It exists so that the same ten people do not sit at the top of every list: a player
+  shown to nobody this week is lifted, and one shown far more often than most is sunk. Both are
+  **silent and both only reorder** — exposure fairness is not a reason to show somebody a bad
+  evening, so it may never admit anybody below the **quality floor**
+  ([ADR-0099](docs/adr/0099-relaxation-offers-the-searchers-own-asks.md)). *Shown more often than
+  most* is the week's ninetieth percentile, republished hourly rather than computed per search.
+  The same ledger will carry `NEWCOMER_ABSORPTION_CAP` — how often one player is volunteered
+  into a **newcomer's** shortlist — which binds by dropping a lift and **never** by withholding
+  anybody, and **nobody is told**, because nothing has happened to them. That count is not kept
+  yet: the cap *keeps its rule and refuses its integer*, so there is nothing for it to bind on.
+  _Avoid_: "impressions", "visibility".
 
 **Terms this context refuses**
 - **Game format** — *mixed doubles*, *women's doubles* and the like. Deliberately does not

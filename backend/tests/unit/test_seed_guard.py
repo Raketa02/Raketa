@@ -35,6 +35,7 @@ ROOT = Path(__file__).resolve().parents[2]
 POISON_PASSWORD = "hunter2-do-not-log-me"
 POISON_DB_URL = f"postgresql+asyncpg://u:{POISON_PASSWORD}@db.example:5432/raketa"
 POISON_SECRET = "s3cret-do-not-log-me"
+POISON_REDIS_URL = f"redis://:{POISON_PASSWORD}@redis.example:6379/0"
 
 #: A database nothing is listening on, so reaching it is a distinguishable
 #: failure from refusing to try.
@@ -103,10 +104,11 @@ def test_the_other_three_are_permitted(clean_env, environment):
 
     settings = build(
         APP_ENV=environment,
-        # The two an unprovisioned environment refuses to start without. They
+        # The three an unprovisioned environment refuses to start without. They
         # are configuration, not seeding — this case is about the seed guard.
         APP_HOST="127.0.0.1",
         WRITER_DB_URL=POISON_DB_URL,
+        REDIS_URL=POISON_REDIS_URL,
     )
 
     refuse_unless_seedable(settings)  # does not raise

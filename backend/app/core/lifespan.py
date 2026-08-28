@@ -12,6 +12,17 @@ forgets is one that holds a database connection open past `dispose_engine`, and
 the symptom is a container that takes its whole grace period to die rather than
 anything that looks like a bug.
 
+**Two connection pools, opened unconditionally and closed here.** The database
+engine and the Redis client are the process's, so both are opened before anything
+that might want one and disposed in the same `finally`, after every background
+task has stopped — a job still running against a closed pool is the same
+shutdown bug in either of them. **Neither is gated on a feature flag**, and the
+Redis one especially must not be: a request path resolves its ledgers through
+this client, so a job's toggle deciding whether the pool exists would be a job's
+toggle deciding whether a Play surface 500s. Opening it connects to nothing, so
+a store that is down costs the ledgers their answers and never costs the
+application its start (``matchmaking/domain/ledgers.py``).
+
 **One thing here starts nothing and is a refusal.** The matcher's ruleset is
 validated before anything else runs, so that a malformed one **fails the deploy**
 rather than serving — with an embedded ruleset there is no hot reload to fall
@@ -40,6 +51,7 @@ from app.infrastructure.database.engine import (
     init_engine,
 )
 from app.infrastructure.jobs import BackgroundTask
+from app.infrastructure.redis_client import close_redis, get_redis, init_redis
 
 logger = logging.getLogger(__name__)
 
@@ -54,11 +66,17 @@ def build_lifespan(settings: Settings):
         verify_ruleset()
 
         init_engine(settings)
+        # The other pool, on the same terms and in the same place. It opens no
+        # socket — `redis-py` connects on the first command — so this cannot
+        # fail here whatever state the store is in.
+        init_redis(settings)
 
-        # Every piece of background work takes a session per tick, so one factory
-        # serves all of them — and it is built only if something wants one, which
-        # is what lets an application with all of it disabled start without an
-        # engine having been reached for at all.
+        # Every piece of background work that touches the database takes a
+        # session per tick, so one factory serves all of them — and it is built
+        # only if something wants one, which is what lets an application with
+        # all of it disabled start without an engine having been reached for at
+        # all. **The exposure roll is the first job that wants none**, so the
+        # engine is no longer a precondition for having any jobs.
         background: list[BackgroundTask] = []
         # Assigned whether or not anything is registered: an attribute that only
         # sometimes exists is one every reader has to guard against.
@@ -68,7 +86,13 @@ def build_lifespan(settings: Settings):
         # container from it, so a second instance anywhere would be a second
         # index that nothing keeps in step with the first.
         app.state.candidate_source = None
+        # Likewise — one connection pool, and this is where the one lives. It
+        # is whatever `init_redis` above returned, unconditionally: the roll is
+        # one reader of the ledgers and the Play surfaces are the rest, so this
+        # attribute may not depend on the roll being switched on.
+        app.state.redis = get_redis()
 
+        session_factory = None
         if (
             settings.EVENT_DELIVERY_WORKER_ENABLED
             or settings.PHOTO_SWEEP_ENABLED
@@ -93,17 +117,18 @@ def build_lifespan(settings: Settings):
                     session_factory=session_factory
                 )
 
-            jobs = build_scheduled_jobs(
-                session_factory=session_factory,
-                settings=settings,
-                candidate_source=app.state.candidate_source,
-            )
-            # Only the scheduled jobs, not the outbox drain beside them: this
-            # attribute is what somebody reads to answer *which jobs is this
-            # process running*, and an answer that quietly included a queue
-            # drain would be a different question's answer.
-            app.state.scheduled_jobs = jobs
-            background.extend(jobs)
+        jobs = build_scheduled_jobs(
+            session_factory=session_factory,
+            settings=settings,
+            candidate_source=app.state.candidate_source,
+            redis_client=app.state.redis,
+        )
+        # Only the scheduled jobs, not the outbox drain beside them: this
+        # attribute is what somebody reads to answer *which jobs is this process
+        # running*, and an answer that quietly included a queue drain would be a
+        # different question's answer.
+        app.state.scheduled_jobs = jobs
+        background.extend(jobs)
 
         for task in background:
             task.start()
@@ -124,5 +149,9 @@ def build_lifespan(settings: Settings):
                         extra={"job": task.name},
                     )
             await dispose_engine()
+            # After the engine and after every task, for the reason the engine
+            # is after the tasks: a pool closed under something still using it
+            # turns a clean shutdown into an exception nobody reads.
+            await close_redis()
 
     return lifespan

@@ -63,6 +63,11 @@ services:
       # below. A server-to-server URL: no phone and no browser ever opens it.
       PHOTO_REVIEW_ENDPOINT_URL: http://photo-review:8000
       PHOTO_REVIEW_TIMEOUT_SECONDS: "10"
+      # The ephemeral store — keep in step with the `redis` service below. Holds
+      # the exposure and suppression ledgers, both of which fail soft: with this
+      # container down the API starts, serves, and loses a search's spread and a
+      # deck's memory. Nothing here must ever be the evidence for anything.
+      REDIS_URL: redis://redis:6379/0
       PYTHONPYCACHEPREFIX: /tmp/pycache
       WATCHFILES_FORCE_POLLING: "true"
     ports:
@@ -75,6 +80,11 @@ services:
         condition: service_healthy
       minio-init:
         condition: service_completed_successfully
+      # Started with the API rather than waited on: the ledgers behind it fail
+      # soft, so an API that comes up first degrades for a second instead of
+      # failing to boot.
+      redis:
+        condition: service_started
     volumes:
       # Hot-reload the source while developing.
       - ./app:/home/app/app

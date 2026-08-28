@@ -40,6 +40,7 @@ POISON_PASSWORD = "hunter2-do-not-log-me"
 POISON_DB_URL = f"postgresql+asyncpg://u:{POISON_PASSWORD}@db.example:5432/raketa"
 POISON_SECRET = "s3cret-do-not-log-me"
 POISON_PHOTO_SECRET = "photo-s3cret-do-not-log-me"
+POISON_REDIS_URL = f"redis://:{POISON_PASSWORD}@redis.example:6379/0"
 
 
 @pytest.fixture
@@ -75,7 +76,11 @@ def settings_for(env, **overrides) -> Settings:
     env = Environment(env)
     base: dict = {"APP_ENV": env}
     if env in UNPROVISIONED:
-        base |= {"APP_HOST": "10.0.0.1", "WRITER_DB_URL": POISON_DB_URL}
+        base |= {
+            "APP_HOST": "10.0.0.1",
+            "WRITER_DB_URL": POISON_DB_URL,
+            "REDIS_URL": POISON_REDIS_URL,
+        }
     if env is Environment.PRODUCTION:
         base |= {
             "JWT_SECRET_KEY": POISON_SECRET,
@@ -210,12 +215,42 @@ def test_an_unprovisioned_environment_without_a_database_refuses(
 
 
 @pytest.mark.parametrize("env", ["development", "staging"])
+def test_an_unprovisioned_environment_without_an_ephemeral_store_refuses(
+    clean_env, env
+) -> None:
+    """The ledgers fail soft; booting permanently degraded is not the same thing.
+
+    An unreachable Redis costs a search its spread and costs nobody their place in
+    it — which is exactly why this has to refuse rather than shrug: a ledger that
+    never works produces no error, no empty screen and no alarm, and looks from
+    every angle like a city where nothing happened.
+    """
+
+    with pytest.raises(ConfigurationError) as exc:
+        build(APP_ENV=env, APP_HOST="10.0.0.1", WRITER_DB_URL=POISON_DB_URL)
+    assert "REDIS_URL" in str(exc.value)
+
+
+def test_local_needs_no_ephemeral_store_configured(clean_env) -> None:
+    """The one environment that runs today runs against the dev stack's Redis."""
+
+    from app.core.config import DEFAULT_REDIS_URL
+
+    assert build(APP_ENV="local").REDIS_URL == DEFAULT_REDIS_URL
+
+
+@pytest.mark.parametrize("env", ["development", "staging"])
 def test_an_unprovisioned_environment_that_is_provisioned_starts(
     clean_env, env
 ) -> None:
     """`development` and `staging` are not forbidden — they are unbuilt. The day a
     domain is registered, turning one on is setting these two variables."""
-    settings = build(APP_ENV=env, APP_HOST="10.0.0.1", WRITER_DB_URL=POISON_DB_URL)
+    settings = build(
+        APP_ENV=env,
+        APP_HOST="10.0.0.1",
+        WRITER_DB_URL=POISON_DB_URL,
+        REDIS_URL=POISON_REDIS_URL,
+    )
     assert settings.APP_ENV is Environment(env)
 
 
@@ -395,6 +430,12 @@ REFUSALS = [
     ("APP_ENV", lambda: build(APP_ENV="prd", WRITER_DB_URL=POISON_DB_URL)),
     ("APP_HOST", lambda: build(APP_ENV="staging", WRITER_DB_URL=POISON_DB_URL)),
     ("WRITER_DB_URL", lambda: build(APP_ENV="staging", APP_HOST="10.0.0.1")),
+    (
+        "REDIS_URL",
+        lambda: build(
+            APP_ENV="staging", APP_HOST="10.0.0.1", WRITER_DB_URL=POISON_DB_URL
+        ),
+    ),
     ("JWT_SECRET_KEY", lambda: production(JWT_SECRET_KEY=DEFAULT_JWT_SECRET_KEY)),
     (
         "PHOTO_STORAGE_SECRET_KEY",
@@ -417,6 +458,7 @@ REFUSAL_IDS = [
     "APP_ENV",
     "APP_HOST",
     "WRITER_DB_URL",
+    "REDIS_URL",
     "JWT_SECRET_KEY",
     "PHOTO_STORAGE_SECRET_KEY",
     "DEBUG",
@@ -444,6 +486,7 @@ def test_no_refusal_echoes_a_value(clean_env, variable, trigger) -> None:
     for leaked in (
         POISON_PASSWORD,
         POISON_DB_URL,
+        POISON_REDIS_URL,
         POISON_SECRET,
         POISON_PHOTO_SECRET,
         DEFAULT_JWT_SECRET_KEY,

@@ -115,6 +115,12 @@ DEFAULT_JWT_SECRET_KEY = "change-me-in-production"
 DEFAULT_PHOTO_STORAGE_ACCESS_KEY = "raketa_photos"
 DEFAULT_PHOTO_STORAGE_SECRET_KEY = "raketa_photos_pwd"
 
+#: The shipped ephemeral-store address. `redis` is the service name in
+#: `docker-compose-local.yml`, so this default resolves on a laptop running the dev
+#: stack and resolves nowhere else — which is what makes it safe to refuse rather
+#: than fall back on, exactly as the writer database's default is.
+DEFAULT_REDIS_URL = "redis://redis:6379/0"
+
 #: The environments a browser reaches over a public network. `local` is not one of them,
 #: which is what makes `http://localhost:3000` a legal allowed origin on a laptop.
 DEPLOYED = frozenset(
@@ -269,6 +275,38 @@ class Settings(BaseSettings):
     #: a long log does bounded work per tick rather than one huge transaction.
     CANDIDATE_INDEX_BATCH_SIZE: int = 500
 
+    # --- the ephemeral store (docs/adr/0093)
+    #
+    # **Redis holds the two ledgers that are allowed to be lossy** — exposure and
+    # suppression — and nothing else. Everything the platform must be able to say
+    # later is a durable row: the gate is the cache, the evidence is the row.
+    #
+    # A **server-to-server** address, like `PHOTO_STORAGE_ENDPOINT_URL` and
+    # `PHOTO_REVIEW_ENDPOINT_URL`, so the public-network scheme rule has nothing to
+    # say about it — no browser and no phone ever opens it. A deployed environment
+    # that wants TLS spells it `rediss://` in the URL it sets, which is the same
+    # place it sets the credentials.
+    #
+    # **What is emphatically not here is either TTL.** How long a suppression lasts
+    # is `PASS_SUPPRESS`, a product decision in the released ruleset; how long a
+    # week of exposure survives is `EXPOSURE_RETENTION_WEEKS`, in
+    # `matchmaking/domain/ledgers.py`. Both decide what can still be asked, and an
+    # environment that could shorten either would be an environment selecting
+    # behaviour a domain test can observe. What lives here is where the store is,
+    # and how often the roll runs.
+    REDIS_URL: str = DEFAULT_REDIS_URL
+
+    # --- the exposure roll (docs/adr/0092, matchmaking-engine.md §14.5)
+    #
+    # Hourly, matching §14.5. The scalar it publishes is a percentile over a week's
+    # appearances, which barely moves within an hour and is read on every search —
+    # so the cadence is the trade between a stale threshold and an unbounded read on
+    # the request path. Turning it off changes no rule a domain test could observe:
+    # the *shown more than most* rung simply never fires, and the two rungs that
+    # lift are unaffected, which is the state the platform is in today.
+    EXPOSURE_ROLL_ENABLED: bool = True
+    EXPOSURE_ROLL_INTERVAL_SECONDS: float = 60 * 60
+
     @field_validator("APP_ENV", mode="before")
     @classmethod
     def _known_environment(cls, v):
@@ -345,6 +383,20 @@ class Settings(BaseSettings):
                     f"defined but not provisioned. Falling back to the local default "
                     f"would point at a database that does not exist — set "
                     f"WRITER_DB_URL explicitly or use 'local'."
+                )
+            if "REDIS_URL" not in provided:
+                # The same refusal as the database's, and for the same reason
+                # rather than for a weaker one. The ledgers behind it fail soft, so
+                # an unreachable Redis costs a search its spread and nothing more —
+                # but *silently degraded for ever* is not a state an environment
+                # should be able to boot into by inheriting a laptop's service
+                # name. A ledger that never works looks exactly like a quiet week.
+                raise ConfigurationError(
+                    f"REDIS_URL is not set, and APP_ENV selects '{env}', which is "
+                    f"defined but not provisioned. Falling back to the local default "
+                    f"would point at an ephemeral store that does not exist, and the "
+                    f"ledgers behind it would degrade silently — set REDIS_URL "
+                    f"explicitly or use 'local'."
                 )
 
         if env in DEPLOYED:

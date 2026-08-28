@@ -249,6 +249,7 @@ aggregator.
 |---|---|
 | `APP_ENV` is not one of the four | A typo must not silently change behaviour. |
 | `development`/`staging` with no `APP_HOST` or `WRITER_DB_URL` | Neither is provisioned; falling back points at a database that does not exist. |
+| `development`/`staging` with no `REDIS_URL` | Same reason, one step further: the ledgers behind it fail soft, so falling back to a laptop's service name would boot permanently degraded and look exactly like a quiet week. |
 | `production` with the default `JWT_SECRET_KEY` | It is public in this repo's history, so every token it signs is forgeable. |
 | `production` with the default `PHOTO_STORAGE_SECRET_KEY` | It is the local MinIO container's, published in this repo, and it unlocks every photo the platform holds. |
 | `production` with `DEBUG=true` | It serves verbose errors to callers. |
@@ -285,6 +286,9 @@ serving HTTP.
 | `PHOTO_REVIEW_TIMEOUT_SECONDS` | The whole budget for one review. Exceeding it fails open. |
 | `PHOTO_SWEEP_ENABLED` | Enables the uncommitted-photo sweep job. |
 | `PHOTO_SWEEP_INTERVAL_SECONDS` | How often the sweep runs. Not the retention window — see *Background Jobs*. |
+| `REDIS_URL` | The ephemeral store, holding the exposure and suppression ledgers. Server-to-server; no scheme rule. |
+| `EXPOSURE_ROLL_ENABLED` | Enables the hourly exposure roll. |
+| `EXPOSURE_ROLL_INTERVAL_SECONDS` | How often the roll runs. Not either ledger's TTL — see *The ephemeral store*. |
 | `RUN_MIGRATIONS_ON_STARTUP` | Optional production startup migration toggle. |
 
 PostgreSQL URLs using `postgresql://` or `postgres://` are normalized to the
@@ -537,9 +541,13 @@ process and no second deployable.
   and dispatches to subscribed handlers. Its worker id is the lease its batches
   claim rows under.
 - **Scheduled jobs** (`PeriodicJob`) run because an interval elapsed.
-  `app/bootstrap/jobs.py` is the register, and one job is in it today: the
+  `app/bootstrap/jobs.py` is the register, and four jobs are in it today: the
   **uncommitted-photo sweep**, which deletes every photo the object store has
-  held for more than 24 hours that no committed profile currently names.
+  held for more than 24 hours that no committed profile currently names; the
+  candidate index's **tail reader** and **snapshot refresh**; and the
+  **exposure roll**, which publishes one scalar per sport per week saying what
+  *shown more often than most* means. The roll is the only one that takes no
+  database session — its whole input and output are in Redis.
 
 **A job may only be registered if it is idempotent and safe to run beside
 itself.** With N API processes a job runs N times per interval, at unrelated
@@ -557,6 +565,40 @@ would see — orphans simply accumulate.
 
 The first run of a job happens at startup rather than after the first interval,
 which is the only thing that makes a six-hourly job observable on a laptop.
+
+## The ephemeral store
+
+Redis holds the **two ledgers that are allowed to be lossy** — exposure and
+suppression — and nothing else (ADR-0093). The rule that separates it from
+everything durable is one sentence: **the gate is the cache; the evidence is the
+row.** A fact that must survive is a durable row elsewhere. *Who was shown to
+whom in week 34* is answered by the search record; *were these two ever passed
+on* is answered by the durable pass record, which is exactly the fact a TTL
+destroys and exactly why the two are stored apart.
+
+**Both ledgers fail soft, and it is worth saying out loud** because ADR-0095's
+*a gate that cannot be evaluated excludes* reads like it should reach them.
+Applying that to a suppression would **empty the deck rather than protect
+anybody**: a suppression is a courtesy, a block is a safety control. So an
+unreachable Redis degrades **ordering and repetition** and never excludes
+anybody or empties a surface. The posture is applied once, by
+`matchmaking/infrastructure/fail_soft_ledgers.py`, and the composition root
+never hands out an unwrapped adapter — so no caller can get it wrong and none
+has to remember to.
+
+**Neither TTL is configuration.** How long a suppression lasts is
+`PASS_SUPPRESS`, a product number in the released ruleset; how long a week of
+exposure survives is `EXPOSURE_RETENTION_WEEKS`, in
+`app/modules/matchmaking/domain/ledgers.py`. Both decide what can still be
+asked. What *is* configuration is where the store lives and how often the roll
+runs — the same split the photo sweep's retention window and cadence have.
+
+**No test needs Redis running.** Both ledgers sit behind ports with an in-memory
+implementation that the whole HTTP suite runs against, wired in
+`tests/conftest.py` exactly as the object store and the photo-review sidecar
+are; and the Redis adapters themselves are exercised by the same contract suite
+against an in-process stand-in, so the key shapes and TTLs are tested rather
+than assumed.
 
 ## Testing And Quality
 

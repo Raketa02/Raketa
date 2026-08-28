@@ -149,6 +149,7 @@ async def test_no_background_work_at_all_reaches_for_no_engine(monkeypatch):
         EVENT_DELIVERY_WORKER_ENABLED=False,
         PHOTO_SWEEP_ENABLED=False,
         CANDIDATE_INDEX_ENABLED=False,
+        EXPOSURE_ROLL_ENABLED=False,
     )
     app = FastAPI()
     app.state.event_runtime = object()
@@ -170,6 +171,11 @@ async def test_no_background_work_at_all_reaches_for_no_engine(monkeypatch):
         # built: it takes a session factory, and building one is what this test
         # exists to prove did not happen.
         assert app.state.candidate_source is None
+        # The ephemeral store is **not** the same claim, and the difference is
+        # the point: it needs no session, so it is opened whatever is switched
+        # off. A request path resolves its ledgers through this client, and a
+        # job's toggle may not decide whether a Play surface has one.
+        assert app.state.redis is not None
 
     assert disposed == [True]
 
@@ -263,3 +269,86 @@ async def test_one_task_that_refuses_to_stop_does_not_strand_the_others(
 
     assert survivor.stopped is True
     assert stub_engine == [True], "the engine was disposed anyway"
+
+
+# ---------------------------------------------------------------------------
+# The ephemeral store
+# ---------------------------------------------------------------------------
+
+
+async def test_the_ephemeral_store_is_opened_and_closed_with_the_application(
+    monkeypatch, stub_engine, no_jobs
+):
+    """One pool per process, and the process is what ends it.
+
+    A client the shutdown path forgets holds its connections open past
+    `dispose_engine`, which is the same shutdown bug the engine has and looks
+    the same from outside: a container that takes its whole grace period to die.
+    """
+
+    client = object()
+    opened: list[Settings] = []
+    closed: list[bool] = []
+
+    def init_redis(settings):
+        opened.append(settings)
+        return client
+
+    async def close_redis() -> None:
+        closed.append(True)
+
+    monkeypatch.setattr(lifespan_module, "init_redis", init_redis)
+    monkeypatch.setattr(lifespan_module, "get_redis", lambda: client)
+    monkeypatch.setattr(lifespan_module, "close_redis", close_redis)
+
+    settings = _settings(
+        EVENT_DELIVERY_WORKER_ENABLED=False, EXPOSURE_ROLL_ENABLED=False
+    )
+    app = FastAPI()
+    app.state.event_runtime = object()
+
+    async with lifespan_module.build_lifespan(settings)(app):
+        # Opened even with the roll off, which is the assertion: the pool is the
+        # process's, and only its *readers* are behind flags.
+        assert opened == [settings]
+        assert app.state.redis is client
+        assert closed == []
+
+    assert closed == [True]
+
+
+async def test_the_store_is_closed_after_the_engine_and_after_the_jobs(
+    monkeypatch, stub_engine
+):
+    """Order, because closing a pool under a live job is the whole hazard."""
+
+    order: list[str] = []
+    job = _FakeWorker("exposure-roll")
+
+    async def stop() -> None:
+        order.append("job")
+        job.stopped = True
+
+    job.stop = stop  # type: ignore[method-assign]
+    monkeypatch.setattr(lifespan_module, "build_scheduled_jobs", lambda **_: [job])
+    monkeypatch.setattr(lifespan_module, "init_redis", lambda settings: object())
+    monkeypatch.setattr(lifespan_module, "get_redis", object)
+
+    async def close_redis() -> None:
+        order.append("redis")
+
+    async def dispose_engine() -> None:
+        order.append("engine")
+
+    monkeypatch.setattr(lifespan_module, "close_redis", close_redis)
+    monkeypatch.setattr(lifespan_module, "dispose_engine", dispose_engine)
+
+    app = FastAPI()
+    app.state.event_runtime = object()
+
+    async with lifespan_module.build_lifespan(
+        _settings(EVENT_DELIVERY_WORKER_ENABLED=False, EXPOSURE_ROLL_ENABLED=True)
+    )(app):
+        pass
+
+    assert order == ["job", "engine", "redis"]

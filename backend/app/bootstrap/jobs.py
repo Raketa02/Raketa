@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import logging
 
+from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.bootstrap.composition import (
@@ -36,8 +37,10 @@ from app.bootstrap.composition import (
     build_clock,
     build_domain_event_store,
     build_event_publisher,
+    build_exposure_ledger,
     build_photo_storage,
     build_player_profile_repository,
+    build_roll_exposure,
 )
 from app.core.config import Settings
 from app.infrastructure.jobs import PeriodicJob
@@ -66,12 +69,16 @@ PHOTO_SWEEP_JOB = "uncommitted-photo-sweep"
 CANDIDATE_INDEX_TAIL_JOB = "candidate-index-tail"
 CANDIDATE_INDEX_REFRESH_JOB = "candidate-index-refresh"
 
+#: The exposure roll's name in the logs and on its asyncio task.
+EXPOSURE_ROLL_JOB = "exposure-roll"
+
 
 def build_scheduled_jobs(
     *,
-    session_factory: async_sessionmaker[AsyncSession],
+    session_factory: async_sessionmaker[AsyncSession] | None,
     settings: Settings,
     candidate_source: DatabaseCandidateSource | None = None,
+    redis_client: Redis | None = None,
 ) -> list[PeriodicJob]:
     """Every job this process should run, in the order they were registered.
 
@@ -83,28 +90,111 @@ def build_scheduled_jobs(
     binds a container from it, so the process must hold exactly one and the
     lifespan is where that one is kept. Absent, the refresh loop is simply not
     registered — a process with no index to serve from has nothing to refresh.
+
+    ``redis_client`` arrives the same way and for the same reason: the process
+    holds one connection pool and the lifespan owns it. Unlike
+    ``candidate_source`` its absence is **not** a legitimate state — the pool is
+    opened unconditionally — so omitting it while the roll is enabled raises.
+
+    ``session_factory`` is optional because **the exposure roll is the first job
+    here that wants none** — its whole input and output are in the ephemeral
+    store. It is still required by every job that reads the database, and
+    omitting it while one of those is enabled raises rather than quietly
+    registering nothing.
     """
 
     jobs: list[PeriodicJob] = []
-    if settings.PHOTO_SWEEP_ENABLED:
-        jobs.append(
-            build_uncommitted_photo_sweep(
-                session_factory=session_factory, settings=settings
+    if settings.PHOTO_SWEEP_ENABLED or settings.CANDIDATE_INDEX_ENABLED:
+        if session_factory is None:
+            # Loudly, rather than by registering nothing. *The sweep is off* and
+            # *the sweep was enabled and silently dropped* are two states with
+            # one symptom — orphans accumulating — and only one of them is
+            # somebody's decision. The lifespan builds a factory for exactly
+            # these flags, so reaching here is a wiring error and not a
+            # configuration one.
+            raise ValueError(
+                "a job that reads the database is enabled, but no session "
+                "factory was passed to build_scheduled_jobs"
             )
-        )
-    if settings.CANDIDATE_INDEX_ENABLED:
-        jobs.append(
-            build_candidate_index_tail_job(
-                session_factory=session_factory, settings=settings
-            )
-        )
-        if candidate_source is not None:
+        if settings.PHOTO_SWEEP_ENABLED:
             jobs.append(
-                build_candidate_index_refresh_job(
-                    source=candidate_source, settings=settings
+                build_uncommitted_photo_sweep(
+                    session_factory=session_factory, settings=settings
                 )
             )
+        if settings.CANDIDATE_INDEX_ENABLED:
+            jobs.append(
+                build_candidate_index_tail_job(
+                    session_factory=session_factory, settings=settings
+                )
+            )
+            if candidate_source is not None:
+                jobs.append(
+                    build_candidate_index_refresh_job(
+                        source=candidate_source, settings=settings
+                    )
+                )
+    if settings.EXPOSURE_ROLL_ENABLED:
+        if redis_client is None:
+            # As loud as the session factory above, and for the same reason: the
+            # lifespan opens the pool unconditionally, so reaching here is a
+            # wiring error rather than a configuration one — and a roll that
+            # silently did not register looks exactly like a roll that is off.
+            raise ValueError(
+                "the exposure roll is enabled, but no redis client was passed "
+                "to build_scheduled_jobs"
+            )
+        jobs.append(build_exposure_roll_job(client=redis_client, settings=settings))
     return jobs
+
+
+def build_exposure_roll_job(
+    *,
+    client: Redis,
+    settings: Settings,
+) -> PeriodicJob:
+    """Publish, per sport, what *shown more often than most* means this week.
+
+    **Idempotent and safe beside itself with no lock** (``docs/adr/0092``), and
+    for the simplest of the three reasons on this page: it is a **reader** that
+    writes one derived scalar. Two runs racing cannot lose an appearance because
+    neither of them touches one, and two runs over an unchanged bucket publish
+    the identical number. There is nothing to serialise, so nothing is.
+
+    It takes no session. The only thing it reads and the only thing it writes
+    are in the ephemeral store, which makes it the first job here that would run
+    in a process with no database at all — and the first whose failure mode is
+    already handled below it, since the ledger it is handed fails soft.
+    """
+
+    roll = build_roll_exposure(build_exposure_ledger(client))
+
+    async def run() -> None:
+        report = await roll.execute()
+        # Logged at info even when it published nothing, for the reason every
+        # loop here is: *the roll ran and the city was quiet* and *the roll did
+        # not run* are the two states this has to be tellable apart from
+        # outside. ``players_counted`` is what separates a quiet week from a
+        # ledger that answered nothing — the one thing a fail-soft port makes
+        # invisible everywhere else.
+        logger.info(
+            "exposure roll finished",
+            extra={
+                "job": EXPOSURE_ROLL_JOB,
+                "exposure_week": report.week.label,
+                "players_counted": report.players_counted,
+                "thresholds": {
+                    sport.value: threshold
+                    for sport, threshold in report.thresholds.items()
+                },
+            },
+        )
+
+    return PeriodicJob(
+        name=EXPOSURE_ROLL_JOB,
+        interval_seconds=settings.EXPOSURE_ROLL_INTERVAL_SECONDS,
+        run=run,
+    )
 
 
 def build_candidate_index_tail_job(

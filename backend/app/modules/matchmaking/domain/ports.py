@@ -647,7 +647,22 @@ class FailPosture(str, Enum):
 #: blocks fail **closed** beside the two gates here, while the exposure and
 #: suppression ledgers fail **soft**, because applying *a gate that cannot be
 #: evaluated excludes* to a courtesy would empty the deck rather than protect
-#: anybody. The ledgers join this table when they are built.
+#: anybody.
+#:
+#: **The ledgers are built and are not rows here either** (#204), and the
+#: sentence that said they would join this table is withdrawn rather than
+#: forgotten. They arrived after ``BlockQuery`` had already made the criterion
+#: explicit one paragraph up: every port below is one the matcher declares of a
+#: context **it does not write**. The ledgers are the opposite extreme — the
+#: matchmaking module's own ephemeral store, declared in
+#: ``matchmaking/domain/ledgers.py`` and answered by adapters in the same module
+#: — so their posture is asserted where those ports live, in
+#: ``LEDGER_FAIL_POSTURE``, and enforced by the wrapper the composition root puts
+#: round every one it hands out. A second declaration here would be a second
+#: place for that posture to be set, which is the failure this table exists to
+#: prevent. The shape of this file also refuses them: the register beside it
+#: builds each row's implementation **over a session**, and neither ledger has
+#: one.
 #:
 #: **Blocks are built and are deliberately not a row here** (#203). Every port
 #: below is one the *matcher* declares of a context it does not write, and its

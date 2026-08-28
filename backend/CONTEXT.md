@@ -496,5 +496,38 @@ there; they are not repeated here.
   two cadences are configuration. _Avoid_: putting the ladder in `config.py`, or `index_stale`
   on the wire — §18 itself says the player sees nothing at that rung.
 
+- **Ephemeral store** — the module's Redis, holding the **exposure ledger** and the
+  **suppression ledger** and nothing else. The rule that separates it from every durable
+  store is one sentence: **the gate is the cache; the evidence is the row.** A fact that must
+  survive is a durable row elsewhere — *who was shown to whom* is answered by the search
+  record, *were these two ever passed on* by the durable pass record, which is exactly the
+  fact a TTL destroys
+  ([ADR-0093](../docs/adr/0093-matcher-in-the-backend-with-a-pure-match-fit-engine.md),
+  [ADR-0128](../docs/adr/0128-a-pass-is-about-my-deck-a-block-is-about-a-person.md)). Its
+  **address** is configuration (`REDIS_URL`); **neither TTL is** — `PASS_SUPPRESS` is a
+  product number in the released ruleset and `EXPOSURE_RETENTION_WEEKS` is in
+  `matchmaking/domain/ledgers.py`, because both decide what can still be asked. _Avoid_:
+  "cache" alone for it — half of what a cache implies is *recomputable*, and neither ledger
+  is.
+- **Fail-soft ledger** — how *exposure and suppression fail soft* stops being prose.
+  `FailSoftExposureLedger` and `FailSoftSuppressionLedger` wrap any implementation and
+  degrade every operation to the **empty answer**, and the composition root never hands out
+  an unwrapped adapter. It is a wrapper rather than a `try` per adapter method, because an
+  adapter that swallows its own failures makes *the store answered nothing* and *the store
+  could not be reached* indistinguishable — and rather than a `try` per call site, because
+  that is a discipline, which is what `application/outward_reads.py` refuses for the five
+  outward ports. Applying ADR-0095's *a gate that cannot be evaluated excludes* here would
+  **empty the deck rather than protect anybody**. _Avoid_: reading it as a general resilience
+  wrapper — it is safe **only** because neither ledger is evidence for anything, and it would
+  be indefensible around `BlockQuery`.
+- **Exposure roll** — the hourly `PeriodicJob` that publishes, per sport, what *shown more
+  often than most* means this week. It is the first job in `app/bootstrap/jobs.py` that takes
+  **no database session**. Despite §14.5's name it **rolls no bucket**: the week is derived
+  from `now`, so next week's key starts empty and this week's expires on its own — the same
+  argument that struck the newcomer-window loop. It is idempotent and safe beside itself
+  because it is a **reader** that writes one derived scalar. _Avoid_: adding bucket
+  management to it — a job whose name promises work it does not do is a job somebody adds the
+  work back into.
+
 Add backend-specific technical terms here as they are resolved. Anything describing the
 *domain* belongs in the shared glossary instead.

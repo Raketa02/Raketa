@@ -32,6 +32,7 @@ way `build_assessment_repository` takes its two.
 
 from __future__ import annotations
 
+from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from app.application.ports import DomainEventPublisher, DomainEventStore, UnitOfWork
@@ -67,6 +68,16 @@ from app.modules.matchmaking.domain.ports import (
     AtStakeQuery,
     MatchHistoryQuery,
     PlayerScoreQuery,
+)
+from app.modules.matchmaking.application.roll_exposure import RollExposure
+from app.modules.matchmaking.domain.ledgers import ExposureLedger, SuppressionLedger
+from app.modules.matchmaking.infrastructure.fail_soft_ledgers import (
+    FailSoftExposureLedger,
+    FailSoftSuppressionLedger,
+)
+from app.modules.matchmaking.infrastructure.redis_ledgers import (
+    RedisExposureLedger,
+    RedisSuppressionLedger,
 )
 from app.modules.matchmaking.infrastructure.rebuild_candidate_index import (
     RebuildCandidateIndex,
@@ -413,6 +424,45 @@ def build_match_fit_engine() -> MatchFit:
     in a composition root whether or not a caller has turned up to make it.
     """
     return MatchFitV1()
+
+
+# --------------------------------------------------------------------------
+# Matchmaking — the ephemeral store
+# --------------------------------------------------------------------------
+#
+# **Every ledger leaves here wrapped, and that is the point of building them
+# here.** Exposure and suppression fail soft (``the-two-contracts.md`` §8), and
+# a posture applied by the composition root is one no caller can be handed
+# without. An unwrapped ``RedisExposureLedger`` is a correct adapter and a wrong
+# dependency: it raises, and a raise on either of these paths empties a surface
+# to protect nobody.
+#
+# The client is passed in rather than built per ledger. It holds the process's
+# one connection pool, opened by the lifespan and closed by it, so a builder
+# that reached for its own would be a second pool per request.
+
+
+def build_exposure_ledger(client: Redis) -> ExposureLedger:
+    """Who has been shown to whom this week, failing soft."""
+
+    return FailSoftExposureLedger(RedisExposureLedger(client))
+
+
+def build_suppression_ledger(client: Redis) -> SuppressionLedger:
+    """Whom this player has recently passed on, failing soft."""
+
+    return FailSoftSuppressionLedger(RedisSuppressionLedger(client))
+
+
+def build_roll_exposure(exposure: ExposureLedger) -> RollExposure:
+    """The hourly roll, over whichever ledger it was handed.
+
+    Takes the port rather than the client, so the job is assembled from a ledger
+    that already carries its posture — the roll has no branch for *Redis is
+    down* and does not need one.
+    """
+
+    return RollExposure(exposure=exposure, clock=build_clock())
 
 
 # --------------------------------------------------------------------------

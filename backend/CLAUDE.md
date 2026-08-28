@@ -124,9 +124,10 @@ Rules to preserve:
   built from the composition root so it reaches the same bucket and event store a
   request does. There is no cron, no beat process and no lock: with N API processes a
   job runs N times per interval, so a job that cannot tolerate that needs a different
-  mechanism and its own ADR. Three jobs today — the uncommitted-photo sweep, whose
+  mechanism and its own ADR. Four jobs today — the uncommitted-photo sweep, whose
   **retention window is domain and whose cadence is configuration** (those two must not
-  swap places), and the candidate index's two loops below.
+  swap places), the candidate index's two loops below, and the **exposure roll**, the
+  first job here that takes no database session at all.
 - **The candidate index tails the log; the outbox delivers side effects**
   ([ADR-0110](../docs/adr/0110-the-index-tails-the-log-the-outbox-delivers-side-effects.md),
   [ADR-0111](../docs/adr/0111-the-index-holds-only-what-a-player-changes-about-themselves.md),
@@ -150,6 +151,20 @@ Rules to preserve:
   **there is no admin route** — a walk over `app/api/` and every `presentation/` fails the
   build if one appears. The staleness **ladder** is domain
   (`matchmaking/domain/index_staleness.py`); only the two cadences are configuration.
+- **The two lossy ledgers live in Redis, and the gate is the cache — the evidence is
+  the row** ([ADR-0093](../docs/adr/0093-matcher-in-the-backend-with-a-pure-match-fit-engine.md),
+  `the-engine.md` §12). Exposure and suppression are ports in
+  `matchmaking/domain/ledgers.py` with TTLs; everything that must survive is a durable row
+  elsewhere, and a test at each port says so. **Both fail soft**, which is the opposite of
+  the block gate beside them and is deliberate: applying ADR-0095's *a gate that cannot be
+  evaluated excludes* to a courtesy would **empty the deck rather than protect anybody**.
+  The posture is a wrapper applied in the composition root, so **no unwrapped adapter is
+  ever handed out** and `.importlinter` keeps `redis` — and the adapter over it — out of
+  every domain and application layer. Neither TTL is configuration: `PASS_SUPPRESS` is in
+  the released ruleset and `EXPOSURE_RETENTION_WEEKS` in the domain, and only `REDIS_URL`
+  and the roll's cadence are settings. **No test needs Redis** — both ports have an
+  in-memory implementation that `tests/conftest.py` wires for the whole HTTP suite, and the
+  Redis adapters are held to the same contract suite against an in-process stand-in.
 - **New routes mount under `app/api/v1/router.py`;** keep the `/api/v1` prefix.
 - **Validate and normalize inside the value object**, not in the use case — see
   `app/modules/users/domain/value_objects.py`.
@@ -216,8 +231,9 @@ tests.
   laptop or a CI runner, and both are `local`.
 - The embedded event-delivery worker polls the outbox on startup; toggle with
   `EVENT_DELIVERY_WORKER_ENABLED`. Scheduled jobs are toggled one at a time —
-  `PHOTO_SWEEP_ENABLED` today — and **every job's first run is at startup**, not after
-  its first interval, so a six-hourly job is observable on a laptop.
+  `PHOTO_SWEEP_ENABLED`, `CANDIDATE_INDEX_ENABLED`, `EXPOSURE_ROLL_ENABLED` — and **every
+  job's first run is at startup**, not after its first interval, so a six-hourly job is
+  observable on a laptop.
 
 ## Git & domain language
 

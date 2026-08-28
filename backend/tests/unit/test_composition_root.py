@@ -67,10 +67,21 @@ from app.shared.ids import new_uuid
 
 ROOT = Path(__file__).resolve().parents[2]
 
-#: The one infrastructure import a dependency declaration may keep. `get_db` is
-#: not an adapter — it is the request-scoped session itself, which is the single
-#: thing in those files that genuinely belongs to a request.
-SESSION_PROVIDER = "app.infrastructure.database.session"
+#: The infrastructure imports a dependency declaration may keep. Neither is an
+#: adapter: one is the request-scoped session itself, the other the process's
+#: Redis connection pool. They are the connections everything else is built
+#: *over*, and a declaration naming one is saying when it is handed out, not
+#: choosing an implementation.
+#:
+#: A closed set rather than a prefix, so that the next thing under
+#: `app.infrastructure.` has to be argued onto this list instead of inheriting
+#: the allowance.
+CONNECTION_PROVIDERS = frozenset(
+    {
+        "app.infrastructure.database.session",
+        "app.infrastructure.redis_client",
+    }
+)
 
 _MODULE_ADAPTER = re.compile(r"^app\.modules\.[^.]+\.infrastructure(\.|$)")
 _ENGINE_VERSION = re.compile(r"^app\.engines\.[^.]+\.v\d+(\.|$)")
@@ -104,7 +115,7 @@ def imported_modules(path: Path) -> set[str]:
 
 
 def is_adapter(module: str) -> bool:
-    if module == SESSION_PROVIDER:
+    if module in CONNECTION_PROVIDERS:
         return False
     if module.startswith("app.infrastructure."):
         return True

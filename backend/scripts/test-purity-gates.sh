@@ -410,6 +410,49 @@ clean
 
 # ---------------------------------------------------------------------------
 echo
+echo ".importlinter — the ephemeral store fenced out of the business rules"
+
+# The two ledgers are ports, and *behind a port* is only true while nothing on the
+# inside can reach the client. What is actually at stake is the fail-soft posture:
+# every ledger leaves the composition root wrapped, because an unwrapped adapter
+# raises and a raise on either path empties a surface to protect nobody. A use case
+# reaching for Redis itself is a use case that has skipped that.
+probe "$MODULE_APPLICATION_PROBE" 'from redis.asyncio import Redis
+
+
+async def shown(url: str) -> int:
+    return await Redis.from_url(url).hlen("expo:PADEL:2026-W35")
+'
+expect red imports "an application layer importing the redis client is refused" \
+  "app.modules.users.application is not allowed to import redis"
+clean
+
+# The indirect one, which is why the contract sets `allow_indirect_imports = false`.
+# A use case that constructs the adapter has reached past the wrapper exactly as
+# completely as one that imports the client, and with the flag on it would read as
+# KEPT.
+probe "$MODULE_APPLICATION_PROBE" 'from app.modules.matchmaking.infrastructure.redis_ledgers import (
+    RedisExposureLedger,
+)
+
+Ledger = RedisExposureLedger
+'
+expect red imports "an application layer constructing the redis adapter is refused" \
+  "app.modules.users.application is not allowed to import redis" \
+  "app.modules.matchmaking.infrastructure.redis_ledgers -> redis"
+clean
+
+# And the legitimate direction: the adapter is on the outside of the fence, which is
+# where a client belongs.
+probe "$MODULE_INFRA_PROBE" 'from redis.asyncio import Redis
+
+Client = Redis
+'
+expect green imports "an infrastructure adapter importing the redis client is allowed"
+clean
+
+# ---------------------------------------------------------------------------
+echo
 echo "the source walk — what module granularity cannot see"
 
 # Both gates are pointed at the same probe on purpose. import-linter passing it

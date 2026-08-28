@@ -19,6 +19,7 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
+from app.bootstrap.composition import build_clock  # noqa: E402
 from app.core.config import get_settings  # noqa: E402
 from app.infrastructure.database.base import Base  # noqa: E402
 from app.infrastructure.database.session import get_db  # noqa: E402
@@ -26,9 +27,17 @@ from app.main import create_app  # noqa: E402  (also registers ORM models)
 from app.modules.player_profile.infrastructure.passthrough_photo_review import (  # noqa: E402,E501
     PassThroughPhotoReview,
 )
+from app.modules.matchmaking.presentation.dependencies import (  # noqa: E402
+    get_exposure_ledger,
+    get_suppression_ledger,
+)
 from app.modules.player_profile.presentation.dependencies import (  # noqa: E402
     get_photo_review,
     get_photo_storage,
+)
+from tests.unit.fake_ledgers import (  # noqa: E402
+    InMemoryExposureLedger,
+    InMemorySuppressionLedger,
 )
 from tests.unit.fake_photo_storage import InMemoryPhotoStorage  # noqa: E402
 
@@ -86,8 +95,38 @@ def photo_review():
     return PassThroughPhotoReview()
 
 
+@pytest.fixture
+def exposure_ledger():
+    """The exposure ledger every API test runs against.
+
+    Overridden on `client` regardless of whether a test asks for it, so **no
+    test in this suite needs Redis running** — which is the acceptance criterion
+    and not a convenience, exactly as it is for the object store above.
+
+    A ledger is the worse of the two to get wrong. A missing object store fails
+    a request; a missing ledger answers *nothing was shown to anybody*, which is
+    a perfectly plausible answer, so a suite silently talking to no Redis at all
+    would look green and prove nothing.
+    """
+
+    return InMemoryExposureLedger(build_clock())
+
+
+@pytest.fixture
+def suppression_ledger():
+    """The suppression ledger every API test runs against. See above."""
+
+    return InMemorySuppressionLedger(build_clock())
+
+
 @pytest_asyncio.fixture
-async def client(session_factory, photo_storage, photo_review):
+async def client(
+    session_factory,
+    photo_storage,
+    photo_review,
+    exposure_ledger,
+    suppression_ledger,
+):
     get_settings.cache_clear()
     app = create_app()
 
@@ -102,6 +141,8 @@ async def client(session_factory, photo_storage, photo_review):
     app.dependency_overrides[get_db] = _get_db_override
     app.dependency_overrides[get_photo_storage] = lambda: photo_storage
     app.dependency_overrides[get_photo_review] = lambda: photo_review
+    app.dependency_overrides[get_exposure_ledger] = lambda: exposure_ledger
+    app.dependency_overrides[get_suppression_ledger] = lambda: suppression_ledger
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
