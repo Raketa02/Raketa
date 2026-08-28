@@ -13,11 +13,12 @@ The backend is the **single source of truth** for the API contract
 ([ADR-0006](../../../docs/adr/0006-backend-owns-api-contract.md)). Never hand-write a
 type that mirrors a backend response — regenerate instead, and commit the result.
 
-The contract is **two documents**, one per client — `backend/openapi.player.json` and
-`backend/openapi.player.json`. This app reads it; a second client would generate its
-own copy from the second. The two apps share no code by design (ADR-0005); regenerating
-both from one emitter is what keeps them from drifting. `make gen-api` at the repo root
-does both at once.
+The contract is **one document today** — `backend/openapi.player.json`, the player surface.
+The emitter is already written per surface (`backend/app/api/contract.py` writes one
+`openapi.<surface>.json` per entry in `SURFACES`), so a second client would read its own
+document rather than share this one. The apps share no code by design (ADR-0005);
+generating every client's types from one emitter is what keeps them from drifting.
+`make gen-api` at the repo root emits the contract and regenerates this client in one step.
 
 **Drift is checked in CI.** The player job regenerates with this app's own pinned
 `openapi-typescript` and diffs — and it runs on a **backend-only** pull request too,
