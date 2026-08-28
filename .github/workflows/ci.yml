@@ -24,6 +24,11 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       backend: ${{ steps.filter.outputs.backend }}
+      # Whether this pull request is a **ruleset release**: the synthetic diff's
+      # artifacts moved. Only those pull requests owe the recorded-corpus report
+      # block — a gate that asks every pull request for a corpus window is a
+      # gate everybody learns to paste nonsense into.
+      ruleset: ${{ steps.filter.outputs.ruleset }}
       player: ${{ steps.filter.outputs.player }}
       player_ready: ${{ steps.bootstrapped.outputs.player }}
     steps:
@@ -50,6 +55,15 @@ jobs:
               - 'docs/specs/matchmaking/judged-pairings.json'
               - 'docs/specs/matchmaking/the-judged-pairings.md'
               - 'docs/specs/matchmaking/ranking-weights.md'
+              # The synthetic ruleset diff, for the same reason one line up:
+              # without these a pull request that hand-edits a generated
+              # artifact runs no backend job, and the gate is dormant in
+              # precisely the case it exists to catch (docs/adr/0119).
+              - 'docs/specs/matchmaking/ruleset-diff/population.thin.json'
+              - 'docs/specs/matchmaking/ruleset-diff/answers.thin.json'
+            ruleset:
+              - 'docs/specs/matchmaking/ruleset-diff/**'
+              - 'backend/app/modules/matchmaking/infrastructure/rulesets/**'
             player:
               - 'frontend_player/**'
               - 'backend/openapi.player.json'
@@ -74,6 +88,29 @@ jobs:
               echo "::notice title=$dir not bootstrapped::Skipping $dir CI — no pnpm-lock.yaml yet. Run 'pnpm install' in $dir and commit the lockfile to enable it."
             fi
           done
+
+  # **The half of the ruleset gate that is a signature** (docs/adr/0119 §4). The
+  # recorded-corpus diff needs a database restore and cannot run here, so what
+  # is asserted is that the pull request wrote its corpus window and coverage
+  # down — presence, and never truth. Its own job, because it is the one check
+  # that reads the pull request rather than the tree, and it must not sit behind
+  # the backend job's Postgres service to say so.
+  release-report:
+    name: Ruleset release — the recorded-corpus report block
+    needs: changes
+    if: github.event_name == 'pull_request' && needs.changes.outputs.ruleset == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Written to a file rather than interpolated into a shell command: a pull
+      # request body is somebody else's text, and pasting it into a command line
+      # is how a description becomes a script.
+      - name: Read the pull request body
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: printf '%s' "$PR_BODY" > "$RUNNER_TEMP/pr-body.txt"
+      - name: The report block is present
+        run: bash .github/scripts/check-release-report-block.sh "$RUNNER_TEMP/pr-body.txt"
 
   guardrails:
     name: Guardrail hooks
@@ -145,6 +182,15 @@ jobs:
       - name: Judged pairings
         working-directory: ${{ github.workspace }}
         run: bash .github/scripts/check-judged-pairings.sh
+      # The ruleset diff: the synthetic corpus, regenerated under two different
+      # PYTHONHASHSEEDs and compared against the committed answers. **Shipping a
+      # ruleset is an offline diff and a deploy** (docs/adr/0119), so a ruleset
+      # edited without regenerating its diff fails here — and the report the
+      # step prints is the diff the pull request has to argue for. It doubles as
+      # a whole-pipeline determinism assertion, which is why the seed varies.
+      - name: Ruleset diff
+        working-directory: ${{ github.workspace }}
+        run: bash .github/scripts/check-ruleset-diff.sh
       # Last, and for the reason test-hooks.sh and test-contract-drift.sh exist:
       # the three purity gates above were all added to a tree that already
       # satisfied them, so none of them has ever been seen to fail. This drives
@@ -160,6 +206,13 @@ jobs:
       - name: Judged-pairings check still fires
         working-directory: ${{ github.workspace }}
         run: bash .github/scripts/test-judged-pairings.sh
+      # It perturbs an artifact, then the live ruleset's quality floor, and
+      # asserts the check goes red for each — including that a floor change is
+      # classified weight-only, which is what keeps its owner off shadow
+      # scoring for a change the recorded corpus can answer exactly.
+      - name: Ruleset-diff check still fires
+        working-directory: ${{ github.workspace }}
+        run: bash .github/scripts/test-ruleset-diff.sh
 
   player:
     name: Player app — lint, typecheck, test

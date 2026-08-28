@@ -6,7 +6,8 @@
 # ----------------------------------------------------------------------------
 .PHONY: help gen-api openapi check check-backend check-player \
         test-hooks test-drift gen-judged-pairings judged-pairings \
-        test-judged-pairings poetry-pin test-poetry-pin afk-install afk-build afk
+        test-judged-pairings gen-ruleset-diff ruleset-diff test-ruleset-diff \
+        poetry-pin test-poetry-pin afk-install afk-build afk
 
 help:              ## list targets
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS=":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -44,6 +45,33 @@ judged-pairings:   ## verify the judged tables reproduce and the floor still hol
 
 test-judged-pairings: ## verify the judged-pairings check still fires
 	bash .github/scripts/test-judged-pairings.sh
+
+# ----------------------------------------------------------------------------
+# The ruleset diff — the same generate-commit-diff idiom, third instance, and
+# this one is a release gate. docs/adr/0119: **shipping a ruleset is an offline
+# diff and a deploy**; canary cannot measure its own success and shadow buys a
+# slower version of an answer already on hand, so the diff is what is left and
+# it has to be a build gate rather than a habit.
+#
+# The synthetic corpus (the-replay-harness.md §2.1) is generated from a seed and
+# its answers are committed. Regenerating after a ruleset change prints the diff
+# — the classification, the verdict rates, the floor crossings — which is what
+# the pull request argues for. The other half of the gate is a signature and
+# says so: the recorded-corpus diff needs a restore and cannot run in CI.
+#
+# Cross-app because the harness is the backend's and the artifacts it writes are
+# the repository's specs, exactly as the judged pairings are.
+# ----------------------------------------------------------------------------
+gen-ruleset-diff:  ## re-run the synthetic corpus and rewrite its committed answers
+	cd backend && poetry run python -m scripts.ruleset_diff
+	@echo "Commit both artifacts along with whatever moved the numbers."
+	@echo "CI regenerates and diffs them (make test-ruleset-diff covers the check)."
+
+ruleset-diff:      ## verify the committed diff reproduces, under two hash seeds
+	bash .github/scripts/check-ruleset-diff.sh
+
+test-ruleset-diff: ## verify the ruleset-diff check still fires
+	bash .github/scripts/test-ruleset-diff.sh
 
 # ----------------------------------------------------------------------------
 # Gates. Each app's own `check` is the real one; these just fan out.

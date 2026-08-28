@@ -295,6 +295,9 @@ serving HTTP.
 | `GRID_STALENESS_INTERVAL_SECONDS` | How often it runs. Not how old a grid must be — that is domain. |
 | `INTEREST_EXPIRY_ENABLED` | Enables the hourly *Let's play* expiry sweep. |
 | `INTEREST_EXPIRY_INTERVAL_SECONDS` | How often the sweep runs. **Not `INTEREST_TTL`**, which is a ruleset row. |
+| `SCALE_PRESSURE_ENABLED` | Enables the scale-pressure probe — trigger 1's event-loop lag monitor, which also closes the fifteen-minute scoring window. |
+| `SCALE_PRESSURE_INTERVAL_SECONDS` | How often it ticks. The tick *is* the measurement: the probe records how much later than this the loop got back to it. **Not the trigger's 15-minute window and not its thresholds** — those are domain, in `matchmaking/domain/scale_triggers.py`. |
+| `GUNICORN_WORKERS` | How many workers this container runs. Read by `docker/api/startup.prod.sh` and by trigger 4's arithmetic, so the memory reading is about the fleet that exists. It selects no behaviour: it is a multiplier inside a log record. |
 | `RUN_MIGRATIONS_ON_STARTUP` | Optional production startup migration toggle. |
 
 PostgreSQL URLs using `postgresql://` or `postgres://` are normalized to the

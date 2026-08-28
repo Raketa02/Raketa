@@ -135,7 +135,7 @@ Rules to preserve:
   built from the composition root so it reaches the same bucket and event store a
   request does. There is no cron, no beat process and no lock: with N API processes a
   job runs N times per interval, so a job that cannot tolerate that needs a different
-  mechanism and its own ADR. Seven jobs today — the uncommitted-photo sweep, whose
+  mechanism and its own ADR. Eight jobs today — the uncommitted-photo sweep, whose
   **retention window is domain and whose cadence is configuration** (those two must not
   swap places), the candidate index's two loops below, the **exposure roll**, the
   first job here that takes no database session at all, the two **prompt loops**
@@ -147,7 +147,13 @@ Rules to preserve:
   so a lapsed yes lifts nobody whether or not it has been swept); what it buys is a
   table the size of what is live, and the one figure a lapsed row could ever be asked
   for — *yeses that expired having never lifted anybody*, `INTEREST_TTL`'s only day-one
-  falsifier, which cannot be computed once the rows are gone.
+  falsifier, which cannot be computed once the rows are gone. The eighth is the
+  **scale-pressure probe** — the only job whose work *is* its own scheduling: it measures
+  how late the loop woke it, and closes the fifteen-minute window
+  [`scale-posture.md`](../docs/specs/matchmaking/scale-posture.md) §4 states trigger 1
+  over. It reads this process's own counters and writes nothing anywhere, so it needs no
+  session and no store, and *N processes, N runs* is what the trigger wants — it is
+  stated **per worker**.
 - **The candidate index tails the log; the outbox delivers side effects**
   ([ADR-0110](../docs/adr/0110-the-index-tails-the-log-the-outbox-delivers-side-effects.md),
   [ADR-0111](../docs/adr/0111-the-index-holds-only-what-a-player-changes-about-themselves.md),
@@ -326,7 +332,8 @@ tests.
 - The embedded event-delivery worker polls the outbox on startup; toggle with
   `EVENT_DELIVERY_WORKER_ENABLED`. Scheduled jobs are toggled one at a time —
   `PHOTO_SWEEP_ENABLED`, `CANDIDATE_INDEX_ENABLED`, `EXPOSURE_ROLL_ENABLED`,
-  `INTENT_DRIFT_ENABLED`, `GRID_STALENESS_ENABLED`, `INTEREST_EXPIRY_ENABLED` — and **every
+  `INTENT_DRIFT_ENABLED`, `GRID_STALENESS_ENABLED`, `INTEREST_EXPIRY_ENABLED`,
+  `SCALE_PRESSURE_ENABLED` — and **every
   job's first run is at startup**, not after its first interval, so a six-hourly job is
   observable on a laptop.
 

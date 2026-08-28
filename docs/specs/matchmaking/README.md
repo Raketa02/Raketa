@@ -30,7 +30,9 @@ nineteen social tag ids that make two of the eight terms work at all, and
 [`the-group-objective.md`](the-group-objective.md), what the engine maximises when it seats four
 people rather than ranking one, and [`the-replay-harness.md`](the-replay-harness.md), what has to
 be true before a ruleset ships and why a past search is explainable forever without ever being
-reproducible.
+reproducible, and [`the-ruleset-gate.md`](the-ruleset-gate.md), what of that was built — the
+committed synthetic diff, the two scale-trigger instruments, and the fact that nothing anywhere
+reads what they emit.
 
 Charted by [The matchmaking engine: who sits down, and why](https://github.com/Raketa02/Raketa/issues/155);
 landed by [Land the matchmaking input documents in the repo](https://github.com/Raketa02/Raketa/issues/156)

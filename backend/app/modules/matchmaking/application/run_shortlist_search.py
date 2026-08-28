@@ -174,7 +174,7 @@ class RunShortlistSearch:
                 for_a_newcomer=for_a_newcomer,
             )
 
-        with self._work.timed(stages, "pipeline"):
+        with self._work.scoring(stages):
             try:
                 shortlist = run(context, self._engine)
             except InvariantViolated as broken:

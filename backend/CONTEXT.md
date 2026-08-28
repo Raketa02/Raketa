@@ -360,9 +360,12 @@ there; they are not repeated here.
   silently rewriting every past comparison, and CI regenerating under a different
   `PYTHONHASHSEED` asserts generation and pipeline together. It goes stale by
   **contradiction** — a named parameter leaving its band against the search record — never
-  by ceasing to resemble anything. _Avoid_: "realistic", "production-like", a fixture whose
-  correlations nobody measured, folding §20.1's scenarios or the six judged pairings into
-  it.
+  by ceasing to resemble anything. It lives in `scripts/ruleset_diff/`, its artifacts in
+  `docs/specs/matchmaking/ruleset-diff/`, and **only the thin density is a build gate** —
+  the dense one runs on demand and is measured in hours, where a gate that takes hours is a
+  gate somebody turns off ([`the-ruleset-gate.md`](../docs/specs/matchmaking/the-ruleset-gate.md)
+  §1.1). _Avoid_: "realistic", "production-like", a fixture whose correlations nobody
+  measured, folding §20.1's scenarios or the six judged pairings into it.
 
 - **Judged-pairings harness** — `scripts/judged_pairings/`, the package that reads
   `docs/specs/matchmaking/judged-pairings.json`, scores its six cases against the **live

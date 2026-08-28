@@ -13,12 +13,16 @@ it would look identical to a term that stood down.
 from __future__ import annotations
 
 import dataclasses
+import json
+from pathlib import Path
 from types import MappingProxyType, NoneType
 from typing import Union, get_args, get_origin
 
 import pytest
 from pydantic import BaseModel, TypeAdapter, ValidationError
 
+from app.api.contract import build_surface_spec
+from app.api.v1.player import player_api_router
 from app.bootstrap.matchmaking import verify_ruleset
 from app.engines.matchfit.core import EvidenceKind, SearchMode, Term
 from app.engines.matchfit.ruleset import Ruleset, validate_ruleset
@@ -303,4 +307,109 @@ def _reading(map_: dict[str, object]) -> Ruleset:
         tags=dataclasses.replace(
             LIVE_RULESET.tags, familiarity_reading_map=MappingProxyType(map_)
         ),
+    )
+
+
+# ---------------------------------------------------------------------------
+# The third roster: the union against the contract document
+#
+# `docs/adr/0106`'s friction only exists if it is felt. **Adding or reshaping a
+# variant is an API release**, and the release is three artifacts deep: the
+# enum, this union, and `openapi.player.json` — from which the client generates
+# an exhaustive renderer per variant (`.github/scripts/check-contract-drift.sh`).
+#
+# Nothing regenerates the contract document from the code, so without this the
+# middle link is missing: a reshaped variant leaves a stale document, the drift
+# check compares that stale document against types generated from it, and the
+# build stays green with the client drawing the old shape. This is the link, and
+# it is a roster test because a table titled *every constant* has already quietly
+# gained and lost a row on this map.
+# ---------------------------------------------------------------------------
+
+CONTRACT = (
+    Path(__file__).resolve().parents[2] / "openapi.player.json"
+)
+
+
+VARIANT_NAMES = frozenset(variant.__name__ for variant in EVIDENCE_VARIANTS)
+
+
+def _closure(schemas: dict, roots: frozenset[str]) -> dict[str, object]:
+    """The variants **and everything they are made of**, by following ``$ref``.
+
+    Scoped to the eight and their closure rather than to the whole document, so
+    an unrelated schema moving is not reported as evidence drift — and *not* to
+    the eight alone, because ``TagPair`` and ``SharedSlot`` are referenced
+    shapes: comparing only the top-level variants would call a reshaped
+    ``TagPair`` no change at all, which is exactly the silent failure this
+    exists to refuse.
+    """
+
+    wanted: dict[str, object] = {}
+    pending = list(roots)
+    while pending:
+        name = pending.pop()
+        if name in wanted or name not in schemas:
+            continue
+        schema = schemas[name]
+        wanted[name] = schema
+        pending.extend(_refs(schema))
+    return wanted
+
+
+def _refs(node: object) -> list[str]:
+    """Every ``#/components/schemas/X`` this subtree names."""
+
+    found: list[str] = []
+    if isinstance(node, dict):
+        for key, value in node.items():
+            if key == "$ref" and isinstance(value, str):
+                found.append(value.rsplit("/", 1)[-1])
+            else:
+                found.extend(_refs(value))
+    elif isinstance(node, list):
+        for item in node:
+            found.extend(_refs(item))
+    return found
+
+
+def _published_schemas() -> dict[str, object]:
+    """Every evidence variant as the **committed contract** publishes it."""
+
+    document = json.loads(CONTRACT.read_text())
+    return _closure(document["components"]["schemas"], VARIANT_NAMES)
+
+
+def _live_schemas() -> dict[str, object]:
+    """The same variants as the **code** would emit them, right now."""
+
+    built = build_surface_spec("Raketa Player API", player_api_router)
+    return _closure(built["components"]["schemas"], VARIANT_NAMES)
+
+
+def test_the_contract_document_publishes_every_kind_the_union_holds() -> None:
+    """One schema per variant, in the document the client reads.
+
+    A variant that reaches no route publishes no schema, and the client then
+    generates a union it can never be handed — which is the failure this asserts
+    against in the direction nobody watches.
+    """
+
+    published = _published_schemas()
+    assert VARIANT_NAMES <= set(published)
+    assert len(VARIANT_NAMES) == len(EvidenceKind)
+
+
+def test_a_reshaped_variant_leaves_the_contract_document_stale() -> None:
+    """The committed contract reproduces from the code, variant for variant.
+
+    This is the link that makes the drift check cover the evidence union.
+    Regenerating is ``make gen-api`` at the repository root, and committing the
+    document without the client types is what the drift check then refuses.
+    """
+
+    assert _published_schemas() == _live_schemas(), (
+        "openapi.player.json no longer matches the evidence union this code "
+        "emits. Run 'make gen-api' at the repository root and commit both the "
+        "contract and the regenerated client types."
     )

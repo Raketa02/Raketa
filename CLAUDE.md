@@ -65,6 +65,21 @@ the hooks themselves, `make gen-api`.
   integer leaves it, which is what `ranking-weights.md` §11 demanded and could not enforce
   against prose ([`.github/scripts/check-judged-pairings.sh`](.github/scripts/check-judged-pairings.sh),
   `make judged-pairings`, proven still to fire by `make test-judged-pairings`).
+- **A ruleset ships on an offline diff, and the diff is a build gate.**
+  [ADR-0119](docs/adr/0119-a-ruleset-ships-on-an-offline-diff-and-a-deploy.md) collapsed
+  the shadow/canary rollout ladder: what remains is a synthetic corpus whose population and
+  answers are **committed artifacts** under `docs/specs/matchmaking/ruleset-diff/`.
+  Regenerate with `make gen-ruleset-diff` and commit the result — CI regenerates and diffs,
+  so a ruleset edited without regenerating its diff fails the build, and **the report the
+  run prints is the diff the pull request has to argue for**. It regenerates under **two
+  different `PYTHONHASHSEED`s** and requires both to reproduce, which makes the artifact a
+  continuous whole-pipeline determinism assertion
+  ([ADR-0105](docs/adr/0105-determinism-is-a-set-iteration-problem-in-python.md) §4's
+  sanctioned exception, second instance). Half the gate is a signature and says so: the
+  recorded-corpus diff needs a database restore and cannot run in CI
+  ([`.github/scripts/check-ruleset-diff.sh`](.github/scripts/check-ruleset-diff.sh),
+  `make ruleset-diff`, proven still to fire by `make test-ruleset-diff`; the whole build is
+  written up in [`docs/specs/matchmaking/the-ruleset-gate.md`](docs/specs/matchmaking/the-ruleset-gate.md)).
 - **One session changes one app.** A `PreToolUse` hook blocks writes that cross an app
   boundary. A block is information — surface it, don't route around it. See
   [`docs/agents/ownership-boundaries.md`](docs/agents/ownership-boundaries.md).
@@ -110,8 +125,9 @@ guardrail doing its job.
 
 After changing either hook, run `make test-hooks` (65 assertions). A guardrail that
 silently stops matching is worse than none, because you stop watching for it. The same
-argument is why `make test-drift`, `make test-poetry-pin` and `make test-judged-pairings`
-exist: each drives its check against a deliberately broken tree and asserts it goes red.
+argument is why `make test-drift`, `make test-poetry-pin`, `make test-judged-pairings`
+and `make test-ruleset-diff` exist: each drives its check against a deliberately broken tree
+and asserts it goes red.
 
 ## Agent skills
 

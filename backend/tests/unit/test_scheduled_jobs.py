@@ -14,7 +14,7 @@ out of SQLite.
 from __future__ import annotations
 
 import logging
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytest
 from uuid import UUID
@@ -29,17 +29,29 @@ from app.bootstrap.jobs import (
     INTEREST_EXPIRY_JOB,
     INTENT_DRIFT_JOB,
     PHOTO_SWEEP_JOB,
+    SCALE_PRESSURE_JOB,
     build_scheduled_jobs,
 )
 from app.core.config import get_settings
 from app.kernel import Sport, instant
 from app.modules.matchmaking.domain.ledgers import week_of
+from app.modules.matchmaking.domain.scale_triggers import (
+    BYTES_PER_ROW,
+    SCORING_P99_TRIGGER_MS,
+    TRIGGER_WINDOW,
+    footprint_of,
+)
+from app.modules.matchmaking.infrastructure.candidate_snapshot_source import (
+    RefreshReport,
+)
+from app.modules.matchmaking.infrastructure.scale_instruments import ScoringMeter
 from app.modules.matchmaking.infrastructure.redis_ledgers import (
     RedisExposureLedger,
     busy_threshold_key,
 )
 from app.modules.player_profile.domain.photos import PhotoRef, TranscodedImage
 from app.shared.ids import new_uuid
+from tests.unit.fake_event_store import FrozenClock
 from tests.unit.fake_photo_storage import InMemoryPhotoStorage
 from tests.unit.fake_redis import BrokenRedis, FakeRedis
 
@@ -149,6 +161,7 @@ def _nothing_but(**overrides):
             "INTENT_DRIFT_ENABLED": False,
             "GRID_STALENESS_ENABLED": False,
             "INTEREST_EXPIRY_ENABLED": False,
+            "SCALE_PRESSURE_ENABLED": False,
             **overrides,
         }
     )
@@ -446,3 +459,181 @@ async def test_the_expiry_loop_runs_end_to_end_through_the_real_wiring(
         and record.never_lifted == 0
         for record in caplog.records
     )
+
+
+# ---------------------------------------------------------------------------
+# The two trigger instruments (scale-posture.md §4)
+#
+# What is asserted is that the record is emitted and carries the fields the
+# trigger is stated in. **No wall-clock, no p99 and no rate of this machine's
+# own** — those are metrics, and a metric asserted on a shared runner is a mute
+# waiting to happen.
+# ---------------------------------------------------------------------------
+
+
+def test_the_pressure_probe_is_registered_and_carries_the_configured_cadence():
+    """It needs no session, no store and no index — it reads this process's own
+    counters, which is why it is the one job a process with everything else
+    switched off still runs."""
+
+    settings = _nothing_but(SCALE_PRESSURE_ENABLED=True)
+    meter = ScoringMeter()
+
+    jobs = build_scheduled_jobs(
+        session_factory=None, settings=settings, meter=meter
+    )
+
+    assert [job.name for job in jobs] == [SCALE_PRESSURE_JOB]
+    assert jobs[0].interval_seconds == settings.SCALE_PRESSURE_INTERVAL_SECONDS
+
+
+def test_the_probe_is_not_registered_without_a_histogram_to_read():
+    """A process that scores nothing has no window to close, and there is
+    nothing here to fall back to."""
+
+    settings = _nothing_but(SCALE_PRESSURE_ENABLED=True)
+
+    assert build_scheduled_jobs(session_factory=None, settings=settings) == []
+
+
+async def test_a_window_that_closes_writes_one_record_naming_both_halves(caplog):
+    """One record per window, and it says which half of trigger 1 fired.
+
+    The window is closed by advancing the probe's own duration source rather
+    than by waiting fifteen minutes, so what this asserts is the record's shape
+    and the arithmetic behind it — never a timing this runner produced.
+    """
+
+    settings = _nothing_but(SCALE_PRESSURE_ENABLED=True)
+    elapsed = [0.0]
+    meter = ScoringMeter(monotonic=lambda: elapsed[0])
+    # The meter the job's probe reads is this one, so *fifteen minutes have
+    # passed* is one statement rather than two that could disagree.
+    job = jobs_module.build_scale_pressure_job(meter=meter, settings=settings)
+
+    meter.observe_scoring(2.0)
+    with caplog.at_level(logging.INFO, logger="app.bootstrap.jobs"):
+        await job.run_once()
+        assert not [r for r in caplog.records if r.msg == "scoring pressure window"]
+        elapsed[0] += TRIGGER_WINDOW.total_seconds()
+        await job.run_once()
+
+    written = [r for r in caplog.records if r.msg == "scoring pressure window"]
+    assert len(written) == 1
+    record = written[0]
+    assert record.levelno == logging.INFO
+    assert record.job == SCALE_PRESSURE_JOB
+    assert record.scoring_calls == 1
+    assert record.trigger_1_fires is False
+    assert record.trigger_1_p99_crossed is False
+    assert record.trigger_1_duty_cycle_crossed is False
+    assert hasattr(record, "loop_lag_p99_ms")
+
+
+async def test_a_window_that_fires_the_trigger_leaves_the_healthy_level(caplog):
+    """A boolean field on an INFO line is a thing nobody is paged by, which is
+    the same as not raising one."""
+
+    settings = _nothing_but(SCALE_PRESSURE_ENABLED=True)
+    elapsed = [0.0]
+    meter = ScoringMeter(monotonic=lambda: elapsed[0])
+    job = jobs_module.build_scale_pressure_job(meter=meter, settings=settings)
+
+    for _ in range(100):
+        meter.observe_scoring(SCORING_P99_TRIGGER_MS + 1.0)
+    with caplog.at_level(logging.INFO, logger="app.bootstrap.jobs"):
+        await job.run_once()
+        elapsed[0] += TRIGGER_WINDOW.total_seconds()
+        await job.run_once()
+
+    record = [r for r in caplog.records if r.msg == "scoring pressure window"][0]
+    assert record.levelno == logging.WARNING
+    assert record.trigger_1_fires is True
+    assert record.trigger_1_p99_crossed is True
+
+
+async def test_the_refresh_record_carries_trigger_fours_arithmetic(caplog):
+    """*Recomputed at every index load*, from the rows this worker holds, the
+    workers configured and the container's own limit — and it rides on the
+    refresh's own record, because a second line would have to say which load it
+    was about."""
+
+    settings = _nothing_but(CANDIDATE_INDEX_ENABLED=True, GUNICORN_WORKERS=4)
+    now = instant(datetime(2026, 8, 26, 18, 0, tzinfo=timezone.utc))
+
+    class OneRow:
+        async def refresh(self):
+            return RefreshReport(
+                snapshot_version=7,
+                partitions=1,
+                rows_held=1_000,
+                rows_decoded=1,
+                caught_up_at=now,
+            )
+
+    # **A gigabyte, stated by the test and not read off the runner.** The
+    # container this asserts about has to be one this suite chose: a CI machine
+    # has whatever cgroup it has, and an assertion about its memory is an
+    # assertion about the runner.
+    job = jobs_module.build_candidate_index_refresh_job(
+        source=OneRow(),
+        settings=settings,
+        clock=FrozenClock(now),
+        memory_limit_bytes=1_000_000_000,
+    )
+    with caplog.at_level(logging.INFO, logger="app.bootstrap.jobs"):
+        await job.run_once()
+
+    record = [r for r in caplog.records if r.msg == "candidate index refreshed"][0]
+    assert record.levelno == logging.INFO
+    assert record.workers == 4
+    assert record.container_memory_limit_bytes == 1_000_000_000
+    assert record.index_bytes_held == BYTES_PER_ROW * 1_000 * 4
+    # §4's own stated bound, reached through the job rather than restated.
+    assert record.trigger_4_players_at == 63_938
+    assert record.trigger_4_fires is False
+
+
+async def test_an_index_over_half_its_container_warns_and_still_refreshes(caplog):
+    """**Warning and never refusing.** An index that has outgrown half the
+    container is a capacity decision — `array`-packed columns at 43 bytes a row
+    — and a process that refused to load it would take the platform down to
+    avoid using memory it had been given."""
+
+    settings = _nothing_but(CANDIDATE_INDEX_ENABLED=True, GUNICORN_WORKERS=4)
+    now = instant(datetime(2026, 8, 26, 18, 0, tzinfo=timezone.utc))
+
+    class ACityTooBig:
+        async def refresh(self):
+            return RefreshReport(
+                snapshot_version=7,
+                partitions=1,
+                rows_held=200_000,
+                rows_decoded=1,
+                caught_up_at=now,
+            )
+
+    job = jobs_module.build_candidate_index_refresh_job(
+        source=ACityTooBig(),
+        settings=settings,
+        clock=FrozenClock(now),
+        memory_limit_bytes=1_000_000_000,
+    )
+    with caplog.at_level(logging.INFO, logger="app.bootstrap.jobs"):
+        await job.run_once()
+
+    record = [r for r in caplog.records if r.msg == "candidate index refreshed"][0]
+    assert record.trigger_4_fires is True
+    assert record.levelno == logging.WARNING
+    # The refresh itself is untouched: the index was published either way.
+    assert record.snapshot_version == 7
+
+
+def test_a_host_with_no_container_limit_reports_unknown_rather_than_roomy() -> None:
+    """Trigger 4 cannot fire where there is no limit to be half of, and
+    **unknown is not unlimited** — which is a laptop, and every run of this
+    suite."""
+
+    footprint = footprint_of(rows=10_000_000, workers=4, limit_bytes=None)
+    assert footprint.fraction_of_budget is None
+    assert not footprint.fires

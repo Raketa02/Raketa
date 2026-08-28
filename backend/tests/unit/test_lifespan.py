@@ -18,6 +18,7 @@ from fastapi import FastAPI
 import pytest
 
 import app.core.lifespan as lifespan_module
+from app.bootstrap.jobs import SCALE_PRESSURE_JOB
 from app.core.config import Settings
 
 
@@ -169,7 +170,12 @@ async def test_no_background_work_at_all_reaches_for_no_engine(monkeypatch):
     monkeypatch.setattr(lifespan_module, "dispose_engine", dispose_engine)
 
     async with lifespan_module.build_lifespan(settings)(app):
-        assert app.state.scheduled_jobs == []
+        # The scoring histogram's probe is the one job left, and it is the same
+        # claim the redis assertion below makes: it reads this process's own
+        # counters, so it needs no session, no store and no engine. Everything
+        # that would have reached for a factory is gone.
+        assert [job.name for job in app.state.scheduled_jobs] == [SCALE_PRESSURE_JOB]
+        assert app.state.scoring_meter is not None
         # The index's own source is one of the things that must not have been
         # built: it takes a session factory, and building one is what this test
         # exists to prove did not happen.

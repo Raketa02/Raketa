@@ -160,7 +160,7 @@ class RunDeckDeal:
             exclusions = await self._exclusions(command, in_box, now)
             re_shows = await self._re_shows(command, in_box, now)
 
-        with self._work.timed(stages, "pipeline"):
+        with self._work.scoring(stages):
             try:
                 dealt = deal(
                     context,

@@ -28,6 +28,7 @@ port that would fix it is not built yet.
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -35,6 +36,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.bootstrap.composition import (
     build_candidate_index_tail,
     build_clock,
+    build_container_memory_limit,
     build_domain_event_store,
     build_event_publisher,
     build_exposure_ledger,
@@ -44,6 +46,7 @@ from app.bootstrap.composition import (
     build_player_profile_repository,
     build_prompt_ledger,
     build_roll_exposure,
+    build_scale_pressure_probe,
     build_search_store,
     build_unit_of_work,
 )
@@ -54,9 +57,11 @@ from app.modules.matchmaking.domain.index_staleness import (
     freshness_of,
     misses_refresh_target,
 )
+from app.modules.matchmaking.domain.scale_triggers import footprint_of
 from app.modules.matchmaking.infrastructure.candidate_snapshot_source import (
     DatabaseCandidateSource,
 )
+from app.modules.matchmaking.infrastructure.scale_instruments import ScoringMeter
 from app.modules.matchmaking.application.detect_intent_drift import (
     DetectIntentDrift,
 )
@@ -71,6 +76,12 @@ from app.modules.player_profile.application.sweep_uncommitted_photos import (
 )
 
 logger = logging.getLogger(__name__)
+
+#: *Nobody passed one*, which is not the same as ``None`` — and ``None`` is a
+#: real answer here, meaning **this host has no limit to be half of**. A sentinel
+#: rather than a boolean beside the value, because two fields that must agree are
+#: two fields that eventually do not.
+_UNREAD: Any = object()
 
 #: The sweep's name in the logs and on its asyncio task.
 PHOTO_SWEEP_JOB = "uncommitted-photo-sweep"
@@ -93,6 +104,12 @@ EXPOSURE_ROLL_JOB = "exposure-roll"
 INTENT_DRIFT_JOB = "intent-drift"
 GRID_STALENESS_JOB = "availability-staleness"
 
+#: Trigger 1's second instrument (``scale-posture.md`` §4). It is the **event
+#: loop lag monitor** — a job whose work is measuring how late the loop woke it
+#: — and the job that closes the fifteen-minute window the scoring histogram is
+#: read over. It writes one log record per window and nothing else.
+SCALE_PRESSURE_JOB = "scale-pressure"
+
 #: The interest ledger's expiry loop. **A yes lapses; it never quietly decays**
 #: (``docs/adr/0127``). It is the only job here that deletes anything, and the
 #: only one whose log line carries a falsifier rather than a throughput figure.
@@ -105,6 +122,7 @@ def build_scheduled_jobs(
     settings: Settings,
     candidate_source: DatabaseCandidateSource | None = None,
     redis_client: Redis | None = None,
+    meter: ScoringMeter | None = None,
 ) -> list[PeriodicJob]:
     """Every job this process should run, in the order they were registered.
 
@@ -121,6 +139,11 @@ def build_scheduled_jobs(
     holds one connection pool and the lifespan owns it. Unlike
     ``candidate_source`` its absence is **not** a legitimate state — the pool is
     opened unconditionally — so omitting it while the roll is enabled raises.
+
+    ``meter`` arrives like ``candidate_source`` and for the same reason: the
+    scoring histogram is **per worker**, so the process holds exactly one and
+    the lifespan is where that one is kept. Absent, the pressure probe is simply
+    not registered — a process nothing scores in has no window to close.
 
     ``session_factory`` is optional because **the exposure roll is the first job
     here that wants none** — its whole input and output are in the ephemeral
@@ -170,6 +193,13 @@ def build_scheduled_jobs(
                     session_factory=session_factory, settings=settings
                 )
             )
+    if settings.SCALE_PRESSURE_ENABLED and meter is not None:
+        # Skipped quietly with no meter, exactly as the index refresh is with no
+        # source: a process that scores nothing has no pressure to report, and
+        # there is nothing here to fall back to. The meter is built
+        # unconditionally by the lifespan, so this is a fact about a test's
+        # wiring rather than about a deployment.
+        jobs.append(build_scale_pressure_job(meter=meter, settings=settings))
     if settings.EXPOSURE_ROLL_ENABLED:
         if redis_client is None:
             # As loud as the session factory above, and for the same reason: the
@@ -218,6 +248,71 @@ def build_scheduled_jobs(
             )
         )
     return jobs
+
+
+def build_scale_pressure_job(
+    *,
+    meter: ScoringMeter,
+    settings: Settings,
+) -> PeriodicJob:
+    """Trigger 1, instrumented: the loop's own oversleep and the scoring window.
+
+    **Idempotent and safe beside itself with no lock** (``docs/adr/0092``) in the
+    only sense that matters for an instrument: it reads and reports this
+    process's own counters and writes nothing anywhere. *N processes, N runs* is
+    what the trigger wants — it is stated **per worker** in
+    ``scale-posture.md`` §4, because the answer to it is a per-worker change and
+    two workers each at 0.2 are not one worker at 0.4.
+
+    **The tick is the measurement.** A periodic job asks the loop to wake it in a
+    second and is woken in a second plus ε, and ε is time the loop could not get
+    back to it — the contention the trigger is about. So the work here *is* the
+    scheduling, and the job does nothing else on the ticks inside a window.
+
+    **One record per fifteen minutes, and it says which half fired.** At
+    ``WARNING`` when the trigger has fired, because a boolean field on an INFO
+    line is a thing nobody is paged by — which is the same as not raising one.
+
+    And the honest part, written where the record is emitted rather than only in
+    the spec: **there is nowhere to read this.** It is a structured log record
+    and this repository has no metrics stack, no dashboard and no alerting
+    behind it (``scale-posture.md`` §7's last row). That is the state the
+    instrument ships in, and it is still strictly better than a trigger somebody
+    has to remember to go and measure.
+    """
+
+    probe = build_scale_pressure_probe(meter=meter, settings=settings)
+
+    async def run() -> None:
+        reading = probe.tick()
+        if reading is None:
+            return
+        logger.log(
+            logging.WARNING if reading.fires else logging.INFO,
+            "scoring pressure window",
+            extra={
+                "job": SCALE_PRESSURE_JOB,
+                "window_seconds": round(reading.window_seconds, 3),
+                "scoring_calls": reading.samples,
+                "scoring_calls_sampled": reading.retained,
+                "scoring_p99_ms": round(reading.scoring_p99_ms, 3),
+                "duty_cycle": round(reading.duty_cycle, 4),
+                "loop_lag_p99_ms": round(reading.loop_lag_p99_ms, 3),
+                # Both halves, whichever fired. *The p99 crossed* is answered by
+                # the posture's rungs 1 and 2 and *the duty cycle crossed* by
+                # rung 4, so a record that only said `trigger_1` would send the
+                # reader to re-measure what the instrument already knew.
+                "trigger_1_p99_crossed": reading.p99_crossed,
+                "trigger_1_duty_cycle_crossed": reading.duty_cycle_crossed,
+                "trigger_1_fires": reading.fires,
+            },
+        )
+
+    return PeriodicJob(
+        name=SCALE_PRESSURE_JOB,
+        interval_seconds=settings.SCALE_PRESSURE_INTERVAL_SECONDS,
+        run=run,
+    )
 
 
 def build_interest_expiry_job(
@@ -450,6 +545,7 @@ def build_candidate_index_refresh_job(
     source: DatabaseCandidateSource,
     settings: Settings,
     clock: Clock | None = None,
+    memory_limit_bytes: int | None = _UNREAD,
 ) -> PeriodicJob:
     """Rebuild this worker's containers from what moved, every two seconds.
 
@@ -460,12 +556,45 @@ def build_candidate_index_refresh_job(
     the wire envelope (``docs/adr/0111``). What the ladder does not do here is
     decide anything: the refusal belongs where a search reads a container, and
     that caller does not exist yet.
+
+    **And a third reading, which is trigger 4** (``scale-posture.md`` §4): the
+    memory arithmetic, recomputed at every load from the rows held, the workers
+    configured and the container's own limit. It raises the level and changes
+    nothing — *warning and never refusing* — and it rides on this record rather
+    than on one of its own, because it is a fact about the index this tick just
+    published and a second line would have to say which load it was about.
+
+    **There is nowhere to read any of it.** These are structured log records with
+    no metrics stack behind them, which is the third of the three signals this
+    build ships unread and is stated here rather than papered over.
     """
 
     reading = clock or build_clock()
+    # Read **once**, at registration, and through the composition root — a
+    # container's memory limit does not change while the container runs, and
+    # re-reading a cgroup file every two seconds would be a syscall per tick to
+    # learn the same number. A caller may pass one instead, which is how a test
+    # states the container it is talking about rather than the runner's.
+    limit_bytes = (
+        build_container_memory_limit()
+        if memory_limit_bytes is _UNREAD
+        else memory_limit_bytes
+    )
 
     async def run() -> None:
         report = await source.refresh()
+        # **Trigger 4, recomputed at every index load** (`scale-posture.md` §4),
+        # from the rows this worker actually holds, the workers this container
+        # actually runs and the limit it actually has. It **warns and never
+        # refuses**: an index that has outgrown half its container is a capacity
+        # decision — `array`-packed columns at 43 bytes a row — and a process
+        # that refused to load its index over it would take the platform down to
+        # avoid using memory it had been given.
+        footprint = footprint_of(
+            rows=report.rows_held,
+            workers=settings.GUNICORN_WORKERS,
+            limit_bytes=limit_bytes,
+        )
         # The real lag a search would read, not the interval this loop is
         # configured at: what §17 alerts on is *how far behind the log the
         # containers are*, and a loop that reported its own cadence back would
@@ -476,7 +605,7 @@ def build_candidate_index_refresh_job(
             # A miss is an **alert**, so it leaves the level every healthy tick
             # writes at. A boolean field on an INFO line is a thing nobody is
             # paged by, which is the same as not raising one.
-            logging.WARNING if missed else logging.INFO,
+            logging.WARNING if missed or footprint.fires else logging.INFO,
             "candidate index refreshed",
             extra={
                 "job": CANDIDATE_INDEX_REFRESH_JOB,
@@ -489,6 +618,22 @@ def build_candidate_index_refresh_job(
                 # §18's rung, recorded rather than acted on. `index_stale` is
                 # this field being anything but FRESH.
                 "index_freshness": freshness_of(lag).value,
+                # Trigger 4. `None` where there is no limit to be half of — a
+                # laptop, or a host with no cgroup — because **unknown is not
+                # unlimited**, and reporting a comfortable fraction of a
+                # made-up limit would be the invented measurement this map
+                # refuses everywhere else.
+                "index_bytes_held": footprint.bytes_held,
+                "container_memory_limit_bytes": footprint.limit_bytes,
+                "workers": footprint.workers,
+                "memory_budget_fraction": (
+                    None
+                    if footprint.fraction_of_budget is None
+                    else round(footprint.fraction_of_budget, 4)
+                ),
+                "trigger_4_rows_at": footprint.rows_at_trigger,
+                "trigger_4_players_at": footprint.players_at_trigger,
+                "trigger_4_fires": footprint.fires,
             },
         )
 

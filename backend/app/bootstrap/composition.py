@@ -110,6 +110,11 @@ from app.modules.matchmaking.infrastructure.snapshot_horizon import (
     SnapshotHorizon,
 )
 from app.modules.matchmaking.infrastructure.rulesets import LIVE_RULESET
+from app.modules.matchmaking.infrastructure.scale_instruments import (
+    ScalePressureProbe,
+    ScoringMeter,
+    container_memory_limit_bytes,
+)
 from app.modules.matchmaking.infrastructure.player_card_source import (
     PlayerCardIdentities,
 )
@@ -671,6 +676,49 @@ def build_candidate_source(
     return DatabaseCandidateSource(
         session_factory=session_factory, empty_at=build_clock().now()
     )
+
+
+def build_scoring_meter() -> ScoringMeter:
+    """This worker's scoring histogram. **One per process**, like the index.
+
+    Trigger 1 is stated *on one worker over 15 min* (``scale-posture.md`` §4), so
+    a per-request meter would measure one request and a meter shared across
+    processes would measure a fleet — and neither is the number the trigger is
+    written about.
+    """
+
+    return ScoringMeter()
+
+
+def build_scale_pressure_probe(
+    *, meter: ScoringMeter, settings: Settings
+) -> ScalePressureProbe:
+    """The loop-lag monitor that closes this worker's scoring window.
+
+    Built here rather than in ``jobs.py`` for the reason every adapter is: the
+    job register says *what* meets *how often* and holds no wiring of its own.
+
+    The interval reaches the probe as well as the ``PeriodicJob``, and it has to
+    be the same number in both: the probe's reading is *how much later than the
+    interval the loop got back to it*, so a probe told one cadence and scheduled
+    on another would report the difference between two settings as contention.
+    """
+
+    return ScalePressureProbe(
+        meter, interval_seconds=settings.SCALE_PRESSURE_INTERVAL_SECONDS
+    )
+
+
+def build_container_memory_limit() -> int | None:
+    """This container's memory limit, or ``None`` where there is not one.
+
+    Read through the root rather than by a job reaching at ``/sys`` itself, and
+    read **once** per process by its caller: a limit does not change while a
+    container runs, and re-reading a cgroup file every two seconds is a syscall
+    per tick to learn the same number.
+    """
+
+    return container_memory_limit_bytes()
 
 
 def build_rebuild_candidate_index(

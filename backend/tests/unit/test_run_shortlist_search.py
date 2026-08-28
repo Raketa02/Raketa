@@ -334,6 +334,7 @@ def use_case(
     exposure: InMemoryExposureLedger | None = None,
     interest: "Yeses | None" = None,
     prompts=None,
+    meter: object = None,
 ) -> RunShortlistSearch:
     store = store or Store()
     work = work or Work(store=store)
@@ -360,6 +361,7 @@ def use_case(
             interest=interest or Yeses(),
             cards=cards or Cards(),
             absent_terms=frozenset({Term.RELIABILITY}),
+            meter=meter,
         ),
         ruleset=LIVE_RULESET,
         engine=engine or MatchFitV1(),
@@ -644,3 +646,47 @@ async def test_a_yes_reaches_the_record_as_an_age_and_a_printed_reason():
     assert recorded.liveness_signals["INTEREST_RECEIVED"] == 18
     assert recorded.inclusion_reason is InclusionReason.INTEREST_LIFT
     assert "INTEREST_RECEIVED" in recorded.liveness_reasons
+
+
+# ---------------------------------------------------------------------------
+# The scoring histogram (scale-posture.md §4)
+# ---------------------------------------------------------------------------
+
+
+class Histogram:
+    """Trigger 1's meter, as a list of the calls it was told about."""
+
+    def __init__(self) -> None:
+        self.calls: list[float] = []
+
+    def observe_scoring(self, milliseconds: float) -> None:
+        self.calls.append(milliseconds)
+
+
+async def test_a_search_reports_its_scoring_call_to_the_histogram() -> None:
+    """**One search, one sample**, and it is the span the search row already
+    records as ``pipeline``.
+
+    Asserted as a count and not as a duration: what this build owes is a trigger
+    that is *instrumented*, and asserting how long this runner took to score six
+    candidates would be asserting a metric — which goes red for the runner's
+    reasons and gets widened until it says nothing.
+    """
+
+    meter = Histogram()
+    use = use_case(rows=(build.row(1), build.row(2)), meter=meter)
+    answer = await use.execute(a_command())
+
+    assert len(meter.calls) == 1
+    # The instrument keeps the fraction the row rounds away, which is what stops
+    # a p99 over integers reading 0 ms for every shortlist on a fast worker.
+    assert meter.calls[0] >= answer.record.latency_ms_by_stage["pipeline"]
+
+
+async def test_a_search_without_a_histogram_is_an_ordinary_search() -> None:
+    """Every test in this file runs one, and a platform that could not answer
+    without an instrument would have the priority exactly backwards."""
+
+    answer = await use_case(rows=(build.row(1),)).execute(a_command())
+
+    assert answer.record.latency_ms_by_stage["pipeline"] >= 0

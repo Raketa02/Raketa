@@ -40,6 +40,7 @@ from fastapi import FastAPI
 from app.bootstrap.composition import (
     build_background_session_factory,
     build_candidate_source,
+    build_scoring_meter,
 )
 from app.bootstrap.events import build_event_delivery_worker
 from app.bootstrap.jobs import build_scheduled_jobs
@@ -86,6 +87,13 @@ def build_lifespan(settings: Settings):
         # container from it, so a second instance anywhere would be a second
         # index that nothing keeps in step with the first.
         app.state.candidate_source = None
+        # Likewise, and unconditionally — trigger 1 is stated *on one worker*
+        # (``scale-posture.md`` §4), so the histogram is this process's own and
+        # a second instance anywhere would be a second window that nothing
+        # closes. It is built whether or not the probe that reads it is
+        # registered: the searches are what fill it, and a search may not have
+        # to ask whether an instrument exists.
+        app.state.scoring_meter = build_scoring_meter()
         # Likewise — one connection pool, and this is where the one lives. It
         # is whatever `init_redis` above returned, unconditionally: the roll is
         # one reader of the ledgers and the Play surfaces are the rest, so this
@@ -123,6 +131,7 @@ def build_lifespan(settings: Settings):
             settings=settings,
             candidate_source=app.state.candidate_source,
             redis_client=app.state.redis,
+            meter=app.state.scoring_meter,
         )
         # Only the scheduled jobs, not the outbox drain beside them: this
         # attribute is what somebody reads to answer *which jobs is this process

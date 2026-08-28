@@ -77,6 +77,7 @@ from app.modules.matchmaking.domain.ledgers import ExposureLedger, SuppressionLe
 from app.modules.matchmaking.domain.passes import PassLedger
 from app.modules.matchmaking.domain.ports import AccountHoldQuery, AccountStatusQuery
 from app.modules.matchmaking.domain.prompts import PromptLedger
+from app.modules.matchmaking.domain.scale_triggers import ScoringInstrument
 from app.modules.player_profile.presentation.dependencies import (
     PlayerProfileRepositoryDep,
     PlayIntentDeclarationRepositoryDep,
@@ -146,6 +147,22 @@ def get_candidate_source(request: Request) -> CandidateSource:
 CandidateSourceDep = Annotated[CandidateSource, Depends(get_candidate_source)]
 
 
+def get_scoring_meter(request: Request) -> ScoringInstrument | None:
+    """This process's scoring histogram, or ``None`` where there is not one.
+
+    **Never a refusal.** An index a search cannot bind is a search that cannot
+    answer; an instrument it cannot report to is a window that stays empty, and
+    a platform that returned 503 because it could not measure itself would have
+    the priority exactly backwards.
+    """
+
+    meter: ScoringInstrument | None = getattr(request.app.state, "scoring_meter", None)
+    return meter
+
+
+ScoringMeterDep = Annotated[ScoringInstrument | None, Depends(get_scoring_meter)]
+
+
 def get_account_hold_query(db: DbSession) -> AccountHoldQuery:
     """Whether an account is under a live hold. **Declared, like every gate.**
 
@@ -188,6 +205,7 @@ def get_search_workbench(
     account_status: AccountStatusQueryDep,
     exposure: ExposureLedgerDep,
     interest: InterestLedgerDep,
+    meter: ScoringMeterDep,
 ) -> SearchWorkbench:
     """Everything every Play surface reads and writes, assembled per request.
 
@@ -228,6 +246,7 @@ def get_search_workbench(
             session=db, event_store=event_store, events=events
         ),
         absent_terms=build_absent_terms(player_scores),
+        meter=meter,
     )
 
 

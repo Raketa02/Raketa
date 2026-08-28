@@ -120,6 +120,16 @@ which amends ADR-0093's prose versions. In short:
 A trigger that requires somebody to go and measure fires late, which is the same disease as a
 claim with no trigger.
 
+> **Built by [#215](https://github.com/Raketa02/Raketa/issues/215).** The histogram wraps the
+> same span the search row already records as `pipeline` — one measurement, not two that could
+> disagree — and the oversleep monitor is the `scale-pressure` job, which writes one
+> `scoring pressure window` record per fifteen minutes per worker, at `WARNING` when either
+> half of trigger 1 has fired. Trigger 4's arithmetic rides on the index refresh's own record,
+> recomputed at every load from `GUNICORN_WORKERS` and the container's cgroup limit, warning
+> and never refusing; where there is no limit to read it says **unknown**, which is not
+> unlimited. All three are structured log records and **nothing reads them** —
+> [`the-ruleset-gate.md`](the-ruleset-gate.md) §2.
+
 **One thing that is not a trigger and belongs beside them: the garbage collector.** One
 automatic gen-2 collection over a live index cost **57.9 ms stop-the-world** — roughly thirty
 times the search it interrupted — and pushed an unrelated request's max to 65 ms.

@@ -354,6 +354,35 @@ class Settings(BaseSettings):
     INTEREST_EXPIRY_ENABLED: bool = True
     INTEREST_EXPIRY_INTERVAL_SECONDS: float = 60 * 60
 
+    # --- the two scale triggers (docs/adr/0092, scale-posture.md §4)
+    #
+    # **The instruments are configuration; the thresholds are not.** How often
+    # the loop-lag probe ticks and how many workers this container runs are
+    # facts about the deployment. *p99 above 20 ms*, *duty cycle above 0.25* and
+    # *half the container memory* are the numbers the escalation ladder is
+    # climbed on, and they live in `matchmaking/domain/scale_triggers.py` — an
+    # environment that could widen a trigger is an environment that decides when
+    # the platform is in trouble.
+    #
+    # Turning the probe off changes nothing a domain test could observe: no
+    # search is timed differently and no answer moves. What stops is the record,
+    # and *a trigger that requires somebody to go and measure fires late* is the
+    # reason the default is on.
+    #
+    # A second a tick, because the reading is the loop's own oversleep and a
+    # probe that slept a minute would report a minute's worth of contention as
+    # one sample. Fifteen minutes of ticks then close a window — the interval
+    # that §4 states the trigger over, which is `TRIGGER_WINDOW` and not a
+    # setting.
+    SCALE_PRESSURE_ENABLED: bool = True
+    SCALE_PRESSURE_INTERVAL_SECONDS: float = 1.0
+
+    #: How many workers this container runs, read from the variable
+    #: `docker/api/startup.prod.sh` already passes to gunicorn — so trigger 4's
+    #: arithmetic reads the fleet that exists rather than one somebody typed
+    #: twice. It selects no behaviour: it is a multiplier inside a log record.
+    GUNICORN_WORKERS: int = 1
+
     @field_validator("APP_ENV", mode="before")
     @classmethod
     def _known_environment(cls, v):

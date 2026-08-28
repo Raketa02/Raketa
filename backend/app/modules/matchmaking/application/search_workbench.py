@@ -61,6 +61,7 @@ from app.modules.matchmaking.domain.errors import (
 from app.modules.matchmaking.domain.geography import Point
 from app.modules.matchmaking.domain.interest import InterestLedger
 from app.modules.matchmaking.domain.relaxation import Rung, RungOffer
+from app.modules.matchmaking.domain.scale_triggers import ScoringInstrument
 from app.modules.matchmaking.domain.ledgers import ExposureLedger, week_of
 from app.modules.matchmaking.domain.ports import (
     AccountHoldQuery,
@@ -170,6 +171,12 @@ class AnsweredCandidate:
         )
 
 
+#: The stage every surface runs the engine inside, and the one trigger 1 is
+#: read over. Named once because two spellings of it would be a search row and
+#: an instrument measuring two different things under one word.
+PIPELINE_STAGE = "pipeline"
+
+
 @final
 class SearchWorkbench:
     """The reads, the writes and the two attachments every surface shares."""
@@ -195,6 +202,7 @@ class SearchWorkbench:
         interest: InterestLedger,
         cards: PlayerCardSource,
         absent_terms: frozenset[Term],
+        meter: ScoringInstrument | None = None,
     ) -> None:
         self._clock = clock
         self._ruleset = ruleset
@@ -214,6 +222,7 @@ class SearchWorkbench:
         self._interest = interest
         self._cards = cards
         self._absent_terms = absent_terms
+        self._meter = meter
 
     @property
     def clock(self) -> Clock:
@@ -230,6 +239,22 @@ class SearchWorkbench:
         """Time one stage into the map that becomes ``latency_ms_by_stage``."""
 
         return Timed(into, stage)
+
+    def scoring(self, into: dict[str, int]) -> "Timed":
+        """Time the **scoring call** — the stage trigger 1 is read over.
+
+        The same span ``latency_ms_by_stage["pipeline"]`` already records, and
+        deliberately so: ``scale-posture.md`` §4's *histogram around the scoring
+        call* and the search row's own operational half must be one measurement,
+        or the day they disagree there is no way to tell which of them is the
+        cost of a search.
+
+        Every surface calls this instead of ``timed(stages, "pipeline")``, so a
+        surface that is added later is instrumented by using the workbench —
+        which is the only thing that keeps a per-worker instrument complete.
+        """
+
+        return Timed(into, PIPELINE_STAGE, meter=self._meter)
 
     # -- the index, bound once ------------------------------------------------
 
@@ -758,9 +783,15 @@ class Timed:
     column means.
     """
 
-    def __init__(self, into: dict[str, int], stage: str) -> None:
+    def __init__(
+        self,
+        into: dict[str, int],
+        stage: str,
+        meter: ScoringInstrument | None = None,
+    ) -> None:
         self._into = into
         self._stage = stage
+        self._meter = meter
         self._started = 0.0
 
     def __enter__(self) -> "Timed":
@@ -769,4 +800,10 @@ class Timed:
 
     def __exit__(self, *_: object) -> None:
         elapsed = (time.monotonic() - self._started) * 1000.0
+        # **The row is rounded and the instrument is not.** A search row stores
+        # whole milliseconds, which is the resolution that column has always
+        # had; a p99 over integers would read 0 ms for every shortlist on a fast
+        # worker and put the trigger permanently to sleep.
         self._into[self._stage] = int(elapsed)
+        if self._meter is not None:
+            self._meter.observe_scoring(elapsed)
