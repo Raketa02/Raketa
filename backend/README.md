@@ -289,6 +289,12 @@ serving HTTP.
 | `REDIS_URL` | The ephemeral store, holding the exposure and suppression ledgers. Server-to-server; no scheme rule. |
 | `EXPOSURE_ROLL_ENABLED` | Enables the hourly exposure roll. |
 | `EXPOSURE_ROLL_INTERVAL_SECONDS` | How often the roll runs. Not either ledger's TTL — see *The ephemeral store*. |
+| `INTENT_DRIFT_ENABLED` | Enables the daily intent-drift prompt loop. |
+| `INTENT_DRIFT_INTERVAL_SECONDS` | How often it runs. Not any of its thresholds — those are domain. |
+| `GRID_STALENESS_ENABLED` | Enables the daily availability-staleness prompt loop. |
+| `GRID_STALENESS_INTERVAL_SECONDS` | How often it runs. Not how old a grid must be — that is domain. |
+| `INTEREST_EXPIRY_ENABLED` | Enables the hourly *Let's play* expiry sweep. |
+| `INTEREST_EXPIRY_INTERVAL_SECONDS` | How often the sweep runs. **Not `INTEREST_TTL`**, which is a ruleset row. |
 | `RUN_MIGRATIONS_ON_STARTUP` | Optional production startup migration toggle. |
 
 PostgreSQL URLs using `postgresql://` or `postgres://` are normalized to the
@@ -541,13 +547,24 @@ process and no second deployable.
   and dispatches to subscribed handlers. Its worker id is the lease its batches
   claim rows under.
 - **Scheduled jobs** (`PeriodicJob`) run because an interval elapsed.
-  `app/bootstrap/jobs.py` is the register, and four jobs are in it today: the
+  `app/bootstrap/jobs.py` is the register, and seven jobs are in it today: the
   **uncommitted-photo sweep**, which deletes every photo the object store has
   held for more than 24 hours that no committed profile currently names; the
-  candidate index's **tail reader** and **snapshot refresh**; and the
+  candidate index's **tail reader** and **snapshot refresh**; the
   **exposure roll**, which publishes one scalar per sport per week saying what
-  *shown more often than most* means. The roll is the only one that takes no
-  database session — its whole input and output are in Redis.
+  *shown more often than most* means; the two **prompt loops** — intent drift and
+  availability staleness — which write no value anywhere and each raise a
+  standing question instead; and the **interest expiry loop**, which removes every
+  *Let's play* whose twenty-one days have passed. The roll is the only one that
+  takes no database session — its whole input and output are in Redis.
+
+  The expiry loop is the only job here that deletes anything, and **correctness
+  does not depend on it running**: every read of the interest ledger is bounded by
+  `now`, so a lapsed yes lifts nobody and counts against nobody's cap whether or
+  not it has been swept. What the loop buys is a table the size of what is live,
+  and one figure that could not be bought later — *yeses that expired having never
+  lifted anybody*, `INTEREST_TTL`'s only day-one falsifier, which a lapsed row
+  leaves no trace to compute.
 
 **A job may only be registered if it is idempotent and safe to run beside
 itself.** With N API processes a job runs N times per interval, at unrelated

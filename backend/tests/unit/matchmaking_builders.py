@@ -1,6 +1,6 @@
 """A search, built in memory, so a test can vary one fact and nothing else.
 
-A ``SearchContext`` holds a searcher, a snapshot, four live gate sets and five
+A ``SearchContext`` holds a searcher, a snapshot, four live gate sets and six
 live term reads. Spelled out at every call site, the fact under test disappears
 into the scaffolding — and worse, a defaulted field somebody quietly changes
 moves every assertion at once. So the defaults live here and each test names its
@@ -159,6 +159,7 @@ def context(
     open_challenge_counts: Mapping[UUID, int] | None = None,
     player_scores: Mapping[UUID, PlayerScoreReading] | None = None,
     times_shown: Mapping[UUID, int] | None = None,
+    interest_days_ago: Mapping[UUID, int] | None = None,
     newcomer_appearances: Mapping[UUID, int] | None = None,
     busy_threshold: int | None = None,
     initiation: SearchInitiation = SearchInitiation.HUMAN,
@@ -195,6 +196,7 @@ def context(
             open_challenge_counts=open_challenge_counts or {},
             player_scores=player_scores or {},
             times_shown=times_shown or {},
+            interest_days_ago=interest_days_ago or {},
             newcomer_appearances=newcomer_appearances or {},
             busy_threshold=busy_threshold,
         ),

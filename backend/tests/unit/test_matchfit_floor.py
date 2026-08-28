@@ -93,7 +93,13 @@ def test_the_floor_takes_no_mode_no_sport_and_no_rung() -> None:
     """
 
     taken = set(signature(admits).parameters)
-    assert taken == {"modified", "ruleset", "absent", "newcomer"}
+    assert taken == {
+        "modified",
+        "ruleset",
+        "absent",
+        "newcomer",
+        "interest_received",
+    }
     assert not taken & {"mode", "sport", "rung", "searcher"}
     assert isinstance(FLOORS.quality_floor, int)
 
@@ -320,3 +326,71 @@ def test_the_newcomer_window_does_not_reach_the_floor() -> None:
         admits(sunk, LIVE_RULESET, DAY_ONE_ABSENT, newcomer=True).refusal
         is Refusal.BELOW_QUALITY_FLOOR
     )
+
+
+# ---------------------------------------------------------------------------
+# The one carve-out: a human's own *Let's play*
+# ---------------------------------------------------------------------------
+
+
+def test_an_interest_lift_admits_below_the_bar() -> None:
+    """*An interest lift is a human's own yes and outranks the engine's opinion*
+    (``docs/adr/0099`` as amended).
+
+    It is the **only** guaranteed inclusion left, and it is not the floor moving:
+    the bar is the same integer for everybody, and what clears it here is
+    somebody having already said yes to this exact searcher.
+    """
+
+    fit = score(searcher(), candidate(), LIVE_RULESET)
+    sunk = modified(fit, applied=FLOORS.quality_floor - fit.points - 5)
+    assert (
+        admits(sunk, LIVE_RULESET, DAY_ONE_ABSENT).refusal
+        is Refusal.BELOW_QUALITY_FLOOR
+    )
+
+    assert admits(
+        sunk, LIVE_RULESET, DAY_ONE_ABSENT, interest_received=True
+    ).admitted
+
+
+def test_an_interest_lift_does_not_reach_the_evidence_gate() -> None:
+    """**The two exemptions are disjoint**, and the split is the argument.
+
+    A yes says *I want to play this person*, which outranks the engine's opinion
+    of the pairing. It says nothing about whether the platform knows enough to
+    have an opinion — and admitting a candidate the engine cannot score would put
+    a Fit on the screen that is not comparable to the one beside it.
+    """
+
+    thin = scored_but_for(
+        Term.INTENT_ALIGNMENT,
+        Term.AVAILABILITY_OVERLAP,
+        Term.PLAYING_STYLE,
+        Term.SOCIAL_VIBE,
+    )
+    assert (
+        admits(
+            modified(thin), LIVE_RULESET, DAY_ONE_ABSENT, interest_received=True
+        ).refusal
+        is Refusal.TOO_LITTLE_EVIDENCE
+    )
+
+
+def test_an_interest_lift_moves_nobodys_number() -> None:
+    """It admits, and the Fit it admits is the Fit that was computed.
+
+    The `+14` is a Liveness offset that reorders; the admission is a separate
+    decision at stage 5. Neither touches the number on the card, which is what
+    lets *Why 78?* keep adding up for a candidate who is only there because
+    somebody said yes.
+    """
+
+    fit = score(searcher(), candidate(), LIVE_RULESET)
+    sunk = modified(fit, applied=FLOORS.quality_floor - fit.points - 5)
+
+    lifted = admits(sunk, LIVE_RULESET, DAY_ONE_ABSENT, interest_received=True)
+
+    assert lifted.admitted
+    assert sunk.points < FLOORS.quality_floor
+    assert lifted.fired == admits(sunk, LIVE_RULESET, DAY_ONE_ABSENT).fired

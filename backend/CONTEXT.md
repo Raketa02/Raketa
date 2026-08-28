@@ -509,6 +509,29 @@ there; they are not repeated here.
   `matchmaking/domain/ledgers.py`, because both decide what can still be asked. _Avoid_:
   "cache" alone for it — half of what a cache implies is *recomputable*, and neither ledger
   is.
+- **Interest ledger** — the module's own **durable** ledger of every live *Let's play*,
+  and the counterweight to the ephemeral store above: it is a table, not a Redis key,
+  because it is the one thing in this context a human would miss. Two shapes are
+  structural rather than remembered. It has **no method that answers *who has said yes to
+  me***: the lift's read (`days_ago_towards`) takes the candidate population it may answer
+  about, so an inbox is not a query the port can express
+  ([ADR-0109](../docs/adr/0109-a-read-back-names-what-it-withholds.md)). And every read is
+  **bounded by `now`**, so a lapsed yes is invisible whether or not the expiry loop has run
+  — *lapsed* and *never sent* are one answer at this seam. It does not fail soft: unlike
+  exposure and suppression it can **admit** somebody, so a lost read is a person the
+  product guaranteed a place and silently dropped. `INTEREST_TTL` and
+  `OUTSTANDING_INTEREST_CAP` are ruleset rows and only the sweep's cadence is
+  configuration. _Avoid_: a `state` or `expired_at` column — a yes is live or gone
+  ([ADR-0127](../docs/adr/0127-a-signal-expires-or-is-refused-never-quietly-decays.md)).
+- **Origin key** — the `(origin_search_id, origin_position)` pair on an interest row: which
+  search surfaced this person and where they sat in it. **Two columns, never a third
+  table** — the link is 1:1, and when `matches` lands the chain is
+  `match ← interest ← search`, still foreign keys. The position is read off the cited
+  search's own **returned** rows rather than sent by the client, so it is true by
+  construction; a citation that cannot be proved is **refused, never linked as null**,
+  because a silently dropped link is a denominator that lies. _Avoid_: making the column
+  nullable "for now" — the whole value of the key is that *interests per search* has no
+  missing rows.
 - **Fail-soft ledger** — how *exposure and suppression fail soft* stops being prose.
   `FailSoftExposureLedger` and `FailSoftSuppressionLedger` wrap any implementation and
   degrade every operation to the **empty answer**, and the composition root never hands out

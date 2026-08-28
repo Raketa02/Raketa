@@ -171,10 +171,11 @@ def liveness_facts_of(
 ) -> LivenessFacts:
     """What stage 6 reads: ten facts that move a position and never a number.
 
-    ``interest_days_ago`` is ``None`` on every search this build can run — the
-    interest ledger and its ``+14`` land with their own route — and the absence
-    is the honest spelling: nobody has said *Let's play* to anybody yet, so there
-    is no age to read.
+    ``interest_days_ago`` is the **age of the yes in days and never a boolean**,
+    and it is ``None`` for everybody who has not said *Let's play* to the
+    searcher. The lift the age produces is flat — ``docs/adr/0127`` refused the
+    taper — so the age is carried rather than priced: it crosses as evidence, is
+    recorded as the signal's raw input, and moves nobody by being large or small.
 
     ``answer_rate`` is ``None`` for the same reason one layer over: how well and
     how fast somebody answers a challenge is a fact about challenges, and nothing
@@ -183,7 +184,7 @@ def liveness_facts_of(
 
     counterpart = context.terms.counterparts.get(player_uuid)
     return LivenessFacts(
-        interest_days_ago=None,
+        interest_days_ago=context.terms.interest_days_ago.get(player_uuid),
         newcomer=is_new_at(row.profile_created_at, context.now),
         previously_accepted=_has(counterpart, PairwiseOutcome.ACCEPTED),
         previously_declined=_has(counterpart, PairwiseOutcome.DECLINED),

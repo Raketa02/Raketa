@@ -57,3 +57,40 @@ class RunShortlistSearchCommand:
     offered_by_search_id: UUID | None
     rung: Rung | None
     trace_id: str
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class ExpressInterestCommand:
+    """*Let's play.* One tap, costing nothing, that cites where it came from.
+
+    **``search_id`` is required and non-nullable.** It is the origin key, and an
+    interest citing a search that is unknown, that belongs to somebody else or
+    that never showed this person is **refused, never linked as null**
+    (``search-telemetry.md`` §4).
+
+    **The position is not here**, and that is the same rule the rest of this file
+    is written under: a client sends the ask and the backend reads the fact. The
+    position is looked up on the cited search's own returned rows, so the origin
+    key is true by construction rather than by a client being honest about where
+    it was scrolled to.
+    """
+
+    from_player_id: UUID
+    to_player_id: UUID
+    sport: Sport
+    search_id: UUID
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class ReadInterestCommand:
+    """*What have I got out, and who said yes back?*
+
+    One field, because there is exactly one person whose interest anybody may
+    read: their own. **Outgoing and mutuals only** — incoming-and-not-mutual
+    never crosses in any shape, and there is no field here that could ask for it
+    (``docs/adr/0109``).
+    """
+
+    player_id: UUID

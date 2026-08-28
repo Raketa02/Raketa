@@ -181,6 +181,17 @@ class LiveTermFacts:
     player_scores: Mapping[UUID, PlayerScoreReading]
     #: How often each candidate has been shown this week, in this sport.
     times_shown: Mapping[UUID, int]
+    #: Which of these candidates said *Let's play* to the searcher, and how many
+    #: days ago. **Only the ones who did are named**, so absence is *they said
+    #: nothing* rather than a zero — a zero here would be a yes sent today.
+    #:
+    #: It is the one read in this bag that can **admit** somebody: an interest
+    #: lift outranks the engine's opinion and may sit below the quality floor
+    #: with its reason printed (``docs/adr/0099`` as amended). The other two
+    #: lifts reorder. That is also why it is read from a durable row rather than
+    #: a ledger with a TTL — the two beside it may be lost, and losing this one
+    #: would silently take a person out of a list they were guaranteed.
+    interest_days_ago: Mapping[UUID, int]
     #: How often each candidate has been volunteered into a **newcomer's**
     #: shortlist this week, in this sport — ``NEWCOMER_ABSORPTION_CAP``'s tally.
     #:

@@ -26,6 +26,7 @@ from app.bootstrap.jobs import (
     CANDIDATE_INDEX_TAIL_JOB,
     EXPOSURE_ROLL_JOB,
     GRID_STALENESS_JOB,
+    INTEREST_EXPIRY_JOB,
     INTENT_DRIFT_JOB,
     PHOTO_SWEEP_JOB,
     build_scheduled_jobs,
@@ -147,6 +148,7 @@ def _nothing_but(**overrides):
             "EXPOSURE_ROLL_ENABLED": False,
             "INTENT_DRIFT_ENABLED": False,
             "GRID_STALENESS_ENABLED": False,
+            "INTEREST_EXPIRY_ENABLED": False,
             **overrides,
         }
     )
@@ -390,5 +392,57 @@ async def test_the_drift_loop_runs_end_to_end_through_the_real_wiring(
 
     assert any(
         record.message == "intent drift loop finished" and record.searches_read == 0
+        for record in caplog.records
+    )
+
+
+# ---------------------------------------------------------------------------
+# The interest expiry loop
+# ---------------------------------------------------------------------------
+
+
+def test_the_expiry_loop_is_registered_and_carries_the_configured_cadence():
+    """Hourly by default, and read from the settings — because ``INTEREST_TTL``
+    itself is emphatically **not** a setting, and only the cadence is."""
+
+    settings = _nothing_but(
+        INTEREST_EXPIRY_ENABLED=True, INTEREST_EXPIRY_INTERVAL_SECONDS=1800.0
+    )
+
+    jobs = build_scheduled_jobs(session_factory=UNUSED_SESSIONS, settings=settings)
+
+    assert [job.name for job in jobs] == [INTEREST_EXPIRY_JOB]
+    assert jobs[0].interval_seconds == 1800.0
+
+
+def test_the_expiry_loop_without_a_session_factory_refuses_to_be_registered():
+    """It reads the database, so it joins the loud branch rather than the quiet
+    one: an expiry that silently did not register looks exactly like one that is
+    off, and the symptom — a table that only grows — takes weeks to notice."""
+
+    settings = _nothing_but(INTEREST_EXPIRY_ENABLED=True)
+
+    with pytest.raises(ValueError, match="session factory"):
+        build_scheduled_jobs(session_factory=None, settings=settings)
+
+
+async def test_the_expiry_loop_runs_end_to_end_through_the_real_wiring(
+    session_factory, caplog
+):
+    """A quiet sweep is logged as a quiet sweep, and the log line carries the
+    falsifier rather than a throughput figure."""
+
+    settings = _nothing_but(INTEREST_EXPIRY_ENABLED=True)
+    (expiry,) = build_scheduled_jobs(
+        session_factory=session_factory, settings=settings
+    )
+
+    with caplog.at_level(logging.INFO):
+        await expiry.run_once()
+
+    assert any(
+        record.message == "interest expiry loop finished"
+        and record.removed == 0
+        and record.never_lifted == 0
         for record in caplog.records
     )

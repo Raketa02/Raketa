@@ -10,7 +10,7 @@ those six plus the shortlist's own terminal stage; the line-up and the deck reus
   2  GENERATE      sport ∧ box ∧ gates, over the partition
   3  FIT           eight terms, renormalised, evidence each   ── THE NUMBER
   4  MODIFY        three modifiers, ±10 stack, each prints
-  5  QUALITY FLOOR below it, not shown at all. minimum evidence beside it
+  5  QUALITY FLOOR below it, not shown — unless they said Let's play to you
   6  LIVENESS      reorders. never enters Fit. never crosses as a number
   7  TERMINAL      ranked by rank_key, capped, unpaginated
 ```
@@ -358,6 +358,13 @@ def score_all(
                     ruleset,
                     context.absent_terms,
                     newcomer=_is_new(candidate.row, context),
+                    # **The one lift that admits.** It is read here, at stage 5,
+                    # rather than at stage 6 where the other liveness facts are:
+                    # the floor is what it exempts from, and a candidate the
+                    # floor refused never reaches stage 6 at all.
+                    interest_received=_said_lets_play(
+                        candidate.player_uuid, context
+                    ),
                 ),
             )
         )
@@ -527,16 +534,27 @@ def _near_misses(
 def _inclusion_reason(row: Scored, context: SearchContext) -> InclusionReason | None:
     """Why this candidate is in the answer, when there is a reason to record.
 
-    **The store is open where the wire is closed.** Two of the three are
-    reachable today and neither of them *admits* anybody — they reorder, which is
-    exactly why only the third crosses the wire. The interest lift is the one
-    that admits, and it arrives with the interest ledger.
+    **The store is open where the wire is closed.** Three values are recorded and
+    one crosses, because only ``INTEREST_LIFT`` *admits* anybody — the other two
+    reorder, and a reorder is not a reason a searcher is owed.
 
-    ``NEWCOMER_WINDOW`` is recorded ahead of ``ZERO_EXPOSURE`` because a newcomer
-    who has also never been shown is being lifted for the more specific reason,
-    and the column holds one value.
+    The order of the three tests is the order of how much each one explains.
+    ``INTEREST_LIFT`` is first because it is the only one that can be why somebody
+    is on the screen **at all**: below the floor nothing else would have put them
+    there, and recording a newcomer's window over the top of it would lose the
+    fact that an *admission* is what happened. It is recorded whether or not the
+    lift was decisive, deliberately — whether the yes admitted somebody below the
+    floor is **derived** from this value against the stamped ruleset's floor
+    (``search-telemetry.md`` §5), and a column recording only the decisive cases
+    would have no denominator.
+
+    ``NEWCOMER_WINDOW`` then precedes ``ZERO_EXPOSURE`` because a newcomer who has
+    also never been shown is being lifted for the more specific reason, and the
+    column holds one value.
     """
 
+    if _said_lets_play(row.generated.player_uuid, context):
+        return InclusionReason.INTEREST_LIFT
     if _is_new(row.generated.row, context):
         return InclusionReason.NEWCOMER_WINDOW
     if context.terms.times_shown.get(row.generated.player_uuid, 0) == 0:
@@ -546,3 +564,16 @@ def _inclusion_reason(row: Scored, context: SearchContext) -> InclusionReason | 
 
 def _is_new(row: CandidateRow, context: SearchContext) -> bool:
     return is_new_at(row.profile_created_at, context.now)
+
+
+def _said_lets_play(player_uuid: UUID, context: SearchContext) -> bool:
+    """Whether this candidate has a **live** yes towards the searcher.
+
+    One reading of the ledger's answer, so the stage that admits and the column
+    that records why cannot come to two conclusions about one row. The map holds
+    ages and not booleans — the age is the lift's recorded input — and *nothing at
+    all* is the absence of a key rather than a zero, because a zero is a yes sent
+    today.
+    """
+
+    return player_uuid in context.terms.interest_days_ago

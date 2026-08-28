@@ -304,6 +304,51 @@ async def search(
     return await client.post("/api/v1/searches", json=body, headers=auth(token))
 
 
+async def express_interest(
+    client,
+    token: str,
+    *,
+    player_id: UUID,
+    search_id: str,
+    sport: Sport = SPORT,
+):
+    """One *Let's play* tap, with the origin key the route requires."""
+
+    return await client.post(
+        "/api/v1/interest",
+        json={
+            "sport": sport.value,
+            "player_id": str(player_id),
+            "search_id": str(search_id),
+        },
+        headers=auth(token),
+    )
+
+
+async def read_interest(client, token: str):
+    return await client.get("/api/v1/interest", headers=auth(token))
+
+
+async def a_yes(client, session_factory, candidate_source, *, sender, towards):
+    """Everything a yes needs: the sender searches, then says it.
+
+    Written once because three tests need a *Let's play* that already stands and
+    vary only what happens next — and because a yes with an origin key made up by
+    a test would be testing a route that does not exist.
+    """
+
+    found = await search(client, sender["token"])
+    assert found.status_code == 200, found.text
+    said = await express_interest(
+        client,
+        sender["token"],
+        player_id=towards,
+        search_id=found.json()["search"]["search_id"],
+    )
+    assert said.status_code in (200, 201), said.text
+    return said
+
+
 #: How long after the log's last event a search is taken to run. Comfortably
 #: inside the staleness ladder's first rung, so nothing here is testing the
 #: refusal by accident.

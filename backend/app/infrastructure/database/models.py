@@ -10,6 +10,7 @@ from app.modules.matchmaking.infrastructure.candidate_index_model import (
     CandidatePlayerFactsORM,
     CandidateRowORM,
 )
+from app.modules.matchmaking.infrastructure.interest_model import InterestORM
 from app.modules.matchmaking.infrastructure.search_model import (
     SearchCandidateORM,
     SearchORM,
@@ -22,6 +23,7 @@ __all__ = [
     "CandidateRowORM",
     "EventOutboxORM",
     "EventStoreORM",
+    "InterestORM",
     "RefreshTokenORM",
     "SearchCandidateORM",
     "SearchORM",

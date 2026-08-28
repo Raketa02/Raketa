@@ -1091,6 +1091,108 @@
           }
         }
       }
+    },
+    "/api/v1/interest": {
+      "get": {
+        "tags": [
+          "interest"
+        ],
+        "summary": "Your Let's play yeses",
+        "description": "**Outgoing and mutuals only.** There is no inbox: a yes nobody has answered stays silent, in both directions, which is what makes saying yes low-stakes. You are never told that somebody declined you, and you are never shown who said yes to you unless you said it back.\n\n**Every outgoing row carries its own `expires_at`**, so the screen can show what is still live without knowing the window.\n\n**`outstanding` carries the count and the cap for every sport**, before you are near either \u2014 a cap you cannot see is a refusal you cannot predict. Render these; never hardcode the number.",
+        "operationId": "read_interest_api_v1_interest_get",
+        "responses": {
+          "200": {
+            "description": "Your outgoing yeses, the ones that came back, and where each sport stands against its cap.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InterestListResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`gate_data_unavailable` \u2014 the block set could not be evaluated, so the list is refused rather than served unverified.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "interest"
+        ],
+        "summary": "Let's play",
+        "description": "One tap, costing nothing \u2014 and it actually does something: you rise in that player's next search for this sport, **with the reason printed**, so the lift is never mistaken for a match.\n\n**Nobody is notified.** A one-sided yes is silent and stays silent. It becomes visible only when the other person goes looking for a game.\n\n**`search_id` is required.** It says which search surfaced this person \u2014 a yes citing a search that is unknown, that is somebody else's or that never showed them is refused, never recorded with an empty link.\n\n**Idempotent.** Tapping again returns the same yes with the same expiry, at `200`.\n\n**It lapses.** Every yes carries its own `expires_at`; when it passes the yes is simply gone, and that person may be dealt to you again. **Never compute the expiry yourself** \u2014 the window is ruleset configuration and does not cross the wire as a number.",
+        "operationId": "express_interest_api_v1_interest_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExpressInterestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The yes stands, and it is new. It lapses at `expires_at`, which was dated the moment it was created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExpressedInterestResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "You had already said this. **Nothing was created and nothing was extended** \u2014 the yes comes back with the expiry it was born with.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExpressedInterestResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`origin_search_not_found` \u2014 no search of **yours** showed that player for that sport. The origin key is refused rather than linked as null.\n\n`outstanding_interest_cap_reached` \u2014 you already have the most yeses in flight this sport allows. **Nothing of yours is shortened to make room**; wait, or one of them comes back. The count and the cap are on `GET /api/v1/interest`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -1590,6 +1692,58 @@
         "title": "ErrorResponse",
         "type": "object"
       },
+      "ExpressInterestRequest": {
+        "properties": {
+          "sport": {
+            "$ref": "#/components/schemas/Sport",
+            "description": "Which sport this yes is for"
+          },
+          "player_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Player Id",
+            "description": "Who you would like to play"
+          },
+          "search_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Search Id",
+            "description": "The search this person was shown to you in. **Required** \u2014 a yes with no origin is refused rather than recorded with a null link."
+          }
+        },
+        "type": "object",
+        "required": [
+          "sport",
+          "player_id",
+          "search_id"
+        ],
+        "title": "ExpressInterestRequest",
+        "description": "One tap. **Three fields, and the third is not optional.**\n\n``search_id`` is the **origin key**: it says which search surfaced this\nperson, and an interest citing a search that is unknown, that belongs to\nsomebody else or that never showed them is **refused, never linked as null**.\nA silently dropped link is a denominator that lies, and *interests per search*\nis how this engine is judged.\n\n**The position is not sent.** The backend reads it off the cited search's own\nreturned rows, so the origin key is true by construction rather than by a\nclient being honest about where it was scrolled to."
+      },
+      "ExpressedInterestResponse": {
+        "properties": {
+          "interest": {
+            "$ref": "#/components/schemas/OutgoingInterestSchema"
+          },
+          "mutual": {
+            "type": "boolean",
+            "title": "Mutual",
+            "description": "`true` when they had already said *Let's play* to you for this sport. **A mutual is told to both sides.** A one-sided yes is told to nobody, ever."
+          },
+          "outstanding": {
+            "$ref": "#/components/schemas/OutstandingSchema",
+            "description": "Where this sport now stands against its cap, after this tap."
+          }
+        },
+        "type": "object",
+        "required": [
+          "interest",
+          "mutual",
+          "outstanding"
+        ],
+        "title": "ExpressedInterestResponse",
+        "description": "What one tap answers with.\n\n``mutual`` is the one thing this tells you about the other person, and you\nhave earned it by them having said yes to you first. Nobody is notified of a\none-sided yes, in either direction."
+      },
       "FactorResponse": {
         "properties": {
           "key": {
@@ -1757,6 +1911,42 @@
         ],
         "title": "IntentAlignmentEvidence",
         "description": "What kind of evening each of them is after.\n\n**Intent is a weight and not a gate.** A candidate who declared the opposite\nloses the term's entire weight and takes no further charge \u2014 the zero is the\nwhole answer, and a second dock would be a gate wearing a modifier's clothes.\nA candidate who has *not* declared has the term dropped and renormalised away\ninstead, so declaring against the searcher already costs strictly more than\nsaying nothing."
+      },
+      "InterestListResponse": {
+        "properties": {
+          "outgoing": {
+            "items": {
+              "$ref": "#/components/schemas/OutgoingInterestSchema"
+            },
+            "type": "array",
+            "title": "Outgoing",
+            "description": "Yeses you sent that are still in flight, newest first. Every one carries its own `expires_at`."
+          },
+          "mutual": {
+            "items": {
+              "$ref": "#/components/schemas/OutgoingInterestSchema"
+            },
+            "type": "array",
+            "title": "Mutual",
+            "description": "Yeses you sent that came back. **Both of you said it**, which is the only way somebody else's yes reaches you at all."
+          },
+          "outstanding": {
+            "items": {
+              "$ref": "#/components/schemas/OutstandingSchema"
+            },
+            "type": "array",
+            "title": "Outstanding",
+            "description": "One entry per sport, always \u2014 the count and the cap in force. Sent before you are near the limit, on purpose."
+          }
+        },
+        "type": "object",
+        "required": [
+          "outgoing",
+          "mutual",
+          "outstanding"
+        ],
+        "title": "InterestListResponse",
+        "description": "Your own *Let's play* screen. **Outgoing and mutuals only.**\n\nThere is no incoming list and there will not be one: a yes nobody has\nanswered stays silent, which is what makes saying yes low-stakes. The two\nlists are disjoint \u2014 a yes that came back is in `mutual` and not in\n`outgoing` \u2014 so a client renders both without deriving either."
       },
       "LevelDirection": {
         "type": "string",
@@ -1930,6 +2120,66 @@
         ],
         "title": "OptimisedFor",
         "description": "Whom this search was run for.\n\n``GROUP`` exists because a line-up with seats locked is no longer optimising\nfor the searcher, who may end up with a worse individual match than an empty\nbuilder would have given them \u2014 and the screen has to say so. A shortlist is\nalways ``SEARCHER``, and the field is on the envelope rather than implied by\nthe surface so that one renderer reads one fact."
+      },
+      "OutgoingInterestSchema": {
+        "properties": {
+          "player_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Player Id",
+            "description": "Who you said *Let's play* to"
+          },
+          "sport": {
+            "$ref": "#/components/schemas/Sport"
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "At",
+            "description": "When you said it"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At",
+            "description": "When this yes lapses. **Dated when it was created** and never extended by tapping again \u2014 a second tap changes nothing. On expiry the row is simply gone: there is no *expired* state and no archive."
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_id",
+          "sport",
+          "at",
+          "expires_at"
+        ],
+        "title": "OutgoingInterestSchema",
+        "description": "One yes you sent, and when it lapses.\n\n``expires_at`` is on the row from the moment it was created, and the client\n**renders** it rather than computing it: the TTL behind it is ruleset\nconfiguration and never crosses as a number."
+      },
+      "OutstandingSchema": {
+        "properties": {
+          "sport": {
+            "$ref": "#/components/schemas/Sport"
+          },
+          "outstanding": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Outstanding"
+          },
+          "cap": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Cap",
+            "description": "The most you may have in flight for this sport at once. **Read it from here, never hardcode it** \u2014 it is ruleset configuration and may move between releases."
+          }
+        },
+        "type": "object",
+        "required": [
+          "sport",
+          "outstanding",
+          "cap"
+        ],
+        "title": "OutstandingSchema",
+        "description": "How many yeses you have in flight for one sport, and the cap in force.\n\n**Outstanding means sent, unexpired and not yet mutual** \u2014 a mutual has been\nanswered and is no longer in flight. The pair travels together on every read,\nbecause a cap you cannot see is a refusal you cannot predict."
       },
       "PhotoResponse": {
         "properties": {

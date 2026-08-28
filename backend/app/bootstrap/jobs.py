@@ -38,12 +38,14 @@ from app.bootstrap.composition import (
     build_domain_event_store,
     build_event_publisher,
     build_exposure_ledger,
+    build_interest_ledger,
     build_photo_storage,
     build_play_intent_declaration_repository,
     build_player_profile_repository,
     build_prompt_ledger,
     build_roll_exposure,
     build_search_store,
+    build_unit_of_work,
 )
 from app.core.config import Settings
 from app.infrastructure.jobs import PeriodicJob
@@ -57,6 +59,9 @@ from app.modules.matchmaking.infrastructure.candidate_snapshot_source import (
 )
 from app.modules.matchmaking.application.detect_intent_drift import (
     DetectIntentDrift,
+)
+from app.modules.matchmaking.application.lapse_expired_interest import (
+    LapseExpiredInterest,
 )
 from app.modules.matchmaking.application.offer_to_refresh_stale_grids import (
     OfferToRefreshStaleGrids,
@@ -87,6 +92,11 @@ EXPOSURE_ROLL_JOB = "exposure-roll"
 #: and when. A job that read both would fail as a unit for either's reason.
 INTENT_DRIFT_JOB = "intent-drift"
 GRID_STALENESS_JOB = "availability-staleness"
+
+#: The interest ledger's expiry loop. **A yes lapses; it never quietly decays**
+#: (``docs/adr/0127``). It is the only job here that deletes anything, and the
+#: only one whose log line carries a falsifier rather than a throughput figure.
+INTEREST_EXPIRY_JOB = "interest-expiry"
 
 
 def build_scheduled_jobs(
@@ -120,7 +130,11 @@ def build_scheduled_jobs(
     """
 
     jobs: list[PeriodicJob] = []
-    if settings.PHOTO_SWEEP_ENABLED or settings.CANDIDATE_INDEX_ENABLED:
+    if (
+        settings.PHOTO_SWEEP_ENABLED
+        or settings.CANDIDATE_INDEX_ENABLED
+        or settings.INTEREST_EXPIRY_ENABLED
+    ):
         if session_factory is None:
             # Loudly, rather than by registering nothing. *The sweep is off* and
             # *the sweep was enabled and silently dropped* are two states with
@@ -150,6 +164,12 @@ def build_scheduled_jobs(
                         source=candidate_source, settings=settings
                     )
                 )
+        if settings.INTEREST_EXPIRY_ENABLED:
+            jobs.append(
+                build_interest_expiry_job(
+                    session_factory=session_factory, settings=settings
+                )
+            )
     if settings.EXPOSURE_ROLL_ENABLED:
         if redis_client is None:
             # As loud as the session factory above, and for the same reason: the
@@ -198,6 +218,54 @@ def build_scheduled_jobs(
             )
         )
     return jobs
+
+
+def build_interest_expiry_job(
+    *,
+    session_factory: async_sessionmaker[AsyncSession],
+    settings: Settings,
+) -> PeriodicJob:
+    """Remove every *Let's play* whose twenty-one days have passed.
+
+    **Idempotent and safe beside itself with no lock** (``docs/adr/0092``):
+    deleting a row twice deletes it once, and two processes racing over the same
+    batch leave exactly what one leaves. It is a keyed delete over an indexed
+    date, so *N processes, N runs* costs a wasted query and nothing else.
+
+    **Correctness does not depend on it running.** Every read of the ledger is
+    bounded by ``now``, so a lapsed yes lifts nobody and counts against nobody's
+    cap whether or not it has been swept. What the loop buys is a table the size
+    of what is live, and the falsifier below.
+
+    The log line is the point of the report: *yeses that expired having never
+    lifted anybody* is ``INTEREST_TTL``'s one falsifier that runs without
+    ``matches`` (``the-five-numbers.md`` §8), and a lapsed row leaves no trace, so
+    it is counted here or never.
+    """
+
+    clock = build_clock()
+
+    async def run() -> None:
+        async with session_factory() as session:
+            report = await LapseExpiredInterest(
+                clock=clock,
+                interest=build_interest_ledger(session),
+                unit_of_work=build_unit_of_work(session),
+            ).execute()
+        logger.info(
+            "interest expiry loop finished",
+            extra={
+                "job": INTEREST_EXPIRY_JOB,
+                "removed": report.removed,
+                "never_lifted": report.never_lifted,
+            },
+        )
+
+    return PeriodicJob(
+        name=INTEREST_EXPIRY_JOB,
+        interval_seconds=settings.INTEREST_EXPIRY_INTERVAL_SECONDS,
+        run=run,
+    )
 
 
 def build_intent_drift_job(

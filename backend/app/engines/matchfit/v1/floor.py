@@ -13,6 +13,15 @@ no sport and no rung, so there is no expression in this module for a bar that
 moved for whichever pool is thin. Each extra dimension would be another place the
 bar could be lowered quietly.
 
+**One carve-out, and it is a person rather than a pool.** An interest lift — a
+human's own *Let's play* — may admit a candidate who is below the bar, with its
+reason printed (``docs/adr/0099`` as amended). That is not the floor moving: the
+bar is the same integer for everybody, and what outranks it is somebody having
+already said yes to this exact searcher. The newcomer-window and zero-exposure
+lifts **reorder and never admit**, because exposure fairness is not a reason to
+show somebody a bad evening — and the difference is visible here, where one of
+the three is a parameter and the other two are not.
+
 **Minimum evidence is a gate, never a score adjustment.** The floor is a fixed
 bar over a score whose ingredients vary per comparison, so at the bar *giving
 nothing* would become a small advantage over giving something mediocre: a
@@ -124,6 +133,7 @@ def admits(
     ruleset: Ruleset,
     absent: frozenset[Term],
     newcomer: bool = False,
+    interest_received: bool = False,
 ) -> Admission:
     """Whether this candidate reaches a screen at all.
 
@@ -140,6 +150,15 @@ def admits(
     else** — the bar below is reached whatever it says, and there is no third
     branch it could take. That is the window's whole licence: it may excuse a
     person-specific gap, and it may not lower a bar for anybody.
+
+    ``interest_received`` is the mirror image, and the two exemptions are
+    deliberately **disjoint**: this one clears the bar and never the evidence
+    gate. A yes says *I want to play this person*, which outranks the engine's
+    opinion of the pairing; it says nothing about whether the platform knows
+    enough to have an opinion, and admitting a candidate the engine cannot score
+    would put a Fit on a screen that is not comparable to the one beside it. So a
+    lifted candidate on whom too little fired is still refused, with the reason
+    the telemetry can read.
     """
 
     live = live_terms(ruleset, absent)
@@ -149,6 +168,6 @@ def admits(
     thin = provisional.evidence_fraction < ruleset.floors.minimum_evidence_fraction
     if thin and not newcomer:
         return replace(provisional, refusal=Refusal.TOO_LITTLE_EVIDENCE)
-    if modified.points < ruleset.floors.quality_floor:
+    if modified.points < ruleset.floors.quality_floor and not interest_received:
         return replace(provisional, refusal=Refusal.BELOW_QUALITY_FLOOR)
     return provisional

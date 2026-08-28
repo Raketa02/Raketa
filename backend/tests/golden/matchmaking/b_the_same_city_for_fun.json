@@ -13,14 +13,14 @@
       "PHOTO": 0,
       "PROPOSALS_OPT_OUT": 0
     },
-    "n_cleared_floor": 4,
-    "n_generated": 5,
+    "n_cleared_floor": 5,
+    "n_generated": 6,
     "n_near_miss_recorded": 0,
-    "n_returned": 4,
-    "n_scored": 4
+    "n_returned": 5,
+    "n_scored": 5
   },
   "near_misses": [],
-  "players_in_range": 4,
+  "players_in_range": 5,
   "returned": [
     {
       "concerns": [
@@ -134,6 +134,135 @@
           "term": "PREDICTED_BALANCE",
           "value": 0.813334,
           "weight": 8.695652
+        }
+      ],
+      "withheld_reason": null
+    },
+    {
+      "concerns": [
+        "INTENT_ALIGNMENT",
+        "SOCIAL_VIBE"
+      ],
+      "degraded_terms": [
+        "RELIABILITY"
+      ],
+      "fit": 73.253326,
+      "inclusion_reason": "INTEREST_LIFT",
+      "liveness_reasons": [
+        {
+          "load": null,
+          "points": 14,
+          "signal": "INTEREST_RECEIVED"
+        },
+        {
+          "load": null,
+          "points": 4,
+          "signal": "OVERLAP_PROXIMITY"
+        }
+      ],
+      "missing_terms": [
+        "RELIABILITY"
+      ],
+      "modifiers": [],
+      "player_id": "00000006-0000-0000-0000-000000000000",
+      "rank_key": 97.253326,
+      "terms": [
+        {
+          "contribution": 17.582418,
+          "evidence": {
+            "kind": "availability_overlap",
+            "next_slot": {
+              "day": 3,
+              "part": "EVENING"
+            },
+            "shared_count": 4
+          },
+          "term": "AVAILABILITY_OVERLAP",
+          "value": 1.0,
+          "weight": 17.582418
+        },
+        {
+          "contribution": 15.472527,
+          "evidence": {
+            "clashing": [],
+            "complementary": [],
+            "kind": "social_vibe",
+            "matched": [
+              "HERE_TO_IMPROVE"
+            ]
+          },
+          "term": "SOCIAL_VIBE",
+          "value": 0.64,
+          "weight": 24.175824
+        },
+        {
+          "contribution": 12.087912,
+          "evidence": {
+            "delta": 0.12,
+            "direction": "ABOVE",
+            "kind": "level_fit",
+            "my_mu": 2.8,
+            "their_mu": 2.92
+          },
+          "term": "LEVEL_FIT",
+          "value": 1.0,
+          "weight": 12.087912
+        },
+        {
+          "contribution": 12.087912,
+          "evidence": {
+            "area_code": "A+05151-000013",
+            "kind": "distance",
+            "km": 0,
+            "outside_their_radius": false
+          },
+          "term": "DISTANCE",
+          "value": 1.0,
+          "weight": 12.087912
+        },
+        {
+          "contribution": 7.156044,
+          "evidence": {
+            "clashing": [
+              {
+                "a": "PLAYS_TO_WIN",
+                "b": "HERE_TO_IMPROVE"
+              }
+            ],
+            "complementary": [],
+            "kind": "playing_style",
+            "matched": [
+              "PLAYS_TO_WIN"
+            ]
+          },
+          "term": "PLAYING_STYLE",
+          "value": 0.592,
+          "weight": 12.087912
+        },
+        {
+          "contribution": 5.384615,
+          "evidence": {
+            "aligned": false,
+            "kind": "intent_alignment",
+            "my_mode": "FOR_FUN",
+            "their_intent": "COMPETITIVE"
+          },
+          "term": "INTENT_ALIGNMENT",
+          "value": 0.35,
+          "weight": 15.384615
+        },
+        {
+          "contribution": 3.481898,
+          "evidence": {
+            "confidence": 60,
+            "kind": "predicted_balance",
+            "my_sigma": 0.34,
+            "pct": 67,
+            "their_sigma": 0.34
+          },
+          "term": "PREDICTED_BALANCE",
+          "value": 0.528088,
+          "weight": 6.593407
         }
       ],
       "withheld_reason": null

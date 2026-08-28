@@ -54,7 +54,7 @@ from app.modules.matchmaking.domain.index_staleness import (
     STALENESS_REFUSAL_AFTER,
 )
 from app.modules.matchmaking.domain.relaxation import Rung
-from app.modules.matchmaking.domain.searches import SearchRecord
+from app.modules.matchmaking.domain.searches import InclusionReason, SearchRecord
 from app.modules.matchmaking.infrastructure.absent_providers import (
     NoHoldsExist,
     NoMatchHistoryExists,
@@ -161,6 +161,35 @@ class NobodyIsHidden:
         self, candidate_ids: Collection[UUID]
     ) -> frozenset[UUID]:
         return frozenset()
+
+
+@dataclass
+class Yeses:
+    """Who has said *Let's play* to the searcher, and how long ago.
+
+    Only the read the search path makes is implemented, and it records the
+    population it was asked about: the whole safety property of that method is
+    that it is **bounded by the candidate set**, so a test can assert the search
+    never asked about anybody outside the box.
+    """
+
+    days_ago: dict[UUID, int] = field(default_factory=dict)
+    asked_about: list[tuple[UUID, ...]] = field(default_factory=list)
+
+    async def days_ago_towards(
+        self,
+        *,
+        player_id: UUID,
+        sport,
+        senders: Collection[UUID],
+        now: datetime,
+    ) -> dict[UUID, int]:
+        self.asked_about.append(tuple(senders))
+        return {
+            sender: age
+            for sender, age in self.days_ago.items()
+            if sender in set(senders)
+        }
 
 
 @dataclass
@@ -302,6 +331,7 @@ def use_case(
     engine=None,
     caught_up_at: datetime = NOW,
     exposure: InMemoryExposureLedger | None = None,
+    interest: "Yeses | None" = None,
     prompts=None,
 ) -> RunShortlistSearch:
     store = store or Store()
@@ -326,6 +356,7 @@ def use_case(
         player_scores=NoPlayerScoresExist(),
         at_stake=NoResultUpdateRuleExists(),
         exposure=exposure or InMemoryExposureLedger(FixedClock()),
+        interest=interest or Yeses(),
         cards=cards or Cards(),
         prompts=prompts or InMemoryPromptLedger(FixedClock()),
         absent_terms=frozenset({Term.RELIABILITY}),
@@ -565,3 +596,46 @@ async def test_the_record_carries_both_stamps_and_the_snapshot_version():
     assert written.snapshot_version == 42
     assert written.trace_id == "trace-1"
     assert written.latency_ms_by_stage.keys() >= {"read_searcher", "pipeline"}
+
+
+async def test_the_lift_read_is_bounded_by_the_box_and_never_by_the_city():
+    """*Which of **these** people said yes*, and never *who said yes to me*.
+
+    The bound is what keeps the read from being an inbox: it is asked about the
+    population the bounding box already admitted, so it cannot answer a question
+    the searcher was not going to be shown the answer to anyway. Asserted here
+    rather than only at the port, because a caller that passed the whole city
+    would satisfy the signature and break the promise.
+    """
+
+    inside = build.row(1)
+    outside = build.row(2, latitude=52.20)
+    yeses = Yeses()
+
+    await use_case(rows=(inside, outside), interest=yeses).execute(a_command())
+
+    (asked,) = yeses.asked_about
+    assert UUID(inside.player_id) in asked
+    assert UUID(outside.player_id) not in asked
+
+
+async def test_a_yes_reaches_the_record_as_an_age_and_a_printed_reason():
+    """The ledger's answer travels into the context and out into the row.
+
+    Two columns land, and they say different things: ``liveness_signals`` keeps
+    the **age in days** because the ``+14`` is flat and a boolean would lose the
+    x-axis of *acceptance by age of yes*, and ``inclusion_reason`` keeps
+    ``INTEREST_LIFT`` because it is the only reason that can be why somebody is
+    on the screen at all.
+    """
+
+    row = build.row(1)
+    store = Store()
+    yeses = Yeses(days_ago={UUID(row.player_id): 18})
+
+    await use_case(rows=(row,), store=store, interest=yeses).execute(a_command())
+
+    recorded = store.written[0].returned[0]
+    assert recorded.liveness_signals["INTEREST_RECEIVED"] == 18
+    assert recorded.inclusion_reason is InclusionReason.INTEREST_LIFT
+    assert "INTEREST_RECEIVED" in recorded.liveness_reasons

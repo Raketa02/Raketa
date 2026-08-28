@@ -125,13 +125,19 @@ Rules to preserve:
   built from the composition root so it reaches the same bucket and event store a
   request does. There is no cron, no beat process and no lock: with N API processes a
   job runs N times per interval, so a job that cannot tolerate that needs a different
-  mechanism and its own ADR. Six jobs today — the uncommitted-photo sweep, whose
+  mechanism and its own ADR. Seven jobs today — the uncommitted-photo sweep, whose
   **retention window is domain and whose cadence is configuration** (those two must not
   swap places), the candidate index's two loops below, the **exposure roll**, the
-  first job here that takes no database session at all, and the two **prompt loops**
-  (intent drift, availability staleness), which write no value anywhere: each raises a
+  first job here that takes no database session at all, the two **prompt loops**
+  (intent drift, availability staleness), which write no value anywhere — each raises a
   question into the prompt ledger and stops, and every threshold behind them is domain
-  in `matchmaking/domain/prompts.py` while only the cadences are settings.
+  in `matchmaking/domain/prompts.py` while only the cadences are settings — and the
+  **interest expiry loop**, the only one that deletes anything. Turning that one off
+  changes no rule a domain test could observe (every ledger read is bounded by `now`,
+  so a lapsed yes lifts nobody whether or not it has been swept); what it buys is a
+  table the size of what is live, and the one figure a lapsed row could ever be asked
+  for — *yeses that expired having never lifted anybody*, `INTEREST_TTL`'s only day-one
+  falsifier, which cannot be computed once the rows are gone.
 - **The candidate index tails the log; the outbox delivers side effects**
   ([ADR-0110](../docs/adr/0110-the-index-tails-the-log-the-outbox-delivers-side-effects.md),
   [ADR-0111](../docs/adr/0111-the-index-holds-only-what-a-player-changes-about-themselves.md),
@@ -171,6 +177,24 @@ Rules to preserve:
   and the loops' cadences are settings. **No test needs Redis** — all three ports have an
   in-memory implementation that `tests/conftest.py` wires for the whole HTTP suite, and the
   Redis adapters are held to the same contract suite against an in-process stand-in.
+- **Interest is durable, in the module, and it is the only lift that admits**
+  ([ADR-0127](../docs/adr/0127-a-signal-expires-or-is-refused-never-quietly-decays.md),
+  [ADR-0109](../docs/adr/0109-a-read-back-names-what-it-withholds.md)). `POST/GET
+  /api/v1/interest` and the `interest` table are the first durable ledger in this module
+  — a row rather than a Redis key, because a person reached out to a person and that is
+  the one thing here a human would miss. Four rules shape it, and each is structural
+  rather than remembered. **There is no method on `InterestLedger` that answers *who has
+  said yes to me***: the lift's read takes the candidate population it may answer about,
+  so an inbox is not a query the port can express. **The origin key is two columns on the
+  row** — an interest citing a search that is unknown, foreign or that never showed that
+  person is refused, never linked as null, and the position is read off the record rather
+  than sent. **Nothing decays**: `INTEREST_TTL` is flat then absent, `expires_at` is dated
+  at birth, and at `OUTSTANDING_INTEREST_CAP` the write is **refused** rather than
+  shortening a yes already sent. And it is the **one** thing that may admit a candidate
+  below `QUALITY_FLOOR` — `admits(..., interest_received=True)` in `engines/matchfit/v1/
+  floor.py`, with the reason printed; the newcomer and zero-exposure lifts reorder and
+  never admit. All three numbers are ruleset rows and only the sweep's cadence is a
+  setting.
 - **A returned search is a recorded search**
   ([ADR-0104](../docs/adr/0104-the-search-record-is-the-answer-and-never-expires.md)).
   `POST /api/v1/searches` is the platform's first matchmaking route, and the rule that
@@ -267,7 +291,7 @@ tests.
 - The embedded event-delivery worker polls the outbox on startup; toggle with
   `EVENT_DELIVERY_WORKER_ENABLED`. Scheduled jobs are toggled one at a time —
   `PHOTO_SWEEP_ENABLED`, `CANDIDATE_INDEX_ENABLED`, `EXPOSURE_ROLL_ENABLED`,
-  `INTENT_DRIFT_ENABLED`, `GRID_STALENESS_ENABLED` — and **every
+  `INTENT_DRIFT_ENABLED`, `GRID_STALENESS_ENABLED`, `INTEREST_EXPIRY_ENABLED` — and **every
   job's first run is at startup**, not after its first interval, so a six-hourly job is
   observable on a laptop.
 

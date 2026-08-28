@@ -75,6 +75,7 @@ from app.modules.matchmaking.application.roll_exposure import RollExposure
 from app.modules.matchmaking.domain.cards import PlayerCardSource
 from app.modules.matchmaking.domain.ledgers import ExposureLedger, SuppressionLedger
 from app.modules.matchmaking.domain.prompts import PromptLedger
+from app.modules.matchmaking.domain.interest import InterestLedger
 from app.modules.matchmaking.domain.search_store import SearchStore
 from app.modules.matchmaking.infrastructure.fail_soft_ledgers import (
     FailSoftExposureLedger,
@@ -110,6 +111,9 @@ from app.modules.matchmaking.infrastructure.snapshot_horizon import (
 from app.modules.matchmaking.infrastructure.rulesets import LIVE_RULESET
 from app.modules.matchmaking.infrastructure.player_card_source import (
     PlayerCardIdentities,
+)
+from app.modules.matchmaking.infrastructure.sqlalchemy_interest_ledger import (
+    SqlAlchemyInterestLedger,
 )
 from app.modules.matchmaking.infrastructure.sqlalchemy_search_store import (
     SqlAlchemySearchStore,
@@ -452,6 +456,24 @@ def build_search_store(session: AsyncSession) -> SearchStore:
     a search that could return without the record.
     """
     return SqlAlchemySearchStore(session)
+
+
+def build_interest_ledger(session: AsyncSession) -> InterestLedger:
+    """The durable *Let's play* ledger, over the caller's own session.
+
+    Over the session and never over a connection of its own, for the reason the
+    search store is: a yes and the origin key that proves it belong to one
+    transaction, and the write is committed by the use case that made both
+    decisions.
+
+    **No fail-soft wrapper.** The two Redis ledgers are wrapped where they are
+    built, because losing a courtesy costs a search its spread; this one is the
+    only read that can *admit* somebody, so a lost answer is a person who was
+    guaranteed a place and silently did not get one. It fails the way the record
+    beside it does.
+    """
+
+    return SqlAlchemyInterestLedger(session)
 
 
 def build_player_card_source(

@@ -18,8 +18,8 @@ dropped:
 **A — competitive singles.** A held account **absent**; a reliability-floor
 breach printed and the candidate still **shown, low**; a candidate with an
 asymmetric view of the pairing **docked** rather than gated; an opposed intent
-reading **0.00**. *Deferred:* the *Let's play* lift, which needs the interest
-ledger (#210).
+reading **0.00**; and a candidate who said *Let's play* **lifted to the top with
+the reason printed and their Fit unchanged by the lift**.
 
 **B — the same city, for fun.** The weights **invert**; the opposed-intent
 candidate takes **no further modifier**, and their `PLAYS_TO_WIN` tag moves the
@@ -108,6 +108,17 @@ OPPOSED = 4
 #: The ordinary good pairing the others are read against.
 ORDINARY = 5
 
+#: Said *Let's play* to the searcher two days ago, and is a **worse** pairing
+#: than ``ORDINARY`` on the numbers. That gap is the whole point: the lift has to
+#: be visible in the order and invisible in the Fit, and a candidate who was
+#: already top would show neither.
+SAID_LETS_PLAY = 6
+
+#: How long ago the yes was sent. It crosses as evidence and is recorded as the
+#: signal's raw input; it is **not** priced — ``docs/adr/0127`` made the ``+14``
+#: flat, so a two-day-old yes and a twenty-day-old one lift by the same amount.
+DAYS_AGO = 2
+
 
 def _population():
     return (
@@ -116,6 +127,7 @@ def _population():
         build.row(ASYMMETRIC, radius_km=2, latitude=51.55, slots=A_WIDE_WEEK),
         build.row(OPPOSED, declared_intent="FOR_FUN", tags=("PLAYS_TO_WIN",)),
         build.row(ORDINARY),
+        build.row(SAID_LETS_PLAY, mu=build.SEARCHER_MU + 0.12),
     )
 
 
@@ -144,6 +156,14 @@ def _player_scores() -> Mapping[Any, PlayerScoreReading]:
     }
 
 
+#: The one live yes in the city. It is a fact about the **pair** and not about
+#: the evening, so it is the same in A and in B — the two walkthroughs are one
+#: city read under two weight vectors, and a yes that appeared in one of them
+#: would make them two cities.
+def _yeses():
+    return {build.player(SAID_LETS_PLAY): DAYS_AGO}
+
+
 def walkthrough_a():
     """Competitive singles, in a city with one held account in it."""
 
@@ -152,6 +172,7 @@ def walkthrough_a():
         facts=build.searcher(mode=SearchMode.COMPETITIVE),
         held=frozenset({str(build.player(HELD))}),
         player_scores=_player_scores(),
+        interest_days_ago=_yeses(),
         absent_terms=frozenset(),
     )
 
@@ -164,6 +185,7 @@ def walkthrough_b():
         facts=build.searcher(mode=SearchMode.FOR_FUN),
         held=frozenset({str(build.player(HELD))}),
         player_scores=_player_scores(),
+        interest_days_ago=_yeses(),
         absent_terms=frozenset(),
     )
 
@@ -454,3 +476,40 @@ def test_the_newcomer_lift_prints():
 def _find(rows: list[dict[str, Any]], number: int) -> dict[str, Any] | None:
     wanted = str(build.player(number))
     return next((row for row in rows if row["player_id"] == wanted), None)
+
+
+def test_a_lets_play_candidate_is_lifted_to_the_top_with_the_reason_printed():
+    """*Lifted to the top, with the reason printed — and the Fit unchanged.*
+
+    Three claims in one row, and they are three because separating them is what
+    the whole design turns on. The **order** moves, by ``+14`` on ``rank_key``.
+    The **number** does not, because Liveness never enters Fit — so *Why 78?*
+    still adds up for somebody who is only near the top because a human said yes.
+    And the **reason prints**, twice and differently: a liveness reason saying
+    *they moved for this*, and an inclusion reason saying *this is why they are
+    here at all*.
+    """
+
+    produced = produce("a_competitive_singles")
+    lifted = _find(produced["returned"], SAID_LETS_PLAY)
+    ordinary = _find(produced["returned"], ORDINARY)
+
+    assert lifted is not None and ordinary is not None
+    assert produced["returned"][0]["player_id"] == lifted["player_id"], (
+        "the yes did not reach the top of the list"
+    )
+    assert lifted["fit"] < ordinary["fit"], (
+        "the fixture stopped being the worse pairing, so the lift proves nothing"
+    )
+    assert lifted["rank_key"] > ordinary["rank_key"], (
+        "the order did not move, which is the only thing the lift may move"
+    )
+    printed = next(
+        reason
+        for reason in lifted["liveness_reasons"]
+        if reason["signal"] == "INTEREST_RECEIVED"
+    )
+    assert printed["points"] == 14, (
+        "the lift is flat at +14 for the whole life of the yes — no taper"
+    )
+    assert lifted["inclusion_reason"] == "INTEREST_LIFT"

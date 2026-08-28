@@ -59,6 +59,7 @@ from app.modules.matchmaking.domain.errors import (
     SportNotRated,
 )
 from app.modules.matchmaking.domain.geography import Point
+from app.modules.matchmaking.domain.interest import InterestLedger
 from app.modules.matchmaking.domain.ledgers import ExposureLedger, week_of
 from app.modules.matchmaking.domain.ports import (
     AccountHoldQuery,
@@ -236,6 +237,7 @@ class RunShortlistSearch:
         player_scores: PlayerScoreQuery,
         at_stake: AtStakeQuery,
         exposure: ExposureLedger,
+        interest: InterestLedger,
         cards: PlayerCardSource,
         prompts: PromptLedger,
         absent_terms: frozenset[Term],
@@ -256,6 +258,7 @@ class RunShortlistSearch:
         self._player_scores = player_scores
         self._at_stake = at_stake
         self._exposure = exposure
+        self._interest = interest
         self._cards = cards
         self._prompts = prompts
         self._absent_terms = absent_terms
@@ -638,11 +641,13 @@ class RunShortlistSearch:
     ) -> SearchContext:
         """Every live fact, resolved **once per search as a set**, never per row.
 
-        The population all six reads are about is the one the bounding box
-        admits, so the box is walked first to name it. Three of the reads fail
-        **closed** and three fail **soft**, and which is which is not this
+        The population every read is about is the one the bounding box admits, so
+        the box is walked first to name it. Three of the outward reads fail
+        **closed** and four fail **soft**, and which is which is not this
         method's opinion — it is the posture each port declared, applied by
-        ``read_demand``.
+        ``read_demand``. The two ledgers below are the module's own and carry
+        their posture in the wrapper around them; the interest ledger is the
+        module's own too and is **durable**, so it fails like the record does.
         """
 
         in_box = ids_in_box(
@@ -686,6 +691,19 @@ class RunShortlistSearch:
             lambda: self._player_scores.readings_for(in_box),
             stood_down=no_scores,
         )
+        # **A durable read, beside two lossy ones, and it does not fail soft.**
+        # The ledgers below may answer nothing and cost a search its spread; this
+        # one may not, because it is the only read that can *admit* somebody. A
+        # yes silently unread is a person the product guaranteed a place to and
+        # then dropped, which is the failure ``docs/adr/0127`` made the lift flat
+        # to keep visible. It lives in this module's own database, so if it
+        # cannot be read the record cannot be written either.
+        said_lets_play = await self._interest.days_ago_towards(
+            player_id=searcher.player_id,
+            sport=command.sport,
+            senders=in_box,
+            now=now,
+        )
         week = week_of(now)
         shown = await self._exposure.times_shown(
             sport=command.sport, week=week, player_ids=in_box
@@ -719,6 +737,7 @@ class RunShortlistSearch:
                 open_challenge_counts=loads,
                 player_scores=dict(scores),
                 times_shown=shown,
+                interest_days_ago=said_lets_play,
                 newcomer_appearances=absorption,
                 busy_threshold=busy,
             ),

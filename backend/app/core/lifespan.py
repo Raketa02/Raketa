@@ -97,6 +97,7 @@ def build_lifespan(settings: Settings):
             settings.EVENT_DELIVERY_WORKER_ENABLED
             or settings.PHOTO_SWEEP_ENABLED
             or settings.CANDIDATE_INDEX_ENABLED
+            or settings.INTEREST_EXPIRY_ENABLED
         ):
             session_factory = build_background_session_factory(get_engine())
 

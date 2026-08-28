@@ -1,4 +1,4 @@
-"""The matchmaking context's refusals — ten codes, distinct at four statuses.
+"""The matchmaking context's refusals — twelve codes, distinct at four statuses.
 
 **Distinct codes at the same status, because a client must be able to tell a
 transient outage from a refusal about *you*.* Three of these are 503 and mean
@@ -178,3 +178,50 @@ class AccountHeld(ForbiddenError):
     """
 
     code = "account_held"
+
+
+class OriginSearchNotFound(ConflictError):
+    """A *Let's play* citing a search that never showed that person.
+
+    **The origin key is refused, never linked as null** (``search-telemetry.md``
+    §4). A silently dropped link is a denominator that lies: *interests per
+    search* is how the whole engine is judged, and a row whose ``search_id`` is
+    null is a yes that came from nowhere and is counted against nothing.
+
+    Four ways this refuses, and they are one code on purpose — the search does
+    not exist, it belongs to somebody else, it was run for another sport, or it
+    never returned that person. Telling them apart would answer *does this
+    ``search_id`` exist* for a stranger's id, which is the question the
+    read-back's own 404 already declines to answer. It also swallows the
+    degenerate case: your own search never returns *you*, so naming yourself
+    lands here rather than needing a refusal of its own.
+
+    It mirrors ``rung_offer_not_found`` deliberately, because it is the same
+    shape of refusal — a client citing a row of this backend's that says
+    something else — and the two should not answer differently.
+    """
+
+    code = "origin_search_not_found"
+
+
+class OutstandingInterestCapReached(ConflictError):
+    """This player already has the most yeses in flight that the sport allows.
+
+    **The cap is hard, and it is shown before it bites** (``docs/adr/0127`` §3).
+    ``OUTSTANDING_INTEREST_CAP`` is per sport, and past it the write is refused
+    rather than silently making room: the *soft* cap — past it the oldest decays
+    faster — reaches **backwards** and shortens the life of yeses already sent,
+    under a rule the player was never told, because a twenty-first arrived.
+    Nothing of theirs is quietly shortened to make room.
+
+    The way out is waiting, or a mutual. There is deliberately no *release my
+    oldest* gesture: that is the soft cap with the player's hand on it, and
+    reinstating it needs an argument nobody has made.
+
+    **The refusal code is contract and the number behind it is not**
+    (``docs/adr/0106``). ``GET /api/v1/interest`` carries the outstanding count
+    and the cap in force so a client can draw the limit rather than hardcode it —
+    a cap the player cannot see is a refusal they cannot predict.
+    """
+
+    code = "outstanding_interest_cap_reached"

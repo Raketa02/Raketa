@@ -333,6 +333,27 @@ class Settings(BaseSettings):
     GRID_STALENESS_ENABLED: bool = True
     GRID_STALENESS_INTERVAL_SECONDS: float = 24 * 60 * 60
 
+    # --- the interest expiry loop (docs/adr/0092, docs/adr/0127)
+    #
+    # **Turning it off changes no rule a domain test could observe.** Every read
+    # of the interest ledger is bounded by `now`, so a yes stops lifting, stops
+    # counting against the cap and stops being listed the moment it expires,
+    # swept or not. What the loop buys is that the table stays the size of what
+    # is live, and the one figure a lapsed row could ever be asked for — *yeses
+    # that expired having never lifted anybody*, which is `INTEREST_TTL`'s only
+    # day-one falsifier and cannot be computed after the rows are gone.
+    #
+    # **`INTEREST_TTL` itself is emphatically not here.** How long a yes lives
+    # decides who is admitted below the quality floor, which is a rule a domain
+    # test observes; it is a ruleset row, and only this cadence is a setting.
+    #
+    # Hourly, which is far finer than a twenty-one-day window needs and is chosen
+    # against the other end: the sweep is a keyed delete over an indexed date, so
+    # a frequent tick is cheap and a rare one lets a deploy gap turn into a
+    # visibly growing table.
+    INTEREST_EXPIRY_ENABLED: bool = True
+    INTEREST_EXPIRY_INTERVAL_SECONDS: float = 60 * 60
+
     @field_validator("APP_ENV", mode="before")
     @classmethod
     def _known_environment(cls, v):

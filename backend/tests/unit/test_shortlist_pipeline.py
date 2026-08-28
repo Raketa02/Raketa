@@ -13,6 +13,8 @@ guarantee ran one stage later and left it green.*
 
 from __future__ import annotations
 
+from datetime import timedelta
+
 import pytest
 
 from app.engines.matchfit.v1 import MatchFitV1
@@ -235,3 +237,106 @@ def test_the_evidence_gate_excludes_nobody_on_todays_inputs():
     assert all(
         row.withheld_reason is None for row in ordinary.returned
     )
+
+
+# ---------------------------------------------------------------------------
+# The one lift that admits
+# ---------------------------------------------------------------------------
+
+
+def _a_poor_pairing(number: int, **overrides):
+    """Somebody the engine would not show: opposed intent, nothing shared, far off.
+
+    Built to sit below the quality floor rather than pinned to a number, so a
+    ruleset release that moves the floor moves this fixture with it. Every test
+    below states the state it is in first, so a pairing that stopped being poor
+    fails loudly instead of quietly testing nothing.
+    """
+
+    return build.row(
+        number,
+        mu=build.SEARCHER_MU + 0.25,
+        declared_intent="FOR_FUN",
+        tags=("HERE_FOR_THE_SOCIAL", "PLAYS_FOR_FUN"),
+        slots=(),
+        latitude=51.59,
+        **overrides,
+    )
+
+
+def test_only_an_interest_lift_admits_somebody_below_the_floor():
+    """*An interest lift is a human's own yes and outranks the engine's opinion.*
+
+    ``docs/adr/0099`` as amended: it is the **only** guaranteed inclusion left,
+    and it is the only reason that reaches the wire — because it is the only one
+    that can be why somebody is on the screen at all.
+    """
+
+    poor = _a_poor_pairing(1)
+    without = _run(build.context((poor, build.row(2))))
+    assert poor.player_id in _ids(without.near_misses), (
+        "the fixture stopped being a poor pairing, so nothing below is tested"
+    )
+
+    with_a_yes = _run(
+        build.context(
+            (poor, build.row(2)),
+            interest_days_ago={build.player(1): 18},
+        )
+    )
+
+    lifted = next(
+        row for row in with_a_yes.returned if row.player_id == poor.player_id
+    )
+    assert lifted.inclusion_reason.value == "INTEREST_LIFT"
+    assert "INTEREST_RECEIVED" in {
+        move.signal.value for move in lifted.liveness.reasons
+    }, "the lift admitted somebody and did not say why"
+
+
+def test_the_newcomer_and_zero_exposure_lifts_reorder_and_never_admit():
+    """**Exposure fairness is not a reason to show somebody a bad evening.**
+
+    Both fire on this candidate — they are new, and nobody has been shown them
+    all week — and neither puts them on a screen. The store records why they
+    would have been lifted; the floor still decides whether they are there.
+    """
+
+    newly = build.NOW - timedelta(days=1)
+    poor = _a_poor_pairing(1, profile_created_at=newly)
+
+    shortlist = _run(build.context((poor, build.row(2)), times_shown={}))
+
+    assert poor.player_id in _ids(shortlist.near_misses), (
+        "the newcomer or the zero-exposure lift admitted somebody below the floor"
+    )
+    assert poor.player_id not in _ids(shortlist.returned)
+
+
+def test_the_lift_does_not_move_the_number_it_admitted_on():
+    """The Fit on the card is the Fit the engine computed, lift or no lift.
+
+    ``rank_key`` is where the ``+14`` lands, and ``rank_key`` never crosses the
+    wire in any shape — which is what lets *Why 78?* keep adding up for a
+    candidate who is only there because somebody said yes.
+    """
+
+    poor = _a_poor_pairing(1)
+    withheld = next(
+        row
+        for row in _run(build.context((poor, build.row(2)))).near_misses
+        if row.player_id == poor.player_id
+    )
+
+    lifted = next(
+        row
+        for row in _run(
+            build.context(
+                (poor, build.row(2)), interest_days_ago={build.player(1): 2}
+            )
+        ).returned
+        if row.player_id == poor.player_id
+    )
+
+    assert lifted.modified.points == pytest.approx(withheld.modified.points)
+    assert lifted.rank_key > lifted.modified.points, "the +14 landed nowhere"

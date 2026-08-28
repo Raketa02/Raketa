@@ -42,6 +42,7 @@ from app.bootstrap.composition import (
     build_account_status_query,
     build_at_stake_query,
     build_exposure_ledger,
+    build_interest_ledger,
     build_match_fit_engine,
     build_match_history_query,
     build_player_card_source,
@@ -53,10 +54,13 @@ from app.bootstrap.composition import (
 )
 from app.infrastructure.redis_client import get_redis
 from app.modules.blocks.presentation.dependencies import BlockQueryDep
+from app.modules.matchmaking.application.express_interest import ExpressInterest
 from app.modules.matchmaking.application.read_back_search import ReadBackSearch
+from app.modules.matchmaking.application.read_interest import ReadInterest
 from app.modules.matchmaking.application.run_shortlist_search import RunShortlistSearch
 from app.modules.matchmaking.domain.candidate_snapshot import CandidateSource
 from app.modules.matchmaking.domain.errors import MatchmakingUnavailable
+from app.modules.matchmaking.domain.interest import InterestLedger
 from app.modules.matchmaking.domain.ledgers import ExposureLedger, SuppressionLedger
 from app.modules.matchmaking.domain.ports import AccountHoldQuery, AccountStatusQuery
 from app.modules.matchmaking.domain.prompts import PromptLedger
@@ -91,6 +95,22 @@ def get_prompt_ledger(store: EphemeralStoreDep) -> PromptLedger:
 
 
 PromptLedgerDep = Annotated[PromptLedger, Depends(get_prompt_ledger)]
+
+
+def get_interest_ledger(db: DbSession) -> InterestLedger:
+    """The durable *Let's play* ledger. **Per request, over the request's session.**
+
+    Declared beside the three ephemeral ledgers and built from a different place
+    on purpose: those are Redis and this is a table, and the seam is what makes
+    that swap invisible to a route. Three surfaces read it today — the search's
+    lift, the two interest routes — so all three wire to this line rather than
+    each deciding where a ledger comes from.
+    """
+
+    return build_interest_ledger(db)
+
+
+InterestLedgerDep = Annotated[InterestLedger, Depends(get_interest_ledger)]
 
 
 def get_candidate_source(request: Request) -> CandidateSource:
@@ -154,6 +174,7 @@ def get_run_shortlist_search(
     holds: AccountHoldQueryDep,
     account_status: AccountStatusQueryDep,
     exposure: ExposureLedgerDep,
+    interest: InterestLedgerDep,
     prompts: PromptLedgerDep,
 ) -> RunShortlistSearch:
     """The shortlist use case, assembled per request.
@@ -185,6 +206,7 @@ def get_run_shortlist_search(
         player_scores=player_scores,
         at_stake=build_at_stake_query(db),
         exposure=exposure,
+        interest=interest,
         cards=build_player_card_source(
             session=db, event_store=event_store, events=events
         ),
@@ -230,3 +252,52 @@ def get_read_back_search(
 
 
 ReadBackSearchDep = Annotated[ReadBackSearch, Depends(get_read_back_search)]
+
+
+def get_express_interest(
+    db: DbSession,
+    clock: ClockDep,
+    uow: UnitOfWorkDep,
+    interest: InterestLedgerDep,
+) -> ExpressInterest:
+    """*Let's play*, assembled per request.
+
+    It holds a ruleset and no engine: the two numbers it reads —
+    ``INTEREST_TTL`` and ``OUTSTANDING_INTEREST_CAP`` — are ruleset rows, and
+    nothing here scores anybody. It holds the **search store** because the origin
+    key is proved against a record rather than trusted from a request.
+    """
+
+    return ExpressInterest(
+        clock=clock,
+        ruleset=build_ruleset(),
+        interest=interest,
+        searches=build_search_store(db),
+        unit_of_work=uow,
+    )
+
+
+ExpressInterestDep = Annotated[ExpressInterest, Depends(get_express_interest)]
+
+
+def get_read_interest(
+    clock: ClockDep,
+    interest: InterestLedgerDep,
+    blocks: BlockQueryDep,
+) -> ReadInterest:
+    """The interest read, assembled per request. **Three collaborators.**
+
+    The block query is here because ``docs/adr/0095``'s rule reaches every
+    surface that shows one player to another, and a mutual row names a person. It
+    fails closed, which is why it is wired rather than optional.
+    """
+
+    return ReadInterest(
+        clock=clock,
+        ruleset=build_ruleset(),
+        interest=interest,
+        blocks=blocks,
+    )
+
+
+ReadInterestDep = Annotated[ReadInterest, Depends(get_read_interest)]

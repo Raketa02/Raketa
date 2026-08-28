@@ -480,6 +480,42 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/interest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Your Let's play yeses
+         * @description **Outgoing and mutuals only.** There is no inbox: a yes nobody has answered stays silent, in both directions, which is what makes saying yes low-stakes. You are never told that somebody declined you, and you are never shown who said yes to you unless you said it back.
+         *
+         *     **Every outgoing row carries its own `expires_at`**, so the screen can show what is still live without knowing the window.
+         *
+         *     **`outstanding` carries the count and the cap for every sport**, before you are near either — a cap you cannot see is a refusal you cannot predict. Render these; never hardcode the number.
+         */
+        get: operations["read_interest_api_v1_interest_get"];
+        put?: never;
+        /**
+         * Let's play
+         * @description One tap, costing nothing — and it actually does something: you rise in that player's next search for this sport, **with the reason printed**, so the lift is never mistaken for a match.
+         *
+         *     **Nobody is notified.** A one-sided yes is silent and stays silent. It becomes visible only when the other person goes looking for a game.
+         *
+         *     **`search_id` is required.** It says which search surfaced this person — a yes citing a search that is unknown, that is somebody else's or that never showed them is refused, never recorded with an empty link.
+         *
+         *     **Idempotent.** Tapping again returns the same yes with the same expiry, at `200`.
+         *
+         *     **It lapses.** Every yes carries its own `expires_at`; when it passes the yes is simply gone, and that person may be dealt to you again. **Never compute the expiry yourself** — the window is ruleset configuration and does not cross the wire as a number.
+         */
+        post: operations["express_interest_api_v1_interest_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -848,6 +884,54 @@ export interface components {
             } | null;
         };
         /**
+         * ExpressInterestRequest
+         * @description One tap. **Three fields, and the third is not optional.**
+         *
+         *     ``search_id`` is the **origin key**: it says which search surfaced this
+         *     person, and an interest citing a search that is unknown, that belongs to
+         *     somebody else or that never showed them is **refused, never linked as null**.
+         *     A silently dropped link is a denominator that lies, and *interests per search*
+         *     is how this engine is judged.
+         *
+         *     **The position is not sent.** The backend reads it off the cited search's own
+         *     returned rows, so the origin key is true by construction rather than by a
+         *     client being honest about where it was scrolled to.
+         */
+        ExpressInterestRequest: {
+            /** @description Which sport this yes is for */
+            sport: components["schemas"]["Sport"];
+            /**
+             * Player Id
+             * Format: uuid
+             * @description Who you would like to play
+             */
+            player_id: string;
+            /**
+             * Search Id
+             * Format: uuid
+             * @description The search this person was shown to you in. **Required** — a yes with no origin is refused rather than recorded with a null link.
+             */
+            search_id: string;
+        };
+        /**
+         * ExpressedInterestResponse
+         * @description What one tap answers with.
+         *
+         *     ``mutual`` is the one thing this tells you about the other person, and you
+         *     have earned it by them having said yes to you first. Nobody is notified of a
+         *     one-sided yes, in either direction.
+         */
+        ExpressedInterestResponse: {
+            interest: components["schemas"]["OutgoingInterestSchema"];
+            /**
+             * Mutual
+             * @description `true` when they had already said *Let's play* to you for this sport. **A mutual is told to both sides.** A one-sided yes is told to nobody, ever.
+             */
+            mutual: boolean;
+            /** @description Where this sport now stands against its cap, after this tap. */
+            outstanding: components["schemas"]["OutstandingSchema"];
+        };
+        /**
          * FactorResponse
          * @description One evidence category's row: what it says, and which way it pulled.
          *
@@ -976,6 +1060,32 @@ export interface components {
              * @description Whether the two read the same evening
              */
             aligned: boolean;
+        };
+        /**
+         * InterestListResponse
+         * @description Your own *Let's play* screen. **Outgoing and mutuals only.**
+         *
+         *     There is no incoming list and there will not be one: a yes nobody has
+         *     answered stays silent, which is what makes saying yes low-stakes. The two
+         *     lists are disjoint — a yes that came back is in `mutual` and not in
+         *     `outgoing` — so a client renders both without deriving either.
+         */
+        InterestListResponse: {
+            /**
+             * Outgoing
+             * @description Yeses you sent that are still in flight, newest first. Every one carries its own `expires_at`.
+             */
+            outgoing: components["schemas"]["OutgoingInterestSchema"][];
+            /**
+             * Mutual
+             * @description Yeses you sent that came back. **Both of you said it**, which is the only way somebody else's yes reaches you at all.
+             */
+            mutual: components["schemas"]["OutgoingInterestSchema"][];
+            /**
+             * Outstanding
+             * @description One entry per sport, always — the count and the cap in force. Sent before you are near the limit, on purpose.
+             */
+            outstanding: components["schemas"]["OutstandingSchema"][];
         };
         /**
          * LevelDirection
@@ -1111,6 +1221,53 @@ export interface components {
          * @enum {string}
          */
         OptimisedFor: "SEARCHER" | "GROUP";
+        /**
+         * OutgoingInterestSchema
+         * @description One yes you sent, and when it lapses.
+         *
+         *     ``expires_at`` is on the row from the moment it was created, and the client
+         *     **renders** it rather than computing it: the TTL behind it is ruleset
+         *     configuration and never crosses as a number.
+         */
+        OutgoingInterestSchema: {
+            /**
+             * Player Id
+             * Format: uuid
+             * @description Who you said *Let's play* to
+             */
+            player_id: string;
+            sport: components["schemas"]["Sport"];
+            /**
+             * At
+             * Format: date-time
+             * @description When you said it
+             */
+            at: string;
+            /**
+             * Expires At
+             * Format: date-time
+             * @description When this yes lapses. **Dated when it was created** and never extended by tapping again — a second tap changes nothing. On expiry the row is simply gone: there is no *expired* state and no archive.
+             */
+            expires_at: string;
+        };
+        /**
+         * OutstandingSchema
+         * @description How many yeses you have in flight for one sport, and the cap in force.
+         *
+         *     **Outstanding means sent, unexpired and not yet mutual** — a mutual has been
+         *     answered and is no longer in flight. The pair travels together on every read,
+         *     because a cap you cannot see is a refusal you cannot predict.
+         */
+        OutstandingSchema: {
+            sport: components["schemas"]["Sport"];
+            /** Outstanding */
+            outstanding: number;
+            /**
+             * Cap
+             * @description The most you may have in flight for this sport at once. **Read it from here, never hardcode it** — it is ruleset configuration and may move between releases.
+             */
+            cap: number;
+        };
         /**
          * PhotoResponse
          * @description One photo: the id a profile commit will carry, and a URL that reads it.
@@ -3042,6 +3199,90 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    read_interest_api_v1_interest_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Your outgoing yeses, the ones that came back, and where each sport stands against its cap. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InterestListResponse"];
+                };
+            };
+            /** @description `gate_data_unavailable` — the block set could not be evaluated, so the list is refused rather than served unverified. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    express_interest_api_v1_interest_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExpressInterestRequest"];
+            };
+        };
+        responses: {
+            /** @description You had already said this. **Nothing was created and nothing was extended** — the yes comes back with the expiry it was born with. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExpressedInterestResponse"];
+                };
+            };
+            /** @description The yes stands, and it is new. It lapses at `expires_at`, which was dated the moment it was created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExpressedInterestResponse"];
+                };
+            };
+            /**
+             * @description `origin_search_not_found` — no search of **yours** showed that player for that sport. The origin key is refused rather than linked as null.
+             *
+             *     `outstanding_interest_cap_reached` — you already have the most yeses in flight this sport allows. **Nothing of yours is shortened to make room**; wait, or one of them comes back. The count and the cap are on `GET /api/v1/interest`.
+             */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
