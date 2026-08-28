@@ -5,13 +5,21 @@ of contexts it does not build; this is the matcher's *own* store, and the
 distinction is the same one between a repository and a consumer-driven contract
 everywhere else in this backend.
 
-**Every method's signature is the authorization rule.**
-``search-telemetry.md`` §3: *the searcher may read their own ``RETURNED`` rows
-and nothing else.* Expressed as a filter inside an adapter, that rule is one
-``WHERE`` clause somebody can drop; expressed here, there is no method that could
-return a near-miss row and no argument that could omit the searcher. **Layer 3 is
-engine-internal and no route ever returns it, to anyone** — a player may ask why
-somebody was shown; nobody may ask who was withheld.
+**Every method a route reaches through carries the authorization rule in its
+signature.** ``search-telemetry.md`` §3: *the searcher may read their own
+``RETURNED`` rows and nothing else.* Expressed as a filter inside an adapter,
+that rule is one ``WHERE`` clause somebody can drop; expressed here, there is no
+method that could return a near-miss row and no argument that could omit the
+searcher. **Layer 3 is engine-internal and no route ever returns it, to anyone**
+— a player may ask why somebody was shown; nobody may ask who was withheld.
+
+**``modes_since`` is the one exception, and it is fenced by its return type
+rather than by its arguments.** It answers about every searcher, because the
+drift loop is about every searcher; what keeps that safe is that it can only
+answer :class:`SearchModeReading` — four columns, no candidate rows, no near
+misses, nothing a response could carry. A method that took a ``searcher_id`` it
+did not need would be authorization theatre; a method that could return a record
+would be the hole. It has no route and it never gets one.
 """
 
 from __future__ import annotations

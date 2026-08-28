@@ -122,6 +122,15 @@ def ladder_for(
     one offer — so *which slot* has to be decided by something, and *the one that
     helps most* is the only criterion that is about the player rather than about
     the grid's layout.
+
+    **A radius rung is offered on a count of zero and a times rung is not, and
+    the asymmetry is deliberate.** A radius rung is *the player's ask, widened*;
+    it exists whenever the slider has room, its count is printed on the button,
+    and *widening to 20 km would still find nobody* is the honest empty state
+    said in a number rather than a rung withheld. A times rung has no such
+    existence: the engine picks the cell, so an unhelpful one is the engine
+    inventing an evening for somebody — and a player who ticks a Saturday they
+    are not truly free in produces a ghost, which is worse than a decline.
     """
 
     rungs: list[Widened] = []

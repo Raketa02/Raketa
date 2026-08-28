@@ -339,7 +339,7 @@ class SuppressionLedger(Protocol):
 #: How each ledger fails. **All soft, and stated where the ports live.**
 #:
 #: Not a row in ``ports.py``'s ``FAIL_POSTURE`` — see the note beside that table.
-#: These two are the matchmaking module's **own** ports, not demands it makes of
+#: These three are the matchmaking module's **own** ports, not demands it makes of
 #: a context it does not write, and #203 settled that a port's posture belongs
 #: where the port is declared rather than restated per consumer.
 #:

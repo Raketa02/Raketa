@@ -15,6 +15,17 @@ row, the returned rows in full, and the best ``NEAR_MISS_RECORDED`` that did not
 clear. *A player may ask why somebody was shown; nobody may ask who was
 withheld* — so layer 3 is engine-internal and no route returns it, to anyone.
 
+**The empty-result rate is a guardrail metric and never a target, and it is
+reported only paired with the return rate** (``docs/adr/0099`` §7 — Kohavi's and
+Spotify's vocabulary, used deliberately so the position stops reading as
+idiosyncratic). Both halves are computable from these rows and neither is
+computed here: there is no metrics surface in this backend, and inventing one
+would be inventing the reporting rule too. What the rule binds is whoever builds
+that surface — ``n_returned == 0`` over searches run is **not** a number that may
+be shown, alerted on or optimised alone, and any change to ``QUALITY_FLOOR``
+lands as an ADR for which the empty-result rate is never sufficient grounds on
+its own.
+
 **Two columns are recorded and read by nothing, deliberately.**
 ``their_slot_count`` and ``days_away`` had their consumers struck by
 ``docs/adr/0120``, and ``liveness_signals`` stores the **raw inputs** and never

@@ -35,7 +35,7 @@ from app.application.ports import UnitOfWork
 from app.engines.matchfit.core import SearchMode, Term
 from app.engines.matchfit.ruleset import Ruleset
 from app.engines.matchfit.scoring import MatchFit
-from app.kernel import Clock, Instant, InvariantViolated, Sport
+from app.kernel import Clock, Instant, InvariantViolated, Sport, invariant
 from app.modules.blocks.domain.ports import BlockQuery
 from app.modules.matchmaking.application.commands import RunShortlistSearchCommand
 from app.modules.matchmaking.application.outward_reads import (
@@ -84,9 +84,9 @@ from app.modules.matchmaking.domain.prompts import (
     RaisedPrompt,
 )
 from app.modules.matchmaking.domain.relaxation import (
-    RelaxationAsk,
     Rung,
     RungOffer,
+    radius_ladder,
 )
 from app.modules.matchmaking.domain.search_store import SearchStore
 from app.modules.matchmaking.domain.searches import (
@@ -333,7 +333,14 @@ class RunShortlistSearch:
             ),
             searcher_grid=searcher.grid.codes,
             searcher_slot_count=len(searcher.grid),
-            radius_clamp_bit=False if ladder is None else ladder.radius_clamped,
+            # **Set on every search, and not only where the offers were
+            # computed.** The bit's job is to count the searchers already at the
+            # slider's ceiling, and a searcher at 50 km who got twenty results
+            # is one of them — recording ``false`` for them because nobody
+            # needed a rung would undercount the exact population the column
+            # exists to find. It costs no re-run: the ladder's arithmetic is
+            # pure, and only the *counts* on it are expensive.
+            radius_clamp_bit=radius_ladder(searcher.radius_km).clamped,
             rung_offers=None if ladder is None else ladder.offers,
             offered_by_search_id=asked.offered_by_search_id,
             rung_taken=asked.rung_taken,
@@ -411,14 +418,21 @@ class RunShortlistSearch:
         offer = await self._cited_offer(
             command, command.offered_by_search_id, command.rung
         )
-        if offer.ask is RelaxationAsk.RADIUS and offer.radius_km is not None:
+        # The ask decides which payload is there, and ``RungOffer``'s own
+        # invariant is what makes that a fact rather than a hope: a ``RADIUS``
+        # rung holds a radius and no slot, and a ``TIMES`` rung the reverse.
+        if offer.radius_km is not None:
             return _AskedFor(
                 grid=grid,
                 radius_km=offer.radius_km,
                 rung_taken=command.rung,
                 offered_by_search_id=command.offered_by_search_id,
             )
-        slot = AvailabilitySlot.from_code(str(offer.slot))
+        invariant(
+            offer.slot is not None,
+            f"a {offer.ask.value} rung offering neither a radius nor a slot",
+        )
+        slot = AvailabilitySlot.from_code(offer.slot or "")
         return _AskedFor(
             # A set, so a client that also sent the widened grid as its override
             # lands in exactly the same place as one that sent nothing.
@@ -465,6 +479,13 @@ class RunShortlistSearch:
         card that could not be assembled dropped one — because that is the list
         the player is looking at when they decide whether they want another
         option.
+
+        **What a rung is priced against is a different number, on purpose.** The
+        trigger asks *is this list short*, in rows shown; a rung asks *would
+        widening add anybody*, in people above the floor. Those are two
+        populations and comparing them would be the arithmetic error: a rung's
+        count is only ever set beside ``n_cleared_floor``, which is the same
+        measurement taken at the same place.
         """
 
         if shown >= self._ruleset.floors.min_shortlist:

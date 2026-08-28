@@ -1,4 +1,4 @@
-"""The matchmaking context's refusals — nine codes, distinct at four statuses.
+"""The matchmaking context's refusals — ten codes, distinct at four statuses.
 
 **Distinct codes at the same status, because a client must be able to tell a
 transient outage from a refusal about *you*.* Three of these are 503 and mean

@@ -186,10 +186,11 @@ def _search_row(search: SearchRecord) -> SearchORM:
         n_near_miss_recorded=search.counts.n_near_miss_recorded,
         best_withheld_fit=search.best_withheld_fit,
         # ``search-telemetry.md``'s own shape, window included, because an
-        # analyst reading this column cannot call ``window_of`` in SQL. **It is
-        # the analyst's copy and nothing reads it back**: the record re-derives
-        # the window from ``searcher_grid`` and ``at``, so the wire has one
-        # source and a label written today cannot outlive the rule that made it.
+        # analyst reading this column cannot call ``window_of`` in SQL. **The
+        # window inside it is the analyst's copy and no reader takes it**: the
+        # record re-derives that one field from ``searcher_grid`` and ``at``, so
+        # the wire has a single source and a label written today cannot outlive
+        # the rule that made it. The rest of the blob is read back as written.
         pool_description={
             "sport": pool.sport.value,
             "radius_km_used": pool.radius_km_used,
@@ -286,6 +287,13 @@ def _search_record(
             # changes. The two inputs are both on this row — the grid the search
             # ran on, and the day it ran — so the derivation reproduces the
             # answer that was given rather than the one that would be given now.
+            #
+            # **``docs/adr/0100`` §8's other half is owed and not built here.**
+            # The window is re-derived at *challenge creation* too, from this
+            # same grid, and stored on the challenge beside its origin key —
+            # which is a demand on ``matches``, a context that does not exist.
+            # ``searcher_grid`` is what makes it payable the day it does, and it
+            # is recorded now because it is search-time and has no backfill.
             window=window_of(
                 AvailabilityGrid.from_codes(row.searcher_grid),
                 iso_weekday(_utc(row.at).isoweekday()),

@@ -117,6 +117,31 @@ async def test_a_searcher_at_the_ceiling_is_offered_no_radius_rung_and_says_so(
     assert body["search"]["pool"]["players_in_range"] == 0
 
 
+async def test_the_clamp_bit_counts_a_searcher_at_the_ceiling_on_every_search(
+    client, session_factory, candidate_source
+):
+    """The bit's job is to count the searchers already at the slider's maximum.
+
+    A long shortlist means the offers were never computed — and recording
+    ``false`` for a 50 km searcher because nobody needed a rung would undercount
+    the exact population the column exists to find.
+    """
+
+    player_id, token = await world.register(client, "busy-at-the-ceiling")
+    await world.commit_profile(client, token, search_radius_km=50)
+    mu = await world.rate(client, token)
+    await world.declare_intent(session_factory, player_id)
+    for index in range(6):
+        await world.a_candidate(client, session_factory, f"player-{index}", mu=mu)
+    await world.fold_the_log(session_factory, candidate_source)
+
+    body = (await world.search(client, token)).json()
+
+    assert len(body["candidates"]) == 6
+    assert body["search"]["rung_offers"] is None, "nobody needed a rung"
+    assert body["search"]["radius_clamp"] is True, "they are still at the ceiling"
+
+
 async def test_taking_a_rung_is_a_new_search_citing_the_one_that_offered_it(
     client, session_factory, candidate_source, searcher
 ):

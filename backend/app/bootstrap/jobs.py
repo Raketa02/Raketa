@@ -161,36 +161,42 @@ def build_scheduled_jobs(
                 "to build_scheduled_jobs"
             )
         jobs.append(build_exposure_roll_job(client=redis_client, settings=settings))
-    if settings.INTENT_DRIFT_ENABLED or settings.GRID_STALENESS_ENABLED:
+    # The two prompt loops. Each is guarded by what **it** needs and nothing
+    # else, so that turning one on cannot refuse the process over a dependency
+    # only the other one wants — and a loop the process cannot host is refused
+    # loudly where its absence would be somebody's decision, and skipped quietly
+    # where it is a fact about the process.
+    if settings.INTENT_DRIFT_ENABLED:
+        if redis_client is None or session_factory is None:
+            raise ValueError(
+                "the intent drift loop is enabled, but no redis client or "
+                "session factory was passed to build_scheduled_jobs"
+            )
+        jobs.append(
+            build_intent_drift_job(
+                session_factory=session_factory,
+                client=redis_client,
+                settings=settings,
+            )
+        )
+    if settings.GRID_STALENESS_ENABLED and candidate_source is not None:
+        # Absent a source this is simply not registered, exactly as the index
+        # refresh is: a process with no picture of the city has no grids to find
+        # stale, and there is nothing here to fall back to. The store is a
+        # different matter — the lifespan opens the pool unconditionally, so
+        # reaching here without one is a wiring error.
         if redis_client is None:
             raise ValueError(
-                "a prompt loop is enabled, but no redis client was passed to "
-                "build_scheduled_jobs"
+                "the availability-staleness loop is enabled, but no redis "
+                "client was passed to build_scheduled_jobs"
             )
-        if settings.INTENT_DRIFT_ENABLED:
-            if session_factory is None:
-                raise ValueError(
-                    "the intent drift loop is enabled, but no session factory "
-                    "was passed to build_scheduled_jobs"
-                )
-            jobs.append(
-                build_intent_drift_job(
-                    session_factory=session_factory,
-                    client=redis_client,
-                    settings=settings,
-                )
+        jobs.append(
+            build_grid_staleness_job(
+                source=candidate_source,
+                client=redis_client,
+                settings=settings,
             )
-        if settings.GRID_STALENESS_ENABLED and candidate_source is not None:
-            # Absent a source this is simply not registered, exactly as the
-            # index refresh is: a process with no picture of the city has no
-            # grids to find stale, and there is nothing here to fall back to.
-            jobs.append(
-                build_grid_staleness_job(
-                    source=candidate_source,
-                    client=redis_client,
-                    settings=settings,
-                )
-            )
+        )
     return jobs
 
 

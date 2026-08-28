@@ -32,6 +32,19 @@ question that was never asked leaves nothing to reconstruct.
 **Nothing in this module writes a profile.** Every one of the four ends at a
 question on a screen; the writes are the player's own, through the routes that
 already own those fields.
+
+**The other half of ``docs/adr/0094``'s pattern is owed and is not here: a
+decline is not yet remembered.** That record pairs the inline offer with a
+**30-day suppression on decline**, and suppressing one needs a surface to
+decline on — which is the same missing surface the *accept* half needs, since
+every one of these questions is answered by a write this backend has no route
+for (``PUT /api/v1/play-intents/{sport}``, and an edit path for the radius and
+the grid). Until those exist, a prompt lapses on :data:`PROMPT_TTL` and is raised
+again while its condition holds, so **a player who declines is asked again** —
+stated here rather than discovered, because it is the one place these prompts are
+ruder than the record they are built on. The two per-search prompts are the mild
+case (they follow an act the player just took); the drift prompt is the sharp
+one, and it is the reason the suppression exists in ADR-0094 at all.
 """
 
 from __future__ import annotations
