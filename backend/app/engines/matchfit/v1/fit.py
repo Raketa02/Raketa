@@ -29,7 +29,7 @@ whatever ``PYTHONHASHSEED`` is.
 
 from __future__ import annotations
 
-from typing import Mapping, Sequence, final
+from typing import Mapping, Sequence, TypeVar, final
 
 from app.engines.matchfit.core import Seat, Term
 from app.engines.matchfit.ruleset import WEIGHT_TOTAL, Ruleset
@@ -42,6 +42,12 @@ from app.kernel import invariant
 #: Where each term sits in the enum, so a tie breaks on a declaration and never
 #: on a dictionary's iteration order.
 _TERM_ORDER = {term: position for position, term in enumerate(Term)}
+
+#: What a renormalisation is over. The rule below is about *a weight vector*
+#: rather than about the eight terms of Fit — the group objective renormalises
+#: its six the same way, and a cross reading renormalises three of Fit's own —
+#: so the function is written once over whatever the vector is keyed by.
+_Weighted = TypeVar("_Weighted")
 
 
 def score(
@@ -97,8 +103,8 @@ def score(
 
 
 def renormalised_weights(
-    weights: Mapping[Term, int], live: Sequence[Term]
-) -> Mapping[Term, float]:
+    weights: Mapping[_Weighted, int], live: Sequence[_Weighted]
+) -> Mapping[_Weighted, float]:
     """Each live term's share of a hundred, over the terms that actually fired.
 
     A mode's weights sum to a hundred *before* this, so a term standing down does
@@ -113,12 +119,18 @@ def renormalised_weights(
     of the eight, in either mode, the shares sum to a hundred. Three terms cannot
     stand down on today's inputs, and a renormalisation only ever exercised on
     the subsets that can is one that breaks the day reliability turns on.
+
+    **Generic in what the vector is keyed by**, because the rule is about a
+    weight vector and not about the eight terms: the group objective renormalises
+    its six the same way, and a cross reading renormalises three of Fit's own
+    over their day-one basis — *"it invents no constant"* is that sentence, and a
+    second copy of this function is where it would stop being true.
     """
 
     basis = sum(weights[term] for term in live)
     invariant(
         basis > 0,
-        f"a renormalisation over no weight at all: {[term.value for term in live]}",
+        f"a renormalisation over no weight at all: {[str(term) for term in live]}",
     )
     return {term: weights[term] * WEIGHT_TOTAL / basis for term in live}
 

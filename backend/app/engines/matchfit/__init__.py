@@ -27,13 +27,16 @@ Three things live here, and the split between them is the point:
     is also where the deferred runtime store will land, since *its arrival
     changes only where the file is read from*.
 
-``scoring`` and ``ranking``
-    The two answers a version returns and the one quantity it never serialises.
-    ``Fit`` is the printed number and the whole of the working behind it;
-    ``ranking`` holds the modifier stack that adjusts it, the Liveness offset
-    that reorders without entering it, and the ``rank_key`` where the two meet —
-    a bare ``float``, because a quantity with no shape has no field it could be
-    written to.
+``scoring``, ``ranking`` and ``grouping``
+    The three answers a version returns and the one quantity it never
+    serialises. ``Fit`` is the printed number and the whole of the working
+    behind it; ``ranking`` holds the modifier stack that adjusts it, the
+    Liveness offset that reorders without entering it, and the ``rank_key``
+    where the two meet — a bare ``float``, because a quantity with no shape has
+    no field it could be written to. ``grouping`` holds what comes back when the
+    engine seats **four** people rather than ranking one: the arrangement, the
+    forecast, and a ``G`` that is a property of its own terms rather than a
+    field, so there is nothing a serialiser could reach for.
 
 ``v1`` and its successors
     A version is a directory that is never deleted, because the maths a result

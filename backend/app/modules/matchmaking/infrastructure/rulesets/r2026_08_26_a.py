@@ -463,6 +463,12 @@ RULESET = Ruleset(
         sigma_coefficient=32.0,
         pct_min=35,
         pct_max=96,
+        # A doubles side is attacked at its weaker half all evening, so the
+        # weaker partner sets 0.55 of it against the stronger's 0.45. It reads
+        # only in a four, and it is the whole reason the three arrangements of
+        # one four differ: at 0.50 every arrangement of the same people would
+        # forecast the same game and the seat delta would be deciding alone.
+        stronger_partner_share=0.45,
     ),
     # Full marks inside 70% of the searcher's own ring, zero at 115% of it. The
     # curve is generous at the top because inside two thirds of the radius you

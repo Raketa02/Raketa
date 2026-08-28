@@ -16,6 +16,7 @@ from __future__ import annotations
 import dataclasses
 
 from app.engines.matchfit.core import ReliabilityStrand, SearchMode
+from app.engines.matchfit.grouping import Seated
 from app.engines.matchfit.ruleset import Ruleset
 from app.engines.matchfit.scorable import (
     CombinedUncertainty,
@@ -134,6 +135,39 @@ def candidate(
         distance_km=distance_km,
         combined=combined(against_sigma, sigma),
         reliability=reliability,
+    )
+
+
+def seated(
+    *,
+    player_id: str = "candidate",
+    fit: float = 70.0,
+    locked: bool = False,
+    mu: float = SEARCHER_MU,
+    sigma: float = SEARCHER_SIGMA,
+    declared_intent: str | None = None,
+    tags: tuple[str, ...] = (),
+    grid: tuple[GridCell, ...] = FOUR_CELLS,
+) -> Seated:
+    """One of the three seats beside the searcher, with the Fit it earned.
+
+    ``fit`` is a number and not a scored pairing, because that is what
+    :class:`Seated` holds: ADR-0117 admits a group term only if it reads
+    something no seat's Fit read, and a test that had to score a whole pairing to
+    say *this seat is worth 46* would be a test about the wrong thing.
+    """
+
+    return Seated(
+        candidate=candidate(
+            player_id=player_id,
+            mu=mu,
+            sigma=sigma,
+            declared_intent=declared_intent,
+            tags=tags,
+            grid=grid,
+        ),
+        fit=fit,
+        locked=locked,
     )
 
 

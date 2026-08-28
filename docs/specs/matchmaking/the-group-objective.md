@@ -194,6 +194,14 @@ Because the seat delta varies by arrangement, the combination is chosen by **`ar
 three pairings**, and `arrange()` stops being a separate step. `scale-posture.md`'s 6 072
 evaluations already budget per-arrangement work, so the cost is one array lookup.
 
+**A side's strength is not the average of its two players**, and the figures below assume it:
+`strength = TEAM_STRENGTH_SHARE · stronger + (1 − TEAM_STRENGTH_SHARE) · weaker`, at
+**0.45 / 0.55**. The weaker half sets more of a side because that is the half a doubles pair is
+attacked at all evening — the prototype's `teamStrength()` carried it and no row of §13 ever
+did, which is recorded here rather than left standing as an assumption. **It is the whole reason
+the three arrangements of one four are three different games:** at parity the gaps below collapse
+to a single number and the seat delta would be deciding alone.
+
 **Balance outweighs the seat delta by roughly fifty to one.** The delta is 0.34 points for fun and
 0.19 competitive; balance across the three arrangements of a four at 3.0 / 3.2 / 3.5 / 3.8 spans
 gaps of 0.025, 0.245 and 0.545 — 0.52 of `balance_norm`, **17.8 points** at `w_bal = 34`. So
@@ -263,6 +271,7 @@ finding: at group level the tag arms break ties and intent moves scores.
 | `w_crossmin` | 6 / 14 | Return rate of the player in the *worst* cross pair, against the other two |
 | `w_avail` | 16 / 20 | Challenge-to-played conversion for line-ups with zero four-way slots against non-zero |
 | `significance₄` | §2.3 | The observed live range. If it never leaves the top of its range it discriminates over a range that does not exist |
+| `TEAM_STRENGTH_SHARE` | 0.45 | Forecast error against confirmed doubles results, split by how lopsided the pair's own two Levels were. At 0.50 it is falsified by the arrangement mattering at all |
 | The seat delta | §3.1 | **How often `is_best ≠ is_evenest`.** If never, the argmax is decoration |
 | `K` | 24 | `max(fit_rank)` among the seated, 95th percentile against `K` — **replaces §24's, which cannot fire** |
 

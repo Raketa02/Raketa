@@ -259,6 +259,16 @@ class BalanceRules:
     sigma_coefficient: float
     pct_min: int
     pct_max: int
+    #: How much of a doubles side's strength the **stronger** partner sets —
+    #: ``the-group-objective.md`` §3.1's ``TEAM_STRENGTH_SHARE``. One number and
+    #: not two, because the pair's shares are one fact: two fields could be
+    #: released summing to something other than a whole side.
+    #:
+    #: Under a half, which is the claim: *the weaker partner sets more of a
+    #: side*, because a doubles pair is attacked at its weaker half all evening.
+    #: It reads only in a four — a pairwise forecast has no side to form — and it
+    #: is why the three arrangements of one four differ at all.
+    stronger_partner_share: float
 
 
 @dataclass(frozen=True)
@@ -1022,6 +1032,11 @@ def _validate_balance(balance: BalanceRules) -> None:
     invariant(
         balance.mu_coefficient > 0 and balance.sigma_coefficient > 0,
         f"balance coefficients: {balance.mu_coefficient}, {balance.sigma_coefficient}",
+    )
+    invariant(
+        0.0 < balance.stronger_partner_share < 0.5,
+        "the stronger partner sets less than half a side, or the claim the "
+        f"share exists to make is not being made: {balance.stronger_partner_share}",
     )
 
 

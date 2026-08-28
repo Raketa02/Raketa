@@ -9,11 +9,14 @@ hands over**.
 
 Three things happen here and nowhere else, each because the fence puts them here:
 
-*The two σs are combined.* ``combine_sigma`` and the confidence transform are
+*The σs are combined.* ``combine_sigma`` and the confidence transform are
 RacketSkill's — *the single place any engine is allowed to combine two standard
 deviations* — and ``.importlinter`` forbids one engine to import the other. So
 Match Fit reads that rule **through the module that composes the two**, and a
-``CombinedUncertainty`` arrives already combined.
+``CombinedUncertainty`` arrives already combined. A **four**'s spread arrives the
+same way and cannot arrive as a value, because the enumeration that decides which
+four is on the far side of the fence — so it crosses as ``combine_group_sigma``,
+a fold of the same rule and not a second one.
 
 *The curves are applied.* Four Liveness signals cross as a reading in ``[0, 1]``
 rather than as what was measured, because a curve from *days since a session
@@ -35,6 +38,8 @@ somebody would try.
 from __future__ import annotations
 
 from datetime import datetime
+from functools import reduce
+from typing import Sequence
 from uuid import UUID
 
 from app.engines.matchfit.scorable import (
@@ -52,7 +57,7 @@ from app.engines.matchfit.scorable import (
     StrandObservation,
 )
 from app.engines.racketskill.core import combine_sigma, confidence_percent
-from app.kernel import iso_weekday
+from app.kernel import invariant, iso_weekday
 from app.modules.matchmaking.domain.areas import area_code_of
 from app.modules.matchmaking.domain.candidate_index import CandidateRow
 from app.modules.matchmaking.domain.geography import Point
@@ -222,6 +227,28 @@ def reliability_record_of(
         published_score=reading.published_score,
         days_since_last_observation=max(0, days),
     )
+
+
+def combine_group_sigma(sigmas: Sequence[float]) -> float:
+    """A four's spread, combined **on RacketSkill's side of the fence**.
+
+    The group objective needs one Uncertainty over four Levels and may not
+    derive it: ``combine_sigma`` is *the single place any engine is allowed to
+    combine two standard deviations*, ``.importlinter`` forbids one engine to
+    import the other, and ``√(Σσ²)`` written inside Match Fit would be a second
+    definition of an identity that already has an owner.
+
+    A fold rather than a new rule, and the fold is legitimate because quadrature
+    is associative: combining four is combining two, twice. That is why this can
+    be a handful of lines here instead of a second formula anywhere.
+
+    It is a **function** where a pair's combination is a value, because the
+    enumeration that decides *which* four is inside the engine — nothing out here
+    could have precomputed the spread of a combination it has not seen.
+    """
+
+    invariant(bool(sigmas), "a spread over nobody at all")
+    return reduce(combine_sigma, sigmas)
 
 
 def area_of(row: CandidateRow) -> Point:

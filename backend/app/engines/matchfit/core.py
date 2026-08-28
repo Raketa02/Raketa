@@ -307,6 +307,76 @@ class GroupTerm(str, Enum):
     CROSS_MIN = "CROSS_MIN"
     AVAILABILITY = "AVAILABILITY"
 
+    @property
+    def reason(self) -> "GroupReason":
+        """The code a line-up decided by this term comes back under.
+
+        The mapping is here rather than in a ruleset for the reason
+        ``Term.evidence_kind`` is: it is the half ``docs/adr/0106`` makes
+        contract. A ruleset that could re-aim a term at a different code would be
+        a weight release changing what the product claims decided a four.
+
+        **Six terms and five codes, because the two cross terms decide the same
+        sentence.** *The mean cross reading* and *the worst of them* are one
+        thing to say to a player — these four get on — and a sixth code
+        separating them would be the engine explaining its own arithmetic rather
+        than naming the fact it read.
+        """
+
+        return _GROUP_REASONS[self]
+
+
+class GroupReason(str, Enum):
+    """Why this four beat the runner-up. **One closed code, never a number.**
+
+    ``G`` chose these four over the other combinations and the third refusal —
+    *never a number it cannot explain in one sentence with the evidence named* —
+    applies. A second score the player must trust is worse than none: it competes
+    with Fit and nobody can act on it. So the evidence half is paid here, by the
+    term with the largest margin between the winning combination and the
+    runner-up — the group analogue of the card's top three reasons
+    (``docs/adr/0117``).
+
+    Closed vocabulary and ``docs/adr/0106``-shaped: **the client writes the
+    sentence, the engine names which.**
+    """
+
+    EVENEST_ARRANGEMENT = "EVENEST_ARRANGEMENT"
+    STRONGEST_WEAKEST_SEAT = "STRONGEST_WEAKEST_SEAT"
+    BEST_AVERAGE_FIT = "BEST_AVERAGE_FIT"
+    MOST_SHARED_SLOTS = "MOST_SHARED_SLOTS"
+    GROUP_RAPPORT = "GROUP_RAPPORT"
+
+
+#: Which code each group term decides under. Declared beside the two enums it
+#: joins rather than inside either, because a mapping that lives in one of its
+#: own endpoints is a mapping the other end cannot be checked against.
+_GROUP_REASONS: dict[GroupTerm, GroupReason] = {
+    GroupTerm.BALANCE: GroupReason.EVENEST_ARRANGEMENT,
+    GroupTerm.SEAT_FIT: GroupReason.BEST_AVERAGE_FIT,
+    GroupTerm.MIN_SEAT_FIT: GroupReason.STRONGEST_WEAKEST_SEAT,
+    GroupTerm.CROSS: GroupReason.GROUP_RAPPORT,
+    GroupTerm.CROSS_MIN: GroupReason.GROUP_RAPPORT,
+    GroupTerm.AVAILABILITY: GroupReason.MOST_SHARED_SLOTS,
+}
+
+
+class ForecastAssumption(str, Enum):
+    """What a **provisional** forecast assumed, as a code the client renders.
+
+    One value, because there is one assumption: a side with a seat still empty is
+    read **as if the missing player matched the one already there**. It is an
+    enum rather than a bare string for the reason every other vocabulary here is
+    one — an assumption the client cannot name is a caveat it cannot print, and a
+    provisional number rendered without its caveat is the failure the whole
+    shape exists to prevent (``docs/adr/0108``).
+
+    A second value would be a second thing the product is willing to assume about
+    somebody who is not there, and that is a decision rather than a constant.
+    """
+
+    EMPTY_SEAT_MATCHES_ITS_PARTNER = "EMPTY_SEAT_MATCHES_ITS_PARTNER"
+
 
 class RelaxationRung(str, Enum):
     """The three offers a short shortlist may carry. **Offered, never applied.**

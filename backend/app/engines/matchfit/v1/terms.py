@@ -30,6 +30,7 @@ from app.engines.matchfit.core import (
     EvidenceKind,
     LevelDirection,
     ReliabilityStrand,
+    SearchMode,
     Seat,
     TagColumn,
     TagRelationshipKind,
@@ -127,13 +128,13 @@ def level_fit(
 
     delta = abs(candidate.level.mu - searcher.level.mu)
     if rules.free_band is None:
-        value = _clamp(1.0 - delta / rules.level_tolerance)
+        value = clamp_unit(1.0 - delta / rules.level_tolerance)
     else:
         # `None` is *the concept does not apply here* rather than a width of
         # zero, so the two curves are written as two rather than folded into one
         # that reads a null as a number.
         priced = max(0.0, delta - rules.free_band)
-        value = _clamp(1.0 - priced / (rules.level_tolerance - rules.free_band))
+        value = clamp_unit(1.0 - priced / (rules.level_tolerance - rules.free_band))
     return TermReading(
         term=Term.LEVEL_FIT,
         value=value,
@@ -165,20 +166,12 @@ def predicted_balance(
     behaviour.
     """
 
-    delta = abs(candidate.level.mu - searcher.level.mu)
-    pct = min(
-        float(rules.pct_max),
-        max(
-            float(rules.pct_min),
-            100.0
-            - delta * rules.mu_coefficient
-            - candidate.combined.sigma * rules.sigma_coefficient,
-        ),
+    pct = forecast_pct(
+        abs(candidate.level.mu - searcher.level.mu), candidate.combined.sigma, rules
     )
-    value = (pct - rules.pct_min) / (rules.pct_max - rules.pct_min)
     return TermReading(
         term=Term.PREDICTED_BALANCE,
-        value=value,
+        value=balance_norm(pct, rules),
         evidence=PredictedBalanceEvidence(
             # The printed forecast is a whole percent; the term's own reading is
             # not rounded, because rounding a value that is about to be weighed
@@ -189,6 +182,40 @@ def predicted_balance(
             confidence=candidate.combined.confidence,
         ),
     )
+
+
+def forecast_pct(gap: float, sigma: float, rules: BalanceRules) -> float:
+    """``clamp(100 − gap·mu_coefficient − σ·sigma_coefficient, min, max)``.
+
+    **One forecast, two sets of people.** A pairing's gap is between two players
+    and a four's is between two side strengths, but the claim being made — *how
+    even will this be* — is the same claim and reads the same three numbers. The
+    group objective calls this rather than carrying a second copy, which is the
+    same rule the two tag columns follow one function down.
+
+    Unrounded: the term weighs this and the card prints a whole percent of it,
+    and rounding a value about to be multiplied by a weight would move the answer
+    for nothing.
+    """
+
+    return min(
+        float(rules.pct_max),
+        max(
+            float(rules.pct_min),
+            100.0 - gap * rules.mu_coefficient - sigma * rules.sigma_coefficient,
+        ),
+    )
+
+
+def balance_norm(pct: float, rules: BalanceRules) -> float:
+    """A forecast as a reading in ``[0, 1]``, **across its own clamp**.
+
+    The clamp bounds are the term's zero and one, not cosmetics. Normalising over
+    ``[0, 100]`` instead would waste the bottom third of the range on forecasts
+    the model never produces, which is the defect this is the second instance of.
+    """
+
+    return (pct - rules.pct_min) / (rules.pct_max - rules.pct_min)
 
 
 def intent_alignment(
@@ -377,7 +404,9 @@ def distance(
     """
 
     span = (rules.zero_at - rules.full_marks_within) * searcher.radius_km
-    value = _clamp((rules.zero_at * searcher.radius_km - candidate.distance_km) / span)
+    value = clamp_unit(
+        (rules.zero_at * searcher.radius_km - candidate.distance_km) / span
+    )
     return TermReading(
         term=Term.DISTANCE,
         value=value,
@@ -430,19 +459,41 @@ def read_terms(
 
 
 # ---------------------------------------------------------------------------
-# The tag arithmetic, shared by the two columns
+# The tag arithmetic, shared by the two columns — and by the group objective,
+# which reads the same rows about two people neither of whom is the searcher
 # ---------------------------------------------------------------------------
 
 
-def _tag_term(
+@final
+@dataclass(frozen=True, slots=True)
+class TagColumnReading:
+    """One column's reading over **two people**, whoever they are.
+
+    Fit calls it about the searcher and a candidate and prints it as a term; the
+    group objective calls it about two candidates and feeds it to a cross
+    reading. Neither is a special case of the other, so what they share is this
+    shape and the arithmetic that produces it — *how do these two get on* has one
+    implementation, called six times in a four, three printed and three scored.
+
+    It carries the lists as well as the number because the printing caller needs
+    them and the scoring one does not, and a reading that answered only the
+    scorer would be a second, quieter version of the same computation.
+    """
+
+    value: float
+    matched: tuple[str, ...]
+    complementary: tuple[TagPair, ...]
+    clashing: tuple[TagPair, ...]
+
+
+def tag_column(
     column: TagColumn,
-    term: Term,
-    variant: type[PlayingStyleEvidence] | type[SocialVibeEvidence],
-    searcher: Searcher,
-    candidate: ScorableCandidate,
+    mine: tuple[str, ...],
+    theirs: tuple[str, ...],
+    mode: SearchMode,
     seat: Seat,
     rules: TagRules,
-) -> TermOutcome:
+) -> TagColumnReading | None:
     """One tag column: ``dr(matches) + complements − clashes``, renormalised.
 
     **The split between the two terms is by relationship, not by tag group.**
@@ -470,16 +521,20 @@ def _tag_term(
     ``PARTNER``-only row does not fire on an unseated shortlist: the harsher
     reading applies only once somebody is being seated as a partner, because
     being wrong about a clash buries a person.
+
+    **The mode is the search's and never a person's.** A cross pair sits inside
+    one search, so both readings of it run under the vector the searcher chose;
+    a row scoped to the other mode does not fire for anybody in that four.
     """
 
     domain = rules.column_domain(column)
-    if not any(tag in domain for tag in searcher.tags):
+    if not any(tag in domain for tag in mine):
         return None
-    if not any(tag in domain for tag in candidate.tags):
+    if not any(tag in domain for tag in theirs):
         return None
 
-    mine = frozenset(searcher.tags)
-    theirs = frozenset(candidate.tags)
+    held = frozenset(mine)
+    other = frozenset(theirs)
     matched: list[str] = []
     complements: list[float] = []
     complementary: list[TagPair] = []
@@ -488,9 +543,9 @@ def _tag_term(
     # Rows in the matrix's own order, so the evidence lists read the same way on
     # every process and every run (`docs/adr/0105`).
     for row in rules.relationship_matrix:
-        if row.column is not column or searcher.mode not in row.modes:
+        if row.column is not column or mode not in row.modes:
             continue
-        if seat not in row.seats or not _fires(row, mine, theirs):
+        if seat not in row.seats or not _fires(row, held, other):
             continue
         if row.kind is TagRelationshipKind.MATCH:
             matched.append(row.a)
@@ -511,17 +566,42 @@ def _tag_term(
         + diminishing_at_strengths(complements, rules.phi)
         - min(severity_total, rules.clash_cap)
     )
-    value = _clamp((raw + rules.clash_cap) / (1.0 + rules.clash_cap))
-    # The variant is handed in rather than re-derived from the term: the two
-    # callers already know which of the two shapes they are, and branching on the
-    # term here would be a second place that mapping could go wrong.
+    return TagColumnReading(
+        value=clamp_unit((raw + rules.clash_cap) / (1.0 + rules.clash_cap)),
+        matched=tuple(matched),
+        complementary=tuple(complementary),
+        clashing=tuple(clashing),
+    )
+
+
+def _tag_term(
+    column: TagColumn,
+    term: Term,
+    variant: type[PlayingStyleEvidence] | type[SocialVibeEvidence],
+    searcher: Searcher,
+    candidate: ScorableCandidate,
+    seat: Seat,
+    rules: TagRules,
+) -> TermOutcome:
+    """One column, as a **term of Fit** — the reading above, printed.
+
+    The variant is handed in rather than re-derived from the term: the two
+    callers already know which of the two shapes they are, and branching on the
+    term here would be a second place that mapping could go wrong.
+    """
+
+    reading = tag_column(
+        column, searcher.tags, candidate.tags, searcher.mode, seat, rules
+    )
+    if reading is None:
+        return None
     return TermReading(
         term=term,
-        value=value,
+        value=reading.value,
         evidence=variant(
-            matched=tuple(matched),
-            complementary=tuple(complementary),
-            clashing=tuple(clashing),
+            matched=reading.matched,
+            complementary=reading.complementary,
+            clashing=reading.clashing,
         ),
     )
 
@@ -574,8 +654,13 @@ def diminishing_at_strengths(strengths: list[float], phi: float) -> float:
 # ---------------------------------------------------------------------------
 
 
-def _clamp(value: float) -> float:
-    """Hold a term's reading inside ``[0, 1]``, the range every term shares."""
+def clamp_unit(value: float) -> float:
+    """Hold a reading inside ``[0, 1]``, the range every term shares.
+
+    Public because the group terms share the range as well as the rule: a second
+    copy one directory over would be the same one-liner with its own chance of
+    being wrong at an end.
+    """
 
     return max(0.0, min(1.0, value))
 
@@ -645,12 +730,16 @@ EMITTED_EVIDENCE_KINDS: frozenset[EvidenceKind] = frozenset(
 
 __all__ = [
     "EMITTED_EVIDENCE_KINDS",
+    "TagColumnReading",
     "TermOutcome",
     "TermReading",
     "availability_overlap",
+    "balance_norm",
+    "clamp_unit",
     "diminishing",
     "diminishing_at_strengths",
     "distance",
+    "forecast_pct",
     "intent_alignment",
     "level_fit",
     "playing_style",
@@ -658,4 +747,5 @@ __all__ = [
     "read_terms",
     "reliability",
     "social_vibe",
+    "tag_column",
 ]
