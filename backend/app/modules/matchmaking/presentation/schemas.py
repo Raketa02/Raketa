@@ -200,6 +200,59 @@ class RunSearchRequest(BaseModel):
     )
 
 
+class DealDeckRequest(BaseModel):
+    """What a deal is asked for. **One field, and that is the whole contract.**
+
+    **There is no `mode` here and there never will be.** The deck reads your own
+    declared Play intent for this sport, resolved backend-side, and *no
+    preference* is a working deck rather than a blocked one — indecision is not a
+    state this product refuses. A mode on this body would be the field the
+    telemetry constraint refuses: `mode` is null exactly when the surface is the
+    deck.
+
+    **There is no widening here either.** The relaxation ladder does not reach
+    the deck, so a deal carries no rung offers and there is no offer for one to
+    cite.
+
+    **There is nothing about a pass.** The suppression window crosses the wire in
+    no shape at all — no field, no code, no timestamp — which is what makes a
+    pass unable to become something stronger by way of a request.
+    """
+
+    sport: Sport = Field(..., description="Which sport this deal is for")
+
+
+class RecordPassRequest(BaseModel):
+    """One *not today*, and where the card came from. **Write-only.**
+
+    Nothing is returned by this route and no route anywhere returns a pass — not
+    to you, not as a count, not as *"you have passed on twelve people"*.
+
+    `search_id` is the **Origin key** and is required, exactly as it is for a
+    yes: a pass citing a search that is unknown, that belongs to somebody else or
+    that never showed that person is refused rather than recorded with an empty
+    link. **The position is not sent** — the backend reads it off the cited
+    search's own rows.
+
+    **How long it lasts is not yours to name**, and there is no field here for
+    it. A pass keeps somebody out of *your deck* only, for a window this backend
+    decides; it never reaches a shortlist, a line-up or a forecast, it never
+    touches their deck, and a second pass buys exactly the same window and no
+    more. The control that removes a person from a person is a **block**, and it
+    is deliberately a heavier gesture.
+    """
+
+    sport: Sport = Field(..., description="Which sport this card was for")
+    player_id: UUID = Field(..., description="Whose card you are passing on")
+    search_id: UUID = Field(
+        ...,
+        description=(
+            "The deal this person was dealt to you in. **Required** — a pass "
+            "with no origin is refused rather than recorded with a null link."
+        ),
+    )
+
+
 class PoolSchema(BaseModel):
     """What the searcher is told about the pool this answer came from.
 

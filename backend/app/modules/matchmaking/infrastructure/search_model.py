@@ -94,6 +94,14 @@ class SearchORM(Base):
             "(rung_taken IS NULL) = (offered_by_search_id IS NULL)",
             name="ck_search_rung_taken_cites_its_offer",
         ),
+        # The suppression count belongs to a deal and to nothing else, because a
+        # pass reaches no other surface (``docs/adr/0128``). Same shape as the
+        # two above: a column whose *presence* carries meaning is a column that
+        # must not be half-written.
+        CheckConstraint(
+            "(n_excluded_by_suppression IS NOT NULL) = (surface = 'DECK')",
+            name="ck_search_suppression_count_only_on_the_deck",
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(UUIDType(binary=False), primary_key=True)
@@ -164,6 +172,14 @@ class SearchORM(Base):
     #: Which rung this search took, on the **accepting** row.
     rung_taken: Mapped[str | None] = mapped_column(String(1), nullable=True)
     latency_ms_by_stage: Mapped[dict[str, Any]] = mapped_column(BLOB, nullable=False)
+    #: How many candidates a **live** pass suppression removed from this deal.
+    #: **Deck deals only**, null elsewhere — a check constraint, not a
+    #: convention. It is the only thing that distinguishes *your own passes
+    #: emptied your deck* from *the pool is empty*, and nobody can see it from
+    #: any screen because no route returns a pass.
+    n_excluded_by_suppression: Mapped[int | None] = mapped_column(
+        Integer, nullable=True
+    )
 
 
 class SearchCandidateORM(Base):
@@ -239,3 +255,9 @@ class SearchCandidateORM(Base):
     #: What a counted game would have been worth then. Null in for fun, where a
     #: counted result is meaningless rather than unavailable.
     at_stake: Mapped[dict[str, Any] | None] = mapped_column(BLOB, nullable=True)
+    #: Whether this card is a **re-show** — the pairing had a pass whose 30-day
+    #: suppression has since lapsed. Set on a dealt card and null everywhere
+    #: else. It reads the **durable pass record**, never the cache, because a
+    #: lapsed key leaves no trace the pair was ever passed — and without it only
+    #: plain pass rate is computable, never *pass rate on re-shown profiles*.
+    suppression_lapsed: Mapped[bool | None] = mapped_column(Boolean, nullable=True)

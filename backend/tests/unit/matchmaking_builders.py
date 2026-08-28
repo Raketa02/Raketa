@@ -163,6 +163,7 @@ def context(
     newcomer_appearances: Mapping[UUID, int] | None = None,
     busy_threshold: int | None = None,
     initiation: SearchInitiation = SearchInitiation.HUMAN,
+    surface: SearchSurface = SearchSurface.SHORTLIST,
     ruleset: Ruleset = LIVE_RULESET,
     absent_terms: frozenset[Term] = frozenset({Term.RELIABILITY}),
     snapshot_version: int = 42,
@@ -176,7 +177,7 @@ def context(
 
     return SearchContext(
         searcher=facts or searcher(),
-        surface=SearchSurface.SHORTLIST,
+        surface=surface,
         initiation=initiation,
         now=now,
         snapshot=CandidateSnapshot(

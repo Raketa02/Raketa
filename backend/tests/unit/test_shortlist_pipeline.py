@@ -18,7 +18,7 @@ from datetime import timedelta
 import pytest
 
 from app.engines.matchfit.v1 import MatchFitV1
-from app.modules.matchmaking.domain.searches import SortOption
+from app.modules.matchmaking.domain.searches import SearchSurface, SortOption
 from app.modules.matchmaking.domain.shortlist import run
 from app.modules.matchmaking.domain.sorting import of_scored, sorts_available
 from app.modules.matchmaking.infrastructure.rulesets import LIVE_RULESET
@@ -43,7 +43,10 @@ def _offered(returned):
     one implementation. ``of_scored`` is the search's own half of that mapping.
     """
 
-    return sorts_available(tuple(of_scored(row) for row in returned))
+    return sorts_available(
+        tuple(of_scored(row) for row in returned),
+        surface=SearchSurface.SHORTLIST,
+    )
 
 
 def test_a_gated_player_never_appears_in_either_band():

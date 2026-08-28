@@ -55,10 +55,11 @@ class SearchSurface(str, Enum):
     every number the engine is judged by becomes meaningless — ``FILL_SEATS`` is
     not even optimising for the searcher.
 
-    Only ``SHORTLIST`` can be written today; the other three arrive with their
-    routes. They are declared now because ``surface`` is a stored column and a
-    vocabulary that grows one value per ticket is a vocabulary whose old rows
-    cannot be read against the new ones.
+    ``SHORTLIST`` and ``DECK`` can be written today; the two line-up surfaces
+    arrive with their route. All four were declared before any of them could be
+    written, because ``surface`` is a stored column and a vocabulary that grows
+    one value per ticket is a vocabulary whose old rows cannot be read against
+    the new ones.
     """
 
     SHORTLIST = "SHORTLIST"
@@ -293,6 +294,18 @@ class SearchCandidateRecord:
     #: What a counted game would have been worth **then**. ``None`` in for fun,
     #: where a counted result is meaningless rather than unavailable.
     at_stake: AtStake | None
+    #: Whether this pairing had a pass whose suppression had already **lapsed** —
+    #: that is, whether this card is a **re-show**. Set on a dealt card and
+    #: ``None`` everywhere else, which is a biconditional rather than a default:
+    #: a shortlist row is not a card, and a near miss was dealt to nobody.
+    #:
+    #: It reads the **durable pass record**, never the suppression cache: a
+    #: lapsed key leaves no trace the pair was ever passed, so at the exact
+    #: moment the re-show happens the fact that makes it one has expired. Without
+    #: this column only plain pass rate is computable, never *pass rate on
+    #: re-shown profiles* — the only falsifier ``PASS_SUPPRESS`` has
+    #: (``docs/adr/0128``).
+    suppression_lapsed: bool | None = None
 
     def __post_init__(self) -> None:
         invariant(self.position >= 1, f"a position below one: {self.position}")
@@ -373,6 +386,14 @@ class SearchRecord:
     rung_taken: Rung | None
     latency_ms_by_stage: Mapping[str, int]
     candidates: tuple[SearchCandidateRecord, ...]
+    #: How many candidates a **live** pass suppression removed from this deal.
+    #: **Deck deals only**, ``None`` elsewhere.
+    #:
+    #: It is the only thing that distinguishes *your own passes emptied your
+    #: deck* from *the pool is empty* — the failure mode nobody can see from any
+    #: screen, since no route returns a pass, to anyone, in any shape
+    #: (``docs/adr/0128`` §4).
+    n_excluded_by_suppression: int | None = None
 
     def __post_init__(self) -> None:
         on_the_deck = self.surface is SearchSurface.DECK
@@ -384,6 +405,24 @@ class SearchRecord:
             (self.intent_read is not None) == on_the_deck,
             f"a {self.surface.value} search with intent_read {self.intent_read}",
         )
+        invariant(
+            (self.n_excluded_by_suppression is not None) == on_the_deck,
+            f"a {self.surface.value} search counting "
+            f"{self.n_excluded_by_suppression} suppressed: the count belongs to "
+            "a deal and to nothing else, because a pass reaches no other surface",
+        )
+        for row in self.candidates:
+            # **A re-show is a fact about a card**, so the flag is set exactly
+            # where a card was dealt: on this surface, in this band. A near miss
+            # was shown to nobody and a shortlist row is not a card, and both
+            # would otherwise carry a ``false`` that reads as *not a re-show*
+            # rather than as *not asked*.
+            invariant(
+                (row.suppression_lapsed is not None)
+                == (on_the_deck and row.band is CandidateBand.RETURNED),
+                f"a {self.surface.value} {row.band.value} row with "
+                f"suppression_lapsed {row.suppression_lapsed}",
+            )
         invariant(
             len(self.returned) == self.counts.n_returned,
             f"n_returned says {self.counts.n_returned} and {len(self.returned)} "

@@ -1193,6 +1193,133 @@
           }
         ]
       }
+    },
+    "/api/v1/deck": {
+      "post": {
+        "tags": [
+          "deck"
+        ],
+        "summary": "Match me",
+        "description": "Deals one batch of cards: one judgement at a time, no mode to pick and no setup.\n\n**Send the sport and nothing else.** The deck reads your own declared Play intent for it \u2014 *no preference* still gives you a working deck \u2014 and no mode crosses the wire in either direction.\n\n**A spent deal deals again.** Post again for a new deal with a new `search_id`; running out of cards is not running out of people, and only a fresh deal that comes back empty means the pool is thin.\n\n**The order is the deck's variety**: people who already said *Let's play* to you, then the liveliest, then the rest. There is no re-sort \u2014 `sorts_available` is empty here, because a deck is one card at a time.\n\n**No widening is offered.** `rung_offers` is `null` on a deal: the relaxation ladder belongs to the shortlist.\n\n**Read it back** through `GET /api/v1/searches/{id}`, in this same shape.",
+        "operationId": "deal_the_deck_api_v1_deck_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DealDeckRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "One deal: an ordered batch of at most ten cards, sharing one `search_id`. **An empty deal is also a 200** \u2014 a fresh deal that came back with nothing is the honest empty state, and the pool it came from is described either way.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShortlistResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`account_held` \u2014 this account is under a live hold.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`sport_not_rated` \u2014 you hold no rating for this sport.\n\n`play_intent_not_declared` \u2014 the deck has no mode to read, so it reads your declaration; without one there is nothing at all to go on. **Answering *no preference* is an answer** and gives you a working deck.\n\n`player_profile_not_committed` \u2014 there is no profile to read a radius, a grid or an area from.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`matchmaking_unavailable`, `gate_data_unavailable`, `index_too_stale`, `search_not_recorded` \u2014 four distinct codes at one status, so a client can tell a transient outage from a refusal about *you*.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/passes": {
+      "post": {
+        "tags": [
+          "passes"
+        ],
+        "summary": "Not today",
+        "description": "Keeps somebody out of **your deck** for a while, and reaches nothing else.\n\n**It is not a block, and it never becomes one.** You will still find that person in a shortlist tomorrow if you change your mind; it never touches their deck, and passing twice buys exactly the same window as passing once. The control that removes a person from a person is `POST /api/v1/blocks`, and it is meant to be the heavier gesture.\n\n**Nobody is told.** Not them, not you: no count, no list, no *show them again*.\n\n**`search_id` is required** \u2014 it says which deal this card came from.",
+        "operationId": "record_a_pass_api_v1_passes_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecordPassRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Recorded. **Nothing is returned, and nothing ever will be** \u2014 there is no route through which a pass reaches anybody, including you."
+          },
+          "409": {
+            "description": "`origin_search_not_found` \u2014 no search of **yours** showed that player for that sport. The origin is refused rather than linked as null.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -1613,6 +1740,20 @@
         ],
         "title": "DayPart",
         "description": "The three parts of a day a player may tick.\n\nClosed, and deliberately coarse. The product asks *when do you usually play*,\nand an answer finer than this would be a schedule \u2014 which is the thing a\npreference is explicitly not.\n\nDeclared in rendering order, so ``tuple(DayPart)`` is the order a grid is\nlaid out in and no caller sorts."
+      },
+      "DealDeckRequest": {
+        "properties": {
+          "sport": {
+            "$ref": "#/components/schemas/Sport",
+            "description": "Which sport this deal is for"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sport"
+        ],
+        "title": "DealDeckRequest",
+        "description": "What a deal is asked for. **One field, and that is the whole contract.**\n\n**There is no `mode` here and there never will be.** The deck reads your own\ndeclared Play intent for this sport, resolved backend-side, and *no\npreference* is a working deck rather than a blocked one \u2014 indecision is not a\nstate this product refuses. A mode on this body would be the field the\ntelemetry constraint refuses: `mode` is null exactly when the surface is the\ndeck.\n\n**There is no widening here either.** The relaxation ladder does not reach\nthe deck, so a deal carries no rung offers and there is no offer for one to\ncite.\n\n**There is nothing about a pass.** The suppression window crosses the wire in\nno shape at all \u2014 no field, no code, no timestamp \u2014 which is what makes a\npass unable to become something stronger by way of a request."
       },
       "DistanceEvidence": {
         "properties": {
@@ -2734,6 +2875,34 @@
         "title": "RatingsResponse",
         "description": "Every sport this player is rated at \u2014 empty when they are rated at none."
       },
+      "RecordPassRequest": {
+        "properties": {
+          "sport": {
+            "$ref": "#/components/schemas/Sport",
+            "description": "Which sport this card was for"
+          },
+          "player_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Player Id",
+            "description": "Whose card you are passing on"
+          },
+          "search_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Search Id",
+            "description": "The deal this person was dealt to you in. **Required** \u2014 a pass with no origin is refused rather than recorded with a null link."
+          }
+        },
+        "type": "object",
+        "required": [
+          "sport",
+          "player_id",
+          "search_id"
+        ],
+        "title": "RecordPassRequest",
+        "description": "One *not today*, and where the card came from. **Write-only.**\n\nNothing is returned by this route and no route anywhere returns a pass \u2014 not\nto you, not as a count, not as *\"you have passed on twelve people\"*.\n\n`search_id` is the **Origin key** and is required, exactly as it is for a\nyes: a pass citing a search that is unknown, that belongs to somebody else or\nthat never showed that person is refused rather than recorded with an empty\nlink. **The position is not sent** \u2014 the backend reads it off the cited\nsearch's own rows.\n\n**How long it lasts is not yours to name**, and there is no field here for\nit. A pass keeps somebody out of *your deck* only, for a window this backend\ndecides; it never reaches a shortlist, a line-up or a forecast, it never\ntouches their deck, and a second pass buys exactly the same window and no\nmore. The control that removes a person from a person is a **block**, and it\nis deliberately a heavier gesture."
+      },
       "RefreshRequest": {
         "properties": {
           "refresh_token": {
@@ -3213,7 +3382,7 @@
           "FILL_SEATS"
         ],
         "title": "SearchSurface",
-        "description": "Which terminal stage ran. Four values, and pooling their rates is how\nevery number the engine is judged by becomes meaningless \u2014 ``FILL_SEATS`` is\nnot even optimising for the searcher.\n\nOnly ``SHORTLIST`` can be written today; the other three arrive with their\nroutes. They are declared now because ``surface`` is a stored column and a\nvocabulary that grows one value per ticket is a vocabulary whose old rows\ncannot be read against the new ones."
+        "description": "Which terminal stage ran. Four values, and pooling their rates is how\nevery number the engine is judged by becomes meaningless \u2014 ``FILL_SEATS`` is\nnot even optimising for the searcher.\n\n``SHORTLIST`` and ``DECK`` can be written today; the two line-up surfaces\narrive with their route. All four were declared before any of them could be\nwritten, because ``surface`` is a stored column and a vocabulary that grows\none value per ticket is a vocabulary whose old rows cannot be read against\nthe new ones."
       },
       "SharedSlot": {
         "properties": {

@@ -154,7 +154,7 @@ class ReadBackSearch:
                 for row in rows
             ),
             sorts_available=sorts_available(
-                tuple(of_record(row) for row in shown)
+                tuple(of_record(row) for row in shown), surface=record.surface
             ),
         )
 

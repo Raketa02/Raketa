@@ -36,6 +36,7 @@ from app.kernel import Instant, InvariantViolated, Sport
 from app.modules.blocks.domain.errors import BlockStateUnavailable
 from app.modules.matchmaking.application.commands import RunShortlistSearchCommand
 from app.modules.matchmaking.application.run_shortlist_search import RunShortlistSearch
+from app.modules.matchmaking.application.search_workbench import SearchWorkbench
 from app.modules.matchmaking.domain.cards import CardIdentity
 from app.modules.matchmaking.domain.candidate_index import Partition
 from app.modules.matchmaking.domain.candidate_snapshot import CandidateSnapshot
@@ -338,28 +339,32 @@ def use_case(
     work = work or Work(store=store)
     work.store = store
     return RunShortlistSearch(
-        clock=FixedClock(),
+        workbench=SearchWorkbench(
+            clock=FixedClock(),
+            ruleset=LIVE_RULESET,
+            searches=store,
+            unit_of_work=work,
+            candidates=Snapshots(rows=rows, caught_up_at=caught_up_at),
+            profiles=Profiles(a_profile() if profile is DEFAULT else profile),
+            ratings=Ratings([a_rating()] if ratings is None else ratings),
+            declarations=Declarations(
+                a_declaration() if declaration is DEFAULT else declaration
+            ),
+            blocks=blocks or Blocks(),
+            holds=holds or NoHoldsExist(),
+            account_status=NobodyIsHidden(),
+            history=NoMatchHistoryExists(),
+            player_scores=NoPlayerScoresExist(),
+            at_stake=NoResultUpdateRuleExists(),
+            exposure=exposure or InMemoryExposureLedger(FixedClock()),
+            interest=interest or Yeses(),
+            cards=cards or Cards(),
+            absent_terms=frozenset({Term.RELIABILITY}),
+        ),
         ruleset=LIVE_RULESET,
         engine=engine or MatchFitV1(),
-        candidates=Snapshots(rows=rows, caught_up_at=caught_up_at),
         searches=store,
-        unit_of_work=work,
-        profiles=Profiles(a_profile() if profile is DEFAULT else profile),
-        ratings=Ratings([a_rating()] if ratings is None else ratings),
-        declarations=Declarations(
-            a_declaration() if declaration is DEFAULT else declaration
-        ),
-        blocks=blocks or Blocks(),
-        holds=holds or NoHoldsExist(),
-        account_status=NobodyIsHidden(),
-        history=NoMatchHistoryExists(),
-        player_scores=NoPlayerScoresExist(),
-        at_stake=NoResultUpdateRuleExists(),
-        exposure=exposure or InMemoryExposureLedger(FixedClock()),
-        interest=interest or Yeses(),
-        cards=cards or Cards(),
         prompts=prompts or InMemoryPromptLedger(FixedClock()),
-        absent_terms=frozenset({Term.RELIABILITY}),
     )
 
 

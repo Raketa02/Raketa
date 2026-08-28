@@ -34,6 +34,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.kernel import Sport
+from app.modules.matchmaking.infrastructure.pass_model import PassORM
 from app.modules.matchmaking.infrastructure.search_model import (
     SearchCandidateORM,
     SearchORM,
@@ -155,13 +156,26 @@ async def declare_intent(
     )
 
 
-async def a_searcher(client, session_factory, name: str = "searcher") -> dict:
-    """One player, ready to search: profile, rating and declaration."""
+async def a_searcher(
+    client,
+    session_factory,
+    name: str = "searcher",
+    *,
+    intent: str = "COMPETITIVE",
+) -> dict:
+    """One player, ready to search: profile, rating and declaration.
+
+    ``intent`` is a parameter rather than something a test declares afterwards
+    because the declaration is an **aggregate**, and a second one at version 1
+    collides — which is the log doing its job, not a fixture being awkward. The
+    deck is the surface that cares: it reads the declaration instead of a mode,
+    so *no preference* is a case it has to be given at birth.
+    """
 
     player_id, token = await register(client, name)
     await commit_profile(client, token)
     mu = await rate(client, token)
-    await declare_intent(session_factory, player_id)
+    await declare_intent(session_factory, player_id, intent=intent)
     return {"id": player_id, "token": token, "mu": mu}
 
 
@@ -327,6 +341,50 @@ async def express_interest(
 
 async def read_interest(client, token: str):
     return await client.get("/api/v1/interest", headers=auth(token))
+
+
+async def deck(client, token: str, sport: Sport = SPORT):
+    """One deal. **The sport is the whole body** — there is no mode to send."""
+
+    return await client.post(
+        "/api/v1/deck", json={"sport": sport.value}, headers=auth(token)
+    )
+
+
+async def pass_on(
+    client,
+    token: str,
+    *,
+    player_id: UUID,
+    search_id: str,
+    sport: Sport = SPORT,
+):
+    """One *not today*, with the origin key the route requires."""
+
+    return await client.post(
+        "/api/v1/passes",
+        json={
+            "sport": sport.value,
+            "player_id": str(player_id),
+            "search_id": str(search_id),
+        },
+        headers=auth(token),
+    )
+
+
+async def recorded_passes(session_factory) -> list[PassORM]:
+    """Every pass row, read straight out of the table.
+
+    The only way to see one at all: no route returns a pass, to anybody, which is
+    exactly the promise these tests are asserting — so the assertion has to reach
+    past the wire, and reaching past it here rather than in each test is what
+    keeps that reach deliberate."""
+
+    async with session_factory() as session:
+        rows = await session.execute(
+            select(PassORM).order_by(PassORM.passed_at)
+        )
+        return list(rows.scalars())
 
 
 async def a_yes(client, session_factory, candidate_source, *, sender, towards):

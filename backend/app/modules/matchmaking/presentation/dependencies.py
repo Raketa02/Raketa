@@ -4,12 +4,18 @@
 concrete class comes from `app.bootstrap.composition`, and
 `tests/unit/test_composition_root.py` fails this file if it imports one.
 
-**The two ledgers were declared before their first caller existed**, exactly as
-`get_block_query` was and for the same reason: every Play surface reads them,
-none of them was built, and the surfaces should wire to this line rather than
-each deciding where a ledger comes from. It also put the seam where the test
-suite can hold it — `tests/conftest.py` overrides both with in-memory ledgers, so
-**no test in this suite needs Redis running**.
+**The ephemeral ledgers are declared here and not per use case**, exactly as
+`get_block_query` is and for the same reason: every Play surface reads them, and
+a surface deciding for itself where a gate comes from is how one of them ends up
+wired to a different answer. It also puts the seam where the test suite can hold
+it — `tests/conftest.py` overrides all three with in-memory ledgers, so **no test
+in this suite needs Redis running**.
+
+**`SearchWorkbench` is declared on the same argument, one layer up.** Every
+surface does the same reads and the same writes around the stage that differs, so
+the shortlist and the deck take one of these rather than fifteen collaborators
+each — and what is left in each factory below is exactly what that surface
+decides for itself.
 
 **The candidate source is the process's, not the request's** (`docs/adr/0112`).
 It is read off the application rather than built here: a per-request source would
@@ -45,6 +51,7 @@ from app.bootstrap.composition import (
     build_interest_ledger,
     build_match_fit_engine,
     build_match_history_query,
+    build_pass_ledger,
     build_player_card_source,
     build_player_score_query,
     build_ruleset,
@@ -55,13 +62,17 @@ from app.bootstrap.composition import (
 from app.infrastructure.redis_client import get_redis
 from app.modules.blocks.presentation.dependencies import BlockQueryDep
 from app.modules.matchmaking.application.express_interest import ExpressInterest
+from app.modules.matchmaking.application.record_pass import RecordPass
 from app.modules.matchmaking.application.read_back_search import ReadBackSearch
 from app.modules.matchmaking.application.read_interest import ReadInterest
+from app.modules.matchmaking.application.run_deck_deal import RunDeckDeal
 from app.modules.matchmaking.application.run_shortlist_search import RunShortlistSearch
+from app.modules.matchmaking.application.search_workbench import SearchWorkbench
 from app.modules.matchmaking.domain.candidate_snapshot import CandidateSource
 from app.modules.matchmaking.domain.errors import MatchmakingUnavailable
 from app.modules.matchmaking.domain.interest import InterestLedger
 from app.modules.matchmaking.domain.ledgers import ExposureLedger, SuppressionLedger
+from app.modules.matchmaking.domain.passes import PassLedger
 from app.modules.matchmaking.domain.ports import AccountHoldQuery, AccountStatusQuery
 from app.modules.matchmaking.domain.prompts import PromptLedger
 from app.modules.player_profile.presentation.dependencies import (
@@ -160,7 +171,7 @@ AccountStatusQueryDep = Annotated[
 ]
 
 
-def get_run_shortlist_search(
+def get_search_workbench(
     db: DbSession,
     clock: ClockDep,
     uow: UnitOfWorkDep,
@@ -175,13 +186,18 @@ def get_run_shortlist_search(
     account_status: AccountStatusQueryDep,
     exposure: ExposureLedgerDep,
     interest: InterestLedgerDep,
-    prompts: PromptLedgerDep,
-) -> RunShortlistSearch:
-    """The shortlist use case, assembled per request.
+) -> SearchWorkbench:
+    """Everything every Play surface reads and writes, assembled per request.
+
+    Declared once rather than per use case, which is the same reason the two
+    ledgers above are declared here: **every surface reads them**, and a second
+    surface deciding for itself where a gate comes from is how one of them ends
+    up wired to a different answer.
 
     The five outward ports and the store are per-request because they read the
     request's own session; the engine and the ruleset are process-wide, because a
-    scorer holds no state and a ruleset is a frozen dataset.
+    scorer holds no state and a ruleset is a frozen dataset. The candidate source
+    is the **process's** (``docs/adr/0112``).
 
     ``absent_terms`` is derived from the Player Score adapter this root just
     chose rather than declared, so the day that adapter changes, this changes
@@ -189,13 +205,12 @@ def get_run_shortlist_search(
     """
 
     player_scores = build_player_score_query(db)
-    return RunShortlistSearch(
+    return SearchWorkbench(
         clock=clock,
         ruleset=build_ruleset(),
-        engine=build_match_fit_engine(),
-        candidates=candidates,
         searches=build_search_store(db),
         unit_of_work=uow,
+        candidates=candidates,
         profiles=profiles,
         ratings=ratings,
         declarations=declarations,
@@ -210,14 +225,113 @@ def get_run_shortlist_search(
         cards=build_player_card_source(
             session=db, event_store=event_store, events=events
         ),
-        prompts=prompts,
         absent_terms=build_absent_terms(player_scores),
+    )
+
+
+SearchWorkbenchDep = Annotated[SearchWorkbench, Depends(get_search_workbench)]
+
+
+def get_run_shortlist_search(
+    db: DbSession,
+    workbench: SearchWorkbenchDep,
+    prompts: PromptLedgerDep,
+) -> RunShortlistSearch:
+    """The shortlist use case: the workbench, plus what only a list has.
+
+    Three collaborators beyond the shared ones, and each is a thing a deal does
+    not do — the ladder needs the ruleset and the engine to price a rung, the
+    citation check needs the store, and the prompts need the ledger they were
+    left in.
+    """
+
+    return RunShortlistSearch(
+        workbench=workbench,
+        ruleset=build_ruleset(),
+        engine=build_match_fit_engine(),
+        searches=build_search_store(db),
+        prompts=prompts,
     )
 
 
 RunShortlistSearchDep = Annotated[
     RunShortlistSearch, Depends(get_run_shortlist_search)
 ]
+
+
+def get_pass_ledger(db: DbSession) -> PassLedger:
+    """The durable record of every pass. **Per request, over the session.**
+
+    Declared beside the suppression ledger and built from a different place on
+    purpose: that one is Redis and fails soft, this one is a table and does not.
+    The gate is the cache; the evidence is the row.
+    """
+
+    return build_pass_ledger(db)
+
+
+PassLedgerDep = Annotated[PassLedger, Depends(get_pass_ledger)]
+
+
+def get_run_deck_deal(
+    db: DbSession,
+    workbench: SearchWorkbenchDep,
+    suppression: SuppressionLedgerDep,
+    interest: InterestLedgerDep,
+    passes: PassLedgerDep,
+) -> RunDeckDeal:
+    """The deck, assembled per request. **Three ledgers the shortlist has not.**
+
+    The suppression cache and the pass record are the deck's alone — a pass
+    reaches no other surface — and the interest ledger is here for the deck's own
+    *already asked* exclusion, which is a read of the player's **own outgoing**
+    rows rather than the lift's read of incoming ones the workbench makes.
+
+    There is no prompt ledger: a deal raises no question, because the two a
+    search can raise are about a grid it improvised and a widening it keeps
+    taking, and a deck does neither.
+    """
+
+    return RunDeckDeal(
+        workbench=workbench,
+        ruleset=build_ruleset(),
+        engine=build_match_fit_engine(),
+        searches=build_search_store(db),
+        suppression=suppression,
+        interest=interest,
+        passes=passes,
+    )
+
+
+RunDeckDealDep = Annotated[RunDeckDeal, Depends(get_run_deck_deal)]
+
+
+def get_record_pass(
+    db: DbSession,
+    clock: ClockDep,
+    uow: UnitOfWorkDep,
+    suppression: SuppressionLedgerDep,
+    passes: PassLedgerDep,
+) -> RecordPass:
+    """*Not today*, assembled per request. **Two stores, in that order.**
+
+    It holds a ruleset and no engine: the one number it reads is
+    ``PASS_SUPPRESS``, and nothing here scores anybody. It holds the **search
+    store** because the origin key is proved against a record rather than trusted
+    from a request.
+    """
+
+    return RecordPass(
+        clock=clock,
+        ruleset=build_ruleset(),
+        passes=passes,
+        suppression=suppression,
+        searches=build_search_store(db),
+        unit_of_work=uow,
+    )
+
+
+RecordPassDep = Annotated[RecordPass, Depends(get_record_pass)]
 
 
 def get_read_back_search(

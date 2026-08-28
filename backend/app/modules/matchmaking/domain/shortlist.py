@@ -3,7 +3,10 @@
 **Stages 1–6 are shared by every surface and only the terminal stage differs**,
 which is the whole reason there is one engine rather than three. What is here is
 those six plus the shortlist's own terminal stage; the line-up and the deck reuse
-:func:`generate` and :func:`score_all` unchanged and end differently.
+:func:`generate`, :func:`score_all` and :func:`with_liveness` unchanged and end
+differently. Those three are public for exactly that reason — a second surface
+that reimplemented stage 6 would be a second opinion about what moves somebody —
+and the terminal stage below is the shortlist's alone.
 
 ```
   1  GATE          ten hard exclusions. no relaxation reaches one
@@ -379,7 +382,7 @@ def run(context: SearchContext, engine: MatchFit) -> Shortlist:
     admitted = tuple(row for row in scored if row.admission.admitted)
     withheld = tuple(row for row in scored if not row.admission.admitted)
     returned = _rank(admitted, context, engine)[: context.ruleset.shape.shortlist_max]
-    near_misses = _near_misses(withheld, context)
+    near_misses = near_misses_of(withheld, context)
     return Shortlist(
         returned=returned,
         near_misses=near_misses,
@@ -409,7 +412,7 @@ def _rank(
     """
 
     searcher = searcher_of(context)
-    moved = tuple(_with_liveness(row, context, engine, searcher) for row in admitted)
+    moved = tuple(with_liveness(row, context, engine, searcher) for row in admitted)
     return tuple(
         sorted(
             moved,
@@ -426,7 +429,7 @@ def _key(row: Scored) -> float:
     return row.rank_key if row.rank_key is not None else 0.0
 
 
-def _with_liveness(
+def with_liveness(
     row: Scored, context: SearchContext, engine: MatchFit, searcher: Searcher
 ) -> Scored:
     """One admitted candidate's offset, its reciprocal, and its rank key."""
@@ -518,7 +521,7 @@ def _searcher_as_candidate(
     )
 
 
-def _near_misses(
+def near_misses_of(
     withheld: tuple[Scored, ...], context: SearchContext
 ) -> tuple[Scored, ...]:
     """Layer 3: the best ``NEAR_MISS_RECORDED`` that did not clear.

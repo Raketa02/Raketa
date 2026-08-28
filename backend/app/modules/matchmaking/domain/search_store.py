@@ -115,6 +115,29 @@ class SearchStore(Protocol):
         """
         ...
 
+    async def dealt_since(
+        self, *, searcher_id: UUID, sport: Sport, since: datetime
+    ) -> frozenset[UUID]:
+        """Everybody this player has been **dealt** since a moment, in this sport.
+
+        What makes **a spent deal deal again**: a new deal carries the same
+        exclusions plus everybody already dealt, and without this a second tap
+        would deal the same ten people — the order is deterministic and nothing
+        about them has moved (``the-engine.md`` §10.3).
+
+        **It reads the record and not a cache**, which is the same split the pass
+        is written under: the deal is a durable row and the courtesy derived from
+        it must not be able to outlive it or fall short of it. The window is the
+        caller's — the store holds every deal ever dealt — and it is
+        :data:`~app.modules.matchmaking.domain.deck.DEALT_MEMORY`.
+
+        It answers ids and never rows. A deal needs a set to hold people out
+        with, and a method that returned records would be a second way to read
+        one — this time without the band predicate that keeps layer 3 inside the
+        building.
+        """
+        ...
+
     async def modes_since(
         self, *, since: datetime, limit: int
     ) -> tuple["SearchModeReading", ...]:

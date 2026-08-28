@@ -76,6 +76,7 @@ from app.modules.matchmaking.domain.cards import PlayerCardSource
 from app.modules.matchmaking.domain.ledgers import ExposureLedger, SuppressionLedger
 from app.modules.matchmaking.domain.prompts import PromptLedger
 from app.modules.matchmaking.domain.interest import InterestLedger
+from app.modules.matchmaking.domain.passes import PassLedger
 from app.modules.matchmaking.domain.search_store import SearchStore
 from app.modules.matchmaking.infrastructure.fail_soft_ledgers import (
     FailSoftExposureLedger,
@@ -114,6 +115,9 @@ from app.modules.matchmaking.infrastructure.player_card_source import (
 )
 from app.modules.matchmaking.infrastructure.sqlalchemy_interest_ledger import (
     SqlAlchemyInterestLedger,
+)
+from app.modules.matchmaking.infrastructure.sqlalchemy_pass_ledger import (
+    SqlAlchemyPassLedger,
 )
 from app.modules.matchmaking.infrastructure.sqlalchemy_search_store import (
     SqlAlchemySearchStore,
@@ -474,6 +478,19 @@ def build_interest_ledger(session: AsyncSession) -> InterestLedger:
     """
 
     return SqlAlchemyInterestLedger(session)
+
+
+def build_pass_ledger(session: AsyncSession) -> PassLedger:
+    """The durable record of every pass, over the caller's own session.
+
+    **No fail-soft wrapper**, and the contrast with the suppression ledger built
+    beside it is the whole design: that one is the *gate* and may be lost for the
+    price of a repeated card, and this one is the *evidence* and may not. A pass
+    whose row could not be written is a pass that did not happen, and the route
+    says so rather than suppressing quietly against nothing.
+    """
+
+    return SqlAlchemyPassLedger(session)
 
 
 def build_player_card_source(

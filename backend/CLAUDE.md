@@ -83,12 +83,16 @@ Rules to preserve:
 - **State changes emit domain events.** Use cases persist them through
   `DomainEventStore.append` and enqueue them on the transactional outbox in the same
   transaction; handlers perform side effects after commit. **One deliberate exception,
-  and it is the matchmaking module's two durable ledgers** — the `search` record and
-  `interest` (`the-engine.md` §12: *nothing here is event-sourced*, and an interest is
-  *durable without being an aggregate with a life story*). Both are small facts with no
-  life story and nothing downstream reacts to one being written: a lift is a read on the
-  next search, and a mutual is what two rows facing each other already say. A new context
-  does **not** inherit this — it needs the same argument made in an ADR.
+  and it is the matchmaking module's three durable ledgers** — the `search` record,
+  `interest` and the **pass** record (`the-engine.md` §12: *nothing here is
+  event-sourced*, and an interest is *durable without being an aggregate with a life
+  story*). All three are small facts with no life story and nothing downstream reacts to
+  one being written: a lift is a read on the next search, a mutual is what two rows
+  facing each other already say, and the suppression a pass writes is a cache its use
+  case fills after the commit rather than a subscriber. The authority naming all three is
+  `the-engine.md` §12; ADR-0128 decides what a pass *is* and says nothing about event
+  sourcing. A new context does **not** inherit this — it needs the same argument made in
+  an ADR.
 - **Seeds execute use cases, never SQL.** `app/seeds/` creates deterministic development
   accounts through the same use cases a request runs, wired from the composition root, so
   a seeded aggregate has the event stream and the outbox rows a real one has. A structural
@@ -201,6 +205,31 @@ Rules to preserve:
   floor.py`, with the reason printed; the newcomer and zero-exposure lifts reorder and
   never admit. All three numbers are ruleset rows and only the sweep's cadence is a
   setting.
+- **The deck reads a declaration, and a pass is a statement about my deck**
+  ([ADR-0128](../docs/adr/0128-a-pass-is-about-my-deck-a-block-is-about-a-person.md),
+  `the-two-contracts.md` §6). `POST /api/v1/deck` takes **`sport` only** and creates a
+  search: there is no mode on the wire in either direction, because the deck resolves the
+  weight vector backend-side from the viewer's declared Play intent — `NO_PREFERENCE →
+  fun`, never a third vector — and `search.intent_read` records **the declaration as it
+  stood**, so a later change to the mapping does not rewrite history. Its order is its
+  whole variety (three bands, then `PASS_SUPPRESS`); the **relaxation ladder does not
+  reach it**; and a spent deal deals again — a new `search_id`, the same exclusions plus
+  everybody dealt within `DEALT_MEMORY`, so only a *fresh* deal that came back empty is
+  the honest empty state.
+  `POST /api/v1/passes` is **write-only and answers `204`**: no route returns a pass, to
+  anyone, in any shape, and `PASS_SUPPRESS` crosses the wire in **no shape at all**. It
+  has three boundaries, all the opposite of a block's — deck only, one-directional, never
+  escalating — and the split that makes them enforceable is **the gate is the cache; the
+  evidence is the row**: the durable `player_pass` row is written and committed first, and
+  the 30-day Redis suppression derived from it is written after and **fails soft**, so an
+  outage repeats a card and never empties a deal. Two telemetry columns exist for the one
+  falsifier `PASS_SUPPRESS` has — `search.n_excluded_by_suppression` and
+  `search_candidate.suppression_lapsed`, both **deck deals only**, both check-constrained.
+  **`application/search_workbench.py` is the seam the two surfaces share** — read the
+  searcher, bind the snapshot and every live gate fact, attach the card and the at-stake
+  block, record, commit, note exposure — so a shortlist and a deal cannot come to two
+  answers about which reads fail closed. What stays in each use case is what that surface
+  decides: the mode, the exclusions, the order, the ladder, the prompts.
 - **A returned search is a recorded search**
   ([ADR-0104](../docs/adr/0104-the-search-record-is-the-answer-and-never-expires.md)).
   `POST /api/v1/searches` is the platform's first matchmaking route, and the rule that

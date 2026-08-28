@@ -12,13 +12,13 @@ attached. What is left is naming fields — and a renderer that did arithmetic
 would be a second implementation of a domain rule in the one layer nobody tests
 for it.
 
-**Both routes render the record**, and that is what makes the round trip true by
-construction rather than by a test that happens to pass. The search that has just
-run and the search read back a month later reach :func:`_candidate` with the same
+**Every route renders the record**, and that is what makes the round trip true by
+construction rather than by a test that happens to pass. A shortlist, a deal and
+a search read back a month later reach :func:`_candidate` with the same
 type — a ``SearchCandidateRecord`` — so there is no shape a fresh response could
 carry that a stored one could not reproduce. The two departures the round trip
-allows itself are the whole of the difference between these two functions: a row
-the live gates now withhold, and a photo link minted per response
+allows itself are the whole of the difference between these three functions: a
+row the live gates now withhold, and a photo link minted per response
 (``docs/adr/0109``, ``docs/adr/0107``).
 
 **A withheld row carries no person.** It is a different type, not a candidate
@@ -34,6 +34,7 @@ from typing import Any
 from app.kernel import InvariantViolated
 
 from app.modules.matchmaking.application.read_back_search import ReadBackAnswer
+from app.modules.matchmaking.application.run_deck_deal import DeckAnswer
 from app.modules.matchmaking.application.run_shortlist_search import ShortlistAnswer
 from app.modules.matchmaking.domain.prompts import RaisedPrompt
 from app.modules.matchmaking.domain.relaxation import RungOffer
@@ -70,6 +71,30 @@ def render(answer: ShortlistAnswer) -> ShortlistResponse:
         search=_envelope(
             answer.record, answer.sorts_available, prompts=answer.prompts
         ),
+        candidates=[_candidate(row) for row in answer.record.returned],
+    )
+
+
+def render_deal(answer: DeckAnswer) -> ShortlistResponse:
+    """One deal, in **the same shape a shortlist crosses in**.
+
+    Not a shape of its own, and that is the read-back's requirement rather than
+    tidiness: ``GET /searches/{id}`` returns the same schema the `POST` did, for
+    any of the four surfaces, so a deal that crossed in a second shape would be a
+    deal that could not be read back through the one renderer this module has.
+
+    What differs is what the record says. ``mode`` is ``null`` — exactly on the
+    deck and nowhere else — the sort list is empty, and ``rung_offers`` is
+    ``null`` because the ladder does not reach here and the offers were not
+    computed at all.
+
+    ``prompts`` is not passed: a deal raises none, and the two spellings are
+    different answers — this one is *the surface does not have them*, where an
+    empty list would be *it ran them and found nothing*.
+    """
+
+    return ShortlistResponse(
+        search=_envelope(answer.record, answer.sorts_available),
         candidates=[_candidate(row) for row in answer.record.returned],
     )
 

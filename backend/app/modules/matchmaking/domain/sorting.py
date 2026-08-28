@@ -42,6 +42,7 @@ from typing import Callable, Sequence, final
 
 from app.modules.matchmaking.domain.searches import (
     SearchCandidateRecord,
+    SearchSurface,
     SortOption,
 )
 from app.modules.matchmaking.domain.shortlist import Scored
@@ -127,7 +128,9 @@ def of_record(row: SearchCandidateRecord) -> Sortable:
     )
 
 
-def sorts_available(returned: Sequence[Sortable]) -> tuple[SortOption, ...]:
+def sorts_available(
+    returned: Sequence[Sortable], *, surface: SearchSurface
+) -> tuple[SortOption, ...]:
     """The controls this answer can honestly draw, in the vocabulary's own order.
 
     ``EVENEST`` is absent from every shortlist and present in the vocabulary on
@@ -139,8 +142,19 @@ def sorts_available(returned: Sequence[Sortable]) -> tuple[SortOption, ...]:
     for everybody — which is a fact about the platform, re-derived per search
     rather than hardcoded, so the control appears by itself on the day
     ``player_score`` ships.
+
+    **The deck draws none of them**, and that is the same rule rather than an
+    exception to it: a deck is one card at a time, so there is no list in the
+    player's hand for a control to reorder, and its **order is its whole
+    variety** — three bands plus ``PASS_SUPPRESS`` (``the-two-contracts.md`` §6).
+    A control that resorted a deal would be offering to undo the one thing the
+    surface does. The surface decides it here rather than at each caller, because
+    the search that has just run and the same deal read back a month later must
+    reach one answer.
     """
 
+    if surface is SearchSurface.DECK:
+        return ()
     return tuple(
         option
         for option, key in (

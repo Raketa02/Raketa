@@ -127,6 +127,31 @@ class SqlAlchemySearchStore:
         )
         return int(counted.scalar_one())
 
+    async def dealt_since(
+        self, *, searcher_id: UUID, sport: Sport, since: datetime
+    ) -> frozenset[UUID]:
+        """Everybody this player has been **dealt** since a moment, in this sport.
+
+        Two predicates and no third: the surface, because a shortlist row is not
+        a card and passing on the deck is not what happened to it; and the band,
+        because a near miss was dealt to nobody. Ids only — the deal needs a set
+        to hold people out with, and a method that returned rows would be a
+        second way to read a search record.
+        """
+
+        rows = await self._session.scalars(
+            select(SearchCandidateORM.player_id)
+            .join(SearchORM, SearchORM.id == SearchCandidateORM.search_id)
+            .where(
+                SearchORM.searcher_id == searcher_id,
+                SearchORM.sport == sport.value,
+                SearchORM.surface == SearchSurface.DECK.value,
+                SearchORM.at >= since,
+                SearchCandidateORM.band == CandidateBand.RETURNED.value,
+            )
+        )
+        return frozenset(rows)
+
     async def modes_since(
         self, *, since: datetime, limit: int
     ) -> tuple[SearchModeReading, ...]:
@@ -209,6 +234,7 @@ def _search_row(search: SearchRecord) -> SearchORM:
         offered_by_search_id=search.offered_by_search_id,
         rung_taken=None if search.rung_taken is None else search.rung_taken.value,
         latency_ms_by_stage=dict(search.latency_ms_by_stage),
+        n_excluded_by_suppression=search.n_excluded_by_suppression,
     )
 
 
@@ -312,6 +338,7 @@ def _search_record(
         rung_taken=None if row.rung_taken is None else Rung(row.rung_taken),
         latency_ms_by_stage=dict(row.latency_ms_by_stage),
         candidates=candidates,
+        n_excluded_by_suppression=row.n_excluded_by_suppression,
     )
 
 
@@ -372,6 +399,7 @@ def _candidate_row(
                 "loss_delta": candidate.at_stake.loss_delta,
             }
         ),
+        suppression_lapsed=candidate.suppression_lapsed,
     )
 
 
@@ -436,6 +464,7 @@ def _candidate_record(row: SearchCandidateORM) -> SearchCandidateRecord:
                 loss_delta=row.at_stake["loss_delta"],
             )
         ),
+        suppression_lapsed=row.suppression_lapsed,
     )
 
 

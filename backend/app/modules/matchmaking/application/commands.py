@@ -84,6 +84,51 @@ class ExpressInterestCommand:
 
 @final
 @dataclass(frozen=True, slots=True)
+class RunDeckDealCommand:
+    """*Match me.* One deal, and **the sport is the whole ask.**
+
+    There is no ``mode`` here and there is nowhere for one to arrive: the deck
+    reads the viewer's own declared Play intent for that sport, resolved
+    backend-side, and ``NO_PREFERENCE`` inherits *for fun* rather than selecting a
+    third vector (``the-two-contracts.md`` §6). A mode on this command would be
+    the request field the telemetry constraint refuses — ``mode`` is ``NULL``
+    exactly when the surface is the deck.
+
+    There is no ``rung`` and no ``availability_override`` either: **the
+    relaxation ladder does not reach the deck** (``docs/adr/0099``), so a deal
+    cannot be widened and there is no offer for one to cite.
+    """
+
+    searcher_id: UUID
+    sport: Sport
+    trace_id: str
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class RecordPassCommand:
+    """*Not today.* One tap, on one card, citing the deal it was dealt in.
+
+    **``search_id`` is required**, on the interest row's own rule and for a
+    reason of its own: ``PASS_SUPPRESS``'s falsifier is *pass rate on re-shown
+    profiles*, which is unmeasurable without knowing where a pass came from
+    (``docs/adr/0128``). The position is read off the cited search rather than
+    sent, exactly as it is for a yes.
+
+    There is no field here for *how long*, and there will not be one. The
+    suppression window is a released ruleset number with **zero contract
+    surface** — no field, no code, no timestamp — and a client that could name
+    one would be a client that could escalate a pass.
+    """
+
+    passer_id: UUID
+    passed_id: UUID
+    sport: Sport
+    search_id: UUID
+
+
+@final
+@dataclass(frozen=True, slots=True)
 class ReadInterestCommand:
     """*What have I got out, and who said yes back?*
 

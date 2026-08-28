@@ -516,6 +516,62 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/deck": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Match me
+         * @description Deals one batch of cards: one judgement at a time, no mode to pick and no setup.
+         *
+         *     **Send the sport and nothing else.** The deck reads your own declared Play intent for it — *no preference* still gives you a working deck — and no mode crosses the wire in either direction.
+         *
+         *     **A spent deal deals again.** Post again for a new deal with a new `search_id`; running out of cards is not running out of people, and only a fresh deal that comes back empty means the pool is thin.
+         *
+         *     **The order is the deck's variety**: people who already said *Let's play* to you, then the liveliest, then the rest. There is no re-sort — `sorts_available` is empty here, because a deck is one card at a time.
+         *
+         *     **No widening is offered.** `rung_offers` is `null` on a deal: the relaxation ladder belongs to the shortlist.
+         *
+         *     **Read it back** through `GET /api/v1/searches/{id}`, in this same shape.
+         */
+        post: operations["deal_the_deck_api_v1_deck_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/passes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Not today
+         * @description Keeps somebody out of **your deck** for a while, and reaches nothing else.
+         *
+         *     **It is not a block, and it never becomes one.** You will still find that person in a shortlist tomorrow if you change your mind; it never touches their deck, and passing twice buys exactly the same window as passing once. The control that removes a person from a person is `POST /api/v1/blocks`, and it is meant to be the heavier gesture.
+         *
+         *     **Nobody is told.** Not them, not you: no count, no list, no *show them again*.
+         *
+         *     **`search_id` is required** — it says which deal this card came from.
+         */
+        post: operations["record_a_pass_api_v1_passes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -821,6 +877,29 @@ export interface components {
          * @enum {string}
          */
         DayPart: "MORNING" | "AFTERNOON" | "EVENING";
+        /**
+         * DealDeckRequest
+         * @description What a deal is asked for. **One field, and that is the whole contract.**
+         *
+         *     **There is no `mode` here and there never will be.** The deck reads your own
+         *     declared Play intent for this sport, resolved backend-side, and *no
+         *     preference* is a working deck rather than a blocked one — indecision is not a
+         *     state this product refuses. A mode on this body would be the field the
+         *     telemetry constraint refuses: `mode` is null exactly when the surface is the
+         *     deck.
+         *
+         *     **There is no widening here either.** The relaxation ladder does not reach
+         *     the deck, so a deal carries no rung offers and there is no offer for one to
+         *     cite.
+         *
+         *     **There is nothing about a pass.** The suppression window crosses the wire in
+         *     no shape at all — no field, no code, no timestamp — which is what makes a
+         *     pass unable to become something stronger by way of a request.
+         */
+        DealDeckRequest: {
+            /** @description Which sport this deal is for */
+            sport: components["schemas"]["Sport"];
+        };
         /**
          * DistanceEvidence
          * @description How far away they are, and whether the searcher is outside *their* ring.
@@ -1667,6 +1746,42 @@ export interface components {
             /** Ratings */
             ratings: components["schemas"]["RatingResponse"][];
         };
+        /**
+         * RecordPassRequest
+         * @description One *not today*, and where the card came from. **Write-only.**
+         *
+         *     Nothing is returned by this route and no route anywhere returns a pass — not
+         *     to you, not as a count, not as *"you have passed on twelve people"*.
+         *
+         *     `search_id` is the **Origin key** and is required, exactly as it is for a
+         *     yes: a pass citing a search that is unknown, that belongs to somebody else or
+         *     that never showed that person is refused rather than recorded with an empty
+         *     link. **The position is not sent** — the backend reads it off the cited
+         *     search's own rows.
+         *
+         *     **How long it lasts is not yours to name**, and there is no field here for
+         *     it. A pass keeps somebody out of *your deck* only, for a window this backend
+         *     decides; it never reaches a shortlist, a line-up or a forecast, it never
+         *     touches their deck, and a second pass buys exactly the same window and no
+         *     more. The control that removes a person from a person is a **block**, and it
+         *     is deliberately a heavier gesture.
+         */
+        RecordPassRequest: {
+            /** @description Which sport this card was for */
+            sport: components["schemas"]["Sport"];
+            /**
+             * Player Id
+             * Format: uuid
+             * @description Whose card you are passing on
+             */
+            player_id: string;
+            /**
+             * Search Id
+             * Format: uuid
+             * @description The deal this person was dealt to you in. **Required** — a pass with no origin is refused rather than recorded with a null link.
+             */
+            search_id: string;
+        };
         /** RefreshRequest */
         RefreshRequest: {
             /** Refresh Token */
@@ -1974,10 +2089,11 @@ export interface components {
          *     every number the engine is judged by becomes meaningless — ``FILL_SEATS`` is
          *     not even optimising for the searcher.
          *
-         *     Only ``SHORTLIST`` can be written today; the other three arrive with their
-         *     routes. They are declared now because ``surface`` is a stored column and a
-         *     vocabulary that grows one value per ticket is a vocabulary whose old rows
-         *     cannot be read against the new ones.
+         *     ``SHORTLIST`` and ``DECK`` can be written today; the two line-up surfaces
+         *     arrive with their route. All four were declared before any of them could be
+         *     written, because ``surface`` is a stored column and a vocabulary that grows
+         *     one value per ticket is a vocabulary whose old rows cannot be read against
+         *     the new ones.
          * @enum {string}
          */
         SearchSurface: "SHORTLIST" | "LINEUP" | "DECK" | "FILL_SEATS";
@@ -3268,6 +3384,112 @@ export interface operations {
              *
              *     `outstanding_interest_cap_reached` — you already have the most yeses in flight this sport allows. **Nothing of yours is shortened to make room**; wait, or one of them comes back. The count and the cap are on `GET /api/v1/interest`.
              */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    deal_the_deck_api_v1_deck_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DealDeckRequest"];
+            };
+        };
+        responses: {
+            /** @description One deal: an ordered batch of at most ten cards, sharing one `search_id`. **An empty deal is also a 200** — a fresh deal that came back with nothing is the honest empty state, and the pool it came from is described either way. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShortlistResponse"];
+                };
+            };
+            /** @description `account_held` — this account is under a live hold. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /**
+             * @description `sport_not_rated` — you hold no rating for this sport.
+             *
+             *     `play_intent_not_declared` — the deck has no mode to read, so it reads your declaration; without one there is nothing at all to go on. **Answering *no preference* is an answer** and gives you a working deck.
+             *
+             *     `player_profile_not_committed` — there is no profile to read a radius, a grid or an area from.
+             */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description `matchmaking_unavailable`, `gate_data_unavailable`, `index_too_stale`, `search_not_recorded` — four distinct codes at one status, so a client can tell a transient outage from a refusal about *you*. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    record_a_pass_api_v1_passes_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecordPassRequest"];
+            };
+        };
+        responses: {
+            /** @description Recorded. **Nothing is returned, and nothing ever will be** — there is no route through which a pass reaches anybody, including you. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `origin_search_not_found` — no search of **yours** showed that player for that sport. The origin is refused rather than linked as null. */
             409: {
                 headers: {
                     [name: string]: unknown;
