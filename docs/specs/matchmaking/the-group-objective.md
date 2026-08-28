@@ -330,6 +330,50 @@ also how a screen says *"nobody at their level yet"* about a newcomer's first fo
 a line-up ([ADR-0099](../../adr/0099-relaxation-offers-the-searchers-own-asks.md)), a newcomer
 least of all ([#175](https://github.com/Raketa02/Raketa/issues/175)).
 
+> **As built, and one correction the build found.** The four codes are one closed vocabulary,
+> and **three of them ride on a seat while `NO_SHARED_SLOTS` rides on the line-up** — as
+> `lineup.dock`. The table above is what forced it: the first three answer *why is this seat
+> empty* and the fourth is explicitly *seated, but the four-way intersection is empty — a dock,
+> never a refusal*. There is no seat for it to be attached to; on a line-up where every seat is
+> open there is no four-way week either, and on a full four every seat is taken. Written down
+> rather than resolved silently, because `the-two-contracts.md` §5 lists all four as the
+> `unfilled_reason` vocabulary and a reader checking the shape against the build would otherwise
+> find a field it does not mention.
+>
+> **More shapes the build fixed**, all of them detail this file deliberately left open. An
+> arrangement carries a `pairing_id` and an `is_current`; its `sides` name **player ids** rather
+> than repeating four breakdowns three times over; and a `locked_seats` entry the gates no longer
+> admit is **refused** — `locked_seat_not_available`, naming nobody — rather than quietly replaced
+> by somebody else. **A locked seat is held to the six pairs like any other**, which §1 implies
+> and no sentence said: two people the searcher hand-seated who may not share a court are refused
+> under the same code, because hand-seating is not a way past a gate.
+>
+> **Four rules the build had to decide, recorded here because they are decisions and not
+> details.**
+>
+> - **`group_reason` is omitted when there was no runner-up.** §5 lists it unconditionally, but
+>   the code names *the term with the largest margin between the winning combination and the
+>   runner-up* — and with one admissible four there is no margin. Naming a term that decided
+>   nothing would be the engine explaining an argument it never had.
+> - **`is_best` is omitted wherever no objective was computed** — a four with an open seat, a
+>   singles line-up, and every `POST /forecasts` response. §3.1 makes `is_best` mean *best by
+>   `G`*, and there is no `G` in any of the three: no cross pairs, no seat delta, no mean over
+>   three Fits, and on the forecast route no Fits at all. Pointing it at the min-gap arrangement
+>   would give one field two meanings on exactly the responses where the builder needs the first,
+>   so *Even it out* is then the only selection there is.
+> - **The remaining seats of an impossible four are filled in Fit order, subject to the same
+>   mask.** §5.1 fixes that *three of four* is the answer and does not say who takes the third
+>   seat. There is nothing for `G` to compare — that is what *impossible* means here — so the
+>   fill is the ranking the search already produced, admitted one at a time against everybody
+>   already seated. It is what the searcher would do by hand and it introduces no constant.
+> - **The line-up is not read back in full.** `the-two-contracts.md` §1 promises `GET
+>   /searches/{id}` returns the same schema the `POST` did; today it returns the envelope and the
+>   seated rows, and the seating, the arrangements and `group_reason` do not survive. Layer 4
+>   holds the winning combination and **no route may return it**, so reproducing the court needs a
+>   second stored shape — *what was shown*, beside *what was compared* — which is the same split
+>   the returned band and the near-miss band already have. Left out deliberately rather than
+>   half-built, and asserted as a gap by the read-back test so it stays visible.
+
 ---
 
 ## 6. What a line-up records that a shortlist does not

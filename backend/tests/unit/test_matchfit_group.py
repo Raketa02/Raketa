@@ -860,16 +860,21 @@ def test_the_seat_multipliers_are_absent_and_the_matrix_carries_the_asymmetry() 
     assert scoped, "the partner asymmetry is carried by the matrix or by nothing"
 
 
-def test_there_is_no_group_objective_for_singles() -> None:
-    """``G`` for two seats is a transform of Fit that is not order-preserving.
+def test_there_is_no_group_objective_for_a_line_up_with_an_open_seat() -> None:
+    """``G`` over fewer than three guests is not a lower ``G``, it is no ``G``.
 
-    The signature is where that is said: nothing here takes fewer than three
-    seated people, so the singles line-up cannot accidentally be scored by an
-    objective that would name a different best candidate than the search did.
+    With two seats the mean and the min are the same number, there are no cross
+    pairs and there is no seat delta, so the objective reduces to a transform of
+    Fit that is **not order-preserving** — the line-up route and the search route
+    could then name different best candidates for one search. The arrangement
+    itself is legitimate, because *three of four* is an honest answer with a
+    forecast on it; what is refused is scoring one.
     """
 
-    with pytest.raises(ValueError):
-        Arrangement.all_of((seated(player_id="a"),))  # type: ignore[arg-type]
+    only = Arrangement.all_of((seated(player_id="a"),))
+    assert len(only) == 1 and not only[0].complete
+    with pytest.raises(InvariantViolated):
+        objective(searcher(), only[0], LIVE_RULESET, COMBINE)
 
 
 def test_the_candidate_cap_stands_at_the_engine_side_ceiling() -> None:

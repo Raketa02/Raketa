@@ -319,6 +319,12 @@ answer, and no seat is ever filled below `QUALITY_FLOOR` to complete a four (ADR
 different shape from *nobody*** — both are this shape, with one or three seats carrying a reason,
 and there is no separate empty state for a line-up.
 
+> **One closed vocabulary, two places on the wire.** The build found that the fourth code cannot
+> sit on a seat: §5.1 defines `NO_SHARED_SLOTS` as *seated, but the four-way intersection is
+> empty — a dock, never a refusal*, which is a statement about the whole line-up and about
+> nobody's seat. It rides as **`lineup.dock`**, in the same enum, and the other three ride as
+> `seats[].unfilled_reason`. Recorded there in full.
+
 ### The forecast
 
 One type, everywhere it appears:

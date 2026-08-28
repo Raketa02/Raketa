@@ -46,13 +46,18 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import StrEnum
-from typing import Any, Literal
+from typing import Any, Literal, TypeVar
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
-from app.engines.matchfit.core import SearchMode, Term
-from app.kernel import Sport
+from app.engines.matchfit.core import GroupReason, SearchMode, Term
+from app.kernel import SPORT_SPECS, Sport
+from app.modules.matchmaking.domain.lineups import (
+    Relationship,
+    Side as CourtSide,
+    UnfilledReason,
+)
 from app.modules.matchmaking.domain.prompts import Prompt
 from app.modules.matchmaking.domain.relaxation import RelaxationAsk, Rung
 from app.modules.matchmaking.domain.searches import SearchSurface, SortOption
@@ -78,6 +83,10 @@ from app.modules.player_profile.domain.availability import Window
 #: and say neither thing — which is what
 #: ``tests/unit/test_matchmaking_shortlist_contract.py`` refuses.
 OMITTED: Any = None
+
+#: Bound so the shared court check hands each request its own type back, which is
+#: what a Pydantic ``model_validator(mode="after")`` must return.
+_RequestT = TypeVar("_RequestT", bound=BaseModel)
 
 
 class OptimisedFor(StrEnum):
@@ -705,6 +714,338 @@ class ShortlistResponse(BaseModel):
             "`withheld` — a fresh search never carries one."
         ),
     )
+
+
+class RunLineupRequest(BaseModel):
+    """⚡ *Fill the seats.* **The line-up and fill-seats are one request.**
+
+    They differ by `locked_seats` being non-empty, which is a property of what
+    you send rather than of where you send it — so hand-seating somebody and
+    pressing ⚡ is the same shape as ⚡ on an empty court, and there is no second
+    route for a client to get wrong.
+
+    There is **no seat count** here and there never will be: how many people sit
+    down is the sport's own fact. There is no radius either, for the reason the
+    shortlist has none.
+    """
+
+    sport: Sport = Field(..., description="Which sport this line-up is for")
+    mode: SearchMode = Field(
+        ...,
+        description=(
+            "Competitive or for fun — the weight vector for this one search. "
+            "It selects the **group** vector too, which inverts against the "
+            "shortlist's: for fun puts more weight on how the four get on than "
+            "on how even the sides are."
+        ),
+    )
+    locked_seats: list[UUID] = Field(
+        default_factory=list,
+        description=(
+            "Players you have already seated by hand, **in seat order**. Send "
+            "none and the engine fills every seat; send one or two and it fills "
+            "the rest **around them**, which is when it starts optimising for "
+            "the group rather than for you — `search.optimised_for` says so.\n\n"
+            "Everybody named must be somebody this search can still seat, and "
+            "they must be able to share a court **with each other** — every gate "
+            "binds all six pairs. Either refusal is "
+            "`locked_seat_not_available`, naming nobody, rather than a quiet "
+            "replacement.\n\n"
+            "Nobody twice, and never more than the sport seats."
+        ),
+    )
+
+    @model_validator(mode="after")
+    def _is_a_court_that_could_exist(self) -> "RunLineupRequest":
+        """The same two refusals the forecast makes, at the same boundary.
+
+        A court with the same person on it twice and a court with more people
+        than it has seats are malformed **asks**, and both are refused here
+        rather than inside — where the second would surface as a `503` about the
+        engine, which is a sentence about the platform for a mistake in the
+        request.
+        """
+
+        return _a_court_that_could_exist(self, self.sport, self.locked_seats)
+    availability_override: list[AvailabilitySlotResource] = Field(
+        OMITTED,
+        description=(
+            "The week to run **this one line-up** against. Omit to use the grid "
+            "on your profile — **omit it, never send `null`**."
+        ),
+    )
+    offered_by_search_id: UUID = Field(
+        OMITTED,
+        description=(
+            "The search whose relaxation offer this one accepts. Taking a rung "
+            "is a **new search citing the one that offered it**."
+        ),
+    )
+    rung: Rung = Field(
+        OMITTED,
+        description=(
+            "Which rung of that search's offer you are taking. Sent with "
+            "`offered_by_search_id` or not at all."
+        ),
+    )
+
+
+class ForecastRequest(BaseModel):
+    """What a four you composed yourself would leave on court.
+
+    **This route creates no search and records nothing.** Re-posting `/lineups`
+    per swap would enter a six-edit builder session into *searches run* as six
+    searches, which is a lie in the one table the product uses to judge itself.
+
+    `search_id` is **required**, and every player named must have appeared in
+    that search's returned rows. Unbounded, this would be a level lookup for any
+    player in the city reachable by id; bounded, it tells you nothing the
+    shortlist did not already show you.
+    """
+
+    sport: Sport = Field(..., description="Which sport this four would play")
+    mode: SearchMode = Field(
+        ..., description="Competitive or for fun — the vector this reads under"
+    )
+    search_id: UUID = Field(
+        ...,
+        description=(
+            "The search these people came off. **Required** — a forecast about "
+            "somebody no search of yours showed is refused, not computed."
+        ),
+    )
+    players: list[UUID] = Field(
+        ...,
+        min_length=1,
+        description=(
+            "The people beside you, **in seat order**: the first is your partner "
+            "in the arrangement the response marks `is_current`. One, two or "
+            "three — a seat may be empty, and the forecast comes back "
+            "**provisional** when one is.\n\n"
+            "Nobody twice, and never more than the sport seats. An empty seat is "
+            "read *as if the missing player matched the one already there*, which "
+            "is a claim about somebody who is not there — sending the same person "
+            "twice would make that assumption look like a fact."
+        ),
+    )
+
+    @model_validator(mode="after")
+    def _is_a_court_that_could_exist(self) -> "ForecastRequest":
+        """The two ways a composed line-up is not one.
+
+        Checked at the boundary rather than inside, because both are malformed
+        **asks** rather than answers the engine has to have an opinion about: a
+        court with the same person on it twice, and a court with more people than
+        it has seats.
+        """
+
+        return _a_court_that_could_exist(self, self.sport, self.players)
+
+
+def _a_court_that_could_exist(
+    request: _RequestT, sport: Sport, seats: list[UUID]
+) -> _RequestT:
+    """Nobody twice, and never more than the sport seats.
+
+    One implementation for the two routes that name people to put on a court,
+    because *how many sit down* is the sport's own fact
+    (``kernel/sports.py``) and a second copy of that arithmetic is a second place
+    for a sport to be added without it.
+    """
+
+    room = SPORT_SPECS[sport].players - 1
+    if len(seats) > room:
+        raise ValueError(
+            f"{sport.value} seats {room} beside you, and you named {len(seats)}"
+        )
+    if len(set(seats)) != len(seats):
+        raise ValueError("the same player cannot take two seats")
+    return request
+
+
+class ArrangementSeatSchema(BaseModel):
+    """One seat within one arrangement: where it is, and who is in it.
+
+    `relationship` is **stated and never inferred from the side** — the whole
+    partner/opponent asymmetry hangs on it, and a client deriving it would be a
+    second implementation of a domain rule.
+    """
+
+    seat_index: int = Field(
+        ...,
+        ge=0,
+        description=(
+            "Which seat, stable across all three arrangements: 0 is you, 1 is "
+            "beside you, 2 and 3 are across the net."
+        ),
+    )
+    relationship: Relationship
+    player_id: UUID = Field(
+        default=OMITTED,
+        description=(
+            "Who is in this seat. **Omitted on an open seat** — the top-level "
+            "`seats` list says why that one is open."
+        ),
+    )
+
+
+class SidesSchema(BaseModel):
+    """The two sides of the net. **You are always on `A`.**
+
+    There is no arrangement in which the searcher crosses the net, because
+    *which side am I on* is not a question a builder asks: what varies is who is
+    beside you.
+    """
+
+    A: list[ArrangementSeatSchema] = Field(
+        ..., description="Your own side, you first"
+    )
+    B: list[ArrangementSeatSchema] = Field(..., description="The opposition")
+
+
+class ArrangementSchema(BaseModel):
+    """One way round, with its own forecast. **All of them cross.**
+
+    There are exactly three pairings of four people and the engine walks all
+    three to choose. Returning what it already knows costs nothing and makes
+    *Even it out* a **selection** rather than a calculation — every swap the
+    builder permits is one of these, so there is no arithmetic left for a client
+    to be tempted by.
+    """
+
+    pairing_id: int = Field(
+        ..., ge=1, description="Which of the arrangements, stable within one answer"
+    )
+    is_current: bool = Field(
+        ...,
+        description=(
+            "The one being drawn: the best on a line-up, and the seat order you "
+            "sent on a forecast."
+        ),
+    )
+    is_best: bool = Field(
+        default=OMITTED,
+        description=(
+            "Best by the group objective. **The objective itself is never "
+            "returned** — a second score you would have to trust is worse than "
+            "none — so `group_reason` names what decided it instead.\n\n"
+            "**Omitted on every arrangement when no objective was computed**, "
+            "rather than pointed at something else: a line-up with a seat still "
+            "open, a singles line-up, and every forecast. There is nothing to be "
+            "best *by* in any of them — no cross pairs, no seat delta, no mean "
+            "over three Fits — and *Even it out* is then the only selection "
+            "there is. Draw `is_evenest`."
+        ),
+    )
+    is_evenest: bool = Field(
+        ...,
+        description=(
+            "The closest game of the three — what *Even it out* selects. **A "
+            "separate boolean from `is_best` because the two can differ**, which "
+            "happens precisely when the four's levels are near-equal and balance "
+            "has nothing left to say."
+        ),
+    )
+    sides: SidesSchema
+    forecast: ForecastSchema
+
+
+class LineupSeatSchema(BaseModel):
+    """One place on the court, with the person in it or the reason it is empty.
+
+    **The person is named by id and their breakdown rides once**, in
+    `candidates[]` — the same list every other surface returns, carrying **the
+    same number the shortlist showed**, because nothing is re-scored behind your
+    back when somebody sits down. Four breakdowns repeated across a court and
+    three arrangements is four chances for two copies to disagree, on a payload
+    that is already tens of kilobytes.
+    """
+
+    side: CourtSide
+    seat_index: int = Field(..., ge=0)
+    relationship: Relationship
+    player_id: UUID = Field(
+        default=OMITTED,
+        description=(
+            "Who is in this seat, to look up in `candidates[]`. **Omitted on an "
+            "open seat**, and on your own — you are not a row of your own search."
+        ),
+    )
+    unfilled_reason: UnfilledReason = Field(
+        default=OMITTED,
+        description=(
+            "Why this seat is empty. **A seat is never filled below the quality "
+            "floor to complete a four**, a newcomer least of all — *three of "
+            "four* is an honest answer, and so is nobody.\n\n"
+            "`NO_ADMISSIBLE_COMBINATION` is the one worth reading twice: there "
+            "were people, and no four of you could share a court. Omitted on a "
+            "seat that is taken."
+        ),
+    )
+
+
+class LineupSchema(BaseModel):
+    """The court, every way round it can sit, and one reason it won.
+
+    **A partial line-up is this shape with fewer people in it** — never a
+    different one, and never an error. *Nobody* is this shape with every seat
+    carrying a reason, so a client renders one thing.
+    """
+
+    seats: list[LineupSeatSchema] = Field(
+        ...,
+        description=(
+            "The court as it currently stands, seat by seat, in the arrangement "
+            "marked `is_current`."
+        ),
+    )
+    arrangements: list[ArrangementSchema] = Field(
+        ...,
+        description=(
+            "Every way round, each with its own forecast. Empty only when "
+            "nobody could be seated at all."
+        ),
+    )
+    group_reason: GroupReason = Field(
+        default=OMITTED,
+        description=(
+            "Why this four beat the runner-up, as one closed code the client "
+            "writes the sentence for. **Omitted when there was no runner-up** — "
+            "one admissible four is not a four that won an argument."
+        ),
+    )
+    dock: UnfilledReason = Field(
+        default=OMITTED,
+        description=(
+            "`NO_SHARED_SLOTS` when the four of you have no hour in common. **A "
+            "dock, never a refusal**: nobody is removed from the court for it, "
+            "and the honest line is that you would all have to bend."
+        ),
+    )
+
+
+class LineupResponse(ShortlistResponse):
+    """The shortlist's envelope, its rows, and the court they were seated on.
+
+    One envelope and one row shape across every surface, so the read-back has one
+    renderer to reproduce: what a line-up adds is the seating, not a second way
+    of describing a person.
+    """
+
+    lineup: LineupSchema
+
+
+class ForecastResponse(BaseModel):
+    """Three arrangements of a four you composed. **And no `search_id`.**
+
+    Nothing was searched and nothing was recorded, so there is no id to read this
+    back by and no breakdown to open. The two version stamps cross because a
+    forecast nobody can reproduce is a number nobody should trust.
+    """
+
+    arrangements: list[ArrangementSchema]
+    engine_version: str = Field(..., description="How the maths works")
+    ruleset_version: str = Field(..., description="What the numbers were")
 
 
 #: Every enum this contract publishes that is not already published by the

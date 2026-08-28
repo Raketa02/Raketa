@@ -18,6 +18,10 @@ from app.modules.matchmaking.presentation.deck_routes import (
 from app.modules.matchmaking.presentation.interest_routes import (
     router as interest_router,
 )
+from app.modules.matchmaking.presentation.lineup_routes import (
+    forecasts_router,
+    router as lineups_router,
+)
 from app.modules.matchmaking.presentation.routes import router as searches_router
 from app.modules.player_profile.presentation.photo_routes import (
     router as photos_router,
@@ -43,6 +47,8 @@ player_api_router.include_router(profile_commit_router)
 player_api_router.include_router(photos_router)
 player_api_router.include_router(blocks_router)
 player_api_router.include_router(searches_router)
+player_api_router.include_router(lineups_router)
+player_api_router.include_router(forecasts_router)
 player_api_router.include_router(interest_router)
 player_api_router.include_router(deck_router)
 player_api_router.include_router(passes_router)

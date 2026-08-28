@@ -143,8 +143,14 @@ def sorts_available(
     rather than hardcoded, so the control appears by itself on the day
     ``player_score`` ships.
 
-    **The deck draws none of them**, and that is the same rule rather than an
-    exception to it: a deck is one card at a time, so there is no list in the
+    **Neither the deck nor a line-up draws any of them**, and that is the same
+    rule rather than an exception to it. A line-up returns **seats** and not a
+    list: the four are chosen together by one objective, and a control that
+    reordered them would be offering to undo the choice the surface exists to
+    make — *Even it out* is a selection among three arrangements, which is a
+    different control and rides on the line-up itself.
+
+    For the deck: a deck is one card at a time, so there is no list in the
     player's hand for a control to reorder, and its **order is its whole
     variety** — three bands plus ``PASS_SUPPRESS`` (``the-two-contracts.md`` §6).
     A control that resorted a deal would be offering to undo the one thing the
@@ -153,7 +159,7 @@ def sorts_available(
     reach one answer.
     """
 
-    if surface is SearchSurface.DECK:
+    if surface is not SearchSurface.SHORTLIST:
         return ()
     return tuple(
         option

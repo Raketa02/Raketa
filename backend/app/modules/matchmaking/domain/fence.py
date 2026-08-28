@@ -61,6 +61,7 @@ from app.kernel import invariant, iso_weekday
 from app.modules.matchmaking.domain.areas import area_code_of
 from app.modules.matchmaking.domain.candidate_index import CandidateRow
 from app.modules.matchmaking.domain.geography import Point
+from app.modules.matchmaking.domain.geography import distance_km as measure_distance
 from app.modules.matchmaking.domain.measurements import (
     Overlap,
     exposure_reading,
@@ -78,6 +79,7 @@ from app.modules.matchmaking.domain.ports import (
 )
 from app.modules.matchmaking.domain.search_context import (
     SearchContext,
+    SearcherFacts,
     is_new_at,
 )
 from app.modules.player_profile.domain.availability import AvailabilitySlot, DayPart
@@ -102,15 +104,60 @@ def searcher_of(context: SearchContext) -> Searcher:
     fact about the pair rather than about either person.
     """
 
-    facts = context.searcher
+    return searcher_from(context.searcher, context.now)
+
+
+def searcher_from(facts: SearcherFacts, now: datetime) -> Searcher:
+    """The same crossing, for a route with **no search context behind it**.
+
+    ``POST /forecasts`` records nothing and binds no snapshot
+    (``docs/adr/0108``), so it has facts and a clock and no context to read them
+    off. The crossing is the same one either way and is written once here, so a
+    field that must not reach the scorer has one place to be refused rather than
+    two.
+    """
+
     return Searcher(
         level=LevelReading(mu=facts.mu, sigma=facts.sigma),
         mode=facts.mode,
         tags=facts.tags,
         grid=_cells(facts.grid.slots),
         radius_km=float(facts.radius_km),
-        today=iso_weekday(context.now.isoweekday()),
+        today=iso_weekday(now.isoweekday()),
         day_parts=DAY_PARTS,
+    )
+
+
+def seatable_of(row: CandidateRow, *, searcher: SearcherFacts) -> ScorableCandidate:
+    """One index row, fenced, for a route that seats people without searching.
+
+    ``POST /forecasts`` reads two side strengths and a spread and nothing else,
+    so this is the same crossing :func:`candidate_of` makes with the two fields
+    that need a running search left out: there is no
+    :class:`~app.modules.matchmaking.domain.ports.PlayerScoreReading` because
+    that route reads no Player Score, and the distance is measured from the
+    searcher's own area rather than taken off a generation pass that never ran.
+
+    It is here, beside its sibling, because **the fence is one place**: a second
+    assembler of a scorable candidate written in an application layer is exactly
+    how a field that may not cross gets across.
+    """
+
+    area = area_of(row)
+    return ScorableCandidate(
+        player_id=row.player_id,
+        level=LevelReading(mu=row.mu, sigma=row.sigma),
+        declared_intent=row.declared_intent,
+        tags=row.social_tags,
+        grid=_cells(slots_of(row)),
+        radius_km=float(row.search_radius_km),
+        area_code=area_code_of(area),
+        distance_km=measure_distance(
+            Point(latitude=searcher.area.latitude, longitude=searcher.area.longitude),
+            area,
+        ),
+        combined=_combined(searcher.sigma, row.sigma),
+        reliability=None,
     )
 
 

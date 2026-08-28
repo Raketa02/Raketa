@@ -197,6 +197,35 @@ def gender_satisfied(
     )
 
 
+def gender_satisfied_between(one: CandidateRow, other: CandidateRow) -> bool:
+    """The mutual gate over **two candidates** — the pairs no searcher is in.
+
+    ``docs/adr/0116``: a four contains six pairs and the searcher is in three of
+    them, so the other three are gated against nobody unless this exists.
+    ADR-0096 chose mutuality precisely so a one-directional filter would not
+    *"leave a woman open to every man who searched ``ANY``"*, and under a
+    searcher-only gate she is open to every man a **third party** seats beside
+    her.
+
+    It reads the same two fields through the same two readers as
+    :func:`gender_satisfied` and applies the same asymmetry between them — an
+    unreadable *answer* is an absence, an unreadable **preference** is a safety
+    setting that cannot be evaluated, and *a gate that cannot be evaluated
+    excludes*. Written as its own function rather than by feeding one row in
+    where a searcher goes, because the searcher's own gender arrives live from
+    the profile and a candidate's arrives off an index row, and a signature that
+    accepted either would be one a caller could pass the wrong one to.
+    """
+
+    mine = _preference(one.gender_preference)
+    theirs = _preference(other.gender_preference)
+    if mine is None or theirs is None:
+        return False
+    return _satisfies(mine, _gender(other.gender)) and _satisfies(
+        theirs, _gender(one.gender)
+    )
+
+
 def _satisfies(preference: GenderPreference, gender: Gender | None) -> bool:
     if preference is GenderPreference.ANY:
         return True

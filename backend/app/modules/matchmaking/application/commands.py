@@ -139,3 +139,63 @@ class ReadInterestCommand:
     """
 
     player_id: UUID
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class RunLineupSearchCommand:
+    """*Fill the seats.* One tap, one search, and a seated four comes back.
+
+    **A line-up and filling seats are one ask that differs by one field.**
+    ``locked_seats`` non-empty is ``FILL_SEATS``, derived at write time rather
+    than sent, so hand-seating somebody and pressing ⚡ is the same shape as ⚡ on
+    an empty court and there is no second route for a client to get wrong
+    (``the-two-contracts.md`` §1).
+
+    Everything else is the shortlist's own ask, for the reason the two surfaces
+    share six stages: the mode, the week this one search runs on, and the rung
+    offer it may be accepting. There is still no radius, and there is still no
+    seat count — how many people sit down is the sport's own fact
+    (``kernel/sports.py``), not a number a phone may name.
+    """
+
+    searcher_id: UUID
+    sport: Sport
+    mode: SearchMode
+    #: Player ids the searcher has already seated by hand, in the order they were
+    #: sent. **Their order is their seating**, so a builder that put somebody
+    #: beside itself gets them beside itself.
+    locked_seats: tuple[UUID, ...]
+    availability_override: tuple[tuple[int, str], ...] | None
+    offered_by_search_id: UUID | None
+    rung: Rung | None
+    trace_id: str
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class ForecastLineupCommand:
+    """*What would this four leave on court?* **And it is not a search.**
+
+    ``docs/adr/0108``: no candidates are generated, nothing is ranked, scored
+    against the floor, withheld or explained — and **nothing is recorded**. A
+    builder session of six edits would otherwise enter *searches run* as six
+    searches, which is a lie in the one table the product uses to judge itself.
+
+    **It is bound to a search the caller ran.** ``search_id`` is required and
+    every player named must have appeared in that search's returned rows.
+    Unbounded, this route is a level-and-band lookup for any player in the city,
+    reachable by id — which is where the privacy line spent everywhere else in
+    this design would leak.
+
+    ``players`` are the people beside the searcher, **in seat order**: the first
+    is the partner of the arrangement the response marks current. One, two or
+    three of them, because a seat may be empty and *three of four* is an honest
+    answer — what cannot be forecast is a court with nobody on it.
+    """
+
+    searcher_id: UUID
+    sport: Sport
+    mode: SearchMode
+    search_id: UUID
+    players: tuple[UUID, ...]

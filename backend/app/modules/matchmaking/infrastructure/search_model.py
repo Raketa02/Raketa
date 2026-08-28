@@ -64,6 +64,15 @@ CODE_ARRAY = ARRAY(String()).with_variant(JSON(), "sqlite")
 #: stores the text and indexes nothing.
 BLOB = JSON().with_variant(JSONB(), "postgresql")
 
+#: The same blob, for a column whose **absence is checked**. ``JSON`` renders a
+#: Python ``None`` as the JSON literal ``null`` by default, which is a value and
+#: not an absence — so a check constraint reading ``IS NOT NULL`` sees every row
+#: as present and refuses them all. ``none_as_null`` is what makes *this column
+#: does not apply here* the same thing in Python, in SQL and in the constraint.
+NULLABLE_BLOB = JSON(none_as_null=True).with_variant(
+    JSONB(none_as_null=True), "postgresql"
+)
+
 
 class SearchORM(Base):
     """One engine invocation, and everything counted about it."""
@@ -101,6 +110,14 @@ class SearchORM(Base):
         CheckConstraint(
             "(n_excluded_by_suppression IS NOT NULL) = (surface = 'DECK')",
             name="ck_search_suppression_count_only_on_the_deck",
+        ),
+        # Layer 4 belongs to the two surfaces that seat people and to no other,
+        # because its unit is the **combination** and only a line-up has one.
+        # The fourth column in this file whose presence carries meaning, and the
+        # fourth for which that is a constraint rather than a convention.
+        CheckConstraint(
+            "(lineup IS NOT NULL) = (surface IN ('LINEUP', 'FILL_SEATS'))",
+            name="ck_search_lineup_only_where_seats_were_filled",
         ),
     )
 
@@ -179,6 +196,20 @@ class SearchORM(Base):
     #: any screen because no route returns a pass.
     n_excluded_by_suppression: Mapped[int | None] = mapped_column(
         Integer, nullable=True
+    )
+    #: **Layer 4, and no route returns any of it.** The winning combination and
+    #: the runner-up, each with the whole ``G`` breakdown the deciding margin is
+    #: computed from, plus the three enumeration counters and the deepest Fit
+    #: rank the engine reached. Two rows, not 1 771 — a layer holding every
+    #: combination that lost would be a group-shaped answer to *who was
+    #: withheld*.
+    #:
+    #: Opaque for the reason ``search_candidate.terms`` is: it is stamped with
+    #: ``ruleset_version`` and the group vector may gain or lose a term between
+    #: rulesets, which is precisely what a relational schema would fight.
+    #: **Line-up surfaces only**, null elsewhere, by check constraint.
+    lineup: Mapped[dict[str, Any] | None] = mapped_column(
+        NULLABLE_BLOB, nullable=True
     )
 
 

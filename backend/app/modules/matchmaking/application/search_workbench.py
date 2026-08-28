@@ -36,7 +36,7 @@ from uuid import UUID
 from app.application.ports import UnitOfWork
 from app.engines.matchfit.core import SearchMode, Term
 from app.engines.matchfit.ruleset import Ruleset
-from app.kernel import Clock, Instant, Sport
+from app.kernel import Clock, Instant, Sport, invariant
 from app.modules.blocks.domain.ports import BlockQuery
 from app.modules.matchmaking.application.outward_reads import (
     live_block_set,
@@ -51,6 +51,7 @@ from app.modules.matchmaking.domain.candidate_snapshot import (
 from app.modules.matchmaking.domain.index_staleness import IndexFreshness
 from app.modules.matchmaking.domain.errors import (
     AccountHeld,
+    RungOfferNotFound,
     IndexTooStale,
     PlayerProfileNotCommitted,
     PlayIntentNotDeclared,
@@ -59,6 +60,7 @@ from app.modules.matchmaking.domain.errors import (
 )
 from app.modules.matchmaking.domain.geography import Point
 from app.modules.matchmaking.domain.interest import InterestLedger
+from app.modules.matchmaking.domain.relaxation import Rung, RungOffer
 from app.modules.matchmaking.domain.ledgers import ExposureLedger, week_of
 from app.modules.matchmaking.domain.ports import (
     AccountHoldQuery,
@@ -93,12 +95,38 @@ from app.modules.matchmaking.application.record_rows import (
     modifier_rows,
     term_rows,
 )
+from app.modules.player_profile.domain.availability import (
+    AvailabilityGrid,
+    AvailabilitySlot,
+)
 from app.modules.player_profile.domain.play_intent import PlayIntent
 from app.modules.player_profile.domain.ports import (
     PlayerProfileRepository,
     PlayIntentDeclarationRepository,
 )
 from app.modules.rating.domain.ports import SkillRatingRepository
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class AskedFor:
+    """The two asks this one search runs on, and where they came from.
+
+    **On the workbench rather than in a use case**, because two surfaces take a
+    rung offer — the shortlist and the line-up — and *reading what was asked for*
+    is not what they disagree about. What each surface decides for itself is
+    whether to **price** a ladder, which is the expensive half and stays theirs.
+
+    ``rung_taken`` and ``offered_by_search_id`` are set together or not at all:
+    **an accepted widen is a new search citing the one that offered it**, and the
+    pair is what makes take-up per rung a join over two rows rather than a flag
+    on one that could be written without the other.
+    """
+
+    grid: AvailabilityGrid
+    radius_km: int
+    rung_taken: Rung | None = None
+    offered_by_search_id: UUID | None = None
 
 
 @final
@@ -302,6 +330,87 @@ class SearchWorkbench:
         )
         if searcher_id in held:
             raise AccountHeld("this account is under a hold")
+
+    # -- what one search was asked for ---------------------------------------
+
+    async def asked_for(
+        self,
+        searcher: SearcherFacts,
+        *,
+        availability_override: tuple[tuple[int, str], ...] | None,
+        offered_by_search_id: UUID | None,
+        rung: Rung | None,
+    ) -> AskedFor:
+        """The grid and the radius this search runs on. **Never a profile edit.**
+
+        Two asks can move them, and neither writes anything: a grid the player
+        edited on the search screen for this evening, and a rung offer they took.
+        The profile keeps its own answers, and the app offers to save either one
+        afterwards through the routes that own those fields (``docs/adr/0099``
+        §3).
+
+        **The widening is read off the offering search's record and never off the
+        request.** That is what keeps *there is no per-search radius input* true:
+        the only radius this backend will run a search at is one it published
+        itself, on a row it wrote.
+        """
+
+        grid = (
+            searcher.grid
+            if availability_override is None
+            else AvailabilityGrid.of_cells(availability_override)
+        )
+        if rung is None and offered_by_search_id is None:
+            return AskedFor(grid=grid, radius_km=searcher.radius_km)
+        if rung is None or offered_by_search_id is None:
+            raise RungOfferNotFound(
+                "a rung and the search that offered it travel together"
+            )
+        offer = await self._cited_offer(searcher, offered_by_search_id, rung)
+        # The ask decides which payload is there, and ``RungOffer``'s own
+        # invariant is what makes that a fact rather than a hope: a ``RADIUS``
+        # rung holds a radius and no slot, and a ``TIMES`` rung the reverse.
+        if offer.radius_km is not None:
+            return AskedFor(
+                grid=grid,
+                radius_km=offer.radius_km,
+                rung_taken=rung,
+                offered_by_search_id=offered_by_search_id,
+            )
+        invariant(
+            offer.slot is not None,
+            f"a {offer.ask.value} rung offering neither a radius nor a slot",
+        )
+        slot = AvailabilitySlot.from_code(offer.slot or "")
+        return AskedFor(
+            # A set, so a client that also sent the widened grid as its override
+            # lands in exactly the same place as one that sent nothing.
+            grid=AvailabilityGrid.of((*grid.slots, slot)),
+            radius_km=searcher.radius_km,
+            rung_taken=rung,
+            offered_by_search_id=offered_by_search_id,
+        )
+
+    async def _cited_offer(
+        self, searcher: SearcherFacts, search_id: UUID, rung: Rung
+    ) -> RungOffer:
+        """The offer this search claims to be accepting, from the row that made it.
+
+        Four ways this refuses, and they are one code on purpose: the search does
+        not exist, it belongs to somebody else, it computed no offers, or it
+        offered no such rung. Telling them apart would answer *does this
+        ``search_id`` exist* for a stranger's id, which is the question the
+        read-back's own 404 already declines to answer.
+        """
+
+        cited = await self._searches.find(
+            search_id=search_id, searcher_id=searcher.player_id
+        )
+        if cited is not None and cited.sport is searcher.sport:
+            for offer in cited.rung_offers or ():
+                if offer.rung is rung:
+                    return offer
+        raise RungOfferNotFound(f"no rung {rung.value} was offered by that search")
 
     # -- binding the context -------------------------------------------------
 

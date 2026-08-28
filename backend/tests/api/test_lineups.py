@@ -1,0 +1,395 @@
+"""``POST /api/v1/lineups`` — the four, the arrangements, and the honest partial.
+
+Every assertion lands on HTTP, through the same in-memory client the shortlist's
+suite uses. What is asserted is the product's promises: that a four comes back
+seated with a forecast per arrangement before anybody has been asked, that a seat
+is never filled below the floor to complete one, that every gate binds all six
+pairs, and that the objective which chose the four never crosses as a number.
+"""
+
+from __future__ import annotations
+
+import pytest
+
+from sqlalchemy import select
+
+from app.modules.matchmaking.infrastructure.search_model import SearchORM
+from tests.api import matchmaking_world as world
+
+
+@pytest.fixture
+async def searcher(client, session_factory):
+    return await world.a_searcher(client, session_factory)
+
+
+async def _a_city(client, session_factory, candidate_source, mu: float):
+    """Four candidates, which is one more than a four needs.
+
+    Deliberately four rather than three: with exactly three there is one
+    admissible combination, nothing was beaten, and a line-up that named a
+    deciding term would be explaining an argument it never had.
+    """
+
+    for name, delta in (("ana", 0.0), ("bo", 0.05), ("cy", -0.05), ("dee", 0.10)):
+        await world.a_candidate(client, session_factory, name, mu=mu + delta)
+    await world.fold_the_log(session_factory, candidate_source)
+
+
+async def test_a_lineup_seats_a_four_with_every_arrangement_and_a_reason(
+    client, session_factory, candidate_source, searcher
+):
+    """⚡ *Fill the seats.* A seated four, priced, before anybody has been asked.
+
+    All three arrangements cross with a forecast each, so *Even it out* is a
+    **selection** the player makes rather than a request they send — and the two
+    booleans are separate, because the new fact the builder can state is that
+    they differ.
+    """
+
+    await _a_city(client, session_factory, candidate_source, searcher["mu"])
+
+    response = await world.lineup(client, searcher["token"])
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    lineup = body["lineup"]
+    assert [seat["relationship"] for seat in lineup["seats"]] == [
+        "SELF",
+        "PARTNER",
+        "OPPONENT",
+        "OPPONENT",
+    ]
+    assert [seat["side"] for seat in lineup["seats"]] == ["A", "A", "B", "B"]
+    assert all("unfilled_reason" not in seat for seat in lineup["seats"])
+    assert len(lineup["arrangements"]) == 3
+    for arrangement in lineup["arrangements"]:
+        forecast = arrangement["forecast"]
+        assert 0 <= forecast["pct"] <= 100
+        assert forecast["provisional"] is False
+        assert forecast["assumption"] is None
+        assert len(arrangement["sides"]["A"]) == 2
+        assert len(arrangement["sides"]["B"]) == 2
+    assert sum(one["is_best"] for one in lineup["arrangements"]) == 1
+    assert sum(one["is_evenest"] for one in lineup["arrangements"]) == 1
+    assert lineup["group_reason"] in {
+        "EVENEST_ARRANGEMENT",
+        "STRONGEST_WEAKEST_SEAT",
+        "BEST_AVERAGE_FIT",
+        "MOST_SHARED_SLOTS",
+        "GROUP_RAPPORT",
+    }
+    assert body["search"]["optimised_for"] == "SEARCHER"
+
+
+async def test_the_objective_never_crosses_as_a_number(
+    client, session_factory, candidate_source, searcher
+):
+    """``G`` chose these four and is **recorded, never returned.**
+
+    A second score the player must trust is worse than none: it competes with Fit
+    and nobody can act on it. What pays the evidence half is one closed reason
+    code, and this asserts that nothing anywhere in the payload is the objective
+    wearing another name.
+    """
+
+    await _a_city(client, session_factory, candidate_source, searcher["mu"])
+
+    body = (await world.lineup(client, searcher["token"])).json()
+
+    flat = _keys(body)
+    for name in ("objective", "g", "group_score", "side_gap", "rank_key"):
+        assert name not in flat, f"the objective reached the wire as {name!r}"
+
+
+def _keys(value) -> set[str]:
+    if isinstance(value, dict):
+        return set(value) | {
+            key for nested in value.values() for key in _keys(nested)
+        }
+    if isinstance(value, list):
+        return {key for nested in value for key in _keys(nested)}
+    return set()
+
+
+async def test_a_seated_card_shows_the_number_the_shortlist_showed(
+    client, session_factory, candidate_source, searcher
+):
+    """**Nothing is re-scored behind the player's back.**
+
+    The card said 78 in the shortlist and it says 78 in the builder. The seat
+    delta enters the objective and the line-up's reasons; it never enters a Fit.
+    """
+
+    await _a_city(client, session_factory, candidate_source, searcher["mu"])
+
+    shortlist = (await world.search(client, searcher["token"])).json()
+    seated = (await world.lineup(client, searcher["token"])).json()
+
+    shown = {row["player_id"]: row["fit"] for row in shortlist["candidates"]}
+    for row in seated["candidates"]:
+        assert row["fit"] == shown[row["player_id"]]
+
+
+async def test_hand_seating_somebody_says_it_is_now_optimising_for_the_group(
+    client, session_factory, candidate_source, searcher
+):
+    """§8.4: with a seat locked the searcher may get a worse individual match.
+
+    The screen has to say so rather than let it be discovered, and *line-up and
+    fill-seats differ only by locked seats* — the same route, the same shape.
+    """
+
+    await _a_city(client, session_factory, candidate_source, searcher["mu"])
+    shortlist = (await world.search(client, searcher["token"])).json()
+    chosen = shortlist["candidates"][-1]["player_id"]
+
+    response = await world.lineup(client, searcher["token"], locked_seats=[chosen])
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["search"]["optimised_for"] == "GROUP"
+    assert body["search"]["surface"] == "FILL_SEATS"
+    seated = {
+        seat["player_id"] for seat in body["lineup"]["seats"] if "player_id" in seat
+    }
+    assert chosen in seated, "the person the searcher seated is not on the court"
+
+
+async def test_three_of_four_is_a_200_with_a_reason_and_a_provisional_forecast(
+    client, session_factory, candidate_source, searcher
+):
+    """A four can be impossible where candidates are plentiful, and that is a
+    partial line-up rather than an error.
+
+    The forecast on a court with an open seat is **provisional**, and it names
+    what it assumed — a half-empty side read as if the missing player matched the
+    one already there.
+    """
+
+    for name, delta in (("ana", 0.0), ("bo", 0.05)):
+        await world.a_candidate(
+            client, session_factory, name, mu=searcher["mu"] + delta
+        )
+    await world.fold_the_log(session_factory, candidate_source)
+
+    response = await world.lineup(client, searcher["token"])
+
+    assert response.status_code == 200, response.text
+    lineup = response.json()["lineup"]
+    open_seats = [
+        seat for seat in lineup["seats"] if "unfilled_reason" in seat
+    ]
+    assert len(open_seats) == 1
+    assert open_seats[0]["unfilled_reason"] == "POOL_EXHAUSTED"
+    for arrangement in lineup["arrangements"]:
+        assert arrangement["forecast"]["provisional"] is True
+        assert (
+            arrangement["forecast"]["assumption"]
+            == "EMPTY_SEAT_MATCHES_ITS_PARTNER"
+        )
+        assert "is_best" not in arrangement, (
+            "an incomplete four has no objective, so there is nothing to be "
+            "best by"
+        )
+    assert sum(one["is_evenest"] for one in lineup["arrangements"]) == 1
+    assert "group_reason" not in lineup, "nothing was beaten, so nothing decided"
+
+
+async def test_nobody_is_the_same_shape_with_every_seat_carrying_a_reason(
+    client, session_factory, candidate_source, searcher
+):
+    """***Nobody* is not a different shape from *three of four*.**
+
+    There is no separate empty state for a line-up: the same court comes back
+    with three seats open and a reason on each, so a client renders one thing.
+    """
+
+    await world.fold_the_log(session_factory, candidate_source)
+
+    response = await world.lineup(client, searcher["token"])
+
+    assert response.status_code == 200, response.text
+    lineup = response.json()["lineup"]
+    assert len(lineup["seats"]) == 4
+    assert [seat.get("unfilled_reason") for seat in lineup["seats"][1:]] == [
+        "POOL_EXHAUSTED"
+    ] * 3
+    assert lineup["arrangements"] == []
+
+
+async def test_a_seat_is_never_filled_below_the_floor_to_complete_a_four(
+    client, session_factory, candidate_source, searcher
+):
+    """``docs/adr/0099``: **a newcomer least of all.**
+
+    Two good candidates and one nobody would seat gives *three of four*, not a
+    four with somebody who should not be on the court.
+    """
+
+    for name, delta in (("ana", 0.0), ("bo", 0.05)):
+        await world.a_candidate(
+            client, session_factory, name, mu=searcher["mu"] + delta
+        )
+    # Far away, no shared slot and the opposite temperament: a real pairing this
+    # engine has already decided not to show, and the floor is what says so.
+    await world.a_candidate(
+        client,
+        session_factory,
+        "poor",
+        mu=searcher["mu"] + 0.4,
+        latitude=51.60,
+        tags=world.SOCIABLE_TAGS,
+        availability=("4:MORNING",),
+        intent="FOR_FUN",
+    )
+    await world.fold_the_log(session_factory, candidate_source)
+
+    body = (await world.lineup(client, searcher["token"])).json()
+
+    cards = {
+        row["player_id"]: row["player_card"]["nickname"]
+        for row in body["candidates"]
+    }
+    seated = {
+        cards[seat["player_id"]]
+        for seat in body["lineup"]["seats"]
+        if "player_id" in seat and seat["player_id"] in cards
+    }
+    assert "poor" not in seated
+
+
+async def test_the_line_up_records_layer_four_and_no_route_returns_it(
+    client, session_factory, candidate_source, searcher
+):
+    """**Two rows, not two thousand**, and engine-internal like layer 3.
+
+    The winning combination and the runner-up are what the deciding margin is
+    computed from; without them ADR-0116's gate is unfalsifiable and the reason
+    code is unreproducible.
+    """
+
+    await _a_city(client, session_factory, candidate_source, searcher["mu"])
+
+    body = (await world.lineup(client, searcher["token"])).json()
+
+    assert "lineup" not in body["search"], "layer 4 reached the wire"
+    async with session_factory() as session:
+        rows = await session.execute(select(SearchORM))
+        recorded = [row for row in rows.scalars() if row.surface == "LINEUP"]
+    assert len(recorded) == 1
+    layer_four = recorded[0].lineup
+    assert layer_four is not None
+    assert layer_four["combinations"] >= 1
+    assert layer_four["refused_by_gate"] >= 0
+    assert layer_four["max_fit_rank_seated"] >= 1
+    assert [row["band"] for row in layer_four["rows"]][:1] == ["WINNER"]
+    assert all(row["terms"] for row in layer_four["rows"])
+    assert len(layer_four["rows"]) <= 2
+    del body
+
+
+async def test_a_locked_seat_the_gates_no_longer_admit_is_refused_not_replaced(
+    client, session_factory, candidate_source, searcher
+):
+    """A four that came back **without** the person the searcher put in it, with
+    somebody else there instead, is the builder lying about what it was asked.
+
+    It names nobody, for the reason a withheld row names no gate.
+    """
+
+    await _a_city(client, session_factory, candidate_source, searcher["mu"])
+    stranger, _ = await world.register(client, "stranger")
+
+    response = await world.lineup(
+        client, searcher["token"], locked_seats=[stranger]
+    )
+
+    assert response.status_code == 409, response.text
+    assert response.json()["code"] == "locked_seat_not_available"
+
+
+async def test_two_hand_seated_players_who_blocked_each_other_are_refused(
+    client, session_factory, candidate_source, searcher
+):
+    """**Hand-seating is not a way past a gate** (``docs/adr/0116``).
+
+    Both are people this search can still see — a block between two candidates
+    takes neither of them off the searcher's shortlist — and what they cannot do
+    is see **each other**. The refusal names nobody, for the reason a withheld
+    row names no gate: saying *which two* would tell the searcher that one of
+    them blocked the other.
+    """
+
+    one, one_token = await world.a_signed_in_candidate(
+        client, session_factory, "ana", mu=searcher["mu"]
+    )
+    other = await world.a_candidate(
+        client, session_factory, "bo", mu=searcher["mu"] + 0.05
+    )
+    await world.a_candidate(
+        client, session_factory, "cy", mu=searcher["mu"] - 0.05
+    )
+    await world.fold_the_log(session_factory, candidate_source)
+    blocked = await world.block_between(client, one_token, other)
+    assert blocked.status_code == 204, blocked.text
+
+    response = await world.lineup(
+        client, searcher["token"], locked_seats=[one, other]
+    )
+
+    assert response.status_code == 409, response.text
+    assert response.json()["code"] == "locked_seat_not_available"
+
+
+async def test_a_court_with_the_same_person_twice_is_refused_at_the_boundary(
+    client, session_factory, candidate_source, searcher
+):
+    """A malformed **ask**, refused where asks are checked — not inside, where it
+    would surface as a `503` about the platform for a mistake in the request."""
+
+    await _a_city(client, session_factory, candidate_source, searcher["mu"])
+    shortlist = (await world.search(client, searcher["token"])).json()
+    one = shortlist["candidates"][0]["player_id"]
+
+    response = await world.lineup(client, searcher["token"], locked_seats=[one, one])
+
+    assert response.status_code == 422, response.text
+
+
+async def test_a_line_up_reads_back_through_the_record_it_wrote(
+    client, session_factory, candidate_source, searcher
+):
+    """``GET /searches/{id}`` reaches a line-up too, and the gates are re-run.
+
+    The record is the answer's identity on every surface, so the seated rows come
+    back the way they were shown — and **layer 4 comes back with them, into the
+    record and no further**: the read-back renders the rows, and there is no
+    field on any response for a combination to arrive in.
+    """
+
+    await _a_city(client, session_factory, candidate_source, searcher["mu"])
+    seated = (await world.lineup(client, searcher["token"])).json()
+    search_id = seated["search"]["search_id"]
+
+    response = await client.get(
+        f"/api/v1/searches/{search_id}", headers=world.auth(searcher["token"])
+    )
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["search"]["surface"] == "LINEUP"
+    assert [row["player_id"] for row in body["candidates"]] == [
+        row["player_id"] for row in seated["candidates"]
+    ]
+    assert all(row["withheld"] is False for row in body["candidates"])
+    # **The court itself does not survive the round trip, and that is a stated
+    # gap rather than an oversight.** `the-two-contracts.md` §1 asks for the same
+    # schema either way; reproducing the seating needs a second stored shape —
+    # *what was shown*, beside layer 4's *what was compared*, which no route may
+    # return. Asserted here so the gap stays visible instead of being discovered
+    # by a client that drew an empty court.
+    assert "lineup" not in body, (
+        "the read-back grew a court; the gap this asserts has been closed and "
+        "the spec amendment should say so"
+    )
+    assert "lineup" not in body["search"], "layer 4 reached the wire"

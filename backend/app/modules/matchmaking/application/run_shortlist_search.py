@@ -33,20 +33,20 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 from typing import final
-from uuid import UUID
 
 from app.engines.matchfit.ruleset import Ruleset
 from app.engines.matchfit.scoring import MatchFit
-from app.kernel import InvariantViolated, invariant
+from app.kernel import InvariantViolated
 from app.modules.matchmaking.application.commands import RunShortlistSearchCommand
-from app.modules.matchmaking.application.search_workbench import SearchWorkbench
+from app.modules.matchmaking.application.search_workbench import (
+    AskedFor,
+    SearchWorkbench,
+)
 from app.modules.matchmaking.domain.errors import (
     MatchmakingUnavailable,
-    RungOfferNotFound,
 )
 from app.modules.matchmaking.domain.search_context import (
     SearchContext,
-    SearcherFacts,
 )
 from app.modules.matchmaking.domain.prompts import (
     REPEATED_WIDENINGS,
@@ -56,7 +56,6 @@ from app.modules.matchmaking.domain.prompts import (
 )
 from app.modules.matchmaking.domain.relaxation import (
     Rung,
-    RungOffer,
     radius_ladder,
 )
 from app.modules.matchmaking.domain.search_store import SearchStore
@@ -76,27 +75,9 @@ from app.modules.matchmaking.domain.sorting import of_scored, sorts_available
 from app.modules.matchmaking.domain.widening import Ladder, ladder_for
 from app.modules.player_profile.domain.availability import (
     AvailabilityGrid,
-    AvailabilitySlot,
     window_of,
 )
 from app.shared.ids import new_uuid
-
-
-@final
-@dataclass(frozen=True, slots=True)
-class _AskedFor:
-    """The two asks this one search runs on, and where they came from.
-
-    ``rung_taken`` and ``offered_by_search_id`` are set together or not at all:
-    **an accepted widen is a new search citing the one that offered it**, and the
-    pair is what makes take-up per rung a join over two rows rather than a flag
-    on one that could be written without the other.
-    """
-
-    grid: AvailabilityGrid
-    radius_km: int
-    rung_taken: Rung | None = None
-    offered_by_search_id: UUID | None = None
 
 
 @final
@@ -166,7 +147,12 @@ class RunShortlistSearch:
         # so that everything downstream — the box, the radius gate, the distance
         # term, the availability denominator, the window and the recorded grid —
         # reads one set of facts and cannot disagree about what was asked for.
-        asked = await self._asked_for(command, declared)
+        asked = await self._work.asked_for(
+            declared,
+            availability_override=command.availability_override,
+            offered_by_search_id=command.offered_by_search_id,
+            rung=command.rung,
+        )
         searcher = replace(declared, grid=asked.grid, radius_km=asked.radius_km)
 
         snapshot, freshness = self._work.bound_snapshot(command.sport, now)
@@ -257,84 +243,6 @@ class RunShortlistSearch:
             prompts=await self._raised(command, asked, profile_grid=declared.grid),
         )
 
-    # -- what this one search was asked for ----------------------------------
-
-    async def _asked_for(
-        self, command: RunShortlistSearchCommand, searcher: SearcherFacts
-    ) -> "_AskedFor":
-        """The grid and the radius this search runs on. **Never a profile edit.**
-
-        Two asks can move them, and neither writes anything: a grid the player
-        edited on the search screen for this evening, and a rung offer they took.
-        The profile keeps its own answers, and the app offers to save either one
-        afterwards through the routes that own those fields (``docs/adr/0099``
-        §3).
-
-        **The widening is read off the offering search's record and never off the
-        request.** That is what keeps *there is no per-search radius input* true:
-        the only radius this backend will run a search at is one it published
-        itself, on a row it wrote.
-        """
-
-        grid = (
-            searcher.grid
-            if command.availability_override is None
-            else AvailabilityGrid.of_cells(command.availability_override)
-        )
-        if command.rung is None and command.offered_by_search_id is None:
-            return _AskedFor(grid=grid, radius_km=searcher.radius_km)
-        if command.rung is None or command.offered_by_search_id is None:
-            raise RungOfferNotFound(
-                "a rung and the search that offered it travel together"
-            )
-        offer = await self._cited_offer(
-            command, command.offered_by_search_id, command.rung
-        )
-        # The ask decides which payload is there, and ``RungOffer``'s own
-        # invariant is what makes that a fact rather than a hope: a ``RADIUS``
-        # rung holds a radius and no slot, and a ``TIMES`` rung the reverse.
-        if offer.radius_km is not None:
-            return _AskedFor(
-                grid=grid,
-                radius_km=offer.radius_km,
-                rung_taken=command.rung,
-                offered_by_search_id=command.offered_by_search_id,
-            )
-        invariant(
-            offer.slot is not None,
-            f"a {offer.ask.value} rung offering neither a radius nor a slot",
-        )
-        slot = AvailabilitySlot.from_code(offer.slot or "")
-        return _AskedFor(
-            # A set, so a client that also sent the widened grid as its override
-            # lands in exactly the same place as one that sent nothing.
-            grid=AvailabilityGrid.of((*grid.slots, slot)),
-            radius_km=searcher.radius_km,
-            rung_taken=command.rung,
-            offered_by_search_id=command.offered_by_search_id,
-        )
-
-    async def _cited_offer(
-        self, command: RunShortlistSearchCommand, search_id: UUID, rung: Rung
-    ) -> RungOffer:
-        """The offer this search claims to be accepting, from the row that made it.
-
-        Four ways this refuses, and they are one code on purpose: the search does
-        not exist, it belongs to somebody else, it computed no offers, or it
-        offered no such rung. Telling them apart would answer *does this
-        ``search_id`` exist* for a stranger's id, which is the question the
-        read-back's own 404 already declines to answer.
-        """
-
-        cited = await self._searches.find(
-            search_id=search_id, searcher_id=command.searcher_id
-        )
-        if cited is not None and cited.sport is command.sport:
-            for offer in cited.rung_offers or ():
-                if offer.rung is rung:
-                    return offer
-        raise RungOfferNotFound(f"no rung {rung.value} was offered by that search")
-
     # -- the ladder ----------------------------------------------------------
 
     def _ladder(
@@ -378,7 +286,7 @@ class RunShortlistSearch:
     async def _raised(
         self,
         command: RunShortlistSearchCommand,
-        asked: "_AskedFor",
+        asked: AskedFor,
         *,
         profile_grid: AvailabilityGrid,
     ) -> tuple[RaisedPrompt, ...]:
@@ -421,7 +329,7 @@ class RunShortlistSearch:
         return tuple(raised)
 
     async def _keeps_taking_this_widening(
-        self, command: RunShortlistSearchCommand, asked: "_AskedFor"
+        self, command: RunShortlistSearchCommand, asked: AskedFor
     ) -> bool:
         """Whether this radius has been taken often enough to be worth keeping.
 

@@ -18,7 +18,7 @@ becoming the matcher's own refusal.
 
 from __future__ import annotations
 
-from typing import Any, Awaitable, Callable, TypeVar
+from typing import Any, Awaitable, Callable, Collection, TypeVar
 
 from uuid import UUID
 
@@ -85,6 +85,31 @@ async def read_demand(
         return await read()
     except Exception:
         return stood_down
+
+
+async def live_block_pairs(
+    blocks: BlockQuery, player_ids: Collection[UUID]
+) -> frozenset[frozenset[UUID]]:
+    """Every standing block **between two candidates**. **Fails closed.**
+
+    The line-up's own block read, and the second reader
+    ``docs/adr/0116`` gives ADR-0095: a four contains six pairs, three of them
+    contain no searcher, and nothing in a shortlist ever asked whether two
+    candidates may share a court.
+
+    It is the same translation :func:`live_block_set` performs — somebody else's
+    outage becoming the matcher's own refusal — written beside it rather than
+    inside the line-up so that a safety gate is translated in one place. A
+    line-up that cannot evaluate this **refuses**; it never seats a four on an
+    unread mask.
+    """
+
+    try:
+        return await blocks.blocked_pairs_among(player_ids)
+    except BlockStateUnavailable as unavailable:
+        raise GateDataUnavailable(
+            "the pairwise block mask could not be evaluated"
+        ) from unavailable
 
 
 async def live_block_set(blocks: BlockQuery, player_id: UUID) -> frozenset[UUID]:

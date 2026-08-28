@@ -150,6 +150,29 @@ class RungOfferNotFound(ConflictError):
     code = "rung_offer_not_found"
 
 
+class LockedSeatNotAvailable(ConflictError):
+    """One of the players you seated by hand cannot be seated in this line-up.
+
+    A locked seat is a person the searcher chose, and the only people they could
+    have chosen are people this backend showed them. Somebody no longer in the
+    pool has been removed by a gate — a block taken since, a hold, a safety
+    preference, a level that has moved — or has fallen below the quality floor,
+    and a seat is never filled below the floor to complete a four
+    (``docs/adr/0099``).
+
+    **It refuses rather than quietly dropping the seat.** A four that came back
+    without the person the searcher put in it, and with somebody else sitting
+    there instead, is the builder lying about what it was asked to do — and the
+    client cannot tell, because every other seat looks exactly the same.
+
+    **It names nobody**, for the reason a withheld row names no gate
+    (``docs/adr/0130``): saying *which* of the four is unavailable would tell a
+    searcher that a particular person blocked them or changed a setting.
+    """
+
+    code = "locked_seat_not_available"
+
+
 class SearchNotFound(NotFoundError):
     """No search of yours has that id.
 

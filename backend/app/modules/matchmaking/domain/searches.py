@@ -320,6 +320,94 @@ class SearchCandidateRecord:
 
 
 @final
+class CombinationBand(str, Enum):
+    """Which of layer 4's **two rows** this is.
+
+    Two, and never a band: the winning combination and the one it beat. A layer
+    holding 1 771 near-miss fours would be a group-shaped answer to *who was
+    withheld*, which is the question nobody may ask.
+    """
+
+    WINNER = "WINNER"
+    RUNNER_UP = "RUNNER_UP"
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class RecordedCombination:
+    """One four the objective compared, and the whole ``G`` breakdown behind it.
+
+    **Exactly what the deciding margin is computed from**, and no more: the
+    margin is over contributions, so the terms and the renormalisation basis both
+    have to be here or the reason code is unreproducible a year later.
+
+    ``terms`` is opaque for the reason ``SearchCandidateRecord.terms`` is — it is
+    stamped with ``ruleset_version`` and its shape may change between rulesets,
+    which is exactly what a relational schema would fight.
+    """
+
+    band: CombinationBand
+    #: The three people seated beside the searcher, in the arrangement's own
+    #: order: the partner first, then the two opponents.
+    members: tuple[UUID, ...]
+    #: Who partnered the searcher in the arrangement this combination was judged
+    #: at. ``None`` is not a value here: a scored combination is a complete four.
+    partner_id: UUID
+    terms: tuple[Mapping[str, Any], ...]
+    #: The group terms that stood down — the renormalisation basis, without which
+    #: two objectives are not comparable.
+    degraded_terms: tuple[str, ...]
+    side_gap: float
+    forecast_pct: int
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class LineupRecord:
+    """Layer 4. **Two rows and four counters, and no route returns any of it.**
+
+    ``the-group-objective.md`` §6: the first three layers are all **per
+    candidate** and a line-up's unit is the **combination**, so ADR-0116's gate
+    would be unfalsifiable and §5's reason code unreproducible without this. It
+    inherits layer 3's rules unchanged — written before the answer is returned,
+    never expires, and engine-internal — because a runner-up combination is a
+    group-shaped near miss.
+
+    ``max_fit_rank_seated`` is ``K``'s replacement falsifier. §24's own reads
+    *whether the winning combination ever contains a candidate ranked past ``K``*
+    and cannot fire, because the pool is truncated at ``K`` by construction; this
+    one measures how deep into the ranking the engine actually reached.
+    """
+
+    combinations: int
+    refused_by_gate: int
+    refused_by_floor: int
+    #: ``None`` when nobody was seated at all.
+    max_fit_rank_seated: int | None
+    #: The winner, then the runner-up. Empty when no combination was scored, and
+    #: one row long when there was nothing to beat.
+    rows: tuple[RecordedCombination, ...]
+
+    def __post_init__(self) -> None:
+        for name, count in (
+            ("combinations", self.combinations),
+            ("refused_by_gate", self.refused_by_gate),
+            ("refused_by_floor", self.refused_by_floor),
+        ):
+            invariant(count >= 0, f"{name} counted {count}")
+        invariant(
+            len(self.rows) <= 2,
+            f"layer 4 recording {len(self.rows)} combinations: two rows, not "
+            f"two thousand",
+        )
+        invariant(
+            [row.band for row in self.rows]
+            == [CombinationBand.WINNER, CombinationBand.RUNNER_UP][: len(self.rows)],
+            "layer 4's rows are the winner then the runner-up, in that order",
+        )
+
+
+@final
 @dataclass(frozen=True, slots=True)
 class SearchRecord:
     """One row per engine invocation, and the identity of the answer beside it.
@@ -386,6 +474,9 @@ class SearchRecord:
     rung_taken: Rung | None
     latency_ms_by_stage: Mapping[str, int]
     candidates: tuple[SearchCandidateRecord, ...]
+    #: Layer 4. **Non-null exactly on the two line-up surfaces**, and returned by
+    #: no route to anybody.
+    lineup: LineupRecord | None = None
     #: How many candidates a **live** pass suppression removed from this deal.
     #: **Deck deals only**, ``None`` elsewhere.
     #:
@@ -404,6 +495,11 @@ class SearchRecord:
         invariant(
             (self.intent_read is not None) == on_the_deck,
             f"a {self.surface.value} search with intent_read {self.intent_read}",
+        )
+        invariant(
+            (self.lineup is not None) == self.seats_a_lineup,
+            f"a {self.surface.value} search with layer 4 {self.lineup}: the "
+            f"combination is a line-up's unit and no other surface has one",
         )
         invariant(
             (self.n_excluded_by_suppression is not None) == on_the_deck,
@@ -439,6 +535,17 @@ class SearchRecord:
             f"a slot count of {self.searcher_slot_count} over a grid of "
             f"{len(self.searcher_grid)} cells",
         )
+
+    @property
+    def seats_a_lineup(self) -> bool:
+        """Whether this search seated people rather than listing them.
+
+        Two surfaces and one question, asked here rather than at each call site:
+        **a line-up and filling seats differ only by locked seats**, so every
+        rule that reads *is this a line-up* must read both or neither.
+        """
+
+        return self.surface in (SearchSurface.LINEUP, SearchSurface.FILL_SEATS)
 
     @property
     def returned(self) -> tuple[SearchCandidateRecord, ...]:

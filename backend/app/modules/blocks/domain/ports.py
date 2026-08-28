@@ -48,7 +48,7 @@ the port is where that stays true.
 
 from __future__ import annotations
 
-from typing import Protocol, runtime_checkable
+from typing import Collection, Protocol, runtime_checkable
 from uuid import UUID
 
 from app.modules.blocks.domain.block import Block
@@ -110,6 +110,35 @@ class BlockQuery(Protocol):
 
         Tens of rows, not a scan. Raises ``BlockStateUnavailable`` rather than
         answering with an empty set it cannot stand behind.
+        """
+        ...
+
+    async def blocked_pairs_among(
+        self, player_ids: Collection[UUID]
+    ) -> frozenset[frozenset[UUID]]:
+        """Every standing block **between two of these people**, as unordered pairs.
+
+        The third question, added by
+        [ADR-0116](../../../../docs/adr/0116-in-a-four-every-gate-binds-all-six-pairs.md):
+        a four contains six pairs and the searcher is in three of them, so a
+        line-up has to know whether `a` blocked `b` — a question no shortlist
+        ever asked, because on a shortlist the searcher is one half of every pair
+        on the screen.
+
+        **One bulk read over the `K` ids, never `K²` pairwise ones.** A line-up
+        enumerates 276 candidate pairs at `K = 24`, and asking
+        :meth:`blocked_between` for each would be 276 round trips for a mask that
+        is one query. This asks the opposite way round: *which of these people
+        have a block standing between them*, which is a single scan bounded by
+        how many blocks those `K` people hold rather than by `K²`.
+
+        It answers in **unordered pairs** for the reason the other two answer as
+        they do — nothing downstream may learn which way round a block was taken,
+        and a ``frozenset`` of two ids is a shape that cannot say.
+
+        Raises ``BlockStateUnavailable`` rather than an empty set it cannot stand
+        behind: an empty answer here seats four people together, and *a gate that
+        cannot be evaluated excludes*.
         """
         ...
 

@@ -33,9 +33,13 @@ from typing import Any
 
 from app.kernel import InvariantViolated
 
+from app.engines.matchfit.grouping import Arranged, Forecast
+from app.modules.matchmaking.application.forecast_lineup import ForecastAnswer
 from app.modules.matchmaking.application.read_back_search import ReadBackAnswer
+from app.modules.matchmaking.application.run_lineup_search import LineupAnswer
 from app.modules.matchmaking.application.run_deck_deal import DeckAnswer
 from app.modules.matchmaking.application.run_shortlist_search import ShortlistAnswer
+from app.modules.matchmaking.domain.lineups import LineupSeat, Side as CourtSide
 from app.modules.matchmaking.domain.prompts import RaisedPrompt
 from app.modules.matchmaking.domain.relaxation import RungOffer
 from app.modules.matchmaking.domain.searches import (
@@ -46,8 +50,15 @@ from app.modules.matchmaking.domain.searches import (
     SortOption,
 )
 from app.modules.matchmaking.presentation.schemas import (
+    ArrangementSchema,
+    ArrangementSeatSchema,
     CandidateSchema,
     ConcernSchema,
+    ForecastResponse,
+    ForecastSchema,
+    LineupResponse,
+    LineupSchema,
+    LineupSeatSchema,
     OptimisedFor,
     PlayerCardSchema,
     PoolSchema,
@@ -55,6 +66,7 @@ from app.modules.matchmaking.presentation.schemas import (
     RungOfferSchema,
     SearchEnvelope,
     ShortlistResponse,
+    SidesSchema,
     WireInclusionReason,
     WithheldRowSchema,
 )
@@ -119,11 +131,205 @@ def render_read_back(answer: ReadBackAnswer) -> ShortlistResponse:
     )
 
 
+def render_lineup(answer: LineupAnswer) -> LineupResponse:
+    """The seated four: the envelope, the rows, and the court they sit on.
+
+    **The rows come off the record**, exactly as a shortlist's do, so a seated
+    card carries the same number the shortlist showed and nothing is re-scored
+    behind the player's back. The court is beside them because a seat is a fact
+    about *this* answer rather than about a person.
+
+    ``optimised_for`` is ``GROUP`` when the searcher hand-seated anybody: from
+    that moment the engine is filling seats around them and may hand the searcher
+    a worse individual match than an empty court would have, and the screen has
+    to be able to say so rather than leave it to be discovered.
+    """
+
+    return LineupResponse(
+        search=_envelope(
+            answer.record,
+            answer.sorts_available,
+            optimised_for=(
+                OptimisedFor.GROUP
+                if answer.optimised_for_group
+                else OptimisedFor.SEARCHER
+            ),
+        ),
+        # **The same rows, in the same shape, on every surface.** A line-up's
+        # returned band is who sat down, so the list is the seated four minus
+        # the searcher — and a client that renders a shortlist row can render
+        # this one without a branch.
+        candidates=[_candidate(row) for row in answer.record.returned],
+        lineup=LineupSchema(
+            seats=[_seat(seat) for seat in answer.seats],
+            arrangements=_arrangements(
+                answer.arrangements,
+                current=answer.drawn,
+                best=answer.best,
+                evenest=answer.evenest,
+            ),
+            **_group_reason(answer),
+        ),
+    )
+
+
+def render_forecast(answer: ForecastAnswer) -> ForecastResponse:
+    """Three arrangements of a composed four. **No search, so no envelope.**
+
+    Nothing was generated, ranked or recorded, so there is no ``search_id`` to
+    read this back by and no row to render. What crosses is the arithmetic and
+    the two stamps that make it reproducible.
+    """
+
+    return ForecastResponse(
+        arrangements=_arrangements(
+            answer.arrangements,
+            current=answer.current,
+            # **No objective was computed here and none is claimed.** Nothing was
+            # compared to anything: the caller composed this four themselves, and
+            # a forecast has no Fits to read a seat by. So ``is_best`` is omitted
+            # on every arrangement rather than pointed at the seat order the
+            # client happened to send.
+            best=None,
+            evenest=answer.evenest,
+        ),
+        engine_version=answer.engine_version,
+        ruleset_version=answer.ruleset_version,
+    )
+
+
+def _group_reason(answer: LineupAnswer) -> dict[str, Any]:
+    """The two codes a line-up may or may not have to say.
+
+    Both are **omitted rather than sent as null**, and they mean different
+    things: no ``group_reason`` is *there was no runner-up to beat*, and no
+    ``dock`` is *the four of you do share an hour*. A null in either place would
+    read as a measured nothing, which neither is.
+    """
+
+    fields: dict[str, Any] = {}
+    if answer.group_reason is not None:
+        fields["group_reason"] = answer.group_reason
+    if answer.dock is not None:
+        fields["dock"] = answer.dock
+    return fields
+
+
+def _arrangements(
+    ways: tuple[tuple[Arranged, tuple[LineupSeat, ...]], ...],
+    *,
+    current: Arranged | None,
+    best: Arranged | None,
+    evenest: Arranged | None,
+) -> list[ArrangementSchema]:
+    """Every way round, each marked by **identity and never by re-deriving.**
+
+    ``is_best`` and ``is_evenest`` are two separate booleans because the new fact
+    the builder can state is that they **differ**, and they are compared by
+    object identity against what the engine chose — a renderer that recomputed
+    either would be the second implementation of a domain rule that
+    ``docs/adr/0108`` exists to prevent.
+
+    ``best`` is ``None`` wherever no objective was computed — an incomplete
+    four, a singles line-up, every forecast — and then **``is_best`` is omitted
+    from every arrangement** rather than set false on all three or pointed at
+    whichever one is being drawn. Omitted is *this does not apply here*, which is
+    exactly the case; ``false`` everywhere would say the engine looked and found
+    no best.
+    """
+
+    return [
+        ArrangementSchema.model_validate(
+            {
+                "pairing_id": position,
+                "is_current": one is current,
+                "is_evenest": one is evenest,
+                "sides": SidesSchema(
+                    A=[
+                        _arranged_seat(seat)
+                        for seat in seats
+                        if seat.side is CourtSide.A
+                    ],
+                    B=[
+                        _arranged_seat(seat)
+                        for seat in seats
+                        if seat.side is CourtSide.B
+                    ],
+                ),
+                "forecast": _forecast(one.forecast),
+                **({} if best is None else {"is_best": one is best}),
+            }
+        )
+        for position, (one, seats) in enumerate(ways, start=1)
+    ]
+
+
+def _arranged_seat(seat: LineupSeat) -> ArrangementSeatSchema:
+    """One seat inside one arrangement. **The person by id, never twice over.**
+
+    The candidate rides once, in the top-level ``seats`` list; an arrangement
+    names who sits where and lets the client look them up, because three copies
+    of four breakdowns is three chances for two of them to disagree.
+    """
+
+    fields: dict[str, Any] = {
+        "seat_index": seat.seat_index,
+        "relationship": seat.relationship,
+    }
+    if seat.player_id is not None:
+        fields["player_id"] = seat.player_id
+    return ArrangementSeatSchema.model_validate(fields)
+
+
+def _seat(seat: LineupSeat) -> LineupSeatSchema:
+    """One seat on the current court, naming whoever is in it.
+
+    **The id and never the breakdown.** The four people ride once, in
+    ``candidates``, which is the list every surface returns and the one a
+    read-back reproduces; repeating them here and again in three arrangements
+    would be four copies of one card with four chances to disagree.
+
+    The searcher's own seat names nobody: they are not a row of their own search,
+    and a card for yourself is a shape this contract has never had.
+    """
+
+    fields: dict[str, Any] = {
+        "side": seat.side,
+        "seat_index": seat.seat_index,
+        "relationship": seat.relationship,
+    }
+    if seat.player_id is not None:
+        fields["player_id"] = seat.player_id
+    if seat.unfilled_reason is not None:
+        fields["unfilled_reason"] = seat.unfilled_reason
+    return LineupSeatSchema.model_validate(fields)
+
+
+def _forecast(forecast: Forecast) -> ForecastSchema:
+    """How even the game is, with its caveat **inside** it.
+
+    ``provisional`` is derived from the assumption on the engine's own type and
+    is passed through rather than recomputed, because the failure being guarded
+    against is a screen showing the number without its caveat — and a renderer
+    that decided the boolean for itself is exactly where the two come apart.
+    """
+
+    return ForecastSchema(
+        pct=forecast.pct,
+        sigma_group=forecast.sigma_group,
+        provisional=forecast.provisional,
+        assumption=(
+            None if forecast.assumption is None else forecast.assumption.value
+        ),
+    )
+
+
 def _envelope(
     record: SearchRecord,
     sorts: tuple[SortOption, ...],
     *,
     prompts: tuple[RaisedPrompt, ...] | None = None,
+    optimised_for: OptimisedFor = OptimisedFor.SEARCHER,
 ) -> SearchEnvelope:
     """The search's own facts, and the two that are about *now*.
 
@@ -144,11 +350,11 @@ def _envelope(
         mode=record.mode,
         ruleset_version=record.ruleset_version,
         engine_version=record.engine_version,
-        # A shortlist optimises for the person who asked, always. The field is
-        # on the envelope rather than implied by the surface because a line-up
-        # with seats locked is the case where it is not, and one renderer should
-        # read one fact.
-        optimised_for=OptimisedFor.SEARCHER,
+        # A shortlist optimises for the person who asked, always, and so does an
+        # empty court. The field is on the envelope rather than implied by the
+        # surface because a line-up **with seats locked** is the case where it is
+        # not, and one renderer should read one fact.
+        optimised_for=optimised_for,
         index_stale=record.index_stale,
         pool=PoolSchema(
             sport=pool.sport,

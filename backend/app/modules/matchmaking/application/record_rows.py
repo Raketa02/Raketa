@@ -26,6 +26,7 @@ from dataclasses import asdict, is_dataclass
 from typing import Any, Mapping
 
 from app.engines.matchfit.core import LivenessSignal
+from app.engines.matchfit.grouping import GroupScore
 from app.engines.matchfit.ranking import Liveness, ModifierStack
 from app.engines.matchfit.scoring import Fit
 from app.modules.matchmaking.domain.shortlist import Scored
@@ -49,6 +50,32 @@ def term_rows(fit: Fit) -> tuple[Mapping[str, Any], ...]:
             "evidence": evidence_payload(scored.evidence),
         }
         for scored in fit.terms
+    )
+
+
+def group_term_rows(score: GroupScore) -> tuple[Mapping[str, Any], ...]:
+    """The ``G`` breakdown of one combination — **the same shape as a Fit's.**
+
+    Layer 4's rows carry it because the deciding reason code is *the term with
+    the largest margin between the winner and the runner-up*, computed over
+    **contributions**: a margin is not reproducible from a code, and a code with
+    no working behind it would be the unfalsifiable claim ``docs/adr/0117``'s
+    reason exists to avoid being.
+
+    There is no ``evidence`` here and there is nowhere for one to go. A group
+    term reads what no seat's Fit read — three pairs and a four-way intersection
+    — and the evidence union is the *card's* vocabulary, published to a client
+    that never sees a combination.
+    """
+
+    return tuple(
+        {
+            "term": reading.term.value,
+            "weight": reading.weight,
+            "value": reading.value,
+            "contribution": reading.contribution,
+        }
+        for reading in score.terms
     )
 
 

@@ -122,6 +122,65 @@ async def test_nobody_is_blocked_from_themselves(session_factory):
         assert not await build_block_query(session).blocked_between(ALICE, ALICE)
 
 
+async def test_the_bulk_read_names_every_pair_between_these_people(session_factory):
+    """``docs/adr/0116``'s own read: **one query over the ``K`` ids, not ``K²``.**
+
+    A four contains six pairs and the searcher is in three of them, so a line-up
+    has to know whether `a` blocked `b` — a question no shortlist ever asked. It
+    comes back as unordered pairs, because nothing downstream may learn which way
+    round a block was taken.
+    """
+
+    async with session_factory() as session:
+        await _record(session, blocker=ALICE, blocked=BOB)
+
+        pairs = await build_block_query(session).blocked_pairs_among(
+            [ALICE, BOB, CAROL]
+        )
+
+        assert pairs == frozenset({frozenset({ALICE, BOB})})
+
+
+async def test_the_bulk_read_ignores_a_block_reaching_outside_the_line_up(
+    session_factory,
+):
+    """Both ends have to be on the court. A block between one of these people and
+    somebody who is not being seated is somebody else's business, and a mask that
+    counted it would refuse a four for a reason that is not on it."""
+
+    async with session_factory() as session:
+        await _record(session, blocker=ALICE, blocked=BOB)
+
+        pairs = await build_block_query(session).blocked_pairs_among([ALICE, CAROL])
+
+        assert pairs == frozenset()
+
+
+async def test_the_bulk_read_sees_a_lift(session_factory):
+    """A lifted block is not a block, here as in the other two reads."""
+
+    async with session_factory() as session:
+        await _record(session, blocker=ALICE, blocked=BOB, lifted=True)
+
+        assert await build_block_query(session).blocked_pairs_among(
+            [ALICE, BOB]
+        ) == frozenset()
+
+
+async def test_a_line_up_of_one_has_no_pair_for_a_block_to_sit_between(
+    session_factory,
+):
+    """The one emptiness here that is **measured** rather than a refusal: fewer
+    than two people is no pair at all, and the read is not taken."""
+
+    async with session_factory() as session:
+        await _record(session, blocker=ALICE, blocked=BOB)
+        query = build_block_query(session)
+
+        assert await query.blocked_pairs_among([ALICE]) == frozenset()
+        assert await query.blocked_pairs_among([]) == frozenset()
+
+
 class BrokenSession:
     """A session whose reads fail, which is the only interesting failure here."""
 
@@ -141,6 +200,8 @@ async def test_a_read_that_cannot_complete_refuses_rather_than_answering_empty()
         await query.exclusions_for(ALICE)
     with pytest.raises(BlockStateUnavailable):
         await query.blocked_between(ALICE, BOB)
+    with pytest.raises(BlockStateUnavailable):
+        await query.blocked_pairs_among([ALICE, BOB])
 
 
 def test_the_payload_keys_are_taken_from_the_events_and_not_trusted():

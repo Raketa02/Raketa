@@ -62,10 +62,12 @@ from app.bootstrap.composition import (
 from app.infrastructure.redis_client import get_redis
 from app.modules.blocks.presentation.dependencies import BlockQueryDep
 from app.modules.matchmaking.application.express_interest import ExpressInterest
+from app.modules.matchmaking.application.forecast_lineup import ForecastLineup
 from app.modules.matchmaking.application.record_pass import RecordPass
 from app.modules.matchmaking.application.read_back_search import ReadBackSearch
 from app.modules.matchmaking.application.read_interest import ReadInterest
 from app.modules.matchmaking.application.run_deck_deal import RunDeckDeal
+from app.modules.matchmaking.application.run_lineup_search import RunLineupSearch
 from app.modules.matchmaking.application.run_shortlist_search import RunShortlistSearch
 from app.modules.matchmaking.application.search_workbench import SearchWorkbench
 from app.modules.matchmaking.domain.candidate_snapshot import CandidateSource
@@ -415,3 +417,61 @@ def get_read_interest(
 
 
 ReadInterestDep = Annotated[ReadInterest, Depends(get_read_interest)]
+
+
+def get_run_lineup_search(
+    workbench: SearchWorkbenchDep,
+    blocks: BlockQueryDep,
+) -> RunLineupSearch:
+    """The line-up use case: the workbench, plus the gate a shortlist never asked.
+
+    One collaborator beyond the shared ones, and it is the whole of what
+    ``docs/adr/0116`` added: a four contains six pairs and the searcher is in
+    three of them, so the line-up makes **one bulk block query over the ``K``
+    candidate ids** that no other surface has any use for.
+
+    There is no prompt ledger and no search store of its own: the ladder does not
+    run here — ``MIN_SHORTLIST`` counts rows in a list somebody reads and a
+    line-up returns seats — and the citation check that needs the store lives on
+    the workbench, where both surfaces reach it.
+    """
+
+    return RunLineupSearch(
+        workbench=workbench,
+        ruleset=build_ruleset(),
+        engine=build_match_fit_engine(),
+        blocks=blocks,
+    )
+
+
+RunLineupSearchDep = Annotated[RunLineupSearch, Depends(get_run_lineup_search)]
+
+
+def get_forecast_lineup(
+    db: DbSession,
+    workbench: SearchWorkbenchDep,
+    candidates: CandidateSourceDep,
+    blocks: BlockQueryDep,
+    holds: AccountHoldQueryDep,
+) -> ForecastLineup:
+    """The forecast, assembled per request. **It is handed nothing to write to.**
+
+    It holds a search store to *read* the citation and an engine only for its
+    version stamp; there is no unit of work here and no ledger, because
+    ``docs/adr/0108`` makes recording nothing a property of this route rather
+    than a discipline its author has to keep. The absence is the point: a use
+    case holding a writer is a use case that can quietly start writing.
+    """
+
+    return ForecastLineup(
+        workbench=workbench,
+        ruleset=build_ruleset(),
+        engine=build_match_fit_engine(),
+        searches=build_search_store(db),
+        candidates=candidates,
+        blocks=blocks,
+        holds=holds,
+    )
+
+
+ForecastLineupDep = Annotated[ForecastLineup, Depends(get_forecast_lineup)]

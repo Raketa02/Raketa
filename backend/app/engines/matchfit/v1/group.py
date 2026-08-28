@@ -63,6 +63,7 @@ from app.engines.matchfit.core import (
     Term,
 )
 from app.engines.matchfit.grouping import (
+    Arranged,
     Arrangement,
     Forecast,
     GroupScore,
@@ -274,6 +275,8 @@ def forecast(
     side_b: tuple[LevelReading, ...],
     rules: BalanceRules,
     combine: SigmaCombiner,
+    *,
+    seats_per_side: int = 2,
 ) -> Forecast:
     """How even the game is forecast to be, for two sides of one or two people.
 
@@ -286,14 +289,25 @@ def forecast(
     produced is exactly the figure the full side produces when the arrival
     matches, and the caveat lifts without the number moving.
 
+    ``seats_per_side`` is **how many a full side holds in this sport**, and it is
+    what decides whether a side of one is provisional or finished. A singles
+    court is full at one a side, and marking that forecast provisional would
+    caveat a number nothing was assumed about — the one lie a caveat can tell.
+    It is a seat count and never a mode: ``kernel/sports.py`` fixes it per sport,
+    and nothing here may guess it from how many people happened to be seated.
+
     ``pct`` is the printed whole percent and the σ is combined outside this
     engine. The coefficients and the clamp are the pairwise term's own: a
     forecast about four people is the same claim as a forecast about two, made
     over two side strengths instead of two players.
     """
 
-    pct, sigma, _ = _predicted(side_a, side_b, rules, combine)
-    return _forecast(pct, sigma, partial=len(side_a) < 2 or len(side_b) < 2)
+    pct, sigma, _ = _predicted(side_a, side_b, rules, combine, seats_per_side)
+    return _forecast(
+        pct,
+        sigma,
+        partial=len(side_a) < seats_per_side or len(side_b) < seats_per_side,
+    )
 
 
 def _forecast(pct: float, sigma: float, *, partial: bool) -> Forecast:
@@ -344,6 +358,7 @@ def _predicted(
     side_b: tuple[LevelReading, ...],
     rules: BalanceRules,
     combine: SigmaCombiner,
+    seats_per_side: int = 2,
 ) -> tuple[float, float, float]:
     """The unrounded forecast, the group σ behind it, and the gap it read.
 
@@ -355,26 +370,33 @@ def _predicted(
     this forecast was computed from.
     """
 
-    a, b = _seated_twice(side_a), _seated_twice(side_b)
+    a = _seated_to_fill(side_a, seats_per_side)
+    b = _seated_to_fill(side_b, seats_per_side)
     sigma = combine([level.sigma for level in a + b])
     gap = abs(_strength(a, rules) - _strength(b, rules))
     return forecast_pct(gap, sigma, rules), sigma, gap
 
 
-def _seated_twice(side: tuple[LevelReading, ...]) -> tuple[LevelReading, ...]:
-    """A side of two, seating a lone player twice — *the* provisional assumption.
+def _seated_to_fill(
+    side: tuple[LevelReading, ...], seats_per_side: int
+) -> tuple[LevelReading, ...]:
+    """A full side, seating a lone player twice — *the* provisional assumption.
 
     Stated once, here, so that everything downstream of it — the strength, the
     σ, the printed percent — reads a full side and no caller has a second chance
     to interpret an empty seat.
+
+    A singles side is full at one, so nothing is assumed and nothing is doubled:
+    the same function answers both sports because *fill the side* is the same
+    sentence, and the seat count is the only thing that differs.
     """
 
     invariant(
-        1 <= len(side) <= 2,
-        f"a doubles side of {len(side)}: an empty side is not a side, and a "
-        f"third player is not a side either",
+        1 <= len(side) <= seats_per_side,
+        f"a side of {len(side)} where {seats_per_side} sit: an empty side is "
+        f"not a side, and a side over its seat count is not one either",
     )
-    return side if len(side) == 2 else (side[0], side[0])
+    return side if len(side) == seats_per_side else side * seats_per_side
 
 
 def _strength(side: tuple[LevelReading, ...], rules: BalanceRules) -> float:
@@ -426,6 +448,18 @@ def objective(
     and there is no reading for it to be a difference around.
     """
 
+    invariant(
+        arrangement.complete,
+        "an objective over a line-up with an open seat: three of four is an "
+        "honest answer and it is not a lower G, it is no G at all",
+    )
+    # The **value** form, so the partner seat is narrowed by the raise rather
+    # than tested a second time to prove what the line above already
+    # guarantees — and so the guarantee survives ``python -O``, which is where
+    # an ``assert`` would evaporate.
+    partner = invariant(
+        arrangement.partner, "a complete four with nobody beside the searcher"
+    )
     mode = searcher.mode
     unlocked = tuple(seat for seat in arrangement.seated if not seat.locked)
     crosses = tuple(
@@ -439,12 +473,9 @@ def objective(
         is not None
     )
     pct, sigma, gap = _predicted(
-        (searcher.level, arrangement.partner.level),
-        tuple(opponent.level for opponent in arrangement.opponents),
-        ruleset.balance,
-        combine,
+        *_sides(searcher, arrangement), ruleset.balance, combine
     )
-    delta = seat_delta(searcher, arrangement.partner, ruleset)
+    delta = seat_delta(searcher, partner, ruleset)
 
     values: dict[GroupTerm, float | None] = {
         GroupTerm.BALANCE: balance_norm(pct, ruleset.balance),
@@ -505,12 +536,65 @@ def objective(
     )
 
 
-def arrangements(
+def _sides(
+    searcher: Searcher, arrangement: Arrangement
+) -> tuple[tuple[LevelReading, ...], tuple[LevelReading, ...]]:
+    """The two sides' Levels, in one place, so nothing reads them twice.
+
+    The searcher is on their own side always and by construction — there is no
+    arrangement in which they cross the net, because *which side am I on* is not
+    a question a builder asks — so what varies is only who is beside them.
+    """
+
+    ours = (
+        (searcher.level,)
+        if arrangement.partner is None
+        else (searcher.level, arrangement.partner.level)
+    )
+    return ours, tuple(opponent.level for opponent in arrangement.opponents)
+
+
+def arranged(
     searcher: Searcher,
-    seated: tuple[Seated, Seated, Seated],
+    arrangement: Arrangement,
     ruleset: Ruleset,
     combine: SigmaCombiner,
-) -> tuple[GroupScore, GroupScore, GroupScore]:
+    *,
+    seats_per_side: int = 2,
+) -> Arranged:
+    """One arrangement's forecast and its side gap. **No objective, deliberately.**
+
+    What a screen draws, for a four **or** for a court still filling. The
+    objective needs three seated people and an incomplete line-up has none to
+    give it; the forecast does not, because reading a half-empty side *as if the
+    missing player matched the one already there* is the whole of what
+    ``provisional`` means. So this is the function both cases go through, which
+    is what makes *the provisional figure becomes exactly the final figure the
+    moment the seat fills* a property of one implementation rather than a hope
+    about two (``docs/adr/0108``).
+    """
+
+    ours, theirs = _sides(searcher, arrangement)
+    pct, sigma, gap = _predicted(
+        ours, theirs, ruleset.balance, combine, seats_per_side
+    )
+    return Arranged(
+        arrangement=arrangement,
+        forecast=_forecast(
+            pct,
+            sigma,
+            partial=len(ours) < seats_per_side or len(theirs) < seats_per_side,
+        ),
+        side_gap=gap,
+    )
+
+
+def arrangements(
+    searcher: Searcher,
+    seated: Sequence[Seated],
+    ruleset: Ruleset,
+    combine: SigmaCombiner,
+) -> tuple[GroupScore, ...]:
     """All three arrangements of one four, each scored and each with a forecast.
 
     Returned whole rather than filtered, because the builder is offered all three
@@ -519,17 +603,15 @@ def arrangements(
     every swap the builder permits is one of these three.
     """
 
-    first, second, third = Arrangement.all_of(seated)
-    return (
-        objective(searcher, first, ruleset, combine),
-        objective(searcher, second, ruleset, combine),
-        objective(searcher, third, ruleset, combine),
+    return tuple(
+        objective(searcher, one, ruleset, combine)
+        for one in Arrangement.all_of(seated)
     )
 
 
 def arrange(
     searcher: Searcher,
-    seated: tuple[Seated, Seated, Seated],
+    seated: Sequence[Seated],
     ruleset: Ruleset,
     combine: SigmaCombiner,
 ) -> GroupScore:
@@ -557,7 +639,7 @@ def best(scores: Sequence[GroupScore]) -> GroupScore:
     invariant(bool(scores), "the best of no arrangements at all")
     return sorted(
         scores,
-        key=lambda score: (-score.objective, score.arrangement.partner.player_id),
+        key=lambda score: (-score.objective, score.arrangement.partner_id),
     )[0]
 
 
@@ -572,7 +654,7 @@ def evenest(scores: Sequence[GroupScore]) -> GroupScore:
     invariant(bool(scores), "the evenest of no arrangements at all")
     return sorted(
         scores,
-        key=lambda score: (score.side_gap, score.arrangement.partner.player_id),
+        key=lambda score: (score.side_gap, score.arrangement.partner_id),
     )[0]
 
 
@@ -619,6 +701,7 @@ def deciding_reason(winner: GroupScore, runner_up: GroupScore) -> GroupReason:
 __all__ = [
     "CROSS_TERMS",
     "arrange",
+    "arranged",
     "arrangements",
     "best",
     "cross_reading",

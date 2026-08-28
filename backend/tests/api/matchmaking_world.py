@@ -179,7 +179,14 @@ async def a_searcher(
     return {"id": player_id, "token": token, "mu": mu}
 
 
-async def a_candidate(
+async def a_candidate(client, session_factory, name: str, **facts) -> UUID:
+    """One person in the city. **Their id, because that is what a test asserts on.**"""
+
+    player_id, _ = await a_signed_in_candidate(client, session_factory, name, **facts)
+    return player_id
+
+
+async def a_signed_in_candidate(
     client,
     session_factory,
     name: str,
@@ -194,15 +201,18 @@ async def a_candidate(
     gender_preference: str = "ANY",
     intent: str | None = "COMPETITIVE",
     at: datetime = LONG_AGO,
-) -> UUID:
-    """One person in the city, as the log tells the index about them.
+) -> tuple[UUID, str]:
+    """The same person, **and a bearer token for them.**
 
     They are registered through the route because the card reads a **nickname**
     from ``users``, which the index does not tail — and a candidate with no
-    nickname is a row the search drops rather than a row it shows blank.
+    nickname is a row the search drops rather than a row it shows blank. That
+    registration produces a token, and it is handed back here for the one thing
+    only a candidate can do for themselves: block another candidate, which is a
+    pair no shortlist ever gated.
     """
 
-    player_id, _ = await register(client, name)
+    player_id, token = await register(client, name)
     await append(
         session_factory,
         PlayerProfileCreated(
@@ -229,7 +239,17 @@ async def a_candidate(
             session_factory,
             PlayIntentDeclared(player_id, SPORT.value, intent, "RATING_TAIL", at),
         )
-    return player_id
+    return player_id, token
+
+
+async def block_between(client, token: str, player_id: UUID):
+    """One player blocking another, through the route a person would use."""
+
+    return await client.post(
+        "/api/v1/blocks",
+        json={"player_id": str(player_id), "surface": "SHORTLIST"},
+        headers=auth(token),
+    )
 
 
 def _rating(player_id: UUID, *, mu: float, at: datetime) -> RatingInitialised:
@@ -558,3 +578,50 @@ async def saved_grid(session_factory, player_id: UUID) -> tuple[str, ...]:
     profile = await _profile(session_factory, player_id)
     assert profile is not None
     return profile.availability.codes
+
+
+async def lineup(
+    client,
+    token: str,
+    mode: str = "COMPETITIVE",
+    sport: Sport = SPORT,
+    *,
+    locked_seats: list[UUID] | None = None,
+    availability_override: list[dict] | None = None,
+):
+    """One ⚡. **`locked_seats` is the whole difference** between the two surfaces.
+
+    Omitted rather than sent empty when a test is not hand-seating anybody, for
+    the same reason the search's three optional asks are: a client says *fill
+    every seat* by not naming one.
+    """
+
+    body: dict = {"sport": sport.value, "mode": mode}
+    if locked_seats is not None:
+        body["locked_seats"] = [str(one) for one in locked_seats]
+    if availability_override is not None:
+        body["availability_override"] = availability_override
+    return await client.post("/api/v1/lineups", json=body, headers=auth(token))
+
+
+async def forecast(
+    client,
+    token: str,
+    *,
+    search_id: str,
+    players: list[UUID],
+    mode: str = "COMPETITIVE",
+    sport: Sport = SPORT,
+):
+    """One composed four, priced. **It creates no search**, which is the point."""
+
+    return await client.post(
+        "/api/v1/forecasts",
+        json={
+            "sport": sport.value,
+            "mode": mode,
+            "search_id": str(search_id),
+            "players": [str(one) for one in players],
+        },
+        headers=auth(token),
+    )

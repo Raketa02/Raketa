@@ -31,7 +31,10 @@ from app.modules.matchmaking.domain.relaxation import (
 from app.modules.matchmaking.domain.search_store import SearchModeReading
 from app.modules.matchmaking.domain.searches import (
     CandidateBand,
+    CombinationBand,
     InclusionReason,
+    LineupRecord,
+    RecordedCombination,
     PoolDescription,
     RecordedCard,
     SearchCandidateRecord,
@@ -235,6 +238,67 @@ def _search_row(search: SearchRecord) -> SearchORM:
         rung_taken=None if search.rung_taken is None else search.rung_taken.value,
         latency_ms_by_stage=dict(search.latency_ms_by_stage),
         n_excluded_by_suppression=search.n_excluded_by_suppression,
+        lineup=None if search.lineup is None else _lineup_blob(search.lineup),
+    )
+
+
+def _lineup_blob(lineup: LineupRecord) -> dict[str, Any]:
+    """Layer 4, as one opaque object. **Written here and read by no route.**
+
+    Flat counters and a two-element list, in the order the winner and the
+    runner-up were compared. The ``G`` breakdown inside each row is the same
+    ``terms`` shape the candidate blob uses — stamped with ``ruleset_version``
+    and allowed to change with the group vector.
+    """
+
+    return {
+        "combinations": lineup.combinations,
+        "refused_by_gate": lineup.refused_by_gate,
+        "refused_by_floor": lineup.refused_by_floor,
+        "max_fit_rank_seated": lineup.max_fit_rank_seated,
+        "rows": [
+            {
+                "band": row.band.value,
+                "members": [str(one) for one in row.members],
+                "partner_id": str(row.partner_id),
+                "terms": [dict(term) for term in row.terms],
+                "degraded_terms": list(row.degraded_terms),
+                "side_gap": row.side_gap,
+                "forecast_pct": row.forecast_pct,
+            }
+            for row in lineup.rows
+        ],
+    }
+
+
+def _lineup_record(blob: Mapping[str, Any] | None) -> LineupRecord | None:
+    """Layer 4, read back as the record it was written from.
+
+    Read back for the reason the counters and the pool description are: the
+    record is one thing, and a reader that assembled half of it would be a
+    second, narrower notion of what a search *is*. **What may leave the building
+    is decided at the wire**, and no renderer names this.
+    """
+
+    if blob is None:
+        return None
+    return LineupRecord(
+        combinations=blob["combinations"],
+        refused_by_gate=blob["refused_by_gate"],
+        refused_by_floor=blob["refused_by_floor"],
+        max_fit_rank_seated=blob["max_fit_rank_seated"],
+        rows=tuple(
+            RecordedCombination(
+                band=CombinationBand(row["band"]),
+                members=tuple(UUID(one) for one in row["members"]),
+                partner_id=UUID(row["partner_id"]),
+                terms=tuple(dict(term) for term in row["terms"]),
+                degraded_terms=tuple(row["degraded_terms"]),
+                side_gap=row["side_gap"],
+                forecast_pct=row["forecast_pct"],
+            )
+            for row in blob["rows"]
+        ),
     )
 
 
@@ -337,6 +401,7 @@ def _search_record(
         offered_by_search_id=row.offered_by_search_id,
         rung_taken=None if row.rung_taken is None else Rung(row.rung_taken),
         latency_ms_by_stage=dict(row.latency_ms_by_stage),
+        lineup=_lineup_record(row.lineup),
         candidates=candidates,
         n_excluded_by_suppression=row.n_excluded_by_suppression,
     )

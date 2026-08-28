@@ -45,6 +45,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import fields
+from typing import Collection
 from uuid import UUID
 
 from sqlalchemy import ColumnElement, or_, select
@@ -138,16 +139,48 @@ class EventSourcedBlockQuery:
             Block.from_history(events).is_standing for events in streams.values()
         )
 
+    async def blocked_pairs_among(
+        self, player_ids: Collection[UUID]
+    ) -> frozenset[frozenset[UUID]]:
+        """Every standing block between two of these people, in one statement.
+
+        Both payload fields are matched against the **same** id list, which is
+        what makes this one query rather than ``K²``: a stream qualifies when
+        both of its ends are inside the line-up, and a block reaching outside it
+        is somebody else's business. The pair comes back unordered because the
+        Block itself is the only thing entitled to know which way round it was
+        taken.
+
+        Empty in, empty out — and that emptiness is **measured**, because a
+        line-up of nobody has no pair for a block to sit between. Every other way
+        of answering nothing raises, exactly as the two reads above do.
+        """
+
+        ids = sorted({str(one) for one in player_ids})
+        if len(ids) < 2:
+            return frozenset()
+        streams = await self._streams(
+            EventStoreORM.payload[_BLOCKER_KEY].as_string().in_(ids)
+            & EventStoreORM.payload[_BLOCKED_KEY].as_string().in_(ids)
+        )
+        pairs: set[frozenset[UUID]] = set()
+        for events in streams.values():
+            block = Block.from_history(events)
+            if block.is_standing:
+                pairs.add(frozenset((block.blocker_id, block.blocked_id)))
+        return frozenset(pairs)
+
     async def _streams(
         self, condition: ColumnElement[bool]
     ) -> dict[UUID, list[DomainEvent]]:
         """The matching streams, each in version order, decoded.
 
         The whole of this adapter's contact with the database and its codec, so
-        the fail-closed translation is written once. A caller of this method
-        cannot get an answer that is quietly empty because something broke.
+        the fail-closed translation is written once for all three reads. A
+        caller of this method cannot get an answer that is quietly empty because
+        something broke.
 
-        **The fold is deliberately outside**, in the two methods above: a
+        **The fold is deliberately outside**, in the three methods above: a
         ``Block`` refusing an event it does not recognise is a bug in this
         codebase, and reporting it as *the gate is temporarily unavailable*
         would hide it behind a status a client is told to retry.

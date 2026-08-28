@@ -1092,6 +1092,170 @@
         }
       }
     },
+    "/api/v1/lineups": {
+      "post": {
+        "tags": [
+          "lineups"
+        ],
+        "summary": "Fill the seats",
+        "description": "Seats a four \u2014 you and three others \u2014 chosen together rather than one at a time, and returns **all three arrangements** with a forecast each.\n\n**Every gate binds all six pairs.** A block, a gender preference and the level tolerance are checked between *every two* of the four, not just between you and each of them. That is stricter than a shortlist and it compounds: a four can be impossible where candidates are plentiful, and the honest answer is a partial line-up carrying `NO_ADMISSIBLE_COMBINATION`.\n\n**A seat is never filled below the quality floor** to complete a four, a newcomer least of all. *Three of four* is a real answer.\n\n**Swapping sides costs no round trip.** All three arrangements cross, each with `is_best` and `is_evenest` \u2014 two separate booleans, because they can differ, which happens precisely when the four's levels are near-equal and balance has nothing left to say.\n\n**Send `locked_seats` to hand-seat people.** From that moment the engine optimises **for the group** and says so in `search.optimised_for`, because you may end up with a worse individual match than an empty court would have given you.\n\n**A seated card shows the same number the shortlist showed.** Nothing is re-scored when somebody sits down.",
+        "operationId": "run_lineup_api_v1_lineups_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunLineupRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "A seated line-up, every arrangement with its own forecast, and one reason this four beat the runner-up. **A seat may be unfilled and this is still a 200** \u2014 the empty seat says why.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LineupResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`account_held` \u2014 this account is under a live hold.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`sport_not_rated` \u2014 you hold no rating for this sport.\n\n`play_intent_not_declared` \u2014 you have not said what kind of evening you are after for it.\n\n`player_profile_not_committed` \u2014 there is no profile to read a radius, a grid or an area from.\n\n`rung_offer_not_found` \u2014 you cited a rung no search of yours offered.\n\n`locked_seat_not_available` \u2014 somebody you seated by hand cannot be seated in this line-up. **Which one is deliberately not said.**",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`matchmaking_unavailable`, `gate_data_unavailable`, `index_too_stale`, `search_not_recorded`. The second one covers the **pairwise block mask**: a four is never seated on a gate that could not be evaluated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/forecasts": {
+      "post": {
+        "tags": [
+          "forecasts"
+        ],
+        "summary": "Forecast a line-up you composed",
+        "description": "Returns every arrangement of a four **you** put together, each with its own forecast \u2014 for the builder, where you swap somebody in and the number has to move.\n\n**This creates no search and records nothing.** Six swaps are not six searches, and recording them as such would put a lie in the one table the product judges itself by. There is no `search_id` in the response and nothing to read back.\n\n**Seats may be empty.** A side with one player is read as if the missing player matched the one already there; the forecast comes back `provisional` with its `assumption`, and the moment you fill the seat the number is **exactly** the same as the final one.\n\n**It is bound to a search you ran.** Every player you name must have appeared in that search's returned rows.\n\n**No forecast arithmetic belongs on the client.** Every figure the builder can show comes from here or from `/lineups`.",
+        "operationId": "forecast_lineup_api_v1_forecasts_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForecastRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Every arrangement of the four you composed, each with its own forecast. **Provisional while a seat is empty**, and the provisional figure becomes exactly the final figure the moment the seat fills.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForecastResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`account_held` \u2014 this account is under a live hold.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`search_not_found` \u2014 no search of yours showed all of those players. **One code for four cases**: the search does not exist, it is somebody else's, it was for another sport, or it never showed one of these people. Telling them apart would answer questions about strangers one probe at a time.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`sport_not_rated`, `play_intent_not_declared`, `player_profile_not_committed` \u2014 the same three the search route owes, for the same reason: a forecast puts **you** on the court.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`gate_data_unavailable` \u2014 blocks and holds are re-read live and a gate that cannot be evaluated excludes.\n\n`matchmaking_unavailable` \u2014 the engine raised.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/interest": {
       "get": {
         "tags": [
@@ -1341,6 +1505,73 @@
           "text"
         ],
         "title": "AnswerOptionResponse"
+      },
+      "ArrangementSchema": {
+        "properties": {
+          "pairing_id": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Pairing Id",
+            "description": "Which of the arrangements, stable within one answer"
+          },
+          "is_current": {
+            "type": "boolean",
+            "title": "Is Current",
+            "description": "The one being drawn: the best on a line-up, and the seat order you sent on a forecast."
+          },
+          "is_best": {
+            "type": "boolean",
+            "title": "Is Best",
+            "description": "Best by the group objective. **The objective itself is never returned** \u2014 a second score you would have to trust is worse than none \u2014 so `group_reason` names what decided it instead.\n\n**Omitted on every arrangement when no objective was computed**, rather than pointed at something else: a line-up with a seat still open, a singles line-up, and every forecast. There is nothing to be best *by* in any of them \u2014 no cross pairs, no seat delta, no mean over three Fits \u2014 and *Even it out* is then the only selection there is. Draw `is_evenest`."
+          },
+          "is_evenest": {
+            "type": "boolean",
+            "title": "Is Evenest",
+            "description": "The closest game of the three \u2014 what *Even it out* selects. **A separate boolean from `is_best` because the two can differ**, which happens precisely when the four's levels are near-equal and balance has nothing left to say."
+          },
+          "sides": {
+            "$ref": "#/components/schemas/SidesSchema"
+          },
+          "forecast": {
+            "$ref": "#/components/schemas/ForecastSchema"
+          }
+        },
+        "type": "object",
+        "required": [
+          "pairing_id",
+          "is_current",
+          "is_evenest",
+          "sides",
+          "forecast"
+        ],
+        "title": "ArrangementSchema",
+        "description": "One way round, with its own forecast. **All of them cross.**\n\nThere are exactly three pairings of four people and the engine walks all\nthree to choose. Returning what it already knows costs nothing and makes\n*Even it out* a **selection** rather than a calculation \u2014 every swap the\nbuilder permits is one of these, so there is no arithmetic left for a client\nto be tempted by."
+      },
+      "ArrangementSeatSchema": {
+        "properties": {
+          "seat_index": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Seat Index",
+            "description": "Which seat, stable across all three arrangements: 0 is you, 1 is beside you, 2 and 3 are across the net."
+          },
+          "relationship": {
+            "$ref": "#/components/schemas/Relationship"
+          },
+          "player_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Player Id",
+            "description": "Who is in this seat. **Omitted on an open seat** \u2014 the top-level `seats` list says why that one is open."
+          }
+        },
+        "type": "object",
+        "required": [
+          "seat_index",
+          "relationship"
+        ],
+        "title": "ArrangementSeatSchema",
+        "description": "One seat within one arrangement: where it is, and who is in it.\n\n`relationship` is **stated and never inferred from the side** \u2014 the whole\npartner/opponent asymmetry hangs on it, and a client deriving it would be a\nsecond implementation of a domain rule."
       },
       "AssessmentStepResponse": {
         "properties": {
@@ -1914,6 +2145,72 @@
         "title": "FactorResponse",
         "description": "One evidence category's row: what it says, and which way it pulled.\n\n``direction`` is one of ``up`` / ``down`` / ``neutral``, computed by the\nengine from that category's own evidence against the final estimate. The\nclient never derives it \u2014 a client-side arrow is a second opinion about the\narithmetic, and two clients would eventually hold two of them."
       },
+      "ForecastRequest": {
+        "properties": {
+          "sport": {
+            "$ref": "#/components/schemas/Sport",
+            "description": "Which sport this four would play"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/SearchMode",
+            "description": "Competitive or for fun \u2014 the vector this reads under"
+          },
+          "search_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Search Id",
+            "description": "The search these people came off. **Required** \u2014 a forecast about somebody no search of yours showed is refused, not computed."
+          },
+          "players": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Players",
+            "description": "The people beside you, **in seat order**: the first is your partner in the arrangement the response marks `is_current`. One, two or three \u2014 a seat may be empty, and the forecast comes back **provisional** when one is.\n\nNobody twice, and never more than the sport seats. An empty seat is read *as if the missing player matched the one already there*, which is a claim about somebody who is not there \u2014 sending the same person twice would make that assumption look like a fact."
+          }
+        },
+        "type": "object",
+        "required": [
+          "sport",
+          "mode",
+          "search_id",
+          "players"
+        ],
+        "title": "ForecastRequest",
+        "description": "What a four you composed yourself would leave on court.\n\n**This route creates no search and records nothing.** Re-posting `/lineups`\nper swap would enter a six-edit builder session into *searches run* as six\nsearches, which is a lie in the one table the product uses to judge itself.\n\n`search_id` is **required**, and every player named must have appeared in\nthat search's returned rows. Unbounded, this would be a level lookup for any\nplayer in the city reachable by id; bounded, it tells you nothing the\nshortlist did not already show you."
+      },
+      "ForecastResponse": {
+        "properties": {
+          "arrangements": {
+            "items": {
+              "$ref": "#/components/schemas/ArrangementSchema"
+            },
+            "type": "array",
+            "title": "Arrangements"
+          },
+          "engine_version": {
+            "type": "string",
+            "title": "Engine Version",
+            "description": "How the maths works"
+          },
+          "ruleset_version": {
+            "type": "string",
+            "title": "Ruleset Version",
+            "description": "What the numbers were"
+          }
+        },
+        "type": "object",
+        "required": [
+          "arrangements",
+          "engine_version",
+          "ruleset_version"
+        ],
+        "title": "ForecastResponse",
+        "description": "Three arrangements of a four you composed. **And no `search_id`.**\n\nNothing was searched and nothing was recorded, so there is no id to read this\nback by and no breakdown to open. The two version stamps cross because a\nforecast nobody can reproduce is a number nobody should trust."
+      },
       "ForecastSchema": {
         "properties": {
           "pct": {
@@ -1973,6 +2270,18 @@
         ],
         "title": "GenderPreference",
         "description": "Who a player is willing to be matched with \u2014 durable, not per search.\n\n**Durable rather than per-search because the gate is mutual.** It has to be\nevaluated against a player when somebody *else* searches and they are not\npresent, and a per-search setting cannot bind that direction at all. A\nper-search override may **narrow** this, never widen past it."
+      },
+      "GroupReason": {
+        "type": "string",
+        "enum": [
+          "EVENEST_ARRANGEMENT",
+          "STRONGEST_WEAKEST_SEAT",
+          "BEST_AVERAGE_FIT",
+          "MOST_SHARED_SLOTS",
+          "GROUP_RAPPORT"
+        ],
+        "title": "GroupReason",
+        "description": "Why this four beat the runner-up. **One closed code, never a number.**\n\n``G`` chose these four over the other combinations and the third refusal \u2014\n*never a number it cannot explain in one sentence with the evidence named* \u2014\napplies. A second score the player must trust is worse than none: it competes\nwith Fit and nobody can act on it. So the evidence half is paid here, by the\nterm with the largest margin between the winning combination and the\nrunner-up \u2014 the group analogue of the card's top three reasons\n(``docs/adr/0117``).\n\nClosed vocabulary and ``docs/adr/0106``-shaped: **the client writes the\nsentence, the engine names which.**"
       },
       "HTTPValidationError": {
         "properties": {
@@ -2137,6 +2446,107 @@
         ],
         "title": "LevelFitEvidence",
         "description": "How far apart the two levels are, and which way.\n\nThe tolerance behind the curve is absolute on \u03bc and never reads a band: the\nshipped bands are deliberately uneven because *evidence* is unevenly\navailable down the scale, not because a tenth of a point means less at the\ntop."
+      },
+      "LineupResponse": {
+        "properties": {
+          "search": {
+            "$ref": "#/components/schemas/SearchEnvelope"
+          },
+          "candidates": {
+            "items": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/CandidateSchema"
+                },
+                {
+                  "$ref": "#/components/schemas/WithheldRowSchema"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Candidates",
+            "description": "Ranked. **An empty list is a `200`** \u2014 the honest empty state is an answer, not a failure.\n\nA read-back may carry withheld rows: the record is immutable and the gates are live, so a row the product has since agreed not to show keeps its place and states that it is withheld. Branch on `withheld` \u2014 a fresh search never carries one."
+          },
+          "lineup": {
+            "$ref": "#/components/schemas/LineupSchema"
+          }
+        },
+        "type": "object",
+        "required": [
+          "search",
+          "candidates",
+          "lineup"
+        ],
+        "title": "LineupResponse",
+        "description": "The shortlist's envelope, its rows, and the court they were seated on.\n\nOne envelope and one row shape across every surface, so the read-back has one\nrenderer to reproduce: what a line-up adds is the seating, not a second way\nof describing a person."
+      },
+      "LineupSchema": {
+        "properties": {
+          "seats": {
+            "items": {
+              "$ref": "#/components/schemas/LineupSeatSchema"
+            },
+            "type": "array",
+            "title": "Seats",
+            "description": "The court as it currently stands, seat by seat, in the arrangement marked `is_current`."
+          },
+          "arrangements": {
+            "items": {
+              "$ref": "#/components/schemas/ArrangementSchema"
+            },
+            "type": "array",
+            "title": "Arrangements",
+            "description": "Every way round, each with its own forecast. Empty only when nobody could be seated at all."
+          },
+          "group_reason": {
+            "$ref": "#/components/schemas/GroupReason",
+            "description": "Why this four beat the runner-up, as one closed code the client writes the sentence for. **Omitted when there was no runner-up** \u2014 one admissible four is not a four that won an argument."
+          },
+          "dock": {
+            "$ref": "#/components/schemas/UnfilledReason",
+            "description": "`NO_SHARED_SLOTS` when the four of you have no hour in common. **A dock, never a refusal**: nobody is removed from the court for it, and the honest line is that you would all have to bend."
+          }
+        },
+        "type": "object",
+        "required": [
+          "seats",
+          "arrangements"
+        ],
+        "title": "LineupSchema",
+        "description": "The court, every way round it can sit, and one reason it won.\n\n**A partial line-up is this shape with fewer people in it** \u2014 never a\ndifferent one, and never an error. *Nobody* is this shape with every seat\ncarrying a reason, so a client renders one thing."
+      },
+      "LineupSeatSchema": {
+        "properties": {
+          "side": {
+            "$ref": "#/components/schemas/Side"
+          },
+          "seat_index": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Seat Index"
+          },
+          "relationship": {
+            "$ref": "#/components/schemas/Relationship"
+          },
+          "player_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Player Id",
+            "description": "Who is in this seat, to look up in `candidates[]`. **Omitted on an open seat**, and on your own \u2014 you are not a row of your own search."
+          },
+          "unfilled_reason": {
+            "$ref": "#/components/schemas/UnfilledReason",
+            "description": "Why this seat is empty. **A seat is never filled below the quality floor to complete a four**, a newcomer least of all \u2014 *three of four* is an honest answer, and so is nobody.\n\n`NO_ADMISSIBLE_COMBINATION` is the one worth reading twice: there were people, and no four of you could share a court. Omitted on a seat that is taken."
+          }
+        },
+        "type": "object",
+        "required": [
+          "side",
+          "seat_index",
+          "relationship"
+        ],
+        "title": "LineupSeatSchema",
+        "description": "One place on the court, with the person in it or the reason it is empty.\n\n**The person is named by id and their breakdown rides once**, in\n`candidates[]` \u2014 the same list every other surface returns, carrying **the\nsame number the shortlist showed**, because nothing is re-scored behind your\nback when somebody sits down. Four breakdowns repeated across a court and\nthree arrangements is four chances for two copies to disagree, on a payload\nthat is already tens of kilobytes."
       },
       "LivenessReason": {
         "type": "string",
@@ -2917,6 +3327,16 @@
         ],
         "title": "RefreshRequest"
       },
+      "Relationship": {
+        "type": "string",
+        "enum": [
+          "SELF",
+          "PARTNER",
+          "OPPONENT"
+        ],
+        "title": "Relationship",
+        "description": "What one seat is to the searcher. **Stated, never inferred from a side.**\n\n``the-two-contracts.md`` \u00a75: the whole partner/opponent asymmetry hangs on\nit, and a client deriving it from which side somebody sits on would be a\nsecond implementation of a domain rule."
+      },
       "RelaxationAsk": {
         "type": "string",
         "enum": [
@@ -3063,6 +3483,52 @@
           "calibration_priority"
         ],
         "title": "ResultResponse"
+      },
+      "RunLineupRequest": {
+        "properties": {
+          "sport": {
+            "$ref": "#/components/schemas/Sport",
+            "description": "Which sport this line-up is for"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/SearchMode",
+            "description": "Competitive or for fun \u2014 the weight vector for this one search. It selects the **group** vector too, which inverts against the shortlist's: for fun puts more weight on how the four get on than on how even the sides are."
+          },
+          "locked_seats": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Locked Seats",
+            "description": "Players you have already seated by hand, **in seat order**. Send none and the engine fills every seat; send one or two and it fills the rest **around them**, which is when it starts optimising for the group rather than for you \u2014 `search.optimised_for` says so.\n\nEverybody named must be somebody this search can still seat, and they must be able to share a court **with each other** \u2014 every gate binds all six pairs. Either refusal is `locked_seat_not_available`, naming nobody, rather than a quiet replacement.\n\nNobody twice, and never more than the sport seats."
+          },
+          "availability_override": {
+            "items": {
+              "$ref": "#/components/schemas/AvailabilitySlotResource"
+            },
+            "type": "array",
+            "title": "Availability Override",
+            "description": "The week to run **this one line-up** against. Omit to use the grid on your profile \u2014 **omit it, never send `null`**."
+          },
+          "offered_by_search_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Offered By Search Id",
+            "description": "The search whose relaxation offer this one accepts. Taking a rung is a **new search citing the one that offered it**."
+          },
+          "rung": {
+            "$ref": "#/components/schemas/Rung",
+            "description": "Which rung of that search's offer you are taking. Sent with `offered_by_search_id` or not at all."
+          }
+        },
+        "type": "object",
+        "required": [
+          "sport",
+          "mode"
+        ],
+        "title": "RunLineupRequest",
+        "description": "\u26a1 *Fill the seats.* **The line-up and fill-seats are one request.**\n\nThey differ by `locked_seats` being non-empty, which is a property of what\nyou send rather than of where you send it \u2014 so hand-seating somebody and\npressing \u26a1 is the same shape as \u26a1 on an empty court, and there is no second\nroute for a client to get wrong.\n\nThere is **no seat count** here and there never will be: how many people sit\ndown is the sport's own fact. There is no radius either, for the reason the\nshortlist has none."
       },
       "RunSearchRequest": {
         "properties": {
@@ -3435,6 +3901,42 @@
         "title": "ShortlistResponse",
         "description": "The whole answer: one envelope, and at most twenty rows.\n\n**Bounded and unpaginated.** There is no page two; past the last row there\nare rung offers or an honest empty state. The bound is ruleset data, so a\nclient never reads twenty from anywhere \u2014 it renders the rows it is given."
       },
+      "Side": {
+        "type": "string",
+        "enum": [
+          "A",
+          "B"
+        ],
+        "title": "Side",
+        "description": "Which side of the net. The searcher is always on ``A``."
+      },
+      "SidesSchema": {
+        "properties": {
+          "A": {
+            "items": {
+              "$ref": "#/components/schemas/ArrangementSeatSchema"
+            },
+            "type": "array",
+            "title": "A",
+            "description": "Your own side, you first"
+          },
+          "B": {
+            "items": {
+              "$ref": "#/components/schemas/ArrangementSeatSchema"
+            },
+            "type": "array",
+            "title": "B",
+            "description": "The opposition"
+          }
+        },
+        "type": "object",
+        "required": [
+          "A",
+          "B"
+        ],
+        "title": "SidesSchema",
+        "description": "The two sides of the net. **You are always on `A`.**\n\nThere is no arrangement in which the searcher crosses the net, because\n*which side am I on* is not a question a builder asks: what varies is who is\nbeside you."
+      },
       "SocialTag": {
         "type": "string",
         "enum": [
@@ -3787,6 +4289,17 @@
         ],
         "title": "UncertaintyFactorResponse",
         "description": "Something that widened the range instead of moving the estimate."
+      },
+      "UnfilledReason": {
+        "type": "string",
+        "enum": [
+          "NO_CANDIDATE_ABOVE_FLOOR",
+          "NO_ADMISSIBLE_COMBINATION",
+          "POOL_EXHAUSTED",
+          "NO_SHARED_SLOTS"
+        ],
+        "title": "UnfilledReason",
+        "description": "Why a seat is empty, and why the four-way week is.\n\n``the-group-objective.md`` \u00a75.1's closed vocabulary. **A partial line-up is\nalways a `200`**: *three of four* is an honest answer, and *nobody* is the\nsame shape with three seats carrying a reason rather than a separate empty\nstate.\n\n``NO_ADMISSIBLE_COMBINATION`` is the one ``docs/adr/0116`` added and it is\nload-bearing: without it a six-pair gate is indistinguishable from a thin\npool, on the screen and in the telemetry \u2014 and after\n``docs/adr/0113`` it is also how a screen says *nobody at their level yet*\nabout a newcomer's first four rather than *nobody*."
       },
       "UserCreateRequest": {
         "properties": {

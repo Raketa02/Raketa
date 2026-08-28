@@ -36,6 +36,7 @@ from app.engines.matchfit.v1.floor import Admission, Refusal, admits, live_terms
 from app.engines.matchfit.v1.group import (
     CROSS_TERMS,
     arrange,
+    arranged,
     arrangements,
     best,
     cross_reading,
@@ -46,6 +47,7 @@ from app.engines.matchfit.v1.group import (
     objective,
     seat_delta,
 )
+from app.engines.matchfit.v1.lineup import GUESTS, offer, seat
 from app.engines.matchfit.v1.liveness import (
     challenge_load,
     read_signals,
@@ -87,6 +89,7 @@ from app.engines.matchfit.v1.terms import (
 __all__ = [
     "CROSS_TERMS",
     "ENGINE_VERSION",
+    "GUESTS",
     "Admission",
     "MatchFitV1",
     "ModifierOutcome",
@@ -97,6 +100,7 @@ __all__ = [
     "absorbed",
     "admits",
     "arrange",
+    "arranged",
     "arrangements",
     "availability_overlap",
     "balance_norm",
@@ -119,6 +123,7 @@ __all__ = [
     "live_terms",
     "modify",
     "objective",
+    "offer",
     "playing_style",
     "predicted_balance",
     "read_signals",
@@ -130,6 +135,7 @@ __all__ = [
     "renormalised_weights",
     "reverse_mode",
     "score",
+    "seat",
     "seat_delta",
     "social_vibe",
     "strength_of",
