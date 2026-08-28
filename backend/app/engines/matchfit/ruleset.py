@@ -332,11 +332,13 @@ class ModifierRules:
 
     **``newcomer_absorption_cap`` keeps its rule and refuses its integer.** It
     bounds how often one player is volunteered into a *newcomer's* shortlist, and
-    binds by dropping the welcoming modifier and the newcomer reorder, never by
-    withholding. With no players there is no distribution to sit it in, and with
-    the modifier it bounds unable to fire, any integer would be untestable. Its
-    falsifier is written and its value is not, so it is ``None`` rather than a
-    number nobody can defend.
+    binds by dropping the **welcoming modifier** — the thumb that selects those
+    players — never by withholding, and never the newcomer lift, which is the
+    other side of the pairing's own subsidy (``docs/adr/0114``, amended). With no
+    players there is no distribution to sit it in, and with the modifier it
+    bounds unable to fire, any integer would be untestable. Its falsifier is
+    written and its value is not, so it is ``None`` rather than a number nobody
+    can defend.
     """
 
     budget: int

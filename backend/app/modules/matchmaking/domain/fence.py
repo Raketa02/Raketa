@@ -185,9 +185,6 @@ def liveness_facts_of(
     return LivenessFacts(
         interest_days_ago=None,
         newcomer=is_new_at(row.profile_created_at, context.now),
-        # The same call stage 4 made, so one cap cannot drop the modifier and
-        # leave the reorder standing.
-        newcomer_appearances=context.absorption_tally(player_uuid),
         previously_accepted=_has(counterpart, PairwiseOutcome.ACCEPTED),
         previously_declined=_has(counterpart, PairwiseOutcome.DECLINED),
         answer_rate=None,

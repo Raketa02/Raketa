@@ -209,7 +209,7 @@ helped**. So the valve is a bound on the ask, not a switch.
 | --- | --- |
 | **Counts** | Appearances in a **newcomer's** shortlist, per week, per sport |
 | **Where** | The exposure ledger — same shape, same cadence, no second ledger |
-| **When it binds** | The welcoming modifier and the newcomer-driven reorder are **dropped**; the player still ranks on their merits |
+| **When it binds** | The welcoming modifier is **dropped**; the player still ranks on their merits. **Not the newcomer lift** — that is the other side of the pairing's own subsidy ([ADR-0114](../../adr/0114-a-newcomer-may-not-be-declined.md), amended) |
 | **Never** | Withheld from generation |
 | **Who is told** | **Nobody** |
 

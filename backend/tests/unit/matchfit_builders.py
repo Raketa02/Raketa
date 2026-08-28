@@ -208,7 +208,6 @@ def liveness_facts(
     *,
     interest_days_ago: int | None = None,
     newcomer: bool = False,
-    newcomer_appearances: int | None = None,
     previously_accepted: bool = False,
     previously_declined: bool = False,
     answer_rate: float | None = None,
@@ -227,7 +226,6 @@ def liveness_facts(
     return LivenessFacts(
         interest_days_ago=interest_days_ago,
         newcomer=newcomer,
-        newcomer_appearances=newcomer_appearances,
         previously_accepted=previously_accepted,
         previously_declined=previously_declined,
         answer_rate=answer_rate,

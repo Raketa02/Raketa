@@ -375,25 +375,23 @@ def test_the_newcomer_lift_reclaims_its_points_by_speaking() -> None:
     assert lifted.dominant.signal is LivenessSignal.NEWCOMER_LIFT
 
 
-def test_the_absorption_cap_drops_the_reorder_and_leaves_the_window_alone() -> None:
-    """Past the cap the lift goes and the candidate is still new.
+def test_the_absorption_cap_does_not_reach_this_stage() -> None:
+    """The cap bounds an **experienced** player's welcoming record, one stage
+    back. This lift fires only for a candidate who is themselves inside the
+    window, so capping it would take the subsidy from the population the cap
+    exists to keep from being leaned on (``docs/adr/0114``, amended).
 
-    The two are deliberately separate facts on the same bag. The window is what
-    the level gate reads and what the minimum-evidence exemption reads, and
-    neither of those is the engine's thumb — the cap bounds *how often the engine
-    volunteers somebody*, so it may only take the reorder.
+    Asserted through a ruleset whose cap is supplied, because a ``None`` cap
+    would make this pass against a stage that *did* read one.
     """
 
-    capped = capped_at(2)
-    facts = liveness_facts(newcomer=True, newcomer_appearances=2)
+    facts = liveness_facts(newcomer=True)
 
-    absorbed_lift = read_signals(facts, capped)
-    assert facts.newcomer is True
-    assert absorbed_lift.offset == 0
-    assert absorbed_lift.printable == ()
-
-    # And the shipped ruleset refuses the integer, so the same facts lift.
+    assert read_signals(facts, capped_at(1)).offset == 8
     assert read_signals(facts, LIVE_RULESET).offset == 8
+    assert "newcomer_appearances" not in {
+        field for field in facts.__slots__
+    }, "stage 6 carries the cap's tally it has no business reading" 
 
 
 @pytest.mark.parametrize(

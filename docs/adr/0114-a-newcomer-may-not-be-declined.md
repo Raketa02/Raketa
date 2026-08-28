@@ -46,9 +46,10 @@ newcomers at the same helpful players walks into that spiral deliberately.
    not a preference with a default.
 
 3. **The ask is bounded instead.** Appearances in a **newcomer's** shortlist are counted per week
-   per sport on the existing exposure ledger. Past the cap, the welcoming modifier and the
-   newcomer-driven reorder are **dropped** — the player still ranks on their merits — and they are
-   **never withheld from generation**.
+   per sport on the existing exposure ledger. Past the cap, the **welcoming modifier** is
+   **dropped** — the player still ranks on their merits — and they are **never withheld from
+   generation**. *(Amended 2026-08-28 — see the amendment below. As accepted, this clause dropped
+   the newcomer-driven reorder as well.)*
 
 4. **Nobody is told the cap bound.**
 
@@ -108,3 +109,35 @@ the telemetry chain, so it ships as an argued judgement with its falsifier attac
 **What would reverse it.** Evidence that helpful players leave rather than absorb — that the cap
 is not the valve, and that the only thing that keeps them is a real refusal. That is a claim about
 people, and it would be settled by watching them, not by arguing about it here.
+
+## Amendment — 2026-08-28: the cap bounds veterans, and the lift is left alone
+
+Building the cap ([#214](https://github.com/Raketa02/Raketa/issues/214)) found that decision 3's
+two clauses reach **opposite populations**, which is invisible in prose and unmissable in code.
+
+`welcoming_record` fires for a player who has *played opponents whose rating was still settling* —
+an experienced player, and exactly the half of the pool this record says the newcomer path leans
+on. `NEWCOMER_LIFT` fires only when the **candidate is themselves inside the window**. So capping
+both meant that on the day the integer shipped, the cap's reachable effect would have been to take
+the `+8` from newcomers appearing in other newcomers' lists — cutting the subsidy from the very
+people the cap exists to keep from being leaned on, and doing it hardest in a thin pool where
+newcomers see mostly each other.
+
+**The cap now binds the welcoming modifier and nothing else.** It reads the candidate's absorption
+tally at stage 4; stage 6 does not read it and carries no field that could. Everything else in
+this record stands unchanged — printed always, never declinable, never withheld, nobody told — and
+this narrowing strengthens rather than weakens the sentence the Consequences argue throughout:
+*newcomers are matched by the strongest, most reliable half of the pool, because those are the
+players `welcoming_record` and the tightened gate select*, and the cap is the bound on how often
+the engine volunteers one of them.
+
+**The cost is that the cap has no reachable effect until `matches` lands**, because the welcoming
+record is `NoEvidence` until then. That is the correct cost: it ships **wired and never binding**
+either way (the integer is still refused), the tally is counted from today so the integer can be
+chosen against real weeks, and a mechanism with no effect is better than one whose only effect is
+backwards.
+
+**What would reverse the amendment.** Evidence that newcomers absorb newcomer load at a rate that
+matters — that a newcomer volunteered into every other newcomer's list is a real cost to somebody.
+That is a measurement over the durable search rows, not an argument, and it would return as its
+own bound rather than by re-broadening this one.

@@ -415,8 +415,11 @@ the block's job.
 
 **`NEWCOMER_ABSORPTION_CAP` keeps its rule and refuses its integer.** It bounds how often one
 player is volunteered into a **newcomer's** shortlist, counted per week per sport on the exposure
-ledger, and binds by **dropping** the welcoming modifier and the newcomer reorder — **never** by
-withholding, and **nobody is told**, because nothing has happened to them.
+ledger, and binds by **dropping** the welcoming modifier — the thumb that selects the experienced
+players it is about — **never** by withholding, and **nobody is told**, because nothing has
+happened to them. It does **not** reach the newcomer lift: that fires only for a candidate inside
+the window, and capping it would take the subsidy from the people the cap exists to keep from
+being leaned on ([ADR-0114](../../adr/0114-a-newcomer-may-not-be-declined.md), amended).
 
 ---
 

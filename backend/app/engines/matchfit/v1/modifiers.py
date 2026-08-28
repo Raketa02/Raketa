@@ -172,18 +172,17 @@ def absorbed(appearances: int | None, rules: ModifierRules) -> bool:
     At the cap and not past it, because the cap is *how often* — the appearance
     that reaches it is the last one the engine volunteers them for.
 
-    **It reads the candidate's own tally, whoever the candidate is**, which is
-    ``docs/adr/0114`` §3 taken at its word: *the welcoming modifier and the
-    newcomer-driven reorder are dropped*. Those two reach different people — the
-    welcoming record is a veteran's, the lift is a newcomer's — so the cap
-    bounds whichever thumb the engine had on this candidate rather than
-    selecting a population to bound. That is deliberate and not an oversight: a
-    newcomer volunteered into every other newcomer's list is absorbing the same
-    load the cap exists to bound, and either way the player keeps every point
-    the eight terms gave them and is never withheld. The reading is recorded
-    here because the issue's own sentence names *an experienced player*, and a
-    reader finding the broader rule later is owed the argument rather than left
-    to assume a bug.
+    **It bounds the welcoming record and nothing else** — the one place it is
+    called. ``docs/adr/0114`` §3 named two things to drop, and the two turn out
+    to reach opposite people: the welcoming record is an experienced player's,
+    while the newcomer lift fires only for a candidate who is *themselves*
+    inside the window. Capping both made the cap take its subsidy from the very
+    population it exists to keep from being leaned on, so the ADR is amended and
+    the lift is left alone. What remains is the sentence the ADR argues for
+    throughout: *newcomers are matched by the strongest, most reliable half of
+    the pool, because those are the players ``welcoming_record`` and the
+    tightened gate select* — and this is the bound on how often the engine
+    volunteers one of them.
     """
 
     cap = rules.newcomer_absorption_cap

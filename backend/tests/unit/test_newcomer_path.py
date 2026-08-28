@@ -300,43 +300,23 @@ def test_the_newcomer_window_is_recorded_and_never_crosses_as_an_inclusion() -> 
 # ---------------------------------------------------------------------------
 
 
-def test_the_cap_drops_the_lift_and_leaves_the_player_in_the_pool() -> None:
-    """**Never withheld from generation.** Withholding would make a thin pool
-    thinner for the person who can least afford it, on a fact about the engine
-    rather than about them (``docs/adr/0125``, ``docs/adr/0114``)."""
+def test_the_cap_never_reaches_a_newcomers_own_lift() -> None:
+    """**It bounds veterans.** ``docs/adr/0114`` §3 named two things to drop and
+    the two reach opposite people: the welcoming record is an experienced
+    player's, the lift fires only for a candidate inside the window. Capping both
+    took the subsidy from the population the cap exists to keep from being leaned
+    on, so the lift is left alone and the ADR carries the amendment.
 
-    absorbed = build.row(1, profile_created_at=NEWLY)
-    beside = build.row(2, profile_created_at=build.SETTLED)
-    newcomer = build.searcher(profile_created_at=NEWLY)
-
-    shortlist = run(
-        build.context(
-            (absorbed, beside),
-            facts=newcomer,
-            newcomer_appearances={build.player(1): 1},
-            ruleset=CAPPED_AT_ONE,
-        ),
-        ENGINE,
-    )
-
-    shown = {row.player_id: row for row in shortlist.returned}
-    assert absorbed.player_id in shown
-    lifted = shown[absorbed.player_id].liveness
-    assert lifted is not None
-    assert LivenessSignal.NEWCOMER_LIFT not in {
-        move.signal for move in lifted.printable
-    }
-
-
-def test_a_search_that_is_not_a_newcomers_never_binds_the_cap() -> None:
-    """The tally is not read at all, so the same row keeps its lift. The bound is
-    on the ask, and this search is not one."""
+    Driven at the pipeline with a cap supplied and a tally well past it, because
+    the shipped ``None`` would make this pass against an engine that did cap the
+    lift.
+    """
 
     absorbed = build.row(1, profile_created_at=NEWLY)
     shortlist = run(
         build.context(
             (absorbed,),
-            facts=build.searcher(profile_created_at=build.SETTLED),
+            facts=build.searcher(profile_created_at=NEWLY),
             newcomer_appearances={build.player(1): 99},
             ruleset=CAPPED_AT_ONE,
         ),
@@ -346,6 +326,32 @@ def test_a_search_that_is_not_a_newcomers_never_binds_the_cap() -> None:
     lifted = shortlist.returned[0].liveness
     assert lifted is not None
     assert LivenessSignal.NEWCOMER_LIFT in {move.signal for move in lifted.printable}
+
+
+def test_the_tally_reaches_stage_four_and_only_on_a_newcomers_search() -> None:
+    """What the cap *does* read, and the two emptinesses it must tell apart.
+
+    ``None`` is *this search is not a newcomer's, so there is nothing to bound*;
+    a zero is *we counted and they have absorbed nothing*. Past a cap of one
+    those are different sentences, which is why the tally is not simply defaulted
+    to zero off a newcomer's search.
+    """
+
+    volunteered = build.player(1)
+    counted = {volunteered: 3}
+
+    by_a_newcomer = build.context(
+        facts=build.searcher(profile_created_at=NEWLY),
+        newcomer_appearances=counted,
+    )
+    by_a_veteran = build.context(
+        facts=build.searcher(profile_created_at=build.SETTLED),
+        newcomer_appearances=counted,
+    )
+
+    assert by_a_newcomer.absorption_tally(volunteered) == 3
+    assert by_a_newcomer.absorption_tally(build.player(2)) == 0
+    assert by_a_veteran.absorption_tally(volunteered) is None
 
 
 def test_nobody_is_told_the_cap_bound() -> None:

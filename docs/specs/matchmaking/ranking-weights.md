@@ -359,7 +359,8 @@ standing insurance, in place before it is needed.
 **`NEWCOMER_ABSORPTION_CAP` keeps its rule and refuses its integer.**
 [ADR-0114](../../adr/0114-a-newcomer-may-not-be-declined.md) bounds how often one player is
 volunteered into a **newcomer's** shortlist — counted per week per sport on the exposure ledger,
-and binding by **dropping** the welcoming modifier and the newcomer reorder, never by withholding.
+and binding by **dropping** the welcoming modifier, never by withholding — and never the newcomer
+lift, which belongs to the other side of the pairing ([ADR-0114](../../adr/0114-a-newcomer-may-not-be-declined.md), amended).
 The number cannot be set here for [`the-five-numbers.md`](the-five-numbers.md)'s reason: with no
 players there is no distribution to sit it in, and with `matches` absent the modifier it bounds
 never fires, so on day one any integer is untestable. Its falsifier is written and its value is

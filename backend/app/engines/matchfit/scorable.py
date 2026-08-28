@@ -426,7 +426,10 @@ class ModifierFacts:
     #: not *no*, because the provider is ``matches`` and it does not exist.
     welcomed_settling_opponents: bool | None
     #: How often this candidate has already been volunteered into a **newcomer's**
-    #: shortlist this week, in this sport — ``NEWCOMER_ABSORPTION_CAP``'s tally.
+    #: shortlist this week, in this sport — ``NEWCOMER_ABSORPTION_CAP``'s tally,
+    #: and the welcoming record's bound alone. It is read **here and nowhere
+    #: else**, because the welcoming record is the thumb that selects the
+    #: experienced players the cap is about (``docs/adr/0114``).
     #:
     #: ``None`` when the search asking is not a newcomer's, which is the only
     #: search the cap counts and the only one it can bind in: the bound is on
@@ -473,18 +476,11 @@ class LivenessFacts:
     #: (``docs/adr/0127``) — the age crosses as evidence and a taper would charge
     #: one fact twice — so this is read as *whether*, and printed as *how long*.
     interest_days_ago: int | None
-    #: Whether the candidate is inside the newcomer window.
+    #: Whether the candidate is inside the newcomer window. **The absorption cap
+    #: is not read here**: it bounds how often an *experienced* player is
+    #: volunteered into newcomers' lists, and this lift is a newcomer's own
+    #: subsidy (``docs/adr/0114``).
     newcomer: bool
-    #: The same absorption tally :class:`ModifierFacts` carries, read here for
-    #: the other half of what the cap drops: past it, the welcoming modifier and
-    #: **the newcomer-driven reorder** both go, and the player ranks on their
-    #: merits (``docs/adr/0114``).
-    #:
-    #: One fact read by two stages rather than one stage passing it to the
-    #: other: stage 4 and stage 6 are separate calls over separate bags, and a
-    #: stage that took its neighbour's would be reading a fact it has no
-    #: business holding.
-    newcomer_appearances: int | None
     previously_accepted: bool
     previously_declined: bool
     #: How well and how fast they answer challenges, as one reading.
@@ -518,8 +514,4 @@ class LivenessFacts:
         invariant(
             self.open_challenges is None or self.open_challenges >= 0,
             f"a negative inbox: {self.open_challenges}",
-        )
-        invariant(
-            self.newcomer_appearances is None or self.newcomer_appearances >= 0,
-            f"a negative absorption tally: {self.newcomer_appearances}",
         )

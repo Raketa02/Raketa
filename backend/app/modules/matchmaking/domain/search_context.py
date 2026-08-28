@@ -226,8 +226,10 @@ class SearchContext:
         is drawn. A zero would say *we counted and they have absorbed nothing*,
         and past a cap of one that is a different sentence.
 
-        Read by both stages the cap drops something in, through one method, so
-        stage 4 and stage 6 cannot come to two answers about one tally.
+        Read by stage 4 alone. The cap bounds how often an **experienced** player
+        is volunteered into newcomers' lists, so it binds the welcoming record —
+        the thumb that selects those players — and never the newcomer lift, which
+        is a subsidy for the other side of the same pairing.
         """
 
         if not self.searcher.is_new_at(self.now):
