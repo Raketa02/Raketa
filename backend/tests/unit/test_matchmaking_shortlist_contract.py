@@ -1,0 +1,171 @@
+"""The shortlist's wire shape — the two spellings of absence, and the closed sets.
+
+``docs/adr/0106`` §4 gives absence two spellings and they are not
+interchangeable:
+
+- **omitted** — *this field does not apply here* — generates as ``field?: T``;
+- **``null``** — *this field applies, and the answer is a measured nothing that
+  is itself a recorded fact* — generates as ``field: T | null``.
+
+A field that was both generates as ``field?: T | null`` and says neither thing.
+This module refuses one, and it refuses it on the emitted schema rather than on a
+review, because the two are one keystroke apart in a model definition.
+
+It also pins the two vocabularies this route introduces. A closed set the client
+generates an exhaustive renderer over is only closed while something checks it —
+and the failure is **silent**: a code the client has never seen renders as
+nothing at all, on the one screen whose whole promise is showing its working.
+"""
+
+from __future__ import annotations
+
+from types import NoneType, UnionType
+from typing import Union, get_args, get_origin
+
+import pytest
+from pydantic import BaseModel
+
+from app.engines.matchfit.core import ChallengeLoad, LivenessSignal
+from app.modules.matchmaking.infrastructure.rulesets import LIVE_RULESET
+from app.modules.matchmaking.presentation.schemas import (
+    OMITTED,
+    CandidateSchema,
+    LivenessReason,
+    ModifierCode,
+    PlayerCardSchema,
+    RunSearchRequest,
+    SearchEnvelope,
+    ShortlistResponse,
+)
+
+#: Every model on this route, so a model added without a rule is a model this
+#: file walks anyway.
+MODELS: tuple[type[BaseModel], ...] = (
+    ShortlistResponse,
+    SearchEnvelope,
+    CandidateSchema,
+    PlayerCardSchema,
+    RunSearchRequest,
+)
+
+#: The fields that mean *this does not apply here*, and why each does.
+OMITTED_FIELDS = {
+    (CandidateSchema, "distance_km"): "the distance term stood down",
+    (CandidateSchema, "inclusion_reason"): "nothing admitted them; they simply fit",
+    (CandidateSchema, "at_stake"): "for fun, or no result-update rule",
+    (CandidateSchema, "would_be_forecast"): "no seat is open on a shortlist",
+    (PlayerCardSchema, "photo_id"): "they have no photo; the client draws the poster",
+    (PlayerCardSchema, "counted_games"): "the games ledger has no provider",
+}
+
+
+def _nullable(annotation: object) -> bool:
+    """Whether ``None`` is one of this annotation's members.
+
+    Both spellings of a union, because Python has two — ``Optional[T]`` and
+    ``T | None`` — and a check that knew only one would read a nullable field as
+    inapplicable and pass.
+    """
+
+    return get_origin(annotation) in (Union, UnionType) and NoneType in get_args(
+        annotation
+    )
+
+
+@pytest.mark.parametrize("model", MODELS, ids=lambda model: model.__name__)
+def test_no_field_is_both_optional_and_nullable(model: type[BaseModel]):
+    """The one shape that says neither thing."""
+
+    for name, field in model.model_fields.items():
+        both = _nullable(field.annotation) and not field.is_required()
+        assert not both, f"{model.__name__}.{name} is both optional and nullable"
+
+
+@pytest.mark.parametrize(
+    "model,field",
+    sorted(OMITTED_FIELDS, key=lambda pair: (pair[0].__name__, pair[1])),
+    ids=lambda value: value if isinstance(value, str) else value.__name__,
+)
+def test_a_field_that_does_not_apply_is_optional_and_never_nullable(model, field):
+    """``field?: T`` — the client branches on its presence, not on a null."""
+
+    declared = model.model_fields[field]
+    assert not declared.is_required(), f"{model.__name__}.{field} must be omittable"
+    assert not _nullable(declared.annotation), (
+        f"{model.__name__}.{field} is spelled as a measured nothing, and it is an "
+        "inapplicable one"
+    )
+
+
+def test_a_measured_nothing_is_required_and_nullable():
+    """``mode`` is null exactly on the deck: both grids were read, and the answer
+    is that this surface has no mode. That is a fact, not an absence."""
+
+    mode = SearchEnvelope.model_fields["mode"]
+    assert mode.is_required()
+    assert _nullable(mode.annotation)
+
+
+def test_the_omitted_sentinel_is_the_only_way_a_field_is_left_out():
+    """One spelling, in one place, so that *why is this field optional* has one
+    answer rather than one per model."""
+
+    assert OMITTED is None
+    for model, field in OMITTED_FIELDS:
+        assert model.model_fields[field].default is OMITTED
+
+
+def test_the_liveness_reason_vocabulary_is_exactly_the_printable_roster():
+    """Eight printable signals, with the full inbox spelled as its three coarse
+    rungs instead of its own name.
+
+    **The two silent signals must be absent**, and their absence is the promise:
+    a silent move carries points and no code, so there is no name on the value to
+    print. A code here for one of them would be that promise broken in the one
+    place it is kept.
+    """
+
+    rules = LIVE_RULESET.liveness
+    printable = {
+        signal for signal in LivenessSignal if rules.signals[signal].printable
+    }
+    silent = set(LivenessSignal) - printable
+    assert len(silent) == 2, (
+        "the silent roster moved; this vocabulary must move with it"
+    )
+
+    expected = {
+        signal.value
+        for signal in printable
+        if signal is not LivenessSignal.CHALLENGE_LOAD
+    } | {
+        f"{LivenessSignal.CHALLENGE_LOAD.value}_{rung.value}" for rung in ChallengeLoad
+    }
+
+    assert {reason.value for reason in LivenessReason} == expected
+    for quiet in silent:
+        assert quiet.value not in {reason.value for reason in LivenessReason}
+
+
+def test_the_modifier_vocabulary_is_the_roster_plus_the_dock_outside_it():
+    """Every modifier prints — there is no unprintable one — and the reliability
+    dock is in the vocabulary because it prints too, while sitting outside the
+    budget."""
+
+    from app.engines.matchfit.core import Modifier
+
+    assert {code.value for code in ModifierCode} == {
+        modifier.value for modifier in Modifier
+    }
+
+
+def test_the_request_carries_asks_and_never_a_fact_about_the_searcher():
+    """**There is no radius here, and there never will be.** A stale radius from
+    a phone is a gate evaluated on a lie, and this is the field it would arrive
+    through."""
+
+    assert set(RunSearchRequest.model_fields) == {"sport", "mode"}
+
+
+def test_the_response_has_two_halves_and_no_third_thing():
+    assert set(ShortlistResponse.model_fields) == {"search", "candidates"}

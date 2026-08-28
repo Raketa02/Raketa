@@ -39,6 +39,8 @@ from app.application.ports import DomainEventPublisher, DomainEventStore, UnitOf
 from app.bootstrap.events import EventRuntime, get_event_runtime
 from app.core.config import Settings
 from app.engines.assessment import AssessmentEngine
+from app.engines.matchfit.core import Term
+from app.engines.matchfit.ruleset import Ruleset
 from app.engines.matchfit.scoring import MatchFit
 from app.engines.matchfit.v1 import MatchFitV1
 from app.engines.racketskill.v3 import RacketSkillEngineV3
@@ -70,7 +72,9 @@ from app.modules.matchmaking.domain.ports import (
     PlayerScoreQuery,
 )
 from app.modules.matchmaking.application.roll_exposure import RollExposure
+from app.modules.matchmaking.domain.cards import PlayerCardSource
 from app.modules.matchmaking.domain.ledgers import ExposureLedger, SuppressionLedger
+from app.modules.matchmaking.domain.search_store import SearchStore
 from app.modules.matchmaking.infrastructure.fail_soft_ledgers import (
     FailSoftExposureLedger,
     FailSoftSuppressionLedger,
@@ -99,6 +103,13 @@ from app.modules.matchmaking.infrastructure.snapshot_horizon import (
     NoSnapshotHorizon,
     PostgresSnapshotHorizon,
     SnapshotHorizon,
+)
+from app.modules.matchmaking.infrastructure.rulesets import LIVE_RULESET
+from app.modules.matchmaking.infrastructure.player_card_source import (
+    PlayerCardIdentities,
+)
+from app.modules.matchmaking.infrastructure.sqlalchemy_search_store import (
+    SqlAlchemySearchStore,
 )
 from app.modules.matchmaking.infrastructure.users_account_status import (
     UsersAccountStatus,
@@ -411,6 +422,59 @@ def build_match_history_query(session: AsyncSession) -> MatchHistoryQuery:
 def build_at_stake_query(session: AsyncSession) -> AtStakeQuery:
     """``rating`` ships; the rule that moves a Level on a result does not."""
     return NoResultUpdateRuleExists()
+
+
+def build_ruleset() -> Ruleset:
+    """Which numbers the matcher runs on. **Chosen here and nowhere else.**
+
+    ``docs/adr/0093`` ships a ruleset with the code and defers the runtime store
+    until there is enough traffic for an experiment to mean anything — *its
+    arrival changes only where the file is read from, never what the stamp
+    guarantees*, and this is the line it changes.
+
+    **Nothing here reads the environment.** A weight is not a setting: it is the
+    product's opinion about who a player should meet, which is behaviour a domain
+    test can observe, and `local`, `development`, `staging` and `production` run
+    the same numbers.
+    """
+    return LIVE_RULESET
+
+
+def build_search_store(session: AsyncSession) -> SearchStore:
+    """Where the record goes. Over the **request's own** session, always.
+
+    ``docs/adr/0104`` commits it in the request's transaction and before the
+    response, so a store built over anything else — a background factory, a
+    second session — would be a record that could commit without the search, or
+    a search that could return without the record.
+    """
+    return SqlAlchemySearchStore(session)
+
+
+def build_player_card_source(session: AsyncSession) -> PlayerCardSource:
+    """The two card fields the index deliberately does not hold."""
+    return PlayerCardIdentities(session)
+
+
+def build_absent_terms(player_scores: PlayerScoreQuery) -> frozenset[Term]:
+    """Which terms have no provider **on this platform**, as opposed to for a
+    person.
+
+    The evidence gate counts person-specific gaps and never platform-wide
+    absence — a fact nobody has about anybody cannot be evidence this person
+    failed to produce — so somebody has to say which is which. It is decided
+    here because *no provider exists* is a fact about this wiring: it is read off
+    the adapter this root just chose, so the day ``player_score`` ships and the
+    line above changes, this one changes with it and nothing else does.
+
+    A ruleset that could declare it would be a weight release deciding which
+    contexts are built, which is why it is not ruleset data.
+    """
+    return (
+        frozenset({Term.RELIABILITY})
+        if isinstance(player_scores, NoPlayerScoresExist)
+        else frozenset()
+    )
 
 
 def build_match_fit_engine() -> MatchFit:

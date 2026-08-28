@@ -1,17 +1,27 @@
-"""The matchmaking context's refusals.
+"""The matchmaking context's refusals — seven codes, distinct at three statuses.
 
-One today, and it is the one a fail-closed read owes the client. The rest of the
-context's error vocabulary — a searcher with no rating for the sport, an
-undeclared Play intent, a held searcher, a search that could not be recorded —
-arrives with the routes that can raise them, because an error nothing can produce
-is a code a client would be branching on for nothing.
+**Distinct codes at the same status, because a client must be able to tell a
+transient outage from a refusal about *you*.* Three of these are 503 and mean
+very different things to somebody holding a phone: the engine raised, a
+fail-closed read failed, the index is too far behind to be trusted. A single
+``service_unavailable`` would collapse *try again in a moment* and *this feature
+is off* into one line the client cannot branch on.
+
+**An empty shortlist is a ``200``.** The honest empty state is an answer, not a
+failure, and nothing here is raised for it.
+
+**Never a fallback list.** When the engine is down the feature is down. A
+hand-rolled backend ranker arriving as a hotfix is how a second, worse,
+unexplainable ranking implementation enters the system permanently — so
+:class:`MatchmakingUnavailable` is the whole of the recovery, and there is
+deliberately nothing to catch it with.
 """
 
 from __future__ import annotations
 
 from http import HTTPStatus
 
-from app.shared.domain.errors import AppError
+from app.shared.domain.errors import AppError, ConflictError, ForbiddenError
 
 
 class GateDataUnavailable(AppError):
@@ -31,3 +41,98 @@ class GateDataUnavailable(AppError):
 
     status_code = HTTPStatus.SERVICE_UNAVAILABLE
     code = "gate_data_unavailable"
+
+
+class MatchmakingUnavailable(AppError):
+    """The engine raised. **The feature is down and there is no second ranker.**
+
+    ``docs/adr/0093`` puts the scorer in-process, so it cannot be unreachable —
+    only raise. What raises is an invariant: a malformed pairing, a ruleset the
+    platform's vocabularies disagree with, a candidate row the index should never
+    have held. None of those has a degraded answer, and a hand-rolled fallback
+    list is the failure this refusal exists to make impossible.
+    """
+
+    status_code = HTTPStatus.SERVICE_UNAVAILABLE
+    code = "matchmaking_unavailable"
+
+
+class IndexTooStale(AppError):
+    """The index is far enough behind that a shortlist would be a guess.
+
+    Past twenty-four hours the ladder refuses rather than serving
+    (``index_staleness``), and **the refusal stands on quality, not safety** —
+    every fact staleness can cost is a fact about who is *worth* meeting, because
+    the facts that must be live never enter the index at all
+    (``docs/adr/0111``). Between fifteen minutes and a day the search is served
+    and the flag recorded.
+    """
+
+    status_code = HTTPStatus.SERVICE_UNAVAILABLE
+    code = "index_too_stale"
+
+
+class SearchNotRecorded(AppError):
+    """The telemetry could not be written, so the answer is not returned.
+
+    ``docs/adr/0104``: the record is written in the request's own transaction and
+    committed **before** the response — *the ``search_id`` is the answer's
+    identity*. A shortlist returned without its row is a row of the product's own
+    denominator lost forever, and there is no backfill.
+    """
+
+    status_code = HTTPStatus.SERVICE_UNAVAILABLE
+    code = "search_not_recorded"
+
+
+class SportNotRated(ConflictError):
+    """The searcher has no Skill rating for the sport they asked about.
+
+    A conflict rather than a not-found, mirroring the shipped
+    ``sport_already_rated`` one context over: the resource is the player's own
+    rating and its state is what refuses. Settled by construction on the client —
+    the sport chips are drawn only for rated sports — and this is the backstop
+    for a stale profile on a second device.
+    """
+
+    code = "sport_not_rated"
+
+
+class PlayerProfileNotCommitted(ConflictError):
+    """The searcher has no profile, so there is no radius, grid or area to search
+    with.
+
+    **Not on the spec's error table**, and added here rather than folded into a
+    neighbouring code. The client cannot reach the Play tab without a committed
+    profile, so this is unreachable by design — which is exactly why it needs its
+    own code: reusing ``sport_not_rated`` for it would tell a player to go and
+    rate a sport they have already rated, and reusing a 500 would file a
+    predictable refusal as a defect. It sits beside ``sport_not_rated`` at the
+    same status because it is the same kind of fact: a refusal about *you*, which
+    you can fix.
+    """
+
+    code = "player_profile_not_committed"
+
+
+class PlayIntentNotDeclared(ConflictError):
+    """The searcher has not said what kind of evening they are after.
+
+    ``docs/adr/0094`` makes the search screen the edit surface for the
+    declaration, so the client opens that interstitial **knowingly** and this is
+    the backstop rather than the designed path.
+    """
+
+    code = "play_intent_not_declared"
+
+
+class AccountHeld(ForbiddenError):
+    """The searcher is under a live hold. **The hold points both ways.**
+
+    A held player can still sign in and run a search, which is why the gate is
+    bidirectional and why the searcher's own side is refused here, at the entry
+    point, rather than by hiding them from other people's lists
+    (``docs/adr/0095``).
+    """
+
+    code = "account_held"

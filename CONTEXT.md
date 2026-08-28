@@ -488,10 +488,13 @@ that will consult the port do not exist yet, which is why it is wired and has no
 
 ### Matchmaking (`backend/app/modules/matchmaking/`)
 
-Decided by [ADR-0093](docs/adr/0093-matcher-in-the-backend-with-a-pure-match-fit-engine.md);
-**designed and not yet built.** Thirty-three ADRs (0093–0125) and the spec set at
-[`docs/specs/matchmaking/`](docs/specs/matchmaking/) settle it; the pipeline is assembled in one
-place, with the precedence rule for reading them, in
+Decided by [ADR-0093](docs/adr/0093-matcher-in-the-backend-with-a-pure-match-fit-engine.md).
+**The shortlist runs end to end**: `POST /api/v1/searches` gates, generates, scores, modifies,
+floors, reorders and records. The **line-up**, the **deck**, the **relaxation ladder**, the
+**interest ledger** and the **read-back** are designed and not yet built — every term below that
+names one is settled and unimplemented, and says so where it matters. Thirty-three ADRs
+(0093–0125) and the spec set at [`docs/specs/matchmaking/`](docs/specs/matchmaking/) settle it;
+the pipeline is assembled in one place, with the precedence rule for reading them, in
 [`the-engine.md`](docs/specs/matchmaking/the-engine.md). Only what a decision has actually settled
 appears here.
 

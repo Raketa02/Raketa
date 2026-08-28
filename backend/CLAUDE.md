@@ -18,6 +18,7 @@ make typecheck   # mypy app scripts
 make check       # lint + lint-imports + typecheck + test — the same gate CI runs
 make test-gates  # prove the kernel/engines purity gates still fire (CI runs it)
 make openapi     # emit openapi.player.json — the contract the client generates from
+make gen-walkthroughs  # rewrite the matchmaking golden files (a diff is a design change)
 make up / down   # dev stack (Postgres + API + MinIO + photo-review + Redis); logs, shell
 make migrate     # alembic upgrade head inside the API container
 make seed        # deterministic dev accounts (make seed-host to run it on the host)
@@ -165,6 +166,26 @@ Rules to preserve:
   and the roll's cadence are settings. **No test needs Redis** — both ports have an
   in-memory implementation that `tests/conftest.py` wires for the whole HTTP suite, and the
   Redis adapters are held to the same contract suite against an in-process stand-in.
+- **A returned search is a recorded search**
+  ([ADR-0104](../docs/adr/0104-the-search-record-is-the-answer-and-never-expires.md)).
+  `POST /api/v1/searches` is the platform's first matchmaking route, and the rule that
+  shapes it is that the `search` row is written **in the request's own transaction and
+  committed before the response returns** — if that fails, the search fails, because the
+  `search_id` *is* the answer's identity. Every fact on it is search-time and **there is
+  no backfill**, which is why the two tables are wide on day one and why
+  `their_slot_count`, `days_away` and the raw `liveness_signals` are recorded and read by
+  nothing: *a strike that is not recorded becomes irreversible by accident.* Nothing
+  deletes a row; erasure will be the only path that ever does.
+  Three seams are worth holding in your head, because a change lands in exactly one of
+  them. **`domain/shortlist.py` is pure** — a bound `SearchContext` in, an ordered answer
+  out, no I/O — which is what lets the three walkthroughs be golden files
+  (`make gen-walkthroughs`; **a diff there is a design change and must be argued for in
+  the pull request**). **`domain/fence.py` is the crossing**: everything the scorer will
+  ever see is built there, so a field that must not reach it has one place to be refused.
+  And **`application/run_shortlist_search.py` owns the order** — read the searcher live,
+  bind one snapshot and every live gate fact, run the pipeline, record and commit, then
+  write exposure *after* the commit. **Never a fallback list:** when the engine raises the
+  feature is down, and there is deliberately nothing to catch it with.
 - **New routes mount under `app/api/v1/router.py`;** keep the `/api/v1` prefix.
 - **Validate and normalize inside the value object**, not in the use case — see
   `app/modules/users/domain/value_objects.py`.

@@ -27,7 +27,11 @@ from app.main import create_app  # noqa: E402  (also registers ORM models)
 from app.modules.player_profile.infrastructure.passthrough_photo_review import (  # noqa: E402,E501
     PassThroughPhotoReview,
 )
+from app.modules.matchmaking.infrastructure.candidate_snapshot_source import (  # noqa: E402,E501
+    DatabaseCandidateSource,
+)
 from app.modules.matchmaking.presentation.dependencies import (  # noqa: E402
+    get_candidate_source,
     get_exposure_ledger,
     get_suppression_ledger,
 )
@@ -119,6 +123,25 @@ def suppression_ledger():
     return InMemorySuppressionLedger(build_clock())
 
 
+@pytest.fixture
+def candidate_source(session_factory):
+    """The one candidate index this process has, for the length of one test.
+
+    **One per process** is `docs/adr/0112`'s rule, and the lifespan is where the
+    one normally lives — but `ASGITransport` does not run a lifespan, so under
+    this seam nothing owns it. This fixture is that owner.
+
+    It is the **real** adapter over the test's own engine rather than a stub, so
+    a search here walks the same decode, the same bound container and the same
+    staleness ladder a request does. A test that wants rows in it seeds the log,
+    tails it, and calls `refresh()`.
+    """
+
+    return DatabaseCandidateSource(
+        session_factory=session_factory, empty_at=build_clock().now()
+    )
+
+
 @pytest_asyncio.fixture
 async def client(
     session_factory,
@@ -126,6 +149,7 @@ async def client(
     photo_review,
     exposure_ledger,
     suppression_ledger,
+    candidate_source,
 ):
     get_settings.cache_clear()
     app = create_app()
@@ -143,6 +167,7 @@ async def client(
     app.dependency_overrides[get_photo_review] = lambda: photo_review
     app.dependency_overrides[get_exposure_ledger] = lambda: exposure_ledger
     app.dependency_overrides[get_suppression_ledger] = lambda: suppression_ledger
+    app.dependency_overrides[get_candidate_source] = lambda: candidate_source
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac

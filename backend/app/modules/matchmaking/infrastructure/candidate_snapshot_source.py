@@ -43,13 +43,14 @@ from __future__ import annotations
 
 import gc
 import logging
+from datetime import datetime, timezone
 from dataclasses import dataclass
 from typing import Mapping, Sequence, TypeVar, cast, final
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.kernel import Instant, invariant
+from app.kernel import Instant, instant, invariant
 from app.modules.matchmaking.domain.candidate_index import (
     CandidateRow,
     IndexedArea,
@@ -218,7 +219,7 @@ class DatabaseCandidateSource:
         ).scalar_one_or_none()
         if cursor is None:
             return 0, self._caught_up_at
-        return cursor.applied_through_sequence_no, Instant(cursor.caught_up_at)
+        return cursor.applied_through_sequence_no, _as_utc(cursor.caught_up_at)
 
     async def _load(
         self, session: AsyncSession, *, after: int, through: int
@@ -283,9 +284,9 @@ def _decode(row: CandidateRowORM, facts: CandidatePlayerFactsORM) -> CandidateRo
         ),
         declared_intent=row.declared_intent,
         social_tags=tuple(_required(facts.social_tags, "a tag list")),
-        tags_updated_at=_required(facts.tags_updated_at, "a tag moment"),
+        tags_updated_at=_as_utc(_required(facts.tags_updated_at, "a tag moment")),
         availability=tuple(_required(facts.availability, "a grid")),
-        grid_updated_at=_required(facts.grid_updated_at, "a grid moment"),
+        grid_updated_at=_as_utc(_required(facts.grid_updated_at, "a grid moment")),
         areas=(
             IndexedArea(
                 latitude=_required(facts.area_latitude, "an area"),
@@ -296,12 +297,37 @@ def _decode(row: CandidateRowORM, facts: CandidatePlayerFactsORM) -> CandidateRo
         proposals_opt_in=facts.proposals_opt_in,
         gender=facts.gender,
         gender_preference=_required(facts.gender_preference, "a gender preference"),
-        profile_created_at=_required(
-            facts.profile_created_at, "a profile commit moment"
+        profile_created_at=_as_utc(
+            _required(facts.profile_created_at, "a profile commit moment")
         ),
-        last_active_at=facts.last_active_at,
+        last_active_at=(
+            None if facts.last_active_at is None else _as_utc(facts.last_active_at)
+        ),
         applied_through_sequence_no=row.applied_through_sequence_no,
     )
+
+
+def _as_utc(value: datetime) -> Instant:
+    """A stored moment, read back as the UTC instant it was written as.
+
+    **Every moment in this schema is written in UTC**, and the columns say
+    ``timezone=True`` — but that is a promise the *database* keeps, and SQLite
+    does not: it stores the text and hands back a naive ``datetime``. A search
+    then subtracts it from ``now`` and raises, or silently reads a local hour.
+
+    So the normalisation happens here, at the one seam where a stored column
+    becomes a domain value, rather than being a fact every reader has to
+    remember. It is a statement about the storage and not about the clock, which
+    is why it attaches UTC rather than converting from local time: the value was
+    written as UTC, so reading it as anything else would move it.
+
+    It is the adapter's job and not the kernel's — ``instant()`` **refuses** a
+    naive datetime on purpose, because in every other context one is a bug.
+    """
+
+    if value.tzinfo is None or value.utcoffset() is None:
+        return Instant(value.replace(tzinfo=timezone.utc))
+    return instant(value)
 
 
 def _required(value: _T | None, what: str) -> _T:

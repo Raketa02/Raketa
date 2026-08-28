@@ -239,3 +239,88 @@ def _in_reading_order(
     slots: Iterable[AvailabilitySlot],
 ) -> list[AvailabilitySlot]:
     return sorted(slots, key=lambda slot: slot.in_reading_order)
+
+
+#: A single day carrying at most this many ticks reads as a **window on that
+#: day** rather than as a week. Adopted from the prototype as a starting
+#: position (``docs/adr/0100`` §6); its falsifier is the rate at which a
+#: challenge is answered with a counter-proposal outside its stated window, and
+#: a label carrying no information is **removed rather than tuned**.
+WINDOW_SINGLE_DAY_MAX_SLOTS: Final = 2
+
+#: At or above this many ticks over the whole grid, no window is narrower than
+#: *any*. Same provenance and the same falsifier.
+WINDOW_ANY_MIN_SLOTS: Final = 12
+
+#: Saturday and Sunday. **A locale assumption, recorded as one rather than as a
+#: constant to tune** (``docs/adr/0100`` §7) — it is not a number, and its
+#: falsifier is the first shard whose weekend is somewhere else.
+_WEEKEND = frozenset({6, 7})
+
+
+class Window(StrEnum):
+    """When a game found on a grid would plausibly be played. **A code, never a
+    sentence** — *"tonight"* is the client's word (``docs/adr/0022``).
+
+    **Derived, never chosen** (``docs/adr/0100``). There is no window picker
+    anywhere: a player changes their window by changing their grid, which is the
+    same act that changes their matches. One control, one meaning.
+
+    It is a **label on the search**, not a proposed time — the grid is still
+    never rendered to anybody as a calendar, and this says only how soon the week
+    it ran on comes round.
+    """
+
+    TODAY = "TODAY"
+    TOMORROW = "TOMORROW"
+    WEEKEND = "WEEKEND"
+    THIS_WEEK = "THIS_WEEK"
+    ANY = "ANY"
+
+
+def window_of(grid: AvailabilityGrid, today: IsoWeekday) -> Window:
+    """The window a search run on this grid is asking about.
+
+    ``docs/adr/0100`` §4 puts the function here, beside the grid, and hands the
+    caller the one thing this module refuses to know: **what day it is.**
+    ``IsoWeekday`` is kernel vocabulary and is neither a date nor a timezone, so
+    the module's negative space — *nothing here has a duration, a date or a
+    timezone in it* — is intact.
+
+    The ladder is read narrowest-first, and every rung is a statement about the
+    **grid**, never about the pair:
+
+    - a wide-open week says nothing about when, and reads ``ANY``;
+    - a grid ticked on one day alone, lightly, is that day — *today*, *tomorrow*,
+      or simply *this week* when it is further off;
+    - a grid ticked only across Saturday and Sunday is the weekend;
+    - anything else is this week.
+
+    An empty grid reads ``ANY``. A blank grid means *we do not know* rather than
+    *never*, and *any* is the only rung that claims nothing.
+    """
+
+    days = {int(slot.day) for slot in grid.slots}
+    if not days or len(grid) >= WINDOW_ANY_MIN_SLOTS:
+        return Window.ANY
+    if len(days) == 1 and len(grid) <= WINDOW_SINGLE_DAY_MAX_SLOTS:
+        return _single_day(next(iter(days)), int(today))
+    if days <= _WEEKEND:
+        return Window.WEEKEND
+    return Window.THIS_WEEK
+
+
+def _single_day(day: int, today: int) -> Window:
+    """Which of the three near rungs one ticked day lands on.
+
+    *Tomorrow* wraps the week — Sunday's tomorrow is Monday — because the grid is
+    an **ordinary** week and has no notion of a particular one. Anything further
+    off than tomorrow is ``THIS_WEEK`` rather than a count of days: a number of
+    days is a date, and this module holds none.
+    """
+
+    if day == today:
+        return Window.TODAY
+    if day == today % DAYS_IN_THE_GRID + 1:
+        return Window.TOMORROW
+    return Window.THIS_WEEK

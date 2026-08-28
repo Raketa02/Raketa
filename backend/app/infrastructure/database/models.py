@@ -10,6 +10,10 @@ from app.modules.matchmaking.infrastructure.candidate_index_model import (
     CandidatePlayerFactsORM,
     CandidateRowORM,
 )
+from app.modules.matchmaking.infrastructure.search_model import (
+    SearchCandidateORM,
+    SearchORM,
+)
 from app.modules.users.infrastructure.sqlalchemy_user_model import UserORM
 
 __all__ = [
@@ -19,5 +23,7 @@ __all__ = [
     "EventOutboxORM",
     "EventStoreORM",
     "RefreshTokenORM",
+    "SearchCandidateORM",
+    "SearchORM",
     "UserORM",
 ]

@@ -933,6 +933,83 @@
           }
         }
       }
+    },
+    "/api/v1/searches": {
+      "post": {
+        "tags": [
+          "searches"
+        ],
+        "summary": "Find me a game",
+        "description": "Returns a ranked shortlist of at most **twenty** people worth messaging, **unpaginated** \u2014 there is no page two, and past the last row there is an honest empty state.\n\n**The breakdown ships with the search, not behind a tap.** Every term, its weight, its value, its contribution and the evidence it read ride on every row, because *Why 78?* has to open instantly.\n\n**Send asks, never facts.** Your radius, grid, tags, rating, intent and gender preference are read from your profile at request time. There is no per-search radius input.\n\n**Competitive and for fun select different weight vectors**, and the list visibly inverts between them.\n\n**Deliberately not idempotent.** Two taps are two searches.\n\n**Re-sorting costs no round trip:** `search.sorts_available` says which controls to draw, and a sort that would reorder nothing is not in it.",
+        "operationId": "run_search_api_v1_searches_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunSearchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "A ranked shortlist of at most twenty, each row carrying a Fit out of a hundred and the complete breakdown that produced it. **An empty list is also a 200** \u2014 the honest empty state is an answer, and the pool it came from is described either way.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShortlistResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`account_held` \u2014 this account is under a live hold.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`sport_not_rated` \u2014 you hold no rating for this sport.\n\n`play_intent_not_declared` \u2014 you have not said what kind of evening you are after for it.\n\n`player_profile_not_committed` \u2014 there is no profile to read a radius, a grid or an area from.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Four distinct codes at one status, so a client can tell a transient outage from a refusal about *you*: `matchmaking_unavailable`, `gate_data_unavailable`, `index_too_stale`, `search_not_recorded`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -1009,6 +1086,59 @@
         ],
         "title": "AssessmentStepResponse",
         "description": "The server-driven step: at most one of `question` / `result` is set, and\n`transcript` is everything already answered behind it. Neither means the run\nis not asking and has not been rated \u2014 see `status`."
+      },
+      "AtStakeSchema": {
+        "properties": {
+          "win_delta": {
+            "type": "number",
+            "title": "Win Delta"
+          },
+          "loss_delta": {
+            "type": "number",
+            "title": "Loss Delta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "win_delta",
+          "loss_delta"
+        ],
+        "title": "AtStakeSchema",
+        "description": "What a **counted** game against this opponent would do to your Level.\n\nFilled by the backend, never by the matcher and never by the client. Omitted\nin for-fun, where a counted result is meaningless rather than unavailable."
+      },
+      "AvailabilityOverlapEvidence": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "availability_overlap",
+            "title": "Kind",
+            "default": "availability_overlap"
+          },
+          "shared_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Shared Count",
+            "description": "Cells both of them ticked"
+          },
+          "next_slot": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SharedSlot"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The soonest cell both ticked, or null when there is none"
+          }
+        },
+        "type": "object",
+        "required": [
+          "shared_count",
+          "next_slot"
+        ],
+        "title": "AvailabilityOverlapEvidence",
+        "description": "How much of the searcher's week the candidate is free in.\n\nThe term is ``|shared| / |mine|`` and has **no constants at all** \u2014 the\ndenominator is the searcher's own ticked cells, which is what makes the\nreading asymmetric and what makes it a fact about the pair.\n\nOverlap is evidence a game can be *arranged*, never a proposed time, which is\nwhy a candidate sharing no slot at all is still shown: the times rung exists\nfor exactly that pairing."
       },
       "AvailabilitySlotResource": {
         "properties": {
@@ -1087,6 +1217,91 @@
         "title": "BlockSurface",
         "description": "The four surfaces of `search-telemetry.md` \u00a72, as a block records them."
       },
+      "CandidateSchema": {
+        "properties": {
+          "player_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Player Id"
+          },
+          "fit": {
+            "type": "number",
+            "title": "Fit",
+            "description": "The printed number, out of a hundred, and the only one a player is asked to trust. It contains no Liveness."
+          },
+          "distance_km": {
+            "type": "integer",
+            "title": "Distance Km",
+            "description": "Whole kilometres between the two coarse areas. **Promoted out of the distance evidence** so the *Closest* sort reads a field rather than reaching into a variant, and **omitted** rather than sent as zero when the distance term stood down \u2014 which is what lets a stood-down row sort last instead of first."
+          },
+          "player_card": {
+            "$ref": "#/components/schemas/PlayerCardSchema"
+          },
+          "concerns": {
+            "items": {
+              "$ref": "#/components/schemas/ConcernSchema"
+            },
+            "type": "array",
+            "title": "Concerns"
+          },
+          "terms": {
+            "items": {
+              "$ref": "#/components/schemas/ScoredTermSchema"
+            },
+            "type": "array",
+            "title": "Terms",
+            "description": "Every term that fired, **ranked by contribution** \u2014 the reasons, in the order the arithmetic puts them in. The cap is the client's."
+          },
+          "degraded_terms": {
+            "items": {
+              "$ref": "#/components/schemas/Term"
+            },
+            "type": "array",
+            "title": "Degraded Terms",
+            "description": "The terms that stood down: the renormalisation basis. Without it a Fit is uninterpretable \u2014 a 78 built on four terms and a 78 built on seven are different readings of the same number."
+          },
+          "modifiers": {
+            "items": {
+              "$ref": "#/components/schemas/ModifierSchema"
+            },
+            "type": "array",
+            "title": "Modifiers"
+          },
+          "liveness_reasons": {
+            "items": {
+              "$ref": "#/components/schemas/LivenessReason"
+            },
+            "type": "array",
+            "title": "Liveness Reasons",
+            "description": "Why this person moved, ranked by how far. **Codes only** \u2014 there is no field here a Liveness number could be written to."
+          },
+          "inclusion_reason": {
+            "$ref": "#/components/schemas/InclusionReason",
+            "description": "Why this person is in the list at all, when the reason is one the searcher is owed. A union of one: only an interest lift **admits** anybody. Omitted otherwise."
+          },
+          "at_stake": {
+            "$ref": "#/components/schemas/AtStakeSchema",
+            "description": "Omitted in for fun, where a counted result is meaningless rather than unavailable, and omitted today in competitive because the result-update rule does not exist."
+          },
+          "would_be_forecast": {
+            "$ref": "#/components/schemas/ForecastSchema",
+            "description": "What this candidate would leave on court. Precomputed only when a line-up has exactly one seat open, so **omitted on every shortlist**."
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_id",
+          "fit",
+          "player_card",
+          "concerns",
+          "terms",
+          "degraded_terms",
+          "modifiers",
+          "liveness_reasons"
+        ],
+        "title": "CandidateSchema",
+        "description": "One row of the shortlist: the pairing, and the person.\n\nThree field families have a **different author** from the rest and are\nattached by the backend after the scorer returns \u2014 the card, the at-stake\nblock and the distance. None of them is a fact the scorer may see, and none\nmay be computed by the client."
+      },
       "CommitPlayerProfileRequest": {
         "properties": {
           "social_tag_ids": {
@@ -1147,6 +1362,19 @@
         "title": "CommitPlayerProfileRequest",
         "description": "Every answer from onboarding's second part, in one body.\n\n**Photos are the only field with a default**, because holding none is a\nlegitimate answer to *add some photos*. Everything else is something this\nrequest must actually carry \u2014 a location, a radius, a tag selection, an\nanswer to the proposals question, and **a week with something ticked in it**\n(``docs/adr/0102``).\n\nThe week's *floor* is not spelled here, and that is the same decision the tag\nselection's is: an empty list passes this schema and is refused by the domain\nwith ``availability_grid_empty``, so the client gets a code it can branch on\nand a recovery it can offer, rather than a 422 that can only say some field\nsomewhere was wrong."
       },
+      "ConcernSchema": {
+        "properties": {
+          "term": {
+            "$ref": "#/components/schemas/Term"
+          }
+        },
+        "type": "object",
+        "required": [
+          "term"
+        ],
+        "title": "ConcernSchema",
+        "description": "The engine's own statement that a term is genuinely weak.\n\nJudged where the weights and the curves are, over **points forgone** rather\nthan over a raw value \u2014 a social vibe of 0.20 costs under four points of a\ncompetitive match and nearly twenty of a friendly, and only one of those is\nworth warning anybody about. A client thresholding a value would be that\njudgement in TypeScript, written differently in every client.\n\n**Ranked by the engine, capped by the client**: a card shows one, *Why 78?*\nshows all of them."
+      },
       "ConfidenceReasonResponse": {
         "properties": {
           "key": {
@@ -1196,6 +1424,40 @@
         ],
         "title": "DayPart",
         "description": "The three parts of a day a player may tick.\n\nClosed, and deliberately coarse. The product asks *when do you usually play*,\nand an answer finer than this would be a schedule \u2014 which is the thing a\npreference is explicitly not.\n\nDeclared in rendering order, so ``tuple(DayPart)`` is the order a grid is\nlaid out in and no caller sorts."
+      },
+      "DistanceEvidence": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "distance",
+            "title": "Kind",
+            "default": "distance"
+          },
+          "km": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Km",
+            "description": "Whole kilometres between the two areas"
+          },
+          "area_code": {
+            "type": "string",
+            "title": "Area Code",
+            "description": "The candidate's coarse area, as a machine code"
+          },
+          "outside_their_radius": {
+            "type": "boolean",
+            "title": "Outside Their Radius",
+            "description": "Whether the searcher sits outside the candidate's own ring"
+          }
+        },
+        "type": "object",
+        "required": [
+          "km",
+          "area_code",
+          "outside_their_radius"
+        ],
+        "title": "DistanceEvidence",
+        "description": "How far away they are, and whether the searcher is outside *their* ring.\n\nA candidate's own radius is a Liveness dock and **never a gate**: somebody\nwho set a small radius is not refusing to be found, and the searcher is\nshown the fact rather than having the person removed. The standalone flat\ndock for it is struck \u2014 the reciprocal reading already prices it, and\nproportionately."
       },
       "ErrorResponse": {
         "description": "The body of every error response, on both API surfaces.",
@@ -1270,6 +1532,46 @@
         "title": "FactorResponse",
         "description": "One evidence category's row: what it says, and which way it pulled.\n\n``direction`` is one of ``up`` / ``down`` / ``neutral``, computed by the\nengine from that category's own evidence against the final estimate. The\nclient never derives it \u2014 a client-side arrow is a second opinion about the\narithmetic, and two clients would eventually hold two of them."
       },
+      "ForecastSchema": {
+        "properties": {
+          "pct": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Pct"
+          },
+          "sigma_group": {
+            "type": "number",
+            "title": "Sigma Group",
+            "description": "The confidence is part of the claim, so it crosses with it"
+          },
+          "provisional": {
+            "type": "boolean",
+            "title": "Provisional"
+          },
+          "assumption": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assumption",
+            "description": "What the provisional figure assumed, as a code the client renders in its own words. Null when nothing was assumed."
+          }
+        },
+        "type": "object",
+        "required": [
+          "pct",
+          "sigma_group",
+          "provisional",
+          "assumption"
+        ],
+        "title": "ForecastSchema",
+        "description": "How even a game is forecast to be. One type, everywhere it appears.\n\n``provisional`` travels **inside** the forecast rather than beside it: the\nfailure being guarded against is a screen showing the number without its\ncaveat, and a sibling boolean is exactly how the two get separated in a\nrefactor."
+      },
       "Gender": {
         "type": "string",
         "enum": [
@@ -1337,6 +1639,113 @@
         ],
         "title": "InProgressAssessmentsResponse",
         "description": "Every unfinished run this player holds \u2014 empty when they hold none.\n\nEmpty is the ordinary answer for a new account and for a player who has\nfinished everything they started, so it is a 200 with an empty list rather\nthan a 404 or the singular form's 204.\n\nOrdered by the sport registry, so a caller that wants one run can take the\nfirst entry."
+      },
+      "InclusionReason": {
+        "type": "string",
+        "enum": [
+          "INTEREST_LIFT",
+          "NEWCOMER_WINDOW",
+          "ZERO_EXPOSURE"
+        ],
+        "title": "InclusionReason",
+        "description": "Why this candidate is in the answer at all. **The store is open where the\nwire is closed** (``the-two-contracts.md`` \u00a74).\n\nAll three are kept here; only ``INTEREST_LIFT`` crosses the wire, because it\nis the only one that **admits** anybody. ``NEWCOMER_WINDOW`` reorders and\nships to the client as a Liveness reason instead; ``ZERO_EXPOSURE`` never\ncrosses at all \u2014 *you are seeing this person because nobody has been shown\nthem all week* is a third party's unpopularity, and the searcher is owed no\nversion of it."
+      },
+      "IntentAlignmentEvidence": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "intent_alignment",
+            "title": "Kind",
+            "default": "intent_alignment"
+          },
+          "my_mode": {
+            "$ref": "#/components/schemas/SearchMode",
+            "description": "The searcher's mode, this search"
+          },
+          "their_intent": {
+            "$ref": "#/components/schemas/PlayIntent",
+            "description": "The candidate's declaration for this sport"
+          },
+          "aligned": {
+            "type": "boolean",
+            "title": "Aligned",
+            "description": "Whether the two read the same evening"
+          }
+        },
+        "type": "object",
+        "required": [
+          "my_mode",
+          "their_intent",
+          "aligned"
+        ],
+        "title": "IntentAlignmentEvidence",
+        "description": "What kind of evening each of them is after.\n\n**Intent is a weight and not a gate.** A candidate who declared the opposite\nloses the term's entire weight and takes no further charge \u2014 the zero is the\nwhole answer, and a second dock would be a gate wearing a modifier's clothes.\nA candidate who has *not* declared has the term dropped and renormalised away\ninstead, so declaring against the searcher already costs strictly more than\nsaying nothing."
+      },
+      "LevelDirection": {
+        "type": "string",
+        "enum": [
+          "ABOVE",
+          "LEVEL",
+          "BELOW"
+        ],
+        "title": "LevelDirection",
+        "description": "Which side of the searcher a candidate's Level sits on.\n\nA code and not a sign on ``delta``, because the client's sentence differs in\nall three cases and a renderer deriving *\"above\"* from a sign is the display\nlogic the presentation boundary exists to keep out.\n\nIt lives here rather than beside the wire shape for the reason\n``EvidenceKind`` does: the engine computes it and the schema publishes it, so\na second spelling on the schema's side would be two answers to *which way is\nup*. A module may import an engine; the reverse is the fence."
+      },
+      "LevelFitEvidence": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "level_fit",
+            "title": "Kind",
+            "default": "level_fit"
+          },
+          "my_mu": {
+            "type": "number",
+            "title": "My Mu",
+            "description": "The searcher's Level"
+          },
+          "their_mu": {
+            "type": "number",
+            "title": "Their Mu",
+            "description": "The candidate's Level"
+          },
+          "delta": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Delta",
+            "description": "The gap, unsigned"
+          },
+          "direction": {
+            "$ref": "#/components/schemas/LevelDirection",
+            "description": "Which side of the searcher"
+          }
+        },
+        "type": "object",
+        "required": [
+          "my_mu",
+          "their_mu",
+          "delta",
+          "direction"
+        ],
+        "title": "LevelFitEvidence",
+        "description": "How far apart the two levels are, and which way.\n\nThe tolerance behind the curve is absolute on \u03bc and never reads a band: the\nshipped bands are deliberately uneven because *evidence* is unevenly\navailable down the scale, not because a tenth of a point means less at the\ntop."
+      },
+      "LivenessReason": {
+        "type": "string",
+        "enum": [
+          "INTEREST_RECEIVED",
+          "PREVIOUS_ACCEPT",
+          "ANSWER_RATE_AND_SPEED",
+          "RECENT_ACTIVITY",
+          "OVERLAP_PROXIMITY",
+          "RECIPROCAL_ASYMMETRY",
+          "NEWCOMER_LIFT",
+          "CHALLENGE_LOAD_SOME",
+          "CHALLENGE_LOAD_BUSY",
+          "CHALLENGE_LOAD_FULL"
+        ],
+        "title": "LivenessReason",
+        "description": "Why somebody moved, as a code. **Never as a number.**\n\nTen values: the eight printable signals, with the full inbox spelled as its\nthree coarse rungs instead of its own name. Their inbox depth is theirs \u2014 the\nrung crosses and the count does not \u2014 and each rung names its own code, so a\nthreshold moving does not silently re-point a code at a different depth.\n\nThe two **silent** signals are absent by construction rather than by\nomission: a silent move carries points and no code, so there is no name on\nthe value to print. ``tests/unit/test_matchmaking_shortlist_contract.py``\nholds this enum to exactly the printable roster."
       },
       "LocationAreaResource": {
         "properties": {
@@ -1407,6 +1816,44 @@
         "type": "object",
         "title": "LogoutResponse"
       },
+      "ModifierCode": {
+        "type": "string",
+        "enum": [
+          "CALIBRATION_VALUE",
+          "FAMILIARITY",
+          "WELCOMING_RECORD",
+          "RELIABILITY_FLOOR_BREACH"
+        ],
+        "title": "ModifierCode",
+        "description": "The three modifiers inside the budget, and the dock outside it.\n\nEvery one of them **prints**: a modifier that could move a score without\nowing a sentence would be Liveness wearing stage 4's clothes, and Liveness\nhas a budget for exactly that."
+      },
+      "ModifierSchema": {
+        "properties": {
+          "code": {
+            "$ref": "#/components/schemas/ModifierCode"
+          },
+          "points": {
+            "type": "number",
+            "title": "Points"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "points"
+        ],
+        "title": "ModifierSchema",
+        "description": "One modifier that fired, and what it was worth on this pairing."
+      },
+      "OptimisedFor": {
+        "type": "string",
+        "enum": [
+          "SEARCHER",
+          "GROUP"
+        ],
+        "title": "OptimisedFor",
+        "description": "Whom this search was run for.\n\n``GROUP`` exists because a line-up with seats locked is no longer optimising\nfor the searcher, who may end up with a worse individual match than an empty\nbuilder would have given them \u2014 and the screen has to say so. A shortlist is\nalways ``SEARCHER``, and the field is on the envelope rather than implied by\nthe surface so that one renderer reads one fact."
+      },
       "PhotoResponse": {
         "properties": {
           "photo_id": {
@@ -1435,6 +1882,69 @@
         ],
         "title": "PhotoResponse",
         "description": "One photo: the id a profile commit will carry, and a URL that reads it.\n\nThe same shape from the upload and from the read, so a client renders a tile\nit has just filled and a tile it is restoring with one code path.\n\n**The URL is not an identifier and must not be stored as one.** It carries a\nsignature and stops working at ``expires_at``; the id is what is permanent."
+      },
+      "PlayIntent": {
+        "type": "string",
+        "enum": [
+          "COMPETITIVE",
+          "FOR_FUN",
+          "NO_PREFERENCE"
+        ],
+        "title": "PlayIntent",
+        "description": "What kind of game a player wants, in one sport.\n\nDeclared per ``(player, sport)`` \u2014 see ``play_intent_declaration.py`` for\nwhy that is its own aggregate rather than a field on the profile."
+      },
+      "PlayerCardSchema": {
+        "properties": {
+          "nickname": {
+            "type": "string",
+            "title": "Nickname",
+            "description": "The whole handle. There is no name in this platform and **nothing may derive a familiar form from it** \u2014 every sentence naming somebody uses the whole handle or names nobody."
+          },
+          "photo_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Photo Id",
+            "description": "The first photo \u2014 order is meaning in a photo list. **An id, never a URL**: a presigned link cannot live in a record kept forever, so the link is minted per response. **Omitted** when the player has no photo, and the client draws the generated court poster."
+          },
+          "area_code": {
+            "type": "string",
+            "title": "Area Code",
+            "description": "Their coarse area, as a machine code"
+          },
+          "social_tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Social Tags",
+            "description": "The Social tag ids they hold"
+          },
+          "level": {
+            "type": "number",
+            "title": "Level",
+            "description": "Their Level, as RacketSkill published it"
+          },
+          "band": {
+            "type": "string",
+            "title": "Band",
+            "description": "The Level band's published name"
+          },
+          "counted_games": {
+            "type": "integer",
+            "title": "Counted Games",
+            "description": "How many counted games they have played. **Omitted today**: the games ledger has no provider in this build, and a zero would be an invented one rather than a measured nothing."
+          }
+        },
+        "type": "object",
+        "required": [
+          "nickname",
+          "area_code",
+          "social_tags",
+          "level",
+          "band"
+        ],
+        "title": "PlayerCardSchema",
+        "description": "Who this person is, on a card. **A closed list with two permanent gaps.**\n\nNo bio and no free text of any kind, ever; and **no activity recency at any\ngranularity** \u2014 not a timestamp, not *active today*, not a green dot.\nLiveness reaches a screen the one way it is sanctioned to: as a reason code."
       },
       "PlayerProfileOptionsResponse": {
         "properties": {
@@ -1525,6 +2035,131 @@
         ],
         "title": "PlayerProfileResponse",
         "description": "A player's profile as it now stands.\n\nThe same body whether the commit created the profile or replayed an earlier\none, so a client that only wants its profile needs no branch on the status.\n\n**No gender value comes back out**, and that is a rule rather than an\noversight (``docs/adr/0096`` \u00a76): a preference crosses the wire *in*, on a\nsearch; no response shape carries a gender out and no card renders one.\nThis body is only ever the caller's own profile, so nothing here would leak\na third party's answer \u2014 the field is left off anyway, because the moment\none response shape carries it, *which* shapes may is a judgement call made\nper endpoint instead of a line nobody has to re-argue. Nothing reads it back\ntoday: onboarding sends it once, and there is no profile editor. When one\nexists, adding it here is an addition to this document and ADR-0096's\nticket's to make.\n\n**Fields are only ever added.** A shipped mobile app parses this document for\nmonths after it stops being built."
+      },
+      "PlayingStyleEvidence": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "playing_style",
+            "title": "Kind",
+            "default": "playing_style"
+          },
+          "matched": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Matched",
+            "description": "Tag ids they both hold, in this column"
+          },
+          "complementary": {
+            "items": {
+              "$ref": "#/components/schemas/TagPair"
+            },
+            "type": "array",
+            "title": "Complementary",
+            "description": "Pairs product claims fit together"
+          },
+          "clashing": {
+            "items": {
+              "$ref": "#/components/schemas/TagPair"
+            },
+            "type": "array",
+            "title": "Clashing",
+            "description": "Pairs product claims do not"
+          }
+        },
+        "type": "object",
+        "required": [
+          "matched",
+          "complementary",
+          "clashing"
+        ],
+        "title": "PlayingStyleEvidence",
+        "description": "What the two of them are like during the hour on court.\n\nThe split from social vibe is **by relationship, not by tag group**: every\nmatrix row carries its own column, so a tag can be read for the hour on court\nin one row and for the evening around it in another.\n\nA pair with nothing firing is *different, not incompatible* \u2014 the term's zero\nis a real clash, never an absence of relationship."
+      },
+      "PoolSchema": {
+        "properties": {
+          "sport": {
+            "$ref": "#/components/schemas/Sport"
+          },
+          "radius_km_used": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Radius Km Used",
+            "description": "The searcher's own radius, in whole kilometres"
+          },
+          "players_in_range": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Players In Range",
+            "description": "How many candidates cleared every gate. **Post-gate, always** \u2014 a pre-gate count beside this one would be the delta a mutual preference hid, per searcher."
+          },
+          "window": {
+            "$ref": "#/components/schemas/Window",
+            "description": "When a game found on this grid would plausibly be played, as a code. Derived by the backend from the grid the search ran on; there is no window picker anywhere."
+          },
+          "post_gate": {
+            "type": "boolean",
+            "title": "Post Gate",
+            "description": "Always true. It travels so the count cannot be misread.",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "sport",
+          "radius_km_used",
+          "players_in_range",
+          "window"
+        ],
+        "title": "PoolSchema",
+        "description": "What the searcher is told about the pool this answer came from.\n\nSent on **every** search and not only on empty ones: a thin pool and a broken\nfloor are indistinguishable without it."
+      },
+      "PredictedBalanceEvidence": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "predicted_balance",
+            "title": "Kind",
+            "default": "predicted_balance"
+          },
+          "pct": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Pct",
+            "description": "The evenness forecast"
+          },
+          "my_sigma": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "My Sigma",
+            "description": "The searcher's Uncertainty"
+          },
+          "their_sigma": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Their Sigma",
+            "description": "The candidate's Uncertainty"
+          },
+          "confidence": {
+            "type": "integer",
+            "maximum": 99.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "description": "The platform's confidence transform over the combined \u03c3, as a whole percent. Never 100: the platform cannot tell a player it is certain."
+          }
+        },
+        "type": "object",
+        "required": [
+          "pct",
+          "my_sigma",
+          "their_sigma",
+          "confidence"
+        ],
+        "title": "PredictedBalanceEvidence",
+        "description": "How even the game is forecast to be, and how sure of that the platform is.\n\n``pct`` is the forecast the player is shown; ``confidence`` is the platform's\nexisting \u03c3 transform and never a second spelling of certainty."
       },
       "ProposalsOptInRequest": {
         "properties": {
@@ -1743,6 +2378,57 @@
         ],
         "title": "RefreshRequest"
       },
+      "ReliabilityEvidence": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "reliability",
+            "title": "Kind",
+            "default": "reliability"
+          },
+          "score": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Score",
+            "description": "The published Player Score"
+          },
+          "strands": {
+            "items": {
+              "$ref": "#/components/schemas/StrandReading"
+            },
+            "type": "array",
+            "title": "Strands",
+            "description": "The strands that produced a reading, over the closed six"
+          },
+          "floor_breached": {
+            "type": "boolean",
+            "title": "Floor Breached",
+            "description": "Whether the published score sits under the reliability bar"
+          }
+        },
+        "type": "object",
+        "required": [
+          "score",
+          "strands",
+          "floor_breached"
+        ],
+        "title": "ReliabilityEvidence",
+        "description": "What the candidate's record says about turning up and following through.\n\n``score`` is the **published Player Score** \u2014 the number on the player's own\nprofile \u2014 and never the matcher's private per-mode blend of the same six\nstrands. A penalty justified by a figure that exists nowhere a human can look\nis unexplainable, and a player who works their visible score back up must be\nable to see the penalty lift."
+      },
+      "ReliabilityStrand": {
+        "type": "string",
+        "enum": [
+          "SHOWS_UP",
+          "ANSWERS_CHALLENGES",
+          "CONFIRMS_RESULTS",
+          "KEEPS_PLANS",
+          "SETTLES_UP",
+          "SPORTSMANSHIP"
+        ],
+        "title": "ReliabilityStrand",
+        "description": "The six strands a reliability reading is built from, read separately.\n\nThey are weighted **per mode** and the two vectors order people oppositely \u2014\na candidate strong on *confirms results* and weak on *sportsmanship* wins in\ncompetitive and loses in for fun. A single blended score cannot express that,\nwhich is the whole argument for the decomposition, and it is justified for\nexactly as long as such a pair exists (``ranking-weights.md`` \u00a76).\n\n**Three different blends of these six exist in this system and confusing them\nis a live risk:** the published Player Score at 35/20/15/12/10/8, and these\ntwo. The reliability *floor* reads the published one \u2014 the one deliberate\nexception, because a penalty justified by a figure that exists nowhere a\nhuman can look is unexplainable."
+      },
       "ResultResponse": {
         "properties": {
           "mu": {
@@ -1830,6 +2516,188 @@
         ],
         "title": "ResultResponse"
       },
+      "RunSearchRequest": {
+        "properties": {
+          "sport": {
+            "$ref": "#/components/schemas/Sport",
+            "description": "Which sport this search is for"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/SearchMode",
+            "description": "Competitive or for fun \u2014 the weight vector for this one search, and nothing else. Two values, where a Play intent has three."
+          }
+        },
+        "type": "object",
+        "required": [
+          "sport",
+          "mode"
+        ],
+        "title": "RunSearchRequest",
+        "description": "What a client may send. **Asks only, never a fact about the searcher.**\n\nThere is deliberately **no radius here, and there never will be.** The\nsearcher's ask *is* their profile radius, read at request time; widening\nhappens only by taking a rung offer. A radius supplied by a phone is a gate\nevaluated on a lie, and this is the field it would arrive through."
+      },
+      "ScoredTermSchema": {
+        "properties": {
+          "term": {
+            "$ref": "#/components/schemas/Term"
+          },
+          "weight": {
+            "type": "number",
+            "title": "Weight",
+            "description": "The **renormalised** weight \u2014 this term's share of a hundred over the terms that actually fired."
+          },
+          "value": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Value"
+          },
+          "contribution": {
+            "type": "number",
+            "title": "Contribution",
+            "description": "The weight times the value. The contributions sum to the Fit."
+          },
+          "evidence": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/LevelFitEvidence"
+              },
+              {
+                "$ref": "#/components/schemas/PredictedBalanceEvidence"
+              },
+              {
+                "$ref": "#/components/schemas/IntentAlignmentEvidence"
+              },
+              {
+                "$ref": "#/components/schemas/ReliabilityEvidence"
+              },
+              {
+                "$ref": "#/components/schemas/AvailabilityOverlapEvidence"
+              },
+              {
+                "$ref": "#/components/schemas/PlayingStyleEvidence"
+              },
+              {
+                "$ref": "#/components/schemas/SocialVibeEvidence"
+              },
+              {
+                "$ref": "#/components/schemas/DistanceEvidence"
+              }
+            ],
+            "title": "Evidence",
+            "discriminator": {
+              "propertyName": "kind",
+              "mapping": {
+                "availability_overlap": "#/components/schemas/AvailabilityOverlapEvidence",
+                "distance": "#/components/schemas/DistanceEvidence",
+                "intent_alignment": "#/components/schemas/IntentAlignmentEvidence",
+                "level_fit": "#/components/schemas/LevelFitEvidence",
+                "playing_style": "#/components/schemas/PlayingStyleEvidence",
+                "predicted_balance": "#/components/schemas/PredictedBalanceEvidence",
+                "reliability": "#/components/schemas/ReliabilityEvidence",
+                "social_vibe": "#/components/schemas/SocialVibeEvidence"
+              }
+            }
+          }
+        },
+        "type": "object",
+        "required": [
+          "term",
+          "weight",
+          "value",
+          "contribution",
+          "evidence"
+        ],
+        "title": "ScoredTermSchema",
+        "description": "One term that produced a reading, and what it was worth here."
+      },
+      "SearchEnvelope": {
+        "properties": {
+          "search_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Search Id",
+            "description": "The answer's identity. Minted server-side and recorded before this response was returned."
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "At"
+          },
+          "surface": {
+            "$ref": "#/components/schemas/SearchSurface"
+          },
+          "mode": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SearchMode"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null exactly on the deck, which has no mode."
+          },
+          "ruleset_version": {
+            "type": "string",
+            "title": "Ruleset Version",
+            "description": "What the numbers were"
+          },
+          "engine_version": {
+            "type": "string",
+            "title": "Engine Version",
+            "description": "How the maths works"
+          },
+          "optimised_for": {
+            "$ref": "#/components/schemas/OptimisedFor"
+          },
+          "index_stale": {
+            "type": "boolean",
+            "title": "Index Stale",
+            "description": "Whether the candidate index was more than fifteen minutes behind the log. The search was served either way; past a day it would have been refused instead."
+          },
+          "pool": {
+            "$ref": "#/components/schemas/PoolSchema"
+          },
+          "radius_clamp": {
+            "type": "boolean",
+            "title": "Radius Clamp",
+            "description": "Whether a widening offer hit the profile slider's own ceiling. False on a search that widened nothing."
+          },
+          "sorts_available": {
+            "items": {
+              "$ref": "#/components/schemas/SortOption"
+            },
+            "type": "array",
+            "title": "Sorts Available",
+            "description": "Which re-sorts the client may draw over rows it already holds. **A sort that would reorder nothing is not in this list**, and the control is not drawn \u2014 a visible control that does nothing is the product lying quietly. Re-sorting costs no round trip."
+          }
+        },
+        "type": "object",
+        "required": [
+          "search_id",
+          "at",
+          "surface",
+          "mode",
+          "ruleset_version",
+          "engine_version",
+          "optimised_for",
+          "index_stale",
+          "pool",
+          "radius_clamp",
+          "sorts_available"
+        ],
+        "title": "SearchEnvelope",
+        "description": "Every fact about *the search*, as opposed to about a candidate.\n\nOne object, identical on every route that creates a search: one renderer, one\ntype."
+      },
+      "SearchMode": {
+        "type": "string",
+        "enum": [
+          "COMPETITIVE",
+          "FOR_FUN"
+        ],
+        "title": "SearchMode",
+        "description": "What kind of evening this search is for. **Two values, never three.**\n\n``PlayIntent`` is the *candidate's* declaration and has three values;\n``SearchMode`` is the *searcher's* setting \u2014 which tab they are on, right\nnow \u2014 and has two. ``app/modules/player_profile/domain/play_intent.py`` says\nwhere this type belongs when it arrives: *\"it belongs to the matcher and not\nto this module\"*. Here it is.\n\n**There is never a ``NO_PREFERENCE`` weight vector.** A candidate who\ndeclared ``NO_PREFERENCE`` is indifferent about the kind of evening, so their\nreverse fit runs under the *searcher's* mode: ``NO_PREFERENCE`` never selects\na weight vector, it inherits one (``ranking-weights.md`` \u00a79). The arities\ndiffer on purpose, so the likeliest bug in the matcher is a type error rather\nthan a paragraph in a document."
+      },
       "SearchRadiusBoundsResource": {
         "properties": {
           "minimum_km": {
@@ -1862,6 +2730,61 @@
         ],
         "title": "SearchRadiusBoundsResource",
         "description": "The range a Search radius may take, in whole kilometres.\n\nThe unit is in every field name on purpose: a bare ``minimum`` is one\nrefactor away from being read as metres."
+      },
+      "SearchSurface": {
+        "type": "string",
+        "enum": [
+          "SHORTLIST",
+          "LINEUP",
+          "DECK",
+          "FILL_SEATS"
+        ],
+        "title": "SearchSurface",
+        "description": "Which terminal stage ran. Four values, and pooling their rates is how\nevery number the engine is judged by becomes meaningless \u2014 ``FILL_SEATS`` is\nnot even optimising for the searcher.\n\nOnly ``SHORTLIST`` can be written today; the other three arrive with their\nroutes. They are declared now because ``surface`` is a stored column and a\nvocabulary that grows one value per ticket is a vocabulary whose old rows\ncannot be read against the new ones."
+      },
+      "SharedSlot": {
+        "properties": {
+          "day": {
+            "type": "integer",
+            "maximum": 7.0,
+            "minimum": 1.0,
+            "title": "Day",
+            "description": "ISO weekday \u2014 1 is Monday, 7 is Sunday. The grid is Monday-first."
+          },
+          "part": {
+            "$ref": "#/components/schemas/DayPart",
+            "description": "Which part of that day"
+          }
+        },
+        "type": "object",
+        "required": [
+          "day",
+          "part"
+        ],
+        "title": "SharedSlot",
+        "description": "The next cell of the week both players ticked.\n\n**The grid is never rendered to anybody as a calendar.** Only the count of\nshared slots and the name of the next shared one are ever shown, because\noverlap is a fact about a pair where a calendar is a fact about a person."
+      },
+      "ShortlistResponse": {
+        "properties": {
+          "search": {
+            "$ref": "#/components/schemas/SearchEnvelope"
+          },
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/CandidateSchema"
+            },
+            "type": "array",
+            "title": "Candidates",
+            "description": "Ranked. **An empty list is a `200`** \u2014 the honest empty state is an answer, not a failure."
+          }
+        },
+        "type": "object",
+        "required": [
+          "search",
+          "candidates"
+        ],
+        "title": "ShortlistResponse",
+        "description": "The whole answer: one envelope, and at most twenty rows.\n\n**Bounded and unpaginated.** There is no page two; past the last row there\nare rung offers or an honest empty state. The bound is ruleset data, so a\nclient never reads twenty from anywhere \u2014 it renders the rows it is given."
       },
       "SocialTag": {
         "type": "string",
@@ -1955,6 +2878,59 @@
         "title": "SocialTagSelectionBoundsResource",
         "description": "How many Social tags a selection must hold to be one.\n\nThe unit is in both field names for the reason it is on the radius bounds:\na bare ``minimum`` beside a list of eighteen tags reads as a count of\nsomething, and which something is exactly what a client would guess wrong."
       },
+      "SocialVibeEvidence": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "social_vibe",
+            "title": "Kind",
+            "default": "social_vibe"
+          },
+          "matched": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Matched",
+            "description": "Tag ids they both hold, in this column"
+          },
+          "complementary": {
+            "items": {
+              "$ref": "#/components/schemas/TagPair"
+            },
+            "type": "array",
+            "title": "Complementary",
+            "description": "Pairs product claims fit together"
+          },
+          "clashing": {
+            "items": {
+              "$ref": "#/components/schemas/TagPair"
+            },
+            "type": "array",
+            "title": "Clashing",
+            "description": "Pairs product claims do not"
+          }
+        },
+        "type": "object",
+        "required": [
+          "matched",
+          "complementary",
+          "clashing"
+        ],
+        "title": "SocialVibeEvidence",
+        "description": "What the two of them are like around the game.\n\nThe same shape as playing style and deliberately a **separate variant**: the\ntwo terms carry different weights, invert between the modes, and a client\nrenders them under different headings. One variant with a column field would\nmake *which term is this* a value the client has to branch on rather than a\ntype it can dispatch over."
+      },
+      "SortOption": {
+        "type": "string",
+        "enum": [
+          "BEST_FIT",
+          "CLOSEST",
+          "EVENEST",
+          "MOST_RELIABLE"
+        ],
+        "title": "SortOption",
+        "description": "The re-sorts a client may offer over rows it already holds.\n\n**Server-driven, and a sort that would reorder nothing is not drawn.** A\nclient deriving offerability from ``degraded_terms`` would be encoding a\nsort-to-term mapping, which is the objection that promoted ``distance_km``\nout of the distance evidence in the first place.\n\n``MOST_RELIABLE`` is in the vocabulary and is never offered today: the\nreliability term stands down for everybody, so the control **is not drawn**\nrather than drawn and inert."
+      },
       "Sport": {
         "type": "string",
         "enum": [
@@ -2010,6 +2986,28 @@
         ],
         "title": "SportsResponse"
       },
+      "StrandReading": {
+        "properties": {
+          "strand": {
+            "$ref": "#/components/schemas/ReliabilityStrand",
+            "description": "Which of the six"
+          },
+          "value": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Value",
+            "description": "The strand's own reading"
+          }
+        },
+        "type": "object",
+        "required": [
+          "strand",
+          "value"
+        ],
+        "title": "StrandReading",
+        "description": "One reliability strand that produced a reading.\n\nA strand with too few observations **stands down and is absent from the\nlist** rather than present at zero: *we have not seen enough* and *they are\nbad at this* are different facts, and a term may never be honestly neutral."
+      },
       "SubmitAnswerRequest": {
         "properties": {
           "question_id": {
@@ -2029,6 +3027,42 @@
           "option_id"
         ],
         "title": "SubmitAnswerRequest"
+      },
+      "TagPair": {
+        "properties": {
+          "a": {
+            "type": "string",
+            "title": "A",
+            "description": "A Social tag id"
+          },
+          "b": {
+            "type": "string",
+            "title": "B",
+            "description": "The other Social tag id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "a",
+          "b"
+        ],
+        "title": "TagPair",
+        "description": "Two tag ids one relationship row fired on.\n\nIds only. The row's kind is the field it sits under, its column is the term\nit sits under, and its strength or severity is a ruleset number the player is\nnot shown \u2014 what is owed here is *which two things about you two this reads*."
+      },
+      "Term": {
+        "type": "string",
+        "enum": [
+          "LEVEL_FIT",
+          "PREDICTED_BALANCE",
+          "INTENT_ALIGNMENT",
+          "RELIABILITY",
+          "AVAILABILITY_OVERLAP",
+          "PLAYING_STYLE",
+          "DISTANCE",
+          "SOCIAL_VIBE"
+        ],
+        "title": "Term",
+        "description": "The eight terms of Fit, weighted per mode and renormalised per comparison.\n\nEight and not seven: the prototype's single ``vibe`` merges what the split\nbelow keeps apart, and intent alignment is the term the prototype never had.\n**The split between playing style and social vibe is by *relationship*, not\nby tag group** \u2014 every matrix row carries its own column\n(``ranking-weights.md`` \u00a71).\n\nDay one **reliability stands down** and the live seven renormalise; that is\nthe basis every judged reading and the quality floor were computed on."
       },
       "TokenResponse": {
         "properties": {
@@ -2245,6 +3279,18 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "Window": {
+        "type": "string",
+        "enum": [
+          "TODAY",
+          "TOMORROW",
+          "WEEKEND",
+          "THIS_WEEK",
+          "ANY"
+        ],
+        "title": "Window",
+        "description": "When a game found on a grid would plausibly be played. **A code, never a\nsentence** \u2014 *\"tonight\"* is the client's word (``docs/adr/0022``).\n\n**Derived, never chosen** (``docs/adr/0100``). There is no window picker\nanywhere: a player changes their window by changing their grid, which is the\nsame act that changes their matches. One control, one meaning.\n\nIt is a **label on the search**, not a proposed time \u2014 the grid is still\nnever rendered to anybody as a calendar, and this says only how soon the week\nit ran on comes round."
       }
     },
     "securitySchemes": {

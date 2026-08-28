@@ -22,6 +22,7 @@ from app.bootstrap.composition import (
     build_image_transcoder,
     build_photo_review,
     build_photo_storage,
+    build_play_intent_declaration_repository,
     build_player_profile_repository,
 )
 from app.modules.player_profile.application.commit_player_profile import (
@@ -35,6 +36,7 @@ from app.modules.player_profile.domain.ports import (
     PhotoReview,
     PhotoStorage,
     PlayerProfileRepository,
+    PlayIntentDeclarationRepository,
 )
 
 
@@ -115,6 +117,24 @@ def get_player_profile_repository(
 
 PlayerProfileRepositoryDep = Annotated[
     PlayerProfileRepository, Depends(get_player_profile_repository)
+]
+
+
+def get_play_intent_declaration_repository(
+    event_store: DomainEventStoreDep,
+    events: EventPublisherDep,
+) -> PlayIntentDeclarationRepository:
+    # Per request, for the reason the profile's is: it remembers the stream
+    # versions it read. Declared here rather than in the matchmaking module that
+    # first reads one, because *where a declaration comes from* is this
+    # context's answer to give.
+    return build_play_intent_declaration_repository(
+        event_store=event_store, events=events
+    )
+
+
+PlayIntentDeclarationRepositoryDep = Annotated[
+    PlayIntentDeclarationRepository, Depends(get_play_intent_declaration_repository)
 ]
 
 
