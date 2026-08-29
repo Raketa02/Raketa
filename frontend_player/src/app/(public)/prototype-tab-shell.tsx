@@ -33,6 +33,7 @@
  *   that survives a reload. The icons are §10.2's honest `currentColor` squares.
  */
 
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -432,6 +433,13 @@ function Switcher({
   const name = VARIANTS.find((v) => v.id === variant)?.name ?? '';
   return (
     <View style={[styles.switcher, { paddingTop: top + 6 }]}>
+      {/* #238 lives on a DIFFERENT route. This bar's squares never change, so landing
+          here looking for glyph variants shows nothing varying. One tap across. */}
+      <Pressable style={styles.crossLink} onPress={() => router.push('/prototype-tab-glyphs')}>
+        <Text style={styles.crossLinkText}>
+          #238 — the glyph prototype is on /prototype-tab-glyphs →
+        </Text>
+      </Pressable>
       <View style={styles.switchRow}>
         {VARIANTS.map((v) => (
           <Pressable
@@ -598,6 +606,15 @@ const styles = StyleSheet.create({
     right: 0,
     zIndex: 99,
   },
+  crossLink: {
+    backgroundColor: theme.color.volt,
+    borderRadius: theme.radius.pill,
+    paddingHorizontal: theme.space.sm,
+    paddingVertical: 4,
+    marginBottom: 2,
+  },
+  crossLinkText: { ...theme.type.tag, color: theme.color.ink, textAlign: 'center' },
+
   switchRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   pill: {
     paddingHorizontal: 8,
