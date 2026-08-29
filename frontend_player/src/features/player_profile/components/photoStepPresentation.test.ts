@@ -18,7 +18,9 @@ import {
   PHOTO_RULE_TITLE,
   POSTER_LABEL,
   PROMOTE_HINT,
+  FLAGGED_BODY,
   addControlLabel,
+  flaggedNoticeTitle,
   photoFailureMessage,
   photoTileHint,
   photoTileLabel,
@@ -30,7 +32,7 @@ function photo(upload: ProfilePhoto['upload']): ProfilePhoto {
   return { uri: 'file:///photos/one.jpg', mimeType: 'image/jpeg', upload };
 }
 
-const uploaded = photo({ kind: 'uploaded', photoId: 'photo-1' });
+const uploaded = photo({ kind: 'uploaded', photoId: 'photo-1', review: 'allowed' });
 
 describe('the rule the step states', () => {
   it('says what a photo must show, and what it must not', () => {
@@ -173,5 +175,51 @@ describe('why an upload failed', () => {
     expect(photoFailureMessage(new AppError('unknown', 'terminal', 'x'))).toBe(
       'Something went wrong at our end. Try again later.',
     );
+  });
+});
+
+describe('what a flagged photo is told', () => {
+  it('names which photo it is about, and what was not seen in it', () => {
+    // The position is how the sentence points at a tile — the same thing a failure does,
+    // because the row is three pictures and a warning that named none would be a warning
+    // about the step.
+    expect(flaggedNoticeTitle(1, 3)).toBe('Photo 2 of 3 — we could not see a court');
+  });
+
+  it('is written as our failure to see rather than the player’s failure to comply', () => {
+    // The reader may be somebody the check is wrong about. *We could not see a court* is
+    // the honest report of what happened; *this is not an on-court photo* is a verdict
+    // about a picture the machine may simply have got wrong.
+    expect(flaggedNoticeTitle(0, 1)).toContain('we could not see');
+    for (const accusation of [/you did not/i, /your photo does not/i, /not allowed/i]) {
+      expect(flaggedNoticeTitle(0, 1)).not.toMatch(accusation);
+      expect(FLAGGED_BODY).not.toMatch(accusation);
+    }
+  });
+
+  it('says nobody has looked, because nobody has', () => {
+    // Nothing reviews a flagged photo a second time. A sentence that let a player believe
+    // a person would get to it would be inventing a process to reassure them with.
+    expect(FLAGGED_BODY).toContain('nobody has looked');
+    expect(FLAGGED_BODY).toContain('automatic');
+  });
+
+  it('says the check gets it wrong, before it says what to do', () => {
+    expect(FLAGGED_BODY).toContain('gets it wrong');
+    expect(FLAGGED_BODY.indexOf('gets it wrong')).toBeLessThan(FLAGGED_BODY.indexOf('swap it'));
+  });
+
+  it('says nothing is blocked, and offers keeping it first', () => {
+    // A false positive costs a sentence, not a signup: the photo is stored, it keeps its
+    // id and it is committed. The player who is on a court is answered first, because
+    // they are the one the sentence risks insulting.
+    expect(FLAGGED_BODY).toContain('Nothing is blocked');
+    expect(FLAGGED_BODY.indexOf('keep it')).toBeLessThan(FLAGGED_BODY.indexOf('swap it'));
+  });
+
+  it('promises no review, no appeal and no removal', () => {
+    for (const invention of [/review/i, /appeal/i, /remov/i, /delet/i, /reject/i, /violat/i]) {
+      expect(FLAGGED_BODY).not.toMatch(invention);
+    }
   });
 });

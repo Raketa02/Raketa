@@ -11,6 +11,7 @@ import {
   addPhotos,
   mediaTypeOf,
   promoteToProfile,
+  flaggedPositions,
   recordUpload,
   removePhoto,
   slotsLeft,
@@ -23,7 +24,7 @@ function uploaded(name: string): ProfilePhoto {
   return {
     uri: `file:///photos/${name}.jpg`,
     mimeType: 'image/jpeg',
-    upload: { kind: 'uploaded', photoId: `id-${name}` },
+    upload: { kind: 'uploaded', photoId: `id-${name}`, review: 'allowed' },
   };
 }
 
@@ -198,5 +199,59 @@ describe('what a photo is sent as', () => {
   it('is a JPEG when the platform said nothing, because a type has to be named', () => {
     expect(mediaTypeOf(null)).toBe(ASSUMED_MEDIA_TYPE);
     expect(ASSUMED_MEDIA_TYPE).toBe('image/jpeg');
+  });
+});
+
+describe('what the on-court check made of a photo', () => {
+  /** The same shape as `uploaded`, with the verdict the check came back with. */
+  function flagged(name: string): ProfilePhoto {
+    return {
+      uri: `file:///photos/${name}.jpg`,
+      mimeType: 'image/jpeg',
+      upload: { kind: 'uploaded', photoId: `id-${name}`, review: 'flagged' },
+    };
+  }
+
+  it('names the flagged photos by their position in the row', () => {
+    // Positions rather than photos: the sentence the step puts on one says which tile it
+    // is about, exactly as a failure's does.
+    expect(flaggedPositions([uploaded('one'), flagged('two'), flagged('three')])).toEqual([1, 2]);
+  });
+
+  it('is nothing at all when every photo came back allowed', () => {
+    expect(flaggedPositions([uploaded('one'), uploaded('two')])).toEqual([]);
+  });
+
+  it('says nothing about a photo that has not arrived, or did not', () => {
+    // Neither has a verdict, because neither has an answer from the platform. A tile that
+    // is still going up must not be warned about, and one that failed has nothing stored
+    // for a check to have looked at.
+    const inFlight = recordUpload([uploaded('one')], 'file:///photos/one.jpg', {
+      kind: 'uploading',
+      progress: 0.5,
+    });
+    const failed = recordUpload([uploaded('two')], 'file:///photos/two.jpg', {
+      kind: 'failed',
+      error: failure,
+    });
+
+    expect(flaggedPositions(inFlight)).toEqual([]);
+    expect(flaggedPositions(failed)).toEqual([]);
+  });
+
+  it('does not keep a flagged photo out of the commit', () => {
+    // The whole of the rule: it warns, it never refuses. A flagged photo is stored, keeps
+    // its id and is committed with the rest — the cost of the check being wrong is a
+    // sentence, not a photograph the player loses.
+    expect(uploadedPhotoIds([uploaded('one'), flagged('two')])).toEqual(['id-one', 'id-two']);
+  });
+
+  it('does not move a flagged photo out of the lead', () => {
+    // Position one is the profile photo and nothing else decides it. A collection that
+    // demoted a flagged photo would be the check enforcing something it is not allowed to.
+    const held = [flagged('one'), uploaded('two')];
+
+    expect(uploadedPhotoIds(held)).toEqual(['id-one', 'id-two']);
+    expect(flaggedPositions(held)).toEqual([0]);
   });
 });

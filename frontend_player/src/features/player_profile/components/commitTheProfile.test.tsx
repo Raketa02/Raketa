@@ -384,11 +384,12 @@ describe('a photo still on its way up when the player reaches the finish', () =>
     aPhotoIsStillArriving();
 
     act(() => {
-      useProfileDraft
-        .getState()
-        .changePhotos((photos) =>
-          photos.map((photo) => ({ ...photo, upload: { kind: 'uploaded', photoId: 'photo-1' } })),
-        );
+      useProfileDraft.getState().changePhotos((photos) =>
+        photos.map((photo) => ({
+          ...photo,
+          upload: { kind: 'uploaded', photoId: 'photo-1', review: 'allowed' } as const,
+        })),
+      );
     });
 
     expect(finish().props.accessibilityState?.disabled).toBe(false);

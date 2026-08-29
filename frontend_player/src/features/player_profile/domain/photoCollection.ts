@@ -33,6 +33,22 @@
 import type { AppError } from '@/shared/errors';
 
 /**
+ * What the platform's on-court check concluded about one uploaded photo.
+ *
+ * **It warns; it never refuses.** A `flagged` photo is stored, keeps its id and is
+ * committed to the profile exactly like an `allowed` one — the ceiling, the order and
+ * `uploadedPhotoIds` do not read this, and nothing here removes a photo because of it. The
+ * only thing it changes is what the step says.
+ *
+ * Two values because the wire has two, and the client is deliberately not given a third for
+ * *the check did not run*: the backend answers `allowed` when its reviewer was unreachable,
+ * because an outage of ours is not a fact about the player's photograph. So there is no
+ * state here that means *we do not know*, and no sentence a screen would have to write for
+ * one.
+ */
+export type PhotoReview = 'allowed' | 'flagged';
+
+/**
  * The most a Player profile may hold.
  *
  * A constant rather than a served bound, unlike the tag floor and ceiling: `POST
@@ -42,14 +58,33 @@ import type { AppError } from '@/shared/errors';
  */
 export const PHOTO_CEILING = 3;
 
+/**
+ * What one finished upload came back with.
+ *
+ * A named shape rather than two fields spelled out in the arm below, because the wire
+ * boundary builds exactly this and the workbench stores exactly this — and two spellings
+ * of the same pair is the kind that drifts by one field.
+ */
+export interface UploadedPhoto {
+  /** The permanent id the commit carries. The signed URL beside it is not kept. */
+  readonly photoId: string;
+  readonly review: PhotoReview;
+}
+
 /** Where one photo has got to on its way into the profile. */
 export type PhotoUpload =
   /** In flight. `progress` is a fraction of the stages `httpUpload` can observe. */
   | { readonly kind: 'uploading'; readonly progress: number }
   /** It did not arrive. The error is kept so the tile can say why and offer the retry. */
   | { readonly kind: 'failed'; readonly error: AppError }
-  /** Stored. `photoId` is the permanent id the commit carries; the URL is not. */
-  | { readonly kind: 'uploaded'; readonly photoId: string };
+  /**
+   * Stored, with the id the commit carries and what the check made of it.
+   *
+   * `review` rides on this arm rather than on the photo, because it is a fact the *upload*
+   * came back with: a picked photo has no verdict, a failed one has none either, and a
+   * field on `ProfilePhoto` would be one the two other arms have to spell `undefined`.
+   */
+  | ({ readonly kind: 'uploaded' } & UploadedPhoto);
 
 /**
  * One photo, from the moment it is picked until the part ends.
@@ -200,6 +235,22 @@ export function recordUpload(
 export function uploadedPhotoIds(photos: readonly ProfilePhoto[]): readonly string[] {
   return photos.flatMap((photo) =>
     photo.upload.kind === 'uploaded' ? [photo.upload.photoId] : [],
+  );
+}
+
+/**
+ * Which held photos the check did not read as on-court, by position.
+ *
+ * **Positions rather than photos**, because the words the step puts on one name it by
+ * where it sits in the row — the same thing a failure does — and a caller holding a photo
+ * would have to find its index again to say which it meant.
+ *
+ * A flagged photo is in `uploadedPhotoIds` like any other and this is deliberately not
+ * consulted there: the warning is a sentence, not a filter (`PhotoReview`).
+ */
+export function flaggedPositions(photos: readonly ProfilePhoto[]): readonly number[] {
+  return photos.flatMap((photo, at) =>
+    photo.upload.kind === 'uploaded' && photo.upload.review === 'flagged' ? [at] : [],
   );
 }
 

@@ -30,7 +30,8 @@ not about the account — sign in, session restore), `onboarding` (the entry gat
 sports picker, the adaptive question loop, the explained result, and the summary and data
 screens a player leaves through) and `player_profile` (onboarding's **second part**, complete: seven
 steps over a client-held draft, and the one write that ends them — the Social tags picker,
-2 to 6 chips from a served vocabulary, the photos step, up to three court photos or none,
+2 to 6 chips from a served vocabulary, the photos step, up to three court photos or none, each
+one checked server-side against the on-court rule and **warned about rather than refused**,
 the availability grid, seven days by three parts of the day, blank on arrival and requiring
 one ticked cell of the twenty-one before it continues
 ([ADR-0102](../docs/adr/0102-silence-is-never-scored.md)), the location step, one foreground fix coarsened to about a kilometre before it is
@@ -52,6 +53,21 @@ refusal is a sentence under the box rather than a closed control
 renders when the server refuses by `adult_attestation_required` — an older build or a
 replayed request can carry a body this form would not have sent, and _try again_ would then
 be the one thing that is not true.
+
+**A flagged photo is warned about and never taken away**
+([ADR-0133](../docs/adr/0133-the-verdict-crosses-on-the-upload-and-the-warning-may-be-wrong.md)).
+Every upload is scored server-side against *shows a racket sport on a court*, and the answer
+comes back on the upload response as a code — `allowed` or `flagged`, never a sentence, and
+never the evidence it was taken from. The step is what writes the sentence, in
+`photoStepPresentation`. **The check is wrong about some unknown share of what it flags**, so
+the copy reports *we could not see a court* rather than accusing anybody, says nobody has
+looked because nothing reviews a flagged photo a second time, says nothing is blocked because
+the photo is stored and committed like any other, and offers keeping it before swapping it.
+The photo keeps its place, keeps the lead if it had it, is in `photo_ids`, and `Continue` is
+not touched. The step does **not** announce the check up front: that is small print to the
+majority whose photo is fine and reads as a threat to the rest. `null` on the wire means *this
+response said nothing*, which is not `allowed` — the mapper collapses it toward silence, and a
+verdict this build has no words for is collapsed the same way.
 
 **The gender step says what narrowing costs, at the moment of the press.** The preference
 is a **mutual** gate: setting _Women only_ does not only filter what a player sees, it hides

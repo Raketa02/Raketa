@@ -1,5 +1,11 @@
 /**
- * Send one picked photo, and answer with the id a profile commit will carry.
+ * Send one picked photo, and answer with the id a profile commit will carry — and the
+ * verdict the platform's on-court check reached on it.
+ *
+ * **The verdict is carried, never acted on here.** It changes no id, cancels no upload and
+ * removes no photo: the check soft-warns, and what a warning looks like is a sentence the
+ * step writes. All this does is stop the answer being thrown away between the wire and the
+ * workbench, which is what it was doing.
  *
  * **One call, one photo.** Nothing here batches, queues or retries: the step owns which
  * photo is being sent and what happens when one fails, because those are decisions about a
@@ -13,8 +19,8 @@
  */
 
 import { uploadPhoto } from '../api/playerProfileApi';
-import { mediaTypeOf } from '../domain/photoCollection';
-import { toUploadedPhotoId } from '../mappers/playerProfileMappers';
+import { mediaTypeOf, type UploadedPhoto } from '../domain/photoCollection';
+import { toUploadedPhoto } from '../mappers/playerProfileMappers';
 
 export interface UploadProfilePhotoInput {
   /** The local `file://` URI the picking port handed over. */
@@ -31,11 +37,11 @@ export function uploadProfilePhoto({
   mimeType,
   onProgress,
   signal,
-}: UploadProfilePhotoInput): Promise<string> {
+}: UploadProfilePhotoInput): Promise<UploadedPhoto> {
   return uploadPhoto({
     uri,
     contentType: mediaTypeOf(mimeType),
     onProgress,
     signal,
-  }).then(toUploadedPhotoId);
+  }).then(toUploadedPhoto);
 }

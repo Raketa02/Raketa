@@ -107,9 +107,12 @@ export function useProfilePhotos() {
             recordUpload(current, photo.uri, { kind: 'uploading', progress }),
           ),
       }).then(
-        (photoId) =>
+        // The verdict is written down with the id and nothing here reads it. Whether a
+        // flagged photo is worth a sentence — and which one — is the step's, and the
+        // queue that runs the uploads has no business holding an opinion about it.
+        ({ photoId, review }) =>
           changePhotos((current) =>
-            recordUpload(current, photo.uri, { kind: 'uploaded', photoId }),
+            recordUpload(current, photo.uri, { kind: 'uploaded', photoId, review }),
           ),
         (cause: unknown) =>
           changePhotos((current) =>

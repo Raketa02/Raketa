@@ -1,10 +1,15 @@
 /**
  * The words on the photos step.
  *
- * **The copy states the on-court rule and claims no check is performed.** There is no
- * content review running in this build, and a screen that said *we check* would be telling
- * a player something untrue about how the product works — the one kind of copy defect that
- * survives a redesign, because nobody re-reads a sentence they believe.
+ * **The copy states the on-court rule, and the check is only ever mentioned to the player it
+ * has something to say about.** There *is* a review running now — every upload is scored
+ * server-side against the rule and the answer comes back on the response
+ * ([ADR-0129](../../../../../docs/adr/0129-the-photo-check-is-a-sidecar-the-backend-asks.md))
+ * — so the sentence this file used to be careful not to write is no longer untrue. It is
+ * still not written. Announcing *we check every photo* up front is small print for the
+ * majority whose photo is fine, and it reads as a threat to the rest; it is the same
+ * argument that took the third line off this step. The check earns a sentence at the one
+ * moment it has a claim to make, and that sentence is `FLAGGED_TITLE` and `FLAGGED_BODY`.
  *
  * `Three is the ceiling` deliberately mirrors the tags step's ceiling refusal: a fact,
  * stated without apology and without *you can only*. **The two are one decision** — do not
@@ -34,10 +39,12 @@ export function photosEyebrow(): string {
 }
 
 /**
- * The one thing this screen asks a player to understand, and the one it must not claim.
+ * The one thing this screen asks a player to understand.
  *
- * It says what a photo is **for** rather than listing what is banned, and it claims no
- * check — there is no content review running in this build.
+ * It says what a photo is **for** rather than listing what is banned, and it is the words
+ * a flagged photo's warning is measured against: the check is the same rule, applied by a
+ * machine, so a player who read this and was warned anyway must not have to work out which
+ * rule they are being told about.
  */
 export const PHOTO_RULE_TITLE = 'Rackets mandatory, faces optional';
 
@@ -69,6 +76,39 @@ export const CEILING_BODY =
 export const PROFILE_WORD = 'Profile';
 export const FAILED_WORD = 'Failed';
 
+/**
+ * What one photo the check did not read as on-court is told, and it is a warning.
+ *
+ * **The reader of this sentence may be somebody the check is wrong about**, and that is the
+ * whole of the design problem — the flag rate is a fact about a corpus nobody has measured
+ * yet, so some share of the people who see it are on a court in the photograph they just
+ * picked. Four things follow, and every clause here is one of them.
+ *
+ * It is written as **our** failure to see rather than the player's failure to comply. *We
+ * could not see a court* is the honest report of what happened; *this is not an on-court
+ * photo* is a verdict about a picture the machine may simply have got wrong.
+ *
+ * It says **nobody has looked**, because nobody has. Nothing reviews a flagged photo a
+ * second time — there is no queue and no human at the end of one — and a warning that let a
+ * player believe otherwise would be inventing a process to reassure them with.
+ *
+ * It says **nothing is blocked**, because nothing is: the photo is stored, it keeps its id,
+ * it is committed with the profile, and `Continue` was never disabled by this. A false
+ * positive has to cost a sentence, not a signup.
+ *
+ * And it ends by naming the **choice**, in that order: keep it if the check is wrong, swap
+ * it if it is not. A player who is on a court is told first, because they are the one the
+ * sentence risks insulting.
+ */
+export function flaggedNoticeTitle(at: number, held: number): string {
+  return `${photoPosition(at, held)} — we could not see a court`;
+}
+
+export const FLAGGED_BODY =
+  'The check is automatic, nobody has looked at your photo, and it gets it wrong ' +
+  'sometimes. Nothing is blocked — keep it if you are on a court in it, and swap it if ' +
+  'you are not.';
+
 /** How many slots remain, said out loud — the row's arithmetic is invisible otherwise. */
 export function addControlLabel(slots: number): string {
   return slots === 1
@@ -82,8 +122,12 @@ export function addControlLabel(slots: number): string {
  * *Of how many* is the number of photos the player actually has, not the ceiling: "Photo 1
  * of 3" on a row holding one would be counting the empty space beside it.
  */
+function photoPosition(at: number, held: number): string {
+  return `Photo ${at + 1} of ${held}`;
+}
+
 export function photoTileLabel(photo: ProfilePhoto, at: number, held: number): string {
-  const position = `Photo ${at + 1} of ${held}`;
+  const position = photoPosition(at, held);
 
   if (photo.upload.kind === 'uploading') return `${position}, uploading`;
   if (photo.upload.kind === 'failed') return `${position}, upload failed`;

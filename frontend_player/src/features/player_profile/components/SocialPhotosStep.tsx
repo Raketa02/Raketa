@@ -28,11 +28,18 @@
  * one fails — the other two keep their state, and pressing the red tile sends that one
  * again.
  *
- * ## The copy states the rule and claims no check
+ * ## The rule is stated once; the check speaks only when it has something to say
  *
- * There is no content review running in this build. The note says what a photo is for and
- * what it should show; it does not say we look, because we do not
+ * The note at the top says what a photo is for and what it should show, and it does not
+ * announce that anything is checked — announcing it to the majority whose photo is fine is
+ * small print, and it reads as a threat to the rest. Every upload *is* checked, and a photo
+ * the check did not read as on-court gets its own amber note under the row
  * (`photoStepPresentation`).
+ *
+ * **It is a warning and it is not a refusal.** A flagged photo is drawn like any other, it
+ * keeps its place and its id, it goes into the commit, and `Continue` is not touched by it.
+ * The check is wrong about some share of the photos it flags — nobody knows what share yet —
+ * so the cost of being wrong has to be a sentence a player can disagree with.
  *
  * **Two lines of small print are gone**: the line under the title, and the one under the row
  * saying that no photo is fine. Neither was untrue — the ceiling and the *or none at all*
@@ -55,7 +62,7 @@ import {
   type PhotoTileFoot,
 } from '@/shared/ui';
 
-import { slotsLeft, type ProfilePhoto } from '../domain/photoCollection';
+import { flaggedPositions, slotsLeft, type ProfilePhoto } from '../domain/photoCollection';
 import { stepAfter } from '../domain/socialSteps';
 import { useProfilePhotos } from '../hooks/useProfilePhotos';
 
@@ -70,12 +77,14 @@ import {
   CEILING_BODY,
   CEILING_TITLE,
   FAILED_WORD,
+  FLAGGED_BODY,
   PHOTO_RULE_BODY,
   PHOTO_RULE_TITLE,
   POSTER_LABEL,
   PROFILE_WORD,
   PROMOTE_LINE,
   addControlLabel,
+  flaggedNoticeTitle,
   photoFailureMessage,
   photoTileHint,
   photoTileLabel,
@@ -113,6 +122,9 @@ export function SocialPhotosStep() {
       ? [{ at, message: photoFailureMessage(photo.upload.error) }]
       : [],
   );
+  // One note per flagged photo, for the reason there is one per failure: the sentence names
+  // which tile it is about, and a single note over two of them would name neither.
+  const flagged = flaggedPositions(photos);
 
   return (
     <SocialStepLayout
@@ -197,6 +209,21 @@ export function SocialPhotosStep() {
           title={photoTileLabel(photos[failure.at]!, failure.at, photos.length)}
         >
           {failure.message}
+        </Note>
+      ))}
+
+      {/* Amber and not coral, and after the failures: a photo that did not arrive is
+          something the player has to act on, and this is something they may ignore. [1.2]
+          keeps coral for the five places it belongs, and a warning about a photo that is
+          sitting right there in the row is not one of them. */}
+      {flagged.map((at) => (
+        <Note
+          key={`flagged-${at}`}
+          variant="amber"
+          accessibilityRole="alert"
+          title={flaggedNoticeTitle(at, photos.length)}
+        >
+          {FLAGGED_BODY}
         </Note>
       ))}
     </SocialStepLayout>

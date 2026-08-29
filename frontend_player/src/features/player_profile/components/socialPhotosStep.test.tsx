@@ -66,20 +66,24 @@ const LIBRARY = [
 let transport: Transport;
 let library: FakeImagePicking;
 
-function photoStored(photoId: string): Wire['PhotoResponse'] {
+function photoStored(
+  photoId: string,
+  review: Wire['PhotoResponse']['review'] = 'allowed',
+): Wire['PhotoResponse'] {
   return {
     photo_id: photoId,
     url: `https://store.test/${photoId}?signature=whatever`,
     expires_at: '2026-08-25T12:00:00Z',
+    review,
   };
 }
 
 /** The store accepts every photo, naming each one after the file it was sent as. */
-function stubUploads() {
+function stubUploads(review: Wire['PhotoResponse']['review'] = 'allowed') {
   let uploaded = 0;
   transport.on('POST', PHOTOS_PATH, () => {
     uploaded += 1;
-    return json(photoStored(`photo-${uploaded}`), 201);
+    return json(photoStored(`photo-${uploaded}`, review), 201);
   });
 }
 
@@ -176,9 +180,11 @@ describe('the words on the step', () => {
     expect(screen.getByText(/Not a selfie, not the beach, not the gym mirror/)).toBeTruthy();
   });
 
-  it('claims no check is performed on what is in the picture', async () => {
-    // There is no content review running in this build. A screen that said we look would
-    // be telling the player something untrue about how the product works.
+  it('does not announce the check to a player it has nothing to say to', async () => {
+    // Every upload *is* checked now. Saying so up front is small print for the majority
+    // whose photo is fine and reads as a threat to the rest — the same argument that took
+    // the third line off this step. The check earns a sentence at the one moment it has a
+    // claim to make, and this player has not uploaded anything.
     await reachThePhotosStep();
 
     for (const claim of [/we check/i, /reviewed/i, /moderat/i, /approved/i, /verified/i]) {
@@ -596,5 +602,99 @@ describe('who the poster is drawn for', () => {
     expect(
       transport.requests.filter((request) => request.path === '/api/v1/users/me').length,
     ).toBeLessThanOrEqual(2);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// A photo the on-court check did not read as on-court
+// ---------------------------------------------------------------------------
+
+describe('a flagged photo', () => {
+  it('is warned about by name, and the warning is announced', async () => {
+    // Announced rather than left beside the row: the player is looking at a picture they
+    // just chose, not at the space under it, and a warning they have to hunt for is a
+    // screen that did nothing.
+    stubUploads('flagged');
+    library.library = [LIBRARY[0]!, LIBRARY[1]!];
+    await reachThePhotosStep();
+
+    await addPhotos();
+    await settled(2);
+
+    const warnings = await screen.findAllByText(/we could not see a court/);
+    expect(warnings.map((node) => String(node.props.children))).toEqual([
+      'Photo 1 of 2 — we could not see a court',
+      'Photo 2 of 2 — we could not see a court',
+    ]);
+    // One note per flagged photo, each one an alert: a single note over two of them would
+    // name neither, which is the same reason there is one per failure.
+    expect(screen.getAllByRole('alert')).toHaveLength(2);
+    expect(screen.getAllByText(/Nothing is blocked/)).toHaveLength(2);
+  });
+
+  it('is kept, keeps its place, and goes into the draft like any other', async () => {
+    // The whole of the rule the backend ships: it warns and it never refuses. A false
+    // positive costs a sentence, not a photograph and not a signup.
+    stubUploads('flagged');
+    library.library = [LIBRARY[0]!];
+    await reachThePhotosStep();
+
+    await addPhotos();
+    await settled(1);
+
+    expect(tileLabels()).toEqual(['Photo 1 of 1, profile photo']);
+    expect(useProfileDraft.getState().draft?.photoIds).toEqual(['photo-1']);
+  });
+
+  it('does not stand between the player and the next step', async () => {
+    stubUploads('flagged');
+    library.library = [LIBRARY[0]!];
+    await reachThePhotosStep();
+    await addPhotos();
+    await settled(1);
+
+    fireEvent.press(screen.getByLabelText('Continue'));
+
+    await waitFor(() => expect(screen).toHavePathname('/availability'));
+    expect(useProfileDraft.getState().draft?.photoIds).toEqual(['photo-1']);
+  });
+
+  it('stops being warned about the moment it is removed', async () => {
+    // The note is derived from the row rather than held beside it, so removing the photo
+    // takes its sentence with it — a warning still on screen about a picture that is gone
+    // is a warning that lies.
+    stubUploads('flagged');
+    library.library = [LIBRARY[0]!];
+    await reachThePhotosStep();
+    await addPhotos();
+    await settled(1);
+
+    fireEvent.press(screen.getByLabelText('Remove photo 1 of 1'));
+
+    await waitFor(() => expect(screen.queryByText(/we could not see a court/)).toBeNull());
+  });
+
+  it('is not what an allowed photo gets', async () => {
+    stubUploads('allowed');
+    library.library = [LIBRARY[0]!];
+    await reachThePhotosStep();
+
+    await addPhotos();
+    await settled(1);
+
+    expect(screen.queryByText(/we could not see a court/)).toBeNull();
+  });
+
+  it('is not what a photo still going up gets, nor one that failed', async () => {
+    // Neither has an answer from the platform: one has not been looked at yet and the
+    // other was never stored. A tile that warned on either would be inventing a verdict.
+    transport.on('POST', PHOTOS_PATH, () => errorResponse(500, 'server_error', 'nope'));
+    library.library = [LIBRARY[0]!];
+    await reachThePhotosStep();
+
+    await addPhotos();
+
+    await screen.findByLabelText('Photo 1 of 1, upload failed');
+    expect(screen.queryByText(/we could not see a court/)).toBeNull();
   });
 });

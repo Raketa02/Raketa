@@ -10,7 +10,7 @@ import type { Wire } from '@/test-support/transport';
 
 import type { ProfileCommit } from '../domain/profileCommit';
 
-import { toCommitRequest, toProfileOptions } from './playerProfileMappers';
+import { toCommitRequest, toProfileOptions, toUploadedPhoto } from './playerProfileMappers';
 
 const SERVED: Wire['PlayerProfileOptionsResponse'] = {
   social_tag_groups: [
@@ -207,5 +207,55 @@ describe('the body that ends the part', () => {
     });
 
     expect(afternoon.availability).toEqual([{ day: 3, part: 'AFTERNOON' }]);
+  });
+});
+
+describe('what an upload answered', () => {
+  function answered(review: Wire['PhotoResponse']['review']): Wire['PhotoResponse'] {
+    return {
+      photo_id: 'photo-1',
+      url: 'https://store.test/photo-1?signature=whatever',
+      expires_at: '2026-08-25T12:00:00Z',
+      review,
+    };
+  }
+
+  it('carries the id and the verdict, and neither the URL nor the expiry', () => {
+    // The URL is not an identifier and must not be stored as one: the tile is drawing the
+    // device's own copy, so a second, expiring address for the same picture is a round
+    // trip to see what is already on screen — and a mapper that carried one would invite
+    // somebody to keep it.
+    expect(toUploadedPhoto(answered('flagged'))).toEqual({
+      photoId: 'photo-1',
+      review: 'flagged',
+    });
+  });
+
+  it('reads a verdict that says nothing was wrong as exactly that', () => {
+    expect(toUploadedPhoto(answered('allowed')).review).toBe('allowed');
+  });
+
+  it('warns about nothing when the response carried no verdict at all', () => {
+    // `GET /photos/{id}` carries none, and so does any backend older than the one that
+    // added the field. `null` is explicitly not `allowed` on the wire so that this
+    // decision is made here — and *nobody said anything* is not a reason to tell a player
+    // their photograph looks wrong.
+    expect(toUploadedPhoto(answered(null)).review).toBe('allowed');
+    expect(toUploadedPhoto(answered(undefined)).review).toBe('allowed');
+  });
+
+  it('warns about nothing on a verdict this build has no sentence for', () => {
+    // The phone that has not been updated in eight months, meeting a decision minted
+    // after it shipped. A warning the app cannot phrase is one it must not invent — the
+    // same answer a tag with no label gets, arrived at the same way.
+    // Through `unknown`, because the generated union is exactly the set of verdicts this
+    // build knows and a body carrying a fourth is by definition one it cannot be given a
+    // type for. That is the case under test, not a hole in it.
+    const fromTheFuture = {
+      ...answered('allowed'),
+      review: 'quarantined',
+    } as unknown as Wire['PhotoResponse'];
+
+    expect(toUploadedPhoto(fromTheFuture).review).toBe('allowed');
   });
 });

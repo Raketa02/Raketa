@@ -25,6 +25,7 @@
 import type { components } from '@/generated/schema';
 
 import type { Gender, GenderPreference } from '../domain/gender';
+import type { PhotoReview, UploadedPhoto } from '../domain/photoCollection';
 import type { ProfileOptions } from '../domain/ProfileOptions';
 import type { DayPart } from '../domain/ProfileDraft';
 import type { ProfileCommit } from '../domain/profileCommit';
@@ -43,6 +44,7 @@ type CommitPlayerProfileRequest = components['schemas']['CommitPlayerProfileRequ
 type WireDayPart = components['schemas']['DayPart'];
 type WireGender = components['schemas']['Gender'];
 type WireGenderPreference = components['schemas']['GenderPreference'];
+type WirePhotoReview = components['schemas']['PhotoReviewDecision'];
 
 /**
  * One spelling, not two.
@@ -98,16 +100,51 @@ export function toProfileOptions(response: PlayerProfileOptionsResponse): Profil
 }
 
 /**
- * The permanent id out of an upload's answer, and nothing else out of it.
+ * The two spellings of a verdict, which are the same word and still get a table.
  *
- * `PhotoResponse` carries a signed URL and an expiry beside the id, and both stop at this
+ * The reason is the day parts', not the tag ids': `PhotoReview` is an enum the app speaks
+ * in its own words rather than an id it stores and sends back, so a third value on either
+ * side stops this file compiling instead of producing a string the row has no sentence for.
+ */
+const APP_PHOTO_REVIEW: Readonly<Record<WirePhotoReview, PhotoReview>> = {
+  allowed: 'allowed',
+  flagged: 'flagged',
+};
+
+/**
+ * What the check concluded, or `allowed` where it said nothing this build understands.
+ *
+ * Two absences fold into the same answer and both are deliberate. The field is **optional
+ * on the wire** — `GET /photos/{id}` carries no verdict at all, and so does any response
+ * from a backend older than the one that added it — and a value outside the table is a
+ * decision minted after this build shipped, which is the phone that has not been updated in
+ * eight months. Neither is a reason to warn: a warning the app cannot phrase is a warning
+ * it must not invent, and `null` is explicitly not `allowed` on the wire precisely so that
+ * this decision is made here rather than assumed there.
+ *
+ * The same answer `toSocialTagId` gives a tag with no label, arrived at the same way — the
+ * difference is only that a chip with no words can be dropped and a photograph cannot.
+ */
+function toPhotoReview(served: PhotoResponse['review']): PhotoReview {
+  return served == null ? 'allowed' : (APP_PHOTO_REVIEW[served] ?? 'allowed');
+}
+
+/**
+ * The permanent id and the verdict out of an upload's answer, and nothing else out of it.
+ *
+ * `PhotoResponse` carries a signed URL and an expiry beside them, and both stop at this
  * boundary on purpose: **the URL is not an identifier and must not be stored as one.** The
  * tile is already drawing the device's own copy, so the client has no use for a second,
  * expiring address for the same picture — and a mapper that carried one would be an
  * invitation to keep it.
+ *
+ * The verdict does cross, because it is the one thing in that answer the player is told
+ * about. What it was computed from does not cross the *wire* at all: the model, the prompt
+ * set and the similarity vector stay on the stored object, so there is nothing here to
+ * decide about them.
  */
-export function toUploadedPhotoId(response: PhotoResponse): string {
-  return response.photo_id;
+export function toUploadedPhoto(response: PhotoResponse): UploadedPhoto {
+  return { photoId: response.photo_id, review: toPhotoReview(response.review) };
 }
 
 /**
