@@ -969,8 +969,13 @@ where, money, results or the conversation itself belongs here.
   They do the same thing to the line-up and they are different facts: *answers challenges* is a
   **Strand** over challenges that got an answer inside their window, and it is unmeasurable if
   silence and a no are one event.
-- **Open challenge** — a Challenge that has not ended. What the matcher excludes a pair on, and
-  what **Challenge load** counts.
+- **Open challenge** — a Challenge that has not ended. What the matcher excludes a pair on. Read
+  from the seats and the clock like the Standing itself, so a seat whose window has passed is not
+  open whether or not anything swept it.
+- **Challenge load** — how many seats are waiting on one player's answer: invited, unanswered and
+  still inside their window, **across every sport**. Not what they organised and not what they have
+  already accepted — the matcher sinks a player on load to predict *will this person answer me*,
+  and somebody with eight sends out is over-committed but is not slow to answer.
 
 **Invariants**
 
@@ -995,7 +1000,10 @@ where, money, results or the conversation itself belongs here.
 - **One open challenge per pair, across every sport.** Two people are either arranging a game or
   they are not; asking for padel while your tennis challenge sits unanswered is pestering with a
   sport chip on it. The matcher's `OpenChallenge` carries no sport, so this is the rule its shipped
-  contract already assumes rather than a new restriction.
+  contract already assumes rather than a new restriction. **Sharing a line-up makes a pair**: every
+  occupied seat but your own is somebody you have an open game with, co-invitees and organiser
+  alike — and a seat that declined or lapsed is empty again, so that person is a stranger to you
+  once more the moment they leave.
 - **No day, part of day, hour or place is ever attached.** The challenge carries a **Window**
   derived from the grid, and the players agree the hour themselves once a court can exist.
 - **A late answer is refused.** Past your own answer window the seat already reads as lapsed and
