@@ -688,3 +688,308 @@ exhaustive by type; neither is reachable.
 - **Anything on an out-of-scope surface** — the record sheets, *Show them again*, the
   seat-impact line, at-stake, Player Score's strands, languages. A code with no surface gets
   no words, and the map's Out of scope is the list.
+- **A clash word for the two tag-term concerns, and `KEEP_THESE_TIMES`'s colour-named body**
+  — both surfaced by §20 and named there rather than invented.
+
+---
+
+## 20. What each control announces
+
+Decided by
+[What each Play control announces](https://github.com/Raketa02/Raketa/issues/236).
+
+`design-system.md` [Part 13](../../../frontend_player/docs/design-system.md#part-13--accessibility)
+is the **requirement** — names on everything tappable, `accessibilityState` on selected
+chips, modal semantics on the sheet, an announcement on every toast, and *"never colour as
+the only signal."* §E6 is the **inventory**, and it opens by recording what the prototype
+has: *"seven `aria-label`s in the whole file, two of them in this feature. No `role`, no
+`aria-live`, no `alt`, no `aria-selected`, no `aria-pressed`."*
+
+Neither is the **sentences**, and Part 13's rule is that *"a control's label is its content
+**and** its state."* An accessible name is copy — it is localisable, it quotes numbers that
+need §B16's formats, and it composes codes whose sentences are already in this file. So it
+lives here, through §1's mechanism and no other: **code → message, never message → message.**
+A label is never a template inlined in a component.
+
+**§E6 is a starting inventory, not a specification.** Five of its rows are rewritten below
+rather than adopted, and each rewrite says why.
+
+### 20.1 The rule that decides an element
+
+Part 13's two worked examples disagree on their face and the rule has to reconcile them: the
+question navigator is *"one element, one label — never one per segment"*, where the
+availability grid is twenty-one elements with the column heads hidden.
+
+> **One accessibility element per action. Everything with no action of its own merges into
+> the nearest action above it.**
+
+Actions are what a listener navigates *by*. The navigator has none, so it is one element; a
+grid cell is an answer, so there are twenty-one. This is the same rule stated once instead of
+twice, and it is the rule §G3's component boundaries are drawn against —
+[#240](https://github.com/Raketa02/Raketa/issues/240) decides the **React component tree**,
+this file decides the **accessibility tree**, and they are independent: a card may be one
+element built from six components, or six elements built from one.
+
+**The cap is on what precedes an action, not on the label.** A merged label leads with the
+identifying facts and continues with the argument; a listener who has heard enough interrupts
+and acts. Roughly twenty words before the first action is the bound, and a merged label that
+cannot state its subject inside it is evidence the seam is wrong.
+
+### 20.2 The role vocabulary — React Native, not ARIA
+
+§E6 asks for `tablist`, `radiogroup`, `switch`, `progressbar`, `image`, `dialog` and
+`status`. React Native's `accessibilityRole` has near-namesakes for most, and its
+`accessibilityState` offers only `{disabled, selected, checked, busy, expanded}` — **no
+`pressed`**, which §E6 asks for three times.
+
+> **Prefer the role that carries the state; where no role carries it, the label carries it;
+> never style alone.**
+
+That is [6.8](../../../frontend_player/docs/design-system.md#68-the-availability-grid)'s own
+argument — *"`checkbox` rather than `button` because the state is the point and the role is
+what carries it: 21 buttons announce 21 identical actions, where 21 checkboxes announce 21
+answers"* — and [6.10](../../../frontend_player/docs/design-system.md#610-the-radius-slider)'s,
+and [7.9](../../../frontend_player/docs/design-system.md#79-the-question-navigator)'s refusal
+of `progressbar` for a control with no max.
+
+Where §E6 says *pressed* — a seat selected for a swap — it becomes `selected`, the state
+React Native actually ships.
+
+### 20.3 The candidate card
+
+The card body's action is *Why 78?* — [#231](https://github.com/Raketa02/Raketa/issues/231)
+repointed the long-press there when K-7 ruled the record sheets out. So the card is **two
+elements**: the body, and its primary button. The fit pill is not a third; it merges.
+
+**The card is spoken in a different order than it is drawn.** Identifying facts lead, the
+argument follows. This is the one recorded divergence from visual order in the feature, and
+it exists because §10 is titled *Why this person is on the list* — dropping the reason lines
+to satisfy a word count would delete what the card is for.
+
+| | |
+| --- | --- |
+| **Card body** | `button`. `{name}. Fit {n} out of 100. {level} · {band} · likely {low}–{high}. {In your area · }{km} km. {reason}. {reason}. {reason}. {reason}. {concern}.` |
+| **Primary button** | `button`. `Add {name} to the court` · `Challenge {name}` — the visible label is *Add* / *Let's play*, which announces identically on twenty cards. Naming the subject is [6.9](../../../frontend_player/docs/design-system.md#69-the-photo-tile-and-picker)'s remove control, whose label *"names which photo it removes"*. |
+
+`{name}` is §15's `playerName()` — **the handle, whole.** A seat label may truncate; a spoken
+name never does.
+
+**`Fit {n} out of 100`, not §E6's *"Match score 78 out of 99"*.** Fit is `CONTEXT.md`'s term
+— *"how good the game would be, printed on the card as one number out of a hundred"* — and
+*Match Fit* is the engine's name, which a card must not borrow. **§E6 rewritten, first of
+five.**
+
+**The ✦ is hidden**, per §E6, and it is hidden by the merge rather than by a separate rule.
+
+**A concern needs no marker, seven times out of nine.** §7's sentences carry their own
+polarity — *A wide level gap — the game may be one-sided*, *Their record is thin on turning
+up*, *A long way out*. The two tag terms do not: `{a} against {b} on court` and `{a} against
+{b} around the game` read as neutral description, and a listener cannot hear the amber. §20.12
+books the gap rather than inventing the word here.
+
+### 20.4 The court — side and role, never an index
+
+§E6 proposes *"Seat 3, Marek Z., level 2,92. Tap to replace."* **An index is not a place.** A
+listener has no picture of the court, and H-25 makes the number mean different things in
+different sports — squash puts both players on the same half, so seat 3 is not where seat 3
+was. **§E6 rewritten, second, third and fourth of five** — the seat, the clear badge and the
+empty seat all lose their numbers.
+
+| | |
+| --- | --- |
+| **Court** | A summary element preceding the seats: `{Sport}, {n} of {m} seats filled.` Four seats announced against nothing is four seats a listener cannot place. |
+| **Seat, them** | `button`. `{side}, {name}, level {level}` |
+| **Seat, you** | `button`. `{side}, you` |
+| **Seat, your partner** | `button`. `{side}, {name}, level {level}` |
+| **Seat, empty** | `button`. `{side}, empty{. UnfilledReason}` — §11's sentence when the engine has one, nothing when the seat was never filled |
+| **Seat, selected for a swap** | the above, plus `accessibilityState={{ selected: true }}` |
+| **Clear badge** | `button`. `Remove {name} from {side}` |
+| **Swap toggle** | `switch`. `Swap players`, `checked` |
+| **Balance bar** | `image`. §B9's balance word and its figure — the word is the point, since the bar is a colour |
+
+`{side}` is *your side* / *their side*, and in doubles the partner seat says *your side, your
+partner*. The **holding ring** — the 430 ms press feedback — announces nothing: it exists to
+confirm a finger is down, on a channel this listener is not using.
+
+**The 9,5pt seat label does not earn `allowFontScaling={false}`.** Part 13 permits the escape
+only *"inside the level bar's drawn geometry"*, and §15 already ruled the court's case the
+other way: *"a seat label may truncate visually; a sentence may not, and a spoken name never
+does."* The visible label scales and truncates, the spoken one is whole, and nothing is
+invented. **This also settles [#240](https://github.com/Raketa02/Raketa/issues/240)'s
+truncation question**, which is recorded there rather than held by both.
+
+### 20.5 The deck
+
+The deck card is §20.3's card with two buttons instead of one.
+
+| | |
+| --- | --- |
+| **Not today** | `button`. `Not today, {name}` |
+| **Let's play** | `button`. `Let's play, {name}` — the 🎾 hidden, per §E6: *"otherwise it announces as 'tennis ball let's play'"* |
+
+**When a card leaves, two things happen and both are deliberate.** §E3's first finding is that
+focus is destroyed on every render and nothing restores it, so today a listener is dropped at
+the root with no idea what happened. The toast announces the act; an explicit
+`setAccessibilityFocus` moves focus to the incoming card's body. #228 §12 made both actions
+optimistic, so the next card is already there to receive it.
+
+**If the swipe of UI Open decision #9 ships, it is never the only path.** VoiceOver and
+TalkBack consume the drag before the card sees it, so a swipe-only deck is one a listener
+cannot answer. §E2 records the two buttons as what exists today; they stay.
+
+### 20.6 The sheets — three, not five
+
+`SH.player` and `SH.playersocial` are out of scope (K-7), so the five are **three**, plus the
+prompt sheet carrying §12's four prompts.
+
+Part 13 already locks `accessibilityViewIsModal`, hidden siblings, and focus returned to the
+trigger on close. The one thing it leaves open is where focus lands on the way *in*:
+
+> **The title, not the first action — one rule for all of them.**
+
+`SH.whyfit` is an explanation with no action worth jumping to; `SH.saveav` and the prompts are
+questions whose answer should be heard before it is offered; and `SH.propose`'s first action
+is **send**, the only irreversible act in the tab. Landing focus on it by default would make
+the worst outcome the cheapest to trigger. §E6's contrary precedent — the splash's *"focus
+moved to 'Open the chat'"* — is on a surface the map ruled out with chat.
+
+**`SH.whyfit`'s accessible name is not its visible title.** The title draws `Why ✦ {score}`,
+and the ✦ must not be spoken, so the sheet is labelled `Why fit {n}`. It is the one place in
+the feature where the two differ, and it differs because a glyph is doing work in the visible
+one.
+
+### 20.7 The availability grid, and the diff variant
+
+The editor is [6.8](../../../frontend_player/docs/design-system.md#68-the-availability-grid),
+reused unchanged and **not restated** — `checkbox`, `checked`, `"Monday morning"`, column
+heads hidden. §E6's *"'EVE' should be announced as 'evening'"* is already done there.
+
+**`SH.saveav`'s diff grid is a different control with a third fact.** Newly-on draws a volt
+ring, newly-off drops to 45% opacity — and the sheet's own body text says *"Green rings are
+new, faded ones you dropped"*, which is Part 13's prohibition in the one place the copy
+**names the colour as the mechanism**.
+
+| | |
+| --- | --- |
+| **Diff cell** | Not interactive — a `span` already. `{Day} {part}` · `{Day} {part}, newly added` · `{Day} {part}, dropped` |
+
+`KEEP_THESE_TIMES`'s body is a **copy edit, booked in §20.12** — it instructs sighted players
+in a vocabulary no listener can use.
+
+### 20.8 Why-fit — the meter is decoration
+
+The row draws a label, a mono `×{weight} → {weight × value}`, **then** a meter, then the
+reason. The number is already text two words earlier.
+
+> **The meter is hidden and the row's words carry it.**
+
+This is [6.8](../../../frontend_player/docs/design-system.md#68-the-availability-grid)'s
+argument again — *"the column heads are therefore decoration to assistive technology and are
+hidden from it; without that, every cell is announced twice."* A bar visualising a printed
+number is that same double announcement. **§E6 rewritten, fifth of five**: its *"expose it as
+a progress indicator with its current, minimum and maximum values"* would publish a precision
+the row already states in a shape the row already chose. `SH.player`'s three meters are the
+only others in the prototype and K-7 ruled them out, so **`progressbar` appears nowhere in
+this contract.**
+
+Rows announce `{term label}. {figure}. {reason}` — §6.1's heads, §6.2's renderers, §7's
+concerns marked in place per #233 §7. The header is §16's sentence.
+
+### 20.9 The three live regions
+
+All polite. There are three, and no fourth:
+
+| | |
+| --- | --- |
+| **The toast layer** | Part 13's requirement, with §20.10's amendment |
+| **The searching status** | §16's two sentences, with `players_in_range` from the response |
+| **The provisional forecast figure** | The only figure in the tab that changes while focus is elsewhere |
+
+The third is the one nobody had claimed. Moving a player across the net changes the forecast
+while focus stays on the seat that moved — so the figure announces, carrying §17's
+`EMPTY_SEAT_MATCHES_ITS_PARTNER` caveat rather than a bare number, which is ADR-0108's rule
+that the figure and its caveat are one thing.
+
+**The pool header's percentage gains its word.** §E5: the 24pt figure is *"tinted with no word
+alongside it, leaving colour as the only cue"* — where the forecast card pairs the tone with
+§B9's balance word every time. Part 13 forbids it outright, so the header draws the word too.
+A visual change, decided on an accessibility rule, and recorded here because nothing else
+claimed it.
+
+[#239](https://github.com/Raketa02/Raketa/issues/239)'s failure sentences go **into** the
+toast region. It writes the words; this section says which regions exist.
+
+### 20.10 Politeness, and the one announcement that interrupts
+
+`AccessibilityInfo.announceForAccessibility` **interrupts** on both platforms. Nineteen toasts
+fire from this feature, and one landing mid-card cuts a listener off in the middle of the
+reason lines they were listening to. Part 13's requirement was written against onboarding,
+which has one toast at a time.
+
+> **`announceForAccessibilityWithOptions` with `queue`.** The requirement survives with its
+> mechanism named more precisely — a Part 16 amendment, booked in §20.12, not an exception.
+
+**One announcement interrupts, and earns it.** [#227](https://github.com/Raketa02/Raketa/issues/227)
+made the send discard the Play stack to `[Now]`, which is a placeholder — so the toast is the
+**entire** confirmation that the one irreversible act in the feature succeeded. It fires
+**after the destination has mounted**, so the platform's own screen-change notification does
+not clobber it, and it does not queue behind anything, because there is nothing left on screen
+to tell the listener the challenge went.
+
+### 20.11 Two collapse conditions, and one screen rule
+
+`the-play-screens.md` §3 licenses the fill animation — *"presentation over a completed answer,
+and the client may take its time."* That permission is granted to **craft aimed at sight**. A
+listener gets none of the craft and all of the latency, in front of an answer already in
+memory.
+
+> **`isScreenReaderEnabled` collapses the fill animation and the deck's stagger to their end
+> state, and zeroes #228 §9's minimum-display latch.**
+
+It is a *second* condition on the same path as reduced motion, not a second path — a player
+may have VoiceOver on and reduced motion off, which is the common case. #239 owns the
+reduced-motion collapse; the two share one helper. The searching region then announces the
+**result** once and never a stage, which is §3's *"no fake stages"* reaching a second surface.
+
+**Every screen title takes `accessibilityRole="header"`**, and nothing announces a screen
+change beyond what the platform already fires. §C records the page header as *not* a shell
+region — *"the title scrolls away"* — so the header role is what makes it reachable again,
+both readers navigating by heading.
+
+### 20.12 What this section does not write, and what gates it
+
+**Two gaps, named rather than invented:**
+
+- **A clash word for the two tag-term concerns.** §7's `PLAYING_STYLE` and `SOCIAL_VIBE`
+  concerns render `{a} against {b}` and read as neutral description. §7 says why they are
+  different — *"a clash is a graded claim, and the engine is the only thing entitled to make
+  it"* — and the word belongs beside those sentences, not in a label.
+- **`KEEP_THESE_TIMES`'s body.** *"Green rings are new, faded ones you dropped"* names a
+  colour as the mechanism. §12 owns the rewrite.
+
+**One obligation on the design system**, to land with
+[#219](https://github.com/Raketa02/Raketa/issues/219)'s outstanding rows so the amendment log
+stays in order: **Part 13 — every toast announces, queued rather than interrupting; the send
+confirmation is the single exception.**
+
+**Two gates**, booked onto [#232](https://github.com/Raketa02/Raketa/issues/232). An
+unenforced rule drifts silently, and §E6's *"seven `aria-label`s in the whole file"* is what
+that looks like:
+
+- **Label coverage is a compile error, not a test.** §1's `Record` keyed by the generated
+  union already gives it: a code with no renderer does not build.
+- **A lint rule over `features/play/`** — every `Pressable` carries an `accessibilityLabel`
+  or an explicit hide. This is the one that catches the historical failure, because the
+  historical failure was an omission and a type cannot see one.
+
+### 20.13 Cited, not written
+
+| | Where it already is |
+| --- | --- |
+| The tab bar's five tabs | [#227](https://github.com/Raketa02/Raketa/issues/227) — `tab`, label, `selected` on all five; the ⚡ hidden; §E7 dissolved |
+| The availability grid, in edit mode | [6.8](../../../frontend_player/docs/design-system.md#68-the-availability-grid) |
+| Touch targets — §E4's fourteen under 44pt | [#219](https://github.com/Raketa02/Raketa/issues/219), which found the system stricter |
+| Contrast, Dynamic Type, tabular figures, reduced motion | [Part 13](../../../frontend_player/docs/design-system.md#part-13--accessibility) |
+| Focus order | §E3 — DOM order matches visual order on every Play screen |
+| Numbers, levels, distances, durations | §B16, through §18 |
+| Pluralisation | §19 — no string hardcodes an `s`, accessible names included |
