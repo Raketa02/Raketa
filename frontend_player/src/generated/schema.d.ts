@@ -336,6 +336,8 @@ export interface paths {
          *     **What is stored is not what was sent.** Every image is decoded and re-encoded to JPEG with its long edge capped, which is how EXIF — and with it the GPS coordinates a phone writes into a photo — is removed reliably rather than best-effort.
          *
          *     The returned id is what a profile commit carries; a photo becomes part of a profile only when a commit names it. Uploaded photos that are never committed are intended to be swept, and that sweep is not running yet.
+         *
+         *     **Every upload is checked against the on-court rule, and `review` says what the check concluded.** It never refuses: a `flagged` photo is stored, answers `201` and is committed like any other, and the warning is the client's to word. A photo the check could not be run on answers `allowed` — the reviewer's own outage is not a reason to tell a player anything about their photograph.
          */
         post: operations["upload_photo_api_v1_photos_post"];
         delete?: never;
@@ -356,6 +358,8 @@ export interface paths {
          * @description Returns a short-lived signed URL rather than the bytes: the store serves the image directly, so a photo never crosses this API twice.
          *
          *     A photo id that does not exist and one belonging to another player both answer `photo_not_found`, deliberately — the alternative is an endpoint that confirms whether a stranger's id is real.
+         *
+         *     **`review` is always `null` here**, and that is not `allowed`: this route does not read what the store holds beside the bytes. The on-court check's verdict crosses on the upload, where a player has just chosen the photograph it is about.
          */
         get: operations["get_photo_api_v1_photos__photo_id__get"];
         put?: never;
@@ -1615,6 +1619,27 @@ export interface components {
          *
          *     **The URL is not an identifier and must not be stored as one.** It carries a
          *     signature and stops working at ``expires_at``; the id is what is permanent.
+         *
+         *     ## The verdict crosses; the evidence does not
+         *
+         *     ``review`` is the on-court check's conclusion and it is a **code**, never a
+         *     sentence: the backend emits codes and the client owns the words
+         *     (``docs/adr/0022``). ``review-note`` — the model, the prompt-set fingerprint
+         *     and the raw similarity vector — stays on the object. It is evidence for us
+         *     rather than a fact about the player, and a confidence score on the wire is an
+         *     invitation to a client that renders one.
+         *
+         *     **The upload carries it and the read does not**, which is why the field is
+         *     optional and why ``null`` is not ``allowed``. Two reasons, and neither is
+         *     that the read is harder. A warning belongs to the moment a player *chose* a
+         *     photograph; a tile being restored is a photograph they already kept, and
+         *     saying it again is a screen re-litigating a decision the player made. And the
+         *     read would have to pay for it: ``GET /photos/{id}`` proves existence and signs
+         *     a URL, and no part of it looks at what the store holds beside the bytes — the
+         *     verdict is user metadata, which every S3-compatible store answers with a
+         *     request per object. So the shape stays one shape and the tile stays one code
+         *     path, exactly as the paragraph above promises; what differs is whether this
+         *     response has anything to say about the check.
          */
         PhotoResponse: {
             /**
@@ -1634,7 +1659,33 @@ export interface components {
              * @description When the URL stops working. Ask for the photo again to get another; there is no way to extend one.
              */
             expires_at: string;
+            /**
+             * @description What the on-court check concluded about this photo, or `null` where this response carries no verdict.
+             *
+             *     **`null` is not `allowed`.** The upload always answers with one of the two values; the read never carries one. A client that has not been told anything must warn about nothing.
+             *
+             *     **A warning and nothing else.** `flagged` does not refuse, delete or hold back a photo: it is stored, it keeps its id, and a profile commit takes it like any other. The check is wrong sometimes, and the cost of being wrong is a sentence rather than a signup.
+             *
+             *     A code, not copy — the words belong to the client.
+             */
+            review?: components["schemas"]["PhotoReviewDecision"] | null;
         };
+        /**
+         * PhotoReviewDecision
+         * @description What the review port concluded about an image.
+         *
+         *     Two values, and there is deliberately no ``REJECTED``. The on-court check
+         *     **soft-warns rather than hard-blocks** (``docs/adr/0091``): a false reject
+         *     stops a real player on their first day, and that cost does not fall now that
+         *     the other side of the trade has got heavier. Adding a blocking value later is
+         *     an addition; shipping one now would be a behaviour nothing has earned.
+         *
+         *     There is also no value for *the reviewer could not be asked*. This enum says
+         *     what the reviewer **concluded** about an image, and an outage is not a
+         *     conclusion about an image — see `verdict_when_unreviewable`.
+         * @enum {string}
+         */
+        PhotoReviewDecision: "allowed" | "flagged";
         /**
          * PlayIntent
          * @description What kind of game a player wants, in one sport.

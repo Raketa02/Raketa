@@ -39,7 +39,10 @@ from app.modules.player_profile.domain.gender import (
     GenderPreference,
 )
 from app.modules.player_profile.domain.location import LocationArea
-from app.modules.player_profile.domain.photos import PresignedPhoto
+from app.modules.player_profile.domain.photos import (
+    PhotoReviewDecision,
+    PresignedPhoto,
+)
 from app.modules.player_profile.domain.profile import (
     MAX_PROFILE_PHOTOS,
     PlayerProfile,
@@ -167,6 +170,27 @@ class PhotoResponse(BaseModel):
 
     **The URL is not an identifier and must not be stored as one.** It carries a
     signature and stops working at ``expires_at``; the id is what is permanent.
+
+    ## The verdict crosses; the evidence does not
+
+    ``review`` is the on-court check's conclusion and it is a **code**, never a
+    sentence: the backend emits codes and the client owns the words
+    (``docs/adr/0022``). ``review-note`` — the model, the prompt-set fingerprint
+    and the raw similarity vector — stays on the object. It is evidence for us
+    rather than a fact about the player, and a confidence score on the wire is an
+    invitation to a client that renders one.
+
+    **The upload carries it and the read does not**, which is why the field is
+    optional and why ``null`` is not ``allowed``. Two reasons, and neither is
+    that the read is harder. A warning belongs to the moment a player *chose* a
+    photograph; a tile being restored is a photograph they already kept, and
+    saying it again is a screen re-litigating a decision the player made. And the
+    read would have to pay for it: ``GET /photos/{id}`` proves existence and signs
+    a URL, and no part of it looks at what the store holds beside the bytes — the
+    verdict is user metadata, which every S3-compatible store answers with a
+    request per object. So the shape stays one shape and the tile stays one code
+    path, exactly as the paragraph above promises; what differs is whether this
+    response has anything to say about the check.
     """
 
     photo_id: UUID = Field(
@@ -188,12 +212,44 @@ class PhotoResponse(BaseModel):
         ),
     )
 
+    review: PhotoReviewDecision | None = Field(
+        default=None,
+        description=(
+            "What the on-court check concluded about this photo, or `null` "
+            "where this response carries no verdict.\n\n"
+            "**`null` is not `allowed`.** The upload always answers with one of "
+            "the two values; the read never carries one. A client that has not "
+            "been told anything must warn about nothing.\n\n"
+            "**A warning and nothing else.** `flagged` does not refuse, delete "
+            "or hold back a photo: it is stored, it keeps its id, and a profile "
+            "commit takes it like any other. The check is wrong sometimes, and "
+            "the cost of being wrong is a sentence rather than a signup.\n\n"
+            "A code, not copy — the words belong to the client."
+        ),
+    )
+
     @classmethod
-    def from_domain(cls, photo_id: UUID, presigned: PresignedPhoto) -> "PhotoResponse":
+    def from_domain(
+        cls,
+        photo_id: UUID,
+        presigned: PresignedPhoto,
+        *,
+        review: PhotoReviewDecision | None = None,
+    ) -> "PhotoResponse":
+        """The two routes call this differently, and that is the contract.
+
+        The upload passes what the reviewer concluded; the read passes nothing,
+        because it has not asked. Defaulting rather than requiring the argument
+        would make *no verdict* the thing a caller forgets rather than the thing
+        it decides — so the read states its ``None`` by omission at exactly one
+        call site, and the class docstring says why.
+        """
+
         return cls(
             photo_id=photo_id,
             url=presigned.url,
             expires_at=presigned.expires_at,
+            review=review,
         )
 
 

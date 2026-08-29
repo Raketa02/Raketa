@@ -128,6 +128,17 @@ Rules to preserve:
   records the similarity vector it was taken from, which is what makes today's
   placeholder threshold safe. **No test needs the container** — `tests/conftest.py`
   overrides the port, as it does the store.
+  **The verdict now crosses the wire, and only on the upload**
+  ([ADR-0133](../docs/adr/0133-the-verdict-crosses-on-the-upload-and-the-warning-may-be-wrong.md)).
+  `PhotoResponse.review` is an optional code — `allowed` / `flagged`, never a sentence and
+  **never the note**, whose model, fingerprint, confidence and raw vector are evidence for
+  re-deriving the threshold and are not about the player. `GET /photos/{id}` answers `null`
+  there, which is deliberately **not** `allowed`: a warning belongs to the moment a player
+  chose a photograph, and the read would pay a metadata request per tile for a fact no
+  client asks it for. That ended ADR-0129's measure-only posture, which was a property of
+  the tree rather than a flag — so there is nothing to toggle and the fail-open trade was
+  re-examined rather than inherited: an outage now costs the player *silence*, not a
+  sentence about our infrastructure dressed up as one about their photo.
 - **Background work is an `asyncio` loop in the API process, and a job must be safe to
   run beside itself** ([ADR-0092](../docs/adr/0092-periodic-jobs-as-embedded-loops.md)).
   `PeriodicJob` (`app/infrastructure/jobs/`) is the whole mechanism — the outbox worker
