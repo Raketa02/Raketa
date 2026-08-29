@@ -575,16 +575,17 @@ So the constant is wrong three ways at once, and the fix is three different sent
 
 | Moment | |
 | --- | --- |
-| **Pre-send** (`SH.propose`) | `{name} gets {window} to answer. Nobody is contacted until you send it.` |
+| **Pre-send** (`SH.propose`) | `Nobody is contacted until you send it.` — **no duration**, per §21 |
 | **Post-send**, per seat | rendered from `answer_by` through §B16's duration formatter — `{name} · {duration} left` |
 | **Mutual yes** | `You both said yes — this one's already on.` **No deadline clause.** |
 
-**`{window}` is a contract obligation, not a constant.** A pre-send sentence naming a
-duration must name the number the backend will actually derive, or it stops naming one. Booked
-onto [#241](https://github.com/Raketa02/Raketa/issues/241) and
-[#232](https://github.com/Raketa02/Raketa/issues/232): either the send response's window
-length crosses on the `challenges` contract, or `SH.propose` says *"a day"* nowhere and
-states only the irreversibility clause.
+**~~`{window}` is a contract obligation, not a constant.~~** A pre-send sentence naming a
+duration must name the number the backend will actually derive, or it stops naming one — and
+[#241](https://github.com/Raketa02/Raketa/issues/241) took the second branch: **`SH.propose`
+names no duration at all.** The send response cannot feed a *pre*-send sheet, no `challenges`
+route is called before the first send, and the deadline the sentence was reaching for is per
+seat and arrives immediately after the act. §21 carries the reasoning; the pre-send row below
+loses its `{window}` clause and keeps only the irreversibility.
 
 **`SH.propose`'s closing *"Nothing opens until they accept"* is false for doubles.** #230
 already rewrote the pre-send line for the seat count; this is the same sentence in its second
@@ -703,8 +704,8 @@ exhaustive by type; neither is reachable.
 - **Pluralisation and Polish-market copy.** §J4's gap; the map's fog. What is owed here is
   that no string hardcodes an `s`.
 - **Telemetry wording.** §J7's eleven observations; the map's fog.
-- **What the send refuses, and in whose words** —
-  [#241](https://github.com/Raketa02/Raketa/issues/241).
+- ~~**What the send refuses, and in whose words**~~ — settled by
+  [#241](https://github.com/Raketa02/Raketa/issues/241) in §21.
 - **Anything on an out-of-scope surface** — the record sheets, *Show them again*, the
   seat-impact line, at-stake, Player Score's strands, languages. A code with no surface gets
   no words, and the map's Out of scope is the list.
@@ -1013,3 +1014,39 @@ that looks like:
 | Focus order | §E3 — DOM order matches visual order on every Play screen |
 | Numbers, levels, distances, durations | §B16, through §18 |
 | Pluralisation | §19 — no string hardcodes an `s`, accessible names included |
+
+## 21. A refused send — two codes, and the naming done elsewhere
+
+[#241](https://github.com/Raketa02/Raketa/issues/241). The send re-verifies five facts and
+refuses **whole** ([`the-play-screens.md`](the-play-screens.md) §5.1). Neither refusal carries
+a payload, so neither sentence has a name in it until the client has re-read the source that
+holds one.
+
+| Code | The sentence | Then |
+| --- | --- | --- |
+| `line_up_no_longer_sendable` | `Something's changed — one of these players can't be invited now.` | Read the origin search back; the withheld rows mark their seats. |
+| the open-challenge refusal (#221) | `You've already got a game waiting with {name}.` | `{name}` comes from the player's **own** challenges, not from the refusal. |
+| neither seat marked after the re-read | `Something's changed, and one of these players can't be invited right now.` | The dead end §5.1 names, stated rather than left silent. |
+
+**The first sentence says *changed*, not *unavailable*.** The fact is that the line-up went out
+of date; a person's standing is not the organiser's to be told, and §4's register — a line
+states facts and never grades them — is what keeps *can't be invited now* from becoming a
+verdict on somebody. Four causes reach it wearing one sentence, exactly as ADR-0130 has them
+reach the withheld row.
+
+**The second is the only one with a name in it**, because #222 puts that gate on the
+*embarrassment* side rather than the safety side, and an open game of yours is already on your
+own list. It is still not read off the refusal — §5.1's rule that a refusal names nobody is
+about the wire, not about what the screen may end up saying.
+
+**Plural-safe.** A doubles send can lose two seats to one press and both codes can fire for one
+press, so neither sentence may be built from a singular assumption — the first says *one of
+these players* because the count is not on the wire either, and counting them would be the
+payload this refusal refuses to carry.
+
+**And §14's `{window}` obligation is discharged by deletion.** `SH.propose` names no duration:
+there is no `challenges` route the client calls before its first send, `GET /sports` carries
+the right argument and the wrong home — a per-seat answer window is not a property of squash —
+and the same screen states the real deadline, per person, from a real timestamp, the moment
+after the act. What the pre-send sheet owes is the irreversibility, which is the fact the
+player cannot recover from.

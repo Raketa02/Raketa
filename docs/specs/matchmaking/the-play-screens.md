@@ -212,6 +212,107 @@ search, re-verifying blocks and holds, stamping `ruleset_version` and `engine_ve
 recording nothing. **No forecast arithmetic runs on the client**, and the check for that is
 looking for arithmetic, not reading intent.
 
+### 5.1 The send re-checks, and refuses whole
+
+**Five facts, re-verified server-side in the send's own transaction.** Four are the
+fail-closed gates the read-back already re-evaluates — a block either way, a hold, an account
+`users` may not show, and the mutual gender preference — and the fifth is `OPEN_CHALLENGE`,
+the one gate deliberately left **soft and out of the read-back** with the send named as its
+backstop ([#222](https://github.com/Raketa02/Raketa/issues/222)). Nothing in Play
+background-refetches ([#228](https://github.com/Raketa02/Raketa/issues/228)), so the client
+cannot have noticed; and the searcher may have built this line-up an hour ago.
+
+**Whole-send, never per-seat.** #221 already refuses a send with nobody new; a partial send
+that silently dropped one invitee would hand the organiser an arrangement they did not
+choose, which is H-18's harm arriving through the safety check. A refused send writes
+nothing, so there is no half-sent challenge to reconcile.
+
+**The organiser's own hold is refused at the entry point**, with the same `account_held` the
+search returns. ADR-0130's own consequences settled this shape once — *"refusing them a fresh
+search while handing back this morning's would be the hold ending at the one route that
+remembers"* — and a hold that stops you searching but lets you send invitations is that hole
+with the blast radius pointed at other people.
+
+**Three refusals, in one order.** *Nobody new to invite* (#221, AC-154) comes **first**: it is
+a fact about the send's shape, needs no reads, and is true regardless of anybody else's
+state — telling an organiser their line-up went stale when they invited nobody sends them
+refreshing a screen that was never wrong. Then the other two, and **both are reported for one
+press**, because fixing one and being refused for the other is the same interruption twice.
+
+| | |
+| --- | --- |
+| `line_up_no_longer_sendable` | **New**, `409`. The four fail-closed gates, indistinguishably. |
+| the open-challenge refusal | **#221's**, already owed by the aggregate. Made a whole-send pre-check rather than something discovered on the way through. |
+
+**Neither refusal names anybody, and neither carries a payload.** ADR-0130 admits exactly one
+field against *nobody may ask who was withheld*, and says in its own words that the single
+exemption is what keeps it a rule; a refusal is also the one place this backend has no typed
+shape to put a payload in — `AppError.details` is `Dict[str, Any]`, which is invisible to
+`test_no_response_carries_a_forbidden_fact.py` and would force the client to hand-write a DTO
+against [ADR-0006](../../adr/0006-backend-owns-api-contract.md). So the refusal states the
+class of problem and **the client re-reads the two sources it already owns** to find out who:
+
+- `line_up_no_longer_sendable` → **read the origin search back.** The read-back re-evaluates
+  the same four gates and marks the withheld rows, and #239 already turns those marks into
+  marked seats. Nothing new is disclosed and no second exemption is bought.
+- the open-challenge refusal → **read your own challenges.** An open game of the organiser's
+  was always theirs to read, so naming the pair costs nothing ADR-0095 protects — #222 is
+  explicit that this gate is *embarrassment, not safety*.
+
+This is why `locked_seat_not_available` needs no correction: the send takes the same posture
+one screen later, for the same reason, and points at nobody either.
+
+**The remedy reads the origin back; it does not re-run the search.** A line-up is bound to one
+`search_id` and `POST /forecasts` refuses anybody who did not appear in it, so re-running the
+pool mints a new id the whole line-up must adopt — and its other three seats are only
+*probably* in the new answer, since a re-rank or the twenty-row cap can drop a seat nobody
+touched. That is H-18's harm arriving through the remedy rather than the fault. Re-running is
+the fallback for the one case the read-back cannot serve: the origin search has nobody left to
+swap in, and then it is honestly a new line-up.
+
+**When the refusal and the refresh disagree, the court says so at court level.** The send
+reads profiles live while the read-back reads the index, so they can differ — most plausibly
+on the mutual preference, where the read-back excludes a candidate the partition no longer
+holds and the send would read them live. Refused, refreshed, and every seat looks fine is a
+dead end; it gets a sentence rather than silence, in the shape §B's shortfall statements
+already use on this screen. **The send is not moved onto the index to close it**: that would
+buy a rare confusing screen at the price of a safety gate inheriting index staleness, which is
+the wrong direction on the one class of check that must not be stale.
+
+**The mutual path runs the same check, and refuses by minting nothing.** `resolve_origin` has
+**no freshness bound** — `SearchStore.find` reads any search of yours, ever, and the record
+*"is immutable and never expires"* — so a *Let's play* can cite a month-old deck deal, and
+#222 opens the mutual-born challenge **inline**. Two stale yeses with a block taken since
+would otherwise walk a challenge past every gate in the product. There is no organiser
+standing there and no screen to refuse to, so the check's whole observable is that **no
+challenge exists afterwards**.
+
+**One judgement, three callers.** `gender_satisfied` says in writing that it takes a row
+rather than a context *"because the same gate is evaluated in two places… and a second
+implementation of a mutual safety gate is exactly the thing that ends up satisfied in one
+place and not the other."* The send makes three, and the arrow runs `matchmaking → challenges`
+so the third cannot import the first. The **predicate** moves to `player_profile`, beside the
+two enums it reads; the **reading** stays with each caller, because the docstring's fear is
+about the rule and not about the source — and the send's should be live profiles. `challenges`
+declares its own hold port with its own empty provider: a duplicated *null object*, which is
+not the thing the fence was guarding. A platform-safety context owning all of this is the
+honest long answer and is **not** taken here — it is a bounded context for two predicates, and
+it would need its own record.
+
+**No row is written for a refused send.** #237's test is whether the outcome is recoverable
+from anything else, and here it partly is — the search record holds the line-up, `challenges`
+holds the sends, and a refused send is the difference. More to the point, a prompt decline is
+a player's declared habit and this is a race between two clocks; counting races is
+instrumentation, which this map already holds as fog.
+
+**What proves it.** Three demands through the `Challenge` aggregate: a send refused with an
+invitee blocked in either direction, asserting **no challenge exists afterwards** — the
+whole-send rule is provable only by the absence; a send refused on the pair rule where the
+open challenge is in **another sport**, which is #221's across-sports rule and the thing a
+build session is likeliest to get wrong; and a mutual formed from **two stale searches with a
+block between them, minting nothing**, which is the only evidence the deck path was decided at
+all.
+
 ---
 
 ## 6. Provisional forecasts
@@ -381,6 +482,15 @@ and the UI build is its own effort. The effort that builds these screens inherit
    pass is an append-only row and a mutual-born challenge has no window at all, so a queue
    of them draining on reconnect is the behaviour you want. Two `networkMode` values in one
    tab is deliberate; left unwritten, the next reader unifies them.
+9. **A refused send is followed by a re-read, never by a payload.** The refusal names the
+   class of problem and nobody in it (§5.1). `line_up_no_longer_sendable` is followed by
+   reading the origin search back and marking the seats its withheld rows identify;
+   the open-challenge refusal is followed by reading the player's own challenges. A client
+   that renders a name straight off a refusal has found a shape this contract does not have.
+10. **The pre-send sheet names no duration.** `SH.propose` states the irreversibility and
+   nothing about how long the wait is; the real deadline is per seat and arrives after the
+   send, rendered from that seat's own `answer_by`
+   ([`the-words.md`](the-words.md) §14, §21).
 
 ---
 
