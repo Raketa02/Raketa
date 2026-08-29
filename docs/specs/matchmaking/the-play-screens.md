@@ -54,7 +54,7 @@ backend after `matchfit` returns — the same seam `at_stake` already rides
 ```
 candidate:   { player_id, fit, distance_km, player_card, ... }
 player_card: { nickname, photo_id?, area_code,
-               social_tags[], level, band, counted_games }
+               social_tags[], level, band, range, counted_games }
 ```
 
 Closed list. `photo_id` is **omitted** (not null) when the player has no photo, and the client
@@ -72,6 +72,21 @@ draws the generated court poster.
 > It is an **integer**, and it is **omitted** rather than `0` when the distance term stood down —
 > the two spellings of absence ([ADR-0106](../../adr/0106-evidence-vocabulary-is-contract-weights-are-configuration.md)
 > §4), which is what lets *Closest* sort a stood-down row last instead of first.
+
+> **`range` is on the card for the same reason `distance_km` is not.** It is the **likely
+> range** — μ ± σ as `rating` published it — and it is a fact about that person alone, which
+> is precisely the test ADR-0107 applies. It travels as `{low, high}`, **projected** onto the
+> index row from `rating.rating_initialised`, which has carried `range_low` / `range_high`
+> all along; it is never derived at assembly, because `likely_range()` returns unrounded
+> values and the rounding lives in the engine — deriving it here would put a second set of
+> drawing constants one layer further out, which is the defect the boundaries-travel-on-the-
+> estimate rule exists to prevent.
+>
+> **The band's numeric edges stay off the card.** Only the band bar would draw them and it
+> lives on the player record sheet, which is out of scope; the glossary refuses them as a
+> second range in any case. `band` remains the published name.
+>
+> The level row that draws all three is [`the-words.md`](the-words.md) §6.4.
 
 **Never on a card, ever:**
 

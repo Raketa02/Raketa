@@ -50,7 +50,7 @@ exists in the store now.
 | `player_profile.location_changed` / v1 | `area`, centroid |
 | `player_profile.search_radius_changed` / v1 | `search_radius_km` |
 | `player_profile.proposals_opt_in_answered` / v1 | `proposals_opt_in` |
-| `rating.rating_initialised` / v1 | μ, σ, `confidence`, band, `status`, `calibration_priority` |
+| `rating.rating_initialised` / v1 | μ, σ, `confidence`, band and its edges, **the likely range**, `status`, `calibration_priority` |
 | `auth.refresh_token_issued` / v1 · `auth.refresh_token_rotated` / v1 | `last_active_at` — see §2.3 |
 
 `player_profile.photos_changed` is **not** consumed: ADR-0107 assembles the player card

@@ -51,8 +51,11 @@ A rating is **never only a number**.
   and matchmaking reads the record rather than the headline.
 - **Confidence** — σ restated as a percentage for the player, `100 × (1 − σ/1,20)`, capped
   at 99. **Never 100** — the platform cannot claim total certainty about anybody.
-- **Likely range** — μ ± σ, clamped to the scale. The player's own range, and the only
-  range shown to them; a band's numeric edges are not a second range to compare it against.
+- **Likely range** — μ ± σ, clamped to the scale. **A fact about one player**, so it travels
+  on any card that names them — printing μ while refusing μ ± σ would show a level and hide
+  how sure of it anybody is. A band's numeric edges are **not** a second range to compare it
+  against, and a screen printing a range prints the published values rather than a second set
+  of drawing constants.
 - **Band** — one of four named ranges, deliberately uneven in width, each with a
   plain-language meaning: **New** 1,0–1,5 · **Developing** 1,6–2,6 · **Established**
   2,7–3,8 · **Advanced** 3,9–5,0.

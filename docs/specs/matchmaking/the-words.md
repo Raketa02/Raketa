@@ -221,8 +221,8 @@ The second figure is the platform's own caveat stated in the same breath as the 
 rule 4's *fact · mechanism* — and this is the **only place `confidence` is drawn at all**:
 `SH.player`'s `"{conf}% sure"` went out of scope with the sheet, and #218 recorded that it
 was a different number anyway (the *pairing's* confidence printed as a fact about a person).
-`my_sigma` and `their_sigma` are never printed; they are the range's input
-([#235](https://github.com/Raketa02/Raketa/issues/235)).
+`my_sigma` and `their_sigma` are never printed. The candidate's σ reaches a screen exactly
+once, as the **likely range on the card** — §6.4 — and never as a number of its own.
 
 **`IntentAlignmentEvidence` `{my_mode, their_intent, aligned}`** — read `my_mode` off the
 evidence, never off the envelope (§2).
@@ -307,6 +307,36 @@ The module licenses exactly one client sentence from it, and that one is honest:
 So the meta line becomes **`{km} km`**, with **`In your area · {km} km`** when the two codes
 are equal. Nothing else. The day a gazetteer exists, `area_code_of` is the one function that
 changes and this line gains a name without any other consumer moving.
+
+### 6.4 The level row — three facts, and the word the prototype spent on the wrong one
+
+§B11 and §B12 draw the row as `"{level} · band {low}–{high}"`, where `{low}–{high}` is
+`2,55–2,87`. **That is not a band.** The four bands are New 1,0–1,5 · Developing 1,6–2,6 ·
+Established 2,7–3,8 · Advanced 3,9–5,0; `2,55–2,87` is the **likely range**, μ ± σ. The
+prototype spent the domain's word on a different concept, and a reader who has seen the band
+names anywhere else in the app reads the pair as the band's own edges — which is exactly what
+`Band`'s docstring forbids: *"a card can never name a band that disagrees with the number
+beside it."*
+
+So the range carries a word of its own, and the band keeps its name:
+
+> `{level} · {band} · likely {low}–{high}`   — e.g. `2,71 · Established · likely 2,55–2,87`
+
+*Fact · mechanism*, §F1 rule 4's shape, the same one `Forecast {pct}% even · {confidence}% sure`
+takes: the level and its plain-language meaning, then the caveat. Levels use §B16's format on
+all three numbers — two decimals, decimal comma.
+
+**All three come off `player_card`.** `level` and `band` already ship; `range` is the one
+contract change the card audit found, and the card carries it because
+[ADR-0107](../../adr/0107-the-player-card-is-assembled-outside-the-engine.md)'s rule admits it
+— *a card says only what its subject published, and every field on it is a fact about that
+person alone*, which is the same rule that keeps `distance_km` off the card. **The band's
+numeric edges are not on the card**: the only thing that would draw them is the band bar, and
+the band bar is drawn from the player record sheet, which is out of scope.
+
+**The client computes nothing here** — not the range from `their_sigma`, and not the band's
+edges from a table of four. Either would be a domain rule encoded in TypeScript, the objection
+that promoted `distance_km` out of the distance evidence in the first place.
 
 ## 7. Concerns
 
@@ -653,7 +683,6 @@ exhaustive by type; neither is reachable.
 - **Pluralisation and Polish-market copy.** §J4's gap; the map's fog. What is owed here is
   that no string hardcodes an `s`.
 - **Telemetry wording.** §J7's eleven observations; the map's fog.
-- **The level row's range** — [#235](https://github.com/Raketa02/Raketa/issues/235).
 - **What the send refuses, and in whose words** —
   [#241](https://github.com/Raketa02/Raketa/issues/241).
 - **Anything on an out-of-scope surface** — the record sheets, *Show them again*, the
