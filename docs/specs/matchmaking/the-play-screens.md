@@ -137,6 +137,18 @@ Switching it offers to update the **declaration** inline, with 30-day suppressio
 ADR-0094's shape with **no** long suppression, because a grid legitimately differs per search
 where an intent does not ([#164](https://github.com/Raketa02/Raketa/issues/164)).
 
+**And the other three prompts do suppress, on a decline that is a durable row.**
+`KEEP_THIS_RADIUS`, `UPDATE_PLAY_INTENT` and `REFRESH_YOUR_TIMES` each go quiet for thirty days
+when the player says no, keyed by the prompt's own identity and never by the value it quoted —
+so declining *keep 22 km?* also answers *keep 32 km?* next week, because the player answered
+about a habit rather than about a number
+([#237](https://github.com/Raketa02/Raketa/issues/237)). The dividing line against *Keep these
+times?* is not per-search versus loop: it is **whether the condition outlives the act**. An
+improvised grid is gone when the search ends; a widening habit, a drift and a week described
+months ago are all still true tomorrow, which is why only they can nag. The decline is
+`POST /api/v1/prompt-declines` — write-only, append-only, no Origin key — and the sheet says
+what it buys.
+
 **The two refusals are known before the tap, and the 409 is the backstop.** `sport_not_rated`
 is settled by construction — the sport chips are drawn only for rated sports.
 `play_intent_not_declared` is a screen the client opens **knowingly**, because ADR-0094 made

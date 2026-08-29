@@ -197,6 +197,28 @@ that stays true: the **gate** is the cache, the **evidence** is the row. Unlike 
 pass record does not expire; nothing in this design deletes a row except erasure (ADR-0104 §3),
 and this joins that rule.
 
+**A prompt decline is a durable row, and its denominator is not a column.**
+[#237](https://github.com/Raketa02/Raketa/issues/237) reaches the same split from the other side.
+`prompts.py`'s two constants are falsified by *take-up rate on the prompt*
+(`INTENT_DRIFT_SEARCHES`) and *acceptance rate on the offer, against rung acceptance*
+(`REPEATED_WIDENINGS`) — three outcomes per raised prompt, and only one of the three is
+unrecorded:
+
+| Outcome | Where it already is |
+| --- | --- |
+| **Raised** | derived — the widening condition is `widenings_taken >= 3` over this store, the drift condition is five consecutive disagreeing searches over the same rows, and both are recomputable forever ([ADR-0118](../../adr/0118-a-past-search-is-not-reproducible.md)'s *explainable, not reproducible*) |
+| **Accepted** | derived — `PlayIntentDeclared(surface=DRIFT_PROMPT)` by name, and an accepted radius is the next search asking at that radius on rung A |
+| **Declined** | **nowhere.** It writes no value, and a Redis suppression that lapses destroys it |
+
+So the decline earns a row and nothing else does. **There is deliberately no `prompts_raised`
+column on the search record**, and adding one would break two arguments that are already
+written down: `ShortlistAnswer.prompts` is beside the record rather than on it, because *"a
+read-back a month later must not re-ask a question whose answer has since been given"*; and the
+raise runs **after the commit**, because *how often have I taken this widening* has to count the
+search that just ran. The named cost is that derived take-up is **approximate** — a player who
+edits their radius in *You* the same week reads as a take-up — and that is enough for a falsifier
+whose job is to say *nobody ever acts on this*.
+
 **The cap's falsifier is not a search fact and does not live here.** Refusals at
 `OUTSTANDING_INTEREST_CAP` and the distribution of outstanding counts per player are facts about
 the interest **write**. The distribution needs no new storage — it is a query over the durable

@@ -9,6 +9,20 @@
 > first per-sport fact on `PlayerProfile`"*. §6.1, §6.3, §6.4 and §6.5 transfer unchanged.
 > Recorded in that document's [conflict table](../specs/matchmaking/README.md#conflicts-with-an-accepted-adr).
 
+> **Amended 2026-08-29 by [The prompt that asks again after you said no](https://github.com/Raketa02/Raketa/issues/237):
+> the suppression keeps its window, its scope and its refusal of an event, and stops living in
+> Redis.** The Decision below says a decline is *"held in the sweeper's Redis with a TTL"*. That
+> one clause becomes **a durable row in `matchmaking`, with the live suppression derived from
+> it** — [ADR-0128](0128-a-pass-is-about-my-deck-a-block-is-about-a-person.md)'s shape, on
+> ADR-0128's argument: `prompts.py`'s own two constants are falsified by *take-up rate* and
+> *acceptance rate on the offer*, and a lapsed TTL leaves no trace the player was ever asked.
+> Everything else stands **literally**: *for that sport*, *30 days*, and *declining a prompt is
+> not a domain fact and earns no event* — a pass earns no event either, and is still a row.
+> The amendment also **discharges one of this record's own stated costs**: *"two things now have
+> to agree about the same suppression window, and a change to one that forgets the other
+> produces either nagging or silence."* There is now one store and one filter, read where every
+> prompt already converges, so the two halves have no way to disagree.
+
 ## Context
 
 The matchmaking engine's strongest term per unit of cost — **Intent alignment** — reads a

@@ -799,6 +799,8 @@ searcher how many people a mutual gate hid from them.
 | **Pass** | **durable**, in the module | its constant's only falsifier is *pass rate on **re-shown** profiles*, and a Redis suppression that lapses leaves no trace that the pair was ever passed — so the falsifier the Origin key was bought for is uncomputable. The record is telemetry; the **live suppression stays the Redis TTL below**, derived from it | — |
 | Suppression | Redis, TTL, derived from the pass record | a courtesy | **soft** |
 | Exposure | Redis, TTL | losing a week of *who was shown to whom* costs nobody a fact | **soft** |
+| Prompt | Redis, TTL | a standing question, left by a loop for the next search to pick up. Losing one costs a prompt nobody sees this week, and the loop raises it again on its next tick | **soft** |
+| **Prompt decline** | **durable**, in the module | the two constants in `prompts.py` are falsified by *take-up rate on the prompt* and *acceptance rate on the offer*, and a decline is the only one of a prompt's three outcomes that nothing else records — the raise conditions are recomputable from the search store forever, and an accept writes a value. A suppression that lapses leaves no trace the player was ever asked. The record is telemetry; the **live suppression is derived from it** at the one place every prompt converges | — |
 | ~~Search results~~ | — | **deleted** — §8.3's `search:{id}` at a 30-minute TTL held the same Fit as §19.2's table, free to disagree, in the one place §8.3 calls disagreement fatal | — |
 | ~~Standing searches~~ | — | out of scope; still fog on the map | — |
 
@@ -812,6 +814,19 @@ story: it is a small fact with an expiry date. The same is true of a pass, with 
 the pass happened is kept, because [#194](https://github.com/Raketa02/Raketa/issues/194) found
 that its constant's falsifier needs exactly the fact a TTL destroys. Suppression still fails
 soft, and the split is why: the **gate** is the cache, the **evidence** is the row.
+
+**The split has a second instance, and it is the same argument about a question rather than a
+person.** A prompt is a courtesy and its ledger is a cache; a **decline** is a player's answer,
+and thirty days of silence bought by a Redis key is thirty days of evidence a TTL then destroys
+([#237](https://github.com/Raketa02/Raketa/issues/237),
+[ADR-0094](../../adr/0094-play-intent-declared-per-sport-in-its-own-aggregate.md) as amended).
+So the decline is a row, the suppression is derived from it, and neither of them **retires** the
+standing prompt — `PromptLedger`'s *two methods and no delete* is untouched, because suppressing
+stops the next **raise** and clears nothing. The read is one filter over every raised prompt,
+after the commit and inside the courtesy, so it degrades the way the block around it already
+degrades: **to no prompt**. That direction is forced — the two degraded outcomes are *ask
+somebody who said no* and *stay quiet*, and staying quiet is what the rest of the block already
+does.
 
 **The sweeper's loops, after the map.** Loops are ADR-0092 `PeriodicJob`s.
 

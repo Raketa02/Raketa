@@ -516,8 +516,28 @@ Every prompt closes with §F2's *"Either way the search runs now."* The value ea
 `RaisedPrompt`'s own payload — *"the value already in play, never a value the engine
 picked."*
 
-**A declined prompt is asked again**, today, and that is
-[#237](https://github.com/Raketa02/Raketa/issues/237)'s to fix — not a copy softener here.
+**A declined prompt suppresses itself for thirty days**, and three of the four say so
+([#237](https://github.com/Raketa02/Raketa/issues/237)). A decline writes no value, so it is the
+one answer nothing else would record; the sentence exists because a thirty-day silence nobody is
+told about is a hidden mechanism, which is
+[ADR-0128](../../adr/0128-a-pass-is-about-my-deck-a-block-is-about-a-person.md)'s own instinct
+(*"the fix is a sentence on the deck about what a pass does"*).
+
+| `Prompt` | After §F2's closer |
+| --- | --- |
+| `KEEP_THESE_TIMES` | — |
+| `KEEP_THIS_RADIUS` | `Not now means not for a month.` |
+| `UPDATE_PLAY_INTENT` | `Not now means not for a month.` |
+| `REFRESH_YOUR_TIMES` | `Not now means not for a month.` |
+
+§F1 rule 4's fact·mechanism shape with **no agent**, which is what keeps rule 6 — no *we*, no
+*Rakieta*, no passive. It rides §1's code → message mechanism as a `Record` over the `Prompt`
+union, so `KEEP_THESE_TIMES`'s blank is a **typed absence** rather than a string somebody
+forgot: it is the one prompt with no suppression at all, because a grid legitimately differs per
+search where a radius, a declaration and a described week do not
+([`the-play-screens.md`](the-play-screens.md) §2,
+[#164](https://github.com/Raketa02/Raketa/issues/164)). The shared closer is unchanged on all
+four, and `REFRESH_YOUR_TIMES` keeps §F2 #9 verbatim.
 
 ## 13. A challenge's standing — five codes, ten sentences
 

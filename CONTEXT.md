@@ -612,7 +612,14 @@ appears here.
   **code** with the value already in play beside it; the client writes the sentence. It is
   **answered** by a write through the route that owns the value, never by the prompt itself, and
   it is **retired** by its own expiry or by its condition ceasing — never by a caller, so a
-  question nobody answered cannot quietly stop being asked.
+  question nobody answered cannot quietly stop being asked. It is **declined** on the sheet — the one
+  answer that writes no value, and so the only one nothing else would record. A decline
+  **suppresses** the prompt for thirty days and **retires** nothing: the standing question still
+  expires on its own, so a caller still cannot make a question quietly stop being asked. Three of
+  the four suppress; *keep these times* does not, because a grid legitimately differs per search
+  where a radius, a declaration and a described week do not. A declined **prompt** is not a
+  declined **seat**; the word is always qualified
+  ([#237](https://github.com/Raketa02/Raketa/issues/237)).
 - **Pool description** — what the response carries when the shortlist is empty: how many players
   of that sport are in range, structured, **counted after every gate**. It is the product in a
   new market, and it is a number on a screen, so it counts real rows and never estimates.
