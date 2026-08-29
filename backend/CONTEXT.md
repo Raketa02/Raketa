@@ -340,6 +340,29 @@ there; they are not repeated here.
   a profile is as unreachable as one never committed, so it is the same orphan. _Avoid_:
   "orphan" as a status stored anywhere — it is a question asked of the store and the
   stream, never a field.
+- **Review standing** — what the metadata on a stored photo says about whether anybody
+  ever looked at it, read off the `review-note` key and nothing else
+  ([ADR-0132](../docs/adr/0132-a-re-review-is-the-same-reviewer-and-a-stale-prompt-set-is-not-one.md)).
+  Three values, because there are three populations: **never asked** (no note — the
+  pass-through era, and also any note nothing can parse), **unavailable** (`unavailable=…`
+  — the sidecar was down when the photo arrived, and this population keeps growing), and
+  **reviewed** (`clip;m=…;p=…;c=…;s=…` — an image was really scored). It is **not** the
+  same question as the verdict: a photo is `allowed` both when a model scored it and when
+  nothing was asked, which is the confusion that made #197 necessary. _Avoid_: a status
+  column, a second table, "reviewed" as a boolean on the object.
+- **Re-review backfill** — the scheduled job that asks the reviewer about the photos
+  nobody ever asked it about: standings *never asked* and *unavailable*. It re-reviews
+  **through the same `PhotoReview` port the upload path holds**, so there is one copy of
+  the rule and a batch cannot disagree with an upload about one image; it never rewrites a
+  note that is already right, because an S3 metadata update is a copy of the object onto
+  itself. _Avoid_: calling it a re-scan or a migration, and calling anything that applies
+  its own threshold a backfill.
+- **Superseded prompt set** — a photo whose standing is *reviewed*, against a
+  `PROMPT_SET_FINGERPRINT` that is no longer the current one. **Counted, never
+  re-reviewed**: whether captions that have moved are worth re-running is a judgement
+  nobody has made, and the fingerprint exists so that the question is answerable rather
+  than so that a job can act on it. _Avoid_: folding it in with the two populations that
+  are work.
 - **Retention window vs cadence** — the pair that must not swap places. *How old an
   uncommitted photo must be before it is swept* is a rule a domain test can observe and
   lives beside the size caps in `player_profile/domain/photos.py`; *how often the sweep

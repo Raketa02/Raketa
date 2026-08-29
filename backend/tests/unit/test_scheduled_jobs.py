@@ -28,6 +28,7 @@ from app.bootstrap.jobs import (
     GRID_STALENESS_JOB,
     INTEREST_EXPIRY_JOB,
     INTENT_DRIFT_JOB,
+    PHOTO_REVIEW_BACKFILL_JOB,
     PHOTO_SWEEP_JOB,
     SCALE_PRESSURE_JOB,
     build_scheduled_jobs,
@@ -49,8 +50,15 @@ from app.modules.matchmaking.infrastructure.redis_ledgers import (
     RedisExposureLedger,
     busy_threshold_key,
 )
-from app.modules.player_profile.domain.photos import PhotoRef, TranscodedImage
+from app.modules.player_profile.domain.photos import (
+    REVIEW_NOTE_METADATA_KEY,
+    PhotoRef,
+    PhotoReviewVerdict,
+    TranscodedImage,
+    verdict_from_similarities,
+)
 from app.shared.ids import new_uuid
+from tests.unit import image_fixtures as fixtures
 from tests.unit.fake_event_store import FrozenClock
 from tests.unit.fake_photo_storage import InMemoryPhotoStorage
 from tests.unit.fake_redis import BrokenRedis, FakeRedis
@@ -156,6 +164,7 @@ def _nothing_but(**overrides):
     return get_settings().model_copy(
         update={
             "PHOTO_SWEEP_ENABLED": False,
+            "PHOTO_REVIEW_BACKFILL_ENABLED": False,
             "CANDIDATE_INDEX_ENABLED": False,
             "EXPOSURE_ROLL_ENABLED": False,
             "INTENT_DRIFT_ENABLED": False,
@@ -220,6 +229,85 @@ async def test_a_photo_inside_the_window_survives_the_wired_job(
     await sweep.run_once()
 
     assert fresh in storage.objects
+
+
+# ---------------------------------------------------------------------------
+# The photo re-review backfill
+# ---------------------------------------------------------------------------
+
+
+class _AlwaysOnCourt:
+    """Stands where `ClipSidecarPhotoReview` stands, holding no policy.
+
+    It answers similarities and lets the domain decide, because the point of the
+    job is that it applies the *same* rule the upload path does — a stub verdict
+    here would let a job that re-thresholded pass this tracer.
+    """
+
+    async def review(self, image: TranscodedImage) -> PhotoReviewVerdict:
+        return verdict_from_similarities(
+            model="test/clip", similarities=[0.9] * 5 + [0.1] * 8
+        )
+
+
+def test_the_backfill_is_registered_and_carries_the_configured_cadence():
+    """And needs no session factory: its whole input is the object store.
+
+    The second job here that reads no database — the exposure roll was the
+    first — which is why it is registered outside the block that refuses to
+    build a database job without one.
+    """
+
+    settings = _nothing_but(
+        PHOTO_REVIEW_BACKFILL_ENABLED=True,
+        PHOTO_REVIEW_BACKFILL_INTERVAL_SECONDS=300.0,
+    )
+
+    jobs = build_scheduled_jobs(session_factory=None, settings=settings)
+
+    assert [job.name for job in jobs] == [PHOTO_REVIEW_BACKFILL_JOB]
+    assert jobs[0].interval_seconds == 300.0
+
+
+async def test_the_backfill_job_runs_end_to_end_through_the_real_wiring(
+    monkeypatch, caplog
+):
+    """One pass-through-era photo, one run of the job's own callable, one note.
+
+    What this proves that the use-case tests cannot: the store, the **real**
+    transcoder and the reviewer are assembled from the composition root by the
+    job's callable, and the budget and the pause it passes are the settings'.
+    """
+
+    storage = InMemoryPhotoStorage()
+    monkeypatch.setattr(jobs_module, "build_photo_storage", lambda settings: storage)
+    monkeypatch.setattr(
+        jobs_module, "build_photo_review", lambda settings: _AlwaysOnCourt()
+    )
+
+    photo = PhotoRef(owner_id=ALICE, photo_id=new_uuid())
+    jpeg = TranscodedImage(
+        data=fixtures.plain_jpeg(), media_type="image/jpeg", width=60, height=40
+    )
+    # Exactly what the pass-through wrote: a decision, and nothing that says
+    # anybody looked.
+    await storage.put(photo, jpeg, metadata={"review": "allowed"})
+
+    settings = _nothing_but(
+        PHOTO_REVIEW_BACKFILL_ENABLED=True, PHOTO_REVIEW_BACKFILL_PAUSE_SECONDS=0.0
+    )
+    (backfill,) = build_scheduled_jobs(session_factory=None, settings=settings)
+
+    with caplog.at_level(logging.INFO):
+        await backfill.run_once()
+
+    note = storage.objects[photo].metadata[REVIEW_NOTE_METADATA_KEY]
+    assert note.startswith("clip;m=test/clip")
+    assert any(
+        record.message == "photo review backfill finished"
+        and record.photos_updated == 1
+        for record in caplog.records
+    )
 
 
 # ---------------------------------------------------------------------------

@@ -40,7 +40,9 @@ from app.bootstrap.composition import (
     build_domain_event_store,
     build_event_publisher,
     build_exposure_ledger,
+    build_image_transcoder,
     build_interest_ledger,
+    build_photo_review,
     build_photo_storage,
     build_play_intent_declaration_repository,
     build_player_profile_repository,
@@ -71,6 +73,9 @@ from app.modules.matchmaking.application.lapse_expired_interest import (
 from app.modules.matchmaking.application.offer_to_refresh_stale_grids import (
     OfferToRefreshStaleGrids,
 )
+from app.modules.player_profile.application.review_unreviewed_photos import (
+    ReviewUnreviewedPhotos,
+)
 from app.modules.player_profile.application.sweep_uncommitted_photos import (
     SweepUncommittedPhotos,
 )
@@ -85,6 +90,11 @@ _UNREAD: Any = object()
 
 #: The sweep's name in the logs and on its asyncio task.
 PHOTO_SWEEP_JOB = "uncommitted-photo-sweep"
+
+#: The re-review backfill's name. It walks the **same bucket** the sweep does
+#: and the two have no lock between them, which is a race each of them handles
+#: rather than one they coordinate over (``docs/adr/0132``).
+PHOTO_REVIEW_BACKFILL_JOB = "photo-review-backfill"
 
 #: The candidate index's two loops. They are **not** one job with two phases:
 #: the tail reader writes the shared tables and is safe beside itself because a
@@ -193,6 +203,12 @@ def build_scheduled_jobs(
                     session_factory=session_factory, settings=settings
                 )
             )
+    if settings.PHOTO_REVIEW_BACKFILL_ENABLED:
+        # Outside the block above, because this is the second job here that
+        # reads no database at all: its whole input is the object store and its
+        # whole output is metadata on the objects it read. Nothing to guard, so
+        # nothing to raise about.
+        jobs.append(build_photo_review_backfill(settings=settings))
     if settings.SCALE_PRESSURE_ENABLED and meter is not None:
         # Skipped quietly with no meter, exactly as the index refresh is with no
         # source: a process that scores nothing has no pressure to report, and
@@ -686,4 +702,73 @@ def build_uncommitted_photo_sweep(
         name=PHOTO_SWEEP_JOB,
         interval_seconds=settings.PHOTO_SWEEP_INTERVAL_SECONDS,
         run=sweep,
+    )
+
+
+def build_photo_review_backfill(*, settings: Settings) -> PeriodicJob:
+    """Ask the reviewer about the photos nobody ever asked it about (#197).
+
+    **Idempotent and safe beside itself with no lock** (``docs/adr/0092``): two
+    runs handed the same photo both ask and both write the same-shaped metadata,
+    and the loser overwrites a verdict with a verdict. The bytes are never
+    touched by either. What *N* processes cost here is duplicated inference
+    rather than a wrong answer, which is why the budget is small and the
+    interval is not — see `Settings` for both numbers, and the use case for why
+    neither of them can change which photos are chosen.
+
+    The reviewer is built from the composition root, so this job asks the same
+    sidecar the upload path asks and applies the same rule
+    (``domain/photos.py`` — `verdict_from_similarities`). **A batch with its own
+    copy of the threshold would be a second reviewer**, able to disagree with
+    the upload path about one image with nothing downstream to say which was
+    right.
+    """
+
+    storage = build_photo_storage(settings)
+    transcoder = build_image_transcoder()
+    review = build_photo_review(settings)
+
+    async def run() -> None:
+        report = await ReviewUnreviewedPhotos(
+            storage=storage,
+            transcoder=transcoder,
+            review=review,
+            batch_limit=settings.PHOTO_REVIEW_BACKFILL_BATCH_LIMIT,
+            pause_seconds=settings.PHOTO_REVIEW_BACKFILL_PAUSE_SECONDS,
+        ).execute()
+
+        # At ``WARNING`` when the reviewer would not answer — whether it gave
+        # up the run or refused individual photos — because that is the state
+        # where the loop is running, finding work and fixing nothing, which at
+        # ``INFO`` beside a `photos_updated` of zero is indistinguishable from a
+        # corpus that is already done.
+        logger.log(
+            logging.WARNING
+            if report.stopped_unreviewable or report.refused
+            else logging.INFO,
+            "photo review backfill finished",
+            extra={
+                "job": PHOTO_REVIEW_BACKFILL_JOB,
+                "photos_examined": report.examined,
+                "photos_updated": report.updated,
+                "photos_vanished": report.vanished,
+                "photos_unreadable": report.unreadable,
+                "photos_refused": report.refused,
+                # Population 3, which this job deliberately does not touch. It
+                # is here because a count is what makes *is it worth re-running
+                # the corpus against the new prompts* answerable at all.
+                "photos_against_a_superseded_prompt_set": report.superseded,
+                "stopped_on_budget": report.stopped_on_budget,
+                "reviewer_unavailable": (
+                    report.unavailable.value
+                    if report.unavailable is not None
+                    else None
+                ),
+            },
+        )
+
+    return PeriodicJob(
+        name=PHOTO_REVIEW_BACKFILL_JOB,
+        interval_seconds=settings.PHOTO_REVIEW_BACKFILL_INTERVAL_SECONDS,
+        run=run,
     )

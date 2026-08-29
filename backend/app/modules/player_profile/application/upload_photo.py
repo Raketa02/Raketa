@@ -28,6 +28,7 @@ from app.modules.player_profile.domain.photos import (
     PhotoRef,
     PhotoReviewVerdict,
     PresignedPhoto,
+    review_metadata,
 )
 from app.modules.player_profile.domain.ports import (
     ImageTranscoder,
@@ -35,13 +36,6 @@ from app.modules.player_profile.domain.ports import (
     PhotoStorage,
 )
 from app.shared.ids import new_uuid
-
-#: The metadata key the review verdict is stored under, beside the bytes.
-REVIEW_METADATA_KEY = "review"
-
-#: The metadata key the reviewer's machine-readable note is stored under, when
-#: it gave one. Absent rather than empty when it did not.
-REVIEW_NOTE_METADATA_KEY = "review-note"
 
 
 @dataclass(frozen=True, slots=True)
@@ -86,9 +80,12 @@ class UploadPhoto:
         # rather than hard-blocks (`docs/adr/0091`), and the verdict rides on the
         # object so that a moderation queue built later can find what it flagged
         # without a second table that can disagree with the blobs.
-        metadata = {REVIEW_METADATA_KEY: verdict.decision.value}
-        if verdict.note is not None:
-            metadata[REVIEW_NOTE_METADATA_KEY] = verdict.note
+        #
+        # **How a verdict becomes metadata is the domain's, not this use case's**
+        # (`domain/photos.py`). The re-review backfill reads back what this line
+        # writes, and an encoder here with a decoder there is the pair that
+        # drifts — silently, into a backfill that finds no population at all.
+        metadata = review_metadata(verdict)
 
         ref = PhotoRef(owner_id=command.owner_id, photo_id=new_uuid())
         await self._storage.put(ref, image, metadata=metadata)

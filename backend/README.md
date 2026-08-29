@@ -286,6 +286,10 @@ serving HTTP.
 | `PHOTO_REVIEW_TIMEOUT_SECONDS` | The whole budget for one review. Exceeding it fails open. |
 | `PHOTO_SWEEP_ENABLED` | Enables the uncommitted-photo sweep job. |
 | `PHOTO_SWEEP_INTERVAL_SECONDS` | How often the sweep runs. Not the retention window — see *Background Jobs*. |
+| `PHOTO_REVIEW_BACKFILL_ENABLED` | Enables the photo re-review backfill job. |
+| `PHOTO_REVIEW_BACKFILL_INTERVAL_SECONDS` | How often the backfill runs. |
+| `PHOTO_REVIEW_BACKFILL_BATCH_LIMIT` | Most photos one backfill run may send to the reviewer. |
+| `PHOTO_REVIEW_BACKFILL_PAUSE_SECONDS` | Gap between two reviews inside one run. Not which photos it picks — that is the note on the object. |
 | `REDIS_URL` | The ephemeral store, holding the exposure and suppression ledgers. Server-to-server; no scheme rule. |
 | `EXPOSURE_ROLL_ENABLED` | Enables the hourly exposure roll. |
 | `EXPOSURE_ROLL_INTERVAL_SECONDS` | How often the roll runs. Not either ledger's TTL — see *The ephemeral store*. |
@@ -550,16 +554,19 @@ process and no second deployable.
   and dispatches to subscribed handlers. Its worker id is the lease its batches
   claim rows under.
 - **Scheduled jobs** (`PeriodicJob`) run because an interval elapsed.
-  `app/bootstrap/jobs.py` is the register, and seven jobs are in it today: the
+  `app/bootstrap/jobs.py` is the register, and nine jobs are in it today: the
   **uncommitted-photo sweep**, which deletes every photo the object store has
   held for more than 24 hours that no committed profile currently names; the
-  candidate index's **tail reader** and **snapshot refresh**; the
-  **exposure roll**, which publishes one scalar per sport per week saying what
-  *shown more often than most* means; the two **prompt loops** — intent drift and
-  availability staleness — which write no value anywhere and each raise a
-  standing question instead; and the **interest expiry loop**, which removes every
-  *Let's play* whose twenty-one days have passed. The roll is the only one that
-  takes no database session — its whole input and output are in Redis.
+  **photo re-review backfill**, which asks the reviewer about the photos nobody
+  ever asked it about; the candidate index's **tail reader** and **snapshot
+  refresh**; the **exposure roll**, which publishes one scalar per sport per week
+  saying what *shown more often than most* means; the two **prompt loops** —
+  intent drift and availability staleness — which write no value anywhere and each
+  raise a standing question instead; the **interest expiry loop**, which removes
+  every *Let's play* whose twenty-one days have passed; and the **scale-pressure
+  probe**, whose work is measuring how late the event loop woke it. Two of them
+  take no database session: the roll, whose whole input and output are in Redis,
+  and the backfill, whose whole input and output are the object store.
 
   The expiry loop is the only job here that deletes anything, and **correctness
   does not depend on it running**: every read of the interest ledger is bounded by
@@ -585,6 +592,24 @@ would see — orphans simply accumulate.
 
 The first run of a job happens at startup rather than after the first interval,
 which is the only thing that makes a six-hourly job observable on a laptop.
+
+**The re-review backfill is the same shape and the same rules**
+([ADR-0132](../docs/adr/0132-a-re-review-is-the-same-reviewer-and-a-stale-prompt-set-is-not-one.md)).
+Every photo uploaded before the checker landed carries `review: allowed` written by
+a pass-through that allowed everything, and nothing looked at those images. *Which
+photos need re-reviewing* is a query rather than a guess, because the note already
+tells the three populations apart: no note at all is the pass-through era,
+`unavailable=…` is a photo that arrived while the sidecar was down, and a full
+`clip;m=…;p=…;c=…;s=…` is one that was really scored. The job fixes the first two,
+**counts** the third — reviewed honestly against a prompt set that has since moved —
+without touching it, because whether that is worth re-running is a judgement nobody
+has made. It re-reviews through the same `PhotoReview` port the upload path holds, so
+there is exactly one copy of the rule; it never rewrites a note that is already
+right, because a metadata update is a copy of the object onto itself; and a run
+against a sidecar it cannot **reach** stops rather than stamping a fresh *could
+not be asked* over an old one. A refusal about one image is the other case and is
+stepped over — ending the run on one would let a single photo end every run at the
+same place for ever, which is a stall rather than a pause.
 
 ## The ephemeral store
 

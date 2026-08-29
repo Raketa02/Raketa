@@ -15,11 +15,9 @@ from __future__ import annotations
 
 import pytest
 
-from app.modules.player_profile.application.upload_photo import (
+from app.modules.player_profile.domain.photos import (
     REVIEW_METADATA_KEY,
     REVIEW_NOTE_METADATA_KEY,
-)
-from app.modules.player_profile.domain.photos import (
     PhotoReviewDecision,
     PhotoReviewVerdict,
 )

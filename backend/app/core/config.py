@@ -251,6 +251,35 @@ class Settings(BaseSettings):
     PHOTO_SWEEP_ENABLED: bool = True
     PHOTO_SWEEP_INTERVAL_SECONDS: float = 6 * 60 * 60
 
+    # --- the photo re-review backfill (docs/adr/0132)
+    #
+    # **Not one of these can change which photos get re-reviewed.** That is read
+    # off the note the object already carries (`player_profile/domain/photos.py`
+    # — `review_standing`), so what is left here is operational: how often to
+    # look, how much inference one run may spend, and how far apart to space it.
+    # Turning the job off changes nothing a domain test could observe — the
+    # unreviewed population simply stops shrinking, which is the state the
+    # platform was in before the job existed.
+    #
+    # **Deliberately slow, and the cadence is in hours for the reason the
+    # sweep's is.** A run is a walk of the whole photo prefix — and a `HEAD` per
+    # object, because no S3-compatible listing carries user metadata — so the
+    # cost of a *tick* is paid against the corpus whether or not there is
+    # anything left to review. An hour puts that walk at six times the sweep's
+    # and no more.
+    #
+    # The budget is what the *sidecar* is protected by: one container running a
+    # single worker by design, with a live upload path queueing behind whatever
+    # it is doing, and a second of quiet between asks so an upload is never
+    # behind a hundred of them. A hundred an hour per API process drains any
+    # backlog this platform has in days, and nothing is waiting on it — the
+    # pass-through population is fixed and only shrinks, and the sweep already
+    # removes the photos no profile ever committed.
+    PHOTO_REVIEW_BACKFILL_ENABLED: bool = True
+    PHOTO_REVIEW_BACKFILL_INTERVAL_SECONDS: float = 60 * 60
+    PHOTO_REVIEW_BACKFILL_BATCH_LIMIT: int = 100
+    PHOTO_REVIEW_BACKFILL_PAUSE_SECONDS: float = 1.0
+
     # --- the candidate index (docs/adr/0110, docs/adr/0112)
     #
     # **Two loops with two different jobs, and both cadences are configuration.**

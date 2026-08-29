@@ -149,6 +149,7 @@ async def test_no_background_work_at_all_reaches_for_no_engine(monkeypatch):
     settings = _settings(
         EVENT_DELIVERY_WORKER_ENABLED=False,
         PHOTO_SWEEP_ENABLED=False,
+        PHOTO_REVIEW_BACKFILL_ENABLED=False,
         CANDIDATE_INDEX_ENABLED=False,
         EXPOSURE_ROLL_ENABLED=False,
         INTENT_DRIFT_ENABLED=False,
@@ -189,9 +190,15 @@ async def test_no_background_work_at_all_reaches_for_no_engine(monkeypatch):
     assert disposed == [True]
 
 
-async def test_the_sweep_is_registered_by_default(monkeypatch, stub_engine):
-    """The default configuration runs it. A job nobody wired up is a decision
-    recorded in an ADR and absent from the running system."""
+async def test_the_two_photo_jobs_are_registered_by_default(monkeypatch, stub_engine):
+    """The default configuration runs both. A job nobody wired up is a decision
+    recorded in an ADR and absent from the running system.
+
+    Both, in one test, because they walk the **same bucket** and the pairing is
+    the thing worth seeing: the sweep deletes what no profile names, the
+    backfill re-reviews what nobody looked at, and neither takes a lock
+    (``docs/adr/0092``, ``docs/adr/0132``).
+    """
 
     settings = _settings(EVENT_DELIVERY_WORKER_ENABLED=False)
     app = FastAPI()
@@ -201,6 +208,7 @@ async def test_the_sweep_is_registered_by_default(monkeypatch, stub_engine):
         names = [job.name for job in app.state.scheduled_jobs]
 
     assert "uncommitted-photo-sweep" in names
+    assert "photo-review-backfill" in names
 
 
 async def test_the_outbox_drain_is_not_published_as_a_scheduled_job(

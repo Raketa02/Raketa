@@ -14,8 +14,6 @@ import pytest
 
 from app.modules.player_profile.application.commands import UploadPhotoCommand
 from app.modules.player_profile.application.upload_photo import (
-    REVIEW_METADATA_KEY,
-    REVIEW_NOTE_METADATA_KEY,
     UploadPhoto,
 )
 from app.modules.player_profile.domain.errors import (
@@ -24,6 +22,8 @@ from app.modules.player_profile.domain.errors import (
 )
 from app.modules.player_profile.domain.photos import (
     MAX_UPLOAD_BYTES,
+    REVIEW_METADATA_KEY,
+    REVIEW_NOTE_METADATA_KEY,
     STORED_MEDIA_TYPE,
     PhotoReviewDecision,
     PhotoReviewVerdict,

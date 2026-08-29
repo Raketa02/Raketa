@@ -28,6 +28,7 @@ from uuid import UUID
 
 from app.kernel import Instant, Sport
 from app.modules.player_profile.domain.photos import (
+    NotedPhoto,
     PhotoRef,
     PhotoReviewVerdict,
     StoredPhoto,
@@ -105,6 +106,60 @@ class PhotoStorage(Protocol):
         The stamp is the store's own, and there is no other source for it: an
         uploaded photo is not in any event stream until a commit names it, so
         *when did this arrive* is a question only the store can answer.
+        """
+        ...
+
+    def with_review_notes(self) -> AsyncGenerator[NotedPhoto, None]:
+        """Every photo this store holds, each with its review note beside it.
+
+        **The listing the re-review backfill walks** (``docs/adr/0132``), and a
+        separate question from ``stored_before`` rather than a flag on it: that
+        one asks *how old*, this one asks *what does the metadata say*, and they
+        are answered by different calls in every S3-compatible store — a listing
+        returns keys and stamps, and user metadata costs a request per object.
+        Folding them together would make the sweep pay for the backfill's reads
+        on every tick.
+
+        **A stream rather than a list**, an ``AsyncGenerator`` rather than an
+        ``AsyncIterator``, and grouped by owner: all three for the reasons
+        ``stored_before`` gives, and the second one so that a caller which stops
+        early — which this one does, on its budget — can close it.
+
+        Every photo, with **no cutoff.** An unreviewed photo does not become
+        less unreviewed with age, and the population that needs the work is the
+        old one.
+        """
+        ...
+
+    async def read(self, ref: PhotoRef) -> bytes | None:
+        """The bytes of this photo, or ``None`` if the store no longer has it.
+
+        ``None`` rather than a raise, because *gone* is a state a caller has to
+        handle rather than a failure: the sweep deletes an orphan the moment its
+        window passes, and a backfill walking the same bucket will meet one.
+        Both are periodic jobs with no lock between them (``docs/adr/0092``).
+
+        The bytes are whatever was stored, which is always JPEG — everything is
+        re-encoded on receipt (this module's docstring).
+        """
+        ...
+
+    async def replace_metadata(
+        self, ref: PhotoRef, metadata: Mapping[str, str]
+    ) -> None:
+        """Replace this photo's metadata, leaving the bytes untouched.
+
+        **Replace, not merge**, because that is what the underlying operation is
+        — an S3 metadata update is a copy of the object onto itself with the new
+        set — and a port that promised a merge would be one implementation
+        pretending. The caller hands over the whole set it wants the object to
+        carry.
+
+        **Already gone is success**, exactly as ``delete`` is, and for the same
+        reason: a job racing the sweep over the same photo must finish rather
+        than fail its run. A photo id is never reused — every upload mints a
+        fresh one — so an object that is absent here is one that will not come
+        back, not one that might be different bytes under the same name.
         """
         ...
 

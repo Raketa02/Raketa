@@ -135,7 +135,7 @@ Rules to preserve:
   built from the composition root so it reaches the same bucket and event store a
   request does. There is no cron, no beat process and no lock: with N API processes a
   job runs N times per interval, so a job that cannot tolerate that needs a different
-  mechanism and its own ADR. Eight jobs today — the uncommitted-photo sweep, whose
+  mechanism and its own ADR. Nine jobs today — the uncommitted-photo sweep, whose
   **retention window is domain and whose cadence is configuration** (those two must not
   swap places), the candidate index's two loops below, the **exposure roll**, the
   first job here that takes no database session at all, the two **prompt loops**
@@ -153,7 +153,26 @@ Rules to preserve:
   [`scale-posture.md`](../docs/specs/matchmaking/scale-posture.md) §4 states trigger 1
   over. It reads this process's own counters and writes nothing anywhere, so it needs no
   session and no store, and *N processes, N runs* is what the trigger wants — it is
-  stated **per worker**.
+  stated **per worker**. The ninth is the **photo re-review backfill**
+  ([ADR-0132](../docs/adr/0132-a-re-review-is-the-same-reviewer-and-a-stale-prompt-set-is-not-one.md)),
+  the second job that takes no session — its whole input and output are the object store.
+  Every photo uploaded before ADR-0129's checker landed carries `review: allowed` written
+  by a pass-through that looked at nothing, and **the note is what tells the three
+  populations apart**: no `review-note` key is the pass-through era, `unavailable=…` is a
+  photo that arrived while the sidecar was down and that population keeps growing, and a
+  full `clip;m=…;p=…;c=…;s=…` was really scored. The job fixes the first two and
+  **counts the third without touching it** — reviewed against captions that have since
+  moved is a judgement nobody has made, and `PROMPT_SET_FINGERPRINT` is what makes it
+  answerable. Four rules, each a way it could go wrong invisibly: it re-reviews
+  **through the `PhotoReview` port**, so there is one copy of `verdict_from_similarities`
+  and a batch cannot disagree with the upload path about one image; it **never rewrites a
+  note that is already right**, because an S3 metadata update is a copy of the object onto
+  itself; a run against a sidecar it cannot **reach** stops rather than stamping a fresh
+  `unavailable` over an old one, while a refusal about one image is counted and stepped
+  over — ending the run on one would stall the job at that photo for ever
+  (`PhotoReviewUnavailability.is_about_the_reviewer` is the split); and a note it cannot
+  parse reads as *nobody looked* — the deliberate inverse of the sweep, whose action is a delete. The budget, the
+  pause and the cadence are settings and none of them selects which photos are chosen.
 - **The candidate index tails the log; the outbox delivers side effects**
   ([ADR-0110](../docs/adr/0110-the-index-tails-the-log-the-outbox-delivers-side-effects.md),
   [ADR-0111](../docs/adr/0111-the-index-holds-only-what-a-player-changes-about-themselves.md),
@@ -331,9 +350,9 @@ tests.
   laptop or a CI runner, and both are `local`.
 - The embedded event-delivery worker polls the outbox on startup; toggle with
   `EVENT_DELIVERY_WORKER_ENABLED`. Scheduled jobs are toggled one at a time —
-  `PHOTO_SWEEP_ENABLED`, `CANDIDATE_INDEX_ENABLED`, `EXPOSURE_ROLL_ENABLED`,
-  `INTENT_DRIFT_ENABLED`, `GRID_STALENESS_ENABLED`, `INTEREST_EXPIRY_ENABLED`,
-  `SCALE_PRESSURE_ENABLED` — and **every
+  `PHOTO_SWEEP_ENABLED`, `PHOTO_REVIEW_BACKFILL_ENABLED`, `CANDIDATE_INDEX_ENABLED`,
+  `EXPOSURE_ROLL_ENABLED`, `INTENT_DRIFT_ENABLED`, `GRID_STALENESS_ENABLED`,
+  `INTEREST_EXPIRY_ENABLED`, `SCALE_PRESSURE_ENABLED` — and **every
   job's first run is at startup**, not after its first interval, so a six-hourly job is
   observable on a laptop.
 

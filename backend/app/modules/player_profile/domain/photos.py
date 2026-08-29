@@ -26,7 +26,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 from hashlib import sha256
 from math import exp
-from typing import Final, Sequence
+from typing import Final, Mapping, Sequence
 from uuid import UUID
 
 from app.kernel import Instant
@@ -174,6 +174,25 @@ class StoredPhoto:
 
 
 @dataclass(frozen=True, slots=True)
+class NotedPhoto:
+    """A photo the store is holding, and what it says about its review.
+
+    The other thing a listing yields, and the mirror image of `StoredPhoto`:
+    that one carries the stamp and deliberately no metadata, this one carries
+    the metadata and deliberately no stamp. Two shapes rather than one wide one,
+    because the sweep may not be able to read a verdict — a sweep that could
+    would invite a rule about flagged photos — and the backfill has no business
+    with an age.
+
+    ``note`` is absent for every photo stored before the checker existed, and
+    that absence is the signal rather than a gap: see `review_standing`.
+    """
+
+    ref: PhotoRef
+    note: str | None
+
+
+@dataclass(frozen=True, slots=True)
 class PresignedPhoto:
     """A URL that grants read access to one photo, and when it stops working.
 
@@ -234,6 +253,30 @@ class PhotoReviewUnavailability(StrEnum):
     TRANSPORT = "transport"
     STATUS = "status"
     MALFORMED = "malformed"
+
+    @property
+    def is_about_the_reviewer(self) -> bool:
+        """Whether this says *the reviewer is down* or *it failed this request*.
+
+        **Two of these four describe the container and two describe one call to
+        it**, and a batch re-reviewing a corpus has to tell them apart. A timeout
+        and a transport error mean the sidecar is not answering, so the next
+        photo will get the same answer and there is nothing to do but come back
+        later. A status or a malformed body mean it *answered* — perhaps about
+        this one image, which may be the only image it cannot handle. Treating
+        those as *the reviewer is down* would let one photo end every run at the
+        same place for ever, and nothing after it in the listing would be looked
+        at again.
+
+        Nothing on the upload path reads this: a single upload fails open
+        whichever it was, and the note records which. It is the re-review pass
+        that has a next photo to decide about.
+        """
+
+        return self in {
+            PhotoReviewUnavailability.TIMEOUT,
+            PhotoReviewUnavailability.TRANSPORT,
+        }
 
 
 #: The captions that mean *this is the photo the rule asks for*. One per sport
@@ -409,3 +452,207 @@ def verdict_when_unreviewable(why: PhotoReviewUnavailability) -> PhotoReviewVerd
         decision=PhotoReviewDecision.ALLOWED,
         note=f"clip;p={PROMPT_SET_FINGERPRINT};unavailable={why.value}",
     )
+
+
+# ---------------------------------------------------------------------------
+# What the store already says about a photo, and who still owes a look
+# ---------------------------------------------------------------------------
+#
+# Everything above decides what a *new* photo's verdict is. What follows reads
+# the verdict already sitting beside an object, because the platform holds
+# photos from three different eras and they are not the same job
+# (``docs/adr/0132``): the ones the pass-through waved through with no note, the
+# ones that arrived while the sidecar was unreachable, and the ones that were
+# really looked at.
+#
+# **The encoder and the decoder are here together, deliberately.** The upload
+# path writes this metadata and the backfill reads it; two modules spelling the
+# same key is the pair that drifts, and a backfill that misspelled it would
+# silently find no population at all.
+
+
+#: The metadata key the review decision is stored under, beside the bytes.
+REVIEW_METADATA_KEY: Final = "review"
+
+#: The metadata key the reviewer's machine-readable note is stored under, when
+#: it gave one. **Absent rather than empty when it did not**, which is the whole
+#: of how a pass-through-era photo is told apart from a reviewed one.
+REVIEW_NOTE_METADATA_KEY: Final = "review-note"
+
+#: What separates one field of a note from the next, and a field's name from its
+#: value. Named because the note is written here and parsed here, and a
+#: separator written twice is one that eventually disagrees with itself.
+_NOTE_FIELD_SEPARATOR: Final = ";"
+_NOTE_VALUE_SEPARATOR: Final = "="
+
+#: The field a note carries the prompt-set fingerprint in. Every note shape has
+#: it — a verdict names what it was judged against, and an outage names what it
+#: would have been judged against.
+_PROMPT_SET_FIELD: Final = "p"
+
+#: The field that says the reviewer was never asked, and why.
+_UNAVAILABLE_FIELD: Final = "unavailable"
+
+#: What a note must carry to count as *this image was actually scored*: the
+#: model, the prompt set, the confidence and the raw vector. All four, because
+#: any three of them is a note this application never wrote.
+_REVIEWED_FIELDS: Final = frozenset({"m", _PROMPT_SET_FIELD, "c", "s"})
+
+
+class PhotoReviewStanding(StrEnum):
+    """Whether anybody has actually looked at this photo yet.
+
+    Read off the note the store holds, and **not** the same question as
+    `PhotoReviewDecision`: a photo can be ``allowed`` because a model scored it
+    and a photo can be ``allowed`` because nothing was asked, and until #181
+    landed nothing distinguished the two.
+
+    Three values because there are three populations, and only the first two are
+    work (``docs/adr/0132``).
+    """
+
+    #: No note, or a note nothing can read. The pass-through era, and the
+    #: population that is fixed and only shrinks.
+    NEVER_ASKED = "never-asked"
+
+    #: The reviewer was asked and could not answer — down, slow, or wrong. This
+    #: population keeps growing, which is why the fix is a loop and not a script.
+    UNAVAILABLE = "unavailable"
+
+    #: Scored against a real image. The prompt set it was scored under is in the
+    #: note; whether that set is still the one being asked is a separate
+    #: question, and `judged_against_a_superseded_set` is the one that asks it.
+    REVIEWED = "reviewed"
+
+
+def review_metadata(verdict: PhotoReviewVerdict) -> dict[str, str]:
+    """The metadata one verdict is stored under, beside the bytes.
+
+    A flagged photo is **stored**, not refused — the check soft-warns rather
+    than hard-blocks (``docs/adr/0091``) — and the verdict rides on the object
+    so that what the reviewer concluded is findable later without a second table
+    to keep in step with the blobs.
+
+    The note key is **omitted** rather than written empty when there is none.
+    That is not tidiness: it is the signal, and `review_standing` reads it.
+    """
+
+    metadata = {REVIEW_METADATA_KEY: verdict.decision.value}
+    if verdict.note is not None:
+        metadata[REVIEW_NOTE_METADATA_KEY] = verdict.note
+    return metadata
+
+
+def review_note_in(metadata: Mapping[str, str]) -> str | None:
+    """The reviewer's note out of one object's metadata, or ``None``.
+
+    ``None`` for *this object carries no note*, which is what every photo stored
+    before the checker existed looks like.
+    """
+
+    return metadata.get(REVIEW_NOTE_METADATA_KEY)
+
+
+def _note_fields(note: str) -> dict[str, str]:
+    """One note's ``name=value`` fields. Anything else in it is ignored.
+
+    Lenient on purpose, and the leniency is bounded by what the callers do with
+    it: a note is only ever read as *reviewed* when all four of the fields that
+    prove a score are present, so a truncated or corrupted string falls short of
+    that and is re-reviewed rather than trusted.
+    """
+
+    fields: dict[str, str] = {}
+    for part in note.split(_NOTE_FIELD_SEPARATOR):
+        name, separator, value = part.partition(_NOTE_VALUE_SEPARATOR)
+        if separator:
+            fields[name] = value
+    return fields
+
+
+def review_standing(note: str | None) -> PhotoReviewStanding:
+    """Which of the three populations the photo carrying `note` is in.
+
+    **A note this cannot read is ``NEVER_ASKED``, not an error**, and that is
+    the opposite of how the sweep treats a key it cannot parse. The sweep
+    refuses to guess because its action is a delete and a wrong answer destroys
+    something a player cannot get back; here the action is a re-review, so a
+    wrong answer costs one inference and leaves behind a note that does parse.
+    """
+
+    if note is None:
+        return PhotoReviewStanding.NEVER_ASKED
+    fields = _note_fields(note)
+    if _UNAVAILABLE_FIELD in fields:
+        return PhotoReviewStanding.UNAVAILABLE
+    if _REVIEWED_FIELDS <= fields.keys():
+        return PhotoReviewStanding.REVIEWED
+    return PhotoReviewStanding.NEVER_ASKED
+
+
+def awaits_review(note: str | None) -> bool:
+    """Whether this photo still owes a look. Populations 1 and 2 together.
+
+    The two are one question at the point of doing the work — *has anything
+    scored this image* — and two different facts about how the platform got
+    there, which is why the standing keeps them apart and this does not.
+    """
+
+    return review_standing(note) is not PhotoReviewStanding.REVIEWED
+
+
+def unavailability_in(note: str | None) -> PhotoReviewUnavailability | None:
+    """Why the reviewer could not be asked, if this note says it could not.
+
+    **The closed set earns its keep here** (`PhotoReviewUnavailability`): a
+    backfill that stops because the sidecar is unreachable and one that stops
+    because the sidecar is rejecting its requests want two different people
+    looking, and the difference is one field of a string nobody had to keep a
+    table of.
+
+    ``None`` for every other note, and for a reason outside the set — which is a
+    note this application did not write, and naming it would be inventing a
+    value the enum deliberately does not have.
+    """
+
+    if note is None:
+        return None
+    reason = _note_fields(note).get(_UNAVAILABLE_FIELD)
+    if reason is None:
+        return None
+    try:
+        return PhotoReviewUnavailability(reason)
+    except ValueError:
+        return None
+
+
+def prompt_set_in(note: str | None) -> str | None:
+    """Which prompt set this note was written under, or ``None`` if it says no.
+
+    The fingerprint is what makes a stored corpus re-readable at all: a
+    similarity vector means nothing without the captions it was measured
+    against (`PROMPT_SET_FINGERPRINT`).
+    """
+
+    if note is None:
+        return None
+    return _note_fields(note).get(_PROMPT_SET_FIELD)
+
+
+def judged_against_a_superseded_set(note: str | None) -> bool:
+    """Whether this photo was really scored, against captions that have moved.
+
+    **Population 3, and it is a question rather than a job** (``docs/adr/0132``).
+    Re-running it is a judgement about how far the set moved, which nothing here
+    can make; what this buys is that the judgement is *answerable* — the size of
+    the population is a count rather than a guess.
+
+    False for anything that awaits review. An outage's note carries a
+    fingerprint too, and an old one is still the sidecar having been down rather
+    than a verdict worth re-deciding — counting it here would hide it from the
+    population that is actually work.
+    """
+
+    if review_standing(note) is not PhotoReviewStanding.REVIEWED:
+        return False
+    return prompt_set_in(note) != PROMPT_SET_FINGERPRINT
