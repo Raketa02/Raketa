@@ -30,7 +30,7 @@ committed ahead of *a decision*, and a speculative list of context names is not 
 context that does not appear below has no vocabulary yet — resolve its terms into this file
 before writing it, which is what the last three sections below are: **Player profile** is
 settled in an accepted ADR and is being built, **Blocks** is settled in an accepted ADR and
-is now built, and **Matchmaking** is settled in accepted ADRs and is not built at all. Their
+is now built, and **Matchmaking** and **Challenges** are settled and not built at all. Their
 terms are here because that is the order this file asks for, not because the code landed
 first. **Player Score** is a further step out again: nothing about it is decided, and it
 appears only because the matcher has contracted six words it will read, and the words are
@@ -300,6 +300,10 @@ of the code because this file asks for them in that order.
   widened search can carry a different window from the profile. It is what the person answering
   a challenge is told they are agreeing to; it is **not a proposed time**, and the players agree
   the hour themselves ([ADR-0100](docs/adr/0100-challenge-window-derived-never-chosen.md)).
+  **Derived once, at the moment of sending, and then recorded on the Challenge.** ADR-0100
+  forbids *choosing* it, not storing it: the grid it was derived from is the searcher's own and
+  they may edit it a minute later, so a window re-derived on read would quietly change what the
+  invitee is answering. A proposal that moves after it is sent is not a proposal.
 - **Location area** — where a player plays, held coarsely. The precise fix that produced it
   is never a shareable value.
 - **Search radius** — the distance around a player's Location area within which they want to
@@ -477,8 +481,8 @@ that will consult the port do not exist yet, which is why it is wired and has no
   response shape can carry a block or a decline — asserted by a test, not by review.
 - **A block is forward-looking.** It removes each from the other's *future* proposals and
   listings. It does not reach into a game already agreed or a chat already open; what it does
-  to an open challenge is a demand on the unbuilt `matches` context, not a decision this
-  context makes.
+  to an open **Challenge** is a demand on the unbuilt `challenges` context, not a decision
+  this context makes.
 - **Blocking is idempotent, and blocking yourself is an error.** A second block appends
   nothing, in the shape of `disable()`; a self-block raises rather than no-ops.
 - **No cap, no cooldown, no rate limit.** Friction on the one control a person has is a tax
@@ -643,9 +647,11 @@ appears here.
 - **Pairwise history** — what happened between the searcher and one other player: **accepted**,
   **declined**, **played**, **planned-never-played**. Four outcomes the matcher keeps distinct,
   because a pair who ghosted each other is not a pair who played.
-- **Origin key** — the `(search_id, position)` a challenge was sent from, carried by the
-  challenge itself. Required, never optional: a search not joined to its outcome is evidence
-  that no longer exists, and there is no backfill.
+- **Origin key** — the `(search_id, position)` a challenge was sent from. Carried **per
+  invited seat**, never per challenge: a doubles send draws its three invitees from one search
+  at three positions, so a challenge-level key would keep the search and lose every position —
+  and the position is what the telemetry join reads. Required, never optional: a search not
+  joined to its outcome is evidence that no longer exists, and there is no backfill.
 - **PlayerScoreQuery** / **MatchHistoryQuery** — the two ports naming what the matcher demands of
   `player_score` and `matches`, beside **AccountHoldQuery** for `cases` and **AtStakeQuery** for
   `rating`. One provider signs one contract. Their only adapters today are
@@ -708,10 +714,11 @@ appears here.
 - **Interest** — a player's own *yes* to a specific person, cited to the **Search** that
   surfaced them. It is a human's judgement rather than the engine's, which is why it may lift
   somebody above the **quality floor** where nothing the engine computes may. It outlives the
-  search it came from, and it is not a challenge — a challenge belongs to a context that does
-  not exist yet. **A yes is a statement about *now*, so it expires** — at 21 days, flat until
-  then and then absent, never tapering, because the age of the yes is already printed on the card
-  and a fading lift would charge for it a second time invisibly
+  search it came from, and it is not a **Challenge** — a challenge belongs to `challenges`,
+  and a *mutual* yes is the one thing here that opens one. **A yes is a statement about *now*,
+  so it expires** — at 21 days, flat until then and then absent, never tapering, because the
+  age of the yes is already printed on the card and a fading lift would charge for it a second
+  time invisibly
   ([ADR-0127](docs/adr/0127-a-signal-expires-or-is-refused-never-quietly-decays.md)). The expiry
   is **dated when the yes is made**, never announced when it lands.
 - **Outstanding interest** — an **Interest** that is sent, **unexpired**, and **not yet
@@ -923,6 +930,80 @@ appears here.
   once.** Passes, declines, blocks, incoming-and-not-mutual interest, Liveness numbers, pre-gate
   pool counts. A test per route passes forever and then somebody adds a route; the assertion is
   central, over every response type the contract publishes.
+
+### Challenges (`backend/app/modules/challenges/`)
+
+Settled by [#221](https://github.com/Raketa02/Raketa/issues/221) and **not built**. It is the
+context the matcher has been citing since ADR-0098 without being able to name: `matchmaking`
+ends at a ranked list, and *asking somebody* begins here. It is deliberately **not** called
+`matches` — that word promises results, history and a played game, none of which is in scope —
+and it deliberately does not live inside `matchmaking`, because the matcher reads challenges
+through a **port** precisely so it does not own them.
+
+Its whole subject is the span between *send* and *everybody has answered*. Nothing about when,
+where, money, results or the conversation itself belongs here.
+
+- **Challenge** — one player's ask to play, sent to everybody on a built court at once, and
+  answered by each of them separately. **One challenge, however many people are in it**: a
+  doubles send is one thing containing four, not four things. Identity is its own, not the pair's
+  — the same people may be challenged again later, and that is a new challenge.
+- **Seat** — one position on the challenge's court: a **Side** and either an occupant or nothing.
+  The seats are a fixed list of `2 × seats_per_side(sport)`, so *which side is short* is a fact
+  the challenge holds rather than one a reader has to count.
+- **Organiser** — the player who sent it. They hold a seat like anybody else, and it is
+  **accepted from birth**, because they are the one proposing. That is what makes *"every seat
+  accepted"* the whole of the completion rule, with no special case for singles.
+- **Arrangement** — the sides the organiser built, recorded with the challenge and shown to the
+  people answering it. The invitee answers *the arrangement proposed*, never a better one worked
+  out afterwards. **Sides only**: the forecast percentage is not stored, because it follows from
+  the sides and a stored copy goes stale the next time a ruleset ships.
+- **Standing** — what a challenge *is* right now: `AWAITING_ANSWERS`, `ON`, `LINE_UP_INCOMPLETE`,
+  `DECLINED`, `LAPSED`. **Derived from the seats and the clock, never stored.** A status column
+  would be wrong for the whole gap between a deadline passing and a sweep noticing, and it would
+  be the copy that gets believed. *Challenge sent* and *Challenge for you* are not two standings —
+  they are one standing read from two sides.
+- **Answer window** — how long one invitee has to answer, **dated per seat when that seat was
+  invited**. Seats filled later start their own day; they cannot inherit a deadline from a send
+  they were not part of.
+- **Lapse** — a seat whose answer window passed with no answer. **A lapse is not a decline.**
+  They do the same thing to the line-up and they are different facts: *answers challenges* is a
+  **Strand** over challenges that got an answer inside their window, and it is unmeasurable if
+  silence and a no are one event.
+- **Open challenge** — a Challenge that has not ended. What the matcher excludes a pair on, and
+  what **Challenge load** counts.
+
+**Invariants**
+
+- **A challenge stands as long as somebody other than the organiser is still in it** — accepted,
+  or yet to answer. A decline reopens that one seat and disturbs nothing else, because the people
+  who already agreed did nothing wrong; but when the last of them is gone, there is nobody left to
+  keep faith with and the challenge is over. Singles gets the right answer for free.
+- **Membership grows one acceptance at a time, and that is the point.** Each accept is
+  consequential the moment it happens rather than a step toward a total: it admits one person to a
+  conversation that starts as soon as the second player is in it, and grows as the others arrive.
+  So `challenges` publishes **one event per acceptance** and never a single *the challenge is now
+  on*. **Line-up incomplete is not a waiting room.**
+- **An acceptance is to the game, not to the side.** An accepted player may be moved across the
+  net afterwards and their acceptance stands: the membership is settled, the arrangement is still
+  the organiser's to choose. They may never be removed or replaced.
+- **Only the newly seated are invited.** Completing a half-built line-up asks the people who were
+  not already in, and nobody else. Asking somebody twice reads as the platform having lost track
+  of them, and it damages the very answer record the matcher reads as reliability.
+- **Once the court is full, the sides are frozen.** The only door back into an arrangement is an
+  open seat, and a send with nobody new to invite is refused rather than recorded — so there is no
+  such thing as a rearrangement on its own.
+- **One open challenge per pair, across every sport.** Two people are either arranging a game or
+  they are not; asking for padel while your tennis challenge sits unanswered is pestering with a
+  sport chip on it. The matcher's `OpenChallenge` carries no sport, so this is the rule its shipped
+  contract already assumes rather than a new restriction.
+- **No day, part of day, hour or place is ever attached.** The challenge carries a **Window**
+  derived from the grid, and the players agree the hour themselves once a court can exist.
+- **A late answer is refused.** Past your own answer window the seat already reads as lapsed and
+  the organiser may have offered it to somebody else; an accept that resurrected it would be
+  contradicting a card the platform already drew.
+- **Nothing announces a conclusion the seats already imply.** There is no `GameOn`, no
+  `ChallengeExpired`, no `ChallengeDeclined` — a **Standing** that is derived has exactly one place
+  to be true, and an event saying otherwise would become the second.
 
 ### Player Score — demanded, not designed
 
