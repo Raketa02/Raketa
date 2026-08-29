@@ -746,9 +746,9 @@ availability grid is twenty-one elements with the column heads hidden.
 Actions are what a listener navigates *by*. The navigator has none, so it is one element; a
 grid cell is an answer, so there are twenty-one. This is the same rule stated once instead of
 twice, and it is the rule §G3's component boundaries are drawn against —
-[#240](https://github.com/Raketa02/Raketa/issues/240) decides the **React component tree**,
-this file decides the **accessibility tree**, and they are independent: a card may be one
-element built from six components, or six elements built from one.
+[`the-play-components.md`](the-play-components.md) decides the **React component tree**, this
+file decides the **accessibility tree**, and they are independent: a card may be one element
+built from six components, or six elements built from one.
 
 **The cap is on what precedes an action, not on the label.** A merged label leads with the
 identifying facts and continues with the argument; a listener who has heard enough interrupts

@@ -395,5 +395,9 @@ and the UI build is its own effort. The effort that builds these screens inherit
   `outstanding` / `cap` pair.
 - **The staleness threshold behind `index_stale`** — [#173](https://github.com/Raketa02/Raketa/issues/173).
 - **The tag relationship matrix** — [#179](https://github.com/Raketa02/Raketa/issues/179).
-- **The Play screens' interface** — out of scope on this map.
+- **The Play screens' interface** — out of scope on *this* map, and taken up by the next one
+  ([#217](https://github.com/Raketa02/Raketa/issues/217)):
+  [`the-words.md`](the-words.md) owns every sentence and every accessible name, and
+  [`the-play-components.md`](the-play-components.md) owns where one component stops and the
+  next begins.
 - **A notification mechanism** — no context in this repository can push anything; in the map's fog.
