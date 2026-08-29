@@ -606,7 +606,10 @@ appears here.
   one place the platform watches, notices, and deliberately declines to act
   ([ADR-0094](docs/adr/0094-play-intent-declared-per-sport-in-its-own-aggregate.md),
   [ADR-0099](docs/adr/0099-relaxation-offers-the-searchers-own-asks.md)). It crosses as a
-  **code** with the value already in play beside it; the client writes the sentence.
+  **code** with the value already in play beside it; the client writes the sentence. It is
+  **answered** by a write through the route that owns the value, never by the prompt itself, and
+  it is **retired** by its own expiry or by its condition ceasing — never by a caller, so a
+  question nobody answered cannot quietly stop being asked.
 - **Pool description** — what the response carries when the shortlist is empty: how many players
   of that sport are in range, structured, **counted after every gate**. It is the product in a
   new market, and it is a number on a screen, so it counts real rows and never estimates.
