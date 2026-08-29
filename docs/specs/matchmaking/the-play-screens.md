@@ -366,6 +366,21 @@ and the UI build is its own effort. The effort that builds these screens inherit
 5. **An unknown evidence kind renders a named gap**, never a shorter list
    ([ADR-0106](../../adr/0106-evidence-vocabulary-is-contract-weights-are-configuration.md) §6).
 6. **The animation's count comes from the response** (§3).
+7. **Nothing in Play retries without the player asking.** Every act in this tab is a
+   mutation, and mutations already ship `retry: false`; the read-back of a search is the
+   one exception and it gives the default up too. An automatic retry the player cannot see
+   is a manual retry they cannot reach — it delays the *Try again* by a full timeout — and
+   the retry itself belongs to the **act that failed**, never to the screen it failed on.
+   That last clause is load-bearing: a search and a read-back are two acts with two ids, so
+   a *retry* that re-ran the search would mint a new one and orphan the line-up bound to
+   the old.
+8. **The send fails when offline; the deck's two pause.** Both are correct, and the test
+   that separates them is *does this act carry a deadline the player chose*. A challenge's
+   answer window is derived **at send** (§G1's answer), so a send deferred to the next
+   reconnect carries a deadline nobody picked — the tap and the send must be one moment. A
+   pass is an append-only row and a mutual-born challenge has no window at all, so a queue
+   of them draining on reconnect is the behaviour you want. Two `networkMode` values in one
+   tab is deliberate; left unwritten, the next reader unifies them.
 
 ---
 

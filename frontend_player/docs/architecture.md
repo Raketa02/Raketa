@@ -669,6 +669,30 @@ duplicated across three screens.
 acceptable for a product flow. Build the reusable states — `LoadingState`, `EmptyState`,
 `ErrorState`, `OfflineBanner`, `Skeleton` — in `src/shared/ui/`.
 
+> **Amendment — `OfflineBanner` is declined, and the offline sentence is a function
+> instead.** A screen-level banner assumes that being offline makes what is on screen
+> wrong. In Play it does not: every ranked list is a mutation-minted record pinned at
+> `staleTime: Infinity`, so a pool held offline is not stale — it is the record, exactly as
+> it was recorded. What breaks offline is never the data, it is the **acts** — searching,
+> filling, forecasting, sending — and each of those has a control the sentence can sit
+> beside. A banner over correct data teaches the player to ignore banners.
+>
+> The app had already answered this three times before the question was asked:
+> `SocialRadiusStep`, `SocialTagsStep` and `SportsPickerScreen` each render an inline
+> `<Note variant="amber">` at the paused thing. Three copies is the threshold
+> `recoveryMessage.ts` names as the signal to promote, so the sentence moves to **one
+> shared function beside `recoveryMessage`** — and it has exactly **two** values, because
+> only one distinction matters: _does this resume by itself when the connection comes
+> back?_ Everything that pauses says it will load as soon as you are back; the one act that
+> is set to fail rather than defer says it cannot be sent. The test is resumption, **not**
+> the HTTP verb — the line-up forecast is a `POST` that pauses, and it takes the first
+> sentence.
+>
+> `LoadingState`, `EmptyState`, `ErrorState` and `Skeleton` stand as written. This list is
+> a menu of states to model, and declining one of its components is a decision about where
+> a state renders, never about whether it is modelled.
+> Decided by [#239](https://github.com/Raketa02/Raketa/issues/239).
+
 ### Loading granularity
 
 Distinguish screen initial load · pull-to-refresh · background refresh · button mutation ·
