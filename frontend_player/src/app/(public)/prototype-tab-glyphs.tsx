@@ -209,6 +209,15 @@ const MATCOMM: Slate<MatCommName>[] = [
   },
 ];
 
+/** MARK = `set` — each family's own bolt, typed against its own glyphMap for the same
+ *  reason the slates are. These three were behind an `as never` until they weren't, which
+ *  is exactly how a verdict gets given on a glyph that does not exist. */
+const BOLTS = {
+  feather: 'zap',
+  ionicons: 'flash',
+  matcomm: 'lightning-bolt',
+} satisfies { feather: FeatherName; ionicons: IoniconsName; matcomm: MatCommName };
+
 type FamilyId = 'feather' | 'ionicons' | 'matcomm' | 'squares';
 
 /** Slate metadata only. The glyph arrays stay apart because each is typed against its own
@@ -220,8 +229,6 @@ type FamilyMeta = {
   /** What this one is arguing. Shown in the switcher so a verdict has something to attach to. */
   claim: string;
   slates: { name: string; claim: string }[];
-  /** The family's own bolt, for MARK = `set`. */
-  bolt: string | null;
   hasFilled: boolean;
 };
 
@@ -233,7 +240,6 @@ const FAMILIES: FamilyMeta[] = [
     name: 'Feather',
     claim: 'one weight, no fill — selection can only ever be tone',
     slates: meta(FEATHER),
-    bolt: 'zap',
     hasFilled: false,
   },
   {
@@ -241,7 +247,6 @@ const FAMILIES: FamilyMeta[] = [
     name: 'Ionicons',
     claim: 'outline/filled pairs — the only family that can carry selection without colour',
     slates: meta(IONICONS),
-    bolt: 'flash',
     hasFilled: true,
   },
   {
@@ -249,7 +254,6 @@ const FAMILIES: FamilyMeta[] = [
     name: 'MaterialCommunity',
     claim: 'widest vocabulary — `radar` and `lightning-bolt` exist in no other family',
     slates: meta(MATCOMM),
-    bolt: 'lightning-bolt',
     hasFilled: true,
   },
   {
@@ -257,7 +261,6 @@ const FAMILIES: FamilyMeta[] = [
     name: 'squares (control)',
     claim: '§10.2 as it ships today — the honest placeholder, in the real bar',
     slates: [{ name: '—', claim: 'no glyph is specified' }],
-    bolt: null,
     hasFilled: false,
   },
 ];
@@ -563,18 +566,17 @@ function Mark({ family, mark }: { family: FamilyId; mark: MarkId }) {
     return <DrawnBolt size={15} color={white} />;
   }
 
-  const fam = familyMeta(family);
-  if (!fam.bolt) {
+  if (family === 'squares') {
     // The control has no bolt to offer, so it falls back to its own idiom: a square.
     return <View style={[styles.square, { backgroundColor: white }]} />;
   }
   if (family === 'feather') {
-    return <Feather name={fam.bolt as never} size={15} color={white} />;
+    return <Feather name={BOLTS.feather} size={15} color={white} />;
   }
   if (family === 'ionicons') {
-    return <Ionicons name={fam.bolt as never} size={15} color={white} />;
+    return <Ionicons name={BOLTS.ionicons} size={15} color={white} />;
   }
-  return <MaterialCommunityIcons name={fam.bolt as never} size={15} color={white} />;
+  return <MaterialCommunityIcons name={BOLTS.matcomm} size={15} color={white} />;
 }
 
 function Label({ text, color }: { text: string; color: string }) {
