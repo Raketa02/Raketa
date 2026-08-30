@@ -13,6 +13,9 @@ consulting the mask, so a mask that agreed with itself would still fail.
 
 from __future__ import annotations
 
+import ast
+import inspect
+
 from itertools import combinations
 
 import pytest
@@ -204,6 +207,37 @@ def test_no_admissible_combination_is_told_apart_from_a_thin_pool():
         unfilled_reason(pool, seating, context, guests=guests_for(Sport.PADEL))
         is UnfilledReason.NO_ADMISSIBLE_COMBINATION
     )
+
+
+def test_three_of_the_four_codes_can_land_on_a_seat_and_the_fourth_is_a_dock():
+    """The vocabulary splits, and the split is not a matter of taste.
+
+    ``NO_SHARED_SLOTS`` is the fourth code and it is the one a **seat** can never
+    carry: an empty four-way intersection zeroes the availability term and says
+    *you would all have to bend*, and **nobody is removed from the court for it**.
+    A seat holding it would be a refusal wearing a dock's name, and the whole
+    reason the two travel in different fields is that they ask the player for
+    opposite things.
+
+    Read off the source rather than off a fixture, because *which codes can reach
+    a seat* is a fact about the function and not about the city a test built.
+    """
+
+    returning = {
+        node.value.attr
+        for node in ast.walk(ast.parse(inspect.getsource(unfilled_reason)))
+        if isinstance(node, ast.Return) and isinstance(node.value, ast.Attribute)
+    }
+
+    assert returning == {
+        UnfilledReason.POOL_EXHAUSTED.value,
+        UnfilledReason.NO_CANDIDATE_ABOVE_FLOOR.value,
+        UnfilledReason.NO_ADMISSIBLE_COMBINATION.value,
+    }
+    assert UnfilledReason.NO_SHARED_SLOTS.value not in returning
+    assert returning | {UnfilledReason.NO_SHARED_SLOTS.value} == {
+        code.value for code in UnfilledReason
+    }, "a fifth code would land here with nothing said about which half it is in"
 
 
 def test_an_empty_city_reads_as_the_pool_and_never_as_a_gate():

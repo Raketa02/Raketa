@@ -285,6 +285,110 @@ async def test_nobody_is_the_same_shape_with_every_seat_carrying_a_reason(
     assert lineup["arrangements"] == []
 
 
+async def test_a_pool_nobody_clears_reads_as_the_floor_and_never_as_an_empty_city(
+    client, session_factory, candidate_source, searcher
+):
+    """**The four codes are four different sentences, and this is the second.**
+
+    There were people. Not one of them was somebody this engine would seat, and
+    *nobody good enough* is an answer the floor has to be able to give — a seat
+    is never filled below it to complete a four. A screen that read this as an
+    empty city would tell the player to widen a radius that is not the problem.
+    """
+
+    for name in ("ana", "bo", "cy"):
+        await world.a_candidate(
+            client,
+            session_factory,
+            name,
+            mu=searcher["mu"] + 0.35,
+            tags=world.SOCIABLE_TAGS,
+            availability=("4:MORNING",),
+            intent="FOR_FUN",
+        )
+    await world.fold_the_log(session_factory, candidate_source)
+
+    body = (await world.lineup(client, searcher["token"])).json()
+
+    lineup = body["lineup"]
+    assert body["search"]["pool"]["players_in_range"] > 0, "there was nobody to fail"
+    assert [seat.get("unfilled_reason") for seat in lineup["seats"][1:]] == [
+        "NO_CANDIDATE_ABOVE_FLOOR"
+    ] * 3
+
+
+async def test_a_court_no_four_can_share_says_so_rather_than_saying_nobody(
+    client, session_factory, candidate_source, searcher
+):
+    """**The code ``docs/adr/0116`` added, all the way out to a seat.**
+
+    Three people the searcher can see and would happily play, and a block between
+    two of them: every pair with the searcher is admissible, and the six-pair gate
+    is what the court runs out of. Without this code on the seat the gate is
+    indistinguishable from a thin pool on the screen, and the two want opposite
+    things from the player.
+    """
+
+    one, one_token = await world.a_signed_in_candidate(
+        client, session_factory, "ana", mu=searcher["mu"]
+    )
+    other = await world.a_candidate(
+        client, session_factory, "bo", mu=searcher["mu"] + 0.05
+    )
+    await world.a_candidate(client, session_factory, "cy", mu=searcher["mu"] - 0.05)
+    await world.fold_the_log(session_factory, candidate_source)
+    blocked = await world.block_between(client, one_token, other)
+    assert blocked.status_code == 204, blocked.text
+
+    body = (await world.lineup(client, searcher["token"])).json()
+
+    lineup = body["lineup"]
+    assert body["search"]["pool"]["players_in_range"] == 3, (
+        "a block between two candidates takes neither off the searcher's list"
+    )
+    open_seats = [seat for seat in lineup["seats"] if "unfilled_reason" in seat]
+    assert [seat["unfilled_reason"] for seat in open_seats] == [
+        "NO_ADMISSIBLE_COMBINATION"
+    ], "there were people left over, and none of them could share this court"
+    seated = {seat.get("player_id") for seat in lineup["seats"]}
+    assert not {str(one), str(other)} <= seated, (
+        "the two who blocked each other are on one court"
+    )
+
+
+async def test_a_four_with_no_hour_in_common_is_docked_and_nobody_leaves_the_court(
+    client, session_factory, candidate_source, searcher
+):
+    """**The fourth code, and the only one that is not about a seat.**
+
+    Three good pairwise overlaps do not make a four-way one: each of them shares
+    an hour with the searcher and there is no hour all four share. That is a
+    **dock**, never a refusal — the court stays full, the honest line is that
+    everybody would have to bend, and the times rung relaxes exactly these cells.
+    """
+
+    for name, slots in (
+        ("ana", ("2:EVENING",)),
+        ("bo", ("6:MORNING",)),
+        ("cy", ("2:EVENING",)),
+    ):
+        await world.a_candidate(
+            client,
+            session_factory,
+            name,
+            mu=searcher["mu"],
+            availability=slots,
+        )
+    await world.fold_the_log(session_factory, candidate_source)
+
+    lineup = (await world.lineup(client, searcher["token"])).json()["lineup"]
+
+    assert all("unfilled_reason" not in seat for seat in lineup["seats"]), (
+        "a dock removes nobody from the court"
+    )
+    assert lineup["dock"] == "NO_SHARED_SLOTS"
+
+
 async def test_a_seat_is_never_filled_below_the_floor_to_complete_a_four(
     client, session_factory, candidate_source, searcher
 ):
@@ -324,6 +428,34 @@ async def test_a_seat_is_never_filled_below_the_floor_to_complete_a_four(
         if "player_id" in seat and seat["player_id"] in cards
     }
     assert "poor" not in seated
+
+
+async def test_the_relaxation_ladder_does_not_reach_the_court_either(
+    client, session_factory, candidate_source, searcher
+):
+    """**The ladder ships on ``POST /searches`` alone**, and now in code.
+
+    A line-up may *take* a rung — the workbench reads what one search was asked
+    for, and both surfaces ask the same way — but it never **prices** one. So its
+    record carries `null`, which is *the offers were not computed at all* and is
+    the truth here, and a search citing a line-up for a rung is refused by the
+    code a widening nobody offered gets.
+    """
+
+    await world.fold_the_log(session_factory, candidate_source)
+    built = (await world.lineup(client, searcher["token"])).json()
+
+    assert built["search"]["rung_offers"] is None, "a court prices no rung"
+
+    refused = await world.search(
+        client,
+        searcher["token"],
+        offered_by_search_id=built["search"]["search_id"],
+        rung="B",
+    )
+
+    assert refused.status_code == 409, refused.text
+    assert refused.json()["code"] == "rung_offer_not_found"
 
 
 async def test_the_line_up_records_layer_four_and_no_route_returns_it(
