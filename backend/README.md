@@ -299,6 +299,8 @@ serving HTTP.
 | `GRID_STALENESS_INTERVAL_SECONDS` | How often it runs. Not how old a grid must be — that is domain. |
 | `INTEREST_EXPIRY_ENABLED` | Enables the hourly *Let's play* expiry sweep. |
 | `INTEREST_EXPIRY_INTERVAL_SECONDS` | How often the sweep runs. **Not `INTEREST_TTL`**, which is a ruleset row. |
+| `CHALLENGE_LAPSE_ENABLED` | Enables the hourly challenge lapse loop, which records a passed answer window as a lapse. |
+| `CHALLENGE_LAPSE_INTERVAL_SECONDS` | How often it runs. **Not `ANSWER_WINDOW`**, which is the promise the invitation makes and is domain. |
 | `SCALE_PRESSURE_ENABLED` | Enables the scale-pressure probe — trigger 1's event-loop lag monitor, which also closes the fifteen-minute scoring window. |
 | `SCALE_PRESSURE_INTERVAL_SECONDS` | How often it ticks. The tick *is* the measurement: the probe records how much later than this the loop got back to it. **Not the trigger's 15-minute window and not its thresholds** — those are domain, in `matchmaking/domain/scale_triggers.py`. |
 | `GUNICORN_WORKERS` | How many workers this container runs. Read by `docker/api/startup.prod.sh` and by trigger 4's arithmetic, so the memory reading is about the fleet that exists. It selects no behaviour: it is a multiplier inside a log record. |
@@ -554,7 +556,7 @@ process and no second deployable.
   and dispatches to subscribed handlers. Its worker id is the lease its batches
   claim rows under.
 - **Scheduled jobs** (`PeriodicJob`) run because an interval elapsed.
-  `app/bootstrap/jobs.py` is the register, and nine jobs are in it today: the
+  `app/bootstrap/jobs.py` is the register, and ten jobs are in it today: the
   **uncommitted-photo sweep**, which deletes every photo the object store has
   held for more than 24 hours that no committed profile currently names; the
   **photo re-review backfill**, which asks the reviewer about the photos nobody
@@ -563,10 +565,12 @@ process and no second deployable.
   saying what *shown more often than most* means; the two **prompt loops** —
   intent drift and availability staleness — which write no value anywhere and each
   raise a standing question instead; the **interest expiry loop**, which removes
-  every *Let's play* whose twenty-one days have passed; and the **scale-pressure
-  probe**, whose work is measuring how late the event loop woke it. Two of them
-  take no database session: the roll, whose whole input and output are in Redis,
-  and the backfill, whose whole input and output are the object store.
+  every *Let's play* whose twenty-one days have passed; the **scale-pressure
+  probe**, whose work is measuring how late the event loop woke it; and the
+  **challenge lapse loop**, which writes down every answer window that passed with
+  nothing in it. Two of them take no database session: the roll, whose whole input
+  and output are in Redis, and the backfill, whose whole input and output are the
+  object store.
 
   The expiry loop is the only job here that deletes anything, and **correctness
   does not depend on it running**: every read of the interest ledger is bounded by
@@ -575,6 +579,24 @@ process and no second deployable.
   and one figure that could not be bought later — *yeses that expired having never
   lifted anybody*, `INTEREST_TTL`'s only day-one falsifier, which a lapsed row
   leaves no trace to compute.
+
+  The lapse loop is the only job here that **appends a domain event**, and it is
+  the clearest case of a loop bought for the record rather than for correctness. A
+  seat past its answer window already reads as lapsed, its pair already releases
+  and its challenge already stands as `LAPSED`, because a standing is folded from
+  the seats and the clock and stored nowhere — a reader asking *is this challenge
+  still open* between a deadline and a sweep gets the same answer either way. What
+  the loop buys is a `SeatLapsed` in the log, so that **answers challenges** has a
+  denominator. What it appends is never a `SeatDeclined`: **a lapse is not a
+  decline**, and a Strand that filed silence as judgement would be measuring the
+  wrong people. `ANSWER_WINDOW` is domain, in
+  `app/modules/challenges/domain/answer_window.py`; only
+  `CHALLENGE_LAPSE_INTERVAL_SECONDS` is configuration. It is also the one job
+  here that takes **a transaction per item rather than per run**: every process
+  walks the same clock-derived list in the same order, so a run that ended on its
+  first version conflict would be a loop that made no progress anywhere. A
+  conflict is counted and stepped over, exactly as the backfill does with a
+  refusal about one image.
 
 **A job may only be registered if it is idempotent and safe to run beside
 itself.** With N API processes a job runs N times per interval, at unrelated

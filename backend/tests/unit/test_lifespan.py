@@ -155,6 +155,7 @@ async def test_no_background_work_at_all_reaches_for_no_engine(monkeypatch):
         INTENT_DRIFT_ENABLED=False,
         GRID_STALENESS_ENABLED=False,
         INTEREST_EXPIRY_ENABLED=False,
+        CHALLENGE_LAPSE_ENABLED=False,
     )
     app = FastAPI()
     app.state.event_runtime = object()

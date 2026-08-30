@@ -35,6 +35,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.bootstrap.composition import (
     build_candidate_index_tail,
+    build_challenge_repository,
     build_clock,
     build_container_memory_limit,
     build_domain_event_store,
@@ -42,6 +43,7 @@ from app.bootstrap.composition import (
     build_exposure_ledger,
     build_image_transcoder,
     build_interest_ledger,
+    build_lapsing_challenge_query,
     build_photo_review,
     build_photo_storage,
     build_play_intent_declaration_repository,
@@ -64,6 +66,9 @@ from app.modules.matchmaking.infrastructure.candidate_snapshot_source import (
     DatabaseCandidateSource,
 )
 from app.modules.matchmaking.infrastructure.scale_instruments import ScoringMeter
+from app.modules.challenges.application.lapse_expired_seats import (
+    LapseExpiredSeats,
+)
 from app.modules.matchmaking.application.detect_intent_drift import (
     DetectIntentDrift,
 )
@@ -125,6 +130,12 @@ SCALE_PRESSURE_JOB = "scale-pressure"
 #: only one whose log line carries a falsifier rather than a throughput figure.
 INTEREST_EXPIRY_JOB = "interest-expiry"
 
+#: The challenges lapse loop. The one job here that **writes a domain event**,
+#: and the only one whose whole product is a record: a seat past its answer
+#: window already reads as lapsed, so what this appends is the fact somebody can
+#: count rather than a change anybody can see.
+CHALLENGE_LAPSE_JOB = "challenge-lapse"
+
 
 def build_scheduled_jobs(
     *,
@@ -167,6 +178,7 @@ def build_scheduled_jobs(
         settings.PHOTO_SWEEP_ENABLED
         or settings.CANDIDATE_INDEX_ENABLED
         or settings.INTEREST_EXPIRY_ENABLED
+        or settings.CHALLENGE_LAPSE_ENABLED
     ):
         if session_factory is None:
             # Loudly, rather than by registering nothing. *The sweep is off* and
@@ -200,6 +212,12 @@ def build_scheduled_jobs(
         if settings.INTEREST_EXPIRY_ENABLED:
             jobs.append(
                 build_interest_expiry_job(
+                    session_factory=session_factory, settings=settings
+                )
+            )
+        if settings.CHALLENGE_LAPSE_ENABLED:
+            jobs.append(
+                build_challenge_lapse_job(
                     session_factory=session_factory, settings=settings
                 )
             )
@@ -375,6 +393,66 @@ def build_interest_expiry_job(
     return PeriodicJob(
         name=INTEREST_EXPIRY_JOB,
         interval_seconds=settings.INTEREST_EXPIRY_INTERVAL_SECONDS,
+        run=run,
+    )
+
+
+def build_challenge_lapse_job(
+    *,
+    session_factory: async_sessionmaker[AsyncSession],
+    settings: Settings,
+) -> PeriodicJob:
+    """Write down every answer window that passed with nothing in it.
+
+    **Idempotent and safe beside itself with no lock** (``docs/adr/0092``): the
+    aggregate skips a seat that already carries an answer, so a second pass
+    appends nothing. A genuine race is caught by the stream version, and the
+    loser **steps over that one challenge and keeps going** — every process walks
+    the same clock-derived list in the same order, so a run that ended on its
+    first conflict would be a loop that made no progress in any process. *N
+    processes, N runs* costs a repeated read and a counted collision.
+
+    **Correctness does not depend on it running.** A seat past its window reads
+    as lapsed, its pair releases and its challenge stands as ``LAPSED`` whether
+    or not anything has been past: the standing is folded from the seats and the
+    clock and is stored nowhere. What the loop buys is the record — *answers
+    challenges* is a Strand over challenges answered inside their window, and
+    silence leaves nothing behind to count unless something writes it down.
+
+    **A lapse is not a decline**, and the loop is where that distinction becomes
+    observable: what it appends is ``SeatLapsed``, never ``SeatDeclined``, because
+    somebody who said nothing made no judgement.
+    """
+
+    clock = build_clock()
+
+    async def run() -> None:
+        async with session_factory() as session:
+            swept = await LapseExpiredSeats(
+                clock=clock,
+                challenges=build_challenge_repository(
+                    event_store=build_domain_event_store(session),
+                    events=build_event_publisher(session),
+                ),
+                lapsing=build_lapsing_challenge_query(session),
+                unit_of_work=build_unit_of_work(session),
+            ).execute()
+        logger.info(
+            "challenge lapse loop finished",
+            extra={
+                "job": CHALLENGE_LAPSE_JOB,
+                "seats": swept.seats,
+                "challenges": swept.challenges,
+                # Not noise: *the loop is doing nothing* and *the loop is losing
+                # every race* have one symptom — a denominator that stops
+                # growing — and only one of them is somebody's problem.
+                "conflicts": swept.conflicts,
+            },
+        )
+
+    return PeriodicJob(
+        name=CHALLENGE_LAPSE_JOB,
+        interval_seconds=settings.CHALLENGE_LAPSE_INTERVAL_SECONDS,
         run=run,
     )
 

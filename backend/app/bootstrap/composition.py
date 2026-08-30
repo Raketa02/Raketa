@@ -72,6 +72,7 @@ from app.modules.challenges.domain.ports import (
     AccountHoldQuery as ChallengeAccountHoldQuery,
     ChallengeDirectory,
     ChallengeRepository,
+    LapsingChallengeQuery,
     OpenChallengeQuery,
     OriginSearchQuery,
 )
@@ -83,6 +84,9 @@ from app.modules.challenges.infrastructure.event_sourced_challenge_directory imp
 )
 from app.modules.challenges.infrastructure.event_sourced_challenge_repository import (
     EventSourcedChallengeRepository,
+)
+from app.modules.challenges.infrastructure.event_sourced_lapsing_challenge_query import (  # noqa: E501
+    EventSourcedLapsingChallengeQuery,
 )
 from app.modules.challenges.infrastructure.event_sourced_open_challenge_query import (
     EventSourcedOpenChallengeQuery,
@@ -360,6 +364,16 @@ def build_challenge_directory(
     return EventSourcedChallengeDirectory(
         session, (runtime or get_event_runtime()).codec
     )
+
+
+def build_lapsing_challenge_query(session: AsyncSession) -> LapsingChallengeQuery:
+    """The candidate set the lapse loop opens — over the log, and with no codec.
+
+    The only read in this context that needs no ``EventCodec``: it answers with
+    stream ids and the loop replays each one through the repository, so decoding
+    them here would be the same stream read twice.
+    """
+    return EventSourcedLapsingChallengeQuery(session)
 
 
 def build_challenge_hold_query(session: AsyncSession) -> ChallengeAccountHoldQuery:

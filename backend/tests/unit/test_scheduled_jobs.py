@@ -24,6 +24,7 @@ from app.bootstrap.composition import build_clock
 from app.bootstrap.jobs import (
     CANDIDATE_INDEX_REFRESH_JOB,
     CANDIDATE_INDEX_TAIL_JOB,
+    CHALLENGE_LAPSE_JOB,
     EXPOSURE_ROLL_JOB,
     GRID_STALENESS_JOB,
     INTEREST_EXPIRY_JOB,
@@ -170,6 +171,7 @@ def _nothing_but(**overrides):
             "INTENT_DRIFT_ENABLED": False,
             "GRID_STALENESS_ENABLED": False,
             "INTEREST_EXPIRY_ENABLED": False,
+            "CHALLENGE_LAPSE_ENABLED": False,
             "SCALE_PRESSURE_ENABLED": False,
             **overrides,
         }
@@ -545,6 +547,61 @@ async def test_the_expiry_loop_runs_end_to_end_through_the_real_wiring(
         record.message == "interest expiry loop finished"
         and record.removed == 0
         and record.never_lifted == 0
+        for record in caplog.records
+    )
+
+
+# ---------------------------------------------------------------------------
+# The challenge lapse loop
+# ---------------------------------------------------------------------------
+
+
+def test_the_lapse_loop_is_registered_and_carries_the_configured_cadence():
+    """The cadence is a setting; ``ANSWER_WINDOW`` is emphatically not.
+
+    How long an invitee has to answer is the promise the invitation makes and
+    lives in ``answer_window.py``; how often the loop writes down that a promise
+    ran out is a fact about the deployment.
+    """
+
+    settings = _nothing_but(
+        CHALLENGE_LAPSE_ENABLED=True, CHALLENGE_LAPSE_INTERVAL_SECONDS=900.0
+    )
+
+    jobs = build_scheduled_jobs(session_factory=UNUSED_SESSIONS, settings=settings)
+
+    assert [job.name for job in jobs] == [CHALLENGE_LAPSE_JOB]
+    assert jobs[0].interval_seconds == 900.0
+
+
+def test_the_lapse_loop_without_a_session_factory_refuses_to_be_registered():
+    """It reads the log, so it joins the loud branch: a loop that silently did
+    not register looks exactly like one that is off, and its symptom — a Strand
+    with no denominator — is invisible until somebody asks for the number."""
+
+    settings = _nothing_but(CHALLENGE_LAPSE_ENABLED=True)
+
+    with pytest.raises(ValueError, match="session factory"):
+        build_scheduled_jobs(session_factory=None, settings=settings)
+
+
+async def test_the_lapse_loop_runs_end_to_end_through_the_real_wiring(
+    session_factory, caplog
+):
+    """A quiet sweep is logged as a quiet sweep, and the line carries the three
+    figures the record exists for rather than a duration."""
+
+    settings = _nothing_but(CHALLENGE_LAPSE_ENABLED=True)
+    (lapse,) = build_scheduled_jobs(session_factory=session_factory, settings=settings)
+
+    with caplog.at_level(logging.INFO):
+        await lapse.run_once()
+
+    assert any(
+        record.message == "challenge lapse loop finished"
+        and record.seats == 0
+        and record.challenges == 0
+        and record.conflicts == 0
         for record in caplog.records
     )
 

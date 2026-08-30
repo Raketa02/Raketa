@@ -239,15 +239,23 @@ class Challenge:
             )
         )
 
-    def lapse(self, *, now: Instant) -> None:
+    def lapse(self, *, now: Instant) -> int:
         """Record every seat whose window has passed with nothing in it.
 
         **Idempotent by the aggregate, not by a lock**: a seat that already has
         an answer is skipped, so a second sweep over the same challenge appends
         nothing. Running it changes no read — the seats already read as lapsed —
         which is exactly why it can be a loop nobody has to trust.
+
+        It answers with **how many seats it wrote down**, which is the one thing
+        about a sweep that cannot be recovered afterwards: the seats read the
+        same either side of it, so a caller that wanted the figure by comparing
+        before and after would find nothing to compare. Zero is the ordinary
+        answer and means the challenge had nothing owing — the sweep's read names
+        candidates, not conclusions.
         """
 
+        recorded = 0
         for seat in self.seats:
             if seat.player_id is None or not seat.is_awaiting():
                 continue
@@ -260,6 +268,8 @@ class Challenge:
                     occurred_at=now,
                 )
             )
+            recorded += 1
+        return recorded
 
     # -- completing a half-built game -------------------------------------
 

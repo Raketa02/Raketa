@@ -561,6 +561,22 @@ def test_the_sweep_records_a_lapse_and_never_a_decline():
     assert {event.player_id for event in events} == {ALICE, BOB, CAROL}
 
 
+def test_the_sweep_says_how_many_seats_it_wrote_down():
+    """The one thing about a sweep that cannot be recovered afterwards.
+
+    The seats read the same either side of it, so a caller counting by comparing
+    before and after would find nothing to compare — and the figure is what
+    gives *answers challenges* a denominator.
+    """
+
+    challenge = a_padel_challenge()
+    challenge.accept(ALICE, occurred_at=at(1))
+
+    assert challenge.lapse(now=INSIDE) == 0
+    assert challenge.lapse(now=OUTSIDE) == 2
+    assert challenge.lapse(now=OUTSIDE) == 0
+
+
 def test_the_sweep_leaves_an_answered_seat_alone():
     challenge = a_padel_challenge()
     challenge.accept(ALICE, occurred_at=at(1))

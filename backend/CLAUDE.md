@@ -154,7 +154,7 @@ Rules to preserve:
   built from the composition root so it reaches the same bucket and event store a
   request does. There is no cron, no beat process and no lock: with N API processes a
   job runs N times per interval, so a job that cannot tolerate that needs a different
-  mechanism and its own ADR. Nine jobs today — the uncommitted-photo sweep, whose
+  mechanism and its own ADR. Ten jobs today — the uncommitted-photo sweep, whose
   **retention window is domain and whose cadence is configuration** (those two must not
   swap places), the candidate index's two loops below, the **exposure roll**, the
   first job here that takes no database session at all, the two **prompt loops**
@@ -192,6 +192,17 @@ Rules to preserve:
   (`PhotoReviewUnavailability.is_about_the_reviewer` is the split); and a note it cannot
   parse reads as *nobody looked* — the deliberate inverse of the sweep, whose action is a delete. The budget, the
   pause and the cadence are settings and none of them selects which photos are chosen.
+  The tenth is the **challenge lapse loop** (#252), and it is the only job here that
+  **appends a domain event**. A seat past its answer window already reads as lapsed, its
+  pair already releases and its challenge already stands as `LAPSED` — a standing is
+  folded from the seats and the clock and stored nowhere, so a reader asking *is this
+  challenge still open* between a deadline and a sweep gets the same answer either way.
+  What the loop buys is the **record**: a `SeatLapsed` in the log, so that *answers
+  challenges* has a denominator. What it appends is never a `SeatDeclined` — **a lapse is
+  not a decline**, and a Strand that filed silence as judgement would be measuring the
+  wrong people. Its read names **candidates rather than conclusions** and that is
+  deliberate: a store that could filter on *has this seat lapsed* would be the derived
+  standing, stored. `ANSWER_WINDOW` is domain; only the cadence is a setting.
 - **The candidate index tails the log; the outbox delivers side effects**
   ([ADR-0110](../docs/adr/0110-the-index-tails-the-log-the-outbox-delivers-side-effects.md),
   [ADR-0111](../docs/adr/0111-the-index-holds-only-what-a-player-changes-about-themselves.md),
@@ -373,7 +384,7 @@ tests.
   `EVENT_DELIVERY_WORKER_ENABLED`. Scheduled jobs are toggled one at a time —
   `PHOTO_SWEEP_ENABLED`, `PHOTO_REVIEW_BACKFILL_ENABLED`, `CANDIDATE_INDEX_ENABLED`,
   `EXPOSURE_ROLL_ENABLED`, `INTENT_DRIFT_ENABLED`, `GRID_STALENESS_ENABLED`,
-  `INTEREST_EXPIRY_ENABLED`, `SCALE_PRESSURE_ENABLED` — and **every
+  `INTEREST_EXPIRY_ENABLED`, `SCALE_PRESSURE_ENABLED`, `CHALLENGE_LAPSE_ENABLED` — and **every
   job's first run is at startup**, not after its first interval, so a six-hourly job is
   observable on a laptop.
 

@@ -383,6 +383,29 @@ class Settings(BaseSettings):
     INTEREST_EXPIRY_ENABLED: bool = True
     INTEREST_EXPIRY_INTERVAL_SECONDS: float = 60 * 60
 
+    # --- the challenge lapse loop (docs/adr/0092)
+    #
+    # **Turning it off changes no rule a domain test could observe.** A seat past
+    # its answer window reads as lapsed at every instant, its pair releases and
+    # its challenge stands as `LAPSED` whether or not anything has swept it —
+    # `standing.py` folds the seats against the clock and stores nothing. What
+    # the loop buys is the *record*: a `SeatLapsed` in the log, so that **answers
+    # challenges** has a denominator, and a lapse is a fact somebody can count
+    # rather than an absence they have to infer.
+    #
+    # **`ANSWER_WINDOW` itself is emphatically not here.** How long an invitee has
+    # to answer is the promise the invitation makes — moving it moves what every
+    # outstanding challenge already said — and it lives in
+    # `challenges/domain/answer_window.py`. Only this cadence is a setting.
+    #
+    # Hourly, and the number it is chosen against is the window rather than the
+    # backlog: a `SeatLapsed` is stamped with the moment the sweep noticed, so
+    # the interval is how late the record is, and an hour against a day is a
+    # twenty-fourth. Finer would buy a rounder timestamp and pay for it in a read
+    # that is not yet indexed.
+    CHALLENGE_LAPSE_ENABLED: bool = True
+    CHALLENGE_LAPSE_INTERVAL_SECONDS: float = 60 * 60
+
     # --- the two scale triggers (docs/adr/0092, scale-posture.md §4)
     #
     # **The instruments are configuration; the thresholds are not.** How often

@@ -41,6 +41,14 @@ scrolled to.
 ``ChallengeDirectory`` is the read behind *your own challenges* — the source the
 client re-reads when a send is refused on the pair rule, and the one an invitee
 opens to find that they were asked.
+
+``LapsingChallengeQuery`` arrived with the sweep and is the odd one out: it
+answers with **candidates** rather than with an answer. Nothing in this context
+may hold a *has lapsed* column — the whole of ``standing.py`` is that refusal —
+so the loop that writes the record cannot be handed the list it wants, only the
+list it can safely narrow to. What it narrows on is the one thing the store
+knows: a seat's deadline is its seating event plus the answer window, so a
+challenge younger than that window holds nothing to record.
 """
 
 from __future__ import annotations
@@ -244,5 +252,42 @@ class ChallengeDirectory(Protocol):
         Newest first is part of the demand rather than a convenience: the client
         renders them in order, and a list whose order depended on how the streams
         happened to be read would reorder itself between two identical requests.
+        """
+        ...
+
+
+@runtime_checkable
+class LapsingChallengeQuery(Protocol):
+    """*Which challenges could be holding a seat whose day has run out?*
+
+    The sweep's read, and **the only port here that answers with candidates.**
+    Every other read in this context is right at the instant it is asked; this
+    one is deliberately allowed to name a challenge with nothing to record,
+    because the fact it would have to filter on — a seat's own deadline — is
+    inside a serialized seat code and not a column, and a store that could filter
+    on it would be the projection ``standing.py`` exists to refuse.
+
+    Over-naming is therefore free and under-naming is not: a challenge this
+    misses keeps a lapse out of the log for ever, while one it names in vain
+    costs a stream read and an aggregate that appends nothing.
+    """
+
+    async def may_have_lapsed(self, *, now: Instant) -> tuple[UUID, ...]:
+        """Every challenge whose seats could include one past its window.
+
+        **The window is what makes this narrow rather than *everything*.** A
+        seat's deadline is the seating event that created it plus
+        ``ANSWER_WINDOW`` and nothing else, so a challenge opened later than
+        ``now`` minus that window holds no seat that could have lapsed — which
+        is a claim about the store rather than about any aggregate, and is the
+        one narrowing an implementation may make.
+
+        **In one stable order, oldest first**, which is a determinism demand and
+        not a safety one: a run commits as a unit, so an interrupted one records
+        nothing whichever order it was walking. What the order buys is that two
+        sweeps over the same store do the same work in the same sequence — and
+        oldest-first is the order the one narrowing that could ever bound this
+        read would want, since a seat lapses exactly one window after an event
+        the log already orders.
         """
         ...
