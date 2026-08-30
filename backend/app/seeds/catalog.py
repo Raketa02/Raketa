@@ -35,10 +35,22 @@ some not.
 
 from __future__ import annotations
 
+import random
 from dataclasses import dataclass
 
 from app.engines.assessment import Question
 from app.kernel import Sport
+from app.modules.player_profile.domain.availability import AvailabilityGrid
+from app.modules.player_profile.domain.gender import Gender, GenderPreference
+from app.modules.player_profile.domain.play_intent import (
+    PlayIntent,
+    PlayIntentSurface,
+)
+from app.modules.player_profile.domain.search_radius import SearchRadius
+from app.modules.player_profile.domain.social_tags import (
+    SocialTag,
+    SocialTagSelection,
+)
 from app.modules.users.domain.value_objects import Email, Nickname, RawPassword
 
 #: A TLD RFC 2606 reserves: no registry will ever sell a name under it, so a
@@ -99,6 +111,33 @@ class AnswerPolicy:
     id, because an id belongs to an engine version and the seed is wired to
     whichever version the API serves.
 
+    **``spread`` widens an index into an index drawn per question**, and it is
+    what makes a *population* out of a policy. The questionnaire is the only door
+    to a level (there is no *record a rating* use case), so sixty members sharing
+    six policies would be sixty players at six values of μ: ``combine_sigma``
+    constant, predicted balance a function of a handful of Δμ, and a pool of
+    near-identical cards ranked arbitrarily. That is a screen defect rather than
+    a statistics defect, and no amount of realism elsewhere fixes it.
+
+    **The draw is keyed ``(handle, sport, question_id)``, never by consumption
+    order.** The engine chooses adaptively; a policy that consumed a stream in
+    ask-order would have an inserted question reshuffle every later answer for
+    every member, and the band histogram would move for a reason having nothing
+    to do with skill. Keyed this way, a member's answers are a function of who
+    they are and what they were asked — so adding a member changes that member's
+    row and nobody else's, and a question added to the bank changes only the
+    answer to *that* question.
+
+    **The spread reaches the demonstrations and never the claims.** The opening
+    question is a claim and its weakest option puts the engine on its
+    one-question beginner path, so a jittered claim would not spread a member
+    around their band — it would move them into a different archetype's. What the
+    engine reads for level *inside* a band is the demonstrations, which is
+    exactly the axis a near-twin varies on.
+
+    ``spread`` defaults to zero, which is the six named policies below unchanged:
+    a draw of zero width is the index itself, and the key is not consulted.
+
     A policy is *not* a promise about the rating it produces. That is
     ``RatingClaim``, which is checked; this is only how the answers are chosen.
     """
@@ -106,10 +145,55 @@ class AnswerPolicy:
     claims: int
     demonstrations: int
 
-    def option_id_for(self, question: Question) -> str:
-        strength = self.demonstrations if question.tier is not None else self.claims
+    #: Half-width of the draw around the centre, in option steps. **Zero is a
+    #: named policy**; anything larger is an archetype standing for a band.
+    spread: int = 0
+
+    def option_id_for(self, question: Question, *, drawn_for: str = "") -> str:
+        """The option this policy picks, for this question, for this member.
+
+        ``drawn_for`` is *who is answering, in which sport* — the two halves of
+        the key the question id completes. It defaults to the empty string
+        because at zero spread the key is never consulted, and the six named
+        policies are all zero spread; a **spread** policy asked without one
+        would answer identically for everybody, which is why the catalog refuses
+        a spread outright and the cohort always passes ``drawn_for``.
+        """
+
         options = question.options
-        return options[min(strength, len(options) - 1)].id
+        if question.tier is None:
+            # **A claim is never jittered.** The opening question is a claim, and
+            # its weakest option puts the engine on its one-question beginner
+            # path — so a drawn claim would not spread a member around their
+            # band, it would move them into a different archetype's.
+            return options[min(max(self.claims, 0), len(options) - 1)].id
+        strength = (
+            self.demonstrations
+            if self.spread == 0
+            else self._drawn(self.demonstrations, key=f"{drawn_for}|{question.id}")
+        )
+        return options[min(max(strength, 0), len(options) - 1)].id
+
+    def _drawn(self, centre: int, *, key: str) -> int:
+        """One index, drawn from ``key`` alone.
+
+        ``random.Random`` seeded with a *string* hashes it with SHA-512 before
+        seeding, so this is reproducible across processes and unaffected by
+        ``PYTHONHASHSEED`` — which ``docs/adr/0105`` makes the question worth
+        answering out loud rather than assuming.
+        """
+
+        return centre + random.Random(key).randint(-self.spread, self.spread)
+
+
+def drawn_for(handle: str, sport: Sport) -> str:
+    """The first two thirds of a draw key, spelled once.
+
+    Here rather than at each call site because a key assembled two ways is two
+    populations, and the one that drifted would be the one nobody re-derived.
+    """
+
+    return f"{handle}|{sport.value}"
 
 
 #: The weakest answer to everything. The opening question's weakest option is
@@ -218,6 +302,76 @@ class RatedRun:
 #: What one account holds, for one sport. A closed union, so the runner's match
 #: over it stops typechecking on the day a fourth state exists — an unhandled
 #: scenario would otherwise be an account silently seeded into no state at all.
+#: The one coordinate every distance in this seed is measured from — the
+#: protagonists' own, and the centre ``cohort.py`` cuts its rings around.
+#:
+#: **It lives here rather than in the cohort** because it is a *protagonist's*
+#: fact and the rings are derived from it: a centre owned by the population
+#: would be a centre the four named accounts had to agree with by hand, and the
+#: day one of them moved, every ring would quietly be measured from somewhere
+#: else. London, at ``LocationArea``'s own two decimal places, because that is
+#: the resolution the commit rounds to on the way in.
+CENTRE_LATITUDE = 51.51
+CENTRE_LONGITUDE = -0.13
+
+#: What a seeded profile calls its consent copy. One string, so the accounts and
+#: the cohort answer the consent question the same way.
+SEED_CONSENT_COPY_VERSION = "proposals-seed"
+
+
+@dataclass(frozen=True)
+class SeedProfile:
+    """The Player profile one account commits, as onboarding's second part.
+
+    **A per-player axis on the account, not a fourth member of ``Scenario``.** A
+    scenario is per *sport* — a rating, an open run, an abandoned one — and a
+    profile is per *player*: one week, one radius, one location, one answer about
+    photographs. Folding it into the per-sport union would make an account with
+    two sports carry two profiles, which is a state the domain cannot reach.
+
+    ``intents`` is the one field that *is* per sport, because a declaration is
+    (``docs/adr/0094``). It is a tuple of pairs rather than a mapping so the
+    account stays hashable and its order is the order the run declares in.
+
+    ``committed_days_ago`` is how far **before this run's own now** the profile
+    was committed, and it is what makes ADR-0113's fourteen-day window visible:
+    a profile committed through the wall clock is a newcomer, always, and a gate
+    with only one side present cannot be seen at all. The run injects a clock
+    (``app/seeds/clock.py``); this is the number it is set to.
+
+    ``clear_the_week`` is the one state the commit itself cannot express: the
+    commit refuses an empty grid — the floor binds the answer a player is *asked*
+    for — while ``ChangeAvailability`` accepts one, because clearing a week
+    afterwards is a legal edit. So a blank week is a commit followed by an edit,
+    which is exactly how a player reaches it.
+    """
+
+    #: ``(iso weekday 1–7, part of day)`` — one pair per cell ticked.
+    availability: tuple[tuple[int, str], ...]
+    social_tag_ids: tuple[str, ...]
+    search_radius_km: int
+    gender: Gender
+    gender_preference: GenderPreference
+    proposals_opt_in: bool
+    committed_days_ago: int
+    intents: tuple[tuple[Sport, PlayIntent], ...] = ()
+    latitude: float = CENTRE_LATITUDE
+    longitude: float = CENTRE_LONGITUDE
+    clear_the_week: bool = False
+
+    #: Which screen the declaration was made on. Client-asserted everywhere else
+    #: and asserted here too — the seed answers the questionnaire and declares in
+    #: its tail, which is what ``RATING_TAIL`` names.
+    intent_surface: PlayIntentSurface = PlayIntentSurface.RATING_TAIL
+
+    #: **No photograph, ever.** A seeded photo would need bytes in this
+    #: repository and an object store to put them in, and the card renders the
+    #: generated court poster without one — which is the state most cards are in
+    #: and the one worth developing against.
+    photo_ids: tuple[str, ...] = ()
+
+
+
 Scenario = OpenRun | AbandonedRun | RatedRun
 
 
@@ -232,11 +386,18 @@ class SeedAccount:
 
     ``scenarios`` is per sport and may be empty: an account with nothing in it is
     a state, and the one every client's empty screen is drawn from.
+
+    ``profile`` is the **per-player** axis, and ``None`` is a state of its own —
+    a player who has finished the questionnaire and never answered onboarding's
+    second part. The four protagonists carry one; the seven states above it do
+    not, because each of those is named for a *rating* state and giving them a
+    week and a location would make each of them two claims in one address.
     """
 
     slug: str
     description: str
     scenarios: tuple[Scenario, ...] = ()
+    profile: SeedProfile | None = None
 
     @property
     def email(self) -> str:
@@ -353,6 +514,185 @@ RATED_IN_EVERY_SPORT = SeedAccount(
     ),
 )
 
+# ---------------------------------------------------------------------------
+# The four protagonists — a Play screen is developed *as* one of these
+# ---------------------------------------------------------------------------
+#
+# **They live in the catalog and not in the cohort**, and the reason is the
+# catalog's own idiom: each is named for a state, and a distribution asserting
+# the existence of exactly one person is not a distribution. *the-blank-week-
+# player* is the clearest case — a single named edge — and the cohort is what
+# stands behind them, never what they are drawn from.
+#
+# Each carries a **profile**, which is the axis this file gained for them, and
+# each is committed at a stated age so that ADR-0113's window has both of its
+# sides present among the people a developer actually signs in as. Three of the
+# four settled and one inside the window, deliberately: a protagonist accidental-
+# ly inside it would tighten the level gate on every search a developer ran and
+# nothing on the screen would say why.
+
+#: The week the protagonists tick. Six of the twenty-one cells, spread across
+#: four evenings and a weekend morning, so that a cohort member drawn against it
+#: can share two cells or none and both are ordinary rather than contrived.
+PROTAGONIST_WEEK: tuple[tuple[int, str], ...] = (
+    (2, "EVENING"),
+    (3, "EVENING"),
+    (4, "EVENING"),
+    (5, "EVENING"),
+    (6, "MORNING"),
+    (6, "AFTERNOON"),
+)
+
+#: Three tags on the competitive side of the vocabulary's own split, so the tag
+#: term has something to agree and disagree with.
+#:
+#: **Through the enum and never as strings.** A tag id is persisted on profiles
+#: for ever and has exactly one home; a literal here would be the second copy
+#: `test_no_second_copy_of_a_tag_id_exists_anywhere_in_the_app` exists to refuse,
+#: and it would keep working right up until somebody retired one of the three.
+PROTAGONIST_TAGS: tuple[str, ...] = (
+    SocialTag.PLAYS_TO_WIN.value,
+    SocialTag.HERE_TO_IMPROVE.value,
+    SocialTag.WARMS_UP_PROPERLY.value,
+)
+
+#: The radius every ring in ``cohort.py`` is cut against. **Ten, and not the
+#: fifty the slider allows**, because the relaxation ladder multiplies what the
+#: searcher asked for: at fifty both rungs clamp to the ceiling and there is no
+#: ladder to watch. At ten the rungs land on fifteen and twenty, which is what
+#: the rings are cut by.
+PROTAGONIST_RADIUS_KM = 10
+
+#: Settled, and clear of the fourteen-day window on the far side.
+SETTLED_DAYS_AGO = 40
+
+#: Inside the window, and clear of its near edge — so a change to the window
+#: moves who is a newcomer rather than the arithmetic of one edge case.
+NEWCOMER_DAYS_AGO = 3
+
+THE_POPULATED_PLAYER = SeedAccount(
+    slug="the-populated-player",
+    description=(
+        "The default protagonist: rated in two sports, settled well clear of "
+        "the newcomer window, at the centre of every ring the cohort is cut "
+        "into. Every Play screen is developed signed in as this account."
+    ),
+    scenarios=(
+        RatedRun(
+            sport=Sport.PADEL,
+            answers=MIDDLING,
+            claim=RatingClaim(band=BAND_ESTABLISHED, position=(0.25, 0.75)),
+        ),
+        RatedRun(
+            sport=Sport.TENNIS,
+            answers=MIDDLING,
+            claim=RatingClaim(band=BAND_ESTABLISHED, position=(0.25, 0.75)),
+        ),
+    ),
+    profile=SeedProfile(
+        availability=PROTAGONIST_WEEK,
+        social_tag_ids=PROTAGONIST_TAGS,
+        search_radius_km=PROTAGONIST_RADIUS_KM,
+        gender=Gender.WOMAN,
+        gender_preference=GenderPreference.ANY,
+        proposals_opt_in=True,
+        committed_days_ago=SETTLED_DAYS_AGO,
+        intents=(
+            (Sport.PADEL, PlayIntent.COMPETITIVE),
+            (Sport.TENNIS, PlayIntent.FOR_FUN),
+        ),
+    ),
+)
+
+THE_NEWCOMER = SeedAccount(
+    slug="the-newcomer",
+    description=(
+        "A player whose profile was committed inside ADR-0113's fourteen-day "
+        "window — the widened gate, from the newcomer's own side, which is the "
+        "half a settled protagonist can never show."
+    ),
+    scenarios=(
+        RatedRun(
+            sport=Sport.PADEL,
+            answers=MIDDLING,
+            claim=RatingClaim(band=BAND_ESTABLISHED, position=(0.25, 0.75)),
+        ),
+    ),
+    profile=SeedProfile(
+        availability=PROTAGONIST_WEEK,
+        social_tag_ids=PROTAGONIST_TAGS,
+        search_radius_km=PROTAGONIST_RADIUS_KM,
+        gender=Gender.WOMAN,
+        gender_preference=GenderPreference.ANY,
+        proposals_opt_in=True,
+        committed_days_ago=NEWCOMER_DAYS_AGO,
+        intents=((Sport.PADEL, PlayIntent.COMPETITIVE),),
+    ),
+)
+
+THE_ONE_SPORT_PLAYER = SeedAccount(
+    slug="the-one-sport-player",
+    description=(
+        "Rated in padel and in nothing else, with no tennis declaration at "
+        "all — the account that shows what a second sport's absence looks like "
+        "on a screen built to switch between them."
+    ),
+    scenarios=(
+        RatedRun(
+            sport=Sport.PADEL,
+            answers=MIDDLING,
+            claim=RatingClaim(band=BAND_ESTABLISHED, position=(0.25, 0.75)),
+        ),
+    ),
+    profile=SeedProfile(
+        availability=PROTAGONIST_WEEK,
+        social_tag_ids=PROTAGONIST_TAGS,
+        search_radius_km=PROTAGONIST_RADIUS_KM,
+        gender=Gender.MAN,
+        gender_preference=GenderPreference.ANY,
+        proposals_opt_in=True,
+        committed_days_ago=SETTLED_DAYS_AGO,
+        intents=((Sport.PADEL, PlayIntent.COMPETITIVE),),
+    ),
+)
+
+THE_BLANK_WEEK_PLAYER = SeedAccount(
+    slug="the-blank-week-player",
+    description=(
+        "A player who committed a week and then cleared it. The availability "
+        "term stands down for them rather than scoring a nought, and every "
+        "surface that took a week has to say so."
+    ),
+    scenarios=(
+        RatedRun(
+            sport=Sport.PADEL,
+            answers=MIDDLING,
+            claim=RatingClaim(band=BAND_ESTABLISHED, position=(0.25, 0.75)),
+        ),
+    ),
+    profile=SeedProfile(
+        availability=PROTAGONIST_WEEK,
+        social_tag_ids=PROTAGONIST_TAGS,
+        search_radius_km=PROTAGONIST_RADIUS_KM,
+        gender=Gender.WOMAN,
+        gender_preference=GenderPreference.ANY,
+        proposals_opt_in=True,
+        committed_days_ago=SETTLED_DAYS_AGO,
+        intents=((Sport.PADEL, PlayIntent.COMPETITIVE),),
+        clear_the_week=True,
+    ),
+)
+
+#: The four a Play screen is developed *as*, in the order the run walks them:
+#: the default first, so an interrupted run leaves the account most work is done
+#: against already built.
+PROTAGONISTS: tuple[SeedAccount, ...] = (
+    THE_POPULATED_PLAYER,
+    THE_NEWCOMER,
+    THE_ONE_SPORT_PLAYER,
+    THE_BLANK_WEEK_PLAYER,
+)
+
 #: Every account this system creates, in the order a run walks them: emptiest
 #: first, so a run interrupted half way leaves the simple states done.
 ACCOUNTS: tuple[SeedAccount, ...] = (
@@ -363,7 +703,7 @@ ACCOUNTS: tuple[SeedAccount, ...] = (
     RATING_BARELY_ESTABLISHED,
     RATING_WELL_ESTABLISHED,
     RATED_IN_EVERY_SPORT,
-)
+) + PROTAGONISTS
 
 
 def _refuse_an_impossible_catalog() -> None:
@@ -398,6 +738,7 @@ def _refuse_an_impossible_catalog() -> None:
         seen.add(account.slug)
 
         sports: set[Sport] = set()
+        rated: set[Sport] = set()
         for scenario in account.scenarios:
             if scenario.sport in sports:
                 raise RuntimeError(
@@ -406,13 +747,29 @@ def _refuse_an_impossible_catalog() -> None:
                 )
             sports.add(scenario.sport)
             if isinstance(scenario, RatedRun):
+                rated.add(scenario.sport)
                 _refuse_an_impossible_policy(account, scenario)
+        if account.profile is not None:
+            # **The rated sports and not merely the ones with a scenario.** An
+            # open run and an abandoned one are sports this account has no
+            # rating in, and every Play surface refuses an unrated sport — so a
+            # declaration against one would name a screen the account cannot
+            # reach, which is exactly what the check below is for.
+            _refuse_an_impossible_profile(account, account.profile, rated=rated)
 
 
 def _refuse_an_impossible_policy(account: SeedAccount, scenario: RatedRun) -> None:
     """An index into a list of options is not a negative number."""
 
     policy = scenario.answers
+    if policy.spread != 0:
+        raise RuntimeError(
+            f"'{account.slug}' answers {scenario.sport.value} with a policy of "
+            f"spread {policy.spread}. A named account's claim is a band and a "
+            f"position inside it, and a drawn answer set cannot be held to one "
+            f"— spread belongs to the cohort's archetypes, whose claim is a "
+            f"histogram."
+        )
     if policy.claims < 0 or policy.demonstrations < 0:
         raise RuntimeError(
             f"'{account.slug}' answers {scenario.sport.value} with {policy}, and "
@@ -427,6 +784,40 @@ def _refuse_an_impossible_policy(account: SeedAccount, scenario: RatedRun) -> No
             f"inside the {scenario.claim.band} band, which is not a fraction of "
             f"that band read low to high."
         )
+
+
+def _refuse_an_impossible_profile(
+    account: SeedAccount, profile: SeedProfile, *, rated: set[Sport]
+) -> None:
+    """A profile the commit would refuse, refused before a session is opened.
+
+    Asked of the **domain's own value objects**, which is the same discipline the
+    addresses above are held to: a tag id this platform does not serve, a radius
+    off the slider or a week with nothing in it would otherwise fail half way
+    through a run, with some accounts written and some not — and a profile is
+    written *after* the questionnaire, so the half that is already there is the
+    expensive half.
+    """
+
+    SocialTagSelection.from_ids(profile.social_tag_ids)
+    SearchRadius.chosen(profile.search_radius_km)
+    AvailabilityGrid.of_cells(profile.availability)
+
+    if profile.committed_days_ago < 0:
+        raise RuntimeError(
+            f"'{account.slug}' commits its profile {profile.committed_days_ago} "
+            f"days ago, which is in the future. A seeded profile is backdated "
+            f"from the run's own now and never forward of it."
+        )
+
+    for sport, _ in profile.intents:
+        if sport not in rated:
+            raise RuntimeError(
+                f"'{account.slug}' declares a {sport.value} Play intent and "
+                f"holds no {sport.value} rating. Every Play surface refuses an "
+                f"unrated sport, so the declaration would name a screen the "
+                f"account cannot reach."
+            )
 
 
 _refuse_an_impossible_catalog()

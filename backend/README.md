@@ -415,16 +415,45 @@ breaks on it.
 | `rating-barely-established@raketa.example` | Padel Level just inside **Established**, its range still reaching into Developing |
 | `rating-well-established@raketa.example` | Padel Level well inside **Established**, clear of the lower edge |
 | `rated-in-every-sport@raketa.example` | All four sports rated, one per band — the longest ratings list there is |
+| `the-populated-player@raketa.example` | **The default protagonist.** Padel and tennis rated, settled, at the centre of every ring — every Play screen is developed signed in as this one |
+| `the-newcomer@raketa.example` | The same answers and a profile committed inside ADR-0113's fourteen days — the widened gate from the newcomer's own side |
+| `the-one-sport-player@raketa.example` | Padel and no tennis at all — a second sport's absence, refused rather than emptied |
+| `the-blank-week-player@raketa.example` | A week committed and then cleared — the availability term stands down rather than scoring a nought |
 
 The password for every seeded account is `raketa-seed1`, and it is public by
 construction — it is written in `app/seeds/catalog.py`.
 
-Scope is what is **modeled**: players, onboarding assessments and Skill ratings. Clubs,
-Courts, Bookings and Matches have no aggregates, so they have no scenarios; each adds its
-own when it exists. A walk over `app/seeds/` asserts the package imports those two
-contexts and no others.
+Behind those eleven named addresses is the **cohort**: a population of `cohort-<ring>-<nn>`
+members, generated from a seed and committed as `app/seeds/cohort.json`. It exists because
+one search over eleven accounts finds them all in one ring, and every Play screen would be
+developed against an empty result.
 
-Four rules hold this together, and each exists because of a specific way seed data goes
+It is a **workbench and it says so on its own report**: chosen so that every Play screen
+state is *reachable*, standing for nothing outside itself, describing no real market. The
+comparator corpus under `docs/specs/matchmaking/ruleset-diff/` answers a different question
+and is not this — the cohort borrows its mechanics (seeded draws keyed off a handle,
+assignment by rule rather than by rate) and none of its numbers.
+
+Two lists, and they are asymmetric. `app/seeds/cohort.py` holds the **declarations** — the
+generator's inputs: rings cut by the relaxation ladder's own ×1.5 and ×2.0 plus a handful
+past the slider's 50 km ceiling, one archetype per band, and a rule apiece for the newcomer
+share, the proposals opt-out, the mutual-gender exclusion and the dual-sport membership.
+`app/seeds/screens.py` holds the **assertions**, and every one of them is an outcome of a
+real read path run as the protagonist — the pool search, the deal, the line-up, the ladder.
+Nothing is asserted about a number the generator chose, because a ruleset that tightens
+`QUALITY_FLOOR` moves no distribution at all and still empties every screen.
+
+Regenerate the population with `make gen-cohort` and commit the result. It records
+**inputs only** — no level, no uncertainty, no band, because those are the engine's answers
+and a committed copy of an answer is a second number nothing keeps honest.
+
+Scope is what is **modeled**: players, onboarding assessments, Skill ratings and Player
+profiles. Clubs, Courts, Bookings and Matches have no aggregates, so they have no
+scenarios; each adds its own when it exists. A walk over `app/seeds/` asserts the package
+**writes** those four contexts and reaches every other one — matchmaking, today — only
+through that context's own use cases.
+
+Six rules hold this together, and each exists because of a specific way seed data goes
 wrong:
 
 - **Seeds execute use cases; nothing writes a table.** These aggregates are event-sourced
@@ -451,6 +480,21 @@ wrong:
   so `rating-barely-established` lands in Developing and `make seed` says so by name — an
   account whose name lies is worse than one that is missing, because nothing about the
   screen it is developed against would look wrong.
+- **The seed runs on injected clocks, and the calendar can fail it.** `SystemClock` makes
+  a *settled* player unreachable on a fresh database — everybody committed through the wall
+  clock is a newcomer, and ADR-0113's gate cannot be seen with one side present. So each
+  account and each member is written on a clock set to its own commit date, straddling the
+  fourteen days with both edges clear. `Clock` is a port and the commit is the same use
+  case, so ADR-0029 is honoured rather than bent. The dates are relative to the run that
+  wrote them and a re-run re-commits nothing, so a fortnight on every newcomer ages out at
+  once — and `make seed` **fails by name, with the age in days**, rather than handing a
+  developer a newcomer path with no newcomers in it.
+- **The assertions read the screens, and the seed ticks the tail first.** They read the
+  candidate index, which has not seen what the run just wrote — so the run folds the log in
+  **in this process** before asserting. That is safe by ADR-0110's own design: the index is
+  a projection behind one `FOR UPDATE` cursor, so a concurrent API tick blocks and then
+  finds nothing to do. Half the gate is a signature: none of this runs in CI, because it
+  needs a database with the seed in it.
 - **Production is refused, on import.** `app/seeds/__init__.py` calls the guard, so
   importing anything in the package under `APP_ENV=production` raises `SeedRefused`
   before a database is opened. The guard is not in the make target: a make target is not

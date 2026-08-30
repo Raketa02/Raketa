@@ -110,8 +110,29 @@ Rules to preserve:
 - **A seed account is named for a state, and the name is checked.** The catalog is a list
   of edges — nothing yet, one open run, one abandoned, a rating at the edge of its band —
   and a rated scenario carries the band it promises, checked against the stored rating on
-  every run. Seed only what is **modeled**: Players, onboarding assessments and Skill
-  ratings have aggregates; nothing else does, so nothing else gets a scenario.
+  every run. Four of the eleven are **protagonists** carrying a per-player *profile* axis,
+  and a Play screen is developed signed in as one of them.
+- **Behind the named accounts is the cohort, and it is a workbench that says so on its
+  face** (`app/seeds/cohort.py`, `app/seeds/screens.py`). One search over eleven accounts
+  finds them all in one ring, so a population is generated from a seed and committed as
+  `app/seeds/cohort.json` — **inputs only**, never a level, an uncertainty or a band, and
+  every draw keyed off the member's own handle so adding one changes that row and nobody
+  else's (`make gen-cohort`, and a test asserts byte-identity). It borrows
+  `scripts/ruleset_diff/population.py`'s mechanics and **none of its numbers**: that corpus
+  is a comparator and this one's job is to *reach* states, which is why ADR-0121 is
+  undisturbed. **Two lists, asymmetric** — the declarations are the generator's inputs, and
+  the assertions are outcomes of the **real read paths run as the protagonist**, because a
+  ruleset that tightens `QUALITY_FLOOR` moves no distribution and still empties every
+  screen. It fails `make seed` on **three clocks**: an engine retune moves the band
+  histogram (a range per band, never a μ — a μ would pin the engine), a ruleset retune
+  empties a screen, and the calendar walks every newcomer out of ADR-0113's window, which
+  fails **by name with the age in days**. The run injects a `Clock` — a port, so ADR-0029
+  is honoured rather than bent — and **ticks the candidate index's tail in-process** before
+  reading, which ADR-0110 makes safe rather than exempt. Half the gate is a signature: the
+  assertions need a database and do not run in CI. Seed only what is **modeled**: Players,
+  onboarding assessments, Skill ratings and Player profiles have aggregates; nothing else
+  does, so nothing else gets a scenario, and the fence is expressed as **writes against
+  reads** rather than as imports.
 - **Photo bytes live behind `PhotoStorage`, and the re-encode behind
   `ImageTranscoder`** ([ADR-0091](../docs/adr/0091-photo-storage-behind-a-port.md)).
   One S3-compatible adapter serves MinIO locally and S3 deployed — same class, different

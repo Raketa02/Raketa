@@ -16,7 +16,7 @@ ECS_CLUSTER      ?= raketa-cluster
 ECS_SERVICE      ?= raketa-service
 
 .PHONY: help install test lint lint-imports format typecheck check test-gates openapi \
-        gen-walkthroughs \
+        gen-walkthroughs gen-cohort \
         build-dev up down logs ps shell migrate seed seed-host \
         rebuild-candidate-index rebuild-candidate-index-host \
         build-prod ecr-login ecr-push ecs-deploy
@@ -58,6 +58,15 @@ check: lint lint-imports typecheck test  ## the full local gate (matches CI)
 # rewrites them; it is never run by CI.
 gen-walkthroughs:  ## rewrite the matchmaking walkthrough golden files
 	UPDATE_GOLDEN=1 poetry run pytest tests/unit/test_matchmaking_walkthroughs.py -q
+
+# The seed cohort's population, generated from a seed and committed as a file
+# (app/seeds/cohort.json). **Inputs only** — no level, no uncertainty and no
+# band, because those are the engine's answers and a committed copy of an answer
+# is a number nothing keeps honest. A diff here is a change to the fixture every
+# Play screen is developed against, and it is readable per member because every
+# draw is keyed off that member's handle.
+gen-cohort:        ## rewrite the seed cohort's committed population
+	poetry run python -m scripts.gen_cohort
 
 ## ----- API contract
 openapi:           ## emit the API contract (openapi.player.json)
