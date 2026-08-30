@@ -69,12 +69,16 @@ _REFUSALS: dict[int | str, dict[str, Any]] = {
         "model": ErrorResponse,
         "description": (
             "`challenge_with_no_invitee`, `organiser_holds_a_seat`, "
-            "`one_person_to_a_seat`, `cannot_challenge_yourself`, "
-            "`court_is_not_the_sports` — the shape of the court, and every one "
-            "of them a caller's bug. Checked **first**, because they need no "
-            "reads and are true regardless of anybody else's state: telling an "
-            "organiser their line-up went stale when they invited nobody sends "
-            "them refreshing a screen that was never wrong."
+            "`one_person_to_a_seat`, `cannot_challenge_yourself` — who is on "
+            "the court, and every one of them a caller's bug. Checked "
+            "**first, before anything is read**, because they are true "
+            "regardless of anybody else's state: telling an organiser their "
+            "line-up went stale when they invited nobody sends them refreshing "
+            "a screen that was never wrong.\n\n"
+            "`court_is_not_the_sports` — the seats are not "
+            "`2 x seats_per_side`, evenly split, in the court's own order. The "
+            "one refusal in that family that cannot come first: the shape is "
+            "the sport's, and the sport is the search's to say."
         ),
     },
     status.HTTP_409_CONFLICT: {
@@ -157,7 +161,6 @@ async def send_challenge(
 @router.get(
     "",
     response_model=ChallengeListResponse,
-    response_model_exclude_unset=True,
     status_code=status.HTTP_200_OK,
     responses={
         status.HTTP_200_OK: {
@@ -218,7 +221,6 @@ _ANSWER_REFUSALS: dict[int | str, dict[str, Any]] = {
 @router.post(
     "/{challenge_id}/accept",
     response_model=ChallengeSchema,
-    response_model_exclude_unset=True,
     status_code=status.HTTP_200_OK,
     responses={
         status.HTTP_200_OK: {
@@ -253,7 +255,6 @@ async def accept_seat(
 @router.post(
     "/{challenge_id}/decline",
     response_model=ChallengeSchema,
-    response_model_exclude_unset=True,
     status_code=status.HTTP_200_OK,
     responses={
         status.HTTP_200_OK: {

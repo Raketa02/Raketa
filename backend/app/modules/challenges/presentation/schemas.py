@@ -16,6 +16,13 @@ because it is a fold of the seats against the moment the list was read — and i
 waiting, lapsed or open is read off ``answer`` and ``answer_by`` against the
 clock, so a client renders *how long you have* from a moment the backend computed
 rather than one a phone derived.
+
+**Every nullable field here is ``null`` and never omitted**, which is the
+matchmaking surface's own distinction applied deliberately rather than by
+default: *``null`` means the field applies and the answer is a measured nothing.*
+An empty seat has no occupant, a seat nobody has answered has no answer, the
+organiser's seat has no deadline and a mutual-born challenge was proposed from no
+grid — four measured nothings, and not four absences.
 """
 
 from __future__ import annotations
@@ -106,14 +113,18 @@ class SeatSchema(BaseModel):
 
     side: Side
     player_id: UUID | None = Field(
-        default=None, description="Who holds this seat, or absent if nobody does"
+        default=None,
+        description=(
+            "Who holds this seat. ``null`` on a seat nobody was put in."
+        ),
     )
     answer: SeatAnswer | None = Field(
         default=None,
         description=(
-            "What they did about being asked, or absent while they have not "
-            "answered. **A lapse is not a refusal** — they are different facts "
-            "and the platform counts them apart."
+            "What they did about being asked. ``null`` while they have not "
+            "answered, and on a seat nobody was put in. **A lapse is not a "
+            "refusal** — they are different facts and the platform counts them "
+            "apart."
         ),
     )
     answer_by: datetime | None = Field(
@@ -121,7 +132,9 @@ class SeatSchema(BaseModel):
         description=(
             "When this seat's answer stops being wanted. Past it the seat reads "
             "as lapsed whether or not anything has swept it, and a late answer "
-            "is refused rather than accepted late."
+            "is refused rather than accepted late. ``null`` exactly when nobody "
+            "was asked: an empty seat, the organiser's, and both seats of a "
+            "challenge born from a mutual yes."
         ),
     )
 
@@ -134,17 +147,17 @@ class ChallengeSchema(BaseModel):
     mode: SearchMode | None = Field(
         default=None,
         description=(
-            "The kind of evening it was sent for. Absent when the surface it came "
-            "from has none — the deck asks nobody to pick one — and on every "
-            "challenge born of a mutual yes."
+            "The kind of evening it was sent for. ``null`` when the surface it "
+            "came from has none — the deck asks nobody to pick one — and on "
+            "every challenge born of a mutual yes."
         ),
     )
     window: Window | None = Field(
         default=None,
         description=(
             "How soon the week this was proposed for comes round. **Derived at "
-            "send from the grid the search ran on** and never asked for. Absent "
-            "on a mutual-born challenge: no grid was proposed from."
+            "send from the grid the search ran on** and never asked for. "
+            "``null`` on a mutual-born challenge: no grid was proposed from."
         ),
     )
     organiser_id: UUID = Field(
@@ -167,8 +180,9 @@ class ChallengeSchema(BaseModel):
         ...,
         description=(
             "The court in its fixed order — every **A** seat, then every **B**. "
-            "Empty seats are in the list, because which side is short is part of "
-            "what a court is."
+            "Empty seats are in the list, because which side is short is part "
+            "of what a court is: an A-side full with a B-side short is a "
+            "different court from the reverse."
         ),
     )
 

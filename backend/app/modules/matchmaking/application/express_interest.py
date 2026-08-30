@@ -40,11 +40,12 @@ a subscription precisely so that it cannot be late.
 
 **A mint that is refused is not a failure of this use case.** The other context
 re-verifies the same gates a send does, because a *Let's play* may cite a search
-from a month ago and a search record never expires; when it refuses, it mints
-nothing and says so by answering nothing. The yes stands, ``mutual`` is still
-``True``, and the two of them have a mutual with no game opened — which is the
-honest state and is exactly what a block taken between two stale yeses should
-produce.
+from a month ago and a search record never expires; when it refuses — a block
+taken since, or a gate it could not read at all — it mints nothing and says so by
+answering nothing. The yes stands, ``mutual`` is still ``True``, and the two of
+them have a mutual with no game opened, which is the honest state. Reporting the
+mutual as ``False`` because a gate refused would tell the sender something about
+the other person that no refusal is allowed to say.
 """
 
 from __future__ import annotations
@@ -156,10 +157,19 @@ class ExpressInterest:
             created = True
 
         answer = await self._answer(yes, now=now, created=created)
-        # **One commit, whichever branch ran.** A repeat tap writes no interest
-        # row and may still have opened a game: the pair could have been refused
-        # a mint when the first yes landed — a gate that was closed then and is
-        # open now — and there is nothing else that would ever come back for it.
+        # **The mint hangs off the mutual and never off ``created``.** It is the
+        # second yes that makes a game, and whether *this* tap wrote a row is a
+        # different question: a repeat tap on a pair whose mint was refused is
+        # the only occasion the platform ever gets to try again, and the other
+        # context refuses a second one on the pair rule anyway.
+        if answer.mutual:
+            await self._challenges.open_from_mutual_interest(
+                sport=yes.sport,
+                player_id=yes.from_player_id,
+                other_player_id=yes.to_player_id,
+            )
+        # **One commit, whichever branch ran** — the yes and the game it opened
+        # are one transaction, or neither happened.
         await self._uow.commit()
         return answer
 
@@ -180,10 +190,10 @@ class ExpressInterest:
         themselves, and it can say nothing about anybody who has not been said
         yes to.
 
-        **The mint hangs off that read and never off ``created``.** It is the
-        second yes that makes a game, and whether *this* tap wrote a row is a
-        different question — a repeat tap on a pair whose mint was refused is the
-        only occasion the platform ever gets to try again.
+        **Nothing here writes.** The mint the mutual causes is in
+        :meth:`execute`, beside the commit it shares a transaction with, because
+        a method called to build a response is not where the second write of a
+        transaction belongs.
 
         ``mutual`` is what the two rows say and is **not** narrowed to *a game
         was opened*: the mutual is true either way, and reporting it as false
@@ -197,12 +207,6 @@ class ExpressInterest:
             sport=yes.sport,
             now=now,
         )
-        if theirs is not None:
-            await self._challenges.open_from_mutual_interest(
-                sport=yes.sport,
-                player_id=yes.from_player_id,
-                other_player_id=yes.to_player_id,
-            )
         return ExpressedInterest(
             interest=yes,
             outstanding=await self._counted(yes.from_player_id, yes.sport, now),

@@ -487,20 +487,47 @@ def _refuse_a_court_that_is_not(sport: Sport, sides: Sequence[Side]) -> None:
         )
 
 
+def refuse_a_bad_court(
+    occupants: Sequence[UUID | None], *, organiser_id: UUID
+) -> None:
+    """The four things about *who is on the court* that are a caller's bug.
+
+    **It takes the occupants and not the arrangement, so that it needs no
+    sport.** A send has to be able to refuse *nobody to invite* before it has
+    read anything at all — the refusal is a fact about the send's shape and is
+    true regardless of anybody else's state, and telling an organiser their
+    line-up went stale when they invited nobody sends them refreshing a screen
+    that was never wrong. The court's *shape* is the one refusal in this family
+    that cannot go first: it is the sport's, and the sport is read off the search
+    the court was built on.
+
+    Public for that one caller. It is still run again by the aggregate, from
+    :func:`_refuse_a_bad_line_up`, which is the point — the use case makes the
+    **order** observable and this stays the only place the rule is written.
+    """
+
+    seated = [one for one in occupants if one is not None]
+    if organiser_id not in seated:
+        raise TheOrganiserHoldsASeat()
+    if seated.count(organiser_id) > 1:
+        raise CannotChallengeYourself()
+    if len(set(seated)) != len(seated):
+        raise OnePersonToASeat()
+    if len(seated) < 2:
+        raise AChallengeNeedsAnInvitee()
+
+
 def _refuse_a_bad_line_up(
     arrangement: Sequence[SeatPlan], *, organiser_id: UUID
 ) -> None:
-    """The three things about *who is on the court* that are a caller's bug."""
+    """The same four, plus the one that is about the arrangement rather than the
+    people: an organiser cannot arrive carrying an invitation to themselves."""
 
-    occupants = [plan.player_id for plan in arrangement if plan.player_id is not None]
-    if organiser_id not in occupants:
-        raise TheOrganiserHoldsASeat()
-    if occupants.count(organiser_id) > 1 or any(
+    refuse_a_bad_court(
+        [plan.player_id for plan in arrangement], organiser_id=organiser_id
+    )
+    if any(
         plan.player_id == organiser_id and plan.origin is not None
         for plan in arrangement
     ):
         raise CannotChallengeYourself()
-    if len(set(occupants)) != len(occupants):
-        raise OnePersonToASeat()
-    if len(occupants) < 2:
-        raise AChallengeNeedsAnInvitee()

@@ -22,10 +22,12 @@ provable**.
 
 **Three refusals, in one order.**
 
-1. *Nobody to invite*, and the rest of the court's shape. The aggregate's own,
-   they need no reads, and they are true regardless of anybody else's state —
-   telling an organiser their line-up went stale when they invited nobody sends
-   them refreshing a screen that was never wrong.
+1. *Nobody to invite*, and who else is on the court. The aggregate's own rule,
+   run here first because it needs **no reads** and is true regardless of
+   anybody else's state — telling an organiser their line-up went stale when
+   they invited nobody sends them refreshing a screen that was never wrong. The
+   one refusal in that family that cannot come first is the court's *shape*: it
+   is the sport's, and the sport is the search's to say.
 2. **The organiser's own hold**, with the same ``account_held`` the search
    returns. ADR-0130's consequences settled the shape once: a hold that stops you
    searching but lets you send invitations is that hole with the blast radius
@@ -72,7 +74,7 @@ from app.modules.challenges.application.commands import (
     SendChallengeCommand,
 )
 from app.modules.challenges.application.court_safety import CourtSafety
-from app.modules.challenges.domain.challenge import Challenge
+from app.modules.challenges.domain.challenge import Challenge, refuse_a_bad_court
 from app.modules.challenges.domain.errors import (
     AnOpenChallengeStandsWithThisPair,
     TheCourtDidNotComeFromThatSearch,
@@ -112,14 +114,40 @@ class SendChallenge:
         self._clock = clock
 
     async def execute(self, command: SendChallengeCommand) -> UUID:
-        """Mint the challenge, or refuse the whole send. Returns its id."""
+        """Mint the challenge, or refuse the whole send. Returns its id.
+
+        **The order of what follows is the design**, and every step is placed
+        against how much it has to read.
+        """
 
         at = instant(self._clock.now())
+        on_the_court = frozenset(
+            choice.player_id
+            for choice in command.court
+            if choice.player_id is not None
+        )
+
+        # 1. The shape of the court, before anything is read at all. The
+        #    aggregate owns the rule and runs it again below; what is here is the
+        #    **order** — a send with nobody to ask is refused without an
+        #    organiser ever being told their line-up went stale.
+        refuse_a_bad_court(
+            [choice.player_id for choice in command.court],
+            organiser_id=command.organiser_id,
+        )
+
+        # 2. Their own hold, at the entry point, with the same code the search
+        #    returns. It is about the caller and nobody else, so it is asked
+        #    before a single fact about another person — or about a search that
+        #    may not be theirs — is read.
+        if command.organiser_id in await self._safety.held_among(
+            [command.organiser_id]
+        ):
+            raise AccountHeld("this account is under a hold")
+
+        # 3. The search the court was built on, which is where the sport, the
+        #    kind of evening, the window and every seat's position come from.
         origin = await self._origin_of(command)
-        # The aggregate refuses a court that is not the sport's, an organiser who
-        # is not in it, somebody seated twice and a send with nobody to ask —
-        # that is where those rules live, and they are checked before anybody
-        # else's state is read.
         challenge = Challenge.sent(
             challenge_id=new_uuid(),
             sport=origin.sport,
@@ -130,19 +158,12 @@ class SendChallenge:
             occurred_at=at,
         )
 
-        on_the_court = frozenset(
-            choice.player_id
-            for choice in command.court
-            if choice.player_id is not None
-        )
-        if command.organiser_id in await self._safety.held_among(
-            [command.organiser_id]
-        ):
-            raise AccountHeld("this account is under a hold")
-
-        # Both are read before either is judged: a press that fixed one and was
-        # refused for the other is the same interruption twice, and the client's
-        # remedy for a refused send re-reads **both** sources it owns.
+        # 4. The two about everybody else. **Both are read before either is
+        #    judged**: a press that fixed one and was refused for the other is
+        #    the same interruption twice, and the client's remedy for a refused
+        #    send re-reads both sources it owns. Only one code can cross an
+        #    envelope that has one, so the safety refusal wins and the message —
+        #    a diagnostic, never copy — carries the second.
         admitted = await self._safety.admits(on_the_court)
         pairs = await self._open_challenges.open_pairs_among(on_the_court, now=at)
         if not admitted:

@@ -35,17 +35,32 @@ from app.api.dependencies import (
 )
 from app.bootstrap.composition import (
     build_block_query,
+    build_challenge_hold_query,
     build_challenge_repository,
     build_domain_event_store,
     build_event_publisher,
     build_open_challenge_query,
     build_origin_search_query,
     build_player_profile_repository,
+    build_ruleset,
+    build_search_store,
     build_user_repository,
 )
+from app.modules.blocks.domain.errors import BlockStateUnavailable
 from app.modules.challenges.application.court_safety import CourtSafety
+from app.modules.challenges.application.open_from_mutual_interest import (
+    OpenChallengeFromMutualInterest,
+)
 from app.modules.challenges.application.send_challenge import SendChallenge
 from app.modules.challenges.presentation.dependencies import get_send_challenge
+from app.modules.matchmaking.application.express_interest import ExpressInterest
+from app.modules.matchmaking.infrastructure.challenges_mutual_challenge import (
+    ChallengesMutualChallenge,
+)
+from app.modules.matchmaking.presentation.dependencies import (
+    InterestLedgerDep,
+    get_express_interest,
+)
 from tests.api import matchmaking_world as world
 
 
@@ -469,3 +484,86 @@ async def test_a_block_between_two_stale_yeses_mints_nothing(
     assert back.json()["mutual"] is True, "the yes still landed"
     assert await _challenges(client, other["token"]) == []
     assert await _challenges(client, searcher["token"]) == []
+
+
+async def test_a_gate_that_cannot_be_read_costs_the_game_and_never_the_yes(
+    client, session_factory, candidate_source, searcher
+):
+    """*A gate that cannot be evaluated excludes* — and on this path excluding
+    means minting nothing, never refusing the tap.
+
+    A raise would reach the only other thing in this transaction: somebody's own
+    *Let's play*. Losing that to a hiccup in a gate query is strictly worse than
+    the pair having a mutual with no game opened, and the next tap tries again.
+    """
+
+    other = await world.a_searcher(client, name="bea")
+    await world.fold_the_log(session_factory, candidate_source)
+    await world.a_yes(
+        client, session_factory, candidate_source, sender=searcher, towards=other["id"]
+    )
+    stale = (await world.search(client, other["token"])).json()["search"]["search_id"]
+    _break_the_block_read(client)
+
+    back = await world.express_interest(
+        client, other["token"], player_id=searcher["id"], search_id=stale
+    )
+
+    assert back.status_code in (200, 201), back.text
+    assert back.json()["mutual"] is True, "the yes stands, and it is still mutual"
+    listed = (await world.read_interest(client, other["token"])).json()
+    assert [row["player_id"] for row in listed["mutual"]] == [str(searcher["id"])]
+
+
+def _break_the_block_read(client) -> None:
+    """A block query that cannot answer, wired where the *mint* reads it.
+
+    The interest route holds two block readers — its own list read and the one
+    inside the mint — and only the second is broken here, so the yes goes
+    through the path a working platform gives it.
+    """
+
+    class Unreadable:
+        async def blocked_pairs_among(self, player_ids):
+            raise BlockStateUnavailable("the block mask could not be read")
+
+        async def exclusions_for(self, player_id):
+            raise BlockStateUnavailable("the block set could not be read")
+
+        async def blocked_between(self, first, second):
+            raise BlockStateUnavailable("the pair could not be read")
+
+    def factory(
+        db: DbSession,
+        clock: ClockDep,
+        uow: UnitOfWorkDep,
+        interest: InterestLedgerDep,
+    ) -> ExpressInterest:
+        return ExpressInterest(
+            clock=clock,
+            ruleset=build_ruleset(),
+            interest=interest,
+            searches=build_search_store(db),
+            challenges=ChallengesMutualChallenge(
+                OpenChallengeFromMutualInterest(
+                    challenges=build_challenge_repository(
+                        event_store=build_domain_event_store(db),
+                        events=build_event_publisher(db),
+                    ),
+                    open_challenges=build_open_challenge_query(db),
+                    safety=CourtSafety(
+                        blocks=Unreadable(),
+                        holds=build_challenge_hold_query(db),
+                        accounts=build_user_repository(db),
+                        profiles=build_player_profile_repository(
+                            event_store=build_domain_event_store(db),
+                            events=build_event_publisher(db),
+                        ),
+                    ),
+                    clock=clock,
+                )
+            ),
+            unit_of_work=uow,
+        )
+
+    world.override(client, get_express_interest, factory)

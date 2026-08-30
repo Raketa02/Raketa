@@ -37,6 +37,7 @@ from app.modules.challenges.application.commands import (
 )
 from app.modules.challenges.application.court_safety import CourtSafety
 from app.modules.challenges.domain.challenge import Challenge
+from app.modules.challenges.domain.errors import TheGatesCouldNotBeEvaluated
 from app.modules.challenges.domain.ports import (
     ChallengeRepository,
     OpenChallengeQuery,
@@ -66,7 +67,11 @@ class OpenChallengeFromMutualInterest:
 
         at = instant(self._clock.now())
         pair = frozenset({command.player_id, command.other_player_id})
-        if not await self._safety.admits(pair):
+        try:
+            admitted = await self._safety.admits(pair)
+        except TheGatesCouldNotBeEvaluated:
+            return None
+        if not admitted:
             return None
         if await self._open_challenges.open_pairs_among(pair, now=at):
             # Already arranging something, in this sport or any other. A second

@@ -268,6 +268,14 @@ async def test_a_player_with_no_profile_cannot_clear_the_gate(session_factory):
         await _nothing_was_written(session)
 
 
+AN_EMPTY_COURT = (
+    SeatChoice(side=Side.A, player_id=ORGANISER),
+    SeatChoice(side=Side.A),
+    SeatChoice(side=Side.B),
+    SeatChoice(side=Side.B),
+)
+
+
 async def test_nobody_to_invite_is_refused_before_anybody_elses_state_is_read(
     session_factory,
 ):
@@ -286,12 +294,51 @@ async def test_nobody_to_invite_is_refused_before_anybody_elses_state_is_read(
                 SendChallengeCommand(
                     organiser_id=ORGANISER,
                     search_id=SEARCH,
-                    court=(
-                        SeatChoice(side=Side.A, player_id=ORGANISER),
-                        SeatChoice(side=Side.A),
-                        SeatChoice(side=Side.B),
-                        SeatChoice(side=Side.B),
-                    ),
+                    court=AN_EMPTY_COURT,
+                )
+            )
+
+
+async def test_nobody_to_invite_outranks_a_search_that_is_not_yours(session_factory):
+    """The order asserted where it can actually fail: **before anything is
+    read**, including the origin.
+
+    A stub that already knew the search would let this pass whatever the order
+    was, so the search is one nothing will place. What must not happen is being
+    told to go and look at a screen that was never wrong.
+    """
+
+    async with session_factory() as session:
+        send = _send(session, origins=StubOrigins(known=set()))
+
+        with pytest.raises(AChallengeNeedsAnInvitee):
+            await send.execute(
+                SendChallengeCommand(
+                    organiser_id=ORGANISER,
+                    search_id=SEARCH,
+                    court=AN_EMPTY_COURT,
+                )
+            )
+
+
+async def test_your_own_hold_outranks_a_search_that_is_not_yours(session_factory):
+    """The hold is about the caller and nobody else, so it is asked before a
+    single fact about another person — or about a search that may not be
+    theirs — is read."""
+
+    async with session_factory() as session:
+        send = _send(
+            session,
+            safety=a_safe_court(COURT, holds=StubHolds(frozenset({ORGANISER}))),
+            origins=StubOrigins(known=set()),
+        )
+
+        with pytest.raises(AccountHeld):
+            await send.execute(
+                SendChallengeCommand(
+                    organiser_id=ORGANISER,
+                    search_id=SEARCH,
+                    court=a_padel_choice(*COURT),
                 )
             )
 
@@ -456,6 +503,35 @@ async def test_a_second_mutual_mints_nothing_while_the_first_stands(session_fact
 
         assert first is not None
         assert again is None
+
+
+async def test_a_gate_that_cannot_be_read_mints_nothing_and_does_not_raise(
+    session_factory,
+):
+    """*A gate that cannot be evaluated excludes* — and on this path excluding
+    means minting nothing, never refusing the tap.
+
+    A raise would reach the only thing in this transaction: somebody\'s own
+    *Let\'s play*. Losing that to a hiccup in a gate query is strictly worse than
+    the pair having a mutual with no game opened, and the next tap tries again.
+    """
+
+    async with session_factory() as session:
+        minted = await _mint(
+            session,
+            safety=a_safe_court([ALICE, BOB], blocks=StubBlocks(unavailable=True)),
+        ).execute(
+            OpenFromMutualInterestCommand(
+                sport=Sport.TENNIS, player_id=ALICE, other_player_id=BOB
+            )
+        )
+        await session.commit()
+
+        assert minted is None
+        pairs = await build_open_challenge_query(session).open_pairs_among(
+            [ALICE, BOB], now=SENT_AT
+        )
+        assert pairs == frozenset()
 
 
 async def test_a_held_player_is_not_given_a_mutual_born_challenge(session_factory):

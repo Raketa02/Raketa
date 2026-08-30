@@ -301,10 +301,13 @@ class TheGatesCouldNotBeEvaluated(AppError):
     its own refusal, which is what stops this context importing the matcher's
     error class.
 
-    It reaches ``POST /api/v1/interest`` too, and that is the honest answer
-    there: a mutual yes mints a challenge inline, in the same transaction, so a
-    gate this build cannot read is a yes this build cannot finish. The retry is
-    safe — a second tap creates nothing and re-runs the mint.
+    **It does not reach ``POST /api/v1/interest``.** A mutual yes mints a
+    challenge inline, in the same transaction, so a raise there would roll back
+    somebody\'s *Let\'s play* — and losing a tap to a hiccup in a hold query is a
+    strictly worse outcome than the pair having a mutual with no game opened. So
+    that path catches this and mints nothing, which is the same fail-closed rule
+    reaching the only remedy it has: on a send there is an organiser at a screen
+    who can retry, and on a deck there is nobody to refuse to.
     """
 
     status_code = HTTPStatus.SERVICE_UNAVAILABLE

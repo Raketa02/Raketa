@@ -171,6 +171,14 @@ class CourtSafety:
         written once here for the reason it is written once there: a safety gate
         translated in one place and swallowed in another is the failure the
         fail-closed rule exists to prevent.
+
+        **It catches broadly, exactly as ``read_demand``'s closed branch does.**
+        A provider that raises and a provider that answers something malformed
+        are the same event to a gate — it could not be evaluated — and narrowing
+        this to the exceptions today's adapters happen to raise would let the
+        next one fail open. What the breadth costs is a bug inside a provider
+        reported as an outage; what it buys is that there is no way to reach a
+        court through a gate that did not answer.
         """
 
         try:

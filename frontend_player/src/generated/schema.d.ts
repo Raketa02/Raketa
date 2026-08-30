@@ -1139,9 +1139,9 @@ export interface components {
              */
             challenge_id: string;
             sport: components["schemas"]["Sport"];
-            /** @description The kind of evening it was sent for. Absent when the surface it came from has none — the deck asks nobody to pick one — and on every challenge born of a mutual yes. */
+            /** @description The kind of evening it was sent for. ``null`` when the surface it came from has none — the deck asks nobody to pick one — and on every challenge born of a mutual yes. */
             mode?: components["schemas"]["SearchMode"] | null;
-            /** @description How soon the week this was proposed for comes round. **Derived at send from the grid the search ran on** and never asked for. Absent on a mutual-born challenge: no grid was proposed from. */
+            /** @description How soon the week this was proposed for comes round. **Derived at send from the grid the search ran on** and never asked for. ``null`` on a mutual-born challenge: no grid was proposed from. */
             window?: components["schemas"]["Window"] | null;
             /**
              * Organiser Id
@@ -1158,7 +1158,7 @@ export interface components {
             opened_at: string;
             /**
              * Seats
-             * @description The court in its fixed order — every **A** seat, then every **B**. Empty seats are in the list, because which side is short is part of what a court is.
+             * @description The court in its fixed order — every **A** seat, then every **B**. Empty seats are in the list, because which side is short is part of what a court is: an A-side full with a B-side short is a different court from the reverse.
              */
             seats: components["schemas"]["SeatSchema"][];
         };
@@ -3046,14 +3046,14 @@ export interface components {
             side: components["schemas"]["app__modules__challenges__domain__seats__Side"];
             /**
              * Player Id
-             * @description Who holds this seat, or absent if nobody does
+             * @description Who holds this seat. ``null`` on a seat nobody was put in.
              */
             player_id?: string | null;
-            /** @description What they did about being asked, or absent while they have not answered. **A lapse is not a refusal** — they are different facts and the platform counts them apart. */
+            /** @description What they did about being asked. ``null`` while they have not answered, and on a seat nobody was put in. **A lapse is not a refusal** — they are different facts and the platform counts them apart. */
             answer?: components["schemas"]["SeatAnswer"] | null;
             /**
              * Answer By
-             * @description When this seat's answer stops being wanted. Past it the seat reads as lapsed whether or not anything has swept it, and a late answer is refused rather than accepted late.
+             * @description When this seat's answer stops being wanted. Past it the seat reads as lapsed whether or not anything has swept it, and a late answer is refused rather than accepted late. ``null`` exactly when nobody was asked: an empty seat, the organiser's, and both seats of a challenge born from a mutual yes.
              */
             answer_by?: string | null;
         };
@@ -4995,7 +4995,11 @@ export interface operations {
                     "application/json": components["schemas"]["SentChallengeResponse"];
                 };
             };
-            /** @description `challenge_with_no_invitee`, `organiser_holds_a_seat`, `one_person_to_a_seat`, `cannot_challenge_yourself`, `court_is_not_the_sports` — the shape of the court, and every one of them a caller's bug. Checked **first**, because they need no reads and are true regardless of anybody else's state: telling an organiser their line-up went stale when they invited nobody sends them refreshing a screen that was never wrong. */
+            /**
+             * @description `challenge_with_no_invitee`, `organiser_holds_a_seat`, `one_person_to_a_seat`, `cannot_challenge_yourself` — who is on the court, and every one of them a caller's bug. Checked **first, before anything is read**, because they are true regardless of anybody else's state: telling an organiser their line-up went stale when they invited nobody sends them refreshing a screen that was never wrong.
+             *
+             *     `court_is_not_the_sports` — the seats are not `2 x seats_per_side`, evenly split, in the court's own order. The one refusal in that family that cannot come first: the shape is the sport's, and the sport is the search's to say.
+             */
             400: {
                 headers: {
                     [name: string]: unknown;
