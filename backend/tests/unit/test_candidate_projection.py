@@ -212,6 +212,8 @@ def test_a_rating_moves_the_row_for_that_sport_and_no_other() -> None:
             "mu": 2.71,
             "sigma": 0.34,
             "confidence": 62,
+            "range_low": 2.4,
+            "range_high": 3.0,
             "band": "Improver",
             "band_lower": 2.5,
             "band_upper": 3.0,

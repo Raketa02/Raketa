@@ -126,16 +126,28 @@ def test_the_index_tables_are_registered_for_migration_discovery() -> None:
     assert {table.name for table in INDEX_TABLES} <= set(Base.metadata.tables)
 
 
-def test_the_migration_creates_the_columns_the_models_declare() -> None:
+def test_the_migrations_create_the_columns_the_models_declare() -> None:
     """The two halves of a schema change, checked against each other.
 
     ``Base.metadata`` is what the test suite creates its tables from and the
-    migration is what production gets, so a column added to one and not the other
-    is green everywhere except where it matters. The suite has run against
+    migrations are what production gets, so a column added to one and not the
+    other is green everywhere except where it matters. The suite has run against
     SQLite-from-metadata since it existed, which is exactly why this drift is
     invisible without an assertion.
 
-    The migration is **parsed rather than executed**: running it needs a
+    **Every migration is read, not only the one that created the tables.** A
+    column arrives with the route that reads it, so the DDL for one table is
+    spread over as many files as there have been tickets — and a walk that knew
+    only ``create_table`` would go red on the first ``add_column`` and be
+    *loosened* rather than read, which is the failure mode a fence dies of. A
+    ``drop_column`` takes one back out, so the walk is a **replay in file order**
+    rather than a union of everything mentioned.
+
+    **Only ``upgrade`` is read.** ``downgrade`` drops what its own file added, and
+    a walk over the whole module would cancel every migration against itself and
+    then pass by asserting nothing.
+
+    The migrations are **parsed rather than executed**: running them needs a
     PostgreSQL connection, and a check that only fires where a database is up is
     a check CI cannot be trusted to run.
     """
@@ -144,24 +156,42 @@ def test_the_migration_creates_the_columns_the_models_declare() -> None:
 
     from app.modules.matchmaking.infrastructure import candidate_index_model
 
-    migration = (
+    versions = (
         Path(candidate_index_model.__file__).parent.parent.parent.parent.parent
         / "migrations"
         / "versions"
-        / "0008_candidate_index.py"
     )
-    declared = {
-        call.args[0].value: sorted(
-            column.args[0].value
-            for column in call.args[1:]
-            if getattr(column.func, "attr", "") == "Column"
+    declared: dict[str, set[str]] = {}
+    for migration in sorted(versions.glob("[0-9]*.py")):
+        module = ast.parse(migration.read_text(encoding="utf-8"))
+        upgrade = next(
+            node
+            for node in module.body
+            if isinstance(node, ast.FunctionDef) and node.name == "upgrade"
         )
-        for call in ast.walk(ast.parse(migration.read_text(encoding="utf-8")))
-        if isinstance(call, ast.Call)
-        and getattr(call.func, "attr", "") == "create_table"
-    }
+        for call in ast.walk(upgrade):
+            if not isinstance(call, ast.Call) or not isinstance(
+                table := (call.args[0] if call.args else None), ast.Constant
+            ):
+                continue
+            operation = getattr(call.func, "attr", "")
+            if operation == "create_table":
+                declared.setdefault(table.value, set()).update(
+                    column.args[0].value
+                    for column in call.args[1:]
+                    if isinstance(column, ast.Call)
+                    and getattr(column.func, "attr", "") == "Column"
+                )
+            elif operation == "add_column":
+                column = call.args[1]
+                assert isinstance(column, ast.Call), migration.name
+                declared.setdefault(table.value, set()).add(column.args[0].value)
+            elif operation == "drop_column":
+                declared.setdefault(table.value, set()).discard(call.args[1].value)
 
-    assert declared == {
+    assert {
+        table.name: sorted(declared.get(table.name, ())) for table in INDEX_TABLES
+    } == {
         table.name: sorted(column.name for column in table.columns)
         for table in INDEX_TABLES
     }

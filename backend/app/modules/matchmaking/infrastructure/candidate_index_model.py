@@ -132,6 +132,9 @@ class CandidateRowORM(Base):
     mu: Mapped[float | None] = mapped_column(Float, nullable=True)
     sigma: Mapped[float | None] = mapped_column(Float, nullable=True)
     confidence: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    #: The likely range as ``rating`` published it, μ ± σ clamped to the scale.
+    range_low: Mapped[float | None] = mapped_column(Float, nullable=True)
+    range_high: Mapped[float | None] = mapped_column(Float, nullable=True)
     band: Mapped[str | None] = mapped_column(String(64), nullable=True)
     band_lower: Mapped[float | None] = mapped_column(Float, nullable=True)
     band_upper: Mapped[float | None] = mapped_column(Float, nullable=True)

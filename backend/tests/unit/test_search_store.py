@@ -88,6 +88,8 @@ def _candidate(band: CandidateBand, position: int) -> SearchCandidateRecord:
                 social_tags=("PLAYS_TO_WIN",),
                 level=2.7,
                 band="Improver",
+                range_low=2.36,
+                range_high=3.04,
             )
             if band is CandidateBand.RETURNED
             else None
@@ -206,6 +208,11 @@ async def test_the_whole_row_that_was_shown_comes_back(store):
     assert row.card.nickname == "ada"
     assert row.card.photo_id == PHOTO, "an id, never a URL"
     assert row.card.social_tags == ("PLAYS_TO_WIN",)
+    assert (row.card.level, row.card.range_low, row.card.range_high) == (
+        2.7,
+        2.36,
+        3.04,
+    ), "a Level read back without the range it was shown with"
     assert row.concerns == ("SOCIAL_VIBE",)
     assert row.distance_km == 4
     assert row.at_stake == AtStake(win_delta=0.07, loss_delta=-0.05)
@@ -345,6 +352,8 @@ def test_a_near_miss_may_not_carry_a_card():
                 social_tags=(),
                 level=2.7,
                 band="Improver",
+                range_low=2.36,
+                range_high=3.04,
             ),
             at_stake=None,
         )

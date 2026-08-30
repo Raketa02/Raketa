@@ -80,7 +80,28 @@ player_card: { nickname, photo_id?, area_code, distance_km,
                social_tags[], level, band, counted_games }
 ```
 
-**Nothing else.** `distance_km` is an **integer** — the underlying area is a coarse centroid
+**Nothing else.**
+
+> **Amended twice since, both under this ADR's own rule** — *a card says only what its
+> subject published, and every field on it is a fact about that person alone.*
+>
+> - **`range` was added** — the likely range, μ ± σ as `rating` published it, travelling as
+>   `{low, high}` ([#235](https://github.com/Raketa02/Raketa/issues/235),
+>   [#243](https://github.com/Raketa02/Raketa/issues/243)). Printing μ while refusing μ ± σ
+>   shows two players at the same Level with no way to tell that one of them is a guess. It
+>   is **projected** onto the index row and copied onto the card, never derived at assembly.
+>   The band's numeric **edges stay off**: their only consumer is the band bar, which is
+>   drawn from the out-of-scope record sheet, and the glossary refuses them as a second
+>   range in any case.
+> - **`distance_km` left the card**, for the same rule read the other way: a distance is a
+>   fact about a **pair**, and it is the one field whose value would change depending on who
+>   is looking. It sits on the *candidate*, beside the card
+>   ([`the-play-screens.md`](../specs/matchmaking/the-play-screens.md) §1, which carries the
+>   argument).
+>
+> The list is still closed; it is the two paragraphs below that say what closed means.
+
+`distance_km` is an **integer** — the underlying area is a coarse centroid
 and the profile's own radius is whole kilometres, so a decimal would claim a precision the
 data does not hold and would let *"3 km"* sit under a 3 km radius while being excluded by it.
 

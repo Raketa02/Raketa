@@ -18,6 +18,7 @@ from typing import Mapping
 from uuid import UUID
 
 from app.engines.matchfit.core import SearchMode, Term
+from app.engines.racketskill.core import likely_range
 from app.engines.matchfit.ruleset import Ruleset
 from app.modules.matchmaking.domain.candidate_index import (
     CandidateRow,
@@ -125,6 +126,12 @@ def row(
         mu=mu,
         sigma=sigma,
         confidence=62,
+        # Through the engine's own function, because a builder that spelled
+        # `mu - sigma` would be this suite's private opinion about what a likely
+        # range is — and it would drift off the scale at the ends, where the
+        # real one clamps.
+        range_low=round(likely_range(mu, sigma)[0], 2),
+        range_high=round(likely_range(mu, sigma)[1], 2),
         band="Improver",
         band_lower=2.5,
         band_upper=3.0,

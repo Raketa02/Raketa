@@ -153,6 +153,8 @@ async def _a_search(
                         social_tags=(),
                         level=2.7,
                         band="Improver",
+                        range_low=2.36,
+                        range_high=3.04,
                     ),
                     at_stake=None,
                 )

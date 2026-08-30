@@ -477,6 +477,9 @@ def _card(card: RecordedCard) -> PlayerCardSchema:
         "social_tags": list(card.social_tags),
         "level": card.level,
         "band": card.band,
+        # Nested on the wire, flat on the record. Copied either way — see
+        # `CandidateRow.range_low`.
+        "range": {"low": card.range_low, "high": card.range_high},
     }
     if card.photo_id is not None:
         fields["photo_id"] = card.photo_id

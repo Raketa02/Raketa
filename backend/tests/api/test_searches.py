@@ -374,6 +374,39 @@ async def test_no_response_carries_a_liveness_number_or_a_rank_key(
         assert forbidden not in text
 
 
+async def test_the_card_states_the_range_the_level_is_likely_in(
+    client, session_factory, candidate_source, searcher
+):
+    """A Level with no range shows two players at the same number with no way to
+    tell that one of them is a guess.
+
+    **It is the published range, not μ ± σ recomputed here.** The rating this
+    world publishes carries `mu ± 0.30` against a σ of 0.34, so a card that
+    derived the range at assembly would answer `± 0.34` and this assertion is
+    what tells the two apart.
+
+    The **band's numeric edges are not on the card**: the only thing that would
+    draw them is the band bar, which lives on the player record sheet, and the
+    glossary refuses them as a second range in any case.
+    """
+
+    mu = searcher["mu"]
+    await world.a_candidate(client, session_factory, "ranged", mu=mu)
+    await world.fold_the_log(session_factory, candidate_source)
+
+    card = (await world.search(client, searcher["token"])).json()["candidates"][0][
+        "player_card"
+    ]
+
+    assert card["level"] == mu
+    assert card["band"] == "Improver"
+    assert card["range"] == {
+        "low": pytest.approx(mu - 0.3),
+        "high": pytest.approx(mu + 0.3),
+    }, "the card derived a range instead of printing the published one"
+    assert "band_lower" not in card and "band_upper" not in card
+
+
 async def test_the_card_carries_a_photo_id_and_never_a_url(
     client, session_factory, candidate_source, searcher
 ):

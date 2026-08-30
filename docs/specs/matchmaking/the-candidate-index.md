@@ -127,6 +127,15 @@ Three assertions guard it, all build-failing:
 3. **No reference cycles** — `__slots__`, primitive fields, no back-pointer to the container.
    This is what makes `gc.freeze()` safe (ADR-0112, §5 below).
 
+The Level columns are what `rating.rating_initialised` published, **copied and never
+recomputed** — μ, σ, `confidence`, the band and its edges, and the **likely range**
+(`range_low` / `range_high`), which is what a player card prints beside the Level so that a
+reader can see how sure the platform is and not only what it thinks
+([`the-play-screens.md`](the-play-screens.md) §1). `likely_range()` returns *unrounded*
+values and the rounding lives in the engine, so a consumer deriving μ ± σ for itself would
+own a rounding rule for a number `rating` publishes — the same argument that put the band's
+edges here rather than in a table of four somewhere downstream.
+
 Measured at **782 bytes a row** as `__slots__` objects, held once per gunicorn worker.
 
 ---

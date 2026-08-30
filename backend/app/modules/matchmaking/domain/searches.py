@@ -234,6 +234,13 @@ class RecordedCard:
     #: Their Level as RacketSkill published it *then*.
     level: float
     band: str
+    #: The **likely range** that was shown beside the Level — μ ± σ, as
+    #: ``rating`` published it and as the index row carried it. Two floats and
+    #: never ``None``: a card that stated a Level always stated how sure of it
+    #: the platform was, so an absence here would be a card this build cannot
+    #: have shown.
+    range_low: float
+    range_high: float
 
 
 @final

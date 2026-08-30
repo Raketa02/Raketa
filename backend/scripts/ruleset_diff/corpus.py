@@ -41,7 +41,7 @@ from app.modules.matchmaking.domain.search_context import (
     SearcherFacts,
 )
 from app.modules.matchmaking.domain.searches import SearchInitiation, SearchSurface
-from app.engines.racketskill.core import band_for, confidence_percent
+from app.engines.racketskill.core import band_for, confidence_percent, likely_range
 from app.kernel import Instant, Sport
 from app.modules.player_profile.domain.availability import AvailabilityGrid
 from app.modules.player_profile.domain.gender import Gender, GenderPreference
@@ -225,12 +225,19 @@ def _searcher(member: Member, mode: SearchMode) -> SearcherFacts:
 
 def _row(member: Member) -> CandidateRow:
     band = band_for(member.mu)
+    # The corpus stands in for `rating.rating_initialised`, so it publishes the
+    # range the way the engine does — through the engine's own function, rounded
+    # where the engine rounds. Nothing scores it; it is here because a row with
+    # a Level and no range is a row this platform does not produce.
+    low, high = likely_range(member.mu, member.sigma)
     return CandidateRow(
         player_id=str(member.player_id),
         sport=member.sport,
         mu=member.mu,
         sigma=member.sigma,
         confidence=confidence_percent(member.sigma),
+        range_low=round(low, 2),
+        range_high=round(high, 2),
         band=band.label,
         band_lower=band.lower,
         band_upper=band.upper,

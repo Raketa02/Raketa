@@ -490,6 +490,8 @@ def _card_blob(card: RecordedCard | None) -> dict[str, Any] | None:
         "social_tags": list(card.social_tags),
         "level": card.level,
         "band": card.band,
+        "range_low": card.range_low,
+        "range_high": card.range_high,
     }
 
 
@@ -544,6 +546,13 @@ def _recorded_card(blob: Mapping[str, Any] | None) -> RecordedCard | None:
         social_tags=tuple(blob["social_tags"]),
         level=blob["level"],
         band=blob["band"],
+        # **A hard key, like every other fact on this card.** There is no blob
+        # written without a range — the columns arrived with the route that
+        # reads them, on a branch with no deployed environment — so a `.get`
+        # here would trade a loud `KeyError` for a card that quietly stopped
+        # saying how sure anybody was.
+        range_low=blob["range_low"],
+        range_high=blob["range_high"],
     )
 
 

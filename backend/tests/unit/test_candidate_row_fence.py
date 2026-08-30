@@ -249,6 +249,31 @@ def test_an_area_accepts_the_coarse_pair_the_stream_actually_carries() -> None:
 
 
 # ---------------------------------------------------------------------------
+# The likely range, which the row copies and never computes
+# ---------------------------------------------------------------------------
+
+
+def test_a_row_refuses_a_likely_range_that_runs_backwards() -> None:
+    """The one thing this row can check about a number it did not compute.
+
+    ``range_low`` / ``range_high`` are **projected**, so the row cannot verify
+    them against μ and σ — the rounding and the clamp live in the engine and
+    re-deriving them here is the defect the projection exists to avoid. What is
+    left is the edges' own order, and it is worth asserting because the pair is
+    two fields a caller fills separately: swapping them at any of the seven
+    places they travel through produces a card that reads *likely 3,05–2,37* and
+    breaks nothing else on the way there.
+    """
+
+    with pytest.raises(InvariantViolated):
+        _row(range_low=3.05, range_high=2.37)
+
+
+def test_a_row_accepts_the_range_the_rating_published() -> None:
+    assert _row().range_low == 2.37
+
+
+# ---------------------------------------------------------------------------
 # 3 — no reference cycles, which is what makes gc.freeze() safe
 # ---------------------------------------------------------------------------
 
@@ -334,7 +359,7 @@ def _cycles_from(root: object) -> list[str]:
     return found
 
 
-def _row() -> CandidateRow:
+def _row(*, range_low: float = 2.37, range_high: float = 3.05) -> CandidateRow:
     when = datetime(2026, 8, 27, 9, 0, tzinfo=timezone.utc)
     return CandidateRow(
         player_id="11111111-1111-1111-1111-111111111111",
@@ -342,6 +367,8 @@ def _row() -> CandidateRow:
         mu=2.71,
         sigma=0.34,
         confidence=62,
+        range_low=range_low,
+        range_high=range_high,
         band="Improver",
         band_lower=2.5,
         band_upper=3.0,

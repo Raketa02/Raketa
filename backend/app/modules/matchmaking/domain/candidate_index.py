@@ -111,6 +111,17 @@ class CandidateRow:
     mu: float
     sigma: float
     confidence: int
+    #: The **likely range** — μ ± σ clamped to the scale — as ``rating``
+    #: published it, and the pair a card prints beside the Level so that a
+    #: reader can see how sure the platform is and not only what it thinks.
+    #:
+    #: **Projected, never derived.** ``likely_range()`` returns *unrounded*
+    #: values and the rounding lives in the engine, so a consumer that computed
+    #: μ ± σ here would own a rounding rule for a number somebody else
+    #: publishes — the second-source-of-truth defect ``band_lower`` /
+    #: ``band_upper`` being projected rather than derived already settled once.
+    range_low: float
+    range_high: float
     #: The Level band's published name. Spelled ``band`` rather than
     #: ``band_name`` so that no field on this row names a *name* — see the fence.
     band: str
@@ -162,6 +173,10 @@ class CandidateRow:
         invariant(bool(self.player_id), "a candidate row with no player")
         invariant(bool(self.sport), "a candidate row with no sport")
         invariant(self.sigma >= 0.0, f"a negative Uncertainty: {self.sigma}")
+        invariant(
+            self.range_low <= self.range_high,
+            f"a likely range that runs backwards: {self.range_low}–{self.range_high}",
+        )
         invariant(
             self.search_radius_km > 0,
             f"a search radius of {self.search_radius_km} km",

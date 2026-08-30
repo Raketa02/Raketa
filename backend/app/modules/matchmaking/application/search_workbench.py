@@ -168,6 +168,10 @@ class AnsweredCandidate:
             social_tags=tuple(indexed.social_tags),
             level=indexed.mu,
             band=indexed.band,
+            # **Read off the row, never recomputed** — see
+            # `CandidateRow.range_low` for why assembly may not derive it.
+            range_low=indexed.range_low,
+            range_high=indexed.range_high,
         )
 
 

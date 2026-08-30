@@ -275,6 +275,8 @@ def _decode(row: CandidateRowORM, facts: CandidatePlayerFactsORM) -> CandidateRo
         mu=_required(row.mu, "a Level"),
         sigma=_required(row.sigma, "an Uncertainty"),
         confidence=_required(row.confidence, "a confidence"),
+        range_low=_required(row.range_low, "a likely range floor"),
+        range_high=_required(row.range_high, "a likely range ceiling"),
         band=_required(row.band, "a band"),
         band_lower=_required(row.band_lower, "a band floor"),
         band_upper=_required(row.band_upper, "a band ceiling"),

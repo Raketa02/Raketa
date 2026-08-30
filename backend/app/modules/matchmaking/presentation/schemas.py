@@ -450,6 +450,24 @@ class SearchEnvelope(BaseModel):
     )
 
 
+class LikelyRangeSchema(BaseModel):
+    """The **likely range** — μ ± σ, clamped to the scale — as `rating` published it.
+
+    Nested rather than two flat fields, because a range is one value with two
+    edges and the rating routes already spell it this way; a card that carried
+    ``range_low`` and ``range_high`` loose beside ``level`` would be the same
+    fact in a second shape.
+
+    **The client computes nothing here.** It is projected onto the index row
+    from ``rating.rating_initialised`` and copied onto the card, because
+    ``likely_range()`` returns unrounded values and the rounding lives in the
+    engine — a range derived anywhere else is a second set of drawing constants.
+    """
+
+    low: float
+    high: float
+
+
 class PlayerCardSchema(BaseModel):
     """Who this person is, on a card. **A closed list with two permanent gaps.**
 
@@ -479,6 +497,16 @@ class PlayerCardSchema(BaseModel):
     social_tags: list[str] = Field(..., description="The Social tag ids they hold")
     level: float = Field(..., description="Their Level, as RacketSkill published it")
     band: str = Field(..., description="The Level band's published name")
+    range: LikelyRangeSchema = Field(
+        ...,
+        description=(
+            "The **likely range** their Level sits in, μ ± σ as RacketSkill "
+            "published it. Always present: a card that stated a Level without "
+            "it would show two players at the same Level with no way to tell "
+            "that one of them is a guess. **The band's numeric edges are not "
+            "here** — they are not a second range to compare this one against."
+        ),
+    )
     counted_games: int = Field(
         default=OMITTED,
         description=(

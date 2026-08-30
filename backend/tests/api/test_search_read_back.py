@@ -118,6 +118,15 @@ async def test_the_breakdown_survives_the_round_trip_whole(
         assert term["contribution"] == pytest.approx(term["weight"] * term["value"])
     assert row["player_card"]["nickname"]
     assert row["player_card"]["area_code"]
+    # The Level **and** how sure of it the platform was, against the answer
+    # that was actually given. A range re-read from a rating that has moved
+    # since would be a different caveat under the same search id, which is the
+    # whole reason the card is recorded — and a bound rather than an equality
+    # here would pass on the re-read one.
+    assert (
+        row["player_card"]["range"]
+        == posted["candidates"][0]["player_card"]["range"]
+    )
     assert "concerns" in row and "degraded_terms" in row
     assert row["fit"] == posted["candidates"][0]["fit"]
 

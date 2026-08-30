@@ -187,6 +187,12 @@ def project(event: DomainEvent) -> tuple[Movement, ...]:
                         "mu": event.mu,
                         "sigma": event.sigma,
                         "confidence": event.confidence,
+                        # The likely range travels **as published** — the
+                        # event has carried it all along, and the alternative
+                        # would put the engine's rounding rule in every
+                        # consumer that ever draws it.
+                        "range_low": event.range_low,
+                        "range_high": event.range_high,
                         # `band`, not `band_name`: the index row carries no
                         # field whose name reads as a person's, which is what
                         # `tests/unit/test_candidate_row_fence.py` walks for.

@@ -2447,6 +2447,25 @@
         "title": "LevelFitEvidence",
         "description": "How far apart the two levels are, and which way.\n\nThe tolerance behind the curve is absolute on \u03bc and never reads a band: the\nshipped bands are deliberately uneven because *evidence* is unevenly\navailable down the scale, not because a tenth of a point means less at the\ntop."
       },
+      "LikelyRangeSchema": {
+        "properties": {
+          "low": {
+            "type": "number",
+            "title": "Low"
+          },
+          "high": {
+            "type": "number",
+            "title": "High"
+          }
+        },
+        "type": "object",
+        "required": [
+          "low",
+          "high"
+        ],
+        "title": "LikelyRangeSchema",
+        "description": "The **likely range** \u2014 \u03bc \u00b1 \u03c3, clamped to the scale \u2014 as `rating` published it.\n\nNested rather than two flat fields, because a range is one value with two\nedges and the rating routes already spell it this way; a card that carried\n``range_low`` and ``range_high`` loose beside ``level`` would be the same\nfact in a second shape.\n\n**The client computes nothing here.** It is projected onto the index row\nfrom ``rating.rating_initialised`` and copied onto the card, because\n``likely_range()`` returns unrounded values and the rounding lives in the\nengine \u2014 a range derived anywhere else is a second set of drawing constants."
+      },
       "LineupResponse": {
         "properties": {
           "search": {
@@ -2827,6 +2846,10 @@
             "title": "Band",
             "description": "The Level band's published name"
           },
+          "range": {
+            "$ref": "#/components/schemas/LikelyRangeSchema",
+            "description": "The **likely range** their Level sits in, \u03bc \u00b1 \u03c3 as RacketSkill published it. Always present: a card that stated a Level without it would show two players at the same Level with no way to tell that one of them is a guess. **The band's numeric edges are not here** \u2014 they are not a second range to compare this one against."
+          },
           "counted_games": {
             "type": "integer",
             "title": "Counted Games",
@@ -2839,7 +2862,8 @@
           "area_code",
           "social_tags",
           "level",
-          "band"
+          "band",
+          "range"
         ],
         "title": "PlayerCardSchema",
         "description": "Who this person is, on a card. **A closed list with two permanent gaps.**\n\nNo bio and no free text of any kind, ever; and **no activity recency at any\ngranularity** \u2014 not a timestamp, not *active today*, not a green dot.\nLiveness reaches a screen the one way it is sanctioned to: as a reason code."
