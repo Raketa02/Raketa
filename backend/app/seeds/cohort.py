@@ -131,12 +131,14 @@ class Archetype:
     ``combine_sigma`` constant, predicted balance a function of a handful of Δμ,
     and a pool of near-identical cards ranked arbitrarily.
 
-    **The spread is on the demonstrations and never on the claims**, and that is
-    a decision rather than an oversight. The opening question is a claim, and its
+    **Every archetype here declares zero width on the claims**, and that is a
+    decision rather than an oversight. The opening question is a claim, and its
     weakest option puts the engine on its one-question beginner path — so a
     jittered claim would not spread a member around their band, it would move
     them into a different archetype's. Demonstrations are what the engine reads
-    for level inside a band, which is exactly the axis a near-twin varies on.
+    for level inside a band, which is exactly the axis a near-twin varies on. The
+    width is a *declaration* rather than a branch in ``AnswerPolicy``, so an
+    archetype that wanted the other axis could have it.
     """
 
     name: str
@@ -159,7 +161,7 @@ NEW_TO_THE_SPORT: Final = Archetype(
 IMPROVER: Final = Archetype(
     name="improver",
     band=BAND_DEVELOPING,
-    answers=AnswerPolicy(claims=1, demonstrations=1, spread=1),
+    answers=AnswerPolicy(claims=1, demonstrations=1, demonstration_spread=1),
 )
 
 #: **The bulk of the cohort, and the reason is the level gate.** The tolerance a
@@ -170,7 +172,7 @@ IMPROVER: Final = Archetype(
 CLUB_PLAYER: Final = Archetype(
     name="club-player",
     band=BAND_ESTABLISHED,
-    answers=AnswerPolicy(claims=2, demonstrations=2, spread=2),
+    answers=AnswerPolicy(claims=2, demonstrations=2, demonstration_spread=2),
 )
 
 #: The strongest answer set there is, and it is zero-spread for the same reason
@@ -212,6 +214,27 @@ class Ring:
     members: Mapping[str, int]
 
 
+#: **How big, and why that big.** The number was found by raising it until the
+#: assertions in ``screens.py`` passed and then written down here, which is the
+#: only defensible way to choose it: a figure taken from the ruleset-diff corpus
+#: would be indefensible the day ``make seed`` starts taking two minutes, and a
+#: figure chosen because it felt right is a figure nobody can argue with.
+#:
+#: What the assertions need, in the order they bind:
+#:
+#: - the innermost ring must leave **``MIN_SHORTLIST`` rows above the floor**
+#:   *after* the level gate, the mutual gender gate and scoring — and only the
+#:   Established archetype survives a competitive protagonist's level gate at
+#:   all, which is why twelve of that ring's nineteen are club players;
+#:  - a **full four** must compose out of the same ring;
+#: - each of rungs B and C must **add somebody new**, which is what puts four
+#:   club players in each of the two ladder rings rather than one;
+#: - the second sport must stay **thin enough to price a ladder at all** — every
+#:   third member plays it by rule, so padel is dense and tennis is not.
+#:
+#: Thirty-six members, three of them past the slider's ceiling. Raising it costs
+#: an assessment apiece — the questionnaire is the only door to a level — and
+#: buys no screen state that is not already reachable.
 RINGS: Final = (
     Ring(
         code="a",
@@ -345,6 +368,14 @@ MEMBER_RADIUS_KM: Final = (5, SEARCH_RADIUS_BOUNDS.maximum_km)
 #: How many tags a member holds, inside the selection's own served bounds.
 MEMBER_TAG_COUNT: Final = (2, 5)
 
+#: How many cells a member ticks **beyond** the ones the overlap rule already
+#: put there, and how many a member with no shared week ticks instead. Named
+#: beside the tag count rather than left inline, because both are the fixture
+#: deciding how much of the grid an ordinary player fills — which is the number
+#: the availability term's denominator is read against.
+MEMBER_EXTRA_CELLS: Final = (1, 4)
+MEMBER_CELLS_ELSEWHERE: Final = (2, 5)
+
 
 # ---------------------------------------------------------------------------
 # The population
@@ -382,7 +413,8 @@ class CohortMember:
     #: table in their head.
     claims: int
     demonstrations: int
-    spread: int
+    claim_spread: int
+    demonstration_spread: int
 
     @property
     def sports(self) -> tuple[Sport, ...]:
@@ -399,7 +431,10 @@ class CohortMember:
     @property
     def answers(self) -> AnswerPolicy:
         return AnswerPolicy(
-            claims=self.claims, demonstrations=self.demonstrations, spread=self.spread
+            claims=self.claims,
+            demonstrations=self.demonstrations,
+            claim_spread=self.claim_spread,
+            demonstration_spread=self.demonstration_spread,
         )
 
     @property
@@ -490,7 +525,8 @@ def _draw(
         committed_days_ago=_rng(handle, "committed", seed).randint(low, high),
         claims=archetype.answers.claims,
         demonstrations=archetype.answers.demonstrations,
-        spread=archetype.answers.spread,
+        claim_spread=archetype.answers.claim_spread,
+        demonstration_spread=archetype.answers.demonstration_spread,
     )
 
 
@@ -518,10 +554,13 @@ def _slots(handle: str, position: int, seed: int) -> tuple[str, ...]:
         return CELLS
     if position % EVERY_NTH_SHARES_NO_WEEK == SHARES_NO_WEEK_AT:
         elsewhere = [cell for cell in CELLS if cell not in PROTAGONIST_CELLS]
-        return tuple(sorted(rng.sample(elsewhere, rng.randint(2, 5))))
+        return tuple(
+            sorted(rng.sample(elsewhere, rng.randint(*MEMBER_CELLS_ELSEWHERE)))
+        )
     shared = rng.sample(PROTAGONIST_CELLS, SHARED_CELLS_FLOOR)
     rest = [cell for cell in CELLS if cell not in shared]
-    return tuple(sorted(set(shared) | set(rng.sample(rest, rng.randint(1, 4)))))
+    extra = rng.sample(rest, rng.randint(*MEMBER_EXTRA_CELLS))
+    return tuple(sorted(set(shared) | set(extra)))
 
 
 def _is_lopsided(position: int) -> bool:
@@ -609,9 +648,12 @@ def as_document(cohort: Cohort) -> dict[str, object]:
             "question."
         ),
         "inputs_only": (
-            "No level, no uncertainty and no band is recorded here. Those are "
+            "No member's level, uncertainty or band is recorded here: those are "
             "the engine's answers to the questionnaire each member sits, and a "
-            "committed copy of an answer is a number nothing keeps honest."
+            "committed copy of an answer is a number nothing keeps honest. The "
+            "band names that do appear are declarations — which band an "
+            "archetype aims at, and the histogram the run checks the engine's "
+            "answers against."
         ),
         "seed": cohort.seed,
         "sports": [sport.value for sport in SPORTS],
@@ -632,7 +674,8 @@ def as_document(cohort: Cohort) -> dict[str, object]:
                 "aims_at_band": archetype.band,
                 "claims": archetype.answers.claims,
                 "demonstrations": archetype.answers.demonstrations,
-                "spread": archetype.answers.spread,
+                "claim_spread": archetype.answers.claim_spread,
+                "demonstration_spread": archetype.answers.demonstration_spread,
             }
             for archetype in ARCHETYPES
         ],
@@ -646,6 +689,11 @@ def as_document(cohort: Cohort) -> dict[str, object]:
 def _member_document(member: CohortMember) -> dict[str, object]:
     document = asdict(member)
     document["stable_id"] = str(member.stable_id)
+    # **A declared input restated, never an engine answer.** ADR-0113's window
+    # is what `committed_days_ago` is written against, and a reader following a
+    # diff should not have to hold fourteen in their head to see who moved
+    # across it.
+    document["newcomer"] = member.is_a_newcomer
     document["slots"] = list(member.slots)
     document["tags"] = list(member.tags)
     document["intents"] = [list(pair) for pair in member.intents]
@@ -672,7 +720,7 @@ def _distance_of(ring: Ring) -> float:
 # ---------------------------------------------------------------------------
 
 
-def _refuse_an_impossible_cohort() -> None:
+def _refuse_an_impossible_cohort(cohort: "Cohort") -> None:
     """Fail at import rather than part-way through a run.
 
     Everything here is a property the *declarations* have to hold before a single
@@ -681,9 +729,8 @@ def _refuse_an_impossible_cohort() -> None:
     the ladder puts it, an archetype without a band, two members at one handle.
     """
 
-    if {archetype.name for archetype in ARCHETYPES} != {
-        archetype.name for archetype in ARCHETYPES
-    } or len(ARCHETYPES) != len({archetype.name for archetype in ARCHETYPES}):
+    names = [archetype.name for archetype in ARCHETYPES]
+    if len(names) != len(set(names)):
         raise RuntimeError("two cohort archetypes share a name")
 
     bands = [archetype.band for archetype in ARCHETYPES]
@@ -727,7 +774,6 @@ def _refuse_an_impossible_cohort() -> None:
             f"arithmetic of one edge case."
         )
 
-    cohort = generate()
     handles = [member.handle for member in cohort.members]
     if len(handles) != len(set(handles)):
         raise RuntimeError("two cohort members share a handle")
@@ -741,8 +787,9 @@ def _refuse_an_impossible_cohort() -> None:
             )
 
 
-_refuse_an_impossible_cohort()
-
 #: The one cohort this system seeds, drawn at import so that the generator, the
-#: committed artifact and the run all read one object.
+#: committed artifact and the run all read one object — and drawn **once**,
+#: because the refusal below reads the same draw rather than making its own.
 COHORT: Final = generate()
+
+_refuse_an_impossible_cohort(COHORT)

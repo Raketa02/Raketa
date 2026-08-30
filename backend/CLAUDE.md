@@ -21,7 +21,10 @@ make openapi     # emit openapi.player.json — the contract the client generate
 make gen-walkthroughs  # rewrite the matchmaking golden files (a diff is a design change)
 make up / down   # dev stack (Postgres + API + MinIO + photo-review + Redis); logs, shell
 make migrate     # alembic upgrade head inside the API container
-make seed        # deterministic dev accounts (make seed-host to run it on the host)
+make seed        # the named accounts *and* the cohort, then reads every Play screen
+                 # as the protagonist and refuses a database that cannot draw one.
+                 # Needs the stack up (Postgres + Redis); make seed-host on the host
+make gen-cohort  # rewrite the cohort's committed population (a diff is a fixture change)
 make rebuild-candidate-index  # fold the log back into the index (…-host on the host)
 ```
 

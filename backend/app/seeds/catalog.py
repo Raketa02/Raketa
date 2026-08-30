@@ -37,6 +37,7 @@ from __future__ import annotations
 
 import random
 from dataclasses import dataclass
+from uuid import UUID
 
 from app.engines.assessment import Question
 from app.kernel import Sport
@@ -128,15 +129,18 @@ class AnswerPolicy:
     row and nobody else's, and a question added to the bank changes only the
     answer to *that* question.
 
-    **The spread reaches the demonstrations and never the claims.** The opening
-    question is a claim and its weakest option puts the engine on its
-    one-question beginner path, so a jittered claim would not spread a member
-    around their band — it would move them into a different archetype's. What the
-    engine reads for level *inside* a band is the demonstrations, which is
-    exactly the axis a near-twin varies on.
+    **The width is per axis, and that is where the one departure lives.** Every
+    question is drawn — there is no question the key is not consulted for — but
+    each of the two axes declares its own width, and an archetype standing for a
+    band declares **zero on the claims**. The reason is the opening question: it
+    is a claim, and its weakest option puts the engine on its one-question
+    beginner path, so a jittered claim would not spread a member around their
+    band — it would move them into a different archetype's. Declared per axis
+    rather than carved out of the mechanism, so the exception is a number in a
+    fixture rather than a branch in this method.
 
-    ``spread`` defaults to zero, which is the six named policies below unchanged:
-    a draw of zero width is the index itself, and the key is not consulted.
+    Both widths default to zero, which is the six named policies below
+    unchanged: a draw of zero width is the index itself.
 
     A policy is *not* a promise about the rating it produces. That is
     ``RatingClaim``, which is checked; this is only how the answers are chosen.
@@ -145,36 +149,32 @@ class AnswerPolicy:
     claims: int
     demonstrations: int
 
-    #: Half-width of the draw around the centre, in option steps. **Zero is a
+    #: Half-widths of the draw around each centre, in option steps. **Zero is a
     #: named policy**; anything larger is an archetype standing for a band.
-    spread: int = 0
+    claim_spread: int = 0
+    demonstration_spread: int = 0
 
-    def option_id_for(self, question: Question, *, drawn_for: str = "") -> str:
+    def option_id_for(self, question: Question, *, drawn_for: str) -> str:
         """The option this policy picks, for this question, for this member.
 
         ``drawn_for`` is *who is answering, in which sport* — the two halves of
-        the key the question id completes. It defaults to the empty string
-        because at zero spread the key is never consulted, and the six named
-        policies are all zero spread; a **spread** policy asked without one
-        would answer identically for everybody, which is why the catalog refuses
-        a spread outright and the cohort always passes ``drawn_for``.
+        the key the question id completes, and :func:`answer_key` is what spells
+        it. **Required and never defaulted**, even though a zero-spread policy
+        never consults it: a default would let a spread policy be asked without
+        a key and answer identically for everybody, which is a population that
+        looks like a population and is one player repeated.
         """
 
         options = question.options
-        if question.tier is None:
-            # **A claim is never jittered.** The opening question is a claim, and
-            # its weakest option puts the engine on its one-question beginner
-            # path — so a drawn claim would not spread a member around their
-            # band, it would move them into a different archetype's.
-            return options[min(max(self.claims, 0), len(options) - 1)].id
-        strength = (
-            self.demonstrations
-            if self.spread == 0
-            else self._drawn(self.demonstrations, key=f"{drawn_for}|{question.id}")
+        centre, width = (
+            (self.claims, self.claim_spread)
+            if question.tier is None
+            else (self.demonstrations, self.demonstration_spread)
         )
+        strength = self._drawn(centre, width, key=f"{drawn_for}|{question.id}")
         return options[min(max(strength, 0), len(options) - 1)].id
 
-    def _drawn(self, centre: int, *, key: str) -> int:
+    def _drawn(self, centre: int, width: int, *, key: str) -> int:
         """One index, drawn from ``key`` alone.
 
         ``random.Random`` seeded with a *string* hashes it with SHA-512 before
@@ -183,10 +183,12 @@ class AnswerPolicy:
         answering out loud rather than assuming.
         """
 
-        return centre + random.Random(key).randint(-self.spread, self.spread)
+        if width == 0:
+            return centre
+        return centre + random.Random(key).randint(-width, width)
 
 
-def drawn_for(handle: str, sport: Sport) -> str:
+def answer_key(handle: str, sport: Sport) -> str:
     """The first two thirds of a draw key, spelled once.
 
     Here rather than at each call site because a key assembled two ways is two
@@ -299,9 +301,6 @@ class RatedRun:
     claim: RatingClaim
 
 
-#: What one account holds, for one sport. A closed union, so the runner's match
-#: over it stops typechecking on the day a fourth state exists — an unhandled
-#: scenario would otherwise be an account silently seeded into no state at all.
 #: The one coordinate every distance in this seed is measured from — the
 #: protagonists' own, and the centre ``cohort.py`` cuts its rings around.
 #:
@@ -364,14 +363,19 @@ class SeedProfile:
     #: its tail, which is what ``RATING_TAIL`` names.
     intent_surface: PlayIntentSurface = PlayIntentSurface.RATING_TAIL
 
-    #: **No photograph, ever.** A seeded photo would need bytes in this
+    #: **No photograph, ever**, and it is a wired field rather than a hard-coded
+    #: empty list at the commit: a seeded photo would need bytes in this
     #: repository and an object store to put them in, and the card renders the
     #: generated court poster without one — which is the state most cards are in
-    #: and the one worth developing against.
-    photo_ids: tuple[str, ...] = ()
+    #: and the one worth developing against. It is passed to the command like
+    #: every other answer, so *no photograph* is a declaration something checks
+    #: rather than a line in the runner nothing reads.
+    photo_ids: tuple[UUID, ...] = ()
 
 
-
+#: What one account holds, for one sport. A closed union, so the runner's match
+#: over it stops typechecking on the day a fourth state exists — an unhandled
+#: scenario would otherwise be an account silently seeded into no state at all.
 Scenario = OpenRun | AbandonedRun | RatedRun
 
 
@@ -762,13 +766,13 @@ def _refuse_an_impossible_policy(account: SeedAccount, scenario: RatedRun) -> No
     """An index into a list of options is not a negative number."""
 
     policy = scenario.answers
-    if policy.spread != 0:
+    if policy.claim_spread or policy.demonstration_spread:
         raise RuntimeError(
-            f"'{account.slug}' answers {scenario.sport.value} with a policy of "
-            f"spread {policy.spread}. A named account's claim is a band and a "
-            f"position inside it, and a drawn answer set cannot be held to one "
-            f"— spread belongs to the cohort's archetypes, whose claim is a "
-            f"histogram."
+            f"'{account.slug}' answers {scenario.sport.value} with a drawn "
+            f"policy ({policy.claim_spread}/{policy.demonstration_spread}). A "
+            f"named account's claim is a band and a position inside it, and a "
+            f"drawn answer set cannot be held to one — a spread belongs to the "
+            f"cohort's archetypes, whose claim is a histogram."
         )
     if policy.claims < 0 or policy.demonstrations < 0:
         raise RuntimeError(

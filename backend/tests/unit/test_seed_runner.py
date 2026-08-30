@@ -248,6 +248,15 @@ def test_the_seed_path_writes_three_contexts_and_only_reads_the_rest():
     aggregate is written, so a repository port — or a repository builder — from
     anywhere else is the line being crossed, and it is refused by name.
 
+    **The matchmaking stores the seed does import are not the line, and that is
+    a decision rather than a gap.** `build_search_store`, `build_interest_ledger`
+    and `build_pass_ledger` are that module's own four durable ledgers — nothing
+    there is event-sourced (`backend/CLAUDE.md`, `the-engine.md` §12) — and they
+    are written by matchmaking's *own use cases*, which is exactly the shape §10
+    sanctioned. Writing a matchmaking **aggregate** would need a matchmaking
+    repository, and there is not one to import; the day somebody writes one, the
+    builder check above is what fails.
+
     Equality in both directions, on purpose. A Clubs repository appearing is the
     scope creep the rule forbids; `rating` *disappearing* is the seed quietly
     reducing to a list of registrations, which is the state this catalog grew out
@@ -451,8 +460,11 @@ def test_an_answer_policy_reads_the_split_off_the_ports_own_vocabulary():
 
     policy = AnswerPolicy(claims=1, demonstrations=3)
 
-    assert policy.option_id_for(a_question(tier=None, options=5)) == "o1"
-    assert policy.option_id_for(a_question(tier="standard", options=5)) == "o3"
+    claim = a_question(tier=None, options=5)
+    demonstration = a_question(tier="standard", options=5)
+
+    assert policy.option_id_for(claim, drawn_for="named") == "o1"
+    assert policy.option_id_for(demonstration, drawn_for="named") == "o3"
 
 
 def test_an_answer_policy_clamps_to_the_options_a_question_offers():
@@ -461,8 +473,11 @@ def test_an_answer_policy_clamps_to_the_options_a_question_offers():
 
     policy = AnswerPolicy(claims=4, demonstrations=4)
 
-    assert policy.option_id_for(a_question(tier=None, options=4)) == "o3"
-    assert policy.option_id_for(a_question(tier="basic", options=5)) == "o4"
+    claim = a_question(tier=None, options=4)
+    demonstration = a_question(tier="basic", options=5)
+
+    assert policy.option_id_for(claim, drawn_for="named") == "o3"
+    assert policy.option_id_for(demonstration, drawn_for="named") == "o4"
 
 
 def test_a_claim_is_silent_about_a_rating_that_matches_it():

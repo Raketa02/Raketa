@@ -46,7 +46,7 @@ from app.seeds.catalog import (
     THE_BLANK_WEEK_PLAYER,
     THE_POPULATED_PLAYER,
     AnswerPolicy,
-    drawn_for,
+    answer_key,
 )
 from app.seeds.clock import NEWCOMER_WINDOW_DAYS, FixedClock, days_before
 from app.seeds.cohort import (
@@ -120,9 +120,15 @@ def test_the_population_records_no_answer_the_engine_gave():
 
     text = json.dumps(as_document(generate()))
 
-    for forbidden in ("\"mu\"", "\"sigma\"", "\"band\"", "\"level\"", "\"confidence\""):
+    for forbidden in ("\"mu\"", "\"sigma\"", "\"level\"", "\"confidence\""):
         assert forbidden not in text, f"the population records {forbidden}"
+    for member in json.loads(text)["members"]:
+        assert "band" not in member, f"{member['handle']} carries a band"
+    # The band names that *are* in the file are declarations — which band an
+    # archetype aims at, and the histogram the run checks the engine against —
+    # and the artifact's own header says so.
     assert "aims_at_band" in text, "an archetype no longer says which band it is for"
+    assert "newcomer" in json.loads(text)["members"][0], "the newcomer flag is gone"
 
 
 def test_every_committed_member_is_a_function_of_their_handle():
@@ -223,6 +229,8 @@ def test_no_cohort_member_carries_a_photo():
 
     for member in COHORT.members:
         assert _profile_of(member).photo_ids == ()
+    for account in PROTAGONISTS:
+        assert account.profile is not None and account.profile.photo_ids == ()
 
 
 def test_the_protagonists_straddle_the_newcomer_window_with_both_edges_clear():
@@ -276,7 +284,6 @@ def test_a_named_policy_answers_the_same_thing_for_everybody():
 
     assert policy.option_id_for(question, drawn_for="alice|PADEL") == "o3"
     assert policy.option_id_for(question, drawn_for="bob|TENNIS") == "o3"
-    assert policy.option_id_for(question) == "o3"
 
 
 def test_a_spread_policy_draws_per_handle_sport_and_question():
@@ -287,24 +294,24 @@ def test_a_spread_policy_draws_per_handle_sport_and_question():
     the band histogram would move for a reason having nothing to do with skill.
     """
 
-    policy = AnswerPolicy(claims=2, demonstrations=2, spread=2)
+    policy = AnswerPolicy(claims=2, demonstrations=2, demonstration_spread=2)
     first = a_question(tier="standard", options=5, id="q1")
     second = a_question(tier="standard", options=5, id="q2")
 
     for member in ("cohort-a-05", "cohort-a-06", "cohort-a-07"):
-        key = drawn_for(member, Sport.PADEL)
+        key = answer_key(member, Sport.PADEL)
         assert policy.option_id_for(first, drawn_for=key) == policy.option_id_for(
             first, drawn_for=key
         )
 
     keyed = {
-        policy.option_id_for(first, drawn_for=drawn_for(handle, Sport.PADEL))
+        policy.option_id_for(first, drawn_for=answer_key(handle, Sport.PADEL))
         for handle in ("cohort-a-05", "cohort-a-06", "cohort-a-07", "cohort-a-08")
     }
     assert len(keyed) > 1, "every member answered identically"
 
-    one = drawn_for("cohort-a-05", Sport.PADEL)
-    other = drawn_for("cohort-a-05", Sport.TENNIS)
+    one = answer_key("cohort-a-05", Sport.PADEL)
+    other = answer_key("cohort-a-05", Sport.TENNIS)
     per_sport = {
         policy.option_id_for(first, drawn_for=one),
         policy.option_id_for(first, drawn_for=other),
@@ -316,18 +323,25 @@ def test_a_spread_policy_draws_per_handle_sport_and_question():
     assert len(per_sport) > 1 or len(per_question) > 1
 
 
-def test_a_spread_never_reaches_a_claim():
+def test_every_archetype_declares_zero_width_on_the_claims():
     """The opening question is a claim, and its weakest option ends the run.
 
     A drawn claim would not spread a member around their band — it would put them
     on the engine's one-question beginner path and into a different archetype's.
+    So the width is **declared** per axis and every archetype declares zero on
+    the claims; asserted over the archetypes rather than over the mechanism,
+    because the mechanism draws every question and the exception is a number.
     """
 
-    policy = AnswerPolicy(claims=2, demonstrations=2, spread=2)
+    assert all(
+        archetype.answers.claim_spread == 0 for archetype in ARCHETYPES
+    ), "an archetype jitters its claims, and the opening claim ends the run"
+
+    policy = AnswerPolicy(claims=2, demonstrations=2, demonstration_spread=2)
     claim = a_question(tier=None, options=5)
 
     answers = {
-        policy.option_id_for(claim, drawn_for=drawn_for(handle, Sport.PADEL))
+        policy.option_id_for(claim, drawn_for=answer_key(handle, Sport.PADEL))
         for handle in (member.handle for member in COHORT.members)
     }
     assert answers == {"o2"}
@@ -344,7 +358,9 @@ def test_a_named_account_may_not_carry_a_spread(monkeypatch):
                 scenarios=(
                     catalog.RatedRun(
                         sport=Sport.PADEL,
-                        answers=AnswerPolicy(claims=2, demonstrations=2, spread=1),
+                        answers=AnswerPolicy(
+                            claims=2, demonstrations=2, demonstration_spread=1
+                        ),
                         claim=catalog.RatingClaim(band=catalog.BAND_ESTABLISHED),
                     ),
                 ),

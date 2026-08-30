@@ -39,11 +39,20 @@ fit the other.
 the seed in it. That is the same half-a-gate the ruleset diff ships with, and it
 is stated here rather than discovered.
 
-**These reads leave records behind.** A search run through its real use case
-writes to ``matchmaking``'s own store, and a search record never expires
-(``docs/adr/0104``), so every ``make seed`` grows that table by a handful of
-rows. Taken as acceptable: the seed genuinely ran those searches, the records are
-true, and a fixture database is disposable.
+**These reads leave records behind, and there are two kinds.** A search run
+through its real use case writes to ``matchmaking``'s own store, and a search
+record never expires (``docs/adr/0104``), so every ``make seed`` grows that
+table by a handful of rows. The second kind is an **interest row**: exhibiting
+``INTEREST_RECEIVED`` needs a yes, a yes cites the search that showed the person,
+and no generator can write one — so a member runs their own pool search here and
+says *Let's play* off it. That is a durable write outside the search store, and
+it is written down rather than buried: it is **one row for the life of the yes
+and not one per run**, because ``ExpressInterest`` is idempotent on the pair — a
+second yes returns the first unchanged, does not re-date the expiry and does not
+spend a cap slot. Both are taken as acceptable on the same argument: the seed
+genuinely ran those searches and that member genuinely said yes, the rows are
+true, and a fixture database is disposable. Flagged here so it can be overturned
+cheaply if a later reader disagrees.
 """
 
 from __future__ import annotations
@@ -83,6 +92,8 @@ from app.bootstrap.composition import (
     build_unit_of_work,
     build_user_repository,
 )
+from redis.asyncio import Redis
+
 from app.core.config import Settings
 from app.engines.matchfit.core import SearchMode, Term
 from app.engines.matchfit.ruleset import Ruleset
@@ -111,6 +122,7 @@ from app.modules.matchmaking.domain.searches import (
 )
 from app.modules.matchmaking.domain.shortlist import run as run_the_pipeline
 from app.seeds.catalog import (
+    PROTAGONISTS,
     THE_BLANK_WEEK_PLAYER,
     THE_NEWCOMER,
     THE_ONE_SPORT_PLAYER,
@@ -180,18 +192,30 @@ async def assert_the_screens(
     candidates = build_candidate_source(session_factory=session_factory)
     await candidates.refresh()
 
-    lines: list[str] = []
-    async with session_factory() as session:
-        paths = await _read_paths(
-            session,
-            settings=settings,
-            candidates=candidates,
-            cohort=cohort,
-            now=now,
-        )
-        lines.extend(await _the_full_battery(paths, cohort=cohort, now=now))
-        lines.extend(await _the_three_named_states(paths))
-    return tuple(lines)
+    # **This run opens the ephemeral store and this run closes it.** Under the
+    # API the pool belongs to the process and the lifespan owns both ends; a
+    # command has no lifespan, so the ownership has to be written down somewhere
+    # — and a client left open is a developer command that does not exit.
+    redis = create_redis_client(settings)
+    try:
+        lines: list[str] = []
+        async with session_factory() as session:
+            paths = await _read_paths(
+                session,
+                settings=settings,
+                candidates=candidates,
+                cohort=cohort,
+                now=now,
+                redis=redis,
+            )
+            lines.extend(await _the_full_battery(paths, cohort=cohort, now=now))
+            lines.extend(await _the_three_named_states(paths))
+        return tuple(lines)
+    finally:
+        # `type: ignore` for `close_redis`'s reason: the obsolete `types-redis`
+        # stubs shadow redis-py's own inline types and predate `aclose`, which
+        # exists and is the spelling `close` was deprecated in favour of.
+        await redis.aclose()  # type: ignore[attr-defined]
 
 
 async def tick_the_tail_to_catch_up(
@@ -221,13 +245,19 @@ async def _read_paths(
     candidates: CandidateSource,
     cohort: Cohort,
     now: Instant,
+    redis: Redis,
 ) -> _ReadPaths:
     """The three surfaces, wired from the composition root and nowhere else.
 
     Assembled exactly as ``matchmaking/presentation/dependencies.py`` assembles
     them for a request, because a second wiring is a second opinion about which
     reads fail closed — and the one that drifted would be the one that quietly
-    softened a gate.
+    softened a gate. Every collaborator comes from the composition root; nothing
+    here names a concrete class.
+
+    The one place this file does not go through a use case is
+    :func:`_as_the_engine_would_fill`, and that is because **there is no
+    engine-initiated use case to go through**. It says so where it is written.
     """
 
     event_store = build_domain_event_store(session)
@@ -238,7 +268,6 @@ async def _read_paths(
     )
     ratings = build_skill_rating_repository(event_store=event_store, events=events)
     player_scores = build_player_score_query(session)
-    redis = create_redis_client(settings)
     exposure = build_exposure_ledger(redis)
     interest = build_interest_ledger(session)
     ruleset = build_ruleset()
@@ -320,7 +349,7 @@ async def _players(session: AsyncSession, cohort: Cohort) -> Mapping[str, UUID]:
 
     users = build_user_repository(session)
     found: dict[str, UUID] = {}
-    addresses = [account.email for account in _PROTAGONISTS] + [
+    addresses = [account.email for account in PROTAGONISTS] + [
         member.email for member in cohort.members
     ]
     for address in addresses:
@@ -332,14 +361,6 @@ async def _players(session: AsyncSession, cohort: Cohort) -> Mapping[str, UUID]:
             )
         found[address] = user.id
     return found
-
-
-_PROTAGONISTS = (
-    THE_POPULATED_PLAYER,
-    THE_NEWCOMER,
-    THE_ONE_SPORT_PLAYER,
-    THE_BLANK_WEEK_PLAYER,
-)
 
 
 # ---------------------------------------------------------------------------

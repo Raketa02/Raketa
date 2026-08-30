@@ -1,6 +1,6 @@
 {
   "what_this_is": "A development workbench: a population chosen so that every Play screen state is reachable. It stands for nothing outside itself and describes no real market. The comparator corpus is docs/specs/matchmaking/ruleset-diff/, and it answers a different question.",
-  "inputs_only": "No level, no uncertainty and no band is recorded here. Those are the engine's answers to the questionnaire each member sits, and a committed copy of an answer is a number nothing keeps honest.",
+  "inputs_only": "No member's level, uncertainty or band is recorded here: those are the engine's answers to the questionnaire each member sits, and a committed copy of an answer is a number nothing keeps honest. The band names that do appear are declarations \u2014 which band an archetype aims at, and the histogram the run checks the engine's answers against.",
   "seed": 20260830,
   "sports": [
     "PADEL",
@@ -70,28 +70,32 @@
       "aims_at_band": "New",
       "claims": 0,
       "demonstrations": 0,
-      "spread": 0
+      "claim_spread": 0,
+      "demonstration_spread": 0
     },
     {
       "name": "improver",
       "aims_at_band": "Developing",
       "claims": 1,
       "demonstrations": 1,
-      "spread": 1
+      "claim_spread": 0,
+      "demonstration_spread": 1
     },
     {
       "name": "club-player",
       "aims_at_band": "Established",
       "claims": 2,
       "demonstrations": 2,
-      "spread": 2
+      "claim_spread": 0,
+      "demonstration_spread": 2
     },
     {
       "name": "strong-player",
       "aims_at_band": "Advanced",
       "claims": 4,
       "demonstrations": 4,
-      "spread": 0
+      "claim_spread": 0,
+      "demonstration_spread": 0
     }
   ],
   "band_histogram": {
@@ -151,8 +155,10 @@
       "committed_days_ago": 84,
       "claims": 0,
       "demonstrations": 0,
-      "spread": 0,
-      "stable_id": "4d1cc07b-ecd2-5080-88c4-d676a9da82b7"
+      "claim_spread": 0,
+      "demonstration_spread": 0,
+      "stable_id": "4d1cc07b-ecd2-5080-88c4-d676a9da82b7",
+      "newcomer": false
     },
     {
       "handle": "cohort-a-01",
@@ -187,8 +193,10 @@
       "committed_days_ago": 27,
       "claims": 0,
       "demonstrations": 0,
-      "spread": 0,
-      "stable_id": "098baec8-737e-550c-a5d8-3b8a7e2fdc52"
+      "claim_spread": 0,
+      "demonstration_spread": 0,
+      "stable_id": "098baec8-737e-550c-a5d8-3b8a7e2fdc52",
+      "newcomer": false
     },
     {
       "handle": "cohort-a-02",
@@ -223,8 +231,10 @@
       "committed_days_ago": 10,
       "claims": 1,
       "demonstrations": 1,
-      "spread": 1,
-      "stable_id": "0420b3e0-5b40-5fee-939d-796169d49fc7"
+      "claim_spread": 0,
+      "demonstration_spread": 1,
+      "stable_id": "0420b3e0-5b40-5fee-939d-796169d49fc7",
+      "newcomer": true
     },
     {
       "handle": "cohort-a-03",
@@ -259,8 +269,10 @@
       "committed_days_ago": 102,
       "claims": 1,
       "demonstrations": 1,
-      "spread": 1,
-      "stable_id": "e271a3f6-08b4-50db-b8fd-a28a6641b24c"
+      "claim_spread": 0,
+      "demonstration_spread": 1,
+      "stable_id": "e271a3f6-08b4-50db-b8fd-a28a6641b24c",
+      "newcomer": false
     },
     {
       "handle": "cohort-a-04",
@@ -295,8 +307,10 @@
       "committed_days_ago": 116,
       "claims": 1,
       "demonstrations": 1,
-      "spread": 1,
-      "stable_id": "9ed945d3-ce75-5945-b7bf-8a3c56543364"
+      "claim_spread": 0,
+      "demonstration_spread": 1,
+      "stable_id": "9ed945d3-ce75-5945-b7bf-8a3c56543364",
+      "newcomer": false
     },
     {
       "handle": "cohort-a-05",
@@ -344,8 +358,10 @@
       "committed_days_ago": 109,
       "claims": 2,
       "demonstrations": 2,
-      "spread": 2,
-      "stable_id": "b2cefb59-43b7-5790-9641-eaf06433681c"
+      "claim_spread": 0,
+      "demonstration_spread": 2,
+      "stable_id": "b2cefb59-43b7-5790-9641-eaf06433681c",
+      "newcomer": false
     },
     {
       "handle": "cohort-a-06",
@@ -385,8 +401,10 @@
       "committed_days_ago": 6,
       "claims": 2,
       "demonstrations": 2,
-      "spread": 2,
-      "stable_id": "2a233708-7e90-5ddd-88ba-44223968580b"
+      "claim_spread": 0,
+      "demonstration_spread": 2,
+      "stable_id": "2a233708-7e90-5ddd-88ba-44223968580b",
+      "newcomer": true
     },
     {
       "handle": "cohort-a-07",
@@ -417,8 +435,10 @@
       "committed_days_ago": 117,
       "claims": 2,
       "demonstrations": 2,
-      "spread": 2,
-      "stable_id": "d6308551-f991-579f-a4bf-42a504d5b9b8"
+      "claim_spread": 0,
+      "demonstration_spread": 2,
+      "stable_id": "d6308551-f991-579f-a4bf-42a504d5b9b8",
+      "newcomer": false
     },
     {
       "handle": "cohort-a-08",
@@ -449,8 +469,10 @@
       "committed_days_ago": 80,
       "claims": 2,
       "demonstrations": 2,
-      "spread": 2,
-      "stable_id": "c14df19e-f631-547e-974d-18a744d695bc"
+      "claim_spread": 0,
+      "demonstration_spread": 2,
+      "stable_id": "c14df19e-f631-547e-974d-18a744d695bc",
+      "newcomer": false
     },
     {
       "handle": "cohort-a-09",
@@ -486,8 +508,10 @@
       "committed_days_ago": 62,
       "claims": 2,
       "demonstrations": 2,
-      "spread": 2,
-      "stable_id": "270c29b0-0b48-5f77-9779-21afa64b000b"
+      "claim_spread": 0,
+      "demonstration_spread": 2,
+      "stable_id": "270c29b0-0b48-5f77-9779-21afa64b000b",
+      "newcomer": false
     },
     {
       "handle": "cohort-a-10",
@@ -523,8 +547,10 @@
       "committed_days_ago": 7,
       "claims": 2,
       "demonstrations": 2,
-      "spread": 2,
-      "stable_id": "50c72974-8021-5a52-ab4b-53750148143e"
+      "claim_spread": 0,
+      "demonstration_spread": 2,
+      "stable_id": "50c72974-8021-5a52-ab4b-53750148143e",
+      "newcomer": true
     },
     {
       "handle": "cohort-a-11",
@@ -559,8 +585,10 @@
       "committed_days_ago": 46,
       "claims": 2,
       "demonstrations": 2,
-      "spread": 2,
-      "stable_id": "01b5d738-4e39-54a3-ad2f-3b82c2de08ca"
+      "claim_spread": 0,
+      "demonstration_spread": 2,
+      "stable_id": "01b5d738-4e39-54a3-ad2f-3b82c2de08ca",
+      "newcomer": false
     },
     {
       "handle": "cohort-a-12",
@@ -599,8 +627,10 @@
       "committed_days_ago": 72,
       "claims": 2,
       "demonstrations": 2,
-      "spread": 2,
-      "stable_id": "d14a243c-b3ae-5ca7-ba72-7a17e7ed7399"
+      "claim_spread": 0,
+      "demonstration_spread": 2,
+      "stable_id": "d14a243c-b3ae-5ca7-ba72-7a17e7ed7399",
+      "newcomer": false
     },
     {
       "handle": "cohort-a-13",
@@ -633,8 +663,10 @@
       "committed_days_ago": 103,
       "claims": 2,
       "demonstrations": 2,
-      "spread": 2,
-      "stable_id": "ff200223-38c5-5f3f-a9f2-2fec1dd82338"
+      "claim_spread": 0,
+      "demonstration_spread": 2,
+      "stable_id": "ff200223-38c5-5f3f-a9f2-2fec1dd82338",
+      "newcomer": false
     },
     {
       "handle": "cohort-a-14",
@@ -683,8 +715,10 @@
       "committed_days_ago": 5,
       "claims": 2,
       "demonstrations": 2,
-      "spread": 2,
-      "stable_id": "1bd0d141-e47e-504f-b8ed-bf66daa33854"
+      "claim_spread": 0,
+      "demonstration_spread": 2,
+      "stable_id": "1bd0d141-e47e-504f-b8ed-bf66daa33854",
+      "newcomer": true
     },
     {
       "handle": "cohort-a-15",
@@ -721,8 +755,10 @@
       "committed_days_ago": 42,
       "claims": 2,
       "demonstrations": 2,
-      "spread": 2,
-      "stable_id": "1a4d53d0-34f8-5000-bb7e-a7d8d18aeb0a"
+      "claim_spread": 0,
+      "demonstration_spread": 2,
+      "stable_id": "1a4d53d0-34f8-5000-bb7e-a7d8d18aeb0a",
+      "newcomer": false
     },
     {
       "handle": "cohort-a-16",
@@ -758,8 +794,10 @@
       "committed_days_ago": 40,
       "claims": 2,
       "demonstrations": 2,
-      "spread": 2,
-      "stable_id": "59599975-225d-5dd9-a214-554ac376f13f"
+      "claim_spread": 0,
+      "demonstration_spread": 2,
+      "stable_id": "59599975-225d-5dd9-a214-554ac376f13f",
+      "newcomer": false
     },
     {
       "handle": "cohort-a-17",
@@ -795,8 +833,10 @@
       "committed_days_ago": 114,
       "claims": 4,
       "demonstrations": 4,
-      "spread": 0,
-      "stable_id": "abb57ad8-7024-5f42-9660-d9e812d58800"
+      "claim_spread": 0,
+      "demonstration_spread": 0,
+      "stable_id": "abb57ad8-7024-5f42-9660-d9e812d58800",
+      "newcomer": false
     },
     {
       "handle": "cohort-a-18",
@@ -835,8 +875,10 @@
       "committed_days_ago": 6,
       "claims": 4,
       "demonstrations": 4,
-      "spread": 0,
-      "stable_id": "43407b50-5066-5c73-9828-e5532082269e"
+      "claim_spread": 0,
+      "demonstration_spread": 0,
+      "stable_id": "43407b50-5066-5c73-9828-e5532082269e",
+      "newcomer": true
     },
     {
       "handle": "cohort-b-00",
@@ -876,8 +918,10 @@
       "committed_days_ago": 112,
       "claims": 1,
       "demonstrations": 1,
-      "spread": 1,
-      "stable_id": "36cb2c6c-9783-58a0-a48c-c2b17f2f5d93"
+      "claim_spread": 0,
+      "demonstration_spread": 1,
+      "stable_id": "36cb2c6c-9783-58a0-a48c-c2b17f2f5d93",
+      "newcomer": false
     },
     {
       "handle": "cohort-b-01",
@@ -909,8 +953,10 @@
       "committed_days_ago": 45,
       "claims": 2,
       "demonstrations": 2,
-      "spread": 2,
-      "stable_id": "6cdede9a-2437-5a51-a28b-1785314699da"
+      "claim_spread": 0,
+      "demonstration_spread": 2,
+      "stable_id": "6cdede9a-2437-5a51-a28b-1785314699da",
+      "newcomer": false
     },
     {
       "handle": "cohort-b-02",
@@ -942,8 +988,10 @@
       "committed_days_ago": 8,
       "claims": 2,
       "demonstrations": 2,
-      "spread": 2,
-      "stable_id": "081224e7-2390-55d5-8a8c-c36550e41386"
+      "claim_spread": 0,
+      "demonstration_spread": 2,
+      "stable_id": "081224e7-2390-55d5-8a8c-c36550e41386",
+      "newcomer": true
     },
     {
       "handle": "cohort-b-03",
@@ -979,8 +1027,10 @@
       "committed_days_ago": 90,
       "claims": 2,
       "demonstrations": 2,
-      "spread": 2,
-      "stable_id": "701d3972-059f-52b8-bed3-9c73824eb14e"
+      "claim_spread": 0,
+      "demonstration_spread": 2,
+      "stable_id": "701d3972-059f-52b8-bed3-9c73824eb14e",
+      "newcomer": false
     },
     {
       "handle": "cohort-b-04",
@@ -1014,8 +1064,10 @@
       "committed_days_ago": 91,
       "claims": 2,
       "demonstrations": 2,
-      "spread": 2,
-      "stable_id": "80136f39-6641-5a74-bfbc-594cdc24bdd2"
+      "claim_spread": 0,
+      "demonstration_spread": 2,
+      "stable_id": "80136f39-6641-5a74-bfbc-594cdc24bdd2",
+      "newcomer": false
     },
     {
       "handle": "cohort-c-00",
@@ -1054,8 +1106,10 @@
       "committed_days_ago": 31,
       "claims": 2,
       "demonstrations": 2,
-      "spread": 2,
-      "stable_id": "f1b410f1-0571-592b-a696-031d2befd63f"
+      "claim_spread": 0,
+      "demonstration_spread": 2,
+      "stable_id": "f1b410f1-0571-592b-a696-031d2befd63f",
+      "newcomer": false
     },
     {
       "handle": "cohort-c-01",
@@ -1087,8 +1141,10 @@
       "committed_days_ago": 26,
       "claims": 2,
       "demonstrations": 2,
-      "spread": 2,
-      "stable_id": "c8ed3f80-a410-5481-96b2-d1c96f20f59f"
+      "claim_spread": 0,
+      "demonstration_spread": 2,
+      "stable_id": "c8ed3f80-a410-5481-96b2-d1c96f20f59f",
+      "newcomer": false
     },
     {
       "handle": "cohort-c-02",
@@ -1120,8 +1176,10 @@
       "committed_days_ago": 6,
       "claims": 2,
       "demonstrations": 2,
-      "spread": 2,
-      "stable_id": "eddb41a1-7c1b-5d46-b4e5-046ce9263551"
+      "claim_spread": 0,
+      "demonstration_spread": 2,
+      "stable_id": "eddb41a1-7c1b-5d46-b4e5-046ce9263551",
+      "newcomer": true
     },
     {
       "handle": "cohort-c-03",
@@ -1158,8 +1216,10 @@
       "committed_days_ago": 32,
       "claims": 2,
       "demonstrations": 2,
-      "spread": 2,
-      "stable_id": "7eea49ac-3865-582f-b94e-34bcbb42216d"
+      "claim_spread": 0,
+      "demonstration_spread": 2,
+      "stable_id": "7eea49ac-3865-582f-b94e-34bcbb42216d",
+      "newcomer": false
     },
     {
       "handle": "cohort-c-04",
@@ -1193,8 +1253,10 @@
       "committed_days_ago": 93,
       "claims": 4,
       "demonstrations": 4,
-      "spread": 0,
-      "stable_id": "dc63438a-25c6-5869-ab72-eff084ab1428"
+      "claim_spread": 0,
+      "demonstration_spread": 0,
+      "stable_id": "dc63438a-25c6-5869-ab72-eff084ab1428",
+      "newcomer": false
     },
     {
       "handle": "cohort-d-00",
@@ -1231,8 +1293,10 @@
       "committed_days_ago": 28,
       "claims": 1,
       "demonstrations": 1,
-      "spread": 1,
-      "stable_id": "fae405d2-61ce-51f8-baf9-c60a823f0d64"
+      "claim_spread": 0,
+      "demonstration_spread": 1,
+      "stable_id": "fae405d2-61ce-51f8-baf9-c60a823f0d64",
+      "newcomer": false
     },
     {
       "handle": "cohort-d-01",
@@ -1267,8 +1331,10 @@
       "committed_days_ago": 49,
       "claims": 2,
       "demonstrations": 2,
-      "spread": 2,
-      "stable_id": "a5008b2b-1f8f-5603-a06c-5c82045da6c0"
+      "claim_spread": 0,
+      "demonstration_spread": 2,
+      "stable_id": "a5008b2b-1f8f-5603-a06c-5c82045da6c0",
+      "newcomer": false
     },
     {
       "handle": "cohort-d-02",
@@ -1300,8 +1366,10 @@
       "committed_days_ago": 10,
       "claims": 2,
       "demonstrations": 2,
-      "spread": 2,
-      "stable_id": "93084dc4-b3a5-58a3-9d13-1d0e99be4bcf"
+      "claim_spread": 0,
+      "demonstration_spread": 2,
+      "stable_id": "93084dc4-b3a5-58a3-9d13-1d0e99be4bcf",
+      "newcomer": true
     },
     {
       "handle": "cohort-d-03",
@@ -1338,8 +1406,10 @@
       "committed_days_ago": 32,
       "claims": 2,
       "demonstrations": 2,
-      "spread": 2,
-      "stable_id": "e2759cc7-cc7a-5597-ac0c-4acc0966ca23"
+      "claim_spread": 0,
+      "demonstration_spread": 2,
+      "stable_id": "e2759cc7-cc7a-5597-ac0c-4acc0966ca23",
+      "newcomer": false
     },
     {
       "handle": "cohort-e-00",
@@ -1377,8 +1447,10 @@
       "committed_days_ago": 29,
       "claims": 0,
       "demonstrations": 0,
-      "spread": 0,
-      "stable_id": "3d5eb721-703f-599a-9fd4-09a871581f66"
+      "claim_spread": 0,
+      "demonstration_spread": 0,
+      "stable_id": "3d5eb721-703f-599a-9fd4-09a871581f66",
+      "newcomer": false
     },
     {
       "handle": "cohort-e-01",
@@ -1408,8 +1480,10 @@
       "committed_days_ago": 78,
       "claims": 2,
       "demonstrations": 2,
-      "spread": 2,
-      "stable_id": "abcf31e4-1e5d-557f-a849-cde5a6d63298"
+      "claim_spread": 0,
+      "demonstration_spread": 2,
+      "stable_id": "abcf31e4-1e5d-557f-a849-cde5a6d63298",
+      "newcomer": false
     },
     {
       "handle": "cohort-e-02",
@@ -1441,8 +1515,10 @@
       "committed_days_ago": 11,
       "claims": 2,
       "demonstrations": 2,
-      "spread": 2,
-      "stable_id": "eb7ec1be-ac9f-5db5-bad8-93b56e0ab1cb"
+      "claim_spread": 0,
+      "demonstration_spread": 2,
+      "stable_id": "eb7ec1be-ac9f-5db5-bad8-93b56e0ab1cb",
+      "newcomer": true
     }
   ]
 }

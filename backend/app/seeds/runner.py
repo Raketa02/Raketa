@@ -155,11 +155,10 @@ from app.seeds.catalog import (
     AnswerPolicy,
     OpenRun,
     RatedRun,
-    RatingClaim,
     Scenario,
     SeedAccount,
     SeedProfile,
-    drawn_for,
+    answer_key,
 )
 from app.seeds.clock import (
     NEWCOMER_WINDOW_DAYS,
@@ -377,7 +376,9 @@ async def _seed_account(
     """
 
     use_cases = _build(session, clock=_clock_for(account, now), settings=settings)
-    player_id, registered = await _ensure_registered(use_cases, account)
+    player_id, registered = await _ensure_registered(
+        use_cases, email=account.email, nickname=account.nickname
+    )
     scenarios = tuple(
         [
             await _ensure_scenario(use_cases, player_id, account, scenario)
@@ -408,16 +409,24 @@ def _clock_for(account: SeedAccount, now: Instant) -> Clock:
 
 
 async def _ensure_registered(
-    use_cases: _UseCases, account: SeedAccount
+    use_cases: _UseCases, *, email: str, nickname: str
 ) -> tuple[UUID, bool]:
-    existing = await use_cases.users.get_by_email(account.email)
+    """Register this address, or find the account already at it.
+
+    Takes the two values rather than an account, because a named account and a
+    cohort member are the same registration: both are an address derived from a
+    name, and two copies of this function would be two places for *is it already
+    there* to be answered differently.
+    """
+
+    existing = await use_cases.users.get_by_email(email)
     if existing is not None:
         return existing.id, False
 
     user = await use_cases.register.execute(
         RegisterUserCommand(
-            email=account.email,
-            nickname=account.nickname,
+            email=email,
+            nickname=nickname,
             password=SEED_PASSWORD,
             # A seeded account attests like any other, because it is registered
             # through the aggregate rather than around it (``docs/adr/0029``).
@@ -456,7 +465,7 @@ async def _ensure_profile(
             player_id=player_id,
             idempotency_key=f"seed-profile-{player_id}",
             social_tag_ids=list(profile.social_tag_ids),
-            photo_ids=[],
+            photo_ids=list(profile.photo_ids),
             availability=list(profile.availability),
             latitude=profile.latitude,
             longitude=profile.longitude,
@@ -536,7 +545,17 @@ async def _ensure_scenario(
                 return SeededScenario(
                     scenario=scenario, assessment_id=existing.id, created=False
                 )
-            return await _rate(use_cases, player_id, account.slug, scenario)
+            return SeededScenario(
+                scenario=scenario,
+                assessment_id=await _rate(
+                    use_cases,
+                    player_id,
+                    account.slug,
+                    scenario.sport,
+                    scenario.answers,
+                ),
+                created=True,
+            )
 
         case _:
             exhaustive(scenario)
@@ -546,8 +565,9 @@ async def _rate(
     use_cases: _UseCases,
     player_id: UUID,
     handle: str,
-    scenario: RatedRun,
-) -> SeededScenario:
+    sport: Sport,
+    policy: AnswerPolicy,
+) -> UUID:
     """Answer the questionnaire to its stop, then ask for the rating.
 
     Two moments, not one (``docs/adr/0020``): the engine stopping is a fact about
@@ -558,24 +578,23 @@ async def _rate(
     """
 
     start = await use_cases.create.execute(
-        CreateAssessmentCommand(player_id=PlayerId(player_id), sport=scenario.sport)
+        CreateAssessmentCommand(player_id=PlayerId(player_id), sport=sport)
     )
     step = await _answer_until_the_engine_stops(
-        use_cases, player_id, handle, scenario, start.step
+        use_cases, player_id, handle, sport, policy, start.step
     )
     await use_cases.complete.execute(
         CompleteAssessmentCommand(player_id=player_id, assessment_id=step.assessment_id)
     )
-    return SeededScenario(
-        scenario=scenario, assessment_id=step.assessment_id, created=True
-    )
+    return step.assessment_id
 
 
 async def _answer_until_the_engine_stops(
     use_cases: _UseCases,
     player_id: UUID,
     handle: str,
-    scenario: RatedRun,
+    sport: Sport,
+    policy: AnswerPolicy,
     step: AssessmentStep,
 ) -> AssessmentStep:
     """Answer whatever is outstanding until nothing is.
@@ -591,13 +610,12 @@ async def _answer_until_the_engine_stops(
     different one, which would make a member's answers move between databases.
     """
 
-    policy: AnswerPolicy = scenario.answers
     answered = 0
     while step.question is not None:
         if answered >= MAX_ANSWERS:
             raise SeedFailed(
                 f"'{handle}' has answered {answered} "
-                f"{scenario.sport.value} questions and the questionnaire is "
+                f"{sport.value} questions and the questionnaire is "
                 f"still going. The engine no longer stops for this answer "
                 f"policy, so the seed is refusing to keep going rather than "
                 f"hang."
@@ -613,7 +631,7 @@ async def _answer_until_the_engine_stops(
                 # every member, and the band histogram would move for a reason
                 # having nothing to do with skill.
                 option_id=policy.option_id_for(
-                    step.question, drawn_for=drawn_for(handle, scenario.sport)
+                    step.question, drawn_for=answer_key(handle, sport)
                 ),
             )
         )
@@ -750,7 +768,9 @@ async def _seed_member(
         clock=days_before(now, member.committed_days_ago),
         settings=settings,
     )
-    player_id, registered = await _ensure_member_registered(use_cases, member)
+    player_id, registered = await _ensure_registered(
+        use_cases, email=member.email, nickname=member.nickname
+    )
     rated = tuple(
         [
             sport
@@ -792,23 +812,6 @@ def _profile_of(member: CohortMember) -> SeedProfile:
     )
 
 
-async def _ensure_member_registered(
-    use_cases: _UseCases, member: CohortMember
-) -> tuple[UUID, bool]:
-    existing = await use_cases.users.get_by_email(member.email)
-    if existing is not None:
-        return existing.id, False
-    user = await use_cases.register.execute(
-        RegisterUserCommand(
-            email=member.email,
-            nickname=member.nickname,
-            password=SEED_PASSWORD,
-            adult_attested=True,
-        )
-    )
-    return user.id, True
-
-
 async def _ensure_member_rated(
     use_cases: _UseCases, player_id: UUID, member: CohortMember, sport: Sport
 ) -> bool:
@@ -822,30 +825,35 @@ async def _ensure_member_rated(
     existing = await _first_attempt(use_cases, player_id, sport)
     if existing is not None and existing.is_completed:
         return False
-    await _rate(
-        use_cases,
-        player_id,
-        member.handle,
-        # The claim is the population's histogram rather than this member's own
-        # band, so the scenario carries the archetype's answers and a claim
-        # nothing reads. A ``RatingClaim`` per member would be a promise the
-        # generator made about the engine's answer, which is the shape §3
-        # refuses.
-        RatedRun(sport=sport, answers=member.answers, claim=_UNCLAIMED),
-    )
+    # **No ``RatingClaim`` anywhere here, and that is the point.** A named
+    # account promises one band and one position inside it; a member's rating is
+    # claimed by the population's *histogram*, and a per-member claim would be a
+    # promise the generator made about the engine's own answer.
+    await _rate(use_cases, player_id, member.handle, sport, member.answers)
     return True
-
-
-#: A member's rating is claimed by the histogram and never one band at a time.
-#: ``RatedRun`` requires a claim — a rated scenario nobody can check is the
-#: failure the catalog is shaped to refuse — so the cohort supplies one that
-#: says, in the only place a reader would look, that the claim is elsewhere.
-_UNCLAIMED = RatingClaim(band="(claimed by the cohort's band histogram)")
 
 
 # ---------------------------------------------------------------------------
 # The three clocks a cohort fails on
 # ---------------------------------------------------------------------------
+
+
+def _readers(
+    session: AsyncSession,
+) -> tuple[PlayerProfileRepository, SkillRatingRepository]:
+    """The two repositories the refusals read the **stored** answer through.
+
+    Spelled once because both refusals ask the same kind of question of the same
+    database, and two copies of this wiring would be two chances for one of them
+    to read through a store the other has since passed.
+    """
+
+    event_store = build_domain_event_store(session)
+    events = build_event_publisher(session)
+    return (
+        build_player_profile_repository(event_store=event_store, events=events),
+        build_skill_rating_repository(event_store=event_store, events=events),
+    )
 
 
 async def refuse_a_cohort_that_has_aged_out(
@@ -867,10 +875,7 @@ async def refuse_a_cohort_that_has_aged_out(
     would otherwise look at.
     """
 
-    profiles = build_player_profile_repository(
-        event_store=build_domain_event_store(session),
-        events=build_event_publisher(session),
-    )
+    profiles, _ = _readers(session)
     expected = [entry for entry in seeded if entry.member.is_a_newcomer]
     if not expected:
         raise SeedFailed(
@@ -916,10 +921,7 @@ async def refuse_a_histogram_that_has_moved(
     band that has swallowed the population is a pool of identical cards.
     """
 
-    ratings = build_skill_rating_repository(
-        event_store=build_domain_event_store(session),
-        events=build_event_publisher(session),
-    )
+    _, ratings = _readers(session)
     counted: dict[str, int] = {band: 0 for band in BAND_HISTOGRAM}
     for entry in seeded:
         for rating in await ratings.find_all_for(player_id=entry.player_id):
