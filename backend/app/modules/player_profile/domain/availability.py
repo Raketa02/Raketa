@@ -31,7 +31,10 @@ retroactively refuse to rehydrate a profile that was legal when it was written.
 and here it is narrower than that: **the commit path refuses.**
 ``PlayerProfile.change_availability`` is a write too, and it accepts a blank grid
 deliberately — a player may clear their week after committing, and the minimum
-binds the answer they are asked for rather than every later edit of it.
+binds the answer they are asked for rather than every later edit of it. That
+counterpart now has a name: ``edited`` takes the same primitives as ``of_cells``
+and enforces no floor, so the edit path is a constructor a reader can see rather
+than an asymmetry they have to infer.
 
 **The floor is not served.** Unlike the tag floor and ceiling it is fixed by the
 record rather than by product, so a client holds it as a constant the way it
@@ -184,16 +187,13 @@ class AvailabilityGrid:
     def of_cells(cls, cells: Iterable[tuple[int, str]]) -> "AvailabilityGrid":
         """The grid these ``(weekday, part)`` pairs make. **At least one.**
 
-        The command path's entry point, so that a *command* carries primitives
+        The commit path's entry point, so that a *command* carries primitives
         from the boundary and the domain is what turns them into slots
-        (``backend/CONTEXT.md`` — *Command*). Raises through ``invariant`` for a
-        pair that is not a cell, because the boundary schema constrains the day
-        to 1–7 and the part to the three there are: reaching this with anything
-        else means a caller inside the application built it.
+        (``backend/CONTEXT.md`` — *Command*).
 
         **This is the one place the floor is enforced**, because it is the one
-        place a player's own answer arrives. Nothing ticked is refused with
-        ``AvailabilityGridEmpty`` — a *refusal* rather than a broken
+        place the answer a player was *asked for* arrives. Nothing ticked is
+        refused with ``AvailabilityGridEmpty`` — a *refusal* rather than a broken
         precondition, because it is a legitimate thing for a client to send and
         the client's recovery is to go back to the week and tick a cell.
 
@@ -202,13 +202,39 @@ class AvailabilityGrid:
         the player ticked, and never of what arrived.
         """
 
-        grid = cls.of(
-            AvailabilitySlot(day=iso_weekday(day), part=_part(part))
-            for day, part in cells
-        )
+        grid = cls.edited(cells)
         if not grid.slots:
             raise AvailabilityGridEmpty()
         return grid
+
+    @classmethod
+    def edited(cls, cells: Iterable[tuple[int, str]]) -> "AvailabilityGrid":
+        """The grid a player just edited. **The floor's named exit.**
+
+        The same ``(weekday, part)`` primitives ``of_cells`` takes and the same
+        fold, minus the minimum — because *the commit path refuses* is this
+        module's rule and a later edit is not the commit. A player may clear
+        their week afterwards, and ``PlayerProfile.change_availability`` has
+        always accepted a blank grid; until this existed there was no boundary
+        constructor that could hand it one.
+
+        **Named rather than a flag on ``of_cells``**, which is
+        ``SearchRadius.chosen`` / ``recorded``'s discipline applied to the grid:
+        every call site says which of the two it is, where a flag re-asks the
+        question at each of them and makes the wrong answer the shorter one. It
+        is not ``from_codes`` either — that is the **replay** constructor, and
+        building a player's live edit through it is a category error.
+
+        Raises through ``invariant`` for a pair that is not a cell, exactly as
+        ``of_cells`` does: the boundary schema constrains the day to 1–7 and the
+        part to the three there are, so reaching this with anything else means a
+        caller inside the application built it.
+        """
+
+        return cls.of(
+            AvailabilitySlot(day=iso_weekday(day), part=_part(part))
+            for day, part in cells
+        )
 
     @classmethod
     def from_codes(cls, codes: Iterable[str]) -> "AvailabilityGrid":

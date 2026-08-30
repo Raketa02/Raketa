@@ -14,8 +14,8 @@ from tests.api import matchmaking_world as world
 
 
 @pytest.fixture
-async def searcher(client, session_factory):
-    return await world.a_searcher(client, session_factory)
+async def searcher(client):
+    return await world.a_searcher(client)
 
 
 async def _a_city(client, session_factory, candidate_source, mu: float):
@@ -199,7 +199,7 @@ async def test_a_forecast_citing_somebody_elses_search_answers_as_an_unknown_one
     existed, and the sameness is the authorization rule rather than tidiness."""
 
     await _a_city(client, session_factory, candidate_source, searcher["mu"])
-    other = await world.a_searcher(client, session_factory, "other")
+    other = await world.a_searcher(client, "other")
     theirs = (await world.search(client, other["token"])).json()
 
     response = await world.forecast(

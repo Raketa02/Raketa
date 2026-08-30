@@ -33,18 +33,23 @@ question that was never asked leaves nothing to reconstruct.
 question on a screen; the writes are the player's own, through the routes that
 already own those fields.
 
-**The other half of ``docs/adr/0094``'s pattern is owed and is not here: a
-decline is not yet remembered.** That record pairs the inline offer with a
-**30-day suppression on decline**, and suppressing one needs a surface to
-decline on — which is the same missing surface the *accept* half needs, since
-every one of these questions is answered by a write this backend has no route
-for (``PUT /api/v1/play-intents/{sport}``, and an edit path for the radius and
-the grid). Until those exist, a prompt lapses on :data:`PROMPT_TTL` and is raised
-again while its condition holds, so **a player who declines is asked again** —
-stated here rather than discovered, because it is the one place these prompts are
-ruder than the record they are built on. The two per-search prompts are the mild
-case (they follow an act the player just took); the drift prompt is the sharp
-one, and it is the reason the suppression exists in ADR-0094 at all.
+**Every one of these questions now has a write to be answered by**, and none of
+them is here: ``PUT /api/v1/play-intents/{sport}`` for the declaration, and
+``PUT /api/v1/players/me/availability`` and ``PUT /api/v1/players/me/search-radius``
+for the grid and the radius. A *yes* is the player making that request; this
+module is not told, and does not need to be — ``KEEP_THIS_RADIUS`` stops because
+a profile holding the widened radius takes no rung on the next search, and
+``KEEP_THESE_TIMES`` stops because the improvised grid and the profile's now
+agree.
+
+**The other half of ``docs/adr/0094``'s pattern is still owed: a decline is not
+yet remembered.** That record pairs the inline offer with a **30-day suppression
+on decline**, and until it exists a prompt lapses on :data:`PROMPT_TTL` and is
+raised again while its condition holds, so **a player who declines is asked
+again** — stated here rather than discovered, because it is the one place these
+prompts are ruder than the record they are built on. The two per-search prompts
+are the mild case (they follow an act the player just took); the drift prompt is
+the sharp one, and it is the reason the suppression exists in ADR-0094 at all.
 """
 
 from __future__ import annotations

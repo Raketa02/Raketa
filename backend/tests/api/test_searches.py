@@ -24,8 +24,8 @@ from tests.api import matchmaking_world as world
 
 
 @pytest.fixture
-async def searcher(client, session_factory):
-    return await world.a_searcher(client, session_factory)
+async def searcher(client):
+    return await world.a_searcher(client)
 
 
 async def test_a_search_returns_a_ranked_shortlist_carrying_its_whole_working(
@@ -268,14 +268,14 @@ async def test_the_near_miss_band_is_recorded_and_never_returned(
 
 
 async def test_a_searcher_with_no_rating_for_the_sport_is_refused_by_its_own_code(
-    client, session_factory
+    client,
 ):
     """Its own code rather than a generic conflict, because the client's recovery
     differs: this one is *go and rate this sport*."""
 
-    player_id, token = await world.register(client, "unrated")
+    _, token = await world.register(client, "unrated")
     await world.commit_profile(client, token)
-    await world.declare_intent(session_factory, player_id)
+    await world.declare_intent(client, token)
 
     response = await world.search(client, token)
 

@@ -14,14 +14,12 @@ tailed exactly as the projection tails them in production. That is also the only
 way to give one a chosen Level, a chosen grid or a chosen area: the questionnaire
 does not take dictation.
 
-> **One precondition this platform cannot yet create through a route.** The
-> shortlist refuses a searcher who has not declared a Play intent for the sport
-> (`play_intent_not_declared`), and ADR-0094's write path — the rating tail, the
-> search screen's inline offer, `PUT /api/v1/play-intents/{sport}` — has not been
-> built. So the declaration is appended to the log here, at the stream id the
-> repository derives. It is the one seam in this module that is not a route, it
-> is deliberate, and it is the handoff to that ticket rather than a shortcut
-> taken here.
+**The searcher's declaration goes through a route too**, now that ADR-0094's
+`PUT /api/v1/play-intents/{sport}` exists. It was the one seam here that was not
+a route — appended to the log at the stream id the repository derives — and it
+was written down as a handoff rather than a shortcut. The handoff has landed, so
+the whole searcher is built the way the platform builds one and nothing in this
+module fabricates a fact about them.
 """
 
 from __future__ import annotations
@@ -31,7 +29,6 @@ from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.kernel import Sport
 from app.modules.matchmaking.infrastructure.pass_model import PassORM
@@ -44,7 +41,6 @@ from app.modules.player_profile.domain.events import (
     PlayIntentDeclared,
     ProposalsOptInAnswered,
 )
-from app.modules.player_profile.domain.ids import play_intent_declaration_id
 from app.modules.player_profile.infrastructure.event_sourced_player_profile_repository import (  # noqa: E501
     PLAYER_PROFILE_AGGREGATE,
 )
@@ -143,42 +139,48 @@ async def rate(client, token: str, sport: Sport = SPORT) -> float:
 
 
 async def declare_intent(
-    session_factory: async_sessionmaker[AsyncSession],
-    player_id: UUID,
+    client,
+    token: str,
     *,
     intent: str = "COMPETITIVE",
     sport: Sport = SPORT,
 ) -> None:
-    """The one precondition with no route. See the module docstring."""
+    """The searcher's declaration, through ADR-0094's own route.
 
-    await append(
-        session_factory,
-        PlayIntentDeclared(player_id, sport.value, intent, "RATING_TAIL", LONG_AGO),
-        aggregate_type="play_intent_declaration",
-        aggregate_id=play_intent_declaration_id(player_id, sport),
+    ``RATING_TAIL`` because that is where a first declaration is made — this is
+    called straight after ``rate``, which is the run whose tail asks.
+    """
+
+    response = await client.put(
+        f"/api/v1/play-intents/{sport.value}",
+        json={"intent": intent, "surface": "RATING_TAIL"},
+        headers=auth(token),
     )
+    assert response.status_code == 200, response.text
 
 
 async def a_searcher(
     client,
-    session_factory,
     name: str = "searcher",
     *,
     intent: str = "COMPETITIVE",
 ) -> dict:
     """One player, ready to search: profile, rating and declaration.
 
+    Every one of the three through the route a person would use, so a searcher
+    is the searcher the platform makes rather than the one this file describes.
+
     ``intent`` is a parameter rather than something a test declares afterwards
-    because the declaration is an **aggregate**, and a second one at version 1
-    collides — which is the log doing its job, not a fixture being awkward. The
-    deck is the surface that cares: it reads the declaration instead of a mode,
-    so *no preference* is a case it has to be given at birth.
+    because the deck is the surface that cares: it reads the declaration instead
+    of a mode, so *no preference* is a case it wants at birth. Declaring again
+    afterwards would work — the route is unkeyed and re-declaring is an edit —
+    but it would put a second event on a stream no test meant to give a history.
     """
 
     player_id, token = await register(client, name)
     await commit_profile(client, token)
     mu = await rate(client, token)
-    await declare_intent(session_factory, player_id, intent=intent)
+    await declare_intent(client, token, intent=intent)
     return {"id": player_id, "token": token, "mu": mu}
 
 

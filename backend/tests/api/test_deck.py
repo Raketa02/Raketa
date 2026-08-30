@@ -23,8 +23,8 @@ from tests.api import matchmaking_world as world
 
 
 @pytest.fixture
-async def searcher(client, session_factory):
-    return await world.a_searcher(client, session_factory)
+async def searcher(client):
+    return await world.a_searcher(client)
 
 
 @pytest.fixture
@@ -97,9 +97,7 @@ async def test_a_player_with_no_preference_still_gets_a_working_deck(
     deal was scored as a for-fun one.
     """
 
-    undecided = await world.a_searcher(
-        client, session_factory, "undecided", intent="NO_PREFERENCE"
-    )
+    undecided = await world.a_searcher(client, "undecided", intent="NO_PREFERENCE")
     await world.a_candidate(
         client, session_factory, "eve", mu=undecided["mu"]
     )
@@ -200,7 +198,7 @@ async def test_the_relaxation_ladder_does_not_reach_the_deck(
     different claim.
     """
 
-    lonely = await world.a_searcher(client, session_factory, "lonely")
+    lonely = await world.a_searcher(client, "lonely")
     await world.fold_the_log(session_factory, candidate_source)
 
     dealt = (await world.deck(client, lonely["token"])).json()

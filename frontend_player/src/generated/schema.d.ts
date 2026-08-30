@@ -299,7 +299,21 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * The week, the radius and the Play intent this player declared
+         * @description One read for the three facts the Play screens hold, across the two aggregates that own them. The fourth fact a search screen needs — **which sports am I rated in** — is `GET /api/v1/ratings` and is not re-served here.
+         *
+         *     **`play_intents` holds only what was declared.** An undeclared sport is absent, never `null`: `NO_PREFERENCE` is an explicit answer, so there is no unanswered value to send. *Rated but undeclared* is a set difference against `GET /ratings`, and it is what a client uses to open the declaration interstitial **before** a search is refused with `play_intent_not_declared` rather than after.
+         *
+         *     **An empty `availability` is a real answer.** A player may clear their week; it means *we do not know when they play* and never *never*.
+         *
+         *     ## What this response does not carry
+         *
+         *     **`gender` and `gender_preference` are withheld and always will be.** Neither value ever comes back out of this API — the profile commit says so, and this route does not weaken it.
+         *
+         *     **Social tags, photos and location are not served *yet*.** They are deferred rather than refused, and this is the route that grows them when the *You* screen is built — there will be no second endpoint for them. The one to be careful with is **photos**: a profile may legally hold none, so an absent photo list here must not be read as *this player has no photographs*. Tags and a location are required at commit, so their absence cannot be mistaken for an answer either way.
+         */
+        get: operations["read_player_profile_api_v1_players_me_profile_get"];
         put?: never;
         /**
          * Commit every answer from onboarding's second part
@@ -314,6 +328,80 @@ export interface paths {
          *     **`gender` is required and `gender_preference` is not.** The first is asked once, here, with `PREFER_NOT_TO_SAY` a first-class answer — there is no unanswered state to send, so a missing or unknown value is a 422 rather than a coded refusal. The second defaults to `ANY`, is durable, and gates **both directions**: narrowing it also hides this player from the side it excludes. Neither value ever comes back out of this API.
          */
         post: operations["commit_player_profile_api_v1_players_me_profile_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/players/me/availability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Replace this player's week
+         * @description The whole week, every time — the list **is** the grid, and what is absent from it is unticked. Unkeyed and safe to send twice: the same week twice lands the same state, and a transition that changes nothing records nothing.
+         *
+         *     **An empty list is a legal value and clears the week.** The floor of one ticked cell binds the *commit*, which is the answer a player is asked for at the end of onboarding, and not every later edit of it. A cleared week is read as *absent* by the matcher, never as a zero — silence is never scored (`docs/adr/0102`).
+         *
+         *     **This is where a `KEEP_THESE_TIMES` prompt is answered.** The engine notices that a search ran on a week the profile does not hold and asks; nothing in the matcher writes a profile, so a *yes* is this request. Declining writes nothing anywhere.
+         *
+         *     Repeated cells are collapsed and the response carries the grid as stored, in the platform's reading order — so a client can see what the profile now holds rather than assuming it kept what was sent.
+         */
+        put: operations["change_availability_api_v1_players_me_availability_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/players/me/search-radius": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Replace this player's Search radius
+         * @description Whole kilometres, unkeyed, and idempotent for the reason the week is.
+         *
+         *     **This is where a `KEEP_THIS_RADIUS` prompt is answered**, and where taking a relaxation rung becomes durable. A rung is *"an ask and never a correction"* — running a wider search writes nothing — and this is the request the offer to keep it turns into. Accepting is also what stops the prompt: a profile that holds the wider radius takes no rung on the next search, so the condition that raised the question is gone rather than suppressed.
+         */
+        put: operations["change_search_radius_api_v1_players_me_search_radius_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/play-intents/{sport}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Declare what kind of game this player wants, in one sport
+         * @description Unkeyed and idempotent. The same value twice lands the same state and records nothing the second time — intent is a **preference, not a consent**: there is no wording to evidence it against, so a stream that grew an event for an unchanged answer would be recording that a player did not do anything.
+         *
+         *     **There is no null and no unanswered state.** `NO_PREFERENCE` is an explicit answer — *either kind of evening suits me* — and the matcher must be able to tell it from *I never opened that screen*, which is what an absent declaration means. Nobody is ever backfilled to it.
+         *
+         *     **A declaration is not a search mode.** Mode is which tab you are on right now and has two values; intent is what you told the platform about this sport and has three. Switching the toggle for one search changes nothing here — this route is what *make this my intent* means.
+         *
+         *     **It needs no profile.** Intent is asked for at the tail of a rating run, which happens before onboarding's second part, so a declaration with no profile behind it is the ordinary first case.
+         */
+        put: operations["declare_play_intent_api_v1_play_intents__sport__put"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -775,6 +863,19 @@ export interface components {
             next_slot: components["schemas"]["SharedSlot"] | null;
         };
         /**
+         * AvailabilityResponse
+         * @description The week as the profile now holds it.
+         *
+         *     A body rather than a ``204`` because the value stored is not always the
+         *     value sent: repeated cells are collapsed and the order is the platform's
+         *     reading order, so a client that kept what it sent would hold a week the
+         *     profile does not.
+         */
+        AvailabilityResponse: {
+            /** Availability */
+            availability: components["schemas"]["AvailabilitySlotResource"][];
+        };
+        /**
          * AvailabilitySlotResource
          * @description One ticked cell of the availability grid.
          *
@@ -892,6 +993,36 @@ export interface components {
             at_stake?: components["schemas"]["AtStakeSchema"];
             /** @description What this candidate would leave on court. Precomputed only when a line-up has exactly one seat open, so **omitted on every shortlist**. */
             would_be_forecast?: components["schemas"]["ForecastSchema"];
+        };
+        /**
+         * ChangeAvailabilityRequest
+         * @description The week, replaced whole.
+         *
+         *     **No floor, and that is the difference from the commit.** An empty list is a
+         *     cleared week and is recorded; ``availability_grid_empty`` refuses the answer
+         *     a player is *asked for* at the end of onboarding, not every later edit of it.
+         *
+         *     Repeated cells are collapsed rather than refused, and the response carries
+         *     the grid as it was stored — so a client that sent the same cell twice, or
+         *     sent the week in its own order, can see what the profile now holds.
+         */
+        ChangeAvailabilityRequest: {
+            /**
+             * Availability
+             * @description Every cell still ticked. **The list is the week** — what is absent is unticked — and an empty list clears it, which is a legal value rather than a refusal.
+             */
+            availability: components["schemas"]["AvailabilitySlotResource"][];
+        };
+        /**
+         * ChangeSearchRadiusRequest
+         * @description The Search radius, replaced whole.
+         */
+        ChangeSearchRadiusRequest: {
+            /**
+             * Search Radius Km
+             * @description Whole kilometres, re-checked against the range and step served by `GET /player-profile/options`. Refused with `search_radius_out_of_bounds` — a disabled slider is not a validation.
+             */
+            search_radius_km: number;
         };
         /**
          * CommitPlayerProfileRequest
@@ -1019,6 +1150,19 @@ export interface components {
         DealDeckRequest: {
             /** @description Which sport this deal is for */
             sport: components["schemas"]["Sport"];
+        };
+        /**
+         * DeclarePlayIntentRequest
+         * @description What kind of game this player wants in one sport, and where they said so.
+         *
+         *     The sport is the path, because it is half the resource's identity: the
+         *     resource is *one player's intent in one sport* (``docs/adr/0094``).
+         */
+        DeclarePlayIntentRequest: {
+            /** @description The declaration. `NO_PREFERENCE` is an **explicit answer** and not an absence — the matcher must be able to tell *either suits me* from *I never opened that screen*, and nobody is ever backfilled to it. There is no null. */
+            intent: components["schemas"]["PlayIntent"];
+            /** @description Which screen this was declared on. Required, because the client is the only party that knows — and safe to take its word for, because nothing branches on it: it is context recorded beside the fact, never a thing a decision reads. */
+            surface: components["schemas"]["PlayIntentSurface"];
         };
         /**
          * DegradedReason
@@ -1773,6 +1917,33 @@ export interface components {
          */
         PlayIntent: "COMPETITIVE" | "FOR_FUN" | "NO_PREFERENCE";
         /**
+         * PlayIntentDeclarationResponse
+         * @description The standing declaration for one player in one sport.
+         *
+         *     The **surface is not served back**. It is recorded beside the fact for us,
+         *     and a response that carried it would invite a client to render *where you
+         *     last said this*, which is a fact about the app and not about the player.
+         */
+        PlayIntentDeclarationResponse: {
+            sport: components["schemas"]["Sport"];
+            intent: components["schemas"]["PlayIntent"];
+        };
+        /**
+         * PlayIntentSurface
+         * @description Which screen a declaration was made on.
+         *
+         *     ``ConsentSurface``'s precedent in this same context, and it obeys the same
+         *     rule about what it is *for*: it is context recorded beside a fact, never a
+         *     thing any decision branches on.
+         *
+         *     **It is client-asserted and a client could lie about it** (ADR-0094). That
+         *     is accepted because the client is the only party that knows which screen it
+         *     was, and nothing load-bearing reads it — which is exactly the condition
+         *     under which a self-reported field is safe to keep.
+         * @enum {string}
+         */
+        PlayIntentSurface: "RATING_TAIL" | "SEARCH_SWITCH" | "DRIFT_PROMPT" | "PROFILE_SCREEN";
+        /**
          * PlayerCardSchema
          * @description Who this person is, on a card. **A closed list with two permanent gaps.**
          *
@@ -1846,6 +2017,59 @@ export interface components {
             social_tag_groups: components["schemas"]["SocialTagGroupResource"][];
             search_radius: components["schemas"]["SearchRadiusBoundsResource"];
             social_tag_selection: components["schemas"]["SocialTagSelectionBoundsResource"];
+        };
+        /**
+         * PlayerProfileReadResponse
+         * @description The profile facts the Play screens read, in one round trip.
+         *
+         *     **Three facts and not the whole profile**, and the two absences are
+         *     different absences:
+         *
+         *     A **standing refusal.** ``gender`` and ``gender_preference`` never come back
+         *     out of this API — the commit route already promises it (``docs/adr/0096``
+         *     §6) and this route does not weaken it.
+         *
+         *     A **deferral.** Social tags, photos and the location area are not refused;
+         *     they are **not served yet**, and this is the route they land on when *You* is
+         *     built rather than a route that acquires a sibling. The one worth naming is
+         *     **photos**: a profile may legally hold none, so an absent ``photo_ids`` is
+         *     the single deferral a client could read as *you have none* — which is exactly
+         *     the vanished-row lie ADR-0109 exists to prevent, arriving through the field
+         *     nobody would check. Tags and a location are required at commit, so their
+         *     absence cannot be mistaken for an answer.
+         *
+         *     It is prose rather than a machine-readable ``withheld`` list: ADR-0130
+         *     already struck ADR-0109's *and why* half, and a list here would be a field
+         *     whose only reader is a human, on a route where no client ever counted a row
+         *     that could go missing.
+         *
+         *     **No ``player_id``.** The resource is ``/players/me``, so the caller is the
+         *     bearer token and echoing it back would be a fourth fact on a body scoped to
+         *     three. ``GET /users/me`` is where an id comes from.
+         *
+         *     **Fields are only ever added.** A shipped mobile app parses this document for
+         *     months after it stops being built.
+         */
+        PlayerProfileReadResponse: {
+            /**
+             * Availability
+             * @description The cells of the week this player has ticked, in the platform's own reading order. **An empty list is a real answer** — a player may clear their week — and it means *we do not know when they play*, never *never*.
+             */
+            availability: components["schemas"]["AvailabilitySlotResource"][];
+            /**
+             * Search Radius Km
+             * @description Whole kilometres. What the search screen's slider opens at.
+             */
+            search_radius_km: number;
+            /**
+             * Play Intents
+             * @description What this player declared, per sport. **Only sports they have declared in appear** — an undeclared sport is absent and is never a `null` value, because there is no unanswered Play intent (`NO_PREFERENCE` is an explicit answer).
+             *
+             *     *Rated but not yet declared* is a set difference the client computes against `GET /ratings`, which it is already fetching to build the sport chips. A search by a player with no declaration for that sport is refused with `play_intent_not_declared`, so this is what lets a client open the one-tap interstitial before the refusal rather than after it.
+             */
+            play_intents: {
+                [key: string]: components["schemas"]["PlayIntent"];
+            };
         };
         /**
          * PlayerProfileResponse
@@ -2531,6 +2755,14 @@ export interface components {
              * @description What the control opens at
              */
             default_km: number;
+        };
+        /**
+         * SearchRadiusResponse
+         * @description The radius as the profile now holds it.
+         */
+        SearchRadiusResponse: {
+            /** Search Radius Km */
+            search_radius_km: number;
         };
         /**
          * SearchSurface
@@ -3454,6 +3686,35 @@ export interface operations {
             };
         };
     };
+    read_player_profile_api_v1_players_me_profile_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlayerProfileReadResponse"];
+                };
+            };
+            /** @description `player_profile_not_found` — this player has not finished onboarding's second part. The recovery is that part, which `GET /users/me` already sends a cold launch into. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     commit_player_profile_api_v1_players_me_profile_post: {
         parameters: {
             query?: never;
@@ -3525,6 +3786,162 @@ export interface operations {
              *
              *     `concurrent_modification` — two commits for this player raced and this one lost. Retry: the retry replays the winner.
              */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    change_availability_api_v1_players_me_availability_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangeAvailabilityRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AvailabilityResponse"];
+                };
+            };
+            /** @description `player_profile_not_found` — this player has not finished onboarding's second part. The recovery is that part, which `GET /users/me` already sends a cold launch into. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `concurrent_modification` — two writes reached this player's profile and this one lost. Retry: the retry reads the winner, and lands the same state or nothing. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    change_search_radius_api_v1_players_me_search_radius_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangeSearchRadiusRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchRadiusResponse"];
+                };
+            };
+            /** @description `search_radius_out_of_bounds` — outside the range served by `GET /player-profile/options`, or off its step. Re-checked here even though a slider built from those numbers cannot produce one: a control is not a validation. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `player_profile_not_found` — this player has not finished onboarding's second part. The recovery is that part, which `GET /users/me` already sends a cold launch into. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `concurrent_modification` — two writes reached this player's profile and this one lost. Retry: the retry reads the winner, and lands the same state or nothing. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    declare_play_intent_api_v1_play_intents__sport__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The sport this declaration is about. Intent is per sport and never transfers between them — no object in the system holds two sports' intent at once. */
+                sport: components["schemas"]["Sport"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeclarePlayIntentRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlayIntentDeclarationResponse"];
+                };
+            };
+            /** @description `concurrent_modification` — two declarations for this player in this sport raced and this one lost. Retry: the retry reads the winner and either changes it or is a no-op. */
             409: {
                 headers: {
                     [name: string]: unknown;

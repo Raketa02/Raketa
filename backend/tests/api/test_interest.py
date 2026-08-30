@@ -33,8 +33,8 @@ from tests.api import matchmaking_world as world
 
 
 @pytest.fixture
-async def searcher(client, session_factory):
-    return await world.a_searcher(client, session_factory)
+async def searcher(client):
+    return await world.a_searcher(client)
 
 
 @pytest.fixture
@@ -169,7 +169,7 @@ async def test_a_yes_citing_somebody_elses_search_is_refused(
     search* is how this engine is judged.
     """
 
-    stranger = await world.a_searcher(client, session_factory, name="stranger")
+    stranger = await world.a_searcher(client, name="stranger")
     await world.fold_the_log(session_factory, candidate_source)
     theirs = (await world.search(client, stranger["token"])).json()
 
@@ -312,7 +312,7 @@ async def test_a_one_sided_yes_is_never_revealed_to_its_recipient(
     own interest and are told nothing at all about the yes pointed at them.
     """
 
-    other = await world.a_searcher(client, session_factory, name="bea")
+    other = await world.a_searcher(client, name="bea")
     await world.fold_the_log(session_factory, candidate_source)
     await world.a_yes(
         client,
@@ -337,7 +337,7 @@ async def test_a_mutual_yes_is_told_to_both_sides(
     """The one shape in which somebody else's yes reaches them — and it reaches
     them only because they said it back."""
 
-    other = await world.a_searcher(client, session_factory, name="bea")
+    other = await world.a_searcher(client, name="bea")
     await world.fold_the_log(session_factory, candidate_source)
     await world.a_yes(
         client,
@@ -370,7 +370,7 @@ async def test_a_mutual_stops_counting_against_the_cap(
     answered and is no longer in flight, which is the one way room opens up other
     than waiting."""
 
-    other = await world.a_searcher(client, session_factory, name="bea")
+    other = await world.a_searcher(client, name="bea")
     await world.fold_the_log(session_factory, candidate_source)
     await world.a_yes(
         client,
@@ -411,7 +411,7 @@ async def test_the_lift_reaches_the_next_search_printed(
     is why it is the only inclusion reason that crosses the wire.
     """
 
-    other = await world.a_searcher(client, session_factory, name="bea")
+    other = await world.a_searcher(client, name="bea")
     await world.fold_the_log(session_factory, candidate_source)
     await world.a_yes(
         client,
@@ -444,7 +444,7 @@ async def test_the_lift_is_recorded_with_the_age_of_the_yes_and_never_a_boolean(
     ruleset's bounds and storing it would make a bounds change undiffable.
     """
 
-    other = await world.a_searcher(client, session_factory, name="bea")
+    other = await world.a_searcher(client, name="bea")
     await world.fold_the_log(session_factory, candidate_source)
     await world.a_yes(
         client,
@@ -479,7 +479,7 @@ async def test_the_lift_is_gone_the_day_the_yes_lapses(
     Nothing has swept the row: expiry is a **date**, and the sweep is a tidy-up.
     """
 
-    other = await world.a_searcher(client, session_factory, name="bea")
+    other = await world.a_searcher(client, name="bea")
     await world.fold_the_log(session_factory, candidate_source)
     await world.a_yes(
         client,

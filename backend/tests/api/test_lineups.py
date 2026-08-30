@@ -20,8 +20,8 @@ from tests.api import matchmaking_world as world
 
 
 @pytest.fixture
-async def searcher(client, session_factory):
-    return await world.a_searcher(client, session_factory)
+async def searcher(client):
+    return await world.a_searcher(client)
 
 
 async def _a_city(client, session_factory, candidate_source, mu: float):

@@ -31,8 +31,8 @@ ANOTHER_EVENING = ("4:EVENING",)
 
 
 @pytest.fixture
-async def searcher(client, session_factory):
-    return await world.a_searcher(client, session_factory)
+async def searcher(client):
+    return await world.a_searcher(client)
 
 
 async def test_a_short_shortlist_carries_what_widening_would_be_worth(
@@ -103,7 +103,7 @@ async def test_a_searcher_at_the_ceiling_is_offered_no_radius_rung_and_says_so(
     player_id, token = await world.register(client, "at-the-ceiling")
     await world.commit_profile(client, token, search_radius_km=50)
     await world.rate(client, token)
-    await world.declare_intent(session_factory, player_id)
+    await world.declare_intent(client, token)
     await world.fold_the_log(session_factory, candidate_source)
 
     body = (await world.search(client, token)).json()
@@ -130,7 +130,7 @@ async def test_the_clamp_bit_counts_a_searcher_at_the_ceiling_on_every_search(
     player_id, token = await world.register(client, "busy-at-the-ceiling")
     await world.commit_profile(client, token, search_radius_km=50)
     mu = await world.rate(client, token)
-    await world.declare_intent(session_factory, player_id)
+    await world.declare_intent(client, token)
     for index in range(6):
         await world.a_candidate(client, session_factory, f"player-{index}", mu=mu)
     await world.fold_the_log(session_factory, candidate_source)
@@ -252,7 +252,7 @@ async def test_another_players_search_cannot_be_cited(
     await world.fold_the_log(session_factory, candidate_source)
     theirs = (await world.search(client, searcher["token"])).json()
 
-    stranger = await world.a_searcher(client, session_factory, name="stranger")
+    stranger = await world.a_searcher(client, name="stranger")
     refused = await world.search(
         client,
         stranger["token"],

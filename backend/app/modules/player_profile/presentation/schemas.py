@@ -22,7 +22,10 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
-from app.kernel import invariant
+from app.kernel import Sport, invariant
+from app.modules.player_profile.application.read_player_profile import (
+    PlayerProfileSurface,
+)
 from app.modules.player_profile.domain.availability import (
     DAYS_IN_THE_GRID,
     AvailabilityGrid,
@@ -39,6 +42,13 @@ from app.modules.player_profile.domain.gender import (
     GenderPreference,
 )
 from app.modules.player_profile.domain.location import LocationArea
+from app.modules.player_profile.domain.play_intent import (
+    PlayIntent,
+    PlayIntentSurface,
+)
+from app.modules.player_profile.domain.play_intent_declaration import (
+    PlayIntentDeclaration,
+)
 from app.modules.player_profile.domain.photos import (
     PhotoReviewDecision,
     PresignedPhoto,
@@ -495,3 +505,182 @@ class PlayerProfileResponse(BaseModel):
 
 def _grid_resource(grid: AvailabilityGrid) -> list[AvailabilitySlotResource]:
     return [AvailabilitySlotResource.from_cell(cell) for cell in grid.cells]
+
+
+class PlayerProfileReadResponse(BaseModel):
+    """The profile facts the Play screens read, in one round trip.
+
+    **Three facts and not the whole profile**, and the two absences are
+    different absences:
+
+    A **standing refusal.** ``gender`` and ``gender_preference`` never come back
+    out of this API — the commit route already promises it (``docs/adr/0096``
+    §6) and this route does not weaken it.
+
+    A **deferral.** Social tags, photos and the location area are not refused;
+    they are **not served yet**, and this is the route they land on when *You* is
+    built rather than a route that acquires a sibling. The one worth naming is
+    **photos**: a profile may legally hold none, so an absent ``photo_ids`` is
+    the single deferral a client could read as *you have none* — which is exactly
+    the vanished-row lie ADR-0109 exists to prevent, arriving through the field
+    nobody would check. Tags and a location are required at commit, so their
+    absence cannot be mistaken for an answer.
+
+    It is prose rather than a machine-readable ``withheld`` list: ADR-0130
+    already struck ADR-0109's *and why* half, and a list here would be a field
+    whose only reader is a human, on a route where no client ever counted a row
+    that could go missing.
+
+    **No ``player_id``.** The resource is ``/players/me``, so the caller is the
+    bearer token and echoing it back would be a fourth fact on a body scoped to
+    three. ``GET /users/me`` is where an id comes from.
+
+    **Fields are only ever added.** A shipped mobile app parses this document for
+    months after it stops being built.
+    """
+
+    availability: list[AvailabilitySlotResource] = Field(
+        ...,
+        description=(
+            "The cells of the week this player has ticked, in the platform's "
+            "own reading order. **An empty list is a real answer** — a player "
+            "may clear their week — and it means *we do not know when they "
+            "play*, never *never*."
+        ),
+    )
+    search_radius_km: int = Field(
+        ..., description="Whole kilometres. What the search screen's slider opens at."
+    )
+    play_intents: dict[Sport, PlayIntent] = Field(
+        ...,
+        description=(
+            "What this player declared, per sport. **Only sports they have "
+            "declared in appear** — an undeclared sport is absent and is never "
+            "a `null` value, because there is no unanswered Play intent "
+            "(`NO_PREFERENCE` is an explicit answer).\n\n"
+            "*Rated but not yet declared* is a set difference the client "
+            "computes against `GET /ratings`, which it is already fetching to "
+            "build the sport chips. A search by a player with no declaration "
+            "for that sport is refused with `play_intent_not_declared`, so this "
+            "is what lets a client open the one-tap interstitial before the "
+            "refusal rather than after it."
+        ),
+    )
+
+    @classmethod
+    def from_domain(cls, surface: PlayerProfileSurface) -> "PlayerProfileReadResponse":
+        return cls(
+            availability=_grid_resource(surface.profile.availability),
+            search_radius_km=surface.profile.search_radius.kilometres,
+            play_intents=dict(surface.play_intents),
+        )
+
+
+class ChangeAvailabilityRequest(BaseModel):
+    """The week, replaced whole.
+
+    **No floor, and that is the difference from the commit.** An empty list is a
+    cleared week and is recorded; ``availability_grid_empty`` refuses the answer
+    a player is *asked for* at the end of onboarding, not every later edit of it.
+
+    Repeated cells are collapsed rather than refused, and the response carries
+    the grid as it was stored — so a client that sent the same cell twice, or
+    sent the week in its own order, can see what the profile now holds.
+    """
+
+    availability: list[AvailabilitySlotResource] = Field(
+        ...,
+        description=(
+            "Every cell still ticked. **The list is the week** — what is absent "
+            "is unticked — and an empty list clears it, which is a legal value "
+            "rather than a refusal."
+        ),
+    )
+
+    def availability_cells(self) -> list[tuple[int, str]]:
+        return [slot.as_cell() for slot in self.availability]
+
+
+class AvailabilityResponse(BaseModel):
+    """The week as the profile now holds it.
+
+    A body rather than a ``204`` because the value stored is not always the
+    value sent: repeated cells are collapsed and the order is the platform's
+    reading order, so a client that kept what it sent would hold a week the
+    profile does not.
+    """
+
+    availability: list[AvailabilitySlotResource]
+
+    @classmethod
+    def from_domain(cls, profile: PlayerProfile) -> "AvailabilityResponse":
+        return cls(availability=_grid_resource(profile.availability))
+
+
+class ChangeSearchRadiusRequest(BaseModel):
+    """The Search radius, replaced whole."""
+
+    search_radius_km: int = Field(
+        ...,
+        description=(
+            "Whole kilometres, re-checked against the range and step served by "
+            "`GET /player-profile/options`. Refused with "
+            "`search_radius_out_of_bounds` — a disabled slider is not a "
+            "validation."
+        ),
+    )
+
+
+class SearchRadiusResponse(BaseModel):
+    """The radius as the profile now holds it."""
+
+    search_radius_km: int
+
+    @classmethod
+    def from_domain(cls, profile: PlayerProfile) -> "SearchRadiusResponse":
+        return cls(search_radius_km=profile.search_radius.kilometres)
+
+
+class DeclarePlayIntentRequest(BaseModel):
+    """What kind of game this player wants in one sport, and where they said so.
+
+    The sport is the path, because it is half the resource's identity: the
+    resource is *one player's intent in one sport* (``docs/adr/0094``).
+    """
+
+    intent: PlayIntent = Field(
+        ...,
+        description=(
+            "The declaration. `NO_PREFERENCE` is an **explicit answer** and not "
+            "an absence — the matcher must be able to tell *either suits me* "
+            "from *I never opened that screen*, and nobody is ever backfilled "
+            "to it. There is no null."
+        ),
+    )
+    surface: PlayIntentSurface = Field(
+        ...,
+        description=(
+            "Which screen this was declared on. Required, because the client is "
+            "the only party that knows — and safe to take its word for, because "
+            "nothing branches on it: it is context recorded beside the fact, "
+            "never a thing a decision reads."
+        ),
+    )
+
+
+class PlayIntentDeclarationResponse(BaseModel):
+    """The standing declaration for one player in one sport.
+
+    The **surface is not served back**. It is recorded beside the fact for us,
+    and a response that carried it would invite a client to render *where you
+    last said this*, which is a fact about the app and not about the player.
+    """
+
+    sport: Sport
+    intent: PlayIntent
+
+    @classmethod
+    def from_domain(
+        cls, declaration: PlayIntentDeclaration
+    ) -> "PlayIntentDeclarationResponse":
+        return cls(sport=declaration.sport, intent=declaration.intent)

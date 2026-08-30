@@ -50,8 +50,8 @@ def _without_the_minted_link(candidate: dict) -> dict:
 
 
 @pytest.fixture
-async def searcher(client, session_factory):
-    return await world.a_searcher(client, session_factory)
+async def searcher(client):
+    return await world.a_searcher(client)
 
 
 async def a_search_of_two(client, session_factory, candidate_source, searcher):
@@ -373,7 +373,7 @@ async def test_a_searcher_may_read_their_own_search_and_nobody_elses(
     posted, _, _ = await a_search_of_two(
         client, session_factory, candidate_source, searcher
     )
-    stranger = await world.a_searcher(client, session_factory, name="stranger")
+    stranger = await world.a_searcher(client, name="stranger")
 
     theirs = await world.read_back(
         client, stranger["token"], posted["search"]["search_id"]

@@ -26,8 +26,14 @@ from app.modules.matchmaking.presentation.routes import router as searches_route
 from app.modules.player_profile.presentation.photo_routes import (
     router as photos_router,
 )
+from app.modules.player_profile.presentation.play_intent_routes import (
+    router as play_intents_router,
+)
 from app.modules.player_profile.presentation.profile_routes import (
     router as profile_commit_router,
+)
+from app.modules.player_profile.presentation.profile_surface_routes import (
+    router as profile_surface_router,
 )
 from app.modules.player_profile.presentation.routes import (
     router as player_profile_router,
@@ -44,6 +50,8 @@ player_api_router.include_router(assessments_router)
 player_api_router.include_router(ratings_router)
 player_api_router.include_router(player_profile_router)
 player_api_router.include_router(profile_commit_router)
+player_api_router.include_router(profile_surface_router)
+player_api_router.include_router(play_intents_router)
 player_api_router.include_router(photos_router)
 player_api_router.include_router(blocks_router)
 player_api_router.include_router(searches_router)

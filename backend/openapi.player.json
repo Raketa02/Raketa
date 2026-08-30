@@ -725,6 +725,254 @@
             }
           }
         }
+      },
+      "get": {
+        "tags": [
+          "player-profile"
+        ],
+        "summary": "The week, the radius and the Play intent this player declared",
+        "description": "One read for the three facts the Play screens hold, across the two aggregates that own them. The fourth fact a search screen needs \u2014 **which sports am I rated in** \u2014 is `GET /api/v1/ratings` and is not re-served here.\n\n**`play_intents` holds only what was declared.** An undeclared sport is absent, never `null`: `NO_PREFERENCE` is an explicit answer, so there is no unanswered value to send. *Rated but undeclared* is a set difference against `GET /ratings`, and it is what a client uses to open the declaration interstitial **before** a search is refused with `play_intent_not_declared` rather than after.\n\n**An empty `availability` is a real answer.** A player may clear their week; it means *we do not know when they play* and never *never*.\n\n## What this response does not carry\n\n**`gender` and `gender_preference` are withheld and always will be.** Neither value ever comes back out of this API \u2014 the profile commit says so, and this route does not weaken it.\n\n**Social tags, photos and location are not served *yet*.** They are deferred rather than refused, and this is the route that grows them when the *You* screen is built \u2014 there will be no second endpoint for them. The one to be careful with is **photos**: a profile may legally hold none, so an absent photo list here must not be read as *this player has no photographs*. Tags and a location are required at commit, so their absence cannot be mistaken for an answer either way.",
+        "operationId": "read_player_profile_api_v1_players_me_profile_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlayerProfileReadResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`player_profile_not_found` \u2014 this player has not finished onboarding's second part. The recovery is that part, which `GET /users/me` already sends a cold launch into.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/players/me/availability": {
+      "put": {
+        "tags": [
+          "player-profile"
+        ],
+        "summary": "Replace this player's week",
+        "description": "The whole week, every time \u2014 the list **is** the grid, and what is absent from it is unticked. Unkeyed and safe to send twice: the same week twice lands the same state, and a transition that changes nothing records nothing.\n\n**An empty list is a legal value and clears the week.** The floor of one ticked cell binds the *commit*, which is the answer a player is asked for at the end of onboarding, and not every later edit of it. A cleared week is read as *absent* by the matcher, never as a zero \u2014 silence is never scored (`docs/adr/0102`).\n\n**This is where a `KEEP_THESE_TIMES` prompt is answered.** The engine notices that a search ran on a week the profile does not hold and asks; nothing in the matcher writes a profile, so a *yes* is this request. Declining writes nothing anywhere.\n\nRepeated cells are collapsed and the response carries the grid as stored, in the platform's reading order \u2014 so a client can see what the profile now holds rather than assuming it kept what was sent.",
+        "operationId": "change_availability_api_v1_players_me_availability_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangeAvailabilityRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AvailabilityResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`player_profile_not_found` \u2014 this player has not finished onboarding's second part. The recovery is that part, which `GET /users/me` already sends a cold launch into.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`concurrent_modification` \u2014 two writes reached this player's profile and this one lost. Retry: the retry reads the winner, and lands the same state or nothing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/players/me/search-radius": {
+      "put": {
+        "tags": [
+          "player-profile"
+        ],
+        "summary": "Replace this player's Search radius",
+        "description": "Whole kilometres, unkeyed, and idempotent for the reason the week is.\n\n**This is where a `KEEP_THIS_RADIUS` prompt is answered**, and where taking a relaxation rung becomes durable. A rung is *\"an ask and never a correction\"* \u2014 running a wider search writes nothing \u2014 and this is the request the offer to keep it turns into. Accepting is also what stops the prompt: a profile that holds the wider radius takes no rung on the next search, so the condition that raised the question is gone rather than suppressed.",
+        "operationId": "change_search_radius_api_v1_players_me_search_radius_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangeSearchRadiusRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchRadiusResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`search_radius_out_of_bounds` \u2014 outside the range served by `GET /player-profile/options`, or off its step. Re-checked here even though a slider built from those numbers cannot produce one: a control is not a validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`player_profile_not_found` \u2014 this player has not finished onboarding's second part. The recovery is that part, which `GET /users/me` already sends a cold launch into.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`concurrent_modification` \u2014 two writes reached this player's profile and this one lost. Retry: the retry reads the winner, and lands the same state or nothing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/play-intents/{sport}": {
+      "put": {
+        "tags": [
+          "player-profile"
+        ],
+        "summary": "Declare what kind of game this player wants, in one sport",
+        "description": "Unkeyed and idempotent. The same value twice lands the same state and records nothing the second time \u2014 intent is a **preference, not a consent**: there is no wording to evidence it against, so a stream that grew an event for an unchanged answer would be recording that a player did not do anything.\n\n**There is no null and no unanswered state.** `NO_PREFERENCE` is an explicit answer \u2014 *either kind of evening suits me* \u2014 and the matcher must be able to tell it from *I never opened that screen*, which is what an absent declaration means. Nobody is ever backfilled to it.\n\n**A declaration is not a search mode.** Mode is which tab you are on right now and has two values; intent is what you told the platform about this sport and has three. Switching the toggle for one search changes nothing here \u2014 this route is what *make this my intent* means.\n\n**It needs no profile.** Intent is asked for at the tail of a rating run, which happens before onboarding's second part, so a declaration with no profile behind it is the ordinary first case.",
+        "operationId": "declare_play_intent_api_v1_play_intents__sport__put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "sport",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Sport",
+              "description": "The sport this declaration is about. Intent is per sport and never transfers between them \u2014 no object in the system holds two sports' intent at once."
+            },
+            "description": "The sport this declaration is about. Intent is per sport and never transfers between them \u2014 no object in the system holds two sports' intent at once."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeclarePlayIntentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlayIntentDeclarationResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`concurrent_modification` \u2014 two declarations for this player in this sport raced and this one lost. Retry: the retry reads the winner and either changes it or is a no-op.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/photos": {
@@ -1681,6 +1929,23 @@
         "title": "AvailabilityOverlapEvidence",
         "description": "How much of the searcher's week the candidate is free in.\n\nThe term is ``|shared| / |mine|`` and has **no constants at all** \u2014 the\ndenominator is the searcher's own ticked cells, which is what makes the\nreading asymmetric and what makes it a fact about the pair.\n\nOverlap is evidence a game can be *arranged*, never a proposed time, which is\nwhy a candidate sharing no slot at all is still shown: the times rung exists\nfor exactly that pairing."
       },
+      "AvailabilityResponse": {
+        "properties": {
+          "availability": {
+            "items": {
+              "$ref": "#/components/schemas/AvailabilitySlotResource"
+            },
+            "type": "array",
+            "title": "Availability"
+          }
+        },
+        "type": "object",
+        "required": [
+          "availability"
+        ],
+        "title": "AvailabilityResponse",
+        "description": "The week as the profile now holds it.\n\nA body rather than a ``204`` because the value stored is not always the\nvalue sent: repeated cells are collapsed and the order is the platform's\nreading order, so a client that kept what it sent would hold a week the\nprofile does not."
+      },
       "AvailabilitySlotResource": {
         "properties": {
           "day": {
@@ -1849,6 +2114,39 @@
         "title": "CandidateSchema",
         "description": "One row of the shortlist: the pairing, and the person.\n\nThree field families have a **different author** from the rest and are\nattached by the backend after the scorer returns \u2014 the card, the at-stake\nblock and the distance. None of them is a fact the scorer may see, and none\nmay be computed by the client.\n\nOn a read-back this row means *the live gates still admit this person*, and\nit says so: ``withheld`` is ``false``, positively, rather than absent. A row\nthe gates no longer admit is a :class:`WithheldRowSchema` instead, and the\ntwo are a union precisely so that **rendering a person the product has agreed\nnot to show is not a shape this contract can hold** (``docs/adr/0109``)."
       },
+      "ChangeAvailabilityRequest": {
+        "properties": {
+          "availability": {
+            "items": {
+              "$ref": "#/components/schemas/AvailabilitySlotResource"
+            },
+            "type": "array",
+            "title": "Availability",
+            "description": "Every cell still ticked. **The list is the week** \u2014 what is absent is unticked \u2014 and an empty list clears it, which is a legal value rather than a refusal."
+          }
+        },
+        "type": "object",
+        "required": [
+          "availability"
+        ],
+        "title": "ChangeAvailabilityRequest",
+        "description": "The week, replaced whole.\n\n**No floor, and that is the difference from the commit.** An empty list is a\ncleared week and is recorded; ``availability_grid_empty`` refuses the answer\na player is *asked for* at the end of onboarding, not every later edit of it.\n\nRepeated cells are collapsed rather than refused, and the response carries\nthe grid as it was stored \u2014 so a client that sent the same cell twice, or\nsent the week in its own order, can see what the profile now holds."
+      },
+      "ChangeSearchRadiusRequest": {
+        "properties": {
+          "search_radius_km": {
+            "type": "integer",
+            "title": "Search Radius Km",
+            "description": "Whole kilometres, re-checked against the range and step served by `GET /player-profile/options`. Refused with `search_radius_out_of_bounds` \u2014 a disabled slider is not a validation."
+          }
+        },
+        "type": "object",
+        "required": [
+          "search_radius_km"
+        ],
+        "title": "ChangeSearchRadiusRequest",
+        "description": "The Search radius, replaced whole."
+      },
       "CommitPlayerProfileRequest": {
         "properties": {
           "social_tag_ids": {
@@ -1985,6 +2283,25 @@
         ],
         "title": "DealDeckRequest",
         "description": "What a deal is asked for. **One field, and that is the whole contract.**\n\n**There is no `mode` here and there never will be.** The deck reads your own\ndeclared Play intent for this sport, resolved backend-side, and *no\npreference* is a working deck rather than a blocked one \u2014 indecision is not a\nstate this product refuses. A mode on this body would be the field the\ntelemetry constraint refuses: `mode` is null exactly when the surface is the\ndeck.\n\n**There is no widening here either.** The relaxation ladder does not reach\nthe deck, so a deal carries no rung offers and there is no offer for one to\ncite.\n\n**There is nothing about a pass.** The suppression window crosses the wire in\nno shape at all \u2014 no field, no code, no timestamp \u2014 which is what makes a\npass unable to become something stronger by way of a request."
+      },
+      "DeclarePlayIntentRequest": {
+        "properties": {
+          "intent": {
+            "$ref": "#/components/schemas/PlayIntent",
+            "description": "The declaration. `NO_PREFERENCE` is an **explicit answer** and not an absence \u2014 the matcher must be able to tell *either suits me* from *I never opened that screen*, and nobody is ever backfilled to it. There is no null."
+          },
+          "surface": {
+            "$ref": "#/components/schemas/PlayIntentSurface",
+            "description": "Which screen this was declared on. Required, because the client is the only party that knows \u2014 and safe to take its word for, because nothing branches on it: it is context recorded beside the fact, never a thing a decision reads."
+          }
+        },
+        "type": "object",
+        "required": [
+          "intent",
+          "surface"
+        ],
+        "title": "DeclarePlayIntentRequest",
+        "description": "What kind of game this player wants in one sport, and where they said so.\n\nThe sport is the path, because it is half the resource's identity: the\nresource is *one player's intent in one sport* (``docs/adr/0094``)."
       },
       "DegradedReason": {
         "type": "string",
@@ -2838,6 +3155,34 @@
         "title": "PlayIntent",
         "description": "What kind of game a player wants, in one sport.\n\nDeclared per ``(player, sport)`` \u2014 see ``play_intent_declaration.py`` for\nwhy that is its own aggregate rather than a field on the profile."
       },
+      "PlayIntentDeclarationResponse": {
+        "properties": {
+          "sport": {
+            "$ref": "#/components/schemas/Sport"
+          },
+          "intent": {
+            "$ref": "#/components/schemas/PlayIntent"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sport",
+          "intent"
+        ],
+        "title": "PlayIntentDeclarationResponse",
+        "description": "The standing declaration for one player in one sport.\n\nThe **surface is not served back**. It is recorded beside the fact for us,\nand a response that carried it would invite a client to render *where you\nlast said this*, which is a fact about the app and not about the player."
+      },
+      "PlayIntentSurface": {
+        "type": "string",
+        "enum": [
+          "RATING_TAIL",
+          "SEARCH_SWITCH",
+          "DRIFT_PROMPT",
+          "PROFILE_SCREEN"
+        ],
+        "title": "PlayIntentSurface",
+        "description": "Which screen a declaration was made on.\n\n``ConsentSurface``'s precedent in this same context, and it obeys the same\nrule about what it is *for*: it is context recorded beside a fact, never a\nthing any decision branches on.\n\n**It is client-asserted and a client could lie about it** (ADR-0094). That\nis accepted because the client is the only party that knows which screen it\nwas, and nothing load-bearing reads it \u2014 which is exactly the condition\nunder which a self-reported field is safe to keep."
+      },
       "PlayerCardSchema": {
         "properties": {
           "nickname": {
@@ -2925,6 +3270,42 @@
         ],
         "title": "PlayerProfileOptionsResponse",
         "description": "Everything a client needs to *render* the profile steps, in one round trip.\n\nA handful of facts rather than one endpoint each, because they are the same\nkind of thing \u2014 closed, read-only, and needed by the same part of onboarding\nat the same moment.\n\n**Fields are only ever added.** A shipped mobile app parses this document for\nmonths after it stops being built, so a new field goes on the end and the\nones already here keep their names and their types."
+      },
+      "PlayerProfileReadResponse": {
+        "properties": {
+          "availability": {
+            "items": {
+              "$ref": "#/components/schemas/AvailabilitySlotResource"
+            },
+            "type": "array",
+            "title": "Availability",
+            "description": "The cells of the week this player has ticked, in the platform's own reading order. **An empty list is a real answer** \u2014 a player may clear their week \u2014 and it means *we do not know when they play*, never *never*."
+          },
+          "search_radius_km": {
+            "type": "integer",
+            "title": "Search Radius Km",
+            "description": "Whole kilometres. What the search screen's slider opens at."
+          },
+          "play_intents": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/PlayIntent"
+            },
+            "propertyNames": {
+              "$ref": "#/components/schemas/Sport"
+            },
+            "type": "object",
+            "title": "Play Intents",
+            "description": "What this player declared, per sport. **Only sports they have declared in appear** \u2014 an undeclared sport is absent and is never a `null` value, because there is no unanswered Play intent (`NO_PREFERENCE` is an explicit answer).\n\n*Rated but not yet declared* is a set difference the client computes against `GET /ratings`, which it is already fetching to build the sport chips. A search by a player with no declaration for that sport is refused with `play_intent_not_declared`, so this is what lets a client open the one-tap interstitial before the refusal rather than after it."
+          }
+        },
+        "type": "object",
+        "required": [
+          "availability",
+          "search_radius_km",
+          "play_intents"
+        ],
+        "title": "PlayerProfileReadResponse",
+        "description": "The profile facts the Play screens read, in one round trip.\n\n**Three facts and not the whole profile**, and the two absences are\ndifferent absences:\n\nA **standing refusal.** ``gender`` and ``gender_preference`` never come back\nout of this API \u2014 the commit route already promises it (``docs/adr/0096``\n\u00a76) and this route does not weaken it.\n\nA **deferral.** Social tags, photos and the location area are not refused;\nthey are **not served yet**, and this is the route they land on when *You* is\nbuilt rather than a route that acquires a sibling. The one worth naming is\n**photos**: a profile may legally hold none, so an absent ``photo_ids`` is\nthe single deferral a client could read as *you have none* \u2014 which is exactly\nthe vanished-row lie ADR-0109 exists to prevent, arriving through the field\nnobody would check. Tags and a location are required at commit, so their\nabsence cannot be mistaken for an answer.\n\nIt is prose rather than a machine-readable ``withheld`` list: ADR-0130\nalready struck ADR-0109's *and why* half, and a list here would be a field\nwhose only reader is a human, on a route where no client ever counted a row\nthat could go missing.\n\n**No ``player_id``.** The resource is ``/players/me``, so the caller is the\nbearer token and echoing it back would be a fourth fact on a body scoped to\nthree. ``GET /users/me`` is where an id comes from.\n\n**Fields are only ever added.** A shipped mobile app parses this document for\nmonths after it stops being built."
       },
       "PlayerProfileResponse": {
         "properties": {
@@ -3915,6 +4296,20 @@
         ],
         "title": "SearchRadiusBoundsResource",
         "description": "The range a Search radius may take, in whole kilometres.\n\nThe unit is in every field name on purpose: a bare ``minimum`` is one\nrefactor away from being read as metres."
+      },
+      "SearchRadiusResponse": {
+        "properties": {
+          "search_radius_km": {
+            "type": "integer",
+            "title": "Search Radius Km"
+          }
+        },
+        "type": "object",
+        "required": [
+          "search_radius_km"
+        ],
+        "title": "SearchRadiusResponse",
+        "description": "The radius as the profile now holds it."
       },
       "SearchSurface": {
         "type": "string",

@@ -34,14 +34,14 @@ Re-declaring ``COMPETITIVE`` over ``COMPETITIVE`` from a different surface is
 still the same answer, and a stream that grew an event for it would be recording
 that a player did not do anything.
 
-**Nothing writes one yet.** ADR-0094 puts the write path at
-``PUT /api/v1/play-intents/{sport}``, unkeyed — the resource is one player's
-intent in one sport, the same request twice lands the same state, and the no-op
-rule means the second appends nothing — with the rating tail as the required
-first surface and the search screen as the edit surface. That endpoint, the tail
-prompt and the drift detector are ADR-0094's build and are not here; what is here
-is the aggregate and its durable contract, so that when they arrive they append
-to a stream whose shape was decided once.
+**The write path is ADR-0094's own:** ``PUT /api/v1/play-intents/{sport}``,
+unkeyed — the resource is one player's intent in one sport, the same request
+twice lands the same state, and the no-op rule below means the second appends
+nothing. It is built (``presentation/play_intent_routes.py``), with the rating
+tail as the required first surface and the search screen as the edit surface.
+What that route does not carry is the *asking*: the tail prompt is the client's
+screen and the drift detector is a loop that raises a question and writes
+nothing, so every path into this aggregate is a player answering.
 """
 
 from __future__ import annotations

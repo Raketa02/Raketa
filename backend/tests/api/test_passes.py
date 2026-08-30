@@ -23,8 +23,8 @@ from tests.api import matchmaking_world as world
 
 
 @pytest.fixture
-async def searcher(client, session_factory):
-    return await world.a_searcher(client, session_factory)
+async def searcher(client):
+    return await world.a_searcher(client)
 
 
 @pytest.fixture
@@ -229,7 +229,7 @@ async def test_a_pass_is_one_directional(
     would spend their pool on my tap and they would never learn why.
     """
 
-    other = await world.a_searcher(client, session_factory, "mirror")
+    other = await world.a_searcher(client, "mirror")
     third = await world.a_candidate(
         client, session_factory, "bea", mu=searcher["mu"]
     )
