@@ -64,6 +64,16 @@ from app.modules.blocks.infrastructure.event_sourced_block_query import (
 from app.modules.blocks.infrastructure.event_sourced_block_repository import (
     EventSourcedBlockRepository,
 )
+from app.modules.challenges.domain.ports import (
+    ChallengeRepository,
+    OpenChallengeQuery,
+)
+from app.modules.challenges.infrastructure.event_sourced_challenge_repository import (
+    EventSourcedChallengeRepository,
+)
+from app.modules.challenges.infrastructure.event_sourced_open_challenge_query import (
+    EventSourcedOpenChallengeQuery,
+)
 from app.modules.matchmaking.domain.ports import (
     AccountHoldQuery,
     AccountStatusQuery,
@@ -274,6 +284,44 @@ def build_block_query(
     else.
     """
     return EventSourcedBlockQuery(session, (runtime or get_event_runtime()).codec)
+
+
+# --------------------------------------------------------------------------
+# Challenges
+# --------------------------------------------------------------------------
+
+
+def build_challenge_repository(
+    *,
+    event_store: DomainEventStore,
+    events: DomainEventPublisher,
+) -> ChallengeRepository:
+    """Per unit of work, for the same reason every aggregate repository is.
+
+    It remembers the stream versions it loaded, so it must never be longer-lived
+    than the transaction it was built beside: one send's versions must never
+    answer for another's.
+    """
+    return EventSourcedChallengeRepository(event_store=event_store, events=events)
+
+
+def build_open_challenge_query(
+    session: AsyncSession,
+    *,
+    runtime: EventRuntime | None = None,
+) -> OpenChallengeQuery:
+    """*Are any two of these people already arranging a game?*
+
+    Over the **log**, because the standing is derived from the seats and the
+    clock and a projection of it would be a status column with a table around
+    it — right until a deadline passed, wrong until something swept it, and
+    believed throughout. It takes the codec from the event runtime rather than
+    declaring the durable names a second time, for the reason the block query
+    does: a re-declared published contract drifts silently.
+    """
+    return EventSourcedOpenChallengeQuery(
+        session, (runtime or get_event_runtime()).codec
+    )
 
 
 # --------------------------------------------------------------------------

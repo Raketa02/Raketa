@@ -30,12 +30,12 @@ committed ahead of *a decision*, and a speculative list of context names is not 
 context that does not appear below has no vocabulary yet — resolve its terms into this file
 before writing it, which is what the last three sections below are: **Player profile** is
 settled in an accepted ADR and is being built, **Blocks** is settled in an accepted ADR and
-is now built, and **Matchmaking** and **Challenges** are settled and not built at all. Their
-terms are here because that is the order this file asks for, not because the code landed
-first. **Player Score** is a further step out again: nothing about it is decided, and it
-appears only because the matcher has contracted six words it will read, and the words are
-the player's, not the matcher's. Every other section describes code that exists in
-`backend/app/` today.
+is now built, **Matchmaking** is settled and not built at all, and **Challenges** is settled
+and built as far as its aggregate. Their terms are here because that is the order this file
+asks for, not because the code landed first. **Player Score** is a further step out again:
+nothing about it is decided, and it appears only because the matcher has contracted six
+words it will read, and the words are the player's, not the matcher's. Every other section
+describes code that exists in `backend/app/` today.
 
 ### Skill rating (`backend/app/modules/rating/`)
 
@@ -946,8 +946,11 @@ appears here.
 
 ### Challenges (`backend/app/modules/challenges/`)
 
-Settled by [#221](https://github.com/Raketa02/Raketa/issues/221) and **not built**. It is the
-context the matcher has been citing since ADR-0098 without being able to name: `matchmaking`
+Settled by [#221](https://github.com/Raketa02/Raketa/issues/221) and built as far as the
+**aggregate** ([#250](https://github.com/Raketa02/Raketa/issues/250)): the model, its six
+events, the derived Standing and the one-open-challenge-per-pair rule exist; no route serves
+them and nothing sweeps a lapse yet. It is the context the matcher has been citing since
+ADR-0098 without being able to name: `matchmaking`
 ends at a ranked list, and *asking somebody* begins here. It is deliberately **not** called
 `matches` — that word promises results, history and a played game, none of which is in scope —
 and it deliberately does not live inside `matchmaking`, because the matcher reads challenges

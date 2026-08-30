@@ -34,6 +34,10 @@ from app.modules.blocks.application.event_subscriptions import (
     register_block_events,
     subscribe_block_handlers,
 )
+from app.modules.challenges.application.event_subscriptions import (
+    register_challenge_events,
+    subscribe_challenge_handlers,
+)
 from app.modules.player_profile.application.event_subscriptions import (
     register_player_profile_events,
     subscribe_player_profile_handlers,
@@ -96,6 +100,7 @@ def build_event_runtime() -> EventRuntime:
     register_rating_events(catalog)
     register_player_profile_events(catalog)
     register_block_events(catalog)
+    register_challenge_events(catalog)
 
     dispatcher = EventDispatcher()
     subscribe_user_handlers(dispatcher)
@@ -103,6 +108,7 @@ def build_event_runtime() -> EventRuntime:
     subscribe_rating_handlers(dispatcher)
     subscribe_player_profile_handlers(dispatcher)
     subscribe_block_handlers(dispatcher)
+    subscribe_challenge_handlers(dispatcher)
 
     return EventRuntime(
         codec=JsonEventCodec(catalog),

@@ -249,6 +249,29 @@ forbidden_modules =
     redis
 allow_indirect_imports = false
 
+# The matcher ends at a ranked list and *asking somebody* begins in `challenges`,
+# and the whole point of the split is that the matcher reads challenges through a
+# port rather than owning them (#221, #250). The arrow therefore runs
+# `matchmaking -> challenges` and never back — which is a rule about one import
+# statement, and so exactly the kind that is broken by somebody in a hurry
+# reaching for `SentFromSearch` or `Side` because a type with the right shape
+# already exists one directory over. Both are deliberately spelled twice; this is
+# what keeps the second spelling from being deleted as duplication.
+#
+# `allow_indirect_imports = true`, for the reason the configuration fence sets it:
+# `challenges` legitimately imports `player_profile` (the `Window` ADR-0100 puts
+# there) and the Match Fit engine (`SearchMode`), and a strict contract would one
+# day go red naming a module that had done nothing. The violation this exists for
+# is the direct one.
+[importlinter:contract:challenges-does-not-know-the-matcher]
+name = The Challenges context does not import the matcher
+type = forbidden
+source_modules =
+    app.modules.challenges
+forbidden_modules =
+    app.modules.matchmaking
+allow_indirect_imports = true
+
 # `scripts/` holds the offline machines — the ones that read a document, run the
 # engine over it and write the answer back. `scripts/__init__.py` says nothing
 # under `app/` may import from here, and this is what makes that true: the

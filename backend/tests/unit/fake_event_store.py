@@ -39,6 +39,9 @@ from app.application.events.store import (
 )
 from app.infrastructure.events.json_event_codec import JsonEventCodec
 from app.modules.blocks.application.event_subscriptions import register_block_events
+from app.modules.challenges.application.event_subscriptions import (
+    register_challenge_events,
+)
 from app.modules.player_profile.application.event_subscriptions import (
     register_player_profile_events,
 )
@@ -71,6 +74,7 @@ def domain_event_codec() -> JsonEventCodec:
     register_rating_events(catalog)
     register_player_profile_events(catalog)
     register_block_events(catalog)
+    register_challenge_events(catalog)
     return JsonEventCodec(catalog)
 
 

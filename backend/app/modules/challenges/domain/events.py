@@ -1,0 +1,182 @@
+"""The Challenges context's domain events — **six, and none of them a conclusion**.
+
+Events carry **primitive** fields, so their wire format survives any later
+refactor of the Python types: a sport, a mode and a window as their codes, a
+player as a ``str`` uuid, and a whole seat as one string (``seats.py``).
+
+**Two openings.** ``ChallengeSent`` is the ordinary one: an organiser with an
+arrangement, asking everybody on a built court at once. ``ChallengeOpened
+FromMutualInterest`` is the deck's: two people who each said *Let's play* to the
+other, so both seats are accepted from birth, there is no deadline anywhere on
+it and there is no arrangement to propose. It is a **distinct event rather than a
+flag**, because a nullable ``answer_by`` is how a later reader invents a deadline
+that never existed.
+
+**Three answers, one per seat, one player each.** ``SeatAccepted`` is published
+per acceptance and never once at the end: each accept is consequential the moment
+it happens — it admits one person to a conversation that starts as soon as the
+second player is in it — so a chat built later subscribes to these and grows its
+roster rather than querying for a completed line-up. ``SeatLapsed`` is the
+sweep's, and it is emphatically **not** ``SeatDeclined``: *answers challenges* is
+a Strand over challenges that got an answer inside their window, and it is
+unmeasurable if silence and a no are one event.
+
+**One re-seating.** ``SeatsInvited`` carries the **whole** resulting arrangement
+rather than a delta, because completing a half-built line-up moves accepted
+players across the net *and* fills the empty seats in one act; two events would
+let a reader fold a half-applied court nobody built. It is safe to be one because
+a send with nobody new is refused, so there is no rearrange-without-invite path
+to represent — which is also where *once the court is full, the sides are frozen*
+comes from.
+
+**No ``GameOn``, no ``ChallengeDeclined``, no ``ChallengeExpired``.** A derived
+standing has exactly one place to be true (``standing.py``), and an event
+announcing a conclusion the fold already reaches would become the second — and it
+would be the one that got believed.
+
+**Every seating event carries the seats, and that is what makes the log
+queryable.** A challenge's stream id is minted rather than derived from the
+people in it, so *which challenges is this player in* cannot be a keyed read; it
+matches the serialized seats, exactly as the Blocks context's exclusion read
+matches its two player-id fields.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from datetime import datetime
+from uuid import UUID
+
+
+@dataclass(frozen=True)
+class ChallengeSent:
+    """One player's ask to play, sent to everybody on a built court at once.
+
+    ``mode`` is the kind of evening the search was run for, and is ``None``
+    exactly when the send came from a surface that has none — the deck, which
+    deals one card at a time and asks nobody to pick a mode.
+
+    ``window`` is the code derived from the grid **the search actually ran on**,
+    stamped here and never re-derived. That grid does not survive the send, so
+    recording the result is the only way to keep ADR-0100's promise that the
+    window says what the person answering is agreeing to; re-deriving it on read
+    would let the organiser silently change the proposal by editing their week,
+    and a proposal that moves after it is sent is not a proposal.
+    """
+
+    challenge_id: UUID
+    sport: str
+    mode: str | None
+    window: str
+    organiser_id: UUID
+    #: The whole court, in its fixed order: every seat's side, its occupant if it
+    #: has one, and — for an invited seat — that seat's own deadline and the
+    #: origin it was drawn from. See ``seats.py`` for the code.
+    seats: tuple[str, ...]
+    occurred_at: datetime
+
+    def __post_init__(self) -> None:
+        _retuple(self, "seats")
+
+
+@dataclass(frozen=True)
+class ChallengeOpenedFromMutualInterest:
+    """Two *Let's play* yeses that met. **Born accepted, with no deadline.**
+
+    Asking the second player to accept a yes they had already given was the
+    alternative; this exists because *that player has left the deck for good,
+    because you now have an open game together* is true the moment the mutual is
+    detected, and a challenge that had to be answered would make it not yet true.
+
+    It carries **no mode and no window**: nobody picked a kind of evening and no
+    grid was proposed from. The pair are seated in the court's first two
+    positions, which puts them one per side in a singles sport and both on one
+    side in a doubles one — half a game, with a side still to fill.
+
+    ``organiser_id`` is the player whose yes closed the loop. Nothing about the
+    standing turns on it while both seats are accepted; it is the seat the
+    aggregate treats as the proposer's if the game is later completed.
+    """
+
+    challenge_id: UUID
+    sport: str
+    organiser_id: UUID
+    other_player_id: UUID
+    seats: tuple[str, ...]
+    occurred_at: datetime
+
+    def __post_init__(self) -> None:
+        _retuple(self, "seats")
+
+
+@dataclass(frozen=True)
+class SeatAccepted:
+    """One person said yes. **Consequential on its own**, never a step to a total."""
+
+    challenge_id: UUID
+    player_id: UUID
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class SeatDeclined:
+    """One person said no. It reopens **their** seat and disturbs nothing else.
+
+    A judgement, and the reason this is a different event from ``SeatLapsed``
+    rather than an outcome field on one.
+    """
+
+    challenge_id: UUID
+    player_id: UUID
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class SeatLapsed:
+    """One answer window passed with nothing in it.
+
+    Recorded by the sweep, and it buys the **record** rather than correctness:
+    every read is bounded by ``now``, so the seat already reads as lapsed whether
+    or not anything swept it. What this event buys is a durable denominator for
+    *answers challenges* the moment there is a context to count it.
+    """
+
+    challenge_id: UUID
+    player_id: UUID
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class SeatsInvited:
+    """The court as it now stands, and which of its seats are newly asked.
+
+    The whole arrangement travels, because a completion does two things at once —
+    an accepted player crosses the net *and* the empty seats fill — and one event
+    is what stops a reader folding a half-applied court.
+
+    ``newly_invited`` is stated rather than derived: *only the newly seated are
+    invited* is the rule a notification path reads, and asking somebody twice
+    reads as the platform having lost track of them.
+    """
+
+    challenge_id: UUID
+    seats: tuple[str, ...]
+    newly_invited: tuple[str, ...]
+    occurred_at: datetime
+
+    def __post_init__(self) -> None:
+        _retuple(self, "seats", "newly_invited")
+
+
+def _retuple(event: object, *fields: str) -> None:
+    """Force a collection field to a tuple, on the way in and out of storage.
+
+    The codec encodes a tuple as a JSON array and decodes it back as a ``list``,
+    so without this an event that has been through the store is unequal to the
+    event that was appended — and a replay would fold lists where the first pass
+    folded tuples. Frozen dataclasses are assigned through ``object`` for the
+    same reason ``__post_init__`` normalisation always is.
+    """
+
+    for field in fields:
+        object.__setattr__(event, field, tuple(getattr(event, field)))
