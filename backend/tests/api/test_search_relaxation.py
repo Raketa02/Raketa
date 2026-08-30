@@ -203,6 +203,118 @@ async def test_the_pair_that_makes_take_up_a_join_is_recorded(
     assert accepting.offered_by_search_id == offering.id
 
 
+async def test_a_taken_rung_prices_no_second_climb(
+    client, session_factory, candidate_source, searcher
+):
+    """**One climb per search screen.** The ladder does not chain.
+
+    The widened radius *is* the searcher's radius by the time the ladder would be
+    priced, so a rung offered here would be a rung off the widening — and four
+    taps from 8 km would land on the 50 km ceiling without the player being asked
+    once. The widened list is still short and still carries no offer, which is
+    the honest empty state arriving one climb in rather than four.
+    """
+
+    await world.a_candidate(
+        client,
+        session_factory,
+        "past-the-ring",
+        mu=searcher["mu"],
+        latitude=JUST_PAST_THE_RING,
+    )
+    await world.fold_the_log(session_factory, candidate_source)
+    offered = (await world.search(client, searcher["token"])).json()
+    assert {one["rung"] for one in offered["search"]["rung_offers"]} >= {"B", "C"}
+
+    widened = (
+        await world.search(
+            client,
+            searcher["token"],
+            offered_by_search_id=offered["search"]["search_id"],
+            rung="C",
+        )
+    ).json()
+
+    assert len(widened["candidates"]) == 1, "the widening found somebody"
+    assert widened["search"]["pool"]["radius_km_used"] == 20
+    # Empty rather than ``null``: *not computed* is what a long enough list
+    # answers, and this list is not long enough.
+    assert widened["search"]["rung_offers"] == []
+    assert widened["search"]["radius_clamp"] is False
+
+
+async def test_the_second_climb_is_refused_and_twice_the_radius_is_the_furthest(
+    client, session_factory, candidate_source, searcher
+):
+    """The bound is a refusal and not a hidden button.
+
+    Nothing on the widened screen offers a rung, and citing the widened search
+    for one is refused by the same code a widening nobody offered gets — because
+    it *is* a widening nobody offered. Twice the radius the player saved is as
+    far as any accepted offer reaches, and their slider never moved.
+    """
+
+    await world.a_candidate(client, session_factory, "near", mu=searcher["mu"])
+    await world.fold_the_log(session_factory, candidate_source)
+    offered = (await world.search(client, searcher["token"])).json()
+    widened = (
+        await world.search(
+            client,
+            searcher["token"],
+            offered_by_search_id=offered["search"]["search_id"],
+            rung="C",
+        )
+    ).json()
+
+    for rung in ("A", "B", "C"):
+        again = await world.search(
+            client,
+            searcher["token"],
+            offered_by_search_id=widened["search"]["search_id"],
+            rung=rung,
+        )
+        assert again.status_code == 409, again.text
+        assert again.json()["code"] == "rung_offer_not_found"
+
+    assert widened["search"]["pool"]["radius_km_used"] == 20
+    assert await world.saved_radius_km(session_factory, searcher["id"]) == 10
+
+
+async def test_a_climb_that_lands_on_the_ceiling_is_offered_nothing_either(
+    client, session_factory, candidate_source
+):
+    """**``radius_clamp`` still gates every offer.**
+
+    A searcher at 40 km is offered one rung, not two, because both multipliers
+    clamp to the same 50 km — and the search that takes it is at the slider's own
+    maximum, where there was never anything left to offer. The two bounds agree
+    rather than one covering for the other.
+    """
+
+    _, token = await world.register(client, "nearly-at-the-ceiling")
+    await world.commit_profile(client, token, search_radius_km=40)
+    await world.rate(client, token)
+    await world.declare_intent(client, token)
+    await world.fold_the_log(session_factory, candidate_source)
+    offered = (await world.search(client, token)).json()
+    assert [one["rung"] for one in offered["search"]["rung_offers"]] == ["B"], (
+        "two multipliers that clamp to one radius are offered once"
+    )
+
+    climbed = (
+        await world.search(
+            client,
+            token,
+            offered_by_search_id=offered["search"]["search_id"],
+            rung="B",
+        )
+    ).json()
+
+    assert climbed["search"]["pool"]["radius_km_used"] == 50
+    assert climbed["search"]["rung_offers"] == []
+    assert climbed["search"]["radius_clamp"] is True
+
+
 async def test_a_widening_nobody_offered_is_refused(
     client, session_factory, candidate_source, searcher
 ):

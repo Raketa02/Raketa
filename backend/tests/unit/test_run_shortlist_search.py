@@ -242,8 +242,39 @@ class Store:
             raise RuntimeError("the search table is unreachable")
         self.written.append(search)
 
-    async def find(self, **_: object) -> None:  # pragma: no cover
+    async def find(
+        self, *, search_id: UUID, searcher_id: UUID
+    ) -> SearchRecord | None:
+        """The row this store wrote, or nothing. **Their own row only.**
+
+        A rung is taken by citing the search that offered it, so a stub that
+        always answered ``None`` could not tell *nobody offered that* from *the
+        offer is right there* — which is the whole of what the ladder's bound is
+        about.
+        """
+
+        for search in self.written:
+            if search.id == search_id and search.searcher_id == searcher_id:
+                return search
         return None
+
+    async def widenings_taken(
+        self, *, searcher_id: UUID, sport: Sport, radius_km: int
+    ) -> int:
+        """This radius, taken by this searcher, counted off the rows themselves.
+
+        The rows are the only place a taken rung is recorded — a widen touches
+        no profile — so the stub counts them rather than answering a constant.
+        """
+
+        return sum(
+            1
+            for search in self.written
+            if search.searcher_id == searcher_id
+            and search.sport is sport
+            and search.rung_taken is not None
+            and search.pool_description.radius_km_used == radius_km
+        )
 
 
 @dataclass
@@ -495,6 +526,96 @@ async def test_an_engine_that_raises_takes_the_feature_down():
         await use_case(rows=(build.row(1),), engine=ARefusingEngine()).execute(
             a_command()
         )
+
+
+# ---------------------------------------------------------------------------
+# One climb per search screen
+# ---------------------------------------------------------------------------
+
+
+async def test_a_search_that_took_a_rung_prices_no_second_climb():
+    """**The ladder does not chain.**
+
+    The widened radius *is* the searcher's radius by the time the ladder is
+    priced, so a rung offered on a search that already took one would be a rung
+    off the widening — and four taps from 8 km would land on the 50 km ceiling
+    without the player being asked once. ``relaxation.py``'s *there is no third
+    radius rung* is that sentence, and this is where it binds.
+    """
+
+    store = Store()
+    search = use_case(rows=(build.row(1),), store=store)
+    offered = await search.execute(a_command())
+    assert offered.record.rung_offers, "nothing was offered; this proves nothing"
+
+    climbed = await search.execute(
+        a_command(offered_by_search_id=offered.record.id, rung=Rung.B)
+    )
+
+    assert climbed.record.rung_taken is Rung.B
+    assert climbed.record.rung_offers == ()
+
+
+async def test_a_times_rung_ends_the_ladder_exactly_as_a_radius_rung_does():
+    """**By climb and not by ask.**
+
+    The guard reads ``rung_taken``, so the cheapest rung spends the climb too.
+    A then B would be two climbs on one screen, and rung A can **evict** — a
+    radius rung priced after it would be priced over a population the player
+    never chose. All three rungs travel on the offer, so somebody who wants
+    distance takes the radius rung and is not made to spend the climb on times.
+    """
+
+    week = ((3, "EVENING"),)
+    store = Store()
+    search = use_case(
+        rows=(
+            build.row(1, mu=3.22, slots=("2:EVENING",)),
+            build.row(2, mu=3.22, slots=("2:EVENING",)),
+        ),
+        store=store,
+    )
+    offered = await search.execute(a_command(availability_override=week))
+    times = [
+        offer for offer in offered.record.rung_offers or () if offer.rung is Rung.A
+    ]
+    assert times and times[0].slot == "2:EVENING", "no times rung; this proves nothing"
+
+    climbed = await search.execute(
+        a_command(
+            availability_override=week,
+            offered_by_search_id=offered.record.id,
+            rung=Rung.A,
+        )
+    )
+
+    assert climbed.record.rung_taken is Rung.A
+    assert climbed.record.rung_offers == (), "the radius rungs did not survive it"
+
+
+async def test_the_climbed_search_says_empty_and_never_not_computed():
+    """**No new field, on the request or the response.**
+
+    ``null`` already means *your list was long enough that nobody priced a rung*,
+    which is false about a list that is still short. So the refusal is an empty
+    list, and the record's own ``rung_taken`` beside it is what tells the two
+    empties apart.
+    """
+
+    plenty = tuple(build.row(one) for one in range(1, 8))
+    long_enough = await use_case(rows=plenty).execute(a_command())
+    assert long_enough.record.rung_offers is None, "the other empty, spelled null"
+
+    store = Store()
+    search = use_case(rows=(build.row(1),), store=store)
+    offered = await search.execute(a_command())
+
+    climbed = await search.execute(
+        a_command(offered_by_search_id=offered.record.id, rung=Rung.B)
+    )
+
+    assert climbed.record.rung_offers == ()
+    assert climbed.record.rung_taken is Rung.B, "and this is what tells them apart"
 
 
 # ---------------------------------------------------------------------------

@@ -21,6 +21,12 @@ while distance costs travel on every game forever. **There is no third radius
 rung**: tripling still leaves 15% of searches under five candidates at launch
 density, so past double it mostly spends the player's travel budget on failing.
 
+**And the ladder does not chain**, which is the same sentence said about taps
+rather than about multipliers. A search that took a rung prices none, so the
+furthest any accepted offer reaches is ×2.0 of the radius the player themselves
+saved — enforced in ``run_shortlist_search.py``'s ``_ladder``, because a bound
+that lives only in a comment is four taps from the ceiling.
+
 **Every rung clamps to the profile slider's own ceiling.** A relaxation may never
 offer a radius the player could not have set for themselves, which is the same
 principle as *a rung may only relax what the searcher asked for*, applied to the

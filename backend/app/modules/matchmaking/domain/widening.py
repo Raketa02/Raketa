@@ -105,6 +105,22 @@ class Ladder:
         return tuple(rung.offer for rung in self.rungs)
 
 
+def nothing_priced(radius_km: int) -> Ladder:
+    """A ladder with no rung on it, for a search that may not be offered one.
+
+    **The clamp bit still tells the truth.** It answers *how many searchers are
+    already at the slider's ceiling*, which is a fact about the radius this
+    search ran at and not about whether anybody priced a rung — so it is read
+    here rather than defaulted, exactly as it is on a ladder that was priced.
+
+    It is here rather than at the call site so that *no rungs* is one shape with
+    one author: a caller assembling the empty ladder itself would be a second
+    opinion about what an unpriced ladder looks like.
+    """
+
+    return Ladder(rungs=(), radius_clamped=radius_ladder(radius_km).clamped)
+
+
 def ladder_for(
     context: SearchContext, engine: MatchFit, *, strict_above_floor: int
 ) -> Ladder:

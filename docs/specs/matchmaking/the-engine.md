@@ -779,6 +779,15 @@ the offers are computed at all**; it triggers nothing. **An accepted widen is a 
 the one that offered it**, scoped to that search, never a silent profile write — and afterwards
 the app may offer to make it permanent, inline, bounded by the player's own slider.
 
+**One climb per search screen.** A search that took a rung is offered none: the widening is the
+searcher's own radius by the time a ladder would be priced, so a second rung would be priced off
+the first and four taps from 8 km would land on the 50 km ceiling without the player being asked
+once. *There is no third radius rung* is the same sentence said about multipliers, and this is
+where it binds — **×2.0 of the radius the player saved is the furthest any accepted offer
+reaches.** The climbed search answers an **empty** `rung_offers` rather than `null`, because `null`
+already means *the list was long enough that nobody priced a rung*; `rung_taken` beside it on the
+same row is what tells the two empties apart, and **no field was added for it**.
+
 ⚠ **Rung A can evict.** Adding a slot to the searcher's grid takes every candidate who does not
 share it from `s/m` to `s/(m+1)`. At `|mine| = 3` one unhelpful slot costs **3.5 for-fun points**.
 Nothing is hidden — the offered count is a real re-run — but relaxation that evicts is a real

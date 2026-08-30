@@ -93,7 +93,7 @@ own future.
 
 | Column | Notes |
 |---|---|
-| `rung_offers` | JSONB: which of A/B/C were offered and each one's **real count**; `null` when `n_returned ≥ MIN_SHORTLIST` meant offers were not computed at all — which is itself the falsifier for `MIN_SHORTLIST` |
+| `rung_offers` | JSONB: which of A/B/C were offered and each one's **real count**; `null` when `n_returned ≥ MIN_SHORTLIST` meant offers were not computed at all — which is itself the falsifier for `MIN_SHORTLIST`. **Empty on a search that took a rung**, because the ladder does not chain: `rung_taken` on the same row is what tells *nothing left to offer* from *you already climbed*, and no column was added for it |
 | `radius_clamp_bit` | Whether the widening ceiling clamped to the profile's own maximum. Tells you how many searchers are already at the ceiling |
 | `offered_by_search_id` | Nullable self-reference: the search whose offer this one accepts |
 | `rung_taken` | Nullable: `A` \| `B` \| `C`. Set on the **accepting** search, beside `offered_by_search_id` |

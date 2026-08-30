@@ -80,7 +80,11 @@ from app.modules.matchmaking.domain.shortlist import (
     run,
 )
 from app.modules.matchmaking.domain.sorting import of_scored, sorts_available
-from app.modules.matchmaking.domain.widening import Ladder, ladder_for
+from app.modules.matchmaking.domain.widening import (
+    Ladder,
+    ladder_for,
+    nothing_priced,
+)
 from app.modules.player_profile.domain.availability import (
     AvailabilityGrid,
     window_of,
@@ -200,7 +204,7 @@ class RunShortlistSearch:
 
         returned = tuple(row.scored for row in rows)
         with self._work.timed(stages, "relaxation"):
-            ladder = self._ladder(context, shortlist, shown=len(rows))
+            ladder = self._ladder(context, shortlist, asked, shown=len(rows))
         record = SearchRecord(
             id=new_uuid(),
             searcher_id=searcher.player_id,
@@ -259,7 +263,12 @@ class RunShortlistSearch:
     # -- the ladder ----------------------------------------------------------
 
     def _ladder(
-        self, context: SearchContext, shortlist: Shortlist, *, shown: int
+        self,
+        context: SearchContext,
+        shortlist: Shortlist,
+        asked: AskedFor,
+        *,
+        shown: int,
     ) -> Ladder | None:
         """Every rung available to this searcher, priced — or nothing at all.
 
@@ -279,10 +288,39 @@ class RunShortlistSearch:
         populations and comparing them would be the arithmetic error: a rung's
         count is only ever set beside ``n_cleared_floor``, which is the same
         measurement taken at the same place.
+
+        **One climb per search screen.** A search that is itself a taken rung
+        prices no further rung. The widening is the searcher's own radius by the
+        time this reads it, so a ladder priced here would be a ladder off the
+        widening — and four taps from 8 km would land on the 50 km ceiling
+        without the player being asked once. ``relaxation.py``'s *there is no
+        third radius rung* is that sentence, and this is where it is enforced:
+        two rungs is the whole ladder, and ×2.0 of the searcher's saved radius is
+        the furthest any accepted offer reaches.
+
+        **By climb and not by ask.** The guard reads ``rung_taken`` rather than
+        *did the radius move*, so a **times** rung ends the ladder too, and
+        neither reason for that is about distance. *One climb per search screen*
+        is the rule, and A then B is two climbs on one screen. And rung A can
+        **evict** (``widening.py``): pricing a radius rung against a grid the
+        engine has just widened would price it over a population the player never
+        chose. All three rungs travel on the offer and their order is a
+        recommendation rather than a lock (``docs/adr/0099`` §2), so a player who
+        wants distance takes the radius rung — they are not made to spend their
+        one climb on the cheapest.
+
+        The refusal is an **empty ladder and never nothing**, because the two
+        spellings already mean different things on the wire: ``null`` is *your
+        list was long enough that nobody priced a rung*, which is false about a
+        short list. Nothing new is recorded for it — the record's own
+        ``rung_taken`` sits beside the empty list and is what says why it is
+        empty.
         """
 
         if shown >= self._ruleset.floors.min_shortlist:
             return None
+        if asked.rung_taken is not None:
+            return nothing_priced(context.searcher.radius_km)
         try:
             return ladder_for(
                 context,

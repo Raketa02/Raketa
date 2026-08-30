@@ -509,6 +509,11 @@ class SearchEnvelope(BaseModel):
             "shortlist was long enough that nobody needed them. An empty list "
             "means they were computed and there is nothing left to offer, which "
             "is the honest empty state: the pool beside it is the whole answer."
+            "\n\n"
+            "**A search that took a rung is offered none**: one climb per search "
+            "screen, so the widest any accepted offer reaches is twice the "
+            "radius you saved. That search's list is empty rather than `null`, "
+            "and `rung_taken` beside it is what tells the two empties apart."
         ),
     )
     prompts: list[PromptSchema] = Field(

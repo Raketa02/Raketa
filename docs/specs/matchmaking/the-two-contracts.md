@@ -193,7 +193,13 @@ is part of what widening costs, and ADR-0099's whole argument for offered-not-ap
 the player sees the cost before paying it.
 
 **`rung_offers: null`** means the offers were not computed at all — the shortlist cleared
-`MIN_SHORTLIST`. An empty list would mean computed and none available. See §7.
+`MIN_SHORTLIST`. An **empty list** means computed and none available, and it has two causes the
+client does not have to tell apart: there was nothing left to offer, or **this search took a rung
+and the ladder does not chain**. One climb per search screen, so the widest any accepted offer
+reaches is ×2.0 of the radius the player saved. The two empties are told apart on the **record**,
+by `rung_taken` beside the list ([`search-telemetry.md`](search-telemetry.md) §2) — **no field was
+added to this envelope for it**, and a client that renders an empty list as *nothing left to
+offer* is right either way. See §7.
 
 **`index_stale`** is the flag; the threshold that turns it into a refusal belongs to
 [The matcher's picture of the city](https://github.com/Raketa02/Raketa/issues/173), not here.
