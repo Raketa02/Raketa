@@ -24,6 +24,7 @@ from app.api.dependencies import ClockDep, DbSession, UnitOfWorkDep
 from app.modules.matchmaking.infrastructure.interest_model import InterestORM
 from app.bootstrap.composition import (
     build_interest_ledger,
+    build_mutual_challenge_minting,
     build_ruleset,
     build_search_store,
 )
@@ -541,6 +542,7 @@ def _cap_at(client, *, one: int) -> None:
             ruleset=tightened,
             interest=build_interest_ledger(db),
             searches=build_search_store(db),
+            challenges=build_mutual_challenge_minting(db),
             unit_of_work=uow,
         )
 

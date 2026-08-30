@@ -41,8 +41,8 @@ from app.modules.matchmaking.domain.cards import CardIdentity
 from app.modules.matchmaking.domain.candidate_index import Partition
 from app.modules.matchmaking.domain.candidate_snapshot import CandidateSnapshot
 from app.modules.matchmaking.domain.declines import DECLINE_SUPPRESS
+from app.shared.domain.errors import AccountHeld
 from app.modules.matchmaking.domain.errors import (
-    AccountHeld,
     GateDataUnavailable,
     IndexTooStale,
     MatchmakingUnavailable,

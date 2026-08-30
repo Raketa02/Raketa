@@ -20,9 +20,13 @@ name, is what history is recorded under.
 - **The matchmaking module's four durable ledgers are exempt**, by decision rather than
   by oversight: the `search` record, `interest`, the **pass** record and the **prompt
   decline** are event-free (`the-engine.md` §12 — *nothing here is event-sourced*). All
-  four are small facts with an identity and no life story, and nothing downstream reacts
-  to one being written — the suppression a pass writes is a cache the use case fills after
-  its commit, not a subscriber, and a decline is read by one filter on the next search.
+  four are small facts with an identity and no life story, and nothing **subscribes** to
+  one being written — the suppression a pass writes is a cache the use case fills after
+  its commit, not a subscriber, and a decline is read by one filter on the next search. A
+  mutual yes does open a challenge, and it is a **call in the same transaction** rather
+  than a subscription (#251, #222): the promise it keeps — *that player has left the deck
+  for good* — is false for as long as a poller takes. The row itself still earns no
+  event.
   The authority is `the-engine.md` §12, which names all four and says *nothing here is
   event-sourced*; ADR-0128 decides what a pass **is** and does not speak to event
   sourcing, and ADR-0094 says of the decline in its own words that *declining a prompt is

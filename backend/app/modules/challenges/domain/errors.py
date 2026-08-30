@@ -8,17 +8,37 @@ The second is about **answering**, and it is where the rules that look
 inconvenient live: a seat is answered once, by the person holding it, inside
 their own window.
 
-**No refusal here names anybody.** ``AppError.details`` is untyped, invisible to
-the central response fence and ungeneratable against the API contract, so a
-refusal states the class of problem and the client re-reads the sources it
-already owns to find out who. That is one exemption not bought, and the
-open-challenge refusal is the one where it matters: a payload naming the pair
-would be a disclosure route through an error message.
+The third family arrived with the send, and it is about **other people's live
+state**: the four fail-closed gates, re-verified in the send's own transaction
+over a court that may have been built an hour ago.
+
+**No refusal here names anybody, and none of them carries a payload.**
+``AppError.details`` is untyped, invisible to the central response fence and
+ungeneratable against the API contract, so a refusal states the class of problem
+and the client re-reads the sources it already owns to find out who
+(``docs/adr/0130`` admits exactly one field against *nobody may ask who was
+withheld*, and says in its own words that the single exemption is what keeps it a
+rule). That is one exemption not bought, and it matters twice over: a payload
+naming the pair on the open-challenge refusal would be a disclosure route through
+an error message, and a payload naming the withheld seat on the gate refusal
+would be a **block detector** handed to the person the block is invisible to.
+
+**The hold refuses with ``account_held``, which is declared in
+``app/shared/domain/errors.py``** rather than a second time here. It is one fact
+with one remedy and it must cross as one code; the class is shared for the same
+reason the *port* is not.
 """
 
 from __future__ import annotations
 
-from app.shared.domain.errors import BadRequestError, ConflictError, ForbiddenError
+from app.shared.domain.errors import (
+    AppError,
+    BadRequestError,
+    ConflictError,
+    ForbiddenError,
+    NotFoundError,
+)
+from http import HTTPStatus
 
 
 class CannotChallengeYourself(BadRequestError):
@@ -208,3 +228,105 @@ class AnOpenChallengeStandsWithThisPair(ConflictError):
             "Somebody on this court already has an open challenge with "
             "somebody else on it."
         )
+
+
+class TheLineUpIsNoLongerSendable(ConflictError):
+    """One of the four fail-closed gates now refuses somebody on this court.
+
+    A block either way, a hold, an account ``users`` may not show, or the mutual
+    gender preference — **indistinguishably**, and about a seat this refusal does
+    not name. Four gates behind one code is the same posture ``read_back_search``
+    takes one screen earlier and for the same reason: a block is invisible to the
+    person it was taken against, a hold and an account state are moderation facts
+    about somebody else, and a gender preference is a safety setting whose owner
+    is the only person entitled to read it.
+
+    **Whole-send, never per-seat.** A send that quietly dropped the refused
+    invitee would hand the organiser an arrangement they did not choose, which is
+    the harm recording the arrangement exists to prevent arriving through the
+    safety check. So nothing is written and there is no half-sent challenge to
+    reconcile.
+
+    **The remedy is to read the origin search back**, which re-evaluates the same
+    four gates and marks the rows it withholds. Nothing new is disclosed, no
+    second exemption is bought, and the line-up keeps the ``search_id`` it was
+    built on — re-running the pool would mint a new id the whole line-up must
+    adopt, and its untouched seats are only *probably* in the new answer.
+    """
+
+    code = "line_up_no_longer_sendable"
+
+    def __init__(self, message: str | None = None) -> None:
+        super().__init__(
+            message
+            or "Somebody on this court can no longer be invited to it."
+        )
+
+
+class TheCourtDidNotComeFromThatSearch(ConflictError):
+    """The cited search cannot place this court.
+
+    **Four cases and one code**, exactly as the *Let's play* origin refuses: the
+    search does not exist, it is somebody else's, it was run for another sport,
+    or it never returned one of these people. Telling them apart would answer
+    *does this search_id exist* about a stranger's id, one probe at a time.
+
+    A send is bound to **one** search, because that is what the arrangement was
+    built and forecast against. It is not an authorization check standing in for
+    the gates — those run afterwards, live — it is what makes every seat's origin
+    true by construction rather than by a client being honest about it.
+    """
+
+    code = "court_origin_not_found"
+
+    def __init__(self) -> None:
+        super().__init__(
+            "No search of yours showed all of those players for that sport."
+        )
+
+
+class TheGatesCouldNotBeEvaluated(AppError):
+    """A safety gate could not be read, so nothing is minted.
+
+    **The fail-closed rule as a class** (``docs/adr/0095`` §5). A term that
+    cannot be evaluated stands down; a *gate* that cannot be evaluated excludes,
+    and at the send that means the whole send refuses rather than writing a
+    challenge nobody verified.
+
+    A 503 and not a 500 because the failure is transient and about the platform,
+    never about the caller: the code tells a client to retry the same request
+    rather than to change it. **Its own code and deliberately not the matcher's**
+    ``gate_data_unavailable``, for the reason ``BlockStateUnavailable`` is not
+    that code either — a consumer catches somebody else's outage and re-raises
+    its own refusal, which is what stops this context importing the matcher's
+    error class.
+
+    It reaches ``POST /api/v1/interest`` too, and that is the honest answer
+    there: a mutual yes mints a challenge inline, in the same transaction, so a
+    gate this build cannot read is a yes this build cannot finish. The retry is
+    safe — a second tap creates nothing and re-runs the mint.
+    """
+
+    status_code = HTTPStatus.SERVICE_UNAVAILABLE
+    code = "challenge_gates_unavailable"
+
+
+class NoChallengeOfYoursHasThatId(NotFoundError):
+    """A challenge id that names nothing this reader holds a seat in.
+
+    **Two cases and one code, deliberately.** The challenge does not exist, or it
+    exists and this player is not on its court — and the two answer identically,
+    because an answer that separated them would tell a caller whether a stranger's
+    challenge id is real. That is a directory of other people's evenings, read one
+    probe at a time, and it is the same refusal ``search_not_found`` already makes
+    about the same class of question.
+
+    ``NotYourSeat`` is **not** this and is not reachable from the routes: it is the
+    aggregate's own invariant, refusing an answer given on somebody else's behalf
+    by a caller that has already been handed the challenge.
+    """
+
+    code = "challenge_not_found"
+
+    def __init__(self) -> None:
+        super().__init__("No challenge of yours has that id.")

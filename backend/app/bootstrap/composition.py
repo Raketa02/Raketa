@@ -64,9 +64,22 @@ from app.modules.blocks.infrastructure.event_sourced_block_query import (
 from app.modules.blocks.infrastructure.event_sourced_block_repository import (
     EventSourcedBlockRepository,
 )
+from app.modules.challenges.application.court_safety import CourtSafety
+from app.modules.challenges.application.open_from_mutual_interest import (
+    OpenChallengeFromMutualInterest,
+)
 from app.modules.challenges.domain.ports import (
+    AccountHoldQuery as ChallengeAccountHoldQuery,
+    ChallengeDirectory,
     ChallengeRepository,
     OpenChallengeQuery,
+    OriginSearchQuery,
+)
+from app.modules.challenges.infrastructure.absent_providers import (
+    NoHoldsExist as NoChallengeHoldsExist,
+)
+from app.modules.challenges.infrastructure.event_sourced_challenge_directory import (
+    EventSourcedChallengeDirectory,
 )
 from app.modules.challenges.infrastructure.event_sourced_challenge_repository import (
     EventSourcedChallengeRepository,
@@ -143,6 +156,15 @@ from app.modules.matchmaking.infrastructure.sqlalchemy_prompt_decline_ledger imp
 )
 from app.modules.matchmaking.infrastructure.sqlalchemy_search_store import (
     SqlAlchemySearchStore,
+)
+from app.modules.matchmaking.domain.mutual_challenge import (
+    MutualChallengeMinting,
+)
+from app.modules.matchmaking.infrastructure.challenges_mutual_challenge import (
+    ChallengesMutualChallenge,
+)
+from app.modules.matchmaking.infrastructure.search_court_origin import (
+    SearchCourtOrigin,
 )
 from app.modules.matchmaking.infrastructure.users_account_status import (
     UsersAccountStatus,
@@ -321,6 +343,94 @@ def build_open_challenge_query(
     """
     return EventSourcedOpenChallengeQuery(
         session, (runtime or get_event_runtime()).codec
+    )
+
+
+def build_challenge_directory(
+    session: AsyncSession,
+    *,
+    runtime: EventRuntime | None = None,
+) -> ChallengeDirectory:
+    """*What have I been asked, and what have I asked for* — over the log.
+
+    Over the log for the reason the open-challenge query is: there is no standing
+    to project, because a standing is a fold of the seats against a clock and a
+    stored one would be wrong for the whole gap between a deadline and a sweep.
+    """
+    return EventSourcedChallengeDirectory(
+        session, (runtime or get_event_runtime()).codec
+    )
+
+
+def build_challenge_hold_query(session: AsyncSession) -> ChallengeAccountHoldQuery:
+    """``cases`` does not exist, so nothing can hold an account.
+
+    **The second line in this file that says so**, and the duplication is the
+    decision rather than an oversight: ``challenges`` declares its own hold port
+    because it may not import the matcher, and a shared declaration would mean a
+    send reading a safety fact through a context it was split away from. On the
+    day ``cases`` ships, this line and ``build_account_hold_query`` change to the
+    same adapter.
+    """
+    return NoChallengeHoldsExist()
+
+
+def build_court_safety(session: AsyncSession) -> CourtSafety:
+    """The four fail-closed gates, over the providers that own each fact.
+
+    Three of the four are somebody else's shipped port — ``blocks``, ``users``
+    and ``player_profile`` — and only the hold is answered by an empty provider.
+    Assembled here rather than at each surface so that the send and the
+    mutual-born mint cannot come to two answers about which reads fail closed.
+    """
+    return CourtSafety(
+        blocks=build_block_query(session),
+        holds=build_challenge_hold_query(session),
+        accounts=build_user_repository(session),
+        profiles=build_player_profile_repository(
+            event_store=build_domain_event_store(session),
+            events=build_event_publisher(session),
+        ),
+    )
+
+
+def build_origin_search_query(session: AsyncSession) -> OriginSearchQuery:
+    """What the search a court was built on says about that court.
+
+    An outward demand ``challenges`` makes and the matcher signs, so the adapter
+    is the matcher's and this line is where the two meet. The alternative — a
+    window and a position on the request body — is the one thing
+    ``docs/adr/0100`` has no picker for and the one thing the origin key may not
+    take a client's word for.
+    """
+    return SearchCourtOrigin(build_search_store(session))
+
+
+def build_mutual_challenge_minting(
+    session: AsyncSession,
+    *,
+    runtime: EventRuntime | None = None,
+) -> MutualChallengeMinting:
+    """The challenge two yeses that met open, minted inline.
+
+    It wraps a ``challenges`` use case rather than an aggregate: what a
+    mutual-born challenge *is* belongs to that context, and the adapter is a
+    translation of one sentence into another.
+
+    **No unit of work here.** The mint joins the transaction of the yes that
+    caused it, so the use case appends and publishes and the caller commits — the
+    boundary stays a decision about the command.
+    """
+    return ChallengesMutualChallenge(
+        OpenChallengeFromMutualInterest(
+            challenges=build_challenge_repository(
+                event_store=build_domain_event_store(session),
+                events=build_event_publisher(session),
+            ),
+            open_challenges=build_open_challenge_query(session, runtime=runtime),
+            safety=build_court_safety(session),
+            clock=build_clock(),
+        )
     )
 
 

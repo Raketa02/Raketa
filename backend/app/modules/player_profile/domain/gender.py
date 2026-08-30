@@ -19,14 +19,20 @@ The words are plain deliberately. A euphemism would fail the matchmaking
 engine's third refusal: it never produces something it cannot explain in one
 sentence.
 
-**The gate that reads these is not here, and must not move here.** ADR-0096
-fences it: gender reaches candidate generation and gating, is *absent* from the
-type handed to ``app/engines/matchfit/``, and inside the matcher the gate is its
-only reader. That gate is mutual — a candidate is eligible only if they pass the
-searcher's preference **and** the searcher passes theirs — and it belongs in the
-module where the matching I/O is, once that module exists. Writing the
-comparison here would put a matching rule in the vocabulary that the scorer's
-own context imports, which is the one place the fence has to hold.
+**The gate that reads these is not in this module, and must not move into
+it.** ADR-0096 fences it: gender reaches candidate generation and gating, is
+*absent* from the type handed to ``app/engines/matchfit/``, and no response ever
+carries either value. Writing the comparison **here** would put a matching rule
+in the vocabulary the scorer's own context imports, which is the one place the
+fence has to hold.
+
+It lives one file over, in ``mutual_preference.py``, and it arrived there when
+the send became its third caller: ``matchmaking -> challenges`` and never back,
+so a send re-verifying the gate in its own transaction cannot reach the matcher's
+copy, and a second implementation of a mutual safety gate is the thing that ends
+up satisfied in one place and not the other. The **reading** stayed with each
+caller — an index row in a search, live profiles in a send — and only the
+judgement moved.
 
 Neither value crosses the wire outward. ``SearchContext`` will carry a
 preference *in*; no response shape carries a gender value *out*, and no card

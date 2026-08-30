@@ -11,6 +11,9 @@ from fastapi import APIRouter
 from app.api.v1.sports import router as sports_router
 from app.modules.auth.presentation.routes import router as auth_router
 from app.modules.blocks.presentation.routes import router as blocks_router
+from app.modules.challenges.presentation.routes import (
+    router as challenges_router,
+)
 from app.modules.matchmaking.presentation.deck_routes import (
     passes_router,
     router as deck_router,
@@ -64,3 +67,4 @@ player_api_router.include_router(interest_router)
 player_api_router.include_router(deck_router)
 player_api_router.include_router(passes_router)
 player_api_router.include_router(prompt_declines_router)
+player_api_router.include_router(challenges_router)

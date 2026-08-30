@@ -17,15 +17,42 @@ unanswered is pestering with a sport chip on it. The matcher's own
 ``OpenChallenge`` carries no sport field at all, so this is the rule its shipped
 contract already assumed rather than a new restriction — which is why nothing on
 this port takes a ``Sport``.
+
+Three more seams arrived with the send, and each is here for a different reason.
+
+``AccountHoldQuery`` is a **duplicated null object**, and the duplication is the
+decision. The matcher declares a port of the same shape against the same absent
+provider (``cases``), and this context may not import it — the arrow runs
+``matchmaking -> challenges`` and never back. Sharing it would mean the send
+reading a safety fact through the matcher, which is the coupling the split
+exists to prevent; what is duplicated instead is an empty answer about a
+provider that does not exist, which is not what the fence was guarding. The
+other three fail-closed gates need no port here at all: ``blocks`` and ``users``
+own theirs and ship them, and a profile is read through
+``player_profile``'s own repository.
+
+``OriginSearchQuery`` is an **outward demand on the matcher**, signed by an
+adapter on the other side of the arrow. The send has to know the window the
+search ran on and where each invitee sat in it, and neither is a thing a client
+may state: ``docs/adr/0100`` has no window picker anywhere, and a position a
+client sent would be true only while the client was honest about where it had
+scrolled to.
+
+``ChallengeDirectory`` is the read behind *your own challenges* — the source the
+client re-reads when a send is refused on the pair rule, and the one an invitee
+opens to find that they were asked.
 """
 
 from __future__ import annotations
 
-from typing import Collection, Protocol, runtime_checkable
+from dataclasses import dataclass
+from typing import Collection, Mapping, Protocol, final, runtime_checkable
 from uuid import UUID
 
-from app.kernel import Instant
+from app.engines.matchfit.core import SearchMode
+from app.kernel import Instant, Sport
 from app.modules.challenges.domain.challenge import Challenge
+from app.modules.player_profile.domain.availability import Window
 
 
 @runtime_checkable
@@ -94,5 +121,128 @@ class OpenChallengeQuery(Protocol):
         It answers in **unordered pairs**, because there is nothing for a caller
         to learn from the direction. Sharing a line-up makes a pair regardless of
         who organised it.
+        """
+        ...
+
+
+@runtime_checkable
+class AccountHoldQuery(Protocol):
+    """Whether an account is under a live hold. **One boolean per player.**
+
+    ``docs/adr/0095``: live, **both directions** — a held organiser is refused at
+    the entry point rather than merely withheld from other people's courts — and
+    **fail-closed**, because a gate that cannot be evaluated excludes.
+
+    **This is the matcher's port, spelled a second time, and that is deliberate.**
+    Its provider is ``cases``, which does not exist; both contexts therefore wire
+    an empty answer that is *measured* rather than stubbed — nobody can be held
+    because nothing can hold anybody. What a shared declaration would buy is one
+    fewer file; what it would cost is this context importing the matcher to ask a
+    safety question, which is the one import the boundary forbids. A duplicated
+    null object is not the thing that fence was guarding.
+
+    It answers with player ids and nothing else: no case, no opened-at, no
+    severity, no count. There is nothing here to weigh, and nothing a refusal
+    could carry.
+    """
+
+    async def held_among(self, player_ids: Collection[UUID]) -> frozenset[UUID]:
+        """Which of these players are under a live hold, right now.
+
+        One set read over the whole court rather than a query per seat, which is
+        the block mask's shape and for the block mask's reason. The organiser's
+        own id goes in beside the invitees' — the gate points both ways, and
+        asking in one call is what stops one direction being forgotten.
+
+        Answers only about ids it was asked about.
+        """
+        ...
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class CourtOrigin:
+    """What the search a court was built on says about that court.
+
+    Three facts the send may not take from a client:
+
+    ``window`` is **derived at send from the grid the search ran on**
+    (``docs/adr/0100``) and stamped onto the challenge. There is no window picker
+    anywhere and never will be: a player changes their window by changing their
+    grid, which is the same act that changes their matches.
+
+    ``sport`` and ``mode`` are the search's own, so a court cannot claim to be a
+    padel evening because a client said so. ``mode`` is ``None`` exactly when the
+    surface had none — the deck deals one card at a time and asks nobody to pick
+    one.
+
+    ``positions`` is where each invitee sat in that search, which is the origin
+    key's other half. It is **read, never sent**, so the telemetry join is true
+    by construction (``search-telemetry.md`` §19.2).
+    """
+
+    sport: Sport
+    mode: SearchMode | None
+    window: Window
+    positions: Mapping[UUID, int]
+
+
+@runtime_checkable
+class OriginSearchQuery(Protocol):
+    """*Did a search of yours show all of these people, and what did it ask?*
+
+    An outward demand on the matcher, signed by an adapter that lives on the
+    matcher's side of the arrow. The send needs the search's own reading of
+    itself and cannot go and get it: ``challenges`` may not import
+    ``matchmaking``.
+
+    **One question and not three.** A caller that asked *which sport*, *which
+    window* and *where did each of them sit* separately would be three reads of
+    one immutable record, and a court assembled from two of them and refused on
+    the third.
+    """
+
+    async def court_origin(
+        self,
+        *,
+        search_id: UUID,
+        organiser_id: UUID,
+        invitee_ids: Collection[UUID],
+    ) -> CourtOrigin | None:
+        """The origin of a court built on that search, or nothing.
+
+        ``None`` covers four cases and does so on purpose — the search does not
+        exist, it is somebody else's, or it never showed one of these people, or
+        it showed them only as a near miss. Telling them apart would answer
+        questions about strangers one probe at a time, which is the refusal
+        ``OriginSearchNotFound`` already makes about the same record.
+
+        The organiser is **not** among ``invitee_ids``: a search never returns
+        its own searcher, so asking about them would refuse every send.
+        """
+        ...
+
+
+@runtime_checkable
+class ChallengeDirectory(Protocol):
+    """Every challenge one player is seated in. **Their own, and nobody else's.**
+
+    Keyed on the player rather than on a challenge id, because that is the whole
+    question: *what have I been asked, and what have I asked for*. There is no
+    method here that takes somebody else's id, which is what stops this read
+    becoming a way to ask about a stranger's evening.
+
+    **Ended challenges come back too**, and the standing says which. A challenge
+    that lapsed this morning is still a thing that happened to the person it was
+    sent to, and a list that quietly dropped it would be the same class of lie as
+    a read-back that got shorter.
+    """
+
+    async def seating(self, player_id: UUID) -> tuple[Challenge, ...]:
+        """Every challenge this player holds a seat in, newest first.
+
+        Newest first is part of the demand rather than a convenience: the client
+        renders them in order, and a list whose order depended on how the streams
+        happened to be read would reorder itself between two identical requests.
         """
         ...

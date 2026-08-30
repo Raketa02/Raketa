@@ -50,7 +50,6 @@ from app.modules.matchmaking.domain.candidate_snapshot import (
 )
 from app.modules.matchmaking.domain.index_staleness import IndexFreshness
 from app.modules.matchmaking.domain.errors import (
-    AccountHeld,
     RungOfferNotFound,
     IndexTooStale,
     PlayerProfileNotCommitted,
@@ -106,6 +105,7 @@ from app.modules.player_profile.domain.ports import (
     PlayIntentDeclarationRepository,
 )
 from app.modules.rating.domain.ports import SkillRatingRepository
+from app.shared.domain.errors import AccountHeld
 
 
 @final

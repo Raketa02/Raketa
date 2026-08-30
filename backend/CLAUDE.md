@@ -86,11 +86,16 @@ Rules to preserve:
   and it is the matchmaking module's four durable ledgers** — the `search` record,
   `interest`, the **pass** record and the **prompt decline** (`the-engine.md` §12:
   *nothing here is event-sourced*, and an interest is *durable without being an aggregate
-  with a life story*). All four are small facts with no life story and nothing downstream
-  reacts to one being written: a lift is a read on the next search, a mutual is what two
-  rows facing each other already say, the suppression a pass writes is a cache its use
-  case fills after the commit rather than a subscriber, and a decline is read by one
-  filter on the next search. The authority naming all four is `the-engine.md` §12;
+  with a life story*). All four are small facts with no life story, and **nothing
+  *subscribes* to one being written**: a lift is a read on the next search, the
+  suppression a pass writes is a cache its use case fills after the commit rather than a
+  subscriber, and a decline is read by one filter on the next search. The one thing a
+  write here does cause is a **call, never a subscription** — a second *Let's play*
+  facing the first opens a challenge **inline, in the same transaction** through a port
+  `challenges` signs (#251), because *that player has left the deck for good* is a
+  promise that must not wait for a poller. The exemption is about the interest row
+  needing no event of its own, and that is unchanged.
+  The authority naming all four is `the-engine.md` §12;
   ADR-0128 decides what a pass *is* and says nothing about event sourcing, and ADR-0094
   says of the decline in its own words that *declining a prompt is not a domain fact and
   earns no event* — its amendment moved the suppression out of Redis and kept that

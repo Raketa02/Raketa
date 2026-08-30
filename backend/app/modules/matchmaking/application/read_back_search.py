@@ -58,7 +58,6 @@ from app.modules.matchmaking.application.outward_reads import (
 from app.modules.matchmaking.domain.candidate_index import CandidateRow, Partition
 from app.modules.matchmaking.domain.candidate_snapshot import CandidateSource
 from app.modules.matchmaking.domain.errors import (
-    AccountHeld,
     PlayerProfileNotCommitted,
     SearchNotFound,
 )
@@ -72,6 +71,7 @@ from app.modules.matchmaking.domain.searches import (
 )
 from app.modules.matchmaking.domain.sorting import of_record, sorts_available
 from app.modules.player_profile.domain.ports import PlayerProfileRepository
+from app.shared.domain.errors import AccountHeld
 
 
 @final

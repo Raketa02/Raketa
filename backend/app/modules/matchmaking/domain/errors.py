@@ -26,7 +26,6 @@ from http import HTTPStatus
 from app.shared.domain.errors import (
     AppError,
     ConflictError,
-    ForbiddenError,
     NotFoundError,
 )
 
@@ -212,16 +211,11 @@ class SearchNotFound(NotFoundError):
     code = "search_not_found"
 
 
-class AccountHeld(ForbiddenError):
-    """The searcher is under a live hold. **The hold points both ways.**
-
-    A held player can still sign in and run a search, which is why the gate is
-    bidirectional and why the searcher's own side is refused here, at the entry
-    point, rather than by hiding them from other people's lists
-    (``docs/adr/0095``).
-    """
-
-    code = "account_held"
+# ``AccountHeld`` used to be declared here and is now in
+# ``app/shared/domain/errors.py``. It moved when ``challenges`` became the second
+# context that refuses on a live hold: neither module may import the other, and
+# one fact with one remedy gets one code. This module still raises it — the
+# import is at the top of the two use cases that do.
 
 
 class OriginSearchNotFound(ConflictError):

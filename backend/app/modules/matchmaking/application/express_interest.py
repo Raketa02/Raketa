@@ -1,6 +1,6 @@
 """*Let's play* — one tap, costing nothing, that actually does something.
 
-**The order of the four things this use case does is load-bearing**, the same way
+**The order of the five things this use case does is load-bearing**, the same way
 the search's is.
 
 1. It resolves the **origin key** off the cited search's own record
@@ -9,13 +9,21 @@ the search's is.
    interest whose origin cannot be proved is refused before anything else is
    considered, because a link that cannot be made true is not a link to drop
    quietly.
-2. It looks for an **existing live yes**, and returns it unchanged if there is
-   one. A second tap creates nothing, spends no cap slot and — the part that
-   matters — does **not** re-date the expiry, because a button that says it costs
-   nothing must not be a way to keep a yes alive for ever.
+2. It looks for an **existing live yes**, and keeps it unchanged if there is one.
+   A second tap creates nothing, spends no cap slot and — the part that matters —
+   does **not** re-date the expiry, because a button that says it costs nothing
+   must not be a way to keep a yes alive for ever.
 3. It checks the **cap**, and refuses at it. Nothing of the player's is quietly
    shortened to make room (``docs/adr/0127`` §3).
-4. It writes the row and **commits**, then reads whether the yes is mutual.
+4. It writes the row, and then reads whether the yes is **mutual**.
+5. When it is, it **opens the challenge inline** and commits the two together.
+
+**The mutual read moved before the commit, and the reason is a promise.** E7 says
+*that player has left the deck for good, because you now have an open game
+together* — and with the outbox in the middle that sentence is false for however
+long the worker takes. So the challenge is minted in this transaction, through a
+port the other context signs (``domain/mutual_challenge.py``), and the yes and the
+game commit together or neither does.
 
 **Nobody is notified.** A one-sided yes is silent: it becomes visible only when
 the other person goes looking for a game, and then only as a lift with its reason
@@ -23,10 +31,20 @@ printed. The one thing this answer tells the sender about the recipient is wheth
 the yes was **mutual** — and that is only knowable because they had already said
 yes themselves.
 
-**No event and no outbox.** Interest is durable without being an aggregate with a
-life story, and there is nothing downstream that reacts to a yes being written:
-the lift is a read on the next search, and a mutual is what two rows facing each
-other already say.
+**No event and no outbox for the yes itself.** Interest is durable without being
+an aggregate with a life story, and nothing subscribes to one being written: the
+lift is a read on the next search, and a mutual is what two rows facing each other
+already say. What is *not* true any more is that nothing downstream happens — the
+mint above is a second write in the same transaction, and it is a call rather than
+a subscription precisely so that it cannot be late.
+
+**A mint that is refused is not a failure of this use case.** The other context
+re-verifies the same gates a send does, because a *Let's play* may cite a search
+from a month ago and a search record never expires; when it refuses, it mints
+nothing and says so by answering nothing. The yes stands, ``mutual`` is still
+``True``, and the two of them have a mutual with no game opened — which is the
+honest state and is exactly what a block taken between two stale yeses should
+produce.
 """
 
 from __future__ import annotations
@@ -42,6 +60,9 @@ from app.kernel import Clock, Sport
 from app.modules.matchmaking.application.commands import ExpressInterestCommand
 from app.modules.matchmaking.application.origins import resolve_origin
 from app.modules.matchmaking.domain.errors import OutstandingInterestCapReached
+from app.modules.matchmaking.domain.mutual_challenge import (
+    MutualChallengeMinting,
+)
 from app.modules.matchmaking.domain.interest import (
     Interest,
     InterestLedger,
@@ -85,12 +106,14 @@ class ExpressInterest:
         ruleset: Ruleset,
         interest: InterestLedger,
         searches: SearchStore,
+        challenges: MutualChallengeMinting,
         unit_of_work: UnitOfWork,
     ) -> None:
         self._clock = clock
         self._ruleset = ruleset
         self._interest = interest
         self._searches = searches
+        self._challenges = challenges
         self._uow = unit_of_work
 
     async def execute(self, command: ExpressInterestCommand) -> ExpressedInterest:
@@ -111,26 +134,34 @@ class ExpressInterest:
             now=now,
         )
         if standing is not None:
-            return await self._answer(standing, now=now, created=False)
-
-        standing_count = await self._counted(command.from_player_id, command.sport, now)
-        if standing_count.reached:
-            raise OutstandingInterestCapReached(
-                f"you already have {standing_count.outstanding} outstanding "
-                f"*Let's play* yeses for {command.sport.value}"
+            yes, created = standing, False
+        else:
+            standing_count = await self._counted(
+                command.from_player_id, command.sport, now
             )
+            if standing_count.reached:
+                raise OutstandingInterestCapReached(
+                    f"you already have {standing_count.outstanding} outstanding "
+                    f"*Let's play* yeses for {command.sport.value}"
+                )
+            yes = Interest(
+                from_player_id=command.from_player_id,
+                to_player_id=command.to_player_id,
+                sport=command.sport,
+                at=now,
+                expires_at=expires_at(now, rules.ttl_days),
+                origin=origin,
+            )
+            await self._interest.record(yes)
+            created = True
 
-        yes = Interest(
-            from_player_id=command.from_player_id,
-            to_player_id=command.to_player_id,
-            sport=command.sport,
-            at=now,
-            expires_at=expires_at(now, rules.ttl_days),
-            origin=origin,
-        )
-        await self._interest.record(yes)
+        answer = await self._answer(yes, now=now, created=created)
+        # **One commit, whichever branch ran.** A repeat tap writes no interest
+        # row and may still have opened a game: the pair could have been refused
+        # a mint when the first yes landed — a gate that was closed then and is
+        # open now — and there is nothing else that would ever come back for it.
         await self._uow.commit()
-        return await self._answer(yes, now=now, created=True)
+        return answer
 
     async def _answer(
         self, yes: Interest, *, now: datetime, created: bool
@@ -148,6 +179,16 @@ class ExpressInterest:
         about one named pair, on a request the recipient of that yes made
         themselves, and it can say nothing about anybody who has not been said
         yes to.
+
+        **The mint hangs off that read and never off ``created``.** It is the
+        second yes that makes a game, and whether *this* tap wrote a row is a
+        different question — a repeat tap on a pair whose mint was refused is the
+        only occasion the platform ever gets to try again.
+
+        ``mutual`` is what the two rows say and is **not** narrowed to *a game
+        was opened*: the mutual is true either way, and reporting it as false
+        because a gate refused would tell the sender something about the other
+        person that no refusal here is allowed to say.
         """
 
         theirs = await self._interest.find(
@@ -156,6 +197,12 @@ class ExpressInterest:
             sport=yes.sport,
             now=now,
         )
+        if theirs is not None:
+            await self._challenges.open_from_mutual_interest(
+                sport=yes.sport,
+                player_id=yes.from_player_id,
+                other_player_id=yes.to_player_id,
+            )
         return ExpressedInterest(
             interest=yes,
             outstanding=await self._counted(yes.from_player_id, yes.sport, now),

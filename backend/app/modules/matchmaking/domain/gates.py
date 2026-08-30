@@ -43,6 +43,9 @@ from app.modules.matchmaking.domain.search_context import (
 )
 from app.modules.matchmaking.domain.searches import SearchInitiation
 from app.modules.player_profile.domain.gender import Gender, GenderPreference
+from app.modules.player_profile.domain.mutual_preference import (
+    preferences_are_mutual,
+)
 
 
 @final
@@ -169,19 +172,22 @@ def gender_satisfied(
     searcher_preference: GenderPreference,
     theirs: CandidateRow | None,
 ) -> bool:
-    """Both preferences, both directions. **Closed, and told to nobody.**
+    """Both preferences, both directions, for a searcher against an index row.
 
-    Absence is not a quieter ``PREFER_NOT_TO_SAY``: a preference that *needs* a
-    gender and does not have one is a gate that could not be evaluated, and a
-    gate that cannot be evaluated excludes. A pair who both ask for anybody never
-    reads a gender at all, which is why an unanswered question costs nothing
-    until somebody's safety setting depends on it.
+    **The judgement is not here.** It is
+    :func:`player_profile.domain.mutual_preference.preferences_are_mutual`, and
+    this is the *reading* that feeds it: the searcher's two facts arrive live
+    from their profile, the other side's arrive as strings off an index row, and
+    the two readers below are what turn a stored code into a value this build can
+    weigh.
 
-    It takes the searcher's two facts and the other side's **row** rather than a
-    whole ``SearchContext``, because the same gate is evaluated in two places —
-    inside a search, and again when a stored search is read back an hour later
-    (``docs/adr/0109``) — and a second implementation of a mutual safety gate is
-    exactly the thing that ends up satisfied in one place and not the other.
+    The rule moved out when the send became the third caller. The docstring that
+    used to sit here refused a second implementation of a mutual safety gate —
+    *exactly the thing that ends up satisfied in one place and not the other* —
+    and the send cannot import this module at all (``matchmaking -> challenges``
+    and never back). What survives that constraint is one predicate in
+    ``player_profile`` with the reading left to each caller, which is the same
+    promise kept a directory over.
 
     ``theirs`` is ``None`` when the index holds no row for that player at all,
     which is a gate that **cannot be evaluated** and therefore excludes.
@@ -189,11 +195,11 @@ def gender_satisfied(
 
     if theirs is None:
         return False
-    preference = _preference(theirs.gender_preference)
-    if preference is None:
-        return False
-    return _satisfies(searcher_preference, _gender(theirs.gender)) and _satisfies(
-        preference, searcher_gender
+    return preferences_are_mutual(
+        one_gender=searcher_gender,
+        one_preference=searcher_preference,
+        other_gender=_gender(theirs.gender),
+        other_preference=_preference(theirs.gender_preference),
     )
 
 
@@ -207,31 +213,21 @@ def gender_satisfied_between(one: CandidateRow, other: CandidateRow) -> bool:
     searcher-only gate she is open to every man a **third party** seats beside
     her.
 
-    It reads the same two fields through the same two readers as
-    :func:`gender_satisfied` and applies the same asymmetry between them — an
-    unreadable *answer* is an absence, an unreadable **preference** is a safety
-    setting that cannot be evaluated, and *a gate that cannot be evaluated
-    excludes*. Written as its own function rather than by feeding one row in
-    where a searcher goes, because the searcher's own gender arrives live from
-    the profile and a candidate's arrives off an index row, and a signature that
-    accepted either would be one a caller could pass the wrong one to.
+    It reads both sides through the two readers below and hands them to the same
+    predicate :func:`gender_satisfied` uses, so the two paths cannot come to
+    different answers about the same pair. Written as its own function rather
+    than by feeding one row in where a searcher goes, because the searcher's own
+    gender arrives live from the profile and a candidate's arrives off an index
+    row, and a signature that accepted either would be one a caller could pass
+    the wrong one to.
     """
 
-    mine = _preference(one.gender_preference)
-    theirs = _preference(other.gender_preference)
-    if mine is None or theirs is None:
-        return False
-    return _satisfies(mine, _gender(other.gender)) and _satisfies(
-        theirs, _gender(one.gender)
+    return preferences_are_mutual(
+        one_gender=_gender(one.gender),
+        one_preference=_preference(one.gender_preference),
+        other_gender=_gender(other.gender),
+        other_preference=_preference(other.gender_preference),
     )
-
-
-def _satisfies(preference: GenderPreference, gender: Gender | None) -> bool:
-    if preference is GenderPreference.ANY:
-        return True
-    if preference is GenderPreference.WOMEN_ONLY:
-        return gender is Gender.WOMAN
-    return gender is Gender.MAN
 
 
 def _gender(code: str | None) -> Gender | None:

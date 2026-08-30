@@ -39,7 +39,10 @@ from app.bootstrap.composition import (
 )
 from app.engines.matchfit.core import SearchMode
 from app.kernel import Instant, Sport, instant
-from app.modules.challenges.application.commands import SendChallengeCommand
+from app.modules.challenges.application.commands import (
+    SeatChoice,
+    SendChallengeCommand,
+)
 from app.modules.challenges.application.send_challenge import SendChallenge
 from app.modules.challenges.domain.answer_window import ANSWER_WINDOW
 from app.modules.challenges.domain.challenge import Challenge
@@ -50,6 +53,7 @@ from app.modules.challenges.domain.origins import SentFromSearch
 from app.modules.challenges.domain.seats import SeatPlan, Side
 from app.modules.player_profile.domain.availability import Window
 from app.shared.ids import new_uuid
+from tests.unit.challenge_world import StubOrigins, a_safe_court
 from tests.unit.fake_event_store import CountingUnitOfWork
 
 ORGANISER = new_uuid()
@@ -137,10 +141,36 @@ def a_tennis_challenge(*, organiser=ORGANISER, invitee=ALICE) -> Challenge:
     )
 
 
-def _send(session, *, now: Instant) -> SendChallenge:
+def a_padel_choice(organiser, *invitees) -> tuple[SeatChoice, ...]:
+    """The same court a client would post: sides and people, no origins."""
+
+    sides = (Side.A, Side.B, Side.B)
+    return (SeatChoice(side=Side.A, player_id=organiser),) + tuple(
+        SeatChoice(side=side, player_id=player_id)
+        for player_id, side in zip(invitees, sides, strict=True)
+    )
+
+
+def a_tennis_choice(organiser, invitee) -> tuple[SeatChoice, ...]:
+    return (
+        SeatChoice(side=Side.A, player_id=organiser),
+        SeatChoice(side=Side.B, player_id=invitee),
+    )
+
+
+def _send(session, *, now: Instant, sport: Sport = Sport.PADEL) -> SendChallenge:
+    """The send with everything but the pair rule wired open.
+
+    The four fail-closed gates have their own file; what is under test here is
+    the one rule this adapter answers, so the safety stubs admit everybody and a
+    refusal below can only have come from the open-challenge read.
+    """
+
     return SendChallenge(
         challenges=_repository(session),
         open_challenges=build_open_challenge_query(session),
+        origins=StubOrigins(known={SEARCH}, sport=sport),
+        safety=a_safe_court([ORGANISER, ALICE, BOB, CAROL, STRANGER]),
         uow=CountingUnitOfWork(),
         clock=FrozenClock(now),
     )
@@ -297,13 +327,11 @@ async def test_the_send_refuses_a_pair_that_already_has_an_open_challenge(
         await _record(session, a_tennis_challenge())
 
         with pytest.raises(AnOpenChallengeStandsWithThisPair):
-            await _send(session, now=INSIDE).execute(
+            await _send(session, now=INSIDE, sport=Sport.TENNIS).execute(
                 SendChallengeCommand(
                     organiser_id=ORGANISER,
-                    sport=Sport.TENNIS,
-                    mode=SearchMode.FOR_FUN,
-                    window=Window.ANY,
-                    arrangement=a_tennis_court(ORGANISER, ALICE),
+                    search_id=SEARCH,
+                    court=a_tennis_choice(ORGANISER, ALICE),
                 )
             )
 
@@ -322,10 +350,8 @@ async def test_the_rule_holds_across_a_different_sport(session_factory):
             await _send(session, now=INSIDE).execute(
                 SendChallengeCommand(
                     organiser_id=ORGANISER,
-                    sport=Sport.PADEL,
-                    mode=SearchMode.COMPETITIVE,
-                    window=Window.WEEKEND,
-                    arrangement=a_padel_court(ORGANISER, ALICE, BOB, CAROL),
+                    search_id=SEARCH,
+                    court=a_padel_choice(ORGANISER, ALICE, BOB, CAROL),
                 )
             )
 
@@ -340,10 +366,8 @@ async def test_the_rule_binds_two_invitees_and_not_only_the_organiser(
             await _send(session, now=INSIDE).execute(
                 SendChallengeCommand(
                     organiser_id=ORGANISER,
-                    sport=Sport.PADEL,
-                    mode=SearchMode.COMPETITIVE,
-                    window=Window.WEEKEND,
-                    arrangement=a_padel_court(ORGANISER, ALICE, BOB, CAROL),
+                    search_id=SEARCH,
+                    court=a_padel_choice(ORGANISER, ALICE, BOB, CAROL),
                 )
             )
 
@@ -358,10 +382,8 @@ async def test_a_refused_send_records_no_challenge(session_factory):
             await _send(session, now=INSIDE).execute(
                 SendChallengeCommand(
                     organiser_id=ORGANISER,
-                    sport=Sport.PADEL,
-                    mode=SearchMode.COMPETITIVE,
-                    window=Window.WEEKEND,
-                    arrangement=a_padel_court(ORGANISER, ALICE, BOB, CAROL),
+                    search_id=SEARCH,
+                    court=a_padel_choice(ORGANISER, ALICE, BOB, CAROL),
                 )
             )
 
@@ -378,13 +400,11 @@ async def test_the_refusal_names_nobody(session_factory):
         await _record(session, a_tennis_challenge())
 
         with pytest.raises(AnOpenChallengeStandsWithThisPair) as refusal:
-            await _send(session, now=INSIDE).execute(
+            await _send(session, now=INSIDE, sport=Sport.TENNIS).execute(
                 SendChallengeCommand(
                     organiser_id=ORGANISER,
-                    sport=Sport.TENNIS,
-                    mode=SearchMode.FOR_FUN,
-                    window=Window.ANY,
-                    arrangement=a_tennis_court(ORGANISER, ALICE),
+                    search_id=SEARCH,
+                    court=a_tennis_choice(ORGANISER, ALICE),
                 )
             )
 
@@ -401,10 +421,8 @@ async def test_the_send_lands_when_nothing_stands_between_them(session_factory):
         challenge_id = await send.execute(
             SendChallengeCommand(
                 organiser_id=ORGANISER,
-                sport=Sport.PADEL,
-                mode=SearchMode.FOR_FUN,
-                window=Window.WEEKEND,
-                arrangement=a_padel_court(ORGANISER, ALICE, BOB, CAROL),
+                search_id=SEARCH,
+                court=a_padel_choice(ORGANISER, ALICE, BOB, CAROL),
             )
         )
         await session.commit()
@@ -420,13 +438,11 @@ async def test_a_challenge_that_lapsed_no_longer_stands_in_the_way(session_facto
     async with session_factory() as session:
         await _record(session, a_tennis_challenge())
 
-        challenge_id = await _send(session, now=OUTSIDE).execute(
+        challenge_id = await _send(session, now=OUTSIDE, sport=Sport.TENNIS).execute(
             SendChallengeCommand(
                 organiser_id=ORGANISER,
-                sport=Sport.TENNIS,
-                mode=SearchMode.FOR_FUN,
-                window=Window.ANY,
-                arrangement=a_tennis_court(ORGANISER, ALICE),
+                search_id=SEARCH,
+                court=a_tennis_choice(ORGANISER, ALICE),
             )
         )
         await session.commit()

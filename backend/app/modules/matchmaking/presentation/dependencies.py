@@ -53,6 +53,7 @@ from app.bootstrap.composition import (
     build_interest_ledger,
     build_match_fit_engine,
     build_match_history_query,
+    build_mutual_challenge_minting,
     build_pass_ledger,
     build_player_card_source,
     build_player_score_query,
@@ -481,6 +482,11 @@ def get_express_interest(
     ``INTEREST_TTL`` and ``OUTSTANDING_INTEREST_CAP`` — are ruleset rows, and
     nothing here scores anybody. It holds the **search store** because the origin
     key is proved against a record rather than trusted from a request.
+
+    And it holds the **mint**, because a mutual yes opens a game inline: *that
+    player has left the deck for good, because you now have an open game
+    together* is a promise that must not wait for a poller. It is built over this
+    request's own session, so the yes and the challenge are one transaction.
     """
 
     return ExpressInterest(
@@ -488,6 +494,7 @@ def get_express_interest(
         ruleset=build_ruleset(),
         interest=interest,
         searches=build_search_store(db),
+        challenges=build_mutual_challenge_minting(db),
         unit_of_work=uow,
     )
 

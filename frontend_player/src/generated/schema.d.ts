@@ -752,6 +752,94 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/challenges": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Your challenges
+         * @description **Sent and received in one list.** *Challenge sent* and *Challenge for you* are one standing read from two sides; tell them apart by whether `organiser_id` is yours.
+         *
+         *     **The standing is derived, never stored.** It is folded from the seats and the clock at the moment you asked, so a seat whose day ran out reads as lapsed whether or not anything has swept it yet.
+         *
+         *     **Ended challenges are here too**, carrying `DECLINED` or `LAPSED`. A list that quietly dropped this morning's is a list that lies.
+         *
+         *     **This is also the remedy for `open_challenge_stands`.** A refused send names nobody; read this to find out which of your own open games is in the way.
+         */
+        get: operations["read_challenges_api_v1_challenges_get"];
+        put?: never;
+        /**
+         * Send the challenge
+         * @description **One act, everybody at once.** A doubles send is one challenge containing four people, answered by each of them separately — never three separate invitations.
+         *
+         *     **Your own seat is accepted from birth.** You are the one proposing, so nothing asks whether you want to play the game you just built.
+         *
+         *     **Each invitee gets 24 hours from when *their* seat was invited**, so a seat filled later is not already half expired.
+         *
+         *     **The arrangement you built is what is recorded**, and it is what they answer — never a better one worked out afterwards.
+         *
+         *     **Everything is re-checked here**, in one transaction, because your line-up may be an hour old and nothing refetches it in the background. The send either happens whole or writes nothing at all: there is no partial send that quietly drops one person.
+         *
+         *     **The sport, the kind of evening and the week come from the search**, not from this request. There is no window picker anywhere — you change your window by changing your grid.
+         */
+        post: operations["send_challenge_api_v1_challenges_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/challenges/{challenge_id}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Accept your seat
+         * @description **Your yes matters on its own**, and is not conditional on the other seats: the conversation opens on the *first* acceptance and grows with each one, so there is no waiting room and no single moment where the game becomes real.
+         *
+         *     **The seat is not in the path** because you hold at most one in any challenge — and nobody may answer for anybody else.
+         *
+         *     The challenge reads `ON` once **every** seat is accepted, with no special case for the organiser and none for singles.
+         */
+        post: operations["accept_seat_api_v1_challenges__challenge_id__accept_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/challenges/{challenge_id}/decline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Decline your seat
+         * @description **Your no is about you.** It reopens exactly your seat and disturbs nothing else: the people who already agreed did nothing wrong and are still in the game, and the organiser may offer your seat to somebody else.
+         *
+         *     **Nobody is told you declined**, and no response anywhere names you as having done so.
+         *
+         *     **Saying nothing is not this.** Silence past your day is a *lapse*, which is a different fact and is counted apart — the platform never files it as a judgement you made.
+         */
+        post: operations["decline_seat_api_v1_challenges__challenge_id__decline_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1023,6 +1111,56 @@ export interface components {
             at_stake?: components["schemas"]["AtStakeSchema"];
             /** @description What this candidate would leave on court. Precomputed only when a line-up has exactly one seat open, so **omitted on every shortlist**. */
             would_be_forecast?: components["schemas"]["ForecastSchema"];
+        };
+        /**
+         * ChallengeListResponse
+         * @description Your challenges, newest first.
+         *
+         *     **One list and not two.** *Challenge sent* and *Challenge for you* are one
+         *     standing read from two sides, so nothing here splits them: the client tells
+         *     them apart by whether ``organiser_id`` is yours.
+         *
+         *     **Ended challenges are in it, and their standing says so.** A list that
+         *     quietly dropped this morning's lapse would be the same class of lie as a
+         *     read-back that got shorter.
+         */
+        ChallengeListResponse: {
+            /** Challenges */
+            challenges: components["schemas"]["ChallengeSchema"][];
+        };
+        /**
+         * ChallengeSchema
+         * @description One challenge, with its whole court and what it is right now.
+         */
+        ChallengeSchema: {
+            /**
+             * Challenge Id
+             * Format: uuid
+             */
+            challenge_id: string;
+            sport: components["schemas"]["Sport"];
+            /** @description The kind of evening it was sent for. Absent when the surface it came from has none — the deck asks nobody to pick one — and on every challenge born of a mutual yes. */
+            mode?: components["schemas"]["SearchMode"] | null;
+            /** @description How soon the week this was proposed for comes round. **Derived at send from the grid the search ran on** and never asked for. Absent on a mutual-born challenge: no grid was proposed from. */
+            window?: components["schemas"]["Window"] | null;
+            /**
+             * Organiser Id
+             * Format: uuid
+             * @description Whose proposal this is. Their seat is **accepted from birth** — they are the one asking.
+             */
+            organiser_id: string;
+            /** @description What this challenge is at the instant it was read. **Derived from the seats and the clock, never stored**, so it is right for the whole gap between a deadline and anything noticing. */
+            standing: components["schemas"]["Standing"];
+            /**
+             * Opened At
+             * Format: date-time
+             */
+            opened_at: string;
+            /**
+             * Seats
+             * @description The court in its fixed order — every **A** seat, then every **B**. Empty seats are in the list, because which side is short is part of what a court is.
+             */
+            seats: components["schemas"]["SeatSchema"][];
         };
         /**
          * ChangeAvailabilityRequest
@@ -1729,7 +1867,7 @@ export interface components {
          *     that is already tens of kilobytes.
          */
         LineupSeatSchema: {
-            side: components["schemas"]["Side"];
+            side: components["schemas"]["app__modules__matchmaking__domain__lineups__Side"];
             /** Seat Index */
             seat_index: number;
             relationship: components["schemas"]["Relationship"];
@@ -2859,6 +2997,108 @@ export interface components {
          */
         SearchSurface: "SHORTLIST" | "LINEUP" | "DECK" | "FILL_SEATS";
         /**
+         * SeatAnswer
+         * @description What the person in this seat did about being asked.
+         *
+         *     Three values and not four: *awaiting* is the absence of an answer, and giving
+         *     it a name would make ``None`` and ``AWAITING`` two spellings of one state
+         *     with nothing to choose between them.
+         *
+         *     ``LAPSED`` is recorded by the sweep and is **never** a decline. They do the
+         *     same thing to the line-up and they are different facts: *answers challenges*
+         *     is a Strand over challenges that got an answer inside their window, and it is
+         *     unmeasurable if silence is filed as judgement.
+         * @enum {string}
+         */
+        SeatAnswer: "ACCEPTED" | "DECLINED" | "LAPSED";
+        /**
+         * SeatChoiceSchema
+         * @description One position on the court as the organiser left it.
+         *
+         *     **An empty seat is a seat**, so ``player_id`` is genuinely optional: an A-side
+         *     full with a B-side short is a different court from the reverse, and the next
+         *     invitee's side is not a free choice.
+         *
+         *     There is no origin field and no position. Where each invitation came from is
+         *     resolved server-side against the cited search, because a position a client
+         *     sent would be true only while the client was honest about where it had
+         *     scrolled to.
+         */
+        SeatChoiceSchema: {
+            /** @description Which side of the net this seat is on */
+            side: components["schemas"]["Side-Input"];
+            /**
+             * Player Id
+             * @description Who is to sit here, or omitted for a seat nobody was put in. The organiser holds one of these like anybody else.
+             */
+            player_id?: string | null;
+        };
+        /**
+         * SeatSchema
+         * @description One seat: a side, its occupant, their answer and their own deadline.
+         *
+         *     ``answer_by`` is **this seat's own**, dated when this seat was invited — a
+         *     seat filled later starts its own day and cannot inherit a deadline from a send
+         *     it was not part of. It is absent exactly when nobody was asked: an empty seat,
+         *     the organiser's, and both seats of a challenge born from a mutual yes.
+         */
+        SeatSchema: {
+            side: components["schemas"]["app__modules__challenges__domain__seats__Side"];
+            /**
+             * Player Id
+             * @description Who holds this seat, or absent if nobody does
+             */
+            player_id?: string | null;
+            /** @description What they did about being asked, or absent while they have not answered. **A lapse is not a refusal** — they are different facts and the platform counts them apart. */
+            answer?: components["schemas"]["SeatAnswer"] | null;
+            /**
+             * Answer By
+             * @description When this seat's answer stops being wanted. Past it the seat reads as lapsed whether or not anything has swept it, and a late answer is refused rather than accepted late.
+             */
+            answer_by?: string | null;
+        };
+        /**
+         * SendChallengeRequest
+         * @description One press. **The court, and the search it was built on.**
+         *
+         *     ``search_id`` is the origin, and it is one search for the whole court: the
+         *     arrangement was built and forecast against a single answer, and a court
+         *     assembled out of two searches is a court no forecast was ever computed for.
+         *
+         *     **The sport, the kind of evening and the week are not sent.** All three are
+         *     read off that search's own record — there is no window picker anywhere
+         *     (``docs/adr/0100``), and a player changes their window by changing their grid.
+         */
+        SendChallengeRequest: {
+            /**
+             * Search Id
+             * Format: uuid
+             * @description The search this court was built from. **Required** — every invitee must have appeared in it, and each seat cites where they sat.
+             */
+            search_id: string;
+            /**
+             * Court
+             * @description The sides as you arranged them, in the court's own order: every **A** seat, then every **B**. It must be the sport's shape and you must be in it.
+             */
+            court: components["schemas"]["SeatChoiceSchema"][];
+        };
+        /**
+         * SentChallengeResponse
+         * @description What a send answers with. **An id, and deliberately nothing else.**
+         *
+         *     Not the challenge: nobody has answered it yet, so every seat says exactly
+         *     what the organiser just sent, and a body repeating their own arrangement back
+         *     at them is a round trip that says nothing. The id is what the client keeps.
+         */
+        SentChallengeResponse: {
+            /**
+             * Challenge Id
+             * Format: uuid
+             * @description The challenge that now stands
+             */
+            challenge_id: string;
+        };
+        /**
          * SharedSlot
          * @description The next cell of the week both players ticked.
          *
@@ -2895,10 +3135,17 @@ export interface components {
         };
         /**
          * Side
-         * @description Which side of the net. The searcher is always on ``A``.
+         * @description Which side of the net. The organiser is always on ``A``.
+         *
+         *     This context's own, and deliberately a second spelling of
+         *     ``matchmaking.domain.lineups.Side``: the matcher's is *the searcher's side of
+         *     a line-up it is ranking*, this one is *a position on a court somebody has
+         *     been asked to sit in*, and ``challenges`` may not import ``matchmaking``.
+         *     The two strings are equal on purpose, so the mapping at the seam is identity
+         *     rather than a table.
          * @enum {string}
          */
-        Side: "A" | "B";
+        "Side-Input": "A" | "B";
         /**
          * SidesSchema
          * @description The two sides of the net. **You are always on `A`.**
@@ -3048,6 +3295,12 @@ export interface components {
             /** Sports */
             sports: components["schemas"]["SportResource"][];
         };
+        /**
+         * Standing
+         * @description The five standings, as codes. A client's words are the client's own.
+         * @enum {string}
+         */
+        Standing: "AWAITING_ANSWERS" | "ON" | "LINE_UP_INCOMPLETE" | "DECLINED" | "LAPSED";
         /**
          * StrandReading
          * @description One reliability strand that produced a reading.
@@ -3303,6 +3556,25 @@ export interface components {
              */
             withheld: true;
         };
+        /**
+         * Side
+         * @description Which side of the net. The organiser is always on ``A``.
+         *
+         *     This context's own, and deliberately a second spelling of
+         *     ``matchmaking.domain.lineups.Side``: the matcher's is *the searcher's side of
+         *     a line-up it is ranking*, this one is *a position on a court somebody has
+         *     been asked to sit in*, and ``challenges`` may not import ``matchmaking``.
+         *     The two strings are equal on purpose, so the mapping at the seam is identity
+         *     rather than a table.
+         * @enum {string}
+         */
+        app__modules__challenges__domain__seats__Side: "A" | "B";
+        /**
+         * Side
+         * @description Which side of the net. The searcher is always on ``A``.
+         * @enum {string}
+         */
+        app__modules__matchmaking__domain__lineups__Side: "A" | "B";
     };
     responses: never;
     parameters: never;
@@ -4662,6 +4934,207 @@ export interface operations {
                 content?: never;
             };
             /** @description `prompt_does_not_suppress` — *Keep these times?* is asked again on the next search, because the week you improvised is a different week next Tuesday. It is the one prompt with no *not now*. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_challenges_api_v1_challenges_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every challenge you hold a seat in, newest first, each with what it is right now. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChallengeListResponse"];
+                };
+            };
+        };
+    };
+    send_challenge_api_v1_challenges_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SendChallengeRequest"];
+            };
+        };
+        responses: {
+            /** @description The challenge stands, and everybody on the court has been asked. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SentChallengeResponse"];
+                };
+            };
+            /** @description `challenge_with_no_invitee`, `organiser_holds_a_seat`, `one_person_to_a_seat`, `cannot_challenge_yourself`, `court_is_not_the_sports` — the shape of the court, and every one of them a caller's bug. Checked **first**, because they need no reads and are true regardless of anybody else's state: telling an organiser their line-up went stale when they invited nobody sends them refreshing a screen that was never wrong. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `account_held` — **your** account is under a live hold. The same code a search returns, and refused at the entry point: a hold that stops you searching but lets you send invitations is the same hole with the blast radius pointed at other people. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /**
+             * @description `court_origin_not_found` — no search of yours showed all of those players. One code for four cases, on purpose.
+             *
+             *     `line_up_no_longer_sendable` — somebody on this court can no longer be invited to it. **Which one is deliberately not said, and neither is why.** Re-read the origin search: its read-back re-evaluates the same gates and marks the seats. **Do not re-run the search** — that mints a new `search_id` the whole line-up must adopt, and its untouched seats are only *probably* in the new answer.
+             *
+             *     `open_challenge_stands` — two people on this court already have a game between them, **in any sport**. Read your own challenges to find out who; an open game of yours was always yours to read.
+             */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description `challenge_gates_unavailable` — a safety gate could not be read, so nothing was minted. Transient and about the platform: retry the same request. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    accept_seat_api_v1_challenges__challenge_id__accept_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                challenge_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Your seat is accepted, and the challenge as it now stands. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChallengeSchema"];
+                };
+            };
+            /** @description `challenge_not_found` — no challenge of **yours** has that id. One code for two cases — it does not exist, or you are not on its court — because separating them would answer *is this id real* about a stranger's evening. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /**
+             * @description `seat_already_answered` — you have answered this one. **Not idempotent, deliberately**: *yes* after *no* is a different answer and not a repeat of one.
+             *
+             *     `answer_window_has_passed` — your day ran out. The seat already reads as lapsed and may have been offered to somebody else, so an answer that resurrected it would contradict a card the platform has already drawn.
+             */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    decline_seat_api_v1_challenges__challenge_id__decline_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                challenge_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Your seat is open again, and the challenge as it now stands. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChallengeSchema"];
+                };
+            };
+            /** @description `challenge_not_found` — no challenge of **yours** has that id. One code for two cases — it does not exist, or you are not on its court — because separating them would answer *is this id real* about a stranger's evening. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /**
+             * @description `seat_already_answered` — you have answered this one. **Not idempotent, deliberately**: *yes* after *no* is a different answer and not a repeat of one.
+             *
+             *     `answer_window_has_passed` — your day ran out. The seat already reads as lapsed and may have been offered to somebody else, so an answer that resurrected it would contradict a card the platform has already drawn.
+             */
             409: {
                 headers: {
                     [name: string]: unknown;
