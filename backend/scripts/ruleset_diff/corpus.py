@@ -12,15 +12,25 @@ counts are printed on the face of the report.
 no database, no Redis, no clock and no network — which is what lets the gate be
 hermetic and live in CI (ADR-0118 §7).
 
-**What the corpus deliberately does not carry** (§2.1): held accounts, pairwise
-history and open challenges. All three are binary, never relaxed and carry no
-constant, so **no ruleset release can change what they do** — a corpus that
-included them would spend runtime to hold three answers fixed.
+**What the corpus deliberately does not carry** (§2.1): held accounts. They are
+binary, never relaxed and carry no constant, so **no ruleset release can change
+what they do** — a corpus that included them would spend runtime to hold one
+answer fixed.
+
+**Pairwise history and open challenges used to be on that list and are not any
+more** (#253). Their exclusion was justified by the provider being
+``NoMatchHistoryExists``, and ``challenges`` signing the port killed the
+justification: ``PREVIOUS_ACCEPT``, ``PREVIOUS_DECLINE`` and ``CHALLENGE_LOAD``'s
+three rungs are **priced** and would otherwise be releasable behaviour the
+offline diff could not see. The gate — one pair with an open game between them —
+comes in for the reason blocks did: a corpus with none over-reports how many
+candidates a search returns.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import timedelta
 from typing import Final, Iterator, Mapping, final
 from uuid import UUID
 
@@ -43,6 +53,11 @@ from app.modules.matchmaking.domain.search_context import (
 from app.modules.matchmaking.domain.searches import SearchInitiation, SearchSurface
 from app.engines.racketskill.core import band_for, confidence_percent, likely_range
 from app.kernel import Instant, Sport
+from app.modules.matchmaking.domain.ports import (
+    OutcomeTally,
+    PairwiseCounterpart,
+    PairwiseOutcome,
+)
 from app.modules.player_profile.domain.availability import AvailabilityGrid
 from app.modules.player_profile.domain.gender import Gender, GenderPreference
 from app.modules.player_profile.domain.play_intent import PlayIntent
@@ -62,6 +77,33 @@ ABSENT_TERMS: Final = frozenset({Term.RELIABILITY})
 #: has no log to be a prefix of — and a moving number would put a value in the
 #: committed artifact that says nothing about the ruleset.
 SNAPSHOT_VERSION: Final = 1
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class Relations:
+    """The population's five relations, resolved once and carried as one thing.
+
+    They are read per search and computed per run, so threading them one
+    parameter at a time made the signature grow every time the corpus learned
+    about another ledger. What they have in common is exactly what makes them a
+    type: each is *the whole population's* answer to one of the reads a live
+    search takes, indexed the way that read is keyed.
+    """
+
+    #: Handle -> the ids that player may not be shown, either direction.
+    blocks: Mapping[str, frozenset[str]]
+    #: Handle -> who said *Let's play* to them, and how many days ago.
+    yeses: Mapping[str, Mapping[UUID, int]]
+    #: Handle -> their pairwise history, one row per counterpart.
+    answered: Mapping[str, Mapping[UUID, PairwiseCounterpart]]
+    #: Handle -> the ids they already have an open game with.
+    gated: Mapping[str, frozenset[str]]
+    #: Id -> how many seats are waiting on that player's answer. **Everybody is
+    #: in it**, because every player asked about gets a count.
+    loads: Mapping[UUID, int]
+    #: Id -> how many times that player was shown this week.
+    shown: Mapping[UUID, int]
 
 
 @final
@@ -100,9 +142,14 @@ def rows_for(population: Population, sport: str) -> tuple[CandidateRow, ...]:
 def searches(population: Population, ruleset: Ruleset) -> Iterator[Search]:
     """Every search the corpus runs, in a stable order."""
 
-    blocks = _blocks_by_player(population)
-    yeses = _yeses_by_searcher(population)
-    shown = {member.player_id: member.times_shown for member in population.members}
+    relations = Relations(
+        blocks=_blocks_by_player(population),
+        yeses=_yeses_by_searcher(population),
+        answered=_answers_by_searcher(population),
+        gated=_open_challenges_by_player(population),
+        loads=_loads_by_player(population),
+        shown={member.player_id: member.times_shown for member in population.members},
+    )
     partitions = {
         sport: rows_for(population, sport)
         for sport in sorted({member.sport for member in population.members})
@@ -116,9 +163,7 @@ def searches(population: Population, ruleset: Ruleset) -> Iterator[Search]:
                 ruleset,
                 surface=SearchSurface.SHORTLIST,
                 mode=mode,
-                blocks=blocks,
-                yeses=yeses,
-                shown=shown,
+                relations=relations,
             )
         if index % EVERY_NTH_RUNS_EVERY_SURFACE:
             continue
@@ -141,9 +186,7 @@ def searches(population: Population, ruleset: Ruleset) -> Iterator[Search]:
                 ruleset,
                 surface=surface,
                 mode=mode,
-                blocks=blocks,
-                yeses=yeses,
-                shown=shown,
+                relations=relations,
                 exclusions=(
                     _exclusions(member, rows) if surface is SearchSurface.DECK else None
                 ),
@@ -157,9 +200,7 @@ def _search(
     *,
     surface: SearchSurface,
     mode: SearchMode,
-    blocks: Mapping[str, frozenset[str]],
-    yeses: Mapping[str, Mapping[UUID, int]],
-    shown: Mapping[UUID, int],
+    relations: Relations,
     exclusions: DeckExclusions | None = None,
 ) -> Search:
     searcher = _searcher(member, mode)
@@ -176,17 +217,17 @@ def _search(
             caught_up_at=Instant(NOW),
         ),
         gates=LiveGateFacts(
-            blocked_player_ids=blocks.get(member.handle, frozenset()),
+            blocked_player_ids=relations.blocks.get(member.handle, frozenset()),
             held_player_ids=frozenset(),
             unshowable_player_ids=frozenset(),
-            open_challenge_ids=frozenset(),
+            open_challenge_ids=relations.gated.get(member.handle, frozenset()),
         ),
         terms=LiveTermFacts(
-            counterparts={},
-            open_challenge_counts={},
+            counterparts=relations.answered.get(member.handle, {}),
+            open_challenge_counts=dict(relations.loads),
             player_scores={},
-            times_shown=dict(shown),
-            interest_days_ago=dict(yeses.get(member.handle, {})),
+            times_shown=dict(relations.shown),
+            interest_days_ago=dict(relations.yeses.get(member.handle, {})),
             newcomer_appearances={},
             busy_threshold=None,
         ),
@@ -291,6 +332,72 @@ def _blocks_by_player(population: Population) -> Mapping[str, frozenset[str]]:
         both.setdefault(a, set()).add(ids[b])
         both.setdefault(b, set()).add(ids[a])
     return {handle: frozenset(blocked) for handle, blocked in both.items()}
+
+
+def _answers_by_searcher(
+    population: Population,
+) -> Mapping[str, Mapping[UUID, PairwiseCounterpart]]:
+    """The searcher's pairwise history, as the fence reads it: one row per person.
+
+    ``PLAYED`` and ``PLANNED_NEVER_PLAYED`` are absent from every row, which is
+    what the live provider answers too — a challenge accepted is not a game
+    played, and ``matches`` is unwritten. That is load-bearing rather than
+    incidental: familiarity needs ``games_played_together >= 1``, so a
+    challenge-only pair leaves the modifier **absent** rather than firing at zero
+    strength on every card.
+
+    **Every tally is a count of one, and that is a stated limit rather than an
+    oversight.** Both signals downstream are flags — *has this ever happened* —
+    so a second accept between the same pair moves nothing the diff could see,
+    and ``last_at`` is the only field the bound reads. A corpus that carried
+    repeat counterparts would spend runtime to hold one answer fixed, which is
+    the same argument §2.1 makes about held accounts.
+    """
+
+    ids = {member.handle: member.player_id for member in population.members}
+    tallies: dict[str, dict[UUID, dict[PairwiseOutcome, OutcomeTally]]] = {}
+    for searcher, counterpart, outcome, days in population.answers:
+        tallies.setdefault(searcher, {}).setdefault(ids[counterpart], {})[
+            PairwiseOutcome(outcome)
+        ] = OutcomeTally(count=1, last_at=Instant(NOW - timedelta(days=days)))
+    return {
+        searcher: {
+            player_id: PairwiseCounterpart(player_id=player_id, outcomes=outcomes)
+            for player_id, outcomes in rows.items()
+        }
+        for searcher, rows in tallies.items()
+    }
+
+
+def _open_challenges_by_player(population: Population) -> Mapping[str, frozenset[str]]:
+    """The gate, **symmetric in effect** — two people are arranging a game or not.
+
+    Recorded as one direction and applied in both, exactly as a block is: the
+    matcher's ``OpenChallenge`` carries no organiser and no sport, because
+    sharing a line-up makes a pair regardless of who sent it.
+    """
+
+    ids = {member.handle: str(member.player_id) for member in population.members}
+    both: dict[str, set[str]] = {}
+    for a, b in population.open_challenges:
+        both.setdefault(a, set()).add(ids[b])
+        both.setdefault(b, set()).add(ids[a])
+    return {handle: frozenset(others) for handle, others in both.items()}
+
+
+def _loads_by_player(population: Population) -> Mapping[UUID, int]:
+    """How full each candidate's inbox is. **Everybody gets a count.**
+
+    Absence from ``population.inboxes`` is an empty inbox and crosses as a
+    measured ``0``, which is the shape the port answers with — every player asked
+    about gets a count, and only a Player Score spells absence by silence.
+    """
+
+    depths = dict(population.inboxes)
+    return {
+        member.player_id: depths.get(member.handle, 0)
+        for member in population.members
+    }
 
 
 def _yeses_by_searcher(

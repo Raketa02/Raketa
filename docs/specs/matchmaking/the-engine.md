@@ -168,7 +168,7 @@ one, at any rung, ever.
 | 2 | **Held account** | live `AccountHoldQuery`, **both ways** — a held searcher is refused at the entry point | **closed** | wired, `NoHoldsExist` |
 | 3 | **No rating for that sport** | the index row | — | ✅ live |
 | 4 | **Candidate outside the searcher's radius** | the searcher's own ask, so a filter | — | ✅ live |
-| 5 | **An open challenge already exists between you** | live, from `MatchHistoryQuery` | **soft** — §7.5's re-verify is the backstop | `NoMatchHistoryExists` |
+| 5 | **An open challenge already exists between you** | live, from `MatchHistoryQuery` | **soft** — §7.5's re-verify is the backstop | ✅ **live** — `challenges` signs it ([#253](https://github.com/Raketa02/Raketa/issues/253)); still soft and still out of the read-back |
 | 6 | **Missing or unapproved photo** | `PhotoReview` | — | ⚠ **live and inert** — ADR-0091's adapter passes everything through; [#181](https://github.com/Raketa02/Raketa/issues/181) |
 | 7 | **Proposals opt-in explicitly `false`** | **gates the push, not the person** — reads `initiation`, never `surface` | — | ✅ live |
 | 8 | **Account active** | live `AccountStatusQuery` against `users`, **candidate-side only** | **closed** | ✅ **live** — [ADR-0124](../../adr/0124-the-matcher-gates-account-state-never-age.md) |

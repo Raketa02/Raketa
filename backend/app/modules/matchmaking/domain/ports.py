@@ -1,9 +1,17 @@
 """What the matcher demands of the contexts it does not build.
 
-**Five outward ports, one per provider, and one provider signs one contract**
+**Five outward ports, and one provider signs one contract**
 (``docs/adr/0098``, ``docs/specs/matchmaking/consumer-driven-contracts.md``). The
 split is by *who supplies the fact*, never by how fresh it has to be — a provider
 that signed half of two contracts would have signed all of neither.
+
+**One of the five has two providers, and the ADR's amendment banner records the
+bend.** ``MatchHistoryQuery``'s seam runs *through* ``pairwise_counterparts``:
+``ACCEPTED`` and ``DECLINED`` are ``challenges``' facts and ``PLAYED`` is
+``matches``'. Splitting the port to match would cut
+``PAIRWISE_COUNTERPART_BOUND`` in half, and two bounded reads merged by a caller
+is not a bounded read — so the port stays whole and ``matches`` arrives as a
+composing adapter rather than as a second signature.
 
 They live in one file on purpose: it is **the one place a build agent finds every
 demand the matcher makes outward**, and splitting them by does-the-provider-exist
@@ -12,7 +20,7 @@ would make a reader check two places to be sure they had them all.
 | Port | Provider | Day one |
 | --- | --- | --- |
 | ``PlayerScoreQuery`` | ``player_score`` | ``NoPlayerScoresExist`` |
-| ``MatchHistoryQuery`` | ``matches`` | ``NoMatchHistoryExists`` |
+| ``MatchHistoryQuery`` | ``challenges`` + ``matches`` | **half real**, see below |
 | ``AccountHoldQuery`` | ``cases`` | ``NoHoldsExist`` |
 | ``AtStakeQuery`` | ``rating``'s result-update rule | ``NoResultUpdateRuleExists`` |
 | ``AccountStatusQuery`` | ``users`` | a **real adapter** — the provider ships |
@@ -223,7 +231,7 @@ class PlayerScoreQuery(Protocol):
 
 
 # ---------------------------------------------------------------------------
-# MatchHistoryQuery — ``matches``
+# MatchHistoryQuery — ``challenges`` today, ``matches`` when it lands
 # ---------------------------------------------------------------------------
 
 #: How many pairwise counterparts travel with a search, most recent first.
@@ -389,6 +397,16 @@ class MatchHistoryQuery(Protocol):
     embarrassment with a backstop, not a safety failure. These are separate reads
     carried in one context object; bundling them into one would make the
     strictest fact's failure mode everybody's.
+
+    **Two providers sign it, and the seam runs through the first read.**
+    ``challenges`` answers the challenge half of ``pairwise_counterparts`` —
+    ``ACCEPTED`` and ``DECLINED``, mapped from the answers people actually gave
+    — plus the whole of ``open_challenges`` and ``open_challenge_counts``.
+    ``matches`` will bring ``PLAYED``, ``PLANNED_NEVER_PLAYED`` and the
+    threshold, and it arrives as an adapter that **composes** with this one
+    rather than replacing it. The alternative was splitting the port, which
+    would cut the 500 bound in half and leave a caller merging two bounded reads
+    into an unbounded one.
     """
 
     async def pairwise_counterparts(
@@ -406,6 +424,18 @@ class MatchHistoryQuery(Protocol):
 
     async def open_challenges(self, searcher_id: UUID) -> tuple[OpenChallenge, ...]:
         """Every challenge currently open between this searcher and anyone.
+
+        **One row per counterpart, and a counterpart is everybody occupying a
+        seat other than your own** — co-invitees included, because if you are
+        both in a line-up you have an open game together. Somebody whose seat has
+        declined or lapsed is out of it immediately: their seat is open again, so
+        they return to the deck rather than losing a candidate they never turned
+        down.
+
+        Each row carries **that seat's own** origin, so one doubles send from one
+        search at three positions comes back as three rows with three positions —
+        which is the join ``docs/specs/matchmaking/search-telemetry.md`` §19.2
+        needs.
 
         **Unbounded**, because it is a never-stale fact and small by
         construction — a player has a handful of live challenges, not a history
@@ -445,10 +475,18 @@ class MatchHistoryQuery(Protocol):
         and is never the last word. A full inbox *sinks* a player rather than
         withholding them (``docs/adr/0125``), and no screen ever shows the number.
 
-        **Every player asked about gets a count, and today every count is a
-        measured zero**: no challenge has ever been sent by anyone, so the zero is
-        real. That is what separates this read from ``PlayerScoreQuery``, where a
-        zero would have been invented and the player is absent instead.
+        **What is counted is seats awaiting *that player's* answer** — invited,
+        unanswered, inside their own window, across every sport. Not the
+        challenges they organised: an organiser with eight sends out is
+        over-committed but is not slow to answer, and sinking them would dock the
+        exact behaviour this signal exists to find. The ruleset's own falsifier
+        is what decides it — *answer rate by open-challenge bucket* — and only
+        unanswered seats are the denominator of that.
+
+        **Every player asked about gets a count, and a zero here is measured**:
+        the seats were counted and none of them was theirs. That is what
+        separates this read from ``PlayerScoreQuery``, where a zero would have
+        been invented and the player is absent instead.
         """
         ...
 

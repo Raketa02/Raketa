@@ -13,9 +13,15 @@ has to look.
 
 Each row carries a **builder over a session** rather than an instance. The null
 objects need nothing and take it anyway (see ``composition.build_account_hold_query``);
-the real adapter genuinely needs one, and a suite that could only construct the
+the real adapters genuinely need one, and a suite that could only construct the
 implementations needing no I/O would be a suite that quietly excused the only
-implementation with a database behind it.
+implementations with a database behind it.
+
+**A row names one implementation and not one provider**, which is what lets
+``ChallengesButNobodyHasPlayed`` sit here as ``MatchHistoryQuery``'s single
+registered implementation while answering for one shipped context and one
+unwritten one. ADR-0098's *one provider signs one contract* is bent there and the
+bend is recorded in the ADR's amendment banner, not smuggled in as a second row.
 
 **A port with nothing registered is a red build**, asserted in the suite against
 ``MATCHER_DEMANDS`` — otherwise a port added in a hurry would look contracted
@@ -71,7 +77,7 @@ REGISTERED_IMPLEMENTATIONS: tuple[RegisteredImplementation, ...] = (
     ),
     RegisteredImplementation(
         port=MatchHistoryQuery,
-        name="NoMatchHistoryExists",
+        name="ChallengesButNobodyHasPlayed",
         build=build_match_history_query,
     ),
     RegisteredImplementation(

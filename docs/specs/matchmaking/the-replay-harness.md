@@ -111,7 +111,7 @@ exercises the ×32 σ coefficient.** A fourth named approximation, beside ADR-01
 | Blocks | **Yes**, ~1 per 20 players — **invented, and stated as invented** | ADR-0116 puts them in the `K × K` admissibility mask; a corpus with none over-reports admissible combinations |
 | Interest · exposure · suppression ledgers | **Yes**, by a **coverage rule, not a rate** — `INTEREST_LIFT`, `NEWCOMER_WINDOW` and `ZERO_EXPOSURE` each fire for ≥ 1 row per density | A rule survives a population resize where a percentage does not. These are also the three rows ADR-0118 §8 makes the *recorded* corpus carry forward unrecomputed — recomputing them is something only this corpus can do |
 | Held accounts | **No** | Binary, never relaxed, no constant — no ruleset release can change what it does. Its coverage is §20.2's *"no gated player ever appears"* and ADR-0098's contract suite |
-| Pairwise history · open challenges | **No** | Same, and the provider is `NoMatchHistoryExists` |
+| Pairwise history · open challenges | **Yes**, by the **same coverage rule** — `PREVIOUS_ACCEPT`, `PREVIOUS_DECLINE` and each of `CHALLENGE_LOAD`'s three rungs fire for ≥ 1 row per density, and ≥ 1 pair is gated on an open challenge | They used to be a **No**, on the grounds that the provider was `NoMatchHistoryExists` — and [#253](https://github.com/Raketa02/Raketa/issues/253) killed that justification. Three of these are **priced**, so leaving them out would put a ruleset that moved the load rungs behind an **empty diff**. The inbox depths are the fixture's own constants and never read from the ruleset, so a rung moving is a diff rather than a population that quietly re-straddled it |
 
 ### The clock
 

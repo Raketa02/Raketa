@@ -71,6 +71,7 @@ from app.modules.challenges.application.open_from_mutual_interest import (
 from app.modules.challenges.domain.ports import (
     AccountHoldQuery as ChallengeAccountHoldQuery,
     ChallengeDirectory,
+    ChallengeHistoryQuery,
     ChallengeRepository,
     LapsingChallengeQuery,
     OpenChallengeQuery,
@@ -81,6 +82,9 @@ from app.modules.challenges.infrastructure.absent_providers import (
 )
 from app.modules.challenges.infrastructure.event_sourced_challenge_directory import (
     EventSourcedChallengeDirectory,
+)
+from app.modules.challenges.infrastructure.event_sourced_challenge_history import (
+    EventSourcedChallengeHistory,
 )
 from app.modules.challenges.infrastructure.event_sourced_challenge_repository import (
     EventSourcedChallengeRepository,
@@ -121,7 +125,6 @@ from app.modules.matchmaking.infrastructure.rebuild_candidate_index import (
 )
 from app.modules.matchmaking.infrastructure.absent_providers import (
     NoHoldsExist,
-    NoMatchHistoryExists,
     NoPlayerScoresExist,
     NoResultUpdateRuleExists,
 )
@@ -163,6 +166,9 @@ from app.modules.matchmaking.infrastructure.sqlalchemy_search_store import (
 )
 from app.modules.matchmaking.domain.mutual_challenge import (
     MutualChallengeMinting,
+)
+from app.modules.matchmaking.infrastructure.challenges_match_history import (
+    ChallengesButNobodyHasPlayed,
 )
 from app.modules.matchmaking.infrastructure.challenges_mutual_challenge import (
     ChallengesMutualChallenge,
@@ -609,9 +615,39 @@ def build_player_score_query(session: AsyncSession) -> PlayerScoreQuery:
     return NoPlayerScoresExist()
 
 
+def build_challenge_history_query(
+    session: AsyncSession,
+    *,
+    runtime: EventRuntime | None = None,
+) -> ChallengeHistoryQuery:
+    """What ``challenges`` owes the matcher — over the log, like its two siblings.
+
+    Over the log rather than a projection for the reason the open-challenge query
+    and the directory are: *open* is a fold of the seats against a clock, and a
+    stored standing would be wrong for the whole gap between a deadline passing
+    and a sweep noticing it.
+    """
+    return EventSourcedChallengeHistory(
+        session, (runtime or get_event_runtime()).codec
+    )
+
+
 def build_match_history_query(session: AsyncSession) -> MatchHistoryQuery:
-    """``matches`` does not exist, so nobody has played anybody."""
-    return NoMatchHistoryExists()
+    """``challenges`` ships and signs half of it; ``matches`` does not exist.
+
+    **The one outward port with two providers, and the split is by fact rather
+    than by contract** (``docs/adr/0098`` as amended). ``ACCEPTED`` and
+    ``DECLINED`` are challenge facts and ``PLAYED`` is ``matches``', and the seam
+    runs *through* ``pairwise_counterparts`` — so the port stays whole, this line
+    wires the half that exists, and the day ``matches`` lands it composes the two
+    rather than signing a second contract.
+
+    The clock is built here rather than taken, because *open* is a fact about the
+    instant the read happens and a caller holding one could hold a stale one.
+    """
+    return ChallengesButNobodyHasPlayed(
+        build_challenge_history_query(session), build_clock()
+    )
 
 
 def build_at_stake_query(session: AsyncSession) -> AtStakeQuery:

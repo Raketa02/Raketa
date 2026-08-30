@@ -1,4 +1,6 @@
-"""The two seams this context is built on: one to write a challenge, one to ask
+"""Every seam this context is built on: one to write a challenge, and six reads.
+
+The first two are the ones it started with — one to write a challenge, one to ask
 whether a game is already being arranged between two people.
 
 ``ChallengeRepository`` is the **aggregate repository** kind — how a use case
@@ -49,6 +51,20 @@ so the loop that writes the record cannot be handed the list it wants, only the
 list it can safely narrow to. What it narrows on is the one thing the store
 knows: a seat's deadline is its seating event plus the answer window, so a
 challenge younger than that window holds nothing to record.
+
+``ChallengeHistoryQuery`` is the seventh and the only one whose reader is not one
+of this repository's own screens: it is **what this context owes the matcher**.
+The matcher declares ``MatchHistoryQuery`` and an adapter on *its* side of the
+arrow signs it (``docs/adr/0098`` as amended — two providers sign one contract),
+reading this port and translating. The set read stays the provider's, exactly as
+``UsersAccountStatus`` leaves ``users``' disabled-account read with ``users``;
+what crosses is this context's own vocabulary, and the adapter is where the two
+spellings meet.
+
+**Nothing on it answers *did they play*.** A challenge accepted is not a game
+played (map Decision 3), so the half of the matcher's contract that is about
+games stays absent until ``matches`` signs — which is why there are three reads
+here and four over there.
 """
 
 from __future__ import annotations
@@ -58,8 +74,10 @@ from typing import Collection, Mapping, Protocol, final, runtime_checkable
 from uuid import UUID
 
 from app.engines.matchfit.core import SearchMode
-from app.kernel import Instant, Sport
+from app.kernel import Instant, Sport, invariant
 from app.modules.challenges.domain.challenge import Challenge
+from app.modules.challenges.domain.origins import ChallengeOrigin
+from app.modules.challenges.domain.seats import SeatAnswer
 from app.modules.player_profile.domain.availability import Window
 
 
@@ -289,5 +307,196 @@ class LapsingChallengeQuery(Protocol):
         oldest-first is the order the one narrowing that could ever bound this
         read would want, since a seat lapses exactly one window after an event
         the log already orders.
+        """
+        ...
+
+
+#: How many answering counterparts one player's history crosses with, most
+#: recent first.
+#:
+#: **Deliberately the same number as the matcher's ``PAIRWISE_COUNTERPART_BOUND``,
+#: spelled a second time** — the same decision ``origins.py`` and ``Side`` take,
+#: for the same reason: this context may not import ``matchmaking``, and the
+#: alternative to two spellings is the matcher owning the vocabulary of the
+#: context built to take work off him. The adapter that signs the matcher's port
+#: is where the two meet, and it refuses to import if they ever disagree.
+#:
+#: The bound is what makes a counterpart cut off by it and one fully decayed by
+#: time indistinguishable by construction, so it travels with the ordering rather
+#: than as a separate courtesy.
+ANSWERED_COUNTERPART_BOUND = 500
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class AnswerTally:
+    """How many times one answer was given between two people, and when it last was.
+
+    The count and the moment, because the two readers want different halves: a
+    signal asks *has this ever happened* and the bound orders on *when it last
+    did*. A shape with one moment and no count could feed neither honestly.
+    """
+
+    count: int
+    last_at: Instant
+
+    def __post_init__(self) -> None:
+        invariant(
+            self.count >= 1,
+            f"a tally of something that never happened: count {self.count}",
+        )
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class ChallengeCounterpart:
+    """One other player, and what they have answered on challenges you were in.
+
+    **Their answers, never yours, and the direction is the whole point.** The
+    two signals downstream are *they said yes to you before* and *they turned you
+    down before*, and both are prices put on **that** person's card. A pair fact
+    that folded in the reader's own answers would dock a candidate for a
+    challenge the searcher declined, which is the searcher's judgement charged to
+    somebody who never made it.
+
+    **A lapse is not an answer and is not here.** ``SeatAnswer.LAPSED`` is
+    refused below rather than merely omitted: silence and a no do the same thing
+    to a line-up and are different facts, and a shape that could carry both
+    would leave the *answers challenges* denominator and the previous-decline
+    signal reading the same erased history.
+    """
+
+    player_id: UUID
+    answers: Mapping[SeatAnswer, AnswerTally]
+
+    def __post_init__(self) -> None:
+        invariant(
+            bool(self.answers),
+            "a counterpart who has answered nothing is not a counterpart — "
+            "absence is spelled by not being in the list at all",
+        )
+        invariant(
+            SeatAnswer.LAPSED not in self.answers,
+            f"a lapse tallied as an answer: {self!r}",
+        )
+
+    @property
+    def last_at(self) -> Instant:
+        """The most recent thing they answered, of either kind."""
+
+        return max(tally.last_at for tally in self.answers.values())
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class SharedChallenge:
+    """One challenge standing open between this player and one other.
+
+    ``origin`` is **the counterpart's own seat's**, so one doubles send from one
+    search at three positions yields three rows carrying three positions — which
+    is the join ``search-telemetry.md`` §19.2 needs, and it is lost the moment a
+    challenge-level origin is substituted for it.
+
+    A seat nobody was invited into has no origin to carry — the organiser's, and
+    both seats of a mutual-born challenge — and those rows say
+    ``SentOutsideASearch`` rather than nothing. That is the same claim the writer
+    makes: **the invitation came from somewhere else, said explicitly**, and it is
+    a claim rather than a missing value on purpose.
+
+    ``opened_at`` is the send moment, or on a mutual-born challenge the moment the
+    second yes landed. Both are the challenge's own opening, so there is one
+    reading and not two.
+    """
+
+    counterpart_id: UUID
+    origin: ChallengeOrigin
+    opened_at: Instant
+
+
+@runtime_checkable
+class ChallengeHistoryQuery(Protocol):
+    """What this context owes the matcher: who answered, who is open, who is full.
+
+    **Three reads and not one bag.** They are separate because their consumers
+    are: two Liveness signals, one gate, and a third signal that is a count over
+    everybody rather than a fact about a pair. Bundling them would make the
+    slowest read's cost and the strictest read's failure everybody's, which is
+    the same argument ``MatchHistoryQuery`` makes about carrying them as separate
+    methods on one port.
+
+    **The two reads that are about *now* take the clock; the one about history
+    does not, and nothing here is projected.** An answer is a thing that
+    happened and reads the same at every instant, so ``answered_counterparts``
+    has no clock to be given. *Open* is ``AWAITING_ANSWERS ∪ ON ∪
+    LINE_UP_INCOMPLETE`` computed from the seats and ``now`` (``standing.py``), so
+    a seat past its window has left both the open read and the count whether or
+    not the sweep has been past — **the sweep exists for the record, not for
+    correctness**. A projection storing the standing would be the status column
+    ``standing.py`` refuses, relocated into a read model, and it would be the copy
+    that got believed.
+    """
+
+    async def answered_counterparts(
+        self, player_id: UUID
+    ) -> tuple[ChallengeCounterpart, ...]:
+        """Everybody who has answered a challenge this player was on the court for.
+
+        **On the court when they answered**, and not merely on it now. A declined
+        seat can be re-offered to somebody else, and the arrangement that results
+        has forgotten whoever left it — so a read that asked today's court would
+        erase a real refusal the day the organiser refilled the seat, and would
+        hand the replacement a history they were never part of.
+
+        At most ``ANSWERED_COUNTERPART_BOUND``, **ordered on ``last_at``, newest
+        first** — the order is part of the demand rather than a convenience,
+        because it is what the bound means.
+
+        **A challenge born of a mutual yes tallies nothing.** Nobody answered
+        anything: both seats are accepted from birth and no answer event exists,
+        so the pair produce no row here at all. What two yeses that met are worth
+        is already priced by the interest lift, and counting it again would be the
+        double-count the whole shape is careful to avoid.
+
+        **A lapse tallies nowhere.** A pair whose only history is one lapsed seat
+        has no row here.
+        """
+        ...
+
+    async def open_challenges_with(
+        self, player_id: UUID, *, now: Instant
+    ) -> tuple[SharedChallenge, ...]:
+        """Everybody this player currently has an open game with. **One row each.**
+
+        A counterpart is **everybody occupying a seat other than your own** on a
+        challenge that has not ended — co-invitees included, because if we are
+        both in a line-up we have an open game together and that is the same fact
+        from the other side. Somebody whose seat has declined or lapsed is out of
+        the game and out of this answer immediately, because their seat is open
+        again; otherwise a decline would cost them a candidate they never turned
+        down.
+
+        **Unbounded**, because it is small by construction: a player has a handful
+        of live challenges rather than a history of them, and one open challenge
+        per pair is a rule this context enforces on the way in.
+        """
+        ...
+
+    async def seats_awaiting_answers(
+        self, player_ids: Collection[UUID], *, now: Instant
+    ) -> Mapping[UUID, int]:
+        """How many seats are waiting on each of these players' answers.
+
+        **Invited, unanswered, inside their own window, across every sport.** Not
+        challenges they organised — an organiser with eight sends out is
+        over-committed but is not slow to answer, and docking them would sink the
+        exact behaviour the product exists to produce — and not seats they have
+        already accepted, which are waiting on nobody.
+
+        Across every sport because the pair rule is, and because the ruleset's own
+        falsifier for this signal is *answer rate by open-challenge bucket*: only
+        unanswered seats are the denominator of that.
+
+        **Every player asked about gets a count**, and a zero here is measured:
+        the seats were counted and there were none.
         """
         ...

@@ -172,9 +172,13 @@ class LiveTermFacts:
     """
 
     #: The searcher's pairwise history, at most 500 counterparts, newest first.
+    #: Challenge-deep today — who accepted and who declined — because ``matches``
+    #: is unwritten, so ``PLAYED`` is empty **by construction** and familiarity
+    #: stands down rather than firing at zero strength on every card.
     counterparts: Mapping[UUID, PairwiseCounterpart]
-    #: How full each candidate's inbox is. Advisory, and today every count is a
-    #: measured zero.
+    #: How many seats are waiting on each candidate's answer, across every sport.
+    #: Advisory, and a zero is measured: the seats were counted and none of them
+    #: was theirs.
     open_challenge_counts: Mapping[UUID, int]
     #: The six reliability strands, for the players who have them. A player with
     #: no record is **absent**, never a zero.

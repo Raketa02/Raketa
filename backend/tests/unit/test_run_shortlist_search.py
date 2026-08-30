@@ -60,7 +60,6 @@ from app.modules.matchmaking.domain.relaxation import Rung
 from app.modules.matchmaking.domain.searches import InclusionReason, SearchRecord
 from app.modules.matchmaking.infrastructure.absent_providers import (
     NoHoldsExist,
-    NoMatchHistoryExists,
     NoPlayerScoresExist,
     NoResultUpdateRuleExists,
 )
@@ -164,6 +163,33 @@ class NobodyIsHidden:
         self, candidate_ids: Collection[UUID]
     ) -> frozenset[UUID]:
         return frozenset()
+
+
+class NothingHasHappenedBetweenAnybody:
+    """``MatchHistoryQuery`` over a world where nobody has been asked anything.
+
+    A hand-written stub rather than the deleted ``NoMatchHistoryExists``: the
+    real provider is now half ``challenges``, which needs a database and a
+    challenge in it, and this file is about the workbench's **order** rather than
+    about anybody's history. The port's real behaviour is held to
+    ``tests/demands/``, which arranges through the aggregate.
+
+    Every count is a zero here because there is nothing seated anywhere, and that
+    is the same shape the provider answers with — every player asked about gets
+    a count.
+    """
+
+    async def pairwise_counterparts(self, searcher_id: UUID):
+        return ()
+
+    async def open_challenges(self, searcher_id: UUID):
+        return ()
+
+    async def late_change_threshold(self):
+        return None
+
+    async def open_challenge_counts(self, player_ids: Collection[UUID]):
+        return {player_id: 0 for player_id in player_ids}
 
 
 @dataclass
@@ -411,7 +437,7 @@ def use_case(
             blocks=blocks or Blocks(),
             holds=holds or NoHoldsExist(),
             account_status=NobodyIsHidden(),
-            history=NoMatchHistoryExists(),
+            history=NothingHasHappenedBetweenAnybody(),
             player_scores=NoPlayerScoresExist(),
             at_stake=NoResultUpdateRuleExists(),
             exposure=exposure or InMemoryExposureLedger(FixedClock()),

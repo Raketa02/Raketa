@@ -19,12 +19,20 @@ discriminating. ``sigma`` is ≈ 0.34 for every player, because every rating tod
 is an *Initial Estimate* — and its stated cost is that the corpus never
 exercises the ×32 σ coefficient.
 
-**Two things here are rules rather than draws, and that is deliberate.** The
-newcomer fraction and the ledger coverage are assigned by position in a stable
-order, because *a rule survives a population resize where a percentage does
-not*: at 20 players per sport per area, a 25% draw is five people on a good day
-and one on a bad one, and the whole point of the coverage rule is that
+**Most of what is not drawn is ruled, and that is deliberate.** The newcomer
+fraction, the ledger coverage and the challenge rows are assigned by position in
+a stable order, because *a rule survives a population resize where a percentage
+does not*: at 20 players per sport per area, a 25% draw is five people on a good
+day and one on a bad one, and the whole point of the coverage rule is that
 ``INTEREST_LIFT``, ``NEWCOMER_WINDOW`` and ``ZERO_EXPOSURE`` each fire.
+
+**The challenge rows arrived when the null object died** (#253). §2.1 excluded
+pairwise history and open challenges and gave the reason in writing — *the
+provider is ``NoMatchHistoryExists``* — and ``challenges`` signing the port
+killed it. Without them ``PREVIOUS_ACCEPT``, ``PREVIOUS_DECLINE`` and
+``CHALLENGE_LOAD``'s three rungs would be released behaviour **the offline diff
+cannot see**: a ruleset moving the load rungs would print an empty diff and the
+gate would pass. They come in under the same coverage rule and not a rate.
 """
 
 from __future__ import annotations
@@ -114,6 +122,27 @@ CORPUS_BLOCK_RATE: Final = 0.05
 #: does not. **A rule, never a sample** — a rule survives a resize.
 EVERY_NTH_RUNS_EVERY_SURFACE: Final = 5
 
+#: How many seats are waiting on the three loaded members of each run of ten.
+#:
+#: **Stated here rather than read from the ruleset, and that is the decision.**
+#: The rungs these straddle are ``CHALLENGE_LOAD``'s and live in the released
+#: ruleset; a generator that read them would move the *population* every time a
+#: ruleset moved, and every past comparison would silently stop being about the
+#: same people. A fixture stands for a comparison (``docs/adr/0121``), so the
+#: depths are the fixture's and the rungs are the thing being measured.
+#:
+#: Three depths because there are three rungs, and one row per depth per density
+#: is the coverage rule the interest and exposure ledgers already use — a rule
+#: survives a population resize where a percentage does not.
+CHALLENGE_LOAD_DEPTHS: Final = (3, 5, 8)
+
+#: How long ago the two answers a challenge counterpart gave were given. Both
+#: signals are flags rather than ramps, so the age moves nobody; it is recorded
+#: because ``last_at`` is what the pairwise bound orders on and a shape with no
+#: moment could not be ordered at all.
+ACCEPTED_DAYS_AGO: Final = 5
+DECLINED_DAYS_AGO: Final = 9
+
 #: The truncated normal §2.1 argues for, and the σ every rating carries while
 #: every rating is an *Initial Estimate*.
 MU_CENTRE: Final = 2.8
@@ -193,10 +222,10 @@ class Member:
 @final
 @dataclass(frozen=True, slots=True)
 class Population:
-    """The whole corpus: its members, its blocks and its yeses.
+    """The whole corpus: its members, and the five relations over them.
 
-    The three are one artifact because they are one population — a block pair
-    naming a handle that no longer exists is the failure a second file invites.
+    They are one artifact because they are one population — a block pair naming a
+    handle that no longer exists is the failure a second file invites.
     """
 
     density: str
@@ -208,6 +237,20 @@ class Population:
     #: ``(searcher, candidate, days_ago)`` — the candidate said *Let's play* to
     #: the searcher that many days ago. **The age and never a boolean.**
     yeses: tuple[tuple[str, str, int], ...]
+    #: ``(searcher, counterpart, outcome, days_ago)`` — the counterpart answered
+    #: that way to a challenge the searcher was in. **Their answer and never the
+    #: searcher's**: both signals are prices put on the counterpart's card.
+    #: ``ACCEPTED`` and ``DECLINED`` only — a lapse tallies nowhere, and there is
+    #: deliberately no way to spell one here.
+    answers: tuple[tuple[str, str, str, int], ...]
+    #: ``(player, seats_awaiting)`` — how many seats are waiting on that player's
+    #: answer, across every sport. Everybody absent from this list has an empty
+    #: inbox, which is a **measured** zero and not an absence.
+    inboxes: tuple[tuple[str, int], ...]
+    #: ``(searcher, counterpart)`` — an open challenge stands between them, so
+    #: the searcher never sees them. Recorded as given; the gate is symmetric in
+    #: effect the way a block is, and the corpus applies it from both sides.
+    open_challenges: tuple[tuple[str, str], ...]
 
     def by_sport(self, sport: str) -> tuple[Member, ...]:
         return tuple(member for member in self.members if member.sport == sport)
@@ -238,6 +281,9 @@ def generate(density: Density, *, seed: int = SEED) -> Population:
         members=ordered,
         blocks=_blocks(rng, ordered),
         yeses=_yeses(ordered),
+        answers=_answers(ordered),
+        inboxes=_inboxes(ordered),
+        open_challenges=_open_challenges(ordered),
     )
 
 
@@ -414,6 +460,79 @@ def _yeses(members: Sequence[Member]) -> tuple[tuple[str, str, int], ...]:
     return tuple(said)
 
 
+def _answers(members: Sequence[Member]) -> tuple[tuple[str, str, str, int], ...]:
+    """The two challenge signals, assigned by rule so both fire at any size.
+
+    ``the-replay-harness.md`` §2.1 excluded pairwise history from the corpus and
+    gave the reason in writing — *the provider is ``NoMatchHistoryExists``* —
+    which stopped being true when ``challenges`` signed the port (#253). Left
+    alone, ``PREVIOUS_ACCEPT`` and ``PREVIOUS_DECLINE`` would be priced
+    behaviour the offline diff could not see, and a ruleset moving either would
+    print an empty diff.
+
+    Every tenth member by id order is answered by the member two later with an
+    accept and by the member four later with a decline, in the same sport. A
+    rule rather than a rate, for the reason every other coverage rule here is
+    one.
+    """
+
+    given: list[tuple[str, str, str, int]] = []
+    for sport in SPORTS:
+        cohort = [m.handle for m in members if m.sport == sport.value]
+        for index in range(0, len(cohort), 10):
+            for offset, (outcome, days) in (
+                (2, ("ACCEPTED", ACCEPTED_DAYS_AGO)),
+                (4, ("DECLINED", DECLINED_DAYS_AGO)),
+            ):
+                counterpart = index + offset
+                if counterpart < len(cohort):
+                    given.append((cohort[index], cohort[counterpart], outcome, days))
+    return tuple(given)
+
+
+def _inboxes(members: Sequence[Member]) -> tuple[tuple[str, int], ...]:
+    """One member per rung per run of ten, so all three of them bind.
+
+    ``CHALLENGE_LOAD``'s rungs have been wired and unreachable since the engine
+    shipped, because every count was a measured zero. These are the depths that
+    make them fire — and because they are the fixture's rather than the
+    ruleset's, moving a rung shows up as a **diff** rather than as a population
+    that quietly re-straddled it.
+    """
+
+    loaded: list[tuple[str, int]] = []
+    for sport in SPORTS:
+        cohort = [m.handle for m in members if m.sport == sport.value]
+        for index, handle in enumerate(cohort):
+            rung = index % 10
+            if 1 <= rung <= len(CHALLENGE_LOAD_DEPTHS):
+                loaded.append((handle, CHALLENGE_LOAD_DEPTHS[rung - 1]))
+    return tuple(loaded)
+
+
+def _open_challenges(members: Sequence[Member]) -> tuple[tuple[str, str], ...]:
+    """At least one gated pair per density — the gate, not the signals.
+
+    ``OPEN_CHALLENGE`` is soft and stays out of the read-back, but it is still a
+    gate that withholds rows from a live search, so a corpus with none
+    over-reports how many candidates a search returns for exactly the reason a
+    corpus with no blocks does.
+
+    Every tenth member by id order already has an open game with the member six
+    later, which is far enough from the accept, the decline and the yes that the
+    four coverage rules do not land on one person.
+    """
+
+    pairs: list[tuple[str, str]] = []
+    for sport in SPORTS:
+        cohort = [m.handle for m in members if m.sport == sport.value]
+        for index in range(0, len(cohort), 10):
+            counterpart = index + 6
+            if counterpart < len(cohort):
+                pairs.append((cohort[index], cohort[counterpart]))
+    return tuple(pairs)
+
+
 def write(population: Population, path: Path) -> Path:
     """Write the population as the committed artifact. **Stable bytes.**"""
 
@@ -437,6 +556,9 @@ def as_document(population: Population) -> dict[str, object]:
         "members": [_member_document(member) for member in population.members],
         "blocks": [list(pair) for pair in population.blocks],
         "yeses": [list(yes) for yes in population.yeses],
+        "answers": [list(answer) for answer in population.answers],
+        "inboxes": [list(inbox) for inbox in population.inboxes],
+        "open_challenges": [list(pair) for pair in population.open_challenges],
     }
 
 

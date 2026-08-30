@@ -23,16 +23,24 @@ by accident.**
 One provider signs one contract. The split is by who supplies the fact, never by how fresh it
 has to be.
 
+**One of the five now has two, and the bend is recorded rather than absorbed**
+([#253](https://github.com/Raketa02/Raketa/issues/253), ADR-0098's amendment banner).
+`challenges` ships and signs `MatchHistoryQuery` beside the still-unwritten `matches`, because
+the seam runs *through* `pairwise_counterparts`: `ACCEPTED` and `DECLINED` are challenge facts
+and `PLAYED` is `matches`'. Splitting the port to match would cut the 500-counterpart bound in
+half, and two bounded reads merged by a caller is not a bounded read.
+
 | Port | Provider | Supplies |
 | --- | --- | --- |
 | `PlayerScoreQuery` | `player_score` | The six strands with their evidence, and opponent variety |
-| `MatchHistoryQuery` | `matches` | The searcher's pairwise history, the per-player open-challenge count, and the origin key |
+| `MatchHistoryQuery` | `challenges` **and** `matches` | The searcher's pairwise history, the per-player open-challenge count, and the origin key. `challenges` answers all of it except `PLAYED`, `PLANNED_NEVER_PLAYED` and the late-change threshold |
 | `AccountHoldQuery` | `cases` | One live boolean per player. Already standing from [ADR-0095](../../adr/0095-block-directed-record-symmetric-effect-gates-fail-closed.md) |
 | `AtStakeQuery` | `rating` | What a counted win and a counted loss against one opponent would do to the searcher's Level |
 | `AccountStatusQuery` | `users` | The set of accounts that may not be shown. Gate 8, from [ADR-0124](../../adr/0124-the-matcher-gates-account-state-never-age.md) |
 
 **The last two are different, and the difference is stated rather than left to be noticed.**
-`player_score`, `matches` and `cases` **do not exist**. `rating` does — it is at
+`player_score`, `matches` and `cases` **do not exist** (`challenges` does, and answers the half
+of `MatchHistoryQuery` above that is about being asked rather than about playing). `rating` does — it is at
 `backend/app/modules/rating/`, with its engine at `app/engines/racketskill/`, and the matcher
 already reads μ and σ from it. What is missing is not a context but a **rule**: the
 result-update rule and its K-factor, which arrive with `matches` and are out of scope on this
@@ -305,10 +313,11 @@ The test is whether a zero would be **measured** or **invented**.
 | Fact | Today | Which, and why |
 | --- | --- | --- |
 | Hold flag | **True-over-empty** | Nobody can be held because nothing can hold anybody. A real, measured absence |
-| Open challenge count | **True-over-empty**, at `0` | No challenge has ever been sent by anyone. A real zero |
-| Pending challenge between a pair | **True-over-empty**, empty set | Same |
+| Open challenge count | **True-over-empty**, and **live** since [#253](https://github.com/Raketa02/Raketa/issues/253) | Seats awaiting that player's answer, across every sport, counted from the seats and the clock. Everybody asked gets a count, and a zero is measured — the shape did not change when the provider arrived, which is the property this rule was chosen for |
+| Pending challenge between a pair | **True-over-empty**, and **live** | Every counterpart in every challenge that has not ended. Still **soft**, and still out of the read-back: this is embarrassment, and the send's re-check is the backstop |
 | The six strands, opponent variety | **`NoEvidence`** | Nobody has failed to turn up because nobody has ever been due to. A zero here would be *invented*, and no record is not a bad record |
-| Pairwise history → familiarity | **`NoEvidence`** | *You have never played this person* is true of everyone, and a modifier firing identically on every candidate changes no ranking while printing a sentence on every card |
+| Pairwise history → previous accept · previous decline | **Live** since [#253](https://github.com/Raketa02/Raketa/issues/253) | `SeatAccepted → ACCEPTED` and `SeatDeclined → DECLINED`, and nothing else does. A **lapse tallies nowhere** — silence is not a judgement — and a challenge born of a mutual yes tallies nothing, because nobody answered anything |
+| Pairwise history → familiarity | **`NoEvidence`** | *You have never played this person* is still true of everyone: a challenge accepted is not a game played, so `games_played_together` is `0` and the modifier is absent rather than firing identically on every candidate |
 | Origin key | Demanded from day one | The search half of §19.2's chain ships now; the outcome half joins it when `matches` lands |
 | At stake | **Absent** | Nobody's Level has ever moved on a result, because the rule that moves it is not written. A zero would claim a counted game changes nothing, which is false about every opponent — so the field is omitted and the card shows no block |
 
@@ -317,9 +326,19 @@ The test is whether a zero would be **measured** or **invented**.
 ## How the demand is made binding
 
 **The contract suite is parameterised over every registered implementation of each port,
-including the null one.** `NoPlayerScoresExist`, `NoMatchHistoryExists` and
-`NoResultUpdateRuleExists` prove the degradation table above, green, today — named for the
-facts they assert rather than for being empty, in `NoHoldsExist`'s style.
+including the null one.** `NoPlayerScoresExist` and `NoResultUpdateRuleExists` prove the
+degradation table above, green, today — named for the facts they assert rather than for being
+empty, in `NoHoldsExist`'s style. `ChallengesButNobodyHasPlayed` follows the same convention over
+half a real provider, and its name is what tells the next reader that `PLAYED` is empty **by
+construction and not by luck**.
+
+**The arrangement belongs to the port and never to one implementation**, and where a provider
+ships, the suite arranges a real world through that context's aggregate rather than an `INSERT`
+([ADR-0029](../../adr/0029-seed-data-through-aggregates-never-in-production.md)). For
+`MatchHistoryQuery` that arrangement **splits in two**, and the split is said out loud: the
+challenge half is arranged and asserted, and `PLAYED`, `PLANNED_NEVER_PLAYED` and
+`late_change_threshold` stay shape-only until `matches` signs, because nobody can arrange them
+yet.
 
 Registering a real adapter enrols it in the suite automatically. It either satisfies the
 contract or the build is red. **There is no skipped test to go stale**, and no version of

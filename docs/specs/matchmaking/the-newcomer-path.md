@@ -346,8 +346,16 @@ to the person it protects most.
 **Everything ships wired.** The map has settled this shape three times —
 [ADR-0095](../../adr/0095-block-directed-record-symmetric-effect-gates-fail-closed.md)'s hold
 gate ships *wired and true-over-empty*, and ADR-0098's ports ship as `NoPlayerScoresExist` and
-`NoMatchHistoryExists`. Welcoming ships as a null-object read returning `NoEvidence`; the cap
+`NoResultUpdateRuleExists`. Welcoming ships as a null-object read returning `NoEvidence`; the cap
 ships as code that never binds.
+
+**The welcoming record is untouched by `challenges` signing `MatchHistoryQuery`**
+([#253](https://github.com/Raketa02/Raketa/issues/253)), and this was checked rather than
+assumed. That provider answers `ACCEPTED` and `DECLINED` and nothing else; `PLAYED` stays empty
+by construction, so `games_played_together` is `0`, `_shared_history` returns nothing, and the
+modifier stays **absent** rather than firing at zero strength on every card. A challenge accepted
+is not a game played, and this is one of the places that would have quietly stopped being true if
+it were.
 
 **Nothing stands in for the welcoming record**, and the reason is already written: *a gate may be
 honestly empty; a term may never be honestly neutral*. Every proxy available is one of the inputs

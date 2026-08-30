@@ -1,4 +1,4 @@
-"""The four providers that do not exist, each answering honestly.
+"""The three providers that do not exist, each answering honestly.
 
 **Everything ships wired, and nothing stands in for an absent provider.** Each
 class below is a **null object named for the fact it asserts** — ``NoHoldsExist``,
@@ -14,6 +14,14 @@ can hold anybody — a real, measured absence, so the gate ships true-over-empty
 Nobody has failed to turn up because nobody has ever been due to — so a
 ``player_score`` fact is **absent**, never a zero, because that zero would be
 invented.
+
+**``NoMatchHistoryExists`` was here and is gone rather than narrowed** (#253). Its
+docstring's second half — *the count is a measured ``0`` for everybody asked,
+because no challenge has ever been sent by anyone* — stopped being true the day
+``challenges`` shipped a send, and a null object whose stated fact has become
+false is worse than no null object at all. What signs ``MatchHistoryQuery`` now is
+``challenges_match_history.ChallengesButNobodyHasPlayed``, which is half a real
+adapter and half a measured absence and is named for exactly that.
 """
 
 from __future__ import annotations
@@ -21,11 +29,9 @@ from __future__ import annotations
 from typing import Collection, Mapping, final
 from uuid import UUID
 
-from app.kernel import Minutes, Sport
+from app.kernel import Sport
 from app.modules.matchmaking.domain.ports import (
     AtStake,
-    OpenChallenge,
-    PairwiseCounterpart,
     PlayerScoreReading,
 )
 
@@ -51,36 +57,6 @@ class NoPlayerScoresExist:
 
 
 @final
-class NoMatchHistoryExists:
-    """Nobody has played anybody, because the ``matches`` context is unwritten.
-
-    **Two different absences, spelled differently on purpose.** The pairwise
-    reads are empty because *you have never played this person* is true of
-    everyone, and familiarity therefore returns ``NoEvidence`` — a modifier
-    firing identically on every candidate changes no ranking while printing a
-    sentence on every card. The **count** is a measured ``0`` for everybody
-    asked, because no challenge has ever been sent by anyone; the challenge-load
-    rungs are wired and never bind.
-    """
-
-    async def pairwise_counterparts(
-        self, searcher_id: UUID
-    ) -> tuple[PairwiseCounterpart, ...]:
-        return ()
-
-    async def open_challenges(self, searcher_id: UUID) -> tuple[OpenChallenge, ...]:
-        return ()
-
-    async def late_change_threshold(self) -> Minutes | None:
-        return None
-
-    async def open_challenge_counts(
-        self, player_ids: Collection[UUID]
-    ) -> Mapping[UUID, int]:
-        return {player_id: 0 for player_id in player_ids}
-
-
-@final
 class NoHoldsExist:
     """Nothing can hold an account, because the ``cases`` context is unwritten.
 
@@ -102,7 +78,7 @@ class NoResultUpdateRuleExists:
     already reads μ and σ from it; what does not exist is the *rule* — the
     result-update step and its K-factor, which arrive with ``matches``. So this
     is a null object about a **rule** rather than about a context, and it is the
-    only one of the four whose provider you can go and read today.
+    only one of the three whose provider you can go and read today.
 
     The answer is **absence and never a zero**: a zero would claim a counted game
     against this opponent moves the searcher's Level by nothing, which is false

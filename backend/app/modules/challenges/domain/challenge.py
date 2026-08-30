@@ -335,6 +335,20 @@ class Challenge:
 
         return self.standing_at(now) not in ENDED
 
+    def seat_of(self, player_id: UUID) -> Seat | None:
+        """That player's seat on this court, or nothing if it is not theirs.
+
+        ``None`` covers both *they were never here* and *their position was
+        re-offered to somebody else*, and it does so on purpose: a seat that has
+        moved on is not this person's to be asked about, which is the same rule
+        the directory drops a stream on.
+        """
+
+        for seat in self.seats:
+            if seat.holds(player_id):
+                return seat
+        return None
+
     def players_in_it_at(self, now: Instant) -> frozenset[UUID]:
         """Everybody still in this game: accepted, or yet to answer.
 

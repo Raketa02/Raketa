@@ -229,9 +229,14 @@ def liveness_facts_of(
     taper — so the age is carried rather than priced: it crosses as evidence, is
     recorded as the signal's raw input, and moves nobody by being large or small.
 
-    ``answer_rate`` is ``None`` for the same reason one layer over: how well and
-    how fast somebody answers a challenge is a fact about challenges, and nothing
-    in this repository has ever sent one.
+    ``answer_rate`` stays ``None``, and **the reason has changed owner rather
+    than gone away.** Challenges are sent and answered now, so *nothing in this
+    repository has ever sent one* is no longer why. *Answers challenges* is a
+    Player Score **Strand**, published by ``player_score``, which does not exist
+    — so this reads ``PlayerScoreQuery`` and not the challenge history beside it.
+    Deriving a rate here from the pairwise tallies would be the matcher computing
+    somebody else's published number, which is the one thing this module refuses
+    everywhere.
     """
 
     counterpart = context.terms.counterparts.get(player_uuid)

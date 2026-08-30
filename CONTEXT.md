@@ -667,9 +667,12 @@ appears here.
   joined to its outcome is evidence that no longer exists, and there is no backfill.
 - **PlayerScoreQuery** / **MatchHistoryQuery** — the two ports naming what the matcher demands of
   `player_score` and `matches`, beside **AccountHoldQuery** for `cases` and **AtStakeQuery** for
-  `rating`. One provider signs one contract. Their only adapters today are
-  **`NoPlayerScoresExist`**, **`NoMatchHistoryExists`** and **`NoResultUpdateRuleExists`**, named
-  for the facts they assert
+  `rating`. One provider signs one contract — with **one recorded exception**: `challenges` ships
+  and signs `MatchHistoryQuery` beside the unwritten `matches`, because the seam runs *through*
+  the pairwise read and splitting the port would halve its 500-counterpart bound. Its adapter is
+  **`ChallengesButNobodyHasPlayed`**, named for the fact that **played** is empty by construction
+  rather than by luck; the two that remain empty are **`NoPlayerScoresExist`** and
+  **`NoResultUpdateRuleExists`**, named the same way
   ([ADR-0098](docs/adr/0098-matcher-demands-as-executable-contracts.md)). `AtStakeQuery` is the
   odd one out: its provider **exists** and the rule it needs does not.
 
