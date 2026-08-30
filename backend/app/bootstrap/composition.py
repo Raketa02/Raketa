@@ -73,6 +73,7 @@ from app.modules.matchmaking.domain.ports import (
 )
 from app.modules.matchmaking.application.roll_exposure import RollExposure
 from app.modules.matchmaking.domain.cards import CardPhotoLinks, PlayerCardSource
+from app.modules.matchmaking.domain.declines import PromptDeclineLedger
 from app.modules.matchmaking.domain.ledgers import ExposureLedger, SuppressionLedger
 from app.modules.matchmaking.domain.prompts import PromptLedger
 from app.modules.matchmaking.domain.interest import InterestLedger
@@ -126,6 +127,9 @@ from app.modules.matchmaking.infrastructure.sqlalchemy_interest_ledger import (
 )
 from app.modules.matchmaking.infrastructure.sqlalchemy_pass_ledger import (
     SqlAlchemyPassLedger,
+)
+from app.modules.matchmaking.infrastructure.sqlalchemy_prompt_decline_ledger import (
+    SqlAlchemyPromptDeclineLedger,
 )
 from app.modules.matchmaking.infrastructure.sqlalchemy_search_store import (
     SqlAlchemySearchStore,
@@ -499,6 +503,24 @@ def build_pass_ledger(session: AsyncSession) -> PassLedger:
     """
 
     return SqlAlchemyPassLedger(session)
+
+
+def build_prompt_decline_ledger(session: AsyncSession) -> PromptDeclineLedger:
+    """The durable record of every *not now*, over the caller's own session.
+
+    **No fail-soft wrapper**, and the contrast with the prompt ledger built below
+    is the whole design: that one holds a question a loop left standing and may
+    be lost for the price of an offer nobody sees this week, and this one holds a
+    player's answer and may not. A decline whose row could not be written is a
+    decline that did not happen, and the route says so rather than going quiet
+    against nothing.
+
+    The read that consults it degrades on its own, at its one call site, and it
+    degrades the other way from everything in ``fail_soft_ledgers.py`` — to
+    *every* prompt silenced, which is no prompt at all.
+    """
+
+    return SqlAlchemyPromptDeclineLedger(session)
 
 
 def build_player_card_source(

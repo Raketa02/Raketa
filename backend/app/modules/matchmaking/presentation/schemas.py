@@ -288,6 +288,46 @@ class RecordPassRequest(BaseModel):
     )
 
 
+class RecordPromptDeclineRequest(BaseModel):
+    """One *not now*, about a question. **Write-only.**
+
+    Nothing is returned by this route and no route anywhere returns a decline —
+    not to you, not as a count, not as *"you have said no to this four times"*.
+
+    **There is no `search_id` and no idempotency key.** A pass carries an origin
+    because *pass rate on re-shown profiles* is unmeasurable without one; nothing
+    a decline is measured by needs one, and two of these questions are raised by
+    a background loop that has no search to cite. A second *not now* is a second
+    row with its own moment, exactly as a second pass is, and it buys the same
+    month the first did.
+
+    **How long it lasts is not yours to name**, and there is no field here for
+    it. What it buys is that this question is not raised at you again for a
+    while; it retires nothing — the standing prompt still expires on its own —
+    and it changes no value on your profile. Saying *yes* is a write through the
+    route that owns the value, and it is a different request entirely.
+    """
+
+    prompt: Prompt = Field(
+        ...,
+        description=(
+            "Which question you are answering, as the code the search sent "
+            "you.\n\n**`KEEP_THESE_TIMES` is refused** — an improvised week is "
+            "a different week next Tuesday, so that one is asked again and the "
+            "app does not offer *not now* for it."
+        ),
+    )
+    sport: Sport = Field(
+        ...,
+        description=(
+            "Which sport's screen raised it. **It is not the key**: a play "
+            "intent is declared per sport, so declining that one is per sport, "
+            "while a search radius and an availability grid are one fact each "
+            "for the whole player — those go quiet everywhere."
+        ),
+    )
+
+
 class PoolSchema(BaseModel):
     """What the searcher is told about the pool this answer came from.
 

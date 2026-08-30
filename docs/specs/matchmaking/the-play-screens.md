@@ -22,7 +22,9 @@ read-back and the silent yes are
 ## 0. The routes, after this ticket
 
 [`the-two-contracts.md`](the-two-contracts.md) §1 fixed four routes. The Play screens need
-three more. That file's §1 stands as written for the four that create searches.
+four more — three from this ticket, and the decline
+[#237](https://github.com/Raketa02/Raketa/issues/237) added later. That file's §1 stands as
+written for the four that create searches.
 
 | Route | Creates a search | Added by |
 | --- | --- | --- |
@@ -33,6 +35,7 @@ three more. That file's §1 stands as written for the four that create searches.
 | `POST /api/v1/interest` | no | [#170](https://github.com/Raketa02/Raketa/issues/170) |
 | **`POST /api/v1/forecasts`** | **no — deliberately** | [ADR-0108](../../adr/0108-a-forecast-is-a-route-not-a-search.md) |
 | **`POST /api/v1/passes`** | no | §7 below |
+| **`POST /api/v1/prompt-declines`** | no | §2 below, [#237](https://github.com/Raketa02/Raketa/issues/237) |
 | **`GET /api/v1/interest`** | no | [ADR-0109](../../adr/0109-a-read-back-names-what-it-withholds.md) |
 
 **And two writes that are not matchmaking's at all.** The search screen is the edit surface

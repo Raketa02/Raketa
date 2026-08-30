@@ -32,6 +32,9 @@ from sqlalchemy import select
 
 from app.kernel import Sport
 from app.modules.matchmaking.infrastructure.pass_model import PassORM
+from app.modules.matchmaking.infrastructure.prompt_decline_model import (
+    PromptDeclineORM,
+)
 from app.modules.matchmaking.infrastructure.search_model import (
     SearchCandidateORM,
     SearchORM,
@@ -427,6 +430,36 @@ async def recorded_passes(session_factory) -> list[PassORM]:
     async with session_factory() as session:
         rows = await session.execute(
             select(PassORM).order_by(PassORM.passed_at)
+        )
+        return list(rows.scalars())
+
+
+async def decline_prompt(
+    client,
+    token: str,
+    *,
+    prompt: str,
+    sport: Sport = SPORT,
+):
+    """One *not now*. **No origin key and no window to name.**"""
+
+    return await client.post(
+        "/api/v1/prompt-declines",
+        json={"prompt": prompt, "sport": sport.value},
+        headers=auth(token),
+    )
+
+
+async def recorded_declines(session_factory) -> list[PromptDeclineORM]:
+    """Every decline row, read straight out of the table.
+
+    The only way to see one at all: no route returns a decline, to anybody — so
+    the assertion has to reach past the wire, and reaching past it here rather
+    than in each test is what keeps that reach deliberate."""
+
+    async with session_factory() as session:
+        rows = await session.execute(
+            select(PromptDeclineORM).order_by(PromptDeclineORM.declined_at)
         )
         return list(rows.scalars())
 

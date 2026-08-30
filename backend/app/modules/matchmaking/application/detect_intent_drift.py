@@ -22,6 +22,13 @@ leaves a prompt in the ledger, and the next search picks it up in one lookup.
 declarations, writes nothing but a prompt, and raising the same prompt in four
 processes leaves exactly what one raise leaves. Two runs over an unchanged window
 raise the identical set.
+
+**A player who has declined this question is still raised at here**, and that is
+deliberate: the suppression is read **downstream**, by the one filter in
+``run_shortlist_search._raised`` where every prompt converges (``declines.py``).
+Checking it here would put the same rule in two places and would make this loop
+something other than what the paragraphs above say it is — it notices, it leaves
+a prompt, and it acts on nothing.
 """
 
 from __future__ import annotations

@@ -23,6 +23,14 @@ term would be scoring a person on how recently they opened an app.
 prompts, over the same rows, from a snapshot every process holds its own copy of;
 four processes raising the same prompt four times a day leave exactly what one
 raise leaves.
+
+**A player who has declined this question is still raised at here**, and the
+suppression is read **downstream** instead, by the one filter in
+``run_shortlist_search._raised`` (``declines.py``). This is the rudest of the
+four prompts if nothing filters it — the condition holds until the player edits
+their week, the loop is daily and ``PROMPT_TTL`` is three days — which is the
+argument for the filter, not an argument for putting it here: a copy of the rule
+in every raiser is four chances for one of them to answer differently.
 """
 
 from __future__ import annotations

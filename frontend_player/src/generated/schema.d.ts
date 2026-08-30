@@ -724,6 +724,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/prompt-declines": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Not now
+         * @description Stops a question being raised at you again for a while, and reaches nothing else.
+         *
+         *     **It changes no value.** Saying *yes* to one of these is a `PUT` through the route that owns the value — your radius, your week, your play intent — and this is what the other button does.
+         *
+         *     **It retires nothing**, including itself: the question standing right now still expires on its own, and this is about the next time it would have been asked.
+         *
+         *     **It is keyed by the question and never by the value quoted at you.** Declining *keep 22 km?* also answers *keep 32 km?* — you answered about a habit, not about a number. Which sport it goes quiet for depends on the question: a play intent is declared per sport, while your radius and your week are one fact each.
+         *
+         *     **There is no `search_id`** and no window to name.
+         */
+        post: operations["decline_a_prompt_api_v1_prompt_declines_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2423,6 +2451,36 @@ export interface components {
              * @description The deal this person was dealt to you in. **Required** — a pass with no origin is refused rather than recorded with a null link.
              */
             search_id: string;
+        };
+        /**
+         * RecordPromptDeclineRequest
+         * @description One *not now*, about a question. **Write-only.**
+         *
+         *     Nothing is returned by this route and no route anywhere returns a decline —
+         *     not to you, not as a count, not as *"you have said no to this four times"*.
+         *
+         *     **There is no `search_id` and no idempotency key.** A pass carries an origin
+         *     because *pass rate on re-shown profiles* is unmeasurable without one; nothing
+         *     a decline is measured by needs one, and two of these questions are raised by
+         *     a background loop that has no search to cite. A second *not now* is a second
+         *     row with its own moment, exactly as a second pass is, and it buys the same
+         *     month the first did.
+         *
+         *     **How long it lasts is not yours to name**, and there is no field here for
+         *     it. What it buys is that this question is not raised at you again for a
+         *     while; it retires nothing — the standing prompt still expires on its own —
+         *     and it changes no value on your profile. Saying *yes* is a write through the
+         *     route that owns the value, and it is a different request entirely.
+         */
+        RecordPromptDeclineRequest: {
+            /**
+             * @description Which question you are answering, as the code the search sent you.
+             *
+             *     **`KEEP_THESE_TIMES` is refused** — an improvised week is a different week next Tuesday, so that one is asked again and the app does not offer *not now* for it.
+             */
+            prompt: components["schemas"]["Prompt"];
+            /** @description Which sport's screen raised it. **It is not the key**: a play intent is declared per sport, so declining that one is per sport, while a search radius and an availability grid are one fact each for the whole player — those go quiet everywhere. */
+            sport: components["schemas"]["Sport"];
         };
         /** RefreshRequest */
         RefreshRequest: {
@@ -4562,6 +4620,46 @@ export interface operations {
                 content?: never;
             };
             /** @description `origin_search_not_found` — no search of **yours** showed that player for that sport. The origin is refused rather than linked as null. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    decline_a_prompt_api_v1_prompt_declines_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecordPromptDeclineRequest"];
+            };
+        };
+        responses: {
+            /** @description Recorded. **Nothing is returned** — there is no route through which a decline reaches anybody, including you. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `prompt_does_not_suppress` — *Keep these times?* is asked again on the next search, because the week you improvised is a different week next Tuesday. It is the one prompt with no *not now*. */
             409: {
                 headers: {
                     [name: string]: unknown;

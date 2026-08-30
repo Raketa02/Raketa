@@ -26,6 +26,7 @@ from uuid import UUID
 
 from app.engines.matchfit.core import SearchMode
 from app.kernel import Sport
+from app.modules.matchmaking.domain.prompts import Prompt
 from app.modules.matchmaking.domain.relaxation import Rung
 
 
@@ -132,6 +133,33 @@ class RecordPassCommand:
     passed_id: UUID
     sport: Sport
     search_id: UUID
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class RecordPromptDeclineCommand:
+    """*Not now.* One tap on a sheet, about a question and never about a value.
+
+    **No Origin key**, and that is a decision rather than an omission: the pass's
+    was bought for a named falsifier — *pass rate on re-shown profiles* — and
+    nothing a decline is measured by needs one. Carrying a ``search_id`` because
+    the neighbour does would be cargo, and it would make a prompt raised by a
+    **loop** unrecordable.
+
+    ``sport`` is *which screen asked*, and it is not the key. What the silence is
+    keyed on is this backend's to decide (``declines.keyed_sport``): a
+    declaration is per sport and a radius and a week are not, so for two of the
+    three prompts this sport is dropped rather than stored. A client that could
+    choose would be a client that could silence a question about tennis by
+    answering one about padel.
+
+    There is no field here for *how long*, and there will not be one — thirty
+    days is ADR-0094's number and has no contract surface.
+    """
+
+    player_id: UUID
+    prompt: Prompt
+    sport: Sport
 
 
 @final

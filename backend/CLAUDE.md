@@ -83,15 +83,18 @@ Rules to preserve:
 - **State changes emit domain events.** Use cases persist them through
   `DomainEventStore.append` and enqueue them on the transactional outbox in the same
   transaction; handlers perform side effects after commit. **One deliberate exception,
-  and it is the matchmaking module's three durable ledgers** — the `search` record,
-  `interest` and the **pass** record (`the-engine.md` §12: *nothing here is
-  event-sourced*, and an interest is *durable without being an aggregate with a life
-  story*). All three are small facts with no life story and nothing downstream reacts to
-  one being written: a lift is a read on the next search, a mutual is what two rows
-  facing each other already say, and the suppression a pass writes is a cache its use
-  case fills after the commit rather than a subscriber. The authority naming all three is
-  `the-engine.md` §12; ADR-0128 decides what a pass *is* and says nothing about event
-  sourcing. A new context does **not** inherit this — it needs the same argument made in
+  and it is the matchmaking module's four durable ledgers** — the `search` record,
+  `interest`, the **pass** record and the **prompt decline** (`the-engine.md` §12:
+  *nothing here is event-sourced*, and an interest is *durable without being an aggregate
+  with a life story*). All four are small facts with no life story and nothing downstream
+  reacts to one being written: a lift is a read on the next search, a mutual is what two
+  rows facing each other already say, the suppression a pass writes is a cache its use
+  case fills after the commit rather than a subscriber, and a decline is read by one
+  filter on the next search. The authority naming all four is `the-engine.md` §12;
+  ADR-0128 decides what a pass *is* and says nothing about event sourcing, and ADR-0094
+  says of the decline in its own words that *declining a prompt is not a domain fact and
+  earns no event* — its amendment moved the suppression out of Redis and kept that
+  sentence literally. A new context does **not** inherit this — it needs the same argument made in
   an ADR.
 - **Seeds execute use cases, never SQL.** `app/seeds/` creates deterministic development
   accounts through the same use cases a request runs, wired from the composition root, so

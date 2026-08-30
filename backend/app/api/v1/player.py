@@ -22,6 +22,9 @@ from app.modules.matchmaking.presentation.lineup_routes import (
     forecasts_router,
     router as lineups_router,
 )
+from app.modules.matchmaking.presentation.prompt_decline_routes import (
+    router as prompt_declines_router,
+)
 from app.modules.matchmaking.presentation.routes import router as searches_router
 from app.modules.player_profile.presentation.photo_routes import (
     router as photos_router,
@@ -60,3 +63,4 @@ player_api_router.include_router(forecasts_router)
 player_api_router.include_router(interest_router)
 player_api_router.include_router(deck_router)
 player_api_router.include_router(passes_router)
+player_api_router.include_router(prompt_declines_router)

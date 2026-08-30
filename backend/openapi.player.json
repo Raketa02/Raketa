@@ -1732,6 +1732,56 @@
           }
         ]
       }
+    },
+    "/api/v1/prompt-declines": {
+      "post": {
+        "tags": [
+          "prompt-declines"
+        ],
+        "summary": "Not now",
+        "description": "Stops a question being raised at you again for a while, and reaches nothing else.\n\n**It changes no value.** Saying *yes* to one of these is a `PUT` through the route that owns the value \u2014 your radius, your week, your play intent \u2014 and this is what the other button does.\n\n**It retires nothing**, including itself: the question standing right now still expires on its own, and this is about the next time it would have been asked.\n\n**It is keyed by the question and never by the value quoted at you.** Declining *keep 22 km?* also answers *keep 32 km?* \u2014 you answered about a habit, not about a number. Which sport it goes quiet for depends on the question: a play intent is declared per sport, while your radius and your week are one fact each.\n\n**There is no `search_id`** and no window to name.",
+        "operationId": "decline_a_prompt_api_v1_prompt_declines_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecordPromptDeclineRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Recorded. **Nothing is returned** \u2014 there is no route through which a decline reaches anybody, including you."
+          },
+          "409": {
+            "description": "`prompt_does_not_suppress` \u2014 *Keep these times?* is asked again on the next search, because the week you improvised is a different week next Tuesday. It is the one prompt with no *not now*.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -3778,6 +3828,25 @@
         ],
         "title": "RecordPassRequest",
         "description": "One *not today*, and where the card came from. **Write-only.**\n\nNothing is returned by this route and no route anywhere returns a pass \u2014 not\nto you, not as a count, not as *\"you have passed on twelve people\"*.\n\n`search_id` is the **Origin key** and is required, exactly as it is for a\nyes: a pass citing a search that is unknown, that belongs to somebody else or\nthat never showed that person is refused rather than recorded with an empty\nlink. **The position is not sent** \u2014 the backend reads it off the cited\nsearch's own rows.\n\n**How long it lasts is not yours to name**, and there is no field here for\nit. A pass keeps somebody out of *your deck* only, for a window this backend\ndecides; it never reaches a shortlist, a line-up or a forecast, it never\ntouches their deck, and a second pass buys exactly the same window and no\nmore. The control that removes a person from a person is a **block**, and it\nis deliberately a heavier gesture."
+      },
+      "RecordPromptDeclineRequest": {
+        "properties": {
+          "prompt": {
+            "$ref": "#/components/schemas/Prompt",
+            "description": "Which question you are answering, as the code the search sent you.\n\n**`KEEP_THESE_TIMES` is refused** \u2014 an improvised week is a different week next Tuesday, so that one is asked again and the app does not offer *not now* for it."
+          },
+          "sport": {
+            "$ref": "#/components/schemas/Sport",
+            "description": "Which sport's screen raised it. **It is not the key**: a play intent is declared per sport, so declining that one is per sport, while a search radius and an availability grid are one fact each for the whole player \u2014 those go quiet everywhere."
+          }
+        },
+        "type": "object",
+        "required": [
+          "prompt",
+          "sport"
+        ],
+        "title": "RecordPromptDeclineRequest",
+        "description": "One *not now*, about a question. **Write-only.**\n\nNothing is returned by this route and no route anywhere returns a decline \u2014\nnot to you, not as a count, not as *\"you have said no to this four times\"*.\n\n**There is no `search_id` and no idempotency key.** A pass carries an origin\nbecause *pass rate on re-shown profiles* is unmeasurable without one; nothing\na decline is measured by needs one, and two of these questions are raised by\na background loop that has no search to cite. A second *not now* is a second\nrow with its own moment, exactly as a second pass is, and it buys the same\nmonth the first did.\n\n**How long it lasts is not yours to name**, and there is no field here for\nit. What it buys is that this question is not raised at you again for a\nwhile; it retires nothing \u2014 the standing prompt still expires on its own \u2014\nand it changes no value on your profile. Saying *yes* is a write through the\nroute that owns the value, and it is a different request entirely."
       },
       "RefreshRequest": {
         "properties": {

@@ -31,16 +31,23 @@ pool and a broken floor are indistinguishable without that description.
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, replace
 from typing import final
+from uuid import UUID
 
 from app.engines.matchfit.ruleset import Ruleset
 from app.engines.matchfit.scoring import MatchFit
-from app.kernel import InvariantViolated
+from app.kernel import InvariantViolated, Sport
 from app.modules.matchmaking.application.commands import RunShortlistSearchCommand
 from app.modules.matchmaking.application.search_workbench import (
     AskedFor,
     SearchWorkbench,
+)
+from app.modules.matchmaking.domain.declines import (
+    PromptDeclineLedger,
+    silence_began,
+    suppresses,
 )
 from app.modules.matchmaking.domain.errors import (
     MatchmakingUnavailable,
@@ -79,6 +86,9 @@ from app.modules.player_profile.domain.availability import (
     window_of,
 )
 from app.shared.ids import new_uuid
+
+
+logger = logging.getLogger(__name__)
 
 
 @final
@@ -121,12 +131,14 @@ class RunShortlistSearch:
         engine: MatchFit,
         searches: SearchStore,
         prompts: PromptLedger,
+        declines: PromptDeclineLedger,
     ) -> None:
         self._work = workbench
         self._ruleset = ruleset
         self._engine = engine
         self._searches = searches
         self._prompts = prompts
+        self._declines = declines
 
     async def execute(self, command: RunShortlistSearchCommand) -> ShortlistAnswer:
         now = self._work.clock.now()
@@ -297,6 +309,12 @@ class RunShortlistSearch:
         loop and are one lookup. The order is the vocabulary's own, so a client
         rendering the first one it understands gets the same one twice for the
         same search.
+
+        **And every one of them passes one gate on the way out.** A player who
+        said *not now* is not asked again for thirty days, keyed on the
+        question's own identity and never on the value it quoted — so the filter
+        is over the assembled list rather than folded into each raiser, which is
+        what makes it one place instead of four.
         """
 
         raised: list[RaisedPrompt] = []
@@ -324,7 +342,62 @@ class RunShortlistSearch:
                 )
             else:
                 raised.append(RaisedPrompt(prompt=prompt))
-        return tuple(raised)
+        if not raised:
+            # Nothing to filter, so nothing to ask the table about — the same
+            # short-circuit ``last_passed_at`` makes one file over, for the same
+            # reason: a read here would be a query asking the database which of
+            # no questions have been declined, on the majority of searches.
+            return ()
+        silenced = await self._silenced(
+            player_id=command.searcher_id, sport=command.sport
+        )
+        return tuple(question for question in raised if question.prompt not in silenced)
+
+    async def _silenced(self, *, player_id: UUID, sport: Sport) -> frozenset[Prompt]:
+        """Which of these questions the player has already answered *not now*.
+
+        **One gate, at the one place every prompt converges**, rather than four
+        checks at four raisers: the two loops go on raising into a ledger that
+        expires, which is what keeps them what their docstrings say they are —
+        *notice, leave a prompt, never act* — and a fifth prompt added in two
+        years inherits this filter structurally.
+
+        It is a read over a **durable** row and not over the ephemeral ledger
+        beside it, because a decline is a player's answer and a suppression held
+        in a TTL is thirty days of evidence that TTL then destroys
+        (``declines.py``).
+
+        **A gate that cannot be evaluated stays quiet**, which is the opposite
+        collapse from the ledgers wrapped in ``fail_soft_ledgers.py`` and is
+        forced two ways. This whole block runs *after* a committed search, so
+        raising here would fail a search that already ran and was recorded; and
+        of the two degraded outcomes — *ask somebody who said no* and *say
+        nothing* — the second is what the rest of this block already does when a
+        ledger is unreachable. So the degraded answer is **every** prompt
+        silenced, which the filter above renders as no prompt at all — the
+        prompts a decline can silence, which is what a table full of declines
+        would have said at worst, rather than the whole union.
+        """
+
+        try:
+            return await self._declines.suppressed_for(
+                player_id=player_id,
+                sport=sport,
+                since=silence_began(self._work.clock.now()),
+            )
+        except Exception:
+            # Warning rather than error, on the wrapper's own reasoning: nothing
+            # is broken for the player and the search they asked for is on its
+            # way. What it must not be is silent — a platform that quietly
+            # stopped offering to keep a widening looks exactly like a platform
+            # nobody accepts the offer from, which is one of the two rates these
+            # rows exist to measure.
+            logger.warning(
+                "prompt declines unreadable, raising no prompt",
+                extra={"searcher_id": str(player_id)},
+                exc_info=True,
+            )
+            return frozenset(prompt for prompt in Prompt if suppresses(prompt))
 
     async def _keeps_taking_this_widening(
         self, command: RunShortlistSearchCommand, asked: AskedFor

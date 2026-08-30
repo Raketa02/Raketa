@@ -98,8 +98,10 @@ response.
 **Three more routes exist, added by [#171](https://github.com/Raketa02/Raketa/issues/171)** and
 specified in [`the-play-screens.md`](the-play-screens.md): `POST /forecasts`
 ([ADR-0108](../../adr/0108-a-forecast-is-a-route-not-a-search.md) — deliberately records
-nothing), `POST /passes`, and `GET /interest`. The four above are the ones that create searches,
-and that is what §1 is about.
+nothing), `POST /passes`, and `GET /interest`. A fourth was added by
+[#237](https://github.com/Raketa02/Raketa/issues/237): `POST /prompt-declines`, write-only and
+with no Origin key, which answers *not now* to a prompt and writes no value anywhere. The four
+above are the ones that create searches, and that is what §1 is about.
 
 ### `POST /searches` is deliberately not idempotent
 

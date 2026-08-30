@@ -1,9 +1,10 @@
-"""The matchmaking context's refusals — twelve codes, distinct at four statuses.
+"""The matchmaking context's refusals — fourteen codes, distinct at four statuses.
 
 **Distinct codes at the same status, because a client must be able to tell a
-transient outage from a refusal about *you*.* Three of these are 503 and mean
+transient outage from a refusal about *you*.* Four of these are 503 and mean
 very different things to somebody holding a phone: the engine raised, a
-fail-closed read failed, the index is too far behind to be trusted. A single
+fail-closed read failed, the index is too far behind to be trusted, the record
+of the search could not be written. A single
 ``service_unavailable`` would collapse *try again in a moment* and *this feature
 is off* into one line the client cannot branch on.
 
@@ -171,6 +172,26 @@ class LockedSeatNotAvailable(ConflictError):
     """
 
     code = "locked_seat_not_available"
+
+
+class PromptDoesNotSuppress(ConflictError):
+    """A *not now* about the one question that goes on being asked anyway.
+
+    ``KEEP_THESE_TIMES`` buys no silence, and that was ruled out **in writing**
+    before this route existed: a grid legitimately differs per search where a
+    radius, a declaration and a described week do not
+    (``the-play-screens.md`` §2). The client never offers it — the sentence
+    *"Not now means not for a month"* is a typed absence on that prompt rather
+    than a string somebody forgot — and this is the backstop.
+
+    It refuses rather than writing a row nothing reads. A decline recorded for a
+    prompt the filter never asks about is a row that looks like evidence of a
+    suppression that never happened, which is worse than the missing row: the
+    corpus these are kept for is read by somebody counting how often a question
+    is answered *no*.
+    """
+
+    code = "prompt_does_not_suppress"
 
 
 class SearchNotFound(NotFoundError):

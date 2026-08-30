@@ -49,14 +49,21 @@ a profile holding the widened radius takes no rung on the next search, and
 ``KEEP_THESE_TIMES`` stops because the improvised grid and the profile's now
 agree.
 
-**The other half of ``docs/adr/0094``'s pattern is still owed: a decline is not
-yet remembered.** That record pairs the inline offer with a **30-day suppression
-on decline**, and until it exists a prompt lapses on :data:`PROMPT_TTL` and is
-raised again while its condition holds, so **a player who declines is asked
-again** — stated here rather than discovered, because it is the one place these
-prompts are ruder than the record they are built on. The two per-search prompts
-are the mild case (they follow an act the player just took); the drift prompt is
-the sharp one, and it is the reason the suppression exists in ADR-0094 at all.
+**The other half of ``docs/adr/0094``'s pattern is built, and it is one module
+over.** That record pairs the inline offer with a **30-day suppression on
+decline**, and ``declines.py`` is that half: a *not now* is a durable row, and
+the suppression is derived from it by one filter at the one place every prompt
+converges. Three of the four suppress. The line is **whether the condition
+outlives the act** rather than per-search versus loop — an improvised grid is
+gone when the search ends, where a widening habit, a drift and a week described
+months ago are all still true tomorrow — so ``KEEP_THESE_TIMES`` is the one
+prompt that is asked again, for a reason ``the-play-screens.md`` §2 had already
+written down.
+
+**A suppression retires nothing**, which is why *two methods and no delete*
+below survives it: declining stops the next **raise** and clears nothing, so the
+question standing right now still expires on :data:`PROMPT_TTL` like any other
+and a caller still cannot make a question quietly stop being asked.
 """
 
 from __future__ import annotations
@@ -167,6 +174,9 @@ def improvised_week(
 #: **Falsified by:** the take-up rate on the prompt. A threshold nobody ever acts
 #: on is measuring a preference that does not exist, and the prompt is removed
 #: rather than tuned — the disposal rule a rung that never converts is under.
+#: **Computable now**: the raises are recomputable from the search store and the
+#: declines are rows (``declines.py``), where a suppression held in a TTL would
+#: have destroyed the half nothing else records.
 INTENT_DRIFT_SEARCHES: Final = 5
 
 #: How many times the same widening must be taken before the app offers to make
@@ -176,7 +186,8 @@ INTENT_DRIFT_SEARCHES: Final = 5
 #:
 #: **Falsified by:** acceptance rate on the offer, against rung acceptance. A
 #: player who takes rung B on every search and declines the offer every time is
-#: telling us the widening is per-evening and the prompt is noise.
+#: telling us the widening is per-evening and the prompt is noise — and *every
+#: time* is countable because each of those declines is a row (``declines.py``).
 REPEATED_WIDENINGS: Final = 3
 
 #: How old a grid must be before the backstop offers to refresh it. Sixty days is

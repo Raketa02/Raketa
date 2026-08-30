@@ -58,6 +58,7 @@ from app.bootstrap.composition import (
     build_player_score_query,
     build_ruleset,
     build_search_store,
+    build_prompt_decline_ledger,
     build_prompt_ledger,
     build_suppression_ledger,
 )
@@ -66,6 +67,9 @@ from app.modules.blocks.presentation.dependencies import BlockQueryDep
 from app.modules.matchmaking.application.express_interest import ExpressInterest
 from app.modules.matchmaking.application.forecast_lineup import ForecastLineup
 from app.modules.matchmaking.application.record_pass import RecordPass
+from app.modules.matchmaking.application.record_prompt_decline import (
+    RecordPromptDecline,
+)
 from app.modules.matchmaking.application.read_back_search import ReadBackSearch
 from app.modules.matchmaking.application.read_interest import ReadInterest
 from app.modules.matchmaking.application.run_deck_deal import RunDeckDeal
@@ -74,6 +78,7 @@ from app.modules.matchmaking.application.run_shortlist_search import RunShortlis
 from app.modules.matchmaking.application.search_workbench import SearchWorkbench
 from app.modules.matchmaking.domain.cards import CardPhotoLinks
 from app.modules.matchmaking.domain.candidate_snapshot import CandidateSource
+from app.modules.matchmaking.domain.declines import PromptDeclineLedger
 from app.modules.matchmaking.domain.errors import MatchmakingUnavailable
 from app.modules.matchmaking.domain.interest import InterestLedger
 from app.modules.matchmaking.domain.ledgers import ExposureLedger, SuppressionLedger
@@ -277,17 +282,41 @@ def get_search_workbench(
 SearchWorkbenchDep = Annotated[SearchWorkbench, Depends(get_search_workbench)]
 
 
+def get_prompt_decline_ledger(db: DbSession) -> PromptDeclineLedger:
+    """The durable record of every *not now*. **Per request, over the session.**
+
+    The same contrast as the pass's, one document over: the prompt ledger built
+    beside it is Redis and fails soft, because a question nobody sees this week
+    costs nothing; this one is a table, because a player's answer is not a thing
+    the platform may forget and then ask again.
+    """
+
+    return build_prompt_decline_ledger(db)
+
+
+PromptDeclineLedgerDep = Annotated[
+    PromptDeclineLedger, Depends(get_prompt_decline_ledger)
+]
+
+
 def get_run_shortlist_search(
     db: DbSession,
     workbench: SearchWorkbenchDep,
     prompts: PromptLedgerDep,
+    declines: PromptDeclineLedgerDep,
 ) -> RunShortlistSearch:
     """The shortlist use case: the workbench, plus what only a list has.
 
-    Three collaborators beyond the shared ones, and each is a thing a deal does
+    Four collaborators beyond the shared ones, and each is a thing a deal does
     not do — the ladder needs the ruleset and the engine to price a rung, the
-    citation check needs the store, and the prompts need the ledger they were
-    left in.
+    citation check needs the store, and the prompts need both the ledger they
+    were left in and the record of the ones this player has already answered
+    *not now*.
+
+    **The two prompt stores are deliberately different stores**, and this is
+    where that shows: one is Redis and fails soft because a lost question costs
+    nobody a fact, and the other is a table because a lost decline re-asks
+    somebody who has already answered.
     """
 
     return RunShortlistSearch(
@@ -296,6 +325,7 @@ def get_run_shortlist_search(
         engine=build_match_fit_engine(),
         searches=build_search_store(db),
         prompts=prompts,
+        declines=declines,
     )
 
 
@@ -377,6 +407,32 @@ def get_record_pass(
 
 
 RecordPassDep = Annotated[RecordPass, Depends(get_record_pass)]
+
+
+def get_record_prompt_decline(
+    clock: ClockDep,
+    uow: UnitOfWorkDep,
+    declines: PromptDeclineLedgerDep,
+) -> RecordPromptDecline:
+    """*Not now*, assembled per request. **One store, and no second one.**
+
+    It holds no ruleset, no engine and no search store: nothing here scores
+    anybody, there is no product number to read — thirty days is ADR-0094's —
+    and there is no origin to prove. The row it writes is the gate as well as
+    the evidence, so unlike the pass beside it there is no cache to write after
+    the commit.
+    """
+
+    return RecordPromptDecline(
+        clock=clock,
+        declines=declines,
+        unit_of_work=uow,
+    )
+
+
+RecordPromptDeclineDep = Annotated[
+    RecordPromptDecline, Depends(get_record_prompt_decline)
+]
 
 
 def get_read_back_search(

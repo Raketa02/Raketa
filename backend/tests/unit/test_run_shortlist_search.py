@@ -40,6 +40,7 @@ from app.modules.matchmaking.application.search_workbench import SearchWorkbench
 from app.modules.matchmaking.domain.cards import CardIdentity
 from app.modules.matchmaking.domain.candidate_index import Partition
 from app.modules.matchmaking.domain.candidate_snapshot import CandidateSnapshot
+from app.modules.matchmaking.domain.declines import DECLINE_SUPPRESS
 from app.modules.matchmaking.domain.errors import (
     AccountHeld,
     GateDataUnavailable,
@@ -54,6 +55,7 @@ from app.modules.matchmaking.domain.index_staleness import (
     STALENESS_ALARM_AFTER,
     STALENESS_REFUSAL_AFTER,
 )
+from app.modules.matchmaking.domain.prompts import Prompt
 from app.modules.matchmaking.domain.relaxation import Rung
 from app.modules.matchmaking.domain.searches import InclusionReason, SearchRecord
 from app.modules.matchmaking.infrastructure.absent_providers import (
@@ -208,6 +210,29 @@ class Snapshots:
 
 
 @dataclass
+class Declines:
+    """The durable record of every *not now*, as a set and a stub that breaks.
+
+    It records the window it was asked about, because *thirty days* is the whole
+    of what the read means and a filter that asked about *ever* would silence a
+    question the player answered a year ago.
+    """
+
+    silenced: frozenset = field(default_factory=frozenset)
+    raises: bool = False
+    asked: list[tuple[UUID, Sport, datetime]] = field(default_factory=list)
+
+    async def record(self, decline) -> None:  # pragma: no cover
+        raise AssertionError("a search never records a decline")
+
+    async def suppressed_for(self, *, player_id, sport, since):
+        if self.raises:
+            raise RuntimeError("the decline table is unreachable")
+        self.asked.append((player_id, sport, since))
+        return frozenset(self.silenced)
+
+
+@dataclass
 class Store:
     written: list[SearchRecord] = field(default_factory=list)
     raises: bool = False
@@ -334,6 +359,7 @@ def use_case(
     exposure: InMemoryExposureLedger | None = None,
     interest: "Yeses | None" = None,
     prompts=None,
+    declines: "Declines | None" = None,
     meter: object = None,
 ) -> RunShortlistSearch:
     store = store or Store()
@@ -367,6 +393,7 @@ def use_case(
         engine=engine or MatchFitV1(),
         searches=store,
         prompts=prompts or InMemoryPromptLedger(FixedClock()),
+        declines=declines or Declines(),
     )
 
 
@@ -740,3 +767,113 @@ async def test_a_search_without_a_histogram_is_an_ordinary_search() -> None:
     answer = await use_case(rows=(build.row(1),)).execute(a_command())
 
     assert answer.record.latency_ms_by_stage["pipeline"] >= 0
+
+
+# ---------------------------------------------------------------------------
+# The prompts, and the one gate every one of them passes
+# ---------------------------------------------------------------------------
+
+
+async def a_standing_prompt(*prompts: Prompt) -> InMemoryPromptLedger:
+    """A ledger with the loops' questions already in it, as a tick leaves them."""
+
+    ledger = InMemoryPromptLedger(FixedClock())
+    for prompt in prompts:
+        await ledger.raise_prompt(
+            player_id=SEARCHER,
+            prompt=prompt,
+            sport=SPORT if prompt is Prompt.UPDATE_PLAY_INTENT else None,
+            detail=SearchMode.COMPETITIVE.value
+            if prompt is Prompt.UPDATE_PLAY_INTENT
+            else None,
+        )
+    return ledger
+
+
+async def test_a_question_the_player_has_declined_is_not_asked_again() -> None:
+    """**The whole point.** The loop goes on raising it — that is what the loops
+    are for — and the search stays quiet about it."""
+
+    answer = await use_case(
+        rows=(build.row(1),),
+        prompts=await a_standing_prompt(Prompt.REFRESH_YOUR_TIMES),
+        declines=Declines(silenced=frozenset({Prompt.REFRESH_YOUR_TIMES})),
+    ).execute(a_command())
+
+    assert answer.prompts == ()
+
+
+async def test_a_decline_silences_its_own_question_and_no_other() -> None:
+    """A player who said *not now* to one offer is still asked the others: these
+    are four questions about four facts, and a decline is an answer to one."""
+
+    answer = await use_case(
+        rows=(build.row(1),),
+        prompts=await a_standing_prompt(
+            Prompt.UPDATE_PLAY_INTENT, Prompt.REFRESH_YOUR_TIMES
+        ),
+        declines=Declines(silenced=frozenset({Prompt.UPDATE_PLAY_INTENT})),
+    ).execute(a_command())
+
+    assert [raised.prompt for raised in answer.prompts] == [Prompt.REFRESH_YOUR_TIMES]
+
+
+async def test_the_gate_asks_about_this_searcher_this_sport_and_thirty_days() -> None:
+    """The window is a **date**, applied in the read: a filter asking *has this
+    player ever declined* would be a silence nothing ever lifts."""
+
+    declines = Declines()
+
+    await use_case(
+        rows=(build.row(1),),
+        prompts=await a_standing_prompt(Prompt.REFRESH_YOUR_TIMES),
+        declines=declines,
+    ).execute(a_command())
+
+    assert declines.asked == [(SEARCHER, SPORT, NOW - DECLINE_SUPPRESS)]
+
+
+async def test_a_search_that_raises_nothing_asks_the_table_nothing() -> None:
+    """The majority of searches. A filter over no questions has no answer to
+    look up, and looking one up anyway would put a query on every search for the
+    sake of the few that carry a prompt."""
+
+    declines = Declines()
+
+    answer = await use_case(rows=(build.row(1),), declines=declines).execute(
+        a_command()
+    )
+
+    assert answer.prompts == ()
+    assert declines.asked == []
+
+
+async def test_a_gate_that_cannot_be_read_asks_nothing_at_all() -> None:
+    """**It degrades to no prompt**, which is the opposite collapse from the
+    ledgers around it and is the right one here: the two degraded outcomes are
+    *ask somebody who said no* and *say nothing*, and the block this sits in
+    already says nothing when a ledger is unreachable."""
+
+    answer = await use_case(
+        rows=(build.row(1),),
+        prompts=await a_standing_prompt(
+            Prompt.UPDATE_PLAY_INTENT, Prompt.REFRESH_YOUR_TIMES
+        ),
+        declines=Declines(raises=True),
+    ).execute(a_command())
+
+    assert answer.prompts == ()
+    assert answer.record.returned, "a search that ran must still answer"
+
+
+async def test_an_unreadable_gate_never_fails_the_search_it_follows() -> None:
+    """The block runs *after* the commit, so raising here would fail a search
+    that has already happened and been recorded."""
+
+    store = Store()
+    use = use_case(rows=(build.row(1),), store=store, declines=Declines(raises=True))
+
+    answer = await use.execute(a_command())
+
+    assert len(store.written) == 1
+    assert answer.record is store.written[0]

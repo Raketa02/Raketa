@@ -910,7 +910,7 @@ release kind — **weight-only** or **shape-class** — is **derived, never decl
 
 ## 14. The contracts
 
-Eight routes. [`the-two-contracts.md`](the-two-contracts.md) holds the shapes.
+Nine routes. [`the-two-contracts.md`](the-two-contracts.md) holds the shapes.
 
 | Route | Creates a search | Notes |
 | --- | --- | --- |
@@ -921,6 +921,7 @@ Eight routes. [`the-two-contracts.md`](the-two-contracts.md) holds the shapes.
 | `POST /api/v1/interest` | — | idempotent per `(from, to, sport)`; `search_id` required |
 | `POST /api/v1/forecasts` | **no — deliberately** | re-`POST`ing a line-up per swap would enter a six-edit builder session into the denominator as six searches |
 | `POST /api/v1/passes` | — | write-only |
+| `POST /api/v1/prompt-declines` | — | write-only, **no Origin key** — the pass's was bought for a named falsifier and nothing here needs one, and two of the three questions it answers are raised by a loop with no search to cite ([#237](https://github.com/Raketa02/Raketa/issues/237)) |
 | `GET /api/v1/interest` | — | **outgoing and mutuals only** |
 
 **The client sends what it is asking for and never a fact about the searcher.** The backend reads
