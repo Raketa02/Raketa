@@ -1789,9 +1789,18 @@ export interface components {
             /**
              * Photo Id
              * Format: uuid
-             * @description The first photo — order is meaning in a photo list. **An id, never a URL**: a presigned link cannot live in a record kept forever, so the link is minted per response. **Omitted** when the player has no photo, and the client draws the generated court poster.
+             * @description The first photo — order is meaning in a photo list. **The id is what is stored**: a presigned link cannot live in a record kept for ever, so the record keeps this one and the link beside it is minted per response. **Omitted** when the player has no photo, and the client draws the generated court poster.
              */
             photo_id?: string;
+            /**
+             * Photo Url
+             * @description Short-lived signed URL that draws that photo. **Minted per response and stored nowhere**: it dies within minutes, and two reads of the same search carry two different links to the same photograph.
+             *
+             *     **You cannot sign one yourself.** `GET /photos/{photo_id}` signs only *your own* photos and refuses a stranger's id deliberately, and a card's photo is by definition somebody else's — so this is the only address this photograph has.
+             *
+             *     **Present exactly when `photo_id` is.** A link that has expired is not an error to report: draw the generated court poster, which is what a player with no photo gets in any case.
+             */
+            photo_url?: string;
             /**
              * Area Code
              * @description Their coarse area, as a machine code

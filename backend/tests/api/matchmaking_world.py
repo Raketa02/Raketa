@@ -45,6 +45,9 @@ from app.modules.player_profile.domain.events import (
     ProposalsOptInAnswered,
 )
 from app.modules.player_profile.domain.ids import play_intent_declaration_id
+from app.modules.player_profile.infrastructure.event_sourced_player_profile_repository import (  # noqa: E501
+    PLAYER_PROFILE_AGGREGATE,
+)
 from app.modules.rating.domain.events import RatingInitialised
 from tests.unit.candidate_index_fixtures import TickingClock, append, build_tail
 
@@ -195,6 +198,7 @@ async def a_signed_in_candidate(
     latitude: float = CENTRE[0],
     longitude: float = CENTRE[1],
     tags: tuple[str, ...] = COMPETITIVE_TAGS,
+    photo_ids: tuple[UUID, ...] = (),
     availability: tuple[str, ...] = SHARED_SLOTS,
     radius_km: int = 25,
     gender: str = "WOMAN",
@@ -218,7 +222,7 @@ async def a_signed_in_candidate(
         PlayerProfileCreated(
             player_id=player_id,
             social_tags=tags,
-            photo_ids=(),
+            photo_ids=tuple(str(photo_id) for photo_id in photo_ids),
             availability=availability,
             latitude=latitude,
             longitude=longitude,
@@ -228,6 +232,12 @@ async def a_signed_in_candidate(
             gender=gender,
             gender_preference=gender_preference,
         ),
+        # **A profile's stream id is the player id itself**, and the card is
+        # assembled from the profile port rather than from the index — so a
+        # profile filed under a random id is one the card source cannot load,
+        # and every candidate here would silently have no photograph.
+        aggregate_type=PLAYER_PROFILE_AGGREGATE,
+        aggregate_id=player_id,
     )
     await append(
         session_factory,

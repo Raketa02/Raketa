@@ -18,8 +18,11 @@ a search read back a month later reach :func:`_candidate` with the same
 type — a ``SearchCandidateRecord`` — so there is no shape a fresh response could
 carry that a stored one could not reproduce. The two departures the round trip
 allows itself are the whole of the difference between these three functions: a
-row the live gates now withhold, and a photo link minted per response
-(``docs/adr/0109``, ``docs/adr/0107``).
+row the live gates now withhold, and the ``photo_url`` beside each recorded
+``photo_id`` (``docs/adr/0109``, ``docs/adr/0107``). **The links are minted
+before this module is called** — signing is I/O and nothing here does any — and
+they arrive as a mapping the routes pass in, so a renderer cannot invent one for
+a row that was not being shown.
 
 **A withheld row carries no person.** It is a different type, not a candidate
 with holes: there is no ``player_id`` on it and no card, so a client cannot
@@ -29,7 +32,8 @@ leak one by forgetting a branch.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Mapping
+from uuid import UUID
 
 from app.kernel import InvariantViolated
 
@@ -72,7 +76,13 @@ from app.modules.matchmaking.presentation.schemas import (
 )
 
 
-def render(answer: ShortlistAnswer) -> ShortlistResponse:
+#: The links minted for this response, by player. **Not part of the record**:
+#: a row absent from it has no photograph, and a photograph has no other
+#: address — ``GET /photos/{id}`` signs only the asking player's own.
+PhotoLinks = Mapping[UUID, str]
+
+
+def render(answer: ShortlistAnswer, photos: PhotoLinks) -> ShortlistResponse:
     """The whole response, from the record the use case just wrote.
 
     Every row is live by construction — the gates were evaluated moments ago —
@@ -83,11 +93,11 @@ def render(answer: ShortlistAnswer) -> ShortlistResponse:
         search=_envelope(
             answer.record, answer.sorts_available, prompts=answer.prompts
         ),
-        candidates=[_candidate(row) for row in answer.record.returned],
+        candidates=[_candidate(row, photos) for row in answer.record.returned],
     )
 
 
-def render_deal(answer: DeckAnswer) -> ShortlistResponse:
+def render_deal(answer: DeckAnswer, photos: PhotoLinks) -> ShortlistResponse:
     """One deal, in **the same shape a shortlist crosses in**.
 
     Not a shape of its own, and that is the read-back's requirement rather than
@@ -107,11 +117,13 @@ def render_deal(answer: DeckAnswer) -> ShortlistResponse:
 
     return ShortlistResponse(
         search=_envelope(answer.record, answer.sorts_available),
-        candidates=[_candidate(row) for row in answer.record.returned],
+        candidates=[_candidate(row, photos) for row in answer.record.returned],
     )
 
 
-def render_read_back(answer: ReadBackAnswer) -> ShortlistResponse:
+def render_read_back(
+    answer: ReadBackAnswer, photos: PhotoLinks
+) -> ShortlistResponse:
     """The same response, a month later, minus who we may no longer show.
 
     **The list keeps its length and its order.** A withheld row holds its place
@@ -125,13 +137,13 @@ def render_read_back(answer: ReadBackAnswer) -> ShortlistResponse:
         candidates=[
             WithheldRowSchema(withheld=True)
             if row.withheld
-            else _candidate(row.recorded, withheld=False)
+            else _candidate(row.recorded, photos, withheld=False)
             for row in answer.rows
         ],
     )
 
 
-def render_lineup(answer: LineupAnswer) -> LineupResponse:
+def render_lineup(answer: LineupAnswer, photos: PhotoLinks) -> LineupResponse:
     """The seated four: the envelope, the rows, and the court they sit on.
 
     **The rows come off the record**, exactly as a shortlist's do, so a seated
@@ -159,7 +171,7 @@ def render_lineup(answer: LineupAnswer) -> LineupResponse:
         # returned band is who sat down, so the list is the seated four minus
         # the searcher — and a client that renders a shortlist row can render
         # this one without a branch.
-        candidates=[_candidate(row) for row in answer.record.returned],
+        candidates=[_candidate(row, photos) for row in answer.record.returned],
         lineup=LineupSchema(
             seats=[_seat(seat) for seat in answer.seats],
             arrangements=_arrangements(
@@ -409,7 +421,10 @@ def _prompt(raised: RaisedPrompt) -> PromptSchema:
 
 
 def _candidate(
-    row: SearchCandidateRecord, *, withheld: bool | None = None
+    row: SearchCandidateRecord,
+    photos: PhotoLinks,
+    *,
+    withheld: bool | None = None,
 ) -> CandidateSchema:
     """One recorded row on the wire.
 
@@ -429,7 +444,7 @@ def _candidate(
     fields: dict[str, Any] = {
         "player_id": row.player_id,
         "fit": row.fit,
-        "player_card": _card(card),
+        "player_card": _card(card, photos.get(row.player_id)),
         "concerns": [ConcernSchema(term=term) for term in row.concerns],
         # The same mappings the record stores. One serialiser, two consumers:
         # the wire validates it into the discriminated union and the store keeps
@@ -472,8 +487,21 @@ def _candidate(
     return CandidateSchema.model_validate(fields)
 
 
-def _card(card: RecordedCard) -> PlayerCardSchema:
-    """The card as it was shown, from the row that recorded it.
+def _card(card: RecordedCard, photo_url: str | None) -> PlayerCardSchema:
+    """The card as it was shown, from the row that recorded it — **and the one
+    field that was not shown to it.**
+
+    The link arrives as an argument rather than being looked up here, because it
+    is not on the card: the record holds an id and a URL signed over it is a fact
+    about *this response*. ``None`` is *this row has no photograph*, and then
+    **both fields are omitted together** — an id with no link beside it is a
+    photograph nothing can draw, which is the contract this field exists to
+    close.
+
+    A row that recorded an id and was minted no link is drawn the same way, and
+    that is deliberate rather than an oversight: the generated court poster is
+    already what this card falls back to, and a search that failed over a
+    signature would be the whole feature going down for the least of its facts.
 
     ``counted_games`` is never passed: the games ledger has no provider in this
     build, so the field does not apply and a zero would be an invented one.
@@ -492,6 +520,7 @@ def _card(card: RecordedCard) -> PlayerCardSchema:
         # `CandidateRow.range_low`.
         "range": {"low": card.range_low, "high": card.range_high},
     }
-    if card.photo_id is not None:
+    if card.photo_id is not None and photo_url is not None:
         fields["photo_id"] = card.photo_id
+        fields["photo_url"] = photo_url
     return PlayerCardSchema.model_validate(fields)

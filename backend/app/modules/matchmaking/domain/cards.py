@@ -19,9 +19,11 @@ not a green dot. That is row three of the Liveness table, and Liveness reaches a
 screen the one way it is sanctioned to: as a reason **code**. *"Last seen 2 hours
 ago"* is a presence indicator, and this product does not have one.
 
-**A photo id, never a URL.** Photos are served through short-lived presigned
-links and a search record is kept forever, so a URL written into one is a dead
-link within the hour. The record stores the id; the link is minted per response.
+**A photo id in the record, and a URL on the response.** Photos are served
+through short-lived presigned links and a search record is kept forever, so a URL
+written into one is a dead link within the hour. The record stores the id; the
+response carries ``photo_url`` beside it, minted per response by
+:class:`CardPhotoLinks` and written down nowhere.
 
 **A nickname, and nothing may shorten it.** ``users`` holds no real name and no
 given name. Every sentence naming somebody uses the whole handle or names
@@ -35,6 +37,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Collection, Mapping, Protocol, final, runtime_checkable
 from uuid import UUID
+
+from app.modules.matchmaking.domain.searches import SearchCandidateRecord
 
 
 @final
@@ -75,5 +79,38 @@ class PlayerCardSource(Protocol):
         row whose card cannot be assembled is **dropped from the response**
         rather than shown with a blank name: a card with no nickname is not a
         card, and the search is still a `200` with one fewer row.
+        """
+        ...
+
+
+@runtime_checkable
+class CardPhotoLinks(Protocol):
+    """Where a card's photograph gets an address. **Per response, never stored.**
+
+    The record keeps the id and this mints the link over it — the one difference
+    the round trip allows itself, on the ``POST`` and again on every ``GET``
+    (``docs/adr/0107``, ``docs/adr/0109``).
+
+    **The client cannot mint one itself, and that is why this exists.**
+    ``GET /photos/{id}`` signs only the asking player's own photos and refuses a
+    stranger's id deliberately — the alternative is an endpoint that confirms
+    whether a stranger's id is real. A card's photo is by definition another
+    player's, so the server that disclosed the person hands over their
+    photograph with them rather than leaving the client an id it can do nothing
+    with.
+    """
+
+    async def links_for(
+        self, rows: Collection[SearchCandidateRecord]
+    ) -> Mapping[UUID, str]:
+        """A short-lived URL for each of these rows that recorded a photo.
+
+        **Keyed by player**, because a row is what the renderer holds and a
+        photo id is what the record holds. A row whose card has no photo is
+        **absent from the answer** rather than present as ``None``: the field is
+        omitted on the wire and the client draws the generated court poster.
+
+        One call for the whole list, never one per row — the shape every set
+        read in this module has.
         """
         ...

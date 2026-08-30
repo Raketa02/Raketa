@@ -82,7 +82,7 @@ player_card: { nickname, photo_id?, area_code, distance_km,
 
 **Nothing else.**
 
-> **Amended twice since, both under this ADR's own rule** — *a card says only what its
+> **Amended three times since, all under this ADR's own rule** — *a card says only what its
 > subject published, and every field on it is a fact about that person alone.*
 >
 > - **`range` was added** — the likely range, μ ± σ as `rating` published it, travelling as
@@ -93,6 +93,15 @@ player_card: { nickname, photo_id?, area_code, distance_km,
 >   The band's numeric **edges stay off**: their only consumer is the band bar, which is
 >   drawn from the out-of-scope record sheet, and the glossary refuses them as a second
 >   range in any case.
+>
+> - **`photo_url` was added beside `photo_id`** — a short-lived signed link, minted per
+>   response and recorded nowhere ([#245](https://github.com/Raketa02/Raketa/issues/245)).
+>   The paragraph below already described it; nothing minted one, and
+>   `GET /photos/{id}` refuses another player's id on purpose — so as the contract stood
+>   **no photograph could reach a Play screen at all**. The two fields are omitted
+>   together, and the URL is the one field on a response the record deliberately cannot
+>   reproduce.
+>
 > - **`distance_km` left the card**, for the same rule read the other way: a distance is a
 >   fact about a **pair**, and it is the one field whose value would change depending on who
 >   is looking. It sits on the *candidate*, beside the card
@@ -105,13 +114,18 @@ player_card: { nickname, photo_id?, area_code, distance_km,
 and the profile's own radius is whole kilometres, so a decimal would claim a precision the
 data does not hold and would let *"3 km"* sit under a 3 km radius while being excluded by it.
 
-**`photo_id`, not a URL.** [ADR-0091](0091-photo-storage-behind-a-port.md) serves photos
-through short-lived presigned URLs, and
-[ADR-0104](0104-the-search-record-is-the-answer-and-never-expires.md) keeps every search row
-forever: a presigned URL written into an unexpiring record is a dead link within the hour.
-The record stores the id; the URL is minted per response, on the `POST` and again on every
-`GET`. **`photo_id` is omitted rather than null** when a player has no photo — the glossary
-already calls that *"not an absence but a generated court poster"*, so this is
+**`photo_id` in the record, `photo_url` on the response.**
+[ADR-0091](0091-photo-storage-behind-a-port.md) serves photos through short-lived presigned
+URLs, and [ADR-0104](0104-the-search-record-is-the-answer-and-never-expires.md) keeps every
+search row for ever: a presigned URL written into an unexpiring record is a dead link within
+the hour. The record stores the id; the URL is minted per response, on the `POST` and again
+on every `GET`. **The dead-link argument is about the record, and a URL that never enters it
+does not touch that argument** — which is why both fields can be on one card. The link is
+minted by the server rather than left to the client because `GET /photos/{id}` signs only
+*your own* photos and refuses a stranger's id deliberately — the alternative is an endpoint
+that confirms whether a stranger's id is real — and a card's photo is by definition another
+player's. **Both fields are omitted rather than null** when a player has no photo — the
+glossary already calls that *"not an absence but a generated court poster"*, so this is
 [ADR-0106](0106-evidence-vocabulary-is-contract-weights-are-configuration.md) §4's *does not
 apply* spelling, and the client draws the poster.
 

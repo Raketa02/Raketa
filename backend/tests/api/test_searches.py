@@ -14,6 +14,7 @@ answer, and that a whole list of facts never crosses at all.
 from __future__ import annotations
 
 from datetime import timedelta
+from uuid import UUID, uuid4
 
 import pytest
 
@@ -438,12 +439,73 @@ async def test_the_card_states_the_range_the_level_is_likely_in(
     assert "band_lower" not in card and "band_upper" not in card
 
 
-async def test_the_card_carries_a_photo_id_and_never_a_url(
+async def test_the_card_carries_its_photos_url_beside_the_id(
     client, session_factory, candidate_source, searcher
 ):
-    """A presigned link cannot live in a record kept for ever, so what travels is
-    the id — and it is **omitted** rather than null when there is no photo, which
-    is what tells the client to draw the generated court poster."""
+    """**A card photo is by definition another player's, and the client cannot
+    sign for one.**
+
+    `GET /photos/{id}` refuses a stranger's id deliberately — the alternative is
+    an endpoint that confirms whether a stranger's id is real — so an id alone
+    would put a photograph on a card that nothing could ever draw. The server
+    that disclosed the person hands over the photograph with them.
+
+    The id is what is stored and the URL is what is rendered: the assertion below
+    is about **whose** photo was signed, not about the shape of a URL, which
+    belongs to the store.
+    """
+
+    photo = uuid4()
+    photographed = await world.a_candidate(
+        client, session_factory, "photographed", mu=searcher["mu"], photo_ids=(photo,)
+    )
+    await world.fold_the_log(session_factory, candidate_source)
+
+    card = (await world.search(client, searcher["token"])).json()["candidates"][0][
+        "player_card"
+    ]
+
+    assert card["photo_id"] == str(photo)
+    assert card["photo_url"].endswith(f"{photographed}/{photo}"), (
+        "the link was signed for somebody other than the person on the card"
+    )
+
+
+async def test_the_card_is_the_only_place_that_link_comes_from(
+    client, session_factory, candidate_source, searcher
+):
+    """**The route that mints links still refuses this id, and that is the point.**
+
+    `GET /photos/{id}` answers about *your own* photos and gives a stranger's id
+    the same 404 an id that never existed gets — the alternative is an endpoint
+    that confirms whether a stranger's id is real. Widening it was the refused
+    alternative; the card carrying its own link is what makes that refusal
+    survivable.
+    """
+
+    photo = uuid4()
+    await world.a_candidate(
+        client, session_factory, "photographed", mu=searcher["mu"], photo_ids=(photo,)
+    )
+    await world.fold_the_log(session_factory, candidate_source)
+    card = (await world.search(client, searcher["token"])).json()["candidates"][0][
+        "player_card"
+    ]
+    assert card["photo_url"]
+
+    asked = await client.get(
+        f"/api/v1/photos/{card['photo_id']}", headers=world.auth(searcher["token"])
+    )
+
+    assert asked.status_code == 404, asked.text
+
+
+async def test_a_player_with_no_photo_carries_neither_field(
+    client, session_factory, candidate_source, searcher
+):
+    """Both are **omitted** rather than null, which is what tells the client to
+    draw the generated court poster. A `null` would be a measured nothing, and
+    there is no photo here to measure."""
 
     await world.a_candidate(client, session_factory, "no-photo", mu=searcher["mu"])
     await world.fold_the_log(session_factory, candidate_source)
@@ -452,10 +514,38 @@ async def test_the_card_carries_a_photo_id_and_never_a_url(
         "player_card"
     ]
 
-    assert "photo_id" not in card
+    assert "photo_id" not in card and "photo_url" not in card
     assert "counted_games" not in card, "the games ledger has no provider today"
     assert "bio" not in card and "last_active_at" not in card
     assert "gender" not in card
+
+
+async def test_the_record_keeps_the_photo_id_and_never_the_link(
+    client, session_factory, candidate_source, searcher
+):
+    """**A presigned link is dead within the hour and this row is kept for ever.**
+
+    That is the whole reason the URL is minted per response, so a record that had
+    learned one would have turned the difference back into a stored dead link —
+    and a read-back a month later would hand it back as though it worked.
+    """
+
+    photo = uuid4()
+    await world.a_candidate(
+        client, session_factory, "photographed", mu=searcher["mu"], photo_ids=(photo,)
+    )
+    await world.fold_the_log(session_factory, candidate_source)
+
+    body = (await world.search(client, searcher["token"])).json()
+    rows = await world.recorded_candidates(
+        session_factory, UUID(body["search"]["search_id"])
+    )
+
+    stored = [row.player_card for row in rows if row.player_card is not None]
+    assert stored, "a returned row recorded no card at all"
+    for card in stored:
+        assert card["photo_id"] == str(photo)
+        assert "photo_url" not in card and "url" not in card
 
 
 async def test_the_envelope_carries_the_facts_about_the_search(

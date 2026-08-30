@@ -101,6 +101,20 @@ class ReadBackRow:
     withheld: bool
 
 
+def still_shown(
+    rows: tuple[ReadBackRow, ...],
+) -> tuple[SearchCandidateRecord, ...]:
+    """The recorded half of every row the live gates still admit.
+
+    One definition, because two things read it at two different moments: the
+    sort list, computed here before the answer exists, and
+    :attr:`ReadBackAnswer.shown`, read by the route afterwards. Written twice,
+    they would be two answers to *who is this reader actually being shown*.
+    """
+
+    return tuple(row.recorded for row in rows if not row.withheld)
+
+
 @final
 @dataclass(frozen=True, slots=True)
 class ReadBackAnswer:
@@ -113,6 +127,18 @@ class ReadBackAnswer:
     #: reorder nothing — the offerability rule is about the rows in the reader's
     #: hand, and after a withholding those are different rows.
     sorts_available: tuple[SortOption, ...]
+
+    @property
+    def shown(self) -> tuple[SearchCandidateRecord, ...]:
+        """The rows this answer still puts a person on.
+
+        Read by everything that acts on *whom the reader is about to see* — the
+        sort list above, and the photo links minted for the response. A withheld
+        row carries no person, so signing their photograph would be minting an
+        address for somebody this answer has just agreed to stop showing.
+        """
+
+        return still_shown(self.rows)
 
 
 @final
@@ -146,13 +172,14 @@ class ReadBackSearch:
 
         rows = record.returned
         withheld = await self._withheld(record, rows)
-        shown = tuple(row for row in rows if row.player_id not in withheld)
+        verdicts = tuple(
+            ReadBackRow(recorded=row, withheld=row.player_id in withheld)
+            for row in rows
+        )
+        shown = still_shown(verdicts)
         return ReadBackAnswer(
             record=record,
-            rows=tuple(
-                ReadBackRow(recorded=row, withheld=row.player_id in withheld)
-                for row in rows
-            ),
+            rows=verdicts,
             sorts_available=sorts_available(
                 tuple(of_record(row) for row in shown), surface=record.surface
             ),

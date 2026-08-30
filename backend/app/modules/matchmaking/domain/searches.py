@@ -215,10 +215,11 @@ class RecordedCard:
     has left. So the card is recorded here, and the round trip reproduces the
     answer that was given rather than the one that would be given now.
 
-    **A photo id, never a URL.** A presigned link is dead within the hour and
-    this row is kept forever, so what is stored is the id and the link is minted
-    per response — the one difference the round-trip assertion allows itself
-    (``docs/adr/0109``).
+    **A photo id, and never the URL beside it on the wire.** A presigned link is
+    dead within the hour and this row is kept for ever, so what is stored is the
+    id; ``player_card.photo_url`` is signed over it per response and written down
+    nowhere — the one difference the round-trip assertion allows itself
+    (``docs/adr/0107``, ``docs/adr/0109``).
 
     There is no ``counted_games``: the games ledger has no provider in this
     build, and a stored zero would be an invented measurement rather than an

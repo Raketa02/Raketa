@@ -72,7 +72,7 @@ from app.modules.matchmaking.domain.ports import (
     PlayerScoreQuery,
 )
 from app.modules.matchmaking.application.roll_exposure import RollExposure
-from app.modules.matchmaking.domain.cards import PlayerCardSource
+from app.modules.matchmaking.domain.cards import CardPhotoLinks, PlayerCardSource
 from app.modules.matchmaking.domain.ledgers import ExposureLedger, SuppressionLedger
 from app.modules.matchmaking.domain.prompts import PromptLedger
 from app.modules.matchmaking.domain.interest import InterestLedger
@@ -114,6 +114,9 @@ from app.modules.matchmaking.infrastructure.scale_instruments import (
     ScalePressureProbe,
     ScoringMeter,
     container_memory_limit_bytes,
+)
+from app.modules.matchmaking.infrastructure.card_photo_links import (
+    PresignedCardPhotos,
 )
 from app.modules.matchmaking.infrastructure.player_card_source import (
     PlayerCardIdentities,
@@ -517,6 +520,26 @@ def build_player_card_source(
         profiles=build_player_profile_repository(
             event_store=event_store, events=events
         ),
+    )
+
+
+def build_card_photo_links(
+    *, storage: PhotoStorage, settings: Settings
+) -> CardPhotoLinks:
+    """The address a card's photograph is drawn from, minted per response.
+
+    Over the **photo provider's own port**, exactly as the card source is over
+    theirs: where a photograph lives is that context's business, and a key
+    written here would be a second answer to it.
+
+    **The window is read here**, from the one setting every photo link in this
+    platform is signed for — so a card and ``GET /photos/{id}`` cannot disagree
+    about how long a link may live, and the route that declares this adapter
+    does not get to name a number.
+    """
+
+    return PresignedCardPhotos(
+        storage=storage, valid_for_minutes=settings.PHOTO_URL_VALID_FOR_MINUTES
     )
 
 

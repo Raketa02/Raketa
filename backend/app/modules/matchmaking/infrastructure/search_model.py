@@ -287,8 +287,9 @@ class SearchCandidateORM(Base):
     distance_km: Mapped[int | None] = mapped_column(Integer, nullable=True)
     #: The card **as it was shown**, so a read-back answers the search that ran
     #: rather than the one that would run now. It holds a ``photo_id`` and never
-    #: a URL: a presigned link is dead within the hour and this row is kept
-    #: forever (``docs/adr/0107``).
+    #: the link: a presigned URL is dead within the hour and this row is kept
+    #: for ever, so the link is signed over this id per response and never
+    #: written here (``docs/adr/0107``).
     player_card: Mapped[dict[str, Any] | None] = mapped_column(BLOB, nullable=True)
     #: What a counted game would have been worth then. Null in for fun, where a
     #: counted result is meaningless rather than unavailable.

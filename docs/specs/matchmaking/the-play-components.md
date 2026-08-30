@@ -401,6 +401,18 @@ it deletes the photograph from the deck, whose entire card is a photograph, and 
 retroactively makes [#220](https://github.com/Raketa02/Raketa/issues/220)'s poster the product
 rather than the fallback it argued itself into being.
 
+> **Built by [#245](https://github.com/Raketa02/Raketa/issues/245).** The finding above is
+> written in the present tense and is now history: `player_card` carries `photo_url` beside
+> `photo_id`, minted per response by a `CardPhotoLinks` port over the photo provider's own
+> store and recorded nowhere. The link is signed as the **candidate's own** — a link signed
+> under the searcher's id would reach an object that does not exist — for the platform's one
+> photo window, and it is **not** checked for existence: that would be twenty round trips
+> before a response, to turn a photo removed since into the poster the client already draws.
+> The two fields are omitted together. A **withheld** row's photograph is signed for nobody:
+> the read-back mints over the rows it still puts a person on. `GET /photos/{id}` is
+> untouched, and a test asserts it still refuses a card's own photo id — which is the whole
+> shape of the argument above.
+
 **One contract change** — the card audit's third, after
 [#233](https://github.com/Raketa02/Raketa/issues/233)'s `degraded_terms` and
 [#235](https://github.com/Raketa02/Raketa/issues/235)'s `range` — one backend ticket and one

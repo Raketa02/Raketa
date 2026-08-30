@@ -14,6 +14,8 @@ card is a re-show — are on the record where an analyst can find them.
 
 from __future__ import annotations
 
+from uuid import uuid4
+
 import pytest
 
 from app.modules.matchmaking.domain.searches import SearchSurface
@@ -267,3 +269,27 @@ async def test_a_deal_reads_back_in_the_same_shape(client, searcher, a_city):
     assert [row["player_id"] for row in body["candidates"]] == [
         row["player_id"] for row in dealt["candidates"]
     ]
+
+
+async def test_a_dealt_card_carries_the_photograph_it_is_mostly_made_of(
+    client, session_factory, candidate_source, searcher
+):
+    """**The deck's whole card is a photograph.**
+
+    A deal that handed back an id the client cannot sign for would draw the
+    generated poster on every card, which would quietly make the poster the
+    product rather than the fallback it argued itself into being.
+    """
+
+    photo = uuid4()
+    dealt_to = await world.a_candidate(
+        client, session_factory, "bea", mu=searcher["mu"], photo_ids=(photo,)
+    )
+    await world.fold_the_log(session_factory, candidate_source)
+
+    card = (await world.deck(client, searcher["token"])).json()["candidates"][0][
+        "player_card"
+    ]
+
+    assert card["photo_id"] == str(photo)
+    assert card["photo_url"].endswith(f"{dealt_to}/{photo}")

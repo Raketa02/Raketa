@@ -9,6 +9,8 @@ pairs, and that the objective which chose the four never crosses as a number.
 
 from __future__ import annotations
 
+from uuid import uuid4
+
 import pytest
 
 from sqlalchemy import select
@@ -393,3 +395,38 @@ async def test_a_line_up_reads_back_through_the_record_it_wrote(
         "the spec amendment should say so"
     )
     assert "lineup" not in body["search"], "layer 4 reached the wire"
+
+
+async def test_a_seated_card_carries_its_photograph_like_any_other(
+    client, session_factory, candidate_source, searcher
+):
+    """**The same rows, in the same shape, on every surface.**
+
+    A line-up's returned band is who sat down, rendered through the one function
+    a shortlist and a deal go through — so a photograph that reached one surface
+    and not this one would mean the link had been wired per route rather than
+    per renderer.
+    """
+
+    photo = uuid4()
+    seated = await world.a_candidate(
+        client, session_factory, "ana", mu=searcher["mu"], photo_ids=(photo,)
+    )
+    for name, delta in (("bo", 0.05), ("cy", -0.05)):
+        await world.a_candidate(
+            client, session_factory, name, mu=searcher["mu"] + delta
+        )
+    await world.fold_the_log(session_factory, candidate_source)
+
+    body = (await world.lineup(client, searcher["token"])).json()
+
+    cards = {
+        row["player_id"]: row["player_card"] for row in body["candidates"]
+    }
+    assert cards[str(seated)]["photo_id"] == str(photo)
+    assert cards[str(seated)]["photo_url"].endswith(f"{seated}/{photo}")
+    assert all(
+        "photo_url" not in card
+        for player_id, card in cards.items()
+        if player_id != str(seated)
+    ), "a player with no photo was handed a link to one"

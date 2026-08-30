@@ -19,9 +19,11 @@ is bounded by the shortlist rather than by the city. If it ever stops being
 affordable, the fix is a read model **on the provider's side** with a port over
 it, not a query written here.
 
-**A URL is never minted.** Photos are served through short-lived presigned links
-and a search record is kept for ever, so what travels is the id. The link is the
-client's next request.
+**No URL is minted here.** Photos are served through short-lived presigned links
+and a search record is kept for ever, so what this source hands over — and what
+the record stores — is the id. The link is signed one layer out, per response,
+by ``CardPhotoLinks``: it is not a fact about the player, and a card assembled
+before the record is written must not carry one.
 """
 
 from __future__ import annotations

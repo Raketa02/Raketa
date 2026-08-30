@@ -44,6 +44,7 @@ from app.modules.matchmaking.application.read_back_search import (
     ReadBackSearchCommand,
 )
 from app.modules.matchmaking.presentation.dependencies import (
+    CardPhotoLinksDep,
     ReadBackSearchDep,
     RunShortlistSearchDep,
 )
@@ -134,6 +135,7 @@ async def run_search(
     request: Request,
     user: CurrentUserDep,
     use_case: RunShortlistSearchDep,
+    photos: CardPhotoLinksDep,
 ) -> ShortlistResponse:
     answer = await use_case.execute(
         RunShortlistSearchCommand(
@@ -156,7 +158,7 @@ async def run_search(
             trace_id=trace_id_for(request),
         )
     )
-    return render(answer)
+    return render(answer, await photos.links_for(answer.record.returned))
 
 
 @router.get(
@@ -219,9 +221,10 @@ async def run_search(
 async def read_search_back(
     user: CurrentUserDep,
     use_case: ReadBackSearchDep,
+    photos: CardPhotoLinksDep,
     search_id: UUID = Path(..., description="The answer's identity, from the POST"),
 ) -> ShortlistResponse:
     answer = await use_case.execute(
         ReadBackSearchCommand(search_id=search_id, reader_id=user.id)
     )
-    return render_read_back(answer)
+    return render_read_back(answer, await photos.links_for(answer.shown))

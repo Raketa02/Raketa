@@ -35,6 +35,7 @@ from app.modules.matchmaking.application.commands import (
     RunLineupSearchCommand,
 )
 from app.modules.matchmaking.presentation.dependencies import (
+    CardPhotoLinksDep,
     ForecastLineupDep,
     RunLineupSearchDep,
 )
@@ -129,6 +130,7 @@ async def run_lineup(
     request: Request,
     user: CurrentUserDep,
     use_case: RunLineupSearchDep,
+    photos: CardPhotoLinksDep,
 ) -> LineupResponse:
     answer = await use_case.execute(
         RunLineupSearchCommand(
@@ -146,7 +148,7 @@ async def run_lineup(
             trace_id=trace_id_for(request),
         )
     )
-    return render_lineup(answer)
+    return render_lineup(answer, await photos.links_for(answer.record.returned))
 
 
 @forecasts_router.post(

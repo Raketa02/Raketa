@@ -30,6 +30,25 @@ from tests.api import matchmaking_world as world
 LATER = world.LONG_AGO + timedelta(days=1)
 
 
+def _without_the_minted_link(candidate: dict) -> dict:
+    """One row, minus the one field on it that is not a recorded fact.
+
+    ``photo_url`` is signed for *this* response over the id the row holds, so it
+    is the one thing a round trip may not assert equality on — and dropping it
+    here is what keeps the rest of the comparison exact.
+    """
+
+    card = candidate.get("player_card")
+    if card is None:
+        return candidate
+    return {
+        **candidate,
+        "player_card": {
+            field: value for field, value in card.items() if field != "photo_url"
+        },
+    }
+
+
 @pytest.fixture
 async def searcher(client, session_factory):
     return await world.a_searcher(client, session_factory)
@@ -58,8 +77,11 @@ async def test_a_search_reads_back_as_the_answer_it_gave(
     Asserted over the record's fields rather than over the bytes: the envelope,
     the order, and every field of every row the record holds. What the record
     does not hold is not compared, which is the whole of ``docs/adr/0109``'s
-    narrowing — and today the two payloads happen to agree completely, because
-    the card is recorded and the photo link is not minted yet.
+    narrowing: the photo link is minted per response and is dropped from both
+    sides below. This suite's store signs a pure function of the ref, so the two
+    links would in fact match here — which is exactly the coincidence a test
+    that compared them would come to depend on, and a real signature carries the
+    moment it was taken.
     """
 
     posted, _, _ = await a_search_of_two(
@@ -86,9 +108,10 @@ async def test_a_search_reads_back_as_the_answer_it_gave(
     assert len(body["candidates"]) == len(posted["candidates"])
     for again, first in zip(body["candidates"], posted["candidates"], strict=True):
         assert again["withheld"] is False, "a live row says so, positively"
-        assert {key: again[key] for key in first} == first, (
-            "the recorded answer came back different"
-        )
+        recorded = _without_the_minted_link(first)
+        assert {key: _without_the_minted_link(again)[key] for key in recorded} == (
+            recorded
+        ), "the recorded answer came back different"
 
 
 async def test_the_breakdown_survives_the_round_trip_whole(
@@ -505,3 +528,72 @@ def test_the_moment_the_fixtures_change_a_preference_at_is_after_the_commit():
 
     assert LATER > world.LONG_AGO
     assert LATER < datetime.now(timezone.utc)
+
+
+async def test_the_link_is_minted_again_rather_than_read_off_the_row(
+    client, session_factory, candidate_source, photo_storage, searcher
+):
+    """**A month-old link would be a dead one, so the record never held it.**
+
+    The photo *id* is a recorded fact and comes back unchanged; the address for
+    it is signed again, here, for this reader and this window. That is the one
+    difference ``docs/adr/0107`` allows the round trip — and it is what lets the
+    row be kept for ever without keeping a link that died within the hour.
+    """
+
+    photo = uuid4()
+    await world.a_candidate(
+        client, session_factory, "photographed", mu=searcher["mu"], photo_ids=(photo,)
+    )
+    await world.fold_the_log(session_factory, candidate_source)
+    posted = (await world.search(client, searcher["token"])).json()
+    signed_on_the_post = len(photo_storage.signed_windows)
+
+    body = (
+        await world.read_back(
+            client, searcher["token"], posted["search"]["search_id"]
+        )
+    ).json()
+
+    card = body["candidates"][0]["player_card"]
+    assert card["photo_id"] == str(photo)
+    assert card["photo_url"], "a read-back handed back an id with no address"
+    assert len(photo_storage.signed_windows) == signed_on_the_post + 1, (
+        "the read-back served a link it had not signed"
+    )
+
+
+async def test_a_withheld_rows_photograph_is_signed_for_nobody(
+    client, session_factory, candidate_source, photo_storage, searcher
+):
+    """A withheld row carries no person, so nothing is minted on their behalf.
+
+    The link never reaches the wire either way — the row is rendered as the bare
+    withholding — but an address signed for somebody this answer has just agreed
+    to stop showing is a credential that should not have been created at all.
+    """
+
+    photo = uuid4()
+    blocked_player = await world.a_candidate(
+        client, session_factory, "photographed", mu=searcher["mu"], photo_ids=(photo,)
+    )
+    await world.fold_the_log(session_factory, candidate_source)
+    posted = (await world.search(client, searcher["token"])).json()
+    assert posted["candidates"][0]["player_card"]["photo_url"]
+    signed_on_the_post = len(photo_storage.signed_windows)
+
+    blocked = await client.post(
+        "/api/v1/blocks",
+        json={"player_id": str(blocked_player), "surface": "SHORTLIST"},
+        headers=world.auth(searcher["token"]),
+    )
+    assert blocked.status_code == 204, blocked.text
+
+    read = await world.read_back(
+        client, searcher["token"], posted["search"]["search_id"]
+    )
+
+    assert read.json()["candidates"] == [{"withheld": True}]
+    assert len(photo_storage.signed_windows) == signed_on_the_post, (
+        "a withheld row's photograph was signed"
+    )

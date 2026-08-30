@@ -40,6 +40,7 @@ from app.api.dependencies import (
     DbSession,
     DomainEventStoreDep,
     EventPublisherDep,
+    SettingsDep,
     UnitOfWorkDep,
 )
 from app.bootstrap.composition import (
@@ -47,6 +48,7 @@ from app.bootstrap.composition import (
     build_account_hold_query,
     build_account_status_query,
     build_at_stake_query,
+    build_card_photo_links,
     build_exposure_ledger,
     build_interest_ledger,
     build_match_fit_engine,
@@ -70,6 +72,7 @@ from app.modules.matchmaking.application.run_deck_deal import RunDeckDeal
 from app.modules.matchmaking.application.run_lineup_search import RunLineupSearch
 from app.modules.matchmaking.application.run_shortlist_search import RunShortlistSearch
 from app.modules.matchmaking.application.search_workbench import SearchWorkbench
+from app.modules.matchmaking.domain.cards import CardPhotoLinks
 from app.modules.matchmaking.domain.candidate_snapshot import CandidateSource
 from app.modules.matchmaking.domain.errors import MatchmakingUnavailable
 from app.modules.matchmaking.domain.interest import InterestLedger
@@ -79,6 +82,7 @@ from app.modules.matchmaking.domain.ports import AccountHoldQuery, AccountStatus
 from app.modules.matchmaking.domain.prompts import PromptLedger
 from app.modules.matchmaking.domain.scale_triggers import ScoringInstrument
 from app.modules.player_profile.presentation.dependencies import (
+    PhotoStorageDep,
     PlayerProfileRepositoryDep,
     PlayIntentDeclarationRepositoryDep,
 )
@@ -188,6 +192,26 @@ def get_account_status_query(db: DbSession) -> AccountStatusQuery:
 AccountStatusQueryDep = Annotated[
     AccountStatusQuery, Depends(get_account_status_query)
 ]
+
+
+def get_card_photo_links(
+    storage: PhotoStorageDep,
+    settings: SettingsDep,
+) -> CardPhotoLinks:
+    """The photograph on a card, signed for this response and no other.
+
+    Declared beside the gates rather than inside a use case, because **every
+    Play surface renders a card** and a surface deciding for itself where a link
+    comes from is how one of them ends up signing for a different window. It is
+    the photo provider's own store, reached through their port — and the window
+    is the composition root's to read, so this line says when a signer is built
+    and never how long it signs for.
+    """
+
+    return build_card_photo_links(storage=storage, settings=settings)
+
+
+CardPhotoLinksDep = Annotated[CardPhotoLinks, Depends(get_card_photo_links)]
 
 
 def get_search_workbench(

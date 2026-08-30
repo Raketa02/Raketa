@@ -53,12 +53,15 @@ backend after `matchfit` returns — the same seam `at_stake` already rides
 
 ```
 candidate:   { player_id, fit, distance_km, player_card, ... }
-player_card: { nickname, photo_id?, area_code,
+player_card: { nickname, photo_id?, photo_url?, area_code,
                social_tags[], level, band, range, counted_games }
 ```
 
-Closed list. `photo_id` is **omitted** (not null) when the player has no photo, and the client
-draws the generated court poster.
+Closed list. `photo_id` and `photo_url` are **omitted together** (not null) when the player has
+no photo, and the client draws the generated court poster. **The id is what is stored and the
+URL is what is drawn** — minted per response and recorded nowhere, because the client cannot
+sign one for another player's photo and `GET /photos/{id}` refuses to
+([`the-play-components.md`](the-play-components.md) §9).
 
 > **`distance_km` sits on the candidate and not inside the card**, matching
 > [`the-two-contracts.md`](the-two-contracts.md) §4. An earlier draft of this section had it

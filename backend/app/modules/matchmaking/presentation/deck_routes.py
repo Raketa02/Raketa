@@ -33,6 +33,7 @@ from app.modules.matchmaking.application.commands import (
     RunDeckDealCommand,
 )
 from app.modules.matchmaking.presentation.dependencies import (
+    CardPhotoLinksDep,
     RecordPassDep,
     RunDeckDealDep,
 )
@@ -115,6 +116,7 @@ async def deal_the_deck(
     request: Request,
     user: CurrentUserDep,
     use_case: RunDeckDealDep,
+    photos: CardPhotoLinksDep,
 ) -> ShortlistResponse:
     answer = await use_case.execute(
         RunDeckDealCommand(
@@ -123,7 +125,7 @@ async def deal_the_deck(
             trace_id=trace_id_for(request),
         )
     )
-    return render_deal(answer)
+    return render_deal(answer, await photos.links_for(answer.record.returned))
 
 
 @passes_router.post(
