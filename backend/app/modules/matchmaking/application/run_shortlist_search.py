@@ -53,6 +53,7 @@ from app.modules.matchmaking.domain.prompts import (
     Prompt,
     PromptLedger,
     RaisedPrompt,
+    improvised_week,
 )
 from app.modules.matchmaking.domain.relaxation import (
     Rung,
@@ -299,12 +300,9 @@ class RunShortlistSearch:
         """
 
         raised: list[RaisedPrompt] = []
-        if asked.grid != profile_grid:
-            raised.append(
-                RaisedPrompt(
-                    prompt=Prompt.KEEP_THESE_TIMES, slots=asked.grid.codes
-                )
-            )
+        week = improvised_week(asked=asked.grid, profile=profile_grid)
+        if week is not None:
+            raised.append(week)
         if await self._keeps_taking_this_widening(command, asked):
             raised.append(
                 RaisedPrompt(

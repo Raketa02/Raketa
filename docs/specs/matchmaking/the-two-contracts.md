@@ -384,8 +384,17 @@ per sort tap is latency spent on nothing.
 
 ## 6. The deck
 
-`POST /api/v1/deck` takes **`sport` only** and returns one deal: an ordered batch of cards,
-one `search` row, one `search_id` shared by every card in the deal.
+`POST /api/v1/deck` takes **the sport and the week you are asking about** — and nothing
+else — and returns one deal: an ordered batch of cards, one `search` row, one `search_id`
+shared by every card in the deal.
+
+**The three refusals this body is written under are a mode, a widening and a pass window,
+and a grid is none of them.** *Match me* is reached from the screen the week is edited on,
+so a deal that ignored the edit would rank on a week the player had just replaced; the
+client cannot compute the difference itself, because a search that took a times rung ran on
+a grid with a slot the player never ticked and only the backend holds that. Like the
+shortlist's, it is an **ask and never a correction**: it writes no profile, and the offer to
+keep it — `KEEP_THESE_TIMES` — rides back on the response of the route that used it.
 
 **A deal is at most `DECK_DEAL_MAX` cards, 10**, and a spent deal deals again — a new request, a
 new `search_id`, the same exclusions plus everybody already dealt. **Exhausting a deal is not

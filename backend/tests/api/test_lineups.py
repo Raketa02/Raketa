@@ -83,6 +83,72 @@ async def test_a_lineup_seats_a_four_with_every_arrangement_and_a_reason(
     assert body["search"]["optimised_for"] == "SEARCHER"
 
 
+async def test_a_line_up_asks_about_the_week_it_was_given(
+    client, session_factory, candidate_source, searcher
+):
+    """**⚡ consumed the improvised week, so ⚡ asks about it.**
+
+    A line-up already holds both grids — the one it ran on and the one on the
+    profile — so the question is free here exactly as it is on a shortlist, and
+    the sheet rides on the response of the route that used the week.
+    """
+
+    for name, delta in (("ana", 0.0), ("bo", 0.05), ("cy", -0.05), ("dee", 0.10)):
+        await world.a_candidate(
+            client,
+            session_factory,
+            name,
+            mu=searcher["mu"] + delta,
+            availability=("4:EVENING",),
+        )
+    await world.fold_the_log(session_factory, candidate_source)
+
+    built = await world.lineup(
+        client,
+        searcher["token"],
+        availability_override=[{"day": 4, "part": "EVENING"}],
+    )
+
+    assert built.status_code == 200, built.text
+    prompts = {
+        prompt["prompt"]: prompt for prompt in built.json()["search"]["prompts"]
+    }
+    assert prompts["KEEP_THESE_TIMES"]["slots"] == ["4:EVENING"]
+    assert await world.saved_grid(session_factory, searcher["id"]) == (
+        "2:EVENING",
+        "6:MORNING",
+    ), "the profile is untouched"
+
+
+async def test_a_line_up_on_a_cleared_week_seats_a_four(
+    client, session_factory, candidate_source, searcher
+):
+    """The builder refused a blank grid with a `400` on the commit path's floor,
+    one layer past where that floor's own docstring puts it."""
+
+    await _a_city(client, session_factory, candidate_source, searcher["mu"])
+
+    built = await world.lineup(
+        client, searcher["token"], availability_override=[]
+    )
+
+    assert built.status_code == 200, built.text
+    prompts = {
+        prompt["prompt"]: prompt for prompt in built.json()["search"]["prompts"]
+    }
+    assert prompts["KEEP_THESE_TIMES"]["slots"] == []
+
+
+async def test_a_line_up_on_the_profiles_own_week_asks_nothing(
+    client, session_factory, candidate_source, searcher
+):
+    await _a_city(client, session_factory, candidate_source, searcher["mu"])
+
+    built = await world.lineup(client, searcher["token"])
+
+    assert built.json()["search"]["prompts"] == []
+
+
 async def test_the_objective_never_crosses_as_a_number(
     client, session_factory, candidate_source, searcher
 ):

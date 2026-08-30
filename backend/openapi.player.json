@@ -1612,7 +1612,7 @@
           "deck"
         ],
         "summary": "Match me",
-        "description": "Deals one batch of cards: one judgement at a time, no mode to pick and no setup.\n\n**Send the sport and nothing else.** The deck reads your own declared Play intent for it \u2014 *no preference* still gives you a working deck \u2014 and no mode crosses the wire in either direction.\n\n**A spent deal deals again.** Post again for a new deal with a new `search_id`; running out of cards is not running out of people, and only a fresh deal that comes back empty means the pool is thin.\n\n**The order is the deck's variety**: people who already said *Let's play* to you, then the liveliest, then the rest. There is no re-sort \u2014 `sorts_available` is empty here, because a deck is one card at a time.\n\n**No widening is offered.** `rung_offers` is `null` on a deal: the relaxation ladder belongs to the shortlist.\n\n**Read it back** through `GET /api/v1/searches/{id}`, in this same shape.",
+        "description": "Deals one batch of cards: one judgement at a time, no mode to pick and no setup.\n\n**No mode, in either direction.** The deck reads your own declared Play intent for the sport \u2014 *no preference* still gives you a working deck \u2014 and no mode crosses the wire either way.\n\n**Send `availability_override` if the player edited their week** on the Play screen, and the deal runs on it; omit it and the grid on the profile is used. It writes nothing: the deal comes back with a `KEEP_THESE_TIMES` prompt, and saving is a separate request the player makes. **A cleared week is a legal value** \u2014 unticking every cell deals a deck rather than being refused.\n\n**A spent deal deals again.** Post again for a new deal with a new `search_id`; running out of cards is not running out of people, and only a fresh deal that comes back empty means the pool is thin.\n\n**The order is the deck's variety**: people who already said *Let's play* to you, then the liveliest, then the rest. There is no re-sort \u2014 `sorts_available` is empty here, because a deck is one card at a time.\n\n**No widening is offered.** `rung_offers` is `null` on a deal: the relaxation ladder belongs to the shortlist.\n\n**Read it back** through `GET /api/v1/searches/{id}`, in this same shape.",
         "operationId": "deal_the_deck_api_v1_deck_post",
         "requestBody": {
           "content": {
@@ -2275,6 +2275,14 @@
           "sport": {
             "$ref": "#/components/schemas/Sport",
             "description": "Which sport this deal is for"
+          },
+          "availability_override": {
+            "items": {
+              "$ref": "#/components/schemas/AvailabilitySlotResource"
+            },
+            "type": "array",
+            "title": "Availability Override",
+            "description": "The week to run **this one deal** against, when the player edited it on the Play screen. Omit to use the grid on your profile \u2014 **omit it, never send `null`**.\n\n**It is an ask and never a correction.** Nothing here writes your profile; the app offers to save it afterwards."
           }
         },
         "type": "object",
@@ -2282,7 +2290,7 @@
           "sport"
         ],
         "title": "DealDeckRequest",
-        "description": "What a deal is asked for. **One field, and that is the whole contract.**\n\n**There is no `mode` here and there never will be.** The deck reads your own\ndeclared Play intent for this sport, resolved backend-side, and *no\npreference* is a working deck rather than a blocked one \u2014 indecision is not a\nstate this product refuses. A mode on this body would be the field the\ntelemetry constraint refuses: `mode` is null exactly when the surface is the\ndeck.\n\n**There is no widening here either.** The relaxation ladder does not reach\nthe deck, so a deal carries no rung offers and there is no offer for one to\ncite.\n\n**There is nothing about a pass.** The suppression window crosses the wire in\nno shape at all \u2014 no field, no code, no timestamp \u2014 which is what makes a\npass unable to become something stronger by way of a request."
+        "description": "What a deal is asked for. **The sport, and the week you are asking about.**\n\nThis said *one field, and that is the whole contract* until the week was\nadded, and the three refusals it was written to protect are untouched by\nthat: **a mode, a widening and a pass window** may not arrive here, and a\ngrid is none of the three.\n\n**There is no `mode` here and there never will be.** The deck reads your own\ndeclared Play intent for this sport, resolved backend-side, and *no\npreference* is a working deck rather than a blocked one \u2014 indecision is not a\nstate this product refuses. A mode on this body would be the field the\ntelemetry constraint refuses: `mode` is null exactly when the surface is the\ndeck.\n\n**There is no widening here either.** The relaxation ladder does not reach\nthe deck, so a deal carries no rung offers and there is no offer for one to\ncite.\n\n**There is nothing about a pass.** The suppression window crosses the wire in\nno shape at all \u2014 no field, no code, no timestamp \u2014 which is what makes a\npass unable to become something stronger by way of a request.\n\n**The week is an ask and never a correction**, exactly as it is on a search.\nIt is here because the alternative was a deck that silently ranks on a week\nthe player has just replaced, and because a client cannot compute the\ndifference itself: a search that took a times rung ran on a grid with a slot\nthe player never ticked, and only this backend knows that."
       },
       "DeclarePlayIntentRequest": {
         "properties": {
@@ -3526,7 +3534,7 @@
             },
             "type": "array",
             "title": "Slots",
-            "description": "The week this search actually ran on, as codes"
+            "description": "The week this search actually ran on, as codes. **An empty list is a cleared week** \u2014 the player unticked every cell, which is a legal edit and a legal thing to be offered \u2014 where the field being absent means this is not the times prompt at all."
           },
           "mode": {
             "$ref": "#/components/schemas/SearchMode",

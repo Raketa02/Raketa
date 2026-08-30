@@ -243,15 +243,17 @@ Rules to preserve:
   setting.
 - **The deck reads a declaration, and a pass is a statement about my deck**
   ([ADR-0128](../docs/adr/0128-a-pass-is-about-my-deck-a-block-is-about-a-person.md),
-  `the-two-contracts.md` §6). `POST /api/v1/deck` takes **`sport` only** and creates a
-  search: there is no mode on the wire in either direction, because the deck resolves the
-  weight vector backend-side from the viewer's declared Play intent — `NO_PREFERENCE →
-  fun`, never a third vector — and `search.intent_read` records **the declaration as it
-  stood**, so a later change to the mapping does not rewrite history. Its order is its
-  whole variety (three bands, then `PASS_SUPPRESS`); the **relaxation ladder does not
-  reach it**; and a spent deal deals again — a new `search_id`, the same exclusions plus
-  everybody dealt within `DEALT_MEMORY`, so only a *fresh* deal that came back empty is
-  the honest empty state.
+  `the-two-contracts.md` §6). `POST /api/v1/deck` takes **the sport and the week this one
+  deal runs on** and creates a search: there is no mode on the wire in either direction,
+  because the deck resolves the weight vector backend-side from the viewer's declared Play
+  intent — `NO_PREFERENCE → fun`, never a third vector — and `search.intent_read` records
+  **the declaration as it stood**, so a later change to the mapping does not rewrite
+  history. Its order is its whole variety (three bands, then `PASS_SUPPRESS`); the
+  **relaxation ladder does not reach it** — the week is the only ask beside the sport, and
+  it is an ask like the shortlist's: it writes nothing, and the deal comes back carrying
+  `KEEP_THESE_TIMES`, which is the offer to save it; and a spent deal deals again — a new
+  `search_id`, the same exclusions plus everybody dealt within `DEALT_MEMORY`, so only a
+  *fresh* deal that came back empty is the honest empty state.
   `POST /api/v1/passes` is **write-only and answers `204`**: no route returns a pass, to
   anyone, in any shape, and `PASS_SUPPRESS` crosses the wire in **no shape at all**. It
   has three boundaries, all the opposite of a block's — deck only, one-directional, never

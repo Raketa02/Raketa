@@ -215,7 +215,12 @@ class RunSearchRequest(BaseModel):
 
 
 class DealDeckRequest(BaseModel):
-    """What a deal is asked for. **One field, and that is the whole contract.**
+    """What a deal is asked for. **The sport, and the week you are asking about.**
+
+    This said *one field, and that is the whole contract* until the week was
+    added, and the three refusals it was written to protect are untouched by
+    that: **a mode, a widening and a pass window** may not arrive here, and a
+    grid is none of the three.
 
     **There is no `mode` here and there never will be.** The deck reads your own
     declared Play intent for this sport, resolved backend-side, and *no
@@ -231,9 +236,25 @@ class DealDeckRequest(BaseModel):
     **There is nothing about a pass.** The suppression window crosses the wire in
     no shape at all — no field, no code, no timestamp — which is what makes a
     pass unable to become something stronger by way of a request.
+
+    **The week is an ask and never a correction**, exactly as it is on a search.
+    It is here because the alternative was a deck that silently ranks on a week
+    the player has just replaced, and because a client cannot compute the
+    difference itself: a search that took a times rung ran on a grid with a slot
+    the player never ticked, and only this backend knows that.
     """
 
     sport: Sport = Field(..., description="Which sport this deal is for")
+    availability_override: list[AvailabilitySlotResource] = Field(
+        OMITTED,
+        description=(
+            "The week to run **this one deal** against, when the player edited "
+            "it on the Play screen. Omit to use the grid on your profile — "
+            "**omit it, never send `null`**.\n\n"
+            "**It is an ask and never a correction.** Nothing here writes your "
+            "profile; the app offers to save it afterwards."
+        ),
+    )
 
 
 class RecordPassRequest(BaseModel):
@@ -378,7 +399,13 @@ class PromptSchema(BaseModel):
         OMITTED, ge=1, description="The widening you keep taking"
     )
     slots: list[str] = Field(
-        OMITTED, description="The week this search actually ran on, as codes"
+        OMITTED,
+        description=(
+            "The week this search actually ran on, as codes. **An empty list "
+            "is a cleared week** — the player unticked every cell, which is a "
+            "legal edit and a legal thing to be offered — where the field being "
+            "absent means this is not the times prompt at all."
+        ),
     )
     mode: SearchMode = Field(
         OMITTED, description="The mode your recent searches keep choosing"

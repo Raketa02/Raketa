@@ -679,7 +679,9 @@ export interface paths {
          * Match me
          * @description Deals one batch of cards: one judgement at a time, no mode to pick and no setup.
          *
-         *     **Send the sport and nothing else.** The deck reads your own declared Play intent for it — *no preference* still gives you a working deck — and no mode crosses the wire in either direction.
+         *     **No mode, in either direction.** The deck reads your own declared Play intent for the sport — *no preference* still gives you a working deck — and no mode crosses the wire either way.
+         *
+         *     **Send `availability_override` if the player edited their week** on the Play screen, and the deal runs on it; omit it and the grid on the profile is used. It writes nothing: the deal comes back with a `KEEP_THESE_TIMES` prompt, and saving is a separate request the player makes. **A cleared week is a legal value** — unticking every cell deals a deck rather than being refused.
          *
          *     **A spent deal deals again.** Post again for a new deal with a new `search_id`; running out of cards is not running out of people, and only a fresh deal that comes back empty means the pool is thin.
          *
@@ -1130,7 +1132,12 @@ export interface components {
         DayPart: "MORNING" | "AFTERNOON" | "EVENING";
         /**
          * DealDeckRequest
-         * @description What a deal is asked for. **One field, and that is the whole contract.**
+         * @description What a deal is asked for. **The sport, and the week you are asking about.**
+         *
+         *     This said *one field, and that is the whole contract* until the week was
+         *     added, and the three refusals it was written to protect are untouched by
+         *     that: **a mode, a widening and a pass window** may not arrive here, and a
+         *     grid is none of the three.
          *
          *     **There is no `mode` here and there never will be.** The deck reads your own
          *     declared Play intent for this sport, resolved backend-side, and *no
@@ -1146,10 +1153,23 @@ export interface components {
          *     **There is nothing about a pass.** The suppression window crosses the wire in
          *     no shape at all — no field, no code, no timestamp — which is what makes a
          *     pass unable to become something stronger by way of a request.
+         *
+         *     **The week is an ask and never a correction**, exactly as it is on a search.
+         *     It is here because the alternative was a deck that silently ranks on a week
+         *     the player has just replaced, and because a client cannot compute the
+         *     difference itself: a search that took a times rung ran on a grid with a slot
+         *     the player never ticked, and only this backend knows that.
          */
         DealDeckRequest: {
             /** @description Which sport this deal is for */
             sport: components["schemas"]["Sport"];
+            /**
+             * Availability Override
+             * @description The week to run **this one deal** against, when the player edited it on the Play screen. Omit to use the grid on your profile — **omit it, never send `null`**.
+             *
+             *     **It is an ask and never a correction.** Nothing here writes your profile; the app offers to save it afterwards.
+             */
+            availability_override?: components["schemas"]["AvailabilitySlotResource"][];
         };
         /**
          * DeclarePlayIntentRequest
@@ -2245,7 +2265,7 @@ export interface components {
             radius_km?: number;
             /**
              * Slots
-             * @description The week this search actually ran on, as codes
+             * @description The week this search actually ran on, as codes. **An empty list is a cleared week** — the player unticked every cell, which is a legal edit and a legal thing to be offered — where the field being absent means this is not the times prompt at all.
              */
             slots?: string[];
             /** @description The mode your recent searches keep choosing */

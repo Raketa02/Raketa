@@ -94,13 +94,20 @@ class RunDeckDealCommand:
     the request field the telemetry constraint refuses — ``mode`` is ``NULL``
     exactly when the surface is the deck.
 
-    There is no ``rung`` and no ``availability_override`` either: **the
-    relaxation ladder does not reach the deck** (``docs/adr/0099``), so a deal
-    cannot be widened and there is no offer for one to cite.
+    There is no ``rung`` here either: **the relaxation ladder does not reach the
+    deck** (``docs/adr/0099``), so a deal cannot be widened and there is no offer
+    for one to cite.
+
+    The **week** is an ask like the shortlist's, and for the same reason: a
+    player who edits their week and taps *Match me* would otherwise be ranked on
+    a week they have just replaced. It writes no profile either.
     """
 
     searcher_id: UUID
     sport: Sport
+    #: The grid to run **this one deal** on, exactly as the shortlist spells it.
+    #: ``None`` is *use the profile's own*, and it is not an empty grid.
+    availability_override: tuple[tuple[int, str], ...] | None
     trace_id: str
 
 

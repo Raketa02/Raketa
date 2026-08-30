@@ -384,10 +384,16 @@ class SearchWorkbench:
         itself, on a row it wrote.
         """
 
+        # **``edited`` and never ``of_cells``.** The floor of one ticked cell
+        # binds *the answer a player is asked for* at commit, and an improvised
+        # week is a later edit of it — so a player who clears their week
+        # searches, exactly as ``availability.py`` says they may. Building this
+        # through the commit path's constructor enforced the floor one layer
+        # past where that module puts it, and refused them a `400`.
         grid = (
             searcher.grid
             if availability_override is None
-            else AvailabilityGrid.of_cells(availability_override)
+            else AvailabilityGrid.edited(availability_override)
         )
         if rung is None and offered_by_search_id is None:
             return AskedFor(grid=grid, radius_km=searcher.radius_km)

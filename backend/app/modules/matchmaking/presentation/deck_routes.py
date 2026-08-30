@@ -9,6 +9,11 @@ system for no analytic gain.
 maps *no preference* to *for fun*, and never selects a third vector. Indecision
 is not a blocked state.
 
+**The week is the one ask beside the sport.** *Match me* is reached from the same
+screen the grid is edited on, so a deal that ignored the edit would rank on a
+week the player had just replaced. It is an ask like the shortlist's — it writes
+no profile, and the offer to save it rides back on the response.
+
 **A spent deal deals again.** Running out of cards is not running out of people:
 the next request is a new search with a new id, the same exclusions plus
 everybody dealt recently, and only a fresh deal that comes back empty is the
@@ -95,9 +100,15 @@ passes_router = APIRouter(prefix="/passes", tags=["passes"])
     description=(
         "Deals one batch of cards: one judgement at a time, no mode to pick and "
         "no setup.\n\n"
-        "**Send the sport and nothing else.** The deck reads your own declared "
-        "Play intent for it — *no preference* still gives you a working deck — "
-        "and no mode crosses the wire in either direction.\n\n"
+        "**No mode, in either direction.** The deck reads your own declared "
+        "Play intent for the sport — *no preference* still gives you a working "
+        "deck — and no mode crosses the wire either way.\n\n"
+        "**Send `availability_override` if the player edited their week** on "
+        "the Play screen, and the deal runs on it; omit it and the grid on the "
+        "profile is used. It writes nothing: the deal comes back with a "
+        "`KEEP_THESE_TIMES` prompt, and saving is a separate request the player "
+        "makes. **A cleared week is a legal value** — unticking every cell "
+        "deals a deck rather than being refused.\n\n"
         "**A spent deal deals again.** Post again for a new deal with a new "
         "`search_id`; running out of cards is not running out of people, and "
         "only a fresh deal that comes back empty means the pool is thin.\n\n"
@@ -122,6 +133,13 @@ async def deal_the_deck(
         RunDeckDealCommand(
             searcher_id=user.id,
             sport=payload.sport,
+            availability_override=(
+                None
+                if payload.availability_override is None
+                else tuple(
+                    cell.as_cell() for cell in payload.availability_override
+                )
+            ),
             trace_id=trace_id_for(request),
         )
     )

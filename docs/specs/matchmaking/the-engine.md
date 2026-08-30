@@ -916,7 +916,7 @@ Eight routes. [`the-two-contracts.md`](the-two-contracts.md) holds the shapes.
 | --- | --- | --- |
 | `POST /api/v1/searches` | ✓ | **deliberately not idempotent** — two taps are two searches, and §19's denominator is *searches run* |
 | `POST /api/v1/lineups` | ✓ | `LINEUP` / `FILL_SEATS`, differing only by `locked_seats` |
-| `POST /api/v1/deck` | ✓ | `sport` only |
+| `POST /api/v1/deck` | ✓ | `sport`, and the week this one deal runs on — no mode, no rung |
 | `GET /api/v1/searches/{id}` | — | the **same schema** the `POST` returned |
 | `POST /api/v1/interest` | — | idempotent per `(from, to, sport)`; `search_id` required |
 | `POST /api/v1/forecasts` | **no — deliberately** | re-`POST`ing a line-up per swap would enter a six-edit builder session into the denominator as six searches |

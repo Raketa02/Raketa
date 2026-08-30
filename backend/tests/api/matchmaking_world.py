@@ -375,12 +375,24 @@ async def read_interest(client, token: str):
     return await client.get("/api/v1/interest", headers=auth(token))
 
 
-async def deck(client, token: str, sport: Sport = SPORT):
-    """One deal. **The sport is the whole body** — there is no mode to send."""
+async def deck(
+    client,
+    token: str,
+    sport: Sport = SPORT,
+    *,
+    availability_override: list[dict] | None = None,
+):
+    """One deal. **There is still no mode to send** — the deck reads a declaration.
 
-    return await client.post(
-        "/api/v1/deck", json={"sport": sport.value}, headers=auth(token)
-    )
+    The week is the one ask beside the sport, omitted unless a test sends one,
+    for the reason the search's are: a client says *use my profile's week* by not
+    mentioning one.
+    """
+
+    body: dict = {"sport": sport.value}
+    if availability_override is not None:
+        body["availability_override"] = availability_override
+    return await client.post("/api/v1/deck", json=body, headers=auth(token))
 
 
 async def pass_on(

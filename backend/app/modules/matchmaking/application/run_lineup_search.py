@@ -87,6 +87,10 @@ from app.modules.matchmaking.domain.searches import (
     SearchSurface,
     SortOption,
 )
+from app.modules.matchmaking.domain.prompts import (
+    RaisedPrompt,
+    improvised_week,
+)
 from app.modules.matchmaking.domain.shortlist import Scored
 from app.modules.matchmaking.domain.sorting import sorts_available
 from app.modules.player_profile.domain.availability import window_of
@@ -128,6 +132,12 @@ class LineupAnswer:
     #: refusal** — nobody is removed from the court for it.
     dock: UnfilledReason | None
     optimised_for_group: bool
+    #: The questions this line-up raises and does not answer. ⚡ consumed the
+    #: improvised week exactly as *Find me a game* did, so it owes the same offer
+    #: to keep it — the omission was an oversight rather than a decision. There
+    #: is no widening prompt here: the ladder is priced by the shortlist, and a
+    #: line-up takes a rung without ever counting one.
+    prompts: tuple[RaisedPrompt, ...] = ()
 
 
 @final
@@ -288,8 +298,14 @@ class RunLineupSearch:
         # objective, so *which way round is this being shown* falls to the only
         # question balance can still answer.
         drawn = seating.best or seating.evenest
+        week = improvised_week(asked=asked.grid, profile=declared.grid)
         return LineupAnswer(
             record=record,
+            # After the commit, like the shortlist's: the sheet rides on the
+            # response of the route that used the week, so the search has
+            # already run by the time the question appears and there is nothing
+            # left for an answer — or a dismissal — to block.
+            prompts=() if week is None else (week,),
             sorts_available=sorts_available((), surface=surface),
             seats=roster(
                 None if drawn is None else drawn.arrangement,

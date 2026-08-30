@@ -3,9 +3,10 @@
 Every assertion lands on the real route through the async client fixture: ASGI
 transport over in-memory SQLite, **no MinIO, no sidecar and no Redis**.
 
-What is asserted is the product's promises rather than the plumbing. That a deal
-takes a sport and nothing else. That **a player with no preference still gets a
-working deck**, because indecision is not a blocked state. That the order is the
+What is asserted is the product's promises rather than the plumbing. That no mode
+crosses the wire in either direction, and that the week the player just edited is
+the one the deal runs on. That **a player with no preference still gets a working
+deck**, because indecision is not a blocked state. That the order is the
 deck's own three bands. That **a spent deal deals again**, and that only a fresh
 deal coming back empty is the honest empty state. And that the two facts nobody
 can see from any screen — how many cards a suppression removed, and whether a
@@ -51,12 +52,12 @@ async def a_city(client, session_factory, candidate_source, searcher):
 # ---------------------------------------------------------------------------
 
 
-async def test_a_deal_takes_a_sport_and_nothing_else(client, searcher, a_city):
+async def test_a_deal_names_no_mode_in_either_direction(client, searcher, a_city):
     """**No mode crosses the wire, in either direction.**
 
-    The deck reads the viewer's own declaration instead, which is why the body
-    has one field — and why the envelope's `mode` comes back null rather than
-    echoing something the request never sent.
+    The deck reads the viewer's own declaration instead — which is why the
+    envelope's `mode` comes back null rather than echoing something the request
+    never sent, and why there is no field for one to arrive through.
     """
 
     dealt = await world.deck(client, searcher["token"])
@@ -67,6 +68,58 @@ async def test_a_deal_takes_a_sport_and_nothing_else(client, searcher, a_city):
     assert body["search"]["mode"] is None, "the deck has no mode"
     assert body["search"]["search_id"], "one deal, one search id"
     assert body["candidates"], "three findable people and an empty deal"
+
+
+async def test_a_deal_runs_on_the_week_the_player_just_edited(
+    client, session_factory, searcher, a_city
+):
+    """**Match me reads the improvised week, and offers to keep it.**
+
+    The alternative was a deck that silently ranks on a week the player has just
+    replaced. The three refusals this body is written under are a mode, a
+    widening and a pass window; a grid is none of them.
+    """
+
+    dealt = await world.deck(
+        client, searcher["token"], availability_override=[{"day": 4, "part": "EVENING"}]
+    )
+
+    assert dealt.status_code == 200, dealt.text
+    prompts = {
+        prompt["prompt"]: prompt for prompt in dealt.json()["search"]["prompts"]
+    }
+    assert prompts["KEEP_THESE_TIMES"]["slots"] == ["4:EVENING"]
+
+    recorded = (await world.recorded_searches(session_factory))[-1]
+    assert list(recorded.searcher_grid) == ["4:EVENING"]
+    assert await world.saved_grid(session_factory, searcher["id"]) == (
+        "2:EVENING",
+        "6:MORNING",
+    ), "the profile is untouched"
+
+
+async def test_a_deal_on_the_profiles_own_week_asks_nothing(
+    client, searcher, a_city
+):
+    """A prompt is raised by something having happened, and an empty list is the
+    honest way to say nothing did — the deck runs them now rather than not
+    having them."""
+
+    dealt = await world.deck(client, searcher["token"])
+
+    assert dealt.json()["search"]["prompts"] == []
+
+
+async def test_a_cleared_week_deals_a_deck(client, searcher, a_city):
+    """The same bug, on the third surface: unticking every cell is an edit."""
+
+    dealt = await world.deck(client, searcher["token"], availability_override=[])
+
+    assert dealt.status_code == 200, dealt.text
+    prompts = {
+        prompt["prompt"]: prompt for prompt in dealt.json()["search"]["prompts"]
+    }
+    assert prompts["KEEP_THESE_TIMES"]["slots"] == []
 
 
 async def test_the_declaration_is_recorded_and_the_vector_is_not(

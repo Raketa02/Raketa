@@ -110,13 +110,17 @@ def render_deal(answer: DeckAnswer, photos: PhotoLinks) -> ShortlistResponse:
     ``null`` because the ladder does not reach here and the offers were not
     computed at all.
 
-    ``prompts`` is not passed: a deal raises none, and the two spellings are
-    different answers — this one is *the surface does not have them*, where an
-    empty list would be *it ran them and found nothing*.
+    ``prompts`` is passed, and an empty list is the honest answer on a deal that
+    ran on the profile's own week: the deck accepts an improvised grid now, so it
+    owes the offer to keep one. Only that prompt can appear here — the ladder
+    still does not reach the deck, and the two loops' prompts are read beside a
+    shortlist.
     """
 
     return ShortlistResponse(
-        search=_envelope(answer.record, answer.sorts_available),
+        search=_envelope(
+            answer.record, answer.sorts_available, prompts=answer.prompts
+        ),
         candidates=[_candidate(row, photos) for row in answer.record.returned],
     )
 
@@ -161,6 +165,7 @@ def render_lineup(answer: LineupAnswer, photos: PhotoLinks) -> LineupResponse:
         search=_envelope(
             answer.record,
             answer.sorts_available,
+            prompts=answer.prompts,
             optimised_for=(
                 OptimisedFor.GROUP
                 if answer.optimised_for_group
@@ -413,7 +418,10 @@ def _prompt(raised: RaisedPrompt) -> PromptSchema:
     fields: dict[str, Any] = {"prompt": raised.prompt}
     if raised.radius_km is not None:
         fields["radius_km"] = raised.radius_km
-    if raised.slots:
+    # ``is not None`` and never truthiness: **an empty list is a cleared week**
+    # and has to cross, where omitting it would ask *keep these times?* about no
+    # times at all and leave the sheet with nothing to draw.
+    if raised.slots is not None:
         fields["slots"] = list(raised.slots)
     if raised.mode is not None:
         fields["mode"] = raised.mode

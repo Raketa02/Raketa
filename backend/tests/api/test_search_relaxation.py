@@ -305,6 +305,41 @@ async def test_an_improvised_week_runs_this_search_and_asks_about_the_profile(
     assert row.searcher_slot_count == 1
 
 
+async def test_a_cleared_week_runs_the_search_and_asks_about_it_too(
+    client, session_factory, candidate_source, searcher
+):
+    """**Unticking every cell is an edit, and an edit searches.**
+
+    The floor binds the answer a player is *asked for* at commit, not every later
+    edit of it, so a blank grid on the search screen is a week like any other:
+    the search runs, the term stands down for want of evidence rather than
+    scoring a nought, and the app offers to save it afterwards.
+    """
+
+    await world.a_candidate(client, session_factory, "near", mu=searcher["mu"])
+    await world.fold_the_log(session_factory, candidate_source)
+
+    ran = await world.search(
+        client, searcher["token"], availability_override=[]
+    )
+
+    assert ran.status_code == 200, ran.text
+    body = ran.json()
+    prompts = {prompt["prompt"]: prompt for prompt in body["search"]["prompts"]}
+    assert prompts["KEEP_THESE_TIMES"]["slots"] == [], (
+        "a cleared week crosses as an empty list, not as a missing field"
+    )
+
+    assert await world.saved_grid(session_factory, searcher["id"]) == (
+        "2:EVENING",
+        "6:MORNING",
+    ), "the profile is untouched"
+
+    (row,) = await world.recorded_searches(session_factory)
+    assert list(row.searcher_grid) == []
+    assert row.searcher_slot_count == 0
+
+
 async def test_a_search_on_the_profiles_own_week_asks_nothing(
     client, session_factory, candidate_source, searcher
 ):

@@ -36,6 +36,13 @@ counterpart now has a name: ``edited`` takes the same primitives as ``of_cells``
 and enforces no floor, so the edit path is a constructor a reader can see rather
 than an asymmetry they have to infer.
 
+**A search's improvised week is an edit and not an answer**, so it builds through
+``edited`` too. That is the sentence above read literally rather than loosely:
+*the commit path* is one route, and a player who unticks every cell on the Play
+screen and searches is not on it. Building a search override through ``of_cells``
+enforced the floor a layer out from this module and refused them a `400`; a grid
+this module hands out blank cannot be one a matcher refuses to run on.
+
 **The floor is not served.** Unlike the tag floor and ceiling it is fixed by the
 record rather than by product, so a client holds it as a constant the way it
 holds the photo cap, and ``GET /player-profile/options`` does not carry it.
@@ -217,6 +224,12 @@ class AvailabilityGrid:
         their week afterwards, and ``PlayerProfile.change_availability`` has
         always accepted a blank grid; until this existed there was no boundary
         constructor that could hand it one.
+
+        **Two callers, and neither is a commit**: the availability write route,
+        and a search's ``availability_override`` — the week a player improvised
+        for one evening, on any of the three surfaces that take one. Both are
+        edits of an answer already given, which is exactly what the floor does
+        not bind.
 
         **Named rather than a flag on ``of_cells``**, which is
         ``SearchRadius.chosen`` / ``recorded``'s discipline applied to the grid:

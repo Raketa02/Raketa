@@ -33,6 +33,13 @@ question that was never asked leaves nothing to reconstruct.
 question on a screen; the writes are the player's own, through the routes that
 already own those fields.
 
+**The grid question is decided here rather than per surface.**
+:func:`improvised_week` is the one comparison behind ``KEEP_THESE_TIMES``, and
+all three surfaces that let a player edit the week for one evening — the
+shortlist, the line-up and the deck — raise it through that function. The
+workbench deliberately holds no prompts, so the shared rule lives with the
+prompts instead.
+
 **Every one of these questions now has a write to be answered by**, and none of
 them is here: ``PUT /api/v1/play-intents/{sport}`` for the declaration, and
 ``PUT /api/v1/players/me/availability`` and ``PUT /api/v1/players/me/search-radius``
@@ -61,6 +68,7 @@ from typing import Final, Mapping, Protocol, final, runtime_checkable
 from uuid import UUID
 
 from app.kernel import Sport, invariant
+from app.modules.player_profile.domain.availability import AvailabilityGrid
 
 
 class Prompt(StrEnum):
@@ -95,7 +103,14 @@ class RaisedPrompt:
     radius_km: int | None = None
     #: The grid this search actually ran on, as slot codes.
     #: ``KEEP_THESE_TIMES``.
-    slots: tuple[str, ...] = ()
+    #:
+    #: **Two absences, and they are different answers.** ``None`` is *not this
+    #: prompt*, exactly as it is for the two fields beside it; ``()`` is **a
+    #: cleared week** — a player who unticked every cell and searched anyway,
+    #: which is a legal edit (``player_profile``'s ``AvailabilityGrid.edited``)
+    #: and therefore a legal thing to be asked about. One value carrying both
+    #: made a cleared week violate this class's own invariant.
+    slots: tuple[str, ...] | None = None
     #: The mode their recent searches keep choosing, as ``SearchMode`` spells it.
     #: ``UPDATE_PLAY_INTENT``.
     mode: str | None = None
@@ -105,14 +120,43 @@ class RaisedPrompt:
             (self.prompt is Prompt.KEEP_THIS_RADIUS) == (self.radius_km is not None),
             f"a {self.prompt.value} prompt about {self.radius_km} km",
         )
+        # Reads uniformly with the two beside it — *the payload is present
+        # exactly for its own prompt* — where ``bool(self.slots)`` also asked
+        # *and is not empty*, which is a question about the week rather than
+        # about which prompt this is.
         invariant(
-            (self.prompt is Prompt.KEEP_THESE_TIMES) == bool(self.slots),
-            f"a {self.prompt.value} prompt carrying {len(self.slots)} slots",
+            (self.prompt is Prompt.KEEP_THESE_TIMES) == (self.slots is not None),
+            f"a {self.prompt.value} prompt carrying {self.slots!r}",
         )
         invariant(
             (self.prompt is Prompt.UPDATE_PLAY_INTENT) == (self.mode is not None),
             f"a {self.prompt.value} prompt about mode {self.mode}",
         )
+
+
+def improvised_week(
+    *, asked: AvailabilityGrid, profile: AvailabilityGrid
+) -> RaisedPrompt | None:
+    """*Keep these times?* — or nothing at all, on the week a search ran on.
+
+    **One rule, and three surfaces raise it.** The shortlist, the line-up and the
+    deck each let a player edit the week for this evening, and each therefore
+    owes them the offer to keep it; three copies of *is this the profile's own
+    week* would be three chances for one of them to answer differently about one
+    moment.
+
+    It is a comparison and never a write: what comes back is the grid **already
+    in play**, so the sheet can show the change rather than describe it.
+
+    **A cleared week is a week.** Unticking every cell is an edit like any other
+    and reaches here as ``()`` — the value the floor refuses at commit and
+    accepts afterwards — where a profile that was blank already and stayed blank
+    raises nothing, because the two grids agree.
+    """
+
+    if asked == profile:
+        return None
+    return RaisedPrompt(prompt=Prompt.KEEP_THESE_TIMES, slots=asked.codes)
 
 
 #: How many searches in a row must disagree with a declaration before the drift

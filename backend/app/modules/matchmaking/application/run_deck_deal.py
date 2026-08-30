@@ -68,6 +68,10 @@ from app.modules.matchmaking.domain.passes import (
     PassLedger,
     suppression_lapsed_at,
 )
+from app.modules.matchmaking.domain.prompts import (
+    RaisedPrompt,
+    improvised_week,
+)
 from app.modules.matchmaking.domain.relaxation import radius_ladder
 from app.modules.matchmaking.domain.search_context import (
     SearchContext,
@@ -89,18 +93,28 @@ from app.shared.ids import new_uuid
 @final
 @dataclass(frozen=True, slots=True)
 class DeckAnswer:
-    """What the route renders: **the record, and nothing beside it.**
+    """What the route renders: **the record, and the question the week raises.**
 
-    The same shape :class:`ShortlistAnswer` has, minus the two fields that are
-    about a list. There are no ``prompts`` on a deal — the two a search can raise
-    are about a grid it improvised and a widening it keeps taking, and a deck does
-    neither — and ``sorts_available`` is empty by the rule in ``sorting.py``
-    rather than by this class being different: a deck is one card at a time, so
-    there is no list in the player's hand for a control to reorder.
+    **The same three fields :class:`ShortlistAnswer` holds**, and they are the
+    same fields for a reason rather than by coincidence: both surfaces render
+    through one function, so a deal that carried a shape of its own could not be
+    read back through it. What differs is what each says — ``sorts_available`` is
+    empty here by the rule in ``sorting.py`` rather than by this class being
+    different: a deck is one card at a time, so there is no list in the player's
+    hand for a control to reorder.
+
+    ``prompts`` used to be missing here on the argument that *a deck improvises
+    no grid and takes no widening*, and half of that was circular: the deck
+    raised no grid prompt because it accepted no grid. It accepts one now, so it
+    asks. **The widening half stands** — the relaxation ladder still does not
+    reach the deck, so ``KEEP_THIS_RADIUS`` has nothing to count here.
     """
 
     record: SearchRecord
     sorts_available: tuple[SortOption, ...]
+    #: The questions this deal raises and does not answer. At most one: the week
+    #: it ran on, when that is not the week on the profile.
+    prompts: tuple[RaisedPrompt, ...] = ()
 
 
 @final
@@ -131,7 +145,7 @@ class RunDeckDeal:
         stages: dict[str, int] = {}
 
         with self._work.timed(stages, "read_searcher"):
-            searcher = await self._work.searcher_facts(
+            declared = await self._work.searcher_facts(
                 player_id=command.searcher_id,
                 sport=command.sport,
                 # **The deck's whole mode story, in one line.** It is a function
@@ -139,7 +153,19 @@ class RunDeckDeal:
                 # runs under and the declaration recorded beside it are one read.
                 mode_of=lambda intent: mode_for_intent(intent, self._ruleset.intent),
             )
-        await self._work.refuse_a_held_searcher(searcher.player_id)
+        await self._work.refuse_a_held_searcher(declared.player_id)
+
+        # **The week this one deal runs on**, which is the profile's own unless
+        # the player edited it on the Play screen. No rung and no citation: the
+        # relaxation ladder does not reach the deck, so the only ask that can
+        # move anything here is the grid.
+        asked = await self._work.asked_for(
+            declared,
+            availability_override=command.availability_override,
+            offered_by_search_id=None,
+            rung=None,
+        )
+        searcher = replace(declared, grid=asked.grid)
 
         snapshot, freshness = self._work.bound_snapshot(command.sport, now)
         for_a_newcomer = searcher.is_new_at(now)
@@ -188,12 +214,17 @@ class RunDeckDeal:
             tuple(row.scored for row in rows),
             for_a_newcomer,
         )
+        week = improvised_week(asked=asked.grid, profile=declared.grid)
         return DeckAnswer(
             record=record,
             sorts_available=sorts_available(
                 tuple(of_scored(row.scored) for row in rows),
                 surface=SearchSurface.DECK,
             ),
+            # After the commit, like the shortlist's. The sheet rides on the
+            # response of the route that used the week, so *Match me* has
+            # already dealt by the time the question appears.
+            prompts=() if week is None else (week,),
         )
 
     # -- the three the deck adds to the gates --------------------------------
