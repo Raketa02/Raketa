@@ -58,6 +58,7 @@ def _candidate(band: CandidateBand, position: int) -> SearchCandidateRecord:
         fit=72.5,
         terms=({"term": "LEVEL_FIT", "weight": 29.9, "value": 1.0},),
         degraded_terms=("RELIABILITY",),
+        degraded_reasons=("NOT_YET_ON_THIS_PLATFORM",),
         modifiers=({"code": "CALIBRATION_VALUE", "points": 4.0},),
         liveness_reasons=("NEWCOMER_LIFT",),
         liveness_signals={"NEWCOMER_LIFT": True, "INTEREST_RECEIVED": None},
@@ -183,6 +184,9 @@ async def test_a_record_round_trips_through_the_columns_it_is_stored_in(store):
     assert [row.position for row in rows] == [1, 2]
     assert rows[0].terms[0]["term"] == "LEVEL_FIT"
     assert rows[0].degraded_terms == ("RELIABILITY",)
+    # Index-aligned with it, and stored rather than re-derived: a read-back
+    # never recomputes, so whose gap it was has to be on the row.
+    assert rows[0].degraded_reasons == ("NOT_YET_ON_THIS_PLATFORM",)
     assert rows[0].liveness_signals["INTEREST_RECEIVED"] is None
     assert rows[0].inclusion_reason is InclusionReason.ZERO_EXPOSURE
 
@@ -299,6 +303,7 @@ def test_a_returned_row_may_not_carry_a_withheld_reason():
             fit=50.0,
             terms=(),
             degraded_terms=(),
+            degraded_reasons=(),
             modifiers=(),
             liveness_reasons=(),
             liveness_signals={},
@@ -313,6 +318,54 @@ def test_a_returned_row_may_not_carry_a_withheld_reason():
             concerns=(),
             distance_km=None,
             card=None,
+            at_stake=None,
+        )
+
+
+def test_a_basis_and_the_reasons_beside_it_may_not_be_different_lengths():
+    """The two columns are **one fact**, and a row where they drifted is a basis
+    nobody can read.
+
+    Refused at the write rather than at the wire: the renderer zips them
+    strictly, which would surface a row that was already stored wrong as a
+    five-hundred on a read-back a month later — and the row is immutable, so
+    there would be nothing to do about it.
+    """
+
+    from app.kernel import InvariantViolated
+
+    with pytest.raises(InvariantViolated):
+        SearchCandidateRecord(
+            band=CandidateBand.RETURNED,
+            position=1,
+            player_id=uuid4(),
+            fit=50.0,
+            terms=(),
+            degraded_terms=("RELIABILITY",),
+            degraded_reasons=(),
+            modifiers=(),
+            liveness_reasons=(),
+            liveness_signals={},
+            shared_count=0,
+            their_slot_count=0,
+            days_away=None,
+            inclusion_reason=None,
+            withheld_reason=None,
+            missing_terms=(),
+            reliability_penalty_applied=False,
+            reliability_penalty_decisive=False,
+            concerns=(),
+            distance_km=None,
+            card=RecordedCard(
+                nickname="ada",
+                photo_id=None,
+                area_code="LDN-CENTRAL",
+                social_tags=(),
+                level=2.7,
+                band="Improver",
+                range_low=2.36,
+                range_high=3.04,
+            ),
             at_stake=None,
         )
 
@@ -332,6 +385,7 @@ def test_a_near_miss_may_not_carry_a_card():
             fit=20.0,
             terms=(),
             degraded_terms=(),
+            degraded_reasons=(),
             modifiers=(),
             liveness_reasons=(),
             liveness_signals={},

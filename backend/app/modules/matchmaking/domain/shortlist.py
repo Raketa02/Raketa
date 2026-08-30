@@ -60,6 +60,7 @@ from app.engines.matchfit.v1 import (
     Admission,
     Refusal,
     admits,
+    attributed,
     modify,
     read_signals,
     reverse_mode,
@@ -198,7 +199,7 @@ class Scored:
         later against the third.
         """
 
-        if Term.DISTANCE in self.fit.degraded_terms:
+        if any(stood.term is Term.DISTANCE for stood in self.fit.degraded_terms):
             return None
         return whole_kilometres(self.generated.distance_km)
 
@@ -340,7 +341,14 @@ def score_all(
             distance_km=candidate.distance_km,
             player_uuid=candidate.player_uuid,
         )
-        fit = engine.score(searcher=searcher, candidate=fenced, ruleset=ruleset)
+        # **The platform's own gaps are named here and not in the engine.** A
+        # term function reports whichever side of the pairing was empty; a term
+        # with no provider at all is nobody's gap, and ``absent`` is a fact about
+        # this wiring rather than about the numbers.
+        fit = attributed(
+            engine.score(searcher=searcher, candidate=fenced, ruleset=ruleset),
+            context.absent_terms,
+        )
         modified = ModifiedFit(
             fit=fit,
             modifiers=modify(

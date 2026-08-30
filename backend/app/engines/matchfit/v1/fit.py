@@ -7,6 +7,12 @@ readings of the same number — and without ``degraded_terms`` beside it a Fit i
 uninterpretable a year later. That is why the basis is a field on the result
 rather than a line in a log.
 
+**``score`` never learns ``absent``.** Which providers this platform has built is
+a fact about the composition root, and handing it to the arithmetic would put the
+ruleset-diff corpus at the mercy of which contexts exist. So a stand-down leaves
+here carrying whichever side of the pairing was empty, and a term with no
+provider at all is restated one layer out, in ``floor.py``.
+
 **The engine ranks the reasons; the client picks how many to show.** The ordering
 is arithmetic — contribution, descending — and is not the client's. So is
 ``concerns``: what counts as a genuinely weak term is a judgement about weights
@@ -34,7 +40,7 @@ from typing import Mapping, Sequence, TypeVar, final
 from app.engines.matchfit.core import Seat, Term
 from app.engines.matchfit.ruleset import WEIGHT_TOTAL, Ruleset
 from app.engines.matchfit.scorable import ScorableCandidate, Searcher
-from app.engines.matchfit.scoring import Fit, ScoredTerm
+from app.engines.matchfit.scoring import Fit, ScoredTerm, StoodDown
 from app.engines.matchfit.v1.engine import ENGINE_VERSION
 from app.engines.matchfit.v1.terms import TermReading, read_terms
 from app.kernel import invariant
@@ -71,9 +77,14 @@ def score(
 
     weights = ruleset.modes[searcher.mode].weights
     outcomes = read_terms(searcher, candidate, ruleset, seat)
-    live: list[TermReading] = [reading for reading in outcomes if reading is not None]
+    live: list[TermReading] = [
+        outcome for outcome in outcomes if isinstance(outcome, TermReading)
+    ]
+    # In ``Term``'s own order, because ``read_terms`` answers in it — a basis is
+    # a set and an order read off one is an order read off a set
+    # (``docs/adr/0105``).
     degraded = tuple(
-        term for term, reading in zip(Term, outcomes, strict=True) if reading is None
+        outcome for outcome in outcomes if isinstance(outcome, StoodDown)
     )
 
     invariant(

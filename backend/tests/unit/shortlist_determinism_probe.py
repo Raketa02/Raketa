@@ -52,7 +52,7 @@ def _row(row: Scored) -> dict[str, object]:
         # while the key that produced it differed would be a coincidence.
         "rank_key": repr(row.rank_key),
         "terms": [scored.term.value for scored in row.fit.terms],
-        "degraded": [term.value for term in row.fit.degraded_terms],
+        "degraded": [stood.term.value for stood in row.fit.degraded_terms],
         "concerns": [term.value for term in row.fit.concerns],
         "modifiers": [entry.modifier.value for entry in row.modified.modifiers.fired],
         "liveness": [

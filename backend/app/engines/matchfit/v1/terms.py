@@ -6,6 +6,12 @@ case it is dropped from the sum and the surviving weights renormalise
 single rule is why a 78 built on four facts is distinguishable from a 78 built on
 seven.
 
+**A stand-down names whose gap it is**, because *reliability is not a thing here
+yet* and *they have not said what kind of evening they want* are two different
+sentences and arrived as one flat list. A term function may author exactly the
+two person-side codes: it knows which side was empty and cannot know whether a
+provider exists at all, which is decided one layer out in ``floor.py``.
+
 The distinction the whole file turns on: **a zero is a measurement and a
 stand-down is not**. Two grids read with nothing in common is a fact about the
 pair and scores zero; a grid nobody has ticked is not a fact about anybody and
@@ -27,6 +33,7 @@ from dataclasses import dataclass
 from typing import final
 
 from app.engines.matchfit.core import (
+    DegradedReason,
     EvidenceKind,
     LevelDirection,
     ReliabilityStrand,
@@ -69,6 +76,7 @@ from app.engines.matchfit.scorable import (
     Searcher,
     StrandObservation,
 )
+from app.engines.matchfit.scoring import StoodDown
 from app.kernel import invariant
 
 
@@ -99,10 +107,13 @@ class TermReading:
         )
 
 
-#: A term either produced a reading or **stood down**. Standing down is spelled
-#: ``None`` because there is no number that means it: not ``0``, which is a
-#: measurement, and not ``0.5``, which is an invented one.
-TermOutcome = TermReading | None
+#: A term either produced a reading or **stood down**, and there is no third
+#: value. It is spelled as a type rather than as ``None`` for two reasons: there
+#: is no number that means it — not ``0``, which is a measurement, and not
+#: ``0.5``, which is an invented one — and a bare ``None`` made *this term stood
+#: down* and *nobody wrote this term* the same value, on a tuple whose whole job
+#: is to be read positionally.
+TermOutcome = TermReading | StoodDown
 
 
 def level_fit(
@@ -234,7 +245,9 @@ def intent_alignment(
 
     declaration = candidate.declared_intent
     if declaration is None:
-        return None
+        return StoodDown(
+            term=Term.INTENT_ALIGNMENT, reason=DegradedReason.NOTHING_FROM_THEM
+        )
     # The value form of `invariant`: it narrows away the `None`, so a cell that
     # is priced at 0.00 — the directly opposite declaration — passes through
     # while an *unpriced* declaration raises. A bare truth test would confuse
@@ -280,9 +293,9 @@ def reliability(
 
     record = candidate.reliability
     if record is None:
-        return None
+        return _no_record()
     if record.days_since_last_observation > rules.horizon_days:
-        return None
+        return _no_record()
 
     readings: list[StrandReading] = []
     weighted = 0.0
@@ -302,7 +315,7 @@ def reliability(
         # Nothing survived, or everything that did carries no weight in this
         # mode. Either way there is no reading — and a term with no reading
         # stands down rather than reporting the zero it did not measure.
-        return None
+        return _no_record()
 
     return TermReading(
         term=Term.RELIABILITY,
@@ -342,8 +355,17 @@ def availability_overlap(
     *arranged* and never a proposed time.
     """
 
-    if not searcher.grid or not candidate.grid:
-        return None
+    if not searcher.grid:
+        # **The searcher's blank grid wins the tie**, and the branch order is
+        # where that is said. Both grids blank is one sentence to write and it is
+        # the one the reader can act on.
+        return StoodDown(
+            term=Term.AVAILABILITY_OVERLAP, reason=DegradedReason.NOTHING_FROM_YOU
+        )
+    if not candidate.grid:
+        return StoodDown(
+            term=Term.AVAILABILITY_OVERLAP, reason=DegradedReason.NOTHING_FROM_THEM
+        )
     theirs = frozenset(candidate.grid)
     shared = tuple(cell for cell in searcher.grid if cell in theirs)
     return TermReading(
@@ -432,6 +454,11 @@ def read_terms(
     missing from the list would renormalise its weight onto the others and the
     Fit would still add up, and a term answering out of position would be weighed
     at its neighbour's weight — a wrong number that looks like a plausible one.
+
+    **The position check now covers a stand-down too**, which the bare ``None``
+    it replaced could not be asked: a term that stood down names itself, so the
+    one outcome that used to pass this unexamined is the one the degraded list is
+    read positionally against.
     """
 
     mode = ruleset.modes[searcher.mode]
@@ -451,9 +478,9 @@ def read_terms(
     )
     for term, reading in zip(Term, readings, strict=True):
         invariant(
-            reading is None or reading.term is term,
+            reading.term is term,
             f"the reading in {term.value}'s position answers for "
-            f"{reading.term.value if reading else None}",
+            f"{reading.term.value}",
         )
     return readings
 
@@ -493,7 +520,7 @@ def tag_column(
     mode: SearchMode,
     seat: Seat,
     rules: TagRules,
-) -> TagColumnReading | None:
+) -> TagColumnReading | DegradedReason:
     """One tag column: ``dr(matches) + complements − clashes``, renormalised.
 
     **The split between the two terms is by relationship, not by tag group.**
@@ -517,6 +544,13 @@ def tag_column(
     a tag about the **person** rather than the game takes no row at all, so it is
     in no domain, and it may be shown and may never score.
 
+    **Which side was empty comes back, and the code is positional**: it names
+    ``mine`` or ``theirs``, which for a term of Fit are the searcher and the
+    candidate. A cross reading takes the value and drops the code, because in a
+    four neither of the two people is *you* — and one implementation of the
+    domain check is worth more than a vocabulary that reads perfectly at both
+    call sites and is written twice.
+
     **Where no seat is assigned the pair reads the ``OPPONENT`` row**, so a
     ``PARTNER``-only row does not fire on an unseated shortlist: the harsher
     reading applies only once somebody is being seated as a partner, because
@@ -529,9 +563,11 @@ def tag_column(
 
     domain = rules.column_domain(column)
     if not any(tag in domain for tag in mine):
-        return None
+        # The searcher's own silence wins the tie, for the reason a blank grid
+        # does: it is the only one of the two the reader can act on.
+        return DegradedReason.NOTHING_FROM_YOU
     if not any(tag in domain for tag in theirs):
-        return None
+        return DegradedReason.NOTHING_FROM_THEM
 
     held = frozenset(mine)
     other = frozenset(theirs)
@@ -593,8 +629,8 @@ def _tag_term(
     reading = tag_column(
         column, searcher.tags, candidate.tags, searcher.mode, seat, rules
     )
-    if reading is None:
-        return None
+    if isinstance(reading, DegradedReason):
+        return StoodDown(term=term, reason=reading)
     return TermReading(
         term=term,
         value=reading.value,
@@ -676,6 +712,20 @@ def _direction(mine: float, theirs: float) -> LevelDirection:
     if theirs == mine:
         return LevelDirection.LEVEL
     return LevelDirection.ABOVE if theirs > mine else LevelDirection.BELOW
+
+
+def _no_record() -> StoodDown:
+    """Reliability's stand-down — **one code for all three of its causes**.
+
+    No record at all, a record whose most recent observation is past the horizon,
+    and a record on which no strand cleared the observation bar are three
+    different facts here and **one sentence outside**. Distinguishing them on the
+    wire would publish activity recency, which ``docs/adr/0106`` §5 refuses by
+    name, so the three causes are collapsed at the only point where all three are
+    visible rather than trusted not to be separated later.
+    """
+
+    return StoodDown(term=Term.RELIABILITY, reason=DegradedReason.NOTHING_FROM_THEM)
 
 
 def _strand_value(observation: StrandObservation) -> float:

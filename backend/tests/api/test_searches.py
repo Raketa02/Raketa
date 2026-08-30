@@ -17,6 +17,7 @@ from datetime import timedelta
 
 import pytest
 
+from app.engines.matchfit.core import Term
 from app.modules.matchmaking.domain.errors import MatchmakingUnavailable
 from tests.api import matchmaking_world as world
 
@@ -59,6 +60,36 @@ async def test_a_search_returns_a_ranked_shortlist_carrying_its_whole_working(
         assert "degraded_terms" in candidate
         assert "modifiers" in candidate
         assert "liveness_reasons" in candidate
+
+
+async def test_a_stood_down_term_crosses_the_wire_saying_whose_gap_it_is(
+    client, session_factory, candidate_source, searcher
+):
+    """**Reliability is nobody's gap, and it says so through the whole stack.**
+
+    `NoPlayerScoresExist` is what this build wires, so `absent_terms` is
+    reliability alone and the term stands down for everybody. What the term
+    function saw is *nothing from them* — a sentence about a person, written from
+    an accident of a null object's shape — and the composition root's own fact
+    overwrites it one layer out. This is the assertion that the overwrite reaches
+    the client rather than only the engine: the card, the record and the
+    read-back all read the same code.
+    """
+
+    await world.a_candidate(client, session_factory, "one", mu=searcher["mu"])
+    await world.fold_the_log(session_factory, candidate_source)
+
+    candidate = (await world.search(client, searcher["token"])).json()["candidates"][0]
+
+    stood_down = {
+        entry["term"]: entry["reason"] for entry in candidate["degraded_terms"]
+    }
+    assert stood_down["RELIABILITY"] == "NOT_YET_ON_THIS_PLATFORM"
+    # And it is the basis, not a diagnostic: every term is either a row with a
+    # reading or a line with a reason, and no term is both or neither.
+    fired = {term["term"] for term in candidate["terms"]}
+    assert fired & set(stood_down) == set()
+    assert len(fired) + len(stood_down) == len(Term)
 
 
 async def test_the_contributions_add_up_to_the_number_on_the_card(

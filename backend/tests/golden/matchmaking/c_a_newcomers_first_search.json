@@ -28,7 +28,10 @@
         "SOCIAL_VIBE"
       ],
       "degraded_terms": [
-        "RELIABILITY"
+        {
+          "reason": "NOT_YET_ON_THIS_PLATFORM",
+          "term": "RELIABILITY"
+        }
       ],
       "fit": 74.350426,
       "inclusion_reason": "NEWCOMER_WINDOW",
@@ -155,7 +158,10 @@
         "SOCIAL_VIBE"
       ],
       "degraded_terms": [
-        "RELIABILITY"
+        {
+          "reason": "NOT_YET_ON_THIS_PLATFORM",
+          "term": "RELIABILITY"
+        }
       ],
       "fit": 73.566783,
       "inclusion_reason": "ZERO_EXPOSURE",

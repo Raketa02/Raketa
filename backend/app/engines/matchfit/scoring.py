@@ -25,7 +25,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Protocol, final, runtime_checkable
 
-from app.engines.matchfit.core import Seat, Term
+from app.engines.matchfit.core import DegradedReason, Seat, Term
 from app.engines.matchfit.evidence import Evidence
 from app.engines.matchfit.ruleset import Ruleset
 from app.engines.matchfit.scorable import ScorableCandidate, Searcher
@@ -52,6 +52,27 @@ class ScoredTerm:
 
 @final
 @dataclass(frozen=True, slots=True)
+class StoodDown:
+    """One term that produced no reading, and **whose gap that is**.
+
+    It lives here rather than in a version because it is half of ``Fit`` — the
+    renormalisation basis — and a version owns the arithmetic and nothing else.
+    ``TermReading``'s opposite number: the two together are what a term function
+    may answer, and there is no third value.
+
+    **The reason has two authors and one of them is not a term function.** A term
+    knows which side was empty and can never know that its provider does not
+    exist, because ``absent`` is a fact about the composition root. So a term in
+    ``absent`` is overwritten one layer out (``v1/floor.py``), where the same
+    argument already decides ``Admission.live``.
+    """
+
+    term: Term
+    reason: DegradedReason
+
+
+@final
+@dataclass(frozen=True, slots=True)
 class Fit:
     """A candidate's Fit, and the whole of the working behind it.
 
@@ -64,9 +85,11 @@ class Fit:
     #: Every term that fired, **ranked by contribution** — the reasons, in the
     #: order the arithmetic puts them in. Uncapped; the cap is the client's.
     terms: tuple[ScoredTerm, ...]
-    #: The terms that stood down: the renormalisation basis, without which the
-    #: number above cannot be read a year later.
-    degraded_terms: tuple[Term, ...]
+    #: The terms that stood down, each with whose gap it is: the renormalisation
+    #: basis, without which the number above cannot be read a year later. In
+    #: ``Term``'s own declaration order, because a basis is a set and an order
+    #: read off one is an order read off a set (``docs/adr/0105``).
+    degraded_terms: tuple[StoodDown, ...]
     #: The engine's own statement that a term is genuinely weak, ranked by the
     #: points it costs.
     concerns: tuple[Term, ...]

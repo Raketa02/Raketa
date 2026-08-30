@@ -36,6 +36,13 @@ facts it holds for everybody, plus at least one of intent, availability and the
 two tag columns. It is standing insurance, in place before the day *we know
 nothing about this person* could quietly become a passing score.
 
+**The platform-versus-person line is drawn twice here, and that is one line.**
+``live_terms`` decides which terms the gate may count against anybody;
+:func:`attributed` decides what a stood-down term *says* about whose gap it is.
+Both read ``absent``, both refuse to let a fact nobody has about anybody read as
+something this person failed to produce, and keeping them in one file is what
+stops the second from being argued again from scratch.
+
 **Its one exemption is the newcomer window, and the window bends nothing else.**
 Not the floor, not a gate, not a block. That exemption is why the window exists:
 the moment ``player_score`` and ``matches`` land, the person with a
@@ -50,9 +57,10 @@ from dataclasses import dataclass, replace
 from enum import Enum
 from typing import final
 
-from app.engines.matchfit.core import Term
+from app.engines.matchfit.core import DegradedReason, Term
 from app.engines.matchfit.ranking import ModifiedFit
 from app.engines.matchfit.ruleset import Ruleset
+from app.engines.matchfit.scoring import Fit
 from app.kernel import invariant
 
 
@@ -126,6 +134,38 @@ def live_terms(ruleset: Ruleset, absent: frozenset[Term]) -> tuple[Term, ...]:
         f"{sorted(term.value for term in unknown)}",
     )
     return tuple(term for term in weighted if term not in absent)
+
+
+def attributed(fit: Fit, absent: frozenset[Term]) -> Fit:
+    """The same Fit, with every term that has **no provider** saying so.
+
+    A term function knows which side of the pairing was empty and can never know
+    that the fact does not exist for anybody: ``absent`` is read off the adapter
+    the composition root chose, and handing it to ``score`` would let which
+    contexts are built reach the arithmetic. So the join is here, where
+    ``live_terms`` already draws the same line for the same reason and with the
+    same argument.
+
+    **It overwrites rather than fills in**, whatever the term said. Reliability
+    stands down today because ``NoPlayerScoresExist`` returns no reading, which a
+    term honestly reports as *nothing from them* — and that would be a sentence
+    about a person, written from an accident of a null object's shape. A fact
+    nobody has about anybody is nobody's gap.
+
+    Absence is platform-wide by construction, so this is the *only* place the
+    code can be authored and the only place it need be: it is one line, and the
+    line is testable.
+    """
+
+    return replace(
+        fit,
+        degraded_terms=tuple(
+            replace(stood, reason=DegradedReason.NOT_YET_ON_THIS_PLATFORM)
+            if stood.term in absent
+            else stood
+            for stood in fit.degraded_terms
+        ),
+    )
 
 
 def admits(

@@ -27,8 +27,14 @@
         "PLAYING_STYLE"
       ],
       "degraded_terms": [
-        "RELIABILITY",
-        "SOCIAL_VIBE"
+        {
+          "reason": "NOTHING_FROM_THEM",
+          "term": "RELIABILITY"
+        },
+        {
+          "reason": "NOTHING_FROM_THEM",
+          "term": "SOCIAL_VIBE"
+        }
       ],
       "fit": 91.872467,
       "inclusion_reason": "ZERO_EXPOSURE",
@@ -144,7 +150,10 @@
         "SOCIAL_VIBE"
       ],
       "degraded_terms": [
-        "RELIABILITY"
+        {
+          "reason": "NOTHING_FROM_THEM",
+          "term": "RELIABILITY"
+        }
       ],
       "fit": 73.253326,
       "inclusion_reason": "INTEREST_LIFT",
@@ -273,7 +282,10 @@
         "SOCIAL_VIBE"
       ],
       "degraded_terms": [
-        "RELIABILITY"
+        {
+          "reason": "NOTHING_FROM_THEM",
+          "term": "RELIABILITY"
+        }
       ],
       "fit": 75.134068,
       "inclusion_reason": "ZERO_EXPOSURE",
@@ -397,7 +409,10 @@
         "SOCIAL_VIBE"
       ],
       "degraded_terms": [
-        "RELIABILITY"
+        {
+          "reason": "NOTHING_FROM_THEM",
+          "term": "RELIABILITY"
+        }
       ],
       "fit": 75.134068,
       "inclusion_reason": "ZERO_EXPOSURE",

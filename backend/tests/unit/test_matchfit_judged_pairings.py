@@ -134,7 +134,7 @@ def test_a_judged_pairing_scores_the_fit_it_was_judged_on(
     on, and it is the number to reproduce.
     """
 
-    assert derived.fit.degraded_terms == (Term.RELIABILITY,)
+    assert [stood.term for stood in derived.fit.degraded_terms] == [Term.RELIABILITY]
     assert derived.fit.points == pytest.approx(recorded["fit"], abs=5e-3)
 
 
@@ -283,8 +283,9 @@ def test_socially_blank_is_a_measured_zero_and_never_a_stand_down() -> None:
         reading = _by_id("1", mode_key)
         assert reading.values["style"] == pytest.approx(0.20)
         assert reading.values["vibe"] == pytest.approx(0.20)
-        assert Term.PLAYING_STYLE not in reading.fit.degraded_terms
-        assert Term.SOCIAL_VIBE not in reading.fit.degraded_terms
+        stood = {entry.term for entry in reading.fit.degraded_terms}
+        assert Term.PLAYING_STYLE not in stood
+        assert Term.SOCIAL_VIBE not in stood
 
 
 def test_standing_the_tag_columns_down_would_beat_declaring_everything() -> None:

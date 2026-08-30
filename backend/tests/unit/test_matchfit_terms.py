@@ -21,6 +21,7 @@ import pytest
 
 from app.engines.matchfit.core import (
     ClashSeverity,
+    DegradedReason,
     LevelDirection,
     ReliabilityStrand,
     SearchMode,
@@ -42,6 +43,7 @@ from app.engines.matchfit.evidence import (
     SocialVibeEvidence,
 )
 from app.engines.matchfit.scorable import GridCell, LevelReading, Searcher
+from app.engines.matchfit.scoring import StoodDown
 from app.engines.matchfit.v1.terms import (
     TermReading,
     availability_overlap,
@@ -221,8 +223,10 @@ def test_silence_stands_the_term_down_and_opposition_costs_the_whole_weight() ->
         candidate(declared_intent=PlayIntent.FOR_FUN.value),
         LIVE_RULESET.intent,
     )
-    assert silent is None
-    assert opposed is not None
+    assert silent == StoodDown(
+        term=Term.INTENT_ALIGNMENT, reason=DegradedReason.NOTHING_FROM_THEM
+    )
+    assert isinstance(opposed, TermReading)
     assert opposed.value == 0.0
     assert isinstance(opposed.evidence, IntentAlignmentEvidence)
     assert opposed.evidence.aligned is False
@@ -277,7 +281,9 @@ FIVE_RATIOS = {
 def test_no_record_at_all_stands_the_term_down() -> None:
     """**No record is not a bad record.** Not ``0.5``, not ``0`` — absent."""
 
-    assert reliability(candidate(), COMP, LIVE_RULESET.reliability) is None
+    assert reliability(candidate(), COMP, LIVE_RULESET.reliability) == StoodDown(
+        term=Term.RELIABILITY, reason=DegradedReason.NOTHING_FROM_THEM
+    )
 
 
 def test_a_strand_below_the_observation_bar_stands_down_alone() -> None:
@@ -292,7 +298,7 @@ def test_a_strand_below_the_observation_bar_stands_down_alone() -> None:
     reading = reliability(
         candidate(reliability=record(ratios=thin)), COMP, LIVE_RULESET.reliability
     )
-    assert reading is not None
+    assert isinstance(reading, TermReading)
     assert isinstance(reading.evidence, ReliabilityEvidence)
     named = {strand.strand for strand in reading.evidence.strands}
     assert ReliabilityStrand.CONFIRMS_RESULTS not in named
@@ -306,10 +312,9 @@ def test_a_record_past_the_horizon_stands_the_whole_term_down() -> None:
     fresh = record(ratios=FIVE_RATIOS, days_since_last_observation=horizon)
     stale = record(ratios=FIVE_RATIOS, days_since_last_observation=horizon + 1)
     assert reliability(candidate(reliability=fresh), COMP, LIVE_RULESET.reliability)
-    assert (
-        reliability(candidate(reliability=stale), COMP, LIVE_RULESET.reliability)
-        is None
-    )
+    assert reliability(
+        candidate(reliability=stale), COMP, LIVE_RULESET.reliability
+    ) == StoodDown(term=Term.RELIABILITY, reason=DegradedReason.NOTHING_FROM_THEM)
 
 
 def test_the_two_mode_vectors_order_the_same_two_candidates_oppositely() -> None:
@@ -416,14 +421,25 @@ def test_the_denominator_is_the_searchers_own_slots() -> None:
     assert wide.value == pytest.approx(6 / 21)
 
 
-@pytest.mark.parametrize("side", ["searcher", "candidate"])
-def test_a_blank_grid_on_either_side_stands_the_term_down(side: str) -> None:
+@pytest.mark.parametrize(
+    "side,reason",
+    [
+        ("searcher", DegradedReason.NOTHING_FROM_YOU),
+        ("candidate", DegradedReason.NOTHING_FROM_THEM),
+    ],
+)
+def test_a_blank_grid_on_either_side_stands_the_term_down(
+    side: str, reason: DegradedReason
+) -> None:
     """**Blank means we do not know**, and it is load-bearing twice.
 
     It is the only thing between the term and a division by zero, and scoring a
     cleared grid as ``0`` would be the invented zero the whole engine refuses:
     *you two never overlap* is a different claim from *nobody has said when they
     play*.
+
+    **And it says whose blank it is**, because *you have not said when you play*
+    is the only one of the two sentences the reader can act on.
     """
 
     blank: tuple = ()
@@ -431,7 +447,22 @@ def test_a_blank_grid_on_either_side_stands_the_term_down(side: str) -> None:
         searcher(grid=blank) if side == "searcher" else searcher(),
         candidate(grid=blank) if side == "candidate" else candidate(),
     )
-    assert reading is None
+    assert reading == StoodDown(term=Term.AVAILABILITY_OVERLAP, reason=reason)
+
+
+def test_two_blank_grids_name_the_searchers_own_side() -> None:
+    """**The tie goes to the side the reader can do something about.**
+
+    Both grids blank is one stand-down and two true sentences, and the product
+    owes the searcher the one that is theirs to fix.
+    """
+
+    blank: tuple = ()
+    assert availability_overlap(
+        searcher(grid=blank), candidate(grid=blank)
+    ) == StoodDown(
+        term=Term.AVAILABILITY_OVERLAP, reason=DegradedReason.NOTHING_FROM_YOU
+    )
 
 
 def test_no_shared_cell_scores_the_measured_zero_instead() -> None:
@@ -571,17 +602,37 @@ def test_a_column_stands_down_when_either_side_holds_no_tag_in_its_domain() -> N
         Seat.OPPONENT,
         LIVE_RULESET.tags,
     )
-    assert silent_on_court is None
+    # Neither side is tagged for the hour on court, and the searcher's own side
+    # is the one named: the tie goes to the half the reader can act on.
+    assert silent_on_court == StoodDown(
+        term=Term.PLAYING_STYLE, reason=DegradedReason.NOTHING_FROM_YOU
+    )
     # And the other column, over the same two people, is a reading.
-    assert (
+    assert isinstance(
         social_vibe(
             searcher(tags=AFTERWARDS),
             candidate(tags=AFTERWARDS),
             Seat.OPPONENT,
             LIVE_RULESET.tags,
-        )
-        is not None
+        ),
+        TermReading,
     )
+
+
+def test_a_column_names_their_side_when_only_theirs_is_untagged() -> None:
+    """One tagged side and one bare one is *their* gap, and it says so.
+
+    The two sentences are not interchangeable: one asks the searcher to finish
+    their own profile, and the other explains why a card is thinner than the one
+    beside it.
+    """
+
+    assert playing_style(
+        searcher(tags=ON_COURT),
+        candidate(tags=AFTERWARDS),
+        Seat.OPPONENT,
+        LIVE_RULESET.tags,
+    ) == StoodDown(term=Term.PLAYING_STYLE, reason=DegradedReason.NOTHING_FROM_THEM)
 
 
 def test_a_tag_about_the_person_may_be_shown_and_may_never_score() -> None:
@@ -597,16 +648,16 @@ def test_a_tag_about_the_person_may_be_shown_and_may_never_score() -> None:
         tag for row in LIVE_RULESET.tags.relationship_matrix for tag in (row.a, row.b)
     }
     assert SocialTag.OPEN_TO_MEET_SOMEONE.value not in named
-    for column in (playing_style, social_vibe):
-        assert (
-            column(
-                searcher(tags=only_the_person),
-                candidate(tags=only_the_person),
-                Seat.OPPONENT,
-                LIVE_RULESET.tags,
-            )
-            is None
-        )
+    for column, term in (
+        (playing_style, Term.PLAYING_STYLE),
+        (social_vibe, Term.SOCIAL_VIBE),
+    ):
+        assert column(
+            searcher(tags=only_the_person),
+            candidate(tags=only_the_person),
+            Seat.OPPONENT,
+            LIVE_RULESET.tags,
+        ) == StoodDown(term=term, reason=DegradedReason.NOTHING_FROM_YOU)
 
 
 def test_nothing_firing_is_the_measured_zero_and_a_capped_clash_is_the_real_one() -> (

@@ -102,6 +102,43 @@ class Term(str, Enum):
         return EvidenceKind[self.name]
 
 
+class DegradedReason(str, Enum):
+    """Whose gap a stood-down term is. **Three values, and one line drawn.**
+
+    ``floor.py`` draws that line to decide a number — *the gate counts
+    person-specific gaps and never platform-wide absence* — and until now it was
+    drawn nowhere else, so the one list that crosses the wire held *reliability
+    is not a thing here yet* and *they have not said what kind of evening they
+    want* as the same fact, twenty times a search.
+
+    **It is a code and not a sentence**, on ``docs/adr/0106``'s rule: a client
+    writing *"they haven't declared"* off a bare ``Term`` would be an engine rule
+    in TypeScript, and *"nobody has a record yet"* becomes silently false the day
+    ``matches`` ships, with no gate that catches it.
+
+    **``NOTHING_FROM_THEM`` deliberately swallows reliability's three causes** —
+    no record, the last observation past the horizon, no strand clearing the
+    observation bar. Separating them would publish activity recency, which
+    ``docs/adr/0106`` §5 refuses by name, so the refusal is held by the shape of
+    this vocabulary rather than by a reviewer noticing it in a later ticket.
+
+    **``NOTHING_FROM_YOU`` wins a tie** — both grids blank, neither side tagged —
+    because it is the only one of the two a reader can act on.
+    """
+
+    #: The term is not live at all: no provider exists on this platform, which
+    #: today is reliability alone. **Never authored by a term function**, which
+    #: cannot know it: ``absent`` is a fact about the composition root, and the
+    #: code is written one layer out, where ``Admission.live`` is.
+    NOT_YET_ON_THIS_PLATFORM = "NOT_YET_ON_THIS_PLATFORM"
+    #: The searcher's own side is empty: a blank grid, or no tag in this
+    #: column's domain.
+    NOTHING_FROM_YOU = "NOTHING_FROM_YOU"
+    #: Their side is empty: no declared intent, no tag in this column, or no
+    #: usable record.
+    NOTHING_FROM_THEM = "NOTHING_FROM_THEM"
+
+
 class LevelDirection(str, Enum):
     """Which side of the searcher a candidate's Level sits on.
 

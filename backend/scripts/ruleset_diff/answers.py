@@ -297,7 +297,16 @@ def _row(row: Scored, handles: Mapping[str, str]) -> Mapping[str, object]:
     return {
         "who": handles[row.player_id],
         "fit": _round(row.modified.points),
-        "degraded": [term.value for term in row.fit.degraded_terms],
+        # The reason travels because it is **ruleset-dependent on one arm**: a
+        # tag column's domain is derived from the relationship matrix, so a
+        # matrix release can flip a card from *nothing from you* to *nothing
+        # from them* without moving a single number — invisible to a diff over
+        # terms alone, on the one artifact that exists to catch what a release
+        # changed.
+        "degraded": [
+            {"term": stood.term.value, "reason": stood.reason.value}
+            for stood in row.fit.degraded_terms
+        ],
         "reason": (
             None if row.inclusion_reason is None else row.inclusion_reason.value
         ),

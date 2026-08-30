@@ -17,12 +17,14 @@ it, forever, for every rate the engine is judged by.
 ``liveness_signals`` stores the raw inputs and never the offset. *A strike that
 is not recorded becomes irreversible by accident.*
 
-**The three text arrays are arrays on PostgreSQL and JSON on SQLite.**
+**The text arrays are arrays on PostgreSQL and JSON on SQLite.**
 ``degraded_terms`` is lifted out of the opaque ``terms`` blob precisely so that a
 per-term ``NoEvidence`` rate is an array query with a GIN index rather than a
 JSONB scan — a term quietly dying is invisible otherwise — and the variant keeps
 the ASGI-over-in-memory-SQLite test seam working without weakening the column
-where it runs.
+where it runs. ``degraded_reasons`` rides beside it in the same shape rather than
+inside it: pairs in one JSONB column would spend exactly the queryability that
+lift bought.
 """
 
 from __future__ import annotations
@@ -244,6 +246,11 @@ class SearchCandidateORM(Base):
     #: Lifted out of the blob: the renormalisation basis, without which a Fit is
     #: uninterpretable a year later.
     degraded_terms: Mapped[list[str]] = mapped_column(CODE_ARRAY, nullable=False)
+    #: Whose gap each of those was, **index-aligned** with the column above and
+    #: not folded into it: pairs in one JSONB column would spend the queryability
+    #: the lift out of the blob bought. A read-back never recomputes, so the code
+    #: a card printed has to be the code the row kept.
+    degraded_reasons: Mapped[list[str]] = mapped_column(CODE_ARRAY, nullable=False)
     modifiers: Mapped[list[Any]] = mapped_column(BLOB, nullable=False)
     liveness_reasons: Mapped[list[str]] = mapped_column(CODE_ARRAY, nullable=False)
     #: The **raw input** per signal, never the offset it produced: an offset is a

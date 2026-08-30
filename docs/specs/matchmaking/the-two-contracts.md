@@ -209,7 +209,7 @@ candidate: {
                  level, band, range, counted_games },
   concerns: [ { term } ],
   terms: [ { term, weight, value, contribution, evidence: <closed union> } ],
-  degraded_terms: [ term ],
+  degraded_terms: [ { term, reason: DegradedReason } ],
   modifiers: [ { code, points } ],
   liveness_reasons: [ code ],
   inclusion_reason?: INTEREST_LIFT,
@@ -229,6 +229,37 @@ types that drift.
 [`search-telemetry.md`](search-telemetry.md) lifts it out of the blob: it is the
 renormalisation basis, and without it a Fit is uninterpretable — §10 renormalises per
 comparison, so which terms fired *is* the reading.
+
+**Each entry says whose gap it is, over a three-value `DegradedReason`** —
+`NOT_YET_ON_THIS_PLATFORM | NOTHING_FROM_YOU | NOTHING_FROM_THEM`, settled by
+[#233](https://github.com/Raketa02/Raketa/issues/233). A flat list of `Term` held *reliability
+is not a thing on this platform yet* and *they have not said what kind of evening they want*
+as the same fact, twenty times a search — the exact conflation `floor.py` refuses by name at
+the point it changes a number: *the gate counts person-specific gaps and never platform-wide
+absence.*
+
+It is a **code and not a sentence**, on this file's own rule and
+[ADR-0106](../../adr/0106-evidence-vocabulary-is-contract-weights-are-configuration.md)'s: a
+client writing *"they haven't declared"* from a bare `INTENT_ALIGNMENT` is an engine rule in
+TypeScript, and *"nobody has a record yet"* goes silently false the day `matches` ships, with
+nothing that goes red. `NOTHING_FROM_THEM` **deliberately swallows every reason a record could
+not be read** — no record, an observation past the horizon, no strand clearing the bar — so
+that §5's recency refusal is held by the shape of the vocabulary rather than by a reviewer
+noticing it in a later ticket. `NOTHING_FROM_YOU` wins a tie, because it is the only one of
+the two the reader can act on.
+
+**Two authors, and neither can be the other.** Only the term function knows which side was
+empty; only the layer holding `absent` knows a term has no provider at all, and that set is
+built in the composition root rather than read off the ruleset. So a term in `absent` reports
+`NOT_YET_ON_THIS_PLATFORM` **whatever the term said**, overwritten one layer out where
+`Admission.live` already is, and the scorer never learns which contexts this platform has
+built.
+
+**The platform tier repeats on every row and is drawn once.** It stays on the row because it
+is that candidate's renormalisation basis and a card whose basis is incomplete cannot be read;
+[`the-play-screens.md`](the-play-screens.md) §8 puts it in the sheet's footer beside the
+version stamps, where the per-person gaps stay with the person. Suppressing it on the wire
+instead was refused: the basis is not decoration.
 
 **No liveness number.** Reasons only. There is no field to write one to
 ([ADR-0106](../../adr/0106-evidence-vocabulary-is-contract-weights-are-configuration.md) §5).

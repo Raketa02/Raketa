@@ -656,7 +656,12 @@ class SearchWorkbench:
             player_id=UUID(row.player_id),
             fit=row.modified.points,
             terms=term_rows(row.fit),
-            degraded_terms=tuple(term.value for term in row.fit.degraded_terms),
+            degraded_terms=tuple(
+                stood.term.value for stood in row.fit.degraded_terms
+            ),
+            degraded_reasons=tuple(
+                stood.reason.value for stood in row.fit.degraded_terms
+            ),
             modifiers=modifier_rows(row.modified.modifiers),
             liveness_reasons=liveness_reason_codes(row.liveness),
             liveness_signals=liveness_signal_inputs(row),

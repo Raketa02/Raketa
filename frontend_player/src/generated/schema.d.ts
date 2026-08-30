@@ -876,9 +876,9 @@ export interface components {
             terms: components["schemas"]["ScoredTermSchema"][];
             /**
              * Degraded Terms
-             * @description The terms that stood down: the renormalisation basis. Without it a Fit is uninterpretable — a 78 built on four terms and a 78 built on seven are different readings of the same number.
+             * @description The terms that stood down, each with **whose gap it is**: the renormalisation basis. Without it a Fit is uninterpretable — a 78 built on four terms and a 78 built on seven are different readings of the same number — and without the reason beside it, *reliability is not a thing here yet* and *they have not said what kind of evening they want* arrive as one flat list.
              */
-            degraded_terms: components["schemas"]["Term"][];
+            degraded_terms: components["schemas"]["DegradedTermSchema"][];
             /** Modifiers */
             modifiers: components["schemas"]["ModifierSchema"][];
             /**
@@ -1019,6 +1019,63 @@ export interface components {
         DealDeckRequest: {
             /** @description Which sport this deal is for */
             sport: components["schemas"]["Sport"];
+        };
+        /**
+         * DegradedReason
+         * @description Whose gap a stood-down term is. **Three values, and one line drawn.**
+         *
+         *     ``floor.py`` draws that line to decide a number — *the gate counts
+         *     person-specific gaps and never platform-wide absence* — and until now it was
+         *     drawn nowhere else, so the one list that crosses the wire held *reliability
+         *     is not a thing here yet* and *they have not said what kind of evening they
+         *     want* as the same fact, twenty times a search.
+         *
+         *     **It is a code and not a sentence**, on ``docs/adr/0106``'s rule: a client
+         *     writing *"they haven't declared"* off a bare ``Term`` would be an engine rule
+         *     in TypeScript, and *"nobody has a record yet"* becomes silently false the day
+         *     ``matches`` ships, with no gate that catches it.
+         *
+         *     **``NOTHING_FROM_THEM`` deliberately swallows reliability's three causes** —
+         *     no record, the last observation past the horizon, no strand clearing the
+         *     observation bar. Separating them would publish activity recency, which
+         *     ``docs/adr/0106`` §5 refuses by name, so the refusal is held by the shape of
+         *     this vocabulary rather than by a reviewer noticing it in a later ticket.
+         *
+         *     **``NOTHING_FROM_YOU`` wins a tie** — both grids blank, neither side tagged —
+         *     because it is the only one of the two a reader can act on.
+         * @enum {string}
+         */
+        DegradedReason: "NOT_YET_ON_THIS_PLATFORM" | "NOTHING_FROM_YOU" | "NOTHING_FROM_THEM";
+        /**
+         * DegradedTermSchema
+         * @description One term that stood down, and **whose gap that is**.
+         *
+         *     A pair rather than a bare ``Term``, because the flat list held two different
+         *     sentences as one fact: *reliability is not a thing on this platform yet* and
+         *     *they have not said what kind of evening they want*. The engine draws that
+         *     line to decide a number — the evidence gate counts person-specific gaps and
+         *     never platform-wide absence — and it now survives the wire.
+         *
+         *     **The reason is a code and the client writes the sentence** (``docs/adr/0106``).
+         *     A client deriving *"they haven't declared"* from ``INTENT_ALIGNMENT`` alone
+         *     would be an engine rule in TypeScript, and *"nobody has a record yet"* is a
+         *     sentence that goes silently false the day ``matches`` ships. The term supplies
+         *     the other half: ``INTENT_ALIGNMENT`` and ``SOCIAL_VIBE`` under one code are two
+         *     different sentences.
+         *
+         *     **The platform tier repeats on every row and is drawn once.** It is here
+         *     because it is this candidate's renormalisation basis — a 78 built on four
+         *     terms and a 78 built on seven are different readings of the same number, and
+         *     dropping it would make the row's own arithmetic unreadable — and
+         *     ``NOT_YET_ON_THIS_PLATFORM`` is a fact about the platform rather than about
+         *     twenty people, so the sheet states it once beside the version stamps
+         *     (``the-play-screens.md`` §8). Suppressing it on the wire instead was refused:
+         *     the basis is not decoration.
+         */
+        DegradedTermSchema: {
+            term: components["schemas"]["Term"];
+            /** @description Whose gap this is: nobody's (`NOT_YET_ON_THIS_PLATFORM` — the term has no provider on this platform at all), yours (`NOTHING_FROM_YOU`), or theirs (`NOTHING_FROM_THEM`). The last deliberately covers every reason a record could not be read, because separating them would publish activity recency. */
+            reason: components["schemas"]["DegradedReason"];
         };
         /**
          * DistanceEvidence

@@ -129,6 +129,7 @@ async def _a_search(
                     fit=70.0,
                     terms=(),
                     degraded_terms=(),
+                    degraded_reasons=(),
                     modifiers=(),
                     liveness_reasons=(),
                     liveness_signals={},

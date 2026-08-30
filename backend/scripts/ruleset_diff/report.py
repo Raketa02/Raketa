@@ -104,7 +104,13 @@ def compare(baseline: Mapping[str, Any], candidate: Answers) -> Diff:
         if returned:
             candidate_top.append(float(returned[0]["fit"]))
         for row in list(returned) + list(record.get("near_miss", ())):
-            bases.add(tuple(row.get("degraded", ())))
+            # The **basis** is which terms stood down; whose gap each was is
+            # recorded beside it and is a different count, so it is not folded
+            # in here — two rows on the same seven terms are one basis whatever
+            # the reasons say about the two people.
+            bases.add(
+                tuple(entry["term"] for entry in row.get("degraded", ()))
+            )
             carried += row.get("reason") is not None
         counts = record.get("counts", {})
         if counts.get("n_near_miss_recorded") and _saturated(record, was.get(key)):

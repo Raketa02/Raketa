@@ -51,7 +51,12 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field, model_validator
 
-from app.engines.matchfit.core import GroupReason, SearchMode, Term
+from app.engines.matchfit.core import (
+    DegradedReason,
+    GroupReason,
+    SearchMode,
+    Term,
+)
 from app.kernel import SPORT_SPECS, Sport
 from app.modules.matchmaking.domain.lineups import (
     Relationship,
@@ -533,6 +538,45 @@ class ConcernSchema(BaseModel):
     term: Term
 
 
+class DegradedTermSchema(BaseModel):
+    """One term that stood down, and **whose gap that is**.
+
+    A pair rather than a bare ``Term``, because the flat list held two different
+    sentences as one fact: *reliability is not a thing on this platform yet* and
+    *they have not said what kind of evening they want*. The engine draws that
+    line to decide a number — the evidence gate counts person-specific gaps and
+    never platform-wide absence — and it now survives the wire.
+
+    **The reason is a code and the client writes the sentence** (``docs/adr/0106``).
+    A client deriving *"they haven't declared"* from ``INTENT_ALIGNMENT`` alone
+    would be an engine rule in TypeScript, and *"nobody has a record yet"* is a
+    sentence that goes silently false the day ``matches`` ships. The term supplies
+    the other half: ``INTENT_ALIGNMENT`` and ``SOCIAL_VIBE`` under one code are two
+    different sentences.
+
+    **The platform tier repeats on every row and is drawn once.** It is here
+    because it is this candidate's renormalisation basis — a 78 built on four
+    terms and a 78 built on seven are different readings of the same number, and
+    dropping it would make the row's own arithmetic unreadable — and
+    ``NOT_YET_ON_THIS_PLATFORM`` is a fact about the platform rather than about
+    twenty people, so the sheet states it once beside the version stamps
+    (``the-play-screens.md`` §8). Suppressing it on the wire instead was refused:
+    the basis is not decoration.
+    """
+
+    term: Term
+    reason: DegradedReason = Field(
+        ...,
+        description=(
+            "Whose gap this is: nobody's (`NOT_YET_ON_THIS_PLATFORM` — the term "
+            "has no provider on this platform at all), yours "
+            "(`NOTHING_FROM_YOU`), or theirs (`NOTHING_FROM_THEM`). The last "
+            "deliberately covers every reason a record could not be read, "
+            "because separating them would publish activity recency."
+        ),
+    )
+
+
 class ScoredTermSchema(BaseModel):
     """One term that produced a reading, and what it was worth here."""
 
@@ -644,12 +688,15 @@ class CandidateSchema(BaseModel):
             "the order the arithmetic puts them in. The cap is the client's."
         ),
     )
-    degraded_terms: list[Term] = Field(
+    degraded_terms: list[DegradedTermSchema] = Field(
         ...,
         description=(
-            "The terms that stood down: the renormalisation basis. Without it a "
-            "Fit is uninterpretable — a 78 built on four terms and a 78 built "
-            "on seven are different readings of the same number."
+            "The terms that stood down, each with **whose gap it is**: the "
+            "renormalisation basis. Without it a Fit is uninterpretable — a 78 "
+            "built on four terms and a 78 built on seven are different readings "
+            "of the same number — and without the reason beside it, *reliability "
+            "is not a thing here yet* and *they have not said what kind of "
+            "evening they want* arrive as one flat list."
         ),
     )
     modifiers: list[ModifierSchema]

@@ -436,7 +436,18 @@ def _candidate(
         # it opaque, so the published shape and the stored blob cannot drift into
         # disagreeing about a field name.
         "terms": [dict(term) for term in row.terms],
-        "degraded_terms": list(row.degraded_terms),
+        # **Index-aligned.** The record keeps the basis and whose gap each
+        # entry is in two columns, for the queryability the first one's own
+        # migration argues for. A row where the two had drifted is refused by
+        # ``SearchCandidateRecord`` itself, on the way in and again on the way
+        # back out, so this zip is strict as a statement of that rule rather
+        # than as the place it is caught.
+        "degraded_terms": [
+            {"term": term, "reason": reason}
+            for term, reason in zip(
+                row.degraded_terms, row.degraded_reasons, strict=True
+            )
+        ],
         "modifiers": [dict(modifier) for modifier in row.modifiers],
         "liveness_reasons": list(row.liveness_reasons),
     }

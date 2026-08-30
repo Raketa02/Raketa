@@ -30,7 +30,7 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from app.engines.matchfit.core import SearchMode, Term
+from app.engines.matchfit.core import DegradedReason, SearchMode, Term
 from app.engines.matchfit.v1 import MatchFitV1
 from app.kernel import Instant, InvariantViolated, Sport
 from app.modules.blocks.domain.errors import BlockStateUnavailable
@@ -603,6 +603,56 @@ async def test_the_record_carries_both_stamps_and_the_snapshot_version():
     assert written.snapshot_version == 42
     assert written.trace_id == "trace-1"
     assert written.latency_ms_by_stage.keys() >= {"read_searcher", "pipeline"}
+
+
+async def test_the_two_columns_answering_whose_gap_this_is_cannot_drift():
+    """``missing_terms`` is the non-platform half of ``degraded_reasons``.
+
+    Two columns computing overlapping facts is how they drift, and these two are
+    stamped by different halves of the pipeline: ``missing_terms`` by the evidence
+    gate's own ``live``/``fired``, which answers a floor investigation, and the
+    reasons by the term that stood down, which answers a player. They may not
+    come to two answers about whose gap this is, so the relationship is asserted
+    rather than trusted.
+
+    **The one way they could legitimately part is a term weighted in neither
+    mode.** ``live_terms`` drops such a term from the gate's basis while it can
+    still stand down and be printed; no term is weighted at zero in both modes
+    today, and the day one is, this goes red — which is the right answer, because
+    it is a term the wire would be explaining and the gate would not be counting.
+    """
+
+    store = Store()
+    # One candidate who declared and one who did not, so both halves of the
+    # relationship are exercised: reliability has no provider on this platform
+    # and is nobody's gap, and a silent intent is theirs.
+    await use_case(
+        rows=(build.row(1), build.row(2, declared_intent=None)), store=store
+    ).execute(a_command())
+    rows = store.written[0].candidates
+    assert rows
+
+    for row in rows:
+        assert row.missing_terms == tuple(
+            term
+            for term, reason in zip(
+                row.degraded_terms, row.degraded_reasons, strict=True
+            )
+            if reason != DegradedReason.NOT_YET_ON_THIS_PLATFORM.value
+        )
+
+    # And neither half is vacuous: the platform's own gap is on every row, and
+    # the silent candidate carries one of their own that the gate counted.
+    assert all(
+        DegradedReason.NOT_YET_ON_THIS_PLATFORM.value in row.degraded_reasons
+        for row in rows
+    )
+    silent = next(
+        row for row in rows if Term.INTENT_ALIGNMENT.value in row.missing_terms
+    )
+    assert silent.degraded_reasons[
+        silent.degraded_terms.index(Term.INTENT_ALIGNMENT.value)
+    ] == DegradedReason.NOTHING_FROM_THEM.value
 
 
 async def test_the_lift_read_is_bounded_by_the_box_and_never_by_the_city():

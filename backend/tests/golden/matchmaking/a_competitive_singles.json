@@ -28,7 +28,10 @@
         "LEVEL_FIT"
       ],
       "degraded_terms": [
-        "RELIABILITY"
+        {
+          "reason": "NOTHING_FROM_THEM",
+          "term": "RELIABILITY"
+        }
       ],
       "fit": 82.065248,
       "inclusion_reason": "INTEREST_LIFT",
@@ -154,7 +157,10 @@
     {
       "concerns": [],
       "degraded_terms": [
-        "RELIABILITY"
+        {
+          "reason": "NOTHING_FROM_THEM",
+          "term": "RELIABILITY"
+        }
       ],
       "fit": 94.159394,
       "inclusion_reason": "ZERO_EXPOSURE",
@@ -275,7 +281,10 @@
     {
       "concerns": [],
       "degraded_terms": [
-        "RELIABILITY"
+        {
+          "reason": "NOTHING_FROM_THEM",
+          "term": "RELIABILITY"
+        }
       ],
       "fit": 94.159394,
       "inclusion_reason": "ZERO_EXPOSURE",
@@ -403,8 +412,14 @@
         "INTENT_ALIGNMENT"
       ],
       "degraded_terms": [
-        "RELIABILITY",
-        "SOCIAL_VIBE"
+        {
+          "reason": "NOTHING_FROM_THEM",
+          "term": "RELIABILITY"
+        },
+        {
+          "reason": "NOTHING_FROM_THEM",
+          "term": "SOCIAL_VIBE"
+        }
       ],
       "fit": 78.745389,
       "inclusion_reason": "ZERO_EXPOSURE",

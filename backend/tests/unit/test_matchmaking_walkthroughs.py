@@ -250,7 +250,10 @@ def _row(row: Scored) -> dict[str, Any]:
             }
             for scored in row.fit.terms
         ],
-        "degraded_terms": [term.value for term in row.fit.degraded_terms],
+        "degraded_terms": [
+            {"term": stood.term.value, "reason": stood.reason.value}
+            for stood in row.fit.degraded_terms
+        ],
         "concerns": [term.value for term in row.fit.concerns],
         "modifiers": [
             {"code": entry.modifier.value, "points": _number(entry.points)}

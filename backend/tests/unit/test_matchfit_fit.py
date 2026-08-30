@@ -19,7 +19,7 @@ from itertools import combinations
 
 import pytest
 
-from app.engines.matchfit.core import SearchMode, Term
+from app.engines.matchfit.core import DegradedReason, SearchMode, Term
 from app.engines.matchfit.ruleset import WEIGHT_TOTAL
 from app.bootstrap.composition import build_match_fit_engine
 from app.engines.matchfit.scoring import MatchFit
@@ -30,7 +30,7 @@ from app.engines.matchfit.v1 import (
     score,
 )
 from app.engines.matchfit.v1 import fit as fit_module
-from app.engines.matchfit.scoring import Fit
+from app.engines.matchfit.scoring import Fit, StoodDown
 from app.kernel import InvariantViolated
 from app.modules.matchmaking.infrastructure.rulesets import LIVE_RULESET
 from app.modules.player_profile.domain.play_intent import PlayIntent
@@ -102,8 +102,12 @@ def test_a_stood_down_term_redistributes_its_weight_and_never_shrinks_the_fit() 
         candidate(declared_intent=PlayIntent.NO_PREFERENCE.value, **facts),
         LIVE_RULESET,
     )
-    assert Term.INTENT_ALIGNMENT in silent.degraded_terms
-    assert Term.INTENT_ALIGNMENT not in declared.degraded_terms
+    assert StoodDown(
+        term=Term.INTENT_ALIGNMENT, reason=DegradedReason.NOTHING_FROM_THEM
+    ) in silent.degraded_terms
+    assert Term.INTENT_ALIGNMENT not in {
+        stood.term for stood in declared.degraded_terms
+    }
     assert sum(term.weight for term in silent.terms) == pytest.approx(WEIGHT_TOTAL)
     for term in silent.terms:
         matching = next(other for other in declared.terms if other.term is term.term)
@@ -121,15 +125,36 @@ def test_the_degraded_terms_are_the_renormalisation_basis_and_travel_with_the_fi
     """
 
     fit = score(searcher(), candidate(), LIVE_RULESET)
-    assert set(fit.degraded_terms) | {term.term for term in fit.terms} == set(Term)
-    assert set(fit.degraded_terms) & {term.term for term in fit.terms} == set()
+    stood = {entry.term for entry in fit.degraded_terms}
+    assert stood | {term.term for term in fit.terms} == set(Term)
+    assert stood & {term.term for term in fit.terms} == set()
     # Nobody declared, nobody has a Player Score, and neither holds a tag: four
     # of the eight are honestly absent on this pairing.
-    assert set(fit.degraded_terms) == {
+    assert stood == {
         Term.INTENT_ALIGNMENT,
         Term.RELIABILITY,
         Term.PLAYING_STYLE,
         Term.SOCIAL_VIBE,
+    }
+    # **In `Term`s own order**, which is what makes the recorded reasons
+    # index-alignable against it a year later rather than a set read twice.
+    assert [entry.term for entry in fit.degraded_terms] == [
+        term for term in Term if term in stood
+    ]
+
+
+def test_the_engine_never_authors_the_platforms_own_gap() -> None:
+    """``score`` is not told which providers exist, and could not say.
+
+    Reliability stands down here because the null object returns no reading,
+    which the term honestly reports as *nothing from them* — a sentence about a
+    person, written from an accident of a wiring choice. Restating it is
+    ``floor.attributed``'s job, one layer out, where ``absent`` lives.
+    """
+
+    fit = score(searcher(), candidate(), LIVE_RULESET)
+    assert DegradedReason.NOT_YET_ON_THIS_PLATFORM not in {
+        entry.reason for entry in fit.degraded_terms
     }
 
 
@@ -298,7 +323,7 @@ def test_a_term_that_stood_down_is_never_a_concern() -> None:
     """
 
     fit = score(searcher(), candidate(), LIVE_RULESET)
-    assert set(fit.concerns) & set(fit.degraded_terms) == set()
+    assert set(fit.concerns) & {stood.term for stood in fit.degraded_terms} == set()
 
 
 def test_a_candidate_with_no_evidence_at_all_is_refused_rather_than_scored(

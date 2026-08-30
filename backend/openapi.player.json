@@ -1801,11 +1801,11 @@
           },
           "degraded_terms": {
             "items": {
-              "$ref": "#/components/schemas/Term"
+              "$ref": "#/components/schemas/DegradedTermSchema"
             },
             "type": "array",
             "title": "Degraded Terms",
-            "description": "The terms that stood down: the renormalisation basis. Without it a Fit is uninterpretable \u2014 a 78 built on four terms and a 78 built on seven are different readings of the same number."
+            "description": "The terms that stood down, each with **whose gap it is**: the renormalisation basis. Without it a Fit is uninterpretable \u2014 a 78 built on four terms and a 78 built on seven are different readings of the same number \u2014 and without the reason beside it, *reliability is not a thing here yet* and *they have not said what kind of evening they want* arrive as one flat list."
           },
           "modifiers": {
             "items": {
@@ -1985,6 +1985,34 @@
         ],
         "title": "DealDeckRequest",
         "description": "What a deal is asked for. **One field, and that is the whole contract.**\n\n**There is no `mode` here and there never will be.** The deck reads your own\ndeclared Play intent for this sport, resolved backend-side, and *no\npreference* is a working deck rather than a blocked one \u2014 indecision is not a\nstate this product refuses. A mode on this body would be the field the\ntelemetry constraint refuses: `mode` is null exactly when the surface is the\ndeck.\n\n**There is no widening here either.** The relaxation ladder does not reach\nthe deck, so a deal carries no rung offers and there is no offer for one to\ncite.\n\n**There is nothing about a pass.** The suppression window crosses the wire in\nno shape at all \u2014 no field, no code, no timestamp \u2014 which is what makes a\npass unable to become something stronger by way of a request."
+      },
+      "DegradedReason": {
+        "type": "string",
+        "enum": [
+          "NOT_YET_ON_THIS_PLATFORM",
+          "NOTHING_FROM_YOU",
+          "NOTHING_FROM_THEM"
+        ],
+        "title": "DegradedReason",
+        "description": "Whose gap a stood-down term is. **Three values, and one line drawn.**\n\n``floor.py`` draws that line to decide a number \u2014 *the gate counts\nperson-specific gaps and never platform-wide absence* \u2014 and until now it was\ndrawn nowhere else, so the one list that crosses the wire held *reliability\nis not a thing here yet* and *they have not said what kind of evening they\nwant* as the same fact, twenty times a search.\n\n**It is a code and not a sentence**, on ``docs/adr/0106``'s rule: a client\nwriting *\"they haven't declared\"* off a bare ``Term`` would be an engine rule\nin TypeScript, and *\"nobody has a record yet\"* becomes silently false the day\n``matches`` ships, with no gate that catches it.\n\n**``NOTHING_FROM_THEM`` deliberately swallows reliability's three causes** \u2014\nno record, the last observation past the horizon, no strand clearing the\nobservation bar. Separating them would publish activity recency, which\n``docs/adr/0106`` \u00a75 refuses by name, so the refusal is held by the shape of\nthis vocabulary rather than by a reviewer noticing it in a later ticket.\n\n**``NOTHING_FROM_YOU`` wins a tie** \u2014 both grids blank, neither side tagged \u2014\nbecause it is the only one of the two a reader can act on."
+      },
+      "DegradedTermSchema": {
+        "properties": {
+          "term": {
+            "$ref": "#/components/schemas/Term"
+          },
+          "reason": {
+            "$ref": "#/components/schemas/DegradedReason",
+            "description": "Whose gap this is: nobody's (`NOT_YET_ON_THIS_PLATFORM` \u2014 the term has no provider on this platform at all), yours (`NOTHING_FROM_YOU`), or theirs (`NOTHING_FROM_THEM`). The last deliberately covers every reason a record could not be read, because separating them would publish activity recency."
+          }
+        },
+        "type": "object",
+        "required": [
+          "term",
+          "reason"
+        ],
+        "title": "DegradedTermSchema",
+        "description": "One term that stood down, and **whose gap that is**.\n\nA pair rather than a bare ``Term``, because the flat list held two different\nsentences as one fact: *reliability is not a thing on this platform yet* and\n*they have not said what kind of evening they want*. The engine draws that\nline to decide a number \u2014 the evidence gate counts person-specific gaps and\nnever platform-wide absence \u2014 and it now survives the wire.\n\n**The reason is a code and the client writes the sentence** (``docs/adr/0106``).\nA client deriving *\"they haven't declared\"* from ``INTENT_ALIGNMENT`` alone\nwould be an engine rule in TypeScript, and *\"nobody has a record yet\"* is a\nsentence that goes silently false the day ``matches`` ships. The term supplies\nthe other half: ``INTENT_ALIGNMENT`` and ``SOCIAL_VIBE`` under one code are two\ndifferent sentences.\n\n**The platform tier repeats on every row and is drawn once.** It is here\nbecause it is this candidate's renormalisation basis \u2014 a 78 built on four\nterms and a 78 built on seven are different readings of the same number, and\ndropping it would make the row's own arithmetic unreadable \u2014 and\n``NOT_YET_ON_THIS_PLATFORM`` is a fact about the platform rather than about\ntwenty people, so the sheet states it once beside the version stamps\n(``the-play-screens.md`` \u00a78). Suppressing it on the wire instead was refused:\nthe basis is not decoration."
       },
       "DistanceEvidence": {
         "properties": {

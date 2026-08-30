@@ -21,11 +21,17 @@ from types import MappingProxyType
 
 import pytest
 
-from app.engines.matchfit.core import Modifier, SearchMode, Term
+from app.engines.matchfit.core import DegradedReason, Modifier, SearchMode, Term
 from app.engines.matchfit.ranking import ModifiedFit, ModifierPoints, ModifierStack
 from app.engines.matchfit.ruleset import Ruleset
-from app.engines.matchfit.scoring import Fit
-from app.engines.matchfit.v1 import Refusal, admits, live_terms, score
+from app.engines.matchfit.scoring import Fit, StoodDown
+from app.engines.matchfit.v1 import (
+    Refusal,
+    admits,
+    attributed,
+    live_terms,
+    score,
+)
 from app.kernel import InvariantViolated
 from app.modules.matchmaking.infrastructure.rulesets import LIVE_RULESET
 from tests.unit.matchfit_builders import candidate, searcher
@@ -72,7 +78,14 @@ def scored_but_for(*standing_down: Term) -> Fit:
     return Fit(
         points=sum(term.contribution for term in kept),
         terms=kept,
-        degraded_terms=full.degraded_terms + tuple(standing_down),
+        degraded_terms=full.degraded_terms
+        + tuple(
+            # The side code is not what this helper is about — the gate counts
+            # *how many* fired — so every hand-built shortfall is spelled as the
+            # person-specific gap it stands for.
+            StoodDown(term=term, reason=DegradedReason.NOTHING_FROM_THEM)
+            for term in standing_down
+        ),
         concerns=(),
         engine_version=full.engine_version,
         ruleset_version=full.ruleset_version,
@@ -219,7 +232,7 @@ def test_platform_wide_absence_is_never_counted_against_anybody() -> None:
     """
 
     thin = scored_but_for(Term.INTENT_ALIGNMENT, Term.PLAYING_STYLE, Term.SOCIAL_VIBE)
-    assert Term.RELIABILITY in thin.degraded_terms
+    assert Term.RELIABILITY in {stood.term for stood in thin.degraded_terms}
     counted = admits(modified(thin), LIVE_RULESET, DAY_ONE_ABSENT)
     uncounted = admits(modified(thin), LIVE_RULESET, frozenset())
     assert counted.admitted
@@ -394,3 +407,67 @@ def test_an_interest_lift_moves_nobodys_number() -> None:
     assert lifted.admitted
     assert sunk.points < FLOORS.quality_floor
     assert lifted.fired == admits(sunk, LIVE_RULESET, DAY_ONE_ABSENT).fired
+
+
+# ---------------------------------------------------------------------------
+# Whose gap it is — the platform's own, restated one layer out
+# ---------------------------------------------------------------------------
+
+
+def test_a_term_with_no_provider_reports_the_platform_whatever_the_term_said() -> None:
+    """**A fact nobody has about anybody is nobody's gap.**
+
+    ``NoPlayerScoresExist`` returns no reading, so the reliability term honestly
+    reports *nothing from them* — a sentence about a person written from an
+    accident of a null object's shape. The overwrite is unconditional rather than
+    a fill-in for that reason: the term is not wrong about what it saw, it is
+    answering a question it cannot be asked.
+    """
+
+    fit = score(searcher(), candidate(), LIVE_RULESET)
+    before = {stood.term: stood.reason for stood in fit.degraded_terms}
+    assert before[Term.RELIABILITY] is DegradedReason.NOTHING_FROM_THEM
+
+    after = attributed(fit, DAY_ONE_ABSENT)
+    reasons = {stood.term: stood.reason for stood in after.degraded_terms}
+    assert reasons[Term.RELIABILITY] is DegradedReason.NOT_YET_ON_THIS_PLATFORM
+    # And nothing else moves: the person-specific gaps are the term's to name.
+    assert {
+        term: reason
+        for term, reason in reasons.items()
+        if term is not Term.RELIABILITY
+    } == {
+        term: reason
+        for term, reason in before.items()
+        if term is not Term.RELIABILITY
+    }
+
+
+def test_the_basis_itself_is_untouched_and_so_is_every_other_field() -> None:
+    """It restates a reason and is not a second scoring pass.
+
+    The renormalisation basis is the set of terms that stood down, and which
+    terms those are is arithmetic the platform's wiring may not move — only what
+    each of them *says*.
+    """
+
+    fit = score(searcher(), candidate(), LIVE_RULESET)
+    after = attributed(fit, DAY_ONE_ABSENT)
+
+    assert after.points == fit.points
+    assert after.terms == fit.terms
+    assert after.concerns == fit.concerns
+    assert [stood.term for stood in after.degraded_terms] == [
+        stood.term for stood in fit.degraded_terms
+    ]
+
+
+def test_a_platform_with_every_provider_built_changes_nothing() -> None:
+    """The day ``player_score`` ships, this line stops firing and no other moves.
+
+    Which is the whole of what makes it safe to write now: it is the composition
+    root's one fact, applied in one place.
+    """
+
+    fit = score(searcher(), candidate(), LIVE_RULESET)
+    assert attributed(fit, frozenset()) == fit

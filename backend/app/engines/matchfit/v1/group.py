@@ -82,6 +82,7 @@ from app.engines.matchfit.scorable import GridCell, LevelReading, Searcher
 from app.engines.matchfit.v1.fit import renormalised_weights
 from app.engines.matchfit.v1.liveness import reverse_mode
 from app.engines.matchfit.v1.terms import (
+    TagColumnReading,
     balance_norm,
     clamp_unit,
     forecast_pct,
@@ -262,7 +263,11 @@ def _cross_tags(
     """One tag column of a cross pair — the same rows Fit reads, at their seat."""
 
     reading = tag_column(column, mine.tags, theirs.tags, mode, seat, ruleset.tags)
-    return None if reading is None else reading.value
+    # The side code is dropped rather than translated: in a four neither of these
+    # two people is the searcher, so *whose gap is this* has no answer a card
+    # could print — and ``G`` renormalises over its own live terms, which is the
+    # whole of what a stood-down column means here.
+    return reading.value if isinstance(reading, TagColumnReading) else None
 
 
 # ---------------------------------------------------------------------------

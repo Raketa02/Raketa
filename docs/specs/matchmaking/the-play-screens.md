@@ -401,7 +401,25 @@ Reads the stored record; **never recomputes**
 evidence; the degraded terms and what they renormalised; every modifier with its points; every
 liveness **reason**; the concerns; the inclusion reason; the ruleset and engine versions. An
 evidence kind the build cannot render is a **named gap saying the app is out of date**, never
-a silently shorter list ([ADR-0106](../../adr/0106-evidence-vocabulary-is-contract-weights-are-configuration.md) §6).
+a silently shorter list ([ADR-0106](../../adr/0106-evidence-vocabulary-is-contract-weights-are-configuration.md) §6),
+and so is a `DegradedReason` it has never seen.
+
+**A stood-down term is not a term row, and it says whose gap it is.** It has no weight, no
+value, no contribution and no evidence — four of a row's five cells — so drawing it greyed
+invents the shape of a reading that does not exist. The live terms are the rows; beneath them
+sits a **not-counted block**, a list and not term rows, and each line pairs the term with its
+`reason` ([`the-two-contracts.md`](the-two-contracts.md) §4). The client writes the sentence
+and the engine names which: `INTENT_ALIGNMENT` and `SOCIAL_VIBE` under one code are two
+different sentences, and a client deriving either from a bare `Term` would be an engine rule
+in TypeScript.
+
+**Two tiers, and the platform's own is stated once.** The per-person gaps —
+`NOTHING_FROM_YOU`, `NOTHING_FROM_THEM` — sit in the candidate's not-counted block, because
+they are facts about these two people. `NOT_YET_ON_THIS_PLATFORM` is a fact about the platform
+and is drawn **once, in the footer beside the version stamps**; otherwise reliability's line
+prints identically on twenty cards and reads as twenty separate shortfalls. Suppressing it
+from the wire instead was refused: it is the renormalisation basis, and *a 78 built on four
+terms and a 78 built on seven are different readings of the same number*.
 
 **Never:** a Liveness number, a near-miss row, a pre-gate pool count, another player's
 breakdown.

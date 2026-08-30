@@ -254,6 +254,11 @@ class SearchCandidateRecord:
     it is the renormalisation basis — without it a Fit is uninterpretable a year
     later — and because a per-term ``NoEvidence`` rate has to be an array query
     rather than a blob scan.
+
+    ``degraded_reasons`` is **index-aligned with it and never folded into it**. A
+    read-back never recomputes, so whose gap each stood-down term was has to be
+    on the row; widening ``degraded_terms`` into pairs would spend exactly the
+    queryability it was lifted out of the blob to buy.
     """
 
     band: CandidateBand
@@ -262,6 +267,14 @@ class SearchCandidateRecord:
     fit: float
     terms: tuple[Mapping[str, Any], ...]
     degraded_terms: tuple[str, ...]
+    #: Whose gap each of those was, **positionally**: one code per entry above,
+    #: in the same order, which the invariant below refuses to let drift.
+    #: ``missing_terms`` is the same fact from the evidence gate's side and the
+    #: two may not disagree either —
+    #: ``tests/unit/test_run_shortlist_search.py`` asserts it is exactly the
+    #: non-``NOT_YET_ON_THIS_PLATFORM`` subset, because two columns answering
+    #: *whose gap is this* are two columns that can drift.
+    degraded_reasons: tuple[str, ...]
     modifiers: tuple[Mapping[str, Any], ...]
     liveness_reasons: tuple[str, ...]
     #: The **raw input** per signal, never the offset it produced.
@@ -323,6 +336,17 @@ class SearchCandidateRecord:
         invariant(
             (self.card is not None) == (self.band is CandidateBand.RETURNED),
             f"a {self.band.value} row with card {self.card}",
+        )
+        # The two halves of the renormalisation basis are one fact in two
+        # columns, and a row where they had drifted is a basis nobody can read.
+        # Refused here rather than at the wire, where it would surface as a
+        # five-hundred on a read-back of a row that was already written wrong —
+        # and rather than as a check constraint, which would have to be spelled
+        # twice for two dialects that store these arrays differently.
+        invariant(
+            len(self.degraded_terms) == len(self.degraded_reasons),
+            f"{len(self.degraded_terms)} degraded terms and "
+            f"{len(self.degraded_reasons)} reasons beside them",
         )
 
 

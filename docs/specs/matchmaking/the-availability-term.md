@@ -110,8 +110,12 @@ ruleset re-admitted `significance` or `proximity` the corpus could not re-derive
 [#183](https://github.com/Raketa02/Raketa/issues/183) named for `liveness_signals`, fixed the
 same way one term over.
 
-`degraded_terms` already carries the `NoEvidence` case; **which side was blank** rides in the
-`terms` blob, so a stood-down term is distinguishable from one that never ran.
+`degraded_terms` already carries the `NoEvidence` case, and **which side was blank** is now a
+recorded code beside it — `NOTHING_FROM_YOU` when the searcher's own grid is empty and
+`NOTHING_FROM_THEM` when theirs is, the searcher's own side winning a tie because it is the
+only one of the two they can act on ([#233](https://github.com/Raketa02/Raketa/issues/233)).
+So a stood-down term is distinguishable from one that never ran, and from one standing down
+for a reason that is about neither person.
 
 `grid_updated_at` is **not** recorded here. With staleness struck it has no search-side reader;
 the *"Keep these times?"* backstop reads the profile.

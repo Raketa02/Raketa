@@ -32,7 +32,13 @@ something no seat's Fit read, and it reads it with Fit's own arithmetic.
 
 from app.engines.matchfit.v1.engine import ENGINE_VERSION
 from app.engines.matchfit.v1.fit import MatchFitV1, renormalised_weights, score
-from app.engines.matchfit.v1.floor import Admission, Refusal, admits, live_terms
+from app.engines.matchfit.v1.floor import (
+    Admission,
+    Refusal,
+    admits,
+    attributed,
+    live_terms,
+)
 from app.engines.matchfit.v1.group import (
     CROSS_TERMS,
     arrange,
@@ -102,6 +108,7 @@ __all__ = [
     "arrange",
     "arranged",
     "arrangements",
+    "attributed",
     "availability_overlap",
     "balance_norm",
     "best",
