@@ -17,9 +17,10 @@ import { refreshTokens } from '@/features/auth/types';
 import { clearStoredTokens, resetSessionStatus, wireHttpCredentials } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import {
-  SPORTS_SERVED,
   launchSignedIn,
+  NOW_TAB_LINE,
   runInProgress,
+  SPORTS_SERVED,
   stubGate as stubGateWith,
 } from '@/test-support/onboardingRouter';
 import {
@@ -568,7 +569,7 @@ describe('the data screen', () => {
 
     // The gate decides where finishing lands, exactly as it does from every other exit:
     // a player who now holds ratings belongs in the app.
-    expect(await screen.findByText('Inside the app')).toBeTruthy();
+    expect(await screen.findByText(NOW_TAB_LINE)).toBeTruthy();
     expect(screen).toHavePathname('/');
 
     // And on the next launch, with nothing cached — which is the whole point of onboarding
@@ -577,7 +578,7 @@ describe('the data screen', () => {
     queryClient.clear();
     await launchSignedIn();
 
-    expect(await screen.findByText('Inside the app')).toBeTruthy();
+    expect(await screen.findByText(NOW_TAB_LINE)).toBeTruthy();
     expect(screen).toHavePathname('/');
     // Not back through the questionnaire, and not back through the welcome.
     expect(screen.queryByText("Let's find your level")).toBeNull();
@@ -609,7 +610,7 @@ describe('a second pass in the same process', () => {
     await waitFor(() => expect(screen).toHavePathname('/data'));
 
     fireEvent.press(screen.getByLabelText('Start playing'));
-    expect(await screen.findByText('Inside the app')).toBeTruthy();
+    expect(await screen.findByText(NOW_TAB_LINE)).toBeTruthy();
     expect(screen).toHavePathname('/');
   }
 

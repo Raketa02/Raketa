@@ -134,10 +134,25 @@ src/app/
 ├── (auth)/                sign-in, sign-up, recovery
 └── (app)/                 authenticated tree
     ├── _layout.tsx        the redirect guard
-    └── (tabs)/
+    └── (tabs)/            the shell: one Stack, five tabs
+        ├── _layout.tsx    TabShell — the navigator and the bar, mounted once
+        ├── index.tsx      Now, and the app's landing
+        ├── around.tsx  chats.tsx  you.tsx
+        └── play/          the one tab with depth
 ```
 
 Route groups exist so the **authorization boundary is visible in the file tree**.
+
+### The shell is a `Stack`, and never `<Tabs>`
+
+Four of the five tabs are single-screen roots and only Play has depth, which is thrown away
+every time a player leaves it. `<Tabs>` keeps a history per tab and restores it on return —
+so built out of the box, a player who leaves the deck and comes back lands on the deck, and
+the rule fails with **no symptom at all**. Switching tabs **replaces**; entering Play lays
+down `[Now, Find a game]`; and both go through one function, `resetShellStack`, which is also
+where a Play session ends
+([#227](https://github.com/Raketa02/Raketa/issues/227),
+[#261](https://github.com/Raketa02/Raketa/issues/261)).
 
 A route file may own: the route declaration, its params, a layout, a redirect, navigation
 options, route-scoped provider composition, and a very small adapter. That is the entire

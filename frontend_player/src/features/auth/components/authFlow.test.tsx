@@ -39,7 +39,7 @@ import { ADULT_ATTESTATION_MISSING, ADULT_LABEL } from '../schemas/authForms';
 import { refreshTokens } from '../use-cases/refreshTokens';
 import { signIn } from '../use-cases/signIn';
 
-import { AccountScreen } from './AccountScreen';
+import { AccountPanel } from './AccountPanel';
 import { SignInScreen } from './SignInScreen';
 import { SignUpScreen } from './SignUpScreen';
 
@@ -371,7 +371,7 @@ describe('signing out', () => {
       nickname: USER.nickname,
     });
 
-    renderScreen(<AccountScreen />);
+    renderScreen(<AccountPanel />);
     fireEvent.press(screen.getByLabelText('Sign out'));
 
     await waitFor(() => expect(getSessionStatus()).toBe('unauthenticated'));
@@ -392,7 +392,7 @@ describe('signing out', () => {
     transport.on('POST', '/api/v1/auth/logout', networkFailure());
     transport.on('GET', '/api/v1/users/me', () => json(USER));
 
-    renderScreen(<AccountScreen />);
+    renderScreen(<AccountPanel />);
     fireEvent.press(screen.getByLabelText('Sign out'));
 
     // A player who taps sign out on a train has decided to leave. Refusing would strand
@@ -403,18 +403,18 @@ describe('signing out', () => {
 });
 
 // ---------------------------------------------------------------------------
-// The authenticated screen
+// The account panel
 // ---------------------------------------------------------------------------
 
-describe('the account screen', () => {
+describe('the account panel', () => {
   it('shows the player, read through Query rather than held by the session', async () => {
     setSessionStatus('authenticated');
     transport.on('GET', '/api/v1/users/me', () => json(USER));
 
-    renderScreen(<AccountScreen />);
+    renderScreen(<AccountPanel />);
 
-    // The identity is one line, and it is the whole assertion: the screen's own heading
-    // says "Inside the app" for every player, so who is signed in is only ever visible
+    // The identity is one line, and it is the whole assertion: the panel carries no
+    // heading of its own — the You tab does — so who is signed in is only ever visible
     // through what Query fetched.
     expect(await screen.findByText('ada · ada@example.com')).toBeTruthy();
   });
@@ -424,7 +424,7 @@ describe('the account screen', () => {
     await beginSession({ accessToken: 'access-1', refreshToken: 'refresh-1' });
     transport.on('GET', '/api/v1/users/me', () => errorResponse(403, 'forbidden'));
 
-    renderScreen(<AccountScreen />);
+    renderScreen(<AccountPanel />);
 
     await waitFor(() =>
       expect(screen.getByText('Something went wrong at our end. Try again later.')),

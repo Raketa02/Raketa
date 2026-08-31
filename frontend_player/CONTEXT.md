@@ -125,6 +125,21 @@ review comment and a test description all use the same word.
   glossary now carries.
 - **Untrusted route input** — any param from a deep link, push payload, universal link,
   App Link or QR code. Zod-validated in the feature's `schemas/` before use.
+- **The shell** — the five tabs a signed-in player is inside, and the **one stack** under
+  them. `Now · Around · ⚡Play · Chats · You`, drawn by `TabBar` and mounted once by
+  `TabShell`. Deliberately **not** `<Tabs>`: that keeps a history per tab and restores it,
+  which is the whole of what
+  [#227](https://github.com/Raketa02/Raketa/issues/227) forbids. _Avoid_: "the tab
+  navigator" — there isn't one.
+- **The reset** — `resetShellStack`, the shell's only navigation move: throw the stack away
+  and lay a new one down. Four tabs lay down one screen and ⚡Play lays down two, which is
+  why back from Play's entry leaves Play rather than walking it. **A Play session ends
+  exactly when it runs.** _Avoid_: "switching tabs" as though it were a push.
+- **A placeholder tab** — one of the four with no screen behind it yet. It states what its
+  tab will be and that it is not built, in one sentence, so a player can tell it from a
+  bug. Three of the four are **citations** of decisions taken elsewhere, and **Now never
+  says nothing is happening** — it is where a send lands. _Avoid_: "empty state" (that is a
+  screen with a real answer of nothing) and "coming soon".
 
 ### The onboarding flow
 

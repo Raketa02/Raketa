@@ -18,7 +18,11 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import AppLayout from '@/app/(app)/_layout';
 import TabsLayout from '@/app/(app)/(tabs)/_layout';
-import HomeRoute from '@/app/(app)/(tabs)/index';
+import AroundRoute from '@/app/(app)/(tabs)/around';
+import ChatsRoute from '@/app/(app)/(tabs)/chats';
+import NowRoute from '@/app/(app)/(tabs)/index';
+import FindAGameRoute from '@/app/(app)/(tabs)/play/index';
+import YouRoute from '@/app/(app)/(tabs)/you';
 import AuthLayout from '@/app/(auth)/_layout';
 import SignInRoute from '@/app/(auth)/sign-in';
 import AvailabilityRoute from '@/app/(onboarding)/availability';
@@ -36,6 +40,7 @@ import ReviewRoute from '@/app/(onboarding)/review/[assessmentId]';
 import SportsRoute from '@/app/(onboarding)/sports';
 import TagsRoute from '@/app/(onboarding)/tags';
 import WelcomeRoute from '@/app/(onboarding)/welcome';
+import { PLACEHOLDER_COPY } from '@/features/shell/types';
 import { beginSession } from '@/shared/lib/auth';
 import {
   ImagePickingProvider,
@@ -47,11 +52,28 @@ import { queryClient } from '@/shared/lib/query-client';
 
 import { json, type Transport, type Wire } from './transport';
 
+/**
+ * The Now tab's one line — which is what *the player is in the app* looks like on screen.
+ *
+ * The gate's fourth destination is the shell's root, and the shell's root is the Now tab, so
+ * every suite that asserts a launch, a finish or a commit landed in the app is asserting this
+ * sentence. Taken from the shell's own copy rather than spelled here, because a placeholder is
+ * exactly the kind of sentence that gets reworded and eight suites holding a string literal is
+ * eight red tests for a wording change.
+ */
+export const NOW_TAB_LINE = PLACEHOLDER_COPY.now.line;
+
 export const ONBOARDING_ROUTES = {
   _layout: TestRoot,
   '(app)/_layout': AppLayout,
   '(app)/(tabs)/_layout': TabsLayout,
-  '(app)/(tabs)/index': HomeRoute,
+  // The five-tab shell. Play is a directory because the deck, the builder and the pool
+  // land under it, and the bar reads its active column off that first segment.
+  '(app)/(tabs)/index': NowRoute,
+  '(app)/(tabs)/around': AroundRoute,
+  '(app)/(tabs)/play/index': FindAGameRoute,
+  '(app)/(tabs)/chats': ChatsRoute,
+  '(app)/(tabs)/you': YouRoute,
   '(auth)/_layout': AuthLayout,
   '(auth)/sign-in': SignInRoute,
   '(onboarding)/_layout': OnboardingLayout,

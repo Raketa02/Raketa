@@ -1,5 +1,5 @@
-import { AccountScreen } from '@/features/auth/types';
+import { NowScreen } from '@/features/shell/types';
 
-export default function HomeRoute() {
-  return <AccountScreen />;
+export default function NowRoute() {
+  return <NowScreen />;
 }

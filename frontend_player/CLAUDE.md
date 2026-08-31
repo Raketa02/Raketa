@@ -24,9 +24,10 @@ feature, not after:
 
 `src/app/_layout.tsx` composes the providers and `src/shared/lib/bootstrap` runs the one
 ordered startup sequence. Above that: the HTTP client with its 401 → refresh → retry
-rotation, the `AppError` family, `shared/lib/auth` over the keychain, and three features —
-`auth` (sign up — including the **adult attestation**, the one question on that form that is
-not about the account — sign in, session restore), `onboarding` (the entry gate, welcome, the
+rotation, the `AppError` family, `shared/lib/auth` over the keychain, and four features —
+`shell` (the five tabs and the one stack under them, below), `auth` (sign up — including the
+**adult attestation**, the one question on that form that is not about the account — sign in,
+session restore), `onboarding` (the entry gate, welcome, the
 sports picker, the adaptive question loop, the explained result, and the summary and data
 screens a player leaves through) and `player_profile` (onboarding's **second part**, complete: seven
 steps over a client-held draft, and the one write that ends them — the Social tags picker,
@@ -41,6 +42,28 @@ matched with ([ADR-0096](../docs/adr/0096-gender-preference-mutual-gate-invisibl
 the Proposals opt-in, never pre-ticked and with a finish that stays closed until the player
 answers either way, and the **profile commit**: every answer in one idempotent
 `POST /players/me/profile`, after which the player walks the data screen into the app).
+
+**The shell is five tabs over one stack, and it remembers nothing.** `TabShell` mounts the
+`TabBar` once, below the navigator, and reads the active column off the current path —
+`tabForPathname`, by the **first** segment, so ⚡Play stays lit for every screen inside Play.
+It is a `Stack` and deliberately **not** `<Tabs>`, which keeps a history per tab and restores
+it: built that way, a player who leaves the deck and comes back lands on the deck, and _back
+goes where I came from_ fails with **no symptom** — nothing throws and nothing looks wrong
+([#227](https://github.com/Raketa02/Raketa/issues/227)). So switching tabs **replaces**, and
+entering Play lays down `[Now, Find a game]` — two screens, which is the whole of _back from
+Play leaves Play_. Both go through **one function**, `resetShellStack`: a flanking tab lays
+down one screen, `enterPlay` lays down two, and the second caller of `enterPlay` is the _Find
+a game_ segment, because re-entering the tab from inside it is arriving rather than going
+back. **A Play session ends exactly when the reset runs**, which is the definition the Play
+state ticket is owed. Four of the five tabs are **honest placeholders**: one sentence naming
+what the tab will be plus that it is not built, three of them citations of decisions taken
+elsewhere, and **Now never says "nothing is happening"** — it is where a send lands, so
+asserting emptiness would be a lie one tap after a challenge went out. `shellCopy.test.ts`
+holds that refusal. The **You** tab still carries the account panel, because signing out is
+the only way back to the beginning and the shell arriving is what gave it a home. The bar's
+**transitions** follow the two moves: `none` by default, because a replace that slid in from
+the right would read as going deeper on the gesture whose meaning is that nothing was kept,
+and the push kept for `play/index`, which genuinely is one.
 
 **Sign-up asks whether the player is an adult, and it is an attestation.** The platform is
 adults only, and that is a precondition of _holding an account_ rather than a rule about who
