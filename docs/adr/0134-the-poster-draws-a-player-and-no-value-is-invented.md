@@ -3,6 +3,52 @@
 - **Status:** Accepted
 - **Date:** 2026-08-29
 
+> **Corrected on the colour space, 2026-08-31, by the build of
+> [#259](https://github.com/Raketa02/Raketa/issues/259): the one fixed pair (3) and (5) ask for
+> is fixed in CIE LCh(uv), not in sRGB HSL, because in HSL there is no such pair.** The two
+> requirements (5) names bind the ground's *luminance* from both sides — white at 4.5:1 against
+> the light stop puts it at or below 0,183, and `ink` at 3:1 against the dark stop puts that at
+> or above 0,130 — and because the light stop is the lighter one, **every stop of every hue
+> falls inside that band**, which is 1,41 wide. Sixteen hues at one HSL saturation and lightness
+> span a factor of three across it, greens to blues, and sixteen at 10° cannot come from one arc
+> because the wider arc holds thirteen: at least one green and at least one blue are in any legal
+> set. Above **17 %** saturation there is no lightness whatever at which one hue from each arc
+> fits in the band, so every HSL pair that clears both bounds is a grey — and a grey poster
+> forfeits the thing this record adopted colour *for*, colour being the difference geometry was
+> standing in for at 27pt. The pair is therefore stated in LCh(uv), where equal lightness **is**
+> equal luminance: light stop `L* 49,13 / C 65`, dark stop `L* 43,65 / C 53`, published in
+> [§6.9](../../frontend_player/docs/design-system.md#69-the-photo-tile-and-picker) and derived,
+> with the 17 %, in `frontend_player/src/shared/ui/posterHues.test.ts`.
+>
+> **This is a correction and not a reopening, and the distinction is (5)'s own.** Its trigger is
+> *"if sixteen do not survive inside the usable arcs"* — sixteen do survive, comfortably, at a
+> chroma no HSL pair could have reached. What did not survive is the space the pair was named
+> in, and (5)'s own sentence — *fixed saturation and lightness is what makes the poster
+> computable* — is **only true** in a space where lightness is luminance. The correction is what
+> makes that sentence true rather than what overturns it.
+>
+> **Nothing else moves.** The figure and its no-likeness line (1), the pose's standing as
+> shown-never-read (2), the closed set of sixteen and both hue bounds — 25° from every named
+> hue, 10° from each other (3), one hue and two stops (4), the two contrast requirements and the
+> rule that a hue clearing neither is dropped *before* the set is counted (5), the retired crops
+> and `COURT_POSTER_COUNT` ≥ 48 (6), nothing stored (7), `useId()` (8) and never-checked (9) all
+> stand as decided. So does ADR-0012's standing. The correction is one line of (3) and one
+> clause of (5), and it names a space rather than changing a number.
+
+> **Corrected on how much of §A5.3's composition is adopted, 2026-08-31, by the same build:
+> the floor glow, the glass wall, the mullions and the light streak do not come across
+> either.** (4) says the hue-shifted light stop is *"the one parameter of §A5.3 we do not
+> adopt"*, and that sentence is now four omissions short. The reason is (5)'s and not a taste:
+> each of those four is a mark **lighter than the light stop**, and the light stop is the number
+> [§2.5](../../frontend_player/docs/design-system.md#25-contrast--computed) publishes as the
+> worst case for a white label — a poster whose real worst case is an untokenised hairline has a
+> guessed ratio, which is the exact failure the court's pinned scrim exists to prevent. What
+> remains is the ground, the figure and the ball. The `volt` ball is kept because this record
+> names it and because it is a mark rather than a text bed; it is the one thing on the poster
+> lighter than the light stop, and it survives for the reason the Consequences already give —
+> `volt` is excluded from `POSTER_HUES`, so the one mark on a poster is the one hue a poster can
+> never be.
+
 ## Context
 
 A player with no photograph is not left with an empty box: they get a **generated court
