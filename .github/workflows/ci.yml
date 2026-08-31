@@ -175,6 +175,16 @@ jobs:
           DB_SSL_MODE: disable
           JWT_SECRET_KEY: ci-secret-do-not-use-in-prod
         run: poetry run pytest tests --cov=app --cov-report=xml -q
+      # Every emitted OpenAPI document, re-emitted and diffed. The dev console's
+      # contract has no client and no codegen, so `check-contract-drift.sh` has
+      # no purchase on it and **freshness** is the analogue (#256): regenerate
+      # the document and diff the JSON. It watches openapi.player.json too,
+      # because one command writes both — and because a stale player document is
+      # invisible to the drift check, which regenerates the client's types from
+      # it and finds them in perfect agreement.
+      - name: Contract freshness
+        working-directory: ${{ github.workspace }}
+        run: bash .github/scripts/check-contract-freshness.sh
       # The six judged pairings, re-derived against the live ruleset: the tables
       # in the specs must reproduce, and QUALITY_FLOOR must still sit inside
       # max(Fit | not shown) < floor <= min(Fit | shown). After the tests,
@@ -200,6 +210,13 @@ jobs:
       - name: Poetry pin drift check still fires
         working-directory: ${{ github.workspace }}
         run: bash .github/scripts/test-poetry-pin-drift.sh
+      # It hand-edits each emitted document and then moves a route's summary
+      # without regenerating, and asserts the check goes red for each. Both
+      # documents are driven: a suite that only broke the player one would leave
+      # the document the check was added for unexercised.
+      - name: Contract-freshness check still fires
+        working-directory: ${{ github.workspace }}
+        run: bash .github/scripts/test-contract-freshness.sh
       # It perturbs the fixture and the two documents in the workspace and
       # restores them. Both halves are driven: a table nobody regenerated, and a
       # floor that has left its judged bound from either side.

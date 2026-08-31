@@ -287,3 +287,46 @@ source_modules =
 forbidden_modules =
     scripts
 allow_indirect_imports = false
+
+# The dev console is a development tool that lives inside the backend, and two
+# arrows keep that from being a claim nobody checks.
+#
+# **The player surface never imports it.** The leak that matters is a dev route
+# reaching the shipped client contract — `openapi.player.json` is what
+# `frontend_player` generates its wire types from, and a type that arrived from
+# a dev tool would ship in an app-store release. `tests/unit/test_dev_console_surface.py`
+# asserts the document itself carries no `/dev` path; this forbids the import
+# that would put one there.
+#
+# **The console does not import the seeds.** It is *entitled* to — both are
+# gated by the same environments — and it declines, for the reason
+# `app/api/dev/__init__.py` writes down: `app/seeds/__init__` refuses on import
+# too, so a console that imported it would refuse in production for the seed
+# table's reason and `CONSOLE_SERVED` would be a second table nothing ever
+# proved fires.
+#
+# Both set `allow_indirect_imports = false`, and the same sentence earns it
+# twice: the interesting violation is the indirect one. A helper module that
+# reaches the seed catalog on the console's behalf breaks the seed rule exactly
+# as completely, and a shared module that pulls a dev schema into the player
+# surface ships it in `openapi.player.json` exactly as completely. Both are
+# green on today's tree with the flag off, which is what makes it affordable —
+# the argument the imaging fence already makes one contract up.
+[importlinter:contract:the-player-surface-does-not-know-the-dev-console]
+name = The player API surface does not import the dev console
+type = forbidden
+source_modules =
+    app.api.v1
+    app.modules
+forbidden_modules =
+    app.api.dev
+allow_indirect_imports = false
+
+[importlinter:contract:the-dev-console-declines-the-seed-import]
+name = The dev console does not import the seed system it is entitled to
+type = forbidden
+source_modules =
+    app.api.dev
+forbidden_modules =
+    app.seeds
+allow_indirect_imports = false

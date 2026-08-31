@@ -5,7 +5,8 @@
 # frontend_player/. Targets here are only for things that genuinely span apps.
 # ----------------------------------------------------------------------------
 .PHONY: help gen-api openapi check check-backend check-player \
-        test-hooks test-drift gen-judged-pairings judged-pairings \
+        test-hooks test-drift contract-freshness test-contract-freshness \
+        gen-judged-pairings judged-pairings \
         test-judged-pairings gen-ruleset-diff ruleset-diff test-ruleset-diff \
         poetry-pin test-poetry-pin afk-install afk-build afk
 
@@ -15,8 +16,20 @@ help:              ## list targets
 # ----------------------------------------------------------------------------
 # API contract — the backend is the source of truth (docs/adr/0006).
 # ----------------------------------------------------------------------------
-openapi:           ## emit the API contract (backend/openapi.player.json)
+openapi:           ## emit the API contracts (backend/openapi.{player,dev}.json)
 	$(MAKE) -C backend openapi
+
+# Freshness, not drift, and the two are different questions. `test-drift` below
+# asserts a client's generated types reproduce from the document; this asserts
+# the *documents* reproduce from the code. The dev console (#256) has no client
+# and no codegen, so freshness is the only analogue its contract has — and it
+# closes a hole on the player side too, where a stale document is invisible to a
+# drift check that regenerates the client's types from it.
+contract-freshness: ## verify every emitted OpenAPI document reproduces from the code
+	bash .github/scripts/check-contract-freshness.sh
+
+test-contract-freshness: ## verify the contract-freshness check still fires
+	bash .github/scripts/test-contract-freshness.sh
 
 gen-api: openapi   ## regenerate the client's wire types from the contract
 	cd frontend_player && pnpm gen:api

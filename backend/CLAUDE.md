@@ -17,13 +17,16 @@ make lint        # ruff check .          make format → ruff format .
 make typecheck   # mypy app scripts
 make check       # lint + lint-imports + typecheck + test — the same gate CI runs
 make test-gates  # prove the kernel/engines purity gates still fire (CI runs it)
-make openapi     # emit openapi.player.json — the contract the client generates from
+make openapi     # emit openapi.{player,dev}.json — the player contract the client
+                 # generates from, and the dev console's one-path contract
 make gen-walkthroughs  # rewrite the matchmaking golden files (a diff is a design change)
 make up / down   # dev stack (Postgres + API + MinIO + photo-review + Redis); logs, shell
 make migrate     # alembic upgrade head inside the API container
 make seed        # the named accounts *and* the cohort, then reads every Play screen
                  # as the protagonist and refuses a database that cannot draw one.
                  # Needs the stack up (Postgres + Redis); make seed-host on the host
+                 # Then http://localhost:8000/dev — the dev console, the thing that answers
+                 # back, since no Play flow can be exercised with one phone
 make gen-cohort  # rewrite the cohort's committed population (a diff is a fixture change)
 make rebuild-candidate-index  # fold the log back into the index (…-host on the host)
 ```
@@ -360,7 +363,26 @@ Rules to preserve:
   render `SearchRecord` through one function and why the row records the card, the concerns,
   the whole-kilometre distance and the at-stake block: what a read-back cannot reproduce off
   the row, it would have to re-read from sources that have moved on.
-- **New routes mount under `app/api/v1/router.py`;** keep the `/api/v1` prefix.
+- **New routes mount under `app/api/v1/router.py`;** keep the `/api/v1` prefix. The one
+  exception is the **dev console** (`app/api/dev/`, #256) — a second *surface*, not a
+  second client: one no-build `console.html` behind a `FileResponse` at `/dev`, and one
+  roster route, which is the whole of `openapi.dev.json`. It **acts as another player by
+  signing in as them** through the ordinary `POST /api/v1/auth/login` with the public seed
+  password the roster hands over, so there is no impersonation endpoint, no `Act-As` header
+  and no authorisation path that exists for it — every write it presses is a
+  player-surface write. It is gated **structurally and by data**, asymmetrically:
+  `CONSOLE_SERVED` in `app/api/dev/gate.py` is a **second table** and never `SEEDABLE`
+  (deriving one refusal from another is what `app/seeds/guard.py` argues against), and
+  importing `routes.py` in production raises `ConsoleRefused` — while the data half is a
+  *consequence*, since the roster lists only the reserved `.example` TLD and production has
+  no such accounts. The refusal is at the top of `routes.py` rather than in the package's
+  `__init__`, deliberately: `create_app` reads the gate in **every** environment, so a
+  package that refused on import would take the production deployable down at startup. It
+  **declines the `app/seeds/` import it is entitled to** — which is what keeps the console's
+  own refusal the one that fires — at the cost of spelling two constants twice, pinned by
+  `tests/unit/test_dev_console_surface.py`. Its contract is checked for **freshness**
+  (`make contract-freshness`), not by the client drift check, which has no purchase on a
+  document with no client.
 - **Validate and normalize inside the value object**, not in the use case — see
   `app/modules/users/domain/value_objects.py`.
 - **`app/kernel/` and `app/engines/` are pure and fenced by three gates**, because no one
@@ -387,6 +409,14 @@ This app is the single source of truth for the API
 `openapi.player.json`, and the client generates its TypeScript wire types from it
 (`make openapi`), so a response-shape change is load-bearing outside this directory. When
 you change it, run the `api-contract-change` skill.
+
+**`make openapi` writes one document per surface, and there are two.** The second is the
+**dev console**'s `openapi.dev.json` — one path, and no client, so nothing generates types
+from it. Both are committed, and both are gated at the repository root by
+`make contract-freshness`: re-emit and diff, which is a different question from
+`make test-drift`'s (that one asks whether the *client's* generated types reproduce from
+the document, and has no purchase on a document with no client). Commit the regenerated
+documents with whatever moved them.
 
 Prefer additive changes. Removing or renaming a field breaks a shipped client — a mobile
 app whose old versions stay installed on real phones for months.

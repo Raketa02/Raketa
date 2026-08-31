@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Raketa — dev console</title>
+<!--
+  The dev console. One file, no build: no npm, no bundler, no codegen and no
+  lint lane. See app/api/dev/__init__.py for why that is what makes the
+  placement under backend/ true rather than a detail beside it.
+
+  Three things this page will not do, and each of them is load-bearing:
+
+  1. **It stores no token.** The access token lives in one variable below and
+     nowhere else — no localStorage, no sessionStorage, no cookie. A dev tool
+     that persists tokens is one that leaks them into a screenshot or a shared
+     browser profile, and being logged out by a refresh is the correct cost.
+  2. **It holds one identity at a time.** Acting as somebody else replaces the
+     token and clears every pane, because the failure this console invites is
+     pressing the right button as the wrong person. The current identity is
+     rendered large and permanently for the same reason.
+  3. **Nothing reacts on its own.** There is not one setInterval or setTimeout
+     in this file. Every refresh is a button. The UI spec §G4 is explicit that
+     "acceptance is not instant and may never arrive — the interface must
+     handle pending indefinitely", and the whole reason this console exists is
+     that nothing auto-answers.
+-->
+<style>
+  :root {
+    --ink: #16181d; --dim: #6a7080; --line: #d9dde5; --bg: #f6f7f9;
+    --card: #fff; --accent: #1f6feb; --bad: #b42318; --good: #067647;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font: 14px/1.5 ui-sans-serif, system-ui, -apple-system, sans-serif;
+    color: var(--ink); background: var(--bg);
+  }
+  header {
+    position: sticky; top: 0; z-index: 2; background: var(--card);
+    border-bottom: 1px solid var(--line); padding: 12px 20px;
+    display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap;
+  }
+  header h1 { font-size: 13px; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--dim); margin: 0; font-weight: 600; }
+  #identity { font-size: 26px; font-weight: 700; }
+  #identity.nobody { color: var(--dim); font-weight: 500; }
+  #identity-id { color: var(--dim); font-size: 12px; font-family: ui-monospace, monospace; }
+  main { padding: 20px; display: grid; gap: 20px; max-width: 1100px; }
+  section { background: var(--card); border: 1px solid var(--line); border-radius: 8px; }
+  section > h2 {
+    margin: 0; padding: 12px 16px; border-bottom: 1px solid var(--line);
+    font-size: 13px; letter-spacing: .06em; text-transform: uppercase; color: var(--dim);
+  }
+  .body { padding: 16px; display: grid; gap: 12px; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--dim); }
+  td.id, .mono { font-family: ui-monospace, SFMono-Regular, monospace; font-size: 12px; color: var(--dim); }
+  button { font: inherit; padding: 5px 12px; border: 1px solid var(--line);
+    background: var(--card); border-radius: 6px; cursor: pointer; }
+  button:hover { border-color: var(--accent); color: var(--accent); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button:disabled { opacity: .45; cursor: default; border-color: var(--line); color: var(--ink); }
+  input, select { font: inherit; padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px; }
+  .note { color: var(--dim); }
+  .bad { color: var(--bad); }
+  .good { color: var(--good); }
+  .pill { display: inline-block; padding: 1px 8px; border: 1px solid var(--line);
+    border-radius: 999px; font-size: 12px; }
+  section[hidden] { display: none; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Raketa dev console</h1>
+  <div>
+    <div id="identity" class="nobody">nobody</div>
+    <div id="identity-id"></div>
+  </div>
+  <button id="sign-out" disabled>Sign out</button>
+</header>
+
+<main>
+  <section>
+    <h2>1 · Roster</h2>
+    <div class="body">
+      <p class="note" id="roster-note">Loading…</p>
+      <div class="row">
+        <input id="filter" placeholder="filter by address or handle" size="34">
+        <button id="reload-roster">Reload</button>
+      </div>
+      <table>
+        <thead><tr><th>Address</th><th>Handle</th><th>Player id</th><th></th></tr></thead>
+        <tbody id="roster"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="search-pane" hidden>
+    <h2>2 · Search as this player</h2>
+    <div class="body">
+      <p class="note">
+        The only legal way to mint an origin: a <em>Let's play</em> cites the search that
+        showed you the person. If somebody you expected is not here, that is a finding.
+      </p>
+      <div class="row">
+        <select id="search-sport"></select>
+        <!--
+          The two SearchMode values, spelled here rather than fetched. There is
+          no served vocabulary for them and deliberately so: the backend serves
+          the Sport registry and the Social tag list because a client must not
+          hardcode either, and this is not a client. Two values, closed, and the
+          contract is one directory away.
+        -->
+        <select id="search-mode">
+          <option value="COMPETITIVE">COMPETITIVE</option>
+          <option value="FOR_FUN">FOR_FUN</option>
+        </select>
+        <button id="run-search" class="primary">Run search</button>
+        <span id="search-note" class="note"></span>
+      </div>
+      <table>
+        <thead><tr><th>Handle</th><th>Fit</th><th>Distance</th><th>Player id</th><th></th></tr></thead>
+        <tbody id="candidates"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="answer-pane" hidden>
+    <h2>3 · Answer as this player</h2>
+    <div class="body">
+      <div class="row">
+        <button id="reload-challenges">Reload challenges</button>
+        <span id="challenge-note" class="note"></span>
+      </div>
+      <table>
+        <thead><tr>
+          <th>Sport</th><th>Standing</th><th>Opened</th><th>Court</th><th>Challenge id</th><th></th>
+        </tr></thead>
+        <tbody id="challenges"></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<script>
+"use strict";
+
+const API = "/api/v1";
+
+// The whole of this console's state. `token` is the one place an access token
+// exists in a browser this page controls, and it dies with the tab.
+let password = null;
+let accounts = [];
+let token = null;
+let acting = null;      // the roster row we are signed in as
+let lastSearchId = null;
+// The sport the rows on screen belong to. Read off the search's own answer
+// rather than off the dropdown, so changing the dropdown after a search cannot
+// send a yes citing an origin for a different sport.
+let lastSearchSport = null;
+
+const $ = (id) => document.getElementById(id);
+const text = (el, value) => { el.textContent = value; };
+
+function el(tag, attrs = {}, ...children) {
+  const node = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "class") node.className = v;
+    else if (k.startsWith("on")) node.addEventListener(k.slice(2), v);
+    else if (v !== null && v !== undefined) node.setAttribute(k, v);
+  }
+  for (const child of children) {
+    node.append(child instanceof Node ? child : document.createTextNode(child));
+  }
+  return node;
+}
+
+async function call(method, path, body) {
+  const headers = {};
+  if (body !== undefined) headers["Content-Type"] = "application/json";
+  if (token) headers["Authorization"] = "Bearer " + token;
+  const response = await fetch(path, {
+    method,
+    headers,
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  const raw = await response.text();
+  let parsed = null;
+  try { parsed = raw ? JSON.parse(raw) : null; } catch { parsed = null; }
+  if (!response.ok) {
+    // The backend's error envelope, shown as it arrived. A dev console that
+    // rewrote a refusal into friendlier words would hide the thing you came
+    // here to read.
+    const detail = parsed && (parsed.code || parsed.detail || parsed.message);
+    throw new Error(response.status + " " + (detail ? JSON.stringify(detail) : raw));
+  }
+  return parsed;
+}
+
+function say(node, message, kind) {
+  node.className = kind ? kind : "note";
+  text(node, message);
+}
+
+// --- 1 · Roster -----------------------------------------------------------
+
+async function loadRoster() {
+  const note = $("roster-note");
+  say(note, "Loading…");
+  try {
+    const body = await call("GET", "/dev/roster");
+    password = body.password;
+    accounts = body.accounts;
+    renderRoster();
+    say(note, accounts.length
+      ? accounts.length + " seed account(s). One password for all of them: " + password
+      : "No seed accounts in this database. Run `make seed` (backend/).");
+  } catch (error) {
+    accounts = [];
+    renderRoster();
+    say(note, String(error), "bad");
+  }
+}
+
+function renderRoster() {
+  const needle = $("filter").value.trim().toLowerCase();
+  const rows = accounts.filter((a) =>
+    !needle || a.email.toLowerCase().includes(needle) || a.nickname.toLowerCase().includes(needle));
+  const body = $("roster");
+  body.replaceChildren(...rows.map((account) =>
+    el("tr", {},
+      el("td", {}, account.email),
+      el("td", {}, account.nickname),
+      el("td", { class: "id" }, account.player_id),
+      el("td", {},
+        el("button", {
+          class: acting && acting.player_id === account.player_id ? "primary" : "",
+          onclick: () => actAs(account),
+        }, "Act as")))));
+}
+
+// --- The identity ---------------------------------------------------------
+
+async function actAs(account) {
+  const note = $("roster-note");
+  say(note, "Signing in as " + account.email + "…");
+  try {
+    // The ordinary login route, with the ordinary password. There is no
+    // impersonation endpoint here and no Act-As header — this console acts as
+    // another player by being them.
+    const tokens = await call("POST", API + "/auth/login",
+      { email: account.email, password });
+    token = tokens.access_token;
+    acting = account;
+    lastSearchId = null;
+    lastSearchSport = null;
+    $("candidates").replaceChildren();
+    $("challenges").replaceChildren();
+    say($("search-note"), "");
+    say($("challenge-note"), "");
+    $("identity").className = "";
+    text($("identity"), account.nickname);
+    text($("identity-id"), account.email + " · " + account.player_id);
+    $("sign-out").disabled = false;
+    $("search-pane").hidden = false;
+    $("answer-pane").hidden = false;
+    renderRoster();
+    say(note, "Acting as " + account.nickname + ".", "good");
+    await loadSports();
+    await loadChallenges();
+  } catch (error) {
+    signOut();
+    say(note, "Could not sign in: " + error, "bad");
+  }
+}
+
+function signOut() {
+  token = null;
+  acting = null;
+  lastSearchId = null;
+  lastSearchSport = null;
+  $("identity").className = "nobody";
+  text($("identity"), "nobody");
+  text($("identity-id"), "");
+  $("sign-out").disabled = true;
+  $("search-pane").hidden = true;
+  $("answer-pane").hidden = true;
+  $("candidates").replaceChildren();
+  $("challenges").replaceChildren();
+  renderRoster();
+}
+
+// --- 2 · Search as --------------------------------------------------------
+
+async function loadSports() {
+  const select = $("search-sport");
+  if (select.options.length) return;
+  const body = await call("GET", API + "/sports");
+  select.replaceChildren(...body.sports.map((sport) =>
+    el("option", { value: sport.sport }, sport.sport)));
+}
+
+async function runSearch() {
+  const note = $("search-note");
+  say(note, "Searching…");
+  try {
+    const body = await call("POST", API + "/searches", {
+      sport: $("search-sport").value,
+      mode: $("search-mode").value,
+    });
+    lastSearchId = body.search.search_id;
+    lastSearchSport = body.search.pool.sport;
+    renderCandidates(body.candidates);
+    say(note, body.candidates.length + " row(s) · search " + lastSearchId
+      + " · pool " + JSON.stringify(body.search.pool));
+  } catch (error) {
+    $("candidates").replaceChildren();
+    say(note, String(error), "bad");
+  }
+}
+
+function renderCandidates(candidates) {
+  $("candidates").replaceChildren(...candidates.map((candidate) => {
+    if (candidate.withheld) {
+      return el("tr", {}, el("td", { colspan: "5", class: "note" },
+        "withheld — recorded, and the live gates no longer admit it"));
+    }
+    return el("tr", {},
+      el("td", {}, candidate.player_card.nickname),
+      el("td", {}, String(candidate.fit)),
+      el("td", {}, candidate.distance_km === undefined ? "—" : candidate.distance_km + " km"),
+      el("td", { class: "id" }, candidate.player_id),
+      el("td", {}, el("button", {
+        onclick: (event) => expressInterest(event.target, candidate.player_id),
+      }, "Let's play")));
+  }));
+}
+
+async function expressInterest(button, playerId) {
+  button.disabled = true;
+  const note = $("search-note");
+  try {
+    const body = await call("POST", API + "/interest", {
+      sport: lastSearchSport,
+      player_id: playerId,
+      search_id: lastSearchId,
+    });
+    say(note, "Yes recorded" + (body.mutual ? " — mutual." : "."), "good");
+    await loadChallenges();
+  } catch (error) {
+    button.disabled = false;
+    say(note, String(error), "bad");
+  }
+}
+
+// --- 3 · Answer as --------------------------------------------------------
+
+async function loadChallenges() {
+  const note = $("challenge-note");
+  say(note, "Loading…");
+  try {
+    const body = await call("GET", API + "/challenges");
+    renderChallenges(body.challenges);
+    say(note, body.challenges.length + " challenge(s), newest first.");
+  } catch (error) {
+    $("challenges").replaceChildren();
+    say(note, String(error), "bad");
+  }
+}
+
+function seatLabel(seat) {
+  const who = seat.player_id
+    ? (acting && seat.player_id === acting.player_id ? "you" : seat.player_id.slice(0, 8))
+    : "empty";
+  return seat.side + ": " + who + (seat.answer ? " (" + seat.answer + ")" : "");
+}
+
+function mySeat(challenge) {
+  return challenge.seats.find((seat) => acting && seat.player_id === acting.player_id);
+}
+
+function renderChallenges(challenges) {
+  $("challenges").replaceChildren(...challenges.map((challenge) => {
+    const seat = mySeat(challenge);
+    const answerable = seat && !seat.answer
+      && challenge.organiser_id !== acting.player_id
+      && challenge.standing === "AWAITING_ANSWERS";
+    const actions = answerable
+      ? el("td", {},
+          el("button", {
+            class: "primary",
+            onclick: (event) => answer(event.target, challenge.challenge_id, "accept"),
+          }, "Accept"),
+          " ",
+          el("button", {
+            onclick: (event) => answer(event.target, challenge.challenge_id, "decline"),
+          }, "Decline"))
+      : el("td", { class: "note" },
+          challenge.organiser_id === acting.player_id ? "yours" : "nothing to answer");
+    return el("tr", {},
+      el("td", {}, challenge.sport + (challenge.mode ? " · " + challenge.mode : "")),
+      el("td", {}, el("span", { class: "pill" }, challenge.standing)),
+      el("td", { class: "mono" }, challenge.opened_at),
+      el("td", { class: "note" }, challenge.seats.map(seatLabel).join("  ·  ")),
+      el("td", { class: "id" }, challenge.challenge_id),
+      actions);
+  }));
+}
+
+async function answer(button, challengeId, verb) {
+  button.disabled = true;
+  const note = $("challenge-note");
+  try {
+    const challenge = await call("POST", API + "/challenges/" + challengeId + "/" + verb);
+    say(note, verb + "ed — the challenge now stands " + challenge.standing + ".", "good");
+    await loadChallenges();
+  } catch (error) {
+    button.disabled = false;
+    say(note, String(error), "bad");
+  }
+}
+
+// --- Wiring ---------------------------------------------------------------
+
+$("reload-roster").addEventListener("click", loadRoster);
+$("filter").addEventListener("input", renderRoster);
+$("sign-out").addEventListener("click", signOut);
+$("run-search").addEventListener("click", runSearch);
+$("reload-challenges").addEventListener("click", loadChallenges);
+
+loadRoster();
+</script>
+</body>
+</html>

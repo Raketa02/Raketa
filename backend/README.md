@@ -184,6 +184,10 @@ The route table above is not the whole surface — `/api/v1/sports`,
 `/api/v1/assessments`, `/api/v1/ratings` and `/api/v1/player-profile/options`
 are in `openapi.player.json`, which is the document that is authoritative.
 
+There is a second surface, and it is not a client: the **dev console** at `/dev`, whose
+contract is `openapi.dev.json` and holds one path. It is served in `local`, `development`
+and `staging` and refuses to be imported in `production`. See *The Dev Console* below.
+
 Example login request:
 
 ```bash
@@ -549,6 +553,47 @@ Addresses are on `.example` — a TLD RFC 2606 reserves, so no registry can sell
 run pointed at the wrong database cannot mail a stranger. Not the `.test` of the same
 sentence, because `EmailStr` at the HTTP boundary refuses that one and a seeded account
 nobody can sign in as is not an account.
+
+## The Dev Console
+
+**Nothing in Play can be exercised with one phone.** `Line-up incomplete`, the decline that
+reopens a seat, the instant match born of a mutual yes — every one of them needs a real
+second player answering. The dev console is that second player.
+
+```bash
+make up && make seed          # the stack, and the accounts to act as
+open http://localhost:8000/dev
+```
+
+Three views, in order — **roster**, **search as**, **answer as**. Pick a row, and the
+console signs in as that account through the ordinary `POST /api/v1/auth/login` with the
+one public seed password. From there it runs real searches, says *Let's play*, and accepts
+or declines seats, all through the player API, as that player.
+
+What it is, stated because each half is load-bearing:
+
+- **It is not a third app.** It is `app/api/dev/`, one no-build `console.html` behind a
+  `FileResponse` and one route. No npm, no bundler, no codegen, no lint lane. The day it
+  wants a component tree it has become a product, and the placement is re-argued rather
+  than grown into.
+- **There is no impersonation endpoint and no `Act-As` header.** The obvious shape —
+  `POST /dev/sessions {handle} → tokens` — was refused by name. The browser presents a
+  credential to the ordinary login route, which means the roster hands it one: the response
+  carries the seed password **once, at the top level**, because one password for every
+  seeded account is what `app/seeds/catalog.py` decided. The consequence is the good one —
+  every write the console presses is a *player-surface* write.
+- **It is gated structurally and by data, and only one of those can fail.** The structural
+  gate is `app/api/dev/gate.py`'s `CONSOLE_SERVED`, a second table written out per
+  environment — importing `app/api/dev/routes.py` under `APP_ENV=production` raises
+  `ConsoleRefused`, and `create_app` mounts nothing. The data gate is a *consequence*: the
+  roster lists accounts addressed on the reserved `.example` TLD, and production has none.
+- **Nothing reacts on its own.** There is not one timer in the page. UI spec §G4 is explicit
+  that *"acceptance is not instant and may never arrive"*, and the console exists so that a
+  human decides when the other side answers.
+- **Its contract is `openapi.dev.json`, and it holds exactly one path** — the roster.
+  Nothing generates types from it, so it is gated by a **freshness** check
+  (`make contract-freshness`) rather than by the client drift check, which has no purchase
+  on a document with no client.
 
 ## Photo Storage
 

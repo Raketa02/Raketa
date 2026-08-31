@@ -1,0 +1,130 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Raketa Dev API",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/dev/roster": {
+      "get": {
+        "tags": [
+          "dev"
+        ],
+        "summary": "The accounts the console may act as, and the one password",
+        "operationId": "read_roster_dev_roster_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RosterResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "RosterAccount": {
+        "properties": {
+          "player_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Player Id",
+            "description": "The id every player-surface read and write names this account by. Same value as the user's id \u2014 there is one identity."
+          },
+          "email": {
+            "type": "string",
+            "title": "Email",
+            "description": "What the console types into `/auth/login`"
+          },
+          "nickname": {
+            "type": "string",
+            "title": "Nickname",
+            "description": "The whole handle. On a seeded account it is also what the account is *for* \u2014 the state it was named for \u2014 which is why this roster reads meaning off the address rather than out of the seed catalog."
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_id",
+          "email",
+          "nickname"
+        ],
+        "title": "RosterAccount",
+        "description": "One account the console may sign in as."
+      },
+      "RosterResponse": {
+        "properties": {
+          "password": {
+            "type": "string",
+            "title": "Password",
+            "description": "The single password every seeded account holds. **At the top level, never per account**: one password for all of them is the seed system's own decision, and a per-row copy would state the opposite. It is public in this repository's source; the environment gate, not secrecy, is what makes that safe."
+          },
+          "accounts": {
+            "items": {
+              "$ref": "#/components/schemas/RosterAccount"
+            },
+            "type": "array",
+            "title": "Accounts",
+            "description": "Every account on the reserved seed TLD, ordered by address and **unpaginated** \u2014 the console filters client-side. An empty list is the honest answer in an unseeded database, and the only answer possible in one holding real players."
+          }
+        },
+        "type": "object",
+        "required": [
+          "password",
+          "accounts"
+        ],
+        "title": "RosterResponse",
+        "description": "Every account the console may act as, and the one password that does it."
+      },
+      "ErrorResponse": {
+        "description": "The body of every error response, on both API surfaces.",
+        "properties": {
+          "code": {
+            "description": "Stable, machine-readable identifier for this exact failure. The only half of the envelope a client may branch on.",
+            "examples": [
+              "question_not_outstanding"
+            ],
+            "title": "Code",
+            "type": "string"
+          },
+          "message": {
+            "description": "Human-readable diagnostic. Never the copy shown to a user \u2014 that is the client's, chosen from the code.",
+            "title": "Message",
+            "type": "string"
+          },
+          "trace_id": {
+            "description": "This request's identifier, also returned on the X-Request-ID header. Ties a client-side failure to a server log without logging a payload.",
+            "title": "Trace Id",
+            "type": "string"
+          },
+          "details": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Structured context for this code, when the code defines any.",
+            "title": "Details"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "trace_id"
+        ],
+        "title": "ErrorResponse",
+        "type": "object"
+      }
+    }
+  }
+}

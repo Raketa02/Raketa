@@ -273,6 +273,36 @@ there; they are not repeated here.
   reason exactly, where a bare absence is also what *no rating*, *out of range* and *the
   wrong gender preference* look like. _Avoid_: asserting an absence on its own, reading the
   edge back out of the store that wrote it.
+- **Dev console** — the backend-served development tool at `/dev`: surface `dev`, contract
+  `openapi.dev.json`, code in `app/api/dev/`. Two things a reader would otherwise assume
+  wrongly. **It is not a client** — nothing generates types from its contract, which is why
+  that document is gated by a *freshness* check and not by `check-contract-drift.sh`. And
+  it acts as another player **only by signing in as one**, through the ordinary
+  `POST /api/v1/auth/login` with the public seed password its roster carries at the top
+  level; there is no impersonation endpoint, no `Act-As` header and no authorisation path
+  that exists for it, so every write it presses is a **player-surface** write and *never
+  acts on behalf of anybody* holds by construction rather than by inspection. Three views —
+  roster, search as, answer as — one identity at a time, the token in memory only, the
+  current identity rendered large, and **not one timer**: it exists so that nothing
+  auto-answers. `frontend_club/` was *"the club console"* and is gone; this is the only
+  console, and saying so here is cheaper than having the collision rediscovered.
+  _Avoid_: calling it an app (it is one HTML file and one route), a second client, an admin
+  panel.
+- **Console gate** — `CONSOLE_SERVED` in `app/api/dev/gate.py`: where the dev console is
+  served, written out per environment with the same `_undecided` refusal the **Seed guard**
+  carries. **A second table, and never `SEEDABLE`** — the same answer today to a different
+  question, and deriving one refusal from another is what `guard.py`'s own comment argues
+  against. The refusal sits at the top of `routes.py` rather than in the package's
+  `__init__`, which is where the seed system puts its own and is **wrong here**:
+  `create_app` reads the table in every environment to decide whether to mount anything, so
+  a package that refused on import would make a production deployable crash at startup
+  reading its own dev tool. Beside it the data half is a **filter, not a refusal** — a seed
+  account is one addressed on the reserved `.example` TLD — so *gated structurally and by
+  data* resolves asymmetrically: the structural gate is a check and the data gate is a
+  **consequence**, since production has no such accounts. Both hold; only one can fail.
+  _Avoid_: deriving it from `SEEDABLE`, putting the refusal where the mount reads it,
+  making the roster *refuse* a non-seed address (it would be theatre — the login route any
+  browser reaches takes any credential).
 - **Served vocabulary** — a closed domain constant the platform owns, held in exactly one
   module of the context that owns it and exposed **read-only** over the player API so no
   client hardcodes it. Two exist: the `Sport` registry at `GET /api/v1/sports`, and the

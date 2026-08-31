@@ -44,6 +44,14 @@ the hooks themselves, `make gen-api`.
   its client types fails the build
   ([`.github/scripts/check-contract-drift.sh`](.github/scripts/check-contract-drift.sh),
   proven still to fire by `make test-drift`).
+  **The backend emits one document per surface, and there are two.** The second is the
+  **dev console**'s `backend/openapi.dev.json` (#256) — one path, and no client, so nothing
+  generates types from it. Its analogue of the drift check is a **freshness** check: re-emit
+  the documents and diff the JSON, which is also the only thing that would catch a stale
+  `openapi.player.json` — the drift check regenerates the client's types *from* that
+  document and finds them in perfect agreement
+  ([`.github/scripts/check-contract-freshness.sh`](.github/scripts/check-contract-freshness.sh),
+  `make contract-freshness`, proven still to fire by `make test-contract-freshness`).
 - **One Poetry writes `backend/poetry.lock` and every pin reads it.** The version is
   pinned in five places across `backend/` and `.github/`, and each must be at least the
   version stamped in the lock's header. Poetry only *warns* when a pin is too old and

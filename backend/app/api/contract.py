@@ -9,7 +9,19 @@ points the client's codegen at the file it writes.
 
 It is written as a *surface* rather than as "the app's OpenAPI" so that adding a
 second client later is mounting a second router here, not restructuring this
-file: ``build_surface_spec`` already generates one surface in isolation.
+file: ``build_surface_spec`` already generates one surface in isolation. The
+second entry has arrived, and it is not a client: the **dev console**, emitted as
+``openapi.dev.json``. Nothing generates types from that document — it is checked
+for *freshness* instead (``.github/scripts/check-contract-freshness.sh``), because
+``check-contract-drift.sh`` diffs a client's generated types against a
+regeneration with that client's own pinned codegen, and here there is no client
+and no codegen.
+
+**Consequence, stated rather than discovered:** importing the dev router is
+unconditional, so this module refuses to import in production exactly as
+``app/seeds/`` does. That makes it a dev-time module like the seeds — run by
+``make openapi``, never by a server. ``app.main`` is what a server imports, and
+it reads the gate rather than the router.
 """
 
 from __future__ import annotations
@@ -19,6 +31,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, FastAPI
 
+from app.api.dev.routes import dev_api_router
 from app.api.v1.player import player_api_router
 from app.core.config import get_settings
 from app.core.exception_handlers import ErrorResponse
@@ -29,6 +42,12 @@ _BACKEND_ROOT = Path(__file__).resolve().parents[2]
 
 SURFACES: dict[str, APIRouter] = {
     "player": player_api_router,
+    # One entry, and the whole dev contract. The page itself is
+    # `include_in_schema=False` and every other request the console sends is a
+    # player-surface request it makes as the player it signed in as — so this
+    # document holds exactly one path, and that is the honest description of
+    # what the surface is.
+    "dev": dev_api_router,
 }
 
 
