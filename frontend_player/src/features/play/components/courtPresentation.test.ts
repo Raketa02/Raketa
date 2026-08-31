@@ -7,9 +7,16 @@
  * sentences are the whole explanation and a number in one would be invented.
  */
 
+import { seatLock, type BuildSeat, type SeatGuard } from '../domain/lineup';
 import { GROUP_REASONS, UNFILLED_REASONS } from '../domain/vocabulary';
 
-import { WITHHELD_SEAT_LINE, groupReasonLine, unfilledSeatLine } from './courtPresentation';
+import { SWAP_TOGGLE_LABEL } from './accessibilityPresentation';
+import {
+  WITHHELD_SEAT_LINE,
+  groupReasonLine,
+  seatGuardLine,
+  unfilledSeatLine,
+} from './courtPresentation';
 
 describe('an unfilled seat', () => {
   it('gives each obstacle its own sentence', () => {
@@ -71,5 +78,46 @@ describe('a seat whose player is no longer available', () => {
 
   it('is not a sentence about an unfilled seat — the seat is filled, by somebody', () => {
     expect(UNFILLED_REASONS.map(unfilledSeatLine)).not.toContain(WITHHELD_SEAT_LINE);
+  });
+});
+
+describe('a refused tap on a seat', () => {
+  const GUARDS: readonly SeatGuard[] = ['SEAT_IS_YOURS', 'ALREADY_ACCEPTED'];
+
+  it('has one sentence per lock, and there are two locks', () => {
+    // Every reason a seat is locked reaches a refusal a player can read: `seatLock` returns
+    // exactly these codes, so a third lock added there fails the compiler here.
+    const locks: readonly (SeatGuard | undefined)[] = (
+      [
+        { kind: 'you' },
+        { kind: 'player', accepted: true },
+        { kind: 'player', accepted: false },
+        { kind: 'empty' },
+      ] satisfies readonly BuildSeat[]
+    ).map(seatLock);
+
+    expect(locks).toEqual(['SEAT_IS_YOURS', 'ALREADY_ACCEPTED', undefined, undefined]);
+    expect(new Set(GUARDS.map((guard) => seatGuardLine(guard, 'ana'))).size).toBe(GUARDS.length);
+  });
+
+  it('names the way out rather than only saying no', () => {
+    // A refusal that only refuses is a control a player presses twice. Your own seat is
+    // refused BECAUSE swap mode is where sides change, so the sentence names that toggle —
+    // through the switch's own label, so the screen cannot start referring to a control that
+    // is not on it.
+    expect(seatGuardLine('SEAT_IS_YOURS', 'You')).toContain(SWAP_TOGGLE_LABEL);
+  });
+
+  it('names the person whose place is kept, and never quotes you at yourself', () => {
+    expect(seatGuardLine('ALREADY_ACCEPTED', 'ana')).toBe(
+      'ana already accepted — they keep their place',
+    );
+    expect(seatGuardLine('SEAT_IS_YOURS', 'You')).not.toContain('You already');
+  });
+
+  it('says what an acceptance costs rather than offering a way round it', () => {
+    // It is refused permanently — there is no toggle for this one — so the sentence states
+    // the consequence instead: they keep their place, and you can still move them.
+    expect(seatGuardLine('ALREADY_ACCEPTED', 'ana')).not.toContain(SWAP_TOGGLE_LABEL);
   });
 });

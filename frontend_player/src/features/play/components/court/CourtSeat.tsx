@@ -4,7 +4,8 @@
  * [7.12](../../../../../docs/design-system.md#712-the-court) draws the line this file sits on:
  * *"the court owns geometry and knows nothing about players; a seat owns its label, its ring,
  * its badge and its taps."* So `Court` hands this component a box and a position, and
- * everything inside that box is here.
+ * everything inside that box is here. The face and the ring are
+ * [`seatFace.tsx`](./seatFace.tsx)'s, because the read-only court draws the same ones.
  *
  * ## The label is an identifier under a face, and it truncates
  *
@@ -32,46 +33,38 @@
  * for: a figure compared vertically against another figure. What is left after §5 takes the
  * level off is a **handle** — a word — and `tag` is the design system's 9,5pt word.
  *
- * ## Three rings, and `CourtMini` draws two of them
+ * ## What this seat does not do yet
  *
- * They are [`seatRing.ts`](./seatRing.ts)'s, because the read-only court wears the same two —
- * §4's *the two courts share everything that is a number*, and 7.12 refuses to put a seat's
- * ring in the theme. What is here is which of the three this seat is wearing.
+ * **There is no long press.** §20.4 records a *"holding ring — the 430 ms press feedback"*, and
+ * the prototype's seat opened a record sheet on a hold.
+ * [#231](https://github.com/Raketa02/Raketa/issues/231) repointed a card's long press at *Why
+ * 78?* when K-7 ruled the record sheets out, and nothing has said where a **seat's** hold
+ * should land — the pairing's why-fit, the player, or nowhere. So it is named here rather than
+ * invented: a gesture with no destination is a destination chosen by whoever wires it first.
  */
 
-import { StyleSheet, Text, View, Pressable } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { playerName } from '@/shared/formatting/playerName';
 import { Plus, theme } from '@/shared/ui';
 
 import type { SeatPlace } from '../../domain/lineup';
 import type { UnfilledReason } from '../../domain/vocabulary';
-import { clearSeatLabel, seatLabel, type SeatOccupant } from '../accessibilityPresentation';
-import { CandidatePhoto, candidatePhotoRadius } from '../candidate/CandidatePhoto';
+import { clearSeatLabel, seatLabel } from '../accessibilityPresentation';
 
-import { seatName } from './seatName';
-import { seatRing } from './seatRing';
+import { SeatFace, seatBox } from './seatFace';
+import { seatWho } from './seatWho';
 
 /**
- * Who is in a seat, as the **component** needs them.
+ * Who is in a seat, as the **interactive** court needs them.
  *
- * A superset of `domain/lineup`'s `BuildSeat`: the rules read the kind and the acceptance, and
- * everything else here is drawn. One type rather than two passed side by side, because a seat
- * that could be handed a `player` to draw and an `empty` to decide with is a seat that will be.
+ * A superset of `domain/lineup`'s `BuildSeat` and of `seatFace.tsx`'s `CourtFaceOccupant`: the
+ * rules read the kind and the acceptance, the drawing reads the id and the link, and the
+ * sentences read the handle and the level. One type rather than three passed side by side,
+ * because a seat that could be handed a `player` to draw and an `empty` to decide with is a
+ * seat that eventually will be.
  */
 export type CourtSeatOccupant =
-  | {
-      readonly kind: 'you';
-      /**
-       * Your own id.
-       *
-       * Your seat draws the **poster** and never a photograph: `photo_url` is minted for
-       * another player's card row, nothing in a line-up carries yours, and `GET /photos/{id}`
-       * signs your own by an id this component was never handed. A poster is a fact about an
-       * id, so your seat is the one face on the court drawn from an id alone.
-       */
-      readonly playerId: string;
-    }
+  | { readonly kind: 'you'; readonly playerId: string }
   | {
       readonly kind: 'player';
       /** The poster's whole input when there is no photograph. */
@@ -90,29 +83,45 @@ export type CourtSeatOccupant =
     };
 
 /**
- * The clear badge, as a share of the face it sits on.
+ * The clear badge, as a share of the face it sits on — **and the one target in this app that
+ * cannot be grown to 44.**
  *
  * [6.9](../../../../../docs/design-system.md#69-the-photo-tile-and-picker)'s remove control is
- * the drawing — a solid `night` square carrying a white mark at the `tag` radius — and §4 says
- * so: *"the seat-clear badge is not a new component"*, and the prototype's 18px circle at
- * radius 9 is dropped. What does **not** carry across is 6.9's 28pt, which is a share of a
- * tile a third of the screen wide: at a 46pt seat the same square is the seat. So it is a
- * share of its own box, exactly as `CandidatePhoto`'s corner is, and it scales with the court
- * rather than being a fourth fixed number.
+ * the drawing, and §4 says so: *"the seat-clear badge is not a new component"* — a solid
+ * `night` square carrying a white mark at the `tag` radius, and the prototype's 18px circle at
+ * radius 9 dropped. What does **not** carry across is 6.9's 28pt and its 8pt slop, and the
+ * arithmetic is why.
  *
- * **The target is grown by slop and not by the visual** — 6.5's rule, and the arithmetic below
- * is what 44 costs at whatever size the face turned out to be.
+ * > `theme.size.minTouch` is 44, and [6.5](../../../../../docs/design-system.md#65-touch-targets)
+ * > anchors the photo tile's whole 44pt square **inside** the tile because a target may not
+ * > take another control's area. On a court the control it would take from is the **seat
+ * > underneath it**: React Native gives an overlap to the topmost sibling, so a 44pt square
+ * > inset into a 46pt face leaves the seat a two-point border. Growing outward instead is
+ * > worse than useless — a touch past a parent's bounds is never delivered, and `Court` sizes
+ * > each seat's box to the face exactly.
+ *
+ * **So both targets cannot be 44 on one seat, and no arrangement makes them.** A face would
+ * have to be at least `44 + 44` for a corner badge to leave the seat a clean square, and at
+ * 23,5 % of the court's width that is a court 375pt wide — wider than the content width of the
+ * phones this app runs on. The badge is therefore drawn at a third of the face and grown to
+ * **half** of it: bounded by the seat rather than by the floor, which is 6.5's *"horizontal
+ * slop is bounded by the neighbour"* read against the neighbour a court actually has. The seat
+ * keeps everything else, which is most of it.
+ *
+ * **This is a design-system question rather than a component decision**, and it is recorded
+ * here because §4 imported 6.9's numbers without running them against a 46pt box. The two ways
+ * out are a wider court in the builder, and a badge that is not on the face at all.
  */
 const CLEAR_RATIO = 1 / 3;
 
-/** 6.5's floor, which every target in this app is grown to rather than drawn at. */
-const TARGET = 44;
+/** The badge's target as a share of the face: half, and the seat has the rest. */
+const CLEAR_TARGET_RATIO = 1 / 2;
 
 const clearSize = (face: number) => Math.round(face * CLEAR_RATIO);
 
-/** What the badge's visual is short of 44, split evenly around it. */
+/** What grows the visual to its target, split around it — 6.5's *visual small, target grown*. */
 function clearSlop(face: number) {
-  const grow = Math.max(0, (TARGET - clearSize(face)) / 2);
+  const grow = Math.max(0, (face * CLEAR_TARGET_RATIO - clearSize(face)) / 2);
   return { top: grow, bottom: grow, left: grow, right: grow };
 }
 
@@ -135,44 +144,30 @@ export interface CourtSeatProps {
 }
 
 export function CourtSeat({ size, place, occupant, selected, onPress, onClear }: CourtSeatProps) {
-  const radius = candidatePhotoRadius(size);
-  const face = { width: size, height: size, borderRadius: radius };
+  const who = seatWho(occupant);
+  const box = seatBox(size);
 
   return (
-    <View style={face}>
+    <View style={box}>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={seatLabel(place, spoken(occupant))}
+        accessibilityLabel={seatLabel(place, who.spoken)}
         accessibilityState={{ selected }}
         onPress={onPress}
-        style={face}
+        // 6.6: touch has no hover, so the press is declared. The photo tile's `.7`, because
+        // what dims is a photograph and this is the same rectangle at a quarter of the size.
+        style={({ pressed }) => [box, pressed ? s.pressed : undefined]}
       >
-        {occupant.kind === 'empty' ? (
-          // 6.9's add glyph, which is `Tick.tsx`'s crossed pair — the same drawing rather than
-          // a second copy of it, which is what that file exists to prevent. Volt as a stroke,
-          // legal on the one kind of bed it may be one on, and this is the court's.
-          <View style={[face, s.emptyFace]}>
-            <Plus />
-          </View>
-        ) : (
-          <CandidatePhoto
-            playerId={occupant.playerId}
-            photoUrl={occupant.kind === 'you' ? undefined : occupant.photoUrl}
-            box={{ kind: 'face', size }}
-          />
-        )}
-
-        {/* Over the face rather than around it: a border on the box below would move the
-            photograph in by two points the moment a seat was selected. */}
-        <View
-          style={[
-            StyleSheet.absoluteFill,
-            { borderRadius: radius },
-            occupant.kind === 'empty' ? seatRing.empty : seatRing.seated,
-            selected ? seatRing.selected : undefined,
-          ]}
-          pointerEvents="none"
-        />
+        <SeatFace
+          size={size}
+          occupant={occupant}
+          ring={selected ? 'selected' : occupant.kind === 'empty' ? 'empty' : 'seated'}
+        >
+          {/* 6.9's add glyph, which is `Tick.tsx`'s crossed pair — the same drawing rather than
+              a second copy of it, which is what that file exists to prevent. Volt as a stroke,
+              on the one kind of bed it may be one, and this is the court's. */}
+          <Plus />
+        </SeatFace>
       </Pressable>
 
       {/* Under the face and outside the court's own box for this seat, which is the face and
@@ -185,7 +180,7 @@ export function CourtSeat({ size, place, occupant, selected, onPress, onClear }:
         accessibilityElementsHidden
         importantForAccessibility="no-hide-descendants"
       >
-        {seatName(occupant)}
+        {who.name}
       </Text>
 
       {onClear === undefined ? null : (
@@ -194,10 +189,14 @@ export function CourtSeat({ size, place, occupant, selected, onPress, onClear }:
           // The drawn word and the spoken name are one `playerName()` — §15's whole handle.
           // The box truncates it and the formatter never does, which is the whole of why a
           // seat label may be cut short and a sentence may not.
-          accessibilityLabel={clearSeatLabel({ name: seatName(occupant), place })}
+          accessibilityLabel={clearSeatLabel({ name: who.name, place })}
           onPress={onClear}
           hitSlop={clearSlop(size)}
-          style={[s.clear, { width: clearSize(size), height: clearSize(size) }]}
+          style={({ pressed }) => [
+            s.clear,
+            { width: clearSize(size), height: clearSize(size) },
+            pressed ? s.pressed : undefined,
+          ]}
         >
           {/* A multiplication sign, not a lowercase x — the x has a baseline and sits low. */}
           <Text style={s.clearMark} accessibilityElementsHidden importantForAccessibility="no">
@@ -209,24 +208,9 @@ export function CourtSeat({ size, place, occupant, selected, onPress, onClear }:
   );
 }
 
-/** What the seat **says**, which is never what it draws: the handle whole, and the level with it. */
-function spoken(occupant: CourtSeatOccupant): SeatOccupant {
-  switch (occupant.kind) {
-    case 'you':
-      return { kind: 'you' };
-    case 'player':
-      return {
-        kind: 'player',
-        name: playerName({ kind: 'player', nickname: occupant.nickname }),
-        level: occupant.level,
-      };
-    case 'empty':
-      return { kind: 'empty', unfilled: occupant.unfilled };
-  }
-}
-
 const s = StyleSheet.create({
-  emptyFace: { alignItems: 'center', justifyContent: 'center' },
+  // 6.6's photo-tile value, for both of this file's pressables.
+  pressed: { opacity: 0.7 },
   label: {
     ...theme.type.tag,
     ...theme.shadow.textOnMedia,

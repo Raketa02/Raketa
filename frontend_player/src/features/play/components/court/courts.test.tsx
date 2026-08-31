@@ -9,7 +9,7 @@
  */
 
 import { fireEvent, render, screen } from '@testing-library/react-native';
-import { StyleSheet, type TextStyle } from 'react-native';
+import { StyleSheet, View, type TextStyle, type ViewStyle } from 'react-native';
 
 import { useToastQueue } from '@/shared/store/toast.store';
 import { theme } from '@/shared/ui';
@@ -275,6 +275,37 @@ describe('the read-only court', () => {
     expect(screen.queryByText('You', { includeHiddenElements: true })).toBeNull();
   });
 
+  it('rings your own face in volt, which is the one fact four faces cannot state', () => {
+    render(
+      <CourtMini
+        sport="padel"
+        width={196}
+        summary="Padel, 2 of 4 seats filled."
+        seats={[
+          { kind: 'you', playerId: 'me' },
+          { kind: 'player', playerId: 'player-b' },
+          { kind: 'empty' },
+          { kind: 'empty' },
+        ]}
+      />,
+    );
+
+    const rings = ringColours();
+
+    // Volt once, white once, and nothing at all for the two seats nobody is in: an unfilled
+    // seat on a court nobody can press is an invitation with nothing to accept.
+    expect(rings.filter((colour) => colour === theme.color.volt)).toHaveLength(1);
+    expect(rings.filter((colour) => colour === theme.color.surface)).toHaveLength(1);
+  });
+
+  it('spends volt on you where the interactive court spends it on a selection', () => {
+    // One meaning per surface. The read-only court has no selection to confuse it with, and
+    // the interactive one marks nobody — which is what keeps 1.2's single accent honest.
+    build([YOU, PARTNER, OPPONENT, EMPTY], true);
+
+    expect(ringColours()).not.toContain(theme.color.volt);
+  });
+
   it('announces one summary and no seats, because a face has no action to navigate by', () => {
     render(
       <CourtMini
@@ -289,5 +320,42 @@ describe('the read-only court', () => {
     expect(screen.queryByLabelText(/side/)).toBeNull();
   });
 });
+
+describe('the clear badge', () => {
+  it('grows its target inward, bounded by the seat rather than by the 44pt floor', () => {
+    // React Native never delivers a touch past a parent's bounds and `Court` sizes each seat's
+    // box to the face exactly, so an outward slop would be inert. Inward it takes the seat's
+    // own area, and both cannot be 44 on a 46pt face — see `CourtSeat`'s own note.
+    build([YOU, PARTNER, OPPONENT, EMPTY]);
+
+    const badge = screen.getByLabelText(`Remove ${LONG_HANDLE} from your side`);
+    const size = StyleSheet.flatten(badge.props.style as TextStyle)?.width as number;
+    const slop = badge.props.hitSlop as { top: number };
+
+    expect(size + slop.top * 2).toBeLessThanOrEqual(46 / 2 + 1);
+    expect(size + slop.top * 2).toBeLessThan(theme.size.minTouch);
+  });
+
+  it('declares a pressed appearance, on itself and on the seat under it', () => {
+    // 6.6: touch has no hover, so every pressable says what a press looks like.
+    build([YOU, PARTNER, OPPONENT, EMPTY]);
+
+    for (const label of [`Remove ${LONG_HANDLE} from your side`, 'Their side, ana, level 3,10']) {
+      const style = screen.getByLabelText(label).props.style;
+
+      expect(StyleSheet.flatten(style as TextStyle)?.opacity).toBeUndefined();
+      expect(typeof style).not.toBe('function');
+    }
+  });
+});
+
+/** Every ring drawn on the court, by colour — the overlay views, which are the only bordered ones. */
+function ringColours(): readonly string[] {
+  return screen
+    .UNSAFE_queryAllByType(View)
+    .map((node) => StyleSheet.flatten(node.props.style as ViewStyle))
+    .filter((style) => style?.borderColor !== undefined)
+    .map((style) => String(style.borderColor));
+}
 
 function noop() {}

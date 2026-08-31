@@ -272,10 +272,16 @@ characters of handle in a 46pt seat is about four, so it truncates to one line w
 ellipsis, the level comes off it, and the **sentence and the spoken name stay whole**, which is
 what keeps ADR-0107 intact: a truncation invents nothing. Under both, `domain/lineup.ts` holds
 what somebody could be wrong about — `seatPlaces`, `seatIsLocked` / `seatIsClearable`, and the
-**swap truth table**, which is a decision and never a write. The **two guard toasts** are the
+**swap truth table**, which is a decision and never a write. `seatLock` is the one spelling of
+_why_ a seat is locked, so the **two guard toasts** are its two codes: they are the
 replacement's and not the trade's — your own seat and a seat somebody already accepted are both
 freely movable across the net — and there is no third, because the clear badge is **not drawn**
-where it would be refused.
+where it would be refused. **Volt means one thing per court**: the seat picked for a swap on the
+interactive one, and which seat is yours on the read-only one, which never has a selection to
+confuse it with. **The clear badge is the one target in this app that cannot reach 44pt** — a
+44pt square inset into a 46pt face leaves the seat a two-point border, and a slop grown outward
+is never delivered past a parent's bounds, so it is bounded by the seat instead and the conflict
+is recorded in `CourtSeat.tsx` rather than papered over.
 
 **Label coverage is a compile error, and the lint rule is the other half.** The `Record`s
 keyed by the generated unions already refuse a code with no words, and **every pressable

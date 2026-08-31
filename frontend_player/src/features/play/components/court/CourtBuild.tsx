@@ -45,7 +45,7 @@ import { seatIsClearable, seatPlaces, tapSeat } from '../../domain/lineup';
 import { seatGuardLine } from '../courtPresentation';
 
 import { CourtSeat, type CourtSeatOccupant } from './CourtSeat';
-import { seatName } from './seatName';
+import { seatWho } from './seatWho';
 
 export interface CourtBuildProps {
   readonly sport: SportKey;
@@ -108,7 +108,7 @@ export function CourtBuild({
         setSelected(undefined);
         return onSwap(decision.from, decision.to);
       case 'REFUSE':
-        return showToast({ message: seatGuardLine(decision.guard, seatName(occupant)) });
+        return showToast({ message: seatGuardLine(decision.guard, seatWho(occupant).name) });
     }
   }
 

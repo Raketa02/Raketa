@@ -18,32 +18,17 @@
  * cut to four characters. The court's `summary` says how many seats are filled and the screen
  * says who is in them.
  *
+ * **An empty seat is drawn as nothing**, and your own face is the one thing this court marks —
+ * see `ringFor` below.
+ *
  * **And nothing here announces.** §20.1's rule is *one accessibility element per action, and
  * everything actionless merges into the nearest action above it*. A read-only face has no
  * action; the summary preceding the seats is the element, and it is `Court`'s.
  */
 
-import { StyleSheet, View } from 'react-native';
-
 import { Court, courtSeatSize, type SportKey } from '@/shared/ui';
 
-import { CandidatePhoto, candidatePhotoRadius } from '../candidate/CandidatePhoto';
-
-import { seatRing } from './seatRing';
-
-/**
- * Who is in a seat, as a court that cannot be touched needs them: an id, and a link if there
- * is one.
- *
- * Deliberately **less** than `CourtSeat`'s occupant rather than the same type reused — the
- * name, the level and the acceptance are facts the interactive seat draws or decides with, and
- * a caller made to supply them here would be supplying them for nothing. The richer type is
- * structurally one of these, so a screen holding a line-up can hand the same array to both.
- */
-export type CourtFaceOccupant =
-  | { readonly kind: 'you'; readonly playerId: string }
-  | { readonly kind: 'player'; readonly playerId: string; readonly photoUrl?: string }
-  | { readonly kind: 'empty' };
+import { SeatFace, type CourtFaceOccupant } from './seatFace';
 
 export interface CourtMiniProps {
   readonly sport: SportKey;
@@ -63,35 +48,32 @@ export function CourtMini({ sport, width, summary, caption, sideLabels, seats }:
   return (
     <Court sport={sport} width={width} summary={summary} caption={caption} sideLabels={sideLabels}>
       {seats.map((occupant, at) => (
-        <Face key={at} size={size} occupant={occupant} />
+        <SeatFace key={at} size={size} occupant={occupant} ring={ringFor(occupant)} />
       ))}
     </Court>
   );
 }
 
 /**
- * One face, or the ring where a face is not.
+ * Which ring, on the court that cannot be touched.
  *
- * The empty seat is the same white ring the seated one wears, **dashed** — the shape that says
- * empty on the interactive court, drawn here without the plus, because there is nothing on
- * this court to press and an add glyph would be an affordance that is not one.
+ * **Your own face is ringed in volt**, which is the one accent and is spent here on the one
+ * fact this court cannot otherwise state: four faces on a picture of a court, and which of
+ * them is you. The interactive court spends volt on the seat you picked for a swap instead —
+ * one meaning per surface, because they never appear together
+ * ([1.2](../../../../../docs/design-system.md#12-one-accent-used-sparingly)).
+ *
+ * **An unfilled seat is drawn as nothing at all.** The interactive court's dashed ring is an
+ * invitation, and there is nothing to accept here: the court's summary already says how many
+ * of the seats are filled, and a ring nobody can press is an affordance that is not one.
  */
-function Face({ size, occupant }: { readonly size: number; readonly occupant: CourtFaceOccupant }) {
-  const face = { width: size, height: size, borderRadius: candidatePhotoRadius(size) };
-
-  if (occupant.kind === 'empty') return <View style={[face, seatRing.empty]} />;
-
-  return (
-    <View style={face}>
-      <CandidatePhoto
-        playerId={occupant.playerId}
-        photoUrl={occupant.kind === 'you' ? undefined : occupant.photoUrl}
-        box={{ kind: 'face', size }}
-      />
-      <View
-        style={[StyleSheet.absoluteFill, { borderRadius: face.borderRadius }, seatRing.seated]}
-        pointerEvents="none"
-      />
-    </View>
-  );
+function ringFor(occupant: CourtFaceOccupant) {
+  switch (occupant.kind) {
+    case 'you':
+      return 'yours' as const;
+    case 'player':
+      return 'seated' as const;
+    case 'empty':
+      return 'none' as const;
+  }
 }

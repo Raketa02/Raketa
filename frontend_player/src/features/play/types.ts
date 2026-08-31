@@ -192,17 +192,19 @@ export {
  * what a tap means — are `domain/lineup`'s, exported below.
  */
 export { CourtBuild, type CourtBuildProps } from './components/court/CourtBuild';
-export {
-  CourtMini,
-  type CourtFaceOccupant,
-  type CourtMiniProps,
-} from './components/court/CourtMini';
+export { CourtMini, type CourtMiniProps } from './components/court/CourtMini';
 export {
   CourtSeat,
   type CourtSeatOccupant,
   type CourtSeatProps,
 } from './components/court/CourtSeat';
-export { seatName } from './components/court/seatName';
+export {
+  SeatFace,
+  seatBox,
+  type CourtFaceOccupant,
+  type SeatFaceProps,
+} from './components/court/seatFace';
+export { seatWho, type SeatWho } from './components/court/seatWho';
 
 export {
   SEAT_PLACES,

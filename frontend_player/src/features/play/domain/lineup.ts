@@ -367,14 +367,33 @@ export function seatPlaces(seats: readonly BuildSeat[]): readonly SeatPlace[] {
 }
 
 /**
- * A seat nobody may vacate: **yours, and anybody who has already accepted.**
+ * Why a seat is locked. A code, so the sentence is `components/`' and stays one spelling.
  *
- * The two are one rule rather than a special case beside a rule. Your own seat is not
+ * It is *why*, and not *whether*, because the two are the same fact: a seat is locked for
+ * exactly one of two reasons, and the reason is what the refusal has to say out loud. A
+ * boolean beside a separate refusal vocabulary would be that fact written twice — and it is
+ * how one of them ends up admitting a seat the other refuses.
+ */
+export type SeatGuard = 'SEAT_IS_YOURS' | 'ALREADY_ACCEPTED';
+
+/**
+ * **The lock**, and the one place either half of it is written.
+ *
+ * Two reasons and one rule rather than a special case beside a rule. Your own seat is not
  * something the builder is composing — it is the thing everything else is composed around —
  * and an acceptance is a promise the product has already made on somebody else's behalf.
+ *
+ * `undefined` is *not locked*, which is what every caller below reads.
  */
+export function seatLock(seat: BuildSeat): SeatGuard | undefined {
+  if (seat.kind === 'you') return 'SEAT_IS_YOURS';
+  if (seat.kind === 'player' && seat.accepted) return 'ALREADY_ACCEPTED';
+  return undefined;
+}
+
+/** A seat nobody may vacate: **yours, and anybody who has already accepted.** */
 export function seatIsLocked(seat: BuildSeat): boolean {
-  return seat.kind === 'you' || (seat.kind === 'player' && seat.accepted);
+  return seatLock(seat) !== undefined;
 }
 
 /**
@@ -385,11 +404,8 @@ export function seatIsLocked(seat: BuildSeat): boolean {
  * a message nobody has to read.
  */
 export function seatIsClearable(seat: BuildSeat): boolean {
-  return seat.kind === 'player' && !seat.accepted;
+  return seat.kind === 'player' && !seatIsLocked(seat);
 }
-
-/** Why a tap was refused. A code, so the sentence is `components/`' and stays one spelling. */
-export type SeatGuard = 'SEAT_IS_YOURS' | 'ALREADY_ACCEPTED';
 
 /**
  * What a tap on a seat **means** — never what it writes.
@@ -432,7 +448,8 @@ export interface SwapState {
  * **The two guards belong to the replacement and not to the trade.** Swapping is *change
  * sides, never seats*: your own seat and an accepted one are both freely movable across the
  * net, and it is only being replaced that they refuse. That is why the toast names the toggle
- * — the thing it refuses is available one switch away.
+ * — the thing it refuses is available one switch away. The refusal reads `seatLock` rather
+ * than re-testing what it holds, so a third locked seat gains its refusal for free.
  *
  * The seat is passed rather than looked up, so this is total: a court draws its own seats, and
  * an index it could not produce is not a state to write a branch for.
@@ -441,9 +458,10 @@ export function tapSeat(state: SwapState, index: number, seat: BuildSeat): SeatT
   if (seat.kind === 'empty') return { kind: 'OPEN_POOL', seat: index };
 
   if (!state.swapping) {
-    if (seat.kind === 'you') return { kind: 'REFUSE', guard: 'SEAT_IS_YOURS', seat: index };
-    if (seat.accepted) return { kind: 'REFUSE', guard: 'ALREADY_ACCEPTED', seat: index };
-    return { kind: 'OPEN_POOL', seat: index };
+    const guard = seatLock(seat);
+    return guard === undefined
+      ? { kind: 'OPEN_POOL', seat: index }
+      : { kind: 'REFUSE', guard, seat: index };
   }
 
   if (state.selected === undefined) return { kind: 'SELECT', seat: index };
