@@ -46,31 +46,108 @@ export function moveAccessibilityFocus(target: FocusTarget | undefined): void {
 }
 
 /**
- * Whether the OS has asked for reduced motion.
+ * One OS switch, read once and then followed.
  *
- * A hook rather than a context, deliberately: both consumers are overlays, at most one is
- * mounted at a time, and a context would have to be wired into the root layout and every
- * test harness to answer a question two components ask. When something that is *always*
- * mounted needs it — a press transform, a list entrance — this becomes the context
- * Part 13 describes, and this hook is what reads it.
+ * Both settings answer the same shape — an initial read that resolves, and an event that
+ * fires when the player changes it in Settings while the app is open — and a second copy of
+ * that shape is a second place to forget the unmount guard. `live` is that guard: a promise
+ * resolving after the screen has gone would set state on nothing.
  */
-export function useReducedMotion(): boolean {
-  const [reduced, setReduced] = useState(false);
+function useAccessibilityFlag(
+  read: () => Promise<boolean>,
+  event: 'reduceMotionChanged' | 'screenReaderChanged',
+): boolean {
+  const [enabled, setEnabled] = useState(false);
 
   useEffect(() => {
     let live = true;
-    void AccessibilityInfo.isReduceMotionEnabled().then((enabled) => {
-      if (live) setReduced(enabled);
+    void read().then((value) => {
+      if (live) setEnabled(value);
     });
 
-    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduced);
+    const subscription = AccessibilityInfo.addEventListener(event, setEnabled);
     return () => {
       live = false;
       subscription.remove();
     };
-  }, []);
+    // `read` is a module-level method reference and `event` a literal; both are stable, and
+    // listing them keeps the hook honest without re-subscribing on every render.
+  }, [read, event]);
 
-  return reduced;
+  return enabled;
+}
+
+/**
+ * Whether the OS has asked for reduced motion.
+ *
+ * A hook rather than a context, deliberately: the consumers are overlays and one collapse
+ * helper, and a context would have to be wired into the root layout and every test harness to
+ * answer a question a component can ask. When something that is *always* mounted needs it —
+ * a press transform, a list entrance — this becomes the context Part 13 describes, and this
+ * hook is what reads it.
+ */
+export function useReducedMotion(): boolean {
+  return useAccessibilityFlag(READ_REDUCE_MOTION, 'reduceMotionChanged');
+}
+
+/**
+ * Whether a screen reader is running.
+ *
+ * Not a synonym for reduced motion, and the difference is the point: **a player may have
+ * VoiceOver on and reduced motion off**, which is the common case
+ * ([`the-words.md`](../../../../docs/specs/matchmaking/the-words.md) §20.11). Anything that
+ * asked only about motion would run its full animation in front of the one listener who gets
+ * none of the craft and all of the latency.
+ */
+export function useScreenReader(): boolean {
+  return useAccessibilityFlag(READ_SCREEN_READER, 'screenReaderChanged');
+}
+
+const READ_REDUCE_MOTION = () => AccessibilityInfo.isReduceMotionEnabled();
+const READ_SCREEN_READER = () => AccessibilityInfo.isScreenReaderEnabled();
+
+/**
+ * Whether presentation collapses to its end state — **one condition, satisfied by either.**
+ *
+ * `the-play-screens.md` §3 licenses the fill animation as *"presentation over a completed
+ * answer, and the client may take its time."* That permission is granted to craft aimed at
+ * sight. A listener gets none of the craft and all of the latency, in front of an answer that
+ * is already in memory — so §20.11 makes a running screen reader a **second condition on the
+ * same path** as reduced motion rather than a second path.
+ *
+ * One helper, because two would be two places for a surface to honour one of the conditions
+ * and not the other. What collapses is named where it is drawn: the fill animation, the
+ * deck's stagger, and the minimum-display latch, which goes to zero.
+ */
+export function useCollapsedPresentation(): boolean {
+  // Both are read, always: `||` between two hook calls would make the second one conditional
+  // on the first, which is the rule React enforces by crashing on the render after a change.
+  const reduced = useReducedMotion();
+  const listening = useScreenReader();
+
+  return reduced || listening;
+}
+
+/**
+ * A live region: say a value again whenever it changes, and never when it has not.
+ *
+ * §20.9 names three of these in the Play tab and no fourth — the toast layer, the searching
+ * status, and the **provisional forecast**, which is the only figure in the tab that changes
+ * while focus is somewhere else. Moving a player across the net changes it while the listener
+ * is still on the seat that moved, so nothing else would ever tell them.
+ *
+ * **An announcement, not an `accessibilityLiveRegion`.** Android's attribute has no iOS
+ * equivalent and fires on *re-render* rather than on arrival, which is the wrong event for a
+ * figure that is recomputed more often than it changes. Both platforms have an announcement,
+ * and this is the same mechanism `ToastHost` uses for the region it owns.
+ *
+ * `null` is a region with nothing in it, which is silence rather than an empty sentence.
+ */
+export function useLiveRegion(message: string | null, politeness: Announcement = 'queued'): void {
+  useEffect(() => {
+    if (message === null || message === '') return;
+    announce(message, politeness);
+  }, [message, politeness]);
 }
 
 /**

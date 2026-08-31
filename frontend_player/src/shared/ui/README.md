@@ -82,7 +82,7 @@ Built so far, by the onboarding slice: `Button`, `Card` (+ `PressableCard`), `No
 and by the second part's photos step: `PhotoRow` with `PhotoTile`, `PhotoAddTile` and
 `PhotoPosterTile`, plus `CourtPoster`; and by its availability step: `AvailabilityGrid`
 with `Tick`; and by sign-up's age question: `TickBox`; and by Play: `TabBar`, `Switch`,
-`FitPill`, `BalanceBar`, `Court` and `Toast` with `ToastHost`. Import them from
+`FitPill`, `BalanceBar`, `Court`, `Meter` and `Toast` with `ToastHost`. Import them from
 `@/shared/ui`.
 
 **The five Play arrivals** are `Switch` (6.12), `FitPill` (7.10), `BalanceBar` (7.11),
@@ -100,6 +100,24 @@ the far side is not the near side reflected. **The diff variant is the grid, not
 file**, with three shapes where the prototype had a volt ring and 45% opacity: colour as the
 only signal twice over, and volt on paper is 1,3:1 besides. `Tick.tsx` grew `Plus` and `Dash`
 for it, in the same 12 × 12 box at the same 2pt stroke.
+
+**Meter and bar are 7.3's two rows, and they are opposite objects.** A `Bar` states a
+fraction to a screen that names its denominator, and reports one through
+`accessibilityValue`. A `Meter` visualises a number the row beside it has **already
+printed** — the why-fit row draws `×{weight} → {value}` two words earlier — so it is
+**hidden from assistive technology and takes no label at all**: a bar over a printed number
+is the double announcement 6.8 hides its column heads to avoid (`the-words.md` §20.8). There
+is no prop to pass one through, which is what stops somebody helpfully adding
+`accessibilityRole="progressbar"` and having every row announced twice.
+
+**Two OS questions, one collapse.** `overlay.ts` reads reduced motion **and** whether a
+screen reader is running, and `useCollapsedPresentation()` is the single condition either
+satisfies. They are not synonyms: a player may have VoiceOver on and reduced motion off,
+which is the common case, and a surface that asked only about motion would run its full
+animation in front of the one person who gets none of the craft and all of the latency
+(`the-words.md` §20.11). `useLiveRegion()` beside them is the same announcement mechanism
+`ToastHost` uses, for a value that changes while focus is somewhere else — §20.9 names three
+such regions in the Play tab and no fourth.
 
 **Overlays.** `BottomSheet` and `Popover` are both real modals, and 9.1's and 7.6's "it is
 a real modal" is three separate obligations rather than one prop — read `overlay.ts` and

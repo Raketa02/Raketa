@@ -117,6 +117,74 @@ const CORE_PATTERNS = [
 
 const restrict = (patterns, paths = [asyncStoragePath]) => ['error', { patterns, paths }];
 
+const literalHexColour = {
+  selector: 'Literal[value=/^#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/]',
+  message:
+    'No literal colour in a component. Every value comes from @/shared/ui/theme.ts, and colour is chosen by meaning (coral = the one accent, mint = settled, amber = reversible, red = ended badly). If the value genuinely does not exist, add it to theme.ts AND docs/design-system.md in the same commit.',
+};
+
+const literalFunctionalColour = {
+  selector: 'Literal[value=/^(?:rgba?|hsla?)\\(/]',
+  message:
+    'No literal colour in a component — including rgba(). Use a token from @/shared/ui/theme.ts. Translucent values live in the theme too.',
+};
+
+const fontWeightProperty = {
+  selector: "Property[key.name='fontWeight'], Property[key.value='fontWeight']",
+  message:
+    "fontWeight is IGNORED on Android when a custom fontFamily is set — this is how an RN app silently loses its typography on one platform. Weight is a family name: theme.font.sans[700], never fontWeight: '700'. See docs/design-system.md Part 3.",
+};
+
+/** The syntax bans that apply everywhere, composed for the same reason the imports are. */
+const SYNTAX_BANS = [literalHexColour, literalFunctionalColour, fontWeightProperty];
+
+/**
+ * Every `Pressable` under `features/play/` names itself, or says it is hidden.
+ *
+ * `the-words.md` §20.12 books **two** gates over this contract, and this is the half a type
+ * cannot give. Label coverage is already a compile error — §1's copy tables are `Record`s
+ * keyed by the generated unions, so a code with no words does not build — but the historical
+ * failure was an **omission**: §E6 opens by recording that the prototype has *"seven
+ * `aria-label`s in the whole file, two of them in this feature. No `role`, no `aria-live`, no
+ * `alt`, no `aria-selected`, no `aria-pressed`."* A missing prop is not a missing branch, and
+ * no `Record` can see one.
+ *
+ * The escape is `accessibilityElementsHidden` / `importantForAccessibility`, which is a
+ * decision written down rather than a control nobody labelled — the court's holding ring and
+ * an already-announced toast are both legitimately silent. A spread also satisfies it: the
+ * props are then the caller's, and this rule cannot see where they came from.
+ *
+ * **`Pressable` and nothing else, because every other pressable in this app already fails to
+ * compile without a name.** `PressableCard`, `CloseControl` and the three photo tiles take
+ * `accessibilityLabel: string` as a REQUIRED prop; `Switch` and `TickBox` take a required
+ * `label` that *is* the accessible name; `Button` and `Chip` take a required `label` the name
+ * falls back to. So for every primitive the coverage gate is the compiler, which is the half
+ * §20.12 says a type does give. What a type cannot see is the one shape where the prop is
+ * optional — a raw `Pressable` from `react-native` — and that is exactly what this covers.
+ * Adding `Button` or `Chip` here would restate a required prop as a lint rule; adding a
+ * primitive that did NOT require a name would be papering over the missing prop rather than
+ * adding it. **The right response to a new tappable primitive is a required prop on it**, and
+ * this entry stays one line wide.
+ */
+const unnamedPressable = [
+  "JSXOpeningElement[name.name='Pressable']",
+  ":not(:has(> JSXAttribute[name.name='accessibilityLabel']))",
+  ':not(:has(> JSXSpreadAttribute))',
+].join('');
+
+const pressableNeedsAName = {
+  // TWO selectors, because a hide is two props and half a hide is not one. iOS reads
+  // `accessibilityElementsHidden` and Android reads `importantForAccessibility`, so a control
+  // carrying one of them is hidden on one platform and an unnamed button on the other — which
+  // is the bug this rule exists to catch, arriving through the rule's own escape hatch.
+  selector: [
+    `${unnamedPressable}:not(:has(> JSXAttribute[name.name='accessibilityElementsHidden']))`,
+    `${unnamedPressable}:not(:has(> JSXAttribute[name.name='importantForAccessibility']))`,
+  ].join(', '),
+  message:
+    'Every Pressable in features/play/ carries an accessibilityLabel, or hides itself explicitly with accessibilityElementsHidden AND importantForAccessibility — one of the two hides it on one platform only. The sentence is never written here: compose it from the-words.md §20 through features/play/components/accessibilityPresentation.ts. See the-words.md §20.12.',
+};
+
 /** Every ban that applies to a file under `src/shared/`, which is the strictest set. */
 const SHARED_PATTERNS = [...CORE_PATTERNS, generatedImports, featureImportsFromShared];
 
@@ -161,24 +229,7 @@ export default [
       // literal value. These three catch the ways that rule is actually broken —
       // deliberately narrow, so there are no false positives to teach an agent
       // that lint warnings are noise.
-      'no-restricted-syntax': [
-        'error',
-        {
-          selector: 'Literal[value=/^#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/]',
-          message:
-            'No literal colour in a component. Every value comes from @/shared/ui/theme.ts, and colour is chosen by meaning (coral = the one accent, mint = settled, amber = reversible, red = ended badly). If the value genuinely does not exist, add it to theme.ts AND docs/design-system.md in the same commit.',
-        },
-        {
-          selector: 'Literal[value=/^(?:rgba?|hsla?)\\(/]',
-          message:
-            'No literal colour in a component — including rgba(). Use a token from @/shared/ui/theme.ts. Translucent values live in the theme too.',
-        },
-        {
-          selector: "Property[key.name='fontWeight'], Property[key.value='fontWeight']",
-          message:
-            "fontWeight is IGNORED on Android when a custom fontFamily is set — this is how an RN app silently loses its typography on one platform. Weight is a family name: theme.font.sans[700], never fontWeight: '700'. See docs/design-system.md Part 3.",
-        },
-      ],
+      'no-restricted-syntax': ['error', ...SYNTAX_BANS],
     },
   },
 
@@ -303,6 +354,21 @@ export default [
     // not, because `testMatch` would then try to run it as a suite.
     files: ['jest.setup.js'],
     languageOptions: { globals: { jest: 'readonly' } },
+  },
+
+  // --- the Play tab: nothing tappable ships without a name --------------------
+  {
+    // Scoped to this feature, exactly as §20.12 scopes it. It is a rule about a contract
+    // this feature has and the rest of the app does not yet: ninety sentences, five screens
+    // and four sheets, all of them assembled from codes. Widening it to `src/**` would make
+    // it a design-system rule, which is Part 13's job and a different amendment.
+    //
+    // `no-restricted-syntax` is re-declared rather than added to — flat config REPLACES a
+    // rule when a later block names it — so the three baseline bans are spread back in. A
+    // block that listed only the new one would switch off the colour and fontWeight rules
+    // for the whole of Play, silently.
+    files: ['src/features/play/**'],
+    rules: { 'no-restricted-syntax': ['error', ...SYNTAX_BANS, pressableNeedsAName] },
   },
 
   // --- route files are adapters: feature public surfaces only -----------------

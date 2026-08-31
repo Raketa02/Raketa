@@ -95,6 +95,30 @@ export {
   windowLabel,
 } from './components/searchPresentation';
 export {
+  CANDIDATE_ACTIONS,
+  PLAY_LIVE_REGIONS,
+  SEAT_PLACES,
+  SWAP_TOGGLE_LABEL,
+  availabilityDiffCellLabel,
+  candidateActionLabel,
+  candidateCardLabel,
+  clearSeatLabel,
+  courtSummaryLabel,
+  deckAnswerLabels,
+  fitSentence,
+  provisionalForecastAnnouncement,
+  seatLabel,
+  whyFitRowLabel,
+  whyFitSheetLabel,
+  type CandidateAction,
+  type CandidateCardFacts,
+  type DeckAnswerLabels,
+  type PlayLiveRegion,
+  type SeatOccupant,
+  type SeatPlace,
+} from './components/accessibilityPresentation';
+export { balanceLabel, balanceTone, balanceWord } from './components/balancePresentation';
+export {
   engineFillStatus,
   poolRankingStatus,
   whyFitHeader,

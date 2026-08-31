@@ -51,6 +51,7 @@ export {
   type LevelBarProps,
   type LevelBarVariant,
 } from './LevelBar';
+export { Meter, type MeterProps } from './Meter';
 export { Note, type NoteProps, type NoteVariant } from './Note';
 export {
   PhotoAddTile,
@@ -84,7 +85,10 @@ export { Toast, ToastHost, type ToastProps } from './Toast';
 export {
   announce,
   behindOverlay,
+  useCollapsedPresentation,
+  useLiveRegion,
   useReducedMotion,
+  useScreenReader,
   type Announcement,
   type FocusTarget,
 } from './overlay';

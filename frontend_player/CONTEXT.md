@@ -382,6 +382,24 @@ comment and a commit message all use the same word.
   snapping carousel of full-width children that bleeds to the screen edge.
 - **Sheet · toast · popover** — the three overlays. Three distinct surfaces, not synonyms,
   and all three render from the root overlay host.
+- **Meter vs bar** — 7.3's two rows, and opposite objects. A **bar** states a fraction to a
+  screen that names its denominator and reports one through `accessibilityValue`; a **meter**
+  visualises a number the row beside it has already printed and is **hidden from assistive
+  technology**. _Avoid_: using either word for the other, or calling a meter a progress bar.
+- **Accessible name** — what a control announces. It is **copy**, not a component detail: it
+  is localisable, it quotes formatted numbers, and it is composed from codes in a
+  `*Presentation.ts`, never written as a template in the component that draws the control.
+  _Avoid_: "aria-label", which is the web's spelling and not React Native's.
+- **Live region** — a value that announces itself when it changes because focus is elsewhere.
+  There are three in Play and no fourth. _Avoid_: `accessibilityLiveRegion`, which is Android
+  only and fires on re-render rather than on arrival.
+- **Collapsed presentation** — an animation skipped to its end state. **One condition, two
+  causes**: the OS asking for reduced motion, or a screen reader running. They are not
+  synonyms and a surface honours both.
+- **Balance word** — the plain word beside an evenness figure — _Very even_, _Fairly even_,
+  _One side favoured_, _Lopsided_. It breaks in four where the bar's tone breaks in three,
+  deliberately: the word is what satisfies _never colour alone_, and a fourth tone would be a
+  fourth meaning.
 
 > The rating, band, confidence, match-fit and hold concepts these surfaces render are
 > **interface** names only. Their domain terms are unmodelled — Bookings, Courts and

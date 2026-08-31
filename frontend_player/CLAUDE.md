@@ -211,6 +211,42 @@ a shortened one, the one sentence a build says about a code it is too old to rea
 `counted()`, the single seam every counted phrase routes through so that a market with real
 plural rules has one function to change rather than every sentence that counts something.
 
+**What each Play control announces is copy too, and it lives with the rest of it.** An
+accessible name is localisable, it quotes numbers that need §B16's formats, and it composes
+codes whose sentences already have a home — so `accessibilityPresentation.ts` writes them
+through the same _code → message, never message → message_ mechanism, and **a label is never a
+template inlined in a component** ([`the-words.md`](../docs/specs/matchmaking/the-words.md)
+§20). **One rule decides every element**: _one accessibility element per action, and everything
+with no action of its own merges into the nearest action above it_ — which is what makes the
+question navigator one element and the availability grid twenty-one, as one rule rather than
+two precedents. It has three consequences worth knowing before reading the file. **The card is
+spoken in a different order than it is drawn** — identifying facts lead, the argument follows —
+and it is the one recorded divergence from visual order in the feature. **The seat, its clear
+badge and the empty seat carry a side and a role and never an index**: a listener has no
+picture of the court, and H-25 puts both squash players on the same half, so seat 3 is not
+where seat 3 was. And **the why-fit meter is hidden**, because the row prints its number two
+words earlier and a bar over a printed number is 6.8's double announcement — leaving
+`progressbar` nowhere in this contract at all. Two Part 13 violations are fixed rather than
+carried over, both colour as the only cue: the diff grid's _new_ and _dropped_, which the
+sheet's own copy named as a colour, and the pool header's tinted percentage, which gains
+§B9's balance word beside it. The header is not built, so what ships is the word and the rule:
+`balancePresentation.ts`.
+
+**Label coverage is a compile error, and the lint rule is the other half.** The `Record`s
+keyed by the generated unions already refuse a code with no words, and **every pressable
+primitive in `shared/ui/` already refuses to compile without a name** — `accessibilityLabel`
+is required on `PressableCard`, `CloseControl` and the photo tiles, and `label` is required
+and _is_ the name on `Switch`, `TickBox`, `Button` and `Chip`. But §E6's _"seven `aria-label`s
+in the whole file"_ was an **omission**, and no type can see one — so the one shape where the
+prop is optional, a raw `Pressable`, is covered by lint: under `features/play/` it carries an
+`accessibilityLabel` or hides itself explicitly, enforced by `eslint.config.mjs` and proven
+still to fire by `pnpm test:labels`. **The right answer to a new tappable primitive is a
+required prop on it**, not a wider selector here. Beside it,
+`useCollapsedPresentation()` is **one condition satisfied by either** reduced motion or a
+running screen reader: a player may have VoiceOver on and reduced motion off, and a surface
+that asked only about motion would run its full animation in front of the one person who gets
+none of the craft and all of the latency.
+
 `src/shared/ui/` holds the design-system primitives built so far — the cards, note, row,
 hairline, button, tag, chip, bar, header, the overlays and drawn objects the result screen
 needed (bottom sheet, popover, level bar, confidence ring), the photo tile with its
@@ -228,7 +264,11 @@ went with their engines in the reset and come back at 7.10 and 7.11, leaving 7.1
 empty. With them, 9.2's **toast** is built: the queue, the live region and the dismiss,
 mounted **once** at 9.3's overlay host in `src/app/_layout.tsx`, over
 `src/shared/store/toast.store.ts`. Part 13's announcement requirement gains its **queued**
-variant there, with the send confirmation as the one message that still interrupts. The rest
+variant there, with the send confirmation as the one message that still interrupts. 7.3's
+**meter** joins them with the accessibility contract, and it is `Bar`'s opposite: a bar states
+a fraction and reports one through `accessibilityValue`, where a meter visualises a number the
+row beside it already printed — so it takes **no label and no value at all**, and
+`progressbar` appears nowhere in Play. The rest
 arrive with the features that need them. **Build outward from the structure below** rather than reaching
 for `create-expo-app` — its default template contradicts ADR-0009 — and copy the shape of
 `src/features/auth/` or `src/features/onboarding/` rather than inventing a second one.
@@ -285,10 +325,11 @@ pnpm lint         # ESLint — also enforces the import boundaries below
 pnpm typecheck    # tsc --noEmit (strict)
 pnpm test         # Jest (jest-expo)
 pnpm test:boundaries   # drive ESLint at code breaking each module ban; it must go red
+pnpm test:labels       # drive ESLint at an unnamed Pressable in Play; it must go red
 pnpm format       # Prettier --write   pnpm format:check → --check
 pnpm gen:api      # regenerate src/generated/ from ../backend/openapi.player.json
 pnpm doctor       # npx expo-doctor — checks dependency/SDK agreement
-pnpm check        # lint + format + typecheck + test + boundaries — the local gate
+pnpm check        # lint + format + typecheck + test + boundaries + labels — the local gate
 ```
 
 **You cannot see the screen.** If a change is visual, say so and ask for a look rather than
