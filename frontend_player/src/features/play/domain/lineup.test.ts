@@ -1,10 +1,17 @@
+import { theme } from '@/shared/ui/theme';
+
 import {
   changingMode,
   changingSport,
   leavingFindAGame,
   lineupStanding,
   sameOrigin,
+  seatIsClearable,
+  seatIsLocked,
+  seatPlaces,
+  tapSeat,
   withheldSeats,
+  type BuildSeat,
   type Lineup,
   type LineupInPlay,
   type OriginSearch,
@@ -164,5 +171,143 @@ describe('a seat whose player the live gates no longer admit', () => {
 
   it('has nothing to mark on a line-up nobody has started', () => {
     expect(withheldSeats(undefined, ['player-a'])).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The court's three: H-25's sides, the locked seats, and the swap truth table
+// ---------------------------------------------------------------------------
+
+/** A doubles court as it starts: you, and three seats nobody has filled. */
+const EMPTY_DOUBLES: readonly BuildSeat[] = [
+  { kind: 'you' },
+  { kind: 'empty' },
+  { kind: 'empty' },
+  { kind: 'empty' },
+];
+
+const seated = (accepted = false): BuildSeat => ({ kind: 'player', accepted });
+
+/** A full doubles court: you, your partner, and two opponents. */
+const FULL_DOUBLES: readonly BuildSeat[] = [{ kind: 'you' }, seated(), seated(), seated()];
+
+/** Swap mode off, nothing selected — the builder as it opens. */
+const RESTING = { swapping: false, selected: undefined } as const;
+
+describe("a seat's place", () => {
+  it('is a side and a role, read off seat order rather than off the drawing', () => {
+    expect(seatPlaces(FULL_DOUBLES)).toEqual([
+      'YOUR_SIDE',
+      'YOUR_PARTNER',
+      'THEIR_SIDE',
+      'THEIR_SIDE',
+    ]);
+  });
+
+  it('has no partner in singles, because your half has one seat in it', () => {
+    expect(seatPlaces([{ kind: 'you' }, seated()])).toEqual(['YOUR_SIDE', 'THEIR_SIDE']);
+  });
+
+  it('follows you across the net, because a side is the half you are on', () => {
+    // The whole point of the swap toggle is *change sides, never seats*. A place read off the
+    // index alone would still call the far half theirs after you had moved into it.
+    expect(seatPlaces([seated(), seated(), { kind: 'you' }, seated()])).toEqual([
+      'THEIR_SIDE',
+      'THEIR_SIDE',
+      'YOUR_SIDE',
+      'YOUR_PARTNER',
+    ]);
+  });
+
+  it('cannot be derived from where a seat is drawn, and squash is why (H-25)', () => {
+    // Squash has no net: both seats are on the near half of the drawing, and a rule that read
+    // the far side off the coordinate would put both players on your side.
+    const [near, far] = theme.size.court.seats.squash;
+    const half = theme.size.court.space.height / 2;
+
+    expect(near?.[1]).toBeGreaterThan(half);
+    expect(far?.[1]).toBeGreaterThanOrEqual(half);
+    expect(seatPlaces([{ kind: 'you' }, seated()])).toEqual(['YOUR_SIDE', 'THEIR_SIDE']);
+  });
+});
+
+describe('a locked seat', () => {
+  it('is yours, and anybody who has already accepted', () => {
+    expect(seatIsLocked({ kind: 'you' })).toBe(true);
+    expect(seatIsLocked(seated(true))).toBe(true);
+    expect(seatIsLocked(seated())).toBe(false);
+    expect(seatIsLocked({ kind: 'empty' })).toBe(false);
+  });
+
+  it('may not be emptied, which is why the clear badge is not drawn on one', () => {
+    // Two guard toasts and not four: a badge that is never drawn is a refusal nobody can
+    // trigger.
+    expect(seatIsClearable(seated())).toBe(true);
+    expect(seatIsClearable(seated(true))).toBe(false);
+    expect(seatIsClearable({ kind: 'you' })).toBe(false);
+    expect(seatIsClearable({ kind: 'empty' })).toBe(false);
+  });
+});
+
+describe('a tap on a seat', () => {
+  it('opens the pool on an empty one, whether or not you are swapping', () => {
+    expect(tapSeat(RESTING, 1, { kind: 'empty' })).toEqual({ kind: 'OPEN_POOL', seat: 1 });
+    expect(tapSeat({ swapping: true, selected: undefined }, 1, { kind: 'empty' })).toEqual({
+      kind: 'OPEN_POOL',
+      seat: 1,
+    });
+  });
+
+  it('offers a replacement for somebody you may replace', () => {
+    expect(tapSeat(RESTING, 2, seated())).toEqual({ kind: 'OPEN_POOL', seat: 2 });
+  });
+
+  it('refuses your own seat, and says how to change sides instead', () => {
+    expect(tapSeat(RESTING, 0, { kind: 'you' })).toEqual({
+      kind: 'REFUSE',
+      guard: 'SEAT_IS_YOURS',
+      seat: 0,
+    });
+  });
+
+  it('refuses somebody who already accepted, because they keep their place', () => {
+    expect(tapSeat(RESTING, 3, seated(true))).toEqual({
+      kind: 'REFUSE',
+      guard: 'ALREADY_ACCEPTED',
+      seat: 3,
+    });
+  });
+
+  it('selects, deselects and trades once you are swapping', () => {
+    expect(tapSeat({ swapping: true, selected: undefined }, 1, seated())).toEqual({
+      kind: 'SELECT',
+      seat: 1,
+    });
+    expect(tapSeat({ swapping: true, selected: 1 }, 1, seated())).toEqual({ kind: 'DESELECT' });
+    expect(tapSeat({ swapping: true, selected: 1 }, 3, seated())).toEqual({
+      kind: 'SWAP',
+      from: 1,
+      to: 3,
+    });
+  });
+
+  it('lets a locked seat change sides, which is the whole of what swapping is for', () => {
+    // *They can change sides, never seats.* The two guards are the replacement's, and
+    // replacement is what swap mode is off for.
+    expect(tapSeat({ swapping: true, selected: undefined }, 0, { kind: 'you' })).toEqual({
+      kind: 'SELECT',
+      seat: 0,
+    });
+    expect(tapSeat({ swapping: true, selected: 0 }, 3, seated(true))).toEqual({
+      kind: 'SWAP',
+      from: 0,
+      to: 3,
+    });
+  });
+
+  it('leaves an untouched court untouched — every outcome is a decision, never a write', () => {
+    tapSeat(RESTING, 1, EMPTY_DOUBLES[1] ?? { kind: 'empty' });
+
+    expect(EMPTY_DOUBLES[1]).toEqual({ kind: 'empty' });
   });
 });

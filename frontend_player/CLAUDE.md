@@ -258,6 +258,25 @@ card that translates and rotates out under a thumb, and a row in a scrolling lis
 so the pool draws one shape twice — and the volt tag that used to read _wants to play you_ is
 now a **sentence**, bound to `INTEREST_LIFT`.
 
+**The court is one drawn object and two feature components.** `Court` (7.12) takes a Sport and
+a box, draws the ground, the chrome and the seat **positions**, and **takes children in seat
+order** — a `useCourtGeometry` hook was refused, because geometry that is _returned_ gets
+adjusted at one call site and not the other. Over it, `CourtMini` draws read-only faces and
+`CourtBuild` draws pressable seats, and they are **two components rather than a flag**: they
+share every number and no behaviour. **The coordinates cannot be derived and H-25 is why** —
+squash has no net, so both players stand on the same half and _seat 3_ is not where seat 3 is
+in padel. That reaches the rules as well as the drawing: a seat's **side is read off seat
+order, never off the picture**, and it **follows you across the net**, because the swap toggle
+is _change sides, never seats_. **The seat label is an identifier under a face** — sixty-four
+characters of handle in a 46pt seat is about four, so it truncates to one line with a tail
+ellipsis, the level comes off it, and the **sentence and the spoken name stay whole**, which is
+what keeps ADR-0107 intact: a truncation invents nothing. Under both, `domain/lineup.ts` holds
+what somebody could be wrong about — `seatPlaces`, `seatIsLocked` / `seatIsClearable`, and the
+**swap truth table**, which is a decision and never a write. The **two guard toasts** are the
+replacement's and not the trade's — your own seat and a seat somebody already accepted are both
+freely movable across the net — and there is no third, because the clear badge is **not drawn**
+where it would be refused.
+
 **Label coverage is a compile error, and the lint rule is the other half.** The `Record`s
 keyed by the generated unions already refuse a code with no words, and **every pressable
 primitive in `shared/ui/` already refuses to compile without a name** — `accessibilityLabel`

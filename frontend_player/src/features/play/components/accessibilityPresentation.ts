@@ -70,6 +70,7 @@ import { cellLabel } from '@/shared/vocabulary/availabilityPresentation';
 import { orOutOfDate } from '@/shared/vocabulary/outOfDate';
 import type { WeekCell } from '@/shared/vocabulary/week';
 
+import type { SeatPlace } from '../domain/lineup';
 import type { ForecastAssumption, UnfilledReason } from '../domain/vocabulary';
 
 import { balanceLabel } from './balancePresentation';
@@ -211,22 +212,7 @@ export function deckAnswerLabels(name: string): DeckAnswerLabels {
 }
 
 /**
- * Where a seat is, in the only two terms a listener can use: **a side, and a role.**
- *
- * §E6 proposes *"Seat 3, Marek Z., level 2,92."* **An index is not a place.** A listener has
- * no picture of the court, and H-25 makes the number mean different things in different sports
- * — squash puts both players on the same half, so seat 3 is not where seat 3 was. **§E6
- * rewritten, second, third and fourth of five**: the seat, the clear badge and the empty seat
- * all lose their numbers.
- *
- * Three values and not four, because *their partner* is a role nobody on this screen is
- * seated relative to: a listener places the far half by its side alone.
- */
-export const SEAT_PLACES = ['YOUR_SIDE', 'YOUR_PARTNER', 'THEIR_SIDE'] as const;
-
-export type SeatPlace = (typeof SEAT_PLACES)[number];
-
-/** The place as a seat label **opens** with it — capitalised, because it starts a sentence. */
+ * The place as a seat label **opens** with it — capitalised, because it starts a sentence. */
 const PLACE: Readonly<Record<SeatPlace, string>> = {
   YOUR_SIDE: 'Your side',
   YOUR_PARTNER: 'Your side, your partner',

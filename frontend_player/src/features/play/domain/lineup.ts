@@ -68,16 +68,18 @@
  * discipline as the origin — a **set difference**, derived at the moment somebody asks, never
  * stored and never synchronised.
  *
- * ## What this file is still owed
+ * ## And the three the court brought with it
  *
  * [`the-play-components.md`](../../../../../docs/specs/matchmaking/the-play-components.md) §7
- * assigns `lineup.ts` five things. Two are here — origin validity and the three triggers behind
- * one guard — because they are the state model. The other three are **the court's**, and they
- * arrive with the screen that draws it: **side derivation under H-25** (squash puts both
- * players on the same half, so seat 3 is not where seat 3 is in padel), **locked seats**, and
- * **§B7's swap truth table**. They are named here rather than left to be rediscovered: a seat's
- * side is meaningless without a court, and a swap is a re-arrangement of a response the builder
- * already holds.
+ * assigns `lineup.ts` five things. Two are the state model above; the other three arrived with
+ * the component that draws a court and are in the second half of this file — **side derivation
+ * under H-25**, **locked seats** and **§B7's swap truth table**.
+ *
+ * They are rules and not drawings, which is the whole of why they are here: a side somebody
+ * could be wrong about (squash puts both players on the same half of the picture), a seat
+ * somebody could wrongly empty, and a tap whose meaning depends on a toggle. What each of them
+ * *says* is `components/courtPresentation.ts`', and what any of it *looks like* is
+ * `components/court/`'s — §7's line, drawn once.
  */
 
 import type { Sport } from '@/shared/vocabulary/sport';
@@ -292,4 +294,159 @@ export function withheldSeats(
   if (lineup === undefined || liveIds === undefined) return [];
   const live = new Set(liveIds);
   return lineup.seats.filter((seated) => !live.has(seated));
+}
+
+// ---------------------------------------------------------------------------
+// The court: H-25's sides, the locked seats, and the swap truth table
+// ---------------------------------------------------------------------------
+
+/**
+ * One seat of a court being built, as **the rules** see it.
+ *
+ * Three facts and no more: whether it is yours, whether somebody is in it, and whether that
+ * somebody has already accepted. The name, the level, the photograph and the per-seat
+ * shortfall are the seat's to draw and none of them changes what a tap does — a component's
+ * own seat type is a superset of this one and passes straight in.
+ */
+export type BuildSeat =
+  | { readonly kind: 'you' }
+  | {
+      readonly kind: 'player';
+      /**
+       * They have already said yes to a challenge this builder is completing.
+       *
+       * *"The people who already said yes are fixed — they can change sides, never seats."*
+       * It is a fact about the seat rather than about the person: the same player is freely
+       * replaceable in a line-up nobody has sent.
+       */
+      readonly accepted: boolean;
+    }
+  | { readonly kind: 'empty' };
+
+/**
+ * Where a seat is, in the only two terms a listener can use: **a side, and a role.**
+ *
+ * The vocabulary lives here rather than beside the sentences that render it because it is
+ * **H-25's**, and [`the-play-components.md`](../../../../../docs/specs/matchmaking/the-play-components.md)
+ * §7 puts *a rule somebody could be wrong about* in `domain/` and the words for it in
+ * `components/`. Somebody can be very wrong about which half is yours.
+ *
+ * Three values and not four, because *their partner* is a role nobody on this screen is
+ * seated relative to: a listener places the far half by its side alone.
+ */
+export const SEAT_PLACES = ['YOUR_SIDE', 'YOUR_PARTNER', 'THEIR_SIDE'] as const;
+
+export type SeatPlace = (typeof SEAT_PLACES)[number];
+
+/**
+ * Side and role for every seat, in seat order — **the one thing the drawing cannot say.**
+ *
+ * The court's coordinates are per Sport and `theme.size.court.seats` lists them *your side
+ * first*, so a half is a slice of that list and nothing else. **H-25 is why it cannot be the
+ * geometry**: squash has no net, both players stand on the same half of the drawing, and a
+ * rule that read the far side off a `y` above the middle would seat both of you on your own
+ * side in one Sport out of four, with nothing on screen to see.
+ *
+ * **And a side follows you.** Swap mode is *change sides, never seats*, so you can end up in
+ * the far half — at which point that half is yours and the one you started in is theirs. A
+ * place read off the index alone would keep calling it theirs.
+ *
+ * A court always seats you. One that does not reads as the court it started as — you in seat
+ * 0 — rather than as a court with two far halves, which is a state no screen could describe.
+ */
+export function seatPlaces(seats: readonly BuildSeat[]): readonly SeatPlace[] {
+  const half = Math.max(1, seats.length / 2);
+  const found = seats.findIndex((seat) => seat.kind === 'you');
+  const yours = found === -1 ? 0 : found;
+  const yourHalf = Math.floor(yours / half);
+
+  return seats.map((_, at) => {
+    if (at === yours) return 'YOUR_SIDE';
+    return Math.floor(at / half) === yourHalf ? 'YOUR_PARTNER' : 'THEIR_SIDE';
+  });
+}
+
+/**
+ * A seat nobody may vacate: **yours, and anybody who has already accepted.**
+ *
+ * The two are one rule rather than a special case beside a rule. Your own seat is not
+ * something the builder is composing — it is the thing everything else is composed around —
+ * and an acceptance is a promise the product has already made on somebody else's behalf.
+ */
+export function seatIsLocked(seat: BuildSeat): boolean {
+  return seat.kind === 'you' || (seat.kind === 'player' && seat.accepted);
+}
+
+/**
+ * Whether a seat may be emptied — and therefore **whether its clear badge is drawn at all**.
+ *
+ * That is why there are two guard toasts and not four. The prototype drew the badge on every
+ * occupied seat and then refused two of them with a message; a refusal nobody can trigger is
+ * a message nobody has to read.
+ */
+export function seatIsClearable(seat: BuildSeat): boolean {
+  return seat.kind === 'player' && !seat.accepted;
+}
+
+/** Why a tap was refused. A code, so the sentence is `components/`' and stays one spelling. */
+export type SeatGuard = 'SEAT_IS_YOURS' | 'ALREADY_ACCEPTED';
+
+/**
+ * What a tap on a seat **means** — never what it writes.
+ *
+ * Every arm is a decision the screen carries out: the pool is a navigation, the swap is a
+ * re-arrangement of a response the builder already holds, and the refusal is a toast. Nothing
+ * here touches a line-up, which is what lets the whole truth table be read in one place.
+ */
+export type SeatTap =
+  /** Fill this seat, or replace who is in it. One act: the pool is opened against a seat. */
+  | { readonly kind: 'OPEN_POOL'; readonly seat: number }
+  | { readonly kind: 'SELECT'; readonly seat: number }
+  | { readonly kind: 'DESELECT' }
+  | { readonly kind: 'SWAP'; readonly from: number; readonly to: number }
+  | { readonly kind: 'REFUSE'; readonly guard: SeatGuard; readonly seat: number };
+
+/** The court's interaction state, which is the swap toggle and the seat waiting for a partner. */
+export interface SwapState {
+  readonly swapping: boolean;
+  /** The seat selected for a trade. Only ever set while `swapping`. */
+  readonly selected: number | undefined;
+}
+
+/**
+ * **The swap truth table**, and the whole of what a seat does when it is pressed.
+ *
+ * ```
+ * empty                     open the pool against this seat   (either mode)
+ * swap off · yours          refuse: turn the toggle on to change sides
+ * swap off · accepted       refuse: they keep their place
+ * swap off · anybody else   open the pool against this seat
+ * swap on  · nothing held   select
+ * swap on  · this seat      deselect
+ * swap on  · another seat   trade the two
+ * ```
+ *
+ * **An empty seat is tested first, in both modes.** There is nothing in it to trade, and a
+ * player in swap mode tapping a hole means the obvious thing.
+ *
+ * **The two guards belong to the replacement and not to the trade.** Swapping is *change
+ * sides, never seats*: your own seat and an accepted one are both freely movable across the
+ * net, and it is only being replaced that they refuse. That is why the toast names the toggle
+ * — the thing it refuses is available one switch away.
+ *
+ * The seat is passed rather than looked up, so this is total: a court draws its own seats, and
+ * an index it could not produce is not a state to write a branch for.
+ */
+export function tapSeat(state: SwapState, index: number, seat: BuildSeat): SeatTap {
+  if (seat.kind === 'empty') return { kind: 'OPEN_POOL', seat: index };
+
+  if (!state.swapping) {
+    if (seat.kind === 'you') return { kind: 'REFUSE', guard: 'SEAT_IS_YOURS', seat: index };
+    if (seat.accepted) return { kind: 'REFUSE', guard: 'ALREADY_ACCEPTED', seat: index };
+    return { kind: 'OPEN_POOL', seat: index };
+  }
+
+  if (state.selected === undefined) return { kind: 'SELECT', seat: index };
+  if (state.selected === index) return { kind: 'DESELECT' };
+  return { kind: 'SWAP', from: state.selected, to: index };
 }

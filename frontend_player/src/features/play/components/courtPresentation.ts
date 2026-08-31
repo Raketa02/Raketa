@@ -26,7 +26,10 @@
  * *pairing's* Fit, never the `G` that seated them (#233 §9).
  */
 
+import type { SeatGuard } from '../domain/lineup';
 import type { GroupReason, UnfilledReason } from '../domain/vocabulary';
+
+import { SWAP_TOGGLE_LABEL } from './accessibilityPresentation';
 
 const UNFILLED: Readonly<Record<UnfilledReason, string>> = {
   NO_CANDIDATE_ABOVE_FLOOR: 'Nobody in range was a good enough fit for this seat',
@@ -67,6 +70,39 @@ export function unfilledSeatLine(reason: UnfilledReason): string {
  * can see and act on, one tap from the pool.
  */
 export const WITHHELD_SEAT_LINE = "Something's changed — they can't be invited now";
+
+/**
+ * The two seats a tap **refuses**, in the court's own words.
+ *
+ * A `Record` keyed by `SeatGuard` for §1's reason: a third guard added to the truth table
+ * fails `pnpm typecheck` here rather than refusing a player in silence.
+ *
+ * **Both name the way out.** A refusal that only says no is a control a player presses twice.
+ * Your own seat is refused *because swap mode is where sides change*, so the sentence names
+ * the toggle — through `SWAP_TOGGLE_LABEL` rather than beside it, because the switch's own
+ * label **is** that word and two spellings of one control is how a screen starts referring to
+ * something that is not on it. An accepted seat is refused permanently, so its sentence says
+ * what it costs instead: they keep their place, and you can still move them across the net.
+ *
+ * **Neither is drawn on the clear badge**, because the badge is not drawn where either would
+ * fire (`domain/lineup.ts`'s `seatIsClearable`) — the prototype offered the ×, refused the
+ * press, and then had to explain itself.
+ */
+const GUARD: Readonly<Record<SeatGuard, (name: string) => string>> = {
+  SEAT_IS_YOURS: () => `That seat is yours — turn on ${SWAP_TOGGLE_LABEL} to change sides`,
+  ALREADY_ACCEPTED: (name) => `${name} already accepted — they keep their place`,
+};
+
+/**
+ * Why a seat would not take the tap.
+ *
+ * `name` is §15's `playerName()` — the whole handle, because a toast is a sentence and a
+ * sentence never truncates. `SEAT_IS_YOURS` does not quote it: the seat is yours, and *You
+ * already accepted* is not a thing to be told.
+ */
+export function seatGuardLine(guard: SeatGuard, name: string): string {
+  return GUARD[guard](name);
+}
 
 const GROUP: Readonly<Record<GroupReason, string>> = {
   EVENEST_ARRANGEMENT: 'The evenest way to split these four',

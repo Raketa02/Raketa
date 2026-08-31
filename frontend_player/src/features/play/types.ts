@@ -94,6 +94,7 @@ export {
 export {
   WITHHELD_SEAT_LINE,
   groupReasonLine,
+  seatGuardLine,
   unfilledSeatLine,
 } from './components/courtPresentation';
 export {
@@ -114,7 +115,6 @@ export {
 export {
   CANDIDATE_ACTIONS,
   PLAY_LIVE_REGIONS,
-  SEAT_PLACES,
   SWAP_TOGGLE_LABEL,
   availabilityDiffCellLabel,
   candidateActionLabel,
@@ -132,7 +132,6 @@ export {
   type DeckAnswerLabels,
   type PlayLiveRegion,
   type SeatOccupant,
-  type SeatPlace,
 } from './components/accessibilityPresentation';
 export { balanceLabel, balanceTone, balanceWord } from './components/balancePresentation';
 export {
@@ -173,12 +172,50 @@ export {
   type CandidatePhotoProps,
 } from './components/candidate/CandidatePhoto';
 export { CardHead, type CardHeadProps } from './components/candidate/CardHead';
+
 export { FactRow, type FactRowProps } from './components/candidate/FactRow';
 export {
   ReasonLine,
   type ReasonLineProps,
   type ReasonLineVariant,
 } from './components/candidate/ReasonLine';
+
+/**
+ * The two courts, over one drawn object.
+ *
+ * `Court` is the design system's — a Sport and a box in, the ground, the chrome and the seat
+ * **positions** out. These two are the feature's, and they are **two components rather than a
+ * flag on one**: they share every number and no behaviour, so read-only faces and pressable
+ * seats are different children
+ * ([`the-play-components.md`](../../../../docs/specs/matchmaking/the-play-components.md) §4).
+ * The rules under them — a side that follows you across the net, a seat nobody may vacate, and
+ * what a tap means — are `domain/lineup`'s, exported below.
+ */
+export { CourtBuild, type CourtBuildProps } from './components/court/CourtBuild';
+export {
+  CourtMini,
+  type CourtFaceOccupant,
+  type CourtMiniProps,
+} from './components/court/CourtMini';
+export {
+  CourtSeat,
+  type CourtSeatOccupant,
+  type CourtSeatProps,
+} from './components/court/CourtSeat';
+export { seatName } from './components/court/seatName';
+
+export {
+  SEAT_PLACES,
+  seatIsClearable,
+  seatIsLocked,
+  seatPlaces,
+  tapSeat,
+  type BuildSeat,
+  type SeatGuard,
+  type SeatPlace,
+  type SeatTap,
+  type SwapState,
+} from './domain/lineup';
 
 export type { Candidate, LikelyRange, PlayerCard, SearchEnvelope } from './domain/candidate';
 

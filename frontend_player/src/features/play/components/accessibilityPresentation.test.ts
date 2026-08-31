@@ -8,9 +8,10 @@
 
 import { OUT_OF_DATE_GAP } from '@/shared/vocabulary/outOfDate';
 
+import { SEAT_PLACES } from '../domain/lineup';
+
 import {
   PLAY_LIVE_REGIONS,
-  SEAT_PLACES,
   SWAP_TOGGLE_LABEL,
   availabilityDiffCellLabel,
   candidateActionLabel,

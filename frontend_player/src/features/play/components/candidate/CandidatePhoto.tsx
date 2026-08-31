@@ -53,6 +53,19 @@ import { CANDIDATE_POSTER_LABEL } from '../playerCardPresentation';
 const RADIUS_RATIO = 0.33;
 
 /**
+ * That corner, for the one thing drawn **around** a face rather than inside it.
+ *
+ * A court seat rings its face and an empty seat draws the ring with no face behind it, so the
+ * ratio has to be readable from outside — and a second `* 0.33` in the seat is the drift
+ * having one owner was supposed to close. Exported as a function rather than as the number,
+ * because what is owned is *a share of the box* and a caller handed `0.33` would have to know
+ * what to do with it.
+ */
+export function candidatePhotoRadius(size: number): number {
+  return size * RADIUS_RATIO;
+}
+
+/**
  * The competitive card's thumbnail, in points — the one box whose dimensions are the card's
  * own rather than the caller's.
  *
@@ -112,11 +125,11 @@ export function CandidatePhoto({ playerId, photoUrl, box }: CandidatePhotoProps)
 function geometry(box: CandidatePhotoBox) {
   switch (box.kind) {
     case 'thumb':
-      return { ...THUMB, borderRadius: THUMB.width * RADIUS_RATIO };
+      return { ...THUMB, borderRadius: candidatePhotoRadius(THUMB.width) };
     case 'media':
       return { flex: 1 };
     case 'face':
-      return { width: box.size, height: box.size, borderRadius: box.size * RADIUS_RATIO };
+      return { width: box.size, height: box.size, borderRadius: candidatePhotoRadius(box.size) };
   }
 }
 
