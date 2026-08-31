@@ -71,10 +71,17 @@ export const SEARCH_MODES = ['COMPETITIVE', 'FOR_FUN'] as const;
 
 export type SearchMode = (typeof SEARCH_MODES)[number];
 
-/** The kind of evening a **player** has declared for a sport. */
-export const PLAY_INTENTS = ['COMPETITIVE', 'FOR_FUN', 'NO_PREFERENCE'] as const;
-
-export type PlayIntent = (typeof PLAY_INTENTS)[number];
+/**
+ * The kind of evening a **player** has declared for a sport — **`shared/vocabulary`'s**, and
+ * re-exported here so Play still reads its whole vocabulary from one file.
+ *
+ * It moved out when `player_profile` became the second feature to hold one: it serves the
+ * declaration on the profile surface and writes it on `PUT /play-intents/{sport}`, and a Play
+ * intent is a root-glossary term rather than this feature's reading of one — `sport.ts`'s
+ * argument exactly. What stayed here is what Play does with one: `domain/playMode` maps a
+ * declaration to the `SearchMode` a search opens in.
+ */
+export { PLAY_INTENTS, type PlayIntent } from '@/shared/vocabulary/playIntent';
 
 /**
  * Whose gap made a term stand down: nobody's, yours, or theirs.

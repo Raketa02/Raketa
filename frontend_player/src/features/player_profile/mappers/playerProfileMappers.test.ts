@@ -10,7 +10,14 @@ import type { Wire } from '@/test-support/transport';
 
 import type { ProfileCommit } from '../domain/profileCommit';
 
-import { toCommitRequest, toProfileOptions, toUploadedPhoto } from './playerProfileMappers';
+import {
+  toCommitRequest,
+  toPlayerProfileSurface,
+  toProfileOptions,
+  toUploadedPhoto,
+  toWeekCells,
+  toWireSlots,
+} from './playerProfileMappers';
 
 const SERVED: Wire['PlayerProfileOptionsResponse'] = {
   social_tag_groups: [
@@ -257,5 +264,73 @@ describe('what an upload answered', () => {
     } as unknown as Wire['PhotoResponse'];
 
     expect(toUploadedPhoto(fromTheFuture).review).toBe('allowed');
+  });
+});
+
+describe('the week, in the two spellings that exist', () => {
+  it('sends the whole grid, in the order it is held', () => {
+    // The list *is* the week and what is absent from it is unticked, so nothing here sorts
+    // and nothing deduplicates — the write path collapses repeats itself.
+    expect(
+      toWireSlots([
+        { day: 6, part: 'morning' },
+        { day: 2, part: 'evening' },
+      ]),
+    ).toEqual([
+      { day: 6, part: 'MORNING' },
+      { day: 2, part: 'EVENING' },
+    ]);
+  });
+
+  it('reads one back', () => {
+    expect(toWeekCells([{ day: 2, part: 'AFTERNOON' }])).toEqual([{ day: 2, part: 'afternoon' }]);
+  });
+
+  it('drops a cell naming a day that is not one of the seven', () => {
+    // The wire types `day` as a bare integer, so seven is a promise rather than a
+    // compiler's guarantee — and there is no honest eighth day to draw.
+    const eighth = [{ day: 8, part: 'MORNING' }] as unknown as Wire['AvailabilitySlotResource'][];
+
+    expect(toWeekCells(eighth)).toEqual([]);
+  });
+});
+
+describe('the profile surface Play reads', () => {
+  const SERVED_SURFACE: Wire['PlayerProfileReadResponse'] = {
+    availability: [{ day: 2, part: 'EVENING' }],
+    search_radius_km: 12,
+    play_intents: { PADEL: 'FOR_FUN', TENNIS: 'NO_PREFERENCE' },
+  };
+
+  it('carries the three facts and nothing else', () => {
+    expect(toPlayerProfileSurface(SERVED_SURFACE)).toEqual({
+      week: [{ day: 2, part: 'evening' }],
+      searchRadiusKm: 12,
+      playIntents: { padel: 'FOR_FUN', tennis: 'NO_PREFERENCE' },
+    });
+  });
+
+  it('reads a cleared week as an answer rather than as a missing one', () => {
+    // A player may clear their week. It means *we do not know when they play*, never
+    // *never*, and it is what the search screen seeds a blank working copy from.
+    expect(toPlayerProfileSurface({ ...SERVED_SURFACE, availability: [] }).week).toEqual([]);
+  });
+
+  it('leaves an undeclared sport absent, which is what the interstitial reads', () => {
+    const declared = toPlayerProfileSurface(SERVED_SURFACE).playIntents;
+
+    expect(declared.squash).toBeUndefined();
+  });
+
+  it('drops a declaration this build cannot read, sport and all', () => {
+    // Two shapes of the same phone-that-was-not-updated case: a fifth sport, and a fourth
+    // intent. Neither can open a chip or seed a mode, and guessing at a weight vector is
+    // the one answer worse than opening on the declared default.
+    const fromTheFuture = {
+      ...SERVED_SURFACE,
+      play_intents: { PADEL: 'FOR_FUN', PICKLEBALL: 'FOR_FUN', TENNIS: 'RANKED' },
+    } as unknown as Wire['PlayerProfileReadResponse'];
+
+    expect(toPlayerProfileSurface(fromTheFuture).playIntents).toEqual({ padel: 'FOR_FUN' });
   });
 });

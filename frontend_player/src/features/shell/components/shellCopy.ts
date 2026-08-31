@@ -13,6 +13,12 @@
  * | Chats | [#221](https://github.com/Raketa02/Raketa/issues/221) — a chat opens on the **first** acceptance and grows with each one |
  * | You | [#226](https://github.com/Raketa02/Raketa/issues/226) — the grid, the radius and the declaration are exactly the three facts on the wire |
  *
+ * **Play is not among them any more.** Its stub said *"the search, the deck and the court —
+ * not built yet"* and was replaced by the screen itself
+ * ([#268](https://github.com/Raketa02/Raketa/issues/268)); the title it held is the screen's
+ * own and moved there with it. Four tabs remain unbuilt, and `PlaceholderTab` already
+ * excluded Play.
+ *
  * **Now deliberately never says "nothing is happening."** It is where a send lands, so a
  * placeholder asserting emptiness would be lying one tap after a challenge went out. Naming
  * the tab's job is true in both states, which is the test the line has to pass and the test
@@ -51,15 +57,3 @@ export const PLACEHOLDER_COPY = {
     line: 'Your profile, your radius, your week — not built yet',
   },
 } as const satisfies Record<PlaceholderTab, PlaceholderCopy>;
-
-/**
- * Play's entry, until [#268](https://github.com/Raketa02/Raketa/issues/268) builds it.
- *
- * The title is the screen's real one and stays: *Find a game* is what ⚡ opens, and the two
- * ways through it are named rather than described, so the stub says what is coming rather
- * than that something is.
- */
-export const FIND_A_GAME_COPY = {
-  title: 'Find a game',
-  line: 'The search, the deck and the court — not built yet',
-} as const satisfies PlaceholderCopy;

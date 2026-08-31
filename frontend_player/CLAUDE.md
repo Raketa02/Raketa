@@ -41,8 +41,10 @@ step, one required answer about the player and one optional preference over who 
 matched with ([ADR-0096](../docs/adr/0096-gender-preference-mutual-gate-invisible-to-the-scorer.md)),
 the Proposals opt-in, never pre-ticked and with a finish that stays closed until the player
 answers either way, and the **profile commit**: every answer in one idempotent
-`POST /players/me/profile`, after which the player walks the data screen into the app). Two
-more features hold **only words** so far — `play` and `challenges`, whose copy deck is below.
+`POST /players/me/profile` — plus the **Profile surface**, the one read of the week, the
+radius and the per-sport declaration that Play's search screen is drawn from, with an unkeyed
+`PUT` behind each of the three). `play` has its first screen, below; `challenges` holds
+**only words** so far.
 
 **The shell is five tabs over one stack, and it remembers nothing.** `TabShell` mounts the
 `TabBar` once, below the navigator, and reads the active column off the current path —
@@ -299,6 +301,31 @@ that asked only about motion would run its full animation in front of the one pe
 none of the craft and all of the latency. **Reduced motion is read once**, by
 `ReducedMotionProvider` at the root: a hook per consumer was one OS listener per consumer,
 which was right for two overlays and wrong for surfaces mounted for as long as the tab is.
+
+**⚡Play's first screen is _Find a game_, and it holds four facts with four lifetimes.** A
+sport and a mode are **process-scoped and never written back**; the week is a **working copy**
+seeded from the profile on entry, edited freely, and travelling as `availability_override` and
+nowhere else; and the radius is route-local over the profile's. The asymmetry is the wire's:
+`RunSearchRequest` carries a sport, a mode and — only where the player improvised one — a week,
+and **there is deliberately no radius on it and never will be**, because _a radius supplied by
+a phone is a gate evaluated on a lie_. So the slider's only way to mean anything is for the
+profile to hold what it shows, which makes pressing _Search_ **one act over two requests** —
+the `PUT` first, and only where the number moved, so a failure there is a search that has not
+happened and the retry is the control the player already pressed. **A cleared week runs a
+search**: an omitted override means _use my profile grid_ and an **empty list** means _I
+unticked every cell_, and #247 is what stopped the wire conflating them. _Changed from your
+profile_ is a **client comparison made on every tap** — a slot ticked and unticked is not a
+changed week — and it is deliberately not `KEEP_THESE_TIMES`, which compares the post-rung grid
+a search actually ran on and only the backend can compute. **The prompts ride on the response**,
+so _it never blocks_ is arithmetic rather than a rule a screen obeys: by the time there is
+anything to ask, the search has already run. The sport chips are drawn only from
+`GET /ratings`, which settles `sport_not_rated` by construction, and a sport that is rated and
+**undeclared** opens ADR-0094's **one-tap interstitial** — _permanent, not a migration path_ —
+off a set difference the screen already holds, before `play_intent_not_declared` refuses rather
+than after. Where a finished search **goes** is not decided there: the latch
+([#269](https://github.com/Raketa02/Raketa/issues/269)) and the builder
+([#271](https://github.com/Raketa02/Raketa/issues/271)) own that, and the record it leaves under
+`searchKeys.detail(id)` is the origin search they read.
 
 **Play's failure layer is built before its screens, and its posture is two sentences.**
 _Nothing in Play background-refetches_ was the first; _**nothing in Play retries without the

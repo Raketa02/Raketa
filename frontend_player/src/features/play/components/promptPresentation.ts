@@ -36,25 +36,22 @@
 
 import { counted } from '@/shared/formatting/counted';
 
-import type { Prompt, SearchMode } from '../domain/vocabulary';
+import type { RaisedPrompt } from '../domain/raisedPrompt';
+import type { Prompt } from '../domain/vocabulary';
 
 import { modeWord } from './searchPresentation';
 
+/**
+ * A prompt as it was raised, with the value it is asking about — **`domain/raisedPrompt`'s**.
+ *
+ * The shape is a code and its payload rather than copy, and a mapper and a use-case both hold
+ * one, so it sits inward of this file and is re-exported here for the callers that reach the
+ * sentence and its facts together.
+ */
+export type { RaisedPrompt };
+
 /** §F2's closer, on all four. It is what makes a prompt an offer rather than a gate. */
 export const PROMPT_CLOSER = 'Either way the search runs now.';
-
-/**
- * A prompt as it was raised, with the value it is asking about.
- *
- * `sportName` is passed in rather than resolved here: what a sport is called is
- * `sportPresentation`'s, and it lives in the feature that first drew one. A copy deck quoting
- * a name is not a second table of names.
- */
-export type RaisedPrompt =
-  | { readonly prompt: 'KEEP_THESE_TIMES'; readonly slotsNow: number; readonly slotsWas: number }
-  | { readonly prompt: 'KEEP_THIS_RADIUS'; readonly radiusKm: number }
-  | { readonly prompt: 'UPDATE_PLAY_INTENT'; readonly sportName: string; readonly mode: SearchMode }
-  | { readonly prompt: 'REFRESH_YOUR_TIMES' };
 
 /** What the sheet draws: the question, what saying yes buys, and what *not now* costs. */
 export interface PromptCopy {

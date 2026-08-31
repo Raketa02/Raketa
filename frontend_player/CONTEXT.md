@@ -238,13 +238,29 @@ profile editor that later edits the same values.
   this build has no words for is dropped rather than drawn — the answer `toSport` gives an
   unknown sport. _Avoid_: "config" and "settings"; neither is about this player, and both
   invite something per-player being added to it.
+- **Profile surface** — the **one read** the Play screens hold about the player: the
+  availability grid, the Search radius and the per-sport Play intent, in one round trip across
+  the two aggregates that own them. Deliberately **not the whole profile**, and the two
+  absences on it are different absences — gender and the gender preference are a _standing
+  refusal_ that never comes back out of this API, and tags, photos and the location area are a
+  _deferral_ this same route grows when **You** is built. Its home is `player_profile/`, not
+  `play/`, because the three **writes** are: one unkeyed `PUT` per fact, and a read whose
+  paired writes live in another feature is a read in the wrong feature. Of the three facts
+  only the radius is written from Find a game — a search carries no radius and never will, so
+  the profile is the only place a slider there can mean anything. _Avoid_: "the profile" for
+  this — it is a surface over one, and calling it the profile is how a fourth field gets added
+  to a body scoped to three; also "play screen read", which names a caller rather than the
+  facts.
 
 ### The Play tab
 
-Seven client-only concepts and one kit of parts. **None of them exists on the backend**, and
-the first four are the shape [#228](https://github.com/Raketa02/Raketa/issues/228) settled:
-what Play remembers, for how long, and what it must never remember. The stores are
-`features/play/store/`; the rules are `features/play/domain/`.
+Seven client-only concepts, one kit of parts, and one gate that is **not** client-only. The
+seven do not exist on the backend, and the first four are the shape
+[#228](https://github.com/Raketa02/Raketa/issues/228) settled: what Play remembers, for how
+long, and what it must never remember. The stores are `features/play/store/`; the rules are
+`features/play/domain/`. The **Declaration interstitial** is the exception on both counts — it
+is a screen this app draws over a write and a refusal the backend already owns, and it is
+listed here because it is a Play surface rather than a profile one.
 
 - **Play session** — **one visit to the Play tab**: the Working copy and the Line-up built on
   it, and nothing else. It begins when the shell lays the Play stack down and **ends exactly
@@ -301,6 +317,18 @@ what Play remembers, for how long, and what it must never remember. The stores a
   pool visit, because that is when the read-back happens. _Avoid_: "blocked seat" and "removed
   player" — both name a cause this app may not know and may not say; "stale seat", which is
   about time and this is not.
+- **Declaration interstitial** — the one-tap question a searcher meets when they are **rated in
+  a sport and have never said what kind of game they want in it**. It is opened off a set
+  difference the search screen already holds — rated, and absent from the Profile surface's
+  declaration map — so it stands **before** `play_intent_not_declared` refuses rather than
+  after it. [ADR-0094](../docs/adr/0094-play-intent-declared-per-sport-in-its-own-aggregate.md)
+  calls it _"permanent, not a migration path"_: it is what makes _every searcher has declared_
+  true rather than intended, and it closes a sport rated before the declaration shipped, a
+  restored account and a bug in the tail with one screen. **It is not the mode toggle**, and
+  the two must never be collapsed — it writes a `PlayIntent` with three values and the toggle
+  chooses a `SearchMode` with two, which is the arity gap ADR-0094 spent a type on. _Avoid_:
+  "the intent prompt" — a Prompt rides on a search response and offers something; this gates
+  one; "onboarding step", which it is not and must not become.
 - **No hold state** — the one thing this tab must never remember. A held account is a `403` the
   HTTP layer already maps as terminal, re-checked server-side at every request; **there is no
   cached hold flag anywhere**, because a cached flag is the only mechanism by which a hold

@@ -244,6 +244,38 @@ export const PROFILE_OPTIONS_SERVED: Wire['PlayerProfileOptionsResponse'] = {
   search_radius: { minimum_km: 1, maximum_km: 50, step_km: 1, default_km: 10 },
 };
 
+export const PROFILE_SURFACE_PATH = '/api/v1/players/me/profile';
+
+/**
+ * The three facts Play's search screen opens on: a week, a radius and one declaration.
+ *
+ * A padel declaration is in it because *rated and undeclared* is a **different screen** —
+ * ADR-0094's one-tap interstitial — so a suite that wants the ordinary case has to say a
+ * declaration exists, and a suite that wants the interstitial passes a surface without one.
+ */
+export const PROFILE_SURFACE_SERVED: Wire['PlayerProfileReadResponse'] = {
+  availability: [
+    { day: 2, part: 'EVENING' },
+    { day: 6, part: 'MORNING' },
+  ],
+  search_radius_km: 12,
+  play_intents: { PADEL: 'FOR_FUN' },
+};
+
+/**
+ * The profile surface, for any suite that renders a screen inside ⚡Play.
+ *
+ * Separate from `stubGate` for the reason the options are: the gate does not read it. It is
+ * the shell's business only because Play's tab is now a screen rather than a placeholder, and
+ * a screen that reads three routes is a screen a harness has to describe.
+ */
+export function stubProfileSurface(
+  transport: Transport,
+  served: Wire['PlayerProfileReadResponse'] = PROFILE_SURFACE_SERVED,
+) {
+  transport.on('GET', PROFILE_SURFACE_PATH, () => json(served));
+}
+
 /**
  * What the profile steps are drawn from.
  *

@@ -103,8 +103,8 @@ export {
   promptCopy,
   promptSuppression,
   type PromptCopy,
-  type RaisedPrompt,
 } from './components/promptPresentation';
+export type { RaisedPrompt } from './domain/raisedPrompt';
 export {
   forecastAssumption,
   modeWord,
@@ -243,3 +243,31 @@ export type { Candidate, LikelyRange, PlayerCard, SearchEnvelope } from './domai
  * not a wider one.
  */
 export { endPlaySession, usePlaySession } from './store/playSession.store';
+
+/**
+ * **Find a game** — the screen behind ⚡, and the first Play surface that is not only words.
+ *
+ * Named by `src/app/(app)/(tabs)/play/index.tsx` and by nothing else. It replaced the shell's
+ * stub, which is why the title moved out of `shellCopy` with it: a placeholder holds a tab's
+ * words only for as long as the tab has no screen
+ * ([#268](https://github.com/Raketa02/Raketa/issues/268)).
+ */
+export { FindAGameScreen } from './components/FindAGameScreen';
+
+/**
+ * What stands between a player and a search, and the words the screen says about it.
+ *
+ * Exported for the suites that drive the screen through the real route tree: an assertion
+ * spelling *Search* or *Find a game* as a string literal is a red build for the ticket that
+ * rewords it, which is the concession `shellCopy`'s `PLACEHOLDER_COPY` already makes and for
+ * the same reason. Nothing in `src/` reads either.
+ */
+export {
+  FIND_A_GAME_TITLE,
+  WEEK_CHANGED_FROM_PROFILE,
+  declarationTitle,
+  intentLabel,
+  modeLabel,
+  searchControlLabel,
+} from './components/findAGamePresentation';
+export { findAGameStanding, type FindAGameStanding } from './domain/findAGame';

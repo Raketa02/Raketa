@@ -59,3 +59,63 @@ export { useSocialStepAdmission, type SocialStepAdmission } from './hooks/useSoc
  * cross-feature import goes through this surface, which is what this file is for.
  */
 export { COURT_POSTER_COUNT, courtPosterFor } from './components/courtPosterFraming';
+
+/**
+ * **The profile surface Play reads, and the two writes beside it.**
+ *
+ * One read of the week, the radius and the per-sport declaration
+ * ([#246](https://github.com/Raketa02/Raketa/issues/246)), and one unkeyed `PUT` per fact.
+ * They are this feature's rather than Play's because the writes are:
+ * [`the-play-screens.md`](../../../../docs/specs/matchmaking/the-play-screens.md) §0 calls
+ * them *"two writes that are not matchmaking's at all"*, and a read whose paired writes live
+ * elsewhere is a read in the wrong feature. *You* will draw the same three facts.
+ *
+ * `useDeclarePlayIntent` is the one-tap interstitial's, which ADR-0094 calls *"permanent, not
+ * a migration path"*: a searcher with a rating and no declaration is gated by it, and that is
+ * what makes every searcher having declared true rather than intended.
+ */
+export type { PlayerProfileSurface, PlayIntentDeclarations } from './domain/PlayerProfileSurface';
+export type { PlayIntentSurface } from './api/playerProfileApi';
+export type { PlayIntentDeclaration } from './use-cases/declarePlayIntent';
+export {
+  useChangeSearchRadius,
+  useDeclarePlayIntent,
+  useProfileSurface,
+} from './hooks/useProfileSurface';
+
+/**
+ * The bounds a Search radius is held inside, and the words the figure is read with.
+ *
+ * Exported because **Play edits the same number against the same rules**, which is this
+ * feature's founding argument in the direction it was written for: *"the profile editor will
+ * obey these rules from a screen that looks nothing like this one."* The onboarding step was
+ * the first such screen and Find a game is the second — the served minimum, maximum, step and
+ * default are product's to retune, so a second copy of the snapping anywhere would be a
+ * staler one in builds already on phones.
+ */
+export { useProfileOptions } from './hooks/useProfileOptions';
+export {
+  openingRadius,
+  radiusAtFraction,
+  radiusFraction,
+  steppedRadius,
+  topOfScale,
+  type SearchRadiusBounds,
+} from './domain/searchRadius';
+export {
+  RADIUS_LABEL,
+  radiusFigure,
+  radiusWords,
+  spokenRadius,
+  widestRadiusFigure,
+} from './components/radiusPresentation';
+
+/**
+ * The week's two spellings, exported for the one caller that sends a week this feature does
+ * not own: the search's `availability_override`.
+ *
+ * `sport.ts`'s rule is the shape — *the two spellings meet in `mappers/`, and only there* —
+ * so this is a re-export rather than a second table in `play/mappers/`, which would be the
+ * drift `week.ts` was promoted to stop arriving one layer lower.
+ */
+export { toWeekCells, toWireSlots } from './mappers/playerProfileMappers';

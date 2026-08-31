@@ -23,15 +23,19 @@
  */
 
 import type { components } from '@/generated/schema';
+import { toSport } from '@/features/onboarding/types';
+import { PLAY_INTENTS, type PlayIntent } from '@/shared/vocabulary/playIntent';
+import type { Sport } from '@/shared/vocabulary/sport';
 import {
   SOCIAL_TAG_GROUP_IDS,
   SOCIAL_TAG_IDS,
   type SocialTagGroupId,
   type SocialTagId,
 } from '@/shared/vocabulary/socialTags';
-import type { DayPart } from '@/shared/vocabulary/week';
+import { WEEKDAYS, type DayPart, type WeekCell, type Weekday } from '@/shared/vocabulary/week';
 
 import type { Gender, GenderPreference } from '../domain/gender';
+import type { PlayerProfileSurface, PlayIntentDeclarations } from '../domain/PlayerProfileSurface';
 import type { PhotoReview, UploadedPhoto } from '../domain/photoCollection';
 import type { ProfileOptions } from '../domain/ProfileOptions';
 import type { ProfileCommit } from '../domain/profileCommit';
@@ -45,6 +49,9 @@ type WireDayPart = components['schemas']['DayPart'];
 type WireGender = components['schemas']['Gender'];
 type WireGenderPreference = components['schemas']['GenderPreference'];
 type WirePhotoReview = components['schemas']['PhotoReviewDecision'];
+type AvailabilitySlotResource = components['schemas']['AvailabilitySlotResource'];
+type PlayerProfileReadResponse = components['schemas']['PlayerProfileReadResponse'];
+type WirePlayIntent = components['schemas']['PlayIntent'];
 
 /**
  * One spelling, not two.
@@ -161,6 +168,103 @@ const WIRE_DAY_PART: Readonly<Record<DayPart, WireDayPart>> = {
   evening: 'EVENING',
 };
 
+/** The same table read the other way, inverted so the two cannot disagree about a part. */
+const DAY_PART: Readonly<Record<WireDayPart, DayPart>> = {
+  MORNING: 'morning',
+  AFTERNOON: 'afternoon',
+  EVENING: 'evening',
+};
+
+const WEEKDAY = new Set<number>(WEEKDAYS);
+
+/**
+ * A week as the wire spells it — **the whole grid, every time**, because the list *is* the
+ * week and what is absent from it is unticked.
+ *
+ * Exported because Play sends one too: the search's `availability_override` is this same
+ * twenty-one-cell week improvised for one search
+ * ([#268](https://github.com/Raketa02/Raketa/issues/268)), and a second table spelled in that
+ * feature's `mappers/` would be the drift `week.ts` was promoted to stop, arriving one layer
+ * lower. `sport.ts`'s rule is the shape: *the two spellings meet in `mappers/`, and only
+ * there* — so this is the one place, and Play reaches it through this feature's public
+ * surface.
+ *
+ * **Order is carried, never imposed.** Nothing here sorts and nothing deduplicates; the
+ * write path collapses repeated cells itself.
+ */
+export function toWireSlots(week: readonly WeekCell[]): AvailabilitySlotResource[] {
+  return week.map((cell) => ({ day: cell.day, part: WIRE_DAY_PART[cell.part] }));
+}
+
+/**
+ * The inbound half. A cell naming a day outside 1-7 is **dropped**, not clamped.
+ *
+ * The wire types `day` as a bare integer, so seven is a promise rather than a compiler's
+ * guarantee, and there is no honest eighth day to render — the answer `toSocialTagId` gives
+ * a tag with no label, for the same reason.
+ */
+export function toWeekCells(slots: readonly AvailabilitySlotResource[]): readonly WeekCell[] {
+  return slots.flatMap((slot) =>
+    WEEKDAY.has(slot.day) ? [{ day: slot.day as Weekday, part: DAY_PART[slot.part] }] : [],
+  );
+}
+
+/**
+ * The declaration map: **only the sports that were answered for.**
+ *
+ * A sport this build has no identity for takes its own key out with it, which is the same
+ * drop `toSports` makes — a declaration nothing can name is a declaration no chip can be
+ * drawn for. An intent outside this build's three is dropped for the second half of the same
+ * reason: `MODE_WITHOUT_A_DECLARATION` is a truthful opening for a sport the platform has an
+ * answer for and this build cannot read, where guessing at a weight vector is not.
+ */
+const KNOWN_PLAY_INTENTS = new Set<PlayIntent>(PLAY_INTENTS);
+
+function toPlayIntentDeclarations(
+  served: Readonly<Record<string, WirePlayIntent>>,
+): PlayIntentDeclarations {
+  const declared: Partial<Record<Sport, PlayIntent>> = {};
+  for (const [wireSport, intent] of Object.entries(served)) {
+    const one = toPlayIntentDeclared({ sport: wireSport, intent });
+    if (one === undefined) continue;
+    declared[one.sport] = one.intent;
+  }
+  return declared;
+}
+
+/**
+ * **One** declaration, as the profile now holds it — the `PUT`'s own answer.
+ *
+ * The same narrowing the map above makes, exported because the write path needs it for the
+ * reason the read path does: what a client sends and what the profile ends up holding are two
+ * facts, and a cache written from the first is a cache that cannot be corrected by the second.
+ * `undefined` where either half is a code this build cannot read, which leaves the caller to
+ * re-read rather than to record something it would then draw.
+ */
+export function toPlayIntentDeclared(response: {
+  readonly sport: string;
+  readonly intent: WirePlayIntent;
+}): { readonly sport: Sport; readonly intent: PlayIntent } | undefined {
+  const sport = toSport(response.sport);
+  if (sport === undefined || !KNOWN_PLAY_INTENTS.has(response.intent)) return undefined;
+  return { sport, intent: response.intent };
+}
+
+/**
+ * The three facts the Play screens hold, out of the one read that carries them.
+ *
+ * Nothing is defaulted here. An empty `availability` is *a cleared week*, which is a legal
+ * answer and not a missing one, and an absent sport in `play_intents` is *undeclared*, which
+ * is the set difference the search screen's interstitial is opened on.
+ */
+export function toPlayerProfileSurface(response: PlayerProfileReadResponse): PlayerProfileSurface {
+  return {
+    week: toWeekCells(response.availability),
+    searchRadiusKm: response.search_radius_km,
+    playIntents: toPlayIntentDeclarations(response.play_intents),
+  };
+}
+
 /**
  * The two gender vocabularies, in the two spellings that exist.
  *
@@ -209,10 +313,7 @@ export function toCommitRequest(commit: ProfileCommit): CommitPlayerProfileReque
   return {
     social_tag_ids: [...commit.socialTagIds],
     photo_ids: [...commit.photoIds],
-    availability: commit.availability.map((slot) => ({
-      day: slot.day,
-      part: WIRE_DAY_PART[slot.part],
-    })),
+    availability: toWireSlots(commit.availability),
     location: { latitude: commit.location.latitude, longitude: commit.location.longitude },
     search_radius_km: commit.searchRadiusKm,
     proposals_opt_in: {

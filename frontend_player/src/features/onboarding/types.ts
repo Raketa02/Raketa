@@ -20,6 +20,31 @@ export type { SkillRating } from './domain/SkillRating';
 export { onboardingKeys } from './hooks/onboardingKeys';
 
 /**
+ * What this player is rated at, and the two spellings of a sport.
+ *
+ * All three are read by **other features**, and each is here for the same reason: onboarding
+ * is where a rating is made and where the wire's `PADEL` first met this app's `padel`, so a
+ * second table or a second query key elsewhere would be a second answer to a question this
+ * feature already owns. `sport.ts`'s own rule is that *the two spellings meet in `mappers/`,
+ * and only there* — singular, which is what makes this a re-export rather than a promotion.
+ *
+ * The callers today are Play's sport chips (`useSkillRatings`, `toWireSport` on the search
+ * request) and the Player profile's surface read (`toSport` over the declaration map).
+ */
+export { useSkillRatings } from './hooks/useSkillRatings';
+export { toSport, toWireSport } from './mappers/onboardingMappers';
+
+/**
+ * What a sport is called, and the colour it wears.
+ *
+ * Presentation the wire does not carry, decided here because onboarding drew the first sport.
+ * Play quotes the name in two places — the chip row, and `UPDATE_PLAY_INTENT`'s *"your last
+ * five {sport} searches"* — and a copy deck quoting a name is never a second table of names
+ * ([`the-words.md`](../../../../docs/specs/matchmaking/the-words.md) §1).
+ */
+export { sportColour, sportLabel } from './components/sportPresentation';
+
+/**
  * The entry gate. The *decision* is exported, never the redirect: where a player belongs
  * is this feature's rule, and which route expresses it is the routing layer's.
  */

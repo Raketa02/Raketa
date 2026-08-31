@@ -12,15 +12,21 @@
 import { router } from 'expo-router';
 import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
 
-import { usePlaySession } from '@/features/play/types';
+import { FIND_A_GAME_TITLE, usePlaySession } from '@/features/play/types';
 
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
-import { GATE_USER, launchSignedIn, stubGate } from '@/test-support/onboardingRouter';
+import {
+  GATE_USER,
+  launchSignedIn,
+  stubGate,
+  stubProfileOptions,
+  stubProfileSurface,
+} from '@/test-support/onboardingRouter';
 import { installTransport, json, type Transport, type Wire } from '@/test-support/transport';
 
 import { enterPlay } from './shellNavigation';
-import { FIND_A_GAME_COPY, PLACEHOLDER_COPY } from './shellCopy';
+import { PLACEHOLDER_COPY } from './shellCopy';
 
 /** One rating and a committed profile: the gate's fourth answer is *the app*. */
 const RATING: Wire['RatingResponse'] = {
@@ -40,6 +46,11 @@ let transport: Transport;
 beforeEach(() => {
   transport = installTransport();
   stubGate(transport, { ratings: [RATING], hasPlayerProfile: true });
+  // ⚡Play is a screen now, and it reads three routes. Stubbed here rather than in the two
+  // tests that press the tab, because an unstubbed route throws at the socket and the
+  // failure would name `fetch` rather than the screen.
+  stubProfileSurface(transport);
+  stubProfileOptions(transport);
 });
 
 afterEach(async () => {
@@ -146,7 +157,7 @@ describe('⚡Play', () => {
 
     pressTab('Play');
 
-    expect(await screen.findByText(FIND_A_GAME_COPY.line)).toBeTruthy();
+    expect(await screen.findByText(FIND_A_GAME_TITLE)).toBeTruthy();
     expect(screen).toHavePathname('/play');
   });
 
@@ -184,7 +195,7 @@ describe('⚡Play', () => {
 
     act(() => enterPlay());
 
-    expect(await screen.findByText(FIND_A_GAME_COPY.line)).toBeTruthy();
+    expect(await screen.findByText(FIND_A_GAME_TITLE)).toBeTruthy();
     expect(screen).toHavePathname('/play');
     act(() => router.back());
     await waitFor(() => expect(screen).toHavePathname('/'));
