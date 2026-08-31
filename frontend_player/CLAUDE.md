@@ -346,13 +346,17 @@ returns, so a latch bound to `isPending` alone would bury the amber sentence say
 `players_in_range` off the answer, and the shape says so — `SearchingStatus.count` is absent
 until there is one, so the wait's first phase has a headline and no number it could not have.
 That is also §20.11's _the searching region announces the **result** once and never a stage_.
-`searchingWait.ts` holds the last split: **a hold is not an animation**, so a collapsed
-presentation drops the fill's 550-per-seat **stagger** to zero and **keeps the floor** — which
-`motion.hold` had decided in writing before anybody asked, and which two docstrings said the
-opposite of until [#269](https://github.com/Raketa02/Raketa/issues/269) put the arithmetic
-somewhere a test could read it. Both files sit in `features/play/`, not `shared/`: the two
-waits are Play's, the second arrives with the builder, and onboarding's floor is anchored to
-the press because it holds a **sentence** to read rather than an answer.
+One split is stated and **half-built on purpose**: _a hold is not an animation_, so a
+collapsed presentation drops the fill's 550-per-seat **stagger** to zero and **keeps the
+floor**. `motion.hold` had decided that in writing before anybody asked, and `overlay.tsx` and
+`accessibilityPresentation.ts` both said the opposite — they are corrected. The floor's half
+ships (`heldWait` takes no collapse and is offered none); the **stagger's half is the engine
+fill's**, it is `motion.hold`'s _"the court's own"_, and it lands with the court that draws it
+([#271](https://github.com/Raketa02/Raketa/issues/271)) rather than as a second arm here with
+no caller. The pool's wait has nothing over it, so its floor is `theme.motion.hold.pool` read
+straight off the theme. `heldWait.ts` sits in `features/play/`, not `shared/`: both waits are
+Play's, the second is unbuilt, and onboarding's floor is anchored to the press because it holds
+a **sentence** to read rather than an answer.
 
 **Play's failure layer is built before its screens, and its posture is two sentences.**
 _Nothing in Play background-refetches_ was the first; _**nothing in Play retries without the

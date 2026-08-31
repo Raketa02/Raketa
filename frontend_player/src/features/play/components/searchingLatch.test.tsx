@@ -81,7 +81,7 @@ describe('the transition', () => {
   /**
    * The transition goes and the **hold does not**, which is the split `motion.hold` argues in
    * its own docstring: nothing moves during a hold, so there is no animation to spare anybody
-   * and a flash is the last thing to give a player who asked for calm (`searchingWait`).
+   * and a flash is the last thing to give a player who asked for calm (`heldWait`).
    */
   it('does not move at all when the OS asks for calm', () => {
     render(

@@ -28,11 +28,26 @@
  * two are the same mechanism pointed at different things, which is why neither is the other's
  * copy.
  *
- * **It is not skipped under reduced motion.** A held screen is not an animation: nothing moves,
- * and the player who asked the OS to calm things down is the last one who should be given a
- * flash where an answer came into existence (`motion.hold`'s own docstring). What *does*
- * collapse is a stagger drawn over the floor, which is motion and is named where it is drawn
- * (`searchingWait`).
+ * ## The collapse, and the half of it that does not collapse
+ *
+ * > **A hold is not an animation.** The floor survives; a stagger over it goes to zero.
+ *
+ * Nothing moves during a hold, and the player who asked the OS to calm things down is the last
+ * one who should be given a flash where an answer came into existence — `motion.hold`'s own
+ * docstring, which decided this before it was asked. So this hook takes no collapse and is
+ * offered none: there is nothing here for reduced motion to skip.
+ *
+ * The other half is real and is **not built here**. §G5's finding is that the prototype kills
+ * its animations and lets the 2,3-second stagger run anyway
+ * ([#239](https://github.com/Raketa02/Raketa/issues/239)), so a collapsed path has to be built
+ * rather than assumed — but the stagger in question is the engine fill's 550 per seat, it is
+ * `motion.hold`'s *"the court's own"*, and it lands with the court that draws it
+ * ([#271](https://github.com/Raketa02/Raketa/issues/271)). What it will need from here is the
+ * floor it is drawn over and the rule above it: **collapse the stagger, keep the floor.**
+ *
+ * The pool's wait has nothing over it, so its floor is `theme.motion.hold.pool` read straight
+ * off the theme by the one screen that waits on it — a second unit standing between a screen
+ * and a constant would be an abstraction with one caller and one branch.
  *
  * ## Why the timer is a ref, and why the hold rises with the act
  *

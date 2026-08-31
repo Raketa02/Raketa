@@ -114,7 +114,6 @@ import { useHeldWait } from './heldWait';
 import { playErrorMessage } from './playErrorMessage';
 import { SearchingLatch } from './SearchingLatch';
 import { poolRankingStatus } from './searchingPresentation';
-import { searchingFloorMs } from './searchingWait';
 import {
   DECLARATION_BODY,
   FIND_A_GAME_TITLE,
@@ -218,9 +217,14 @@ export function FindAGameScreen() {
    *
    * `useHeldWait` is bound to the act and the floor runs **after** it, so the count off the
    * response is drawn for the same beat whether the search took fifty milliseconds or five
-   * seconds. Nothing here delays a request. The pool's floor takes no collapse and is not
-   * offered one: a held screen is not an animation, so there is nothing for reduced motion to
-   * skip and no question to put to the OS (`searchingWait`).
+   * seconds. Nothing here delays a request.
+   *
+   * The floor is `motion.hold.pool` read directly, because the pool's wait has **nothing over
+   * it**: no stagger, so nothing for a collapsed presentation to take, and no question to put
+   * to the OS. The engine fill's floor is the one with an animation on top and a collapsed
+   * path to build, and it arrives with the court that draws it
+   * ([#271](https://github.com/Raketa02/Raketa/issues/271)) rather than as a second arm here
+   * with no caller.
    *
    * The two subtractions are the two states that are not a wait. A **refusal** has nothing to
    * hold for — the sentence and the retry are already over the *Search* control below — and a
@@ -229,7 +233,7 @@ export function FindAGameScreen() {
    * a screen with no way off it.
    */
   const writesPaused = search.isPaused || radiusWrite.isPaused;
-  const held = useHeldWait(search.isPending && !writesPaused, searchingFloorMs({ kind: 'pool' }));
+  const held = useHeldWait(search.isPending && !writesPaused, theme.motion.hold.pool);
   const latched = held && !writesPaused && search.error === null;
 
   /**

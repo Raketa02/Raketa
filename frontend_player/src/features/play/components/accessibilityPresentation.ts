@@ -56,7 +56,7 @@
  * - **The collapse** (§20.11) — `useCollapsedPresentation()` in `@/shared/ui/overlay`. What
  *   collapses is named where it is drawn: the fill animation, the deck's stagger, and the
  *   stagger drawn over #228 §9's minimum-display floor. **The floor is not one of them** — a
- *   hold is not an animation, and `motion.hold` says so about itself (`searchingWait.ts`).
+ *   hold is not an animation, and `motion.hold` says so about itself (`heldWait.ts`).
  * - *"The searching region announces the **result** once and never a stage"* (§20.11) — a
  *   rule about **when** `poolRankingStatus` and `engineFillStatus` are handed to a live
  *   region, which is the screen's to obey. It is §3's *no fake stages* reaching a second

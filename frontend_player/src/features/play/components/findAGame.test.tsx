@@ -16,6 +16,7 @@ import { onlineManager } from '@tanstack/react-query';
 
 import { offlineMessage } from '@/shared/errors';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
+import { theme } from '@/shared/ui';
 import { queryClient } from '@/shared/lib/query-client';
 import {
   launchSignedIn,
@@ -36,7 +37,6 @@ import { endPlaySession } from '../store/playSession.store';
 
 import { playErrorMessage } from './playErrorMessage';
 import { poolRankingStatus } from './searchingPresentation';
-import { searchingFloorMs } from './searchingWait';
 import {
   DECLARATION_BODY,
   RADIUS_IS_YOUR_PROFILE,
@@ -147,7 +147,7 @@ const SEARCHING = poolRankingStatus({ playersInRange: undefined, sportName: 'Pad
  */
 const latchLifted = async () => {
   await screen.findByText(SEARCHING);
-  act(() => jest.advanceTimersByTime(searchingFloorMs({ kind: 'pool' })));
+  act(() => jest.advanceTimersByTime(theme.motion.hold.pool));
   await waitFor(() => expect(screen.queryByText(SEARCHING)).toBeNull());
 };
 
@@ -512,7 +512,7 @@ describe('the searching latch', () => {
     await screen.findByText(SEARCHING);
 
     // Long past the floor, and still nothing to print: the wait is the request's.
-    act(() => jest.advanceTimersByTime(searchingFloorMs({ kind: 'pool' }) * 3));
+    act(() => jest.advanceTimersByTime(theme.motion.hold.pool * 3));
     expect(screen.queryByText(SEARCHING)).not.toBeNull();
     expect(screen.queryByText(/in range/)).toBeNull();
 
