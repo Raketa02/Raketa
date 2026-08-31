@@ -51,8 +51,10 @@ design-system doc, in the same commit.
 - **9 between stacked cards, 15 at the gutter.** Everything else from the 3pt grid.
 - **Rule C:** white text never sits on `coral` or `mint` — it needs `coralInk` or
   `mintInk`. `ink` is the only dark permitted on `coral`.
-- `volt` on dark surfaces only.
-- **Cards never cast a shadow.** Three shadows exist; all are for things that float.
+- `volt` is a fill anywhere and a stroke only on dark — on paper it is ~1.3:1 as a
+  foreground and 13.96:1 as a bed for `ink`.
+- **Cards never cast a shadow.** Four shadows exist; all are for things that float, and
+  the deck card is one of them because it is not a card.
 - **Every number is mono and tabular.** That is the mechanism that stops a row reflowing
   when a level changes from 2,71 to 2,80.
 - **Every state carries a word or a shape**, never colour alone.

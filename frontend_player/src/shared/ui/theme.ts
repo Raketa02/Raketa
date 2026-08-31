@@ -7,7 +7,8 @@
  *
  * Rules — see docs/design-system.md for the reasoning behind each:
  *   line   BOUNDS a thing        line2  is a FOLD inside one thing
- *   volt   on dark surfaces only (on paper it is ~1.3:1)
+ *   volt   a FILL anywhere, carrying `ink` (13.96:1); a STROKE only on dark, because as a
+ *          foreground on paper it is ~1.3:1 and simply not there
  *   Rule C white text never sits on `coral` or `mint`; it needs `coralInk` or
  *          `mintInk`. `ink` is the only dark that may sit on `coral` (4.50:1).
  *   Colour is picked by MEANING, never by appearance.
@@ -69,7 +70,9 @@ const color = {
   infoSoft: '#EAF1F4',
   infoLine: '#C7DBE3',
 
-  /** DARK SURFACES ONLY — night on it 10.60, ink on it 13.96. Never on paper. */
+  /** A FILL ANYWHERE, a STROKE ONLY ON DARK. `ink` on it is 13.96 wherever it is drawn, so
+   *  a volt tag or button reads on paper; volt AS A FOREGROUND on paper is ~1.3:1, so a
+   *  volt hairline, ring or border there is a line nobody sees. On night it is 10.60. */
   volt: '#D9F24B',
 
   // --- On-dark-card child colours (the dark card repaints its children) ---
@@ -81,12 +84,30 @@ const color = {
   onDarkTag: 'rgba(255,255,255,0.14)',
 
   scrim: 'rgba(10,52,65,0.45)', // the night colour at 45%, not black
+
+  /** THE COURT'S GROUND, and the system's only rule for text over a GENERATED fill.
+   *
+   *  The court is drawn from the selected sport's hue, so the ratio behind a white label
+   *  would otherwise depend on which sport a player picked — every pair in
+   *  docs/design-system.md 2.5 is a fixed pair and none of them can state that. PINNED at
+   *  .93 (the prototype's two call sites disagreed at .92 and .94), which leaves the hue at
+   *  most 7% of the ground: the dark end is `night` whatever the sport, and the light end is
+   *  one of four known composites, 12.29-13.03 for white. Derived in textOnMedia.test.ts.
+   *
+   *  The night colour rather than a black, exactly as `scrim` is — the dim matches the
+   *  palette, and the prototype's rgba(6,26,33) is a hex this palette does not have. */
+  courtScrim: 'rgba(10,52,65,0.93)',
 } as const;
 
 /**
  * Sport identity deliberately reuses the semantic palette rather than extending it —
  * four more hues would make every screen with a sport dot noisier, and the dot is always
  * accompanied by the sport name in text. A FIFTH SPORT FORCES A REAL DECISION.
+ *
+ * That premise is TESTED, not asserted: it was checked against every Play site that draws a
+ * sport hue — the sport chips, the sport tags on the player record, and the court gradient —
+ * and every one carries the sport name on screen (docs/design-system.md 2.3). A surface that
+ * draws one of these with no name beside it reopens the question as surely as a fifth sport.
  */
 const sport = {
   padel: color.coral,
@@ -216,6 +237,11 @@ const space = {
 
 const radius = {
   sheet: 22, // top corners only
+  /** The deck card — the one surface that is NOT a card. It animates in, and translates and
+   *  rotates out under the thumb, so it is a transient object being manipulated: a fourth
+   *  member of the floating family (see `shadow.deckCard`), not a fifth exception to 4.3's
+   *  rule about cards. The competitive candidate card in the pool stays a card at 13. */
+  deckCard: 18,
   cardDark: 15,
   card: 13,
   popover: 13,
@@ -414,10 +440,13 @@ const hit = {
 } as const;
 
 // ---------------------------------------------------------------------------
-// Elevation — three shadows in the whole system, all for things that genuinely float.
+// Elevation — four shadows in the whole system, all for things that genuinely float, plus
+// one TEXT shadow, which is a different mechanism and not an elevation at all.
 // CARDS NEVER HAVE ONE: depth on paper comes from the surface change and the 1pt border.
+// The deck card is here because it is not a card, not because the rule bent.
 //
-// RN cannot express CSS spread, so these are calibrated approximations.
+// RN cannot express CSS spread, so these are calibrated approximations: the blur halves,
+// the offset shrinks toward the negative spread, and the opacity comes down with it.
 // ---------------------------------------------------------------------------
 
 const shadow = {
@@ -441,6 +470,29 @@ const shadow = {
     shadowOpacity: 0.24,
     shadowRadius: 14,
     elevation: 10,
+  },
+  /** The deck card, from `0 18px 40px -26px rgba(11,43,51,.45)`. The largest negative spread
+   *  of the four — 26 of 40 blur — so it is the FAINTEST: the offset comes down hardest and
+   *  the opacity with it. Not the tightest — its blur ties the sheet's, because 40px halves
+   *  to 20 whatever the spread was. It floats least of the four, and its `elevation` says
+   *  so. */
+  deckCard: {
+    shadowColor: '#0B2B33',
+    shadowOffset: { width: 0, height: 7 },
+    shadowOpacity: 0.12,
+    shadowRadius: 20,
+    elevation: 8,
+  },
+  /** TEXT ON GENERATED MEDIA — a textShadow, not an elevation, and the only one in the app.
+   *
+   *  Carried by EVERY label drawn over the court, both sets: the ratios `color.courtScrim`
+   *  guarantees are the ground's light end, and a label can sit anywhere on the ramp. The
+   *  prototype gave it to the seat labels and not to the side labels, which are the
+   *  lower-contrast of the two. */
+  textOnMedia: {
+    textShadowColor: 'rgba(0,0,0,0.6)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
 } as const;
 

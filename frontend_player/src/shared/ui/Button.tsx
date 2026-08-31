@@ -1,7 +1,7 @@
 /**
  * The button, per design-system 6.1.
  *
- * Three variants, four heights, and one rule that is easy to miss: **the primary button
+ * Five variants, four heights, and one rule that is easy to miss: **the primary button
  * is filled `coralInk` and brightens to `coral` when pressed** — the inverse of the
  * prototype, which put white 12pt text on `coral` at 3.89:1. Coral still reads as the
  * accent; the label is legible (Rule C).
@@ -21,13 +21,23 @@
  * reason and with the same momentary exception. **The colour is never the whole fact:** a
  * control that turns green must also change its words, and the screen that uses this is
  * responsible for that half.
+ *
+ * **`volt` is a fifth variant and the one that does not have the others' shape** (added for
+ * Play's *they want you* signal). Volt is a **fill anywhere and a stroke only on dark** (2.2):
+ * as a foreground on paper it is ~1.3:1 and invisible, but `ink` on it is 13.96:1, so the
+ * fill inverts exactly the problem the stroke has. Its label is therefore `ink` and never
+ * white. Its press is **`opacity: .7`** rather than a second fill — the system's answer for a
+ * pressed surface with no darker companion (6.6: chip, segment, availability cell, photo
+ * tile, tick-box row) — because volt is already the brightest value in the palette, and a
+ * seventh hex invented to satisfy *the variant's pressed fill* would be a colour added to
+ * describe a press.
  */
 
 import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { theme } from './theme';
 
-export type ButtonVariant = 'primary' | 'dark' | 'secondary' | 'settled';
+export type ButtonVariant = 'primary' | 'dark' | 'secondary' | 'settled' | 'volt';
 
 /**
  * 32 tertiary-in-card · 34 default · 40 screen action · 42 the primary action on a
@@ -137,6 +147,7 @@ const FILL = StyleSheet.create({
     borderColor: theme.color.line,
   },
   settled: { backgroundColor: theme.color.mintInk },
+  volt: { backgroundColor: theme.color.volt },
 });
 
 const PRESSED = StyleSheet.create({
@@ -144,6 +155,8 @@ const PRESSED = StyleSheet.create({
   dark: { backgroundColor: theme.color.night2 },
   secondary: { backgroundColor: theme.color.line2 },
   settled: { backgroundColor: theme.color.mint },
+  // Not a fill. Volt has no darker companion and does not get one invented for a press.
+  volt: { opacity: 0.7 },
 });
 
 const LABEL = StyleSheet.create({
@@ -151,4 +164,5 @@ const LABEL = StyleSheet.create({
   dark: { color: theme.color.surface },
   secondary: { color: theme.color.ink },
   settled: { color: theme.color.surface },
+  volt: { color: theme.color.ink },
 });

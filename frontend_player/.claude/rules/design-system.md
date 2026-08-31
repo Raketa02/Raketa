@@ -61,10 +61,13 @@ frame, a stage or a scenario switcher, and never use the four stage colours (`#0
   reversible, not yet wrong · red = ended badly · info = explanation, not status.
 - **Rule C — white text never sits on `coral` or `mint`** (3.89:1 and 4.07:1). Use
   `coralInk` / `mintInk`. `ink` is the only dark that may sit on coral (4.50:1).
-- **`volt` on dark surfaces only.** On paper it is ~1.3:1.
+- **`volt` is a fill anywhere and a stroke only on dark.** `ink` on a volt fill is
+  13.96:1; volt as a foreground on paper is ~1.3:1, so a volt line, ring or border there
+  is invisible.
 - **Every number is mono and tabular** — that is what stops a row reflowing when a level goes
   from 2,71 to 2,80. Polish formatting: `38,00 zł`, `2,71`, `65%`, `18:30`.
-- **Cards never cast a shadow.** Three shadows exist; all are for things that float.
+- **Cards never cast a shadow.** Four shadows exist; all are for things that float, and
+  the deck card is one of them because it is not a card.
 - **Band `ink` for text and rails**, `tint`/`deep` for the bar only. A printed level range
   always comes from the model's `bandLo`/`bandHi`, never the bar's drawing values.
 - **Every state carries a word or a shape**, never colour alone.
