@@ -1,6 +1,11 @@
 import type { Wire } from '@/test-support/transport';
 
-import { toOriginSearch, toRaisedPrompts, toRunSearchRequest } from './searchMappers';
+import {
+  toOriginSearch,
+  toPlayersInRange,
+  toRaisedPrompts,
+  toRunSearchRequest,
+} from './searchMappers';
 
 const TUESDAY_EVENING = { day: 2, part: 'evening' } as const;
 
@@ -76,6 +81,16 @@ describe('the record a line-up is judged against', () => {
       searchId: 'e0f1a2b3-c4d5-4e6f-8a9b-0c1d2e3f4a5b',
       origin: ORIGIN,
     });
+  });
+});
+
+describe('the count the latch prints', () => {
+  /**
+   * `players_in_range` and nothing else off the pool: the searching latch prints one number,
+   * and a reading with fields nobody draws would be a contract nobody is checking.
+   */
+  it('is the response’s own post-gate count', () => {
+    expect(toPlayersInRange(shortlist())).toBe(7);
   });
 });
 

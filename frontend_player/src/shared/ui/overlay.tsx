@@ -164,8 +164,14 @@ const READ_SCREEN_READER = () => AccessibilityInfo.isScreenReaderEnabled();
  * same path** as reduced motion rather than a second path.
  *
  * One helper, because two would be two places for a surface to honour one of the conditions
- * and not the other. What collapses is named where it is drawn: the fill animation, the
- * deck's stagger, and the minimum-display latch, which goes to zero.
+ * and not the other. What collapses is named where it is drawn: the fill animation, the deck's
+ * stagger, and the **stagger over** the searching latch's floor, which goes to zero.
+ *
+ * **The floor itself does not**, and this sentence used to say it did. `motion.hold` had
+ * already decided the other way in writing — *a held duration is not an animation: nothing
+ * moves, and the player who asked the OS to calm things down is the last one who should get a
+ * flash* — and [#269](https://github.com/Raketa02/Raketa/issues/269) is where the two met.
+ * `searchingWait.ts` is where the split is arithmetic rather than prose.
  */
 export function useCollapsedPresentation(): boolean {
   // Both are read, always: `||` between two hook calls would make the second one conditional

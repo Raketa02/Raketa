@@ -129,7 +129,10 @@ which is Part 13's own shape for a port's context.
 
 **Overlays.** `BottomSheet` and `Popover` are both real modals, and 9.1's and 7.6's "it is
 a real modal" is three separate obligations rather than one prop — read `overlay.tsx` and
-either docblock before adding a third. Two of them are the caller's: the screen behind
+either docblock before adding another. Play's `SearchingLatch` is the third and lives in its
+feature rather than here, because it is one screen's wait rather than a primitive; it answers
+the same three obligations and records the one it answers differently — it moves no focus,
+having nothing to focus and nobody choosing to leave it. Two of them are the caller's: the screen behind
 spreads `behindOverlay(open)`, and the overlay is rendered as that screen's _sibling_,
 never inside it. `CloseControl` is 9.1's close circle, shared because the header control
 that opens a sheet, the sheet's own close and the popover's are the same 28pt object;

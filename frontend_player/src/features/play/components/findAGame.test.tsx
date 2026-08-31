@@ -10,8 +10,11 @@
  * different Tuesday.
  */
 
-import { fireEvent, screen, waitFor } from 'expo-router/testing-library';
+import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
 
+import { onlineManager } from '@tanstack/react-query';
+
+import { offlineMessage } from '@/shared/errors';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import {
@@ -32,6 +35,8 @@ import { usePlayPreferences } from '../store/playPreferences.store';
 import { endPlaySession } from '../store/playSession.store';
 
 import { playErrorMessage } from './playErrorMessage';
+import { poolRankingStatus } from './searchingPresentation';
+import { searchingFloorMs } from './searchingWait';
 import {
   DECLARATION_BODY,
   RADIUS_IS_YOUR_PROFILE,
@@ -100,6 +105,8 @@ beforeEach(() => {
 
 afterEach(async () => {
   transport.restore();
+  // One test takes the connection away, and `onlineManager` is a singleton.
+  onlineManager.setOnline(true);
   queryClient.clear();
   // The process-scoped store outlives a visit by design, so a suite has to stand in for the
   // process ending — which is the only thing that clears it.
@@ -126,6 +133,23 @@ const isSelected = (label: string) =>
   screen.getByLabelText(label).props.accessibilityState?.selected === true;
 const searchButton = () =>
   screen.getByLabelText(searchControlLabel({ kind: 'searchable', sport: 'padel' }) ?? '');
+
+const SEARCHING = poolRankingStatus({ playersInRange: undefined, sportName: 'Padel' }).headline;
+
+/**
+ * Spend the floor, and wait for the latch to lift.
+ *
+ * Nothing behind it is reachable while it is up — it spreads `behindOverlay`, and a query that
+ * does not ask for hidden elements will not find a screen that has hidden itself — so every
+ * assertion about *Find a game* after a search goes through here. The clock is **driven**
+ * rather than waited on: `expo-router/testing-library` installs jest's fake timers, and a
+ * floor that is only asserted by elapsing is a floor no suite can afford to have lengthened.
+ */
+const latchLifted = async () => {
+  await screen.findByText(SEARCHING);
+  act(() => jest.advanceTimersByTime(searchingFloorMs({ kind: 'pool' })));
+  await waitFor(() => expect(screen.queryByText(SEARCHING)).toBeNull());
+};
 
 /** Every request that would have changed the player rather than asked the engine something. */
 const profileWrites = () => [
@@ -314,6 +338,7 @@ describe('the search', () => {
       nativeEvent: { actionName: 'increment' },
     });
     fireEvent.press(searchButton());
+    await latchLifted();
 
     await waitFor(() =>
       expect(screen.getByLabelText('How far to look').props.accessibilityValue.now).toBe(9),
@@ -367,6 +392,145 @@ describe('the search', () => {
       ),
     ).toBeTruthy();
     expect(searchButton()).toBeTruthy();
+  });
+});
+
+/**
+ * The latch — *where the wait happens*, and the four things #269 fixed about it.
+ *
+ * It is asserted through the real screen because three of the four are only true **in
+ * relation to the screen underneath**: that it covers it, that it lets go of it on a refusal,
+ * and that it never becomes a place to be stranded.
+ */
+describe('the searching latch', () => {
+  /** A request that never answers, so the wait can be looked at while it is still a wait. */
+  const hangs = () => transport.on('POST', SEARCHES, () => new Promise<never>(() => undefined));
+
+  it('covers the screen that launched it, and says what is happening', async () => {
+    hangs();
+    await openPlay();
+
+    fireEvent.press(searchButton());
+
+    expect(await screen.findByText(SEARCHING)).toBeTruthy();
+    // The screen is behind an overlay that hides its descendants, which is the half of
+    // *modal* a `Modal` cannot do for the tree it left behind.
+    expect(screen.queryByText(RADIUS_IS_YOUR_PROFILE)).toBeNull();
+  });
+
+  /**
+   * §B14's count came off a 650 ms timer, before the response existed. There is no number
+   * here to print, because the only place one could come from has not answered.
+   */
+  it('prints no count while the response does not exist', async () => {
+    hangs();
+    await openPlay();
+
+    fireEvent.press(searchButton());
+    await screen.findByText(SEARCHING);
+
+    expect(screen.queryByText(/in range/)).toBeNull();
+  });
+
+  /** And the number it does print is `players_in_range`, off the answer it waited for. */
+  it('prints the pool’s own count once the response exists', async () => {
+    await openPlay();
+
+    fireEvent.press(searchButton());
+
+    expect(await screen.findByText('7 in range for Padel')).toBeTruthy();
+    // Readable at all only because the floor outlives an answer that arrives inside it —
+    // §J6's *"so a fast answer does not flash past."*
+    expect(screen.queryByText(SEARCHING)).not.toBeNull();
+  });
+
+  /**
+   * It is a latch and not a destination, so there is nothing on it to press — no back, no
+   * close, no cancel. The prototype's dead end was dissolved by binding the wait to the
+   * response, not by furnishing it with a way out.
+   */
+  it('offers nothing to press', async () => {
+    hangs();
+    await openPlay();
+
+    fireEvent.press(searchButton());
+    await screen.findByText(SEARCHING);
+
+    expect(screen.queryByRole('button')).toBeNull();
+  });
+
+  /**
+   * A refusal has nothing to hold for: the wait ends, the screen comes back, and the sentence
+   * is over the control that failed — `retryTarget`'s *the-search*, which is the button the
+   * player already pressed.
+   */
+  it('lets go of the screen the moment the search is refused', async () => {
+    transport.on('POST', SEARCHES, () => errorResponse(503, 'matchmaking_unavailable'));
+    await openPlay();
+
+    fireEvent.press(searchButton());
+
+    expect(
+      await screen.findByText(
+        playErrorMessage({ code: 'matchmaking_unavailable' } as never) as string,
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByText(SEARCHING)).toBeNull();
+  });
+
+  /**
+   * A paused request is not one in flight. `networkMode: 'online'` holds the search until the
+   * connection returns, and a latch over that would bury the sentence that says so under a
+   * screen with no way off it — which is the dead end again, arriving by a different door.
+   */
+  it('does not go up over a search the connection has paused', async () => {
+    await openPlay();
+    onlineManager.setOnline(false);
+
+    fireEvent.press(searchButton());
+
+    expect(await screen.findByText(offlineMessage('resumes'))).toBeTruthy();
+    expect(screen.queryByText(SEARCHING)).toBeNull();
+  });
+
+  /**
+   * **The case a fast stub cannot reach.** The floor runs from the answer, not from the press,
+   * so a search slower than the floor prints its count for exactly as long as an instant one
+   * does. Anchored the other way this assertion is zero milliseconds long, the number is drawn
+   * for no frames, and §20.11's *announces the result once* announces nothing.
+   */
+  it('prints the count on a search that took longer than the floor', async () => {
+    let answer = () => undefined as void;
+    transport.on(
+      'POST',
+      SEARCHES,
+      () => new Promise<Response>((resolve) => (answer = () => resolve(json(shortlist())))),
+    );
+    await openPlay();
+
+    fireEvent.press(searchButton());
+    await screen.findByText(SEARCHING);
+
+    // Long past the floor, and still nothing to print: the wait is the request's.
+    act(() => jest.advanceTimersByTime(searchingFloorMs({ kind: 'pool' }) * 3));
+    expect(screen.queryByText(SEARCHING)).not.toBeNull();
+    expect(screen.queryByText(/in range/)).toBeNull();
+
+    answer();
+
+    expect(await screen.findByText('7 in range for Padel')).toBeTruthy();
+    await latchLifted();
+  });
+
+  /** And it lifts on its own, without anybody asking it to. */
+  it('lifts when the wait is over', async () => {
+    await openPlay();
+
+    fireEvent.press(searchButton());
+    await screen.findByText(SEARCHING);
+    await latchLifted();
+
+    expect(screen.getByText(RADIUS_IS_YOUR_PROFILE)).toBeTruthy();
   });
 });
 

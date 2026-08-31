@@ -322,10 +322,37 @@ anything to ask, the search has already run. The sport chips are drawn only from
 `GET /ratings`, which settles `sport_not_rated` by construction, and a sport that is rated and
 **undeclared** opens ADR-0094's **one-tap interstitial** — _permanent, not a migration path_ —
 off a set difference the screen already holds, before `play_intent_not_declared` refuses rather
-than after. Where a finished search **goes** is not decided there: the latch
-([#269](https://github.com/Raketa02/Raketa/issues/269)) and the builder
-([#271](https://github.com/Raketa02/Raketa/issues/271)) own that, and the record it leaves under
-`searchKeys.detail(id)` is the origin search they read.
+than after. Where a finished search **goes** is still not decided there: the builder
+([#271](https://github.com/Raketa02/Raketa/issues/271)) owns that, and the record the search
+leaves under `searchKeys.detail(id)` is the origin search it reads.
+
+**The wait is a latch over the screen that launched it, bound to the response and floored by
+the clock.** `SearchingLatch` is a sibling of the screen root, drawn while `POST /searches` is
+in flight and then held for §J6's **minimum** — _so a fast answer does not flash past_.
+**`useHeldWait`'s floor runs from the answer, not from the press**, and that is the half that
+is easy to get backwards: the thing that must not flash past is the answer, so a search that
+took five seconds shows its count for the same beat as one that took fifty milliseconds, where
+a press-anchored floor would have spent itself before any real round trip and drawn the number
+for no frames at all. Nothing delays a request either way — `the-play-screens.md` §3 licenses
+_presentation over a completed answer_ and forbids the server making a search _feel
+substantial_. It is a latch rather than a route, so there is **no back, no close and nothing to
+press**: the prototype's _no back button and no escape_ was a dead end
+because the wait was a 1400 ms timer, and binding it to the request dissolved the dead end
+instead of furnishing it. **Two states are not a wait and would otherwise strand a player**: a
+refusal has nothing to hold for and ends over the _Search_ control that failed, and a **paused**
+mutation is not in flight at all — `networkMode: 'online'` holds it until the connection
+returns, so a latch bound to `isPending` alone would bury the amber sentence saying so.
+§B14's _live_ count came off a timer **before the response existed**; it is now
+`players_in_range` off the answer, and the shape says so — `SearchingStatus.count` is absent
+until there is one, so the wait's first phase has a headline and no number it could not have.
+That is also §20.11's _the searching region announces the **result** once and never a stage_.
+`searchingWait.ts` holds the last split: **a hold is not an animation**, so a collapsed
+presentation drops the fill's 550-per-seat **stagger** to zero and **keeps the floor** — which
+`motion.hold` had decided in writing before anybody asked, and which two docstrings said the
+opposite of until [#269](https://github.com/Raketa02/Raketa/issues/269) put the arithmetic
+somewhere a test could read it. Both files sit in `features/play/`, not `shared/`: the two
+waits are Play's, the second arrives with the builder, and onboarding's floor is anchored to
+the press because it holds a **sentence** to read rather than an answer.
 
 **Play's failure layer is built before its screens, and its posture is two sentences.**
 _Nothing in Play background-refetches_ was the first; _**nothing in Play retries without the

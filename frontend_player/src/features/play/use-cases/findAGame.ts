@@ -45,6 +45,7 @@ import type { OriginSearch, PlayOrigin } from '../domain/lineup';
 import type { RaisedPrompt } from '../domain/raisedPrompt';
 import {
   toOriginSearch,
+  toPlayersInRange,
   toRaisedPrompts,
   toRunSearchRequest,
   type PromptQuotes,
@@ -71,6 +72,15 @@ export interface FindAGameAsk {
  */
 export interface SearchOutcome {
   readonly origin: OriginSearch;
+  /**
+   * The pool's post-gate count, which the searching latch prints and nothing else does yet.
+   *
+   * It is here rather than in the cache entry beside the origin because it is a fact about
+   * **this answer** and not about the record a line-up is judged against: the latch reads the
+   * response it was waiting for, and a count re-read months later would describe a pool that
+   * has moved ([#269](https://github.com/Raketa02/Raketa/issues/269)).
+   */
+  readonly playersInRange: number;
   readonly prompts: readonly RaisedPrompt[];
 }
 
@@ -91,6 +101,7 @@ export async function findAGame(
 
   return {
     origin: toOriginSearch(response, ask.origin),
+    playersInRange: toPlayersInRange(response),
     prompts: toRaisedPrompts(response, ask.quotes),
   };
 }

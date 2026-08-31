@@ -9,6 +9,19 @@
 import { engineFillStatus, poolRankingStatus, whyFitHeader } from './searchingPresentation';
 
 describe('the searching states', () => {
+  /**
+   * The count is a fact about an answer, and there is no answer yet — so there is no number
+   * to invent and nowhere to invent one from (#269).
+   */
+  it('prints no count before the response exists', () => {
+    expect(poolRankingStatus({ playersInRange: undefined, sportName: 'Padel' })).toEqual({
+      headline: 'Ranking everybody you could play…',
+    });
+    expect(engineFillStatus({ playersInRange: undefined })).toEqual({
+      headline: 'Looking for the evenest four…',
+    });
+  });
+
   it('keeps the count, and names the sport where the screen does not', () => {
     expect(poolRankingStatus({ playersInRange: 41, sportName: 'Padel' })).toEqual({
       headline: 'Ranking everybody you could play…',

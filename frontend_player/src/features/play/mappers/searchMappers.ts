@@ -72,6 +72,25 @@ export function toOriginSearch(response: ShortlistResponse, origin: PlayOrigin):
   return { searchId: response.search.search_id, origin };
 }
 
+/**
+ * The one number a searching latch prints — post-gate, and never a number the client grew to
+ * fill the time.
+ *
+ * `the-play-screens.md` §3 draws both lines this is on the right side of: the server never
+ * delays to make a search feel substantial, and *"the count the animation prints is
+ * `players_in_range` from the response."* §B14's *live* count was neither — it was
+ * `len(generation.admitted)` on a 650 ms timer, printed before the answer existed
+ * ([#223](https://github.com/Raketa02/Raketa/issues/223)) — so the count arrives here, off a
+ * response, or it does not arrive at all.
+ *
+ * The rest of `PoolSchema` is deliberately left on the wire. `post_gate` travels *"so the
+ * count cannot be misread"* and is always `true`; the radius and the window are the pool
+ * header's and the deck's, and they come with the surfaces that draw them.
+ */
+export function toPlayersInRange(response: ShortlistResponse): number {
+  return response.search.pool.players_in_range;
+}
+
 const KNOWN_MODES = new Set<SearchMode>(SEARCH_MODES);
 
 /**

@@ -114,6 +114,16 @@ describe('what comes back', () => {
     expect(outcome.prompts).toEqual([{ prompt: 'KEEP_THESE_TIMES', slotsNow: 1, slotsWas: 2 }]);
     expect(transport.requestsTo('POST', SEARCHES)).toHaveLength(1);
   });
+
+  /**
+   * The searching latch's one number, and the reason it is on the outcome at all: a count that
+   * did not arrive with the answer is a count printed before there was one (#269).
+   */
+  it('carries the pool’s post-gate count, off the response', async () => {
+    const outcome = await findAGame(ASK, { saveRadius });
+
+    expect(outcome.playersInRange).toBe(7);
+  });
 });
 
 describe('the week', () => {

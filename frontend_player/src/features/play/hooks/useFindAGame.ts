@@ -23,11 +23,12 @@
  * screen's own *Search* control, which is `retryTarget`'s **the-search** — no record id, so
  * there is nothing to re-read.
  *
- * Where a completed search **goes** is not decided here. The searching latch
- * ([#269](https://github.com/Raketa02/Raketa/issues/269)) is bound to this response and the
- * builder behind it ([#271](https://github.com/Raketa02/Raketa/issues/271)) is what reads the
- * record; a navigation invented before either exists would be a destination this hook has to
- * un-decide twice.
+ * Where a completed search **goes** is not decided here. The searching latch is bound to this
+ * mutation's own `isPending` and comes down on its response
+ * ([#269](https://github.com/Raketa02/Raketa/issues/269)) — a wait rather than a destination,
+ * so it needs nothing from here — and the builder behind it
+ * ([#271](https://github.com/Raketa02/Raketa/issues/271)) is what reads the record. A
+ * navigation invented before that exists would be a destination this hook has to un-decide.
  */
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
