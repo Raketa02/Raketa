@@ -21,11 +21,10 @@
  */
 
 export {
-  COMPETITIVE_CARD_DRAWS,
-  DECK_CARD_DRAWS,
+  CONCERN_CAP,
   REASON_CAP,
-  SOCIAL_CARD_DRAWS,
   WHYFIT_DRAWS,
+  selectConcern,
   selectReasons,
   type ReasonInput,
   type ReasonSelection,
@@ -68,8 +67,15 @@ export { termLabel } from './components/termPresentation';
 export { reasonLine } from './components/reasonPresentation';
 export { concernLine } from './components/concernPresentation';
 export {
+  BALANCE_ROW_LABEL,
+  CANDIDATE_ACTION_WORD,
+  CANDIDATE_POSTER_LABEL,
+  DECK_ANSWER_WORDS,
+  OVERLAP_ROW_LABEL,
+  balanceRowValue,
   levelRow,
   metaLine,
+  overlapRowValue,
   type LevelRowFacts,
   type MetaLineFacts,
 } from './components/playerCardPresentation';
@@ -135,6 +141,46 @@ export {
   whyFitHeader,
   type SearchingStatus,
 } from './components/searchingPresentation';
+
+/**
+ * The three cards, and the parts kit under them.
+ *
+ * **Three components, not one with a `surface` prop** — after Decision 3 the shapes genuinely
+ * differ, and one component would carry `surface === …` at nine sites, which is §G3 #1's own
+ * complaint in a new spelling
+ * ([`the-play-components.md`](../../../../docs/specs/matchmaking/the-play-components.md) §3).
+ * Each takes `(candidate, envelope)` and reads no global state, and **each exports the set of
+ * terms it draws**, because that set is a statement about that component and is the one thing
+ * that could go stale silently anywhere else.
+ *
+ * The parts are exported beside them because the court's seat draws a face and the pool's
+ * header states a fact, and neither is a card.
+ */
+export {
+  COMPETITIVE_CARD_DRAWS,
+  CandidateCard,
+  type CandidateCardProps,
+} from './components/candidate/CandidateCard';
+export {
+  CandidateCardSocial,
+  SOCIAL_CARD_DRAWS,
+  type CandidateCardSocialProps,
+} from './components/candidate/CandidateCardSocial';
+export { DECK_CARD_DRAWS, DeckCard, type DeckCardProps } from './components/candidate/DeckCard';
+export {
+  CandidatePhoto,
+  type CandidatePhotoBox,
+  type CandidatePhotoProps,
+} from './components/candidate/CandidatePhoto';
+export { CardHead, type CardHeadProps } from './components/candidate/CardHead';
+export { FactRow, type FactRowProps } from './components/candidate/FactRow';
+export {
+  ReasonLine,
+  type ReasonLineProps,
+  type ReasonLineVariant,
+} from './components/candidate/ReasonLine';
+
+export type { Candidate, LikelyRange, PlayerCard, SearchEnvelope } from './domain/candidate';
 
 /**
  * A Play session: the working copy of the week and the line-up on it, and the one function

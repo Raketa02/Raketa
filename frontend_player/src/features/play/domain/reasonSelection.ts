@@ -34,27 +34,6 @@ import type { LivenessReason, Term } from './vocabulary';
 export const REASON_CAP = 3;
 
 /**
- * What the **competitive** candidate card draws for itself.
- *
- * The head-to-head row prints both levels and the balance bar draws the forecast.
- * `RELIABILITY` joins them **the day the Player Score block prints** and not before — there
- * is no block today, so a reliability line is the only thing that would say anything about
- * their record.
- */
-export const COMPETITIVE_CARD_DRAWS: readonly Term[] = ['LEVEL_FIT', 'PREDICTED_BALANCE'];
-
-/** What the **social** card draws: a level row, a *You overlap* row, and km on the meta line. */
-export const SOCIAL_CARD_DRAWS: readonly Term[] = ['LEVEL_FIT', 'AVAILABILITY_OVERLAP', 'DISTANCE'];
-
-/** What the **deck** card draws — the social card's three, plus the predicted-balance row. */
-export const DECK_CARD_DRAWS: readonly Term[] = [
-  'LEVEL_FIT',
-  'PREDICTED_BALANCE',
-  'AVAILABILITY_OVERLAP',
-  'DISTANCE',
-];
-
-/**
  * The why-fit sheet draws **everything, on purpose**, so it filters nothing.
  *
  * A summary block there would break §10 *"on the one screen whose job is showing values"*
@@ -78,8 +57,9 @@ export interface ReasonInput {
    * The terms this surface renders a value for, and therefore will not restate in a line.
    *
    * Passed in rather than looked up, so that the set is declared beside the component that
-   * draws it — the one place it cannot go stale silently. The three sets above are its
-   * callers' until the cards land ([#266](https://github.com/Raketa02/Raketa/issues/266)).
+   * draws it — the one place it cannot go stale silently. The three card sets are **exported
+   * by the three cards** for that reason; the sheet's empty one is below, because the sheet
+   * filters nothing and *that* is a statement about this rule rather than about a component.
    */
   readonly drawn: readonly Term[];
   /** Every term that fired, **ranked by contribution**. Nothing here sorts. */
@@ -136,4 +116,41 @@ export function selectReasons(input: ReasonInput): ReasonSelection {
   if (movedThemHere !== undefined) return { kind: 'liveness', reason: movedThemHere };
 
   return { kind: 'hidden' };
+}
+
+/**
+ * How many concerns a **card** shows. One — and the cap is the client's, not the engine's.
+ *
+ * `concerns[]` arrives ranked by points forgone and uncapped on purpose:
+ * [`the-play-screens.md`](../../../../../docs/specs/matchmaking/the-play-screens.md) §1 says
+ * capping it in the engine *"would throw away exactly the rows that explain a low Fit on the
+ * screen built to explain it"*. So the sheet shows all of them and a card shows the top one.
+ */
+export const CONCERN_CAP = 1;
+
+/**
+ * The concern a card draws, or nothing.
+ *
+ * Two things can drop the top one, and both are the same shape as the reason list's. A
+ * concern is keyed by `term` alone, so it is **joined back to the row that fired** — a term
+ * the engine is concerned about but which did not fire has no evidence, and a sentence over
+ * no evidence is not writable. And the two tag terms can be a concern with **nothing
+ * clashing**, their measured zero, where §7 refuses to let the client call it a clash. Either
+ * way the card draws the next concern down rather than a blank row, exactly as the reason
+ * list does, and the sheet still marks the term in place.
+ *
+ * It returns the **row**, not a sentence: this file holds no words, and `concernLine` is a
+ * sentence over the evidence the row carries.
+ */
+export function selectConcern(input: {
+  readonly terms: readonly ScoredTerm[];
+  readonly concerns: readonly Term[];
+  /** `(row) => concernLine(row.evidence) !== undefined`, for the reason `saysSomething` is. */
+  readonly saysSomething: (term: ScoredTerm) => boolean;
+}): readonly ScoredTerm[] {
+  return input.concerns
+    .map((term) => input.terms.find((row) => row.term === term))
+    .filter((row): row is ScoredTerm => row !== undefined)
+    .filter(input.saysSomething)
+    .slice(0, CONCERN_CAP);
 }

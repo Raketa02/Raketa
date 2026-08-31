@@ -38,7 +38,7 @@
  */
 
 import { counted } from '@/shared/formatting/counted';
-import { formatLevel, formatPercent } from '@/shared/formatting/ratingFormat';
+import { formatLevel } from '@/shared/formatting/ratingFormat';
 import { slotName } from '@/shared/vocabulary/availabilityPresentation';
 import { socialTagName } from '@/shared/vocabulary/socialTagPresentation';
 import type { SocialTagId } from '@/shared/vocabulary/socialTags';
@@ -55,6 +55,8 @@ import type {
   TagRelationships,
 } from '../domain/evidence';
 import type { SearchMode } from '../domain/vocabulary';
+
+import { NO_SHARED_SLOTS, balanceRowValue } from './playerCardPresentation';
 
 /**
  * How far apart the two levels are, in the direction the engine measured it.
@@ -83,7 +85,9 @@ export function levelFitReason(evidence: LevelFitEvidence): string {
  * card, and never as a number of its own.
  */
 export function predictedBalanceReason(evidence: PredictedBalanceEvidence): string {
-  return `Forecast ${formatPercent(evidence.pct)} even · ${formatPercent(evidence.confidence)} sure`;
+  // The row on the deck card says the same two figures under a label, so the two registers
+  // are one string with a word in front of it rather than two spellings that can drift.
+  return `Forecast ${balanceRowValue(evidence)}`;
 }
 
 /**
@@ -127,7 +131,8 @@ export function reliabilityReason(evidence: ReliabilityEvidence): string {
  * game can be arranged, and the times rung of the ladder exists for exactly this pairing.
  */
 export function availabilityOverlapReason(evidence: AvailabilityOverlapEvidence): string {
-  if (evidence.sharedCount === 0) return 'No shared slots — one of you would have to bend';
+  // One string, two registers — the row is the only surface that can reach it (§6.2).
+  if (evidence.sharedCount === 0) return NO_SHARED_SLOTS;
 
   // Through the one pluralisation helper, so that no sentence here assumes English's plural.
   const both = `${counted(evidence.sharedCount, 'slot', 'slots')} you both ticked`;

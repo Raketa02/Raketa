@@ -107,7 +107,30 @@ export interface CandidateCardFacts {
   readonly name: string;
   readonly fit: number;
   readonly level: LevelRowFacts;
-  readonly meta: MetaLineFacts;
+  /**
+   * The forecast, **where the card draws it rather than saying it as a reason line**.
+   *
+   * §20.3's row is written against §B10's card and reaches every surface, so it does not name
+   * this clause — but the rule above it does. §20.1 merges an actionless element into the
+   * nearest action above it, and the balance bar has no action, so the bar's own name is not
+   * an element on a card the way it is on a court. Its reading has to arrive somewhere or the
+   * competitive card draws a figure a listener never hears while the term is filtered out of
+   * the reasons for being drawn.
+   *
+   * Omitted on the two cards that say it as a sentence instead — one spelling per card,
+   * which is the whole of §10.
+   */
+  readonly balance?: string;
+  /**
+   * **Omitted where the card does not draw a meta line**, which is two different absences.
+   *
+   * `distance_km` is omitted rather than sent as zero when the distance term stood down — the
+   * two spellings of absence (ADR-0106 §4) — and the competitive card draws no distance row
+   * at all, which is why `DISTANCE` is not in its drawn set and its reason line survives. A
+   * label that stated the kilometres anyway would say them twice, once as a clause and once
+   * as the reason: §10's rule broken in the one register nobody can see it in.
+   */
+  readonly meta?: MetaLineFacts;
   /** The lines `selectReasons` returned, in the order the card draws them. */
   readonly reasons: readonly string[];
   /** What the card draws of `concerns[]` — one on a card, all of them in *Why 78?*. */
@@ -138,7 +161,8 @@ export function candidateCardLabel(facts: CandidateCardFacts): string {
     facts.name,
     fitSentence(facts.fit),
     levelRow(facts.level),
-    metaLine(facts.meta),
+    facts.balance ?? '',
+    facts.meta === undefined ? '' : metaLine(facts.meta),
     ...facts.reasons,
     ...facts.concerns,
   ]);

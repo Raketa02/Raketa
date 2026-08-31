@@ -232,6 +232,32 @@ sheet's own copy named as a colour, and the pool header's tinted percentage, whi
 §B9's balance word beside it. The header is not built, so what ships is the word and the rule:
 `balancePresentation.ts`.
 
+**The same person is drawn three ways, from one contract and one parts kit.** `CandidateCard`
+is photo-left with a head-to-head row, `CandidateCardSocial` and `DeckCard` are media-top with
+fact rows, and they are **three components rather than one with a `surface` prop** — a single
+card would carry `surface === …` at nine sites, which is the sixty-line conditional the split
+exists to prevent. Under them sit `CandidatePhoto` (the photo-or-poster switch, one component
+at three sizes, its radius 33 % of its own box), `CardHead`, `FactRow` and `ReasonLine`. **Each
+takes `(candidate, envelope)` and reads no global state**, and the envelope travels whole
+rather than as a `mode` string precisely because `SearchEnvelope.mode` is null on the deck and
+the mode the engine priced a row under is not — the two are supposed to disagree there. **Each
+card exports the set of terms it draws**, because that set is a statement about that component
+and is the one thing that could go stale silently anywhere else. The set is read **both
+ways**: the de-duplication filter drops those terms from the reason list, and the card's spoken
+name states exactly the ones it draws — so the competitive card, which draws no distance row,
+says its kilometres as a reason line and never also as a clause. The two registers stay apart —
+a **fact row** is a fact the card states, a **reason line** answers _why this person_ and never
+grades it, and the one concern a card draws is the engine's graded claim in the opposite tone.
+Anything actionless inside the body **merges**: the photograph, and the balance bar, whose
+reading is drawn as a word beside it and spoken as a clause, because a bar is a tint and
+_never colour alone_ binds the sighted half too. `CandidatePhoto` draws the minted
+`photo_url` and falls back to the generated poster when the id is omitted, reaching
+`courtPosterFor` through `player_profile`'s public surface rather than copying the hash: one
+player id, one poster, forever. **Only the deck card floats** — #219 B3's argument is about a
+card that translates and rotates out under a thumb, and a row in a scrolling list does neither,
+so the pool draws one shape twice — and the volt tag that used to read _wants to play you_ is
+now a **sentence**, bound to `INTEREST_LIFT`.
+
 **Label coverage is a compile error, and the lint rule is the other half.** The `Record`s
 keyed by the generated unions already refuse a code with no words, and **every pressable
 primitive in `shared/ui/` already refuses to compile without a name** — `accessibilityLabel`

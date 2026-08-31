@@ -307,14 +307,36 @@ what Play remembers, for how long, and what it must never remember. The stores a
   released on one screen could survive on another. Gating the builder at _navigation_ would
   need exactly that cache, and it is refused. _Avoid_: "hold flag", "blocked user state".
 - **Parts kit** — the shared parts the three candidate cards are assembled from:
-  `CandidatePhoto` (photo-or-poster in a box, one component at three sizes), `FactRow`, `TagRow`
-  and `ReasonLine`. **Three components over one kit, never one component with a `surface`
+  `CandidatePhoto` (photo-or-poster in a box, one component at three sizes), `CardHead`,
+  `FactRow` and `ReasonLine`. **Three components over one kit, never one component with a `surface`
   prop** — `CandidateCard` is photo-left with a head-to-head row, `CandidateCardSocial` and
   `DeckCard` are media-top with fact rows, and only the deck card floats. The two courts,
   `CourtMini` and `CourtBuild`, are the same pairing over the design system's `Court`: the
   drawn object owns the geometry and knows nothing about players, and the seat owns its label,
   its ring, its badge and its taps. _Avoid_: "the card component" — there are three; "variant"
   and a `surface` prop, which is the sixty-line conditional this split exists to prevent.
+- **Drawn set** — the terms a candidate card **renders a value for**, and therefore will not
+  restate as a reason line. Three sets, one per card, and each is **exported by the card that
+  draws them** rather than held in the selector: the set is a statement about that component,
+  and anywhere else it is the one thing that could go stale silently when a row is added or
+  removed. The filter over it runs **first and the cap after**, which is what makes a card that
+  promised three reasons draw three. _Avoid_: "the filter", which is the rule rather than the
+  set; "hidden terms" — a term outside the set is not hidden, it is said in the other register.
+- **Fact row vs reason line** — the two registers a card states something in. A **fact row** is
+  a fact the card states unconditionally — the level row, the meta line, _You overlap_,
+  _Predicted balance_ — and a **reason line** answers _why this person_, is selected, ranked
+  and capped, and **states its evidence's facts without grading them**. The same term is one or
+  the other on a given card and never both, which is the whole of the de-duplication rule. A
+  **concern** is a reason line's shape in the opposite tone: the engine's own graded claim
+  about a term, and the one thing on a card that is entitled to grade. _Avoid_: calling a fact
+  row a reason, and "why-fit row", which is the sheet's.
+- **Search envelope** — every fact about **the search** rather than about a candidate, and the
+  second argument every card takes. It carries the searcher's own area code, folded on in
+  `api/` exactly as the Origin search's sport and week are, so that a card can compute the one
+  comparison it is licensed to and still **read no global state**. Its `mode` is **null exactly
+  on the deck**, and it is passed whole rather than as a mode string precisely so it cannot be
+  conflated with the mode the engine priced a row under, which is on the evidence. _Avoid_:
+  "the search" for the record it describes; passing `mode` alone.
 
 ### Data and errors
 
