@@ -18,6 +18,7 @@
  */
 
 import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
+import { Path, Stop } from 'react-native-svg';
 
 import { refreshTokens } from '@/features/auth/types';
 import { clearStoredTokens, resetSessionStatus, wireHttpCredentials } from '@/shared/lib/auth';
@@ -115,16 +116,21 @@ async function addPhotos() {
 }
 
 /**
- * The window the poster is drawn through, as the drawing itself reports it.
+ * The poster a player is looking at, as the drawing itself reports it.
  *
- * The framing *is* the poster — the colours never vary — so this is the whole of what has
- * to come back the same for a player, and reading it off the rendered SVG is what makes
- * the assertion about the picture rather than about the function that chose it.
+ * The hue and the pose *are* the poster — the composition never varies — so the two stops of
+ * the ground and the figure's own paths are the whole of what has to come back the same, and
+ * reading them off the rendered SVG is what makes the assertion about the picture rather
+ * than about the function that chose it. The gradient's id is deliberately not read: it is a
+ * per-instance value and a poster that came back with the same one would be the bug 6.9's
+ * `useId()` rule exists to prevent.
  */
-async function posterFraming(): Promise<string> {
-  const poster = await screen.findByLabelText(/generated court poster/);
-  const drawing = poster.props.children as { readonly props: { readonly viewBox: string } };
-  return drawing.props.viewBox;
+async function posterDrawing(): Promise<string> {
+  await screen.findByLabelText(/generated court poster/);
+  const ground = screen.UNSAFE_queryAllByType(Stop).map((stop) => stop.props.stopColor as string);
+  const figure = screen.UNSAFE_queryAllByType(Path).map((path) => path.props.d as string);
+
+  return [...ground, ...figure].join(' ');
 }
 
 /**
@@ -239,7 +245,10 @@ describe('a player who adds none', () => {
 
   it('gets the same poster on the next launch, because it is a hash of who they are', async () => {
     await reachThePhotosStep();
-    const first = await posterFraming();
+    const first = await posterDrawing();
+    // An empty read would make every assertion below vacuously true, which is exactly what
+    // the retired viewBox check had become once the composition stopped varying.
+    expect(first).not.toBe('');
 
     // The process dies and everything in memory with it. The id is the only input, so the
     // drawing has to come back identical — a poster that changed would read as a profile
@@ -249,7 +258,7 @@ describe('a player who adds none', () => {
     useProfileDraft.getState().reset();
     await reachThePhotosStep();
 
-    expect(await posterFraming()).toEqual(first);
+    expect(await posterDrawing()).toEqual(first);
   });
 
   it('is not shown one once a photo of their own leads', async () => {

@@ -111,12 +111,16 @@ component exists. The words are the caller's.
 tick is only ever drawn on the `ink` fill 6.8's selected state inverts to, so `surface` is
 the only colour there has ever been, and it is held there once with its contrast figure.
 
-`CourtPoster` (6.9) is the third, and the one with **no size at all**: the court is
+`CourtPoster` (6.9) is the third, and the one with **no size at all**: the composition is
 described in `viewBox` units and the caller gives it a box, so one drawing serves a 90pt
-tile and a 27pt avatar. It varies in geometry and never in colour, and the framing that
-varies is the _caller's_ — the design system's contract is that one player id produces one
-poster, and which crop an id maps to belongs to the feature, exactly as the ring's ceiling
-belongs to the engine. It, `ConfidenceRing` and `Tick` are what need
+tile and a 27pt avatar. It draws a player — three poses, flat, in `ink`, with **no face and
+no likeness** — over a two-stop gradient on one of the sixteen hues in `POSTER_HUES`, and
+`hue` is the **one colour prop in this system that does not come from `theme.color`**
+(ADR-0134). Both choices are the _caller's_: the design system's contract is that one player
+id produces one poster, and which hue and pose an id maps to belongs to the feature, exactly
+as the ring's ceiling belongs to the engine. Its gradient id comes from `useId()` and never
+from data — the prototype composed it from the player id and the width, so a screen drawing
+one person twice emitted duplicates. It, `ConfidenceRing` and `Tick` are what need
 `react-native-svg`.
 
 **The photo tile** (6.9) is a row before it is a tile: `PhotoRow` is always three slots

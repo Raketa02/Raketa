@@ -9,57 +9,22 @@
  * is at most 7% of the ground, the dark end is a constant, and the light end is one of
  * **four** known composites — four ratios to compute rather than an unbounded set.
  *
- * This file is the computation. 2.5's four court rows are **derived here and copied there**,
- * exactly as the level bar's edges are derived in `bandEdges.test.ts` rather than asserted,
- * so unpinning the scrim or retuning a Sport hue goes red instead of going unnoticed.
+ * This file is the computation, and the WCAG arithmetic under it is `contrast.testkit.ts`'s,
+ * so the court's four rows and the poster's two are one formula. 2.5's four court rows are
+ * **derived here and copied there**, exactly as the level bar's edges are derived in
+ * `bandEdges.test.ts` rather than asserted, so unpinning the scrim or retuning a Sport hue
+ * goes red instead of going unnoticed.
  *
  * A test and not a runtime check, for the reason `bandEdges.test.ts` gives: a `theme.ts`
  * that checked its own arithmetic would be the app refusing to launch over a drawing detail,
  * and a red build is where a human reconciles it.
  */
 
+import { composite, contrast, parse, type Rgb } from '@/test-support/contrast';
 import { theme, type SportKey } from './theme';
 
 /** WCAG 2.1 requires 4.5:1 for text below the large-text threshold. Nothing here is above it. */
 const AA = 4.5;
-
-/** Channels, 0–255. */
-type Rgb = readonly [number, number, number];
-
-function parse(value: string): { readonly rgb: Rgb; readonly alpha: number } {
-  const hex = /^#([0-9a-f]{6})$/i.exec(value);
-  if (hex?.[1]) {
-    const n = Number.parseInt(hex[1], 16);
-    return { rgb: [(n >> 16) & 255, (n >> 8) & 255, n & 255], alpha: 1 };
-  }
-  const rgba = /^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*([\d.]+)\s*)?\)$/i.exec(value);
-  if (!rgba) throw new Error(`not a colour this file can read: ${value}`);
-  return {
-    rgb: [Number(rgba[1]), Number(rgba[2]), Number(rgba[3])],
-    alpha: rgba[4] === undefined ? 1 : Number(rgba[4]),
-  };
-}
-
-/** `over` composited onto `under`. Straight alpha, sRGB channels. */
-function composite(over: Rgb, alpha: number, under: Rgb): Rgb {
-  const mix = (i: 0 | 1 | 2) => alpha * over[i] + (1 - alpha) * under[i];
-  return [mix(0), mix(1), mix(2)];
-}
-
-/** WCAG 2.1 relative luminance. */
-function luminance([r, g, b]: Rgb): number {
-  const channel = (c: number) => {
-    const s = c / 255;
-    return s <= 0.04045 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
-  };
-  return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
-}
-
-/** WCAG 2.1 contrast ratio, rounded to the two decimals 2.5 prints. */
-function contrast(a: Rgb, b: Rgb): number {
-  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x) as [number, number];
-  return Math.round(((hi + 0.05) / (lo + 0.05)) * 100) / 100;
-}
 
 /**
  * The court's ground at its **light end** — the worst case for a label on it.

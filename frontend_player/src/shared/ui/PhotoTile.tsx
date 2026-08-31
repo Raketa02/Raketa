@@ -49,7 +49,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 
-import { CourtPoster, type CourtPosterFraming } from './CourtPoster';
+import { CourtPoster, type CourtPosterLook } from './CourtPoster';
 import { theme } from './theme';
 
 const tile = theme.size.photoTile;
@@ -179,7 +179,7 @@ export interface PhotoPosterTileProps {
    * decided by there being no photograph, not by an answer having arrived, and a slot that
    * appeared a moment later would move the add control out from under a finger.
    */
-  readonly framing: CourtPosterFraming | undefined;
+  readonly poster: CourtPosterLook | undefined;
   /** Must say the picture is generated. `CourtPoster` explains why. */
   readonly accessibilityLabel: string;
 }
@@ -198,11 +198,11 @@ export interface PhotoPosterTileProps {
  * than the profile tile's `ink` one for the same reason: `ink` marks the photo a player
  * chose to lead with, and nobody chose this.
  */
-export function PhotoPosterTile({ framing, accessibilityLabel }: PhotoPosterTileProps) {
+export function PhotoPosterTile({ poster, accessibilityLabel }: PhotoPosterTileProps) {
   return (
-    <View style={[s.tile, s.photoTile, framing === undefined ? s.posterGround : undefined]}>
-      {framing === undefined ? null : (
-        <CourtPoster framing={framing} accessibilityLabel={accessibilityLabel} />
+    <View style={[s.tile, s.photoTile, poster === undefined ? s.posterGround : undefined]}>
+      {poster === undefined ? null : (
+        <CourtPoster hue={poster.hue} pose={poster.pose} accessibilityLabel={accessibilityLabel} />
       )}
     </View>
   );

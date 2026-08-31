@@ -21,8 +21,9 @@ export { CloseControl, type CloseControlProps } from './CloseControl';
 export { ConfidenceRing, type ConfidenceRingProps } from './ConfidenceRing';
 export {
   CourtPoster,
-  COURT_POSTER_SPACE,
-  type CourtPosterFraming,
+  COURT_POSTER_POSES,
+  type CourtPosterLook,
+  type CourtPosterPose,
   type CourtPosterProps,
 } from './CourtPoster';
 export { DarkCard, type DarkCardProps } from './DarkCard';
@@ -56,4 +57,11 @@ export { Tag, type TagProps, type TagVariant } from './Tag';
 export { Tick } from './Tick';
 export { TickBox, type TickBoxProps } from './TickBox';
 export { behindOverlay, useReducedMotion, type FocusTarget } from './overlay';
-export { theme, type BandKey, type SportKey, type Theme } from './theme';
+export {
+  POSTER_HUES,
+  theme,
+  type BandKey,
+  type PosterHue,
+  type SportKey,
+  type Theme,
+} from './theme';

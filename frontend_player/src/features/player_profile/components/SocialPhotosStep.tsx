@@ -164,7 +164,7 @@ export function SocialPhotosStep() {
         {photos.length === 0 ? (
           <PhotoPosterTile
             key="poster"
-            framing={user.data === undefined ? undefined : courtPosterFor(user.data.id)}
+            poster={user.data === undefined ? undefined : courtPosterFor(user.data.id)}
             accessibilityLabel={POSTER_LABEL}
           />
         ) : null}

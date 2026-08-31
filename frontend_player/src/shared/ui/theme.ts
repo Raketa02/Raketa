@@ -116,6 +116,59 @@ const sport = {
   badminton: color.amber,
 } as const;
 
+// ---------------------------------------------------------------------------
+// The generated poster's hues — a closed set, and deliberately NOT in `color`
+// ---------------------------------------------------------------------------
+
+/**
+ * THE SIXTEEN HUES A GENERATED POSTER CAN BE (docs/design-system.md 6.9, ADR-0134).
+ *
+ * Exported beside the theme and never inside it. Colour in this system is picked by MEANING;
+ * a poster hue is picked by a hash of a player id, so it is not a semantic colour and must
+ * not be reachable where one is expected — a `theme.color.poster…` would be the first value
+ * in the palette that means nothing, sitting where every other one means something.
+ * `CourtPoster` is the only component that takes one, as a prop of this type: the exception
+ * to *a literal hex in a component is a bug* is this list, and nothing else.
+ *
+ * **No poster can claim a Sport, by construction rather than by hope.** Every stop below is
+ * at least 25° from `red`, `coral`, `mint`, `amber`, `volt` and every `sport` value, which
+ * excludes two arcs — 341°→94° and 138°→220° — and leaves 44° and 121° to design in. That is
+ * what keeps 2.3's premise true on a surface that draws a hue with no name beside it.
+ *
+ * **One pair of stops, and the pair is fixed in CIE LCh(uv) rather than in sRGB HSL.** Two
+ * requirements bind it from opposite sides: white text over the poster needs 4.5:1 against
+ * the LIGHT stop, and the `ink` figure — a graphical object, not text — needs 3:1 against the
+ * DARK stop. Together they confine the whole ground to one narrow band of luminance, and
+ * sixteen hues at one HSL `S`/`L` pair vary across that band by a factor of three between the
+ * greens and the blues: there is no such pair that clears both, and the only sets that do are
+ * grey. At one LCh lightness and chroma per stop every hue has the SAME luminance, so 2.5
+ * publishes two ratios instead of thirty-two. Derived and held in `posterHues.test.ts`.
+ *
+ * The ramp is deliberately gentle — 1,21–1,23 between the stops is the most those two bounds
+ * allow. A deeper one is not a tuning; it is one of the two ratios.
+ */
+export const POSTER_HUES = [
+  { light: '#41840F', dark: '#3E741E' },
+  { light: '#36851E', dark: '#357526' },
+  { light: '#2A8628', dark: '#2D762C' },
+  { light: '#1B8730', dark: '#247631' },
+  { light: '#5174BA', dark: '#4B66A0' },
+  { light: '#6370BB', dark: '#5963A1' },
+  { light: '#6F6CBB', dark: '#6360A1' },
+  { light: '#7A68BB', dark: '#6C5DA1' },
+  { light: '#8664B9', dark: '#755A9F' },
+  { light: '#915FB6', dark: '#7E569D' },
+  { light: '#9C5BB2', dark: '#87529A' },
+  { light: '#A556AC', dark: '#8F4F95' },
+  { light: '#AD52A4', dark: '#964C8E' },
+  { light: '#B45098', dark: '#9B4A84' },
+  { light: '#B75088', dark: '#9F4A77' },
+  { light: '#B85377', dark: '#9F4C69' },
+] as const;
+
+/** One member of the closed set. `CourtPoster` takes this and never a string. */
+export type PosterHue = (typeof POSTER_HUES)[number];
+
 /**
  * The level bar's four bands. Three values each, not one with opacity:
  *   tint — the large bar fill
