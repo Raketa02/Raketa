@@ -22,6 +22,7 @@ import { EnvironmentBadge } from '@/shared/config/EnvironmentBadge';
 import { wireHttpCredentials } from '@/shared/lib/auth';
 import { BootstrapGate, bootstrapApp, sharedBootstrapSteps } from '@/shared/lib/bootstrap';
 import { queryClient } from '@/shared/lib/query-client';
+import { ToastHost } from '@/shared/ui';
 
 /**
  * Hand the HTTP client its credential adapter, including the wire call its 401 rotation
@@ -74,6 +75,13 @@ export default function RootLayout() {
            * production.
            */}
           <EnvironmentBadge />
+          {/*
+           * design-system 9.3's single root-level overlay host, and its first occupant.
+           * `zIndex` is scoped to the parent in React Native, so a toast raised from inside
+           * a card renders inside that card — mounting it once here is what makes the layer
+           * order mean anything. One host, one queue: `shared/store/toast.store.ts`.
+           */}
+          <ToastHost />
         </BootstrapGate>
       </QueryClientProvider>
     </SafeAreaProvider>

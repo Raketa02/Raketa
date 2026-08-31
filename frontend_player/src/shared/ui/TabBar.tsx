@@ -95,6 +95,28 @@ export const TAB_BAR_TABS = [
   { key: 'you', label: 'You', glyph: 'user' },
 ] as const satisfies readonly TabBarTab[];
 
+/**
+ * The bar's height at the default text size, **excluding** the bottom safe-area inset.
+ *
+ * Derived from the same tokens the stylesheet below lays the bar out from — the hairline, the
+ * two paddings, the ⚡Play disc (which is the tallest thing in a column, not the 16pt icon
+ * box) and the label — so it cannot drift from the bar it describes. It exists because
+ * [9.2](../../../docs/design-system.md#92-toast) positions the toast *above the tab bar*, and
+ * the alternative was the toast holding a copy of these five numbers.
+ *
+ * **The default size, and a floor rather than a promise.** `labelMaxScale` lets Dynamic Type
+ * grow the labels, so a bar on a phone set large is taller than this; the toast clearing the
+ * default is what 9.2 asks for, and a toast that measured the bar would be an overlay
+ * depending on a screen having one.
+ */
+export const TAB_BAR_HEIGHT =
+  1 +
+  theme.space.xs +
+  theme.size.fab +
+  theme.space.xxs +
+  theme.type.tag.lineHeight +
+  theme.space.md;
+
 export interface TabBarProps {
   /** Which of the five is showing. Play stays active for every screen inside Play. */
   readonly active: TabBarKey;

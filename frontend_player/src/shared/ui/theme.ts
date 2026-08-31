@@ -314,6 +314,12 @@ const radius = {
    *  radius would be the first step back toward a booking grid. */
   availabilityCell: 10,
   avatar: 9,
+  /** The court's ground. A card at 13 is a surface a finger rests on; a court is a picture
+   *  inside one, and 4.2's rule reads the other way for it — the smaller the surface, the
+   *  tighter the corner. Named for its role beside the two nines already here rather than
+   *  borrowing `avatar`, because a court is not a face and the next reader must not be able
+   *  to change one by changing the other. */
+  court: 9,
   hourSquare: 9,
   rangeSquare: 9,
   timeSquare: 8,
@@ -340,7 +346,12 @@ const size = {
   chipSm: 25,
   seg: 25,
   tag: 19,
-  fit: 23,
+  /** The fit pill — 7.10. **26, which is the height every call site drew.** The prototype's
+   *  class defaulted to 23 and was overridden inline at all five sites; UI §G1 records that
+   *  the defaults are used nowhere, so the arrival takes the USED value and the unused one
+   *  stops existing. The number inside is `num.xs`, the nearest mono role to the 12pt those
+   *  same sites wrote — a seventh size step for one pill is what 15.3 says not to add. */
+  fit: 26,
   avatar: 27,
   timeSquare: 32,
   meter: 5,
@@ -463,7 +474,79 @@ const size = {
     box: 20,
     row: 44, // = minTouch
   },
-  balanceBar: 24,
+  /** The balance bar — 7.11. Three heights, and the segment labels are tied to them: at
+   *  `lg` and `md` a label fits beside the fold, at `sm` it does not and the bar draws none.
+   *  #219 B4 raised the type floor to 9,5pt, so the prototype's 8 / 8,5 / 9,5 collapse to one
+   *  role (`tag`) and the size decides WHETHER there is a label rather than how small it is.
+   *
+   *  The bar's SCALE is not here, for 7.5's reason: the level bar's fixed 1,00-5,00 lives in
+   *  the component that draws it, and this one's mapping-and-clamp lives in `BalanceBar.tsx`
+   *  the same way. What is here is geometry. */
+  balanceBar: { sm: 16, md: 18, lg: 24 },
+  /** The switch — 6.12. The track and the knob are UI §G1's measured 40 x 23 and 18, and the
+   *  inset is the arithmetic between them rather than a fourth number. The ROW is the touch
+   *  surface, exactly as 6.11's is: a 23pt track is well under the 44pt minimum, and a
+   *  `hitSlop` around it would leave the words beside it inert. */
+  switch: { track: 40, height: 23, knob: 18, row: 44 },
+  /** The court — 7.12, and the drawn object whose numbers cannot be derived.
+   *
+   *  `space` is the drawing's own box and every coordinate below is in it. The 1,32 aspect
+   *  IS 132 / 100, kept as the two numbers the line-sets are drawn against rather than as a
+   *  ratio, so a path and a seat are read against one grid.
+   *
+   *  **`seats` are per Sport and are not a mirror.** Squash has no net: both players stand on
+   *  the same half (H-25), so seat 3 is not where seat 3 is in padel, and deriving the far
+   *  side by reflecting the near one produces the wrong court for one sport in four. They are
+   *  listed in SEAT ORDER — your side first, their side second — which is the order the court
+   *  hands its children, and the order `{side}` is read off in `the-words.md` 20.4.
+   *
+   *  `line` is the chrome, as OPACITIES of one white rather than as five rgba values: the
+   *  court's ground is generated, so its lines are a single colour at a set of weights, and
+   *  spelling them as colours would put five near-identical whites in a palette that picks by
+   *  meaning. `sideLabelOpacity` is 2.5's own recorded value — white at .6 is 5,46 against the
+   *  worst of the four grounds, which already clears AA, so it is not raised.
+   */
+  court: {
+    space: { width: 100, height: 132 },
+    /** The seat face against the court's width, with a floor: below it a face is a dot. */
+    seatRatio: 0.235,
+    seatMin: 17,
+    sideLabelOpacity: 0.6,
+    line: {
+      bound: 0.3,
+      boundWidth: 1.6,
+      inner: 0.24,
+      innerWidth: 1.1,
+      net: 0.85,
+      netWidth: 1.8,
+      netGlow: 0.35,
+      netGlowWidth: 5,
+      /** Squash's front wall — a band, not a line, and the only filled mark on any court. */
+      wall: 0.16,
+    },
+    seats: {
+      padel: [
+        [30, 96],
+        [70, 110],
+        [30, 22],
+        [70, 36],
+      ],
+      badminton: [
+        [32, 98],
+        [68, 110],
+        [32, 22],
+        [68, 34],
+      ],
+      tennis: [
+        [50, 104],
+        [50, 28],
+      ],
+      squash: [
+        [34, 92],
+        [66, 66],
+      ],
+    },
+  },
   sportDot: 6,
   infoGlyph: 14,
   tabIcon: 16,
@@ -631,6 +714,12 @@ const motion = {
      *  player cannot finish before the screen leaves is worse than no sentence at all, so
      *  if the copy grows this grows with it, as an amendment rather than a tweak. */
     calculating: 1200,
+    /** A toast — 9.2. The prototype's 2600, kept: it is the read time of the longest of the
+     *  nineteen sentences this app fires, and it is what the QUEUE spends per message, so
+     *  shortening it is a decision about how long a listener waits rather than a tidy-up.
+     *  Nothing surrounds it: the toast neither arrives nor leaves on an animation (1.5), so
+     *  this is the whole of that component's timing and there is no reduced-motion branch. */
+    toast: 2600,
   },
 } as const;
 

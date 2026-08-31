@@ -1,12 +1,13 @@
 /**
  * What every overlay in this app needs, in one place.
  *
- * There are two of them now — the bottom sheet (design-system 9.1) and the anchored
- * popover (7.6) — and Part 13 asks the same three things of both: siblings hidden from
- * assistive technology, focus moved in and returned to the trigger on close, and motion
- * skipped when the OS asks for it. Each was written inside `BottomSheet` when it was the
- * only overlay; a second copy in `Popover` is how two overlays end up meeting two
- * different halves of one requirement.
+ * There are three of them now — the bottom sheet (design-system 9.1), the anchored popover
+ * (7.6) and the toast (9.2) — and Part 13 asks the same things of them: siblings hidden from
+ * assistive technology, focus moved in and returned to the trigger on close, motion skipped
+ * when the OS asks for it, and **an announcement on everything that appears without being
+ * asked for**. Each was written inside `BottomSheet` when it was the only overlay; a second
+ * copy in `Popover` is how two overlays end up meeting two different halves of one
+ * requirement.
  */
 
 import { useEffect, useState, type RefObject } from 'react';
@@ -70,4 +71,30 @@ export function useReducedMotion(): boolean {
   }, []);
 
   return reduced;
+}
+
+/**
+ * Whether this announcement may wait its turn, or takes the floor.
+ *
+ * Part 13 requires that every toast announces. It does not say *how*, and the default
+ * mechanism **interrupts** on both platforms: nineteen toasts fire from the Play tab, and one
+ * landing mid-card cuts a listener off in the middle of the reason lines they were listening
+ * to. So the requirement keeps its force and names its mechanism precisely — `queue`, which
+ * is a Part 16 amendment rather than an exception (`the-words.md` §20.10).
+ */
+export type Announcement = 'queued' | 'interrupting';
+
+/**
+ * Say something to a screen reader, politely by default.
+ *
+ * **`queue` is honoured on iOS and is not a thing on Android.** React Native forwards the
+ * option to `UIAccessibility` and falls back to the interrupting call on the other platform,
+ * so a queued announcement is a request rather than a guarantee — which is worth knowing here
+ * and is not worth a second code path, because interrupting is what the requirement asked for
+ * before this amendment and is still the correct floor.
+ */
+export function announce(message: string, politeness: Announcement = 'queued'): void {
+  AccessibilityInfo.announceForAccessibilityWithOptions(message, {
+    queue: politeness === 'queued',
+  });
 }

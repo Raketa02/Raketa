@@ -45,12 +45,31 @@
  * This file holds no copy. The heads, the day labels, each cell's accessible name and the
  * footnote all arrive as props, because the onboarding step that collects a week and the
  * profile editor that will change one do not say the same things.
+ *
+ * ## The diff variant is this grid, not a second one
+ *
+ * `SH.saveav` draws the same seven-by-three week with a **third fact** on each cell — the
+ * slots this search added and the ones it dropped. `the-words.md` §20.7 calls it *"a
+ * different control with a third fact … not interactive"*, which describes a second
+ * accessibility tree and not a second file: it is this geometry **exactly**, and a second
+ * copy of it is the drift `Tick` was extracted to prevent.
+ *
+ * **One component, two modes, two accessibility trees.** The editor's cells are twenty-one
+ * `checkbox`es; the diff's are not interactive at all, so nothing there is pressable, nothing
+ * carries `checked`, and a cell with nothing to say is hidden rather than announced empty.
+ *
+ * The prototype's scheme is **replaced rather than carried over**, because it is a
+ * [Part 13](../../../docs/design-system.md#part-13--accessibility) violation twice: *new* was
+ * a volt ring and *dropped* was 45% opacity — colour as the only signal, on a sheet whose own
+ * body copy names the colour as the mechanism — and a volt ring drawn on paper is 1,3:1 and
+ * simply not there. The three facts are three **shapes** instead, from `Tick`'s own family.
  */
 
+import { type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { theme } from './theme';
-import { Tick } from './Tick';
+import { Dash, Plus, Tick } from './Tick';
 
 const grid = theme.size.availability;
 
@@ -74,10 +93,37 @@ export interface AvailabilityGridRow {
   readonly cells: readonly AvailabilityGridCell[];
 }
 
-export interface AvailabilityGridProps {
+/**
+ * What a diff cell says about one slot, and the whole of it.
+ *
+ * `on` and `off` are this week as the search left it; `added` and `dropped` are the two
+ * facts the editor has no room for. Each is a shape rather than a colour — `Tick`, `Plus`
+ * and `Dash` — because the prototype's volt ring and 45% opacity are Part 13's prohibition
+ * drawn twice.
+ */
+export type AvailabilityDiffState = 'on' | 'off' | 'added' | 'dropped';
+
+export interface AvailabilityDiffCell {
+  readonly key: string;
+  readonly state: AvailabilityDiffState;
+  /**
+   * `{Day} {part}` · `{Day} {part}, newly added` · `{Day} {part}, dropped`
+   * (`the-words.md` §20.7). **Omitted means hidden**, not announced empty: a slot that was
+   * off and stayed off has nothing to tell a listener, and twenty-one of those between the
+   * ones that do is the double announcement 6.8 hides its column heads to avoid.
+   */
+  readonly accessibilityLabel?: string;
+}
+
+export interface AvailabilityDiffRow {
+  readonly key: string;
+  readonly label: string;
+  readonly cells: readonly AvailabilityDiffCell[];
+}
+
+interface GridChrome {
   /** One per column, in the order the cells run. Decoration to assistive technology. */
   readonly columnHeads: readonly string[];
-  readonly rows: readonly AvailabilityGridRow[];
   /**
    * At most two lines under the grid, and **its height is reserved whether or not it has
    * anything in it**: the moment a player is most likely to tick a second cell is
@@ -87,14 +133,28 @@ export interface AvailabilityGridProps {
   readonly footnote?: string;
 }
 
-export function AvailabilityGrid({ columnHeads, rows, footnote }: AvailabilityGridProps) {
+export interface AvailabilityGridEditorProps extends GridChrome {
+  readonly variant?: 'editor';
+  readonly rows: readonly AvailabilityGridRow[];
+}
+
+export interface AvailabilityGridDiffProps extends GridChrome {
+  readonly variant: 'diff';
+  readonly rows: readonly AvailabilityDiffRow[];
+}
+
+/** The two modes are a union rather than a flag, so a diff row can never reach the editor. */
+export type AvailabilityGridProps = AvailabilityGridEditorProps | AvailabilityGridDiffProps;
+
+export function AvailabilityGrid(props: AvailabilityGridProps) {
+  const { columnHeads, footnote } = props;
   return (
     <View>
       <View style={s.grid}>
         {/* Content-sized so Dynamic Type grows it, capped by `labelMaxRatio` so it cannot
             grow into the cells' 44pt. */}
         <View style={s.labels}>
-          {rows.map((row) => (
+          {props.rows.map((row) => (
             <View key={row.key} style={s.labelBox}>
               {/* No `numberOfLines`: 6.8 has Dynamic Type *grow* these, and a truncated
                   `Tue` and `Thu` are the same three characters — the ambiguity the short
@@ -122,11 +182,9 @@ export function AvailabilityGrid({ columnHeads, rows, footnote }: AvailabilityGr
             ))}
           </View>
 
-          {rows.map((row) => (
+          {cellRows(props).map((row) => (
             <View key={row.key} style={s.cellRow}>
-              {row.cells.map((cell) => (
-                <Cell key={cell.key} cell={cell} />
-              ))}
+              {row.cells}
             </View>
           ))}
         </View>
@@ -143,6 +201,27 @@ export function AvailabilityGrid({ columnHeads, rows, footnote }: AvailabilityGr
       </View>
     </View>
   );
+}
+
+/**
+ * The rows, with their cells already drawn — the one place the two modes differ.
+ *
+ * The row wrapper is written once and the mode chooses only what goes in it, because the two
+ * grids are the same seven-by-three geometry and a second copy of the loop is the second copy
+ * of the geometry arriving as code.
+ */
+function cellRows(
+  props: AvailabilityGridProps,
+): readonly { readonly key: string; readonly cells: readonly ReactNode[] }[] {
+  return props.variant === 'diff'
+    ? props.rows.map((row) => ({
+        key: row.key,
+        cells: row.cells.map((cell) => <DiffCell key={cell.key} cell={cell} />),
+      }))
+    : props.rows.map((row) => ({
+        key: row.key,
+        cells: row.cells.map((cell) => <Cell key={cell.key} cell={cell} />),
+      }));
 }
 
 /**
@@ -176,6 +255,39 @@ function Cell({ cell }: { readonly cell: AvailabilityGridCell }) {
     </Pressable>
   );
 }
+
+/**
+ * One diff cell — the same 44pt box, and nothing that can be operated.
+ *
+ * Not a `Pressable` and not a `checkbox`: §20.7 records the diff grid as *"not interactive"*,
+ * and a role that carried `checked` here would offer a state a reader could try to change.
+ * The three drawn facts are three marks in one 12 × 12 box, so a reader who cannot separate
+ * volt from white still separates a tick from a plus from a dash.
+ */
+function DiffCell({ cell }: { readonly cell: AvailabilityDiffCell }) {
+  const hidden = cell.accessibilityLabel === undefined;
+  return (
+    <View
+      accessible={!hidden}
+      accessibilityLabel={cell.accessibilityLabel}
+      accessibilityElementsHidden={hidden}
+      importantForAccessibility={hidden ? 'no-hide-descendants' : 'auto'}
+      style={[s.cell, FILLED.has(cell.state) ? s.cellSelected : undefined]}
+    >
+      {MARKS[cell.state]}
+    </View>
+  );
+}
+
+/** The two states drawn on the inverted fill — this week as the search leaves it. */
+const FILLED = new Set<AvailabilityDiffState>(['on', 'added']);
+
+const MARKS: Readonly<Record<AvailabilityDiffState, ReactNode>> = {
+  on: <Tick />,
+  added: <Plus />,
+  dropped: <Dash />,
+  off: null,
+};
 
 const s = StyleSheet.create({
   // Bottom-aligned, so the labels line up with their rows however tall the heads grow.

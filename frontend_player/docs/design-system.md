@@ -509,12 +509,20 @@ Everything else follows. A value outside the grid is a bug.
 | 13                  | Card, popover                                      |
 | 12                  | Toast                                              |
 | 10                  | Button, note, segmented control, availability cell |
-| 9                   | Info button                                        |
-| 8                   | Sport dot backing                                  |
+| 9                   | Info button, the court ([7.12](#712-the-court))    |
+| 8                   | Sport dot backing, the balance bar                 |
+| 7                   | The fit pill ([7.10](#710-the-fit-pill))           |
 | 6                   | Tag, sport dot                                     |
 
 **The pattern: the bigger the surface, the rounder.** A dark card is 15 where a light one
 is 13 — the darker fill makes the corner read tighter at the same radius.
+
+**The court reads the rule the other way, and is the one thing that does.** A card at 13 is a
+surface a finger rests on; a court is a **picture inside one**, and a picture wants the
+tighter corner however large its box — so `radius.court` is 9 at a 74pt mini and at a
+full-width build alike. It is named for its role beside the other 9 rather than borrowing
+`avatar`, because a court is not a face and the next reader must not be able to change one by
+changing the other.
 
 **`deckCard: 18` is not a card at 18.** The deck card animates in, and translates and
 rotates out under the thumb: it is a **transient object being manipulated**, which is why it
@@ -961,6 +969,43 @@ cells. At the cap the three cells still share 196,5pt on the narrowest phone. Th
 contain no text, so nothing inside one scales, and `allowFontScaling={false}` never arises
 ([Part 13](#part-13--accessibility)).
 
+### The diff variant
+
+`SH.saveav` draws the same week with a **third fact** on each cell: the slots this search
+added, and the ones it dropped. `the-words.md` §20.7 calls it _"a different control with a
+third fact … not interactive"_ — which describes a second accessibility tree and **not a
+second file**. It is this seven-by-three geometry exactly, and a second copy of that grid is
+the drift `Tick` was extracted to prevent.
+
+> **One component, two modes, two accessibility trees.**
+
+| State              | Cell                  | Mark                   |
+| ------------------ | --------------------- | ---------------------- |
+| **on**, unchanged  | `ink` fill            | the tick               |
+| **added**          | `ink` fill            | a **plus**, in `volt`  |
+| **dropped**        | `surface`, 1pt `line` | a **dash**, in `muted` |
+| **off**, unchanged | `surface`, 1pt `line` | —                      |
+
+**The prototype's scheme is replaced by the arrival rather than after it**, because it is a
+[Part 13](#part-13--accessibility) violation twice over. New drew a **volt ring** and dropped
+drew **45 % opacity** — colour as the only signal, on a sheet whose own body copy names the
+colour as the mechanism (_"Green rings are new, faded ones you dropped"_) — and a volt ring on
+paper is 1,3:1, so half of it was not there at all
+([2.2](#22-accent-and-semantics): volt is a fill anywhere and a stroke only on dark).
+
+**Three shapes, from the tick's own family.** One 12 × 12 box, one 2pt round-capped stroke,
+and plus-and-minus is the diff idiom every reader already has;
+[6.9](#69-the-photo-tile-and-picker)'s add glyph is the same crossed pair at 20 × 20, so
+nothing here is a new drawing. The plus is `volt` **on `ink`**, which is the one kind of bed
+volt may be a stroke on.
+
+**Nothing on it is pressable**, so nothing carries `checked` and nothing offers a state a
+reader could try to change. **A cell with nothing to say is hidden** rather than announced
+empty: a slot that was off and stayed off tells a listener nothing, and twenty-one of those
+between the ones that changed is the double announcement the column heads are hidden to avoid.
+The three sentences are §20.7's — `{Day} {part}` · `{Day} {part}, newly added` ·
+`{Day} {part}, dropped` — and they are the caller's, like every other word on this grid.
+
 ---
 
 ## 6.9 The photo tile and picker
@@ -1330,6 +1375,59 @@ inside it. The message beneath carries the state as words, so nothing rests on t
 
 ---
 
+## 6.12 The switch
+
+A mode a player turns on and off — the swap toggle on the interactive court is the first,
+and the pattern is _a setting that can be flipped back_.
+
+```
+row     height 44, control + words together — THE TOUCH SURFACE
+track   40 × 23, radius pill · line2 off · ink on
+knob    18 circle, inset 2,5 · night off · surface on
+travel  track − knob − two insets, and nothing else moves
+pressed opacity .7, over either state
+```
+
+**Nothing already in Part 6 carries `checked` on a mode.** [6.11](#611-the-tick-box) says in
+as many words that it is not a switch — it is _"a claim a player either makes or does not"_,
+written in the player's voice and asserted once; [6.3](#63-segmented-control) picks one of
+several; [6.2](#62-chip--the-filter-pill) narrows what is already on screen. A mode that can
+be turned back off is none of the three, and `the-words.md` §20.4 fixed the role as `switch`
+with `checked`, so the role and the control arrive together.
+
+**The row is the control, not the track** — the same decision [6.11](#611-the-tick-box) and
+[6.10](#610-the-radius-slider) make. A 23pt track is well under the
+[44pt minimum](#65-touch-targets), and growing it with `hitSlop` would leave the words beside
+it inert.
+
+**The state is carried by the knob's position before it is carried by any fill.** That is the
+shape [Part 13](#part-13--accessibility) asks for, and it is what lets the two fills be the
+inversion [6.8](#68-the-availability-grid) already uses rather than a second on-colour. Mint
+was refused for the fill: [2.2](#22-accent-and-semantics) means _settled, safe, covered_ by
+it, and a swap mode being on is not a settled thing.
+
+**The knob takes the value that reads on the bed it is standing on.** The prototype drew a
+white knob at both ends of the travel, and against its unchecked `line` track that is
+**1,30:1** — the control's only moving part invisible in half its states. `night` on `line2`
+is **11,36:1** and `surface` on `ink` is **17,50:1**, so the knob clears
+[1.4.11](#25-contrast--computed)'s 3:1 for a graphical object at both ends. This is Rule C's
+argument applied to a mark rather than to text, and it is the only place in this system where
+one object takes two values. **The three ratios are derived, never typed** —
+[`Switch.test.tsx`](../src/shared/ui/Switch.test.tsx) computes them and fails if a token
+moves, exactly as the court's four and the poster's two are derived.
+
+**There is no disabled switch.** [6.1](#61-button)'s rule is that this app never draws a
+pressable-looking control that refuses, and [6.9](#69-the-photo-tile-and-picker) makes its
+ceiling a fact of the layout rather than a greyed button. A mode with nothing to switch is a
+row that is not on screen.
+
+**The words are the caller's, and the accessible name is the label alone.** A switch announces
+its state through `checked`, so a description folded into the name would be the double
+announcement 6.8 hides its column heads to avoid. The mode line beneath is drawn and merged
+into the one element; what the mode _does_ is said by the controls it changes.
+
+---
+
 # Part 7 — Data display
 
 ## 7.3 Meter and bar
@@ -1505,6 +1603,188 @@ are behind it. It states **no total**, because there is none to state. Its role 
 `progressbar`: that role carries a max. `allowFontScaling` does not arise — the navigator
 contains no text.
 
+## 7.10 The fit pill
+
+Fit, on a card. One shape, one threshold, drawn on four surfaces — the competitive card, the
+social card, the deck card, and the head of the why-fit sheet.
+
+```
+pill    height 26, radius.fit 7, padding 0 × 9, row, gap 3
+base    background night · label #fff        13,29:1
+hi      background coral · label ink          4,50:1   ← Rule C
+glyph   ✦, drawn and never spoken
+number  num.xs, mono, TABULAR
+```
+
+**This is not the deleted 7.1 returning under its old number.**
+[Part 17](#part-17--what-the-reset-removed) removed the fit badge because the Match Fit engine
+it drew was removed, and it warns about this section in particular: the badge's _"90 threshold
+named a scale the deleted engine defined."_ The engine ships again and the component comes
+back — at a new number, because a section number in this document never moves — and it
+**states the scale it is against** rather than inheriting one.
+
+> **Fit is out of 100**, and `hi` is Fit ≥ 90 — the top tenth of that scale.
+
+[`CONTEXT.md`](../../CONTEXT.md) defines Fit as _"how good the game would be, printed on the
+card as one number out of a hundred"_, which is where the denominator comes from, and
+`the-words.md` §20.3 rules against §E6's _"out of 99"_ on the same sentence. The step is a
+**step in a fill and not a fourth meaning**: [15.2](#152-adding-a-colour) forbids inventing one
+of those, and `coral` is the app's one accent used exactly as [1.2](#12-one-accent-used-sparingly)
+describes — sparingly, on the tenth of cards that earn it.
+
+**`ink` on the coral, never white.** The prototype drew `#fff` on `var(--coral)`, which is
+3,89:1 and the one pairing [Rule C](#rule-c--text-on-a-saturated-fill) refuses outright.
+
+**26 tall, which is what every call site drew.** UI §G1 records the class defaults being
+overridden inline at all five of them — _"the class defaults are used nowhere"_ — so the
+arrival takes the used values and the unused ones stop existing. The number inside is
+`num.xs`, the nearest mono role to the 12pt those same sites wrote: a seventh size step for
+one pill is what [15.3](#153-adding-a-size-or-a-spacing-step) says not to add.
+
+**The pill is not its own accessibility element.** `the-words.md` §20.3 merges it into the
+card body's label — `Fit {n} out of 100` — and the ✦ _"is hidden by the merge rather than by a
+separate rule"_, so there is no rule here either.
+
+## 7.11 The balance bar
+
+Two segments in one track, saying **which side** a game leans to.
+
+```
+bar     height 16 / 18 / 24, radius.balanceBar 8, overflow hidden
+yours   night          — on a dark card: surface, with the label in night
+theirs  ok mintInk · warn amber · bad red        ← Rule C: white sits on all three
+labels  tag, centred, drawn at 18 and 24 and absent at 16
+```
+
+**This is not the deleted 7.2 returning under its old number**, for 7.10's reason and by the
+same rule.
+
+### One fixed scale, because three clamps were the defect
+
+The prototype computed the left segment as _fifty, plus the difference between the two side
+strengths times thirty-four_ — and then clamped it to **22–78** on the forecast card and
+**20–80** on the pool header and the candidate card. One formula, three clamps, so the same
+gap landed in a different place on two screens. That is precisely what
+[7.5](#75-the-level-bar) and [7.8](#78-the-confidence-ring) exist to prevent: _a value must
+land in the same place everywhere or the component means different things on different
+screens._
+
+Drawing the raw shares instead would be honest and invisible — 2,71 against 2,83 is 48,9
+against 51,1, a difference nobody can see at 24pt.
+
+> **The amplification ships as one fixed scale: one mapping, one constant of 34, one clamp at
+> 20–80.** A steep scale is still a fixed scale. What was wrong was three of them.
+
+The scale lives in the component, exactly as the level bar's fixed 1,00–5,00 does;
+`theme.size.balanceBar` holds the geometry and nothing else.
+
+**The printed evenness percentage stays the server's and is never derived from the strengths**
+(`the-play-screens.md` §11.3 — _no forecast arithmetic on the client_). The bar and the number
+are two different facts: the number says _how even_, the bar says _which side_.
+
+**The word beside the bar carries the meaning**, which [Part 13](#part-13--accessibility)'s
+_never colour alone_ already forces, and `the-words.md` §20.4 makes the bar one `image`
+element whose name is that word and its figure.
+
+**The on-dark repaint is a repaint, not a second scheme.** The pool header draws this bar
+inside a dark card, where a `night` segment against a `night` card is one segment — so the two
+sides swap which of them is the dark one, and the label on _your_ side goes to `night` with
+it. React Native has no colour cascade, which is why this is a `variant` rather than something
+the card does to its children; [7.5](#75-the-level-bar) took the same repaint for the same
+reason. **The tone, the scale and the clamp are untouched by it.**
+
+**Three sizes, and the size decides whether there is a label.** #219 B4 put the type floor at
+9,5pt, so the prototype's 8 / 8,5 / 9,5 segment labels collapse to one role. At 24 and 18 a
+`tag` line fits beside the fold; at 16 it does not, and the smallest bar draws none rather
+than drawing one under the floor.
+
+**One thing recorded rather than fixed.** §B9's word breaks at 85 / 70 / 55 and its colour
+breaks at 70 / 55, so _Very even_ and _Fairly even_ share one green. That is **correct**: Part
+13 is satisfied by the word, and a fourth tone would need a fourth _meaning_, which
+[15.2](#152-adding-a-colour) forbids inventing. Left unwritten, somebody tidies it into four
+colours.
+
+## 7.12 The court
+
+The court a game is played on, with the players standing where they will stand. The fifth
+drawn object — after the level bar, the confidence ring, the question navigator and the
+generated poster — and the one whose numbers cannot be derived.
+
+```
+ground   a 150° gradient from the Sport hue to `night`, under one `courtScrim` pass
+chrome   ONE white at four weights — boundary .30/1,6 · net .85/1,8 over a .35/5 glow
+         · inner lines .24/1,1 · squash's front wall, a .16 band
+caption  eyebrow over a gradient to `courtScrim`, with `textOnMedia`
+sides    eyebrow at white .6, with `textOnMedia`      ← 5,46 against the worst ground (2.5)
+box      100 × 132 drawing units — the 1,32 aspect IS those two numbers
+radius   radius.court 9
+seats    POSITIONS. The caller supplies what stands in each one.
+```
+
+> **`Court` takes a Sport and a box, renders the ground, the chrome and the seat _positions_,
+> and takes children in seat order.**
+
+```tsx
+<Court sport={sport} width={w} summary={…}>
+  {seats.map(…)}          // children in seat order; the court places them
+</Court>
+```
+
+**Two other shapes were refused and both fail the same way.** A `renderSeat(index, position)`
+callback is this with an indirection. A `useCourtGeometry(sport, width)` hook **returns** the
+coordinates, and geometry that is returned is geometry that gets adjusted at one call site and
+not the other — the drift this Part exists to prevent, arriving through the door the rule was
+written to close. With children the positions never leave the module, and the interface is
+testable through itself: hand it two children, assert two positions, per Sport.
+
+**The seat count is the Sport** — padel and badminton four, tennis and squash two — and it is
+read off the coordinates rather than stated twice.
+
+**H-25 is why the coordinates cannot be derived.** Squash has **no net and no two sides** —
+its pair share one playing area, where the other three put a seat on each side of a net. So
+_seat 3_ is not where seat 3 is in padel, and reflecting the near side about the middle draws
+three Sports correctly and one wrongly with nothing to see. They are
+`theme.size.court.seats`, per Sport, **in seat order — your side first**, which is the order
+`the-words.md` §20.4 reads `{side}` off.
+
+**The seat face is a share of the court with a floor** below which a face is a dot. Its
+**radius and its ring are not here**: the court owns where a seat goes and how big its box is,
+and the seat owns what is drawn in it. That is why `CandidatePhoto`'s _33 % of its own box_
+lives with `CandidatePhoto` and not in `theme.size.court` — a rule about a face, held beside
+the thing that draws faces.
+
+**The read-only court and the interactive one are not a flag on this component.** They share
+every number and no behaviour, so they are two feature components over one drawn object:
+read-only faces and pressable seats are _different children_. The court owns geometry and
+knows nothing about players; a seat owns its label, its ring, its badge and its taps.
+
+**The seat-clear badge is not a new component.** [6.9](#69-the-photo-tile-and-picker)'s remove
+control already is one — a solid `night` square with a white mark at the `tag` radius, a 44pt
+target, inset by its own slop — and §20.4's _`Remove {name} from {side}`_ is 6.9's own rule
+that a remove control _"names which photo it removes"_ applied. The prototype's 18px circle at
+radius 9 is dropped.
+
+**Padel's second boundary pass is dropped** — a 5pt white at `.12`, the glass wall — on
+[6.9](#69-the-photo-tile-and-picker)'s argument for dropping the poster's: it is a mark
+lighter than the ground it sits on, drawn over a boundary that is already there. **Squash's
+out-line takes the net's weight and none of its glow**: the glow is a net's depth, and squash
+has no net.
+
+**Padel's inner lines join the .24 the other three draw.** The prototype drew them at `.28`,
+which is the same kind of variance §G2 exists to close; one line weight across four courts is
+half the reason this is one component.
+
+**Every label over the court carries `textOnMedia`**, and the gradient id comes from `useId()`
+— the pool draws a court in its header and another in a card, and an id composed from the
+Sport and the width emits duplicates the moment a screen draws two of the same Sport
+([6.9](#69-the-photo-tile-and-picker) closed exactly that bug).
+
+**This file holds no copy.** The caption, the two side labels and the summary a screen reader
+hears first all arrive as props. The summary is an element of its own **preceding the seats**
+rather than the court's own label — a container carrying one would swallow the seats, which
+are the elements the screen is navigated by — and the caption and side labels are hidden,
+because the summary already names the Sport and each seat names its own side.
+
 ---
 
 # Part 8 — Scrolling patterns
@@ -1556,15 +1836,54 @@ closes on back-gesture (Android hardware back must dismiss it).
 ## 9.2 Toast
 
 ```
-position  left 15, right 15, above the tab bar + bottom safe-area inset
+position  left 15, right 15, above the tab bar + bottom safe-area inset, clear by 9
 tst       background night, #fff, radius 12, padding 12 × 15, 12 / 600
 ok        background mintInk        ← Rule C, was mint (4.07:1)
 bad       background red
 ```
 
 `pointerEvents: 'none'` on the container **so a toast never blocks a tap.** Every toast
-announces itself with `AccessibilityInfo.announceForAccessibility` — the prototype had no
-live region, and a toast a screen-reader user cannot hear is a toast that did not happen.
+announces itself — the prototype had no live region, and a toast a screen-reader user cannot
+hear is a toast that did not happen.
+
+### The queue, the live region and the dismiss
+
+Specified above and unbuilt until #260. What was missing is the three things §G3 #7 asks for.
+
+**One host, mounted once, at [9.3](#93-layer-order)'s overlay root.** `zIndex` is scoped to
+the parent in React Native, so a toast raised from inside a card renders inside that card;
+`ToastHost` is a sibling of the route tree in `src/app/_layout.tsx`, exactly as the
+environment badge is. The queue behind it is `shared/store/toast.store.ts` and not a feature's,
+because a queue living in a feature is that feature owning every other feature's toasts.
+
+**A queue, not a stack.** The prototype appended toasts to a column and let three sit there at
+once. The announcement is queued (Part 13, below), and a screen showing three sentences while
+a listener is being read one is the two channels disagreeing about what just happened —
+nineteen toasts fire from the Play tab alone, so the case is real.
+
+**The one interrupting message jumps the queue as well as the voice.** Part 13's exception is
+that the send confirmation _does not queue behind anything_, and that is two things rather than
+one: it is spoken with `queue: false`, **and** it is placed in front of everything not yet
+shown. A politeness flag alone would still leave it waiting two holds — 5,2 seconds — on a
+destination that is a placeholder with nothing else on it to say the challenge went. **The
+message already on screen keeps its place**, because pulling a sentence out from under a reader
+is the interruption the amendment exists to stop.
+
+**The dismiss is the hold, and there is no close control.** `pointerEvents: 'none'` is the
+rule above, and a control inside the toast is a tap the toast has to eat. So the head of the
+queue is shown for `motion.hold.toast` — 2,6 seconds, the read time of the longest sentence
+this app fires — and then the next one takes its place.
+
+**Nothing about it animates.** [1.5](#15-nothing-animates-that-does-not-have-to) is the rule,
+and the message has already been spoken by the time a 240ms rise would have finished arriving.
+That also means there is no reduced-motion branch to get wrong: a hold is not an animation.
+
+**The live region is an announcement, not `accessibilityLiveRegion`.** Android's attribute has
+no iOS equivalent and fires on re-render rather than on arrival, which on a host that swaps one
+message for another is the wrong event. The host announces the head as it _becomes_ the head —
+a sentence spoken while three others are ahead of it is a sentence about a screen the player is
+not on — and the drawn toast is hidden from assistive technology, because it has already been
+spoken and a reader that walked into it would hear the sentence 2,6 seconds late.
 
 ## 9.3 Layer order
 
@@ -1968,7 +2287,19 @@ the missing column is a requirement here.**
 - **Reduced motion.** `AccessibilityInfo.isReduceMotionEnabled` disables every animation
   and press transform, checked once and held in context.
 - **Tabular numerals** everywhere numbers are compared.
-- **Live announcements.** Every toast calls `announceForAccessibility`.
+- **Live announcements.** Every toast announces, **queued** —
+  `announceForAccessibilityWithOptions` with `queue`, and **one exception**. The bare call
+  _interrupts_ on both platforms, and this requirement was written against onboarding, which
+  has one toast at a time; nineteen fire from the Play tab, and one landing mid-card cuts a
+  listener off in the middle of what they were listening to. The requirement keeps its force
+  and names its mechanism precisely — an amendment, not an exception.
+  **The send confirmation interrupts, and earns it**: [#227](https://github.com/Raketa02/Raketa/issues/227)
+  made the send discard the Play stack to a placeholder, so the toast is the _entire_
+  confirmation that the one irreversible act in the feature succeeded, and it fires after the
+  destination mounts so the platform's own screen-change notification does not clobber it.
+  A second exception is an amendment, never a call-site decision (`the-words.md` §20.10).
+  `queue` is honoured on iOS and is not a thing on Android, where the interrupting call is
+  what a queued announcement falls back to.
 - **Modal semantics.** The sheet and the popover set `accessibilityViewIsModal` (iOS) and
   hide siblings (Android), and return focus to the trigger on close.
 - **Names on everything tappable.** Tabs, info marks, the popover close, answer options,
@@ -2120,6 +2451,15 @@ unchangeable one; it is one whose changes are recorded rather than absorbed.
 | 2026-08-31 | [6.9](#69-the-photo-tile-and-picker)                                        | _"It is never a person. No face, no silhouette, no initials"_ and _"it varies in geometry and never in colour"_ — a singles court in three colours, cropped by a hash into eight framings by six ball positions | **The poster draws a player.** One of three poses — forehand, serve, lunge — flat, in `ink`, with **no face and no likeness of any kind**, holding a racket, over a two-stop gradient on one of sixteen `POSTER_HUES`. The composition is fixed and whole and the **crops are retired**; the ball is `volt`; the `<Defs>` id comes from `useId()`                                                                                                 | Both refusals are **dissolved rather than overruled** ([ADR-0134](../../docs/adr/0134-the-poster-draws-a-player-and-no-value-is-invented.md)). The first was protecting one sentence — _the poster must not appear to answer do I want to play this person_ — which a **face** answers and a flat unfaced pictogram does not, so the line moves to no likeness and the constraint becomes the rule. The second was protecting [2.3](#23-sport-identity)'s Sport aliasing, which a `hash % 360` would have broken on the very surface it had just been checked against — so the hash picks from a **designed set** instead, and no poster can claim a Sport by construction. The crops go because their own file conceded the case against them: forty-eight crops of one court is a deck where every card is the same picture, and at 27pt a crop of a court carries no identity at all                                                                                                                                                                         |
 | 2026-08-31 | [2.5](#25-contrast--computed)                                               | _"The generated poster is not covered here"_ — one line deferring it to [6.9](#69-the-photo-tile-and-picker)                                                                                                    | **Two rows and a subsection.** White + `textOnMedia` on a poster hue's light stop at **4,60–4,65**, `ink` on its dark stop at **3,09–3,12**, both derived in `posterHues.test.ts`                                                                                                                                                                                                                                                                 | The poster is the second generated fill and the first with a foreground requirement of its own, so it stops being a forward reference. Two requirements bind the stop pair from opposite ends — 4.5:1 for white at the light end, 3:1 for the `ink` figure at the dark — and what makes sixteen hues into two rows is that the set is designed at **one lightness per stop**. It also records what that costs: the two bounds confine the ground to one band, so the ramp can never exceed 1,23×                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | 2026-08-31 | [6.9](#69-the-photo-tile-and-picker)                                        | `CourtPoster` took a framing and no colour; `theme.ts` had no poster values                                                                                                                                     | **`POSTER_HUES` in `theme.ts`, outside `color`** — sixteen hues, one lightness-and-chroma pair per stop — and a `hue` prop on `CourtPoster` typed as a member of it                                                                                                                                                                                                                                                                               | It is **not a semantic colour**: [1.3](#13-semantic-colour-is-never-decorative) picks colour by meaning and this one is picked by a hash, so it must not be reachable where a semantic colour is expected. The prop is the **first place in this system where a component takes a colour it did not get from `theme.color`**, so _a literal hex in a component is a bug_ now has one named exception, and it is bounded by a type rather than by a convention. The pair is fixed in **CIE LCh(uv)** and not in sRGB HSL: sixteen hues at one HSL `S`/`L` vary in luminance by a factor of three between the greens and the blues, and every such pair that clears both bounds is grey                                                                                                                                                                                                                                                                                                                                                                           |
+| 2026-08-31 | [6.8](#68-the-availability-grid)                                            | The grid had one mode: twenty-one `checkbox` cells with two states between them                                                                                                                                 | A **diff variant** — the same seven-by-three geometry, not interactive, with a third fact per cell: added and dropped                                                                                                                                                                                                                                                                                                                             | `the-words.md` §20.7 calls the diff grid _"a different control with a third fact … not interactive"_, which describes a second **accessibility tree** and not a second file. It is 6.8's geometry exactly, and a second copy of that grid is the drift `Tick` was extracted to prevent. The prototype's scheme is replaced by the arrival rather than after it: _new_ drew a volt ring and _dropped_ drew 45% opacity — colour as the only signal twice over, on a sheet whose own body copy names the colour as the mechanism — and a volt ring on paper is 1,3:1. The three facts are three **shapes** from the tick's own family, and `Tick.tsx` gains `Plus` and `Dash`                                                                                                                                                                                                                                                                                                                                                                                     |
+| 2026-08-31 | [6.12](#612-the-switch)                                                     | —                                                                                                                                                                                                               | **New section.** The switch: a 40 × 23 track at the pill radius, an 18pt knob, the 44pt **row** as the touch surface, and `switch` with `checked`                                                                                                                                                                                                                                                                                                 | Nothing in Part 6 carried `checked` on a **mode** — [6.11](#611-the-tick-box) says outright that it is not a switch, 6.3 picks one of several and 6.2 narrows what is on screen — and `the-words.md` §20.4 fixed the swap toggle's role as `switch`. The knob takes **two values**, which is the one object in this system that does: `surface` on the unchecked track is 1,2:1, so the prototype's white knob was invisible in half its states                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| 2026-08-31 | [7.10](#710-the-fit-pill)                                                   | Deleted with the Match Fit engine in the reset, as **7.1**, with [Part 17](#part-17--what-the-reset-removed) warning that its 90 threshold _"named a scale the deleted engine defined"_                         | **New section**, at a new number. The fit pill: 26 tall at `radius.fit`, `night` by default and `coral` with `ink` on it at Fit ≥ 90 — and the scale **restated**: Fit is out of 100                                                                                                                                                                                                                                                              | A returning component does not reclaim its old number; the gaps are the record ([6.8](#68-the-availability-grid)'s own row settled that). The threshold is **re-argued rather than inherited**: `CONTEXT.md` defines Fit as one number out of a hundred, and 90 is the top tenth of that scale rather than a fourth meaning [15.2](#152-adding-a-colour) would forbid. `ink` on the coral and not `#fff`, which is 3,89:1 and the pairing Rule C refuses; 26 tall and not 23, because UI §G1 records the class defaults being used at none of the five call sites                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| 2026-08-31 | [7.11](#711-the-balance-bar)                                                | Deleted with the pairing / balance-forecast engine in the reset, as **7.2**                                                                                                                                     | **New section**, at a new number. The balance bar: three heights, one mapping, one amplification constant of 34 and **one** clamp at 20–80                                                                                                                                                                                                                                                                                                        | The prototype had one formula and **three clamps** — 22–78 on the forecast card, 20–80 on two others — so the same gap landed in a different place on two screens, which is the defect [7.5](#75-the-level-bar) and [7.8](#78-the-confidence-ring) exist to prevent. Drawing the raw shares would be honest and invisible. A steep scale is still a fixed scale; what was wrong was three of them. The tones are the `*Ink` values, per Rule C, and the segment labels are `tag` at the two larger sizes and absent at the smallest — #219 B4's floor, not a smaller step. It also takes [7.5](#75-the-level-bar)'s **on-dark repaint**, because the pool header draws it inside a dark card and React Native has no colour cascade                                                                                                                                                                                                                                                                                                                             |
+| 2026-08-31 | [7.12](#712-the-court)                                                      | The court was drawn twice in the prototype and specified nowhere                                                                                                                                                | **New section.** The court: a Sport and a box in, the ground and the chrome and the seat **positions** out, and **children in seat order**                                                                                                                                                                                                                                                                                                        | A `useCourtGeometry` hook **returns** the coordinates, and returned geometry gets adjusted at one call site and not the other — the drift this Part exists to prevent, through the door the rule was written to close. With children the positions never leave the module. **H-25 is why they cannot be derived**: squash has no net and no two sides, so a reflection about the middle draws three Sports right and one wrong. Padel's glass wall and its `.28` inner lines go — a lighter mark over a boundary already there, and one line weight across four courts                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| 2026-08-31 | [4.2](#42-radius) · [`theme.ts`](../src/shared/ui/theme.ts)                 | —                                                                                                                                                                                                               | **`radius.court: 9`**, `size.switch`, `size.court` (including the per-Sport seat coordinates), `size.balanceBar` as three heights, `size.fit` 23 → **26**, and `motion.hold.toast`                                                                                                                                                                                                                                                                | Appendix A's contract: the document and `theme.ts` change in one commit. The seat coordinates are tokens on [7.5](#75-the-level-bar)'s precedent — half a drawn object in each file is how a value gets changed in one place. The court's chrome is **opacities of one white** rather than five rgba values, because a generated ground's lines are one colour at a set of weights and five near-identical whites in a palette that picks by meaning are five colours that mean nothing                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| 2026-08-31 | [9.2](#92-toast) · [9.3](#93-layer-order)                                   | Specified and unbuilt: a position, three fills and _every toast announces_                                                                                                                                      | **Built** — the queue, the live region and the dismiss, mounted **once** at the overlay host                                                                                                                                                                                                                                                                                                                                                      | 9.3 requires a single root-level overlay host and this is its first occupant; the queue is `shared/store/` and not a feature's, because a queue inside a feature is that feature owning every other feature's toasts. A **queue and not a stack**, because the announcement is queued and three sentences on screen while a listener is read one is the two channels disagreeing. The interrupting message takes the **head** as well as `queue: false` — a flag alone would leave the send confirmation waiting two holds to be spoken at all. The dismiss is the **hold**: `pointerEvents: 'none'` is 9.2's own rule and a close control is a tap the toast has to eat. Nothing animates ([1.5](#15-nothing-animates-that-does-not-have-to)), so there is no reduced-motion branch                                                                                                                                                                                                                                                                            |
+| 2026-08-31 | [Part 13](#part-13--accessibility)                                          | _"Live announcements. Every toast calls `announceForAccessibility`."_                                                                                                                                           | Every toast announces, **queued** — `announceForAccessibilityWithOptions` with `queue` — with the **send confirmation** as the single interrupting exception                                                                                                                                                                                                                                                                                      | The bare call interrupts on both platforms, and the requirement was written against onboarding, which has one toast at a time. Nineteen fire from the Play tab and one landing mid-card cuts a listener off. The requirement keeps its force and names its mechanism precisely — an **amendment, not an exception**. The send confirmation earns the one interruption because [#227](https://github.com/Raketa02/Raketa/issues/227) made the send discard the stack to a placeholder, so the toast is the entire confirmation that the one irreversible act succeeded (`the-words.md` §20.10)                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| 2026-08-31 | [10.2](#102-the-tab-bar)                                                    | The bar's height existed only as the sum of five tokens in its own stylesheet                                                                                                                                   | **`TAB_BAR_HEIGHT`**, derived from those same five, exported                                                                                                                                                                                                                                                                                                                                                                                      | [9.2](#92-toast) positions the toast _above the tab bar_, and the alternative was the toast holding a second copy of the bar's paddings, its hairline, the ⚡Play disc and its label. It is the height at the **default** text size and says so: `labelMaxScale` grows the labels, so it is the floor 9.2 asks for rather than a promise                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 
 # Part 17 — What the reset removed
 
@@ -2149,6 +2489,13 @@ to contradict the current domain — the per-format block above, and the fit bad
 threshold, which named a scale the deleted engine defined. Rebuilding one is an amendment
 under [Part 15](#part-15--extension-guide), recorded in
 [Part 16](#part-16--amendments-after-locking).
+
+**Two of them have come back, and neither reclaimed its number.** The Match Fit engine and the
+balance-forecast engine both ship again, so the fit badge and the balance bar return — as
+[7.10](#710-the-fit-pill) and [7.11](#711-the-balance-bar), leaving 7.1 and 7.2 empty. That is
+[6.8](#68-the-availability-grid)'s rule applied a second time: a section number in this
+document never moves, and the gaps are the record. The warning above did its work on the way
+past — 7.10 **restates** the scale its threshold is against rather than inheriting one.
 
 ---
 

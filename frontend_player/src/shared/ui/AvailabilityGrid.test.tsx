@@ -25,7 +25,12 @@ import { render, screen } from '@testing-library/react-native';
 import { StyleSheet, View, type ViewStyle } from 'react-native';
 import { Path } from 'react-native-svg';
 
-import { AvailabilityGrid, type AvailabilityGridRow } from './AvailabilityGrid';
+import {
+  AvailabilityGrid,
+  type AvailabilityDiffRow,
+  type AvailabilityDiffState,
+  type AvailabilityGridRow,
+} from './AvailabilityGrid';
 import { theme } from './theme';
 
 const grid = theme.size.availability;
@@ -109,5 +114,85 @@ describe('the footnote slot', () => {
 
     expect(screen.queryByText('Nothing ticked')).toBeNull();
     expect(reservedSlots()).toHaveLength(1);
+  });
+});
+
+/**
+ * The diff variant — the same geometry with a third fact, and the fix for a Part 13 violation
+ * nobody had claimed.
+ *
+ * The prototype drew *new* as a volt ring and *dropped* as 45% opacity: colour as the only
+ * signal, twice, on a sheet whose own body copy names the colour as the mechanism — and a
+ * volt ring on paper is 1,3:1 besides, so half of it was not there at all. Three shapes is
+ * the fix, and a shape is exactly what no screen query can see.
+ */
+describe('the diff variant', () => {
+  const diffRows = (states: readonly AvailabilityDiffState[]): readonly AvailabilityDiffRow[] => [
+    {
+      key: 'Mon',
+      label: 'Mon',
+      cells: states.map((state, index) => ({
+        key: `Mon ${index}`,
+        state,
+        accessibilityLabel: state === 'off' ? undefined : `Mon ${index}`,
+      })),
+    },
+  ];
+
+  it('draws one mark per fact, so no two states differ by colour alone', () => {
+    render(
+      <AvailabilityGrid
+        variant="diff"
+        columnHeads={['Morning', 'Afternoon', 'Evening']}
+        rows={diffRows(['on', 'added', 'dropped'])}
+      />,
+    );
+
+    // A tick, a plus and a dash: three drawings, and the plus is two subpaths in one.
+    expect(ticks().map((node) => node.props.d as string)).toEqual([
+      'M 2.5 6.5 L 5 9 L 9.5 3.5',
+      'M 6 2.5 V 9.5 M 2.5 6 H 9.5',
+      'M 2.5 6 H 9.5',
+    ]);
+  });
+
+  it('is not interactive, so nothing on it offers a state a reader could try to change', () => {
+    render(
+      <AvailabilityGrid
+        variant="diff"
+        columnHeads={['Morning']}
+        rows={diffRows(['on', 'added', 'dropped'])}
+      />,
+    );
+
+    expect(screen.queryAllByRole('checkbox')).toHaveLength(0);
+    expect(screen.getByLabelText('Mon 1')).toBeTruthy();
+  });
+
+  it('hides a cell with nothing to say rather than announcing it empty', () => {
+    render(
+      <AvailabilityGrid
+        variant="diff"
+        columnHeads={['Morning']}
+        rows={diffRows(['off', 'added'])}
+      />,
+    );
+
+    // Twenty-one names between the ones that changed is the double announcement 6.8 hides
+    // its column heads to avoid, arriving on a grid that cannot be operated at all.
+    expect(screen.queryAllByLabelText(/^Mon/)).toHaveLength(1);
+  });
+
+  it('is 6.8 exactly — the same cell, at the same height, on the same inverted fill', () => {
+    render(<AvailabilityGrid variant="diff" columnHeads={['Morning']} rows={diffRows(['on'])} />);
+    const diffCell = flatten(screen.getByLabelText('Mon 0').props.style);
+    screen.unmount();
+
+    render(<AvailabilityGrid columnHeads={['Morning']} rows={rows(['Mon morning'])} />);
+    const editorCell = flatten(screen.getByRole('checkbox', { name: 'Mon morning' }).props.style);
+
+    expect(diffCell?.height).toBe(grid.cellHeight);
+    expect(diffCell?.backgroundColor).toBe(editorCell?.backgroundColor);
+    expect(diffCell?.borderRadius).toBe(editorCell?.borderRadius);
   });
 });

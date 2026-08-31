@@ -8,10 +8,24 @@
 
 export {
   AvailabilityGrid,
+  type AvailabilityDiffCell,
+  type AvailabilityDiffRow,
+  type AvailabilityDiffState,
   type AvailabilityGridCell,
+  type AvailabilityGridDiffProps,
+  type AvailabilityGridEditorProps,
   type AvailabilityGridProps,
   type AvailabilityGridRow,
 } from './AvailabilityGrid';
+export {
+  BALANCE_SCALE,
+  BalanceBar,
+  balanceShare,
+  type BalanceBarProps,
+  type BalanceBarSize,
+  type BalanceBarTone,
+  type BalanceBarVariant,
+} from './BalanceBar';
 export { Bar, type BarProps } from './Bar';
 export { BottomSheet, type BottomSheetProps } from './BottomSheet';
 export { Button, type ButtonProps, type ButtonSize, type ButtonVariant } from './Button';
@@ -26,7 +40,9 @@ export {
   type CourtPosterPose,
   type CourtPosterProps,
 } from './CourtPoster';
+export { Court, courtSeatCount, courtSeatSize, type CourtProps } from './Court';
 export { DarkCard, type DarkCardProps } from './DarkCard';
+export { FIT_HIGH, FIT_SCALE, FitPill, type FitPillProps } from './FitPill';
 export { Hairline, type HairlineProps, type HairlineVariant } from './Hairline';
 export { InfoGlyph, type InfoGlyphProps } from './InfoGlyph';
 export {
@@ -52,11 +68,26 @@ export { QuestionNavigator, type QuestionNavigatorProps } from './QuestionNaviga
 export { RadiusSlider, type RadiusSliderProps } from './RadiusSlider';
 export { Row, type RowProps, type RowVariant } from './Row';
 export { ScreenHeader, type ScreenHeaderProps } from './ScreenHeader';
-export { TabBar, TAB_BAR_TABS, type TabBarKey, type TabBarProps, type TabBarTab } from './TabBar';
+export { Switch, type SwitchProps } from './Switch';
+export {
+  TabBar,
+  TAB_BAR_HEIGHT,
+  TAB_BAR_TABS,
+  type TabBarKey,
+  type TabBarProps,
+  type TabBarTab,
+} from './TabBar';
 export { Tag, type TagProps, type TagVariant } from './Tag';
-export { Tick } from './Tick';
+export { Dash, Plus, Tick } from './Tick';
 export { TickBox, type TickBoxProps } from './TickBox';
-export { behindOverlay, useReducedMotion, type FocusTarget } from './overlay';
+export { Toast, ToastHost, type ToastProps } from './Toast';
+export {
+  announce,
+  behindOverlay,
+  useReducedMotion,
+  type Announcement,
+  type FocusTarget,
+} from './overlay';
 export {
   POSTER_HUES,
   theme,

@@ -81,8 +81,25 @@ Built so far, by the onboarding slice: `Button`, `Card` (+ `PressableCard`), `No
 `DarkCard`, `Row`, `LevelBar`, `ConfidenceRing`, `Popover` (+ `InfoMark`), `InfoGlyph`,
 and by the second part's photos step: `PhotoRow` with `PhotoTile`, `PhotoAddTile` and
 `PhotoPosterTile`, plus `CourtPoster`; and by its availability step: `AvailabilityGrid`
-with `Tick`; and by sign-up's age question: `TickBox`; and by Play: `TabBar`. Import them
-from `@/shared/ui`.
+with `Tick`; and by sign-up's age question: `TickBox`; and by Play: `TabBar`, `Switch`,
+`FitPill`, `BalanceBar`, `Court` and `Toast` with `ToastHost`. Import them from
+`@/shared/ui`.
+
+**The five Play arrivals** are `Switch` (6.12), `FitPill` (7.10), `BalanceBar` (7.11),
+`Court` (7.12) and the availability grid's **diff variant** — and none of them reclaims a
+deleted section number, because a number in the design system never moves. Two of them are
+returns: the fit badge and the balance bar went with the engines that fed them in the
+2026-08-25 reset, and both engines ship again. **7.10 restates the scale it is against** —
+Fit is out of 100, and the step at 90 is the top tenth of it — because Part 17 warns in
+writing that the deleted 7.1's threshold named a scale the deleted engine defined.
+**7.11 ships one scale where the prototype had three clamps**, which is the same defect the
+level bar and the confidence ring exist to prevent. **The court takes children in seat
+order**: a hook returning the coordinates is geometry that gets adjusted at one call site and
+not the other, and squash's seats are why they cannot be derived at all — there is no net, so
+the far side is not the near side reflected. **The diff variant is the grid, not a second
+file**, with three shapes where the prototype had a volt ring and 45% opacity: colour as the
+only signal twice over, and volt on paper is 1,3:1 besides. `Tick.tsx` grew `Plus` and `Dash`
+for it, in the same 12 × 12 box at the same 2pt stroke.
 
 **Overlays.** `BottomSheet` and `Popover` are both real modals, and 9.1's and 7.6's "it is
 a real modal" is three separate obligations rather than one prop — read `overlay.ts` and
@@ -91,6 +108,18 @@ spreads `behindOverlay(open)`, and the overlay is rendered as that screen's _sib
 never inside it. `CloseControl` is 9.1's close circle, shared because the header control
 that opens a sheet, the sheet's own close and the popover's are the same 28pt object;
 `InfoGlyph` is shared for the same reason between the info note and the popover's mark.
+
+**The toast is the third overlay and the first that needs 9.3's host.** `ToastHost` is mounted
+**once**, as a sibling of the route tree in `src/app/_layout.tsx` — `zIndex` is scoped to the
+parent in React Native, so a toast raised from inside a card renders inside that card. The
+queue is `shared/store/toast.store.ts` rather than a feature's, because a queue inside a
+feature is that feature owning every other feature's toasts. It shows **one message at a
+time**: the announcement is queued, and three sentences on screen while a listener is read one
+is the two channels disagreeing. The **dismiss is the hold** — 9.2's `pointerEvents: 'none'`
+is what keeps a toast from eating a press, and a close control inside one is exactly that
+press. Nothing about it animates, so there is no reduced-motion branch. `announce()` in
+`overlay.ts` is Part 13's amendment: every toast announces **queued**, and the send
+confirmation is the one message that interrupts.
 
 **Drawn objects.** `LevelBar` (7.5) and `ConfidenceRing` (7.8) are geometry, not styling —
 their values are `theme.size.levelBar` and `theme.size.ring*`, and both keep a fixed scale

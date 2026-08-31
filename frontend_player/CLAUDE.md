@@ -164,8 +164,16 @@ the centre, drawn from one Feather family
 ([ADR-0135](../docs/adr/0135-the-bar-draws-one-family-and-the-bolt-joins-it.md)), which is
 why `@expo/vector-icons` is **declared** in `package.json` rather than inherited through
 `expo`: the app's primary navigation renders through it, and an SDK bump could move or drop
-it with no signal in this app's own manifest. The rest arrive with the features that need
-them. **Build outward from the structure below** rather than reaching
+it with no signal in this app's own manifest. Play's five arrivals join them — the **switch**
+(6.12), the **fit pill** (7.10), the **balance bar** (7.11), the **court** (7.12) and the
+availability grid's **diff variant** — and **none of them reclaims a deleted section number**,
+because a number in `docs/design-system.md` never moves: the fit badge and the balance bar
+went with their engines in the reset and come back at 7.10 and 7.11, leaving 7.1 and 7.2
+empty. With them, 9.2's **toast** is built: the queue, the live region and the dismiss,
+mounted **once** at 9.3's overlay host in `src/app/_layout.tsx`, over
+`src/shared/store/toast.store.ts`. Part 13's announcement requirement gains its **queued**
+variant there, with the send confirmation as the one message that still interrupts. The rest
+arrive with the features that need them. **Build outward from the structure below** rather than reaching
 for `create-expo-app` — its default template contradicts ADR-0009 — and copy the shape of
 `src/features/auth/` or `src/features/onboarding/` rather than inventing a second one.
 

@@ -114,6 +114,18 @@ jest.mock('expo-font', () => ({
   isLoaded: jest.fn(() => true),
 }));
 
+// --- one function React Native's own jest mock leaves out ---------------------
+// The second gap of the `expo-font` kind, and called out for the same reason: this is not a
+// port's far side and nothing here is testing React Native.
+//
+// `AccessibilityInfo.announceForAccessibilityWithOptions` is public API and is what
+// design-system Part 13's *queued* announcement is — but `react-native/jest/setup.js` lists
+// `announceForAccessibility` and not the variant beside it, so a component that speaks
+// politely throws `is not a function` under jest and passes on a device. The real module is
+// left alone; one absent function is supplied, exactly as `expo-font`'s `isLoaded` is.
+require('react-native/Libraries/Components/AccessibilityInfo/AccessibilityInfo').default.announceForAccessibilityWithOptions ??=
+  jest.fn();
+
 // --- public runtime config --------------------------------------------------
 // The variables themselves are set in jest.config.js — see the note there; Babel inlines
 // them at transform time, so setting them from here would be too late.
