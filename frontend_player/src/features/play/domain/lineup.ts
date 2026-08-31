@@ -61,6 +61,13 @@
  * tap — which is the moment the *Keep these times?* prompt already occupies, and therefore not
  * a new interruption.
  *
+ * ## A seat can go out of date, and it is marked rather than emptied
+ *
+ * The other thing that can happen to a line-up while nobody is looking: a seated player the
+ * live gates have since stopped admitting. That is `withheldSeats` below, and it is the same
+ * discipline as the origin — a **set difference**, derived at the moment somebody asks, never
+ * stored and never synchronised.
+ *
  * ## What this file is still owed
  *
  * [`the-play-components.md`](../../../../../docs/specs/matchmaking/the-play-components.md) §7
@@ -230,4 +237,59 @@ export function changingMode(inPlay: LineupInPlay, mode: SearchMode): OriginChan
  */
 export function leavingFindAGame(inPlay: LineupInPlay): OriginChange {
   return changingTheOrigin(inPlay, inPlay.now);
+}
+
+/**
+ * The seats whose players the **live gates no longer admit**, as a set difference.
+ *
+ * ## Why a difference, and not a tombstone
+ *
+ * `WithheldRowSchema` has exactly **one field**. There is nowhere on it for a reason, an id, a
+ * card or a breakdown to be written, because
+ * [ADR-0130](../../../../../docs/adr/0130-a-withheld-row-is-stated-and-the-gate-is-not-named.md)'s rule is that the other side
+ * sees no trace in any response — and that rule does not weaken because the surface has a
+ * longer memory. So a withheld row cannot say *who*.
+ *
+ * It does not need to. The line-up's seats hold the players themselves and the read-back's
+ * live rows carry `player_id`, so a seated player who is no longer among the live rows **is**
+ * the mark. No positional arithmetic, no cache archaeology.
+ *
+ * ## Derived, never stored
+ *
+ * The same discipline as the origin: *invalidity is derived from the origin* rather than
+ * synchronised, which is why the two stores need no sync. A stored mark is a third thing that
+ * can be stale about staleness, and it would outlive the read-back that justified it — the
+ * exact shape of the cached hold flag §J6 forbids by name.
+ *
+ * It follows that **a mark appears only after a pool visit**, because that is when the
+ * read-back happens, and navigation is never gated on a request. `undefined` live rows is that
+ * state and marks nobody: with no read-back held, reading *no live rows* as *everybody is
+ * gone* would mark a whole court on a cold cache.
+ *
+ * ## What the mark may say, and what it may not
+ *
+ * **The seat is marked, not emptied.** Emptying is the silent destruction the origin guard
+ * exists to prevent, arriving from a direction no acceptance criterion covers; doing nothing
+ * lets the player build on somebody who is gone and find out at the last possible moment.
+ * Marking states the fact where they can act on it, one tap from the pool, and leaves the send
+ * as the backstop rather than the discovery.
+ *
+ * **A marked player stays seated, and stays in the forecast.** Dropping them would make the
+ * number silently disagree with the court in front of the player, and would force a *second*
+ * cause for `provisional` — which was deliberately collapsed to exactly one.
+ *
+ * **The court states the fact and never the cause**: four gates reach this mark wearing one
+ * sentence, exactly as they reach the withheld row. That sentence is
+ * [`courtPresentation.ts`](../components/courtPresentation.ts)'s.
+ *
+ * @param liveIds the `player_id`s the origin search's read-back still holds, or `undefined`
+ *   when no read-back is held at all.
+ */
+export function withheldSeats(
+  lineup: Lineup | undefined,
+  liveIds: readonly SeatedPlayerId[] | undefined,
+): readonly SeatedPlayerId[] {
+  if (lineup === undefined || liveIds === undefined) return [];
+  const live = new Set(liveIds);
+  return lineup.seats.filter((seated) => !live.has(seated));
 }

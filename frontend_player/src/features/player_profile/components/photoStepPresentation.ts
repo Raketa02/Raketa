@@ -26,7 +26,7 @@
  */
 
 import type { AppError } from '@/shared/errors';
-import { recoveryMessage } from '@/shared/errors';
+import { codeMessage } from '@/shared/errors';
 
 import type { ProfilePhoto } from '../domain/photoCollection';
 import type { PhotoAccess } from '../hooks/useProfilePhotos';
@@ -180,7 +180,5 @@ const FAILURE_BY_CODE: Readonly<Record<string, string>> = {
 };
 
 export function photoFailureMessage(error: AppError): string {
-  return (
-    (error.code === undefined ? undefined : FAILURE_BY_CODE[error.code]) ?? recoveryMessage(error)
-  );
+  return codeMessage(FAILURE_BY_CODE, error);
 }

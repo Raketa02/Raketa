@@ -33,6 +33,12 @@
  * (`onboardingKeys.ratings()`, reference data), and the **Match me count** on the segment
  * (AC-5) — the one number in this tab that should move while you look at it.
  *
+ * ## Nothing in Play retries without the player asking
+ *
+ * The tab's second posture, and the twin of the first. Every act here is a mutation and
+ * mutations ship `retry: false`; the read-back was the one exception, and giving the default
+ * up too is what makes the rule statable rather than nearly true. See `retry` below.
+ *
  * ## Re-sorting costs no round trip; only membership does
  *
  * `SearchEnvelope.sorts_available` is *"which re-sorts the client may draw over rows it
@@ -70,6 +76,22 @@ export const RANKED_LIST_QUERY_OPTIONS = {
   staleTime: Infinity,
   /** Foregrounding must not reorder the pool under the player's finger. */
   refetchOnWindowFocus: false,
+  /**
+   * **Nothing in Play retries without the player asking**, and this is the one line that makes
+   * the rule whole.
+   *
+   * Every other act in this tab is a mutation, and mutations already ship `retry: false`. The
+   * read-back of a search is a `GET`, so it inherits the app-wide predicate and would be
+   * attempted twice more on a transient failure — which puts the *Try again* the player can
+   * see roughly **31 seconds** away (15s of timeout, a second of backoff, another 15s). An
+   * automatic retry the player cannot see is a manual retry they cannot reach.
+   *
+   * This is not the phantom-search argument that keeps `TIMEOUT_MS.request` at 15s: a `GET`
+   * records nothing, and re-reading a record costs nobody a row. It is purely about the
+   * affordance, and it stands beside `refetchOnWindowFocus: false` as the second half of one
+   * posture — nothing in this tab moves except when the player asks.
+   */
+  retry: false,
   /**
    * **The record outlives the screens that read it**, which `staleTime` alone does not give.
    *

@@ -85,7 +85,11 @@ export {
   inclusionLine,
   livenessLine,
 } from './components/livenessPresentation';
-export { groupReasonLine, unfilledSeatLine } from './components/courtPresentation';
+export {
+  WITHHELD_SEAT_LINE,
+  groupReasonLine,
+  unfilledSeatLine,
+} from './components/courtPresentation';
 export {
   PROMPT_CLOSER,
   REFRESH_YOUR_TIMES_BODY,

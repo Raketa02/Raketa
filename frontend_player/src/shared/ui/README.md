@@ -110,7 +110,7 @@ is the double announcement 6.8 hides its column heads to avoid (`the-words.md` �
 is no prop to pass one through, which is what stops somebody helpfully adding
 `accessibilityRole="progressbar"` and having every row announced twice.
 
-**Two OS questions, one collapse.** `overlay.ts` reads reduced motion **and** whether a
+**Two OS questions, one collapse.** `overlay.tsx` reads reduced motion **and** whether a
 screen reader is running, and `useCollapsedPresentation()` is the single condition either
 satisfies. They are not synonyms: a player may have VoiceOver on and reduced motion off,
 which is the common case, and a surface that asked only about motion would run its full
@@ -119,8 +119,16 @@ animation in front of the one person who gets none of the craft and all of the l
 `ToastHost` uses, for a value that changes while focus is somewhere else — §20.9 names three
 such regions in the Play tab and no fourth.
 
+**Reduced motion is a context, and the screen reader is not.** `ReducedMotionProvider` is
+mounted once in `src/app/_layout.tsx` and `useReducedMotion()` reads it — a hook per consumer
+meant an `AccessibilityInfo` listener per consumer, which was fine for two overlays and is not
+for the Play tab's always-mounted surfaces (a press transform, the fill's staggered seats).
+Outside a provider it reads `false`, which is what the app looked like before anybody asked for
+calm; a test that wants a tree in reduced motion passes `value` rather than mocking the OS,
+which is Part 13's own shape for a port's context.
+
 **Overlays.** `BottomSheet` and `Popover` are both real modals, and 9.1's and 7.6's "it is
-a real modal" is three separate obligations rather than one prop — read `overlay.ts` and
+a real modal" is three separate obligations rather than one prop — read `overlay.tsx` and
 either docblock before adding a third. Two of them are the caller's: the screen behind
 spreads `behindOverlay(open)`, and the overlay is rendered as that screen's _sibling_,
 never inside it. `CloseControl` is 9.1's close circle, shared because the header control
@@ -136,7 +144,7 @@ time**: the announcement is queued, and three sentences on screen while a listen
 is the two channels disagreeing. The **dismiss is the hold** — 9.2's `pointerEvents: 'none'`
 is what keeps a toast from eating a press, and a close control inside one is exactly that
 press. Nothing about it animates, so there is no reduced-motion branch. `announce()` in
-`overlay.ts` is Part 13's amendment: every toast announces **queued**, and the send
+`overlay.tsx` is Part 13's amendment: every toast announces **queued**, and the send
 confirmation is the one message that interrupts.
 
 **Drawn objects.** `LevelBar` (7.5) and `ConfidenceRing` (7.8) are geometry, not styling —

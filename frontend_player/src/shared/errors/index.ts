@@ -8,7 +8,8 @@ export {
   type AppErrorKind,
   type Recovery,
 } from './AppError';
-export { recoveryMessage } from './recoveryMessage';
+export { offlineMessage, type Resumption } from './offlineMessage';
+export { codeMessage, recoveryMessage } from './recoveryMessage';
 export {
   mapDecodeFailure,
   mapErrorResponse,

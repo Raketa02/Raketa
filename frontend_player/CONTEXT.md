@@ -241,9 +241,9 @@ profile editor that later edits the same values.
 
 ### The Play tab
 
-Six client-only concepts and one kit of parts. **None of them exists on the backend**, and the
-first four are the shape [#228](https://github.com/Raketa02/Raketa/issues/228) settled: what
-Play remembers, for how long, and what it must never remember. The stores are
+Seven client-only concepts and one kit of parts. **None of them exists on the backend**, and
+the first four are the shape [#228](https://github.com/Raketa02/Raketa/issues/228) settled:
+what Play remembers, for how long, and what it must never remember. The stores are
 `features/play/store/`; the rules are `features/play/domain/`.
 
 - **Play session** — **one visit to the Play tab**: the Working copy and the Line-up built on
@@ -289,6 +289,18 @@ Play remembers, for how long, and what it must never remember. The stores are
   me count. **Re-sorting costs no round trip** and neither does re-arranging four people; only
   changing who is on the court does. _Avoid_: "results", and "the pool" for all three — a deal
   and a shortlist are not pools.
+- **Withheld seat** — a seated player the **live gates no longer admit**, found as a **set
+  difference** between the line-up's seats and the `player_id`s the origin search's read-back
+  still holds. A withheld row carries no id, so the difference is the only way to know; it is
+  **derived at the moment somebody asks and never stored**, which is the same discipline that
+  lets the two Play stores exist without a sync — a stored mark is a third thing that can be
+  stale about staleness. **The seat is marked, not emptied**, and the marked player **stays in
+  the forecast**, because dropping them would make the number disagree with the court in front
+  of the player and would force a second cause for _provisional_. **The court states the fact
+  and never the cause**: four gates reach one sentence. A mark therefore appears only after a
+  pool visit, because that is when the read-back happens. _Avoid_: "blocked seat" and "removed
+  player" — both name a cause this app may not know and may not say; "stale seat", which is
+  about time and this is not.
 - **No hold state** — the one thing this tab must never remember. A held account is a `403` the
   HTTP layer already maps as terminal, re-checked server-side at every request; **there is no
   cached hold flag anywhere**, because a cached flag is the only mechanism by which a hold
@@ -337,6 +349,20 @@ Play remembers, for how long, and what it must never remember. The stores are
   code nor the vocabulary — a wire token in a player's face is not an explanation.
 - **Recovery category** — which of _auto-retry · user-retry · re-auth · user correction ·
   conflict · terminal_ an error is. Assigned when the endpoint is mapped.
+- **Paused, not failed** — a query or mutation the online manager is **holding** because there
+  is no connection. It attempted nothing, so it produces no `AppError` at all and no `code`
+  table or recovery category can reach it; what it gets instead is `offlineMessage()`, beside
+  `recoveryMessage` and with **exactly two values, split on whether the act resumes by itself**.
+  It is rendered **inline at the paused control**, never as a screen-level banner: a banner
+  assumes being offline makes what is on screen wrong, and over a record pinned at
+  `staleTime: Infinity` it is not. The split is **not** the HTTP verb — the line-up forecast is
+  a `POST` that pauses and takes the first sentence. _Avoid_: "offline error" and
+  "`OfflineBanner`", declined by name in `docs/architecture.md` Part 11.
+- **Retry target** — which of two acts a _Try again_ re-runs, on the one wait where it is
+  ambiguous: `POST /searches` **mints** a record and `GET /searches/{id}` **re-reads** one. No
+  record id, re-fire the `POST`; a record id exists, re-read — because re-running the search
+  mints a new id and orphans the line-up bound to the old one. The control is the failed act's
+  own, never the screen's. _Avoid_: "refresh", which names neither act.
 - **Idempotency key** — the client-supplied token that makes a repeated mutation safe to
   send. The actual duplicate-booking defence; a disabled button is only UX.
 - **Correlation ID / trace ID** — the per-request identifier that ties a mobile failure to

@@ -13,7 +13,7 @@
  * was the first of the three.
  */
 
-import { recoveryMessage, type AppError } from '@/shared/errors';
+import { codeMessage, type AppError } from '@/shared/errors';
 
 import { ADULT_ATTESTATION_MISSING } from '../schemas/authForms';
 
@@ -32,8 +32,7 @@ const BY_CODE: Readonly<Record<string, string>> = {
 };
 
 export function authErrorMessage(error: AppError): string {
-  const known = error.code === undefined ? undefined : BY_CODE[error.code];
-  return known ?? recoveryMessage(error);
+  return codeMessage(BY_CODE, error);
 }
 
 /**

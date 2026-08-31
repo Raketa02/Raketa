@@ -23,7 +23,11 @@ export { onboardingKeys } from './hooks/onboardingKeys';
  * The entry gate. The *decision* is exported, never the redirect: where a player belongs
  * is this feature's rule, and which route expresses it is the routing layer's.
  */
-export { useEntryDecision, type EntryDecision } from './hooks/useEntryDecision';
+export {
+  useEntryDecision,
+  type EntryDecision,
+  type EntryUnavailable,
+} from './hooks/useEntryDecision';
 
 /**
  * A walk through onboarding is over when the player is in the app. The gate is the one

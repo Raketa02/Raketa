@@ -245,7 +245,33 @@ required prop on it**, not a wider selector here. Beside it,
 `useCollapsedPresentation()` is **one condition satisfied by either** reduced motion or a
 running screen reader: a player may have VoiceOver on and reduced motion off, and a surface
 that asked only about motion would run its full animation in front of the one person who gets
-none of the craft and all of the latency.
+none of the craft and all of the latency. **Reduced motion is read once**, by
+`ReducedMotionProvider` at the root: a hook per consumer was one OS listener per consumer,
+which was right for two overlays and wrong for surfaces mounted for as long as the tab is.
+
+**Play's failure layer is built before its screens, and its posture is two sentences.**
+_Nothing in Play background-refetches_ was the first; _**nothing in Play retries without the
+player asking**_ is the second, and it lands as `retry: false` beside the ranked list's
+`staleTime: Infinity` — the read-back was the one act still inheriting the app's automatic
+retry, which put the _Try again_ a player can see roughly thirty-one seconds away. **The
+eight-second search timeout the spec asked for is refused, and refusing it is the decision**:
+a search is a recording write on a route that is deliberately not idempotent, so giving up at
+8 s on a 9 s answer leaves a recorded search nobody read and its retry records a second —
+shortening the number manufactures telemetry rather than bounding a wait, and the refusal is
+written beside the numbers in `timeouts.ts`. **A retry belongs to the act that failed**, never
+to the screen it failed on: `POST /searches` mints a record and `GET /searches/{id}` re-reads
+one, so `retryTarget` says which — re-running the search would mint a new id and orphan the
+line-up bound to the old one, which `POST /forecasts` answers with `404 search_not_found`, one
+code for four cases. **`OfflineBanner` is declined by name** (`docs/architecture.md` Part 11):
+a pool held offline is not stale, it _is_ the record, and what breaks offline is the acts
+rather than the data — so the sentence is `offlineMessage()` beside `recoveryMessage`, with
+exactly two values split on **does this act resume by itself**, rendered inline at the paused
+control. **`features/challenges/` alone sets `networkMode: 'always'`**, because a challenge's
+answer window is derived _at send_ and the pause would split the tap from the send; the deck
+keeps the pause, and the asymmetry is written down at both sites. And **a seat whose player
+the live gates no longer admit is marked, never emptied** — a set difference against the rows
+the read-back still holds, derived and never stored, with the marked player still in the
+forecast and the court stating the fact and never the cause.
 
 `src/shared/ui/` holds the design-system primitives built so far — the cards, note, row,
 hairline, button, tag, chip, bar, header, the overlays and drawn objects the result screen

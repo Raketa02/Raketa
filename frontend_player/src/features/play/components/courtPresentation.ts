@@ -39,6 +39,35 @@ export function unfilledSeatLine(reason: UnfilledReason): string {
   return UNFILLED[reason];
 }
 
+/**
+ * A seated player the live gates no longer admit — **the fact, and never the cause**.
+ *
+ * Not a code: nothing on the wire says this. It is a **set difference** the client derives,
+ * because `WithheldRowSchema` has one field and carries no id — see
+ * [`lineup.ts`](../domain/lineup.ts)'s `withheldSeats`.
+ *
+ * Four gates reach this one sentence: a block in either direction, a hold, an account that may
+ * not be shown, and the mutual gender preference. Naming which fired would tell a searcher
+ * that a particular person blocked them, was suspended, or changed a safety setting — which is
+ * the ceiling
+ * [ADR-0130](../../../../../docs/adr/0130-a-withheld-row-is-stated-and-the-gate-is-not-named.md)
+ * puts on the withheld row itself, and it does not weaken because the client did the
+ * arithmetic instead of the server.
+ *
+ * It says **changed**, not *unavailable*, in the register the refused send is held to, and the
+ * two sentences are written down together in
+ * [`the-words.md`](../../../../../docs/specs/matchmaking/the-words.md) §21 so that neither can
+ * drift away from the other: the fact is that
+ * the line-up went out of date, and a person's standing is not the organiser's to be told.
+ * *Can't be invited now* is a statement about what this app will do, not a verdict on
+ * somebody.
+ *
+ * **The seat keeps its player.** Emptying it is silent destruction arriving from a direction
+ * no acceptance criterion covers; this sentence is what makes the change something the player
+ * can see and act on, one tap from the pool.
+ */
+export const WITHHELD_SEAT_LINE = "Something's changed — they can't be invited now";
+
 const GROUP: Readonly<Record<GroupReason, string>> = {
   EVENEST_ARRANGEMENT: 'The evenest way to split these four',
   STRONGEST_WEAKEST_SEAT: 'Nobody here is out of their depth',

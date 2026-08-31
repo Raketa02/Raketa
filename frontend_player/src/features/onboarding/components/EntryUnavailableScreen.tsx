@@ -7,32 +7,72 @@
  *
  * This is the launch screen a player on a dead connection sees, so it says what happened
  * and nothing else.
+ *
+ * **Two states, and the difference is whether anything was attempted.** A read that failed
+ * has something to say and something to retry. A launch with no connection has neither: the
+ * gate's queries are *paused*, they resume themselves the moment the connection is back, and
+ * the retry would be the one control on this screen that does nothing. So the offline half is
+ * amber rather than coral — reversible, not yet wrong — and carries no button.
  */
 
 import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import type { AppError } from '@/shared/errors';
+import { offlineMessage } from '@/shared/errors';
 import { Button, Note, theme } from '@/shared/ui';
+
+import type { EntryUnavailable } from '../hooks/useEntryDecision';
 
 import { onboardingErrorMessage } from './onboardingErrorMessage';
 
 export interface EntryUnavailableScreenProps {
-  readonly error: AppError;
+  readonly reason: EntryUnavailable;
+  /**
+   * Required even though the offline half never calls it. The gate always has a retry to
+   * offer — it is three `refetch`es — and an optional prop would let a *failed* branch be
+   * rendered with nothing to press, which is the one state on this screen with no way out.
+   */
   readonly onRetry: () => void;
 }
 
-export function EntryUnavailableScreen({ error, onRetry }: EntryUnavailableScreenProps) {
+/**
+ * The screen, as three facts read off one branch.
+ *
+ * One `reason.kind` test rather than one per element: three ternaries in a tree is three
+ * places for the amber half to keep a coral sentence, and the retryable half is exactly the
+ * half with something to retry.
+ */
+function saying(reason: EntryUnavailable) {
+  if (reason.kind === 'offline') {
+    return {
+      title: 'Waiting for a connection',
+      variant: 'amber' as const,
+      sentence: offlineMessage('resumes'),
+      retryable: false,
+    };
+  }
+
+  return {
+    title: "We couldn't pick up where you left off",
+    variant: 'coral' as const,
+    sentence: onboardingErrorMessage(reason.error),
+    retryable: true,
+  };
+}
+
+export function EntryUnavailableScreen({ reason, onRetry }: EntryUnavailableScreenProps) {
+  const said = saying(reason);
+
   return (
     <SafeAreaView style={s.screen} edges={['top', 'bottom']}>
       <View style={s.content}>
         <Text style={s.title} accessibilityRole="header">
-          We couldn&apos;t pick up where you left off
+          {said.title}
         </Text>
-        <Note variant="coral" accessibilityRole="alert">
-          {onboardingErrorMessage(error)}
+        <Note variant={said.variant} accessibilityRole="alert">
+          {said.sentence}
         </Note>
-        <Button label="Try again" size="lg" onPress={onRetry} />
+        {said.retryable ? <Button label="Try again" size="lg" onPress={onRetry} /> : null}
       </View>
     </SafeAreaView>
   );

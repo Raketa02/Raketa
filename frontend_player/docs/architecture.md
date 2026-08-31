@@ -706,7 +706,9 @@ acceptable for a product flow. Build the reusable states — `LoadingState`, `Em
 > `LoadingState`, `EmptyState`, `ErrorState` and `Skeleton` stand as written. This list is
 > a menu of states to model, and declining one of its components is a decision about where
 > a state renders, never about whether it is modelled.
-> Decided by [#239](https://github.com/Raketa02/Raketa/issues/239).
+> Decided by [#239](https://github.com/Raketa02/Raketa/issues/239), built as
+> `src/shared/errors/offlineMessage.ts` by
+> [#265](https://github.com/Raketa02/Raketa/issues/265).
 
 ### Loading granularity
 

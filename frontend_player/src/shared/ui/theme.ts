@@ -714,6 +714,19 @@ const motion = {
      *  player cannot finish before the screen leaves is worse than no sentence at all, so
      *  if the copy grows this grows with it, as an amendment rather than a tweak. */
     calculating: 1200,
+    /** The pool's minimum display floor — §J6's *"so a fast answer does not flash past"*.
+     *  A floor with no stagger over it, so reduced motion changes nothing here: it is not
+     *  skipped, because the concern is legibility rather than movement, and the player who
+     *  asked for calm is the last one to be given a flash. */
+    pool: 1100,
+    /** The engine fill's floor — the **held** half of the fill's `650 plus 550 per seat`.
+     *
+     *  The split is the whole point. This number survives reduced motion for `pool`'s
+     *  reason; the 550-per-seat **stagger** is motion, collapses to zero, and lands every
+     *  seat together after this same beat. The stagger is not here because it is the
+     *  **court's own** and belongs beside the animation it drives; these two are here
+     *  because two screens share them, and a floor typed twice is a floor that drifts. */
+    fill: 650,
     /** A toast — 9.2. The prototype's 2600, kept: it is the read time of the longest of the
      *  nineteen sentences this app fires, and it is what the QUEUE spends per message, so
      *  shortening it is a decision about how long a listener waits rather than a tidy-up.

@@ -9,7 +9,7 @@
 
 import { GROUP_REASONS, UNFILLED_REASONS } from '../domain/vocabulary';
 
-import { groupReasonLine, unfilledSeatLine } from './courtPresentation';
+import { WITHHELD_SEAT_LINE, groupReasonLine, unfilledSeatLine } from './courtPresentation';
 
 describe('an unfilled seat', () => {
   it('gives each obstacle its own sentence', () => {
@@ -48,5 +48,28 @@ describe('why this four', () => {
     // The code is the vocabulary: splitting it in copy would publish a distinction the enum
     // deliberately does not carry.
     expect(groupReasonLine('GROUP_RAPPORT')).toBe('These four read each other well');
+  });
+});
+
+describe('a seat whose player is no longer available', () => {
+  it('states the fact and never the cause', () => {
+    // Four fail-closed gates reach this mark — a block either way, a hold, an account that
+    // may not be shown, and the mutual gender preference — and naming which one fired would
+    // tell a searcher that a particular person blocked them or changed a safety setting.
+    const said = WITHHELD_SEAT_LINE.toLowerCase();
+
+    for (const cause of ['block', 'hold', 'suspend', 'preference', 'gender']) {
+      expect(said).not.toContain(cause);
+    }
+  });
+
+  it('says something changed rather than something about them', () => {
+    // The register the send refusal is held to: the fact is that the line-up went out of
+    // date, and a person's standing is not the organiser's to be told.
+    expect(WITHHELD_SEAT_LINE).toMatch(/^Something's changed/);
+  });
+
+  it('is not a sentence about an unfilled seat — the seat is filled, by somebody', () => {
+    expect(UNFILLED_REASONS.map(unfilledSeatLine)).not.toContain(WITHHELD_SEAT_LINE);
   });
 });

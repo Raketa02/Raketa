@@ -57,7 +57,7 @@ export interface Toast {
    * confirmation and nothing else — see the module docblock, and `the-words.md` §20.10, where
    * that exception is argued.
    *
-   * The type is `overlay.ts`'s rather than a second name for it: the store carries what a
+   * The type is `overlay.tsx`'s rather than a second name for it: the store carries what a
    * message is worth and the host performs it, and two spellings of one concept that are only
    * coupled by the call between them are two things to keep in step.
    */

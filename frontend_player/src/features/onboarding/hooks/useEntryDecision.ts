@@ -27,7 +27,7 @@ import { useCallback } from 'react';
 
 import { useCurrentUser } from '@/features/auth/types';
 import { useSessionStatus } from '@/shared/lib/auth';
-import { networkUnavailable, type AppError } from '@/shared/errors';
+import type { AppError } from '@/shared/errors';
 
 import { entryDestination, type EntryDestination } from '../domain/entryDecision';
 import { useDeferredRuns } from '../store/deferredRuns.store';
@@ -36,15 +36,32 @@ import { listRatings } from '../use-cases/listRatings';
 
 import { onboardingKeys } from './onboardingKeys';
 
+/**
+ * **Why the gate could not be read** — two states, and they are not the same sentence.
+ *
+ * `networkMode: 'online'` *pauses* a query rather than failing it. A paused query attempted
+ * nothing, produced no `AppError`, and **resumes itself** the moment the connection is back —
+ * so synthesising a failure for it, as this hook did, rendered *"We couldn't reach Raketa.
+ * Check your connection and try again"* over a launch where nothing had been tried and there
+ * was nothing to try again. Three screens in this app already said the true thing at their own
+ * paused queries; this was the one site that converted the state into an error and said the
+ * false one.
+ */
+export type EntryUnavailable =
+  /** A read genuinely failed. There is something to say about it, and something to retry. */
+  | { readonly kind: 'failed'; readonly error: AppError }
+  /** Nothing was attempted. It will run itself on reconnect, and the sentence promises that. */
+  | { readonly kind: 'offline' };
+
 export type EntryDecision =
   /** Still asking. The caller renders nothing — not a spinner, and never a route tree. */
   | { readonly kind: 'pending' }
   /**
    * The gate could not be read. There is no safe default: sending an unrated player into
    * the app skips onboarding, and sending a rated one into onboarding re-rates them. So
-   * the player is told, and offered the retry.
+   * the player is told, and — where there is anything to retry — offered the retry.
    */
-  | { readonly kind: 'unavailable'; readonly error: AppError; readonly retry: () => void }
+  | { readonly kind: 'unavailable'; readonly reason: EntryUnavailable; readonly retry: () => void }
   | EntryDestination;
 
 export function useEntryDecision(): EntryDecision {
@@ -89,18 +106,23 @@ export function useEntryDecision(): EntryDecision {
   }, [refetchRatings, refetchRun, refetchUser]);
 
   const error = (ratings.error ?? run.error ?? user.error) as AppError | null;
-  if (error !== null) return { kind: 'unavailable', error, retry };
+  if (error !== null) return { kind: 'unavailable', reason: { kind: 'failed', error }, retry };
 
   // Offline, with nothing cached to decide from. `networkMode: 'online'` *pauses* a
   // query rather than failing it, so without this branch a launch on a dead connection
   // renders nothing at all — for as long as the connection stays dead. Saying so is the
   // difference between an app that is waiting and an app that looks broken.
+  //
+  // It is stated as **paused**, not converted into a `networkUnavailable()`. A synthesised
+  // error would be a claim that something was tried and failed, and the screen would then
+  // offer a *Try again* for a query that resumes itself — which is the one control on that
+  // screen that would do nothing.
   const paused =
     ratings.fetchStatus === 'paused' ||
     run.fetchStatus === 'paused' ||
     user.fetchStatus === 'paused';
   if (paused && !(ratings.isSuccess && run.isSuccess && user.isSuccess)) {
-    return { kind: 'unavailable', error: networkUnavailable(), retry };
+    return { kind: 'unavailable', reason: { kind: 'offline' }, retry };
   }
 
   // `isSuccess`, not a truthiness check on the data: an empty ratings list and a `null`

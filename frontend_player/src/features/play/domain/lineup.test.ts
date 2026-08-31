@@ -4,6 +4,7 @@ import {
   leavingFindAGame,
   lineupStanding,
   sameOrigin,
+  withheldSeats,
   type Lineup,
   type LineupInPlay,
   type OriginSearch,
@@ -123,5 +124,45 @@ describe('the guard, and its three callers', () => {
       kind: 'ask',
       seated: 2,
     });
+  });
+});
+
+describe('a seat whose player the live gates no longer admit', () => {
+  it('is a set difference against the rows the read-back still holds', () => {
+    expect(withheldSeats(LINEUP, ['player-b'])).toEqual(['player-a']);
+  });
+
+  it('marks nothing while every seated player is still live', () => {
+    expect(withheldSeats(LINEUP, ['player-a', 'player-b', 'somebody-else'])).toEqual([]);
+  });
+
+  it('marks nothing at all until there has been a read-back', () => {
+    // A withheld row carries no id, so the only thing a client can know is which rows are
+    // still live. With no read-back held there are none of those — and reading that as
+    // "everybody is gone" would mark a whole court on a cold cache.
+    expect(withheldSeats(LINEUP, undefined)).toEqual([]);
+  });
+
+  it('leaves the line-up exactly as it was — the mark is derived, never stored', () => {
+    // A stored mark is a third thing that can be stale about staleness, and it would outlive
+    // the read-back that justified it.
+    withheldSeats(LINEUP, []);
+
+    expect(LINEUP.seats).toEqual(['player-a', 'player-b']);
+  });
+
+  it('keeps the marked player seated, so the forecast is still asked about four', () => {
+    // Dropping them would make the number silently disagree with the court in front of the
+    // player, and would force a second cause for *provisional*.
+    const marked = withheldSeats(LINEUP, ['player-b']);
+
+    expect(LINEUP.seats).toContain(marked[0]);
+    expect(lineupStanding({ lineup: LINEUP, originSearch: SEARCH, now: ORIGIN })).toEqual({
+      kind: 'current',
+    });
+  });
+
+  it('has nothing to mark on a line-up nobody has started', () => {
+    expect(withheldSeats(undefined, ['player-a'])).toEqual([]);
   });
 });

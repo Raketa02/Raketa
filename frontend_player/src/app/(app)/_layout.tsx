@@ -60,7 +60,7 @@ export default function AppLayout() {
       // the gate resolves is the authenticated-tree flash, one frame before a redirect.
       return null;
     case 'unavailable':
-      return <EntryUnavailableScreen error={entry.error} onRetry={entry.retry} />;
+      return <EntryUnavailableScreen reason={entry.reason} onRetry={entry.retry} />;
     case 'welcome':
       return <Redirect href="/welcome" />;
     case 'social-steps':

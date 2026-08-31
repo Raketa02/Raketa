@@ -22,7 +22,7 @@ import { EnvironmentBadge } from '@/shared/config/EnvironmentBadge';
 import { wireHttpCredentials } from '@/shared/lib/auth';
 import { BootstrapGate, bootstrapApp, sharedBootstrapSteps } from '@/shared/lib/bootstrap';
 import { queryClient } from '@/shared/lib/query-client';
-import { ToastHost } from '@/shared/ui';
+import { ReducedMotionProvider, ToastHost } from '@/shared/ui';
 
 /**
  * Hand the HTTP client its credential adapter, including the wire call its 401 rotation
@@ -66,23 +66,31 @@ export default function RootLayout() {
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
       <StatusBar style="dark" />
       <QueryClientProvider client={queryClient}>
-        <BootstrapGate run={run}>
-          <Slot />
-          {/*
-           * A sibling of the route tree rather than part of it, so the badge is on every
-           * screen without a screen having to know it exists — and inside the gate, so
-           * it reads config only after bootstrap has validated it. Nothing at all in
-           * production.
-           */}
-          <EnvironmentBadge />
-          {/*
-           * design-system 9.3's single root-level overlay host, and its first occupant.
-           * `zIndex` is scoped to the parent in React Native, so a toast raised from inside
-           * a card renders inside that card — mounting it once here is what makes the layer
-           * order mean anything. One host, one queue: `shared/store/toast.store.ts`.
-           */}
-          <ToastHost />
-        </BootstrapGate>
+        {/*
+         * One subscription to the OS's reduced-motion switch, for every screen. It was a hook
+         * per consumer while the consumers were two overlays; the Play tab's always-mounted
+         * surfaces — a press transform, the fill's staggered seats — are what its own docstring
+         * named as the moment it becomes the context Part 13 describes.
+         */}
+        <ReducedMotionProvider>
+          <BootstrapGate run={run}>
+            <Slot />
+            {/*
+             * A sibling of the route tree rather than part of it, so the badge is on every
+             * screen without a screen having to know it exists — and inside the gate, so
+             * it reads config only after bootstrap has validated it. Nothing at all in
+             * production.
+             */}
+            <EnvironmentBadge />
+            {/*
+             * design-system 9.3's single root-level overlay host, and its first occupant.
+             * `zIndex` is scoped to the parent in React Native, so a toast raised from inside
+             * a card renders inside that card — mounting it once here is what makes the layer
+             * order mean anything. One host, one queue: `shared/store/toast.store.ts`.
+             */}
+            <ToastHost />
+          </BootstrapGate>
+        </ReducedMotionProvider>
       </QueryClientProvider>
     </SafeAreaProvider>
   );

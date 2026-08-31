@@ -384,7 +384,7 @@ describe('where a launch lands', () => {
     expect(transport.requestsTo('POST', '/api/v1/auth/refresh')).toEqual([]);
   });
 
-  it('says the connection is out rather than rendering nothing, when launched offline', async () => {
+  it('says it is waiting rather than rendering nothing, when launched offline', async () => {
     stubGate();
     // `networkMode: 'online'` *pauses* a query instead of failing it, so the gate's two
     // reads never resolve and never error. Without a branch for that, the app renders a
@@ -394,12 +394,31 @@ describe('where a launch lands', () => {
     await launchSignedIn();
 
     expect(
-      await screen.findByText("We couldn't reach Raketa. Check your connection and try again."),
+      await screen.findByText("You're offline. This will load as soon as you're back."),
     ).toBeTruthy();
     expect(transport.requests).toHaveLength(0);
 
     onlineManager.setOnline(true);
 
+    await waitFor(() => expect(screen).toHavePathname('/welcome'));
+  });
+
+  it('claims nothing was tried, and offers no retry for a query that resumes itself', async () => {
+    // The shipped bug this replaces: a paused query was converted into a synthesised
+    // `networkUnavailable()`, so the launch screen said "We couldn't reach Raketa" about a
+    // request that was never made, over a *Try again* that could not do anything.
+    stubGate();
+    onlineManager.setOnline(false);
+
+    await launchSignedIn();
+    await screen.findByText("You're offline. This will load as soon as you're back.");
+
+    expect(
+      screen.queryByText("We couldn't reach Raketa. Check your connection and try again."),
+    ).toBeNull();
+    expect(screen.queryByLabelText('Try again')).toBeNull();
+
+    onlineManager.setOnline(true);
     await waitFor(() => expect(screen).toHavePathname('/welcome'));
   });
 });

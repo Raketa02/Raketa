@@ -83,6 +83,7 @@ export { Dash, Plus, Tick } from './Tick';
 export { TickBox, type TickBoxProps } from './TickBox';
 export { Toast, ToastHost, type ToastProps } from './Toast';
 export {
+  ReducedMotionProvider,
   announce,
   behindOverlay,
   useCollapsedPresentation,
@@ -91,6 +92,7 @@ export {
   useScreenReader,
   type Announcement,
   type FocusTarget,
+  type ReducedMotionProviderProps,
 } from './overlay';
 export {
   POSTER_HUES,

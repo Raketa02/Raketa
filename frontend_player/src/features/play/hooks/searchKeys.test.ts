@@ -1,3 +1,5 @@
+import { withheldSeats } from '../domain/lineup';
+
 import { RANKED_LIST_QUERY_OPTIONS, searchKeys } from './searchKeys';
 
 describe('query keys', () => {
@@ -48,12 +50,34 @@ describe('query keys', () => {
   });
 });
 
+describe('a seat the live gates no longer admit', () => {
+  it('is still in the forecast key, so the number is about the court on screen', () => {
+    // The mark is derived beside the line-up and subtracted from nothing: dropping a marked
+    // player would make the figure silently disagree with the four in front of the player,
+    // and would force a second cause for *provisional*.
+    const lineup = { originSearchId: 's1', seats: ['player-a', 'player-b'] };
+    const marked = withheldSeats(lineup, ['player-b']);
+
+    expect(marked).toEqual(['player-a']);
+    expect(searchKeys.forecast(lineup.originSearchId, lineup.seats)).toContainEqual(
+      expect.arrayContaining(marked),
+    );
+  });
+});
+
 describe('the ranked-list override of the global defaults', () => {
   it('never goes stale on a timer and never refetches on foreground', () => {
     // Foregrounding under the app-wide `refetchOnWindowFocus: true` would reorder the pool
     // under the player's finger — AC-70's harm, arriving from focus.
     expect(RANKED_LIST_QUERY_OPTIONS.staleTime).toBe(Infinity);
     expect(RANKED_LIST_QUERY_OPTIONS.refetchOnWindowFocus).toBe(false);
+  });
+
+  it('never retries by itself, so the Try again the player can see is reachable', () => {
+    // One automatic attempt is 15s of timeout plus a second of backoff plus another 15s, so
+    // the visible *Try again* could not appear for ~31 seconds. An automatic retry the player
+    // cannot see is a manual retry they cannot reach.
+    expect(RANKED_LIST_QUERY_OPTIONS.retry).toBe(false);
   });
 
   it('outlives the screens that read it, so a line-up cannot lose its origin to the collector', () => {

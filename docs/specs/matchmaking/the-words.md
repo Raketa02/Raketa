@@ -1028,6 +1028,19 @@ holds one.
 | the open-challenge refusal (#221) | `You've already got a game waiting with {name}.` | `{name}` comes from the player's **own** challenges, not from the refusal. |
 | neither seat marked after the re-read | `Something's changed, and one of these players can't be invited right now.` | The dead end §5.1 names, stated rather than left silent. |
 
+**The court's own mark is the same sentence, per seat.** A refused send is not the only way a
+seated player goes out of date: reading the origin search back marks the seats its withheld rows
+identify, and that mark is a **set difference** the client derives — a withheld row carries no
+id, so there is nothing else to derive it from. The seat is **marked, never emptied**, the
+marked player **stays in the forecast**, and the line states the fact and never the cause:
+
+> `Something's changed — they can't be invited now`
+
+It is written once, in `features/play/components/courtPresentation.ts`, in the same register and
+under the same ceiling as the row above it — four gates reach one sentence, and naming which
+fired would tell a searcher that a particular person blocked them or changed a safety setting.
+Settled by [#239](https://github.com/Raketa02/Raketa/issues/239) §8.
+
 **The first sentence says *changed*, not *unavailable*.** The fact is that the line-up went out
 of date; a person's standing is not the organiser's to be told, and §4's register — a line
 states facts and never grades them — is what keeps *can't be invited now* from becoming a

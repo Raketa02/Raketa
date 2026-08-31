@@ -8,9 +8,23 @@
  * asked for**. Each was written inside `BottomSheet` when it was the only overlay; a second
  * copy in `Popover` is how two overlays end up meeting two different halves of one
  * requirement.
+ *
+ * **The two OS questions are here rather than in a file of their own**, and one of them is now
+ * a context. *Is motion reduced* and *is a screen reader running* arrived as this file's
+ * business — every overlay skips its animation and announces itself — and they are read by
+ * surfaces that are not overlays as well. Splitting them out would be two files whose contents
+ * are one paragraph each; what a second home would buy is a second place to answer half of
+ * `useCollapsedPresentation`.
  */
 
-import { useEffect, useState, type RefObject } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
+  type RefObject,
+} from 'react';
 import { AccessibilityInfo, findNodeHandle, type View } from 'react-native';
 
 /** A ref to whatever should hold accessibility focus — a host element, not a component. */
@@ -78,16 +92,50 @@ function useAccessibilityFlag(
 }
 
 /**
- * Whether the OS has asked for reduced motion.
+ * Whether this tree runs with reduced motion.
  *
- * A hook rather than a context, deliberately: the consumers are overlays and one collapse
- * helper, and a context would have to be wired into the root layout and every test harness to
- * answer a question a component can ask. When something that is *always* mounted needs it —
- * a press transform, a list entrance — this becomes the context Part 13 describes, and this
- * hook is what reads it.
+ * **It is a context now**, which the hook it replaced predicted in writing: *"a hook rather
+ * than a context, deliberately… when something that is always mounted needs it — a press
+ * transform, a list entrance — this becomes the context Part 13 describes."* The engine fill's
+ * staggered seats are that list entrance, and the deck's card is that press transform. A hook
+ * per consumer means an `AccessibilityInfo` listener per consumer, on surfaces that are mounted
+ * for as long as the tab is; the OS switch is **one fact about the device**, and reading it in
+ * one place is what Part 13's *"a screen reaches a port through its context"* is for.
+ *
+ * `false` is the value outside a provider, and it is the right one: it is what the app looked
+ * like before anybody asked for calm. Every screen is inside `ReducedMotionProvider`, mounted
+ * once at the root beside the other providers, so the only trees without one are the unit tests
+ * that say so.
  */
 export function useReducedMotion(): boolean {
-  return useAccessibilityFlag(READ_REDUCE_MOTION, 'reduceMotionChanged');
+  return useContext(ReducedMotionContext);
+}
+
+/** The one place this app asks the OS about motion. `false` until a provider says otherwise. */
+const ReducedMotionContext = createContext(false);
+
+export interface ReducedMotionProviderProps {
+  /**
+   * The device, unless a test says otherwise — Part 13's own shape for a port's context. A
+   * test that wants a tree in reduced motion wraps it in `value`, rather than mocking
+   * `AccessibilityInfo` and awaiting a promise on every render it makes.
+   */
+  readonly value?: boolean;
+  readonly children: ReactNode;
+}
+
+/**
+ * One subscription to the OS switch, for the whole tree beneath it.
+ *
+ * Mounted at the root, so nothing else has to wire it up and nothing else may: a second
+ * provider inside a screen would be a second answer to a question the device answers once.
+ */
+export function ReducedMotionProvider({ value, children }: ReducedMotionProviderProps) {
+  const os = useAccessibilityFlag(READ_REDUCE_MOTION, 'reduceMotionChanged');
+
+  return (
+    <ReducedMotionContext.Provider value={value ?? os}>{children}</ReducedMotionContext.Provider>
+  );
 }
 
 /**

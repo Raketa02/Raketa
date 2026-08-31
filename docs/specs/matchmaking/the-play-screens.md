@@ -498,7 +498,12 @@ and the UI build is its own effort. The effort that builds these screens inherit
    the retry itself belongs to the **act that failed**, never to the screen it failed on.
    That last clause is load-bearing: a search and a read-back are two acts with two ids, so
    a *retry* that re-ran the search would mint a new one and orphan the line-up bound to
-   the old.
+   the old. **No record id, re-fire the `POST`; a record id exists, re-read** — the client
+   holds that as `features/play/domain/retryTarget.ts`. Placement follows from it rather
+   than being chosen per screen: **three of the four waits reuse a control the screen
+   already has** — Find a game's *Search*, the court's ⚡ fill, and the pool's re-read — and
+   **only the forecast gains one**, because a player who has stopped changing seats would
+   otherwise sit with no number and no way to ask again.
 8. **The send fails when offline; the deck's two pause.** Both are correct, and the test
    that separates them is *does this act carry a deadline the player chose*. A challenge's
    answer window is derived **at send** (§G1's answer), so a send deferred to the next
