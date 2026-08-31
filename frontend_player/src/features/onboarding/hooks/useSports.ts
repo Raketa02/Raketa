@@ -10,7 +10,7 @@ import { useQuery } from '@tanstack/react-query';
 
 import type { AppError } from '@/shared/errors';
 
-import type { Sport } from '../domain/Sport';
+import type { Sport } from '@/shared/vocabulary/sport';
 import { listSports } from '../use-cases/listSports';
 
 import { onboardingKeys } from './onboardingKeys';

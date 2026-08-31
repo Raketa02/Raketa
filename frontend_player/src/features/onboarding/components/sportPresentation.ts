@@ -14,7 +14,7 @@
 
 import { theme } from '@/shared/ui';
 
-import type { Sport } from '../domain/Sport';
+import type { Sport } from '@/shared/vocabulary/sport';
 
 const LABELS: Readonly<Record<Sport, string>> = {
   padel: 'Padel',

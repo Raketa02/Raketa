@@ -23,7 +23,7 @@ import type {
 } from '../domain/Assessment';
 import type { AssessmentResult } from '../domain/AssessmentResult';
 import type { SkillRating } from '../domain/SkillRating';
-import type { Sport } from '../domain/Sport';
+import type { Sport } from '@/shared/vocabulary/sport';
 
 type WireSport = components['schemas']['Sport'];
 type RatingResponse = components['schemas']['RatingResponse'];

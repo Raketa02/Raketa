@@ -15,7 +15,6 @@ export { ReviewScreen } from './components/ReviewScreen';
 export { SportsPickerScreen } from './components/SportsPickerScreen';
 export { WelcomeScreen } from './components/WelcomeScreen';
 
-export type { Sport } from './domain/Sport';
 export type { SkillRating } from './domain/SkillRating';
 
 export { onboardingKeys } from './hooks/onboardingKeys';

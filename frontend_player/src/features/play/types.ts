@@ -11,6 +11,13 @@
  *
  * Nothing outside this folder reads anything not re-exported here — ESLint blocks the deep
  * paths.
+ *
+ * **What the rest of the app may reach in Play's state is a Play session, and only that.**
+ * `endPlaySession` is what the shell's reset calls, and `usePlaySession` beside it is how that
+ * ending is *observed* ([#264](https://github.com/Raketa02/Raketa/issues/264)). `playPreferences`
+ * is not here at all, and neither is the origin guard: what a player last searched for and when
+ * a line-up is worth a confirmation are Play's own business, and a second feature reading either
+ * is the coupling the origin key exists to make unnecessary.
  */
 
 export {
@@ -124,3 +131,26 @@ export {
   whyFitHeader,
   type SearchingStatus,
 } from './components/searchingPresentation';
+
+/**
+ * A Play session: the working copy of the week and the line-up on it, and the one function
+ * that ends both.
+ *
+ * `endPlaySession` is called by `resetShellStack` and by nothing else, which is what makes the
+ * shell's one navigation move the **definition** of a session ending rather than a line
+ * somebody must remember on every exit.
+ *
+ * **`usePlaySession` is exported because that definition lives in another feature.** The rule
+ * is stated here and enforced by the shell, so the shell's own suite is where it has to be
+ * checked — and a rule nothing can observe is a rule that stops being true without a symptom,
+ * which is the failure the shell was built to avoid in the first place. It is the same
+ * concession `features/shell/types.ts` already makes for `PLACEHOLDER_COPY`, *"read outside
+ * this feature by one thing: the test harness."*
+ *
+ * The honest cost is that the store's writers — `enter`, `seat`, `toggleWeekCell` — are
+ * reachable from outside too. Nothing calls them from outside and nothing should: seating
+ * somebody is an act on the pool, and a second feature doing it would be building a line-up
+ * against an origin it cannot see. If a caller ever appears, the answer is a narrower export,
+ * not a wider one.
+ */
+export { endPlaySession, usePlaySession } from './store/playSession.store';

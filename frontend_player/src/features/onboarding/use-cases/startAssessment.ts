@@ -8,7 +8,7 @@
 
 import { createAssessment } from '../api/onboardingApi';
 import type { AssessmentStep } from '../domain/Assessment';
-import type { Sport } from '../domain/Sport';
+import type { Sport } from '@/shared/vocabulary/sport';
 import { toAssessmentStep, toWireSport } from '../mappers/onboardingMappers';
 
 export interface StartAssessmentOptions {

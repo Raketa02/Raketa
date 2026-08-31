@@ -34,7 +34,7 @@
 
 import { create } from 'zustand';
 
-import type { Sport } from '../domain/Sport';
+import type { Sport } from '@/shared/vocabulary/sport';
 import {
   begin as beginPass,
   recordRated,

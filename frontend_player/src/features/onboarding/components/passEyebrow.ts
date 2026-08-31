@@ -16,7 +16,7 @@
  */
 
 import type { RatingPosition } from '../domain/onboardingPass';
-import type { Sport } from '../domain/Sport';
+import type { Sport } from '@/shared/vocabulary/sport';
 
 import { sportLabel } from './sportPresentation';
 

@@ -18,7 +18,7 @@
 
 import { z } from 'zod';
 
-import { SPORTS } from '../domain/Sport';
+import { SPORTS } from '@/shared/vocabulary/sport';
 
 export const assessmentRouteParams = z.object({
   assessmentId: z.string().uuid(),

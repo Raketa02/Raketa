@@ -46,3 +46,36 @@ export interface WeekCell {
   readonly day: Weekday;
   readonly part: DayPart;
 }
+
+/**
+ * Whether two cells are the same cell — the identity every rule over a week turns on.
+ *
+ * A day and a part together, never either alone: Tuesday morning and Tuesday evening are two
+ * cells, and a comparison that read only the day would tick both.
+ */
+export function sameCell(one: WeekCell, other: WeekCell): boolean {
+  return one.day === other.day && one.part === other.part;
+}
+
+/** Whether a week has this cell ticked. */
+export function isTicked(week: readonly WeekCell[], cell: WeekCell): boolean {
+  return week.some((ticked) => sameCell(ticked, cell));
+}
+
+/**
+ * Press a cell: tick it, or untick it.
+ *
+ * Ticks are kept in **press order**. What a player ticked first is a fact about them, and
+ * re-sorting into the grid's own order would throw it away before anything downstream saw it.
+ *
+ * **Here rather than in either feature**, on this folder's own test — *"whether a second
+ * feature would have written the identical table"*. `player_profile` toggles these twenty-one
+ * cells for the availability step and Play toggles them for the week it searches on, and the
+ * second one was written identically to the first. What is **not** here is what either feature
+ * means by a toggle: the step's floor of one ticked cell is `player_profile`'s rule, and
+ * whether the week still matches the profile is Play's.
+ */
+export function toggleCell(week: readonly WeekCell[], cell: WeekCell): readonly WeekCell[] {
+  if (isTicked(week, cell)) return week.filter((ticked) => !sameCell(ticked, cell));
+  return [...week, cell];
+}

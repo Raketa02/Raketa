@@ -10,7 +10,7 @@
  */
 
 import type { AssessmentResult } from './AssessmentResult';
-import type { Sport } from './Sport';
+import type { Sport } from '@/shared/vocabulary/sport';
 
 export interface AnswerOption {
   readonly id: string;

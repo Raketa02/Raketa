@@ -67,7 +67,7 @@ import {
 } from '@/shared/ui';
 
 import type { AnswerOption } from '../domain/Assessment';
-import type { Sport } from '../domain/Sport';
+import type { Sport } from '@/shared/vocabulary/sport';
 import { positionOf } from '../domain/onboardingPass';
 import { outstandingPosition, questionAt, standingPosition } from '../domain/questionNavigation';
 import { proposeRevision } from '../domain/revision';

@@ -8,7 +8,7 @@
 import type { AssessmentRun } from './Assessment';
 import { entryDestination } from './entryDecision';
 import type { SkillRating } from './SkillRating';
-import type { Sport } from './Sport';
+import type { Sport } from '@/shared/vocabulary/sport';
 
 function rating(sport: Sport): SkillRating {
   return {

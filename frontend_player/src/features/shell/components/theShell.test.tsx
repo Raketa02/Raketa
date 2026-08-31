@@ -12,6 +12,8 @@
 import { router } from 'expo-router';
 import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
 
+import { usePlaySession } from '@/features/play/types';
+
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import { GATE_USER, launchSignedIn, stubGate } from '@/test-support/onboardingRouter';
@@ -202,6 +204,46 @@ describe('⚡Play', () => {
     act(() => router.back());
     await waitFor(() => expect(screen).toHavePathname('/'));
     expect(router.canGoBack()).toBe(false);
+  });
+});
+
+describe('a Play session ends exactly when the shell lays a stack down', () => {
+  /** A player mid-build: a week they have edited, and two people on the court. */
+  function halfwayThroughBuildingOne() {
+    const session = usePlaySession.getState();
+    session.enter([{ day: 2, part: 'evening' }]);
+    session.toggleWeekCell({ day: 6, part: 'morning' });
+    session.seat('search-1', 'player-a');
+    session.seat('search-1', 'player-b');
+  }
+
+  it('clears the working copy and the line-up when the player leaves for another tab', async () => {
+    // The definition, walked rather than called: nothing in Play tidies up after itself, and
+    // the only thing that clears a session is arriving somewhere.
+    await launchIntoTheApp();
+    pressTab('Play');
+    await waitFor(() => expect(screen).toHavePathname('/play'));
+    halfwayThroughBuildingOne();
+
+    pressTab('Chats');
+
+    await waitFor(() => expect(screen).toHavePathname('/chats'));
+    expect(usePlaySession.getState().week).toBeUndefined();
+    expect(usePlaySession.getState().lineup).toBeUndefined();
+  });
+
+  it('clears it on the way back in too, so ⚡ opens on a week seeded from the profile', async () => {
+    // AC-2 lands a returning player on Find a game. A line-up that survived would sit
+    // invisible behind a screen whose week no longer matches the search it was built on.
+    await launchIntoTheApp();
+    pressTab('Play');
+    await waitFor(() => expect(screen).toHavePathname('/play'));
+    halfwayThroughBuildingOne();
+
+    pressTab('Play');
+
+    await waitFor(() => expect(screen).toHavePathname('/play'));
+    expect(usePlaySession.getState().lineup).toBeUndefined();
   });
 });
 

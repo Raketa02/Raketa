@@ -34,9 +34,18 @@
  * a week, which is also what makes them testable without mounting anything.
  */
 
-import { DAY_PARTS, WEEKDAYS } from '@/shared/vocabulary/week';
+import { DAY_PARTS, WEEKDAYS, isTicked, toggleCell } from '@/shared/vocabulary/week';
 
 import type { AvailabilitySlot } from './ProfileDraft';
+
+/**
+ * A cell's identity and the press over it moved to `shared/vocabulary/week` when Play became
+ * the second feature to toggle these twenty-one cells — the identical function, which is that
+ * folder's own test for what belongs in it. They are re-exported here so this module stays the
+ * one place the availability step reads its rules from; what stayed behind is the part that is
+ * a *claim about a profile*, which is the floor.
+ */
+export { isTicked, toggleCell };
 
 /** Twenty-one — the whole grid, and the largest a week can be. */
 export const WEEK_CELLS = WEEKDAYS.length * DAY_PARTS.length;
@@ -44,32 +53,6 @@ export const WEEK_CELLS = WEEKDAYS.length * DAY_PARTS.length;
 /** Every cell of the grid, in the order it is drawn: Monday first, morning first. */
 export function everyCell(): readonly AvailabilitySlot[] {
   return WEEKDAYS.flatMap((day) => DAY_PARTS.map((part) => ({ day, part })));
-}
-
-/** Whether two cells are the same cell — the identity everything below turns on. */
-function sameCell(one: AvailabilitySlot, other: AvailabilitySlot): boolean {
-  return one.day === other.day && one.part === other.part;
-}
-
-export function isTicked(week: readonly AvailabilitySlot[], cell: AvailabilitySlot): boolean {
-  return week.some((ticked) => sameCell(ticked, cell));
-}
-
-/**
- * Press a cell: tick it, or untick it.
- *
- * Ticks are appended in **press order**, exactly as the tag selection keeps them. What a
- * player ticked first is a fact about them, and re-sorting to the grid's own order would
- * throw it away before the commit ever saw it.
- */
-export function toggleCell(
-  week: readonly AvailabilitySlot[],
-  cell: AvailabilitySlot,
-): readonly AvailabilitySlot[] {
-  if (isTicked(week, cell)) {
-    return week.filter((ticked) => !sameCell(ticked, cell));
-  }
-  return [...week, cell];
 }
 
 /**

@@ -18,7 +18,17 @@
  * `[Now]` with the line-up gone
  * ([#274](https://github.com/Raketa02/Raketa/issues/274)). **A Play session ends exactly
  * when this function runs**, which is the definition
- * [#264](https://github.com/Raketa02/Raketa/issues/264) is owed.
+ * [#264](https://github.com/Raketa02/Raketa/issues/264) is owed — and now the thing it does:
+ * every path through this function calls `endPlaySession`, so the working copy and the line-up
+ * are cleared by *arriving somewhere*, never by a screen remembering to tidy up after itself.
+ *
+ * **The clear is here rather than on a Play screen's unmount** because leaving Play is the
+ * event, and an unmount is not one: the builder unmounts when the court is pushed over it, and
+ * a rule keyed on that would throw a half-built line-up away in the middle of building it.
+ *
+ * This is also why the shell is the one feature that reads across the boundary — one import of
+ * one function from `features/play`'s public surface. The alternative is Play subscribing to
+ * navigation, which is the same coupling pointed the other way and with a listener to leak.
  *
  * ## Why the imperative `router` and not `useRouter()`
  *
@@ -30,6 +40,7 @@
 
 import { router } from 'expo-router';
 
+import { endPlaySession } from '@/features/play/types';
 import type { TabBarKey } from '@/shared/ui';
 
 import { PLAY_STACK, SHELL_TAB_ROOT, type ShellRoute } from '../domain/shellTabs';
@@ -48,6 +59,12 @@ type ShellStack = readonly [ShellRoute, ...ShellRoute[]];
  */
 export function resetShellStack(stack: ShellStack): void {
   const [root, ...above] = stack;
+
+  // First, because it is the definition rather than a consequence: a session is over the
+  // moment the player is sent somewhere, and ⚡Play arriving again is an arrival too — AC-2
+  // lands a returning player on Find a game with the week re-seeded, not on a builder they
+  // left an hour ago.
+  endPlaySession();
 
   if (router.canDismiss()) router.dismissAll();
   router.replace(root);

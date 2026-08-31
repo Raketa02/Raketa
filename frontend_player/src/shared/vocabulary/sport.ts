@@ -13,6 +13,22 @@
  * a player can be rated at padel and unrated at tennis indefinitely. Anything asking "has
  * this player been through onboarding" is really asking "does a rating exist for this
  * sport" and has to ask it that way.
+ *
+ * ## Why this is `shared/` and not `onboarding/domain/`
+ *
+ * It began there, because onboarding was the only feature that had met a sport. Play is the
+ * second — the sport chips, the search's own `sport`, and the origin a line-up is judged
+ * against are all this same closed four — and a sport is a **domain** term in the root
+ * glossary rather than either feature's reading of one, which is `shared/README.md`'s own
+ * test: *"whether a second feature would have written the identical table."* It would have
+ * written this one exactly, and a second list of four sports is the drift `week.ts` was
+ * promoted to stop.
+ *
+ * **That test is not "two files use it"**, which `docs/architecture.md`'s fourth
+ * non-negotiable rightly refuses. What is proven here is *ownership*: the four are the
+ * backend registry's, fixed by a release rather than by either feature, and neither feature
+ * may change them. A rule onboarding decided about a sport — which one comes next in a pass —
+ * stayed behind, and so did every word either feature says about one.
  */
 
 /**

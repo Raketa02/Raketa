@@ -73,7 +73,7 @@ import {
 } from '@/shared/ui';
 
 import type { AssessmentResult } from '../domain/AssessmentResult';
-import type { Sport } from '../domain/Sport';
+import type { Sport } from '@/shared/vocabulary/sport';
 import { positionOf } from '../domain/onboardingPass';
 import { useAdvanceThroughPass } from '../hooks/useAdvanceThroughPass';
 import { useAssessment } from '../hooks/useAssessment';

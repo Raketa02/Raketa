@@ -239,6 +239,71 @@ profile editor that later edits the same values.
   unknown sport. _Avoid_: "config" and "settings"; neither is about this player, and both
   invite something per-player being added to it.
 
+### The Play tab
+
+Six client-only concepts and one kit of parts. **None of them exists on the backend**, and the
+first four are the shape [#228](https://github.com/Raketa02/Raketa/issues/228) settled: what
+Play remembers, for how long, and what it must never remember. The stores are
+`features/play/store/`; the rules are `features/play/domain/`.
+
+- **Play session** — **one visit to the Play tab**: the Working copy and the Line-up built on
+  it, and nothing else. It begins when the shell lays the Play stack down and **ends exactly
+  when [the reset](#routing) runs** — every door out of Play and every door back in goes
+  through that one function, which is what makes the ending a definition rather than a line
+  each screen must remember. **Backgrounding does not end one**: the process lives and the
+  stack is intact, so a line-up really can sit half-built for an hour, which is the state the
+  send-time re-check exists for. Process death ends everything; nothing is persisted. _Avoid_:
+  "the session" unqualified — that is the auth session, and the two have different lifetimes;
+  "Play state", which invites a seventh thing being added to it.
+- **Working copy** — **the week Play searches on**: seeded from the player's profile week when
+  the tab is entered, edited freely on Find a game, and **never written back**. It travels as
+  `availability_override` on the search and nowhere else, so a week improvised for one evening
+  is forgotten with the session. Seeded **on navigation, never during a render** — the
+  prototype cloned it inside its own render, which is the one inherited defect this concept
+  exists to refuse. Whether it _differs from the profile_ is a **comparison made on every tap**,
+  not a flag a toggle sets: a slot ticked on and off again is not a changed week. Distinct from
+  the search's own `KEEP_THESE_TIMES` prompt, which the backend raises against the post-rung
+  grid and which only the backend can compute. _Avoid_: "draft week" — a Profile draft exists
+  to be committed and this exists to be discarded; "the grid", which is the control that draws
+  it.
+- **Origin search** — **the search a Line-up was built off**, held as its id and what it was
+  asked for: sport, mode and the week. `POST /forecasts` calls `search_id` the _Origin key_ and
+  refuses players who did not appear in that search, so this is the name for what a line-up is
+  judged against. It is folded onto the record in `api/` — `SearchEnvelope` carries the id and
+  the mode and neither the sport nor the week, because those were the request's. **A line-up's
+  invalidity is derived from it and never synchronised**, which is why the two Play stores can
+  exist without a write that crosses them. _Avoid_: "the current search" — the whole point is
+  that it may no longer be current; "search context".
+- **Line-up** — **`{ originSearchId, seats }`**, and the seats are **player ids and nothing
+  else**: every name, level and photograph is read back off the origin search's own rows in
+  Query. Client-only until it is sent — adding somebody builds it on your screen and reaches
+  nobody. It is orphaned when the origin moves, and **three acts move the origin** — changing
+  the sport, changing the mode, and leaving Find a game on an edited week — which share **one
+  guard with three callers**, so a fourth origin field inherits the confirmation for free.
+  _Avoid_: "the court" — that is the drawn object the line-up is shown on; "team", "group".
+- **Ranked list** — the pool, a line-up's shortlist and a deck deal: **one record shape, minted
+  by a mutation and read by id** from `searchKeys.detail(search_id)`. **Nothing in Play
+  background-refetches** — `staleTime: Infinity`, no refetch on focus — because foregrounding
+  the app would otherwise reorder the pool under the player's finger. What _does_ refetch on the
+  ordinary defaults: the profile and its week, the ratings behind the sport chips, and the Match
+  me count. **Re-sorting costs no round trip** and neither does re-arranging four people; only
+  changing who is on the court does. _Avoid_: "results", and "the pool" for all three — a deal
+  and a shortlist are not pools.
+- **No hold state** — the one thing this tab must never remember. A held account is a `403` the
+  HTTP layer already maps as terminal, re-checked server-side at every request; **there is no
+  cached hold flag anywhere**, because a cached flag is the only mechanism by which a hold
+  released on one screen could survive on another. Gating the builder at _navigation_ would
+  need exactly that cache, and it is refused. _Avoid_: "hold flag", "blocked user state".
+- **Parts kit** — the shared parts the three candidate cards are assembled from:
+  `CandidatePhoto` (photo-or-poster in a box, one component at three sizes), `FactRow`, `TagRow`
+  and `ReasonLine`. **Three components over one kit, never one component with a `surface`
+  prop** — `CandidateCard` is photo-left with a head-to-head row, `CandidateCardSocial` and
+  `DeckCard` are media-top with fact rows, and only the deck card floats. The two courts,
+  `CourtMini` and `CourtBuild`, are the same pairing over the design system's `Court`: the
+  drawn object owns the geometry and knows nothing about players, and the seat owns its label,
+  its ring, its badge and its taps. _Avoid_: "the card component" — there are three; "variant"
+  and a `surface` prop, which is the sixty-line conditional this split exists to prevent.
+
 ### Data and errors
 
 - **Query key factory** — the per-feature object in `hooks/` defining every key, with
