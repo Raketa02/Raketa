@@ -57,84 +57,67 @@ cheaply if a later reader disagrees.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
-from typing import Mapping, Sequence
-from uuid import UUID
+from dataclasses import replace
+from typing import Mapping
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.bootstrap.composition import (
-    build_absent_terms,
-    build_account_hold_query,
-    build_account_status_query,
-    build_at_stake_query,
-    build_block_query,
-    build_candidate_index_tail,
-    build_candidate_source,
-    build_domain_event_store,
-    build_event_publisher,
-    build_exposure_ledger,
-    build_interest_ledger,
-    build_match_fit_engine,
-    build_match_history_query,
-    build_mutual_challenge_minting,
-    build_pass_ledger,
-    build_play_intent_declaration_repository,
-    build_player_card_source,
-    build_player_profile_repository,
-    build_player_score_query,
-    build_prompt_decline_ledger,
-    build_prompt_ledger,
-    build_ruleset,
-    build_search_store,
-    build_skill_rating_repository,
-    build_suppression_ledger,
-    build_unit_of_work,
-    build_user_repository,
-)
-from redis.asyncio import Redis
-
+from app.bootstrap.composition import build_candidate_source
 from app.core.config import Settings
 from app.engines.matchfit.core import SearchMode, Term
 from app.engines.matchfit.ruleset import Ruleset
-from app.engines.matchfit.scoring import MatchFit
 from app.infrastructure.redis_client import create_redis_client
 from app.kernel import Instant, Sport
+from app.modules.challenges.application.read_challenges import ReadChallengesCommand
+from app.modules.challenges.domain.seats import SeatAnswer
+from app.modules.challenges.domain.standing import ENDED
 from app.modules.matchmaking.application.commands import (
     ExpressInterestCommand,
-    RunDeckDealCommand,
+    ReadInterestCommand,
     RunLineupSearchCommand,
-    RunShortlistSearchCommand,
 )
-from app.modules.matchmaking.application.express_interest import ExpressInterest
-from app.modules.matchmaking.application.run_deck_deal import RunDeckDeal
-from app.modules.matchmaking.application.run_lineup_search import RunLineupSearch
-from app.modules.matchmaking.application.run_shortlist_search import RunShortlistSearch
-from app.modules.matchmaking.application.search_workbench import SearchWorkbench
-from app.modules.matchmaking.domain.candidate_snapshot import CandidateSource
 from app.modules.matchmaking.domain.errors import SportNotRated
 from app.modules.matchmaking.domain.gates import GateCode
-from app.modules.matchmaking.domain.relaxation import Rung
 from app.modules.matchmaking.domain.searches import (
+    SearchCandidateRecord,
     SearchInitiation,
     SearchRecord,
     SearchSurface,
 )
 from app.modules.matchmaking.domain.shortlist import run as run_the_pipeline
 from app.seeds.catalog import (
-    PROTAGONISTS,
     THE_BLANK_WEEK_PLAYER,
     THE_NEWCOMER,
     THE_ONE_SPORT_PLAYER,
     THE_POPULATED_PLAYER,
     SeedAccount,
 )
-from app.seeds.clock import FixedClock
-from app.seeds.cohort import COHORT, Cohort, CohortMember
-
-#: What one ``make seed`` calls its searches, so the rows it leaves behind are
-#: separable from a developer's own in the one table that keeps them for ever.
-TRACE_ID = "seed-assertions"
+from app.seeds.cohort import COHORT, Cohort
+from app.seeds.pairs import SeededPairs
+from app.seeds.paths import (
+    TRACE_ID,
+    ReadPaths,
+    deal_a_deck,
+    read_paths,
+    returned_ids,
+    run_a_shortlist,
+    tick_the_tail_to_catch_up,
+)
+from app.seeds.relationships import (
+    ABSENT_ON_THE_BLOCKED_GATE,
+    ABSENT_ON_THE_OPEN_CHALLENGE_GATE,
+    IN_YOUR_LINE_UP_AND_ACCEPTED,
+    IN_YOUR_LINE_UP_STILL_DECIDING,
+    PROTAGONIST,
+    SAID_YES_TO_YOU,
+    THEY_BLOCKED_YOU,
+    THEY_CHALLENGED_YOU,
+    THEY_TURNED_DOWN_YOUR_COURT,
+    YOUR_YES_MAKES_IT_MUTUAL,
+    YOU_PASSED_THEM,
+    YOU_SAID_YES_TO_THEM,
+    Relationship,
+)
 
 # **How many rows the pool must carry is deliberately not a constant here.** It
 # is ``MIN_SHORTLIST``, read off the live ruleset at the assertion: the product's
@@ -157,35 +140,26 @@ class ScreenIsEmpty(RuntimeError):
     """
 
 
-@dataclass(frozen=True)
-class _ReadPaths:
-    """The three surfaces, the workbench under them, and what reads them back."""
-
-    workbench: SearchWorkbench
-    shortlist: RunShortlistSearch
-    deck: RunDeckDeal
-    lineup: RunLineupSearch
-    interest: ExpressInterest
-    engine: MatchFit
-    ruleset: Ruleset
-    #: Player id per seeded address, so an assertion names an account and never
-    #: a uuid a developer would have to look up.
-    players: Mapping[str, UUID]
-
-
 async def assert_the_screens(
     session_factory: async_sessionmaker[AsyncSession],
     *,
     settings: Settings,
     now: Instant,
+    pairs: SeededPairs,
     cohort: Cohort = COHORT,
 ) -> tuple[str, ...]:
-    """Read every screen the cohort promises, and refuse a database that cannot.
+    """Read every screen the fixture promises, and refuse a database that cannot.
 
     Returns the lines the report prints. They are the **evidence**, not a
     decoration: what a failure has to print is the assertion, the protagonist,
     the surface and both counts, and printing the same breakdown on the way
     through is what makes the passing run legible too.
+
+    ``pairs`` carries the one deal this run has already made as the protagonist.
+    The deck's own claims are read off that record rather than off a fresh deal,
+    because ``DEALT_MEMORY`` is a day: a second deal would find every card of the
+    first already spent, and asserting against it would be asserting about the
+    remainder rather than about the deck.
     """
 
     await tick_the_tail_to_catch_up(session_factory, settings=settings)
@@ -200,7 +174,7 @@ async def assert_the_screens(
     try:
         lines: list[str] = []
         async with session_factory() as session:
-            paths = await _read_paths(
+            paths = await read_paths(
                 session,
                 settings=settings,
                 candidates=candidates,
@@ -208,7 +182,25 @@ async def assert_the_screens(
                 now=now,
                 redis=redis,
             )
-            lines.extend(await _the_full_battery(paths, cohort=cohort, now=now))
+            pool = await run_a_shortlist(
+                paths,
+                THE_POPULATED_PLAYER.email,
+                Sport.PADEL,
+                SearchMode.COMPETITIVE,
+            )
+            deck = pairs.the_deal_that_earned_the_pass
+            battery, line_up = await _the_full_battery(
+                paths,
+                pool,
+                deck,
+                spent=pairs.the_deck_was_already_spent,
+                cohort=cohort,
+                now=now,
+            )
+            lines.extend(battery)
+            lines.extend(
+                await _the_eleven(paths, pool, line_up, pairs=pairs)
+            )
             lines.extend(await _the_three_named_states(paths))
         return tuple(lines)
     finally:
@@ -218,207 +210,45 @@ async def assert_the_screens(
         await redis.aclose()  # type: ignore[attr-defined]
 
 
-async def tick_the_tail_to_catch_up(
-    session_factory: async_sessionmaker[AsyncSession], *, settings: Settings
-) -> int:
-    """Fold everything this run appended into the candidate index. **In process.**
-
-    Safe by the index's own design rather than by exemption: the cursor is taken
-    ``FOR UPDATE`` inside the transaction, so an API worker ticking at the same
-    moment blocks and then finds nothing left to apply.
-    """
-
-    tail = build_candidate_index_tail(settings=settings)
-    applied = 0
-    async with session_factory() as session:
-        while True:
-            report = await tail.tick(session)
-            if not report.events_applied:
-                return applied
-            applied += report.events_applied
-
-
-async def _read_paths(
-    session: AsyncSession,
-    *,
-    settings: Settings,
-    candidates: CandidateSource,
-    cohort: Cohort,
-    now: Instant,
-    redis: Redis,
-) -> _ReadPaths:
-    """The three surfaces, wired from the composition root and nowhere else.
-
-    Assembled exactly as ``matchmaking/presentation/dependencies.py`` assembles
-    them for a request, because a second wiring is a second opinion about which
-    reads fail closed — and the one that drifted would be the one that quietly
-    softened a gate. Every collaborator comes from the composition root; nothing
-    here names a concrete class.
-
-    The one place this file does not go through a use case is
-    :func:`_as_the_engine_would_fill`, and that is because **there is no
-    engine-initiated use case to go through**. It says so where it is written.
-    """
-
-    event_store = build_domain_event_store(session)
-    events = build_event_publisher(session)
-    profiles = build_player_profile_repository(event_store=event_store, events=events)
-    declarations = build_play_intent_declaration_repository(
-        event_store=event_store, events=events
-    )
-    ratings = build_skill_rating_repository(event_store=event_store, events=events)
-    player_scores = build_player_score_query(session)
-    exposure = build_exposure_ledger(redis)
-    interest = build_interest_ledger(session)
-    ruleset = build_ruleset()
-    engine = build_match_fit_engine()
-
-    workbench = SearchWorkbench(
-        clock=FixedClock(at=now),
-        ruleset=ruleset,
-        searches=build_search_store(session),
-        unit_of_work=build_unit_of_work(session),
-        candidates=candidates,
-        profiles=profiles,
-        ratings=ratings,
-        declarations=declarations,
-        blocks=build_block_query(session),
-        holds=build_account_hold_query(session),
-        account_status=build_account_status_query(session),
-        history=build_match_history_query(session),
-        player_scores=player_scores,
-        at_stake=build_at_stake_query(session),
-        exposure=exposure,
-        interest=interest,
-        cards=build_player_card_source(
-            session=session, event_store=event_store, events=events
-        ),
-        absent_terms=build_absent_terms(player_scores),
-        meter=None,
-    )
-    return _ReadPaths(
-        workbench=workbench,
-        shortlist=RunShortlistSearch(
-            workbench=workbench,
-            ruleset=ruleset,
-            engine=engine,
-            searches=build_search_store(session),
-            prompts=build_prompt_ledger(redis),
-            declines=build_prompt_decline_ledger(session),
-        ),
-        deck=RunDeckDeal(
-            workbench=workbench,
-            ruleset=ruleset,
-            engine=engine,
-            searches=build_search_store(session),
-            suppression=build_suppression_ledger(redis),
-            interest=interest,
-            passes=build_pass_ledger(session),
-        ),
-        lineup=RunLineupSearch(
-            workbench=workbench,
-            ruleset=ruleset,
-            engine=engine,
-            blocks=build_block_query(session),
-        ),
-        interest=ExpressInterest(
-            clock=FixedClock(at=now),
-            ruleset=ruleset,
-            interest=interest,
-            searches=build_search_store(session),
-            # Wired and never reached: a mutual yes opens a game inline, and
-            # nothing here answers a yes back. The collaborator is real because
-            # a use case assembled with a hole in it is not the one a request
-            # runs.
-            challenges=build_mutual_challenge_minting(session),
-            unit_of_work=build_unit_of_work(session),
-        ),
-        engine=engine,
-        ruleset=ruleset,
-        players=await _players(session, cohort),
-    )
-
-
-async def _players(session: AsyncSession, cohort: Cohort) -> Mapping[str, UUID]:
-    """Every seeded address, as the id the write path minted for it.
-
-    Looked up by address rather than derived, because ``RegisterUser`` mints the
-    id and a caller-chosen one is an id the write path does not own. The address
-    is what the catalog promises and it is what this reads.
-    """
-
-    users = build_user_repository(session)
-    found: dict[str, UUID] = {}
-    addresses = [account.email for account in PROTAGONISTS] + [
-        member.email for member in cohort.members
-    ]
-    for address in addresses:
-        user = await users.get_by_email(address)
-        if user is None:
-            raise ScreenIsEmpty(
-                f"'{address}' was seeded and cannot be found. The assertions "
-                f"read the same database the run just wrote."
-            )
-        found[address] = user.id
-    return found
-
-
 # ---------------------------------------------------------------------------
 # The full battery, against the-populated-player
 # ---------------------------------------------------------------------------
 
 
 async def _the_full_battery(
-    paths: _ReadPaths, *, cohort: Cohort, now: Instant
-) -> list[str]:
-    """Everything the default protagonist proves, in the order it is proved."""
+    paths: ReadPaths,
+    pool: SearchRecord,
+    deck: SearchRecord,
+    *,
+    spent: bool,
+    cohort: Cohort,
+    now: Instant,
+) -> tuple[list[str], SearchRecord]:
+    """Everything the default protagonist proves, in the order it is proved.
 
-    lines: list[str] = [
-        await _somebody_says_lets_play(paths, cohort=cohort),
+    The pool is handed in rather than run here, because the eleven relationships
+    are read off the **same** search: two searches would be two answers, and a
+    claim about a card would then be a claim about a card nobody was shown.
+    """
+
+    court, line_up = await _refuse_a_court_that_cannot_be_filled(paths)
+    lines = [
+        _refuse_a_pool_that_cannot_fill_a_screen(paths, pool),
+        _refuse_a_gender_gate_that_never_fires(pool),
+        _refuse_a_window_with_only_one_side(pool),
+        _refuse_a_reason_line_that_cannot_be_drawn(paths, pool),
+        _refuse_a_deck_that_deals_nothing(deck, spent=spent),
+        court,
     ]
-    pool = await _shortlist(
-        paths, THE_POPULATED_PLAYER, Sport.PADEL, SearchMode.COMPETITIVE
-    )
-    lines.append(_refuse_a_pool_that_cannot_fill_a_screen(paths, pool))
-    lines.append(_refuse_a_gender_gate_that_never_fires(pool))
-    lines.append(_refuse_a_window_with_only_one_side(pool))
-    lines.append(_refuse_a_reason_line_that_cannot_be_drawn(paths, pool))
-    lines.append(await _refuse_a_deck_that_deals_nothing(paths))
-    lines.append(await _refuse_a_court_that_cannot_be_filled(paths))
     lines.extend(await _refuse_a_ladder_that_adds_nobody(paths))
     lines.append(
         await _refuse_a_fill_that_shows_an_opted_out_member(paths, pool, now=now)
     )
-    return lines
-
-
-async def _shortlist(
-    paths: _ReadPaths,
-    account: SeedAccount,
-    sport: Sport,
-    mode: SearchMode,
-    *,
-    offered_by_search_id: UUID | None = None,
-    rung: Rung | None = None,
-) -> SearchRecord:
-    """One tap, through the use case a request runs. **The record is the answer.**"""
-
-    answer = await paths.shortlist.execute(
-        RunShortlistSearchCommand(
-            searcher_id=paths.players[account.email],
-            sport=sport,
-            mode=mode,
-            availability_override=None,
-            offered_by_search_id=offered_by_search_id,
-            rung=rung,
-            trace_id=TRACE_ID,
-        )
-    )
-    return answer.record
+    return lines, line_up
 
 
 def _refuse_a_pool_that_cannot_fill_a_screen(
-    paths: _ReadPaths, pool: SearchRecord
+    paths: ReadPaths, pool: SearchRecord
 ) -> str:
     """*The pool returns ≥ N above the floor*, where N is the ruleset's own.
 
@@ -547,12 +377,14 @@ CANNOT_BE_DRAWN: Mapping[str, str] = {
         "fabricate one"
     ),
     "PREVIOUS_ACCEPT": (
-        "the seed writes `users`, `rating` and `player_profile` and does not "
-        "write a challenge, so no pairwise answer exists to price"
+        "unreachable until `matches` closes a challenge. `SeatAccepted` makes a "
+        "seat `ACCEPTED` and *open* is `AWAITING_ANSWERS | ON | "
+        "LINE_UP_INCOMPLETE`, so a pair with an accepted seat is permanently "
+        "`OPEN_CHALLENGE`-gated and the signal is unreachable on every surface. "
+        "Inventing a challenge-ending path **is** results, which is out of "
+        "scope — so this is narrowed out by name and contracted by a demand in "
+        "`tests/demands/` instead of by a fixture"
     ),
-    "CHALLENGE_LOAD_SOME": "no seeded member has an inbox — see PREVIOUS_ACCEPT",
-    "CHALLENGE_LOAD_BUSY": "no seeded member has an inbox — see PREVIOUS_ACCEPT",
-    "CHALLENGE_LOAD_FULL": "no seeded member has an inbox — see PREVIOUS_ACCEPT",
 }
 
 
@@ -580,7 +412,7 @@ def _printable_codes(ruleset: Ruleset) -> frozenset[str]:
 
 
 def _refuse_a_reason_line_that_cannot_be_drawn(
-    paths: _ReadPaths, pool: SearchRecord
+    paths: ReadPaths, pool: SearchRecord
 ) -> str:
     """*Every reason line the cards can draw is exhibited by at least one row.*
 
@@ -629,37 +461,44 @@ def _refuse_a_reason_line_that_cannot_be_drawn(
 # ---------------------------------------------------------------------------
 
 
-async def _refuse_a_deck_that_deals_nothing(paths: _ReadPaths) -> str:
-    """*The deck deals ≥ N cards.*
+def _refuse_a_deck_that_deals_nothing(record: SearchRecord, *, spent: bool) -> str:
+    """*The deck deals >= N cards.*
 
     A different surface and not a second read of the same one: the deck resolves
     its weight vector from the viewer's **declaration** rather than from a mode,
     orders on three bands, and applies exclusions no shortlist has. A cohort that
     fills a list and empties a deal is a cohort that has proved half of what it
     promised.
+
+    **Read off the deal this run already made** rather than off a fresh one.
+    ``DEALT_MEMORY`` is a day, so a second deal deals the remainder — and a
+    fixture that asserted against the remainder would be asserting about
+    whichever cards the first deal happened to leave.
     """
 
-    answer = await paths.deck.execute(
-        RunDeckDealCommand(
-            searcher_id=paths.players[THE_POPULATED_PLAYER.email],
-            sport=Sport.PADEL,
-            availability_override=None,
-            trace_id=TRACE_ID,
+    dealt = record.counts.n_returned
+    if spent:
+        return (
+            f"deck · {THE_POPULATED_PLAYER.slug} · padel: **not read** — this "
+            f"run's deal found a deck an earlier one had already spent, and a "
+            f"deal is remembered for a day. That is ADR-0131's cost, not an "
+            f"empty pool; the run that proves the deal fills is the one against "
+            f"a fresh database."
         )
-    )
-    dealt = answer.record.counts.n_returned
     if dealt < CARDS_A_DEAL_MUST_CARRY:
         raise ScreenIsEmpty(
-            _complaint("the deck", answer.record, CARDS_A_DEAL_MUST_CARRY, dealt)
+            _complaint("the deck", record, CARDS_A_DEAL_MUST_CARRY, dealt)
         )
     return (
         f"deck · {THE_POPULATED_PLAYER.slug} · padel: {dealt} card(s) dealt, "
-        f"intent read {answer.record.intent_read}, "
-        f"{answer.record.n_excluded_by_suppression} removed by suppression"
+        f"intent read {record.intent_read}, "
+        f"{record.n_excluded_by_suppression} in range under a live suppression"
     )
 
 
-async def _refuse_a_court_that_cannot_be_filled(paths: _ReadPaths) -> str:
+async def _refuse_a_court_that_cannot_be_filled(
+    paths: ReadPaths,
+) -> tuple[str, SearchRecord]:
     """*A full four composes.*
 
     The line-up is where ``docs/adr/0116``'s six-pair rule runs, so this is the
@@ -670,7 +509,7 @@ async def _refuse_a_court_that_cannot_be_filled(paths: _ReadPaths) -> str:
 
     answer = await paths.lineup.execute(
         RunLineupSearchCommand(
-            searcher_id=paths.players[THE_POPULATED_PLAYER.email],
+            searcher_id=paths.player(THE_POPULATED_PLAYER.email),
             sport=Sport.PADEL,
             mode=SearchMode.COMPETITIVE,
             locked_seats=(),
@@ -698,11 +537,12 @@ async def _refuse_a_court_that_cannot_be_filled(paths: _ReadPaths) -> str:
     return (
         f"court · {THE_POPULATED_PLAYER.slug} · padel: {len(answer.seats)} seats "
         f"filled, {len(answer.arrangements)} arrangement(s), "
-        f"group reason {answer.group_reason}, dock {answer.dock}"
+        f"group reason {answer.group_reason}, dock {answer.dock}",
+        answer.record,
     )
 
 
-async def _refuse_a_ladder_that_adds_nobody(paths: _ReadPaths) -> list[str]:
+async def _refuse_a_ladder_that_adds_nobody(paths: ReadPaths) -> list[str]:
     """*Each rung adds at least one candidate, and the second climb is refused.*
 
     **Run on tennis, and the reason is structural rather than a preference.**
@@ -716,8 +556,8 @@ async def _refuse_a_ladder_that_adds_nobody(paths: _ReadPaths) -> list[str]:
     property of the fixture rather than a hope about a draw.
     """
 
-    first = await _shortlist(
-        paths, THE_POPULATED_PLAYER, Sport.TENNIS, SearchMode.FOR_FUN
+    first = await run_a_shortlist(
+        paths, THE_POPULATED_PLAYER.email, Sport.TENNIS, SearchMode.FOR_FUN
     )
     if first.rung_offers is None:
         raise ScreenIsEmpty(
@@ -750,9 +590,9 @@ async def _refuse_a_ladder_that_adds_nobody(paths: _ReadPaths) -> list[str]:
         )
 
     taken = first.rung_offers[-1]
-    second = await _shortlist(
+    second = await run_a_shortlist(
         paths,
-        THE_POPULATED_PLAYER,
+        THE_POPULATED_PLAYER.email,
         Sport.TENNIS,
         SearchMode.FOR_FUN,
         offered_by_search_id=first.id,
@@ -785,82 +625,12 @@ async def _refuse_a_ladder_that_adds_nobody(paths: _ReadPaths) -> list[str]:
 
 
 # ---------------------------------------------------------------------------
-# The two asymmetries a unit test cannot show
+# The asymmetry a unit test cannot show
 # ---------------------------------------------------------------------------
 
 
-async def _somebody_says_lets_play(paths: _ReadPaths, *, cohort: Cohort) -> str:
-    """A real *Let's play*, so the one lift that **admits** has a witness.
-
-    ``INTEREST_RECEIVED`` is the only signal that can pull a candidate through
-    ``QUALITY_FLOOR``, and it is the only printable signal whose input the
-    generator cannot write down: a yes cites the search that showed the person,
-    and an origin key is refused unless that search really showed them. So a
-    member runs their **own** pool search here and says yes off it — two real
-    read paths and a real write, rather than a row nobody could have produced.
-
-    Idempotent by the use case's own rule: a second yes returns the first
-    unchanged, does not re-date the expiry and does not spend a cap slot.
-    """
-
-    target = paths.players[THE_POPULATED_PLAYER.email]
-    tried: list[str] = []
-    for member in _who_might_see_the_protagonist(cohort):
-        record = (
-            await paths.shortlist.execute(
-                RunShortlistSearchCommand(
-                    searcher_id=paths.players[member.email],
-                    sport=Sport.PADEL,
-                    mode=SearchMode.COMPETITIVE,
-                    availability_override=None,
-                    offered_by_search_id=None,
-                    rung=None,
-                    trace_id=TRACE_ID,
-                )
-            )
-        ).record
-        tried.append(f"{member.handle} ({record.counts.n_returned} row(s))")
-        if any(row.player_id == target for row in record.candidates):
-            await paths.interest.execute(
-                ExpressInterestCommand(
-                    from_player_id=paths.players[member.email],
-                    to_player_id=target,
-                    sport=Sport.PADEL,
-                    search_id=record.id,
-                )
-            )
-            return (
-                f"interest · {member.handle} said *Let's play* to "
-                f"{THE_POPULATED_PLAYER.slug}, citing search {record.id}"
-            )
-    raise ScreenIsEmpty(
-        f"no cohort member's own padel pool contained "
-        f"{THE_POPULATED_PLAYER.slug}, across {len(tried)} attempt(s): "
-        + ", ".join(tried)
-        + ". A yes cites the search that showed the person, so without one the "
-        "interest lift — the only lift that admits below the floor — has no "
-        "witness on any screen."
-    )
-
-
-def _who_might_see_the_protagonist(cohort: Cohort) -> Sequence[CohortMember]:
-    """The members most likely to have the protagonist in their own pool.
-
-    The protagonist is at the centre and these are the nearest ring's club
-    players, widest radius first — a member's own radius gates their own search,
-    and nothing else here decides who can see whom.
-    """
-
-    inner = [
-        member
-        for member in cohort.members
-        if member.ring == "a" and member.archetype == "club-player"
-    ]
-    return sorted(inner, key=lambda member: -member.radius_km)[:3]
-
-
 async def _refuse_a_fill_that_shows_an_opted_out_member(
-    paths: _ReadPaths, pool: SearchRecord, *, now: Instant
+    paths: ReadPaths, pool: SearchRecord, *, now: Instant
 ) -> str:
     """*At least one member is in the pool and not in the engine's fill.*
 
@@ -905,7 +675,7 @@ async def _refuse_a_fill_that_shows_an_opted_out_member(
 
 
 async def _as_the_engine_would_fill(
-    paths: _ReadPaths,
+    paths: ReadPaths,
     account: SeedAccount,
     sport: Sport,
     mode: SearchMode,
@@ -919,7 +689,7 @@ async def _as_the_engine_would_fill(
 
     workbench = paths.workbench
     declared = await workbench.searcher_facts(
-        player_id=paths.players[account.email], sport=sport, mode_of=lambda _: mode
+        player_id=paths.player(account.email), sport=sport, mode_of=lambda _: mode
     )
     asked = await workbench.asked_for(
         declared,
@@ -946,7 +716,7 @@ async def _as_the_engine_would_fill(
 # ---------------------------------------------------------------------------
 
 
-async def _the_three_named_states(paths: _ReadPaths) -> list[str]:
+async def _the_three_named_states(paths: ReadPaths) -> list[str]:
     """The state each of the other three protagonists is named for, and no more.
 
     Running the full battery four times would cost a dozen assessments' worth of
@@ -961,7 +731,7 @@ async def _the_three_named_states(paths: _ReadPaths) -> list[str]:
     ]
 
 
-async def _refuse_a_newcomer_whose_gate_did_not_tighten(paths: _ReadPaths) -> str:
+async def _refuse_a_newcomer_whose_gate_did_not_tighten(paths: ReadPaths) -> str:
     """*the-newcomer* — the widened gate, read from the newcomer's own side.
 
     ADR-0113 binds the **pairing**: while either side is inside its window the
@@ -973,10 +743,12 @@ async def _refuse_a_newcomer_whose_gate_did_not_tighten(paths: _ReadPaths) -> st
     a *for fun* search is the window and nothing else.
     """
 
-    settled = await _shortlist(
-        paths, THE_POPULATED_PLAYER, Sport.PADEL, SearchMode.FOR_FUN
+    settled = await run_a_shortlist(
+        paths, THE_POPULATED_PLAYER.email, Sport.PADEL, SearchMode.FOR_FUN
     )
-    new = await _shortlist(paths, THE_NEWCOMER, Sport.PADEL, SearchMode.FOR_FUN)
+    new = await run_a_shortlist(
+        paths, THE_NEWCOMER.email, Sport.PADEL, SearchMode.FOR_FUN
+    )
     code = GateCode.LEVEL.value
     theirs = new.counts.excluded_by_gate.get(code, 0)
     hers = settled.counts.excluded_by_gate.get(code, 0)
@@ -996,7 +768,7 @@ async def _refuse_a_newcomer_whose_gate_did_not_tighten(paths: _ReadPaths) -> st
 
 
 async def _refuse_a_second_sport_that_is_not_visibly_absent(
-    paths: _ReadPaths,
+    paths: ReadPaths,
 ) -> str:
     """*the-one-sport-player* — the second sport's absence, said out loud.
 
@@ -1007,8 +779,8 @@ async def _refuse_a_second_sport_that_is_not_visibly_absent(
     """
 
     try:
-        record = await _shortlist(
-            paths, THE_ONE_SPORT_PLAYER, Sport.TENNIS, SearchMode.COMPETITIVE
+        record = await run_a_shortlist(
+            paths, THE_ONE_SPORT_PLAYER.email, Sport.TENNIS, SearchMode.COMPETITIVE
         )
     except SportNotRated as refused:
         return (
@@ -1022,7 +794,7 @@ async def _refuse_a_second_sport_that_is_not_visibly_absent(
     )
 
 
-async def _refuse_a_blank_week_that_scored_a_nought(paths: _ReadPaths) -> str:
+async def _refuse_a_blank_week_that_scored_a_nought(paths: ReadPaths) -> str:
     """*the-blank-week-player* — the availability term stands down.
 
     A cleared week is *we do not know*, not *never free*: a nought would rank
@@ -1031,8 +803,8 @@ async def _refuse_a_blank_week_that_scored_a_nought(paths: _ReadPaths) -> str:
     withdrew. What the row must carry is a **degraded** term with a reason on it.
     """
 
-    record = await _shortlist(
-        paths, THE_BLANK_WEEK_PLAYER, Sport.PADEL, SearchMode.COMPETITIVE
+    record = await run_a_shortlist(
+        paths, THE_BLANK_WEEK_PLAYER.email, Sport.PADEL, SearchMode.COMPETITIVE
     )
     term = Term.AVAILABILITY_OVERLAP.value
     standing = [row for row in record.candidates if term not in row.degraded_terms]
@@ -1057,4 +829,530 @@ async def _refuse_a_blank_week_that_scored_a_nought(paths: _ReadPaths) -> str:
     return (
         f"blank week · {THE_BLANK_WEEK_PLAYER.slug}: {term} stood down on all "
         f"{len(record.candidates)} scored row(s), reasons {reasons}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# The eleven, read as the protagonist — the pairwise facts no cohort can assert
+# ---------------------------------------------------------------------------
+
+
+async def _the_eleven(
+    paths: ReadPaths,
+    pool: SearchRecord,
+    line_up: SearchRecord,
+    *,
+    pairs: SeededPairs,
+) -> list[str]:
+    """Every relationship claim, read off a surface rather than off the ledger.
+
+    **The pool is the one the battery already ran**, so a card's reason line and
+    the absence beside it are two readings of one answer. A second search would
+    be a second answer, and a claim about a card would be a claim about a card
+    nobody was shown.
+
+    Two of the claims are read off the deal this run made rather than off a fresh
+    one, and one insists on a fresh one — which is the whole of what
+    ``DEALT_MEMORY`` costs a fixture, said in code.
+    """
+
+    deck = pairs.the_deal_that_earned_the_pass
+    return [
+        _refuse_a_lift_with_no_witness(paths, pool),
+        await _refuse_a_mutual_that_is_in_neither_state(
+            paths, pool, deck, pairs=pairs
+        ),
+        await _refuse_an_outstanding_count_of_nothing(paths, pool),
+        _refuse_a_refusal_no_card_carries(paths, pool),
+        _refuse_an_absence_with_no_gate_behind_it(paths, pool, deck, line_up),
+        await _refuse_a_block_only_one_side_can_see(paths),
+        await _refuse_a_seat_that_is_not_hers_to_answer(paths),
+        await _refuse_a_pass_the_deck_still_deals(paths, pool, pairs=pairs),
+    ]
+
+
+def _card_for(
+    paths: ReadPaths, record: SearchRecord, relationship: Relationship
+) -> SearchCandidateRecord | None:
+    """That account's row **as the answer carried it**, or nothing.
+
+    ``returned`` and never ``candidates``, because every claim that reads a row
+    is a claim about a card somebody was shown — a near-miss row is recorded and
+    handed to nobody, and an origin key does not resolve against one either, so a
+    presence claim proved by a near miss would be proved by something no screen
+    can draw.
+    """
+
+    them = paths.player(relationship.account.email)
+    for row in record.returned:
+        if row.player_id == them:
+            return row
+    return None
+
+
+def _was_scored(
+    paths: ReadPaths, record: SearchRecord, relationship: Relationship
+) -> bool:
+    """Whether this search scored them at all — shown, or recorded as a near miss.
+
+    The **absence** claims ask this rather than :func:`_card_for`, and the
+    asymmetry is deliberate: absence is the stronger statement when it is read
+    over everything the search wrote down, because a gated candidate is not
+    scored at all while a candidate below the floor is.
+    """
+
+    them = paths.player(relationship.account.email)
+    return any(row.player_id == them for row in record.candidates)
+
+
+def _refuse_a_lift_with_no_witness(paths: ReadPaths, pool: SearchRecord) -> str:
+    """*``said-yes-to-you`` carries ``INTEREST_RECEIVED`` on her pool card.*
+
+    The only signal that can pull a candidate **through** ``QUALITY_FLOOR``, and
+    the only printable one whose input no generator can write down: a yes cites
+    the search that showed the person, and an origin key is refused unless that
+    search really showed them. So this is the one claim whose falsification is
+    also a statement about the platform — if it is missing, either the yes was
+    never written or the lift no longer reaches a card.
+    """
+
+    row = _card_for(paths, pool, SAID_YES_TO_YOU)
+    code = "INTEREST_RECEIVED"
+    if row is None or code not in row.liveness_reasons:
+        raise ScreenIsEmpty(
+            f"'{SAID_YES_TO_YOU.account.slug}' said *Let's play* to "
+            f"{PROTAGONIST.slug} and her padel pool "
+            + (
+                "does not carry them at all"
+                if row is None
+                else f"draws {sorted(row.liveness_reasons)} on their row"
+            )
+            + f", never {code}. That lift is the only one that admits a "
+            f"candidate below QUALITY_FLOOR, and it is the only printable "
+            f"signal a distribution cannot produce."
+        )
+    return (
+        f"interest · {SAID_YES_TO_YOU.account.slug} is in "
+        f"{PROTAGONIST.slug}'s padel pool carrying {code}, "
+        f"age {row.liveness_signals.get(code)} day(s)"
+    )
+
+
+async def _refuse_a_mutual_that_is_in_neither_state(
+    paths: ReadPaths, pool: SearchRecord, deck: SearchRecord, *, pairs: SeededPairs
+) -> str:
+    """*``your-yes-makes-it-mutual`` is in one of its two states, and no other.*
+
+    **A two-state machine, with everything else illegal.** Either a live inbound
+    yes with no open challenge — a deck card carrying *wants to play you* — or
+    the challenge that yes became, with that person gated off every surface. The
+    second state is a real assertion in its own right rather than a fixture
+    rotting: it is *gone for good* checked on a real read. So spending this
+    fixture **buys a check rather than breaking one**, and ``make seed`` stays
+    green through the ordinary use of the thing it seeds — which is the whole
+    point, because a target that goes red as a consequence of using it trains
+    people to ignore it.
+    """
+
+    them = paths.player(YOUR_YES_MAKES_IT_MUTUAL.account.email)
+    open_ones = await paths.history.open_challenges(paths.player(PROTAGONIST.email))
+    a_game_stands = any(row.counterpart_id == them for row in open_ones)
+    code = "INTEREST_RECEIVED"
+
+    if not a_game_stands and pairs.the_deck_was_already_spent:
+        # **Still asserted, on the other surface the yes has.** A deck this run
+        # could not deal is not a licence to assert nothing — state one is *a
+        # live inbound yes with no open challenge*, and the sender's own
+        # outgoing list is the screen that says the yes is still live.
+        theirs = await paths.read_interest.execute(
+            ReadInterestCommand(player_id=them)
+        )
+        alive = [
+            row
+            for row in theirs.outgoing + theirs.mutual
+            if row.to_player_id == paths.player(PROTAGONIST.email)
+            and row.sport is Sport.PADEL
+        ]
+        if not alive:
+            raise ScreenIsEmpty(
+                f"'{YOUR_YES_MAKES_IT_MUTUAL.account.slug}' is in neither state: "
+                f"no game stands with {PROTAGONIST.slug} and their own outgoing "
+                f"list carries no live yes to her. The fixture is a two-state "
+                f"machine and everything else is illegal — a yes that lapsed is "
+                f"a database whose age gate has walked past it."
+            )
+        return (
+            f"mutual · {YOUR_YES_MAKES_IT_MUTUAL.account.slug}'s yes stands "
+            f"until {alive[0].expires_at:%Y-%m-%d} and no game has been opened "
+            f"on it. The deck card itself was **not read**: this run's deal "
+            f"found a deck an earlier one had spent."
+        )
+    if not a_game_stands:
+        row = _card_for(paths, deck, YOUR_YES_MAKES_IT_MUTUAL)
+        if row is None or code not in row.liveness_reasons:
+            raise ScreenIsEmpty(
+                f"'{YOUR_YES_MAKES_IT_MUTUAL.account.slug}' has a live yes to "
+                f"{PROTAGONIST.slug}, no game stands between them, and her deal "
+                f"of {deck.counts.n_returned} card(s) "
+                + (
+                    "never dealt them"
+                    if row is None
+                    else f"drew {sorted(row.liveness_reasons)} on their card"
+                )
+                + ". *Wants to play you* is that card's whole subject, and this "
+                "is the only pair on the fixture whose yes back opens a game "
+                "the same instant."
+            )
+        return (
+            f"mutual · {YOUR_YES_MAKES_IT_MUTUAL.account.slug} is on "
+            f"{PROTAGONIST.slug}'s deck carrying {code}; saying yes back opens a "
+            f"game inline"
+        )
+
+    if _was_scored(paths, pool, YOUR_YES_MAKES_IT_MUTUAL):
+        raise ScreenIsEmpty(
+            f"'{YOUR_YES_MAKES_IT_MUTUAL.account.slug}' has an open game with "
+            f"{PROTAGONIST.slug} and is still scored into her padel pool. A "
+            f"challenge born of a mutual yes gates the pair off every surface, "
+            f"and *gone for good* is what the second state of this fixture "
+            f"exists to check."
+        )
+    return (
+        f"mutual · the fixture is spent: a game stands between "
+        f"{PROTAGONIST.slug} and {YOUR_YES_MAKES_IT_MUTUAL.account.slug}, and "
+        f"they are gone from her pool. Seed a fresh database to run the flow "
+        f"again."
+    )
+
+
+async def _refuse_an_outstanding_count_of_nothing(
+    paths: ReadPaths, pool: SearchRecord
+) -> str:
+    """*``you-said-yes-to-them`` is outstanding, and a repeat tap creates nothing.*
+
+    The repeat tap is made **here, for real**, citing the pool the battery just
+    ran: a yes is idempotent on the pair, so a second tap returns the first
+    unchanged, does not re-date the expiry and does not spend a cap slot. That is
+    a property of the use case and this is the only place the fixture can watch
+    it happen without a second account to spend.
+    """
+
+    her = paths.player(PROTAGONIST.email)
+    them = paths.player(YOU_SAID_YES_TO_THEM.account.email)
+    summary = await paths.read_interest.execute(ReadInterestCommand(player_id=her))
+    standing = [row for row in summary.outgoing if row.to_player_id == them]
+    if not standing:
+        raise ScreenIsEmpty(
+            f"{PROTAGONIST.slug} said *Let's play* to "
+            f"'{YOU_SAID_YES_TO_THEM.account.slug}' and her own outgoing list "
+            f"does not carry it. That list is the surface the outstanding count "
+            f"and the cap are both read against."
+        )
+    outstanding = [
+        count for count in summary.outstanding if count.sport is Sport.PADEL
+    ]
+    if not outstanding or outstanding[0].outstanding < 1:
+        raise ScreenIsEmpty(
+            f"{PROTAGONIST.slug}'s padel outstanding count is "
+            f"{outstanding[0].outstanding if outstanding else 'absent'} with a "
+            f"yes standing. The count is what a cap the player cannot see is "
+            f"shown through."
+        )
+
+    if _card_for(paths, pool, YOU_SAID_YES_TO_THEM) is None:
+        raise ScreenIsEmpty(
+            f"'{YOU_SAID_YES_TO_THEM.account.slug}' is not in "
+            f"{PROTAGONIST.slug}'s padel pool, so the repeat tap has no search "
+            f"to cite. A yes she has already sent gates nobody: an outgoing yes "
+            f"holds somebody out of her **deck** and never out of her pool."
+        )
+    again = await paths.interest.execute(
+        ExpressInterestCommand(
+            from_player_id=her,
+            to_player_id=them,
+            sport=Sport.PADEL,
+            search_id=pool.id,
+        )
+    )
+    if again.created or again.interest.expires_at != standing[0].expires_at:
+        raise ScreenIsEmpty(
+            f"a second *Let's play* from {PROTAGONIST.slug} to "
+            f"'{YOU_SAID_YES_TO_THEM.account.slug}' answered created="
+            f"{again.created} and an expiry of {again.interest.expires_at}, "
+            f"where the standing yes expires {standing[0].expires_at}. A repeat "
+            f"tap says *nothing changed* rather than *nothing happened*: the yes "
+            f"stands with the expiry it was born with, and it spends no cap slot."
+        )
+    return (
+        f"outstanding · {PROTAGONIST.slug} holds "
+        f"{outstanding[0].outstanding} of {outstanding[0].cap} padel yes(es), "
+        f"and a repeat tap on {YOU_SAID_YES_TO_THEM.account.slug} answered "
+        f"created={again.created}"
+    )
+
+
+def _refuse_a_refusal_no_card_carries(
+    paths: ReadPaths, pool: SearchRecord
+) -> str:
+    """*``they-turned-down-your-court`` is in the pool, carrying the refusal.*
+
+    A declined seat reopens and that person returns to the deck immediately, so
+    this is the one pairwise answer a card can carry at all — the accept's
+    counterpart is permanently gated and is narrowed out by name in
+    ``CANNOT_BE_DRAWN``. ``PREVIOUS_DECLINE`` is a **silent** signal, so the claim
+    is read off the row's recorded raw input rather than off a reason line: what
+    is asserted is that the matcher saw the refusal, which is what a silent
+    signal owes anybody.
+    """
+
+    row = _card_for(paths, pool, THEY_TURNED_DOWN_YOUR_COURT)
+    code = "PREVIOUS_DECLINE"
+    if row is None:
+        raise ScreenIsEmpty(
+            f"'{THEY_TURNED_DOWN_YOUR_COURT.account.slug}' declined "
+            f"{PROTAGONIST.slug}'s court and is not in her padel pool. A "
+            f"declined seat reopens and ends a court nobody else was in, so the "
+            f"pair is released the same instant — an absence here is the pair "
+            f"rule refusing to let go."
+        )
+    if not row.liveness_signals.get(code):
+        raise ScreenIsEmpty(
+            f"'{THEY_TURNED_DOWN_YOUR_COURT.account.slug}' is in "
+            f"{PROTAGONIST.slug}'s padel pool and their row records "
+            f"{code}={row.liveness_signals.get(code)!r}. "
+            f"The refusal is on the pair and the matcher reads it off "
+            f"`pairwise_counterparts`, so a false here is the one outward demand "
+            f"`challenges` signs having stopped answering."
+        )
+    return (
+        f"decline · {THEY_TURNED_DOWN_YOUR_COURT.account.slug} is back in "
+        f"{PROTAGONIST.slug}'s padel pool with {code} recorded on the row"
+    )
+
+
+def _refuse_an_absence_with_no_gate_behind_it(
+    paths: ReadPaths, pool: SearchRecord, deck: SearchRecord, line_up: SearchRecord
+) -> str:
+    """*The absent are absent from every surface, for the reason they are named for.*
+
+    **The claim is the gate histogram, not the absence**, and the refinement is
+    load-bearing: an account gated for an accidental reason is absent, and a
+    naive absence claim passes. The histogram is counted first-in-declaration
+    order — ``BLOCKED`` first, ``NOT_RATED`` third, ``OPEN_CHALLENGE`` fifth — so
+    a count against a code names the reason exactly, and it cannot be non-zero
+    unless a rated, in-range, gender-satisfied candidate was excluded for it.
+
+    **Three surfaces are read and the fourth is the third one over.** A block is
+    recorded against one of four — shortlist, deck, line-up, filling seats — and
+    every one of those has to be empty of these accounts; the records for the
+    first three are the ones this run has already produced, and *filling seats*
+    is the line-up use case one locked argument apart, sharing its gates by
+    construction (``SearchRecord.is_a_line_up`` covers both). The histogram is
+    asserted on the pool alone because that is the search the counts are named
+    against, and the other two are read for the absence itself.
+    """
+
+    surfaces = (("pool", pool), ("deck", deck), ("line-up", line_up))
+    reported: list[str] = []
+    for code, named in (
+        (GateCode.OPEN_CHALLENGE, ABSENT_ON_THE_OPEN_CHALLENGE_GATE),
+        (GateCode.BLOCKED, ABSENT_ON_THE_BLOCKED_GATE),
+    ):
+        for surface, record in surfaces:
+            present = sorted(
+                relationship.account.slug
+                for relationship in named
+                if _was_scored(paths, record, relationship)
+            )
+            if present:
+                raise ScreenIsEmpty(
+                    f"{present} should be absent from {PROTAGONIST.slug}'s padel "
+                    f"{surface} on the {code.value} gate and was scored into it."
+                )
+        counted = pool.counts.excluded_by_gate.get(code.value, 0)
+        if counted < len(named):
+            raise ScreenIsEmpty(
+                f"{len(named)} account(s) are named for the {code.value} gate "
+                f"and it excluded {counted} candidate(s) from "
+                f"{PROTAGONIST.slug}'s padel pool. An absence is not the claim: "
+                f"an account gated for an accidental reason — no rating, out of "
+                f"range, the wrong gender preference — is absent too, and the "
+                f"histogram is the only thing that tells the two apart. "
+                f"Gates: {dict(sorted(pool.counts.excluded_by_gate.items()))}."
+            )
+        reported.append(f"{code.value} {counted}")
+    return (
+        "absences · "
+        + ", ".join(reported)
+        + " on the pool's gate histogram, and nobody named is scored into her "
+        "pool, her deck or her line-up"
+    )
+
+
+async def _refuse_a_block_only_one_side_can_see(paths: ReadPaths) -> str:
+    """*``they-blocked-you`` cannot see her either.*
+
+    The only fixture for a **symmetric effect read off a directed record**, and
+    it is unobservable from her side by construction — indistinguishable from
+    somebody simply out of range. So it is checked by reading a screen as
+    *them*, which is the concrete form of why these are accounts and not rows in
+    an edge table.
+    """
+
+    record = await run_a_shortlist(
+        paths, THEY_BLOCKED_YOU.account.email, Sport.PADEL, SearchMode.COMPETITIVE
+    )
+    her = paths.player(PROTAGONIST.email)
+    if any(row.player_id == her for row in record.candidates):
+        raise ScreenIsEmpty(
+            f"'{THEY_BLOCKED_YOU.account.slug}' blocked {PROTAGONIST.slug} and "
+            f"her row is in their own padel pool. ADR-0095's effect is "
+            f"symmetric from a record that is not."
+        )
+    counted = record.counts.excluded_by_gate.get(GateCode.BLOCKED.value, 0)
+    if counted < 1:
+        raise ScreenIsEmpty(
+            f"'{THEY_BLOCKED_YOU.account.slug}' blocked {PROTAGONIST.slug} and "
+            f"their own search excluded nobody on the {GateCode.BLOCKED.value} "
+            f"gate. She is absent from it, which on its own is what being out of "
+            f"range looks like. "
+            f"Gates: {dict(sorted(record.counts.excluded_by_gate.items()))}."
+        )
+    return (
+        f"block · {THEY_BLOCKED_YOU.account.slug}'s own padel pool excluded "
+        f"{counted} on {GateCode.BLOCKED.value}, and {PROTAGONIST.slug} is not "
+        f"in it"
+    )
+
+
+async def _refuse_a_seat_that_is_not_hers_to_answer(paths: ReadPaths) -> str:
+    """*The inbound court is hers to answer, and both co-invitees are on it.*
+
+    The one screen a doubles send exists for: a seat with a side, a window
+    counting down, and a line-up that is hers. The two co-invitees differ by seat
+    state on purpose, so the court draws a filled seat and an unanswered one side
+    by side — and only a fixture can prove that two screens differ.
+    """
+
+    her = paths.player(PROTAGONIST.email)
+    organiser = paths.player(THEY_CHALLENGED_YOU.account.email)
+    standing = await paths.read_challenges.execute(
+        ReadChallengesCommand(reader_id=her)
+    )
+    courts = [
+        row
+        for row in standing
+        if row.challenge.organiser_id == organiser and row.standing not in ENDED
+    ]
+    if not courts:
+        raise ScreenIsEmpty(
+            f"'{THEY_CHALLENGED_YOU.account.slug}' sent {PROTAGONIST.slug} a "
+            f"court and her own list carries no open one from them, across "
+            f"{len(standing)} challenge(s). A seat's window is twenty-four hours "
+            f"and nothing here backdates one, so a court seeded yesterday has "
+            f"lapsed — seed again."
+        )
+    court = courts[0].challenge
+    hers = court.seat_of(her)
+    if hers is None or not hers.is_awaiting():
+        raise ScreenIsEmpty(
+            f"{PROTAGONIST.slug}'s seat on challenge {court.id} reads "
+            f"{hers and hers.answer}. The claim is a seat that is **hers to "
+            f"answer**, with its own day running."
+        )
+    seats = {
+        relationship.account.slug: court.seat_of(
+            paths.player(relationship.account.email)
+        )
+        for relationship in (
+            IN_YOUR_LINE_UP_AND_ACCEPTED,
+            IN_YOUR_LINE_UP_STILL_DECIDING,
+        )
+    }
+    filled = seats[IN_YOUR_LINE_UP_AND_ACCEPTED.account.slug]
+    deciding = seats[IN_YOUR_LINE_UP_STILL_DECIDING.account.slug]
+    if filled is None or filled.answer is not SeatAnswer.ACCEPTED:
+        raise ScreenIsEmpty(
+            f"'{IN_YOUR_LINE_UP_AND_ACCEPTED.account.slug}' holds "
+            f"{filled and filled.answer} on challenge {court.id} and is named "
+            f"for a filled seat."
+        )
+    if deciding is None or not deciding.is_awaiting():
+        raise ScreenIsEmpty(
+            f"'{IN_YOUR_LINE_UP_STILL_DECIDING.account.slug}' holds "
+            f"{deciding and deciding.answer} on challenge {court.id} and is "
+            f"named for a seat nobody has answered. The two exist to differ."
+        )
+    return (
+        f"court · challenge {court.id} from "
+        f"{THEY_CHALLENGED_YOU.account.slug} reads {courts[0].standing.value}: "
+        f"{PROTAGONIST.slug} on side {hers.side.value} answering by "
+        f"{hers.answer_by:%Y-%m-%d %H:%M}, one seat accepted and one still out"
+    )
+
+
+async def _refuse_a_pass_the_deck_still_deals(
+    paths: ReadPaths, pool: SearchRecord, *, pairs: SeededPairs
+) -> str:
+    """*``you-passed-them`` is gone from the deck and a full candidate in the pool.*
+
+    A two-surface asymmetry that reads as a bug to anybody meeting it cold: a
+    pass is *a statement about my deck* and never about the person, so ADR-0128
+    keeps the suppression off the search entirely.
+
+    **This deal is a fresh one and it has to be**, because the deal that earned
+    the pass's origin key was dealt before the pass existed. It also costs: every
+    card of that first deal is spent for a day, so what this one asserts about
+    the gate is ``n_excluded_by_suppression`` — people in range under a **live**
+    pass, counted whether or not the deal had already spent them.
+
+    **And the gate half is asserted only where the cache answers.** The
+    suppression ledger fails soft, so an unreachable Redis says *nobody* and a
+    lapsed window says *nobody*; the run probes the store when it writes the
+    suppression, and where the probe came back empty this reports the cache
+    rather than accusing the fixture — which is the failure a named catalog
+    exists to avoid. The pool half is asserted either way, because it is a fact
+    about a durable row.
+    """
+
+    them = paths.player(YOU_PASSED_THEM.account.email)
+    if _card_for(paths, pool, YOU_PASSED_THEM) is None:
+        raise ScreenIsEmpty(
+            f"'{YOU_PASSED_THEM.account.slug}' was passed on and is missing from "
+            f"{PROTAGONIST.slug}'s padel pool. A pass is a statement about her "
+            f"deck and about nothing else: *pass on somebody tonight, find them "
+            f"third in your shortlist tomorrow* is the named cost, and a "
+            f"suppression that reached the search would have taken it back."
+        )
+    if not pairs.the_suppression_reads_back:
+        return (
+            f"pass · {YOU_PASSED_THEM.account.slug} is a candidate in "
+            f"{PROTAGONIST.slug}'s pool, and the deck half was **not read**: the "
+            f"suppression this run wrote does not read back, so the store is "
+            f"unreachable. That is the cache and not the fixture — bring Redis "
+            f"up and seed again."
+        )
+
+    answer = await deal_a_deck(paths, PROTAGONIST.email, Sport.PADEL)
+    record = answer.record
+    if them in returned_ids(record):
+        raise ScreenIsEmpty(
+            f"{PROTAGONIST.slug} passed on '{YOU_PASSED_THEM.account.slug}', the "
+            f"suppression reads back, and her next deal dealt them anyway. The "
+            f"gate is that cache and the row that proves the pass never expires, "
+            f"so the deck is no longer reading the one from the other."
+        )
+    if (record.n_excluded_by_suppression or 0) < 1:
+        raise ScreenIsEmpty(
+            f"{PROTAGONIST.slug}'s deal found nobody in range under a live "
+            f"suppression, over a pool of {record.counts.n_generated}, though "
+            f"the store answers for '{YOU_PASSED_THEM.account.slug}'. They are "
+            f"absent from the deal either way — a card already dealt today is "
+            f"held out too — so without this count the claim would be proved by "
+            f"the wrong exclusion."
+        )
+    return (
+        f"pass · {YOU_PASSED_THEM.account.slug} is gone from "
+        f"{PROTAGONIST.slug}'s deck ({record.n_excluded_by_suppression} in range "
+        f"under a live suppression) and still a candidate in her pool"
     )

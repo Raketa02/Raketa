@@ -59,6 +59,7 @@ from app.seeds.cohort import (
     as_document,
     generate,
 )
+from app.seeds.pairs import write_the_relationships
 from app.seeds.runner import (
     COHORT_DISCLAIMER,
     SeedFailed,
@@ -394,7 +395,19 @@ async def a_seeded_world(session_factory):
         members = await seed_the_cohort(
             session, clock=FixedClock(at=now), settings=settings
         )
-    return {"accounts": accounts, "members": members, "now": now}
+    # **The relationships are part of the world and not a layer above it.** Five
+    # of the ten `LivenessSignal` codes are facts about a pair, so a world seeded
+    # without them is one where the assertions below would be reading a fixture
+    # nobody could have produced.
+    pairs = await write_the_relationships(
+        session_factory, settings=settings, now=now
+    )
+    return {
+        "accounts": accounts,
+        "members": members,
+        "now": now,
+        "pairs": pairs,
+    }
 
 
 async def test_the_cohort_reaches_every_screen_it_promises(
@@ -410,12 +423,14 @@ async def test_the_cohort_reaches_every_screen_it_promises(
     """
 
     lines = await assert_the_screens(
-        session_factory, settings=get_settings(), now=a_seeded_world["now"]
+        session_factory,
+        settings=get_settings(),
+        now=a_seeded_world["now"],
+        pairs=a_seeded_world["pairs"],
     )
     text = "\n".join(lines)
 
     for surface in (
-        "interest ·",
         "pool ·",
         "gender gate ·",
         "newcomer window ·",
@@ -424,6 +439,13 @@ async def test_the_cohort_reaches_every_screen_it_promises(
         "court ·",
         "ladder ·",
         "proposals opt-out ·",
+        "interest ·",
+        "mutual ·",
+        "outstanding ·",
+        "decline ·",
+        "absences ·",
+        "block ·",
+        "pass ·",
         "newcomer gate ·",
         "one sport ·",
         "blank week ·",

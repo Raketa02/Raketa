@@ -66,6 +66,7 @@ from app.seeds.catalog import (
     RatingClaim,
     SeedAccount,
 )
+from app.seeds.relationships import RELATIONSHIP_ACCOUNTS
 from app.seeds.runner import (
     SeededAccount,
     SeededScenario,
@@ -89,7 +90,15 @@ RFC2606_RESERVED_TLDS = frozenset({".test", ".example", ".invalid", ".localhost"
 #: The contexts the seed path **writes an aggregate in**. Clubs, Courts,
 #: Bookings and Matches are named in the glossary and modeled nowhere, so a seed
 #: for one of them would have to invent the aggregate first.
-WRITTEN_CONTEXTS = frozenset({"users", "rating", "player_profile"})
+#:
+#: `challenges` and `blocks` joined on the day the relationship layer landed, and
+#: they joined as *writes through their own use cases*: five of the ten
+#: `LivenessSignal` codes are facts about a pair, no distribution can exhibit
+#: one, and a court and a block are the only shapes two of them come in. Both are
+#: modeled — which is the whole of what this rule asks.
+WRITTEN_CONTEXTS = frozenset(
+    {"users", "rating", "player_profile", "challenges", "blocks"}
+)
 
 #: The contexts the seed path only **exercises**, through their own use cases.
 #: The assertions run real searches, deal real decks and compose real line-ups,
@@ -97,20 +106,21 @@ WRITTEN_CONTEXTS = frozenset({"users", "rating", "player_profile"})
 #: an interest row — which is not the same act as seeding an aggregate.
 EXERCISED_CONTEXTS = frozenset({"matchmaking"})
 
-#: The repository builders the seed path may take from the composition root.
-#: Written out by name, because a builder is how an aggregate is written and the
-#: **name** is the only place the context appears: importing
-#: `build_challenge_repository` would be the seed acquiring a write it has no
-#: argument for, and nothing else in this file would notice.
-AGGREGATE_WRITERS = frozenset(
-    {
-        "build_user_repository",
-        "build_assessment_repository",
-        "build_skill_rating_repository",
-        "build_player_profile_repository",
-        "build_play_intent_declaration_repository",
-    }
-)
+#: The repository builders the seed path may take from the composition root, and
+#: the context each of them writes an aggregate in. Written out by name, because
+#: a builder is how an aggregate is written and the **name** is often the only
+#: place the context appears — a use case takes its repository from here and
+#: never imports the port, so a builder nobody listed is a write nothing in this
+#: file would notice.
+AGGREGATE_WRITERS = {
+    "build_user_repository": "users",
+    "build_assessment_repository": "rating",
+    "build_skill_rating_repository": "rating",
+    "build_player_profile_repository": "player_profile",
+    "build_play_intent_declaration_repository": "player_profile",
+    "build_challenge_repository": "challenges",
+    "build_block_repository": "blocks",
+}
 
 #: The two infrastructure modules the seed path may import, and neither is an
 #: adapter: both are the **process's own connection**, which is the same
@@ -200,6 +210,9 @@ def test_the_walk_has_something_to_walk():
         "clock.py",
         "cohort.py",
         "guard.py",
+        "pairs.py",
+        "paths.py",
+        "relationships.py",
         "runner.py",
         "screens.py",
     }
@@ -231,7 +244,7 @@ def test_no_seed_module_writes_through_a_session(path):
     assert not offending, f"{path.name} calls {sorted(offending)}"
 
 
-def test_the_seed_path_writes_three_contexts_and_only_reads_the_rest():
+def test_the_seed_path_writes_five_contexts_and_only_reads_the_rest():
     """*No aggregate is invented for a context that is not yet modeled*, stated
     as **writes against reads** rather than as imports.
 
@@ -267,19 +280,21 @@ def test_the_seed_path_writes_three_contexts_and_only_reads_the_rest():
         (module, name) for path in SEED_MODULES for module, name in imported(path)
     ]
 
-    written = {
-        module.split(".")[2]
-        for module, name in imports
-        if module.startswith("app.modules.") and name.endswith("Repository")
-    }
-    assert written == WRITTEN_CONTEXTS
-
     builders = {
         name
         for module, name in imports
         if module == "app.bootstrap.composition" and name.endswith("_repository")
     }
-    assert builders <= AGGREGATE_WRITERS, sorted(builders - AGGREGATE_WRITERS)
+    assert builders <= set(AGGREGATE_WRITERS), sorted(
+        builders - set(AGGREGATE_WRITERS)
+    )
+
+    written = {
+        module.split(".")[2]
+        for module, name in imports
+        if module.startswith("app.modules.") and name.endswith("Repository")
+    } | {AGGREGATE_WRITERS[name] for name in builders}
+    assert written == WRITTEN_CONTEXTS
 
     contexts = {
         module.split(".")[2]
@@ -575,10 +590,17 @@ async def _streams(session) -> dict[str, int]:
     return {aggregate: count for aggregate, count in rows.all()}
 
 
+#: Every account the catalog walk writes: the states, the four protagonists and
+#: the eleven relationships. Written as one tuple here for the reason the runner
+#: walks one — an assertion counted over half of them goes green on the day the
+#: other half stops being seeded.
+SEEDED_ACCOUNTS = ACCOUNTS + RELATIONSHIP_ACCOUNTS
+
+
 def _rated_scenarios() -> list[tuple[SeedAccount, RatedRun]]:
     return [
         (account, scenario)
-        for account in ACCOUNTS
+        for account in SEEDED_ACCOUNTS
         for scenario in account.scenarios
         if isinstance(scenario, RatedRun)
     ]
@@ -596,10 +618,10 @@ async def test_seeding_writes_an_event_stream_for_every_aggregate(session_factor
         seeded = await seed(session)
         streams = await _streams(session)
 
-    assert len(seeded) == len(ACCOUNTS)
-    assert streams.get("user", 0) == len(ACCOUNTS)
+    assert len(seeded) == len(SEEDED_ACCOUNTS)
+    assert streams.get("user", 0) == len(SEEDED_ACCOUNTS)
     assert streams.get("assessment", 0) >= sum(
-        len(account.scenarios) for account in ACCOUNTS
+        len(account.scenarios) for account in SEEDED_ACCOUNTS
     )
     assert streams.get("skill_rating", 0) == len(_rated_scenarios())
 
@@ -639,7 +661,7 @@ async def _stored_ratings(session):
     )
 
     found = {}
-    for account in ACCOUNTS:
+    for account in SEEDED_ACCOUNTS:
         user = await users.get_by_email(account.email)
         assert user is not None
         for rating in await ratings.find_all_for(player_id=user.id):

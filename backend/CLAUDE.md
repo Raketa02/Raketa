@@ -132,10 +132,30 @@ Rules to preserve:
   fails **by name with the age in days**. The run injects a `Clock` — a port, so ADR-0029
   is honoured rather than bent — and **ticks the candidate index's tail in-process** before
   reading, which ADR-0110 makes safe rather than exempt. Half the gate is a signature: the
-  assertions need a database and do not run in CI. Seed only what is **modeled**: Players,
-  onboarding assessments, Skill ratings and Player profiles have aggregates; nothing else
-  does, so nothing else gets a scenario, and the fence is expressed as **writes against
-  reads** rather than as imports.
+  assertions need a database and do not run in CI. Seed only what is **modeled**, and the
+  fence is expressed as **writes against reads** rather than as imports — it is the layer
+  below that widened it from three written contexts to five.
+- **A distribution cannot assert a pair, so eleven accounts are named for one**
+  (`app/seeds/relationships.py`, `app/seeds/pairs.py`, `app/seeds/paths.py`). Five of the
+  ten `LivenessSignal` codes are facts about **two people** — *they said yes to you*, *they
+  turned your court down*, *their inbox is full* — and no cohort, however well shaped, can
+  exhibit one; a rate cannot assert that **exactly one** instant-match pair exists. So the
+  cohort keeps the six that are properties of one person and this layer signs the pairwise
+  five, each account named for the relationship from the protagonist's side.
+  **Every edge costs a real search or deal run as the sender** — `Interest` and `Pass` have
+  no non-search constructor, a send cites the search its court was built on — and that cost
+  is the check: an origin that resolves proves the protagonist was genuinely findable
+  through gender, level and radius before any lift is claimed. **`PREVIOUS_ACCEPT` is
+  narrowed out by name**: `SeatAccepted → ACCEPTED`, nothing ends a game without `matches`,
+  so that pair is permanently `OPEN_CHALLENGE`-gated and the code is contracted by a demand
+  in `tests/demands/` rather than fixtured. **Absence claims assert the gate histogram**,
+  not the absence, because an account gated for an accidental reason is absent too and a
+  naive claim passes. Two costs are **printed on the report** rather than hidden: the
+  pass's suppression is a Redis TTL that fails soft while its row never expires — so the
+  run is idempotent for the row and unconditional for the cache, and the complaint names
+  the **cache** — and the deal that earned the pass's origin key leaves the protagonist's
+  deck a day short (ADR-0131). This is the only place the seed writes `challenges` and
+  `blocks`, and it writes them through their own use cases like everything else.
 - **Photo bytes live behind `PhotoStorage`, and the re-encode behind
   `ImageTranscoder`** ([ADR-0091](../docs/adr/0091-photo-storage-behind-a-port.md)).
   One S3-compatible adapter serves MinIO locally and S3 deployed — same class, different

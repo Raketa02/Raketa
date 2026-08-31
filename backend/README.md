@@ -423,7 +423,7 @@ breaks on it.
 The password for every seeded account is `raketa-seed1`, and it is public by
 construction — it is written in `app/seeds/catalog.py`.
 
-Behind those eleven named addresses is the **cohort**: a population of `cohort-<ring>-<nn>`
+Behind those eleven state-named addresses is the **cohort**: a population of `cohort-<ring>-<nn>`
 members, generated from a seed and committed as `app/seeds/cohort.json`. It exists because
 one search over eleven accounts finds them all in one ring, and every Play screen would be
 developed against an empty result.
@@ -447,11 +447,56 @@ Regenerate the population with `make gen-cohort` and commit the result. It recor
 **inputs only** — no level, no uncertainty, no band, because those are the engine's answers
 and a committed copy of an answer is a second number nothing keeps honest.
 
-Scope is what is **modeled**: players, onboarding assessments, Skill ratings and Player
-profiles. Clubs, Courts, Bookings and Matches have no aggregates, so they have no
-scenarios; each adds its own when it exists. A walk over `app/seeds/` asserts the package
-**writes** those four contexts and reaches every other one — matchmaking, today — only
-through that context's own use cases.
+Behind the cohort is a third layer, and it exists because **a distribution cannot assert a
+pair**. Five of the ten Liveness codes a card can print are facts about two people — *they
+said yes to you*, *they turned your court down*, *their inbox is full* — and no population,
+however well shaped, can exhibit one: a rate over sixty members produces edges nobody
+named, and it cannot assert that *exactly one* instant-match pair exists. So eleven
+accounts are named for a **relationship to `the-populated-player`**, from her side, and
+`app/seeds/pairs.py` writes each edge through the use case that owns it.
+
+| Address | Relationship, and what it makes true |
+| --- | --- |
+| `said-yes-to-you@raketa.example` | A live inbound *Let's play* — her pool card carries `INTEREST_RECEIVED`, the only lift that admits below `QUALITY_FLOOR` |
+| `your-yes-makes-it-mutual@raketa.example` | A second live yes, on her **deck** — say yes back and a game opens inline. The one instant match this database can produce |
+| `you-said-yes-to-them@raketa.example` | Her own outgoing yes — the outstanding-per-sport count, and a repeat tap that changes nothing |
+| `you-challenged-them@raketa.example` | An open **tennis** singles challenge, so they are missing from her **padel** pool — one open challenge per pair, across sports |
+| `they-challenged-you@raketa.example` | Organiser of a padel doubles court she holds a seat on, with its own day running |
+| `in-your-line-up-and-accepted@raketa.example` | A co-invitee on that court who said yes — a filled seat, and gone from every one of her surfaces |
+| `in-your-line-up-still-deciding@raketa.example` | The other co-invitee, who has answered nothing — an unanswered seat beside the filled one |
+| `they-turned-down-your-court@raketa.example` | Declined a seat on a court she organised; it ended with the seat, so they are back in her pool carrying the refusal |
+| `you-blocked-them@raketa.example` | Blocked by her — absent from all four surfaces, silently |
+| `they-blocked-you@raketa.example` | Blocked **her** — the same absence and a different fact, and it is checkable only by signing in as them |
+| `you-passed-them@raketa.example` | Passed on — gone from her deck and a full candidate in her pool |
+
+Three rules shape that layer, and each is a way a relationship fixture goes wrong:
+
+- **Every edge costs a real search or deal run as the sender**, because `Interest` and
+  `Pass` have no non-search constructor and a send cites the search its court was built on.
+  That cost is turned into the check: the origin must resolve, which proves the protagonist
+  was genuinely findable through gender, level and radius before any lift is claimed.
+- **An absence claim asserts the gate histogram, not the absence.** An account gated for an
+  accidental reason — no rating, out of range, the wrong gender preference — is absent too,
+  and a naive claim passes; the histogram is counted first-in-declaration order, so
+  `excluded_by_gate[OPEN_CHALLENGE] >= 4` names the reason exactly.
+- **One code cannot be reached at all.** An accepted seat keeps a challenge open and
+  nothing ends a game without `matches`, so `PREVIOUS_ACCEPT` is permanently gated out of
+  every card. It is listed as unreachable **by name**, with the reason, and contracted by a
+  demand in `tests/demands/` rather than by a fixture — and the run goes red on the day it
+  *is* drawn, which is how it moves back to the promised side.
+
+Two costs are printed on the report rather than hidden. The pass's suppression is a Redis
+TTL that **fails soft** while its durable row never expires, so the run is idempotent for
+the row and unconditional for the cache — and when a deck deals somebody it should not, the
+complaint names the cache rather than accusing the fixture. And the deal that earned the
+pass's origin key is remembered for a day (ADR-0131), so `make seed` leaves the
+protagonist's deck that many cards short.
+
+Scope is what is **modeled**: players, onboarding assessments, Skill ratings, Player
+profiles, Challenges and Blocks. Clubs, Courts, Bookings and Matches have no aggregates, so they
+have no scenarios; each adds its own when it exists. A walk over `app/seeds/` asserts the
+package **writes** those six contexts and reaches every other one — matchmaking, today —
+only through that context's own use cases.
 
 Six rules hold this together, and each exists because of a specific way seed data goes
 wrong:

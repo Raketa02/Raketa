@@ -37,6 +37,7 @@ from __future__ import annotations
 
 import random
 from dataclasses import dataclass
+from typing import Sequence
 from uuid import UUID
 
 from app.engines.assessment import Question
@@ -733,33 +734,59 @@ def _refuse_an_impossible_catalog() -> None:
             f"TLD, which cannot be registered. '{SEED_EMAIL_DOMAIN}' can be."
         )
 
-    seen: set[str] = set()
+    refuse_two_accounts_at_one_name(ACCOUNTS)
     for account in ACCOUNTS:
-        Email(account.email)
-        Nickname(account.nickname)
+        refuse_an_impossible_account(account)
+
+
+def refuse_two_accounts_at_one_name(accounts: Sequence[SeedAccount]) -> None:
+    """No two of these are the same person. **Asked across every list at once.**
+
+    Public, and taking the accounts rather than reading ``ACCOUNTS``, because the
+    catalog is no longer the only list the runner walks: the eleven relationships
+    are seeded through the same registration, so a slug shared *between* the two
+    lists is a collision this file could not see and the run would meet half way
+    through, at the second registration for one address.
+    """
+
+    seen: set[str] = set()
+    for account in accounts:
         if account.slug in seen:
             raise RuntimeError(f"two seed accounts are named '{account.slug}'")
         seen.add(account.slug)
 
-        sports: set[Sport] = set()
-        rated: set[Sport] = set()
-        for scenario in account.scenarios:
-            if scenario.sport in sports:
-                raise RuntimeError(
-                    f"'{account.slug}' has two scenarios for "
-                    f"{scenario.sport.value}: one sport is one state."
-                )
-            sports.add(scenario.sport)
-            if isinstance(scenario, RatedRun):
-                rated.add(scenario.sport)
-                _refuse_an_impossible_policy(account, scenario)
-        if account.profile is not None:
-            # **The rated sports and not merely the ones with a scenario.** An
-            # open run and an abandoned one are sports this account has no
-            # rating in, and every Play surface refuses an unrated sport — so a
-            # declaration against one would name a screen the account cannot
-            # reach, which is exactly what the check below is for.
-            _refuse_an_impossible_profile(account, account.profile, rated=rated)
+
+def refuse_an_impossible_account(account: SeedAccount) -> None:
+    """Everything that makes one account seedable, asked before a session opens.
+
+    Public because the catalog is no longer the only list of accounts: the
+    eleven relationships in ``app/seeds/relationships.py`` are seeded through the
+    same walk and have to answer the same questions. One copy, so an account
+    added to either list is held to one standard — two would be two standards,
+    and the one that drifted would be the one nobody re-read.
+    """
+
+    Email(account.email)
+    Nickname(account.nickname)
+
+    sports: set[Sport] = set()
+    rated: set[Sport] = set()
+    for scenario in account.scenarios:
+        if scenario.sport in sports:
+            raise RuntimeError(
+                f"'{account.slug}' has two scenarios for "
+                f"{scenario.sport.value}: one sport is one state."
+            )
+        sports.add(scenario.sport)
+        if isinstance(scenario, RatedRun):
+            rated.add(scenario.sport)
+            _refuse_an_impossible_policy(account, scenario)
+    if account.profile is not None:
+        # **The rated sports and not merely the ones with a scenario.** An open
+        # run and an abandoned one are sports this account has no rating in, and
+        # every Play surface refuses an unrated sport — so a declaration against
+        # one would name a screen the account cannot reach.
+        _refuse_an_impossible_profile(account, account.profile, rated=rated)
 
 
 def _refuse_an_impossible_policy(account: SeedAccount, scenario: RatedRun) -> None:

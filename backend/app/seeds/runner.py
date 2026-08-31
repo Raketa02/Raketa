@@ -173,6 +173,8 @@ from app.seeds.cohort import (
     CohortMember,
 )
 from app.seeds.guard import refuse_unless_seedable
+from app.seeds.pairs import SeededPairs, write_the_relationships
+from app.seeds.relationships import PROTAGONIST, RELATIONSHIP_ACCOUNTS
 from app.seeds.screens import assert_the_screens
 
 #: A questionnaire the seed can no longer finish is a hang, and a hang in a
@@ -354,7 +356,7 @@ async def seed(
     return tuple(
         [
             await _seed_account(session, account, now=now, settings=settings)
-            for account in ACCOUNTS
+            for account in ACCOUNTS + RELATIONSHIP_ACCOUNTS
         ]
     )
 
@@ -967,6 +969,10 @@ class SeedReport:
     members: tuple[SeededMember, ...]
     now: Instant
     screens: tuple[str, ...] = ()
+    #: The eleven relationships, the inboxes they left behind, and the two
+    #: costs. ``None`` only where a caller drove the two populations without the
+    #: layer above them — the API suite does, and it asserts no screen.
+    pairs: SeededPairs | None = None
 
 
 async def run(settings: Settings | None = None) -> SeedReport:
@@ -1003,11 +1009,21 @@ async def run(settings: Settings | None = None) -> SeedReport:
             )
             await refuse_a_cohort_that_has_aged_out(session, members, now=now)
             await refuse_a_histogram_that_has_moved(session, members)
-        screens = await assert_the_screens(
+        # **After both populations and before every claim.** An edge is a real
+        # search or deal run as the sender, so it needs everybody in the index —
+        # and the claims are read off what the edges made true.
+        pairs = await write_the_relationships(
             session_factory, settings=settings, now=now
         )
+        screens = await assert_the_screens(
+            session_factory, settings=settings, now=now, pairs=pairs
+        )
         return SeedReport(
-            accounts=accounts, members=members, now=now, screens=screens
+            accounts=accounts,
+            members=members,
+            now=now,
+            screens=screens,
+            pairs=pairs,
         )
     finally:
         await engine.dispose()
@@ -1067,10 +1083,32 @@ def report(run_report: SeedReport) -> list[str]:
                 f"assessment {seeded_scenario.assessment_id}"
             )
     lines.extend(["", *_cohort_lines(run_report.members)])
+    if run_report.pairs is not None:
+        lines.extend(["", *_relationship_lines(run_report.pairs)])
     if run_report.screens:
         lines.extend(["", "The screens, read as the protagonist:"])
         lines.extend(f"  {line}" for line in run_report.screens)
     lines.extend(["", COHORT_DISCLAIMER])
+    if run_report.pairs is not None and run_report.pairs.costs:
+        lines.append("")
+        lines.extend(f"Cost: {cost}" for cost in run_report.pairs.costs)
+    return lines
+
+
+def _relationship_lines(pairs: SeededPairs) -> list[str]:
+    """The eleven, one line each, with what each one promises beside it.
+
+    **The claim is printed where the address is**, because a developer signing in
+    as `said-yes-to-you` is asking what they should expect to see, and an account
+    named for a pair answers that only if the pair's own promise is beside it.
+    """
+
+    lines = [f"The eleven relationships, with {PROTAGONIST.slug}:"]
+    for edge in pairs.edges:
+        lines.append(f"  {edge.relationship.account.email}")
+        lines.append(f"      {edge.line}")
+        lines.append(f"      claims: {edge.relationship.claim}")
+    lines.extend(f"  {line}" for line in pairs.inboxes)
     return lines
 
 

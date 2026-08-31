@@ -820,6 +820,50 @@ async def test_a_challenge_born_of_a_mutual_yes_tallies_nothing(
 
 
 @pytest.mark.parametrize("implementation", registered(MatchHistoryQuery))
+async def test_an_accept_is_tallied_and_the_pair_it_belongs_to_never_reopens(
+    implementation, session
+):
+    """**`PREVIOUS_ACCEPT` is contracted here because no card can ever carry it.**
+
+    The signal is priced, printable and unreachable on every surface, and the two
+    halves of this arrangement are why. A seat that accepts is tallied as an
+    `ACCEPTED` outcome on the pair — that half is the demand the matcher makes and
+    it answers. But an accepted seat is a live seat, *open* is
+    `AWAITING_ANSWERS | ON | LINE_UP_INCOMPLETE`, and **nothing in this repository
+    ends a game**: results are out of scope, so the pair stays gated by
+    `OPEN_CHALLENGE` for as long as the database exists and the tally is never
+    read on a candidate row.
+
+    So this is contracted rather than fixtured. `app/seeds/screens.py` names the
+    code in `CANNOT_BE_DRAWN` with that reason, and the day `matches` closes a
+    challenge, the assertion beside it — *a code named unreachable that was
+    drawn* — is what says the code has moved to the promised side. The failure
+    both of them exist to avoid is the opposite one: a reason line missing from
+    every card, and a developer hunting for a bug in the ruleset.
+    """
+
+    port = implementation.build(session)
+    organiser, invitee = new_uuid(), new_uuid()
+    challenge = await _sent(
+        session,
+        organiser=organiser,
+        invitees=(invitee,),
+        sport=Sport.TENNIS,
+        at=_ago(minutes=10),
+    )
+    await _answers(session, challenge, invitee, yes=True, at=_ago(minutes=5))
+
+    tallied = _by_player(await port.pairwise_counterparts(organiser))
+    assert PairwiseOutcome.ACCEPTED in tallied[invitee]
+    assert tallied[invitee][PairwiseOutcome.ACCEPTED].count == 1
+
+    # And the same arrangement, read the other way: the pair has an open game,
+    # so nothing that reads a card will ever be asked to price that tally.
+    assert _counterparts(await port.open_challenges(organiser)) == {invitee}
+    assert _counterparts(await port.open_challenges(invitee)) == {organiser}
+
+
+@pytest.mark.parametrize("implementation", registered(MatchHistoryQuery))
 async def test_the_pairwise_bound_and_its_order_against_a_history_that_exceeds_it(
     implementation, session
 ):

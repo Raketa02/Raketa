@@ -242,6 +242,37 @@ there; they are not repeated here.
   Developing stops the seed by name. The band's edges come from the rating rather than
   from a second copy, so a re-cut band moves the claim with it. _Avoid_: a claim written as
   literal Levels, a check that only runs on the account this run happened to create.
+- **Cohort** — the population behind the named accounts: sixty-odd members generated from
+  one seed, committed as `app/seeds/cohort.json` and **inputs only** — never a level, an
+  uncertainty or a band, because those are the engine's answers to the questionnaire each
+  member sits and a committed copy of an answer is a number nothing keeps honest. It is a
+  **development workbench and says so on its own artifact**: a population chosen so that
+  every Play screen state is *reachable*, standing for nothing outside itself and
+  describing no real market. Every draw is keyed off the member's own handle, so adding one
+  changes that row and nobody else's; every coverage rule is a rule over the member's
+  position rather than a rate, because at this size a 25% draw is four people on a good day
+  and one on a bad one. _Avoid_: reading a rate here as evidence about anything, a μ in the
+  artifact, a rule expressed as a percentage.
+- **Relationship account** — a seed account named for a **pair** rather than for its own
+  state — `said-yes-to-you`, `they-blocked-you` — always from the protagonist's side, with
+  the protagonist named in the description and never in the slug (a pool card is read
+  constantly and a sign-in happens once). The eleven exist because five of the ten
+  `LivenessSignal` codes are facts about two people and **no distribution can exhibit
+  one**: a rate over sixty members produces edges nobody named, and it cannot assert that
+  *exactly one* instant-match pair exists. Every edge costs a **real search or deal run as
+  the sender**, because interest and passes have no non-search constructor and a send cites
+  the search its court was built on — and that cost is the check, since an origin that
+  resolves proves the protagonist was genuinely findable before any lift is claimed.
+  _Avoid_: an account named for its own state here, a second protagonist acquiring edges,
+  an edge written straight into a ledger.
+- **Relationship claim** — what a relationship account promises, and it is **a code on a
+  card or a named absence, read through the protagonist's own read path** — never a ledger
+  lookup, because a check computed from what the generator wrote can only ever pass. An
+  absence claim asserts the **gate histogram** rather than the absence: the histogram is
+  counted first-in-declaration-order, so `excluded_by_gate[OPEN_CHALLENGE] >= 4` names the
+  reason exactly, where a bare absence is also what *no rating*, *out of range* and *the
+  wrong gender preference* look like. _Avoid_: asserting an absence on its own, reading the
+  edge back out of the store that wrote it.
 - **Served vocabulary** — a closed domain constant the platform owns, held in exactly one
   module of the context that owns it and exposed **read-only** over the player API so no
   client hardcodes it. Two exist: the `Sport` registry at `GET /api/v1/sports`, and the
