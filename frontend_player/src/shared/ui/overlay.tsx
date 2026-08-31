@@ -171,9 +171,7 @@ const READ_SCREEN_READER = () => AccessibilityInfo.isScreenReaderEnabled();
  * already decided the other way in writing — *a held duration is not an animation: nothing
  * moves, and the player who asked the OS to calm things down is the last one who should get a
  * flash* — and [#269](https://github.com/Raketa02/Raketa/issues/269) is where the two met.
- * `features/play/components/heldWait.ts` is the floor, and takes no collapse; the stagger over
- * it is the engine fill's and arrives with the court that draws it
- * ([#271](https://github.com/Raketa02/Raketa/issues/271)).
+ * `searchingWait.ts` is where the split is arithmetic rather than prose.
  */
 export function useCollapsedPresentation(): boolean {
   // Both are read, always: `||` between two hook calls would make the second one conditional

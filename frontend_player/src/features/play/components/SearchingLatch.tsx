@@ -19,7 +19,7 @@
  *
  * So there is **no control here of any kind**. A close would promise an escape from a wait the
  * player is not trapped in, and a back would make this a destination. What keeps a fast answer
- * from flashing past is the floor, not a button (`heldWait`).
+ * from flashing past is the floor, not a button (`searchingWait`, `heldWait`).
  *
  * ## The count is printed off the answer or not at all
  *
