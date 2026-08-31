@@ -35,12 +35,16 @@
  *
  * ## What this seat does not do yet
  *
- * **There is no long press.** §20.4 records a *"holding ring — the 430 ms press feedback"*, and
- * the prototype's seat opened a record sheet on a hold.
- * [#231](https://github.com/Raketa02/Raketa/issues/231) repointed a card's long press at *Why
- * 78?* when K-7 ruled the record sheets out, and nothing has said where a **seat's** hold
- * should land — the pairing's why-fit, the player, or nowhere. So it is named here rather than
- * invented: a gesture with no destination is a destination chosen by whoever wires it first.
+ * **There is no long press, and [#278](https://github.com/Raketa02/Raketa/issues/278) is
+ * where it goes.** §20.4 records a *"holding ring — the 430 ms press feedback"*, so a gesture
+ * has to exist for that sentence to mean anything — but the prototype's seat hold opened
+ * `SH.player` / `SH.playersocial`, **the two sheets K-7 removed**, so it is orphaned rather
+ * than unspecified. [#231](https://github.com/Raketa02/Raketa/issues/231) repointed a card's
+ * long press at *Why 78?* and [#233](https://github.com/Raketa02/Raketa/issues/233) §9 already
+ * settled what a seat's sheet would say; what nothing has settled is how a listener reaches
+ * it, since a seat's tap is already spent on *replace* or *select* and there is no long-press
+ * gesture in the accessibility API. A gesture with no destination is a destination chosen by
+ * whoever wires it first, so it is named here and decided there.
  */
 
 import { Pressable, StyleSheet, Text, View } from 'react-native';
