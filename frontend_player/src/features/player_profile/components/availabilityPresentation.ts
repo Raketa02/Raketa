@@ -1,5 +1,5 @@
 /**
- * The words on the availability step.
+ * The words the availability **step** says about the week it collects.
  *
  * **The step says what it is not.** A seven-by-three grid looks enough like a diary that a
  * player could reasonably think they were promising to turn up, so the screen states in as
@@ -8,9 +8,12 @@
  * not checked: the one kind of copy defect that survives a redesign, because nobody
  * re-reads a sentence they believe.
  *
- * **Every accessible name here exists because a cell carries its fact in a drawing.** The
- * grid announces a cell's day and part of the day, because the row it is in and the column
- * it is under are decoration to assistive technology (design-system 6.8).
+ * **What a day and a cell are called moved to
+ * [`@/shared/vocabulary/availabilityPresentation`](../../../shared/vocabulary/availabilityPresentation.ts)**
+ * — Play names the next cell two players share inside a reason line, which made this the
+ * third caller of one table of seven days
+ * ([`the-words.md`](../../../../../docs/specs/matchmaking/the-words.md) §1). What stayed is
+ * what this step says about its own rule.
  *
  * The footnote's two messages share one reserved slot, and 6.8 caps it at two lines of
  * `tiny`. A third line is an amendment, not a copy tweak.
@@ -34,62 +37,9 @@
  * rather than a figure — the rule itself is `weekStanding`'s, and nothing here decides it.
  */
 
-import type { AvailabilitySlot, DayPart, Weekday } from '../domain/ProfileDraft';
 import type { WeekStanding } from '../domain/availabilityWeek';
 
 import { stepEyebrow } from './socialStepPresentation';
-
-/** The full day, for the name a cell announces. Nothing abbreviates when it is spoken. */
-const DAY_NAME: Readonly<Record<Weekday, string>> = {
-  1: 'Monday',
-  2: 'Tuesday',
-  3: 'Wednesday',
-  4: 'Thursday',
-  5: 'Friday',
-  6: 'Saturday',
-  7: 'Sunday',
-};
-
-/**
- * The day, short, for a label column capped at a quarter of the content width.
- *
- * Three letters rather than one: `T` and `S` each name two days, and a column that made a
- * player count rows to tell Tuesday from Thursday would have saved nothing worth having.
- */
-const DAY_SHORT: Readonly<Record<Weekday, string>> = {
-  1: 'Mon',
-  2: 'Tue',
-  3: 'Wed',
-  4: 'Thu',
-  5: 'Fri',
-  6: 'Sat',
-  7: 'Sun',
-};
-
-const DAY_PART_HEAD: Readonly<Record<DayPart, string>> = {
-  morning: 'Morning',
-  afternoon: 'Afternoon',
-  evening: 'Evening',
-};
-
-export function dayLabel(day: Weekday): string {
-  return DAY_SHORT[day];
-}
-
-export function dayPartHead(part: DayPart): string {
-  return DAY_PART_HEAD[part];
-}
-
-/**
- * What one cell is called: **its day and its part of the day**, and nothing else.
- *
- * Whether it is ticked is `accessibilityState.checked`'s to say — a name that carried the
- * state would announce it twice, and a `checkbox` whose name changed as it was pressed is
- * a different control every time it is read.
- */
-export function cellLabel(cell: AvailabilitySlot): string {
-  return `${DAY_NAME[cell.day]} ${cell.part}`;
-}
 
 /** The one thing this step must not let a player misread about their own answer. */
 export const AVAILABILITY_PROMISE_TITLE = 'A preference, not a promise';

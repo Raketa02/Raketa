@@ -10,7 +10,7 @@
  * served, which is the one bug these rules exist to prevent.
  */
 
-import type { SocialTagId } from './SocialTag';
+import type { SocialTagId } from '@/shared/vocabulary/socialTags';
 import {
   selectionStanding,
   toggleSocialTag,

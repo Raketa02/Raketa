@@ -23,18 +23,18 @@
  */
 
 import type { components } from '@/generated/schema';
-
-import type { Gender, GenderPreference } from '../domain/gender';
-import type { PhotoReview, UploadedPhoto } from '../domain/photoCollection';
-import type { ProfileOptions } from '../domain/ProfileOptions';
-import type { DayPart } from '../domain/ProfileDraft';
-import type { ProfileCommit } from '../domain/profileCommit';
 import {
   SOCIAL_TAG_GROUP_IDS,
   SOCIAL_TAG_IDS,
   type SocialTagGroupId,
   type SocialTagId,
-} from '../domain/SocialTag';
+} from '@/shared/vocabulary/socialTags';
+import type { DayPart } from '@/shared/vocabulary/week';
+
+import type { Gender, GenderPreference } from '../domain/gender';
+import type { PhotoReview, UploadedPhoto } from '../domain/photoCollection';
+import type { ProfileOptions } from '../domain/ProfileOptions';
+import type { ProfileCommit } from '../domain/profileCommit';
 
 type PlayerProfileOptionsResponse = components['schemas']['PlayerProfileOptionsResponse'];
 type PhotoResponse = components['schemas']['PhotoResponse'];

@@ -4,7 +4,7 @@
  * reflowing when a level goes from 2,71 to 2,80.
  */
 
-import { formatConfidence, formatLevel, formatRange } from './ratingFormat';
+import { formatLevel, formatPercent, formatRange } from './ratingFormat';
 
 describe('levels', () => {
   it('writes two decimals with a comma, whatever the value arrived as', () => {
@@ -26,11 +26,11 @@ describe('ranges', () => {
   });
 });
 
-describe('confidence', () => {
-  it('is a whole percentage', () => {
-    // The one rating figure with no decimals: the engine's precision does not survive
-    // being read as "28,4% sure", and nothing on the screen compares two of them.
-    expect(formatConfidence(28)).toBe('28%');
-    expect(formatConfidence(28.4)).toBe('28%');
+describe('a percentage', () => {
+  it('is whole, always', () => {
+    // No percentage in this app carries a decimal: the engine's precision does not survive
+    // being read as "28,4% sure", and nothing on any screen compares two of them.
+    expect(formatPercent(28)).toBe('28%');
+    expect(formatPercent(28.4)).toBe('28%');
   });
 });

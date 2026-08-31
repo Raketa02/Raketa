@@ -31,11 +31,9 @@ export { SOCIAL_STEPS, type SocialStep } from './domain/socialSteps';
 export { SOCIAL_STEPS_ENTRY } from './components/socialStepRoutes';
 export type {
   AvailabilitySlot,
-  DayPart,
   LocationArea,
   ProfileDraft,
   ProposalsOptIn,
-  Weekday,
 } from './domain/ProfileDraft';
 export type { Gender, GenderPreference } from './domain/gender';
 

@@ -53,7 +53,7 @@ import { useOnboardingPass } from '../store/onboardingPass.store';
 import { OnboardingChrome } from './OnboardingChrome';
 import { ratingStatusLabel } from './bandPresentation';
 import { onboardingErrorMessage } from './onboardingErrorMessage';
-import { formatConfidence, formatLevel, formatRange } from './ratingFormat';
+import { formatLevel, formatPercent, formatRange } from '@/shared/formatting/ratingFormat';
 import { sportColour, sportLabel } from './sportPresentation';
 
 /**
@@ -244,8 +244,8 @@ function RatingCard({ entry: { run, query } }: RatingCardProps) {
             <Row
               divided
               label="Confidence"
-              value={<Figure>{formatConfidence(result.confidence)}</Figure>}
-              accessibilityLabel={`${sport} confidence: ${formatConfidence(result.confidence)}`}
+              value={<Figure>{formatPercent(result.confidence)}</Figure>}
+              accessibilityLabel={`${sport} confidence: ${formatPercent(result.confidence)}`}
             />
             <Row
               divided

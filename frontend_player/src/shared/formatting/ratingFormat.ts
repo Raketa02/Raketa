@@ -10,6 +10,15 @@
  * comma on one device and a point on another for the same rating. This is a **house
  * convention**, not a localisation — when the app is genuinely localised it becomes one,
  * in one place, which is here.
+ *
+ * **It is in `shared/` because a level is printed wherever a player is.** It was
+ * `onboarding/components/` while the result screen was the only thing that drew one; Play
+ * prints a level on every card, in every reason line about a level gap, and on every seat of
+ * a court, and ESLint blocks a deep import between features outright — so the two options
+ * were promotion or a second copy of *two fixed decimals, decimal comma*. A second copy of
+ * that is the drift the design system's *every number is mono and tabular* rule exists to
+ * prevent ([`the-play-components.md`](../../../../docs/specs/matchmaking/the-play-components.md)
+ * §7).
  */
 
 const DECIMALS = 2;
@@ -31,10 +40,13 @@ export function formatRange(range: { readonly low: number; readonly high: number
 }
 
 /**
- * Confidence is a whole percentage. It is the one rating figure with no decimals: the
- * engine's own precision does not survive being read as "28,4% sure", and nothing on the
- * screen compares two of them.
+ * A percentage — **whole, always**.
+ *
+ * A confidence, a forecast's evenness, a term's value read as a share: none of them survives
+ * being read as "28,4% sure", the engine's own precision is not a fact about the pairing, and
+ * nothing on any screen compares two of them closely enough for a decimal to answer a
+ * question. One shape for every percentage in the app is §B16's rule; this is where it is.
  */
-export function formatConfidence(value: number): string {
+export function formatPercent(value: number): string {
   return `${Math.round(value)}%`;
 }

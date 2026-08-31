@@ -255,6 +255,21 @@ profile editor that later edits the same values.
   on. The message is copy.
 - **`AppError`** — the normalized client-side error family in `shared/errors`. Nothing
   above `shared/lib/http` ever sees a raw `fetch` rejection or backend JSON.
+- **Presentation module** — a `*Presentation.ts` holding the words this app gives a closed
+  server vocabulary, chosen **by the stable code**: localization goes _code → message_, never
+  _message → message_. Two shapes, and the split is whether the sentence quotes a value — a
+  `Readonly<Record<Code, string>>` where the code has no payload, so a code with no words does
+  not compile, and one function per variant where it does. Feature-local, one per **vocabulary
+  owner** rather than per screen. _Avoid_: a template inlined in a component, and rendering the
+  backend's `message`, which ships English into every locale.
+- **Copy deck** — the document a feature's presentation modules are written against and
+  **cited by section, never restated**:
+  [`the-words.md`](../docs/specs/matchmaking/the-words.md) for Play. It is where a later copy
+  edit is argued, so that one voice can be checked against itself in one place.
+- **Out-of-date gap** — what a build says about a code it has never seen:
+  `shared/vocabulary/outOfDate.ts`'s one sentence, drawn wherever the screen states a count or
+  a total the unreadable row belongs to, and a **drop** everywhere else. It names neither the
+  code nor the vocabulary — a wire token in a player's face is not an explanation.
 - **Recovery category** — which of _auto-retry · user-retry · re-auth · user correction ·
   conflict · terminal_ an error is. Assigned when the endpoint is mapped.
 - **Idempotency key** — the client-supplied token that makes a repeated mutation safe to

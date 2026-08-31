@@ -41,8 +41,14 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { recoveryMessage } from '@/shared/errors';
 import { Button, Chip, Note, theme } from '@/shared/ui';
+import {
+  socialTagGroupHeading,
+  socialTagLabel,
+  socialTagName,
+} from '@/shared/vocabulary/socialTagPresentation';
+import type { SocialTagId } from '@/shared/vocabulary/socialTags';
 
-import type { SocialTagGroup, SocialTagId } from '../domain/SocialTag';
+import type { SocialTagGroup } from '../domain/SocialTag';
 import { stepAfter } from '../domain/socialSteps';
 import { selectionStanding, toggleSocialTag } from '../domain/socialTagSelection';
 import { useProfileOptions } from '../hooks/useProfileOptions';
@@ -53,9 +59,6 @@ import { SOCIAL_STEP_PATH } from './socialStepRoutes';
 import { stepCopy } from './socialStepPresentation';
 import {
   socialTagCeilingTitle,
-  socialTagGroupHeading,
-  socialTagLabel,
-  socialTagName,
   socialTagsContinueLabel,
   socialTagsEyebrow,
 } from './socialTagPresentation';

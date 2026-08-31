@@ -24,7 +24,7 @@ import { Card, Row, theme } from '@/shared/ui';
 import type { EvidenceContribution } from '../domain/AssessmentResult';
 
 import { directionMark } from './evidencePresentation';
-import { formatLevel } from './ratingFormat';
+import { formatLevel } from '@/shared/formatting/ratingFormat';
 
 export interface EvidenceTrailProps {
   readonly contributions: readonly EvidenceContribution[];

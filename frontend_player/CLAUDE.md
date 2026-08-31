@@ -41,7 +41,8 @@ step, one required answer about the player and one optional preference over who 
 matched with ([ADR-0096](../docs/adr/0096-gender-preference-mutual-gate-invisible-to-the-scorer.md)),
 the Proposals opt-in, never pre-ticked and with a finish that stays closed until the player
 answers either way, and the **profile commit**: every answer in one idempotent
-`POST /players/me/profile`, after which the player walks the data screen into the app).
+`POST /players/me/profile`, after which the player walks the data screen into the app). Two
+more features hold **only words** so far — `play` and `challenges`, whose copy deck is below.
 
 **The shell is five tabs over one stack, and it remembers nothing.** `TabShell` mounts the
 `TabBar` once, below the navigator, and reads the active column off the current path —
@@ -177,6 +178,38 @@ networking path the module exists to prevent. `httpUpload` also reads the local 
 URI a picker hands back, because `fetch` is what this module is allowed to touch, and it
 reports **stages rather than bytes**: React Native's `fetch` cannot say how much of a body
 has gone out, and buying that would mean a second transport.
+
+**Play begins as a copy deck, and `challenges` beside it.** Nothing the matcher sends is
+prose: what crosses is a `Term`, a `LivenessReason`, an `UnfilledReason`, a `Prompt`, a
+`Standing` — and the app writes the words for all of them
+([ADR-0106](../docs/adr/0106-evidence-vocabulary-is-contract-weights-are-configuration.md),
+[`the-words.md`](../docs/specs/matchmaking/the-words.md), cited by section and never
+restated). So the two features arrive **words first**: `features/play/components/*Presentation.ts`
+and `features/challenges/components/challengePresentation.ts` hold every sentence those
+screens will say, and the screens are assembled from them rather than from templates inlined
+in six components. **Two shapes, and the split is whether the sentence quotes a value** — a
+`Readonly<Record<Code, string>>` wherever the code has no payload, so a code with no words
+does not compile, and **one function per variant** for the eight evidence variants, because a
+reason line is a sentence _over_ its evidence. The unions those tables are keyed by are
+`domain/vocabulary.ts`'s, held equal to the generated ones by a compile-time assertion in
+`mappers/wireVocabulary.ts` — the wire boundary keeps `generated/` out of `components/`, so a
+code added, removed or renamed on the contract fails `pnpm typecheck` in the one file whose
+job is saying so. Two rules sit over the deck. **A reason line states its evidence's facts and
+never grades them** — a client thresholding a term value would be that judgement in
+TypeScript — so the grading vocabulary belongs to `concerns[]`, which is the engine's and
+arrives ranked. And **the de-duplication filter is per surface and runs before the cap**:
+`domain/reasonSelection.ts` takes the terms a card draws, removes them, any term the engine is
+concerned about, and any term whose evidence **is not a reason at all** — three of the eight
+renderers legitimately decline, and a survivor that renders nothing is the blank row the whole
+selection exists to prevent — and only _then_ takes three, falling back to the top
+`LivenessReason` and hiding the row rather than drawing an empty one. Three tables were
+**promoted to `shared/`** on
+`recoveryMessage.ts`'s third-caller rule rather than re-typed here — the Social tags, the
+week's days and parts, and the level and percentage formats — beside `playerName()`, which is
+ADR-0107's _the whole handle or nobody_ with one implementation and a type that will not take
+a shortened one, the one sentence a build says about a code it is too old to read, and
+`counted()`, the single seam every counted phrase routes through so that a market with real
+plural rules has one function to change rather than every sentence that counts something.
 
 `src/shared/ui/` holds the design-system primitives built so far — the cards, note, row,
 hairline, button, tag, chip, bar, header, the overlays and drawn objects the result screen

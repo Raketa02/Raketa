@@ -84,7 +84,7 @@ import { OnboardingChrome } from './OnboardingChrome';
 import { BAND_NAMES, bandPresentation, ratingStatusLabel } from './bandPresentation';
 import { onboardingErrorMessage } from './onboardingErrorMessage';
 import { passEyebrow } from './passEyebrow';
-import { formatConfidence, formatLevel, formatRange } from './ratingFormat';
+import { formatLevel, formatPercent, formatRange } from '@/shared/formatting/ratingFormat';
 import { sportLabel } from './sportPresentation';
 
 type ExplainerKey = 'level' | 'range' | 'confidence';
@@ -332,7 +332,7 @@ function Verdict({ result, marks, onExplain }: VerdictProps) {
   const band = bandPresentation(result.band.name);
   const level = formatLevel(result.level);
   const range = formatRange(result.range);
-  const confidence = formatConfidence(result.confidence);
+  const confidence = formatPercent(result.confidence);
 
   return (
     <>

@@ -34,19 +34,9 @@
  * a week, which is also what makes them testable without mounting anything.
  */
 
-import type { AvailabilitySlot, DayPart, Weekday } from './ProfileDraft';
+import { DAY_PARTS, WEEKDAYS } from '@/shared/vocabulary/week';
 
-/**
- * Monday first, as ISO weekdays.
- *
- * The order is the contract's as well as the design system's: `AvailabilitySlotResource`
- * numbers days 1-7 as ISO weekdays and says the grid is Monday-first, so nothing on either
- * side of the wire sorts.
- */
-export const WEEKDAYS: readonly Weekday[] = [1, 2, 3, 4, 5, 6, 7];
-
-/** The three parts of the day, in the order `DayPart` declares them. */
-export const DAY_PARTS: readonly DayPart[] = ['morning', 'afternoon', 'evening'];
+import type { AvailabilitySlot } from './ProfileDraft';
 
 /** Twenty-one — the whole grid, and the largest a week can be. */
 export const WEEK_CELLS = WEEKDAYS.length * DAY_PARTS.length;

@@ -21,7 +21,7 @@
  * mounting anything.
  */
 
-import type { SocialTagId } from './SocialTag';
+import type { SocialTagId } from '@/shared/vocabulary/socialTags';
 
 /** Both ends included: a selection of exactly `minimum` is enough, and one of exactly `maximum` is legal. */
 export interface SocialTagSelectionBounds {

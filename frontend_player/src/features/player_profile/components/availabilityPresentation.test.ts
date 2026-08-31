@@ -1,48 +1,23 @@
 /**
  * The words on the availability step.
  *
- * Three of them are load-bearing rather than decorative and are asserted as such: **each
- * cell names its day and its part of the day**, because a screen reader gets nothing from
- * the row a cell is in or the column it is under; **the floor is stated in words**, because
- * a required answer a player only meets as a dead control is a rule nobody explained; and
- * **the empty week's footnote never says the blank was counted**, which is the reading
- * ADR-0102 withdrew.
+ * Two of them are load-bearing rather than decorative and are asserted as such: **the floor
+ * is stated in words**, because a required answer a player only meets as a dead control is a
+ * rule nobody explained; and **the empty week's footnote never says the blank was counted**,
+ * which is the reading ADR-0102 withdrew.
+ *
+ * What a day and a cell are *called* is asserted beside the promoted table, in
+ * `@/shared/vocabulary/availabilityPresentation`.
  */
 
-import { DAY_PARTS, WEEKDAYS, WEEK_CELLS, everyCell } from '../domain/availabilityWeek';
+import { WEEK_CELLS } from '../domain/availabilityWeek';
 
 import {
   AVAILABILITY_PROMISE_BODY,
   availabilityContinueLabel,
   availabilityEyebrow,
   availabilityFootnote,
-  cellLabel,
-  dayLabel,
-  dayPartHead,
 } from './availabilityPresentation';
-
-describe('naming a cell', () => {
-  it('names the day and the part of the day, in that order', () => {
-    expect(cellLabel({ day: 1, part: 'morning' })).toBe('Monday morning');
-    expect(cellLabel({ day: 7, part: 'evening' })).toBe('Sunday evening');
-  });
-
-  it('gives all twenty-one a name of their own', () => {
-    const names = everyCell().map(cellLabel);
-
-    expect(new Set(names).size).toBe(WEEK_CELLS);
-  });
-});
-
-describe('the labels around the grid', () => {
-  it('shortens each day for a column capped at a quarter of the content', () => {
-    expect(WEEKDAYS.map(dayLabel)).toEqual(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']);
-  });
-
-  it('heads the three columns with the parts of the day', () => {
-    expect(DAY_PARTS.map(dayPartHead)).toEqual(['Morning', 'Afternoon', 'Evening']);
-  });
-});
 
 describe('the floor, in words', () => {
   it('states the rule in the eyebrow, beside how far through the part the player is', () => {
