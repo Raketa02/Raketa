@@ -66,8 +66,9 @@ frame, a stage or a scenario switcher, and never use the four stage colours (`#0
   is invisible.
 - **Every number is mono and tabular** — that is what stops a row reflowing when a level goes
   from 2,71 to 2,80. Polish formatting: `38,00 zł`, `2,71`, `65%`, `18:30`.
-- **Cards never cast a shadow.** Four shadows exist; all are for things that float, and
-  the deck card is one of them because it is not a card.
+- **Cards never cast a shadow.** Five shadows exist; all are for things that float, and
+  the deck card is one of them because it is not a card. The ⚡Play disc's is the only
+  tinted one, and only on iOS — Android's `elevation` cannot be coloured.
 - **Band `ink` for text and rails**, `tint`/`deep` for the bar only. A printed level range
   always comes from the model's `bandLo`/`bandHi`, never the bar's drawing values.
 - **Every state carries a word or a shape**, never colour alone.

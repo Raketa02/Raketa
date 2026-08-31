@@ -51,6 +51,7 @@ export { QuestionNavigator, type QuestionNavigatorProps } from './QuestionNaviga
 export { RadiusSlider, type RadiusSliderProps } from './RadiusSlider';
 export { Row, type RowProps, type RowVariant } from './Row';
 export { ScreenHeader, type ScreenHeaderProps } from './ScreenHeader';
+export { TabBar, TAB_BAR_TABS, type TabBarKey, type TabBarProps, type TabBarTab } from './TabBar';
 export { Tag, type TagProps, type TagVariant } from './Tag';
 export { Tick } from './Tick';
 export { TickBox, type TickBoxProps } from './TickBox';

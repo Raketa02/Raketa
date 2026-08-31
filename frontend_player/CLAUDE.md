@@ -56,17 +56,17 @@ be the one thing that is not true.
 
 **A flagged photo is warned about and never taken away**
 ([ADR-0133](../docs/adr/0133-the-verdict-crosses-on-the-upload-and-the-warning-may-be-wrong.md)).
-Every upload is scored server-side against *shows a racket sport on a court*, and the answer
+Every upload is scored server-side against _shows a racket sport on a court_, and the answer
 comes back on the upload response as a code — `allowed` or `flagged`, never a sentence, and
 never the evidence it was taken from. The step is what writes the sentence, in
 `photoStepPresentation`. **The check is wrong about some unknown share of what it flags**, so
-the copy reports *we could not see a court* rather than accusing anybody, says nobody has
+the copy reports _we could not see a court_ rather than accusing anybody, says nobody has
 looked because nothing reviews a flagged photo a second time, says nothing is blocked because
 the photo is stored and committed like any other, and offers keeping it before swapping it.
 The photo keeps its place, keeps the lead if it had it, is in `photo_ids`, and `Continue` is
 not touched. The step does **not** announce the check up front: that is small print to the
-majority whose photo is fine and reads as a threat to the rest. `null` on the wire means *this
-response said nothing*, which is not `allowed` — the mapper collapses it toward silence, and a
+majority whose photo is fine and reads as a threat to the rest. `null` on the wire means _this
+response said nothing_, which is not `allowed` — the mapper collapses it toward silence, and a
 verdict this build has no words for is collapsed the same way.
 
 **The gender step says what narrowing costs, at the moment of the press.** The preference
@@ -158,8 +158,13 @@ has gone out, and buying that would mean a second transport.
 `src/shared/ui/` holds the design-system primitives built so far — the cards, note, row,
 hairline, button, tag, chip, bar, header, the overlays and drawn objects the result screen
 needed (bottom sheet, popover, level bar, confidence ring), the photo tile with its
-generated court poster, the availability grid and the radius slider, and the tick box with
-the tick both it and the grid draw; the rest arrive with the features that need
+generated court poster, the availability grid and the radius slider, the tick box with
+the tick both it and the grid draw, and the **tab bar** — five columns with ⚡Play raised at
+the centre, drawn from one Feather family
+([ADR-0135](../docs/adr/0135-the-bar-draws-one-family-and-the-bolt-joins-it.md)), which is
+why `@expo/vector-icons` is **declared** in `package.json` rather than inherited through
+`expo`: the app's primary navigation renders through it, and an SDK bump could move or drop
+it with no signal in this app's own manifest. The rest arrive with the features that need
 them. **Build outward from the structure below** rather than reaching
 for `create-expo-app` — its default template contradicts ADR-0009 — and copy the shape of
 `src/features/auth/` or `src/features/onboarding/` rather than inventing a second one.

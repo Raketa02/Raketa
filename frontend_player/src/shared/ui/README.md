@@ -53,8 +53,9 @@ design-system doc, in the same commit.
   `mintInk`. `ink` is the only dark permitted on `coral`.
 - `volt` is a fill anywhere and a stroke only on dark — on paper it is ~1.3:1 as a
   foreground and 13.96:1 as a bed for `ink`.
-- **Cards never cast a shadow.** Four shadows exist; all are for things that float, and
-  the deck card is one of them because it is not a card.
+- **Cards never cast a shadow.** Five shadows exist; all are for things that float, and
+  the deck card is one of them because it is not a card. The fifth, the ⚡Play disc's, is
+  the only one that is a colour rather than a dimming — and only on iOS.
 - **Every number is mono and tabular.** That is the mechanism that stops a row reflowing
   when a level changes from 2,71 to 2,80.
 - **Every state carries a word or a shape**, never colour alone.
@@ -80,7 +81,8 @@ Built so far, by the onboarding slice: `Button`, `Card` (+ `PressableCard`), `No
 `DarkCard`, `Row`, `LevelBar`, `ConfidenceRing`, `Popover` (+ `InfoMark`), `InfoGlyph`,
 and by the second part's photos step: `PhotoRow` with `PhotoTile`, `PhotoAddTile` and
 `PhotoPosterTile`, plus `CourtPoster`; and by its availability step: `AvailabilityGrid`
-with `Tick`; and by sign-up's age question: `TickBox`. Import them from `@/shared/ui`.
+with `Tick`; and by sign-up's age question: `TickBox`; and by Play: `TabBar`. Import them
+from `@/shared/ui`.
 
 **Overlays.** `BottomSheet` and `Popover` are both real modals, and 9.1's and 7.6's "it is
 a real modal" is three separate obligations rather than one prop — read `overlay.ts` and
@@ -147,3 +149,14 @@ retune — what reaches the component is where the thumb goes and what the figur
 a screen needs, extend the primitive — the two auth-form controls that remain in
 `features/auth/components/AuthControls.tsx` are there because the design system genuinely
 specifies no text field and no _ended badly_ note variant, and each says so in place.
+
+**The tab bar** (10.2) is the app's bottom chrome, and it is the drawn object only — it
+takes the active tab and a press handler and knows nothing about routes or stacks. **Its
+inventory of five is its own** rather than a prop, because
+[ADR-0135](../../../../docs/adr/0135-the-bar-draws-one-family-and-the-bolt-joins-it.md)
+fixes the family and the five names, and because `theme.size.tabBar.labelMaxScale` is derived
+from exactly those five words in exactly five columns — a caller that could pass a sixth tab
+could invalidate the cap without anything saying so. Feather from `@expo/vector-icons`,
+selection **in tone alone**, and the ⚡ is Feather `zap` rather than the character `⚡`,
+which carries `Emoji_Presentation=Yes` and would render in a colour this app does not choose.
+The bar owns the bottom safe-area inset; a CTA above it owns none.

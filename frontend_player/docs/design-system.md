@@ -502,25 +502,45 @@ two radii.
 
 ## 4.3 Elevation
 
-Four shadows exist, all for things that genuinely float. **Cards never have one** — depth on
+Five shadows exist, all for things that genuinely float. **Cards never have one** — depth on
 paper comes from the surface change and the 1pt `line` border, and the deck card is here
 because [4.2](#42-radius) says it is not a card.
 
 RN cannot express CSS spread, so these are calibrated approximations, with `elevation`
 for Android:
 
-| Element       | iOS                                                                | Android         |
-| ------------- | ------------------------------------------------------------------ | --------------- |
-| **Sheet**     | `shadowColor #0A2028`, offset `{0,−8}`, opacity `.18`, radius `20` | `elevation: 16` |
-| **Popover**   | `shadowColor #0B1F2A`, offset `{0,8}`, opacity `.24`, radius `15`  | `elevation: 12` |
-| **Toast**     | `shadowColor #000`, offset `{0,6}`, opacity `.24`, radius `14`     | `elevation: 10` |
-| **Deck card** | `shadowColor #0B2B33`, offset `{0,7}`, opacity `.12`, radius `20`  | `elevation: 8`  |
+| Element         | iOS                                                                | Android         |
+| --------------- | ------------------------------------------------------------------ | --------------- |
+| **Sheet**       | `shadowColor #0A2028`, offset `{0,−8}`, opacity `.18`, radius `20` | `elevation: 16` |
+| **Popover**     | `shadowColor #0B1F2A`, offset `{0,8}`, opacity `.24`, radius `15`  | `elevation: 12` |
+| **Toast**       | `shadowColor #000`, offset `{0,6}`, opacity `.24`, radius `14`     | `elevation: 10` |
+| **Deck card**   | `shadowColor #0B2B33`, offset `{0,7}`, opacity `.12`, radius `20`  | `elevation: 8`  |
+| **⚡Play disc** | `shadowColor coral`, offset `{0,3}`, opacity `.40`, radius `7`     | `elevation: 6`  |
 
-The deck card is the **faintest** of the four, and the calibration is why: at
+The deck card is the **faintest** of the five, and the calibration is why: at
 `0 18px 40px -26px` it carries the largest negative spread of any shadow in the system — 26
 of 40 blur — so the offset comes down hardest and the opacity with it. It floats least, and
 its `elevation` says so. It is not the _tightest_: at radius 20 its blur ties the sheet's,
 because a 40px blur halves to 20 whatever is subtracted from its spread.
+
+### The fifth is a colour, and it is calibrated, not copied
+
+The ⚡Play disc ([10.2](#102-the-tab-bar)) is the only tinted shadow in the app: it is the one
+thing in the bottom chrome that floats, and it floats in its own colour rather than in a dim.
+The prototype's rule is `0 6px 14px -6px rgba(232,72,43,.7)` and **the negative spread is the
+whole of the calibration** — 6 of the 14 blur never reach the paper, and RN has no way to say
+so:
+
+| CSS          | Here     | Why                                            |
+| ------------ | -------- | ---------------------------------------------- |
+| blur `14`    | radius 7 | the halving the other four already do          |
+| offset `6`   | 3        | the spread eats the drop: 6 × (1 − 6/14) = 3,4 |
+| opacity `.7` | `.40`    | and the same fraction of the ink               |
+
+**On Android it is not a colour.** `elevation` draws the platform's own black shadow and RN
+exposes no way to tint it, so the disc is raised on both platforms and glows on one. Its 6
+seats it under the deck card, which is right: the bar is chrome, and every overlay passes over
+it.
 
 ### One text shadow, which is not an elevation
 
@@ -793,6 +813,17 @@ are the same rectangle. The add control is a pressable card-shaped surface with 
 change; a filled tile's border is already carrying whether it is the profile photo
 ([6.9](#69-the-photo-tile-and-picker)), so borrowing it for a press would have one line say
 two things and lose the argument at the moment both are true.
+
+Play's tab bar adds two, and the pair is the same rule twice — **one channel per state**:
+
+| Element                                | Pressed                                                                 |
+| -------------------------------------- | ----------------------------------------------------------------------- |
+| Tab column ([10.2](#102-the-tab-bar))  | `opacity: .7`, on the **column** — it is the target, and it has no fill |
+| ⚡Play disc ([10.2](#102-the-tab-bar)) | `coral` — [6.1](#61-button) `primary`'s pressed fill, arriving free     |
+
+The disc is the one column that does **not** dim, because it already has a second fill and
+dimming it as well would put two channels on one press. Its ring is untouched by a press for
+the same reason the shadow is: the ring says _you are here_, and a press is not that.
 
 Feedback is immediate — use `Pressable`'s `pressed` state, not a 120ms animation. The
 120ms in the prototype is a mouse-hover transition and has no touch equivalent.
@@ -1457,27 +1488,116 @@ SafeAreaView
   TabBar              equal columns, one per top-level destination
 ```
 
+> **Confirmed for Play**, against a UI specification that proposed the opposite
+> ([#227](https://github.com/Raketa02/Raketa/issues/227)). The header **pins** above the
+> scroller and does not scroll away — both shipped layouts already build it that way, and the
+> counter-argument is a viewport budget computed against a 392 × 788 phone with **no safe
+> areas at all**, so its own number gets worse on a real device rather than better. The CTA
+> and the tab bar are **flex siblings** below the scroller, never fixed elements.
+>
+> **The tab bar owns the bottom safe-area inset and the CTA owns none.** The CTA sits above
+> the bar, so an inset applied twice is 34pt of nothing on a notched device — and applied to
+> the wrong one it is a CTA under the home indicator.
+
 ## 10.2 The tab bar
 
 ```
 equal columns, one per top-level destination
 paddingTop 6, paddingBottom = 12 + bottom safe-area inset
-icon 16 × 16
+icon 16 × 16, gap 3, label `tag`
+centre column: a 30pt disc, radius 11, 6.1 `primary`, shadow.fab
+active Play:   a 2pt `coral` ring, 2pt clear of the disc, ABSOLUTELY POSITIONED
 ```
 
-> **Not built, and not chrome until it has somewhere to go.** `src/app/(app)/(tabs)/` is a
-> `Stack`, because there is one screen and an empty tab bar over a single route is chrome
-> pretending to be navigation. The geometry is specified here so the second destination
-> does not also have to design the bar.
+**Five columns** — `Now · Around · ⚡Play · Chats · You`. The centre one is raised, and it is
+both an action and a destination: pressing it always opens Play's entry, and the four screens
+that entry leads to are somewhere a player can be for a whole flow. That is what the ring is
+for.
 
-> **The prototype ships no icon set** — its tab icons are `currentColor` squares, an honest
-> placeholder that specifies shape and position but not glyph. Real icons come from
-> `@expo/vector-icons` (already available through Expo). **The design system specifies the
-> 16pt box and the position; picking the glyph set is a separate, recorded decision.**
-> Until then, squares are correct — a placeholder that looks like a placeholder.
+### The disc is [6.1](#61-button) `primary` in a squircle
+
+Not a new colour treatment, and this is the one exception the bar looked like it needed and
+does not have. The prototype's disc was **white on `coral` at 3.89:1** — the exact pairing
+[2.2](#22-accent-and-semantics)'s Rule C refuses outright, on the grounds that nothing in this
+app reaches the large-text threshold. `primary` already answers it: fill `coralInk`, white
+mark, brightening to `coral` on press. The press state arrives free and no colour is added.
+
+Radius 11 rather than the avatar rule's `round(30 × 0.33)` = 10: the disc is not a face, and
+11 is the measured value.
+
+### The active state is a ring, in coral, and it is out of the layout
+
+**2pt, `coral`, set 2pt clear of the disc.** The gap is the bar's own `surface`, so there is
+no collar to token and coral reads **3.89:1 on both edges** of the stroke — clearing 3:1 for a
+non-text indicator. Volt cleared it on neither: **1.25:1** against the bar and **2.86:1**
+against the disc, which is [2.2](#22-accent-and-semantics) as amended — _a fill anywhere, a
+stroke only on dark_ — measured rather than asserted.
+
+**Absolutely positioned, and the bar's height never changes.** A bar that grew 8pt on arriving
+in Play would move the four things that did not change in order to announce the one that did.
+The 4pt the ring needs above the disc comes out of the 6pt top padding, leaving 2pt of
+clearance to the hairline.
+
+**The bar carries no badge.** A count that is not filtered the way the surface it labels is
+filtered would be an unfiltered number on permanent chrome, on a tab whose own rule is that it
+always opens somewhere else. Counts belong to the screen they describe.
+
+### Feather, and selection in tone alone
+
+The glyph set is **Feather from `@expo/vector-icons`**, declared in `package.json` rather than
+inherited transitively, and the inventory is these five
+([ADR-0135](../../docs/adr/0135-the-bar-draws-one-family-and-the-bolt-joins-it.md)):
+
+| Tab      | Glyph            | Box                              |
+| -------- | ---------------- | -------------------------------- |
+| `now`    | `home`           | 16pt                             |
+| `around` | `map-pin`        | 16pt                             |
+| `play`   | `zap`            | **15pt**, white, inside the disc |
+| `chats`  | `message-circle` | 16pt                             |
+| `you`    | `user`           | 16pt                             |
+
+**Selection changes tone and never shape**: `ink` selected, `muted` resting — 3.25:1, and a
+_lightness_ difference rather than a hue one, so it survives greyscale and a red-green
+deficiency. Feather has one weight and no filled counterparts, and that costs nothing here for
+exactly that reason: a family with outline/filled pairs would put a second state channel on
+top of a sufficient one, which is the same thing the ring refuses about the shadow.
+
+**The ⚡ is `zap` and never the character.** `U+26A1` carries `Emoji_Presentation=Yes`, so a
+bare `<Text>⚡</Text>` requests colour-emoji presentation and a `color` style has nothing to
+apply to — the one mark in the bar whose colour this app would not control, on the disc whose
+whole argument is a white mark.
+
+**Every glyph name is typed against its own family's `glyphMap`,** so a name the package does
+not ship is a compile error rather than a blank column nobody notices at 16pt.
+
+### The label is `tag`, under a derived cap
+
+`tag` — 9,5/700 and **flat**. A tab label is a _name_, and `eyebrow`, the other member of the
+9,5 pair, is tracked: 1,43pt per character spends **8,6pt** of a 64pt column on air.
+
+[Part 13](#part-13--accessibility) names this bar as the fixed-height exception **and** permits
+`allowFontScaling={false}` only inside the level bar, so a bounded `maxFontSizeMultiplier` is
+the only mechanism left. **Its value is derived, never chosen** — from the longest shipped
+label, at `tag`'s size, in the narrowest phone's column, with the grid's smallest step held on
+each side. `theme.size.tabBar.labelMaxScale` carries the answer and
+[`tabBarLabelCap.test.ts`](../src/shared/ui/tabBarLabelCap.test.ts) re-derives it from the real
+Archivo Bold metrics, so a sixth tab or a longer word goes red rather than truncating on
+somebody's phone.
+
+**The bar's height is fixed against _state_, not against the OS text size**, and the two claims
+on this page are not the same claim. Nothing about being in Play changes the height — that is
+what the absolute ring is for. The label, however, scales: at the cap one line of `tag` goes
+12 → 20,4pt and the bar grows with it, which is [Part 13](#part-13--accessibility) working
+rather than failing. The 44pt figure below is a **minimum**, met at 1× and only exceeded from
+there.
 
 Every tab needs an `accessibilityRole="tab"`, an `accessibilityLabel` and
-`accessibilityState={{ selected }}`. The visible label is not enough on its own.
+`accessibilityState={{ selected }}`. The visible label is not enough on its own. The glyph is
+**hidden** from the reader on every column, the bolt included — the label already names the
+tab, and the disc's own visible _Play_ is what announces the control.
+
+The column reaches the 44pt minimum by its own geometry — 30 + 3 + 12 inside the bar's
+padding — so there is no hit-slop to arrange.
 
 ## 10.3 The screen header
 
@@ -1795,6 +1915,13 @@ and five accessibility gaps. All are resolved here. **This table is the diff.**
 | 18  | Stage, rail, phone frame, time bar, and their four hard-coded colours                                                | **Not product** — [Part 0](#part-0--reading-a-web-prototype-as-a-native-app)                                          | The harness is not the app                                                                |
 | 19  | Three counter-overrides so the popover survives inside a dark card                                                   | The popover renders through the overlay root                                                                          | Fix the containment, not the symptom                                                      |
 
+**Row 6 is retired.** The separate recorded decision it was waiting for is
+[ADR-0135](../../docs/adr/0135-the-bar-draws-one-family-and-the-bolt-joins-it.md): the family
+is Feather, the five names are fixed, and [10.2](#102-the-tab-bar) draws them. The row stays
+in the table for the reason every row here stays — it is the record of what was decided and
+why, and _"specifying a glyph we do not have would be worse than a square"_ is still the
+argument that kept the placeholder honest for as long as there was no bar to draw on.
+
 Every ratio quoted was computed against WCAG 2.1, not estimated.
 
 ---
@@ -1881,6 +2008,11 @@ unchangeable one; it is one whose changes are recorded rather than absorbed.
 | 2026-08-31 | [6.1](#61-button)                                                           | Four variants: `primary`, `dark`, `secondary`, `settled`                                                                                                                                            | A fifth, **`volt`** — filled `volt`, label `ink`, pressed `opacity: .7`                                                                                                                                                                                                                                                                                                                                                                           | Play needs a control for _they want you to play_ and every existing variant says something else: `primary` claims the accent a screen may only spend once ([1.2](#12-one-accent-used-sparingly)), `secondary` reads as the lesser of two actions, `dark` is a filled action with no meaning attached, and `settled` is mint's. It is the one variant that does not have the others' shape — its label is `ink` rather than white, and its press is an opacity rather than a fill. Both follow from volt itself: `ink` on volt is 13.96:1 and white on it is not readable, and volt is already the brightest value in the palette with no darker companion to press to                                                                                                                                                                                                                                                                                                                                                                                           |
 | 2026-08-31 | [6.6](#66-press-states)                                                     | The volt button had no registered press                                                                                                                                                             | `opacity: .7`, over its one fill                                                                                                                                                                                                                                                                                                                                                                                                                  | The system's existing answer for a pressed surface with no second fill — the chip, the segment, the availability cell, the photo tile and the tick-box row all take it. A seventh hex invented to satisfy _the variant's pressed fill_ would be a colour added to describe a press, which [15.2](#152-adding-a-colour) refuses on its face: it carries no meaning nothing else carries. Registered here rather than left in [6.1](#61-button), because this table is where a build session looks for what a finger does                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | 2026-08-31 | [2.5](#25-contrast--computed) · [4.3](#43-elevation)                        | —                                                                                                                                                                                                   | **Two new tokens.** `color.courtScrim` — the `night` colour at **`.93`** — and `shadow.textOnMedia`, a `textShadow` rather than an elevation                                                                                                                                                                                                                                                                                                      | The prototype's two court call sites disagreed at `.92` (read-only) and `.94` (interactive), and a scrim that is not one number is a ground whose worst case cannot be computed at all; pinning it is what turns an unbounded set of ratios into four. It is the `night` colour rather than the prototype's `rgba(6,26,33,·)` for the reason [9.1](#91-bottom-sheet)'s scrim is: the dim matches the palette, and that hex carries no meaning the palette does not already have ([15.2](#152-adding-a-colour)). `textOnMedia` is lifted from the seat labels' own `0 1px 3px rgba(0,0,0,.6)` and applied to **both** label sets — the prototype gave it to the seats and not to the side labels, which are the lower-contrast of the two. The generated poster inherits it and sets its own lightness floor separately, its hue being player-derived rather than one of four                                                                                                                                                                                    |
+| 2026-08-31 | [4.3](#43-elevation)                                                        | Four shadows, none of them tinted                                                                                                                                                                   | A **fifth**, the ⚡Play disc's, in `coral` — and the calibration table that turns the prototype's `-6px` spread into a radius, an offset and an opacity RN can actually express                                                                                                                                                                                                                                                                   | The one thing in the bottom chrome that floats, and it floats in its own colour. Stated with the Android caveat, because `elevation` cannot be tinted and half the platform gets a dim instead                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| 2026-08-31 | [6.6](#66-press-states)                                                     | The tab bar had no registered press at all                                                                                                                                                          | Two: `opacity: .7` on a tab **column**, and [6.1](#61-button) `primary`'s `coral` on the ⚡Play disc — which does **not** also dim                                                                                                                                                                                                                                                                                                                | One channel per state. The disc has a second fill and the flanks do not, so each takes the answer its own surface allows                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| 2026-08-31 | [10.1](#101-screen-structure)                                               | The structure, stated and never confirmed against a specification that proposed the opposite                                                                                                        | The same structure, recorded as **confirmed for Play**: the header pins above the scroller, the CTA and the bar are flex siblings below it, and the **bar owns the bottom inset**                                                                                                                                                                                                                                                                 | The counter-argument is a viewport budget computed against a phone with no safe areas, so it gets worse on a real device. An inset applied twice is 34pt of nothing                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| 2026-08-31 | [10.2](#102-the-tab-bar)                                                    | Geometry for a bar nobody had built: paddings, a 16pt box, `currentColor` squares, and no label role at all                                                                                         | The whole bar. Five columns, a 30pt disc at radius 11 in [6.1](#61-button) `primary` with `shadow.fab`, a 2pt `coral` ring **absolutely positioned**, `tag` labels under a **derived** `maxFontSizeMultiplier`, Feather and its five names, no badge — and [Part 14](#part-14--corrections-applied-to-the-prototype) row 6 retired                                                                                                                | The bar ships, so every question it was holding open is now due. Volt lost the ring by measurement (1.25:1) and the disc lost white-on-`coral` to Rule C; the cap is derived because a guessed one fails on one word, on one phone, at one OS setting                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| 2026-08-31 | [4.3](#43-elevation) · [10.2](#102-the-tab-bar)                             | —                                                                                                                                                                                                   | **Four new values in `theme.ts`.** `size.fab` **28 → 30**, `radius.fab: 11`, a `size.tabBar` block holding the bolt, the ring's gap and stroke and the derived label cap, and `shadow.fab`                                                                                                                                                                                                                                                        | `size.fab` was unreferenced and off the 3pt grid at both values; 30 is what the bar draws. The ring is kept as its two stated numbers rather than a pre-added 38, and the bar does the arithmetic                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 
 # Part 17 — What the reset removed
 

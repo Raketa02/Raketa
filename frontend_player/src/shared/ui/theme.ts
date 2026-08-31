@@ -246,6 +246,11 @@ const radius = {
   card: 13,
   popover: 13,
   toast: 12,
+  /** The ⚡Play disc. Not the avatar rule — `round(30 x 0.33)` lands on 10 and the disc is
+   *  not a face; 11 is the prototype's measured value, kept (docs/design-system.md 10.2).
+   *  The active state's RING is this grown by `size.tabBar.ringGap + ringStroke` on every
+   *  side, which is arithmetic the bar does rather than a second radius token. */
+  fab: 11,
   btn: 10,
   note: 10,
   daySquare: 10,
@@ -409,7 +414,34 @@ const size = {
   sportDot: 6,
   infoGlyph: 14,
   tabIcon: 16,
-  fab: 28,
+  /** The ⚡Play disc — 28 until the bar was built, unreferenced by anything, and off the
+   *  3pt grid at both values. **30**, which is what #227 drew and measured. */
+  fab: 30,
+  /** The tab bar — 10.2. The bar's own geometry is 10.2's and is read from `space`:
+   *  paddingTop `xs`, paddingBottom `md` + the bottom inset, an icon at `tabIcon`, and the
+   *  smallest step on the grid between the icon and its label. What is here is the four
+   *  values the grid and 10.2 do not between them supply.
+   *
+   *  `ringGap` and `ringStroke` are the ACTIVE state, kept as the two numbers 10.2 states
+   *  rather than pre-added into a 38pt ring: the ring is `size.fab` grown by both on every
+   *  side and its radius is `radius.fab` grown by both, and the bar does that arithmetic —
+   *  the same reason the level bar keeps 7.5's y coordinates as coordinates. The ring is
+   *  ABSOLUTELY positioned, so the 4pt it adds above the disc comes out of the bar's
+   *  existing 6pt top padding and the bar's height does not change between screens.
+   *
+   *  `labelMaxScale` is the only Dynamic Type mechanism this surface has: Part 13 names the
+   *  tab bar as the fixed-height exception AND permits `allowFontScaling={false}` only
+   *  inside the level bar, which leaves a bounded multiplier and nothing else. **Derived,
+   *  never chosen** — `tabBarLabelCap.test.ts` measures the five shipped labels against the
+   *  real Archivo 700 advances in the narrowest phone's column and recomputes it, so a
+   *  sixth tab or a longer word goes red rather than truncating on somebody's phone. */
+  tabBar: {
+    /** ADR-0135: Feather `zap`, inside the disc, smaller than the 16pt box the flanks use. */
+    bolt: 15,
+    ringGap: 2,
+    ringStroke: 2,
+    labelMaxScale: 1.7,
+  },
   grabber: { width: 36, height: 4 },
   sheetClose: 28,
   popoverWidth: 250,
@@ -440,7 +472,7 @@ const hit = {
 } as const;
 
 // ---------------------------------------------------------------------------
-// Elevation — four shadows in the whole system, all for things that genuinely float, plus
+// Elevation — five shadows in the whole system, all for things that genuinely float, plus
 // one TEXT shadow, which is a different mechanism and not an elevation at all.
 // CARDS NEVER HAVE ONE: depth on paper comes from the surface change and the 1pt border.
 // The deck card is here because it is not a card, not because the rule bent.
@@ -482,6 +514,29 @@ const shadow = {
     shadowOpacity: 0.12,
     shadowRadius: 20,
     elevation: 8,
+  },
+  /** THE ⚡PLAY DISC — the fifth, and the only one that is a colour rather than a dimming.
+   *
+   *  From the prototype's `0 6px 14px -6px rgba(232,72,43,.7)`, and CALIBRATED rather than
+   *  copied: that rule carries a -6px spread against a 14px blur, so 6 of the 14 never
+   *  reach the paper and RN has no way to say so.
+   *
+   *    blur 14   -> radius 7    the halving the other four do
+   *    offset 6  -> 3           the spread eats the drop: 6 x (1 - 6/14) = 3,4
+   *    opacity .7 -> .40        and the same fraction of the ink: .7 x (1 - 6/14)
+   *
+   *  `coral` rather than a bespoke dark hex, because the tint is the whole point — the disc
+   *  is the one thing in the bottom chrome that floats, and it floats in its own colour.
+   *  ON ANDROID IT DOES NOT: `elevation` draws the platform's black shadow and RN exposes
+   *  no way to tint it, so the disc is raised on both platforms and glows on one. 6 seats it
+   *  below the deck card, which is right — the bar is chrome and every overlay passes over
+   *  it. */
+  fab: {
+    shadowColor: color.coral,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.4,
+    shadowRadius: 7,
+    elevation: 6,
   },
   /** TEXT ON GENERATED MEDIA — a textShadow, not an elevation, and the only one in the app.
    *
