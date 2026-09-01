@@ -43,8 +43,8 @@ the Proposals opt-in, never pre-ticked and with a finish that stays closed until
 answers either way, and the **profile commit**: every answer in one idempotent
 `POST /players/me/profile` — plus the **Profile surface**, the one read of the week, the
 radius and the per-sport declaration that Play's search screen is drawn from, with an unkeyed
-`PUT` behind each of the three). `play` has its first screen, below; `challenges` holds
-**only words** so far.
+`PUT` behind each of the three). `play` has its first two screens and the sheet over them,
+below; `challenges` holds **only words** so far.
 
 **The shell is five tabs over one stack, and it remembers nothing.** `TabShell` mounts the
 `TabBar` once, below the navigator, and reads the active column off the current path —
@@ -377,6 +377,72 @@ keeps the pause, and the asymmetry is written down at both sites. And **a seat w
 the live gates no longer admit is marked, never emptied** — a set difference against the rows
 the read-back still holds, derived and never stored, with the marked player still in the
 forecast and the court stating the fact and never the cause.
+
+**⚡Play's second screen is _Match me_ — one person at a time, two named buttons, and no
+swipe.** The gesture was refused **not on cost** — `RadiusSlider` already drags on the
+built-in `PanResponder` — but because _Show them again_ was struck, leaving `PASS_SUPPRESS` at
+thirty days with nothing that reverses one: a swipe would put the cheapest gesture in the app
+on the most durable act in it. **No `react-native-gesture-handler` and no
+`react-native-reanimated` are added**, the leaving animation stays a leaving animation, and
+`deck.test.tsx` asserts both absences — the second against `package.json`, because that is
+where a build session reaching for a swipe reaches first. Answering is **optimistic** so the
+next card is already there to receive the focus that moves onto it, and **a refusal puts the
+card back**, which is what keeps _a retry belongs to the act_ true here: the retry is the
+button that was pressed, and it cannot be if the person is gone. Offline is not a refusal —
+the deck **keeps the pause**, because neither a yes nor a pass derives anything from the
+moment it lands. **A spent deal is not an empty pool**: ten cards answered deals again with a
+new `search_id` and the player never sees it, and only a fresh deal that comes back empty is
+an ending — of which there are **two, split on `players_in_range`**, because _widen in You_ is
+advice for somebody with nobody in range and an insult to somebody who has answered everybody.
+That sentence is gated again by `radius_clamp`, since a player at their own ceiling cannot
+give what it asks for. **There is no _Show them again_**; what stands in its place is the pool
+description and the count of the player's own outgoing yeses, both already on the wire. The
+card in flight is **route-local** and the ids answered are keyed by the deal they belong to,
+so a deal replaced mid-flight cannot leave a stale id behind — derived, never synchronised.
+
+**Play's two ways through the tab are one control, and the count on it is the segment's.**
+`PlaySegment` is design-system **6.3**, specified since the document was locked and built for
+this; its two halves move in opposite directions and that is the decision — _Find a game_ is
+an **arrival** and calls the shell's reset, where _Match me_ is an ordinary push. The count is
+your **own outstanding yeses**, filtered by the sport on screen so the number labels the deck
+it sits above, and it moves on a tap's own response rather than on a refetch. The prototype's
+number was people who had waved at _you_, and that number **cannot exist**: an incoming yes
+never crosses the wire in either direction. It is the one read in Play that background-
+refetches, because the rule against that is about orderings and a count has none — and it is
+why the tab bar carries no badge.
+
+**`SH.whyfit` is the one surface allowed to draw a term row, and the row count is derived.**
+One component taking `(candidate, envelope)` and reading no global state, which is what lets
+it **name no mode on the deck**: deriving one from the declared intent would be the engine's
+resolution rule rewritten in TypeScript. Five zones — term rows, the sub-total, the
+adjustments, what else moved you here, and a footer — with the not-counted block beneath the
+rows and their total. **A stood-down term is not a term row**: four of a row's five cells
+would be empty, so the live terms are rows and the rest are a list, each line pairing the term
+with **whose gap** it was; the platform's own gap is stated **once, in the footer**, or
+reliability's line prints identically on twenty cards. **Concerns are marked in place** rather
+than gathered, because every concern's term is guaranteed to be a row already drawn and a
+summary block would restate a value the sheet has just rendered. The column **adds up on
+screen**: contributions are apportioned by largest remainder against the printed sub-total, so
+seven rows rounded independently cannot miss it, and `applied` is derived as `fit −
+Σcontributions` because the modifier rows carry pre-budget entry points and **nothing sums
+that list**. The versions in the footer are not decoration: the read-back never recomputes, so
+a month-old record is today's build drawing an older ruleset. **A row this build cannot read
+is kept, and the gap lands in place** — an unknown `Term` takes the row's label, an unknown
+evidence variant takes the slot where the reason line goes, and the three numbers stand,
+because they are numbers rather than codes. Dropping one is not a shorter list, it is a wrong
+number: its contribution would reappear under _the engine adjusted it_ as an adjustment nobody
+made. What **is** dropped is what no screen totals — a tag with no words, a liveness code, a
+concern that could not be joined to a row.
+
+**Two gaps were found while building the deck and are named rather than papered over.** The
+searcher's **own area code** is served by no route — `area_code` crosses on the candidate and
+on the distance evidence, and both are theirs — so `SearchEnvelope.myAreaCode` is optional and
+absent, and the meta line drops its one licensed clause and keeps its kilometres. And
+`PlayIntentSurface` is a closed four with **no deck value**, so the declaration interstitial
+reports `SEARCH_SWITCH` from both Play surfaces; it is client-asserted context nothing branches
+on, and a fifth value is a contract change to argue rather than a field to invent. They are
+[#279](https://github.com/Raketa02/Raketa/issues/279) and
+[#280](https://github.com/Raketa02/Raketa/issues/280).
 
 `src/shared/ui/` holds the design-system primitives built so far — the cards, note, row,
 hairline, button, tag, chip, bar, header, the overlays and drawn objects the result screen

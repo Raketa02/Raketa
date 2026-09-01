@@ -40,6 +40,11 @@ const ENVELOPE: SearchEnvelope = {
   searchId: '11111111-0000-4000-8000-000000000001',
   mode: 'COMPETITIVE',
   myAreaCode: MY_AREA,
+  // The pool and the clamp are the empty state's and the ladder's; no card reads either.
+  pool: { radiusKmUsed: 12, playersInRange: 7, window: 'THIS_WEEK' },
+  radiusClamp: false,
+  rulesetVersion: 'ruleset-v1',
+  engineVersion: 'matchfit-v1',
 };
 
 /** One term that fired, with the arithmetic that put it where it is. */
@@ -111,6 +116,10 @@ function candidate(over: Partial<Candidate> = {}): Candidate {
     terms: TERMS,
     concerns: [],
     livenessReasons: [],
+    // The sheet's three, which no card draws — stated rather than spread away, so a card
+    // that started reading one fails here rather than reading an empty list.
+    degradedTerms: [],
+    modifiers: [],
     ...over,
   };
 }

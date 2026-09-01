@@ -21,6 +21,7 @@ import TabsLayout from '@/app/(app)/(tabs)/_layout';
 import AroundRoute from '@/app/(app)/(tabs)/around';
 import ChatsRoute from '@/app/(app)/(tabs)/chats';
 import NowRoute from '@/app/(app)/(tabs)/index';
+import DeckRoute from '@/app/(app)/(tabs)/play/deck';
 import FindAGameRoute from '@/app/(app)/(tabs)/play/index';
 import YouRoute from '@/app/(app)/(tabs)/you';
 import AuthLayout from '@/app/(auth)/_layout';
@@ -72,6 +73,7 @@ export const ONBOARDING_ROUTES = {
   '(app)/(tabs)/index': NowRoute,
   '(app)/(tabs)/around': AroundRoute,
   '(app)/(tabs)/play/index': FindAGameRoute,
+  '(app)/(tabs)/play/deck': DeckRoute,
   '(app)/(tabs)/chats': ChatsRoute,
   '(app)/(tabs)/you': YouRoute,
   '(auth)/_layout': AuthLayout,
@@ -287,6 +289,20 @@ export function stubProfileOptions(
   served: Wire['PlayerProfileOptionsResponse'] = PROFILE_OPTIONS_SERVED,
 ) {
   transport.on('GET', PROFILE_OPTIONS_PATH, () => json(served));
+}
+
+/**
+ * Your own *Let's play* yeses — the read behind the **Match me count** on Play's segment.
+ *
+ * Separate from the three above and defaulted to nothing outstanding, because every Play
+ * screen draws the segment and almost no suite is about the number on it: a count that has
+ * not landed draws no count, which is the same thing the segment says at nought.
+ */
+export function stubInterest(
+  transport: Transport,
+  served: Wire['InterestListResponse'] = { outgoing: [], mutual: [], outstanding: [] },
+) {
+  transport.on('GET', '/api/v1/interest', () => json(served));
 }
 
 export interface GateStub {

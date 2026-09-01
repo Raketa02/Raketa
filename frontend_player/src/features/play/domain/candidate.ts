@@ -20,17 +20,27 @@
  *
  * ## What is not here yet
  *
- * `degraded_terms`, `modifiers` and `at_stake` are the why-fit sheet's and arrive with it;
- * `counted_games` is `OMITTED` on the wire and Decision 3 deleted the block that would have
- * drawn it. **`would_be_forecast` is out of scope entirely** — nothing in the backend writes
- * it, and its three consumers went with it. A field is added here when a surface draws it,
- * because a DTO with fields nobody reads is a contract nobody is checking.
+ * `degraded_terms` and `modifiers` arrived with `SH.whyfit`, which is the surface that draws
+ * them ([#273](https://github.com/Raketa02/Raketa/issues/273)). What is still absent is
+ * `at_stake` — the sheet's five zones do not draw it — and `counted_games`, which is
+ * `OMITTED` on the wire and whose block Decision 3 deleted. **`would_be_forecast` is out of
+ * scope entirely**: nothing in the backend writes it, and its three consumers went with it. A
+ * field is added here when a surface draws it, because a DTO with fields nobody reads is a
+ * contract nobody is checking.
  */
 
 import type { SocialTagId } from '@/shared/vocabulary/socialTags';
 
 import type { ScoredTerm } from './evidence';
-import type { InclusionReason, LivenessReason, SearchMode, Term } from './vocabulary';
+import type {
+  DegradedReason,
+  InclusionReason,
+  LivenessReason,
+  ModifierCode,
+  SearchMode,
+  Term,
+  Window,
+} from './vocabulary';
 
 /** μ ± σ, as `rating` published it. The **likely range** — never the band's own edges. */
 export interface LikelyRange {
@@ -96,6 +106,51 @@ export interface Candidate {
   readonly livenessReasons: readonly LivenessReason[];
   /** Why they are on the list **at all**, where the reason is one the searcher is owed. */
   readonly inclusionReason?: InclusionReason;
+  /**
+   * The terms that **stood down**, each with whose gap it was — the renormalisation basis.
+   *
+   * Drawn by `SH.whyfit` and by nothing else: *"a 78 built on four terms and a 78 built on
+   * seven are different readings of the same number"*, and the sheet is the only surface whose
+   * job is that number. It is **not** a shorter `terms[]` — a stood-down term has no weight,
+   * no value, no contribution and no evidence, which is four of a row's five cells
+   * ([#233](https://github.com/Raketa02/Raketa/issues/233) §1).
+   */
+  readonly degradedTerms: readonly DegradedTerm[];
+  /** What the engine adjusted after the eight terms were summed. **Never summed** — see below. */
+  readonly modifiers: readonly Modifier[];
+}
+
+/**
+ * A term the engine **did not count**, and whose gap that was.
+ *
+ * The pair is the sentence — *"`INTENT_ALIGNMENT + NOTHING_FROM_THEM` and `SOCIAL_VIBE +
+ * NOTHING_FROM_THEM` are two different sentences from one code"* — so neither half travels
+ * alone.
+ */
+export interface DegradedTerm {
+  /** `null` where the served term is a code this build has no name for — §3's gap in place. */
+  readonly term: Term | null;
+  /**
+   * `null` where the served reason is a code this build has never seen.
+   *
+   * A gap rather than a drop, because the not-counted block **is** the renormalisation basis
+   * a reader is owed: a line that vanished would make the sheet's own list of what did not
+   * count silently shorter (`the-words.md` §3).
+   */
+  readonly reason: DegradedReason | null;
+}
+
+/**
+ * One adjustment the engine made after the terms were summed, and what it was worth.
+ *
+ * **Nothing sums this list.** `record_rows.py` forbids it in writing — the budget was applied
+ * by the type that produced it — and the only total anybody may read is `applied`, which is
+ * `fit − Σcontributions` and is exact by subtraction from two published numbers.
+ */
+export interface Modifier {
+  readonly code: ModifierCode;
+  /** Signed, and in Fit points. The row prints it; no row prints a running total. */
+  readonly points: number;
 }
 
 /**
@@ -108,10 +163,69 @@ export interface Candidate {
  * licenses a client to compute — and a card that reached for the profile itself would be
  * reading global state, which is the defect §G6 #8 records on the why-fit sheet and
  * [#233](https://github.com/Raketa02/Raketa/issues/233) fixed there.
+ *
+ * ## And today there is nothing to fold on, which is why it is optional
+ *
+ * **No route serves the searcher their own area code.** `area_code` crosses on exactly two
+ * schemas — `PlayerCardSchema` and `DistanceEvidence` — and both are the *candidate's*;
+ * `GET /players/me/profile` serves a week, a radius and the declarations, and the location
+ * area is one of the three facts it names as *not served yet*. So the comparison this field
+ * exists for cannot fire, and the honest spelling of that is an absent value rather than a
+ * sentinel string that would silently mean *never in your area*.
+ *
+ * The first surface to draw a card is the deck, which is where the gap was found;
+ * [#279](https://github.com/Raketa02/Raketa/issues/279) is where it is decided, and until then
+ * the meta line drops its clause and keeps its kilometres.
  */
 export interface SearchEnvelope {
   readonly searchId: string;
   /** **Null exactly on the deck**, which has no mode. See the module note. */
   readonly mode: SearchMode | null;
-  readonly myAreaCode: string;
+  /** Absent until a route serves it — see the module note, not a bug in a caller. */
+  readonly myAreaCode?: string;
+  /** What the searcher is told about the pool this answer came from. */
+  readonly pool: PoolDescription;
+  /**
+   * What the numbers were, and how the maths worked — the why-fit sheet's **footer**.
+   *
+   * Not decoration. `GET /searches/{id}` *never recomputes*
+   * ([ADR-0104](../../../../../docs/adr/0104-the-search-record-is-the-answer-and-never-expires.md)),
+   * so a month-old read-back is today's build drawing an older ruleset's arithmetic, and this
+   * pair is the only thing on screen that says so.
+   */
+  readonly rulesetVersion: string;
+  readonly engineVersion: string;
+  /**
+   * Whether a widening offer hit the **profile slider's own ceiling** — and therefore whether
+   * any *widen* sentence may be said at all.
+   *
+   * `false` on an answer that widened nothing, which is every deal: the relaxation ladder
+   * belongs to the shortlist and a deck carries no rung offers. The gate is drawn anyway,
+   * because it is addressed to a player who may already be at 50 km and *asking somebody for
+   * something they cannot give* is the one thing the advice must not do
+   * ([`the-words.md`](../../../../../docs/specs/matchmaking/the-words.md) §17).
+   */
+  readonly radiusClamp: boolean;
+}
+
+/**
+ * The pool an answer came out of — sent on **every** search and not only on empty ones,
+ * *"because a thin pool and a broken floor are indistinguishable without it"*.
+ *
+ * ADR-0099's shape minus its two constants. `post_gate` is always `true` and travels only so
+ * the count cannot be misread, and the **sport is not here**: the screen that draws a pool
+ * already knows which sport it asked about and holds this app's word for it, which is the
+ * same division `poolRankingStatus` takes. A sport narrowed twice is a sport that can be
+ * narrowed differently in two places.
+ *
+ * **The count is post-gate, always.** No pre-gate count crosses, because the delta would be
+ * the number of people a mutual preference hid from this searcher
+ * ([ADR-0096](../../../../../docs/adr/0096-gender-preference-mutual-gate-invisible-to-the-scorer.md)).
+ */
+export interface PoolDescription {
+  /** The searcher's own radius, in whole kilometres, as the search actually ran on it. */
+  readonly radiusKmUsed: number;
+  readonly playersInRange: number;
+  /** `null` where the served window is a code this build has never seen — §3's drop. */
+  readonly window: Window | null;
 }

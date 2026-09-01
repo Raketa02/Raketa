@@ -66,7 +66,7 @@ const RANKED: readonly ScoredTerm[] = [
   scored('SOCIAL_VIBE'),
 ];
 
-function reasons(selection: ReturnType<typeof selectReasons>): readonly Term[] {
+function reasons(selection: ReturnType<typeof selectReasons>): readonly (Term | null)[] {
   return selection.kind === 'terms' ? selection.terms.map((row) => row.term) : [];
 }
 

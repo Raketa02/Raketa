@@ -134,4 +134,19 @@ export const searchKeys = {
    */
   forecast: (searchId: string, players: readonly SeatedPlayerId[]) =>
     [...searchKeys.forecasts(), searchId, [...players].sort()] as const,
+  /**
+   * The **Match me count** — your outstanding yeses, per sport.
+   *
+   * The one key here that is not a search's, and it joins this factory rather than starting a
+   * second file for the reason stated above: `searchKeys` is named for the record because
+   * every Play surface reads a search, and one count is not a second feature's worth of keys.
+   *
+   * **It is deliberately not under `RANKED_LIST_QUERY_OPTIONS`.** It is a number rather than
+   * an ordering, so nothing reorders under a finger when it moves — and it is the one figure
+   * in this tab that *should* move while somebody is looking at it, which is exactly what the
+   * app-wide defaults give it. It is also **not keyed by sport**: one read answers for all
+   * four, the deck filters what it draws, and a key per sport would be four requests for one
+   * response.
+   */
+  interest: () => [...searchKeys.all, 'interest'] as const,
 };

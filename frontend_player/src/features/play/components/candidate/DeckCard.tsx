@@ -39,6 +39,7 @@
  * a state rather than a blank row.
  */
 
+import type { RefObject } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Button, theme } from '@/shared/ui';
@@ -88,9 +89,42 @@ export interface DeckCardProps {
   readonly onAccept: () => void;
   /** The body's own action, reached by a long press. */
   readonly onWhyFit: () => void;
+  /**
+   * A handle on the body, so the deck can move accessibility focus **onto the card that
+   * arrives**.
+   *
+   * §E3's first finding is that focus is destroyed on every render and nothing restores it,
+   * so a listener who answers a card is dropped at the root with no idea what happened. The
+   * toast announces the act and this is where focus goes — and it is the *body*, because the
+   * body is the element that says who this is (§20.5). The screen owns the moving; the card
+   * owns which element is worth moving to, which is why this is a prop and not a rule.
+   *
+   * A `View` ref rather than `overlay.tsx`'s `FocusTarget`, which is the wider
+   * `View | null` shape a `useRef(null)` produces: `Pressable` takes the narrower one, and
+   * `moveAccessibilityFocus` accepts this without widening anything.
+   */
+  readonly bodyRef?: RefObject<View>;
+  /**
+   * Whether an answer is already on its way — **the two buttons lock until the card has
+   * left**.
+   *
+   * Not a `busy` state: nothing is loading, and the answer is optimistic, so the card is
+   * already travelling. What this prevents is the second press landing on a person who has
+   * been answered and is still on screen, which would record two acts about one card. It is
+   * the courtesy; the correctness is that the screen's handler refuses the same thing.
+   */
+  readonly answering?: boolean;
 }
 
-export function DeckCard({ candidate, envelope, onPass, onAccept, onWhyFit }: DeckCardProps) {
+export function DeckCard({
+  candidate,
+  envelope,
+  onPass,
+  onAccept,
+  onWhyFit,
+  bodyRef,
+  answering = false,
+}: DeckCardProps) {
   const facts = candidateFacts(candidate, envelope, DECK_CARD_DRAWS);
   const balance = evidenceOf(candidate, 'predicted_balance');
   const overlap = evidenceOf(candidate, 'availability_overlap');
@@ -102,6 +136,7 @@ export function DeckCard({ candidate, envelope, onPass, onAccept, onWhyFit }: De
           `overflow: hidden` on one layer are a shadow drawn against a clipped bound — the
           same reason the sheet and the toast keep their own. */}
       <Pressable
+        ref={bodyRef}
         style={s.clip}
         accessibilityRole="button"
         accessibilityLabel={facts.label}
@@ -151,6 +186,7 @@ export function DeckCard({ candidate, envelope, onPass, onAccept, onWhyFit }: De
           label={DECK_ANSWER_WORDS.pass}
           accessibilityLabel={answers.pass}
           onPress={onPass}
+          disabled={answering}
           variant="secondary"
           style={s.answer}
         />
@@ -158,6 +194,7 @@ export function DeckCard({ candidate, envelope, onPass, onAccept, onWhyFit }: De
           label={DECK_ANSWER_WORDS.accept}
           accessibilityLabel={answers.accept}
           onPress={onAccept}
+          disabled={answering}
           style={s.answer}
         />
       </View>

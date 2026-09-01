@@ -255,6 +255,34 @@ export { endPlaySession, usePlaySession } from './store/playSession.store';
 export { FindAGameScreen } from './components/FindAGameScreen';
 
 /**
+ * **Match me** — the deck, and the second Play screen.
+ *
+ * Named by `src/app/(app)/(tabs)/play/deck.tsx` and by nothing else. One person at a time, two
+ * named buttons and no swipe, and a long press that opens `SH.whyfit`
+ * ([#270](https://github.com/Raketa02/Raketa/issues/270)).
+ */
+export { DeckScreen } from './components/DeckScreen';
+
+/**
+ * The whole Fit calculation, in a sheet — and the one surface allowed to draw a term row.
+ *
+ * Exported because three surfaces open it: the deck's long press, and each of the pool's two
+ * cards on a plain press ([#273](https://github.com/Raketa02/Raketa/issues/273)). It takes
+ * `(candidate, envelope)` and reads no global state, which is what lets it name no mode on the
+ * deck — `SearchEnvelope.mode` is null exactly there.
+ */
+export { WhyFitSheet, type WhyFitSheetProps } from './components/whyfit/WhyFitSheet';
+
+/**
+ * Play's two ways through the tab, as one control.
+ *
+ * Both screens draw it, and it is **not** the shell's: the count on it is filtered by the
+ * sport on screen, and the sport is a Play screen's own fact — which is also why the tab bar
+ * carries no badge (`TabBar`).
+ */
+export { PlaySegment, type PlaySegmentProps, type PlaySurface } from './components/PlaySegment';
+
+/**
  * What stands between a player and a search, and the words the screen says about it.
  *
  * Exported for the suites that drive the screen through the real route tree: an assertion
@@ -271,3 +299,26 @@ export {
   searchControlLabel,
 } from './components/findAGamePresentation';
 export { findAGameStanding, type FindAGameStanding } from './domain/findAGame';
+
+/**
+ * The deck's own words, exported for its suite for the reason above — and for one more: three
+ * of them are what a **rule** looks like on screen. *There is no `Show them again`* is only
+ * checkable against the sentences that replaced it, and the empty states' split is only
+ * checkable by asking which title was drawn.
+ */
+export {
+  DEAL_AGAIN_LABEL,
+  DECK_FOOTER,
+  MATCH_ME_TITLE,
+  NOBODY_IN_RANGE_TITLE,
+  SEEN_EVERYBODY_TITLE,
+  WIDEN_IN_YOU,
+  interestToast,
+  matchMeSegment,
+  mutualToast,
+  outgoingYeses,
+  passedToast,
+} from './components/deckPresentation';
+export { poolDescription } from './components/searchPresentation';
+export { deckStanding, type DeckDeal, type DeckStanding } from './domain/deckHand';
+export { whyFitColumn, type WhyFitColumn, type WhyFitRow } from './domain/whyFitColumn';

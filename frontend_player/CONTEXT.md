@@ -359,12 +359,34 @@ listed here because it is a Play surface rather than a profile one.
   about a term, and the one thing on a card that is entitled to grade. _Avoid_: calling a fact
   row a reason, and "why-fit row", which is the sheet's.
 - **Search envelope** — every fact about **the search** rather than about a candidate, and the
-  second argument every card takes. It carries the searcher's own area code, folded on in
-  `api/` exactly as the Origin search's sport and week are, so that a card can compute the one
-  comparison it is licensed to and still **read no global state**. Its `mode` is **null exactly
-  on the deck**, and it is passed whole rather than as a mode string precisely so it cannot be
-  conflated with the mode the engine priced a row under, which is on the evidence. _Avoid_:
-  "the search" for the record it describes; passing `mode` alone.
+  second argument every card and the why-fit sheet takes: the id, the mode, the pool
+  description, the radius clamp and the two version stamps. Its `mode` is **null exactly on the
+  deck**, and it is passed whole rather than as a mode string precisely so it cannot be
+  conflated with the mode the engine priced a row under, which is on the evidence. It is also
+  where the searcher's **own** area code would be folded on, so that a card can compute the one
+  comparison it is licensed to and still **read no global state** — and it is **absent**,
+  because no route serves a player their own coarse area: `area_code` crosses on the candidate
+  and on the distance evidence, and both are theirs. The meta line drops its clause and keeps
+  its kilometres until the fact exists. _Avoid_: "the search" for the record it describes;
+  passing `mode` alone; a sentinel for the missing area, which would silently mean _never in
+  your area_.
+- **Play segment** — the **two ways through the Play tab** as one control, drawn on both
+  screens and never on the tab bar: _Find a game_ and _Match me_. The halves move in opposite
+  directions, and that is the whole of it — _Find a game_ is an **arrival**, so it calls [the
+  reset](#routing) and ends the Play session, where _Match me_ is an ordinary push with Find a
+  game left underneath. It is design-system 6.3, specified since the document was locked and
+  built for this. _Avoid_: "the play tabs" — the bar has the tabs, and this is inside one of
+  them; `router.back()` for the left half, which lands correctly on most paths and silently
+  wrongly on the rest.
+- **Match me count** — the number on that segment: your **own outstanding yeses in the sport
+  on screen**, read from `GET /interest` and **filtered by sport**, so that the number labels
+  the deck it sits above. It is the one figure in the tab that background-refetches, because
+  the rule against that is about **orderings** — a pool reordering under a finger — and a count
+  has no order to lose. The prototype counted people who had waved at _you_, and that number
+  **cannot exist**: an incoming yes never crosses the wire in either direction, which is what
+  makes saying yes low-stakes. It moves on a tap's **own response** rather than on a refetch.
+  _Avoid_: "unread", "inbox" and "badge" — there is no inbox and the bar carries no badge;
+  counting the outgoing list, which is this app answering a question the response answers.
 
 ### Data and errors
 

@@ -139,11 +139,27 @@ export type Evidence =
  *
  * The list arrives **ranked by contribution**; nothing on this side sorts. The cap on how
  * many are drawn is the client's, and it is `reasonSelection`'s.
+ *
+ * ## The two `null`s, and why the numbers beside them are not
+ *
+ * Old builds live on real phones for months, so a served `Term` or a ninth evidence variant
+ * may be a code this build has never seen — the state
+ * [`the-words.md`](../../../../../docs/specs/matchmaking/the-words.md) §3 legislates for. The
+ * row is **kept** either way, because ADR-0106 §6 requires *"a named gap saying the app is out
+ * of date, never a silently shorter list"* and the why-fit sheet prints **totals these rows
+ * belong to**: a row dropped here reappears as an adjustment nobody made, and the sheet's
+ * derived `applied` becomes *"a wrong number that looks like a plausible one"*.
+ *
+ * So the gap lands **in place**, exactly as #233 §7 specifies: an unrenderable variant *"leaves
+ * its row's weight, value and contribution standing — those are numbers, not codes"* and puts
+ * the gap where the reason line goes, and an unknown `Term` takes the whole row's label.
  */
 export interface ScoredTerm {
-  readonly term: Term;
+  /** `null` where the served term is a code this build has no name for. */
+  readonly term: Term | null;
   readonly weight: number;
   readonly value: number;
   readonly contribution: number;
-  readonly evidence: Evidence;
+  /** `null` where the served variant is one this build has no renderer for. */
+  readonly evidence: Evidence | null;
 }

@@ -21,6 +21,7 @@ import {
   launchSignedIn,
   stubGate,
   stubProfileOptions,
+  stubInterest,
   stubProfileSurface,
 } from '@/test-support/onboardingRouter';
 import { installTransport, json, type Transport, type Wire } from '@/test-support/transport';
@@ -43,6 +44,15 @@ const RATING: Wire['RatingResponse'] = {
 
 let transport: Transport;
 
+/**
+ * *The player is on Find a game*, asserted on the **header** rather than on the words.
+ *
+ * The screen's title and Play's segment now say the same thing — the segment is a view
+ * switch and the view it switches to is this screen — so the string alone matches twice.
+ * The header is the one of the two that means *this is where you are*.
+ */
+const onFindAGame = () => screen.findByRole('header', { name: FIND_A_GAME_TITLE });
+
 beforeEach(() => {
   transport = installTransport();
   stubGate(transport, { ratings: [RATING], hasPlayerProfile: true });
@@ -50,6 +60,7 @@ beforeEach(() => {
   // tests that press the tab, because an unstubbed route throws at the socket and the
   // failure would name `fetch` rather than the screen.
   stubProfileSurface(transport);
+  stubInterest(transport);
   stubProfileOptions(transport);
 });
 
@@ -157,7 +168,7 @@ describe('⚡Play', () => {
 
     pressTab('Play');
 
-    expect(await screen.findByText(FIND_A_GAME_TITLE)).toBeTruthy();
+    expect(await onFindAGame()).toBeTruthy();
     expect(screen).toHavePathname('/play');
   });
 
@@ -195,7 +206,7 @@ describe('⚡Play', () => {
 
     act(() => enterPlay());
 
-    expect(await screen.findByText(FIND_A_GAME_TITLE)).toBeTruthy();
+    expect(await onFindAGame()).toBeTruthy();
     expect(screen).toHavePathname('/play');
     act(() => router.back());
     await waitFor(() => expect(screen).toHavePathname('/'));

@@ -236,6 +236,12 @@ const type = {
    *  to be findable at a glance and the muted eyebrow was not. */
   flab: { fontFamily: font.sans[700], fontSize: 10.5, letterSpacing: 0.95, lineHeight: 12 },
   chip: { fontFamily: font.sans[600], fontSize: 10.5 },
+  /** The segmented control's label — 6.3's own `10.5 / 700`, tokenised by the first screen
+   *  that needed one. It is `chip`'s size at `flab`'s weight and neither's tracking: a
+   *  segment names a VIEW rather than a filter, so it is not a chip, and it is not uppercase,
+   *  so it is not a form label. 6.3 was specified and unbuilt, and this is the value it
+   *  states — a new role rather than a new decision. */
+  seg: { fontFamily: font.sans[700], fontSize: 10.5 },
   /** EYEBROW — labels a region you are READING. Not interchangeable with flab. */
   eyebrow: { fontFamily: font.sans[700], fontSize: 9.5, letterSpacing: 1.43, lineHeight: 12 },
   tag: { fontFamily: font.sans[700], fontSize: 9.5, lineHeight: 12 },

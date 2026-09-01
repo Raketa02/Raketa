@@ -82,8 +82,19 @@ Built so far, by the onboarding slice: `Button`, `Card` (+ `PressableCard`), `No
 and by the second part's photos step: `PhotoRow` with `PhotoTile`, `PhotoAddTile` and
 `PhotoPosterTile`, plus `CourtPoster`; and by its availability step: `AvailabilityGrid`
 with `Tick`; and by sign-up's age question: `TickBox`; and by Play: `TabBar`, `Switch`,
-`FitPill`, `BalanceBar`, `Court`, `Meter` and `Toast` with `ToastHost`. Import them from
-`@/shared/ui`.
+`FitPill`, `BalanceBar`, `Court`, `Meter`, `Segment` and `Toast` with `ToastHost`. Import them
+from `@/shared/ui`.
+
+**`Segment` is 6.3, specified since the document was locked and built only now.** Its own
+closing line is why it exists in that shape — _"nothing uses it today; it is specified so the
+first screen that needs one does not invent a second shape"_ — and Play's two ways through the
+tab are that screen. It is a **`button` carrying `selected`**, exactly as the chip is, and
+never a `switch` carrying `checked`: nothing in Part 6 carries `checked` on a _mode_, and 6.3
+_"picks one of several"_. The selection is a **lightness** step on the surface with a matching
+one on the label, so it is not colour alone, and every press is reported including a press on
+the segment already chosen — Play's _Find a game_ half re-enters the tab, which is arriving
+rather than doing nothing. Its label is a whole string rather than a name plus a count slot,
+because _Match me · 3_ is copy and the count belongs to the feature that counts something.
 
 **The five Play arrivals** are `Switch` (6.12), `FitPill` (7.10), `BalanceBar` (7.11),
 `Court` (7.12) and the availability grid's **diff variant** — and none of them reclaims a

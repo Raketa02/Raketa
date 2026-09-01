@@ -83,40 +83,34 @@ import {
   steppedRadius,
   topOfScale,
   useChangeSearchRadius,
-  useDeclarePlayIntent,
   useProfileOptions,
   useProfileSurface,
   widestRadiusFigure,
 } from '@/features/player_profile/types';
 import { ShellScreen } from '@/features/shell/types';
 import { offlineMessage, recoveryMessage } from '@/shared/errors';
-import {
-  AvailabilityGrid,
-  Button,
-  Chip,
-  Note,
-  RadiusSlider,
-  behindOverlay,
-  theme,
-} from '@/shared/ui';
+import { AvailabilityGrid, Button, Note, RadiusSlider, behindOverlay, theme } from '@/shared/ui';
 import { cellLabel, dayLabel, dayPartHead } from '@/shared/vocabulary/availabilityPresentation';
 import { DAY_PARTS, WEEKDAYS } from '@/shared/vocabulary/week';
 
 import { findAGameStanding } from '../domain/findAGame';
-import { PLAY_INTENTS, SEARCH_MODES } from '../domain/vocabulary';
+import { SEARCH_MODES } from '../domain/vocabulary';
 import { differsFromProfile, isTicked } from '../domain/workingWeek';
+import { useOutstandingInterest } from '../hooks/useDeck';
 import { useFindAGame } from '../hooks/useFindAGame';
 import type { FindAGameAsk } from '../use-cases/findAGame';
 import { usePlayPreferences } from '../store/playPreferences.store';
 import { usePlaySession } from '../store/playSession.store';
 
+import { DeclarationInterstitial } from './DeclarationInterstitial';
+import { SportChips } from './SportChips';
 import { useHeldWait } from './heldWait';
+import { PlaySegment } from './PlaySegment';
 import { playErrorMessage } from './playErrorMessage';
 import { SearchingLatch } from './SearchingLatch';
 import { poolRankingStatus } from './searchingPresentation';
 import { searchingFloorMs } from './searchingWait';
 import {
-  DECLARATION_BODY,
   FIND_A_GAME_TITLE,
   LOADING_PROFILE_LABEL,
   MODE_HEADING,
@@ -124,12 +118,8 @@ import {
   RADIUS_IS_YOUR_PROFILE,
   RETRY_READ_LABEL,
   SEARCHING_LABEL,
-  SPORT_HEADING,
   WEEK_CHANGED_FROM_PROFILE,
   WEEK_HEADING,
-  declarationOptionLabel,
-  declarationTitle,
-  intentLabel,
   modeControlLabel,
   modeLabel,
   searchControlLabel,
@@ -169,8 +159,16 @@ export function FindAGameScreen() {
   const [chosenRadiusKm, setChosenRadiusKm] = useState<number | undefined>(undefined);
 
   const search = useFindAGame();
-  const declare = useDeclarePlayIntent();
   const radiusWrite = useChangeSearchRadius();
+  /**
+   * The **Match me count**, for the segment above — and the one read on this screen that is
+   * allowed to move on its own.
+   *
+   * It is not gated on anything: a count that failed or has not landed simply draws no count,
+   * which is the same thing the segment says at nought. There is nothing to retry and nothing
+   * to report, because the number labels the *other* half of the control.
+   */
+  const interest = useOutstandingInterest();
 
   const profile = profileSurface.data;
   const bounds = options.data?.searchRadius;
@@ -179,6 +177,12 @@ export function FindAGameScreen() {
   const rated = useMemo(() => (ratings.data ?? []).map((rating) => rating.sport), [ratings.data]);
   const standing = findAGameStanding(rated, sport, profile?.playIntents ?? {});
   const sportName = standing.kind === 'no-rated-sport' ? undefined : sportLabel(standing.sport);
+  /**
+   * The count on the segment, **filtered by the sport on screen**, so the number labels the
+   * deck it sits above. An absent entry is *nothing outstanding there*, which is nought.
+   */
+  const outstandingHere =
+    standing.kind === 'no-rated-sport' ? 0 : (interest.data?.[standing.sport] ?? 0);
 
   /**
    * Fill the grid in from the profile — **once, when the read lands.**
@@ -348,24 +352,17 @@ export function FindAGameScreen() {
             </View>
           ) : null}
 
+          {/* Play's two ways through the tab. It is drawn on both screens rather than in the
+              shell, because the count on it is sport-filtered and the sport is this screen's
+              ([#270](https://github.com/Raketa02/Raketa/issues/270)). */}
+          <PlaySegment active="find" outstanding={outstandingHere} />
+
           {standing.kind === 'no-rated-sport' && ratings.isSuccess ? (
             <Note>{NO_RATED_SPORT_LINE}</Note>
           ) : null}
 
           {standing.kind === 'no-rated-sport' ? null : (
-            <View style={s.section}>
-              <Text style={s.heading}>{SPORT_HEADING}</Text>
-              <View style={s.chips}>
-                {rated.map((offered) => (
-                  <Chip
-                    key={offered}
-                    label={sportLabel(offered)}
-                    selected={offered === standing.sport}
-                    onPress={() => chooseSport(offered)}
-                  />
-                ))}
-              </View>
-            </View>
+            <SportChips rated={rated} selected={standing.sport} onChoose={chooseSport} />
           )}
 
           {standing.kind === 'no-rated-sport' ? null : (
@@ -389,30 +386,10 @@ export function FindAGameScreen() {
           {/* ADR-0094's one-tap interstitial: *permanent, not a migration path*. It is what makes
               every searcher having declared true rather than intended, and it is opened here
               knowingly — before `play_intent_not_declared` refuses — because the profile read
-              carries only what was declared and the difference is free. */}
+              carries only what was declared and the difference is free. The deck is refused by
+              the same code and draws the same question, so the block is a component. */}
           {standing.kind === 'undeclared' && sportName !== undefined ? (
-            <Note title={declarationTitle(sportName)}>
-              <Text style={s.body}>{DECLARATION_BODY}</Text>
-              {declare.error !== null ? (
-                <Text style={s.failureLine} accessibilityRole="alert">
-                  {playErrorMessage(declare.error)}
-                </Text>
-              ) : null}
-              <View style={s.answers}>
-                {PLAY_INTENTS.map((intent) => (
-                  <Button
-                    key={intent}
-                    label={intentLabel(intent)}
-                    accessibilityLabel={declarationOptionLabel(intent, sportName)}
-                    variant="secondary"
-                    disabled={declare.isPending}
-                    onPress={() =>
-                      declare.mutate({ sport: standing.sport, intent, surface: 'SEARCH_SWITCH' })
-                    }
-                  />
-                ))}
-              </View>
-            </Note>
+            <DeclarationInterstitial sport={standing.sport} sportName={sportName} />
           ) : null}
 
           {week === undefined || profile === undefined ? null : (
@@ -481,6 +458,5 @@ const s = StyleSheet.create({
   section: { gap: theme.space.xs, paddingTop: theme.space.xs },
   heading: { ...theme.type.flab, color: theme.color.ink, textTransform: 'uppercase' },
   body: { ...theme.type.tiny, color: theme.color.ink },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: theme.space.xs },
   answers: { flexDirection: 'row', flexWrap: 'wrap', gap: theme.space.xs },
 });

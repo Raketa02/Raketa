@@ -1,0 +1,589 @@
+/**
+ * **Match me**, walked the way a player walks it: the real route tree, the real shell, the
+ * real stores and only `fetch` faked.
+ *
+ * What is asserted here is the set of decisions a build session could quietly undo. Four of
+ * them are refusals, and a refusal is only observable as an absence — which is why they are
+ * driven from the outside rather than unit-called:
+ *
+ * - **Yes and no are buttons, and there is no swipe.** The gesture is not the cheapest thing
+ *   in the app on the most durable act in it, and no gesture library is added for one.
+ * - **There is no *Show them again*.** The prototype's button makes `PASS_SUPPRESS`
+ *   unmeasurable, so the honest ending is the pool and the count of your own yeses.
+ * - **A spent deal is not an empty pool**, and the two empty states split on
+ *   `players_in_range` — the advice is addressed to the player who can act on it.
+ * - **The count on the segment is filtered by the sport on screen**, so the number labels the
+ *   deck it sits above.
+ */
+
+import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
+
+import { onlineManager } from '@tanstack/react-query';
+
+import { offlineMessage } from '@/shared/errors';
+import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
+import { queryClient } from '@/shared/lib/query-client';
+import { useToastQueue } from '@/shared/store/toast.store';
+import {
+  launchSignedIn,
+  stubGate,
+  stubInterest,
+  stubProfileOptions,
+  stubProfileSurface,
+} from '@/test-support/onboardingRouter';
+import {
+  errorResponse,
+  installTransport,
+  json,
+  noContent,
+  type Transport,
+  type Wire,
+} from '@/test-support/transport';
+
+import { usePlayPreferences } from '../store/playPreferences.store';
+import { endPlaySession } from '../store/playSession.store';
+
+import { declarationTitle } from './findAGamePresentation';
+import {
+  DECK_FOOTER,
+  NOBODY_IN_RANGE_TITLE,
+  SEEN_EVERYBODY_TITLE,
+  WIDEN_IN_YOU,
+  interestToast,
+  mutualToast,
+  outgoingYeses,
+  passedToast,
+} from './deckPresentation';
+import { playErrorMessage } from './playErrorMessage';
+import { poolDescription } from './searchPresentation';
+
+const DECK = '/api/v1/deck';
+const INTEREST = '/api/v1/interest';
+const PASSES = '/api/v1/passes';
+
+const SEARCH_ID = 'd0d1a2b3-c4d5-4e6f-8a9b-0c1d2e3f4a5b';
+
+function rating(sport: Wire['Sport']): Wire['RatingResponse'] {
+  return {
+    sport,
+    mu: 2.71,
+    sigma: 0.62,
+    confidence: 28,
+    range: { low: 2.09, high: 3.33 },
+    band: { name: 'Established', lower: 2.7, upper: 3.8 },
+    status: 'initial_estimate',
+    engine_version: 'racketskill-v3',
+    updated_at: '2026-08-14T09:00:00Z',
+  };
+}
+
+/** One dealt card. Enough terms that the sheet has rows and the card has a reason line. */
+function card(nickname: string, playerId: string): Wire['CandidateSchema'] {
+  return {
+    player_id: playerId,
+    fit: 78,
+    distance_km: 4,
+    player_card: {
+      nickname,
+      area_code: 'A+050612+0019938',
+      social_tags: ['PLAYS_TO_WIN'],
+      level: 2.83,
+      band: 'Established',
+      range: { low: 2.55, high: 2.87 },
+    },
+    concerns: [],
+    terms: [
+      {
+        term: 'LEVEL_FIT',
+        weight: 30,
+        value: 0.8,
+        contribution: 24,
+        evidence: {
+          kind: 'level_fit',
+          my_mu: 2.71,
+          their_mu: 2.83,
+          delta: 0.12,
+          direction: 'ABOVE',
+        },
+      },
+      {
+        term: 'DISTANCE',
+        weight: 20,
+        value: 0.7,
+        contribution: 14,
+        evidence: {
+          kind: 'distance',
+          km: 4,
+          area_code: 'A+050612+0019938',
+          outside_their_radius: false,
+        },
+      },
+      {
+        term: 'INTENT_ALIGNMENT',
+        weight: 40,
+        value: 1,
+        contribution: 40,
+        evidence: {
+          kind: 'intent_alignment',
+          my_mode: 'FOR_FUN',
+          their_intent: 'FOR_FUN',
+          aligned: true,
+        },
+      },
+    ],
+    degraded_terms: [
+      { term: 'RELIABILITY', reason: 'NOT_YET_ON_THIS_PLATFORM' },
+      { term: 'SOCIAL_VIBE', reason: 'NOTHING_FROM_THEM' },
+    ],
+    modifiers: [{ code: 'CALIBRATION_VALUE', points: 3 }],
+    liveness_reasons: ['RECENT_ACTIVITY'],
+  };
+}
+
+interface DealtOver {
+  readonly candidates?: readonly Wire['CandidateSchema'][];
+  readonly playersInRange?: number;
+  readonly radiusClamp?: boolean;
+  readonly searchId?: string;
+}
+
+function deal({
+  candidates = [card('Marek Z.', 'aaaaaaaa-0000-4000-8000-000000000001')],
+  playersInRange = 7,
+  radiusClamp = false,
+  searchId = SEARCH_ID,
+}: DealtOver = {}): Wire['ShortlistResponse'] {
+  return {
+    search: {
+      search_id: searchId,
+      at: '2026-09-01T18:00:00Z',
+      surface: 'DECK',
+      // Null exactly on the deck, which has no mode.
+      mode: null,
+      ruleset_version: 'ruleset-v1',
+      engine_version: 'matchfit-v1',
+      optimised_for: 'SEARCHER',
+      index_stale: false,
+      pool: {
+        sport: 'PADEL',
+        radius_km_used: 12,
+        players_in_range: playersInRange,
+        window: 'THIS_WEEK',
+        post_gate: true,
+      },
+      radius_clamp: radiusClamp,
+      sorts_available: [],
+      rung_offers: null,
+    },
+    candidates: [...candidates],
+  };
+}
+
+function expressed(mutual: boolean, outstanding = 3): Wire['ExpressedInterestResponse'] {
+  return {
+    interest: {
+      player_id: 'aaaaaaaa-0000-4000-8000-000000000001',
+      sport: 'PADEL',
+      at: '2026-09-01T18:00:00Z',
+      expires_at: '2026-09-08T18:00:00Z',
+    },
+    mutual,
+    outstanding: { sport: 'PADEL', outstanding, cap: 10 },
+  };
+}
+
+let transport: Transport;
+
+beforeEach(() => {
+  transport = installTransport();
+  stubGate(transport, {
+    ratings: [rating('PADEL'), rating('TENNIS')],
+    hasPlayerProfile: true,
+  });
+  stubProfileOptions(transport);
+  stubProfileSurface(transport);
+  stubInterest(transport);
+  transport.on('POST', DECK, () => json(deal()));
+  transport.on('POST', INTEREST, () => json(expressed(false), 201));
+  transport.on('POST', PASSES, () => noContent());
+});
+
+afterEach(async () => {
+  transport.restore();
+  onlineManager.setOnline(true);
+  queryClient.clear();
+  useToastQueue.getState().clear();
+  usePlayPreferences.getState().reset();
+  endPlaySession();
+  resetSessionStatus();
+  await clearStoredTokens();
+});
+
+/** A signed-in player standing on the deck, with the first deal already drawn. */
+async function openDeck() {
+  await launchSignedIn();
+  fireEvent.press(await screen.findByLabelText('Play'));
+  await waitFor(() => expect(screen).toHavePathname('/play'));
+  // Find a game's grid is the last thing its three reads produce, so its arrival is the
+  // segment being real rather than a control over a half-loaded screen.
+  await screen.findByLabelText('Tuesday evening');
+
+  // The segment's accessible name carries the count — `Match me, 3 yeses of yours still out`
+  // — so it is matched by its stem rather than by a number a suite would have to restate.
+  fireEvent.press(screen.getByLabelText(/^Match me/));
+  await waitFor(() => expect(screen).toHavePathname('/play/deck'));
+}
+
+const dealBodies = () => transport.requestsTo('POST', DECK).map((request) => request.body);
+const toasts = () => useToastQueue.getState().queue.map((toast) => toast.message);
+
+describe('what the deck deals', () => {
+  it('deals on arrival, for the sport Play is on, and draws one person', async () => {
+    await openDeck();
+
+    expect(await screen.findByLabelText(/^Marek Z\./)).toBeTruthy();
+    expect(dealBodies()).toEqual([{ sport: 'PADEL' }]);
+  });
+
+  /**
+   * The week is an **ask and never a correction**: a grid improvised on Find a game travels
+   * as `availability_override`, and a grid that still equals the profile's is omitted rather
+   * than sent — *"omit it, never send `null`"*.
+   */
+  it('sends the improvised week, and omits it when the grid is the profile’s', async () => {
+    await launchSignedIn();
+    fireEvent.press(await screen.findByLabelText('Play'));
+    await screen.findByLabelText('Tuesday evening');
+    fireEvent.press(screen.getByLabelText('Monday morning'));
+
+    fireEvent.press(screen.getByLabelText(/^Match me/));
+    await waitFor(() => expect(screen).toHavePathname('/play/deck'));
+    await screen.findByLabelText(/^Marek Z\./);
+
+    expect(dealBodies()).toEqual([
+      {
+        sport: 'PADEL',
+        availability_override: [
+          { day: 2, part: 'EVENING' },
+          { day: 6, part: 'MORNING' },
+          { day: 1, part: 'MORNING' },
+        ],
+      },
+    ]);
+  });
+
+  it('deals again for a sport the player switches to, and only then', async () => {
+    stubProfileSurface(transport, {
+      availability: [{ day: 2, part: 'EVENING' }],
+      search_radius_km: 12,
+      play_intents: { PADEL: 'FOR_FUN', TENNIS: 'COMPETITIVE' },
+    });
+    await openDeck();
+    await screen.findByLabelText(/^Marek Z\./);
+
+    fireEvent.press(screen.getByLabelText('Tennis'));
+    await waitFor(() => expect(dealBodies()).toHaveLength(2));
+
+    expect(dealBodies()[1]).toEqual({ sport: 'TENNIS' });
+  });
+
+  /**
+   * The deck has **no mode**, so it reads the declaration — and is refused with
+   * `play_intent_not_declared` without one. ADR-0094's interstitial is therefore opened
+   * knowingly, before the refusal, on this surface exactly as on the search screen.
+   */
+  it('asks what kind of game before dealing a sport nobody has declared in', async () => {
+    await openDeck();
+    await screen.findByLabelText(/^Marek Z\./);
+
+    fireEvent.press(screen.getByLabelText('Tennis'));
+
+    expect(await screen.findByText(declarationTitle('Tennis'))).toBeTruthy();
+    expect(dealBodies()).toHaveLength(1);
+  });
+
+  it('says what a refusal means, and offers the act that failed as the retry', async () => {
+    transport.on('POST', DECK, () => errorResponse(503, 'matchmaking_unavailable'));
+    await openDeck();
+
+    const said = await screen.findByText(
+      playErrorMessage({ code: 'matchmaking_unavailable' } as never),
+    );
+    expect(said).toBeTruthy();
+
+    // Nothing retried on its own: one refusal is one request until a player asks again.
+    expect(dealBodies()).toHaveLength(1);
+
+    transport.on('POST', DECK, () => json(deal()));
+    fireEvent.press(screen.getByLabelText('Deal again'));
+    await waitFor(() => expect(dealBodies()).toHaveLength(2));
+  });
+});
+
+describe('yes and no', () => {
+  it('are two named buttons, and the card announces no gesture at all', async () => {
+    await openDeck();
+    await screen.findByLabelText(/^Marek Z\./);
+
+    expect(screen.getByLabelText('Not today, Marek Z.')).toBeTruthy();
+    expect(screen.getByLabelText("Let's play, Marek Z.")).toBeTruthy();
+    // A swipe would have to be announced to a listener who cannot perform one, and there is
+    // no alternative offered because there is no gesture.
+    expect(screen.queryByLabelText(/swipe|drag/i)).toBeNull();
+  });
+
+  /**
+   * The refusal, asserted where it can actually be broken. A build session reaching for a
+   * swipe reaches for one of these two libraries first, and neither is a dependency this app
+   * has ([#231](https://github.com/Raketa02/Raketa/issues/231) §3).
+   */
+  it('cost no new gesture dependency', () => {
+    const manifest = require('../../../../package.json') as {
+      dependencies: Record<string, string>;
+    };
+
+    expect(manifest.dependencies['react-native-gesture-handler']).toBeUndefined();
+    expect(manifest.dependencies['react-native-reanimated']).toBeUndefined();
+  });
+
+  it('sends a yes with the deal it came off, and never a position', async () => {
+    await openDeck();
+    fireEvent.press(await screen.findByLabelText("Let's play, Marek Z."));
+
+    await waitFor(() => expect(transport.requestsTo('POST', INTEREST)).toHaveLength(1));
+    expect(transport.requestsTo('POST', INTEREST)[0]?.body).toEqual({
+      sport: 'PADEL',
+      player_id: 'aaaaaaaa-0000-4000-8000-000000000001',
+      search_id: SEARCH_ID,
+    });
+  });
+
+  it('sends a pass the same way, and is told nothing back', async () => {
+    await openDeck();
+    fireEvent.press(await screen.findByLabelText('Not today, Marek Z.'));
+
+    await waitFor(() => expect(transport.requestsTo('POST', PASSES)).toHaveLength(1));
+    expect(transport.requestsTo('POST', PASSES)[0]?.body).toEqual({
+      sport: 'PADEL',
+      player_id: 'aaaaaaaa-0000-4000-8000-000000000001',
+      search_id: SEARCH_ID,
+    });
+  });
+
+  it('says a one-sided yes is silent, because nobody is told', async () => {
+    await openDeck();
+    fireEvent.press(await screen.findByLabelText("Let's play, Marek Z."));
+
+    await waitFor(() => expect(toasts()).toEqual([interestToast('Marek Z.')]));
+  });
+
+  /**
+   * The one thing a yes tells you about the other person, and it is earned: they said it
+   * first. The sentence comes off the **response** rather than off the press, which is why
+   * the two arms are two runs — a client cannot know which it was until the answer lands.
+   */
+  it('tells a mutual to both sides', async () => {
+    transport.on('POST', INTEREST, () => json(expressed(true)));
+    await openDeck();
+    fireEvent.press(await screen.findByLabelText("Let's play, Marek Z."));
+
+    await waitFor(() => expect(toasts()).toEqual([mutualToast('Marek Z.')]));
+  });
+
+  it('names the person a pass was about', async () => {
+    await openDeck();
+    fireEvent.press(await screen.findByLabelText('Not today, Marek Z.'));
+
+    await waitFor(() => expect(toasts()).toEqual([passedToast('Marek Z.')]));
+  });
+
+  it('moves to the next card once the one answered has left', async () => {
+    transport.on('POST', DECK, () =>
+      json(
+        deal({
+          candidates: [
+            card('Marek Z.', 'aaaaaaaa-0000-4000-8000-000000000001'),
+            card('Ana K.', 'aaaaaaaa-0000-4000-8000-000000000002'),
+          ],
+        }),
+      ),
+    );
+    await openDeck();
+    fireEvent.press(await screen.findByLabelText('Not today, Marek Z.'));
+
+    expect(await screen.findByLabelText(/^Ana K\./)).toBeTruthy();
+    expect(screen.queryByLabelText(/^Marek Z\./)).toBeNull();
+  });
+
+  /**
+   * A refusal puts the card back, which is what keeps `retryTarget`'s rule true here: the
+   * retry is the control the player already pressed, and it cannot be that control if the
+   * person it was about is gone.
+   */
+  it('returns the card when the answer is refused, with the sentence above it', async () => {
+    transport.on('POST', PASSES, () => errorResponse(409, 'origin_search_not_found'));
+    await openDeck();
+    fireEvent.press(await screen.findByLabelText('Not today, Marek Z.'));
+
+    await screen.findByText(playErrorMessage({ code: 'origin_search_not_found' } as never));
+    expect(screen.getByLabelText('Not today, Marek Z.')).toBeTruthy();
+  });
+
+  it('holds an answer made offline rather than failing it, and says so', async () => {
+    await openDeck();
+    await screen.findByLabelText(/^Marek Z\./);
+
+    act(() => onlineManager.setOnline(false));
+    fireEvent.press(screen.getByLabelText("Let's play, Marek Z."));
+
+    expect(await screen.findByText(offlineMessage('resumes'))).toBeTruthy();
+    expect(transport.requestsTo('POST', INTEREST)).toHaveLength(0);
+  });
+});
+
+describe('the empty deck', () => {
+  it('states the pool and the count of your own yeses, and offers no way back', async () => {
+    transport.on('POST', DECK, () => json(deal({ candidates: [] })));
+    stubInterest(transport, {
+      outgoing: [],
+      mutual: [],
+      outstanding: [{ sport: 'PADEL', outstanding: 2, cap: 10 }],
+    });
+    await openDeck();
+
+    expect(await screen.findByText(SEEN_EVERYBODY_TITLE)).toBeTruthy();
+    expect(
+      screen.getByText(
+        poolDescription({
+          playersInRange: 7,
+          radiusKmUsed: 12,
+          window: 'THIS_WEEK',
+          sportName: 'Padel',
+        }),
+      ),
+    ).toBeTruthy();
+    expect(screen.getByText(outgoingYeses(2))).toBeTruthy();
+
+    // The struck control, asserted as an absence — the only way a refusal can be asserted.
+    expect(screen.queryByLabelText(/show them again/i)).toBeNull();
+  });
+
+  it('reads an empty deal with nobody in range as the other state, and advises widening', async () => {
+    transport.on('POST', DECK, () => json(deal({ candidates: [], playersInRange: 0 })));
+    await openDeck();
+
+    expect(await screen.findByText(NOBODY_IN_RANGE_TITLE)).toBeTruthy();
+    expect(screen.getByText(WIDEN_IN_YOU)).toBeTruthy();
+  });
+
+  /** Nobody is asked for something they cannot give: `radius_clamp` gates the sentence. */
+  it('never advises widening to a player already at their own ceiling', async () => {
+    transport.on('POST', DECK, () =>
+      json(deal({ candidates: [], playersInRange: 0, radiusClamp: true })),
+    );
+    await openDeck();
+
+    expect(await screen.findByText(NOBODY_IN_RANGE_TITLE)).toBeTruthy();
+    expect(screen.queryByText(WIDEN_IN_YOU)).toBeNull();
+  });
+
+  it('never advises widening to a player who has simply answered everybody', async () => {
+    await openDeck();
+    fireEvent.press(await screen.findByLabelText('Not today, Marek Z.'));
+
+    // The deal is spent, so the screen deals again — and a spent deal is never an ending.
+    await waitFor(() => expect(dealBodies()).toHaveLength(2));
+    expect(screen.queryByText(WIDEN_IN_YOU)).toBeNull();
+  });
+
+  /**
+   * *"A spent deal deals again… the screen runs out of cards long before the pool does, and
+   * only a fresh deal that comes back empty is the empty state."*
+   */
+  it('deals again when the last card is answered, and only then shows an ending', async () => {
+    await openDeck();
+    fireEvent.press(await screen.findByLabelText('Not today, Marek Z.'));
+    await waitFor(() => expect(dealBodies()).toHaveLength(2));
+
+    expect(screen.queryByText(SEEN_EVERYBODY_TITLE)).toBeNull();
+
+    transport.on('POST', DECK, () => json(deal({ candidates: [], searchId: 'second-deal' })));
+    fireEvent.press(await screen.findByLabelText('Not today, Marek Z.'));
+
+    expect(await screen.findByText(SEEN_EVERYBODY_TITLE)).toBeTruthy();
+  });
+});
+
+describe('the segment', () => {
+  it('carries the count for the sport on screen, and no other', async () => {
+    stubInterest(transport, {
+      outgoing: [],
+      mutual: [],
+      outstanding: [
+        { sport: 'PADEL', outstanding: 3, cap: 10 },
+        { sport: 'TENNIS', outstanding: 9, cap: 10 },
+      ],
+    });
+    await launchSignedIn();
+    fireEvent.press(await screen.findByLabelText('Play'));
+    await screen.findByLabelText('Tuesday evening');
+
+    expect(await screen.findByLabelText(/^Match me, 3 yeses/)).toBeTruthy();
+    expect(screen.queryByLabelText(/9 yeses/)).toBeNull();
+  });
+
+  it('moves on the answer’s own response rather than on a second request', async () => {
+    stubInterest(transport, {
+      outgoing: [],
+      mutual: [],
+      outstanding: [{ sport: 'PADEL', outstanding: 2, cap: 10 }],
+    });
+    await openDeck();
+    await screen.findByLabelText(/^Match me, 2 yeses/);
+    await screen.findByLabelText(/^Marek Z\./);
+
+    fireEvent.press(screen.getByLabelText("Let's play, Marek Z."));
+
+    expect(await screen.findByLabelText(/^Match me, 3 yeses/)).toBeTruthy();
+    // One read, at mount. The tap's answer carried the new count, so nothing asked again.
+    expect(transport.requestsTo('GET', INTEREST)).toHaveLength(1);
+  });
+
+  it('takes the player back to Find a game as an arrival rather than a step back', async () => {
+    await openDeck();
+    await screen.findByLabelText(/^Marek Z\./);
+
+    fireEvent.press(screen.getByLabelText('Find a game'));
+
+    await waitFor(() => expect(screen).toHavePathname('/play'));
+  });
+});
+
+describe('the footer, and what it promises', () => {
+  it('says what a pass does, and names the gesture that opens the reading', async () => {
+    await openDeck();
+    await screen.findByLabelText(/^Marek Z\./);
+
+    for (const line of DECK_FOOTER) {
+      expect(screen.getByText(line)).toBeTruthy();
+    }
+  });
+
+  it('opens SH.whyfit on a long press, which is what the footer said it would', async () => {
+    await openDeck();
+    fireEvent(await screen.findByLabelText(/^Marek Z\./), 'longPress');
+
+    expect(await screen.findByLabelText('Why fit 78')).toBeTruthy();
+  });
+
+  /**
+   * The bar reads its active column off the **first** path segment, so ⚡Play stays lit for
+   * every screen inside Play — which is what the deck being `/play/deck` rather than a route
+   * of its own buys.
+   */
+  it('keeps ⚡Play lit, because the deck is inside the tab', async () => {
+    await openDeck();
+
+    expect(screen.getByLabelText('Play').props.accessibilityState?.selected).toBe(true);
+  });
+});

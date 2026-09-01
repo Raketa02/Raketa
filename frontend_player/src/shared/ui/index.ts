@@ -69,6 +69,7 @@ export { QuestionNavigator, type QuestionNavigatorProps } from './QuestionNaviga
 export { RadiusSlider, type RadiusSliderProps } from './RadiusSlider';
 export { Row, type RowProps, type RowVariant } from './Row';
 export { ScreenHeader, type ScreenHeaderProps } from './ScreenHeader';
+export { Segment, type SegmentOption, type SegmentProps } from './Segment';
 export { Switch, type SwitchProps } from './Switch';
 export {
   TabBar,
@@ -86,6 +87,7 @@ export {
   ReducedMotionProvider,
   announce,
   behindOverlay,
+  moveAccessibilityFocus,
   useCollapsedPresentation,
   useLiveRegion,
   useReducedMotion,

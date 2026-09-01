@@ -73,12 +73,23 @@ export interface MetaLineFacts {
   readonly km: number;
   /** Their coarse area, as a machine code. **Never printed.** */
   readonly theirAreaCode: string;
-  /** Yours, for the one comparison this line is allowed to make. */
-  readonly myAreaCode: string;
+  /**
+   * Yours, for the one comparison this line is allowed to make — **absent until a route
+   * serves it**.
+   *
+   * No response carries the searcher's own area today (`domain/candidate`), and the two
+   * absences must not be conflated: an absent code is *the comparison cannot be made*, where
+   * a code that differs is *they are not in your area*. Both draw the same line, and only one
+   * of them is a claim.
+   */
+  readonly myAreaCode?: string;
 }
 
 export function metaLine(facts: MetaLineFacts): string {
   const distance = `${facts.km} km`;
+  // `undefined === undefined` would be true, so the absence is tested rather than compared:
+  // a card with no area of its own must not tell twenty strangers they are in it.
+  if (facts.myAreaCode === undefined) return distance;
   return facts.theirAreaCode === facts.myAreaCode ? `In your area · ${distance}` : distance;
 }
 

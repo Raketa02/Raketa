@@ -63,6 +63,23 @@ const BY_CODE: Readonly<Record<string, string>> = {
    */
   search_not_found: 'That search is no longer available. Run a new one to keep going.',
   /**
+   * The deck's own pair of refusals, and both are about *this* answer rather than about the
+   * player ([#270](https://github.com/Raketa02/Raketa/issues/270)).
+   *
+   * `origin_search_not_found` is `search_not_found` one layer down: the yes or the pass cited
+   * a deal that is not this player's or never showed that person, and the remedy is the same —
+   * a new deal, which the deck's own control asks for. It says *deck* rather than *search*
+   * because that is the act the player is standing in front of.
+   */
+  origin_search_not_found: 'That deal is no longer available. Deal again to keep going.',
+  /**
+   * The cap, and the one sentence that must not promise a way round it. **Nothing of yours is
+   * shortened to make room** — the contract says so — so the honest remedy is waiting, and
+   * the count and the cap are both on the read the segment already holds.
+   */
+  outstanding_interest_cap_reached:
+    "You have as many yeses out as this sport allows. One comes back, or one lapses, and there's room again.",
+  /**
    * Unreachable while the sport chips are drawn from the rated sports, and the backstop for a
    * stale profile on a second device. It sends the player where the rating is made.
    */

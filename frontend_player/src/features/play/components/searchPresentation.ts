@@ -4,6 +4,8 @@
  * ([`the-words.md`](../../../../../docs/specs/matchmaking/the-words.md) §17).
  */
 
+import { counted } from '@/shared/formatting/counted';
+
 import type { ForecastAssumption, SearchMode, SortOption, Window } from '../domain/vocabulary';
 
 /**
@@ -26,6 +28,39 @@ const WINDOW: Readonly<Record<Window, string>> = {
 
 export function windowLabel(window: Window): string {
   return WINDOW[window];
+}
+
+/**
+ * The pool an answer came out of, as one sentence — ADR-0099's own shape, in words.
+ *
+ * The kernel *"emits values and stable machine codes, never display text"*, so the wire sends
+ * `{sport, radius_km_used, players_in_range, window, post_gate}` and **the client writes the
+ * sentence**. This is that sentence, and it is the honest empty state's whole body: a thin
+ * pool and a broken floor are indistinguishable without it, which is why the description is
+ * sent on every answer rather than only on the empty ones.
+ *
+ * **The count is post-gate, always**, and it is drawn as served: no pre-gate figure crosses,
+ * because the delta between them is the number of people a mutual preference hid from this
+ * searcher ([ADR-0096](../../../../../docs/adr/0096-gender-preference-mutual-gate-invisible-to-the-scorer.md)).
+ *
+ * **The sport's name is the caller's**, exactly as it is on `poolRankingStatus`: the screen
+ * asking about a pool already holds this app's word for the sport it asked about, and
+ * narrowing the served code a second time would be a second place it could be narrowed
+ * differently.
+ *
+ * **The window clause is dropped where the code is one this build cannot read** — §3's drop
+ * rather than a gap, because the sentence around it still states the count and the radius,
+ * which are the two facts a player acts on.
+ */
+export function poolDescription(pool: {
+  readonly playersInRange: number;
+  readonly radiusKmUsed: number;
+  readonly window: Window | null;
+  readonly sportName: string;
+}): string {
+  const players = counted(pool.playersInRange, 'player', 'players');
+  const range = `${players} in range for ${pool.sportName}, within ${pool.radiusKmUsed} km`;
+  return pool.window === null ? `${range}.` : `${range} · ${windowLabel(pool.window)}`;
 }
 
 /**

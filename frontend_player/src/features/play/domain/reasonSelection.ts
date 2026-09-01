@@ -98,11 +98,17 @@ const NEVER_FILTERED: Term = 'INTENT_ALIGNMENT';
 
 export function selectReasons(input: ReasonInput): ReasonSelection {
   const said = input.terms
-    .filter((row) => row.term === NEVER_FILTERED || !input.drawn.includes(row.term))
+    // A row whose term this build has no name for is **not filtered out here** — it is
+    // filtered by `saysSomething` below, along with every other row that cannot be written as
+    // a sentence. Its evidence may be perfectly readable, and a reason line never names its
+    // term: it is a sentence over the payload, so the row still answers *why this person*.
+    .filter(
+      (row) => row.term === NEVER_FILTERED || row.term === null || !input.drawn.includes(row.term),
+    )
     // A concerned term is removed from the reason list: one term saying "✓ X" and "! X" on
     // one card is §10's rule broken at its own root, and the sheet still shows the term with
     // its concern marked in place. The slot goes to the next survivor.
-    .filter((row) => !input.concerns.includes(row.term))
+    .filter((row) => row.term === null || !input.concerns.includes(row.term))
     // And so does a term whose evidence is not a reason at all — see `saysSomething`.
     .filter(input.saysSomething)
     .slice(0, REASON_CAP);
@@ -149,7 +155,7 @@ export function selectConcern(input: {
   readonly saysSomething: (term: ScoredTerm) => boolean;
 }): readonly ScoredTerm[] {
   return input.concerns
-    .map((term) => input.terms.find((row) => row.term === term))
+    .map((term) => input.terms.find((row) => row.term !== null && row.term === term))
     .filter((row): row is ScoredTerm => row !== undefined)
     .filter(input.saysSomething)
     .slice(0, CONCERN_CAP);

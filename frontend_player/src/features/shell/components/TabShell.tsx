@@ -26,9 +26,10 @@
  * A `Stack`'s default is the push transition, and the shell's ordinary move is a **replace** —
  * so out of the box, going from Now to Around slides in from the right and reads as going
  * *deeper* on the one gesture whose whole meaning is that nothing was kept. The shell's
- * default is therefore `none`, and `play/index` takes the push back, because entering Find a
- * game genuinely is one: Now stays underneath it, and leaving it should read as coming back
- * out. **This is the one thing in the shell that has not been seen on a device.**
+ * default is therefore `none`, and the two Play screens take the push back, because entering
+ * Find a game and pushing the deck over it genuinely are ones: what they arrive on stays
+ * underneath, and leaving should read as coming back out. **This is the one thing in the shell
+ * that has not been seen on a device.**
  */
 
 import { Stack, usePathname } from 'expo-router';
@@ -47,6 +48,10 @@ export function TabShell() {
     <View style={s.shell}>
       <Stack screenOptions={{ headerShown: false, animation: 'none' }}>
         <Stack.Screen name="play/index" options={{ animation: 'default' }} />
+        {/* The deck is genuinely pushed: Find a game stays underneath it, so the transition
+            that reads as *going deeper* is the true one — the same exception, for the same
+            reason ([#270](https://github.com/Raketa02/Raketa/issues/270)). */}
+        <Stack.Screen name="play/deck" options={{ animation: 'default' }} />
       </Stack>
       <TabBar active={tabForPathname(pathname)} onPress={openTab} />
     </View>

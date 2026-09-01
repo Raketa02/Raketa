@@ -111,7 +111,7 @@ export function evidenceOf<K extends Evidence['kind']>(
   candidate: Candidate,
   kind: K,
 ): Extract<Evidence, { readonly kind: K }> | undefined {
-  const row = candidate.terms.find((term) => term.evidence.kind === kind);
+  const row = candidate.terms.find((term) => term.evidence?.kind === kind);
   return row?.evidence as Extract<Evidence, { readonly kind: K }> | undefined;
 }
 
@@ -160,7 +160,10 @@ function reasonLinesOf(candidate: Candidate, drawn: readonly Term[]): readonly s
       terms: candidate.terms,
       concerns: candidate.concerns,
       livenessReasons: candidate.livenessReasons,
-      saysSomething: (term) => reasonLine(term.evidence) !== undefined,
+      // A row this build cannot read says nothing on a **card**: §3 drops a code wherever the
+      // screen states no total it belongs to, and a card shows three reasons out of eight and
+      // always did. The named gap is the why-fit sheet's, which prints the column.
+      saysSomething: (term) => term.evidence !== null && reasonLine(term.evidence) !== undefined,
     }),
   );
 }
@@ -171,7 +174,9 @@ function spoken(selection: ReasonSelection): readonly string[] {
     case 'terms':
       // `saysSomething` already dropped every row this can decline for, so nothing is lost
       // here — the filter is what keeps the promise of three from printing two.
-      return selection.terms.flatMap((term) => reasonLine(term.evidence) ?? []);
+      return selection.terms.flatMap((term) =>
+        term.evidence === null ? [] : (reasonLine(term.evidence) ?? []),
+      );
     case 'liveness':
       return [livenessLine(selection.reason)];
     case 'hidden':
@@ -184,6 +189,6 @@ function concernLinesOf(candidate: Candidate): readonly string[] {
   return selectConcern({
     terms: candidate.terms,
     concerns: candidate.concerns,
-    saysSomething: (term) => concernLine(term.evidence) !== undefined,
-  }).flatMap((term) => concernLine(term.evidence) ?? []);
+    saysSomething: (term) => term.evidence !== null && concernLine(term.evidence) !== undefined,
+  }).flatMap((term) => (term.evidence === null ? [] : (concernLine(term.evidence) ?? [])));
 }
