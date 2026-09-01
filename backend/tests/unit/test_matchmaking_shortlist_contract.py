@@ -257,8 +257,9 @@ def test_the_week_a_prompt_quotes_back_is_the_resource_a_grid_is_drawn_from():
     seven-by-three grid as the profile's own and quotes the count off it. It
     crossed as the aggregate's storage codes, so the sheet had to split
     ``"3:EVENING"`` for itself — which is the one thing
-    ``AvailabilitySlotResource`` was named to spare a client, and the same
-    reading ``RungOfferSchema.slot`` settled one test up (#286).
+    ``AvailabilitySlotResource`` was named to spare a client. It is the same
+    reading the test one up gave ``RungOfferSchema.slot`` (#283), reached the
+    second time on the second field that had been read as an exception (#286).
 
     **A quoted payload is still a resource when a grid is drawn from it.** That
     is the argument the counter-argument lost: the engine holding the week as

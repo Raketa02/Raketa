@@ -407,11 +407,9 @@ def _offer(offer: RungOffer) -> RungOfferSchema:
     """One rung as it crosses. The payload field its ask does not use is omitted,
     not sent as null: a radius rung has no slot, rather than a slot of nothing.
 
-    **The cell is split here**, out of the code the engine holds it as. A times
-    rung's slot is drawn on the client's own grid beside twenty other cells, and
-    ``AvailabilitySlotResource`` is two named fields precisely so that no client
-    ever splits ``"4:EVENING"`` for itself — this is the side of the boundary
-    that owns our persistence format, so this is where it is read
+    **The cell is read out of its code**, by ``_cell`` below. A times rung's slot
+    is drawn on the client's own grid beside twenty other cells, and no client
+    ever splits ``"4:EVENING"`` for itself
     (`#283 <https://github.com/Raketa02/Raketa/issues/283>`_).
     """
 
@@ -424,21 +422,34 @@ def _offer(offer: RungOffer) -> RungOfferSchema:
     if offer.radius_km is not None:
         fields["radius_km"] = offer.radius_km
     if offer.slot is not None:
-        cell = AvailabilitySlot.from_code(offer.slot)
-        fields["slot"] = AvailabilitySlotResource(day=int(cell.day), part=cell.part)
+        fields["slot"] = _cell(offer.slot)
     return RungOfferSchema.model_validate(fields)
+
+
+def _cell(code: str) -> AvailabilitySlotResource:
+    """One stored code, as the two named fields a grid is drawn from.
+
+    **The only place this side reads our own slot encoding**, and it is one
+    function rather than two identical expressions because the rule it enforces
+    is that there is no second answer — a cell that gets drawn crosses in these
+    two fields, whether the player ticked it (``availability``), was offered it
+    (``RungOfferSchema.slot``, #283) or is being asked to keep it
+    (``PromptSchema.slots``, #286). ``AvailabilitySlotResource``'s own docstring
+    carries the argument; this carries the arithmetic.
+    """
+
+    cell = AvailabilitySlot.from_code(code)
+    return AvailabilitySlotResource(day=int(cell.day), part=cell.part)
 
 
 def _prompt(raised: RaisedPrompt) -> PromptSchema:
     """One standing question, carrying only the value it is asking about.
 
-    **The week is split here**, out of the codes the engine holds it in, for the
-    same reason ``_offer`` splits the one cell a rung adds: the sheet draws this
-    week on the seven-by-three grid beside the profile's own, and
-    ``AvailabilitySlotResource`` is two named fields precisely so that no client
-    ever splits ``"3:EVENING"`` for itself. That it is a payload *quoted back*
-    rather than a resource the player asked for changes nothing about who owns
-    the encoding — this is the side of the boundary that does
+    **The week goes through the same ``_cell`` the offered slot does.** That this
+    one is a payload *quoted back* rather than a resource the player asked for
+    changes nothing about who owns the encoding: the sheet draws it on the
+    seven-by-three grid beside the profile's own week, and a cell that gets drawn
+    crosses in two named fields
     (`#286 <https://github.com/Raketa02/Raketa/issues/286>`_).
     """
 
@@ -449,10 +460,7 @@ def _prompt(raised: RaisedPrompt) -> PromptSchema:
     # and has to cross, where omitting it would ask *keep these times?* about no
     # times at all and leave the sheet with nothing to draw.
     if raised.slots is not None:
-        fields["slots"] = [
-            AvailabilitySlotResource(day=int(cell.day), part=cell.part)
-            for cell in (AvailabilitySlot.from_code(code) for code in raised.slots)
-        ]
+        fields["slots"] = [_cell(code) for code in raised.slots]
     if raised.mode is not None:
         fields["mode"] = raised.mode
     return PromptSchema.model_validate(fields)

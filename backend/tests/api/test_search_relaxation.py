@@ -457,10 +457,7 @@ async def test_an_improvised_week_runs_this_search_and_asks_about_the_profile(
 
     assert body["search"]["pool"]["window"] == "THIS_WEEK"
     prompts = {prompt["prompt"]: prompt for prompt in body["search"]["prompts"]}
-    assert prompts["KEEP_THESE_TIMES"]["slots"] == [{"day": 4, "part": "EVENING"}], (
-        "the week a prompt quotes back is drawn on a grid, so it crosses as the "
-        "two named fields every other week on the wire crosses in (#286)"
-    )
+    assert prompts["KEEP_THESE_TIMES"]["slots"] == [{"day": 4, "part": "EVENING"}]
 
     assert await world.saved_grid(session_factory, searcher["id"]) == (
         "2:EVENING",
