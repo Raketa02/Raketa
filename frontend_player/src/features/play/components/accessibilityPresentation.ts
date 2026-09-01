@@ -191,6 +191,23 @@ export function candidateActionLabel(action: CandidateAction, name: string): str
   return action === 'ADD_TO_COURT' ? `Add ${name} to the court` : `Challenge ${name}`;
 }
 
+/**
+ * `Look out to 22 km, 9 to choose from` — a rung, with its price **in its own name**.
+ *
+ * ADR-0099 §5 puts the count on the button, and §20.1 reaches the same two elements from the
+ * other side: the price has no action of its own, so it merges into the control it prices
+ * rather than standing beside it as a second stop with no verb. The visible layout keeps them
+ * apart — the count is a `.tiny` under the control — and the line beneath is hidden, exactly
+ * as the court's own shortfall statements are.
+ *
+ * Both halves are given rather than composed here from a code, because they already have
+ * homes: the label is `relaxationOffer`'s and the price is `rungCount`'s, and re-deriving
+ * either would be a second spelling of a sentence this feature writes once.
+ */
+export function rungOfferLabel(offer: string, price: string): string {
+  return `${offer}, ${price}`;
+}
+
 /** The deck card's two buttons. It is §20.3's card with two actions instead of one. */
 export interface DeckAnswerLabels {
   readonly pass: string;
@@ -423,7 +440,15 @@ export const PLAY_LIVE_REGIONS: Readonly<Record<PlayLiveRegion, Announcement>> =
   toast: 'queued',
   /** §16's two sentences, with `players_in_range` from the response. */
   searching: 'queued',
-  /** The only figure in the tab that changes while focus is elsewhere. */
+  /**
+   * The only figure in the tab that changes while focus is elsewhere — and **claimed once**,
+   * by the builder, although two screens now draw it.
+   *
+   * The pool draws the same running figure and moves it by adding somebody, but the court is
+   * still mounted underneath that route and `announce` is imperative: it fires from behind a
+   * screen the platform has marked hidden, so the change is already spoken. A second claimant
+   * would say one change twice ([#272](https://github.com/Raketa02/Raketa/issues/272)).
+   */
   provisionalForecast: 'queued',
 };
 

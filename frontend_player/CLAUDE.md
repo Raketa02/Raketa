@@ -457,10 +457,14 @@ Every thin-result state in the specs pointed the player at a settings screen —
 radius in You_ — because the prototype had no offer to point at. It is struck: pointing
 somebody at a settings screen while a **one-tap widening with a true count** sits on the same
 screen is the product being unhelpful on purpose, and taking a rung and changing the saved
-radius stay deliberately different acts — one search against every future search. Every radius
-rung is gated again by `radius_clamp`, and where the ceiling bit so hard that nothing is left
-the **reach is stated as a fact** rather than suppressed: a player staring at a short list with
-no account of why is what the gate exists to avoid. **The count is never a delta** — the rows
+radius stay deliberately different acts — one search against every future search. **The
+`radius_clamp` bit gates the sentence and never the offers**, which is the reading that is easy
+to get backwards: it says a widening _hit_ the slider's ceiling, not that the searcher is at
+it — the engine clamps such a rung down to 50 km and offers it anyway — so filtering on the bit
+would take a real one-tap widening away from exactly the player the ladder was built for. What
+it decides is the copy written when nothing is left to offer: the **reach stated as a fact**
+rather than an instruction nobody can carry out, because suppressing it would leave a player
+staring at a short list with no account of why. **The count is never a delta** — the rows
 shown and the people above the floor are two populations, one of which is not even a superset —
 and **a rung priced at nobody is a sentence rather than a button**, because a control that
 provably returns an empty list is a control lying about being useful. Taking one is

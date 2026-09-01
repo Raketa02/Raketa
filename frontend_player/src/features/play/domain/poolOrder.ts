@@ -74,6 +74,26 @@ const ORDERABLE: readonly SortOption[] = SORT_OPTIONS.filter(
 );
 
 /**
+ * The rows the pool may **offer**, which is the answer's rows minus anybody already on court.
+ *
+ * A row for somebody who is already seated carries an *Add* that could do nothing, and that is
+ * the same objection that keeps a sort nobody can act on off this screen: a visible control
+ * that does nothing is the product lying quietly.
+ *
+ * **The ladder does not read this.** How many people cleared the bar is a fact about the
+ * answer, and it must not move because the player has since seated one of them — the two
+ * numbers are on screen together, and a title that counted what is left would be describing
+ * the list rather than the search.
+ */
+export function pickable(
+  rows: readonly Candidate[],
+  seated: readonly string[],
+): readonly Candidate[] {
+  const onCourt = new Set(seated);
+  return rows.filter((row) => !onCourt.has(row.playerId));
+}
+
+/**
  * The rows, in the order the screen should draw them.
  *
  * `undefined` is *the order they arrived in*, which is the engine's own ranking and the pool's

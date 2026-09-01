@@ -397,11 +397,14 @@ listed here because it is a Play surface rather than a profile one.
   Its count is _the total who would clear the floor at this rung_, so **the client never
   subtracts**: the rows on screen and the people above the floor are two populations, and one of
   them is not even a superset. `null` and `[]` are different answers — _nobody needed offers_
-  against _there is nothing left to offer_ — and every radius rung is gated by the **radius
-  clamp**, since each is addressed to a player who may already be at the ceiling. A rung priced
-  at nobody is a **sentence rather than a button**. _Avoid_: "widening" for the offer (the
-  widening is the engine's and never crosses on the request); "+3 more"; "the ladder" for one
-  rung.
+  against _there is nothing left to offer_. **The radius clamp gates the sentence, not the
+  offers**: the bit says a widening _hit_ the slider's ceiling rather than that the searcher is
+  at it, and the engine clamps such a rung down to the maximum and offers it anyway — so what
+  the bit decides is the copy written when nothing is left, which is the reach as a fact rather
+  than an instruction nobody can carry out. A rung priced at nobody is a **sentence rather than
+  a button**. _Avoid_: "widening" for the offer (the widening is the engine's and never crosses
+  on the request); "+3 more"; "the ladder" for one rung; reading the clamp as _the searcher is
+  at the ceiling_, which deletes real offers from the one screen built to make them.
 - **Standing statement** — what replaces _back_ once a rung has been taken: one sentence naming
   the widening this list ran under and the profile it did **not** touch. There is no way back to
   the strict list, because a player holding both would be diffing them to find the people that

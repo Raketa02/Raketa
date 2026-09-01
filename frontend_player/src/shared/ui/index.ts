@@ -18,6 +18,7 @@ export {
   type AvailabilityGridRow,
 } from './AvailabilityGrid';
 export {
+  BALANCE_INK,
   BALANCE_SCALE,
   BalanceBar,
   balanceShare,

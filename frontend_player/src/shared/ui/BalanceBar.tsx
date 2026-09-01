@@ -84,6 +84,21 @@ export type BalanceBarSize = keyof typeof theme.size.balanceBar;
 /** The three the palette already means. `ok` is `mintInk` and not `mint`, per Rule C. */
 export type BalanceBarTone = 'ok' | 'warn' | 'bad';
 
+/**
+ * The same three as **ink**, for a screen printing the figure rather than drawing the bar.
+ *
+ * 7.11's finding is *one formula, three clamps* — a value landing in a different place on two
+ * screens — and the thresholds are already asked for rather than restated (`balanceTone`). This
+ * is the other half of that: which colour each tone is, in one place, so a second screen
+ * printing a tinted percentage cannot pick a different amber. Rule C is why it is `mintInk`
+ * rather than `mint`.
+ */
+export const BALANCE_INK: Readonly<Record<BalanceBarTone, string>> = {
+  ok: theme.color.mintInk,
+  warn: theme.color.amber,
+  bad: theme.color.red,
+};
+
 export type BalanceBarVariant = 'base' | 'onDark';
 
 export interface BalanceBarProps {

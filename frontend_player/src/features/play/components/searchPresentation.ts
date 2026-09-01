@@ -6,6 +6,7 @@
 
 import { counted } from '@/shared/formatting/counted';
 
+import type { RelaxedAsk } from '../domain/candidate';
 import type { ForecastAssumption, SearchMode, SortOption, Window } from '../domain/vocabulary';
 
 /**
@@ -66,18 +67,18 @@ export function poolDescription(pool: {
 /**
  * A rung of the relaxation ladder, as the offer a player is given.
  *
- * The ladder ships on the pool alone ([#223](https://github.com/Raketa02/Raketa/issues/223)),
- * and every *widen* sentence is gated by `radius_clamp` before it is drawn — each is addressed
- * to a player who may already be at 50 km, and asking somebody for something they cannot give
- * is the one thing the ladder must not do.
+ * The ladder ships on the pool alone ([#223](https://github.com/Raketa02/Raketa/issues/223)).
+ * **A drawn offer is never gated on `radius_clamp`**: the bit says a widening hit the slider's
+ * ceiling, and the engine clamps such a rung down to 50 km and offers it anyway, so an offer
+ * that arrived is one the player can take. What the bit gates is the *sentence* written when
+ * there is nothing left to offer — `poolPresentation`'s `terminalReachLine`, which states the
+ * reach as a fact rather than asking somebody for something they cannot give.
  *
  * **The rung's letter is never printed.** `Rung` values are letters rather than numbers
  * precisely so nobody lines them up against a struck rung, and printing either spelling would
  * publish an engine-internal ordering — so it is not a parameter of this function at all.
  */
-export function relaxationOffer(
-  offer: { readonly ask: 'TIMES' } | { readonly ask: 'RADIUS'; readonly radiusKm: number },
-): string {
+export function relaxationOffer(offer: RelaxedAsk): string {
   return offer.ask === 'TIMES' ? 'Look outside your week' : `Look out to ${offer.radiusKm} km`;
 }
 

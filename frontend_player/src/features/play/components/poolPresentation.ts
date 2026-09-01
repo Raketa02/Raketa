@@ -36,6 +36,7 @@
 
 import { counted } from '@/shared/formatting/counted';
 
+import type { RelaxedAsk } from '../domain/candidate';
 import type { Window } from '../domain/vocabulary';
 
 import { windowLabel } from './searchPresentation';
@@ -113,9 +114,7 @@ export function rungCount(
  * said — which is that record's own *"widening to 20 km would still find nobody is the honest
  * empty state said in a number"*, said in a sentence instead of a tap.
  */
-export function zeroRungLine(
-  offer: { readonly ask: 'TIMES' } | { readonly ask: 'RADIUS'; readonly radiusKm: number },
-): string {
+export function zeroRungLine(offer: RelaxedAsk): string {
   const reach = offer.ask === 'TIMES' ? 'outside your week' : `at ${offer.radiusKm} km`;
   return `Even ${reach}, nobody clears the bar.`;
 }

@@ -5,6 +5,7 @@ import {
   isTicked,
   sameWeek,
   seedWorkingWeek,
+  sentWeekForOrigin,
   toggleCell,
   type WorkingWeek,
 } from './workingWeek';
@@ -96,5 +97,29 @@ describe('whether the week differs from the profile', () => {
   it('a cleared week is a legal week, and it is a change', () => {
     expect(sameWeek([], PROFILE)).toBe(false);
     expect(sameWeek([], [])).toBe(true);
+  });
+});
+
+describe('the week a second search on one origin sends', () => {
+  it('omits it where the origin ran on the profile’s own grid', () => {
+    expect(sentWeekForOrigin([TUESDAY_EVENING], [TUESDAY_EVENING])).toBeUndefined();
+  });
+
+  it('sends the week the origin actually ran on where it differs', () => {
+    expect(sentWeekForOrigin([TUESDAY_EVENING], [SATURDAY_MORNING])).toEqual([TUESDAY_EVENING]);
+  });
+
+  /**
+   * **Unprovable is sent.** Omitting means *the grid on my profile*, not *the week the search
+   * above me ran on* — so a fill or a widening with no profile read in hand would quietly run
+   * on a different week from the answer it is extending, with nothing on screen to see.
+   */
+  it('sends it rather than omitting it when the profile cannot be read', () => {
+    expect(sentWeekForOrigin([TUESDAY_EVENING], undefined)).toEqual([TUESDAY_EVENING]);
+  });
+
+  /** A cleared week is a legal ask, and it is not the same ask as *use my profile grid*. */
+  it('sends an emptied week, which an omission would turn back into the profile’s', () => {
+    expect(sentWeekForOrigin([], [TUESDAY_EVENING])).toEqual([]);
   });
 });

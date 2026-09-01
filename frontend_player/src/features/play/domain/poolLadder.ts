@@ -29,14 +29,25 @@
  * still prints — that record's own *"widening to 20 km would still find nobody is the honest
  * empty state said in a number"*, said in a sentence instead of a tap.
  *
- * ## `radius_clamp` gates every radius rung, and the gate is not the engine's
+ * ## `radius_clamp` is not a gate on the offers, and reading it as one deletes real widenings
  *
- * The bit is true when the profile slider's own ceiling bit at all, *"including when it bit so
- * hard no radius rung is left"*. The engine already declines to offer a radius rung to a
- * searcher at 50 km, so this gate is the second half of one rule rather than a duplicate of
- * it: what it protects against is a *widen* sentence addressed to somebody who has nothing
- * left to widen, which is the one thing the ladder must not do
- * ([`the-words.md`](../../../../../docs/specs/matchmaking/the-words.md) §17).
+ * The bit says *a widening offer hit the profile slider's own ceiling* — **not** *the searcher
+ * is at the ceiling*. `radius_ladder` sets it whenever a multiplier overshoots and then
+ * **clamps that rung down to 50 km and offers it anyway**: a searcher at 26 km is offered 39
+ * and 50 with the bit set, and both are real rungs priced by a genuine re-run. Filtering them
+ * out on the bit would take a one-tap widening with a true count away from exactly the player
+ * it was built for — which is the failure the ladder exists to prevent, arriving from the gate
+ * that was supposed to prevent it.
+ *
+ * So this function does not read the clamp at all. **What the bit gates is a sentence**: when
+ * nothing is left to offer, the copy states the reach as a fact instead of asking for a
+ * widening the player cannot give ([#223](https://github.com/Raketa02/Raketa/issues/223) §5,
+ * [`the-words.md`](../../../../../docs/specs/matchmaking/the-words.md) §17), and that is
+ * `components/poolPresentation.ts`'s `terminalReachLine`. `RadiusLadder`'s own docstring is
+ * the other half of the reading: *"clamped is recorded even when it left no rung standing —
+ * that is exactly the searcher already at the maximum, and counting them is the whole point of
+ * the bit."* **Left no rung standing** is the case the sentence is for; it is not the only case
+ * the bit is set in.
  *
  * ## What is deliberately not decided here
  *
@@ -76,19 +87,13 @@ export function poolLadder(pool: {
   /** How many rows the answer carried — the shown rows, never a population. */
   readonly rows: number;
   readonly offers: readonly RungOffer[] | null;
-  readonly radiusClamp: boolean;
 }): PoolLadder {
   if (pool.offers === null) return pool.rows > 0 ? { kind: 'silent' } : { kind: 'exhausted' };
-
-  const offers = pool.radiusClamp
-    ? pool.offers.filter((offer) => offer.ask !== 'RADIUS')
-    : pool.offers;
-
-  if (offers.length === 0) return { kind: 'exhausted' };
+  if (pool.offers.length === 0) return { kind: 'exhausted' };
 
   return {
     kind: 'offered',
-    controls: offers.filter((offer) => offer.candidatesAboveFloor > 0),
-    statements: offers.filter((offer) => offer.candidatesAboveFloor === 0),
+    controls: pool.offers.filter((offer) => offer.candidatesAboveFloor > 0),
+    statements: pool.offers.filter((offer) => offer.candidatesAboveFloor === 0),
   };
 }

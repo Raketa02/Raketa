@@ -37,7 +37,7 @@ import { installTransport, json, type Transport, type Wire } from '@/test-suppor
 import { usePlayPreferences } from '../store/playPreferences.store';
 import { endPlaySession, usePlaySession } from '../store/playSession.store';
 
-import { seatLabel } from './accessibilityPresentation';
+import { rungOfferLabel, seatLabel } from './accessibilityPresentation';
 import { balanceWord } from './balancePresentation';
 import { PICK_PLAYERS_LABEL, PROVISIONAL_WORD } from './builderPresentation';
 import { levelRow } from './playerCardPresentation';
@@ -226,6 +226,16 @@ async function openThePool() {
 
 const addLabel = (playerId: string) => `Add ${NAMES[playerId]} to the court`;
 
+/** A rung control's whole spoken name: the offer, and the price printed on it. */
+const rungLabel = (
+  offer: { readonly ask: 'TIMES' } | { readonly ask: 'RADIUS'; readonly radiusKm: number },
+  above: number,
+) =>
+  rungOfferLabel(
+    relaxationOffer(offer),
+    rungCount({ candidatesAboveFloor: above, window: 'THIS_WEEK' }, 'THIS_WEEK'),
+  );
+
 describe('arriving', () => {
   it('draws the ranked list, and re-reads the record it was opened on', async () => {
     await openThePool();
@@ -370,11 +380,19 @@ describe('the ladder', () => {
     await openThePool();
 
     expect(await screen.findByText(poolLadderTitle({ rows: 3, radiusKmUsed: 15 }))).toBeTruthy();
-    expect(screen.getByLabelText(relaxationOffer({ ask: 'TIMES' }))).toBeTruthy();
-    expect(screen.getByLabelText(relaxationOffer({ ask: 'RADIUS', radiusKm: 22 }))).toBeTruthy();
+    // ADR-0099 §5: the count is printed **on** the button, so it is in the control's own name
+    // as well as under it — the line beneath has no action and merges into it (§20.1).
+    expect(screen.getByLabelText(rungLabel({ ask: 'TIMES' }, 7))).toBeTruthy();
+    expect(screen.getByLabelText(rungLabel({ ask: 'RADIUS', radiusKm: 22 }, 9))).toBeTruthy();
+    // Visible, and hidden from a listener — the control above it already says the price.
     expect(
-      screen.getByText(rungCount({ candidatesAboveFloor: 9, window: 'THIS_WEEK' }, 'THIS_WEEK')),
+      screen.getByText(rungCount({ candidatesAboveFloor: 9, window: 'THIS_WEEK' }, 'THIS_WEEK'), {
+        includeHiddenElements: true,
+      }),
     ).toBeTruthy();
+    expect(
+      screen.queryByText(rungCount({ candidatesAboveFloor: 9, window: 'THIS_WEEK' }, 'THIS_WEEK')),
+    ).toBeNull();
   });
 
   it('is drawn on no other Play screen', async () => {
@@ -384,22 +402,35 @@ describe('the ladder', () => {
     await screen.findByLabelText('Tuesday evening');
 
     // Find a game holds the same envelope and offers nothing off it.
-    expect(screen.queryByLabelText(relaxationOffer({ ask: 'RADIUS', radiusKm: 22 }))).toBeNull();
+    expect(screen.queryByLabelText(rungLabel({ ask: 'RADIUS', radiusKm: 22 }, 9))).toBeNull();
   });
 
   /**
-   * The bit is true when the profile slider's own ceiling bit at all, and every *widen*
-   * sentence is addressed to a player who may have nothing left to widen.
+   * The bit says *a widening offer hit the slider's ceiling*, **not** *the searcher is at the
+   * ceiling*: `radius_ladder` clamps such a rung down to 50 km and offers it anyway, so a
+   * searcher at 26 km is offered 39 and 50 with the bit set. Reading it as a gate would take a
+   * real one-tap widening away from exactly the player the ladder was built for.
    */
-  it('takes the radius rung away when the clamp is set, and states the reach instead', async () => {
-    offerRungs({ rung_offers: [RADIUS_RUNG], radius_clamp: true });
+  it('keeps a clamped answer’s radius rung, because the offer is still real', async () => {
+    offerRungs({ rung_offers: [{ ...RADIUS_RUNG, radius_km: 50 }], radius_clamp: true });
     await openThePool();
 
-    await waitFor(() =>
-      expect(screen.queryByLabelText(relaxationOffer({ ask: 'RADIUS', radiusKm: 22 }))).toBeNull(),
-    );
     expect(
-      screen.getByText(
+      await screen.findByLabelText(rungLabel({ ask: 'RADIUS', radiusKm: 50 }, 9)),
+    ).toBeTruthy();
+  });
+
+  /**
+   * The searcher already at the maximum, which is the case the bit exists to count. Nothing is
+   * left to offer, so the copy states the reach rather than asking for a widening they cannot
+   * give — and suppressing the sentence would leave them with no account of why.
+   */
+  it('states the reach as a fact when the ceiling left no rung at all', async () => {
+    offerRungs({ rung_offers: [], radius_clamp: true });
+    await openThePool();
+
+    expect(
+      await screen.findByText(
         terminalReachLine({
           radiusKmUsed: 15,
           playersInRange: 6,
@@ -416,7 +447,7 @@ describe('the ladder', () => {
     await openThePool();
 
     expect(await screen.findByText(zeroRungLine({ ask: 'RADIUS', radiusKm: 32 }))).toBeTruthy();
-    expect(screen.queryByLabelText(relaxationOffer({ ask: 'RADIUS', radiusKm: 32 }))).toBeNull();
+    expect(screen.queryByLabelText(rungLabel({ ask: 'RADIUS', radiusKm: 32 }, 0))).toBeNull();
   });
 
   /** `null` is *nobody needed offers*. The list is the answer, and no block is drawn. */
@@ -451,7 +482,7 @@ describe('the ladder', () => {
     );
 
     await openThePool();
-    fireEvent.press(await screen.findByLabelText(relaxationOffer({ ask: 'RADIUS', radiusKm: 22 })));
+    fireEvent.press(await screen.findByLabelText(rungLabel({ ask: 'RADIUS', radiusKm: 22 }, 9)));
 
     await screen.findByText(
       poolRankingStatus({ playersInRange: undefined, sportName: 'Padel' }).headline,

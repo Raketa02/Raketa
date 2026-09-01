@@ -264,6 +264,23 @@ export function firstEmptySeat(seating: Seating): number {
 }
 
 /**
+ * Who an add against this seat would **replace** — and nobody, on every other kind of seat.
+ *
+ * The pool is opened against a seat, and whether that makes the next add an addition or a
+ * replacement is a fact about the seat rather than a rendering. `undefined` covers all three
+ * ways there is nobody to replace: no seat was named, the index is one this court could not
+ * produce, and the seat is empty or the searcher's own.
+ *
+ * Total by construction, like `swapSeats` and `firstEmptySeat` beside it: a seating has exactly
+ * as many entries as the court has seats, so an index outside it is not a state to write a
+ * branch for.
+ */
+export function seatOccupant(seating: Seating, at: number | undefined): string | undefined {
+  const seat = at === undefined ? undefined : seating[at];
+  return seat?.kind === 'player' ? seat.playerId : undefined;
+}
+
+/**
  * One seat of the court a **line-up answer** returned, with the reason it is open.
  *
  * The shortfall rides here and not on an arrangement, because *why could this not be filled* is

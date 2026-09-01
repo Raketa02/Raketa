@@ -107,5 +107,37 @@ export function differsFromProfile(working: WorkingWeek, profileWeek: WorkingWee
   return !sameWeek(working, profileWeek);
 }
 
+/**
+ * **The week a second search on one origin sends** — and *unprovable is sent*.
+ *
+ * Two screens run a search on a week an **earlier** search already ran on: ⚡ fills the seats
+ * around a court, and the pool takes a rung. Neither is composing a new ask, so both must
+ * reproduce the first one — and an omitted `availability_override` does not mean *the week the
+ * search above me ran on*, it means *the grid on my profile*. The two coincide only where the
+ * origin's week can be **shown** to be the profile's, which needs the profile read in hand.
+ *
+ * So the absent profile sends the week rather than omitting it. Omitting would be the app
+ * quietly running the second search on a different week from the list it is widening or the
+ * court it is filling — two answers on one screen disagreeing about what was asked, with
+ * nothing to see. Sending costs a field the backend would have filled in identically.
+ *
+ * It is **not** `differsFromProfile` above with the arguments swapped. That one answers *has
+ * the player edited their week*, on a working copy, and its honest answer with no profile is
+ * *no*. This one answers *can I prove this week is the profile's*, and its honest answer with
+ * no profile is *no* as well — which is the opposite outcome, because the questions are
+ * opposite. Two rules that differ only in what an unknown means are exactly the pair that gets
+ * collapsed by hand at a call site.
+ *
+ * @param asked the week the origin search ran on.
+ * @param profileWeek the profile's own grid, or `undefined` while it has not been read.
+ */
+export function sentWeekForOrigin(
+  asked: WorkingWeek,
+  profileWeek: WorkingWeek | undefined,
+): WorkingWeek | undefined {
+  if (profileWeek === undefined) return asked;
+  return differsFromProfile(asked, profileWeek) ? asked : undefined;
+}
+
 /** Re-exported so a Play screen reads its whole week vocabulary from one place. */
 export { isTicked, toggleCell } from '@/shared/vocabulary/week';

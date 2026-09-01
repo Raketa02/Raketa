@@ -65,6 +65,7 @@ import { offlineMessage } from '@/shared/errors';
 import { formatPercent } from '@/shared/formatting/ratingFormat';
 import { sideNames, type NamedPlayer } from '@/shared/formatting/playerName';
 import {
+  BALANCE_INK,
   Button,
   Card,
   Hairline,
@@ -95,7 +96,7 @@ import {
 } from '../domain/forecast';
 import { seatPlaces, withheldSeats, type SeatPlace } from '../domain/lineup';
 import type { UnfilledReason } from '../domain/vocabulary';
-import { differsFromProfile } from '../domain/workingWeek';
+import { sentWeekForOrigin } from '../domain/workingWeek';
 import { useFillSeats, useForecast, useSearchRecord } from '../hooks/useBuilder';
 import { usePlaySession } from '../store/playSession.store';
 
@@ -289,11 +290,7 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
    * the one case an omitted override already means. Unprovable is *sent*: a fill that quietly
    * ran on a different week from the search above it would be the two disagreeing silently.
    */
-  const sentWeek =
-    origin === undefined ||
-    (profile !== undefined && !differsFromProfile(origin.week, profile.week))
-      ? undefined
-      : origin.week;
+  const sentWeek = origin === undefined ? undefined : sentWeekForOrigin(origin.week, profile?.week);
 
   /**
    * The fill's wait — the second of Play's two, and the one with a **stagger over its floor**.
@@ -500,7 +497,9 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
                       is what puts §B9's word there, and the ticket puts *Provisional* under the
                       tinted number in one word — so both read down from the figure rather than
                       standing beside it. */}
-                  <Text style={[s.figure, { color: FIGURE_INK[balanceTone(chosen.forecast.pct)] }]}>
+                  <Text
+                    style={[s.figure, { color: BALANCE_INK[balanceTone(chosen.forecast.pct)] }]}
+                  >
                     {formatPercent(chosen.forecast.pct)}
                   </Text>
                   <Text style={s.word}>{balanceWord(chosen.forecast.pct)}</Text>
@@ -700,19 +699,6 @@ function courtStatements(court: {
 
   return [...new Set(said)];
 }
-
-/**
- * The figure's tint, read off `balanceTone` rather than off a second set of breaks.
- *
- * 7.11's whole finding is *one formula, three clamps* — a value landing in a different place on
- * two screens — so the thresholds are asked for rather than restated, and what is here is only
- * which colour each of the three tones is. They are `BalanceBar`'s own three.
- */
-const FIGURE_INK: Readonly<Record<ReturnType<typeof balanceTone>, string>> = {
-  ok: theme.color.mintInk,
-  warn: theme.color.amber,
-  bad: theme.color.red,
-};
 
 const s = StyleSheet.create({
   root: { flex: 1 },
