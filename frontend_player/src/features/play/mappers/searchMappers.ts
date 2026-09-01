@@ -29,7 +29,7 @@
 
 import type { components } from '@/generated/schema';
 import { toWireSport } from '@/features/onboarding/types';
-import { toWeekFromCodes, toWireSlots } from '@/features/player_profile/types';
+import { toWeekCells, toWireSlots } from '@/features/player_profile/types';
 import type { WeekCell } from '@/shared/vocabulary/week';
 
 import type { OriginSearch, PlayOrigin } from '../domain/lineup';
@@ -181,10 +181,10 @@ function toRaisedPrompt(raised: PromptSchema, quoted: PromptQuotes): RaisedPromp
         ? undefined
         : {
             prompt: 'KEEP_THESE_TIMES',
-            // The joined codes the stream stores, split by the feature that owns the week's
-            // spellings — the sheet draws these cells and quotes their count, so one list
+            // The same two named fields the profile's own week arrives in, read by the same
+            // mapper (#286) — the sheet draws these cells and quotes their count, so one list
             // answers both and neither can disagree with the other.
-            week: toWeekFromCodes(raised.slots),
+            week: toWeekCells(raised.slots),
             profileWeek: quoted.profileWeek,
           };
     case 'KEEP_THIS_RADIUS':

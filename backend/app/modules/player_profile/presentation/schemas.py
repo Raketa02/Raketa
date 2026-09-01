@@ -270,6 +270,16 @@ class AvailabilitySlotResource(BaseModel):
     The stream's code is a *storage* encoding chosen so a replay folds strings;
     this is a contract a client renders a grid from, and a client that had to
     split ``"3:EVENING"`` would be parsing our persistence format.
+
+    **Every cell, and there is no exception.** The rule was twice read as
+    covering only the cells a player *chose* — the one a times rung offers
+    (#283), and the week a raised ``KEEP_THESE_TIMES`` quotes back (#286) — on
+    the argument that a payload handed back is not a resource. Both crossed as
+    codes, and in both cases a client ended up splitting one. What decides this
+    is not whose value it is but **what is done with it**: a cell that gets
+    drawn on the seven-by-three grid crosses in these two fields, and the engine
+    holding it as a code is a fact about the engine. This side of the boundary
+    owns the encoding, so this side is where it is read.
     """
 
     day: int = Field(

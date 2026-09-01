@@ -210,39 +210,6 @@ export function toWeekCells(slots: readonly AvailabilitySlotResource[]): readonl
 }
 
 /**
- * The **third** spelling of a cell, and the one place it is split.
- *
- * `AvailabilitySlotResource` is two named fields precisely so a client never parses a joined
- * code — *"a client that had to split `"3:EVENING"` would be parsing our persistence
- * format"*. `PromptSchema.slots` sends exactly that joined code anyway: the grid a search ran
- * on reaches the wire as the aggregate stores it, so the sheet that draws that week has to
- * read one. It is split **here**, beside the two spellings this feature already owns, rather
- * than in the feature that happens to need it — a fourth table in `play/mappers/` would be
- * the drift `week.ts` was promoted to stop, arriving one layer lower.
- *
- * A code this cannot read is **dropped**, which is `toWeekCells`'s own answer one line up: an
- * eighth day and a fourth part of the day are both cells with nothing to draw, and the count
- * the sheet's sentence quotes is this week's own length, so a dropped cell is dropped from
- * both the drawing and the number rather than from one of them.
- */
-export function toWeekFromCodes(codes: readonly string[]): readonly WeekCell[] {
-  return codes.flatMap((code) => {
-    const [day, part] = code.split(SLOT_CODE_SEPARATOR);
-    const number = Number(day);
-    return day !== undefined && /^\d+$/.test(day) && WEEKDAY.has(number) && isWireDayPart(part)
-      ? [{ day: number as Weekday, part: DAY_PART[part] }]
-      : [];
-  });
-}
-
-/** The event stream's own separator, and the only reason this file knows there is one. */
-const SLOT_CODE_SEPARATOR = ':';
-
-function isWireDayPart(part: string | undefined): part is WireDayPart {
-  return part !== undefined && part in DAY_PART;
-}
-
-/**
  * The declaration map: **only the sports that were answered for.**
  *
  * A sport this build has no identity for takes its own key out with it, which is the same

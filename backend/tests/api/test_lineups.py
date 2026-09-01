@@ -113,7 +113,7 @@ async def test_a_line_up_asks_about_the_week_it_was_given(
     prompts = {
         prompt["prompt"]: prompt for prompt in built.json()["search"]["prompts"]
     }
-    assert prompts["KEEP_THESE_TIMES"]["slots"] == ["4:EVENING"]
+    assert prompts["KEEP_THESE_TIMES"]["slots"] == [{"day": 4, "part": "EVENING"}]
     assert await world.saved_grid(session_factory, searcher["id"]) == (
         "2:EVENING",
         "6:MORNING",

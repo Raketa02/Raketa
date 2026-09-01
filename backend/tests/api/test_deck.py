@@ -88,7 +88,7 @@ async def test_a_deal_runs_on_the_week_the_player_just_edited(
     prompts = {
         prompt["prompt"]: prompt for prompt in dealt.json()["search"]["prompts"]
     }
-    assert prompts["KEEP_THESE_TIMES"]["slots"] == ["4:EVENING"]
+    assert prompts["KEEP_THESE_TIMES"]["slots"] == [{"day": 4, "part": "EVENING"}]
 
     recorded = (await world.recorded_searches(session_factory))[-1]
     assert list(recorded.searcher_grid) == ["4:EVENING"]

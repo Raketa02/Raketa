@@ -112,16 +112,18 @@ export {
 } from './components/radiusPresentation';
 
 /**
- * The week's two spellings, exported for the one caller that sends a week this feature does
- * not own: the search's `availability_override`.
+ * The week's two spellings, exported for the weeks Play meets that this feature does not own:
+ * the search's `availability_override` on the way out, and the week a raised
+ * `KEEP_THESE_TIMES` quotes back on the way in.
  *
  * `sport.ts`'s rule is the shape — *the two spellings meet in `mappers/`, and only there* —
  * so this is a re-export rather than a second table in `play/mappers/`, which would be the
  * drift `week.ts` was promoted to stop arriving one layer lower.
  *
- * **`toWeekFromCodes` is the third spelling**, and it is here for the same reason rather than
- * for a new one: a raised `KEEP_THESE_TIMES` carries the week the search ran on as the joined
- * codes the event stream stores, which is the one shape `AvailabilitySlotResource` exists to
- * spare a client — so the split lives beside the other two and nowhere else.
+ * **There is no third spelling.** A raised `KEEP_THESE_TIMES` used to carry the week as the
+ * joined codes the event stream stores, and this feature owned a `toWeekFromCodes` that split
+ * them; the contract now sends the same `AvailabilitySlotResource` every other week on the
+ * wire does, so `toWeekCells` reads that one too and no client parses our persistence format
+ * ([#286](https://github.com/Raketa02/Raketa/issues/286)).
  */
-export { toWeekCells, toWeekFromCodes, toWireSlots } from './mappers/playerProfileMappers';
+export { toWeekCells, toWireSlots } from './mappers/playerProfileMappers';

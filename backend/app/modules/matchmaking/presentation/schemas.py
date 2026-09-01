@@ -441,13 +441,16 @@ class PromptSchema(BaseModel):
     radius_km: int = Field(
         OMITTED, ge=1, description="The widening you keep taking"
     )
-    slots: list[str] = Field(
+    slots: list[AvailabilitySlotResource] = Field(
         OMITTED,
         description=(
-            "The week this search actually ran on, as codes. **An empty list "
-            "is a cleared week** — the player unticked every cell, which is a "
-            "legal edit and a legal thing to be offered — where the field being "
-            "absent means this is not the times prompt at all."
+            "The week this search actually ran on, in the same two named fields "
+            "every other week on the wire crosses in — because the sheet **draws** "
+            "this one on the seven-by-three grid beside the profile's own and "
+            "quotes its count off the same list. **An empty list is a cleared "
+            "week** — the player unticked every cell, which is a legal edit and a "
+            "legal thing to be offered — where the field being absent means this "
+            "is not the times prompt at all."
         ),
     )
     mode: SearchMode = Field(

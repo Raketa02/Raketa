@@ -1001,6 +1001,16 @@ export interface components {
          *     The stream's code is a *storage* encoding chosen so a replay folds strings;
          *     this is a contract a client renders a grid from, and a client that had to
          *     split ``"3:EVENING"`` would be parsing our persistence format.
+         *
+         *     **Every cell, and there is no exception.** The rule was twice read as
+         *     covering only the cells a player *chose* — the one a times rung offers
+         *     (#283), and the week a raised ``KEEP_THESE_TIMES`` quotes back (#286) — on
+         *     the argument that a payload handed back is not a resource. Both crossed as
+         *     codes, and in both cases a client ended up splitting one. What decides this
+         *     is not whose value it is but **what is done with it**: a cell that gets
+         *     drawn on the seven-by-three grid crosses in these two fields, and the engine
+         *     holding it as a code is a fact about the engine. This side of the boundary
+         *     owns the encoding, so this side is where it is read.
          */
         AvailabilitySlotResource: {
             /**
@@ -2431,9 +2441,9 @@ export interface components {
             radius_km?: number;
             /**
              * Slots
-             * @description The week this search actually ran on, as codes. **An empty list is a cleared week** — the player unticked every cell, which is a legal edit and a legal thing to be offered — where the field being absent means this is not the times prompt at all.
+             * @description The week this search actually ran on, in the same two named fields every other week on the wire crosses in — because the sheet **draws** this one on the seven-by-three grid beside the profile's own and quotes its count off the same list. **An empty list is a cleared week** — the player unticked every cell, which is a legal edit and a legal thing to be offered — where the field being absent means this is not the times prompt at all.
              */
-            slots?: string[];
+            slots?: components["schemas"]["AvailabilitySlotResource"][];
             /** @description The mode your recent searches keep choosing */
             mode?: components["schemas"]["SearchMode"];
         };

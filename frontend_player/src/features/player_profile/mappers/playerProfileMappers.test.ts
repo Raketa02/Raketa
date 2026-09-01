@@ -16,7 +16,6 @@ import {
   toProfileOptions,
   toUploadedPhoto,
   toWeekCells,
-  toWeekFromCodes,
   toWireSlots,
 } from './playerProfileMappers';
 
@@ -293,43 +292,6 @@ describe('the week, in the two spellings that exist', () => {
     const eighth = [{ day: 8, part: 'MORNING' }] as unknown as Wire['AvailabilitySlotResource'][];
 
     expect(toWeekCells(eighth)).toEqual([]);
-  });
-});
-
-/**
- * The third spelling: the joined code the event stream stores, which one route sends anyway.
- *
- * A raised `KEEP_THESE_TIMES` carries the week the search ran on as `"3:EVENING"` strings —
- * the shape `AvailabilitySlotResource` exists to spare a client — so the split lives here,
- * beside the two spellings this feature already owns.
- */
-describe('a week as the stream stores it', () => {
-  it('splits a code into the cell it names', () => {
-    expect(toWeekFromCodes(['2:EVENING', '6:MORNING'])).toEqual([
-      { day: 2, part: 'evening' },
-      { day: 6, part: 'morning' },
-    ]);
-  });
-
-  it('carries the order it was given, and sorts nothing', () => {
-    expect(toWeekFromCodes(['7:AFTERNOON', '1:MORNING'])).toEqual([
-      { day: 7, part: 'afternoon' },
-      { day: 1, part: 'morning' },
-    ]);
-  });
-
-  it('reads a cleared week as a week with nothing in it', () => {
-    // `[]` is a cleared week and is a legal thing to be offered; *not this prompt* is an
-    // absence one layer up, and never an empty list.
-    expect(toWeekFromCodes([])).toEqual([]);
-  });
-
-  it('drops a code it cannot read rather than guessing at the cell', () => {
-    // The same answer an eighth day gets on the read above: an unreadable code is a cell
-    // with nothing to draw, and a fourth part of the day is a build that shipped before it.
-    expect(
-      toWeekFromCodes(['8:MORNING', '3:SIESTA', 'MONDAY:MORNING', '2', ':', '2:EVENING']),
-    ).toEqual([{ day: 2, part: 'evening' }]);
   });
 });
 

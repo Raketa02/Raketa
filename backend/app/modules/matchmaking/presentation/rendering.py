@@ -430,7 +430,17 @@ def _offer(offer: RungOffer) -> RungOfferSchema:
 
 
 def _prompt(raised: RaisedPrompt) -> PromptSchema:
-    """One standing question, carrying only the value it is asking about."""
+    """One standing question, carrying only the value it is asking about.
+
+    **The week is split here**, out of the codes the engine holds it in, for the
+    same reason ``_offer`` splits the one cell a rung adds: the sheet draws this
+    week on the seven-by-three grid beside the profile's own, and
+    ``AvailabilitySlotResource`` is two named fields precisely so that no client
+    ever splits ``"3:EVENING"`` for itself. That it is a payload *quoted back*
+    rather than a resource the player asked for changes nothing about who owns
+    the encoding — this is the side of the boundary that does
+    (`#286 <https://github.com/Raketa02/Raketa/issues/286>`_).
+    """
 
     fields: dict[str, Any] = {"prompt": raised.prompt}
     if raised.radius_km is not None:
@@ -439,7 +449,10 @@ def _prompt(raised: RaisedPrompt) -> PromptSchema:
     # and has to cross, where omitting it would ask *keep these times?* about no
     # times at all and leave the sheet with nothing to draw.
     if raised.slots is not None:
-        fields["slots"] = list(raised.slots)
+        fields["slots"] = [
+            AvailabilitySlotResource(day=int(cell.day), part=cell.part)
+            for cell in (AvailabilitySlot.from_code(code) for code in raised.slots)
+        ]
     if raised.mode is not None:
         fields["mode"] = raised.mode
     return PromptSchema.model_validate(fields)

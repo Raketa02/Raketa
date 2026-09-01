@@ -36,7 +36,7 @@ const SHORTLIST: Wire['ShortlistResponse'] = {
     radius_clamp: false,
     sorts_available: ['BEST_FIT'],
     rung_offers: null,
-    prompts: [{ prompt: 'KEEP_THESE_TIMES', slots: ['2:EVENING'] }],
+    prompts: [{ prompt: 'KEEP_THESE_TIMES', slots: [{ day: 2, part: 'EVENING' }] }],
   },
   candidates: [],
 };

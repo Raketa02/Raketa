@@ -164,7 +164,7 @@ const profileWrites = () => [
 
 describe('the question a search raised', () => {
   it('is asked after the search has run, which is what makes it never block', async () => {
-    await search([{ prompt: 'KEEP_THESE_TIMES', slots: ['2:EVENING'] }]);
+    await search([{ prompt: 'KEEP_THESE_TIMES', slots: [{ day: 2, part: 'EVENING' }] }]);
 
     // The sheet is on screen and the search it is about is already recorded. There is
     // nothing left for a dismissal to swallow, which is the whole of §F2's closer.
@@ -193,7 +193,15 @@ describe('the question a search raised', () => {
    * dropped, and nothing at all on a slot that was off and stayed off.
    */
   it('draws the week the search ran on against the week on the profile', async () => {
-    await search([{ prompt: 'KEEP_THESE_TIMES', slots: ['2:EVENING', '1:MORNING'] }]);
+    await search([
+      {
+        prompt: 'KEEP_THESE_TIMES',
+        slots: [
+          { day: 2, part: 'EVENING' },
+          { day: 1, part: 'MORNING' },
+        ],
+      },
+    ]);
     await screen.findByText(KEEP_THESE_TIMES);
 
     expect(screen.getByLabelText('Monday morning, newly added')).toBeTruthy();
@@ -226,7 +234,15 @@ describe('the question a search raised', () => {
 
 describe('yes — through the route that owns the value', () => {
   it('saves the week the search ran on, and writes no decline', async () => {
-    await search([{ prompt: 'KEEP_THESE_TIMES', slots: ['2:EVENING', '1:MORNING'] }]);
+    await search([
+      {
+        prompt: 'KEEP_THESE_TIMES',
+        slots: [
+          { day: 2, part: 'EVENING' },
+          { day: 1, part: 'MORNING' },
+        ],
+      },
+    ]);
     await screen.findByText(KEEP_THESE_TIMES);
 
     fireEvent.press(screen.getByLabelText(promptControls('KEEP_THESE_TIMES').accept));
@@ -349,7 +365,7 @@ describe('not now — a row about the question, and never a value', () => {
   });
 
   it('carries no suppression sentence on the one prompt with no suppression', async () => {
-    await search([{ prompt: 'KEEP_THESE_TIMES', slots: ['2:EVENING'] }]);
+    await search([{ prompt: 'KEEP_THESE_TIMES', slots: [{ day: 2, part: 'EVENING' }] }]);
     await screen.findByText(KEEP_THESE_TIMES);
 
     expect(screen.queryByText(/not for a month/)).toBeNull();
@@ -361,7 +377,7 @@ describe('not now — a row about the question, and never a value', () => {
    * closes, and the search still stands.
    */
   it('sends nothing for the prompt a decline buys nothing on', async () => {
-    await search([{ prompt: 'KEEP_THESE_TIMES', slots: ['2:EVENING'] }]);
+    await search([{ prompt: 'KEEP_THESE_TIMES', slots: [{ day: 2, part: 'EVENING' }] }]);
     await screen.findByText(KEEP_THESE_TIMES);
 
     fireEvent.press(screen.getByLabelText(promptControls('KEEP_THESE_TIMES').decline));
@@ -416,7 +432,15 @@ describe('one question, one answer', () => {
         searches === 1
           ? shortlist([{ prompt: 'REFRESH_YOUR_TIMES' }])
           : shortlist(
-              [{ prompt: 'KEEP_THESE_TIMES', slots: ['2:EVENING', '1:MORNING'] }],
+              [
+                {
+                  prompt: 'KEEP_THESE_TIMES',
+                  slots: [
+                    { day: 2, part: 'EVENING' },
+                    { day: 1, part: 'MORNING' },
+                  ],
+                },
+              ],
               'f1a2b3c4-d5e6-4f70-8a9b-0c1d2e3f4a5b',
             ),
       );

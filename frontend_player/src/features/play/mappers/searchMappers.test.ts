@@ -108,13 +108,21 @@ describe('the questions a search raises', () => {
   });
 
   /**
-   * The week the search ran on arrives as the **joined codes the stream stores**, which is the
-   * one shape `AvailabilitySlotResource` exists to spare a client — so it is split here and
-   * the sheet is handed cells it can draw rather than strings it would have to parse.
+   * The week the search ran on arrives in the **two named fields every other week on the wire
+   * arrives in** (#286), so it is read by the same `toWeekCells` the profile's own week is —
+   * one spelling for the two grids the sheet draws side by side.
    */
   it('lifts the week the search ran on, beside the one on the profile', () => {
     const raised = toRaisedPrompts(
-      shortlist([{ prompt: 'KEEP_THESE_TIMES', slots: ['2:EVENING', '6:MORNING'] }]),
+      shortlist([
+        {
+          prompt: 'KEEP_THESE_TIMES',
+          slots: [
+            { day: 2, part: 'EVENING' },
+            { day: 6, part: 'MORNING' },
+          ],
+        },
+      ]),
       QUOTED,
     );
 
@@ -130,10 +138,23 @@ describe('the questions a search raises', () => {
     ]);
   });
 
-  /** A code this build cannot read is dropped, exactly as an eighth day is on the read. */
-  it('drops a slot code it cannot read, from the drawing and the count alike', () => {
+  /**
+   * An eighth day is dropped, which is `toWeekCells`'s own answer on every other week: the
+   * wire types `day` as a bare integer, and there is no honest eighth day to draw. It is
+   * dropped from the drawing and from the count alike, because the sheet quotes the length of
+   * the list it draws.
+   */
+  it('drops a cell it cannot draw, from the drawing and the count alike', () => {
     const raised = toRaisedPrompts(
-      shortlist([{ prompt: 'KEEP_THESE_TIMES', slots: ['2:EVENING', '9:EVENING', '3:SIESTA'] }]),
+      shortlist([
+        {
+          prompt: 'KEEP_THESE_TIMES',
+          slots: [
+            { day: 2, part: 'EVENING' },
+            { day: 9, part: 'EVENING' },
+          ],
+        },
+      ]),
       QUOTED,
     );
 

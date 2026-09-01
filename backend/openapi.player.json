@@ -2266,7 +2266,7 @@
           "part"
         ],
         "title": "AvailabilitySlotResource",
-        "description": "One ticked cell of the availability grid.\n\nTwo named fields rather than the single joined code the event stream stores.\nThe stream's code is a *storage* encoding chosen so a replay folds strings;\nthis is a contract a client renders a grid from, and a client that had to\nsplit ``\"3:EVENING\"`` would be parsing our persistence format."
+        "description": "One ticked cell of the availability grid.\n\nTwo named fields rather than the single joined code the event stream stores.\nThe stream's code is a *storage* encoding chosen so a replay folds strings;\nthis is a contract a client renders a grid from, and a client that had to\nsplit ``\"3:EVENING\"`` would be parsing our persistence format.\n\n**Every cell, and there is no exception.** The rule was twice read as\ncovering only the cells a player *chose* \u2014 the one a times rung offers\n(#283), and the week a raised ``KEEP_THESE_TIMES`` quotes back (#286) \u2014 on\nthe argument that a payload handed back is not a resource. Both crossed as\ncodes, and in both cases a client ended up splitting one. What decides this\nis not whose value it is but **what is done with it**: a cell that gets\ndrawn on the seven-by-three grid crosses in these two fields, and the engine\nholding it as a code is a fact about the engine. This side of the boundary\nowns the encoding, so this side is where it is read."
       },
       "BandResponse": {
         "properties": {
@@ -3915,11 +3915,11 @@
           },
           "slots": {
             "items": {
-              "type": "string"
+              "$ref": "#/components/schemas/AvailabilitySlotResource"
             },
             "type": "array",
             "title": "Slots",
-            "description": "The week this search actually ran on, as codes. **An empty list is a cleared week** \u2014 the player unticked every cell, which is a legal edit and a legal thing to be offered \u2014 where the field being absent means this is not the times prompt at all."
+            "description": "The week this search actually ran on, in the same two named fields every other week on the wire crosses in \u2014 because the sheet **draws** this one on the seven-by-three grid beside the profile's own and quotes its count off the same list. **An empty list is a cleared week** \u2014 the player unticked every cell, which is a legal edit and a legal thing to be offered \u2014 where the field being absent means this is not the times prompt at all."
           },
           "mode": {
             "$ref": "#/components/schemas/SearchMode",

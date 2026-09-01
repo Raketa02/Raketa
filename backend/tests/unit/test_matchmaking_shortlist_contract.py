@@ -35,6 +35,7 @@ from app.modules.matchmaking.presentation.schemas import (
     LivenessReason,
     ModifierCode,
     PlayerCardSchema,
+    PromptSchema,
     RunSearchRequest,
     RungOfferSchema,
     SearchEnvelope,
@@ -246,6 +247,29 @@ def test_the_cell_a_times_rung_offers_is_the_resource_a_grid_is_drawn_from():
     """
 
     assert RungOfferSchema.model_fields["slot"].annotation is AvailabilitySlotResource
+
+
+def test_the_week_a_prompt_quotes_back_is_the_resource_a_grid_is_drawn_from():
+    """**The last place a client met the joined code, and now it does not.**
+
+    A raised ``KEEP_THESE_TIMES`` is the only week on this route the client is
+    asked to *draw* rather than to send: the prompt sheet renders it on the same
+    seven-by-three grid as the profile's own and quotes the count off it. It
+    crossed as the aggregate's storage codes, so the sheet had to split
+    ``"3:EVENING"`` for itself — which is the one thing
+    ``AvailabilitySlotResource`` was named to spare a client, and the same
+    reading ``RungOfferSchema.slot`` settled one test up (#286).
+
+    **A quoted payload is still a resource when a grid is drawn from it.** That
+    is the argument the counter-argument lost: the engine holding the week as
+    codes is a fact about the engine, and this side of the boundary is where our
+    persistence format is read.
+    """
+
+    assert (
+        PromptSchema.model_fields["slots"].annotation
+        == list[AvailabilitySlotResource]
+    )
 
 
 def test_the_response_has_two_halves_and_no_third_thing():
