@@ -15,7 +15,15 @@ const ORIGIN = {
   week: [TUESDAY_EVENING],
 } as const;
 
-const QUOTED = { sportName: 'Padel', slotsOnProfile: 4 };
+/** The profile's own week — four cells, which is `KEEP_THESE_TIMES`'s second number. */
+const PROFILE_WEEK = [
+  { day: 1, part: 'evening' },
+  { day: 2, part: 'evening' },
+  { day: 4, part: 'morning' },
+  { day: 6, part: 'morning' },
+] as const;
+
+const QUOTED = { sportName: 'Padel', profileWeek: PROFILE_WEEK };
 
 function shortlist(prompts?: Wire['PromptSchema'][]): Wire['ShortlistResponse'] {
   return {
@@ -99,19 +107,49 @@ describe('the questions a search raises', () => {
     expect(toRaisedPrompts(shortlist(), QUOTED)).toEqual([]);
   });
 
-  it('counts the week the search ran on, against the count on the profile', () => {
+  /**
+   * The week the search ran on arrives as the **joined codes the stream stores**, which is the
+   * one shape `AvailabilitySlotResource` exists to spare a client — so it is split here and
+   * the sheet is handed cells it can draw rather than strings it would have to parse.
+   */
+  it('lifts the week the search ran on, beside the one on the profile', () => {
     const raised = toRaisedPrompts(
       shortlist([{ prompt: 'KEEP_THESE_TIMES', slots: ['2:EVENING', '6:MORNING'] }]),
       QUOTED,
     );
 
-    expect(raised).toEqual([{ prompt: 'KEEP_THESE_TIMES', slotsNow: 2, slotsWas: 4 }]);
+    expect(raised).toEqual([
+      {
+        prompt: 'KEEP_THESE_TIMES',
+        week: [
+          { day: 2, part: 'evening' },
+          { day: 6, part: 'morning' },
+        ],
+        profileWeek: PROFILE_WEEK,
+      },
+    ]);
+  });
+
+  /** A code this build cannot read is dropped, exactly as an eighth day is on the read. */
+  it('drops a slot code it cannot read, from the drawing and the count alike', () => {
+    const raised = toRaisedPrompts(
+      shortlist([{ prompt: 'KEEP_THESE_TIMES', slots: ['2:EVENING', '9:EVENING', '3:SIESTA'] }]),
+      QUOTED,
+    );
+
+    expect(raised).toEqual([
+      {
+        prompt: 'KEEP_THESE_TIMES',
+        week: [{ day: 2, part: 'evening' }],
+        profileWeek: PROFILE_WEEK,
+      },
+    ]);
   });
 
   // `()` is a cleared week and is a real offer; `None` is *not this prompt*.
   it('offers to keep a cleared week', () => {
     expect(toRaisedPrompts(shortlist([{ prompt: 'KEEP_THESE_TIMES', slots: [] }]), QUOTED)).toEqual(
-      [{ prompt: 'KEEP_THESE_TIMES', slotsNow: 0, slotsWas: 4 }],
+      [{ prompt: 'KEEP_THESE_TIMES', week: [], profileWeek: PROFILE_WEEK }],
     );
   });
 

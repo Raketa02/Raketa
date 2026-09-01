@@ -496,6 +496,32 @@ writes the **whole** record back, origin and court included, because neither cro
 read-back. Both card types draw here and **the pool draws one shape twice**; the pending seat
 replacement is route-local and needs no clearing rule, because the court pops.
 
+**A search that raised a question asks it on `SH.saveav`, and dismissing it is an answer.**
+One sheet for all four prompts, keyed per prompt, with **no string of its own** — the title, the
+body, §F2's closer, the suppression sentence and both control names come off the copy deck, so
+a fifth prompt fails to compile there rather than drawing an unlabelled button. It is asked
+**after the latch lifts and before the court is pushed**: the prompts ride on the search's own
+response, so _it never blocks_ is arithmetic, and what the sheet stands in front of is the
+**court** — the week, the radius and the declaration are all edited on the screen underneath it.
+**The two answers land in two modules**, which is the shape worth knowing: a _yes_ is a `PUT`
+through the route that owns the value — `player_profile`'s week, radius or declaration — and a
+_not now_ is `POST /api/v1/prompt-declines`, a durable row about **the question**, keyed by the
+prompt and never by the value it quoted. **Dismissal is a decline** — the scrim, the close
+control and Android's back gesture all write the row — because walking away from a sheet whose
+footer says the search has already run is indistinguishable in intent from pressing _not now_,
+and an unanswered question is asked forever on the two prompts whose condition never stops being
+true. Two prompts have a **stated absence** and neither is an oversight: `KEEP_THESE_TIMES`
+declines into no row, because a grid is a different grid next Tuesday and the route refuses one;
+`REFRESH_YOUR_TIMES` accepts into no write, because it carries no value and is only ever raised
+on a week the profile already holds — so its _yes_ hands the player back to the grid, which is
+the one thing on that screen that can make it true. `KEEP_THESE_TIMES` draws **6.8's diff
+variant** of the same grid the screen edits, off the prompt's own payload rather than the
+working copy — the engine compares the **post-rung** week — and a cleared one draws as every
+profile cell dashed, which is §12's second body as a picture. The week arrives as the joined
+codes the event stream stores, which is the one shape `AvailabilitySlotResource` exists to spare
+a client, so it is split in `player_profile`'s mappers beside the two spellings that were
+already there.
+
 **⚡ becomes a challenge on the court once full, and that is `features/challenges/`.** The seam
 is drawn at _the one action in this tab that reaches another person_: the pinned CTA is the
 court's own slot **calling** a challenges use-case, and `SH.propose`, the send, the two

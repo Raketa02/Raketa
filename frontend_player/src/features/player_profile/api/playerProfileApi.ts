@@ -14,6 +14,9 @@ type PhotoResponse = components['schemas']['PhotoResponse'];
 type CommitPlayerProfileRequest = components['schemas']['CommitPlayerProfileRequest'];
 type PlayerProfileResponse = components['schemas']['PlayerProfileResponse'];
 type PlayerProfileReadResponse = components['schemas']['PlayerProfileReadResponse'];
+type ChangeAvailabilityRequest = components['schemas']['ChangeAvailabilityRequest'];
+type AvailabilityResponse = components['schemas']['AvailabilityResponse'];
+type AvailabilitySlotResource = components['schemas']['AvailabilitySlotResource'];
 type ChangeSearchRadiusRequest = components['schemas']['ChangeSearchRadiusRequest'];
 type SearchRadiusResponse = components['schemas']['SearchRadiusResponse'];
 type WirePlayIntent = components['schemas']['PlayIntent'];
@@ -151,6 +154,44 @@ export function readPlayerProfile({
     path: '/api/v1/players/me/profile',
     authenticated: true,
     signal,
+  });
+}
+
+export interface ChangeAvailabilityOptions {
+  /** Every cell still ticked, in the app's own order. The list **is** the week. */
+  readonly availability: readonly AvailabilitySlotResource[];
+}
+
+/**
+ * Replace this player's week. **The whole grid, every time**, and an empty list clears it.
+ *
+ * The list *is* the week and what is absent from it is unticked, so there is no per-cell
+ * request and nothing to merge: a client that sent a delta would be describing a transition
+ * the aggregate does not have.
+ *
+ * **A cleared week is a legal value here and a refusal at the commit**, and the asymmetry is
+ * the route's rather than this app's to preserve: the floor of one ticked cell binds the
+ * answer a player is *asked for* at the end of onboarding, not every later edit of it. So
+ * nothing here checks the length.
+ *
+ * **This is where a `KEEP_THESE_TIMES` prompt is answered.** The engine notices that a search
+ * ran on a week the profile does not hold and asks; nothing in the matcher writes a profile,
+ * so a *yes* is this request and a *not now* is a different one entirely
+ * ([#275](https://github.com/Raketa02/Raketa/issues/275)).
+ *
+ * **Unkeyed, and no `signal`** — the radius write's two reasons, unchanged: a `PUT` that lands
+ * the same state twice has nothing to deduplicate, and a cancelled write leaves the client
+ * unable to say whether it landed.
+ */
+export function changeAvailability({
+  availability,
+}: ChangeAvailabilityOptions): Promise<AvailabilityResponse> {
+  const body: ChangeAvailabilityRequest = { availability: [...availability] };
+  return httpRequest<AvailabilityResponse>({
+    method: 'PUT',
+    path: '/api/v1/players/me/availability',
+    body,
+    authenticated: true,
   });
 }
 

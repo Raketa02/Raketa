@@ -559,6 +559,35 @@ search where a radius, a declaration and a described week do not
 [#164](https://github.com/Raketa02/Raketa/issues/164)). The shared closer is unchanged on all
 four, and `REFRESH_YOUR_TIMES` keeps §F2 #9 verbatim.
 
+### The two answers, and the third way of giving one of them
+
+| `Prompt` | Yes | Not now | The sheet's close control |
+| --- | --- | --- | --- |
+| `KEEP_THESE_TIMES` | `Save it to my profile` | `Just for this search` | `Close without saving these times` |
+| `KEEP_THIS_RADIUS` | `Make it my usual` | `Keep it to this one` | `Close without changing your radius` |
+| `UPDATE_PLAY_INTENT` | `Update it` | `Just for this search` | `Close without changing your profile` |
+| `REFRESH_YOUR_TIMES` | `Let me fix it now` | `Not now` | `Close without changing your week` |
+
+Three of the four pairs were **already written down** and are reused rather than invented:
+`SH.saveav` ships the first ([#237](https://github.com/Raketa02/Raketa/issues/237) §5), the
+drift prompt's are `matchmaking-engine.md` §6.3's *Update it* and *Just for this search*, and
+the radius pair is its own body's closing clause. Not one of them quotes a value, so they are
+§1's **first** shape — a flat `Record` beside the switch that writes the sentences.
+
+**A *yes* is a write through the route that owns the value**, and `REFRESH_YOUR_TIMES` is the
+one that promises none, because it carries none. It is only ever the prompt on screen when the
+week the search ran on **is** the profile's — an edited week raises `KEEP_THESE_TIMES`, which
+sorts first — and re-sending an unchanged week lands the same state and records nothing. So its
+*yes* hands the player back to the grid on the screen behind the sheet, and the label says so
+rather than claiming a save that would not happen
+([#275](https://github.com/Raketa02/Raketa/issues/275)).
+
+**Dismissal is a decline**, so the close control is a third way of pressing *not now* and is
+named for what closing leaves alone rather than for the act — never *Close*, which says nothing
+out of visual context, and never the decline button's own words, which would offer a listener
+the same choice twice. §20.6 puts focus on the title on the way in, which is what makes the
+question heard before either answer is offered.
+
 ## 13. A challenge's standing — five codes, ten sentences
 
 #221: *"**Challenge sent** and **Challenge for you** are one standing read from two sides, not

@@ -78,6 +78,7 @@ export type { PlayerProfileSurface, PlayIntentDeclarations } from './domain/Play
 export type { PlayIntentSurface } from './api/playerProfileApi';
 export type { PlayIntentDeclaration } from './use-cases/declarePlayIntent';
 export {
+  useChangeAvailability,
   useChangeSearchRadius,
   useDeclarePlayIntent,
   useProfileSurface,
@@ -117,5 +118,10 @@ export {
  * `sport.ts`'s rule is the shape — *the two spellings meet in `mappers/`, and only there* —
  * so this is a re-export rather than a second table in `play/mappers/`, which would be the
  * drift `week.ts` was promoted to stop arriving one layer lower.
+ *
+ * **`toWeekFromCodes` is the third spelling**, and it is here for the same reason rather than
+ * for a new one: a raised `KEEP_THESE_TIMES` carries the week the search ran on as the joined
+ * codes the event stream stores, which is the one shape `AvailabilitySlotResource` exists to
+ * spare a client — so the split lives beside the other two and nowhere else.
  */
-export { toWeekCells, toWireSlots } from './mappers/playerProfileMappers';
+export { toWeekCells, toWeekFromCodes, toWireSlots } from './mappers/playerProfileMappers';

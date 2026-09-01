@@ -29,7 +29,7 @@
 
 import type { components } from '@/generated/schema';
 import { toWireSport } from '@/features/onboarding/types';
-import { toWireSlots } from '@/features/player_profile/types';
+import { toWeekFromCodes, toWireSlots } from '@/features/player_profile/types';
 import type { WeekCell } from '@/shared/vocabulary/week';
 
 import type { OriginSearch, PlayOrigin } from '../domain/lineup';
@@ -143,8 +143,14 @@ const KNOWN_MODES = new Set<SearchMode>(SEARCH_MODES);
 export interface PromptQuotes {
   /** What this sport is called, for the one prompt whose sentence names it. */
   readonly sportName: string;
-  /** How many cells the **profile's** week holds — `KEEP_THESE_TIMES`'s second number. */
-  readonly slotsOnProfile: number;
+  /**
+   * The **profile's** own week — `KEEP_THESE_TIMES`'s other half.
+   *
+   * The cells rather than their count, because the sheet draws the two weeks against each
+   * other as a grid and quotes the count off the same list it draws
+   * ([#275](https://github.com/Raketa02/Raketa/issues/275)).
+   */
+  readonly profileWeek: readonly WeekCell[];
 }
 
 /**
@@ -153,10 +159,10 @@ export interface PromptQuotes {
  * **Present on a search and omitted on a read-back**, so an absent list is *this response did
  * not raise any* and never *this build could not read them*.
  *
- * `slotsWas` is the client's own count and the one value here the response does not carry: the
- * engine compares the **post-rung** grid the search actually ran on against the profile's, and
- * only it knows what the first of those was — so the wire sends `slots`, the count on the
- * profile is the read the screen already holds, and neither side computes the other's half.
+ * The profile's week is the client's own and the one value here the response does not carry:
+ * the engine compares the **post-rung** grid the search actually ran on against the profile's,
+ * and only it knows what the first of those was — so the wire sends `slots`, the profile's
+ * week is the read the screen already holds, and neither side computes the other's half.
  */
 export function toRaisedPrompts(
   response: ShortlistResponse,
@@ -175,8 +181,11 @@ function toRaisedPrompt(raised: PromptSchema, quoted: PromptQuotes): RaisedPromp
         ? undefined
         : {
             prompt: 'KEEP_THESE_TIMES',
-            slotsNow: raised.slots.length,
-            slotsWas: quoted.slotsOnProfile,
+            // The joined codes the stream stores, split by the feature that owns the week's
+            // spellings — the sheet draws these cells and quotes their count, so one list
+            // answers both and neither can disagree with the other.
+            week: toWeekFromCodes(raised.slots),
+            profileWeek: quoted.profileWeek,
           };
     case 'KEEP_THIS_RADIUS':
       return raised.radius_km === undefined

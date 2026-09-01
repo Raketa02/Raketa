@@ -21,8 +21,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { AppError } from '@/shared/errors';
 import type { PlayIntent } from '@/shared/vocabulary/playIntent';
 import type { Sport } from '@/shared/vocabulary/sport';
+import type { WeekCell } from '@/shared/vocabulary/week';
 
 import type { PlayerProfileSurface } from '../domain/PlayerProfileSurface';
+import { changeAvailability } from '../use-cases/changeAvailability';
 import { changeSearchRadius } from '../use-cases/changeSearchRadius';
 import { declarePlayIntent, type PlayIntentDeclaration } from '../use-cases/declarePlayIntent';
 import { readProfileSurface } from '../use-cases/readProfileSurface';
@@ -36,6 +38,30 @@ export function useProfileSurface() {
   return useQuery<PlayerProfileSurface, AppError>({
     queryKey: playerProfileKeys.surface(),
     queryFn: ({ signal }) => readProfileSurface({ signal }),
+  });
+}
+
+/**
+ * Replace the profile's week — **the whole grid, and an empty one is a real answer.**
+ *
+ * The week written into the cache is the **route's**, not the request's: repeated cells are
+ * collapsed and the order is the platform's reading order, so a client that kept what it sent
+ * would draw a week the profile does not hold. It is the radius write's rule, on the fact
+ * beside it.
+ *
+ * The one caller today is the prompt sheet's *yes* to `KEEP_THESE_TIMES`
+ * ([#275](https://github.com/Raketa02/Raketa/issues/275)); *You* will be the second.
+ */
+export function useChangeAvailability() {
+  const client = useQueryClient();
+
+  return useMutation<readonly WeekCell[], AppError, readonly WeekCell[]>({
+    mutationFn: (week) => changeAvailability(week),
+    onSuccess: (week) => {
+      client.setQueryData<PlayerProfileSurface>(playerProfileKeys.surface(), (held) =>
+        held === undefined ? held : { ...held, week },
+      );
+    },
   });
 }
 

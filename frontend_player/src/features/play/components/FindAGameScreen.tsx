@@ -46,6 +46,16 @@
  *
  * ## Where a completed search goes, and when
  *
+ * **Through the sheet, where the search raised a question.** `SH.saveav` asks it after the
+ * latch lifts and before the court is pushed ([#275](https://github.com/Raketa02/Raketa/issues/275)):
+ * the prompts ride on the search's own response, so *"it never blocks"* is arithmetic rather
+ * than an ordering a screen remembers — the search has run before there is anything to ask.
+ * What the sheet stands in front of is the **court**, and it stands there because the three
+ * values these questions are about — the week, the radius and the declaration — are all edited
+ * on *this* screen. **Dismissing it is a decline and is written like any other answer**, and
+ * one prompt's *yes* keeps the player here rather than going on: `REFRESH_YOUR_TIMES` carries
+ * no value to write, so accepting it is a request for the grid.
+ *
  * The **builder**, pushed with the id the search just minted
  * ([#271](https://github.com/Raketa02/Raketa/issues/271)) — and pushed **when the latch
  * lifts**, not when the mutation succeeds. The two are different moments and the difference is
@@ -59,12 +69,6 @@
  *
  * ## What is deliberately not here
  *
- * **The prompt sheet.** `SH.saveav` is [#275](https://github.com/Raketa02/Raketa/issues/275)'s.
- * What this ticket owes it is the ordering, and the ordering is now **structural**: the
- * prompts come off the search's own response, so by the time there is anything to ask, the
- * search has already run. *"It never blocks"* is true by construction rather than by a screen
- * remembering to sequence a sheet after a request.
- *
  * **The origin guard's confirmation.** `changingSport` and `changingMode` are the two triggers
  * this screen owns, and both answer *go* until a line-up exists — which nothing on this branch
  * can yet build. The modal lands with the screens that can seat somebody
@@ -77,7 +81,7 @@
  * lands where it should and 10.3 makes the chevron opt-in for exactly this case.
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 
@@ -113,6 +117,7 @@ import { usePlaySession } from '../store/playSession.store';
 
 import { BUILDER_ROUTE } from './BuilderScreen';
 import { DeclarationInterstitial } from './DeclarationInterstitial';
+import { PromptSheet, type AfterThePrompt } from './PromptSheet';
 import { SportChips } from './SportChips';
 import { useHeldWait } from './heldWait';
 import { PlaySegment } from './PlaySegment';
@@ -167,6 +172,16 @@ export function FindAGameScreen() {
    * the slider back to the profile, which is where the answer now is.
    */
   const [chosenRadiusKm, setChosenRadiusKm] = useState<number | undefined>(undefined);
+
+  /**
+   * Where the prompt sheet returns focus to — **the week**, which is what it is about.
+   *
+   * Part 13 returns a listener to the control that opened a modal; this one is opened by an
+   * *answer* rather than by a press, so there is no trigger and the grid is the honest
+   * target: three of the four questions are about a value edited on this screen, and the
+   * fourth's *yes* is a request for this very control.
+   */
+  const weekSection = useRef<View | null>(null);
 
   const search = useFindAGame();
   const radiusWrite = useChangeSearchRadius();
@@ -255,8 +270,36 @@ export function FindAGameScreen() {
    */
   const playersInRange = search.isSuccess ? search.data.playersInRange : undefined;
 
+  const minted = search.isSuccess ? search.data.record.searchId : undefined;
+
   /**
-   * **The wait lifts onto the court.**
+   * **The question this search raised, and the beat it is asked in.**
+   *
+   * The **first** prompt and never a stack of them: the response orders them in the
+   * vocabulary's own order precisely so *"a client rendering the first one it understands gets
+   * the same one twice for the same search"* (`run_shortlist_search._raised`).
+   *
+   * It is asked **after the latch and before the court**, which is this screen's arrangement
+   * and the reason the push below is not simply bound to the response. *It never blocks* is
+   * about the search, and the search has already run — what the sheet stands in front of is
+   * the court, on the screen the question is about: the week, the radius and the declaration
+   * are all edited here, and a sheet asking about them over the builder would be a question
+   * about a screen the player had already left.
+   *
+   * Keyed by the **search id**, so a second search asks again and a re-render of a screen the
+   * player has come back to asks nothing.
+   */
+  const [answer, setAnswer] = useState<{
+    readonly searchId: string;
+    readonly next: AfterThePrompt;
+  }>();
+  const answeredThis = answer?.searchId === minted ? answer : undefined;
+  const raised = search.isSuccess ? search.data.prompts[0] : undefined;
+  const asking = !latched && answeredThis === undefined ? raised : undefined;
+
+  /**
+   * **The wait lifts onto the court** — once there is nothing left to ask, and unless the
+   * player asked to be handed back to their week instead.
    *
    * The id is the effect's dependency rather than the success flag, so a second search pushes
    * a second court and a re-render of a screen the player has come back to pushes nothing: a
@@ -264,11 +307,11 @@ export function FindAGameScreen() {
    * while the latch is up unmounts this screen and pushes nothing at all, which is correct —
    * the reset has ended the session the court would have been built in.
    */
-  const minted = search.isSuccess ? search.data.record.searchId : undefined;
+  const mayGoOn = raised === undefined || answeredThis?.next === 'carry-on';
   useEffect(() => {
-    if (minted === undefined || latched) return;
+    if (minted === undefined || latched || !mayGoOn) return;
     router.push({ pathname: BUILDER_ROUTE, params: { search: minted } });
-  }, [minted, latched]);
+  }, [minted, latched, mayGoOn]);
 
   /**
    * The comparison, made **once** and read twice.
@@ -302,21 +345,18 @@ export function FindAGameScreen() {
           sentWeek: improvised ? week : undefined,
           radiusKm,
           profileRadiusKm: profile.searchRadiusKm,
-          quotes: {
-            sportName: sportLabel(standing.sport),
-            slotsOnProfile: profile.week.length,
-          },
+          quotes: { sportName: sportLabel(standing.sport), profileWeek: profile.week },
         }
       : undefined;
 
   return (
     <>
-      {/* The latch is a **sibling** of the screen it covers, never a child: `behindOverlay`
-          hides everything inside the element carrying it, and an overlay rendered in there
-          would hide itself along with the screen. The wrapper exists only to carry those two
-          props, because `ShellScreen` takes none — `ResultScreen` spreads them on its own
-          `SafeAreaView` and needs no wrapper at all. */}
-      <View style={s.root} {...behindOverlay(latched)}>
+      {/* Both overlays are **siblings** of the screen they cover, never children:
+          `behindOverlay` hides everything inside the element carrying it, and an overlay
+          rendered in there would hide itself along with the screen. The wrapper exists only to
+          carry those two props, because `ShellScreen` takes none — `ResultScreen` spreads them
+          on its own `SafeAreaView` and needs no wrapper at all. */}
+      <View style={s.root} {...behindOverlay(latched || asking !== undefined)}>
         <ShellScreen
           title={FIND_A_GAME_TITLE}
           action={
@@ -418,7 +458,7 @@ export function FindAGameScreen() {
           ) : null}
 
           {week === undefined || profile === undefined ? null : (
-            <View style={s.section}>
+            <View style={s.section} ref={weekSection}>
               <Text style={s.heading}>{WEEK_HEADING}</Text>
               <AvailabilityGrid
                 columnHeads={DAY_PARTS.map(dayPartHead)}
@@ -469,6 +509,29 @@ export function FindAGameScreen() {
         <SearchingLatch
           visible={latched}
           status={poolRankingStatus({ playersInRange, sportName })}
+        />
+      )}
+
+      {/* A **sibling** for the latch's reason — a `Modal` presents in its own window, and the
+          screen root behind it says so itself. It carries the sport because the decline route
+          takes one on every prompt and only this screen knows which chip the search ran on.
+
+          It is **mounted for as long as the search that raised it**, rather than only while it
+          is up: `visible` going false is what returns focus to the grid, and a sheet that
+          unmounted instead would drop a listener at the top of the screen.
+
+          `key` is the search id, so one sheet is one question. It is a statement of that rule
+          rather than the mechanism behind it — a second search is pending before it succeeds,
+          which already takes `raised` away and unmounts this — and the rule is what the sheet's
+          *answered once* guard depends on. */}
+      {raised === undefined || minted === undefined || standing.kind !== 'searchable' ? null : (
+        <PromptSheet
+          key={minted}
+          visible={asking !== undefined}
+          raised={raised}
+          sport={standing.sport}
+          returnFocusTo={weekSection}
+          onAnswered={(next) => setAnswer({ searchId: minted, next })}
         />
       )}
     </>

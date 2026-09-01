@@ -308,7 +308,7 @@ export function PoolScreen({ arrivalSearchId, arrivalSeat }: PoolScreenProps) {
         sentWeek,
         offeredBySearchId: record.searchId,
         rung: offer.rung,
-        quotes: { sportName, slotsOnProfile: profile?.week.length ?? 0 },
+        quotes: { sportName, profileWeek: profile?.week ?? [] },
       },
       {
         onSuccess: ({ record: answer }) => {

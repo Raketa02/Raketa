@@ -14,6 +14,7 @@ import { findAGame } from './findAGame';
 const SEARCHES = '/api/v1/searches';
 
 const TUESDAY_EVENING = { day: 2, part: 'evening' } as const;
+const SATURDAY_MORNING = { day: 6, part: 'morning' } as const;
 
 const SHORTLIST: Wire['ShortlistResponse'] = {
   search: {
@@ -56,7 +57,7 @@ const ASK = {
   sentWeek: undefined,
   radiusKm: 22,
   profileRadiusKm: 12,
-  quotes: { sportName: 'Padel', slotsOnProfile: 2 },
+  quotes: { sportName: 'Padel', profileWeek: [TUESDAY_EVENING, SATURDAY_MORNING] },
 } as const;
 
 const saveRadius = (radiusKm: number) => {
@@ -124,7 +125,13 @@ describe('what comes back', () => {
   it('carries the questions the search raised, which therefore cannot precede it', async () => {
     const outcome = await findAGame(ASK, { saveRadius });
 
-    expect(outcome.prompts).toEqual([{ prompt: 'KEEP_THESE_TIMES', slotsNow: 1, slotsWas: 2 }]);
+    expect(outcome.prompts).toEqual([
+      {
+        prompt: 'KEEP_THESE_TIMES',
+        week: [TUESDAY_EVENING],
+        profileWeek: [TUESDAY_EVENING, SATURDAY_MORNING],
+      },
+    ]);
     expect(transport.requestsTo('POST', SEARCHES)).toHaveLength(1);
   });
 

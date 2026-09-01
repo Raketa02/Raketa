@@ -57,3 +57,26 @@ export function modeForIntent(intent: PlayIntent): SearchMode {
  * places, and the second one is the one that gets missed.
  */
 export const MODE_WITHOUT_A_DECLARATION: SearchMode = modeForIntent('NO_PREFERENCE');
+
+/**
+ * The declaration a player is agreeing to when they accept `UPDATE_PLAY_INTENT` — the
+ * mapping above, read the other way, and **it is not its inverse.**
+ *
+ * `modeForIntent` is three values collapsing into two and cannot be run backwards: the
+ * question this answers is *your last five searches were competitive — make that your
+ * declaration?*, and the value being agreed to is the **searches' own mode**. So
+ * `NO_PREFERENCE` is unreachable here, and correctly: a run of five searches in one mode is
+ * evidence of a preference, and a prompt that offered indifference as the answer to it would
+ * be proposing something the drift never observed.
+ *
+ * A table rather than a cast, for `SEEDED_MODE`'s reason: the two types are deliberately
+ * different and a shared spelling is a coincidence nothing should lean on.
+ */
+const DECLARED_FROM_MODE: Readonly<Record<SearchMode, PlayIntent>> = {
+  COMPETITIVE: 'COMPETITIVE',
+  FOR_FUN: 'FOR_FUN',
+};
+
+export function intentForMode(mode: SearchMode): PlayIntent {
+  return DECLARED_FROM_MODE[mode];
+}
