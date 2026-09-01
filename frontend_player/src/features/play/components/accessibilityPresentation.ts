@@ -387,6 +387,24 @@ export function whyFitRowLabel(row: {
 }
 
 /**
+ * A cell of the week Play searches on — `Thursday evening` · `Thursday evening, added for this
+ * search`.
+ *
+ * 6.8's editor cell, whose name is `cellLabel`'s and stays it: **the suffix is a third fact and
+ * not a state**, so `checked` still says what the *week* holds and this says what the *search*
+ * did ([#283](https://github.com/Raketa02/Raketa/issues/283)). It is the one thing a listener
+ * has instead of the plus, and without it a cell the player never ticked is announced exactly
+ * like the twenty around it.
+ *
+ * The suffix is the diff grid's *", newly added"* said the other way round, because it is a
+ * different claim: that one is *your* week against your profile, this one is a cell the engine
+ * added to one search.
+ */
+export function searchWeekCellLabel(cell: WeekCell, addedForThisSearch: boolean): string {
+  return addedForThisSearch ? `${cellLabel(cell)}, added for this search` : cellLabel(cell);
+}
+
+/**
  * A cell of `SH.saveav`'s diff grid — `Monday evening` · `, newly added` · `, dropped`.
  *
  * **This is the first of §20's two colour-only findings.** Newly-on drew a volt ring and

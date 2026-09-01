@@ -30,6 +30,7 @@
  */
 
 import type { SocialTagId } from '@/shared/vocabulary/socialTags';
+import type { WeekCell } from '@/shared/vocabulary/week';
 
 import type { ScoredTerm } from './evidence';
 import type {
@@ -281,6 +282,24 @@ interface RungOfferFacts {
    * one this build has never seen, which drops the clause and keeps the count (§3).
    */
   readonly window: Window | null;
+  /**
+   * The one cell a **times** rung would add to the searcher's grid, for that one search.
+   *
+   * It is here rather than on `RelaxedAsk` beside the radius, though the wire makes the two
+   * look alike, because the union below is *the pair the label is written from* and this cell
+   * is in no label: the control says *look outside your week* rather than naming a Saturday
+   * morning, and nothing in this feature prints a slot the player never ticked. What it is for
+   * is the **tick** on the grid two screens back
+   * ([#283](https://github.com/Raketa02/Raketa/issues/283)), which is drawing rather than
+   * words.
+   *
+   * `null` on every radius rung — a rung never relaxes two asks at once — and `null` on a
+   * times rung whose cell the wire omitted or spelled in a way this build cannot read. The
+   * offer **survives** that, which is `window`'s answer above and not `radiusKm`'s: the label
+   * and the count are both true without it, where a radius rung with no radius has no sentence
+   * left at all.
+   */
+  readonly slot: WeekCell | null;
 }
 
 /**
@@ -296,6 +315,12 @@ interface RungOfferFacts {
  *
  * A rung never touches a measurement, a term, a weight or the quality floor. These are the two
  * things the searcher asked for, and nothing else is relaxable.
+ *
+ * **The times rung's cell is not here**, though the wire carries it beside the radius. This
+ * union is the pair a *sentence* is built from, and the cell is in no sentence: it is a mark on
+ * a grid ([#283](https://github.com/Raketa02/Raketa/issues/283)), so it sits on the facts above
+ * with the count and the window. Putting it here would hand it to every reader of a taken rung,
+ * each of which refuses to print it.
  */
 export type RelaxedAsk =
   | { readonly ask: Extract<RelaxationAsk, 'TIMES'> }

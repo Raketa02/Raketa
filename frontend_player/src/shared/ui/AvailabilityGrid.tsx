@@ -40,6 +40,19 @@
  * and it is what makes a ticked week read as a pattern rather than as a stain. Round cap and
  * join: at 2pt, butt caps make a tick read as two bars meeting at a corner.
  *
+ * ## One cell can also carry a mark it did not earn
+ *
+ * A times rung widens the searcher's own grid by one slot **for one search**, and the week the
+ * player filled in disagrees with the search that ran until the grid says which cell that was
+ * ([#283](https://github.com/Raketa02/Raketa/issues/283)). So an editor cell takes an optional
+ * `addedForThisSearch`, drawn as a plus on the **unfilled** square.
+ *
+ * **It is a third fact and not a third state**, which is the distinction that keeps the two
+ * paragraphs above true: the cell is unselected, reports itself unchecked, and toggles like
+ * every other, because pressing it is how a player makes that widening their own ask. The bed
+ * is what forces a second plus in `Tick` — the diff's is volt on `ink`, and this square is not
+ * filled.
+ *
  * ## Every word is the caller's
  *
  * This file holds no copy. The heads, the day labels, each cell's accessible name and the
@@ -69,7 +82,7 @@ import { type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { theme } from './theme';
-import { Dash, Plus, Tick } from './Tick';
+import { Dash, Plus, PlusOnSurface, Tick } from './Tick';
 
 const grid = theme.size.availability;
 
@@ -77,6 +90,16 @@ export interface AvailabilityGridCell {
   readonly key: string;
   /** Drawn ink-filled with a tick, and announced as checked. Owned by the caller. */
   readonly selected: boolean;
+  /**
+   * A slot **this one search** added, which the player never ticked — drawn as a plus on the
+   * unfilled cell ([#283](https://github.com/Raketa02/Raketa/issues/283)).
+   *
+   * It is a third *fact*, never a third state: the cell is not selected, reports itself
+   * unticked, and presses like any other, because pressing it is how a player makes the
+   * widening their own. What the mark adds is that the week on screen and the week the search
+   * ran on can be told apart at all.
+   */
+  readonly addedForThisSearch?: boolean;
   /** Fires on every press, ticked or not. The cell reports; the caller decides. */
   readonly onPress: () => void;
   /**
@@ -234,7 +257,9 @@ function cellRows(
  *
  * There is **no disabled cell and no fourth state**: every cell toggles, always, in both
  * directions, and a greyed one would be the screen claiming a constraint the domain does
- * not have.
+ * not have. `addedForThisSearch` does not make one — it is a mark on an unticked cell that
+ * presses exactly like its neighbours, and `checked` stays what the *week* says rather than
+ * what the search did.
  */
 function Cell({ cell }: { readonly cell: AvailabilityGridCell }) {
   return (
@@ -252,6 +277,9 @@ function Cell({ cell }: { readonly cell: AvailabilityGridCell }) {
       ]}
     >
       {cell.selected ? <Tick /> : null}
+      {/* Never both: a cell the player has ticked is theirs, and the caller drops the mark
+          on the tap that ticks it. */}
+      {!cell.selected && cell.addedForThisSearch === true ? <PlusOnSurface /> : null}
     </Pressable>
   );
 }

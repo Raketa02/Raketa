@@ -88,6 +88,42 @@ export const WEEK_CHANGED_FROM_PROFILE =
   'Changed from your profile — this search only, and nothing is saved.';
 
 /**
+ * *A plus is a time this search added* — the sentence that explains the mark on a cell the
+ * player never ticked ([#283](https://github.com/Raketa02/Raketa/issues/283)).
+ *
+ * **The cell is not named**, which is `takenRungLine`'s rule read here: the offer that made it
+ * says *look outside your week* rather than naming a Saturday morning, and the grid is already
+ * showing which square it is. Naming it in prose as well would be the one place the feature
+ * prints a slot the player did not choose.
+ */
+export const WEEK_ADDED_FOR_THIS_SEARCH =
+  'A plus is a time this search added, not one you asked for. Nothing is saved.';
+
+/** Both at once, in one sentence, because the slot under the grid holds two lines and no more. */
+export const WEEK_CHANGED_AND_ADDED =
+  'Changed from your profile, and a plus is a time this search added. Nothing is saved.';
+
+/**
+ * What the grid says about itself — **at most one sentence, and sometimes none.**
+ *
+ * Two facts can be true under one grid: the player edited their week, and a rung added a cell
+ * to the search that ran. The slot beneath is two lines by 6.8's own rule, so they are one
+ * sentence rather than two stacked — and the pair is decided **here** rather than by a screen
+ * concatenating whichever happen to hold.
+ *
+ * @param week.improvised whether the working copy differs from the profile's grid.
+ * @param week.addedForThisSearch whether a times rung widened the search on screen.
+ */
+export function weekFootnote(week: {
+  readonly improvised: boolean;
+  readonly addedForThisSearch: boolean;
+}): string | undefined {
+  if (week.improvised && week.addedForThisSearch) return WEEK_CHANGED_AND_ADDED;
+  if (week.addedForThisSearch) return WEEK_ADDED_FOR_THIS_SEARCH;
+  return week.improvised ? WEEK_CHANGED_FROM_PROFILE : undefined;
+}
+
+/**
  * What the slider does, said out loud — because it is the one control here that **writes**.
  *
  * A sport, a mode and a week edited on this screen reach the server as an ask on one search

@@ -140,4 +140,4 @@ export function sentWeekForOrigin(
 }
 
 /** Re-exported so a Play screen reads its whole week vocabulary from one place. */
-export { isTicked, toggleCell } from '@/shared/vocabulary/week';
+export { isTicked, sameCell, toggleCell } from '@/shared/vocabulary/week';

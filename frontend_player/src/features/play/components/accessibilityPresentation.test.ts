@@ -21,6 +21,7 @@ import {
   deckAnswerLabels,
   fitSentence,
   provisionalForecastAnnouncement,
+  searchWeekCellLabel,
   seatLabel,
   whyFitRowLabel,
   whyFitSheetLabel,
@@ -198,6 +199,26 @@ describe('the why-fit sheet', () => {
 describe('Fit states the scale it is against', () => {
   it('is out of 100, which is the term CONTEXT.md defines', () => {
     expect(fitSentence(78)).toBe('Fit 78 out of 100');
+  });
+});
+
+describe('the cell a times rung added', () => {
+  const THURSDAY_EVENING = { day: 4, part: 'evening' } as const;
+
+  /**
+   * The mark is drawn as a plus and a plus is not readable, so this is the whole of what a
+   * listener gets ([#283](https://github.com/Raketa02/Raketa/issues/283)). It suffixes the
+   * cell's ordinary name rather than replacing it: the square is still Thursday evening.
+   */
+  it('says which search the cell belongs to, after saying which cell it is', () => {
+    expect(searchWeekCellLabel(THURSDAY_EVENING, true)).toBe(
+      'Thursday evening, added for this search',
+    );
+  });
+
+  /** `checked` says what the week holds; nothing here may say it twice. */
+  it('is the plain name on every other cell', () => {
+    expect(searchWeekCellLabel(THURSDAY_EVENING, false)).toBe('Thursday evening');
   });
 });
 

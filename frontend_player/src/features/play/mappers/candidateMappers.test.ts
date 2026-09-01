@@ -122,7 +122,7 @@ describe('the envelope', () => {
             ask: 'TIMES',
             candidates_above_floor: 7,
             window: 'WEEKEND',
-            slot: '6:MORNING',
+            slot: { day: 6, part: 'MORNING' },
           },
           {
             rung: 'B',
@@ -136,10 +136,52 @@ describe('the envelope', () => {
     );
 
     expect(envelope.rungOffers).toEqual([
-      // The added cell does not cross into the domain: the backend reads the widening off the
-      // offer it made, and no surface names a slot the player never ticked.
-      { rung: 'A', ask: 'TIMES', candidatesAboveFloor: 7, window: 'WEEKEND' },
-      { rung: 'B', ask: 'RADIUS', candidatesAboveFloor: 9, window: 'THIS_WEEK', radiusKm: 22 },
+      // The cell crosses to be **drawn** and never to be sent back: the backend reads the
+      // widening off the offer it made, and `SearchAsk` has nowhere to put one.
+      {
+        rung: 'A',
+        ask: 'TIMES',
+        candidatesAboveFloor: 7,
+        window: 'WEEKEND',
+        slot: { day: 6, part: 'morning' },
+      },
+      // A rung never relaxes two asks at once, so a radius rung's cell is a measured `null`
+      // rather than a field it happens to be missing.
+      {
+        rung: 'B',
+        ask: 'RADIUS',
+        candidatesAboveFloor: 9,
+        window: 'THIS_WEEK',
+        radiusKm: 22,
+        slot: null,
+      },
+    ]);
+  });
+
+  /**
+   * The tick is a clause on a control whose count and label are both true without it —
+   * `window`'s own answer one field over, and the opposite of a radius rung's, whose whole
+   * label *is* the number it would be missing.
+   */
+  it('keeps a times rung whose cell it cannot read, with nothing to tick', () => {
+    const envelope = toSearchEnvelope(
+      response({
+        rung_offers: [
+          { rung: 'A', ask: 'TIMES', candidates_above_floor: 4, window: 'ANY' },
+          {
+            rung: 'A',
+            ask: 'TIMES',
+            candidates_above_floor: 4,
+            window: 'ANY',
+            slot: { day: 8, part: 'MORNING' },
+          },
+        ],
+      }),
+    );
+
+    expect(envelope.rungOffers).toEqual([
+      { rung: 'A', ask: 'TIMES', candidatesAboveFloor: 4, window: 'ANY', slot: null },
+      { rung: 'A', ask: 'TIMES', candidatesAboveFloor: 4, window: 'ANY', slot: null },
     ]);
   });
 

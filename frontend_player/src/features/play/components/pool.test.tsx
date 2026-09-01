@@ -37,7 +37,7 @@ import { installTransport, json, type Transport, type Wire } from '@/test-suppor
 import { usePlayPreferences } from '../store/playPreferences.store';
 import { endPlaySession, usePlaySession } from '../store/playSession.store';
 
-import { rungOfferLabel, seatLabel } from './accessibilityPresentation';
+import { rungOfferLabel, searchWeekCellLabel, seatLabel } from './accessibilityPresentation';
 import { balanceWord } from './balancePresentation';
 import { PICK_PLAYERS_LABEL, PROVISIONAL_WORD } from './builderPresentation';
 import { levelRow } from './playerCardPresentation';
@@ -50,6 +50,7 @@ import {
   terminalReachLine,
   zeroRungLine,
 } from './poolPresentation';
+import { WEEK_ADDED_FOR_THIS_SEARCH } from './findAGamePresentation';
 import { forecastAssumption, relaxationOffer, sortLabel } from './searchPresentation';
 import { poolRankingStatus } from './searchingPresentation';
 
@@ -137,7 +138,9 @@ const TIMES_RUNG: Wire['RungOfferSchema'] = {
   ask: 'TIMES',
   candidates_above_floor: 7,
   window: 'THIS_WEEK',
-  slot: '6:MORNING',
+  // A cell outside the profile's own week, which is the only kind a times rung offers: the
+  // engine tests the additions somebody in range has ticked and the searcher has not.
+  slot: { day: 4, part: 'EVENING' },
 };
 
 const RADIUS_RUNG: Wire['RungOfferSchema'] = {
@@ -504,6 +507,124 @@ describe('the ladder', () => {
     });
     // The widening itself is not sent: the backend reads it off the offer it made.
     expect(widened?.body).not.toHaveProperty('radius_km');
+  });
+});
+
+/**
+ * §8 of [#223](https://github.com/Raketa02/Raketa/issues/223): the cell a times rung adds
+ * **visibly ticks**, marked as this-search-only — otherwise the grid the player just filled in
+ * disagrees with the search that ran, with nothing on either screen to say so.
+ *
+ * It is drawn on *Find a game*, two pushes back, because that is where the grid is
+ * ([#283](https://github.com/Raketa02/Raketa/issues/283)); the pool has no grid, and a tick
+ * drawn where nobody is looking is not the requirement.
+ */
+describe('the cell a times rung adds', () => {
+  const THURSDAY_EVENING = { day: 4, part: 'evening' } as const;
+
+  async function takeTheTimesRung() {
+    transport.on('POST', SEARCHES, (request) =>
+      json(
+        (request.body as { readonly offered_by_search_id?: string }).offered_by_search_id ===
+          undefined
+          ? shortlist({ rung_offers: [TIMES_RUNG, RADIUS_RUNG] })
+          : { search: envelope(WIDER_ID, { rung_offers: [] }), candidates: [card(B)] },
+      ),
+    );
+    transport.on('GET', `${SEARCHES}/${SEARCH_ID}`, () =>
+      json(shortlist({ rung_offers: [TIMES_RUNG, RADIUS_RUNG] })),
+    );
+
+    await openThePool();
+    fireEvent.press(await screen.findByLabelText(rungLabel({ ask: 'TIMES' }, 7)));
+    await screen.findByText(
+      poolRankingStatus({ playersInRange: undefined, sportName: 'Padel' }).headline,
+    );
+    act(() => jest.advanceTimersByTime(2000));
+    await waitFor(() =>
+      expect(screen.getByText(takenRungLine({ ask: 'TIMES', profileRadiusKm: 15 }))).toBeTruthy(),
+    );
+  }
+
+  /** Back out of the pool, off the court, and onto the screen the week is edited on. */
+  async function backToFindAGame() {
+    act(() => router.back());
+    await waitFor(() => expect(screen).toHavePathname('/play/builder'));
+    act(() => router.back());
+    await waitFor(() => expect(screen).toHavePathname('/play'));
+  }
+
+  it('is marked on the grid the week is edited on, and announced as this search’s', async () => {
+    await takeTheTimesRung();
+    await backToFindAGame();
+
+    expect(await screen.findByLabelText(searchWeekCellLabel(THURSDAY_EVENING, true))).toBeTruthy();
+    expect(screen.getByText(WEEK_ADDED_FOR_THIS_SEARCH)).toBeTruthy();
+  });
+
+  /**
+   * **A climb that adds no cell takes the mark with it.** The court still holds the strict
+   * record, so leaving this pool and opening it again against another seat offers the ladder a
+   * second time — and a radius rung taken there runs on the week *without* the added cell. A
+   * mark left standing would be the grid disagreeing with the search that ran, which is the
+   * disagreement §8 exists to close, pointed the other way.
+   */
+  it('is dropped by a later radius rung, which ran on the week without it', async () => {
+    await takeTheTimesRung();
+
+    act(() => router.back());
+    await waitFor(() => expect(screen).toHavePathname('/play/builder'));
+    fireEvent.press(await screen.findByLabelText(PICK_PLAYERS_LABEL));
+    await waitFor(() => expect(screen).toHavePathname('/play/pool'));
+
+    fireEvent.press(await screen.findByLabelText(rungLabel({ ask: 'RADIUS', radiusKm: 22 }, 9)));
+    await screen.findByText(
+      poolRankingStatus({ playersInRange: undefined, sportName: 'Padel' }).headline,
+    );
+    act(() => jest.advanceTimersByTime(2000));
+    await waitFor(() =>
+      expect(
+        screen.getByText(takenRungLine({ ask: 'RADIUS', radiusKm: 22, profileRadiusKm: 15 })),
+      ).toBeTruthy(),
+    );
+
+    await backToFindAGame();
+
+    expect(await screen.findByLabelText(searchWeekCellLabel(THURSDAY_EVENING, false))).toBeTruthy();
+    expect(screen.queryByText(WEEK_ADDED_FOR_THIS_SEARCH)).toBeNull();
+  });
+
+  /**
+   * Pressing it is an ordinary tick, and the two facts cannot both stand on one square: from
+   * that press the cell is the player's own ask, travelling on every search from here.
+   */
+  it('becomes the player’s own week the moment they tick it themselves', async () => {
+    await takeTheTimesRung();
+    await backToFindAGame();
+
+    fireEvent.press(await screen.findByLabelText(searchWeekCellLabel(THURSDAY_EVENING, true)));
+
+    const ticked = await screen.findByLabelText(searchWeekCellLabel(THURSDAY_EVENING, false));
+    expect(ticked.props.accessibilityState).toEqual(expect.objectContaining({ checked: true }));
+    expect(screen.queryByText(WEEK_ADDED_FOR_THIS_SEARCH)).toBeNull();
+  });
+
+  /**
+   * The whole reason it is not written into the working copy. `week` is what travels as
+   * `availability_override`, so a cell put there would carry a this-search-only widening into
+   * every later ask — ADR-0099's conflation, arriving from the client.
+   */
+  it('does not join the week, so the next search asks for the profile’s grid', async () => {
+    await takeTheTimesRung();
+    await backToFindAGame();
+
+    fireEvent.press(screen.getByLabelText('Search'));
+
+    await waitFor(() => expect(transport.requestsTo('POST', SEARCHES)).toHaveLength(3));
+    const [, , next] = transport.requestsTo('POST', SEARCHES);
+    expect(next?.body).not.toHaveProperty('availability_override');
+    // And the mark goes with the list it was about: this search cites no offer.
+    expect(usePlaySession.getState().addedForThisSearch).toBeUndefined();
   });
 });
 

@@ -29,6 +29,11 @@ JUST_PAST_THE_RING = 51.61
 #: evening and Saturday morning.
 ANOTHER_EVENING = ("4:EVENING",)
 
+#: Tags on the other side of both splits from ``COMPETITIVE_TAGS``, which is
+#: what makes a candidate cost a for-fun search enough points that their week is
+#: decisive.
+AN_OPPOSITE_EVENING_OUT = ("STRAIGHT_HOME_AFTER", "QUIET_AND_FOCUSED")
+
 
 @pytest.fixture
 async def searcher(client):
@@ -68,6 +73,53 @@ async def test_a_short_shortlist_carries_what_widening_would_be_worth(
     # another is part of what widening costs.
     assert offers["B"]["window"] == body["search"]["pool"]["window"]
     assert "slot" not in offers["B"], "a radius rung has no slot, rather than none"
+
+
+async def test_a_times_rung_names_its_cell_in_the_two_fields_a_grid_is_drawn_from(
+    client, session_factory, candidate_source, searcher
+):
+    """**The offered cell crosses as a day and a part of the day, never joined.**
+
+    The client has to draw that cell on its own seven-by-three grid, marked as
+    belonging to this one search (#283) — and that is the same grid every other
+    slot is drawn on, from ``AvailabilitySlotResource``. A joined ``"4:EVENING"``
+    here would make the one cell the player never ticked the one cell whose
+    client had to split our persistence format, which the resource one schema
+    over refuses by name.
+
+    The scene is the honest way to earn a times rung: an evening asked for
+    alone, and the one person in range free on a different one — near enough on
+    level, far enough on everything a for-fun evening weighs that the empty week
+    is what keeps them off the list.
+    """
+
+    await world.a_candidate(
+        client,
+        session_factory,
+        "thursday",
+        mu=searcher["mu"],
+        availability=ANOTHER_EVENING,
+        tags=AN_OPPOSITE_EVENING_OUT,
+    )
+    await world.fold_the_log(session_factory, candidate_source)
+
+    body = (
+        await world.search(
+            client,
+            searcher["token"],
+            "FOR_FUN",
+            availability_override=[{"day": 2, "part": "EVENING"}],
+        )
+    ).json()
+
+    assert body["candidates"] == [], "somebody cleared the bar; this proves nothing"
+    offers = {offer["rung"]: offer for offer in body["search"]["rung_offers"]}
+    assert offers["A"]["ask"] == "TIMES"
+    assert offers["A"]["candidates_above_floor"] == 1
+    assert offers["A"]["slot"] == {"day": 4, "part": "EVENING"}
+    assert "radius_km" not in offers["A"], (
+        "a times rung has no radius, rather than a radius of nothing"
+    )
 
 
 async def test_a_long_enough_shortlist_computes_no_offers_at_all(

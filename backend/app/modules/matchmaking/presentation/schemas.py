@@ -415,11 +415,14 @@ class RungOfferSchema(BaseModel):
             "offered no radius rung at all."
         ),
     )
-    slot: str = Field(
+    slot: AvailabilitySlotResource = Field(
         OMITTED,
         description=(
             "The one cell this rung would add to your week, on a `TIMES` rung, "
-            "as `day:PART`. For this search only."
+            "and **for this search only**. The same two named fields every "
+            "other slot crosses in, because this one is drawn on the same "
+            "seven-by-three grid the player just filled in — ticked there as "
+            "belonging to this search and to no later one."
         ),
     )
 

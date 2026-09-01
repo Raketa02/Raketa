@@ -74,6 +74,8 @@ from app.modules.matchmaking.presentation.schemas import (
     WireInclusionReason,
     WithheldRowSchema,
 )
+from app.modules.player_profile.domain.availability import AvailabilitySlot
+from app.modules.player_profile.presentation.schemas import AvailabilitySlotResource
 
 
 #: The links minted for this response, by player. **Not part of the record**:
@@ -403,7 +405,15 @@ def _envelope(
 
 def _offer(offer: RungOffer) -> RungOfferSchema:
     """One rung as it crosses. The payload field its ask does not use is omitted,
-    not sent as null: a radius rung has no slot, rather than a slot of nothing."""
+    not sent as null: a radius rung has no slot, rather than a slot of nothing.
+
+    **The cell is split here**, out of the code the engine holds it as. A times
+    rung's slot is drawn on the client's own grid beside twenty other cells, and
+    ``AvailabilitySlotResource`` is two named fields precisely so that no client
+    ever splits ``"4:EVENING"`` for itself — this is the side of the boundary
+    that owns our persistence format, so this is where it is read
+    (`#283 <https://github.com/Raketa02/Raketa/issues/283>`_).
+    """
 
     fields: dict[str, Any] = {
         "rung": offer.rung,
@@ -414,7 +424,8 @@ def _offer(offer: RungOffer) -> RungOfferSchema:
     if offer.radius_km is not None:
         fields["radius_km"] = offer.radius_km
     if offer.slot is not None:
-        fields["slot"] = offer.slot
+        cell = AvailabilitySlot.from_code(offer.slot)
+        fields["slot"] = AvailabilitySlotResource(day=int(cell.day), part=cell.part)
     return RungOfferSchema.model_validate(fields)
 
 

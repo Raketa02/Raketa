@@ -50,6 +50,66 @@ describe('the working copy', () => {
   });
 });
 
+describe('the cell a times rung added', () => {
+  const THURSDAY_EVENING: WeekCell = { day: 4, part: 'evening' };
+
+  it('is nothing until a rung is taken', () => {
+    read().enter(PROFILE_WEEK);
+
+    expect(read().addedForThisSearch).toBeUndefined();
+  });
+
+  /**
+   * The whole of why it is a field of its own. `week` is what travels as
+   * `availability_override`, so an offered cell written into it would carry a this-search-only
+   * widening into every later ask — the conflation ADR-0099 exists to prevent, arriving from
+   * the client instead of the engine.
+   */
+  it('is not the week: the ask the next search sends is untouched', () => {
+    read().enter(PROFILE_WEEK);
+
+    read().addForThisSearch(THURSDAY_EVENING);
+
+    expect(read().week).toEqual(PROFILE_WEEK);
+    expect(differsFromProfile(read().week ?? [], PROFILE_WEEK)).toBe(false);
+  });
+
+  it('goes when the player ticks that cell for themselves — it is their own ask now', () => {
+    read().enter(PROFILE_WEEK);
+    read().addForThisSearch(THURSDAY_EVENING);
+
+    read().toggleWeekCell(THURSDAY_EVENING);
+
+    expect(read().week).toEqual([...PROFILE_WEEK, THURSDAY_EVENING]);
+    expect(read().addedForThisSearch).toBeUndefined();
+  });
+
+  it('stays while another cell is edited, because that edit is not about it', () => {
+    read().enter(PROFILE_WEEK);
+    read().addForThisSearch(THURSDAY_EVENING);
+
+    read().toggleWeekCell(TUESDAY_EVENING);
+
+    expect(read().addedForThisSearch).toEqual(THURSDAY_EVENING);
+  });
+
+  /** A new search cites no offer, so the mark would be a fact about a list nobody holds. */
+  it('is forgotten on demand, for the search that does not carry it', () => {
+    read().enter(PROFILE_WEEK);
+    read().addForThisSearch(THURSDAY_EVENING);
+
+    read().clearAddedForThisSearch();
+
+    expect(read().addedForThisSearch).toBeUndefined();
+  });
+
+  it('drops a rung taken outside a session rather than beginning one', () => {
+    read().addForThisSearch(THURSDAY_EVENING);
+
+    expect(read().addedForThisSearch).toBeUndefined();
+  });
+});
+
 describe('the line-up', () => {
   it('is absent until somebody is added', () => {
     read().enter(PROFILE_WEEK);
@@ -110,25 +170,29 @@ describe('the line-up', () => {
 });
 
 describe('when a Play session ends', () => {
-  it('takes the week and the line-up with it', () => {
+  it('takes the week, the line-up and the added cell with it', () => {
     read().enter(PROFILE_WEEK);
     read().seat('search-1', 'player-a');
+    read().addForThisSearch({ day: 4, part: 'evening' });
 
     endPlaySession();
 
     expect(read().week).toBeUndefined();
     expect(read().lineup).toBeUndefined();
+    expect(read().addedForThisSearch).toBeUndefined();
   });
 
   it('re-entering seeds a fresh week and no line-up, whatever the last visit built', () => {
     read().enter(PROFILE_WEEK);
     read().toggleWeekCell({ day: 1, part: 'morning' });
     read().seat('search-1', 'player-a');
+    read().addForThisSearch({ day: 4, part: 'evening' });
 
     endPlaySession();
     read().enter(PROFILE_WEEK);
 
     expect(read().week).toEqual(PROFILE_WEEK);
     expect(read().lineup).toBeUndefined();
+    expect(read().addedForThisSearch).toBeUndefined();
   });
 });

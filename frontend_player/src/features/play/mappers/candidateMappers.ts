@@ -51,6 +51,7 @@
 
 import type { components } from '@/generated/schema';
 import { SOCIAL_TAG_IDS, type SocialTagId } from '@/shared/vocabulary/socialTags';
+import type { WeekCell } from '@/shared/vocabulary/week';
 import { toWeekCells } from '@/features/player_profile/types';
 
 import type {
@@ -194,6 +195,7 @@ function toRungOffer(offer: WireRungOffer): RungOffer | undefined {
     rung,
     candidatesAboveFloor: offer.candidates_above_floor,
     window: toWindow(offer.window) ?? null,
+    slot: toAddedCell(offer.slot),
     ...relaxed,
   };
 }
@@ -202,6 +204,21 @@ function toRungOffer(offer: WireRungOffer): RungOffer | undefined {
 function toRelaxedAsk(ask: RelaxationAsk, radiusKm: number | undefined): RelaxedAsk | undefined {
   if (ask === 'TIMES') return { ask };
   return radiusKm === undefined ? undefined : { ask, radiusKm };
+}
+
+/**
+ * The cell a times rung would add — **kept as a `null`, never as a dropped offer.**
+ *
+ * That is the opposite of the radius one line up, and the difference is what each half is for.
+ * A radius rung's whole label *is* its number, so a missing one leaves no sentence to draw. A
+ * cell is in no sentence at all: it is the tick the grid draws two screens back
+ * ([#283](https://github.com/Raketa02/Raketa/issues/283)), and the control's label and count
+ * are both true without it. So an absent or unreadable cell costs the tick and nothing else —
+ * `window`'s own answer one field over.
+ */
+function toAddedCell(slot: WireRungOffer['slot']): WeekCell | null {
+  const [cell] = slot === undefined ? [] : toWeekCells([slot]);
+  return cell ?? null;
 }
 
 export function toCandidate(row: CandidateSchema): Candidate {

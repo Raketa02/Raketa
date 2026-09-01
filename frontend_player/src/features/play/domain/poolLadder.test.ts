@@ -17,6 +17,7 @@ const times = (above: number): RungOffer => ({
   ask: 'TIMES',
   candidatesAboveFloor: above,
   window: 'THIS_WEEK',
+  slot: { day: 4, part: 'evening' },
 });
 
 const radius = (above: number, radiusKm = 22): RungOffer => ({
@@ -24,6 +25,8 @@ const radius = (above: number, radiusKm = 22): RungOffer => ({
   ask: 'RADIUS',
   candidatesAboveFloor: above,
   window: 'THIS_WEEK',
+  // A rung never relaxes two asks at once, so a radius rung's cell is a measured `null`.
+  slot: null,
   radiusKm,
 });
 

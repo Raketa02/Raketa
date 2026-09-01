@@ -103,12 +103,12 @@ import {
 import { ShellScreen } from '@/features/shell/types';
 import { offlineMessage, recoveryMessage } from '@/shared/errors';
 import { AvailabilityGrid, Button, Note, RadiusSlider, behindOverlay, theme } from '@/shared/ui';
-import { cellLabel, dayLabel, dayPartHead } from '@/shared/vocabulary/availabilityPresentation';
+import { dayLabel, dayPartHead } from '@/shared/vocabulary/availabilityPresentation';
 import { DAY_PARTS, WEEKDAYS } from '@/shared/vocabulary/week';
 
 import { findAGameStanding } from '../domain/findAGame';
 import { SEARCH_MODES } from '../domain/vocabulary';
-import { differsFromProfile, isTicked } from '../domain/workingWeek';
+import { differsFromProfile, isTicked, sameCell } from '../domain/workingWeek';
 import { useOutstandingInterest } from '../hooks/useDeck';
 import { useFindAGame } from '../hooks/useFindAGame';
 import type { FindAGameAsk } from '../use-cases/findAGame';
@@ -117,6 +117,7 @@ import { usePlaySession } from '../store/playSession.store';
 
 import { BUILDER_ROUTE } from './BuilderScreen';
 import { DeclarationInterstitial } from './DeclarationInterstitial';
+import { searchWeekCellLabel } from './accessibilityPresentation';
 import { PromptSheet, type AfterThePrompt } from './PromptSheet';
 import { SportChips } from './SportChips';
 import { useHeldWait } from './heldWait';
@@ -133,11 +134,11 @@ import {
   RADIUS_IS_YOUR_PROFILE,
   RETRY_READ_LABEL,
   SEARCHING_LABEL,
-  WEEK_CHANGED_FROM_PROFILE,
   WEEK_HEADING,
   modeControlLabel,
   modeLabel,
   searchControlLabel,
+  weekFootnote,
 } from './findAGamePresentation';
 
 export function FindAGameScreen() {
@@ -152,6 +153,10 @@ export function FindAGameScreen() {
   const seedIfAbsent = usePlayPreferences((state) => state.seedIfAbsent);
 
   const week = usePlaySession((state) => state.week);
+  // `addedCell` here rather than the store's own name: this screen asks *is this the cell* of
+  // each of twenty-one squares, and the answer it hands the grid is a boolean of the same name.
+  const addedCell = usePlaySession((state) => state.addedForThisSearch);
+  const clearAddedForThisSearch = usePlaySession((state) => state.clearAddedForThisSearch);
   const enter = usePlaySession((state) => state.enter);
   const toggleWeekCell = usePlaySession((state) => state.toggleWeekCell);
 
@@ -380,6 +385,10 @@ export function FindAGameScreen() {
                   busyLabel={SEARCHING_LABEL}
                   onPress={() => {
                     if (ask === undefined) return;
+                    // This search cites no offer, so it runs on the week below and nothing
+                    // else: the cell a rung added belonged to the list it widened, and from
+                    // here on the mark would be about a search nobody is holding (#283).
+                    clearAddedForThisSearch();
                     // The chosen radius has done its job: the profile now holds whatever the
                     // server made of it, and the slider reads that from here on.
                     search.mutate(ask, { onSuccess: () => setChosenRadiusKm(undefined) });
@@ -462,20 +471,31 @@ export function FindAGameScreen() {
               <Text style={s.heading}>{WEEK_HEADING}</Text>
               <AvailabilityGrid
                 columnHeads={DAY_PARTS.map(dayPartHead)}
-                // The marker is a comparison against the profile's own week, made on every tap —
-                // not a flag a toggle sets, which is what makes a slot ticked and unticked stop
-                // reporting itself as changed. It is not `KEEP_THESE_TIMES`, which compares the
-                // post-rung grid a search actually ran on and only the backend can compute.
-                footnote={improvised ? WEEK_CHANGED_FROM_PROFILE : undefined}
+                // Two facts, one sentence, decided in the copy deck: the marker is a comparison
+                // against the profile's own week made on every tap — not a flag a toggle sets,
+                // which is what makes a slot ticked and unticked stop reporting itself as
+                // changed — and the plus is the cell a rung added to the search that ran.
+                // Neither is `KEEP_THESE_TIMES`, which compares the post-rung grid a search
+                // actually ran on and only the backend can compute.
+                footnote={weekFootnote({ improvised, addedForThisSearch: addedCell !== undefined })}
                 rows={WEEKDAYS.map((day) => ({
                   key: String(day),
                   label: dayLabel(day),
-                  cells: DAY_PARTS.map((part) => ({
-                    key: `${day}-${part}`,
-                    selected: isTicked(week, { day, part }),
-                    onPress: () => toggleWeekCell({ day, part }),
-                    accessibilityLabel: cellLabel({ day, part }),
-                  })),
+                  cells: DAY_PARTS.map((part) => {
+                    const cell = { day, part };
+                    // A cell the player never ticked, standing for this search alone. Pressing
+                    // it is an ordinary tick — and the store drops the mark on that press,
+                    // because from then on the cell is the player's own ask.
+                    const added = addedCell !== undefined && sameCell(addedCell, cell);
+
+                    return {
+                      key: `${day}-${part}`,
+                      selected: isTicked(week, cell),
+                      addedForThisSearch: added,
+                      onPress: () => toggleWeekCell(cell),
+                      accessibilityLabel: searchWeekCellLabel(cell, added),
+                    };
+                  }),
                 }))}
               />
             </View>

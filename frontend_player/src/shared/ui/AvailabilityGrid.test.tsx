@@ -80,6 +80,49 @@ describe('the selected cell', () => {
   });
 });
 
+/**
+ * The third fact on an editor cell — a slot **this search** added, which the player never
+ * ticked.
+ *
+ * It is drawn rather than announced-only for the reason the tick is: a cell is a bare
+ * rectangle, and the mark is the whole of what separates a square that is part of the ask from
+ * one that a rung widened for one search
+ * ([#283](https://github.com/Raketa02/Raketa/issues/283)). The bed is the argument for the
+ * second plus: `Plus` is volt on `ink`, and this cell is **not** filled — it is not part of the
+ * week, and a filled one would read as ticked under a finger that is about to tick it.
+ */
+describe('the cell a rung added for this search', () => {
+  const added = (): readonly AvailabilityGridRow[] =>
+    rows([]).map((row) => ({
+      ...row,
+      cells: row.cells.map((cell) =>
+        cell.key === 'Mon morning' ? { ...cell, addedForThisSearch: true } : cell,
+      ),
+    }));
+
+  it('draws the plus, on the unfilled cell, and never the tick', () => {
+    render(<AvailabilityGrid columnHeads={['Morning']} rows={added()} />);
+
+    expect(ticks().map((node) => node.props.d as string)).toEqual(['M 6 2.5 V 9.5 M 2.5 6 H 9.5']);
+    expect(flatten(screen.getByRole('checkbox', { name: 'Mon morning' }).props.style)).toEqual(
+      expect.objectContaining({ backgroundColor: theme.color.surface }),
+    );
+  });
+
+  /**
+   * The mark says what the *search* did; `checked` says what the *week* holds, and the week
+   * does not hold this cell. A cell reported as checked would be one a player unticks by
+   * pressing — which is the opposite of what the press does.
+   */
+  it('is still a cell to press, and reports itself unticked', () => {
+    render(<AvailabilityGrid columnHeads={['Morning']} rows={added()} />);
+
+    expect(screen.getByRole('checkbox', { name: 'Mon morning' }).props.accessibilityState).toEqual(
+      expect.objectContaining({ checked: false }),
+    );
+  });
+});
+
 describe('the column heads', () => {
   it('are drawn, and hidden from assistive technology so no cell is announced twice', () => {
     render(<AvailabilityGrid columnHeads={['Morning', 'Afternoon']} rows={rows([])} />);

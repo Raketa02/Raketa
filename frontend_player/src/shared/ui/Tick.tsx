@@ -21,12 +21,22 @@
  * — and a second copy of the path is exactly the drift `README.md` says this barrel exists
  * to prevent.
  *
- * **None of the three takes props, and the colour is not one of them.** Each is drawn on
+ * **None of the four takes props, and the colour is not one of them.** Each is drawn on
  * exactly one bed and so has exactly one value, held here with its contrast figure rather
  * than restated at every call site: the tick is `surface` on `ink` (17,50:1), the plus is
  * `volt` on `ink` — volt as a stroke, which is legal only on dark and this is dark — and the
  * dash is `muted` on `surface` (5,40:1). A `color` prop would be a choice offered to callers
  * that none of them has.
+ *
+ * ## The plus is drawn twice, because it lands on two beds
+ *
+ * The editor grid marks the cell a times rung added for one search
+ * ([#283](https://github.com/Raketa02/Raketa/issues/283)), and that cell is deliberately
+ * **not** filled: it is not part of the week the player is asking with. So the diff's volt
+ * stroke cannot be reused — volt on `surface` is 1,3:1 and simply not there — and the second
+ * one is `ink` on `surface`, which is the tick's own contrast read the other way round. Two
+ * named marks rather than one taking a colour, for the reason above: the bed is a fact about
+ * where each is drawn, not a decision a caller makes.
  */
 
 import Svg, { Path } from 'react-native-svg';
@@ -67,4 +77,12 @@ export function Plus() {
 /** A slot this search dropped. Drawn on the unselected cell, so `muted` is the value. */
 export function Dash() {
   return <Mark d={DASH} stroke={theme.color.muted} />;
+}
+
+/**
+ * The same plus on the **unfilled** cell — a slot a rung added for this one search, on the
+ * editor grid the player still edits. `ink` on `surface` (17,50:1).
+ */
+export function PlusOnSurface() {
+  return <Mark d={PLUS} stroke={theme.color.ink} />;
 }

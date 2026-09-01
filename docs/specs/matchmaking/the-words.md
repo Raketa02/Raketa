@@ -994,6 +994,23 @@ The editor is [6.8](../../../frontend_player/docs/design-system.md#68-the-availa
 reused unchanged and **not restated** — `checkbox`, `checked`, `"Monday morning"`, column
 heads hidden. §E6's *"'EVE' should be announced as 'evening'"* is already done there.
 
+**One editor cell can carry a suffix, and it is a fact rather than a state.** A times rung
+adds one slot to the searcher's own grid for one search, and *Find a game* marks that cell
+with a plus ([#283](https://github.com/Raketa02/Raketa/issues/283)). A plus is not readable,
+so the suffix is the whole of what a listener gets — and it is **after** the cell's ordinary
+name, never instead of it, because the square is still Thursday evening and `checked` still
+says what the *week* holds rather than what the search did.
+
+| | |
+| --- | --- |
+| **Editor cell, marked** | Still a `checkbox`, still unchecked. `{Day} {part}, added for this search` |
+
+The suffix is the diff grid's *", newly added"* said the other way round, because it is a
+different claim: that one is the player's own week against their profile, this one is a cell
+the **engine** added to one search. The sentence under the grid explains the mark and
+**names no cell** — `takenRungLine`'s own rule, since the control that offered the widening
+says *look outside your week* rather than naming a Saturday morning.
+
 **`SH.saveav`'s diff grid is a different control with a third fact.** Newly-on draws a
 **plus** in `volt` on `ink` and newly-off a **dash** in `muted` — shapes from the tick's own
 family, which is

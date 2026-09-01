@@ -56,7 +56,7 @@ import { create } from 'zustand';
 import type { WeekCell } from '@/shared/vocabulary/week';
 
 import type { Lineup, SeatedPlayerId } from '../domain/lineup';
-import { seedWorkingWeek, toggleCell, type WorkingWeek } from '../domain/workingWeek';
+import { sameCell, seedWorkingWeek, toggleCell, type WorkingWeek } from '../domain/workingWeek';
 
 interface PlaySessionState {
   /**
@@ -69,6 +69,19 @@ interface PlaySessionState {
   /** Undefined until somebody has been added. Nothing else in Play holds a line-up. */
   readonly lineup: Lineup | undefined;
   /**
+   * **The cell a times rung added, for the search on screen and no other.**
+   *
+   * A rung taken on the pool widens the searcher's own grid by one slot for that one search
+   * ([#223](https://github.com/Raketa02/Raketa/issues/223) §8), and the week the player filled
+   * in disagrees with the search that ran until the grid says so. So it is held here, beside
+   * the week, to be **ticked** on *Find a game* two pushes back — and deliberately not held
+   * *in* the week: `week` is what travels as `availability_override`, so writing the offered
+   * cell into it would carry a this-search-only widening into every later ask, which is the
+   * conflation ADR-0099 exists to prevent arriving from the client instead of the engine
+   * ([#283](https://github.com/Raketa02/Raketa/issues/283)).
+   */
+  readonly addedForThisSearch: WeekCell | undefined;
+  /**
    * Enter Play: fill the grid in from the profile.
    *
    * Called on **navigation**, never during a render — §G6 bug #5 is the prototype cloning the
@@ -79,8 +92,32 @@ interface PlaySessionState {
    * an entry is always the start of a session and there is never a half-built week to protect.
    */
   readonly enter: (profileWeek: WorkingWeek) => void;
-  /** Tick or untick one cell of the working copy. A no-op outside a session. */
+  /**
+   * Tick or untick one cell of the working copy. A no-op outside a session.
+   *
+   * **A tap on the offered cell also takes the mark off it.** The two facts are about the same
+   * square and only one of them can be true: once the player ticks it themselves it is their
+   * own ask, travelling on every search from here, and *added for this search* would be the
+   * grid saying so about a cell that outlived the search it belonged to.
+   */
   readonly toggleWeekCell: (cell: WeekCell) => void;
+  /**
+   * Record the cell a times rung just added. **One caller: the pool, on a taken rung.**
+   *
+   * The offer is the pool's and the grid is *Find a game*'s, so the fact has to outlive the
+   * screen that learned it — which is what this store is for, and why the mark is not a
+   * `useState` on the pool the way its pending replacement is.
+   */
+  readonly addForThisSearch: (cell: WeekCell) => void;
+  /**
+   * Forget it — **the next search does not carry it.**
+   *
+   * Taking a rung is one search citing the offer that priced it; a search composed on *Find a
+   * game* cites nothing, so from the moment one is asked for, the mark would be a claim about
+   * a list nobody is holding any more. The screen that composes the ask is the one that says
+   * so, because it is the one that knows.
+   */
+  readonly clearAddedForThisSearch: () => void;
   /**
    * Add somebody to the court, under the search they came off.
    *
@@ -133,12 +170,33 @@ interface PlaySessionState {
 export const usePlaySession = create<PlaySessionState>((set) => ({
   week: undefined,
   lineup: undefined,
-  enter: (profileWeek) => set({ week: seedWorkingWeek(profileWeek), lineup: undefined }),
+  addedForThisSearch: undefined,
+  enter: (profileWeek) =>
+    set({
+      week: seedWorkingWeek(profileWeek),
+      lineup: undefined,
+      addedForThisSearch: undefined,
+    }),
   // Dropped rather than beginning a session, for the reason the pass drops a rating recorded
   // with no pass running: the grid is only reachable from a screen the entry seeded, so this
   // guards against a future caller rather than a case the flow produces.
   toggleWeekCell: (cell) =>
-    set((state) => (state.week === undefined ? state : { week: toggleCell(state.week, cell) })),
+    set((state) => {
+      if (state.week === undefined) return state;
+      const marked = state.addedForThisSearch;
+      return {
+        week: toggleCell(state.week, cell),
+        ...(marked !== undefined && sameCell(marked, cell)
+          ? { addedForThisSearch: undefined }
+          : {}),
+      };
+    }),
+  // Dropped outside a session for `toggleWeekCell`'s own reason: the pool is only reachable
+  // from a screen the entry seeded, so this guards a future caller rather than a case the
+  // flow produces.
+  addForThisSearch: (cell) =>
+    set((state) => (state.week === undefined ? state : { addedForThisSearch: cell })),
+  clearAddedForThisSearch: () => set({ addedForThisSearch: undefined }),
   seat: (originSearchId, playerId) =>
     set((state) => {
       const held = state.lineup?.originSearchId === originSearchId ? state.lineup : undefined;
@@ -156,7 +214,7 @@ export const usePlaySession = create<PlaySessionState>((set) => ({
       return { lineup: seats.length === 0 ? undefined : { ...state.lineup, seats } };
     }),
   discardLineup: () => set({ lineup: undefined }),
-  end: () => set({ week: undefined, lineup: undefined }),
+  end: () => set({ week: undefined, lineup: undefined, addedForThisSearch: undefined }),
 }));
 
 /**

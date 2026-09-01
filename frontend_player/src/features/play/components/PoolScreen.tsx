@@ -72,13 +72,14 @@
  * an **admission** rather than a bonus — so re-applying it here would score the wire's own
  * ranking a second time. `poolOrder` sorts on the printed number and nothing else.
  *
- * **The cell a times rung would add.** #223 §8 requires that the offered slot **visibly ticks**
- * on the 7×3 grid, marked as this-search-only, because otherwise the week the player just
- * filled in disagrees with the search that ran. `RungOfferSchema.slot` carries it and nothing
- * here reads it: the grid is *Find a game*'s surface, one screen back, and a tick drawn on a
- * screen the player is not looking at is not the requirement. It is
- * [#283](https://github.com/Raketa02/Raketa/issues/283), pointed at from here because the wire
- * field would otherwise read as unused rather than deferred.
+ * **The cell a times rung adds — which is recorded here and drawn nowhere near here.** #223 §8
+ * requires that the offered slot **visibly ticks**, marked as this-search-only, because
+ * otherwise the week the player just filled in disagrees with the search that ran. There is no
+ * grid on this screen and a tick drawn where nobody is looking is not the requirement, so what
+ * this screen does is hand the cell to `playSession` and let *Find a game* mark it on the grid
+ * it owns ([#283](https://github.com/Raketa02/Raketa/issues/283)). **It never names the cell in
+ * prose either**: `takenRungLine` says *outside your week* rather than a Saturday morning, and
+ * the grid two pushes back is the one surface that shows which square it was.
  *
  * **A second live region over the running figure.** §20.9's third region announces the forecast
  * because it changes while focus is elsewhere, and that is as true here as on the court — but
@@ -173,6 +174,8 @@ export function PoolScreen({ arrivalSearchId, arrivalSeat }: PoolScreenProps) {
   const lineup = usePlaySession((state) => state.lineup);
   const seatPlayer = usePlaySession((state) => state.seat);
   const unseat = usePlaySession((state) => state.unseat);
+  const addForThisSearch = usePlaySession((state) => state.addForThisSearch);
+  const clearAddedForThisSearch = usePlaySession((state) => state.clearAddedForThisSearch);
   const profileSurface = useProfileSurface();
 
   /**
@@ -316,6 +319,17 @@ export function PoolScreen({ arrivalSearchId, arrivalSeat }: PoolScreenProps) {
           // The sort is the old list's selection, and there is no chip on the new one it is
           // guaranteed to correspond to: `sorts_available` is per answer.
           setSort(undefined);
+          // The cell the widening added, handed to the grid it belongs to. Nothing here draws
+          // it: this screen has no grid, and #223 §8 asks for the tick where the week was
+          // filled in — which is *Find a game*, two pushes back (#283).
+          //
+          // **Every climb rewrites it, including the ones that add no cell.** A player can
+          // leave this pool and open it again against another seat, on the strict record the
+          // court still holds, and take a *radius* rung the second time — which runs on the
+          // week without the cell. A mark left standing would then be the grid disagreeing
+          // with the search that ran, which is the disagreement §8 exists to close.
+          if (offer.slot === null) clearAddedForThisSearch();
+          else addForThisSearch(offer.slot);
           setTaken(
             offer.ask === 'TIMES'
               ? { ask: 'TIMES', profileRadiusKm: record.envelope.pool.radiusKmUsed }

@@ -2835,11 +2835,8 @@ export interface components {
              * @description The widened radius, on a `RADIUS` rung. Always inside the same 1-50 km your own slider holds: a relaxation never offers a radius you could not have set yourself, so a searcher already at 50 km is offered no radius rung at all.
              */
             radius_km?: number;
-            /**
-             * Slot
-             * @description The one cell this rung would add to your week, on a `TIMES` rung, as `day:PART`. For this search only.
-             */
-            slot?: string;
+            /** @description The one cell this rung would add to your week, on a `TIMES` rung, and **for this search only**. The same two named fields every other slot crosses in, because this one is drawn on the same seven-by-three grid the player just filled in — ticked there as belonging to this search and to no later one. */
+            slot?: components["schemas"]["AvailabilitySlotResource"];
         };
         /**
          * ScoredTermSchema
