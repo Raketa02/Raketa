@@ -6,14 +6,20 @@
  * route-local and need no clearing rule
  * ([#228](https://github.com/Raketa02/Raketa/issues/228) §6).
  *
- * The two params it will read — the origin search and the seat being filled — are already
- * sent by the builder. Validating them belongs with the screen that reads them
- * ([#272](https://github.com/Raketa02/Raketa/issues/272)); nothing here trusts one, because
- * nothing here reads one.
+ * **Both params are untrusted.** The search becomes `ForecastRequest.search_id` and a Query
+ * key, and the seat decides whether an add **replaces** somebody — so neither is read before it
+ * is checked. A link that does not survive that has no list to draw and no seat to fill, which
+ * is not a pool but Play's own start.
  */
 
-import { PoolScreen } from '@/features/play/types';
+import { Redirect, useLocalSearchParams } from 'expo-router';
+
+import { PoolScreen, parsePoolRouteParams } from '@/features/play/types';
 
 export default function PoolRoute() {
-  return <PoolScreen />;
+  const params = parsePoolRouteParams(useLocalSearchParams());
+
+  if (params === undefined) return <Redirect href="/play" />;
+
+  return <PoolScreen arrivalSearchId={params.search} arrivalSeat={params.seat} />;
 }

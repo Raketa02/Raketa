@@ -38,7 +38,10 @@ import type {
   LivenessReason,
   ModifierCode,
   OptimisedFor,
+  RelaxationAsk,
+  Rung,
   SearchMode,
+  SortOption,
   Term,
   Window,
 } from './vocabulary';
@@ -223,7 +226,80 @@ export interface SearchEnvelope {
    * alternative would be claiming *optimised for you* about an answer this build cannot read.
    */
   readonly optimisedFor: OptimisedFor | null;
+  /**
+   * Which re-sorts the client may draw over rows it already holds — **rendered verbatim, and
+   * the row vanishes when it is empty.**
+   *
+   * The vocabulary is the server's and *"never a lie"*: a sort that would reorder nothing is
+   * not in this list, so a hardcoded row of four would be three-quarters a lie today
+   * ([#231](https://github.com/Raketa02/Raketa/issues/231) §6). `[]` is a real, tested state.
+   */
+  readonly sortsAvailable: readonly SortOption[];
+  /**
+   * What relaxing your **own** asks would be worth, each priced by a genuine re-run — or
+   * `null` where nobody needed them.
+   *
+   * The two absences are different answers and the falsifier is `null` versus not-null:
+   * **`null` is *the list cleared five*** and the offers were never computed, while `[]` is
+   * *they were computed and there is nothing left to offer*, which is the honest empty state
+   * with the pool beside it as the whole answer. Collapsing them would make a thin list and a
+   * long one say the same thing.
+   */
+  readonly rungOffers: readonly RungOffer[] | null;
 }
+
+/**
+ * One rung of the relaxation ladder, priced. **Offered, never applied.**
+ *
+ * The engine computes what relaxing one of the *searcher's own* asks would be worth and hands
+ * over the number; it never takes the offer, because only the player can say truthfully that
+ * they are free on a Saturday
+ * ([ADR-0099](../../../../../docs/adr/0099-relaxation-offers-the-searchers-own-asks.md)).
+ *
+ * **The one client obligation here is a rule and not a rendering: never subtract.**
+ * `candidatesAboveFloor` is *the total who would clear the floor at this rung*, and rendering
+ * a delta against the rows on screen is the arithmetic error `run_shortlist_search.py` names
+ * by hand — *"the trigger asks is this list short, in rows shown; a rung asks would widening
+ * add anybody, in people above the floor — those are two populations"*
+ * ([#223](https://github.com/Raketa02/Raketa/issues/223) §1). It is also the only reason the
+ * one rung whose set is **not** a superset can be priced honestly at all.
+ */
+export type RungOffer = RungOfferFacts & RelaxedAsk;
+
+interface RungOfferFacts {
+  /**
+   * Which rung. **Never printed** — the letters are letters precisely so nobody lines them up
+   * against a struck rung, and printing either spelling publishes an engine-internal ordering.
+   * It is carried because it is what `RunSearchRequest.rung` cites when the offer is taken.
+   */
+  readonly rung: Rung;
+  /** The **total** above the floor at this rung, from a real re-run. See the note: never a delta. */
+  readonly candidatesAboveFloor: number;
+  /**
+   * This rung's **own** window — a challenge sliding from `WEEKEND` to `THIS_WEEK` is part of
+   * what widening costs, and it is shown before it is paid. `null` where the served code is
+   * one this build has never seen, which drops the clause and keeps the count (§3).
+   */
+  readonly window: Window | null;
+}
+
+/**
+ * Which of the searcher's own asks a rung relaxes — **a union rather than a code beside an
+ * optional number.**
+ *
+ * The wire carries `ask` and an optional `radius_km`, and the two are only meaningful together:
+ * a `RADIUS` rung's whole label *is* that number. Spelling it as one union is what makes the
+ * mapper's decision permanent — a `RADIUS` offer arriving without a radius is **dropped**,
+ * because there is no sentence left to draw and an offer is not a row in any total a gap would
+ * have to hold open — and it is what stops every reader downstream carrying a fallback for a
+ * state the mapper has already refused to produce.
+ *
+ * A rung never touches a measurement, a term, a weight or the quality floor. These are the two
+ * things the searcher asked for, and nothing else is relaxable.
+ */
+export type RelaxedAsk =
+  | { readonly ask: Extract<RelaxationAsk, 'TIMES'> }
+  | { readonly ask: Extract<RelaxationAsk, 'RADIUS'>; readonly radiusKm: number };
 
 /**
  * The pool an answer came out of — sent on **every** search and not only on empty ones,

@@ -43,6 +43,9 @@ const ENVELOPE: SearchEnvelope = {
   // The pool and the clamp are the empty state's and the ladder's; no card reads either.
   pool: { radiusKmUsed: 12, playersInRange: 7, window: 'THIS_WEEK' },
   radiusClamp: false,
+  // The sort row and the ladder are the pool's, and no card reads either.
+  sortsAvailable: [],
+  rungOffers: null,
   rulesetVersion: 'ruleset-v1',
   engineVersion: 'matchfit-v1',
   // A shortlist is always the searcher's. The builder is the only surface that reads it.

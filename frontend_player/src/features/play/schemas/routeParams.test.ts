@@ -7,7 +7,7 @@
  * is one code for four cases and so tells nobody what happened.
  */
 
-import { parseBuilderRouteParams } from './routeParams';
+import { parseBuilderRouteParams, parsePoolRouteParams } from './routeParams';
 
 const SEARCH = 'e0f1a2b3-c4d5-4e6f-8a9b-0c1d2e3f4a5b';
 
@@ -44,5 +44,31 @@ describe('the builder route params', () => {
     expect(
       parseBuilderRouteParams({ search: SEARCH, sport: 'squash', mode: 'COMPETITIVE' }),
     ).toEqual({ search: SEARCH });
+  });
+});
+
+describe('the pool route params', () => {
+  it('accepts a search and the seat the visit is against', () => {
+    expect(parsePoolRouteParams({ search: SEARCH, seat: '2' })).toEqual({
+      search: SEARCH,
+      seat: 2,
+    });
+  });
+
+  it('rejects a link with no seat, rather than reading one as the searcher’s own', () => {
+    // `z.coerce.number()` would read both of these as **zero**, and zero is a seat.
+    expect(parsePoolRouteParams({ search: SEARCH })).toBeUndefined();
+    expect(parsePoolRouteParams({ search: SEARCH, seat: '' })).toBeUndefined();
+  });
+
+  it('rejects a seat that is not a whole seat', () => {
+    expect(parsePoolRouteParams({ search: SEARCH, seat: '-1' })).toBeUndefined();
+    expect(parsePoolRouteParams({ search: SEARCH, seat: '1.5' })).toBeUndefined();
+    expect(parsePoolRouteParams({ search: SEARCH, seat: 'partner' })).toBeUndefined();
+  });
+
+  it('rejects a search id that is not one, exactly as the builder does', () => {
+    expect(parsePoolRouteParams({ search: 'latest', seat: '2' })).toBeUndefined();
+    expect(parsePoolRouteParams({ search: [SEARCH, SEARCH], seat: '2' })).toBeUndefined();
   });
 });

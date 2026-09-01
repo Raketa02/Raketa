@@ -167,21 +167,6 @@ export const FILLING_LABEL = 'Filling the seats…';
  */
 export const NO_RECORD_TITLE = 'This line-up has lost its search';
 
-/**
- * The pool's own two lines, until it is built.
- *
- * An **honest placeholder**, in the shell's register: it names what belongs on the screen and
- * says it is not built, so a player can tell one from a bug. It is here rather than in
- * `shellCopy` because the pool is Play's screen and not a tab —
- * [#272](https://github.com/Raketa02/Raketa/issues/272) replaces both of these with the real
- * thing.
- */
-export const POOL_TITLE = 'Pick players';
-
-export const POOL_NOT_BUILT =
-  'Everybody the search found, ranked, with the option to widen when it comes back thin — not ' +
-  'built yet.';
-
 export const NO_RECORD_BODY =
   'The search it was built from is no longer here, so nobody can be added or replaced. Running ' +
   'a new one starts a fresh court.';

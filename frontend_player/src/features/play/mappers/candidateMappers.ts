@@ -53,7 +53,14 @@ import type { components } from '@/generated/schema';
 import { SOCIAL_TAG_IDS, type SocialTagId } from '@/shared/vocabulary/socialTags';
 import { toWeekCells } from '@/features/player_profile/types';
 
-import type { Candidate, DegradedTerm, Modifier, SearchEnvelope } from '../domain/candidate';
+import type {
+  Candidate,
+  DegradedTerm,
+  Modifier,
+  RelaxedAsk,
+  RungOffer,
+  SearchEnvelope,
+} from '../domain/candidate';
 import type { Evidence, ScoredTerm, TagPair } from '../domain/evidence';
 import {
   DEGRADED_REASONS,
@@ -63,7 +70,10 @@ import {
   MODIFIER_CODES,
   OPTIMISED_FOR,
   PLAY_INTENTS,
+  RELAXATION_ASKS,
+  RUNGS,
   SEARCH_MODES,
+  SORT_OPTIONS,
   TERMS,
   WINDOWS,
   type DegradedReason,
@@ -73,7 +83,10 @@ import {
   type ModifierCode,
   type OptimisedFor,
   type PlayIntent,
+  type RelaxationAsk,
+  type Rung,
   type SearchMode,
+  type SortOption,
   type Term,
   type Window,
 } from '../domain/vocabulary';
@@ -85,6 +98,7 @@ type WireEvidence = ScoredTermSchema['evidence'];
 type WireTagPair = components['schemas']['TagPair'];
 type WireDegradedTerm = components['schemas']['DegradedTermSchema'];
 type WireModifier = components['schemas']['ModifierSchema'];
+type WireRungOffer = components['schemas']['RungOfferSchema'];
 
 /**
  * One answer, as the screens over it hold it: the envelope, and the rows that survived.
@@ -132,9 +146,57 @@ export function toSearchEnvelope(response: ShortlistResponse): SearchEnvelope {
     },
     radiusClamp: response.search.radius_clamp,
     optimisedFor: toOptimisedFor(response.search.optimised_for) ?? null,
+    // A sort this build has no words for is **dropped**: the row is a selection out of a
+    // longer vocabulary and states no total, so a chip nobody could read is nothing to draw.
+    sortsAvailable: response.search.sorts_available.flatMap((sort) => toSortOption(sort) ?? []),
+    rungOffers: toRungOffers(response.search.rung_offers),
     rulesetVersion: response.search.ruleset_version,
     engineVersion: response.search.engine_version,
   };
+}
+
+/**
+ * The ladder, with **`null` kept as `null`**.
+ *
+ * That is the whole of what this function has to be careful about: `null` is *the offers were
+ * never computed, because the list cleared five* and `[]` is *they were computed and there is
+ * nothing left to offer*. The falsifier is one against the other, so `?? []` here would delete
+ * the difference between a long list and a terminal one and hand the screen one empty state
+ * where the contract has two.
+ */
+function toRungOffers(offers: WireRungOffer[] | null): readonly RungOffer[] | null {
+  return offers == null ? null : offers.flatMap((offer) => toRungOffer(offer) ?? []);
+}
+
+/**
+ * One priced rung, or nothing.
+ *
+ * Three narrowings and each is §3's **drop**, because an offer is a control rather than a row
+ * in a total: an unreadable rung has nothing to cite when it is taken, an unreadable ask has
+ * no label, and a `RADIUS` rung with no radius has no sentence at all — its label *is* that
+ * number. The **window** is the one that stays, as a `null`: it is a clause on a control whose
+ * count and label are both still true without it.
+ */
+function toRungOffer(offer: WireRungOffer): RungOffer | undefined {
+  const rung = KNOWN_RUNGS.has(offer.rung) ? (offer.rung as Rung) : undefined;
+  const ask = KNOWN_ASKS.has(offer.ask) ? (offer.ask as RelaxationAsk) : undefined;
+  if (rung === undefined || ask === undefined) return undefined;
+
+  const relaxed = toRelaxedAsk(ask, offer.radius_km);
+  if (relaxed === undefined) return undefined;
+
+  return {
+    rung,
+    candidatesAboveFloor: offer.candidates_above_floor,
+    window: toWindow(offer.window) ?? null,
+    ...relaxed,
+  };
+}
+
+/** The pair the label is written from — and `undefined` where half of it is missing. */
+function toRelaxedAsk(ask: RelaxationAsk, radiusKm: number | undefined): RelaxedAsk | undefined {
+  if (ask === 'TIMES') return { ask };
+  return radiusKm === undefined ? undefined : { ask, radiusKm };
 }
 
 export function toCandidate(row: CandidateSchema): Candidate {
@@ -324,6 +386,9 @@ const KNOWN_TAGS = new Set<string>(SOCIAL_TAG_IDS);
 const KNOWN_DIRECTIONS = new Set<string>(LEVEL_DIRECTIONS);
 const KNOWN_WINDOWS = new Set<string>(WINDOWS);
 const KNOWN_OPTIMISED_FOR = new Set<string>(OPTIMISED_FOR);
+const KNOWN_SORTS = new Set<string>(SORT_OPTIONS);
+const KNOWN_RUNGS = new Set<string>(RUNGS);
+const KNOWN_ASKS = new Set<string>(RELAXATION_ASKS);
 
 function toTerm(term: string): Term | undefined {
   return KNOWN_TERMS.has(term) ? (term as Term) : undefined;
@@ -335,6 +400,10 @@ function toLivenessReason(reason: string): LivenessReason | undefined {
 
 function toOptimisedFor(optimised: string): OptimisedFor | undefined {
   return KNOWN_OPTIMISED_FOR.has(optimised) ? (optimised as OptimisedFor) : undefined;
+}
+
+function toSortOption(sort: string): SortOption | undefined {
+  return KNOWN_SORTS.has(sort) ? (sort as SortOption) : undefined;
 }
 
 function toWindow(window: string): Window | undefined {

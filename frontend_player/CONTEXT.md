@@ -379,7 +379,8 @@ listed here because it is a Play surface rather than a profile one.
   row a reason, and "why-fit row", which is the sheet's.
 - **Search envelope** — every fact about **the search** rather than about a candidate, and the
   second argument every card and the why-fit sheet takes: the id, the mode, the pool
-  description, the radius clamp and the two version stamps. Its `mode` is **null exactly on the
+  description, the radius clamp, the sort row's offers, the relaxation ladder's and the two
+  version stamps. Its `mode` is **null exactly on the
   deck**, and it is passed whole rather than as a mode string precisely so it cannot be
   conflated with the mode the engine priced a row under, which is on the evidence. It is also
   where the searcher's **own** area code would be folded on, so that a card can compute the one
@@ -389,6 +390,34 @@ listed here because it is a Play surface rather than a profile one.
   its kilometres until the fact exists. _Avoid_: "the search" for the record it describes;
   passing `mode` alone; a sentinel for the missing area, which would silently mean _never in
   your area_.
+- **Rung offer** — **what relaxing one of the searcher's own asks would be worth**, priced by a
+  genuine re-run and drawn on the pool and **nowhere else**. Two asks — the week and the radius
+  — and the letter that identifies the rung is **never printed** in any spelling, because
+  letters were chosen over numbers precisely so nobody could line them up against a struck rung.
+  Its count is _the total who would clear the floor at this rung_, so **the client never
+  subtracts**: the rows on screen and the people above the floor are two populations, and one of
+  them is not even a superset. `null` and `[]` are different answers — _nobody needed offers_
+  against _there is nothing left to offer_ — and every radius rung is gated by the **radius
+  clamp**, since each is addressed to a player who may already be at the ceiling. A rung priced
+  at nobody is a **sentence rather than a button**. _Avoid_: "widening" for the offer (the
+  widening is the engine's and never crosses on the request); "+3 more"; "the ladder" for one
+  rung.
+- **Standing statement** — what replaces _back_ once a rung has been taken: one sentence naming
+  the widening this list ran under and the profile it did **not** touch. There is no way back to
+  the strict list, because a player holding both would be diffing them to find the people that
+  differ, which is the engine's job — so the way out is changing the ask again. _Avoid_:
+  "undo" and "reset the search", neither of which exists.
+- **Sort row** — the pool's chips, **rendered from `sorts_available` verbatim and omitted
+  entirely when it is empty**. Re-sorting costs no round trip, so a sort is in no query key at
+  all. The row gains **the way back** the moment the player leaves the order they arrived in:
+  _Best fit_ is withheld precisely when the returned order already is best-fit order, so a row
+  drawn from the server's list alone would make _Closest_ a one-way door. _Avoid_: a hardcoded
+  row of four, which is three-quarters a lie today; deriving offerability from the rows.
+- **Pending seat replacement** — **the seat the pool was opened against**, held route-locally
+  and discharged by the first add: where that seat is occupied the add is a **replacement**, and
+  the screen names whom it replaces before it happens. It **needs no clearing rule**, because
+  the court pops rather than pushes and the route unmounts with it. _Avoid_: holding it in a
+  store, which reintroduces exactly the bug the pop already prevents.
 - **Play segment** — the **two ways through the Play tab** as one control, drawn on both
   screens and never on the tab bar: _Find a game_ and _Match me_. The halves move in opposite
   directions, and that is the whole of it — _Find a game_ is an **arrival**, so it calls [the

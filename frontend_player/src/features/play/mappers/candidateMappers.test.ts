@@ -85,9 +85,79 @@ describe('the envelope', () => {
       optimisedFor: 'SEARCHER',
       pool: { radiusKmUsed: 12, playersInRange: 7, window: 'THIS_WEEK' },
       radiusClamp: false,
+      sortsAvailable: [],
+      rungOffers: null,
       rulesetVersion: 'ruleset-v1',
       engineVersion: 'matchfit-v1',
     });
+  });
+
+  it('draws the sort row from the server’s own list, dropping a code it cannot read', () => {
+    const envelope = toSearchEnvelope(
+      response({ sorts_available: ['BEST_FIT', 'STEADIEST' as Wire['SortOption'], 'CLOSEST'] }),
+    );
+
+    expect(envelope.sortsAvailable).toEqual(['BEST_FIT', 'CLOSEST']);
+  });
+
+  /**
+   * The falsifier is `null` against not-null: `null` is *the list cleared five and nobody
+   * needed offers*, `[]` is *they were computed and there is nothing left to offer*. A `?? []`
+   * anywhere on this path would delete the difference between a long list and a terminal one.
+   */
+  it('keeps the two empty ladders apart', () => {
+    expect(toSearchEnvelope(response({ rung_offers: null })).rungOffers).toBeNull();
+    expect(toSearchEnvelope(response({ rung_offers: [] })).rungOffers).toEqual([]);
+  });
+
+  it('carries a priced rung whole, and never the widening it would apply', () => {
+    const envelope = toSearchEnvelope(
+      response({
+        rung_offers: [
+          {
+            rung: 'A',
+            ask: 'TIMES',
+            candidates_above_floor: 7,
+            window: 'WEEKEND',
+            slot: '6:MORNING',
+          },
+          {
+            rung: 'B',
+            ask: 'RADIUS',
+            candidates_above_floor: 9,
+            window: 'THIS_WEEK',
+            radius_km: 22,
+          },
+        ],
+      }),
+    );
+
+    expect(envelope.rungOffers).toEqual([
+      // The added cell does not cross into the domain: the backend reads the widening off the
+      // offer it made, and no surface names a slot the player never ticked.
+      { rung: 'A', ask: 'TIMES', candidatesAboveFloor: 7, window: 'WEEKEND' },
+      { rung: 'B', ask: 'RADIUS', candidatesAboveFloor: 9, window: 'THIS_WEEK', radiusKm: 22 },
+    ]);
+  });
+
+  /** A radius rung's whole label *is* that number, so there is no sentence left to draw. */
+  it('drops a radius rung with no radius, and a rung it cannot name', () => {
+    const envelope = toSearchEnvelope(
+      response({
+        rung_offers: [
+          { rung: 'B', ask: 'RADIUS', candidates_above_floor: 9, window: 'THIS_WEEK' },
+          { rung: 'D' as Wire['Rung'], ask: 'TIMES', candidates_above_floor: 4, window: 'ANY' },
+          {
+            rung: 'A',
+            ask: 'LEVEL' as Wire['RelaxationAsk'],
+            candidates_above_floor: 4,
+            window: 'ANY',
+          },
+        ],
+      }),
+    );
+
+    expect(envelope.rungOffers).toEqual([]);
   });
 
   /**

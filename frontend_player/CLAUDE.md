@@ -43,8 +43,8 @@ the Proposals opt-in, never pre-ticked and with a finish that stays closed until
 answers either way, and the **profile commit**: every answer in one idempotent
 `POST /players/me/profile` — plus the **Profile surface**, the one read of the week, the
 radius and the per-sport declaration that Play's search screen is drawn from, with an unkeyed
-`PUT` behind each of the three). `play` has its first three screens, the sheet over them and
-an honest placeholder for the fourth, below; `challenges` holds **only words** so far.
+`PUT` behind each of the three). `play` has its four screens and the sheet over them, below;
+`challenges` holds **only words** so far.
 
 **The shell is five tabs over one stack, and it remembers nothing.** `TabShell` mounts the
 `TabBar` once, below the navigator, and reads the active column off the current path —
@@ -445,13 +445,51 @@ strengths and nothing on a line-up serves one.
 `UnfilledReason` codes replace AC-69's _"Only found N"_ with the obstacle for the actual seat,
 and the statements are the seats' **own spoken names printed**, so the sentence a listener
 hears and the sentence a reader sees cannot drift apart. The ladder is not here and never will
-be — it is the pool's, which is why the pool ships now as an honest placeholder
-([#272](https://github.com/Raketa02/Raketa/issues/272)) rather than as a remedy pointing
+be — it is the pool's, which is the screen every remedy routes to rather than a remedy pointing
 nowhere. **A withheld seat is marked rather than emptied**, derived as a set difference against
 the rows the record still holds, and the marked player **stays in the forecast**: dropping them
 would force a second cause for _provisional_. Such a seat is a **fourth spoken kind** rather
 than a player with missing facts — a withheld row carries one field and no card, so there is no
 name and no level to read out — and it says the fact and never the cause.
+
+**⚡Play's fourth screen is the pool, and the relaxation ladder is on it and on no other.**
+Every thin-result state in the specs pointed the player at a settings screen — _widen the
+radius in You_ — because the prototype had no offer to point at. It is struck: pointing
+somebody at a settings screen while a **one-tap widening with a true count** sits on the same
+screen is the product being unhelpful on purpose, and taking a rung and changing the saved
+radius stay deliberately different acts — one search against every future search. Every radius
+rung is gated again by `radius_clamp`, and where the ceiling bit so hard that nothing is left
+the **reach is stated as a fact** rather than suppressed: a player staring at a short list with
+no account of why is what the gate exists to avoid. **The count is never a delta** — the rows
+shown and the people above the floor are two populations, one of which is not even a superset —
+and **a rung priced at nobody is a sentence rather than a button**, because a control that
+provably returns an empty list is a control lying about being useful. Taking one is
+`POST /searches` **citing the offer**, with no widening in the body: the backend reads that off
+the offer it made, so the two sides cannot hold different opinions about what a rung was worth.
+It **replaces the list**, and what replaces _back_ is a standing statement naming the widening
+and the profile it did not touch. **One climb per search screen, and the bound is the
+engine's** — a search that took a rung is offered none — so this screen renders what it was
+handed and keeps no memory of how far it has climbed.
+
+**The sort row is the server's vocabulary drawn verbatim, and it vanishes when that list is
+empty.** At most two chips exist today, `[]` is a tested state, and a hardcoded row of four
+would be three-quarters a lie. The non-obvious half is that **the returned order becomes
+selectable once the player has left it**: _Best fit_ is withheld precisely when the returned
+order already _is_ best-fit order, so a row drawn from `sorts_available` alone would make
+_Closest_ a one-way door. **The comparator adds no `+12`** — the interest lift is an admission
+the engine already made, and re-applying it client-side would score the wire's own ranking a
+second time. The seat-impact line and the _Evenest_ chip are out of scope with it: both read
+`would_be_forecast`, which nothing in the backend has ever written.
+
+**The pool is where the running forecast is read, and where `provisional` is a sentence.** The
+word under the tinted number is §B9's **balance** word, because Part 13 forbids colour alone
+and the spec had the two slots the wrong way round; the caveat is the assumption's own sentence
+beneath it, and there is no second badge. **The re-read is this screen's act** — the record is
+immutable and the gates are live, so arriving here is the one moment a row the product has
+since agreed not to show leaves the list and a seat on the court behind it goes blank. It
+writes the **whole** record back, origin and court included, because neither crosses on a
+read-back. Both card types draw here and **the pool draws one shape twice**; the pending seat
+replacement is route-local and needs no clearing rule, because the court pops.
 
 **`SH.whyfit` is the one surface allowed to draw a term row, and the row count is derived.**
 One component taking `(candidate, envelope)` and reading no global state, which is what lets

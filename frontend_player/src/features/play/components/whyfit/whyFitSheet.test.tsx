@@ -33,6 +33,8 @@ const DECK_ENVELOPE: SearchEnvelope = {
   mode: null,
   pool: { radiusKmUsed: 12, playersInRange: 7, window: 'THIS_WEEK' },
   radiusClamp: false,
+  sortsAvailable: [],
+  rungOffers: null,
   rulesetVersion: 'ruleset-v1',
   engineVersion: 'matchfit-v1',
   optimisedFor: 'SEARCHER',

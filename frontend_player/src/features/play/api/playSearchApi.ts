@@ -17,12 +17,15 @@
  * opposite of. What protects a player from a double tap is the control being busy, and what
  * protects them from a retry storm is that nothing in Play retries without them asking.
  *
- * **No `signal`.** A search *records* server-side before it answers, so a cancelled request
- * leaves a search minted and nobody holding its id — which is the exact state
- * `search_not_found` describes and the one this screen must not manufacture. It is the same
- * reason the profile commit takes none, and the same reason `TIMEOUT_MS.request` stays at 15 s
- * against a specification that asked for eight: giving up early on a recording write does not
- * bound a wait, it manufactures telemetry (`domain/retryTarget`).
+ * **No `signal` on the two that record.** A search *records* server-side before it answers, so
+ * a cancelled request leaves a search minted and nobody holding its id — which is the exact
+ * state `search_not_found` describes and the one this screen must not manufacture. It is the
+ * same reason the profile commit takes none, and the same reason `TIMEOUT_MS.request` stays at
+ * 15 s against a specification that asked for eight: giving up early on a recording write does
+ * not bound a wait, it manufactures telemetry (`domain/retryTarget`).
+ *
+ * The **read-back** and the **forecast** take one, for the mirror image of that reason: neither
+ * records, so an abandoned one costs nobody a row.
  */
 
 import type { components } from '@/generated/schema';
@@ -46,6 +49,35 @@ export function runSearch(body: RunSearchRequest): Promise<ShortlistResponse> {
     path: '/api/v1/searches',
     body,
     authenticated: true,
+  });
+}
+
+/**
+ * Read one back — **the record, plus live gate state**, and the one `GET` in this file.
+ *
+ * `GET /searches/{id}` answers *"in the same shape the `POST` returned it"* and **never
+ * recomputes**: the record is immutable and the gates are live, so what a re-read adds is a row
+ * the fail-closed gates no longer admit, **stated as withheld** rather than quietly missing
+ * ([ADR-0104](../../../../../docs/adr/0104-the-search-record-is-the-answer-and-never-expires.md),
+ * [ADR-0130](../../../../../docs/adr/0130-a-withheld-row-is-stated-and-the-gate-is-not-named.md)).
+ *
+ * It takes a `signal` for `requestForecast`'s reason and not for a different one: **a read
+ * records nothing**, so a cancelled one costs nobody a row and leaves no id for anybody to be
+ * holding. That is the same asymmetry drawn twice in this file, on the two routes that do not
+ * write.
+ *
+ * A search belonging to somebody else answers exactly as one that never existed, so nothing
+ * here has anything to check: `404 search_not_found` is one code for four cases by design.
+ */
+export function readSearch(
+  searchId: string,
+  { signal }: Cancellable = {},
+): Promise<ShortlistResponse> {
+  return httpRequest<ShortlistResponse>({
+    method: 'GET',
+    path: `/api/v1/searches/${encodeURIComponent(searchId)}`,
+    authenticated: true,
+    signal,
   });
 }
 
@@ -86,7 +118,7 @@ export function runLineup(body: RunLineupRequest): Promise<LineupResponse> {
  */
 export function requestForecast(
   body: ForecastRequest,
-  { signal }: ForecastOptions = {},
+  { signal }: Cancellable = {},
 ): Promise<ForecastResponse> {
   return httpRequest<ForecastResponse>({
     method: 'POST',
@@ -97,6 +129,12 @@ export function requestForecast(
   });
 }
 
-export interface ForecastOptions {
+/**
+ * The two routes here that record nothing take a `signal`; the two that record take none.
+ *
+ * One shape rather than one per call site, because it is one decision: what decides whether a
+ * request may be abandoned is whether abandoning it leaves something behind.
+ */
+export interface Cancellable {
   readonly signal?: AbortSignal;
 }

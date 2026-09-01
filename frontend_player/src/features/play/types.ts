@@ -281,7 +281,12 @@ export { WhyFitSheet, type WhyFitSheetProps } from './components/whyfit/WhyFitSh
  * and a Query key ([#271](https://github.com/Raketa02/Raketa/issues/271)).
  */
 export { BuilderScreen, type BuilderScreenProps } from './components/BuilderScreen';
-export { parseBuilderRouteParams, type BuilderRouteParams } from './schemas/routeParams';
+export {
+  parseBuilderRouteParams,
+  parsePoolRouteParams,
+  type BuilderRouteParams,
+  type PoolRouteParams,
+} from './schemas/routeParams';
 
 /**
  * **The pool** — an honest placeholder until
@@ -291,7 +296,7 @@ export { parseBuilderRouteParams, type BuilderRouteParams } from './schemas/rout
  * every remedy here, and a court naming a remedy with nowhere to go is worse than one that
  * said nothing.
  */
-export { PoolScreen } from './components/PoolScreen';
+export { PoolScreen, type PoolScreenProps } from './components/PoolScreen';
 
 /**
  * The forecast, as the builder holds it — **every way round, each with its own number**, and

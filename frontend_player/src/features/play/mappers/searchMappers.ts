@@ -34,7 +34,7 @@ import type { WeekCell } from '@/shared/vocabulary/week';
 
 import type { OriginSearch, PlayOrigin } from '../domain/lineup';
 import type { RaisedPrompt } from '../domain/raisedPrompt';
-import { SEARCH_MODES, type SearchMode } from '../domain/vocabulary';
+import { SEARCH_MODES, type Rung, type SearchMode } from '../domain/vocabulary';
 
 type RunSearchRequest = components['schemas']['RunSearchRequest'];
 type ShortlistResponse = components['schemas']['ShortlistResponse'];
@@ -52,6 +52,22 @@ export interface SearchAsk {
   readonly origin: PlayOrigin;
   /** The improvised week, or `undefined` to search on the grid the profile holds. */
   readonly sentWeek: PlayOrigin['week'] | undefined;
+  /**
+   * The offer this search accepts, where it is one — **the citation, and never the widening.**
+   *
+   * *"Taking a rung is a new search citing the one that offered it, never a silent change to
+   * your saved preferences"*, and *"the widening itself is **not** sent: the backend reads it
+   * off the offer it made"*. So there is no radius and no added slot in this shape, and there
+   * is nowhere for one to be put — which is what stops the client and the engine holding two
+   * opinions about what a rung was worth.
+   *
+   * Absent on an ordinary search, and the two fields travel as a pair because the contract
+   * says so: `rung` is *"sent with `offered_by_search_id` or not at all"*.
+   */
+  readonly taking?: {
+    readonly offeredBySearchId: string;
+    readonly rung: Rung;
+  };
 }
 
 export function toRunSearchRequest(ask: SearchAsk): RunSearchRequest {
@@ -59,6 +75,9 @@ export function toRunSearchRequest(ask: SearchAsk): RunSearchRequest {
     sport: toWireSport(ask.origin.sport),
     mode: ask.origin.mode,
     ...availabilityOverride(ask.sentWeek),
+    ...(ask.taking === undefined
+      ? {}
+      : { offered_by_search_id: ask.taking.offeredBySearchId, rung: ask.taking.rung }),
   };
 }
 
