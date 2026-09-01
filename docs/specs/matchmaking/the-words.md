@@ -849,10 +849,58 @@ empty seat all lose their numbers.
 | **Clear badge** | `button`. `Remove {name} from {side}` |
 | **Swap toggle** | `switch`. `Swap players`, `checked` |
 | **Balance bar** | `image`. §B9's balance word and its figure — the word is the point, since the bar is a colour |
+| **Seated name, on the forecast card** | `button`. `{side}, {name}, why fit {n}` — the way in to `SH.whyfit` for somebody already seated |
 
 `{side}` is *your side* / *their side*, and in doubles the partner seat says *your side, your
-partner*. The **holding ring** — the 430 ms press feedback — announces nothing: it exists to
-confirm a finger is down, on a channel this listener is not using.
+partner*.
+
+**The holding ring is struck rather than announced**
+([#278](https://github.com/Raketa02/Raketa/issues/278)). The sentence that stood here gave the
+430 ms press feedback no announcement *"on a channel this listener is not using"*, which was an
+inventory of the prototype and not a decision: the ring came in beside the two record sheets
+K-7 removed, and its gesture went with them. What replaces it is
+[6.6](../../../frontend_player/docs/design-system.md#66-press-states)'s own rule — **one
+channel per state** — applied where the seat already answers it. A seat dims to `.7` on
+press-in, so a finger being down is confirmed; a ring would be the second channel on the state
+that already has one, which is the argument the ⚡Play disc was refused a dim under. The court
+earns no press-state row, 6.6's avatar *peek* row is left alone because it describes a
+different interaction, and there is no `motion.hold` entry, because how long a finger is held
+is not *how long a state is shown* and the two do not belong under one word.
+
+### 20.4.1 A seat's hold, and the route that does not need one
+
+A seated player's Fit had no explanation anywhere in the product. The pool is the one surface
+that explains a person and it **removes** everybody already on the court, so the gap was total
+rather than awkward — and ⚡ *Let the engine fill the seats* is what makes it matter, because
+that court is four people the searcher never chose and never saw a card for.
+
+> **The forecast card's names row is the route, and a hold on the seat is a shortcut to the
+> same sheet.**
+
+The names row already prints every seated handle in full, one per line, split by side — it is
+why §5 lets a 46pt seat cut a name to four characters — and it is present whenever a seat is
+filled on both sides, which a ⚡-built court always is. So the route is a list of names, which
+is the most navigable thing a listener meets, and it costs no new element. **The side headings
+hide** once the names are buttons: each one names its own side, exactly as the court's caption
+and side labels hide because each seat names its own (7.12).
+
+**A hold may never be the only way to reach anything.** There is no long-press gesture in the
+accessibility API, so a hold is a *fallback* — it duplicates a route and never carries one. The
+deck's is the app's only other, and this is the rule that keeps it honest rather than a
+precedent that spreads.
+
+**Only a seat holding another player whose row still exists is a way in.** No route serves a
+searcher their own candidate row, so *why fit* about yourself is not a thing; an empty seat has
+no Fit and is already explained twice, by §11's sentence beneath the seats and by its own
+spoken name; and a withheld row carries one field and no card, so there is no breakdown left to
+draw. A name is a button where there is something behind it and plain text where there is not —
+never a button that opens an apology.
+
+**While the swap toggle is on, the hold does nothing, and says nothing.** A tap is *select* then
+*trade*, so a hold on a seat mid-trade is most likely a slow tap, and answering hesitation with
+a modal punishes the one two-step interaction on the screen. No sentence is owed because nothing
+advertises the gesture — the same reason the clear badge draws no refusal, *"the × a player
+cannot use is never on screen to press."* The names row is unaffected in either mode.
 
 **The 9,5pt seat label does not earn `allowFontScaling={false}`.** Part 13 permits the escape
 only *"inside the level bar's drawn geometry"*, and §15 already ruled the court's case the

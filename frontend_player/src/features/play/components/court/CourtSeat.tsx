@@ -33,18 +33,23 @@
  * for: a figure compared vertically against another figure. What is left after §5 takes the
  * level off is a **handle** — a word — and `tag` is the design system's 9,5pt word.
  *
- * ## What this seat does not do yet
+ * ## The hold is decided and not yet wired
  *
- * **There is no long press, and [#278](https://github.com/Raketa02/Raketa/issues/278) is
- * where it goes.** §20.4 records a *"holding ring — the 430 ms press feedback"*, so a gesture
- * has to exist for that sentence to mean anything — but the prototype's seat hold opened
- * `SH.player` / `SH.playersocial`, **the two sheets K-7 removed**, so it is orphaned rather
- * than unspecified. [#231](https://github.com/Raketa02/Raketa/issues/231) repointed a card's
- * long press at *Why 78?* and [#233](https://github.com/Raketa02/Raketa/issues/233) §9 already
- * settled what a seat's sheet would say; what nothing has settled is how a listener reaches
- * it, since a seat's tap is already spent on *replace* or *select* and there is no long-press
- * gesture in the accessibility API. A gesture with no destination is a destination chosen by
- * whoever wires it first, so it is named here and decided there.
+ * **There is no long press here yet, and
+ * [#285](https://github.com/Raketa02/Raketa/issues/285) wires it.**
+ * [#278](https://github.com/Raketa02/Raketa/issues/278) settled where it lands, and the answer
+ * is mostly about somewhere else: a seated player's Fit had no explanation anywhere in the
+ * product, because the pool is the one surface that explains a person and it removes everybody
+ * already on the court. **The forecast card's names row is the route** — the same row this
+ * file's truncation is licensed by — and a hold on the seat is a shortcut to the identical
+ * sheet, never the only way in, since there is no long-press gesture in the accessibility API.
+ *
+ * Three things this component keeps as they are, decided rather than pending. **No holding
+ * ring**: §20.4's sentence was struck, because the seat already dims to `.7` on press-in and a
+ * ring would be 6.6's second channel on one state. **No `delayLongPress`** — the platform's
+ * default, as the deck card's hold already takes. And **the hold is inert while `selected` is
+ * live under a swap**, with no toast, on the clear badge's own precedent one docblock down:
+ * a gesture nothing advertises owes no refusal.
  */
 
 import { Pressable, StyleSheet, Text, View } from 'react-native';
