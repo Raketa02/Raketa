@@ -111,8 +111,21 @@ echo "guard-bash.sh — secrets"
 expect guard-bash.sh 2 "copy template over real file" "$(cmd "$ROOT/backend" "cp ${DOTENV}.local.example ${DOTENV}.local")"
 expect guard-bash.sh 2 "append to a real env file"    "$(cmd "$ROOT/backend" "echo K=v >> ${DOTENV}")"
 expect guard-bash.sh 2 "delete a real env file"       "$(cmd "$ROOT/backend" "rm ${DOTENV}.local")"
+expect guard-bash.sh 2 "write a nested real env file"  "$(cmd "$ROOT" "tee backend/${DOTENV}.docker")"
 expect guard-bash.sh 0 "touch an example template"    "$(cmd "$ROOT/backend" "touch ${DOTENV}.local.example")"
 expect guard-bash.sh 0 "edit an example template"     "$(cmd "$ROOT/backend" "sed -i '' s/a/b/ ${DOTENV}.docker.example")"
+# Four characters matched anywhere made `record${DOTENV}elope` — the Play search DTO's
+# own field — read as a dotenv write, and the refusal named a cause that was not the
+# cause (#281). The two assertions above it are the half that must not be lost: the
+# fix is precision, never a weaker guard.
+expect guard-bash.sh 0 "a field named ...elope in a heredoc" \
+  "$(cmd "$ROOT" "cat > frontend_player/src/a.tsx <<EOF\\n<Text>{record${DOTENV}elope.total}</Text>\\nEOF")"
+expect guard-bash.sh 0 "process${DOTENV} beside a JSX close tag" \
+  "$(cmd "$ROOT" "cat > frontend_player/src/a.tsx <<EOF\\n<Text>{process${DOTENV}.API_URL}</Text>\\nEOF")"
+# Filing the report reproduced the report: a body quoting the refusal carries the glob
+# after a '>' blockquote marker, so #281 had to be filed with --body-file.
+expect guard-bash.sh 0 "the refusal quoted in an issue body" \
+  "$(cmd "$ROOT" "gh issue create --body 'was refused:\\n> Blocked: modifying a real ${DOTENV}* / secret file'")"
 
 echo
 echo "guard-bash.sh — destructive git"

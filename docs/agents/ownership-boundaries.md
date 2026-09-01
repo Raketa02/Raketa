@@ -109,10 +109,11 @@ key material, and an `ask` list for `git push` / `gh pr merge` / `gh release`.
 make test-hooks        # or: bash .claude/hooks/test-hooks.sh
 ```
 
-65 assertions across both hooks: cross-app writes, `../` escapes, scoped-session resolution,
+69 assertions across both hooks: cross-app writes, `../` escapes, scoped-session resolution,
 shared-doc writes, self-defence, deploy commands, secret writes, destructive git, and the
 false-positive cases that must **not** be blocked (a commit message mentioning `ecs-deploy`,
-editing a `.env.example` template, an ordinary `git push`).
+editing a `.env.example` template, an ordinary `git push`, a heredoc whose body says
+`record.envelope`).
 
 Passing unit tests do **not** prove the hooks are registered for a given session. Verify that
 separately, end to end:
@@ -148,6 +149,14 @@ report that the clients need `make gen-api`. See
 Those need a human. Surface the blocked command and why you wanted to run it. Don't
 reconstruct it in a form the guard doesn't recognise — if you can defeat the guard, the
 guard is worth fixing, so report that instead.
+
+**"The refusal names something my command never touched."**
+Then the pattern matched a word, and the guard is worth fixing — the same report, from the
+other side. Reach for the Edit/Write tool, which is scoped by path and unaffected, and file
+the false positive; do **not** re-word the command until it slips through. `.env` matching
+those four characters anywhere read `record.envelope` as a secret write and refused a
+`.tsx` heredoc (#281), and the natural misreading — *"the hook is broken"* — is the one
+that ends in routing around it.
 
 ## What this deliberately does not do
 
