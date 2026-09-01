@@ -11,9 +11,16 @@
  *
  * The prompts ride on the search's own response, so by the time this is on screen the search
  * has already run — *"either way the search runs now"* is arithmetic and not a promise a
- * component keeps ([#226](https://github.com/Raketa02/Raketa/issues/226) §6). What the sheet
- * does stand in front of is the **court**, which is the screen's arrangement and not this
- * one's: it reports what was answered and the screen decides where that goes.
+ * component keeps ([#226](https://github.com/Raketa02/Raketa/issues/226) §6). What it stands
+ * in front of is the screen's arrangement and never this one's: it reports what was answered
+ * and the screen decides where that goes.
+ *
+ * **Three surfaces raise prompts and only one of them pushes anywhere**
+ * ([#287](https://github.com/Raketa02/Raketa/issues/287)). On Find a game the sheet stands
+ * between the latch lifting and the court being pushed. ⚡ lands on the court the player is
+ * already looking at and a deal replaces the card in place, so on those two it stands in front
+ * of the answer that is already there, and `AfterThePrompt` can only ever be *carry-on* —
+ * because the one prompt whose answer is the other value is the one those two surfaces drop.
  *
  * ## Dismissal is a decline
  *
@@ -87,14 +94,25 @@ export interface PromptSheetProps {
    */
   readonly onAnswered: (next: AfterThePrompt) => void;
   /**
-   * Where focus goes when the sheet closes — **the week grid**, and not a trigger.
+   * Where focus goes when the sheet closes — **and it is per surface, because the thing the
+   * question is about is not on all three of them.**
    *
-   * Part 13's third modal obligation is focus returned to the control that opened it, and
-   * this sheet was opened by an *answer* rather than by a press: there is no trigger. The
-   * grid is what it is about on three of the four prompts and what the fourth's *yes* is a
-   * request for, so it is where a listener should land in the one case the screen stays put.
+   * Part 13's third modal obligation is focus returned to the control that opened it, and this
+   * sheet was opened by an *answer* rather than by a press: there is no trigger. On Find a
+   * game the week grid is the honest target — it is what three of the four prompts are about
+   * and what the fourth's *yes* is a request for — and on the deck it is the card the deal put
+   * on screen, which is where the player is.
+   *
+   * On the builder it is **⚡**, which is genuinely the control that raised it — and which
+   * that same act unmounts where it fills the court, replacing the two ways of filling one
+   * with the send. `moveAccessibilityFocus` is silent on an empty ref, so that case lands a
+   * listener on the platform's own default rather than on the app's one irreversible act,
+   * which is the right nothing ([#287](https://github.com/Raketa02/Raketa/issues/287)).
+   *
+   * **Optional because absent is a real answer**, on `WhyFitSheet`'s own precedent one
+   * directory over, and because `BottomSheet` beneath already takes none.
    */
-  readonly returnFocusTo: FocusTarget;
+  readonly returnFocusTo?: FocusTarget;
 }
 
 export function PromptSheet({

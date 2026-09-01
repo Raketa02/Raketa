@@ -28,8 +28,11 @@
  *
  * `ChallengeSchema` carries the sport, the mode, the window and the deadlines, and nothing
  * draws any of them yet: the one reader today is the pair rule's naming
- * (`domain/challenge.ts`). Mapping the rest would be a DTO nobody is checking, which is the
- * argument `fillSeats` already makes about the prompts a line-up raises.
+ * (`domain/challenge.ts`). Mapping the rest would be a DTO nobody is checking — the argument
+ * `fillSeats` made about the prompts a line-up raises, right up until those prompts gained a
+ * reader and stopped being a list nothing read
+ * ([#287](https://github.com/Raketa02/Raketa/issues/287)). Which is the shape of the answer
+ * here too: these fields are mapped by the ticket that draws them.
  */
 
 import type { components } from '@/generated/schema';

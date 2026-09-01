@@ -38,6 +38,7 @@ import {
   errorResponse,
   installTransport,
   json,
+  noContent,
   type Transport,
   type Wire,
 } from '@/test-support/transport';
@@ -65,6 +66,7 @@ import {
 } from './builderPresentation';
 import { WITHHELD_SEAT_LINE, optimisedForLine, unfilledSeatLine } from './courtPresentation';
 import { playErrorMessage } from './playErrorMessage';
+import { promptControls, promptCopy } from './promptPresentation';
 import { engineFillStatus, poolRankingStatus } from './searchingPresentation';
 import { searchingFloorMs } from './searchingWait';
 
@@ -75,6 +77,8 @@ const ENGINE_FILL = engineFillStatus({ playersInRange: undefined }).headline;
 const SEARCHES = '/api/v1/searches';
 const LINEUPS = '/api/v1/lineups';
 const FORECASTS = '/api/v1/forecasts';
+const DECLINES = '/api/v1/prompt-declines';
+const RADIUS = '/api/v1/players/me/search-radius';
 
 const SEARCH_ID = 'e0f1a2b3-c4d5-4e6f-8a9b-0c1d2e3f4a5b';
 const LINEUP_ID = 'a1b2c3d4-0000-4000-8000-00000000000f';
@@ -191,6 +195,8 @@ const THREE_WAYS = [
 interface FullCourt {
   readonly optimisedFor?: Wire['OptimisedFor'];
   readonly candidates?: Wire['LineupResponse']['candidates'];
+  /** The questions this fill raises. Absent on every fixture that is not about them. */
+  readonly prompts?: readonly Wire['PromptSchema'][];
 }
 
 /** ⚡'s answer with every seat taken. */
@@ -199,6 +205,7 @@ function seatedFour(over: FullCourt = {}): Wire['LineupResponse'] {
     search: envelope(LINEUP_ID, {
       surface: 'LINEUP',
       ...(over.optimisedFor === undefined ? {} : { optimised_for: over.optimisedFor }),
+      ...(over.prompts === undefined ? {} : { prompts: [...over.prompts] }),
     }),
     candidates: over.candidates ?? [card(B), card(C), card(D)],
     lineup: {
@@ -269,6 +276,8 @@ beforeEach(() => {
   transport.on('POST', SEARCHES, () => json(shortlist()));
   transport.on('POST', LINEUPS, () => json(seatedFour()));
   transport.on('POST', FORECASTS, () => json(forecastResponse()));
+  transport.on('POST', DECLINES, () => noContent());
+  transport.on('PUT', RADIUS, () => json<Wire['SearchRadiusResponse']>({ search_radius_km: 22 }));
 });
 
 afterEach(async () => {
@@ -844,5 +853,100 @@ describe('when it fails', () => {
 
     expect(await screen.findByText(offlineMessage('resumes'))).toBeTruthy();
     expect(screen.queryByText(ENGINE_FILL)).toBeNull();
+  });
+});
+
+/**
+ * **The questions ⚡ raises, and the beat there is nowhere to put them in.**
+ *
+ * `POST /lineups` mints a search like `POST /searches` does, so it raises prompts like one.
+ * Find a game asks them between the latch lifting and the court being pushed; here the court
+ * **is** what the fill landed on, so the sheet stands in front of an answer that is already on
+ * screen — and the one prompt whose *yes* is a request for the week grid never reaches a screen
+ * that has no grid ([#287](https://github.com/Raketa02/Raketa/issues/287)).
+ */
+describe('the question ⚡ raised', () => {
+  const KEEP_THIS_RADIUS = promptCopy({ prompt: 'KEEP_THIS_RADIUS', radiusKm: 22 }).title;
+  const REFRESH_YOUR_TIMES = promptCopy({ prompt: 'REFRESH_YOUR_TIMES' }).title;
+
+  const raising = (prompts: readonly Wire['PromptSchema'][]) =>
+    transport.on('POST', LINEUPS, () => json(seatedFour({ prompts })));
+
+  it('waits for the latch, and is asked over the court the fill landed on', async () => {
+    raising([{ prompt: 'KEEP_THIS_RADIUS', radius_km: 22 }]);
+    await openTheBuilder();
+
+    fireEvent.press(screen.getByLabelText(fillSeatsLabel({ seats: 4, filled: 1 })));
+    await screen.findByText(ENGINE_FILL);
+    await waitFor(() => expect(transport.requestsTo('POST', LINEUPS)).toHaveLength(1));
+
+    // The answer is in memory and the question is not on screen: the wait is what the sheet
+    // is behind, and the court is what the wait lifts onto.
+    expect(screen.queryByText(KEEP_THIS_RADIUS)).toBeNull();
+
+    act(() =>
+      jest.advanceTimersByTime(searchingFloorMs({ kind: 'fill', seats: 4, collapsed: false })),
+    );
+
+    expect(await screen.findByText(KEEP_THIS_RADIUS)).toBeTruthy();
+    // Nothing was pushed: the court under the sheet is the one ⚡ filled.
+    expect(screen).toHavePathname('/play/builder');
+  });
+
+  it('writes its yes through the route that owns the value, and no decline', async () => {
+    raising([{ prompt: 'KEEP_THIS_RADIUS', radius_km: 22 }]);
+    await openTheBuilder();
+    await pressFill();
+    await screen.findByText(KEEP_THIS_RADIUS);
+
+    fireEvent.press(screen.getByLabelText(promptControls('KEEP_THIS_RADIUS').accept));
+
+    await waitFor(() => expect(transport.requestsTo('PUT', RADIUS)).toHaveLength(1));
+    expect(transport.requestsTo('PUT', RADIUS)[0]?.body).toEqual({ search_radius_km: 22 });
+    expect(transport.requestsTo('POST', DECLINES)).toEqual([]);
+    // Answered, and the court ⚡ filled is what the sheet closes onto — nothing was pushed.
+    await waitFor(() => expect(screen.queryByText(KEEP_THIS_RADIUS)).toBeNull());
+    expect(screen.getByLabelText(summary(4))).toBeTruthy();
+  });
+
+  it('is a decline when it is dismissed, written about the question and never the value', async () => {
+    raising([{ prompt: 'KEEP_THIS_RADIUS', radius_km: 22 }]);
+    await openTheBuilder();
+    await pressFill();
+    await screen.findByText(KEEP_THIS_RADIUS);
+
+    fireEvent.press(screen.getByLabelText(promptControls('KEEP_THIS_RADIUS').close));
+
+    await waitFor(() => expect(transport.requestsTo('POST', DECLINES)).toHaveLength(1));
+    expect(transport.requestsTo('POST', DECLINES)[0]?.body).toEqual({
+      prompt: 'KEEP_THIS_RADIUS',
+      sport: 'PADEL',
+    });
+    // Answered, and the court it was asked over is reachable again.
+    await waitFor(() => expect(screen.queryByText(KEEP_THIS_RADIUS)).toBeNull());
+    expect(screen.getByLabelText(summary(4))).toBeTruthy();
+  });
+
+  /**
+   * Dropped rather than truncated to, which is why the fixture puts it first: what the sheet
+   * asks is the next question a screen with no week grid can honour.
+   */
+  it('is never the one whose yes is a week grid this screen does not have', async () => {
+    raising([{ prompt: 'REFRESH_YOUR_TIMES' }, { prompt: 'KEEP_THIS_RADIUS', radius_km: 22 }]);
+    await openTheBuilder();
+    await pressFill();
+
+    expect(await screen.findByText(KEEP_THIS_RADIUS)).toBeTruthy();
+    expect(screen.queryByText(REFRESH_YOUR_TIMES)).toBeNull();
+  });
+
+  it('leaves the court alone where the only question raised is that one', async () => {
+    raising([{ prompt: 'REFRESH_YOUR_TIMES' }]);
+    await openTheBuilder();
+    await pressFill();
+
+    // No sheet at all — the filled court is reachable, which it would not be behind one.
+    expect(await screen.findByLabelText(summary(4))).toBeTruthy();
+    expect(screen.queryByText(REFRESH_YOUR_TIMES)).toBeNull();
   });
 });

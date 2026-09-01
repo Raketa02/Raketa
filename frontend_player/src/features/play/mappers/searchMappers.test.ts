@@ -201,4 +201,21 @@ describe('the questions a search raises', () => {
       ),
     ).toEqual([]);
   });
+
+  /**
+   * The same drop, from the **client's** side of the pair. `KEEP_THESE_TIMES` is two weeks and
+   * only one of them crosses the wire; a build that does not hold the other cannot draw the
+   * diff, and an empty list in its place would be a grid against a week nobody has (#287).
+   */
+  it('drops the two-week prompt where the profile’s own week has not landed', () => {
+    const raised = toRaisedPrompts(
+      shortlist([
+        { prompt: 'KEEP_THESE_TIMES', slots: [{ day: 2, part: 'EVENING' }] },
+        { prompt: 'KEEP_THIS_RADIUS', radius_km: 22 },
+      ]),
+      { ...QUOTED, profileWeek: undefined },
+    );
+
+    expect(raised).toEqual([{ prompt: 'KEEP_THIS_RADIUS', radiusKm: 22 }]);
+  });
 });

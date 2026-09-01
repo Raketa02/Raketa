@@ -149,8 +149,15 @@ export interface PromptQuotes {
    * The cells rather than their count, because the sheet draws the two weeks against each
    * other as a grid and quotes the count off the same list it draws
    * ([#275](https://github.com/Raketa02/Raketa/issues/275)).
+   *
+   * **`undefined` is a build that does not hold it**, and it is stated rather than omitted:
+   * the builder raises prompts off a court whose profile read may still be in flight
+   * ([#287](https://github.com/Raketa02/Raketa/issues/287)), and a caller that quietly passed
+   * an empty list would draw a diff against a week nobody has. It is the missing half of a
+   * payload, so the prompt it belongs to is **dropped** exactly as one arriving without its
+   * `slots` is — §3's rule, arriving from the client's side of the pair.
    */
-  readonly profileWeek: readonly WeekCell[];
+  readonly profileWeek: readonly WeekCell[] | undefined;
 }
 
 /**
@@ -163,6 +170,10 @@ export interface PromptQuotes {
  * the engine compares the **post-rung** grid the search actually ran on against the profile's,
  * and only it knows what the first of those was — so the wire sends `slots`, the profile's
  * week is the read the screen already holds, and neither side computes the other's half.
+ *
+ * **Three routes answer with a `search` envelope and all three raise prompts** — `POST
+ * /searches`, `POST /lineups` and `POST /deck` — so this reads the envelope and nothing else,
+ * exactly as `toOriginSearch` beside it does ([#287](https://github.com/Raketa02/Raketa/issues/287)).
  */
 export function toRaisedPrompts(
   response: ShortlistResponse,
@@ -177,7 +188,7 @@ function toRaisedPrompt(raised: PromptSchema, quoted: PromptQuotes): RaisedPromp
       // `undefined` is *not this prompt* and `[]` is *a cleared week* — two absences the
       // contract deliberately stopped conflating (#247), so `?? []` here would be this side
       // re-conflating them and offering to save a week nobody ran a search on.
-      return raised.slots === undefined
+      return raised.slots === undefined || quoted.profileWeek === undefined
         ? undefined
         : {
             prompt: 'KEEP_THESE_TIMES',

@@ -499,10 +499,26 @@ replacement is route-local and needs no clearing rule, because the court pops.
 **A search that raised a question asks it on `SH.saveav`, and dismissing it is an answer.**
 One sheet for all four prompts, keyed per prompt, with **no string of its own** — the title, the
 body, §F2's closer, the suppression sentence and both control names come off the copy deck, so
-a fifth prompt fails to compile there rather than drawing an unlabelled button. It is asked
-**after the latch lifts and before the court is pushed**: the prompts ride on the search's own
-response, so _it never blocks_ is arithmetic, and what the sheet stands in front of is the
-**court** — the week, the radius and the declaration are all edited on the screen underneath it.
+a fifth prompt fails to compile there rather than drawing an unlabelled button. On Find a game
+it is asked **after the latch lifts and before the court is pushed**: the prompts ride on the
+search's own response, so _it never blocks_ is arithmetic, and what the sheet stands in front of
+is the **court** — the week, the radius and the declaration are all edited on the screen
+underneath it. **Three routes raise prompts and only that one pushes anywhere.** ⚡ mints a
+search of its own and a deal mints one per hand, so the builder and the deck draw the same
+sheet — the builder once its own latch lifts, the deck as soon as the deal lands — and on both
+it stands in front of an answer already on screen rather than in front of a push. Neither has a
+week grid, so `REFRESH_YOUR_TIMES` is **dropped by the use-case before it reaches either**:
+asking a question whose only answer is a control that is not on the screen would, since
+dismissal is _not now_ and _not now_ suppresses for thirty days, spend the offer on the one
+surface that cannot honour it. What that leaves those two is a sheet whose only answer is
+_carry on_. **The deck remembers its questions by the sport and the code rather than by the
+deal**, because a deal is not a press — the entry deal is an effect and a spent hand deals again
+on its own — so a `search_id` key would put _Keep these times?_ in front of a player again every
+ten cards; ⚡ and _Search_ are presses, and both key by the search they minted. That memory is
+what makes the deck draw the **first unasked** prompt rather than the first one: every later
+list starts with the same leading code, so picking `prompts[0]` and _then_ finding it answered
+would go silent for the whole visit with a second question standing behind it. One deal still
+asks one question — the deal that took an answer is held for exactly that.
 **The two answers land in two modules**, which is the shape worth knowing: a _yes_ is a `PUT`
 through the route that owns the value — `player_profile`'s week, radius or declaration — and a
 _not now_ is `POST /api/v1/prompt-declines`, a durable row about **the question**, keyed by the

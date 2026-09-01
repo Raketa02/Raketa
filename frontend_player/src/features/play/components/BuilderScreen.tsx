@@ -48,6 +48,19 @@
  * whole of what §11.3 permits. The bar belongs where a served advantage exists — the candidate
  * card's `LEVEL_FIT` evidence, where it already is.
  *
+ * ## ⚡ raises questions, and the sheet has nowhere to stand in front of
+ *
+ * `POST /lineups` mints a search like `POST /searches` does, and a minted search raises
+ * prompts. Find a game asks them between the latch lifting and the court being pushed; here
+ * the court **is** what the fill landed on, so the sheet stands in front of an answer already
+ * on screen and closing it is the whole of where anybody goes
+ * ([#287](https://github.com/Raketa02/Raketa/issues/287)).
+ *
+ * **`REFRESH_YOUR_TIMES` never reaches this screen.** Its *yes* is a request for the week
+ * grid, this screen has none, and a sheet drawing it would either promise a control that is
+ * not here or — since dismissal is *not now*, and *not now* suppresses for thirty days — spend
+ * the offer on the surface that cannot honour it. The use-case drops it.
+ *
  * ## The one thing on this screen that reaches another person
  *
  * *"Searching, browsing, seating, swapping and replacing produce nothing outbound"* — and then
@@ -174,6 +187,7 @@ import {
   seatsOpenLine,
 } from './builderPresentation';
 import { CourtBuild } from './court/CourtBuild';
+import { PromptSheet } from './PromptSheet';
 import type { CourtSeatOccupant } from './court/CourtSeat';
 import {
   WITHHELD_SEAT_LINE,
@@ -314,6 +328,16 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
    */
   const sendControl = useRef<View>(null);
 
+  /**
+   * Where the prompt sheet hands focus back — **⚡, which is what raised it.**
+   *
+   * Null exactly when the fill filled the court, because that is when the two ways of filling
+   * it are replaced by the send. `moveAccessibilityFocus` is silent on an empty ref, so a full
+   * fill returns a listener to the platform's own landing rather than onto the send control,
+   * which is the last place a question about a radius should leave anybody.
+   */
+  const fillControl = useRef<View>(null);
+
   const origin = record?.origin;
   const sport = origin?.sport;
   const seats = sport === undefined ? 0 : courtSeatCount(sport);
@@ -446,6 +470,38 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
   const playersInRange = fill.isSuccess ? fill.data.playersInRange : undefined;
 
   /**
+   * **The question ⚡ raised, and the beat it is asked in.**
+   *
+   * The **first** prompt and never a stack of them, for Find a game's reason: the response
+   * orders them in the vocabulary's own order, so a client drawing the first one it understands
+   * draws the same one twice for the same search. What reaches here is already filtered to the
+   * ones a screen with no week grid can honour (`use-cases/fillSeats`).
+   *
+   * It is asked **after the latch lifts**, and there it stops. Find a game puts the sheet
+   * between the wait and the push because the court is somewhere else; ⚡ fills the court the
+   * player is already looking at, so what the sheet stands in front of is an answer that has
+   * already landed and closing it is the whole of where anybody goes
+   * ([#287](https://github.com/Raketa02/Raketa/issues/287)).
+   *
+   * Keyed by the **search the fill minted**, exactly as Find a game keys by the one its search
+   * minted — and unlike the deck, which needs a wider key because a deal is not a press. ⚡ is,
+   * so a second press is a second question worth asking.
+   */
+  const [answeredFor, setAnsweredFor] = useState<string | undefined>(undefined);
+  const filledSearch = fill.isSuccess ? fill.data.record.searchId : undefined;
+  const raised = fill.isSuccess ? fill.data.prompts[0] : undefined;
+  /**
+   * The question and everything needed to draw it, or nothing — **one value, because the
+   * overlay behind it and the sheet itself must not be able to disagree.** Two expressions for
+   * one sheet is a screen that can hide itself behind a modal it did not mount.
+   */
+  const question =
+    raised === undefined || filledSearch === undefined || sport === undefined
+      ? undefined
+      : { raised, sport, search: filledSearch };
+  const asking = question !== undefined && !latched && answeredFor !== question.search;
+
+  /**
    * **The third live region**, and the one nobody else could have claimed (§20.9).
    *
    * Moving a player across the net changes the forecast **while focus stays on the seat that
@@ -469,7 +525,15 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
   function fillTheSeats() {
     if (origin === undefined) return;
     fill.mutate(
-      { origin, lockedSeats: members, sentWeek },
+      {
+        origin,
+        lockedSeats: members,
+        sentWeek,
+        // The profile's own week may not have landed, and that is stated rather than replaced
+        // with an empty one: the prompt that would have quoted it is dropped instead of drawn
+        // against a grid nobody holds (`use-cases/fillSeats`).
+        quotes: { sportName: sportLabel(origin.sport), profileWeek: profile?.week },
+      },
       {
         onSuccess: ({ record: answer }) => {
           // Both halves of one act: the answer's own search becomes the origin, and the people
@@ -594,7 +658,10 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
           same hide as the latch — a modal sheet's Part 13 obligation is that the tree behind
           it says so, and here that tree holds a second control spelled with the sheet's own
           words. */}
-      <View style={s.root} {...behindOverlay(latched || proposing || explained !== undefined)}>
+      <View
+        style={s.root}
+        {...behindOverlay(latched || proposing || explained !== undefined || asking)}
+      >
         <ShellScreen
           title={builderTitle({ seats, filled })}
           eyebrow={
@@ -643,14 +710,20 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
                 {fill.isPaused ? <Note variant="amber">{offlineMessage('resumes')}</Note> : null}
 
                 {/* The failed act's own control is the retry — ⚡ is what failed, and pressing
-                    it again is that act rather than the screen it failed on (`retryTarget`). */}
-                <Button
-                  label={fillSeatsLabel({ seats, filled })}
-                  size="lg"
-                  busy={fill.isPending}
-                  busyLabel={FILLING_LABEL}
-                  onPress={fillTheSeats}
-                />
+                    it again is that act rather than the screen it failed on (`retryTarget`).
+
+                    A `View` around it for `sendControl`'s reason: focus has to land on a
+                    **host element** this component holds a ref to, and `Button` is a
+                    component. It is where the prompt sheet hands focus back. */}
+                <View ref={fillControl}>
+                  <Button
+                    label={fillSeatsLabel({ seats, filled })}
+                    size="lg"
+                    busy={fill.isPending}
+                    busyLabel={FILLING_LABEL}
+                    onPress={fillTheSeats}
+                  />
+                </View>
                 <Button
                   label={PICK_PLAYERS_LABEL}
                   variant="secondary"
@@ -872,6 +945,29 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
       </View>
 
       <SearchingLatch visible={latched} status={engineFillStatus({ playersInRange })} />
+
+      {/* `SH.saveav` — the questions ⚡'s own search raised, asked once the latch is off them.
+          A **sibling** for the latch's reason: a `Modal` presents in its own window, and the
+          screen root behind it says so itself. It carries the sport because the decline route
+          takes one on every prompt, and the origin is the only thing that knows which.
+
+          It stays mounted after it is answered rather than only while it is up, so `visible`
+          going false has somewhere to hand focus back — which is ⚡, the control that raised
+          it. **A fill that filled the court has unmounted ⚡** and replaced it with the send, so
+          the ref is empty exactly then; that is the honest nothing rather than a listener
+          landed on the app's one irreversible act (`PromptSheet`, `moveAccessibilityFocus`).
+
+          `key` is the minted search id, so one fill is one question and a second ⚡ asks again. */}
+      {question === undefined ? null : (
+        <PromptSheet
+          key={question.search}
+          visible={asking}
+          raised={question.raised}
+          sport={question.sport}
+          returnFocusTo={fillControl}
+          onAnswered={() => setAnsweredFor(question.search)}
+        />
+      )}
 
       {/* `SH.whyfit`, over the court — the only place a **seated** player's Fit is explained,
           because the pool removes everybody already on the court from the one surface that

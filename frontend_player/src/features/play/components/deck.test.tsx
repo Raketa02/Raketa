@@ -56,11 +56,14 @@ import {
 } from './deckPresentation';
 import { playErrorMessage } from './playErrorMessage';
 import { metaLine } from './playerCardPresentation';
+import { promptControls, promptCopy } from './promptPresentation';
 import { poolDescription } from './searchPresentation';
 
 const DECK = '/api/v1/deck';
 const INTEREST = '/api/v1/interest';
 const PASSES = '/api/v1/passes';
+const DECLINES = '/api/v1/prompt-declines';
+const RADIUS = '/api/v1/players/me/search-radius';
 
 const SEARCH_ID = 'd0d1a2b3-c4d5-4e6f-8a9b-0c1d2e3f4a5b';
 
@@ -159,6 +162,8 @@ interface DealtOver {
    * `null` here asks this fixture for that response.
    */
   readonly myAreaCode?: string | null;
+  /** The questions this deal raises. Empty on every fixture that is not about them. */
+  readonly prompts?: readonly Wire['PromptSchema'][];
 }
 
 function deal({
@@ -167,6 +172,7 @@ function deal({
   radiusClamp = false,
   searchId = SEARCH_ID,
   myAreaCode = HERE,
+  prompts = [],
 }: DealtOver = {}): Wire['ShortlistResponse'] {
   return {
     search: {
@@ -190,6 +196,7 @@ function deal({
       sorts_available: [],
       rung_offers: null,
       ...(myAreaCode === null ? {} : { my_area_code: myAreaCode }),
+      prompts: [...prompts],
     },
     candidates: [...candidates],
   };
@@ -222,6 +229,8 @@ beforeEach(() => {
   transport.on('POST', DECK, () => json(deal()));
   transport.on('POST', INTEREST, () => json(expressed(false), 201));
   transport.on('POST', PASSES, () => noContent());
+  transport.on('POST', DECLINES, () => noContent());
+  transport.on('PUT', RADIUS, () => json<Wire['SearchRadiusResponse']>({ search_radius_km: 22 }));
 });
 
 afterEach(async () => {
@@ -628,5 +637,169 @@ describe('the footer, and what it promises', () => {
     await openDeck();
 
     expect(screen.getByLabelText('Play').props.accessibilityState?.selected).toBe(true);
+  });
+});
+
+/**
+ * **The questions a deal raises, and the two things that are different about asking them here.**
+ *
+ * A deal is not a press — the entry deal is an effect and a spent hand deals again on its own —
+ * so *asked once* has to hold across deals rather than across searches. And the deck has no
+ * week grid, so the one prompt whose *yes* is a request for one never reaches it
+ * ([#287](https://github.com/Raketa02/Raketa/issues/287)).
+ */
+describe('the question a deal raised', () => {
+  const KEEP_THIS_RADIUS = promptCopy({ prompt: 'KEEP_THIS_RADIUS', radiusKm: 22 }).title;
+  const REFRESH_YOUR_TIMES = promptCopy({ prompt: 'REFRESH_YOUR_TIMES' }).title;
+  const UPDATE_PLAY_INTENT = promptCopy({
+    prompt: 'UPDATE_PLAY_INTENT',
+    sportName: 'Padel',
+    mode: 'FOR_FUN',
+  }).title;
+
+  it('is asked over the card the deal has already dealt', async () => {
+    transport.on('POST', DECK, () =>
+      json(deal({ prompts: [{ prompt: 'KEEP_THIS_RADIUS', radius_km: 22 }] })),
+    );
+    await openDeck();
+
+    // There is no push to stand in front of and no wait to lift: the deal is recorded, the
+    // card is behind the sheet, and closing it is the whole of where anybody goes.
+    expect(await screen.findByText(KEEP_THIS_RADIUS)).toBeTruthy();
+    expect(dealBodies()).toHaveLength(1);
+  });
+
+  it('writes its yes through the route that owns the value', async () => {
+    transport.on('POST', DECK, () =>
+      json(deal({ prompts: [{ prompt: 'KEEP_THIS_RADIUS', radius_km: 22 }] })),
+    );
+    await openDeck();
+    await screen.findByText(KEEP_THIS_RADIUS);
+
+    fireEvent.press(screen.getByLabelText(promptControls('KEEP_THIS_RADIUS').accept));
+
+    await waitFor(() => expect(transport.requestsTo('PUT', RADIUS)).toHaveLength(1));
+    expect(transport.requestsTo('PUT', RADIUS)[0]?.body).toEqual({ search_radius_km: 22 });
+    expect(transport.requestsTo('POST', DECLINES)).toEqual([]);
+  });
+
+  /**
+   * The half a `search_id` key would get wrong. A spent hand deals again by itself, and the
+   * condition a prompt is raised on does not change because ten cards were answered — so a
+   * question keyed by the deal would be put in front of the player again every ten cards.
+   */
+  it('is not asked again by the deal that follows it', async () => {
+    transport.on('POST', DECK, () =>
+      json(deal({ prompts: [{ prompt: 'KEEP_THIS_RADIUS', radius_km: 22 }] })),
+    );
+    await openDeck();
+    await screen.findByText(KEEP_THIS_RADIUS);
+
+    fireEvent.press(screen.getByLabelText(promptControls('KEEP_THIS_RADIUS').decline));
+    await waitFor(() => expect(transport.requestsTo('POST', DECLINES)).toHaveLength(1));
+
+    // Answering the last card spends the deal, so the screen deals again — and the second
+    // answer raises the same question, off a second `search_id`.
+    transport.on('POST', DECK, () =>
+      json(
+        deal({
+          searchId: 'second-deal',
+          prompts: [{ prompt: 'KEEP_THIS_RADIUS', radius_km: 22 }],
+        }),
+      ),
+    );
+    fireEvent.press(await screen.findByLabelText('Not today, Marek Z.'));
+    await waitFor(() => expect(dealBodies()).toHaveLength(2));
+
+    expect(await screen.findByLabelText(/^Marek Z\./)).toBeTruthy();
+    expect(screen.queryByText(KEEP_THIS_RADIUS)).toBeNull();
+  });
+
+  /**
+   * One deal asks one question. Answering promotes whatever was behind it, and a second sheet
+   * opening onto the first one closing is the stack the response ordering exists to prevent.
+   */
+  it('does not put the question behind it onto the same deal', async () => {
+    transport.on('POST', DECK, () =>
+      json(
+        deal({
+          prompts: [
+            { prompt: 'KEEP_THIS_RADIUS', radius_km: 22 },
+            { prompt: 'UPDATE_PLAY_INTENT', mode: 'FOR_FUN' },
+          ],
+        }),
+      ),
+    );
+    await openDeck();
+    await screen.findByText(KEEP_THIS_RADIUS);
+
+    fireEvent.press(screen.getByLabelText(promptControls('KEEP_THIS_RADIUS').decline));
+
+    await waitFor(() => expect(screen.queryByText(KEEP_THIS_RADIUS)).toBeNull());
+    expect(screen.queryByText(UPDATE_PLAY_INTENT)).toBeNull();
+    expect(await screen.findByLabelText(/^Marek Z\./)).toBeTruthy();
+  });
+
+  /**
+   * The half a `prompts[0]`-then-check would lose. Every later list starts with the same
+   * leading code, so a screen that picked the first prompt and *then* found it answered would
+   * go silent for the rest of the visit with a second question standing right behind it.
+   */
+  it('asks the question behind it on the deal that follows', async () => {
+    const raising = () =>
+      json(
+        deal({
+          searchId: `deal-${transport.requestsTo('POST', DECK).length}`,
+          prompts: [
+            { prompt: 'KEEP_THIS_RADIUS', radius_km: 22 },
+            { prompt: 'UPDATE_PLAY_INTENT', mode: 'FOR_FUN' },
+          ],
+        }),
+      );
+    transport.on('POST', DECK, raising);
+    await openDeck();
+    await screen.findByText(KEEP_THIS_RADIUS);
+
+    fireEvent.press(screen.getByLabelText(promptControls('KEEP_THIS_RADIUS').decline));
+    await waitFor(() => expect(screen.queryByText(KEEP_THIS_RADIUS)).toBeNull());
+
+    // Answering the last card spends the deal, so the screen deals again — and the second
+    // deal raises the same two questions, the first of which has been answered this visit.
+    fireEvent.press(await screen.findByLabelText('Not today, Marek Z.'));
+    await waitFor(() => expect(dealBodies()).toHaveLength(2));
+
+    expect(await screen.findByText(UPDATE_PLAY_INTENT)).toBeTruthy();
+    expect(screen.queryByText(KEEP_THIS_RADIUS)).toBeNull();
+  });
+
+  /**
+   * `REFRESH_YOUR_TIMES`'s *yes* hands the player back to the week grid, and this screen has
+   * none. It is **dropped** rather than truncated to, which is why the fixture puts it first:
+   * what the sheet asks is the next question the deck can honour.
+   */
+  it('is never the one whose yes is a week grid this screen does not have', async () => {
+    transport.on('POST', DECK, () =>
+      json(
+        deal({
+          prompts: [
+            { prompt: 'REFRESH_YOUR_TIMES' },
+            { prompt: 'KEEP_THIS_RADIUS', radius_km: 22 },
+          ],
+        }),
+      ),
+    );
+    await openDeck();
+
+    expect(await screen.findByText(KEEP_THIS_RADIUS)).toBeTruthy();
+    expect(screen.queryByText(REFRESH_YOUR_TIMES)).toBeNull();
+  });
+
+  it('leaves the card alone where the only question raised is that one', async () => {
+    transport.on('POST', DECK, () => json(deal({ prompts: [{ prompt: 'REFRESH_YOUR_TIMES' }] })));
+    await openDeck();
+
+    // No sheet at all — the card the deal dealt is reachable, which it would not be behind one.
+    expect(await screen.findByLabelText(/^Marek Z\./)).toBeTruthy();
+    expect(screen.queryByText(REFRESH_YOUR_TIMES)).toBeNull();
   });
 });

@@ -59,9 +59,27 @@
  * **A mode.** The deck has none — `SearchEnvelope.mode` is null exactly here — so it reads the
  * player's own declaration, and the interstitial is what makes that readable.
  *
- * **A prompt sheet.** A deal raises `KEEP_THESE_TIMES` like a search does, and `SH.saveav`
- * ([#275](https://github.com/Raketa02/Raketa/issues/275)) is where either surface gains a
- * reader for one.
+ * **Anywhere for the prompt sheet to send anybody.** A deal raises questions like a search
+ * does and the sheet answers them here now
+ * ([#287](https://github.com/Raketa02/Raketa/issues/287)) — but a deal replaces the card in
+ * place, so there is no push for the sheet to stand in front of. It stands in front of the
+ * card that has already arrived, and closing it is the whole of where anybody goes.
+ *
+ * **`REFRESH_YOUR_TIMES`.** Its *yes* hands the player back to the week grid and this screen
+ * has none, so the deal drops it before it reaches here (`use-cases/dealDeck`). What that
+ * leaves is a sheet whose only answer is *carry on*.
+ *
+ * **A second sheet for a question already answered here.** A deal is not a press — the entry
+ * deal is an effect and a spent hand deals again on its own — so a question keyed by the
+ * **deal** would be re-asked every ten cards for as long as the condition holds, which on
+ * `KEEP_THESE_TIMES` is every deal of the visit. What is remembered instead is the sport and
+ * the question (`domain/raisedPrompt`), and answered once is answered for the visit.
+ *
+ * That memory is what makes the **first unasked** prompt the one to draw rather than the first
+ * one: every later list starts with the same leading code, so a screen that took `prompts[0]`
+ * and then found it answered would go silent for the rest of the visit with a second question
+ * standing behind it. One deal still asks at most one question — the deal that took an answer
+ * is held for exactly that, so answering does not promote the next one onto the same card.
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -79,6 +97,12 @@ import type { Sport } from '@/shared/vocabulary/sport';
 import type { Candidate } from '../domain/candidate';
 import { deckStanding } from '../domain/deckHand';
 import { findAGameStanding } from '../domain/findAGame';
+import {
+  NOTHING_ASKED,
+  alsoAsked,
+  firstUnasked,
+  type AskedQuestions,
+} from '../domain/raisedPrompt';
 import { differsFromProfile } from '../domain/workingWeek';
 import { useDealDeck, useOutstandingInterest, useSayNo, useSayYes } from '../hooks/useDeck';
 import { usePlayPreferences } from '../store/playPreferences.store';
@@ -88,6 +112,7 @@ import type { DeckAsk } from '../use-cases/dealDeck';
 import { DeckStage } from './DeckStage';
 import { DeclarationInterstitial } from './DeclarationInterstitial';
 import { PlaySegment } from './PlaySegment';
+import { PromptSheet } from './PromptSheet';
 import { SportChips } from './SportChips';
 import { DeckCard } from './candidate/DeckCard';
 import {
@@ -138,6 +163,19 @@ export function DeckScreen() {
   const [leaving, setLeaving] = useState<string | undefined>(undefined);
   const [explaining, setExplaining] = useState<Candidate | undefined>(undefined);
 
+  /**
+   * The questions already answered **on this visit**, and the deal that took the last answer.
+   *
+   * Two facts because they bound two different things, and dropping either one breaks a
+   * different case. `asked` is what stops a question being put again by the next deal —
+   * `domain/raisedPrompt` is where that key and its reasons live. `answeredOnThisDeal` is what
+   * stops the *next* question being put by the same one: answering promotes whatever was
+   * behind it, and a second sheet opening onto the first one closing is the stack the response
+   * ordering exists to prevent. One deal asks at most one question.
+   */
+  const [asked, setAsked] = useState<AskedQuestions>(NOTHING_ASKED);
+  const [answeredOnThisDeal, setAnsweredOnThisDeal] = useState<string | undefined>(undefined);
+
   /** The body of the card on screen — where focus goes when the next one arrives (§20.5). */
   const body = useRef<View>(null);
   /** Whether anybody has been answered, so the first card is not taken from the header. */
@@ -164,6 +202,7 @@ export function DeckScreen() {
           // already holds. A deck reached without passing through Find a game has no working
           // copy at all, and that is the same ask: run it on my profile's week.
           sentWeek: week !== undefined && differsFromProfile(week, profile.week) ? week : undefined,
+          quotes: { sportName: sportLabel(standing.sport), profileWeek: profile.week },
         }
       : undefined;
 
@@ -229,6 +268,30 @@ export function DeckScreen() {
     if (hand?.kind !== 'spent' || deal.isPending) return;
     dealAgain.current();
   }, [hand?.kind, deal.isPending]);
+
+  /**
+   * **The question this deal raised, and the beat it is asked in.**
+   *
+   * One question per deal and never a stack of them, for Find a game's reason: the response
+   * orders them in the vocabulary's own order precisely so a client drawing the first one it
+   * understands draws the same one twice for the same search. It is the first **unasked** one
+   * rather than the first one, which is the half a per-visit memory makes load-bearing — see
+   * `firstUnasked`. What reaches here is already filtered to the ones a screen with no week
+   * grid can honour (`use-cases/dealDeck`).
+   *
+   * The beat is **as soon as the deal lands**, because there is no wait to lift and nothing to
+   * push: the sheet stands in front of the card that has already arrived, which is the whole of
+   * this screen's arrangement.
+   */
+  const raised =
+    dealt === undefined || onThisSport === undefined
+      ? undefined
+      : firstUnasked(dealt.prompts, onThisSport, asked);
+  const question =
+    raised === undefined || onThisSport === undefined || dealt === undefined
+      ? undefined
+      : { raised, sport: onThisSport, deal: dealt.envelope.searchId };
+  const asking = question !== undefined && answeredOnThisDeal !== question.deal;
 
   const outstandingHere = onThisSport === undefined ? 0 : (interest.data?.[onThisSport] ?? 0);
   const readError = profileSurface.error ?? ratings.error;
@@ -296,7 +359,7 @@ export function DeckScreen() {
       {/* The sheet is a **sibling** of the screen it covers, never a child: `behindOverlay`
           hides everything inside the element carrying it, and an overlay rendered in there
           would hide itself along with the screen. */}
-      <View style={s.root} {...behindOverlay(explaining !== undefined)}>
+      <View style={s.root} {...behindOverlay(explaining !== undefined || asking)}>
         <ShellScreen title={MATCH_ME_TITLE}>
           <PlaySegment active="match" outstanding={outstandingHere} />
 
@@ -396,6 +459,32 @@ export function DeckScreen() {
           )}
         </ShellScreen>
       </View>
+
+      {/* A **sibling** for `WhyFitSheet`'s reason — a `Modal` presents in its own window, and
+          the screen root behind it says so itself. It carries the sport because the decline
+          route takes one on every prompt, and only this screen knows which chip was dealt on.
+
+          It stays mounted after it is answered rather than only while it is up: `visible`
+          going false is what returns focus to the card, and a sheet that unmounted instead
+          would drop a listener at the top of the screen. The re-deal unmounts it, which is
+          correct — the question it was asking belonged to a deal nobody is holding.
+
+          `key` is the **question**, so one sheet is one question and the *answered once* guard
+          inside it cannot outlive the thing it was asked about. Deliberately not the deal: the
+          deal is what decides whether to ask at all, and it is read one line down. */}
+      {question === undefined ? null : (
+        <PromptSheet
+          key={`${question.sport}:${question.raised.prompt}`}
+          visible={asking}
+          raised={question.raised}
+          sport={question.sport}
+          returnFocusTo={body}
+          onAnswered={() => {
+            setAsked((held) => alsoAsked(held, question.sport, question.raised.prompt));
+            setAnsweredOnThisDeal(question.deal);
+          }}
+        />
+      )}
 
       {explaining === undefined || dealt === undefined ? null : (
         <WhyFitSheet
