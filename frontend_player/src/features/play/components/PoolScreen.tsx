@@ -76,9 +76,9 @@
  * on the 7×3 grid, marked as this-search-only, because otherwise the week the player just
  * filled in disagrees with the search that ran. `RungOfferSchema.slot` carries it and nothing
  * here reads it: the grid is *Find a game*'s surface, one screen back, and a tick drawn on a
- * screen the player is not looking at is not the requirement. **It is unbooked and needs a
- * ticket** — recorded here rather than left to be rediscovered, because the wire field looks
- * unused rather than deferred.
+ * screen the player is not looking at is not the requirement. It is
+ * [#283](https://github.com/Raketa02/Raketa/issues/283), pointed at from here because the wire
+ * field would otherwise read as unused rather than deferred.
  *
  * **A second live region over the running figure.** §20.9's third region announces the forecast
  * because it changes while focus is elsewhere, and that is as true here as on the court — but
