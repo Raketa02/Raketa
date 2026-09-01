@@ -32,7 +32,13 @@ import {
   stubProfileOptions,
   stubProfileSurface,
 } from '@/test-support/onboardingRouter';
-import { installTransport, json, type Transport, type Wire } from '@/test-support/transport';
+import {
+  installTransport,
+  json,
+  noContent,
+  type Transport,
+  type Wire,
+} from '@/test-support/transport';
 
 import { usePlayPreferences } from '../store/playPreferences.store';
 import { endPlaySession, usePlaySession } from '../store/playSession.store';
@@ -52,9 +58,12 @@ import {
 } from './poolPresentation';
 import { WEEK_ADDED_FOR_THIS_SEARCH } from './findAGamePresentation';
 import { forecastAssumption, relaxationOffer, sortLabel } from './searchPresentation';
+import { promptControls, promptCopy } from './promptPresentation';
 import { poolRankingStatus } from './searchingPresentation';
 
 const SEARCHES = '/api/v1/searches';
+const DECLINES = '/api/v1/prompt-declines';
+const RADIUS = '/api/v1/players/me/search-radius';
 const FORECASTS = '/api/v1/forecasts';
 
 const SEARCH_ID = 'e0f1a2b3-c4d5-4e6f-8a9b-0c1d2e3f4a5b';
@@ -198,6 +207,8 @@ beforeEach(() => {
   transport.on('POST', SEARCHES, () => json(shortlist()));
   transport.on('GET', `${SEARCHES}/${SEARCH_ID}`, () => json(shortlist()));
   transport.on('POST', FORECASTS, () => json(forecastResponse()));
+  transport.on('POST', DECLINES, () => noContent());
+  transport.on('PUT', RADIUS, () => json<Wire['SearchRadiusResponse']>({ search_radius_km: 22 }));
 });
 
 afterEach(async () => {
@@ -746,5 +757,169 @@ describe('replacing somebody', () => {
       originSearchId: SEARCH_ID,
       seats: [C],
     });
+  });
+});
+
+/**
+ * **The questions a climb raises**, on the fourth surface `SH.saveav` reaches
+ * ([#287](https://github.com/Raketa02/Raketa/issues/287)).
+ *
+ * `POST /searches` raises prompts wherever it is called and taking a rung calls it, so what is
+ * asserted here is the beat — a climb replaces the list in place, so the sheet stands in front
+ * of an answer already on screen — and the one question this screen cannot honour.
+ */
+describe('the question a climb raised', () => {
+  const KEEP_THIS_RADIUS = promptCopy({ prompt: 'KEEP_THIS_RADIUS', radiusKm: 22 }).title;
+  const REFRESH_YOUR_TIMES = promptCopy({ prompt: 'REFRESH_YOUR_TIMES' }).title;
+  const KEEP_THESE_TIMES = promptCopy({
+    prompt: 'KEEP_THESE_TIMES',
+    week: [],
+    profileWeek: [],
+  }).title;
+
+  /** A pool with one radius rung on it, whose climb answers raising `prompts`. */
+  function ladderRaising(prompts: readonly Wire['PromptSchema'][]) {
+    transport.on('POST', SEARCHES, (request) =>
+      json(
+        (request.body as { readonly offered_by_search_id?: string }).offered_by_search_id ===
+          undefined
+          ? shortlist({ rung_offers: [RADIUS_RUNG] })
+          : {
+              search: envelope(WIDER_ID, {
+                pool: {
+                  sport: 'PADEL',
+                  radius_km_used: 22,
+                  players_in_range: 11,
+                  window: 'THIS_WEEK',
+                  post_gate: true,
+                },
+                // A search that took a rung is offered none, which is what unmounts the
+                // control the sheet would otherwise hand focus back to.
+                rung_offers: [],
+                prompts: [...prompts],
+              }),
+              candidates: [card(B)],
+            },
+      ),
+    );
+  }
+
+  /** Take the widening, and spend the pool's own floor so the latch lifts onto the new list. */
+  async function climb() {
+    fireEvent.press(await screen.findByLabelText(rungLabel({ ask: 'RADIUS', radiusKm: 22 }, 9)));
+    await screen.findByText(
+      poolRankingStatus({ playersInRange: undefined, sportName: 'Padel' }).headline,
+    );
+    act(() => jest.advanceTimersByTime(2000));
+  }
+
+  it('waits for the latch, and is asked over the list the climb replaced', async () => {
+    ladderRaising([{ prompt: 'KEEP_THIS_RADIUS', radius_km: 22 }]);
+    await openThePool();
+
+    fireEvent.press(await screen.findByLabelText(rungLabel({ ask: 'RADIUS', radiusKm: 22 }, 9)));
+    await screen.findByText(
+      poolRankingStatus({ playersInRange: undefined, sportName: 'Padel' }).headline,
+    );
+    await waitFor(() => expect(transport.requestsTo('POST', SEARCHES)).toHaveLength(2));
+
+    // The answer is in memory and the question is not on screen: the wait is what the sheet
+    // is behind, and the widened list is what the wait lifts onto.
+    expect(screen.queryByText(KEEP_THIS_RADIUS)).toBeNull();
+
+    act(() => jest.advanceTimersByTime(2000));
+
+    expect(await screen.findByText(KEEP_THIS_RADIUS)).toBeTruthy();
+    // Nothing was pushed: the list under the sheet is the one the climb wrote.
+    expect(screen).toHavePathname('/play/pool');
+  });
+
+  /**
+   * The hinge ADR-0099 leaves open, drawn where the evidence is. Taking the rung wrote no
+   * radius; saying *yes* to the offer that follows it does, through the route that owns the
+   * value — which is what makes the two acts different rather than merely sequential.
+   */
+  it('writes its yes through the route that owns the value, and takes no rung with it', async () => {
+    ladderRaising([{ prompt: 'KEEP_THIS_RADIUS', radius_km: 22 }]);
+    await openThePool();
+    await climb();
+    await screen.findByText(KEEP_THIS_RADIUS);
+
+    fireEvent.press(screen.getByLabelText(promptControls('KEEP_THIS_RADIUS').accept));
+
+    await waitFor(() => expect(transport.requestsTo('PUT', RADIUS)).toHaveLength(1));
+    expect(transport.requestsTo('PUT', RADIUS)[0]?.body).toEqual({ search_radius_km: 22 });
+    // Two searches: the one the pool opened on and the climb. Answering ran neither.
+    expect(transport.requestsTo('POST', SEARCHES)).toHaveLength(2);
+    expect(transport.requestsTo('POST', DECLINES)).toEqual([]);
+  });
+
+  it('is a decline when it is dismissed, written about the question and never the value', async () => {
+    ladderRaising([{ prompt: 'KEEP_THIS_RADIUS', radius_km: 22 }]);
+    await openThePool();
+    await climb();
+    await screen.findByText(KEEP_THIS_RADIUS);
+
+    fireEvent.press(screen.getByLabelText(promptControls('KEEP_THIS_RADIUS').close));
+
+    await waitFor(() => expect(transport.requestsTo('POST', DECLINES)).toHaveLength(1));
+    expect(transport.requestsTo('POST', DECLINES)[0]?.body).toEqual({
+      prompt: 'KEEP_THIS_RADIUS',
+      sport: 'PADEL',
+    });
+    expect(transport.requestsTo('PUT', RADIUS)).toEqual([]);
+  });
+
+  /**
+   * The profile's own week is the client's half of `KEEP_THESE_TIMES`, and this screen holds
+   * it — so the diff is drawn against the week the profile actually has rather than against an
+   * empty one this screen substituted for a read that had not landed.
+   */
+  it('draws the week the climb ran on against the one the profile holds', async () => {
+    ladderRaising([
+      {
+        prompt: 'KEEP_THESE_TIMES',
+        slots: [
+          { day: 2, part: 'EVENING' },
+          { day: 1, part: 'MORNING' },
+        ],
+      },
+    ]);
+    await openThePool();
+    await climb();
+    await screen.findByText(KEEP_THESE_TIMES);
+
+    // The stub's profile week is Tuesday evening and Saturday morning.
+    expect(screen.getByLabelText('Monday morning, newly added')).toBeTruthy();
+    expect(screen.getByLabelText('Saturday morning, dropped')).toBeTruthy();
+  });
+
+  /**
+   * Dropped rather than truncated to, which is why the fixture puts it first: *"there is no
+   * grid on this screen"* is the same sentence that sends a rung's added cell two pushes back.
+   */
+  it('is never the one whose yes is a week grid this screen does not have', async () => {
+    ladderRaising([
+      { prompt: 'REFRESH_YOUR_TIMES' },
+      { prompt: 'KEEP_THIS_RADIUS', radius_km: 22 },
+    ]);
+    await openThePool();
+    await climb();
+
+    expect(await screen.findByText(KEEP_THIS_RADIUS)).toBeTruthy();
+    expect(screen.queryByText(REFRESH_YOUR_TIMES)).toBeNull();
+  });
+
+  it('leaves the widened list alone where the only question raised is that one', async () => {
+    ladderRaising([{ prompt: 'REFRESH_YOUR_TIMES' }]);
+    await openThePool();
+    await climb();
+
+    // No sheet at all — the standing statement the climb wrote is reachable, which it would
+    // not be behind one.
+    expect(
+      await screen.findByText(takenRungLine({ ask: 'RADIUS', radiusKm: 22, profileRadiusKm: 15 })),
+    ).toBeTruthy();
+    expect(screen.queryByText(REFRESH_YOUR_TIMES)).toBeNull();
   });
 });

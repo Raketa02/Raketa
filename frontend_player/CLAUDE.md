@@ -503,14 +503,19 @@ a fifth prompt fails to compile there rather than drawing an unlabelled button. 
 it is asked **after the latch lifts and before the court is pushed**: the prompts ride on the
 search's own response, so _it never blocks_ is arithmetic, and what the sheet stands in front of
 is the **court** — the week, the radius and the declaration are all edited on the screen
-underneath it. **Three routes raise prompts and only that one pushes anywhere.** ⚡ mints a
-search of its own and a deal mints one per hand, so the builder and the deck draw the same
-sheet — the builder once its own latch lifts, the deck as soon as the deal lands — and on both
-it stands in front of an answer already on screen rather than in front of a push. Neither has a
-week grid, so `REFRESH_YOUR_TIMES` is **dropped by the use-case before it reaches either**:
+underneath it. **Four surfaces raise prompts and only that one pushes anywhere.** ⚡ mints a
+search of its own, a deal mints one per hand, and taking a rung is `POST /searches` again — so
+the builder, the deck and the pool draw the same sheet, each once its own answer has landed,
+and on all three it stands in front of something already on screen rather than in front of a
+push. **`KEEP_THIS_RADIUS` on the pool is the ladder's own argument finished rather than a
+contradiction of it**: ADR-0099 refuses a rung _silently_ becoming a saved radius, and a sheet
+naming the number, the profile it has not touched and what _not now_ costs is the opposite of
+silent — asked on the one screen where the player can see what the widening bought. None of the
+three has a week grid, so `REFRESH_YOUR_TIMES` is **dropped by the use-case before it reaches
+any of them**:
 asking a question whose only answer is a control that is not on the screen would, since
 dismissal is _not now_ and _not now_ suppresses for thirty days, spend the offer on the one
-surface that cannot honour it. What that leaves those two is a sheet whose only answer is
+surface that cannot honour it. What that leaves those three is a sheet whose only answer is
 _carry on_. **The deck remembers its questions by the sport and the code rather than by the
 deal**, because a deal is not a press — the entry deal is an effect and a spent hand deals again
 on its own — so a `search_id` key would put _Keep these times?_ in front of a player again every

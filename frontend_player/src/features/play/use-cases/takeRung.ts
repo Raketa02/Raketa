@@ -32,10 +32,28 @@
  * rung is one search, widening in You is every future search, and `KEEP_THIS_RADIUS` is the
  * hinge between them — asked **after** evidence, by the engine, and answered by a route this
  * client does not call from here.
+ *
+ * ## The prompts ride back, minus the one the pool cannot answer
+ *
+ * The hinge above is the whole reason this surface draws them
+ * ([#287](https://github.com/Raketa02/Raketa/issues/287)). A climb is the moment the evidence
+ * exists — the player has just widened and can see what it bought — and `SH.saveav` is where
+ * the engine's offer to keep it is put as a question. **That is not the conflation two
+ * paragraphs up**: what ADR-0099 refuses is a rung *silently* becoming a saved radius, and a
+ * sheet naming the number, the profile it has not touched and what *not now* costs is the
+ * opposite of silent. Nothing here writes it either way — a *yes* goes out through
+ * `player_profile`'s own route, from `use-cases/answerPrompt`.
+ *
+ * **`REFRESH_YOUR_TIMES` is dropped rather than drawn**, for the reason `dealDeck` and
+ * `fillSeats` drop it: its *yes* is a request for the week grid, the pool has none — *"there
+ * is no grid on this screen"* is the same sentence that sends a rung's added cell two pushes
+ * back to Find a game (#283) — and a question whose only answer is a screen this one does not
+ * have costs the screen that **does** have it thirty days of silence.
  */
 
 import { runSearch } from '../api/playSearchApi';
 import type { PlayOrigin } from '../domain/lineup';
+import { answerableWithoutAWeekGrid } from '../domain/raisedPrompt';
 import type { Rung } from '../domain/vocabulary';
 import { toRankedList } from '../mappers/candidateMappers';
 import {
@@ -56,7 +74,15 @@ export interface TakeRungAsk {
   /** The search that made the offer. It is the citation, and the route refuses any other. */
   readonly offeredBySearchId: string;
   readonly rung: Rung;
-  /** The two facts a raised prompt's sentence quotes and the response does not carry. */
+  /**
+   * The two facts a raised prompt's sentence quotes and the response does not carry.
+   *
+   * `profileWeek` is statable as **absent**, and the pool is a surface that needs it: this
+   * screen is reached by two pushes off a cached record and its own profile read may not have
+   * landed. An empty list in its place would draw the diff against a week nobody holds and
+   * quote *"0 on your profile"*, which is the measured zero ADR-0102 says the matcher never
+   * takes — so the prompt is dropped instead (`mappers/searchMappers`).
+   */
   readonly quotes: PromptQuotes;
 }
 
@@ -76,6 +102,6 @@ export async function takeRung(ask: TakeRungAsk): Promise<SearchOutcome> {
     // game leaves, and for the same reason.
     record: { ...toOriginSearch(response, ask.origin), envelope, candidates },
     playersInRange: toPlayersInRange(response),
-    prompts: toRaisedPrompts(response, ask.quotes),
+    prompts: answerableWithoutAWeekGrid(toRaisedPrompts(response, ask.quotes)),
   };
 }

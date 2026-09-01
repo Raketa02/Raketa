@@ -59,6 +59,25 @@
  * and rotates out under a thumb, and a row in a scrolling list does neither
  * ([`the-play-components.md`](../../../../../docs/specs/matchmaking/the-play-components.md) §3).
  *
+ * ## A climb raises questions, and the hinge is drawn where the evidence is
+ *
+ * `POST /searches` raises prompts wherever it is called, and taking a rung calls it — so this
+ * is the fourth surface `SH.saveav` reaches ([#287](https://github.com/Raketa02/Raketa/issues/287)).
+ * The sheet is asked once **this screen's own latch lifts**, over the widened list: a climb
+ * replaces the list in place, so there is no push for it to stand in front of.
+ *
+ * **`KEEP_THIS_RADIUS` here is the ladder's own argument finished, not a contradiction of it.**
+ * Taking a rung and changing your saved radius stay deliberately different acts, and this
+ * screen is where the difference is written down twice already — in the standing statement
+ * naming *the profile it did not touch*, and in `takeRung` writing no radius. What the engine
+ * offers after the climb is the third: the number, asked for rather than taken, on the one
+ * screen where the player can see what the widening bought. A sheet that names the value and
+ * says what *not now* costs is the opposite of the silent conflation ADR-0099 refuses.
+ *
+ * **`REFRESH_YOUR_TIMES` never reaches here**, because *"there is no grid on this screen"* —
+ * the same sentence that sends a rung's added cell two pushes back to Find a game. The
+ * use-case drops it.
+ *
  * ## What it deliberately does not draw
  *
  * **A seat-impact line, and an *Evenest* chip.** Both read `CandidateSchema.would_be_forecast`,
@@ -142,6 +161,7 @@ import {
   terminalReachLine,
   zeroRungLine,
 } from './poolPresentation';
+import { PromptSheet } from './PromptSheet';
 import { SearchingLatch } from './SearchingLatch';
 import {
   forecastAssumption,
@@ -194,6 +214,17 @@ export function PoolScreen({ arrivalSearchId, arrivalSeat }: PoolScreenProps) {
   const [pending, setPending] = useState<number | undefined>(arrivalSeat);
   const [sort, setSort] = useState<SortOption | undefined>(undefined);
   const [explaining, setExplaining] = useState<Candidate | undefined>(undefined);
+
+  /**
+   * Where the prompt sheet hands focus back — **the standing statement the climb wrote.**
+   *
+   * Part 13 returns a listener to the control that opened a modal; this sheet is opened by an
+   * *answer* rather than by a press, and the rung that caused it is unmounted by its own
+   * success — one climb per search screen, so the answer's own `rung_offers` is empty and the
+   * ladder is replaced. What replaced it is this sentence, which names the widening the
+   * question is about.
+   */
+  const standingStatement = useRef<View | null>(null);
 
   const record = useSearchRecord(searchId);
   const reread = useReadSearchBack();
@@ -291,6 +322,31 @@ export function PoolScreen({ arrivalSearchId, arrivalSeat }: PoolScreenProps) {
   const playersInRange = climb.isSuccess ? climb.data.playersInRange : undefined;
 
   /**
+   * **The question the climb raised, and the beat it is asked in.**
+   *
+   * Asked **after the latch lifts**, and there it stops: a climb replaces the list in place, so
+   * the sheet stands in front of an answer already on screen rather than in front of a push —
+   * the builder's arrangement rather than Find a game's
+   * ([#287](https://github.com/Raketa02/Raketa/issues/287)).
+   *
+   * Keyed by the **search the climb minted**, because taking a rung is a press: a second climb
+   * is a second question worth asking, where the deck needs a wider memory precisely because a
+   * deal is not one. One climb per search screen means there is rarely a second — which is a
+   * fact about the ladder rather than a reason to key this differently.
+   *
+   * One value rather than three, so the overlay behind the sheet and the sheet itself cannot
+   * disagree about whether one is up.
+   */
+  const [answeredFor, setAnsweredFor] = useState<string | undefined>(undefined);
+  const climbed = climb.isSuccess ? climb.data.record.searchId : undefined;
+  const raised = climb.isSuccess ? climb.data.prompts[0] : undefined;
+  const question =
+    raised === undefined || climbed === undefined || sport === undefined
+      ? undefined
+      : { raised, sport, search: climbed };
+  const asking = question !== undefined && !latched && answeredFor !== question.search;
+
+  /**
    * Add somebody, discharging the replacement if this visit was against an occupied seat.
    *
    * Nobody drawn here is on the court — `pickable` took them out — so the person leaving the
@@ -311,7 +367,11 @@ export function PoolScreen({ arrivalSearchId, arrivalSeat }: PoolScreenProps) {
         sentWeek,
         offeredBySearchId: record.searchId,
         rung: offer.rung,
-        quotes: { sportName, profileWeek: profile?.week ?? [] },
+        // `profile?.week` and never `?? []`: an unlanded read is *this build does not hold
+        // the profile's week*, and an empty list is *they have unticked every cell*. The
+        // mapper drops the prompt that would quote it rather than drawing a diff claiming
+        // every slot is new (#247's distinction, on the client's own half of the pair).
+        quotes: { sportName, profileWeek: profile?.week },
       },
       {
         onSuccess: ({ record: answer }) => {
@@ -349,7 +409,7 @@ export function PoolScreen({ arrivalSearchId, arrivalSeat }: PoolScreenProps) {
       {/* Both overlays are **siblings** of the screen they cover: `behindOverlay` hides
           everything inside the element carrying it, so one rendered in there would hide itself
           along with the screen. */}
-      <View style={s.root} {...behindOverlay(latched || explaining !== undefined)}>
+      <View style={s.root} {...behindOverlay(latched || explaining !== undefined || asking)}>
         <ShellScreen
           title={POOL_TITLE}
           eyebrow={
@@ -364,11 +424,19 @@ export function PoolScreen({ arrivalSearchId, arrivalSeat }: PoolScreenProps) {
             </Note>
           ) : (
             <>
-              {/* What replaces *back*: the widening, and the profile it did not touch. */}
+              {/* What replaces *back*: the widening, and the profile it did not touch.
+
+                  It carries the ref the prompt sheet hands focus back to, in a `View` because
+                  focus has to land on a **host element** and `Note` is a component. It is the
+                  honest target on this screen: the control that raised the sheet was the rung,
+                  and a search that took one is offered none — so the ladder it stood in is
+                  gone by the time the sheet closes, and this sentence is what took its place. */}
               {taken === undefined ? null : (
-                <Note variant="info">
-                  <Text style={s.body}>{takenRungLine(taken)}</Text>
-                </Note>
+                <View ref={standingStatement}>
+                  <Note variant="info">
+                    <Text style={s.body}>{takenRungLine(taken)}</Text>
+                  </Note>
+                </View>
               )}
 
               {/* The running forecast — **the one surface `provisional` is about**. The tinted
@@ -556,6 +624,26 @@ export function PoolScreen({ arrivalSearchId, arrivalSeat }: PoolScreenProps) {
         <SearchingLatch
           visible={latched}
           status={poolRankingStatus({ playersInRange, sportName })}
+        />
+      )}
+
+      {/* `SH.saveav` — the questions the climb's own search raised, asked once the latch is off
+          them. A **sibling** for the latch's reason: a `Modal` presents in its own window, and
+          the screen root behind it says so itself. It carries the sport because the decline
+          route takes one on every prompt, and the origin is the only thing that knows which.
+
+          It stays mounted after it is answered rather than only while it is up, so `visible`
+          going false has somewhere to hand focus back.
+
+          `key` is the minted search id, so one climb is one question. */}
+      {question === undefined ? null : (
+        <PromptSheet
+          key={question.search}
+          visible={asking}
+          raised={question.raised}
+          sport={question.sport}
+          returnFocusTo={standingStatement}
+          onAnswered={() => setAnsweredFor(question.search)}
         />
       )}
     </>
