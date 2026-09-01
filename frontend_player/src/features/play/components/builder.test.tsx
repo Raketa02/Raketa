@@ -49,6 +49,7 @@ import {
   SWAP_TOGGLE_LABEL,
 } from './accessibilityPresentation';
 import { balanceWord } from './balancePresentation';
+import { CANDIDATE_POSTER_LABEL } from './playerCardPresentation';
 import {
   PICK_PLAYERS_LABEL,
   PROVISIONAL_WORD,
@@ -255,7 +256,7 @@ beforeEach(() => {
     .spyOn(AccessibilityInfo, 'announceForAccessibilityWithOptions')
     .mockImplementation(() => undefined);
   transport = installTransport();
-  stubGate(transport, { ratings: [rating('PADEL')], hasPlayerProfile: true });
+  stubGate(transport, { id: ME, ratings: [rating('PADEL')], hasPlayerProfile: true });
   stubProfileOptions(transport);
   stubProfileSurface(transport);
   stubInterest(transport);
@@ -322,6 +323,23 @@ describe('arriving', () => {
     expect(screen.getByText(seatsOpenLine(3))).toBeTruthy();
     // Nothing has been asked about nobody: `ForecastRequest.players` is *one, two or three*.
     expect(transport.requestsTo('POST', FORECASTS)).toHaveLength(0);
+  });
+
+  /**
+   * **Your own seat has a face before anybody has answered for it**
+   * ([#282](https://github.com/Raketa02/Raketa/issues/282)).
+   *
+   * A poster is a function of an id, and the id is the account's — so the one seat on an
+   * empty court is drawn from `GET /users/me` rather than waiting for an arrangement to name
+   * you with `Relationship.SELF`. One poster, because the other three seats are empty and an
+   * empty seat draws a plus.
+   */
+  it('draws your own poster on a court nobody has answered for', async () => {
+    await openTheBuilder();
+
+    expect(
+      screen.getAllByLabelText(CANDIDATE_POSTER_LABEL, { includeHiddenElements: true }),
+    ).toHaveLength(1);
   });
 
   it('offers both branches, and neither is drawn once the court is full', async () => {

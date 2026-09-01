@@ -92,6 +92,10 @@ async def test_a_deal_runs_on_the_week_the_player_just_edited(
 
     recorded = (await world.recorded_searches(session_factory))[-1]
     assert list(recorded.searcher_grid) == ["4:EVENING"]
+    # The area is recorded beside the week and on the same terms — a deal is a
+    # search, and its envelope carries both halves of the card's one comparison.
+    assert recorded.searcher_area_code
+    assert dealt.json()["search"]["my_area_code"] == recorded.searcher_area_code
     assert await world.saved_grid(session_factory, searcher["id"]) == (
         "2:EVENING",
         "6:MORNING",

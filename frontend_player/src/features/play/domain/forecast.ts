@@ -25,10 +25,13 @@
  * is correct, because they are the same game.
  *
  * **`SELF` is how a seat knows it is yours**, and it is `Relationship`'s doing rather than a
- * position's: no route serves a searcher their own player id, so an index would be the only
- * other answer and *seat 0 is you* is a rule the engine states rather than one a client may
- * assume. It also survives the swap that moves you across the net, where the index no longer
- * says anything (`lineup.ts`'s `seatPlaces`).
+ * position's: an index would be the only other answer, and *seat 0 is you* is a rule the
+ * engine states rather than one a client may assume. It also survives the swap that moves you
+ * across the net, where the index no longer says anything (`lineup.ts`'s `seatPlaces`).
+ *
+ * **Which seat is a different question from who.** The searcher's own id is served — it is the
+ * account's, off `GET /users/me` — and nothing here reads it: an id says nothing about where
+ * somebody sits, and a seating is the only thing that does.
  *
  * ## No arithmetic happens here, and that is checkable rather than intended
  *
@@ -169,8 +172,9 @@ export function seatedIds(seating: Seating): readonly string[] {
  * position.
  *
  * `you` is `Relationship.SELF`'s answer rather than an index, for the reason nothing in this
- * file reads an index: no route serves a searcher their own player id, and swap mode moves you
- * across the net.
+ * file reads an index: *seat 0 is you* is the engine's rule to state, and swap mode moves you
+ * across the net. **The id itself is the caller's to pass** — it is the account's, and a
+ * domain function that fetched one would be reading global state.
  */
 export function courtWithYou(seating: Seating, you: string): readonly (string | undefined)[] {
   return seating.map((seat) =>

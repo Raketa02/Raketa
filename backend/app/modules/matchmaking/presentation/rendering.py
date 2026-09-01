@@ -360,6 +360,12 @@ def _envelope(
     fields: dict[str, Any] = {}
     if prompts is not None:
         fields["prompts"] = [_prompt(raised) for raised in prompts]
+    # **Omitted rather than sent as null**, which is this module's own first
+    # spelling: a search recorded before the area was kept did not measure a
+    # nothing, it recorded nothing at all — and a card handed an empty code would
+    # compare it unequal to every real one and quietly say *never in your area*.
+    if record.searcher_area_code is not None:
+        fields["my_area_code"] = record.searcher_area_code
     return SearchEnvelope(
         search_id=record.id,
         at=record.at,

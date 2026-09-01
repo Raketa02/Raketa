@@ -123,10 +123,12 @@ export function toRankedList(response: ShortlistResponse): RankedList {
 /**
  * The facts about the search itself.
  *
- * `myAreaCode` is **not** set, and that is the whole of what this function decides beyond a
- * renaming: no route serves the searcher their own coarse area, so there is nothing to fold
- * on and the meta line drops its one licensed clause rather than comparing a code against a
- * string somebody invented (`domain/candidate`).
+ * `myAreaCode` is folded on **exactly when the wire carries one**, and that is the whole of
+ * what this function decides beyond a renaming. The envelope's code is the searcher's area
+ * *as the search ran on it*, and a search recorded before the backend kept one omits it
+ * ([#279](https://github.com/Raketa02/Raketa/issues/279)) — so the key is left off rather
+ * than set to a sentinel, because an empty string compares unequal to every real code and
+ * would quietly mean *never in your area* (`domain/candidate`).
  *
  * A `mode` outside this build's two becomes `null`, which is the deck's own value and reads
  * as *this answer names no mode* — the honest reading, and the one place where guessing would
@@ -139,6 +141,9 @@ export function toSearchEnvelope(response: ShortlistResponse): SearchEnvelope {
   return {
     searchId: response.search.search_id,
     mode: mode == null || !KNOWN_MODES.has(mode) ? null : mode,
+    ...(response.search.my_area_code === undefined
+      ? {}
+      : { myAreaCode: response.search.my_area_code }),
     pool: {
       radiusKmUsed: pool.radius_km_used,
       playersInRange: pool.players_in_range,

@@ -488,6 +488,22 @@ class SearchRecord:
     #: How many of the twenty-one grid cells the searcher had ticked. The
     #: availability term's **denominator**, per search rather than per candidate.
     searcher_slot_count: int
+    #: The searcher's **own** coarse area, as the code the wire spells areas in,
+    #: and as this search ran on it.
+    #:
+    #: Recorded for ``searcher_grid``'s reason rather than read back off the
+    #: profile: a read-back never recomputes, and the profile's *current* area is
+    #: a different fact for a player who has moved since — a card saying *in your
+    #: area* over an area they have left is the answer that would be given now
+    #: rather than the one that was given.
+    #:
+    #: ``None`` is **not an area**. It is a search recorded before this column
+    #: existed, which searches being kept for ever (``docs/adr/0104``) makes a
+    #: standing state rather than a migration's leftover, and the wire spells it
+    #: by **omitting** the field (``docs/adr/0106`` §4) — an empty code would
+    #: compare unequal to every real one and would quietly mean *never in your
+    #: area*, which is a claim rather than a gap.
+    searcher_area_code: str | None
     #: Whether the widening ceiling clamped to the profile's own maximum. It is
     #: true for the searcher already **at** the maximum too, whose ladder has no
     #: radius rung on it at all — counting them is the whole job of the bit.
@@ -566,6 +582,12 @@ class SearchRecord:
             self.searcher_slot_count == len(self.searcher_grid),
             f"a slot count of {self.searcher_slot_count} over a grid of "
             f"{len(self.searcher_grid)} cells",
+        )
+        invariant(
+            self.searcher_area_code != "",
+            "a search recorded with an empty area code: absence is None and "
+            "means *not recorded*, where an empty string is a code nothing can "
+            "produce and every real code compares unequal to",
         )
 
     @property

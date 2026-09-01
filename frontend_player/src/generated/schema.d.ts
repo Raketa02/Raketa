@@ -2885,6 +2885,15 @@ export interface components {
             /** @description Null exactly on the deck, which has no mode. */
             mode: components["schemas"]["SearchMode"] | null;
             /**
+             * My Area Code
+             * @description **Your own** coarse area, as the code the candidate's card carries one in, and as this search ran on it.
+             *
+             *     It is here so a card can say *in your area* — a comparison between two codes, which is the one sentence an `area_code` licenses a client to write. The card is handed both codes rather than reading the profile for the second: a card that reached for a value nobody passed it would be drawing from global state.
+             *
+             *     **Omitted on a search recorded before it was kept**, and on those only. It is the search's area rather than the profile's current one, so a read-back reproduces the answer that was given rather than the one that would be given now — and an absent code drops the sentence, where an empty one would quietly claim *never in your area*.
+             */
+            my_area_code?: string;
+            /**
              * Ruleset Version
              * @description What the numbers were
              */

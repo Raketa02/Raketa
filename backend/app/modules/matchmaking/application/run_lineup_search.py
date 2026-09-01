@@ -278,6 +278,7 @@ class RunLineupSearch:
             ),
             searcher_grid=searcher.grid.codes,
             searcher_slot_count=len(searcher.grid),
+            searcher_area_code=searcher.area_code,
             radius_clamp_bit=radius_ladder(searcher.radius_km).clamped,
             # **The ladder does not run here.** ``MIN_SHORTLIST`` counts rows in
             # a list somebody reads, and a line-up returns seats; pricing a rung

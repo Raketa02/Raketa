@@ -50,6 +50,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy_utils.types.uuid import UUIDType
 
 from app.infrastructure.database.base import Base
+from app.modules.matchmaking.domain.areas import AREA_CODE_WIDTH
 
 #: The same ``BIGINT``-on-PostgreSQL / ``INTEGER``-on-SQLite variant the event
 #: store's ``sequence_no`` uses. A watermark that could not hold every value the
@@ -174,6 +175,18 @@ class SearchORM(Base):
     searcher_grid: Mapped[list[str]] = mapped_column(CODE_ARRAY, nullable=False)
     #: The availability term's denominator, per search rather than per candidate.
     searcher_slot_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    #: The searcher's **own** area, as the code the wire spells areas in, and as
+    #: this search ran on it. Stored beside the grid and for the same reason: the
+    #: profile's area today is a different fact for a player who has moved, and a
+    #: read-back reproduces the answer that was given.
+    #:
+    #: **Nullable, and the null is not a default.** It is a row written before
+    #: this column existed, and nothing has ever written one since; an empty
+    #: string would be a code nothing can produce and every real code compares
+    #: unequal to, which is *never in your area* said in a column.
+    searcher_area_code: Mapped[str | None] = mapped_column(
+        String(AREA_CODE_WIDTH), nullable=True
+    )
     radius_clamp_bit: Mapped[bool] = mapped_column(Boolean, nullable=False)
     #: Which rungs were offered and each one's real count. **``NULL`` means the
     #: offers were not computed at all** — the shortlist cleared ``MIN_SHORTLIST``

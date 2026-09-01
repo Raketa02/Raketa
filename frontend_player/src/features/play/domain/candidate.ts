@@ -160,32 +160,32 @@ export interface Modifier {
 /**
  * Every fact about *the search*, as opposed to about a candidate.
  *
- * **`myAreaCode` is folded on in `api/`, exactly as `OriginSearch`'s sport and week are.** It
- * is the searcher's own coarse area, and it is here because the meta line's one licensed
+ * **`myAreaCode` travels on the envelope rather than being looked up per card.** It is the
+ * searcher's own coarse area, and it is here because the meta line's one licensed
  * sentence is a **comparison between two codes** — the shape
  * [ADR-0021](../../../../../docs/adr/0021-kernel-in-backend-clients-derive-by-comparison.md)
  * licenses a client to compute — and a card that reached for the profile itself would be
  * reading global state, which is the defect §G6 #8 records on the why-fit sheet and
  * [#233](https://github.com/Raketa02/Raketa/issues/233) fixed there.
  *
- * ## And today there is nothing to fold on, which is why it is optional
+ * ## Optional, because a search may predate the fact
  *
- * **No route serves the searcher their own area code.** `area_code` crosses on exactly two
- * schemas — `PlayerCardSchema` and `DistanceEvidence` — and both are the *candidate's*;
- * `GET /players/me/profile` serves a week, a radius and the declarations, and the location
- * area is one of the three facts it names as *not served yet*. So the comparison this field
- * exists for cannot fire, and the honest spelling of that is an absent value rather than a
- * sentinel string that would silently mean *never in your area*.
+ * `SearchEnvelope.my_area_code` is the searcher's area **as the search ran on it**, recorded
+ * on the search beside the week it ran on rather than read off the profile — the profile's
+ * area is what it is *now*, and a search read back a month later would otherwise say *in your
+ * area* about an area the player has left
+ * ([#279](https://github.com/Raketa02/Raketa/issues/279)).
  *
- * The first surface to draw a card is the deck, which is where the gap was found;
- * [#279](https://github.com/Raketa02/Raketa/issues/279) is where it is decided, and until then
- * the meta line drops its clause and keeps its kilometres.
+ * A search recorded before the backend kept one carries no code, and searches are kept for
+ * ever, so the absence is a standing state rather than a migration's leftover. It stays an
+ * **absent value** rather than a sentinel: an empty string compares unequal to every real code
+ * and would quietly mean *never in your area*, which is a claim where this is a gap.
  */
 export interface SearchEnvelope {
   readonly searchId: string;
   /** **Null exactly on the deck**, which has no mode. See the module note. */
   readonly mode: SearchMode | null;
-  /** Absent until a route serves it — see the module note, not a bug in a caller. */
+  /** Absent on a search recorded before it was kept — see the module note, not a caller's bug. */
   readonly myAreaCode?: string;
   /** What the searcher is told about the pool this answer came from. */
   readonly pool: PoolDescription;

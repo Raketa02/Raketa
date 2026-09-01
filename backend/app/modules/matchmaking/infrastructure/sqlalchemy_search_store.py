@@ -228,6 +228,7 @@ def _search_row(search: SearchRecord) -> SearchORM:
         },
         searcher_grid=list(search.searcher_grid),
         searcher_slot_count=search.searcher_slot_count,
+        searcher_area_code=search.searcher_area_code,
         radius_clamp_bit=search.radius_clamp_bit,
         rung_offers=(
             None
@@ -392,6 +393,7 @@ def _search_record(
         ),
         searcher_grid=tuple(row.searcher_grid),
         searcher_slot_count=row.searcher_slot_count,
+        searcher_area_code=row.searcher_area_code,
         radius_clamp_bit=row.radius_clamp_bit,
         rung_offers=(
             None

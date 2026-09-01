@@ -312,6 +312,15 @@ export function stubInterest(
 export interface GateStub {
   readonly ratings?: readonly Wire['RatingResponse'][];
   /**
+   * Who this player **is** — the id `GET /users/me` answers with, which is the same id every
+   * route reads off the bearer token and the one a court draws your own seat from.
+   *
+   * Defaulted, because almost no suite is about identity. A suite that seats you beside
+   * candidates has to state it: the poster in your seat is a function of this id, and so is
+   * the court a challenge is sent with.
+   */
+  readonly id?: string;
+  /**
    * The runs this player left unfinished, in the order the server sends them — sport
    * registry order. A single run is the ordinary case; two is what proves which one the
    * gate picks.
@@ -348,14 +357,14 @@ export const GATE_USER: Wire['UserResponse'] = {
  */
 export function stubGate(
   transport: Transport,
-  { ratings = [], runs = [], hasPlayerProfile = false }: GateStub = {},
+  { ratings = [], runs = [], hasPlayerProfile = false, id = GATE_USER.id }: GateStub = {},
 ) {
   transport.on('GET', '/api/v1/ratings', () =>
     json<Wire['RatingsResponse']>({ ratings: [...ratings] }),
   );
 
   transport.on('GET', '/api/v1/users/me', () =>
-    json<Wire['UserResponse']>({ ...GATE_USER, has_player_profile: hasPlayerProfile }),
+    json<Wire['UserResponse']>({ ...GATE_USER, id, has_player_profile: hasPlayerProfile }),
   );
 
   stubRunsInProgress(transport, runs);

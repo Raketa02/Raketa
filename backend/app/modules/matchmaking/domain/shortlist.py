@@ -66,7 +66,6 @@ from app.engines.matchfit.v1 import (
     reverse_mode,
 )
 from app.kernel import invariant, iso_weekday
-from app.modules.matchmaking.domain.areas import area_code_of
 from app.modules.matchmaking.domain.candidate_index import CandidateRow
 from app.modules.matchmaking.domain.fence import (
     area_of,
@@ -522,7 +521,7 @@ def _searcher_as_candidate(
         tags=facts.tags,
         grid=searcher.grid,
         radius_km=float(facts.radius_km),
-        area_code=area_code_of(facts.area),
+        area_code=facts.area_code,
         distance_km=row.generated.distance_km,
         combined=row.fenced.combined,
         reliability=None,

@@ -308,6 +308,16 @@ So the meta line becomes **`{km} km`**, with **`In your area · {km} km`** when 
 are equal. Nothing else. The day a gazetteer exists, `area_code_of` is the one function that
 changes and this line gains a name without any other consumer moving.
 
+**Both codes have to reach the card, and for a while only one did.** `area_code` crossed on
+the player card and on the distance evidence, and both of those are the *candidate's* — so
+the one sentence this section licenses could not fire for anybody
+([#279](https://github.com/Raketa02/Raketa/issues/279)). The searcher's own is
+`SearchEnvelope.my_area_code`, on the envelope beside the week the search ran on and recorded
+with it: a read-back never recomputes, and the profile's area is what it is *now*, so a card
+drawn from the profile would say *in your area* about an area the player has since left. A
+search recorded before it was kept omits the field, and the clause is dropped rather than
+answered — an empty code compares unequal to every real one and would quietly say *never*.
+
 ### 6.4 The level row — three facts, and the word the prototype spent on the wrong one
 
 §B11 and §B12 draw the row as `"{level} · band {low}–{high}"`, where `{low}–{high}` is

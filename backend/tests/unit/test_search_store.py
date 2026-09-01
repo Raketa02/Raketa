@@ -9,6 +9,7 @@ withheld* — so the near-miss band has no read path at all, and a stranger's
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import datetime, timezone
 from uuid import UUID, uuid4
 
@@ -44,6 +45,10 @@ AT = datetime(2026, 8, 26, 18, 0, tzinfo=timezone.utc)
 #: reads as ``THIS_WEEK`` — the same window the pool description carries, because
 #: the read-back **re-derives** it from this grid rather than reading the label.
 GRID = ("1:EVENING", "3:EVENING", "5:EVENING", "6:MORNING")
+#: The searcher's own coarse area, as ``area_code_of`` spells one. Recorded
+#: beside the grid and read back the same way: it is the second half of the one
+#: comparison a card is licensed to make.
+MY_AREA = "A+05218+002123"
 OFFERED_BY = UUID("22222222-2222-2222-2222-222222222222")
 SEARCHER = UUID("11111111-1111-1111-1111-111111111111")
 STRANGER = UUID("22222222-2222-2222-2222-222222222222")
@@ -137,6 +142,7 @@ def _record(searcher_id: UUID = SEARCHER) -> SearchRecord:
         ),
         searcher_grid=GRID,
         searcher_slot_count=len(GRID),
+        searcher_area_code=MY_AREA,
         radius_clamp_bit=True,
         rung_offers=(
             RungOffer(
@@ -242,6 +248,42 @@ async def test_the_search_row_comes_back_whole_beside_its_candidates(store):
     assert read.counts.excluded_by_gate == {"BLOCKED": 1}
     assert read.pool_description.window is Window.THIS_WEEK
     assert read.best_withheld_fit == 41.0
+    # The searcher's own area, as **this** search ran on it. A read-back that
+    # re-read the profile would say *in your area* about the area they live in
+    # now, over a search that was answered before they moved.
+    assert read.searcher_area_code == MY_AREA
+
+
+async def test_a_search_recorded_before_the_area_was_kept_reads_back_without_one(
+    store,
+):
+    """``None`` is *not recorded*, and it is the only absence there is.
+
+    Rows written before the column existed have no area, and searches are kept
+    for ever — so the state is standing rather than a migration's leftover. What
+    it must never become on the way back is an empty code: every real code
+    compares unequal to one, which is *never in your area* said quietly.
+    """
+
+    adapter, session = store
+    record = replace(_record(), searcher_area_code=None)
+
+    await adapter.record(record)
+    await session.commit()
+
+    read = await adapter.find(search_id=record.id, searcher_id=SEARCHER)
+
+    assert read is not None
+    assert read.searcher_area_code is None
+
+
+def test_an_area_code_is_recorded_or_absent_and_never_blank():
+    """The invariant that keeps the two absences apart at the source."""
+
+    from app.kernel import InvariantViolated
+
+    with pytest.raises(InvariantViolated):
+        replace(_record(), searcher_area_code="")
 
 
 async def test_the_near_miss_band_is_stored_and_has_no_read_path(store):
@@ -445,6 +487,7 @@ def test_the_redaction_detector_must_agree_with_the_rows_written():
                         "pool_description",
                         "searcher_grid",
                         "searcher_slot_count",
+                        "searcher_area_code",
                         "radius_clamp_bit",
                         "rung_offers",
                         "offered_by_search_id",

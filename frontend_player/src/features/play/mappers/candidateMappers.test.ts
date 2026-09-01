@@ -13,6 +13,9 @@ import type { Wire } from '@/test-support/transport';
 
 import { toCandidate, toRankedList, toSearchEnvelope } from './candidateMappers';
 
+/** The searcher's own coarse area, as `area_code_of` spells one. */
+const MY_AREA = 'A+05218+002123';
+
 function response(over: Partial<Wire['ShortlistResponse']['search']> = {}) {
   return {
     search: {
@@ -161,11 +164,19 @@ describe('the envelope', () => {
   });
 
   /**
-   * No route serves the searcher their own coarse area, so there is nothing to fold on — and
-   * an absent value is the honest spelling of that, where a sentinel string would quietly
-   * mean *never in your area* (`domain/candidate`).
+   * The second half of the one comparison a card is licensed to make. It is the area the
+   * search **ran on**, so it travels on the envelope rather than being looked up per card.
    */
-  it('sets no area code of the searcher’s, because nothing serves one', () => {
+  it('folds on the searcher’s own area code', () => {
+    expect(toSearchEnvelope(response({ my_area_code: MY_AREA })).myAreaCode).toBe(MY_AREA);
+  });
+
+  /**
+   * A search recorded before the backend kept one carries no code, and searches are kept for
+   * ever — so an absent value is the honest spelling of it, where a sentinel string would
+   * quietly mean *never in your area* (`domain/candidate`).
+   */
+  it('sets no area code where the search recorded none', () => {
     expect(toSearchEnvelope(response())).not.toHaveProperty('myAreaCode');
   });
 

@@ -50,3 +50,14 @@ def area_code_of(area: Point) -> str:
     latitude = round(area.latitude * _SCALE)
     longitude = round(area.longitude * _SCALE)
     return f"{_PREFIX}{latitude:+06d}{longitude:+07d}"
+
+
+#: How wide a code is — **the same width at every latitude and longitude**,
+#: because both halves are signed and zero-padded, which is what makes a lexical
+#: index over the column a spatial one.
+#:
+#: Derived by minting the widest code there is rather than written as a number
+#: beside a column, for ``_SCALE``'s own reason one screen up: a change to how a
+#: code is spelled moves the width with it instead of silently outgrowing a
+#: column somebody sized by hand.
+AREA_CODE_WIDTH = len(area_code_of(Point(latitude=-90.0, longitude=-180.0)))

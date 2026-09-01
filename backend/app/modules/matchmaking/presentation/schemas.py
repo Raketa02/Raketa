@@ -472,6 +472,24 @@ class SearchEnvelope(BaseModel):
         ...,
         description="Null exactly on the deck, which has no mode.",
     )
+    my_area_code: str = Field(
+        OMITTED,
+        description=(
+            "**Your own** coarse area, as the code the candidate's card carries "
+            "one in, and as this search ran on it.\n\n"
+            "It is here so a card can say *in your area* — a comparison between "
+            "two codes, which is the one sentence an `area_code` licenses a "
+            "client to write. The card is handed both codes rather than reading "
+            "the profile for the second: a card that reached for a value nobody "
+            "passed it would be drawing from global state.\n\n"
+            "**Omitted on a search recorded before it was kept**, and on those "
+            "only. It is the search's area rather than the profile's current "
+            "one, so a read-back reproduces the answer that was given rather "
+            "than the one that would be given now — and an absent code drops "
+            "the sentence, where an empty one would quietly claim *never in "
+            "your area*."
+        ),
+    )
     ruleset_version: str = Field(..., description="What the numbers were")
     engine_version: str = Field(..., description="How the maths works")
     optimised_for: OptimisedFor

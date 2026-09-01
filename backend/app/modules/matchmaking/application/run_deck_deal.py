@@ -351,6 +351,7 @@ class RunDeckDeal:
             ),
             searcher_grid=searcher.grid.codes,
             searcher_slot_count=len(searcher.grid),
+            searcher_area_code=searcher.area_code,
             radius_clamp_bit=radius_ladder(searcher.radius_km).clamped,
             rung_offers=None,
             offered_by_search_id=None,

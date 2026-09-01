@@ -238,7 +238,7 @@ beforeEach(() => {
     .spyOn(AccessibilityInfo, 'announceForAccessibilityWithOptions')
     .mockImplementation(() => undefined);
   transport = installTransport();
-  stubGate(transport, { ratings: [rating('PADEL')], hasPlayerProfile: true });
+  stubGate(transport, { id: ME, ratings: [rating('PADEL')], hasPlayerProfile: true });
   stubProfileOptions(transport);
   stubProfileSurface(transport);
   stubInterest(transport);

@@ -35,6 +35,7 @@ from uuid import UUID
 from app.engines.matchfit.core import SearchMode, Term
 from app.engines.matchfit.ruleset import Ruleset
 from app.kernel import IsoWeekday, Sport, invariant, iso_weekday
+from app.modules.matchmaking.domain.areas import area_code_of
 from app.modules.matchmaking.domain.candidate_snapshot import CandidateSnapshot
 from app.modules.matchmaking.domain.geography import BoundingBox, Point, bounding_box
 from app.modules.matchmaking.domain.ports import PairwiseCounterpart, PlayerScoreReading
@@ -126,6 +127,18 @@ class SearcherFacts:
         """Whether the searcher is still inside their newcomer window."""
 
         return is_new_at(self.profile_created_at, now)
+
+    @property
+    def area_code(self) -> str:
+        """This searcher's coarse area, as the code the wire spells areas in.
+
+        Here rather than at the three call sites that record it, because it is
+        the same derivation the candidate's own card already makes and one of
+        them silently reaching for a different function is how the two codes on
+        a card stop being comparable.
+        """
+
+        return area_code_of(self.area)
 
 
 @final

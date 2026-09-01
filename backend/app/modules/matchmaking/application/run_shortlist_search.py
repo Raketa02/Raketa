@@ -229,6 +229,7 @@ class RunShortlistSearch:
             ),
             searcher_grid=searcher.grid.codes,
             searcher_slot_count=len(searcher.grid),
+            searcher_area_code=searcher.area_code,
             # **Set on every search, and not only where the offers were
             # computed.** The bit's job is to count the searchers already at the
             # slider's ceiling, and a searcher at 50 km who got twenty results

@@ -586,6 +586,30 @@ async def test_the_envelope_carries_the_facts_about_the_search(
         assert staged not in envelope and staged not in envelope["pool"]
 
 
+async def test_the_envelope_carries_the_searchers_own_area(
+    client, session_factory, candidate_source, searcher
+):
+    """**Both halves of the one comparison a card may make.**
+
+    A card saying *they are in your area* is the client comparing two codes,
+    which is the shape ``docs/adr/0021`` licenses — and until this field the
+    candidate's was the only one that crossed, so the sentence could never fire
+    for anybody. It is the area **this search ran on**, so a read-back a month
+    later reproduces the answer that was given.
+    """
+
+    await world.a_candidate(client, session_factory, "neighbour", mu=searcher["mu"])
+    await world.fold_the_log(session_factory, candidate_source)
+
+    body = (await world.search(client, searcher["token"])).json()
+    mine = body["search"]["my_area_code"]
+
+    assert mine, "an envelope with no area is a card that can never say it has one"
+    # This world seats searcher and candidate in the same square, and the two
+    # codes agreeing is the whole of what makes the sentence sayable.
+    assert [row["player_card"]["area_code"] for row in body["candidates"]] == [mine]
+
+
 async def test_a_reason_that_only_reorders_never_crosses_the_wire(
     client, session_factory, candidate_source, searcher
 ):

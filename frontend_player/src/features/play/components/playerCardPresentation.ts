@@ -74,10 +74,10 @@ export interface MetaLineFacts {
   /** Their coarse area, as a machine code. **Never printed.** */
   readonly theirAreaCode: string;
   /**
-   * Yours, for the one comparison this line is allowed to make — **absent until a route
-   * serves it**.
+   * Yours, for the one comparison this line is allowed to make — **absent on a search that
+   * did not record one**.
    *
-   * No response carries the searcher's own area today (`domain/candidate`), and the two
+   * The envelope carries it as the search ran on it (`domain/candidate`), and the two
    * absences must not be conflated: an absent code is *the comparison cannot be made*, where
    * a code that differs is *they are not in your area*. Both draw the same line, and only one
    * of them is a claim.

@@ -55,6 +55,7 @@ import {
   passedToast,
 } from './deckPresentation';
 import { playErrorMessage } from './playErrorMessage';
+import { metaLine } from './playerCardPresentation';
 import { poolDescription } from './searchPresentation';
 
 const DECK = '/api/v1/deck';
@@ -77,6 +78,9 @@ function rating(sport: Wire['Sport']): Wire['RatingResponse'] {
   };
 }
 
+/** The square both people are in, so the meta line's one licensed clause has a pairing. */
+const HERE = 'A+050612+0019938';
+
 /** One dealt card. Enough terms that the sheet has rows and the card has a reason line. */
 function card(nickname: string, playerId: string): Wire['CandidateSchema'] {
   return {
@@ -85,7 +89,7 @@ function card(nickname: string, playerId: string): Wire['CandidateSchema'] {
     distance_km: 4,
     player_card: {
       nickname,
-      area_code: 'A+050612+0019938',
+      area_code: HERE,
       social_tags: ['PLAYS_TO_WIN'],
       level: 2.83,
       band: 'Established',
@@ -114,7 +118,7 @@ function card(nickname: string, playerId: string): Wire['CandidateSchema'] {
         evidence: {
           kind: 'distance',
           km: 4,
-          area_code: 'A+050612+0019938',
+          area_code: HERE,
           outside_their_radius: false,
         },
       },
@@ -145,6 +149,16 @@ interface DealtOver {
   readonly playersInRange?: number;
   readonly radiusClamp?: boolean;
   readonly searchId?: string;
+  /**
+   * The searcher's own area, as the search ran on it. Defaulted to the dealt card's own,
+   * because that is the pairing the one licensed sentence is *about*.
+   *
+   * **`null` is the record's absence and the wire's is omission** — the two spellings of the
+   * one fact, not two facts. A search recorded before the backend kept an area has a null
+   * column, and the response leaves `my_area_code` out rather than sending it empty; passing
+   * `null` here asks this fixture for that response.
+   */
+  readonly myAreaCode?: string | null;
 }
 
 function deal({
@@ -152,6 +166,7 @@ function deal({
   playersInRange = 7,
   radiusClamp = false,
   searchId = SEARCH_ID,
+  myAreaCode = HERE,
 }: DealtOver = {}): Wire['ShortlistResponse'] {
   return {
     search: {
@@ -174,6 +189,7 @@ function deal({
       radius_clamp: radiusClamp,
       sorts_available: [],
       rung_offers: null,
+      ...(myAreaCode === null ? {} : { my_area_code: myAreaCode }),
     },
     candidates: [...candidates],
   };
@@ -243,6 +259,33 @@ describe('what the deck deals', () => {
 
     expect(await screen.findByLabelText(/^Marek Z\./)).toBeTruthy();
     expect(dealBodies()).toEqual([{ sport: 'PADEL' }]);
+  });
+
+  /**
+   * **The one sentence a card may write from an `area_code`, end to end**
+   * ([#279](https://github.com/Raketa02/Raketa/issues/279)).
+   *
+   * Both codes come off one response — theirs on the card, yours on the envelope — so this
+   * asserts the whole path: the wire, the mapper that folds the searcher's own on, and the
+   * line. It is here rather than only over `metaLine`, because the clause was unreachable on
+   * every surface for as long as the second code had nothing serving it.
+   */
+  it('says a candidate is in your area when the two codes agree', async () => {
+    await openDeck();
+    await screen.findByLabelText(/^Marek Z\./);
+
+    const line = metaLine({ km: 4, theirAreaCode: HERE, myAreaCode: HERE });
+
+    expect(screen.getByText(line)).toBeTruthy();
+  });
+
+  /** A search recorded before the area was kept drops the clause and keeps its kilometres. */
+  it('keeps the kilometres and claims no area where the search recorded none', async () => {
+    transport.on('POST', DECK, () => json(deal({ myAreaCode: null })));
+    await openDeck();
+    await screen.findByLabelText(/^Marek Z\./);
+
+    expect(screen.getByText(metaLine({ km: 4, theirAreaCode: HERE }))).toBeTruthy();
   });
 
   /**

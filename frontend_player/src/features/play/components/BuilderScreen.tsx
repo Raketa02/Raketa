@@ -74,6 +74,7 @@ import { useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { router } from 'expo-router';
 
+import { useCurrentUser } from '@/features/auth/types';
 import { sportLabel } from '@/features/onboarding/types';
 import {
   A_PAIR_HERE_IS_ALREADY_PLAYING,
@@ -228,6 +229,25 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
   const originSearchId = lineup?.originSearchId ?? answeredSearchId;
   const record = useSearchRecord(originSearchId);
 
+  /**
+   * **Who you are, which is the account's fact rather than an answer's**
+   * ([#282](https://github.com/Raketa02/Raketa/issues/282)).
+   *
+   * `Relationship.SELF` names the searcher on every seating the engine returns, and reading
+   * the id off one was the whole of what this screen had — but the builder draws a court
+   * **before any answer exists**, so your own seat was a ring with no face until a fill came
+   * back. The id is served, and has been all along: `GET /users/me` is where an id comes
+   * from, and the searcher a route reads off the bearer token is this same player.
+   *
+   * It is read here, at the screen, and handed down — a seat that fetched its own occupant
+   * would be a drawing reaching for global state. `SELF` keeps the job it is actually for:
+   * **which seat** is yours, which is a fact about an arrangement and not about an account.
+   *
+   * `undefined` while the launch read is still in flight, which is the one frame the faceless
+   * seat is still honest for.
+   */
+  const self = useCurrentUser().data?.id;
+
   const fill = useFillSeats();
   const send = useSendChallenge();
   /**
@@ -340,10 +360,6 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
   const shortfall = record?.court === undefined ? undefined : shortfallBySeat(record.court);
 
   const rows = new Map((record?.candidates ?? []).map((row) => [row.playerId, row]));
-  // Who *you* are, which no route serves and every answer states — `Relationship.SELF`.
-  const self = arrangements
-    .flatMap((one) => one.seats)
-    .find((seat) => seat.relationship === 'SELF')?.playerId;
 
   const occupants: readonly CourtSeatOccupant[] = seated.map((seat, at) =>
     toOccupant(seat, { self, rows, unfilled: shortfall?.get(at) ?? null }),
@@ -564,9 +580,9 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
                 {online ? null : <Note variant="amber">{offlineMessage('does-not-resume')}</Note>}
 
                 {/* Pending on the pinned CTA, and disabled while the send is in flight or
-                    there is no connection to make it over. `self` is `Relationship.SELF`'s
-                    answer and arrives with the forecast: a court with nobody in it that the
-                    engine has named as you is not a court this client may describe. */}
+                    there is no connection to make it over. `self` is the account's own id and
+                    is absent only while the launch read is in flight: a court this client
+                    cannot name you on is not a court it may send. */}
                 {/* A `View` around the button, because focus has to land on a **host element**
                     this component holds a ref to and `Button` is a component. The same shape
                     `BottomSheet` uses for its own heading. */}
@@ -838,7 +854,8 @@ function namedPlayer(nickname: string | undefined): NamedPlayer {
 function toOccupant(
   seat: Seating[number],
   court: {
-    /** Your own player id, once an answer has named it. No route serves it — `seatFace.tsx`. */
+    /** Your own player id — the account's, read at the screen. `undefined` for the one frame
+     *  the launch read is still in flight (`seatFace.tsx`). */
     readonly self: string | undefined;
     readonly rows: ReadonlyMap<string, Candidate>;
     readonly unfilled: UnfilledReason | null;

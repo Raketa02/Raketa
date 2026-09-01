@@ -232,8 +232,9 @@ export type OptimisedFor = (typeof OPTIMISED_FOR)[number];
  *
  * *"The whole partner/opponent asymmetry hangs on it… and a client deriving it from which half
  * of the court somebody sits on would be a second implementation of a domain rule."* It is
- * also how a court knows which seat is yours without the client holding its own player id:
- * `SELF` is the answer, and no route serves a searcher their own id.
+ * also how a court knows **which seat** is yours: `SELF` is the answer, where an index would
+ * be an assumption — *seat 0 is you* is a rule the engine states, and a swap moves you across
+ * the net. Who you are is a different question and a different source (`GET /users/me`).
  */
 export const RELATIONSHIPS = ['SELF', 'PARTNER', 'OPPONENT'] as const;
 

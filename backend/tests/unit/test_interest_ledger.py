@@ -115,6 +115,7 @@ async def _a_search(
                 window=Window.THIS_WEEK,
             ),
             searcher_grid=("1:EVENING",),
+            searcher_area_code="A+05218+002123",
             searcher_slot_count=1,
             radius_clamp_bit=False,
             rung_offers=None,

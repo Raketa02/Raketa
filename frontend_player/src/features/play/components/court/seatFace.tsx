@@ -15,14 +15,16 @@
  * component was never handed. A poster is a fact about an id, so your seat is the one face on
  * a court drawn from an id alone.
  *
- * **And on a court nobody has answered for yet, it does not have even that.** No route serves
- * a searcher their **own player id** — the same gap `SearchEnvelope.myAreaCode` records as
- * [#279](https://github.com/Raketa02/Raketa/issues/279) — and the only thing that ever names
- * it is `Relationship.SELF` on a seat the engine returned. So a builder arriving on a fresh
- * search draws your seat before anything has told it who you are, and the honest answer is a
- * **seated ring with no face**: a poster invented from a placeholder id would be a picture of
- * somebody else, and a plus would say the seat is open. It fills itself in the moment any
- * answer arrives, which is why the field is optional rather than a second occupant kind.
+ * **And the id is the account's, not the answer's**
+ * ([#282](https://github.com/Raketa02/Raketa/issues/282)). A builder draws an empty court
+ * before anybody has answered for it, so a seat that waited for `Relationship.SELF` to name
+ * you sat faceless until a fill came back; the screen reads `GET /users/me` instead and hands
+ * the id down, because a drawing may not fetch its own occupant.
+ *
+ * The field stays **optional** for the one frame that launch read is still in flight, and the
+ * answer there is a **seated ring with no face**: a poster invented from a placeholder id
+ * would be a picture of somebody else, and a plus would say the seat is open, which the truth
+ * table refuses. That is a state rather than a second occupant kind.
  */
 
 import type { ReactNode } from 'react';
