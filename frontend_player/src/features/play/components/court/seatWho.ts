@@ -70,3 +70,24 @@ export function seatWho(occupant: CourtSeatOccupant): SeatWho {
       };
   }
 }
+
+/**
+ * Whether a seat has a Fit anybody may ask about — **another player, whose row the record
+ * still holds.**
+ *
+ * The rule
+ * ([`the-words.md`](../../../../../../docs/specs/matchmaking/the-words.md) §20.4.1) is three
+ * refusals and one admission. **You** are refused because no route serves a searcher their own
+ * candidate row, so *why fit* about yourself is not a thing. An **empty** seat has no Fit and
+ * is already explained twice — §11's sentence beneath the seats, and its own spoken name. A
+ * **withheld** seat carries one field and no card, so there is no breakdown left to draw.
+ *
+ * It reads `named` rather than testing the nickname a second time, because *the record no
+ * longer describes them* and *there is no handle to print* are one fact: `toOccupant` drops
+ * the card's fields together, and `seatWho` is already where the two registers of it separate.
+ * A name is a button where there is something behind it and plain text where there is not —
+ * never a button that opens an apology.
+ */
+export function seatIsExplainable(occupant: CourtSeatOccupant): boolean {
+  return occupant.kind === 'player' && seatWho(occupant).named;
+}

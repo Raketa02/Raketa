@@ -6,7 +6,7 @@
  * first word, never an initial, never a truncation.
  */
 
-import { playerName, sideNames } from './playerName';
+import { playerName } from './playerName';
 
 const LONG = 'niepokonany wojownik z warszawy grający wieczorami';
 
@@ -30,22 +30,5 @@ describe('naming one person', () => {
 
   it('leaves an empty seat a question mark, which is not a word', () => {
     expect(playerName({ kind: 'unknown' })).toBe('?');
-  });
-});
-
-describe('naming a side', () => {
-  it('returns one entry per seat rather than one joined phrase', () => {
-    // §B16's formatter redrawn: "You + Marek" is a layout that assumed short words, and a
-    // formatter that returns one string has decided the layout.
-    expect(sideNames([{ kind: 'you' }, { kind: 'player', nickname: LONG }])).toEqual(['You', LONG]);
-  });
-
-  it('makes singles and doubles the same call', () => {
-    expect(sideNames([{ kind: 'player', nickname: 'ada' }])).toEqual(['ada']);
-  });
-
-  it('keeps an empty seat in place rather than dropping it', () => {
-    // A side of two with one seat open is not a side of one.
-    expect(sideNames([{ kind: 'you' }, { kind: 'unknown' }])).toEqual(['You', '?']);
   });
 });

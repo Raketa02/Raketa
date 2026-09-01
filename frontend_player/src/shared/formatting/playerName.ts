@@ -18,6 +18,15 @@
  * ADR-0107's rule is against *inventing* a familiar form — a visual truncation invents
  * nothing, and it belongs to the component whose box is doing the truncating rather than
  * here.
+ *
+ * **`sideNames` is gone, and the rule it carried is not.** §B16's `"You + Marek"` was redrawn
+ * as a *list* — *"a formatter that returns one string has decided the layout, and this one
+ * must not"*, because at 64 characters a join produces a phrase no side label can hold — and
+ * it had one caller, the builder's forecast card. That row is now a list of **controls** and
+ * not of names ([#285](https://github.com/Raketa02/Raketa/issues/285)): each seated handle
+ * with a breakdown behind it opens `SH.whyfit`, so the entry carries a place and a candidate
+ * row beside its word. `handlesOn` composes those entries from this file's one formatter, and
+ * a `map` over a shape it does not own could not have been the thing doing it.
  */
 
 /**
@@ -47,22 +56,4 @@ export function playerName(player: NamedPlayer): string {
     case 'unknown':
       return UNKNOWN;
   }
-}
-
-/**
- * The names on one side of a court — **one entry per seat, never one joined phrase**.
- *
- * This is §B16's side-name formatter *redrawn*. What it used to return was `"You + Marek"`,
- * and that is a layout that assumed short words: at 64 characters the join produces a string
- * no side label can hold, and the 46pt seat is the binding constraint on what a court can
- * print ([`the-play-components.md`](../../../../docs/specs/matchmaking/the-play-components.md)
- * §5). A formatter that returns one string has decided the layout, and this one must not.
- *
- * So the caller gets the names and decides how to draw them — one per line, each truncated
- * to its own box, with the whole handle read off the lines the screen already prints in full.
- * A side with one seat is a list of one, which is what makes singles and doubles the same
- * call.
- */
-export function sideNames(seats: readonly NamedPlayer[]): readonly string[] {
-  return seats.map(playerName);
 }

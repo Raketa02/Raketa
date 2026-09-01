@@ -287,8 +287,13 @@ export type SeatOccupant =
  * case the other way: *"a seat label may truncate visually; a sentence may not, and a spoken
  * name never does."* The visible label scales and truncates; this one is whole.
  *
- * The **holding ring** — the 430 ms press feedback — announces nothing. It exists to confirm
- * a finger is down, on a channel this listener is not using.
+ * **The holding ring is struck rather than announced** (§20.4,
+ * [#278](https://github.com/Raketa02/Raketa/issues/278)). The prototype's 430 ms ring fed two
+ * sheets K-7 removed, and what replaces it is 6.6's *one channel per state*: the seat already
+ * dims to `.7` on press-in, so a finger being down is confirmed and there is no second signal
+ * for a name to carry. What a seat **does** hold now is a hold, and it announces nothing
+ * either — a hold duplicates a route and never carries one, so what is announced is the
+ * route: {@link seatedNameLabel} on the forecast card's own names row.
  */
 export function seatLabel(place: SeatPlace, occupant: SeatOccupant): string {
   const where = PLACE[place];
@@ -320,6 +325,40 @@ export function clearSeatLabel(seat: {
   readonly place: SeatPlace;
 }): string {
   return `Remove ${seat.name ?? 'this player'} from ${SIDE[seat.place]}`;
+}
+
+/**
+ * A seated handle on the forecast card — `Your side, Marek, why fit 78` (§20.4).
+ *
+ * **The one way in to `SH.whyfit` for somebody already seated**, and the reason it had to be
+ * built: the pool is the surface that explains a person and `pickable` removes everybody
+ * already on the court, so a seated player's Fit was unreachable — which ⚡ *Let the engine
+ * fill the seats* turns from awkward into total, because that court is four people the
+ * searcher never chose and never saw a card for (§20.4.1).
+ *
+ * It opens with the **same place clause a seat's own spoken name opens with** — *your side*,
+ * *your side, your partner*, *their side* — and takes `PLACE` rather than the heading the row
+ * draws, for §1's reason: a formatter composes from a code, never from another surface's
+ * message. The heading says *Your side* where the partner's own name says *Your side, your
+ * partner*, which is §20.4's rule that the role disambiguates two seats on one half. That is also what hides the two side headings — each name
+ * now names its own side, exactly as 7.12 hides the court's caption and side labels because
+ * each seat does.
+ *
+ * The clause is spelled here rather than lower-casing {@link whyFitSheetLabel}, on `PLACE` and
+ * `SIDE`'s own precedent one block up: **two tables and not one lower-cased at the call site**
+ * — a transformation over a composed sentence is a rule that breaks on the first proper noun.
+ *
+ * **The figure is rounded, because this button names the sheet it opens.** `whyFitColumn`
+ * writes the whole column against `Math.round(fit)` and the sheet's title and accessible name
+ * are that number, so a served `78,4` announced whole here would promise *why fit 78,4* and
+ * open *Why fit 78*. It is the one place a Fit is rounded outside that column, and it is
+ * rounded *to* it — `signedFigure`'s own rule that a figure is rounded where it is printed.
+ */
+export function seatedNameLabel(
+  place: SeatPlace,
+  seated: { readonly name: string; readonly fit: number },
+): string {
+  return `${PLACE[place]}, ${seated.name}, why fit ${Math.round(seated.fit)}`;
 }
 
 /**

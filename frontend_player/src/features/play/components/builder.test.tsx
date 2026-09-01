@@ -14,6 +14,9 @@
  * - **The shortfall is per seat**, in the four codes, with the remedy on the pool.
  * - **A withheld seat is marked rather than emptied**, and the marked player stays in the
  *   forecast.
+ * - **A seated player's Fit is reachable**, by a name on the forecast card and by a hold on
+ *   the seat — and a hold is never the only way in, because there is no long-press gesture in
+ *   the accessibility API.
  */
 
 import { AccessibilityInfo } from 'react-native';
@@ -46,6 +49,8 @@ import {
   courtSummaryLabel,
   provisionalForecastAnnouncement,
   seatLabel,
+  seatedNameLabel,
+  whyFitSheetLabel,
   SWAP_TOGGLE_LABEL,
 } from './accessibilityPresentation';
 import { balanceWord } from './balancePresentation';
@@ -54,6 +59,7 @@ import {
   PICK_PLAYERS_LABEL,
   PROVISIONAL_WORD,
   RETRY_FORECAST_LABEL,
+  SIDE_HEADINGS,
   fillSeatsLabel,
   seatsOpenLine,
 } from './builderPresentation';
@@ -281,6 +287,13 @@ const seat = (place: Parameters<typeof seatLabel>[0], playerId: string) =>
   screen.getByLabelText(
     seatLabel(place, { kind: 'player', name: NAMES[playerId] ?? '', level: LEVELS[playerId] ?? 0 }),
   );
+
+/** The names row's own button — `{side}, {name}, why fit {n}`, and every fixture's Fit is 78. */
+const named = (place: Parameters<typeof seatedNameLabel>[0], playerId: string) =>
+  screen.getByLabelText(seatedNameLabel(place, { name: NAMES[playerId] ?? '', fit: 78 }));
+
+/** `SH.whyfit`'s accessible name, which is deliberately not its visible `Why ✦ 78`. */
+const WHY_FIT = whyFitSheetLabel(78);
 
 /** The shape `playErrorMessage` reads — the code, never the backend's own message. */
 const refusal = (code: string): AppError => ({ recovery: 'business-conflict', code }) as AppError;
@@ -649,6 +662,127 @@ describe('what the court says about itself', () => {
 
     expect(await screen.findByLabelText(summary(4))).toBeTruthy();
     expect(screen.getByText(unfilledSeatLine('NO_SHARED_SLOTS'))).toBeTruthy();
+  });
+});
+
+/**
+ * **Why is this person on my court?** — which had no answer anywhere in the product until
+ * [#285](https://github.com/Raketa02/Raketa/issues/285).
+ *
+ * The pool is the one surface that explains a person and `pickable` **removes everybody already
+ * seated** from it, so a seated player's Fit was unreachable — and ⚡ is what makes that matter,
+ * because a court it built is four people the searcher never chose and never saw a card for.
+ *
+ * What is asserted is the shape of the answer rather than the sheet's contents, which is
+ * `whyFitSheet.test.tsx`'s: **the names row is the route**, the hold is a shortcut that
+ * duplicates it, and neither exists where there is no breakdown behind the name.
+ */
+describe('why this person is on my court', () => {
+  it('opens SH.whyfit from a seated name, which is the route a listener can reach', async () => {
+    await openTheBuilder();
+    await pressFill();
+    await screen.findByText('78%');
+
+    fireEvent.press(named('YOUR_PARTNER', B));
+
+    expect(await screen.findByLabelText(WHY_FIT)).toBeTruthy();
+  });
+
+  /** The shortcut, and it lands on the identical sheet rather than on a second surface. */
+  it('opens the same sheet from a hold on the seat', async () => {
+    await openTheBuilder();
+    await pressFill();
+    await screen.findByText('78%');
+
+    fireEvent(seat('YOUR_PARTNER', B), 'longPress');
+
+    expect(await screen.findByLabelText(WHY_FIT)).toBeTruthy();
+  });
+
+  /**
+   * **The headings hide once the names are buttons.** Each one now opens with the side its
+   * row's key says, which is 7.12's rule for the court's own caption and side labels: a caption
+   * is hidden where every element under it names itself. They are still drawn.
+   */
+  it('hides the two side headings, because each name says its own side', async () => {
+    await openTheBuilder();
+    await pressFill();
+    await screen.findByText('78%');
+
+    for (const heading of [SIDE_HEADINGS.yours, SIDE_HEADINGS.theirs]) {
+      expect(screen.queryByText(heading)).toBeNull();
+      expect(screen.getByText(heading, { includeHiddenElements: true })).toBeTruthy();
+    }
+  });
+
+  /**
+   * **A name is a button where there is a breakdown behind it and plain text where there is
+   * not** — never a button that opens an apology. Your own seat has no candidate row, because
+   * no route serves a searcher their own; a withheld row carries one field and no card.
+   */
+  it('draws no button for you or for a player the record no longer describes', async () => {
+    transport.on('POST', LINEUPS, () =>
+      json(seatedFour({ candidates: [card(B), card(C), { withheld: true }] })),
+    );
+    await openTheBuilder();
+    await pressFill();
+    await screen.findByLabelText(summary(4));
+
+    // The two the record still holds a row for.
+    expect(named('YOUR_PARTNER', B)).toBeTruthy();
+    expect(named('THEIR_SIDE', C)).toBeTruthy();
+    // And nobody else on the row: four seats, two ways in.
+    expect(screen.queryAllByLabelText(/why fit/)).toHaveLength(2);
+    // The other two lines are still **drawn** — plain text is not a line that vanished, and a
+    // row is one entry per seat rather than a phrase the seats it can explain were joined
+    // into. The withheld handle's `?` is the names row's: the seat draws the same character
+    // under its face and hides it.
+    expect(screen.getByText('?')).toBeTruthy();
+    // Twice: the You tab underneath, and your own line on the card.
+    expect(screen.getAllByText('You')).toHaveLength(2);
+  });
+
+  /** The same rule on the shortcut: a seat with nothing behind it carries no gesture. */
+  it('holds nothing on a seat whose player the record no longer describes', async () => {
+    transport.on('POST', LINEUPS, () =>
+      json(seatedFour({ candidates: [card(B), card(C), { withheld: true }] })),
+    );
+    await openTheBuilder();
+    await pressFill();
+    await screen.findByLabelText(summary(4));
+
+    fireEvent(screen.getByLabelText(seatLabel('THEIR_SIDE', { kind: 'withheld' })), 'longPress');
+
+    expect(screen.queryByLabelText(WHY_FIT)).toBeNull();
+  });
+
+  /**
+   * **A hold mid-trade is most likely a slow tap**, so it does nothing — and it says nothing,
+   * because nothing advertises the gesture, which is the clear badge's own precedent.
+   */
+  it('is inert while the swap toggle is on, and owes no sentence for it', async () => {
+    await openTheBuilder();
+    await pressFill();
+    await screen.findByText('78%');
+
+    fireEvent.press(screen.getByLabelText(SWAP_TOGGLE_LABEL));
+    const saidBefore = spoken().length;
+    fireEvent(seat('YOUR_PARTNER', B), 'longPress');
+
+    expect(screen.queryByLabelText(WHY_FIT)).toBeNull();
+    expect(spoken()).toHaveLength(saidBefore);
+  });
+
+  /** The names row is unaffected in both modes: the route stays open while the shortcut shuts. */
+  it('keeps the names row a way in while the toggle is on', async () => {
+    await openTheBuilder();
+    await pressFill();
+    await screen.findByText('78%');
+
+    fireEvent.press(screen.getByLabelText(SWAP_TOGGLE_LABEL));
+    fireEvent.press(named('YOUR_PARTNER', B));
+
+    expect(await screen.findByLabelText(WHY_FIT)).toBeTruthy();
   });
 });
 

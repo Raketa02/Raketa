@@ -4,7 +4,8 @@
  * `Court.test.tsx` already holds the geometry — two children, two positions, per Sport. What
  * is asserted here is what the geometry cannot see: that the seat label truncates while the
  * sentence and the spoken name stay whole, that the swap truth table reaches the callbacks it
- * says it does, that the badge a player may not use is never drawn, and that the read-only
+ * says it does, that the badge a player may not use is never drawn, that the hold reaches
+ * `SH.whyfit` from the three seats that have one and from no other, and that the read-only
  * court draws faces and nothing else.
  */
 
@@ -39,6 +40,8 @@ const OPPONENT: CourtSeatOccupant = {
   accepted: false,
 };
 const ACCEPTED: CourtSeatOccupant = { ...OPPONENT, playerId: 'player-c', accepted: true };
+/** A seat the record can no longer describe: a player, and none of the card's fields. */
+const WITHHELD: CourtSeatOccupant = { kind: 'player', playerId: 'player-d', accepted: false };
 const EMPTY: CourtSeatOccupant = { kind: 'empty', unfilled: null };
 
 const SUMMARY = 'Padel, 3 of 4 seats filled.';
@@ -46,7 +49,7 @@ const SUMMARY = 'Padel, 3 of 4 seats filled.';
 const flatten = (style: unknown) => StyleSheet.flatten(style as TextStyle);
 
 function build(seats: readonly CourtSeatOccupant[], swapping = false) {
-  const acts = { openPool: jest.fn(), swap: jest.fn(), clear: jest.fn() };
+  const acts = { openPool: jest.fn(), swap: jest.fn(), clear: jest.fn(), hold: jest.fn() };
 
   const view = render(
     <CourtBuild
@@ -58,6 +61,7 @@ function build(seats: readonly CourtSeatOccupant[], swapping = false) {
       onOpenPool={acts.openPool}
       onSwap={acts.swap}
       onClear={acts.clear}
+      onHold={acts.hold}
     />,
   );
 
@@ -239,12 +243,82 @@ describe('a tap on a seat', () => {
         onOpenPool={noop}
         onSwap={noop}
         onClear={noop}
+        onHold={noop}
       />,
     );
 
     expect(screen.getByLabelText('Your side, you').props.accessibilityState).toEqual(
       expect.objectContaining({ selected: false }),
     );
+  });
+});
+
+/**
+ * **The hold, and the three seats that do not have one.**
+ *
+ * It opens `SH.whyfit` for the player in the seat — a *shortcut* to the route the forecast
+ * card's names row carries, never the only way in, because there is no long-press gesture in
+ * the accessibility API. So what matters here is the negative half: a seat with nothing behind
+ * it carries no gesture at all rather than one that opens an apology, and the toggle takes the
+ * gesture away from every seat at once.
+ */
+describe('a hold on a seat', () => {
+  it('explains the player in it', () => {
+    const { hold } = build([YOU, PARTNER, OPPONENT, EMPTY]);
+
+    fireEvent(screen.getByLabelText('Their side, ana, level 3,10'), 'longPress');
+
+    expect(hold).toHaveBeenCalledWith(2);
+  });
+
+  /** An accepted seat is somebody you may not replace, and still somebody you may read about. */
+  it('explains a player whose seat is locked, because a lock is not a silence', () => {
+    const { hold } = build([YOU, PARTNER, ACCEPTED, EMPTY]);
+
+    fireEvent(screen.getByLabelText('Their side, ana, level 3,10'), 'longPress');
+
+    expect(hold).toHaveBeenCalledWith(2);
+  });
+
+  it('does nothing on your own seat, which no route serves you a row for', () => {
+    const { hold } = build([YOU, PARTNER, OPPONENT, EMPTY]);
+
+    fireEvent(screen.getByLabelText('Your side, you'), 'longPress');
+
+    expect(hold).not.toHaveBeenCalled();
+  });
+
+  it('does nothing on an empty seat, which has no Fit and is explained twice already', () => {
+    const { hold } = build([YOU, PARTNER, OPPONENT, EMPTY]);
+
+    fireEvent(screen.getByLabelText('Their side, empty'), 'longPress');
+
+    expect(hold).not.toHaveBeenCalled();
+  });
+
+  /** A withheld row carries one field and no card, so there is no breakdown left to draw. */
+  it('does nothing on a seat whose player the record no longer describes', () => {
+    const { hold } = build([YOU, PARTNER, WITHHELD, EMPTY]);
+
+    fireEvent(
+      screen.getByLabelText("Their side. Something's changed — they can't be invited now"),
+      'longPress',
+    );
+
+    expect(hold).not.toHaveBeenCalled();
+  });
+
+  /**
+   * **A hold mid-trade is most likely a slow tap**, and no sentence is owed for it: nothing
+   * advertises the gesture, which is the clear badge's own precedent.
+   */
+  it('is inert on every seat while the toggle is on, and raises no toast', () => {
+    const { hold } = build([YOU, PARTNER, OPPONENT, EMPTY], true);
+
+    fireEvent(screen.getByLabelText('Their side, ana, level 3,10'), 'longPress');
+
+    expect(hold).not.toHaveBeenCalled();
+    expect(useToastQueue.getState().queue).toHaveLength(0);
   });
 });
 

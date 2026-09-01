@@ -71,7 +71,14 @@
  */
 
 import { useRef, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import {
+  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
+} from 'react-native';
 import { router } from 'expo-router';
 
 import { useCurrentUser } from '@/features/auth/types';
@@ -98,7 +105,7 @@ import { offlineMessage } from '@/shared/errors';
 import { useIsOnline } from '@/shared/lib/platform';
 import { showToast } from '@/shared/store/toast.store';
 import { formatPercent } from '@/shared/formatting/ratingFormat';
-import { playerName, sideNames, type NamedPlayer } from '@/shared/formatting/playerName';
+import { playerName, type NamedPlayer } from '@/shared/formatting/playerName';
 import {
   BALANCE_INK,
   Button,
@@ -142,6 +149,7 @@ import {
   SWAP_TOGGLE_LABEL,
   courtSummaryLabel,
   provisionalForecastAnnouncement,
+  seatedNameLabel,
 } from './accessibilityPresentation';
 import { balanceTone, balanceWord } from './balancePresentation';
 import {
@@ -179,6 +187,7 @@ import { SearchingLatch } from './SearchingLatch';
 import { forecastAssumption } from './searchPresentation';
 import { engineFillStatus } from './searchingPresentation';
 import { searchingFloorMs } from './searchingWait';
+import { WhyFitSheet } from './whyfit/WhyFitSheet';
 
 /**
  * The pool — the ranked list, and **the one screen the ladder is on**
@@ -284,6 +293,19 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
   const [refusal, setRefusal] = useState<SendRefusal | undefined>(undefined);
 
   /**
+   * **Whose Fit is being explained** — `SH.whyfit`, over the court rather than over a list.
+   *
+   * The row itself and not an id, for the reason the pool and the deck both hold one: the
+   * sheet takes `(candidate, envelope)` and reads no global state, so a screen holding an id
+   * would be looking the same row up again on every render of a sheet that is already holding
+   * it. Route-local with the seating and the refusal, and gone the moment the court pops.
+   *
+   * **Two routes reach it and neither is the other's fallback**: a name on the forecast card
+   * is the route, and a hold on the seat is a shortcut duplicating it.
+   */
+  const [explaining, setExplaining] = useState<Candidate | undefined>(undefined);
+
+  /**
    * Where accessibility focus goes when `SH.propose` closes — **the control that opened it**.
    *
    * Part 13's rule for every overlay in this app: without it a listener is returned to the top
@@ -360,6 +382,20 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
   const shortfall = record?.court === undefined ? undefined : shortfallBySeat(record.court);
 
   const rows = new Map((record?.candidates ?? []).map((row) => [row.playerId, row]));
+
+  /**
+   * `SH.whyfit`'s two inputs, or nothing — **one value, so the sheet and the hide behind it
+   * cannot disagree.**
+   *
+   * The sheet needs a record as well as a row, and the tree behind a modal has to say it is
+   * behind one (Part 13). Read as two conditions, an evicted record would hide the whole
+   * screen behind an overlay that never rendered, and a listener would be left with nothing at
+   * all — so *is there a sheet* is derived once and both sites read it.
+   */
+  const explained =
+    explaining === undefined || record === undefined
+      ? undefined
+      : { candidate: explaining, envelope: record.envelope };
 
   const occupants: readonly CourtSeatOccupant[] = seated.map((seat, at) =>
     toOccupant(seat, { self, rows, unfilled: shortfall?.get(at) ?? null }),
@@ -558,7 +594,7 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
           same hide as the latch — a modal sheet's Part 13 obligation is that the tree behind
           it says so, and here that tree holds a second control spelled with the sheet's own
           words. */}
-      <View style={s.root} {...behindOverlay(latched || proposing)}>
+      <View style={s.root} {...behindOverlay(latched || proposing || explained !== undefined)}>
         <ShellScreen
           title={builderTitle({ seats, filled })}
           eyebrow={
@@ -662,6 +698,15 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
                   const seat = seated[at];
                   if (seat?.kind === 'player') unseat(seat.playerId);
                 }}
+                // The shortcut. Which seats carry it, and that none does under a swap, are
+                // `CourtBuild`'s: the rule sits beside the truth table it is an exception to,
+                // and it is read off the occupants this lookup's rows built — so a seat that
+                // offered the gesture has a row here, and an absent one is *nothing to
+                // explain* rather than a case owed a sentence.
+                onHold={(at) => {
+                  const seat = seated[at];
+                  if (seat?.kind === 'player') setExplaining(rows.get(seat.playerId));
+                }}
               />
 
               {open > 0 ? <Text style={s.centred}>{seatsOpenLine(open)}</Text> : null}
@@ -754,17 +799,34 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
                       allowed to cut one to four characters: `the-play-components.md` §5 makes
                       the truncation legal because *"both screens the court appears on already
                       print the handles in full and unavoidably"*, and this is the builder's
-                      half of that. One name per line, each in its own box — `sideNames`
-                      returns a list rather than a joined phrase precisely so the layout is the
-                      caller's and 64 characters cannot be assumed short. */}
+                      half of that. One name per line, each in its own box — a list rather than
+                      a joined phrase precisely so the layout is here and 64 characters cannot
+                      be assumed short.
+
+                      **And it is the route into `SH.whyfit` for somebody already seated**
+                      (§20.4.1). The headings are drawn and hidden, because each name that is a
+                      button now opens with the side this row's key says — 7.12's own rule for
+                      the court's caption and side labels, one card down. */}
                   <Hairline>
                     <Row
                       label={SIDE_HEADINGS.yours}
-                      value={<Names names={handlesOn('yours', seated, places, rows)} />}
+                      labelHidden
+                      value={
+                        <Names
+                          seated={handlesOn('yours', seated, places, rows)}
+                          onExplain={setExplaining}
+                        />
+                      }
                     />
                     <Row
                       label={SIDE_HEADINGS.theirs}
-                      value={<Names names={handlesOn('theirs', seated, places, rows)} />}
+                      labelHidden
+                      value={
+                        <Names
+                          seated={handlesOn('theirs', seated, places, rows)}
+                          onExplain={setExplaining}
+                        />
+                      }
                       divided
                     />
                   </Hairline>
@@ -810,6 +872,24 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
       </View>
 
       <SearchingLatch visible={latched} status={engineFillStatus({ playersInRange })} />
+
+      {/* `SH.whyfit`, over the court — the only place a **seated** player's Fit is explained,
+          because the pool removes everybody already on the court from the one surface that
+          explains a person. It reads `(candidate, envelope)` off the origin search record and
+          nothing else, which is what lets one sheet serve all three of its entry points.
+
+          **No `returnFocusTo`**, on the pool's own precedent: up to four names and four seats
+          open the same sheet, so there is no one control to return to, and a ref per name
+          would be four refs to keep in step with a list that changes on every swap. */}
+      {explained === undefined ? null : (
+        <WhyFitSheet
+          visible
+          onClose={() => setExplaining(undefined)}
+          candidate={explained.candidate}
+          envelope={explained.envelope}
+          name={playerName({ kind: 'player', nickname: explained.candidate.card.nickname })}
+        />
+      )}
 
       {/* `SH.propose` — the last thing between a built court and four people being asked.
           Confirming dismisses it and runs the send, whose pending state and whose refusal both
@@ -885,43 +965,102 @@ function toOccupant(
 }
 
 /**
+ * One printed handle, with **the two things that decide whether it is a control**.
+ *
+ * The place, because the button opens with the same two words the seat's own spoken name does
+ * and `seatedNameLabel` composes from the code rather than from the heading the row draws. And
+ * the row behind it, because that is both the test — *is there a breakdown to open* — and the
+ * whole of what `SH.whyfit` is handed.
+ */
+interface SeatedHandle {
+  readonly place: SeatPlace;
+  /** §15's whole handle, or the unknown's question mark. Never cut short here. */
+  readonly name: string;
+  /**
+   * The row the record still holds for them. **Absent is plain text**: you have no candidate
+   * row because no route serves a searcher their own, and a withheld player has one field and
+   * no card — so there is nothing behind the name and it is not a button (`seatIsExplainable`,
+   * the same rule the seat's hold reads).
+   */
+  readonly candidate?: Candidate;
+}
+
+/**
  * The handles on one half of the court, **whole**.
  *
- * `sideNames` is §15's formatter and it returns a **list**: *"a formatter that returns one
- * string has decided the layout, and this one must not"* — at 64 characters a join produces a
- * phrase no row can hold. A seat the record can no longer describe answers the unknown's
- * question mark, which is the same word the seat itself draws.
+ * §15's `playerName()` is the one formatter, and this returns a **list**: *"a formatter that
+ * returns one string has decided the layout, and this one must not"* — at 64 characters a join
+ * produces a phrase no row can hold. A seat the record can no longer describe answers the
+ * unknown's question mark, which is the same word the seat itself draws.
  */
 function handlesOn(
   half: 'yours' | 'theirs',
   seated: Seating,
   places: readonly SeatPlace[],
   rows: ReadonlyMap<string, Candidate>,
-): readonly string[] {
+): readonly SeatedHandle[] {
   const mine = half === 'yours';
 
-  return sideNames(
-    seated.flatMap<NamedPlayer>((seat, at) => {
-      const place = places[at];
-      if (place === undefined || mine !== (place !== 'THEIR_SIDE')) return [];
-      if (seat.kind === 'you') return [{ kind: 'you' }];
-      if (seat.kind === 'empty') return [];
+  return seated.flatMap<SeatedHandle>((seat, at) => {
+    const place = places[at];
+    if (place === undefined || mine !== (place !== 'THEIR_SIDE')) return [];
+    if (seat.kind === 'you') return [{ place, name: playerName({ kind: 'you' }) }];
+    if (seat.kind === 'empty') return [];
 
-      const nickname = rows.get(seat.playerId)?.card.nickname;
-      return [nickname === undefined ? { kind: 'unknown' } : { kind: 'player', nickname }];
-    }),
-  );
+    const row = rows.get(seat.playerId);
+    const who: NamedPlayer =
+      row === undefined ? { kind: 'unknown' } : { kind: 'player', nickname: row.card.nickname };
+
+    return [{ place, name: playerName(who), ...(row === undefined ? {} : { candidate: row }) }];
+  });
 }
 
-/** One name per line, each truncating in its own box and none of them joined. */
-function Names({ names }: { readonly names: readonly string[] }) {
+/**
+ * One name per line, each truncating in its own box and none of them joined — **and each a
+ * button where there is a breakdown behind it.**
+ *
+ * The target is the **line**, built to 6.5's minimum rather than granted a `hitSlop`: the names
+ * are stacked with no gap, so vertical slop is bounded by a neighbour 0pt away and there is
+ * none to take. That is the tick-box row's answer to the same arithmetic — *the row is the
+ * surface* — and here the surface is one name.
+ *
+ * **Every line takes that box, including the ones that are not controls.** A 44pt button
+ * beside a 15pt line is one column at two rhythms, and which rhythm a line gets would then be
+ * decided by whether the record still describes the person standing in that seat — a layout
+ * that moves when a row is withheld. The box is the column's, and the target is a consequence
+ * of it rather than the reason for it.
+ *
+ * The key is the **position**, not the word: two withheld seats on one side both answer `?`,
+ * and a key of the name would collapse them into one line.
+ */
+function Names({
+  seated,
+  onExplain,
+}: {
+  readonly seated: readonly SeatedHandle[];
+  readonly onExplain: (candidate: Candidate) => void;
+}) {
   return (
     <View>
-      {names.map((name) => (
-        <Text key={name} style={s.handle}>
-          {name}
-        </Text>
-      ))}
+      {seated.map(({ place, name, candidate }, at) =>
+        candidate === undefined ? (
+          <View key={at} style={s.handleTarget}>
+            <Text style={s.handle}>{name}</Text>
+          </View>
+        ) : (
+          <Pressable
+            key={at}
+            accessibilityRole="button"
+            accessibilityLabel={seatedNameLabel(place, { name, fit: candidate.fit })}
+            onPress={() => onExplain(candidate)}
+            // 6.6: the chip's `.7`, on the target rather than on the word — the line is the
+            // control, so a word that dimmed alone would say the two are separate things.
+            style={({ pressed }) => [s.handleTarget, pressed ? s.pressed : undefined]}
+          >
+            <Text style={s.handle}>{name}</Text>
+          </Pressable>
+        ),
+      )}
     </View>
   );
 }
@@ -978,4 +1117,11 @@ const s = StyleSheet.create({
   provisional: { ...theme.type.tiny, color: theme.color.muted },
   // The whole handle, and the one place on this screen it is not cut short.
   handle: { ...theme.type.rlValue, color: theme.color.ink, textAlign: 'right' },
+  // 6.5's floor, as geometry rather than as slop, and the column's one rhythm — see `Names`.
+  handleTarget: {
+    minHeight: theme.size.minTouch,
+    minWidth: theme.size.minTouch,
+    justifyContent: 'center',
+  },
+  pressed: { opacity: 0.7 },
 });

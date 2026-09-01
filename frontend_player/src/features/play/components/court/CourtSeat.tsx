@@ -33,23 +33,27 @@
  * for: a figure compared vertically against another figure. What is left after §5 takes the
  * level off is a **handle** — a word — and `tag` is the design system's 9,5pt word.
  *
- * ## The hold is decided and not yet wired
+ * ## The hold opens `SH.whyfit`, and it is a shortcut to a route that already exists
  *
- * **There is no long press here yet, and
- * [#285](https://github.com/Raketa02/Raketa/issues/285) wires it.**
- * [#278](https://github.com/Raketa02/Raketa/issues/278) settled where it lands, and the answer
- * is mostly about somewhere else: a seated player's Fit had no explanation anywhere in the
- * product, because the pool is the one surface that explains a person and it removes everybody
- * already on the court. **The forecast card's names row is the route** — the same row this
- * file's truncation is licensed by — and a hold on the seat is a shortcut to the identical
- * sheet, never the only way in, since there is no long-press gesture in the accessibility API.
+ * A seated player's Fit had no explanation anywhere in the product, because the pool is the
+ * one surface that explains a person and it removes everybody already on the court —
+ * unreachable, and ⚡ *Let the engine fill the seats* is what makes that matter, since that
+ * court is four people the searcher never chose and never saw a card for. **The forecast
+ * card's names row is the route** — the same row this file's truncation is licensed by — and
+ * `onHold` is a shortcut to the identical sheet
+ * ([#285](https://github.com/Raketa02/Raketa/issues/285), §20.4.1).
  *
- * Three things this component keeps as they are, decided rather than pending. **No holding
- * ring**: §20.4's sentence was struck, because the seat already dims to `.7` on press-in and a
- * ring would be 6.6's second channel on one state. **No `delayLongPress`** — the platform's
- * default, as the deck card's hold already takes. And **the hold is inert while `selected` is
- * live under a swap**, with no toast, on the clear badge's own precedent one docblock down:
- * a gesture nothing advertises owes no refusal.
+ * **It is a fallback and never the only way in.** There is no long-press gesture in the
+ * accessibility API, so a hold *duplicates* a route and carries none (Part 16, 2026-09-01).
+ * A seat this component was handed no `onHold` for is a seat with no gesture at all, and
+ * `CourtBuild` is where the three seats that get none are decided.
+ *
+ * Three things about it are decided rather than open. **No holding ring**: §20.4's sentence
+ * was struck, because the seat already dims to `.7` on press-in and a ring would be 6.6's
+ * second channel on one state. **No `delayLongPress`** — the platform's default, as the deck
+ * card's hold already takes, and `motion.hold` is *how long a state is shown* and must not
+ * gain a gesture threshold. And **the hold says nothing when it does nothing**, on the clear
+ * badge's own precedent one docblock down: a gesture nothing advertises owes no refusal.
  */
 
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -159,9 +163,25 @@ export interface CourtSeatProps {
    * two: `seatIsClearable` decides, and the badge a player cannot use is never drawn.
    */
   readonly onClear?: () => void;
+  /**
+   * Explain the Fit of whoever is sitting here — the shortcut to `SH.whyfit`.
+   *
+   * **Omitted is how a seat says it has nothing to explain**, which is the clear badge's shape
+   * for the same reason: a hold that opened an apology would be worse than a hold that does
+   * nothing, and a gesture nothing advertises owes no sentence either way.
+   */
+  readonly onHold?: () => void;
 }
 
-export function CourtSeat({ size, place, occupant, selected, onPress, onClear }: CourtSeatProps) {
+export function CourtSeat({
+  size,
+  place,
+  occupant,
+  selected,
+  onPress,
+  onClear,
+  onHold,
+}: CourtSeatProps) {
   const who = seatWho(occupant);
   const box = seatBox(size);
 
@@ -172,6 +192,10 @@ export function CourtSeat({ size, place, occupant, selected, onPress, onClear }:
         accessibilityLabel={seatLabel(place, who.spoken)}
         accessibilityState={{ selected }}
         onPress={onPress}
+        // The platform's own threshold, and no announcement: a hold is a fallback for a route
+        // the forecast card's names row already carries, and it is absent where there is
+        // nothing behind it.
+        onLongPress={onHold}
         // 6.6: touch has no hover, so the press is declared. The photo tile's `.7`, because
         // what dims is a photograph and this is the same rectangle at a quarter of the size.
         style={({ pressed }) => [box, pressed ? s.pressed : undefined]}
