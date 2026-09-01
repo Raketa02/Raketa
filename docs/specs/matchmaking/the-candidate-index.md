@@ -136,7 +136,14 @@ values and the rounding lives in the engine, so a consumer deriving μ ± σ for
 own a rounding rule for a number `rating` publishes — the same argument that put the band's
 edges here rather than in a table of four somewhere downstream.
 
-Measured at **782 bytes a row** as `__slots__` objects, held once per gunicorn worker.
+Measured at **1 991 bytes a row** as `__slots__` objects, held once per gunicorn worker —
+[`candidate_row_bench.py`](../../research/bench/matcher-scale/candidate_row_bench.py), which
+imports this type rather than copying it. The **782** this said until
+[#276](https://github.com/Raketa02/Raketa/issues/276) was measured against
+`matchmaking-engine.md` §7.2's row — two `int` bitmasks, scalar area columns, epoch ints — and
+never against this one. **Half the row** is vocabulary strings the projection copies per
+row instead of sharing: sharing them would give back **996 bytes of the 1 991**, and that is a
+change to the projection rather than to this figure.
 
 ---
 
@@ -207,7 +214,9 @@ ADR-0095's live block set, ADR-0098's history and the Redis ledgers are all read
 
 A delta refresh shares row references, so the steady state never holds two copies of a row.
 **Trigger 4 loses its `× 2`** and becomes `bytes_per_row × rows × workers` > half the
-container limit — roughly **64 000 players** at four workers on a 1 GB container, not ~32 000.
+container limit. That was *~64 000 players* at four workers on a 1 GB container while
+`BYTES_PER_ROW` was 782; at the measured 1 991 it is roughly **25 000 players** — the `× 2`
+argument is untouched and the row underneath it was remeasured (#276).
 ADR-0093 and ADR-0101 are amended in place (ADR-0112).
 
 ---
@@ -264,7 +273,7 @@ set the wall clock.
 
 ADR-0101 makes the partition `(sport)` today and `(sport, cell)` at trigger 4. The cell **size
 is not chosen here**, and that is deliberate: it is calibrated against a real population's
-clustering, and trigger 4 is ~64 000 players away. Choosing it now would repeat
+clustering, and trigger 4 is ~25 000 players away. Choosing it now would repeat
 [#167](https://github.com/Raketa02/Raketa/issues/167)'s `QUALITY_FLOOR` mistake — a number that
 cannot be calibrated is not an answer, it is a placeholder that later reads as a decision.
 

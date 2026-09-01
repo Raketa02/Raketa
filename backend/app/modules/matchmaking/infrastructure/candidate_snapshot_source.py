@@ -14,7 +14,19 @@ carried across as a pointer. Rebuilding from scratch decodes 50 000 rows to chan
 the handful that moved — the 0.9 s figure that made a ×2 memory budget look
 necessary. Because the steady state never holds two copies of a row, **trigger 4
 loses its ×2** and becomes ``bytes_per_row × rows × workers`` > half the container
-limit: roughly **64 000 players** at four workers on a 1 GB container, not ~32 000.
+limit: roughly **25 000 players** at four workers on a 1 GB container, twice what
+the ×2 allowed. (That sentence read *64 000* until #276 remeasured the row itself;
+the doubling this paragraph argues for is untouched.)
+
+**``_decode`` below copies every string the driver returned, and that is half a
+row.** Neither asyncpg nor SQLAlchemy interns, so each row holds its own
+``"PADEL"``, its own ``"ANY"`` and its own copy of every availability code it
+ticks — **996 bytes a row**, of the measured 1 991, that routing the closed
+vocabularies through themselves would give back. It is left alone deliberately:
+#276 was a ticket about a figure nobody re-measured, and folding a projection
+change into the commit that records the measurement would mean the recorded
+number described code written in the same breath. It is worth its own ticket, and
+the bench already prints the number that ticket would be argued on.
 
 **``gc.freeze()`` after every load and refresh, and it is safe for a stated
 reason.** One automatic gen-2 collection over a live index cost **57.9 ms

@@ -118,7 +118,7 @@ before its readers.
 | Signal | Fires at | Record | Level when it fires |
 |---|---|---|---|
 | **Trigger 1** — scoring contends with the request | p99 of one scoring call > **20 ms**, **or** duty cycle > **0.25**, on one worker over 15 min | `scoring pressure window`, once per window per worker | `WARNING` |
-| **Trigger 4** — the index outgrows the container | `bytes_per_row × rows × workers` > **50%** of the limit — roughly **64 000 players** at four workers on a 1 GB container | `candidate index refreshed`, at every index load | `WARNING`, and it **never refuses** |
+| **Trigger 4** — the index outgrows the container | `bytes_per_row × rows × workers` > **50%** of the limit — roughly **25 000 players** at four workers on a 1 GB container | `candidate index refreshed`, at every index load | `WARNING`, and it **never refuses** |
 | **Index staleness** | 15 min flags, 24 h refuses (`index_staleness.py`) | `candidate index refreshed`, and `index_stale` on the search row | `WARNING` past §17's p99 |
 
 **Trigger 1 has two instruments and they are both here.** The *histogram around the scoring
@@ -192,7 +192,7 @@ runner's reasons, somebody widens it, and what survives asserts nothing at all.
 
 What the suite asserts instead is arithmetic over **injected** samples — that a p99 of a
 stated list is the stated number, that a duty cycle is time over wall-clock, that trigger 4
-reproduces `scale-posture.md`'s own *64 000 players* from the constants — and that each record
+reproduces `scale-posture.md`'s own *25 000 players* from the constants — and that each record
 is **emitted** carrying the fields its trigger is stated in. The committed diff artifact holds
 no timing for the same reason: a file that moved because a runner was busy would go red for
 reasons nobody can argue about, which is how a gate gets switched off.

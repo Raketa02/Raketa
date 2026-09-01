@@ -37,8 +37,15 @@ duplicate row.
    the frozen objects cannot become unreachable garbage. Refcounting frees an
    outgoing row the moment the last container drops it — a property, not a hope.
 
-Measured at **782 bytes a row** as ``__slots__`` objects, held once per gunicorn
-worker.
+Measured at **1 991 bytes a row** as ``__slots__`` objects, held once per gunicorn
+worker — ``docs/research/bench/matcher-scale/candidate_row_bench.py``, which
+measures *this* type by importing it. The 782 that stood here until #276 was a
+real measurement of ``matchmaking-engine.md`` §7.2's row, which packs the grid
+and the tags into two ``int`` bitmasks and keeps the area as three scalars; this
+row holds two tuples of strings and a tuple of ``IndexedArea``, and it has never
+had the other shape. Half of the 1 991 is vocabulary strings the projection
+copies per row rather than shares — which is a fact about the projection, and is
+argued where the projection is.
 """
 
 from __future__ import annotations
@@ -202,7 +209,7 @@ class Partition:
     key is a field a future matching conjunct can attach itself to, and the day it
     does, *who you are shown* starts depending on how the data happens to be
     laid out. The cell size is not chosen here either: it is calibrated against a
-    real population's clustering and trigger 4 is ~64 000 players away.
+    real population's clustering and trigger 4 is ~25 000 players away.
     """
 
     sport: str

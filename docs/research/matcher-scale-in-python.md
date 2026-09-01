@@ -11,6 +11,29 @@ claims with **measured CPython** ones, and to put a number on the two
 [ADR-0093](../adr/0093-matcher-in-the-backend-with-a-pure-match-fit-engine.md) reversal triggers
 this ticket exists to make measurable.
 
+> ### Corrected by [#276](https://github.com/Raketa02/Raketa/issues/276) — read this before quoting a byte count
+>
+> **Every row measurement below is of the row `matchmaking-engine.md` §7.2 *specifies*, and
+> that is not the row the index holds.** The harness's `population.py` says so in its own
+> docstring and always did; what happened is that its **782 bytes a row** was then quoted in
+> seven files as the cost of
+> `app/modules/matchmaking/domain/candidate_index.CandidateRow` — a type that packs nothing,
+> holding two tuples of strings where §7.2 holds two `int` bitmasks, a tuple of `IndexedArea`
+> where §7.2 holds three scalars, four `datetime` objects where §7.2 holds epoch ints, and no
+> shard key at all.
+>
+> Measured the same way, by
+> [`bench/matcher-scale/candidate_row_bench.py`](bench/matcher-scale/candidate_row_bench.py)
+> — which **imports** the shipping type so it cannot drift from it again — a row is **1 991
+> bytes**, and **249 MB** for the 125 000-row city. Half of that is closed-vocabulary
+> strings the projection copies per row rather than shares.
+>
+> **Nothing below is retracted**, because nothing below is wrong about what it measured. The
+> ratios — objects against packed columns, the worker multiplier, the fork result, the GC
+> pause — all transfer, and the packed-column escape route gets *cheaper* relative to
+> objects, not dearer. What does not transfer is any absolute byte count quoted about the
+> shipping row. For that, read `scale-posture.md` §1.
+
 Every claim carries one of three tags:
 
 | Tag | Means |
@@ -64,7 +87,8 @@ Every claim carries one of three tags:
 >    32 MB. The same index as plain Python objects is **98 MB**, as a naively-spelled
 >    dataclass with `uuid` and `datetime` fields it is **241 MB**, and it is held **once per
 >    gunicorn worker** with no copy-on-write relief. Four workers on a 1 GB container reach
->    the trigger at about **32 000 players**, not at "several cities". The fix is a
+>    the trigger at about **32 000 players**, not at "several cities" — and about **12 500**
+>    once the row is measured rather than §7.2's (see the banner at the top). The fix is a
 >    representation change, not a service: `array`-packed columns are **44 bytes a row**,
 >    below the Go figure the ADR trusted, and they *do* share across forked workers.
 > 2. **The largest latency event in the process is not the search — it is the garbage
@@ -96,8 +120,9 @@ Every claim carries one of three tags:
 | Thread offload | n/a | **does not help** — loop-lag p99 got worse, not better | 2 |
 | Process offload, worker holds the index | n/a | **0.9 ms loop-lag p99**, +0.7 ms latency | 2 |
 | Process offload, block is pickled across | n/a | **5.3 ms of pickle on the loop**, 658 KB, 15.4 ms total | 2 |
-| Bytes per candidate row | **~160** (§7.2) | **782** objects · **1 929** naive dataclass · **43** packed | 3 |
-| Whole 50 000-player index | **32 MB** (§7.2) | **98 MB** objects · **5 MB** packed — **per worker** | 3 |
+| Bytes per candidate row (§7.2's row) | **~160** (§7.2) | **782** objects · **1 929** naive dataclass · **43** packed | 3 |
+| Bytes per candidate row (**the shipping row**, #276) | — | **1 991** — see the banner above | 3 |
+| Whole 50 000-player index (§7.2's row) | **32 MB** (§7.2) | **98 MB** objects · **5 MB** packed — **per worker** | 3 |
 | Gen-2 GC pause with the index live | n/a | **58 ms** → **0.4 ms** after `gc.freeze()` | 3 |
 | Rebuild, 50 000 players, projection CPU only | **< 5 min** target (§7.4) | **1.0 s** — 959 000 events/s, one core | 5 |
 | Doubles, C(15,3) x 3 pairings | **tens of µs** (§9.9) | **2.08 ms** plain · **0.05 ms** numpy | 6 |
@@ -367,6 +392,7 @@ rather than just the container. The last column is the whole 125 000-row index o
 | dataclass with `uuid.UUID`, `datetime`, `str` shard key — **the naive spelling** | **1 929** | **241 MB** |
 | plain class with `__dict__`, 32 fields | 3 447 | 431 MB |
 | `__slots__` class, the §7.2 field list — **what a careful implementer writes** | **782** | **98 MB** |
+| `__slots__` `CandidateRow`, **the row that ships** — measured later, by #276 | **1 991** | **249 MB** |
 | `array`-packed columns (exact `itemsize × len`) | **43** | **5 MB** |
 | numpy columns (exact `.nbytes`) | 46 | 6 MB |
 | *§7.2's claim, for comparison* | *160* | *20 MB* |
@@ -385,12 +411,12 @@ per instance (~200 MB)", which is 200 bytes a row. Three numbers, three assumpti
 and **no `--preload`**. So today the multiplier is 1 — and the day somebody sets
 `GUNICORN_WORKERS=4` to use the instance's cores, the index memory quadruples silently.
 
-| workers/instance | `__slots__` objects | packed columns |
-| ---: | ---: | ---: |
-| 1 | 98 MB | 5 MB |
-| 2 | 196 MB | 11 MB |
-| 4 | **391 MB** | 22 MB |
-| 8 | 782 MB | 44 MB |
+| workers/instance | `__slots__` objects (§7.2's row) | the shipping row (#276) | packed columns |
+| ---: | ---: | ---: | ---: |
+| 1 | 98 MB | 249 MB | 5 MB |
+| 2 | 196 MB | 498 MB | 11 MB |
+| 4 | **391 MB** | **996 MB** | 22 MB |
+| 8 | 782 MB | 1 991 MB | 44 MB |
 
 **And `--preload` does not rescue it.** Forking four workers after building the index, each one
 then scanning it, measured by USS — memory that would be freed if that process died:
@@ -479,6 +505,7 @@ argument survives the port intact** — the index cannot move under a running se
 > | --- | ---: | ---: |
 > | naive dataclass (1 929 B) | 130 000 rows (~52 000 players) | 32 000 rows (~13 000 players) |
 > | `__slots__` objects (782 B) | **320 000 rows (~128 000 players)** | **80 000 rows (~32 000 players)** |
+> | the shipping `CandidateRow` (1 991 B), #276 | 125 000 rows (~50 000 players) | 31 000 rows (~12 500 players) |
 > | packed columns (43 B) | 5.8 M rows | 1.5 M rows |
 
 [ESTIMATED] from the measured bytes/row, the measured 2x refresh peak, and a 50% budget so the
@@ -534,7 +561,8 @@ decision.**
 The document never mentions them, and §7.2's schema cannot express them: `shard_key` is a
 single `string` on a row keyed `(player, sport)`.
 
-Three shapes, with the memory arithmetic at a measured 782 bytes an object row:
+Three shapes, with the memory arithmetic at a measured 782 bytes an object row (1 991 for the
+row that ships — #276; the comparison is unaffected, since only the middle shape pays it):
 
 | shape | identity | what a search from either city sees | cost |
 | --- | --- | --- | --- |

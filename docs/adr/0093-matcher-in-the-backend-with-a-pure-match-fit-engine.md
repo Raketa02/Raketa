@@ -161,6 +161,14 @@ in a codebase to lift into a service:
    duplicates any of them — a delta refresh copies row **references** from the container it
    replaces. The trigger is `bytes_per_row × rows × workers`, which the same 1 GB container
    reaches at roughly **64 000 players** on four workers.)*
+   *(Corrected by [#276](https://github.com/Raketa02/Raketa/issues/276): the 782 both
+   amendments divide by was measured against the row §7.2 **specified** — two `int` bitmasks,
+   scalar area columns, epoch ints — and never against `CandidateRow`, which holds tuples of
+   strings, a tuple of `IndexedArea` and four `datetime` objects. Measured against the type
+   that ships, a row is **1 991 bytes**, and the same 1 GB container reaches the trigger at
+   roughly **25 000 players** on four workers. The order-of-magnitude point stands and gets
+   larger; what changed is that the figure is now a measurement of the thing it is quoted
+   about.)*
 
 None of the four can fire this year, which is the point of naming them.
 

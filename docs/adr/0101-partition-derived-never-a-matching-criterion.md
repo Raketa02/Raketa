@@ -80,6 +80,19 @@ variable to 4. On a 1 GB container the trigger is reached at roughly **80 000 ro
 refcounting dirties every page a scan touches, so four forked workers cost 108 MB of
 *unique* set size each.
 
+> **Corrected by [#276](https://github.com/Raketa02/Raketa/issues/276), and the correction
+> runs the same way the paragraph above does.** The 782 is a real measurement of the row §7.2
+> *specifies*, taken before `CandidateRow` existed and never retaken against it. The shipping
+> row holds two tuples of strings where §7.2 holds two `int` bitmasks, a tuple of
+> `IndexedArea` where §7.2 holds three scalars, and four `datetime` objects where §7.2 holds
+> epoch ints — **1 991 bytes a row, 249 MB for the same city**
+> ([`candidate_row_bench.py`](../research/bench/matcher-scale/candidate_row_bench.py), which
+> imports the type rather than copying it). Every figure in the paragraph moves in the
+> direction this ADR already argues; its row counts are also the `× 2` era's, separately
+> halved by [ADR-0112](0112-the-snapshot-is-a-per-partition-container-bound-once.md). With
+> both corrections the 1 GB container reaches trigger 4 at **~63 000 rows, about 25 000
+> players**.
+
 **Trigger 1** — *"request latency measurably contends with scoring"* — was prose, and prose
 does not fire. The measurement supplies the numbers, and also the reason to instrument
 rather than to wait: the largest latency event in the process is not the search but the
@@ -152,8 +165,11 @@ as a claim with no trigger at all.
 this ADR assumed was a cold rebuild. #173 made it a **delta** that copies row *references*
 from the container it replaces and decodes only the rows that moved, so the steady state
 never holds two copies of a row. The trigger is
-`bytes_per_row × rows × GUNICORN_WORKERS` > 50% of the limit — roughly **64 000 players** on
-four workers of a 1 GB container, not ~32 000. A trigger computed against a peak that does
+`bytes_per_row × rows × GUNICORN_WORKERS` > 50% of the limit — roughly **25 000 players** on
+four workers of a 1 GB container, twice what the `× 2` allowed. (That figure read *64 000*
+until [#276](https://github.com/Raketa02/Raketa/issues/276) remeasured `bytes_per_row` against
+the row that ships rather than the row §7.2 specifies; the doubling this paragraph argues for
+is untouched.) A trigger computed against a peak that does
 not occur fires early, which is the same defect in the other direction as the one this
 section was written to fix.
 

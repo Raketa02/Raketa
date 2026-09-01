@@ -26,6 +26,7 @@ disagree about what *transitive* means.
 
 from __future__ import annotations
 
+import sys
 from dataclasses import FrozenInstanceError, fields, is_dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -40,6 +41,7 @@ from app.modules.matchmaking.domain.candidate_index import (
     Partition,
     partition_of,
 )
+from app.modules.matchmaking.domain.scale_triggers import BYTES_PER_ROW
 from tests.unit.test_scorable_candidate_fence import reachable_fields, _words
 
 #: Located through the module rather than by this file's own depth. A path
@@ -281,7 +283,7 @@ def test_a_row_accepts_the_range_the_rating_published() -> None:
 def test_an_index_row_is_frozen_and_slotted() -> None:
     """Both halves of the memory claim, and of the immutability one.
 
-    ``__slots__`` is the 782-bytes-a-row figure; frozen is what lets a delta
+    ``__slots__`` is the 1 991-bytes-a-row figure; frozen is what lets a delta
     refresh share a row between two containers without either being able to
     change it under the other.
     """
@@ -328,6 +330,137 @@ def test_the_cycle_walk_finds_a_back_pointer_to_a_container() -> None:
     container.rows.append(row)
 
     assert _cycles_from(row) != []
+
+
+# ---------------------------------------------------------------------------
+# 4 — the one number attached to this row that nothing else observes
+# ---------------------------------------------------------------------------
+
+
+def test_a_row_still_costs_roughly_what_the_trigger_budgets_for_it() -> None:
+    """``BYTES_PER_ROW``, held against a row rather than against a memory.
+
+    Everything else about this type is walked — the fence, the cycles, the
+    schema — and the one thing that was not is the figure trigger 4 divides the
+    container by. So it went wrong the quiet way (#276): ``range_low`` /
+    ``range_high`` were added and nothing moved, and long before that the
+    constant had been measured against the row ``matchmaking-engine.md`` §7.2
+    *specified* — int bitmasks for the grid and the tags, scalar area columns,
+    epoch ints — rather than against the tuples and ``datetime`` objects this
+    one holds. **A measured number nobody re-measures stops being a
+    measurement.**
+
+    This is not the benchmark and cannot be: it is one row rather than 31 250,
+    ``sys.getsizeof`` rather than ``tracemalloc``, and it has no RSS
+    cross-check. What it is, is the thing that goes red — the band is wide
+    enough that no reasonable field moves it by accident and narrow enough that
+    a second tuple or a second ``IndexedArea`` does, and the slot count below
+    catches the cheap fields the band would swallow. Both say the same sentence
+    when they fail: go and re-run ``candidate_row_bench.py``.
+    """
+
+    row = _bench_shaped_row()
+    measured = sys.getsizeof(row) + sum(
+        _deep_bytes(getattr(row, slot), set()) for slot in CandidateRow.__slots__
+    )
+
+    assert 0.8 * BYTES_PER_ROW < measured < 1.2 * BYTES_PER_ROW, (
+        f"a row of this shape now costs {measured} bytes and trigger 4 budgets "
+        f"{BYTES_PER_ROW}; re-run docs/research/bench/matcher-scale/"
+        f"candidate_row_bench.py and move the constant with its measurement"
+    )
+
+
+def test_adding_a_field_is_a_moment_somebody_re_measures_the_row() -> None:
+    """A count, so a cheap field cannot slip past the band above.
+
+    A new ``None`` column costs eight bytes and would move nothing a percentage
+    could see, which is exactly how a row grows a slot at a time until the
+    figure quoted about it is wrong by a factor. There is no right number here —
+    twenty-five is only what ships — and updating it is the whole ask: read
+    ``candidate_index``'s module docstring, re-run the bench, and move
+    ``BYTES_PER_ROW`` in the same commit as the field.
+    """
+
+    assert len(CandidateRow.__slots__) == 25
+
+
+def _bench_shaped_row() -> CandidateRow:
+    """The row ``candidate_row_bench.py`` measures the mean of, near the middle.
+
+    Six of the twenty-one cells and four tags — ``app/seeds/cohort.py``'s own
+    density, which is what the bench builds its population at (mean 6.2, median
+    5) — and **every vocabulary string a distinct object**, because that is what
+    ``candidate_snapshot_source._decode`` produces: it copies whatever the
+    driver returned, and neither asyncpg nor SQLAlchemy interns, so two rows of
+    the same sport hold two ``"PADEL"`` objects. A row built from literals here
+    would be measuring the interned counterfactual and would read 55% light.
+    """
+
+    def uninterned_copy(value: str) -> str:
+        return value.encode().decode()
+
+    when = datetime(2026, 8, 27, 9, 0, tzinfo=timezone.utc)
+    return CandidateRow(
+        player_id="11111111-1111-1111-1111-111111111111",
+        sport=uninterned_copy("PADEL"),
+        mu=2.71,
+        sigma=0.34,
+        confidence=62,
+        range_low=2.37,
+        range_high=3.05,
+        band=uninterned_copy("Improver"),
+        band_lower=2.5,
+        band_upper=3.0,
+        rating_status=uninterned_copy("INITIAL_ESTIMATE"),
+        calibration_priority=uninterned_copy("STANDARD"),
+        declared_intent=uninterned_copy("COMPETITIVE"),
+        social_tags=tuple(
+            uninterned_copy(tag)
+            for tag in (
+                "PLAYS_TO_WIN",
+                "HERE_TO_IMPROVE",
+                "STAYS_FOR_A_DRINK",
+                "WARMS_UP_PROPERLY",
+            )
+        ),
+        tags_updated_at=when,
+        availability=tuple(
+            uninterned_copy(f"{day}:{part}")
+            for day in range(1, 3)
+            for part in ("MORNING", "AFTERNOON", "EVENING")
+        ),
+        grid_updated_at=when,
+        areas=(IndexedArea(latitude=52.23, longitude=21.01),),
+        search_radius_km=12,
+        proposals_opt_in=True,
+        gender=uninterned_copy("WOMAN"),
+        gender_preference=uninterned_copy("ANY"),
+        profile_created_at=when,
+        last_active_at=when,
+        applied_through_sequence_no=41,
+    )
+
+
+def _deep_bytes(value: object, seen: set[int]) -> int:
+    """``sys.getsizeof`` down one level, counting each object once.
+
+    The same walk ``candidate_row_bench.py`` breaks its field table up with: a
+    tuple's own footprint plus its elements', an ``IndexedArea`` plus its two
+    floats, and nothing deeper because the row goes no deeper — which is the
+    cycle walk above, stated as a size.
+    """
+
+    if id(value) in seen:
+        return 0
+    seen.add(id(value))
+    total = sys.getsizeof(value)
+    if isinstance(value, tuple):
+        for element in value:
+            total += _deep_bytes(element, seen)
+    if isinstance(value, IndexedArea):
+        total += sys.getsizeof(value.latitude) + sys.getsizeof(value.longitude)
+    return total
 
 
 def _cycles_from(root: object) -> list[str]:

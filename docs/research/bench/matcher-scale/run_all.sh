@@ -27,7 +27,7 @@ fi
 echo '```'
 echo
 
-for b in scan_bench terms_bench doubles_bench memory_bench fork_bench \
+for b in scan_bench terms_bench doubles_bench memory_bench candidate_row_bench fork_bench \
          port_bench rebuild_bench lowend_bench loop_bench gc_bench \
          saturation_bench; do
   echo

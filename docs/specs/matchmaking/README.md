@@ -196,8 +196,13 @@ has to say *which* one.
   row**, not 160.
 
 None of the three is authoritative and the discrepancy is not the interesting part: the
-measured figure is **782 bytes a row as plain Python objects**, and it is held once per
-worker. See [`docs/research/matcher-scale-in-python.md`](../../research/matcher-scale-in-python.md).
+measured figure is **1 991 bytes a row as plain Python objects**, and it is held once per
+worker. See
+[`candidate_row_bench.py`](../../research/bench/matcher-scale/candidate_row_bench.py), which
+measures the shipping `CandidateRow` by importing it, and
+[`docs/research/matcher-scale-in-python.md`](../../research/matcher-scale-in-python.md) for the
+older run — whose **782** measured §7.2's row and was quoted about this one from the day
+the constant was written ([#276](https://github.com/Raketa02/Raketa/issues/276)).
 [ADR-0101](../../adr/0101-partition-derived-never-a-matching-criterion.md) has since restated
 ADR-0093's trigger 4 in **rows and workers**, and
 [`scale-posture.md`](scale-posture.md) carries the measured table — so quote neither §7.2 nor

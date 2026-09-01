@@ -29,7 +29,7 @@ from app.modules.matchmaking.domain.scale_triggers import (
 WINDOW = TRIGGER_WINDOW.total_seconds()
 
 #: A gigabyte, as the posture's own arithmetic spells it — ``0.5 × 10⁹`` over
-#: ``782 × 4`` is what produces §4's *~160 000 rows*, and reading it as a
+#: ``1 991 × 4`` is what produces §4's *~63 000 rows*, and reading it as a
 #: gibibyte would move that figure by 7% and stop the number in the document
 #: reproducing.
 ONE_GB = 1_000_000_000
@@ -119,17 +119,20 @@ def test_the_loop_lag_rides_along_and_is_not_part_of_the_trigger() -> None:
 
 
 def test_the_trigger_reproduces_the_postures_own_stated_bound() -> None:
-    """*Roughly 64 000 players at four workers on a 1 GB container.*
+    """*Roughly 25 000 players at four workers on a 1 GB container.*
 
     The one number in ``scale-posture.md`` §4 that a reader is most likely to
     quote, re-derived here from the constants rather than restated — so a change
     to ``BYTES_PER_ROW`` or to the half-the-container budget moves this
-    assertion instead of leaving the document quietly wrong.
+    assertion instead of leaving the document quietly wrong. It moved once, and
+    that is the whole of #276: the figure said ~64 000 while ``BYTES_PER_ROW``
+    was 782, which was measured against the row ``matchmaking-engine.md`` §7.2
+    *specified* and never against the row this codebase holds.
     """
 
     footprint = footprint_of(rows=0, workers=4, limit_bytes=ONE_GB)
-    assert footprint.rows_at_trigger == 159_846
-    assert footprint.players_at_trigger == 63_938
+    assert footprint.rows_at_trigger == 62_782
+    assert footprint.players_at_trigger == 25_112
 
 
 def test_the_refresh_holds_one_copy_of_a_row_and_the_multiplier_is_named() -> None:
@@ -143,19 +146,27 @@ def test_the_refresh_holds_one_copy_of_a_row_and_the_multiplier_is_named() -> No
 
 
 def test_an_index_over_half_the_container_fires() -> None:
-    over = footprint_of(rows=160_000, workers=4, limit_bytes=ONE_GB)
+    over = footprint_of(rows=63_000, workers=4, limit_bytes=ONE_GB)
     assert over.fires
     assert (over.fraction_of_budget or 0) > 1.0
 
 
-def test_an_index_at_the_launch_citys_size_is_nowhere_near_it() -> None:
+def test_an_index_at_the_launch_citys_size_does_not_fire_but_is_no_longer_far() -> None:
     """§1's launch city — 10³–10⁴ players at ~2.5 rows each — against the same
-    container the trigger is written for."""
+    container the trigger is written for.
+
+    **The headroom is the thing #276 moved.** At 782 bytes a row the top of the
+    launch range sat at a sixth of the budget; at the measured 1 991 it sits at
+    **two fifths** of it. It still does not fire, and the fraction is asserted
+    rather than the verdict alone, because *does not fire* is the same sentence
+    at 16% and at 40% and only one of them is comfortable.
+    """
 
     launch = footprint_of(
         rows=int(10_000 * ROWS_PER_PLAYER), workers=4, limit_bytes=ONE_GB
     )
     assert not launch.fires
+    assert 0.38 < (launch.fraction_of_budget or 0) < 0.42
 
 
 def test_an_unreadable_limit_is_unknown_and_never_unlimited() -> None:

@@ -57,7 +57,41 @@ TRIGGER_WINDOW = timedelta(minutes=15)
 #: (``scale-posture.md`` §1). **Not 160** — §7.2's figure is wrong three
 #: different ways — and not 43, which is the ``array``-packed answer this
 #: trigger *fires to authorise* rather than the state it measures.
-BYTES_PER_ROW = 782
+#:
+#: **And not 782, which is what this said from the day it was written** (#276).
+#: That figure was measured, and it was measured against §7.2's *specified* row:
+#: two ``int`` bitmasks for the tags and the grid, scalar area columns, epoch
+#: ints, a shard key. ``CandidateRow`` has never had that shape — it holds two
+#: tuples of strings, a tuple of ``IndexedArea``, four ``datetime`` objects and
+#: no shard key at all. The number below is the first one taken against the type
+#: this constant is about, by
+#: ``docs/research/bench/matcher-scale/candidate_row_bench.py``, which
+#: **imports** the row rather than copying it: 1 991 by ``tracemalloc`` over
+#: 31 250 rows, 2 159 by the RSS cross-check.
+#:
+#: **Half of it is strings nobody needed a second copy of** — 996 of the 1 991,
+#: which sharing the closed vocabularies would give back. That is a change
+#: to the projection and not to this constant, which measures the row as it is
+#: actually built; the argument is in ``candidate_snapshot_source``, beside the
+#: code that would carry it, and the bench prints both figures so the saving is
+#: measured before anyone decides to spend it.
+#:
+#: **One input to it is an assumption, and it is the one that moves the answer.**
+#: ``availability`` is the most expensive field on the row — a tuple plus a
+#: string per ticked cell — so how much of the grid a player fills sets the
+#: total, and there are no real players to measure. The bench uses
+#: ``app/seeds/cohort.py``'s density, the only one this repository states (mean
+#: 6.2 of 21 cells), and **prints the elasticity rather than hiding it**: 3 cells
+#: is 1 779 a row and 21 is 2 938, so trigger 4 moves between ~28 000 and
+#: ~17 000 players across that range. A figure quoted without its assumption is
+#: how the 782 above survived, so this one is quoted with it.
+#:
+#: **This is not urgent.** The correction moves trigger 4 from ~64 000 players
+#: to ~25 000, against a platform whose largest environment is a laptop, and the
+#: error it fixes was in the direction of firing *late* rather than of a wrong
+#: refusal. What makes it worth having done is that the old figure was quoted in
+#: seven files as a measurement while being a measurement of something else.
+BYTES_PER_ROW = 1991
 
 #: §4's *50% of the container memory limit*. Half, so that the index and
 #: everything the API needs beside it are budgeted separately rather than the
@@ -67,7 +101,7 @@ MEMORY_TRIGGER_FRACTION = 0.5
 #: §1's *candidate rows ≈ 2.5 × players*, and the reason the table says **write
 #: every threshold in rows, never in players**: rows are what the arithmetic
 #: reads, and the player figure is the sentence a human recognises. It is used
-#: to say *roughly 64 000 players* on the way out and never on the way in.
+#: to say *roughly 25 000 players* on the way out and never on the way in.
 ROWS_PER_PLAYER = 2.5
 
 #: ``docs/adr/0112`` struck the ``× 2`` that budgeted a refresh peak holding two
@@ -232,7 +266,7 @@ class IndexFootprint:
 
         §1's *write every threshold in rows, never in players* is about the
         arithmetic, which reads rows throughout. This is the sentence at the end
-        of it: **roughly 64 000 players at four workers on a 1 GB container.**
+        of it: **roughly 25 000 players at four workers on a 1 GB container.**
         """
 
         rows = self.rows_at_trigger
