@@ -401,8 +401,10 @@ export function whyFitRowLabel(row: {
  * §20.7 records the diff grid as *"a different control with a third fact"*, and a role that
  * carried `checked` would offer a state a reader could try to change.
  *
- * `KEEP_THESE_TIMES`'s body — the copy that names the colour — is a rewrite booked on §12 by
- * §20.12, and is deliberately not invented here.
+ * **`KEEP_THESE_TIMES`'s body is the third answer, and it is written** — §12, through
+ * `promptPresentation` ([#277](https://github.com/Raketa02/Raketa/issues/277)). It names 6.8's
+ * plus and dash, so the sentence a reader is given and the suffixes a listener is given
+ * describe the same two marks rather than the scheme the drawing retired.
  */
 export function availabilityDiffCellLabel(
   cell: WeekCell,

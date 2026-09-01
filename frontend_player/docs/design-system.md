@@ -1003,8 +1003,9 @@ the drift `Tick` was extracted to prevent.
 
 **The prototype's scheme is replaced by the arrival rather than after it**, because it is a
 [Part 13](#part-13--accessibility) violation twice over. New drew a **volt ring** and dropped
-drew **45 % opacity** — colour as the only signal, on a sheet whose own body copy names the
-colour as the mechanism (_"Green rings are new, faded ones you dropped"_) — and a volt ring on
+drew **45 % opacity** — colour as the only signal, on a sheet whose own body copy named the
+colour as the mechanism (_"Green rings are new, faded ones you dropped"_, rewritten against
+this table by [#277](https://github.com/Raketa02/Raketa/issues/277)) — and a volt ring on
 paper is 1,3:1, so half of it was not there at all
 ([2.2](#22-accent-and-semantics): volt is a fill anywhere and a stroke only on dark).
 

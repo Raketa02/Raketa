@@ -504,13 +504,33 @@ construction.
 
 | `Prompt` | Title | Body |
 | --- | --- | --- |
-| `KEEP_THESE_TIMES` | `Keep these times?` | `{n} slots now · {was} on your profile. Green rings are new, faded ones you dropped.` |
+| `KEEP_THESE_TIMES`, on a week with cells | `Keep these times?` | `{n} slots now · {was} on your profile. A plus is new, a dash is one you dropped.` |
+| `KEEP_THESE_TIMES`, on a cleared week | `Keep these times?` | `Nothing ticked · {was} on your profile. The matcher skips a blank week rather than scoring it nought.` |
 | `KEEP_THIS_RADIUS` | `Keep {radius_km} km?` | `You've widened to this three searches running. Make it your usual, or keep it to this one.` |
 | `UPDATE_PLAY_INTENT` | `Your searches say something else` | `Your last five {sport} searches were {mode}. Your profile still says otherwise — want to change it?` |
 | `REFRESH_YOUR_TIMES` | `Is this week still right?` | `The matcher reads this grid every time it looks for anybody — for you and for the people it puts in front of you. A grid that is three months old quietly ruins every match it touches, so it is worth keeping honest.` |
 
 `REFRESH_YOUR_TIMES` keeps §F2 #9 **verbatim** — it is one of the ten strings that define the
 voice, and this is the prompt it was written for.
+
+**`KEEP_THESE_TIMES` has two bodies and one arm**
+([#277](https://github.com/Raketa02/Raketa/issues/277)). The marks it names are
+[6.8](../../../frontend_player/docs/design-system.md#68-the-availability-grid)'s diff
+variant's — a **plus** for newly-on, a **dash** for newly-off — and never the colour they are
+drawn in. The sentence they replace — *"Green rings are new, faded ones you dropped"* — named
+the **colour as the mechanism**, which was Part 13's prohibition on the day it was written;
+and once the diff variant replaced the volt ring and the 45% opacity with shapes, it was also
+describing marks that are **not on the screen**, on every week rather than only a cleared
+one.
+
+The second body is the **cleared week**, made a legal value on the wire by
+[#247](https://github.com/Raketa02/Raketa/issues/247). It has no *new* half — the whole grid
+is the dropped one — and *"0 slots now"* would assert a **measured zero**, which is the one
+reading [ADR-0102](../../adr/0102-silence-is-never-scored.md) refuses: a blank grid is
+*absent*, never *never*. So it states what actually happens, with **the matcher as its
+subject** — §F1 rule 6's shape, and `REFRESH_YOUR_TIMES`'s own. It is the only prompt body
+that states a scoring rule, and it earns it, because the count it replaces was already
+stating one and stating it wrongly.
 
 Every prompt closes with §F2's *"Either way the search runs now."* The value each quotes is
 `RaisedPrompt`'s own payload — *"the value already in play, never a value the engine
@@ -709,8 +729,10 @@ exhaustive by type; neither is reachable.
 - **Anything on an out-of-scope surface** — the record sheets, *Show them again*, the
   seat-impact line, at-stake, Player Score's strands, languages. A code with no surface gets
   no words, and the map's Out of scope is the list.
-- **A clash word for the two tag-term concerns, and `KEEP_THESE_TIMES`'s colour-named body**
-  — both surfaced by §20 and named there rather than invented.
+- **A clash word for the two tag-term concerns** — surfaced by §20 and named there rather
+  than invented.
+- ~~**`KEEP_THESE_TIMES`'s colour-named body**~~ — settled by
+  [#277](https://github.com/Raketa02/Raketa/issues/277) in §12.
 
 ---
 
@@ -885,17 +907,20 @@ The editor is [6.8](../../../frontend_player/docs/design-system.md#68-the-availa
 reused unchanged and **not restated** — `checkbox`, `checked`, `"Monday morning"`, column
 heads hidden. §E6's *"'EVE' should be announced as 'evening'"* is already done there.
 
-**`SH.saveav`'s diff grid is a different control with a third fact.** Newly-on draws a volt
-ring, newly-off drops to 45% opacity — and the sheet's own body text says *"Green rings are
-new, faded ones you dropped"*, which is Part 13's prohibition in the one place the copy
-**names the colour as the mechanism**.
+**`SH.saveav`'s diff grid is a different control with a third fact.** Newly-on draws a
+**plus** in `volt` on `ink` and newly-off a **dash** in `muted` — shapes from the tick's own
+family, which is
+[6.8](../../../frontend_player/docs/design-system.md#68-the-availability-grid)'s diff variant
+replacing the volt ring and the 45% opacity the prototype drew. Colour is a second signal on
+every one of them and the mechanism of none.
 
 | | |
 | --- | --- |
 | **Diff cell** | Not interactive — a `span` already. `{Day} {part}` · `{Day} {part}, newly added` · `{Day} {part}, dropped` |
 
-`KEEP_THESE_TIMES`'s body is a **copy edit, booked in §20.12** — it instructs sighted players
-in a vocabulary no listener can use.
+§12's body names those same two marks, so the sentence a reader is given and the suffixes a
+listener is given describe one drawing rather than two
+([#277](https://github.com/Raketa02/Raketa/issues/277)).
 
 ### 20.8 Why-fit — the meter is decoration
 
@@ -979,14 +1004,12 @@ both readers navigating by heading.
 
 ### 20.12 What this section does not write, and what gates it
 
-**Two gaps, named rather than invented:**
+**One gap, named rather than invented:**
 
 - **A clash word for the two tag-term concerns.** §7's `PLAYING_STYLE` and `SOCIAL_VIBE`
   concerns render `{a} against {b}` and read as neutral description. §7 says why they are
   different — *"a clash is a graded claim, and the engine is the only thing entitled to make
   it"* — and the word belongs beside those sentences, not in a label.
-- **`KEEP_THESE_TIMES`'s body.** *"Green rings are new, faded ones you dropped"* names a
-  colour as the mechanism. §12 owns the rewrite.
 
 **One obligation on the design system**, to land with
 [#219](https://github.com/Raketa02/Raketa/issues/219)'s outstanding rows so the amendment log

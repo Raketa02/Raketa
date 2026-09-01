@@ -92,11 +92,26 @@ export const REFRESH_YOUR_TIMES_BODY =
 /**
  * Everything one prompt says.
  *
- * **A copy edit is booked against `KEEP_THESE_TIMES`'s body and is not made here.** §20.7
- * found that *"Green rings are new, faded ones you dropped"* names a colour as the mechanism,
- * which Part 13 forbids, and §20.12 books the rewrite to §12 rather than inventing it in an
- * accessible name. Until that lands the sentence is the one the deck holds, and the diff
- * grid's own cell names carry *newly added* and *dropped* in words regardless.
+ * **`KEEP_THESE_TIMES` writes two bodies from one arm**, keyed on whether the week the search
+ * ran on is empty ([#277](https://github.com/Raketa02/Raketa/issues/277)).
+ *
+ * A week with cells names the two marks
+ * [6.8](../../../../docs/design-system.md#68-the-availability-grid)'s diff variant draws — a
+ * **plus** and a **dash**. The sentence they replace named *"Green rings … faded ones"*, which
+ * was a colour as the mechanism when it was written and, once the diff variant replaced the
+ * volt ring and the 45% opacity with shapes, a description of marks that are not on the screen
+ * at all.
+ *
+ * A **cleared week has no *new* half**, so it takes a body of its own rather than the same
+ * sentence stretched over a twenty-second value. *"0 slots now"* would assert a **measured
+ * zero**, which is the one reading
+ * [ADR-0102](../../../../../docs/adr/0102-silence-is-never-scored.md) says the matcher never
+ * takes: a blank grid is *absent*, never *never*. So the empty body states what happens
+ * instead — the only prompt body that names a scoring rule, and it earns it, because the count
+ * it replaces was already naming one and naming it wrongly. It takes the matcher as its
+ * subject, which is §F1 rule 6's shape and `REFRESH_YOUR_TIMES`'s own.
+ *
+ * Both keep §F2's closer, and the suppression stays the typed absence it was.
  */
 export function promptCopy(raised: RaisedPrompt): PromptCopy {
   return {
@@ -114,8 +129,11 @@ function question(raised: RaisedPrompt): { readonly title: string; readonly body
       return {
         title: 'Keep these times?',
         body:
-          `${counted(raised.slotsNow, 'slot', 'slots')} now · ${raised.slotsWas} on your profile. ` +
-          'Green rings are new, faded ones you dropped.',
+          raised.slotsNow === 0
+            ? `Nothing ticked · ${raised.slotsWas} on your profile. ` +
+              'The matcher skips a blank week rather than scoring it nought.'
+            : `${counted(raised.slotsNow, 'slot', 'slots')} now · ${raised.slotsWas} on your profile. ` +
+              'A plus is new, a dash is one you dropped.',
       };
     case 'KEEP_THIS_RADIUS':
       return {

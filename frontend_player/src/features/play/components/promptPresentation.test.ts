@@ -36,6 +36,36 @@ describe('every prompt quotes the value already in play', () => {
     );
   });
 
+  it('names the marks the grid draws, and never the colour it draws them in', () => {
+    // 6.8's diff variant replaced the volt ring and the 45% opacity with a plus and a dash,
+    // so the sentence that named the retired scheme described marks nobody could see.
+    const body = promptCopy({ prompt: 'KEEP_THESE_TIMES', slotsNow: 6, slotsWas: 4 }).body;
+
+    expect(body).toBe('6 slots now · 4 on your profile. A plus is new, a dash is one you dropped.');
+    expect(body).not.toMatch(/green|ring|faded/i);
+  });
+
+  it('tells a cleared week what happens to it, rather than counting it as nought', () => {
+    // ADR-0102: a blank grid is *absent*, never *never*. `0 slots now` asserts the one
+    // measurement the matcher refuses to take, on the week where the whole grid is the
+    // dropped half and there is no new one to describe.
+    const body = promptCopy({ prompt: 'KEEP_THESE_TIMES', slotsNow: 0, slotsWas: 4 }).body;
+
+    expect(body).toBe(
+      'Nothing ticked · 4 on your profile. The matcher skips a blank week rather than scoring ' +
+        'it nought.',
+    );
+    expect(body).not.toMatch(/0 slots/);
+  });
+
+  it('closes a cleared week the same way, and still offers it no suppression', () => {
+    const copy = promptCopy({ prompt: 'KEEP_THESE_TIMES', slotsNow: 0, slotsWas: 4 });
+
+    expect(copy.title).toBe('Keep these times?');
+    expect(copy.closer).toBe(PROMPT_CLOSER);
+    expect(copy.suppression).toBeUndefined();
+  });
+
   it('names the sport and the mode the searches keep choosing', () => {
     expect(
       promptCopy({ prompt: 'UPDATE_PLAY_INTENT', sportName: 'Padel', mode: 'FOR_FUN' }).body,
