@@ -22,12 +22,14 @@ type SearchRadiusResponse = components['schemas']['SearchRadiusResponse'];
 type WirePlayIntent = components['schemas']['PlayIntent'];
 type WireSport = components['schemas']['Sport'];
 /**
- * Which screen a declaration was made on — the wire's four values, re-exported.
+ * Which screen a declaration was made on — the wire's five values, re-exported.
  *
  * Aliased out of `generated/` rather than restated: it is a closed vocabulary **nothing
  * branches on**, recorded beside the fact and never read by a decision, so there is nothing
  * for a domain table to be about. A second spelling would be a table that buys documentation
- * nothing was missing and can still drift.
+ * nothing was missing and can still drift — and it would have had to be widened by hand when
+ * `DECK` landed ([#280](https://github.com/Raketa02/Raketa/issues/280)), which is the drift
+ * this alias exists to make impossible.
  */
 export type PlayIntentSurface = components['schemas']['PlayIntentSurface'];
 type PlayIntentDeclarationResponse = components['schemas']['PlayIntentDeclarationResponse'];

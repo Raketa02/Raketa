@@ -66,9 +66,10 @@ export interface PromptWrites {
 /**
  * Where a declaration made from this sheet says it came from.
  *
- * The **one** of `PlayIntentSurface`'s closed four that names this exact act — a drift the
- * platform noticed, offered, and had accepted. The interstitial two files over has no such
- * value and takes the nearest; this one is not a compromise.
+ * The **one** of `PlayIntentSurface`'s closed five that names this exact act — a drift the
+ * platform noticed, offered, and had accepted. It is the sheet's alone: the interstitial two
+ * files over now takes its surface from its caller, and the type it accepts is narrowed to the
+ * two Play screens, so this value cannot be reported from anywhere but here.
  */
 const DECLARED_ON = 'DRIFT_PROMPT' as const;
 

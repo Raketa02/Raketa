@@ -43,7 +43,7 @@ import {
 import { usePlayPreferences } from '../store/playPreferences.store';
 import { endPlaySession } from '../store/playSession.store';
 
-import { declarationTitle } from './findAGamePresentation';
+import { declarationOptionLabel, declarationTitle } from './findAGamePresentation';
 import {
   DECK_FOOTER,
   NOBODY_IN_RANGE_TITLE,
@@ -60,6 +60,7 @@ import { promptControls, promptCopy } from './promptPresentation';
 import { poolDescription } from './searchPresentation';
 
 const DECK = '/api/v1/deck';
+const TENNIS_INTENT = '/api/v1/play-intents/TENNIS';
 const INTEREST = '/api/v1/interest';
 const PASSES = '/api/v1/passes';
 const DECLINES = '/api/v1/prompt-declines';
@@ -352,6 +353,31 @@ describe('what the deck deals', () => {
 
     expect(await screen.findByText(declarationTitle('Tennis'))).toBeTruthy();
     expect(dealBodies()).toHaveLength(1);
+  });
+
+  /**
+   * The surface is the deck's own — [#280](https://github.com/Raketa02/Raketa/issues/280).
+   * The interstitial is one component with two callers, and the field whose whole job is to
+   * say which screen it was is the one thing that must differ between them. It is asserted
+   * from the outside because it is a value with no effect on this screen: nothing here reads
+   * it back, so nothing but this would notice the two callers reporting the same screen.
+   */
+  it('reports the deck as the surface it was declared on', async () => {
+    transport.on('PUT', TENNIS_INTENT, () =>
+      json<Wire['PlayIntentDeclarationResponse']>({ sport: 'TENNIS', intent: 'FOR_FUN' }),
+    );
+    await openDeck();
+    await screen.findByLabelText(/^Marek Z\./);
+    fireEvent.press(screen.getByLabelText('Tennis'));
+    await screen.findByText(declarationTitle('Tennis'));
+
+    fireEvent.press(screen.getByLabelText(declarationOptionLabel('FOR_FUN', 'Tennis')));
+
+    await waitFor(() => expect(transport.requestsTo('PUT', TENNIS_INTENT)).toHaveLength(1));
+    expect(transport.requestsTo('PUT', TENNIS_INTENT)[0]?.body).toEqual({
+      intent: 'FOR_FUN',
+      surface: 'DECK',
+    });
   });
 
   it('says what a refusal means, and offers the act that failed as the retry', async () => {

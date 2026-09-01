@@ -368,6 +368,24 @@ async def test_a_declaration_is_opened_and_then_changed_through_one_route(client
     assert changed.json() == {"sport": "SQUASH", "intent": "COMPETITIVE"}
 
 
+async def test_the_deck_is_a_surface_the_route_accepts(client):
+    """#280. The deck draws ADR-0094's interstitial for the same reason the
+    search screen does, so ``DECK`` has to cross the boundary as itself rather
+    than as the nearest of four — this is the assertion that the widened enum
+    reached the schema and not only the domain."""
+
+    _, headers = await a_player(client)
+
+    response = await client.put(
+        intents_url(Sport.TENNIS),
+        json={"intent": "COMPETITIVE", "surface": "DECK"},
+        headers=headers,
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.json() == {"sport": "TENNIS", "intent": "COMPETITIVE"}
+
+
 async def test_declaring_the_value_already_held_records_nothing(
     client, session_factory
 ):

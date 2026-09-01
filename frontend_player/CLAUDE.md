@@ -605,15 +605,20 @@ number: its contribution would reappear under _the engine adjusted it_ as an adj
 made. What **is** dropped is what no screen totals — a tag with no words, a liveness code, a
 concern that could not be joined to a row.
 
-**Two gaps were found while building the deck and are named rather than papered over.** The
-searcher's **own area code** is served by no route — `area_code` crosses on the candidate and
-on the distance evidence, and both are theirs — so `SearchEnvelope.myAreaCode` is optional and
-absent, and the meta line drops its one licensed clause and keeps its kilometres. And
-`PlayIntentSurface` is a closed four with **no deck value**, so the declaration interstitial
-reports `SEARCH_SWITCH` from both Play surfaces; it is client-asserted context nothing branches
-on, and a fifth value is a contract change to argue rather than a field to invent. They are
-[#279](https://github.com/Raketa02/Raketa/issues/279) and
-[#280](https://github.com/Raketa02/Raketa/issues/280).
+**Two gaps were found while building the deck. One is still open; the other was argued and
+closed.** The searcher's **own area code** is served by no route — `area_code` crosses on the
+candidate and on the distance evidence, and both are theirs — so `SearchEnvelope.myAreaCode` is
+optional and absent, and the meta line drops its one licensed clause and keeps its kilometres
+([#279](https://github.com/Raketa02/Raketa/issues/279)). The other was `PlayIntentSurface`, a
+closed four with **no deck value**, which had the declaration interstitial reporting
+`SEARCH_SWITCH` from both Play surfaces —
+[#280](https://github.com/Raketa02/Raketa/issues/280) widened it to a closed **five** with
+`DECK`, so `declaredOn` is now a required prop on the interstitial, typed as the two Play
+surfaces alone because the other three are other screens' to write — **spelled, not `Extract`d
+off the generated union**, since transport does not reach `components/` and the `mutate` call
+already fails the build if the contract drops a member. It widened rather than renaming `SEARCH_SWITCH` to a `PLAY_SWITCH` true of
+both surfaces: the code is stored verbatim on the backend's `PlayIntentDeclared` and read back
+as itself, so a rename is an event migration bought on a field nothing branches on.
 
 `src/shared/ui/` holds the design-system primitives built so far — the cards, note, row,
 hairline, button, tag, chip, bar, header, the overlays and drawn objects the result screen

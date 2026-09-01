@@ -3570,11 +3570,12 @@
         "enum": [
           "RATING_TAIL",
           "SEARCH_SWITCH",
+          "DECK",
           "DRIFT_PROMPT",
           "PROFILE_SCREEN"
         ],
         "title": "PlayIntentSurface",
-        "description": "Which screen a declaration was made on.\n\n``ConsentSurface``'s precedent in this same context, and it obeys the same\nrule about what it is *for*: it is context recorded beside a fact, never a\nthing any decision branches on.\n\n**It is client-asserted and a client could lie about it** (ADR-0094). That\nis accepted because the client is the only party that knows which screen it\nwas, and nothing load-bearing reads it \u2014 which is exactly the condition\nunder which a self-reported field is safe to keep."
+        "description": "Which screen a declaration was made on.\n\n``ConsentSurface``'s precedent in this same context, and it obeys the same\nrule about what it is *for*: it is context recorded beside a fact, never a\nthing any decision branches on.\n\n**It is client-asserted and a client could lie about it** (ADR-0094). That\nis accepted because the client is the only party that knows which screen it\nwas, and nothing load-bearing reads it \u2014 which is exactly the condition\nunder which a self-reported field is safe to keep.\n\n**It widens; it never renames** (#280). The deck earned the fifth member:\n``POST /deck`` has no mode to read, so it reads the declaration, is refused\nwith ``play_intent_not_declared`` exactly as a search is, and draws the same\ninterstitial. Reporting that as ``SEARCH_SWITCH`` was a small untruth in the\none field whose whole job is to say which screen it was. The alternative\nargued was to rename ``SEARCH_SWITCH`` to ``PLAY_SWITCH`` \u2014 one value true\nof both Play surfaces rather than two that each name one \u2014 and it lost on\ncost, not on taste: the code is stored verbatim in ``PlayIntentDeclared``\nand read back through ``PlayIntentSurface(event.surface)``, so a rename is\nan event migration bought on a field nothing branches on, while a widening\nis one member and leaves every code already in a stream meaning what it\nmeant when it was written."
       },
       "PlayerCardSchema": {
         "properties": {

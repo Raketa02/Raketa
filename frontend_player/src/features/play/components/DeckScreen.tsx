@@ -374,7 +374,11 @@ export function DeckScreen() {
           {/* The same question Find a game asks, because the deck is refused by the same code:
               it has no mode, so it reads the declaration. */}
           {standing.kind === 'undeclared' && sportName !== undefined ? (
-            <DeclarationInterstitial sport={standing.sport} sportName={sportName} />
+            <DeclarationInterstitial
+              sport={standing.sport}
+              sportName={sportName}
+              declaredOn="DECK"
+            />
           ) : null}
 
           {readError !== null ? (

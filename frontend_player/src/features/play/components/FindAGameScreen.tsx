@@ -463,7 +463,11 @@ export function FindAGameScreen() {
               carries only what was declared and the difference is free. The deck is refused by
               the same code and draws the same question, so the block is a component. */}
           {standing.kind === 'undeclared' && sportName !== undefined ? (
-            <DeclarationInterstitial sport={standing.sport} sportName={sportName} />
+            <DeclarationInterstitial
+              sport={standing.sport}
+              sportName={sportName}
+              declaredOn="SEARCH_SWITCH"
+            />
           ) : null}
 
           {week === undefined || profile === undefined ? null : (

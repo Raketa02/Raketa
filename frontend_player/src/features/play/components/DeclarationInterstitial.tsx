@@ -16,16 +16,21 @@
  * is a permanent write is two places for the wording, the surface code and the refusal path to
  * drift apart.
  *
- * ## The surface it reports is `SEARCH_SWITCH` from both, and that is a rough edge
+ * ## The surface is the caller's, because the two callers are two screens
  *
- * `PlayIntentSurface` is a **closed four** — `RATING_TAIL`, `SEARCH_SWITCH`, `DRIFT_PROMPT`,
- * `PROFILE_SCREEN` — and none of them is the deck. It is client-asserted context recorded
- * beside a fact, *"never a thing any decision branches on"*, so the cost of the nearest value
- * is bounded: both Play surfaces are a sport switch on a Play screen, and nothing downstream
- * reads which. It is not a prop, because a prop with one value at two call sites is a seam
- * invented for a fifth value that does not exist; a fifth value is a **contract change to
- * argue**, and [#280](https://github.com/Raketa02/Raketa/issues/280) is where that argument
- * belongs.
+ * `PlayIntentSurface` is a closed **five**, and the fifth is `DECK`
+ * ([#280](https://github.com/Raketa02/Raketa/issues/280)). It shipped as a widening rather
+ * than a rename of `SEARCH_SWITCH` into a `PLAY_SWITCH` true of both: the code is stored
+ * verbatim on the backend's `PlayIntentDeclared` and read back as itself, so a rename is an
+ * event migration bought on a field nothing branches on.
+ *
+ * So `declaredOn` is a **required prop**, and it is the one thing that must differ between the
+ * two callers — every other word, write and refusal on this screen is shared, which is why the
+ * component exists. It was deliberately not a prop while the deck had no value of its own: a
+ * prop carrying one value at two call sites is a seam invented for a distinction the contract
+ * could not express. Now it can, so the seam is real and the type is `SEARCH_SWITCH | DECK` —
+ * the rating tail, the drift prompt and the profile screen write through their own paths and
+ * cannot reach this one.
  *
  * **It is not the mode toggle, and the two must never be collapsed.** This writes a
  * `PlayIntent` with three values; the toggle chooses a `SearchMode` with two. That arity gap
@@ -48,16 +53,35 @@ import {
 } from './findAGamePresentation';
 import { playErrorMessage } from './playErrorMessage';
 
-/** The nearest of the closed four. See the module note — the deck has no value of its own. */
-const DECLARED_ON = 'SEARCH_SWITCH' as const;
+/**
+ * The two of `PlayIntentSurface` a Play screen may report, spelled here rather than derived.
+ *
+ * Two values and not five: the rating tail, the drift prompt and the profile screen write
+ * through their own paths, and a component that accepted `DRIFT_PROMPT` would let the prompt
+ * sheet's value be reported from a place that is not the prompt sheet.
+ *
+ * It is **not** `Extract<…>` off the generated union, though that would say the same thing in
+ * fewer words. Generated types are transport and are read only in a feature's `api/` or
+ * `mappers/` layer, which `mappers/wireVocabulary.ts` argues for in writing and rejects this
+ * exact shortcut by name. Nothing is lost by spelling it: `declare.mutate` below takes the
+ * wire union, so a member the contract drops or renames makes this type unassignable *there*
+ * — the same red build, on the same `pnpm typecheck`, without transport reaching `components/`.
+ */
+export type PlayDeclarationSurface = 'SEARCH_SWITCH' | 'DECK';
 
 export interface DeclarationInterstitialProps {
   readonly sport: Sport;
   /** This app's word for that sport — the caller already drew it on a chip. */
   readonly sportName: string;
+  /** Which of the two Play screens this is. See the module note — it is the caller's to say. */
+  readonly declaredOn: PlayDeclarationSurface;
 }
 
-export function DeclarationInterstitial({ sport, sportName }: DeclarationInterstitialProps) {
+export function DeclarationInterstitial({
+  sport,
+  sportName,
+  declaredOn,
+}: DeclarationInterstitialProps) {
   const declare = useDeclarePlayIntent();
 
   return (
@@ -76,7 +100,7 @@ export function DeclarationInterstitial({ sport, sportName }: DeclarationInterst
             accessibilityLabel={declarationOptionLabel(intent, sportName)}
             variant="secondary"
             disabled={declare.isPending}
-            onPress={() => declare.mutate({ sport, intent, surface: DECLARED_ON })}
+            onPress={() => declare.mutate({ sport, intent, surface: declaredOn })}
           />
         ))}
       </View>

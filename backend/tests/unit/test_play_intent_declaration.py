@@ -145,6 +145,28 @@ def test_changing_the_declared_value_records_it():
     assert declaration.intent is PlayIntent.FOR_FUN
 
 
+def test_a_declaration_made_on_the_deck_names_the_deck():
+    """#280. The deck reads the declaration — ``POST /deck`` has no mode — so it
+    is refused with ``play_intent_not_declared`` exactly as a search is, and it
+    draws the same interstitial. A field whose whole job is to say *which
+    screen* has a value for every screen that can write through it, and
+    ``SEARCH_SWITCH`` is left naming the search screen alone: widening is
+    additive, so every code already in a stream still means what it meant.
+    """
+
+    declaration = replayed(a_declaration())
+
+    declaration.declare(
+        PlayIntent.FOR_FUN,
+        surface=PlayIntentSurface.DECK,
+        occurred_at=LATER,
+    )
+
+    (recorded,) = declaration.pull_events()
+    assert recorded.surface == "DECK"
+    assert declaration.surface is PlayIntentSurface.DECK
+
+
 def test_declaring_the_value_already_held_records_nothing():
     """The preference rule. ``PUT /play-intents/{sport}`` is unkeyed precisely
     because of this: the same request twice lands the same state and the second

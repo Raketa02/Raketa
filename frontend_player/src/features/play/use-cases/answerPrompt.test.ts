@@ -93,8 +93,9 @@ describe('yes — a write through the route that owns the value', () => {
       ports(),
     );
 
-    // `DRIFT_PROMPT` is the one of the closed four that names this exact act, unlike the
-    // interstitial's, which takes the nearest value there is.
+    // `DRIFT_PROMPT` is the one of the closed five that names this exact act, and the sheet is
+    // the only place it can be reported from — the interstitial's prop accepts the two Play
+    // screens and not this.
     expect(written).toEqual([{ sport: 'padel', intent: 'COMPETITIVE', surface: 'DRIFT_PROMPT' }]);
   });
 

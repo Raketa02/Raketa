@@ -2136,9 +2136,22 @@ export interface components {
          *     is accepted because the client is the only party that knows which screen it
          *     was, and nothing load-bearing reads it — which is exactly the condition
          *     under which a self-reported field is safe to keep.
+         *
+         *     **It widens; it never renames** (#280). The deck earned the fifth member:
+         *     ``POST /deck`` has no mode to read, so it reads the declaration, is refused
+         *     with ``play_intent_not_declared`` exactly as a search is, and draws the same
+         *     interstitial. Reporting that as ``SEARCH_SWITCH`` was a small untruth in the
+         *     one field whose whole job is to say which screen it was. The alternative
+         *     argued was to rename ``SEARCH_SWITCH`` to ``PLAY_SWITCH`` — one value true
+         *     of both Play surfaces rather than two that each name one — and it lost on
+         *     cost, not on taste: the code is stored verbatim in ``PlayIntentDeclared``
+         *     and read back through ``PlayIntentSurface(event.surface)``, so a rename is
+         *     an event migration bought on a field nothing branches on, while a widening
+         *     is one member and leaves every code already in a stream meaning what it
+         *     meant when it was written.
          * @enum {string}
          */
-        PlayIntentSurface: "RATING_TAIL" | "SEARCH_SWITCH" | "DRIFT_PROMPT" | "PROFILE_SCREEN";
+        PlayIntentSurface: "RATING_TAIL" | "SEARCH_SWITCH" | "DECK" | "DRIFT_PROMPT" | "PROFILE_SCREEN";
         /**
          * PlayerCardSchema
          * @description Who this person is, on a card. **A closed list with two permanent gaps.**

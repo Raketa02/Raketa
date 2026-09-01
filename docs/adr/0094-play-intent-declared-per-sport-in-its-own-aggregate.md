@@ -203,3 +203,48 @@ aggregate**, inside the **Player profile** context.
   and is unchanged here. What is new is only where the declaration is *edited*.
 - Nothing here is event-sourced that was not already: the aggregate joins the same store, the
   same catalog and the same dispatcher as every other.
+
+## Amendment — 2026-09-01: the deck is a surface, and the set widens rather than renaming
+
+Building the deck ([#270](https://github.com/Raketa02/Raketa/issues/270)) gave the `surface`
+code a **second Play screen** that the closed four could not name. `POST /api/v1/deck` carries
+no mode in either direction, so it reads the declaration and is refused with
+`play_intent_not_declared` exactly as a search is; its sport chips land on rated, undeclared
+sports exactly as the search screen's do; and it therefore draws this record's one-tap
+interstitial. That made the interstitial a component with two callers, and it shipped reporting
+`SEARCH_SWITCH` from both — a small untruth in the one field whose entire job is to say which
+screen it was, introduced deliberately and filed as
+[#280](https://github.com/Raketa02/Raketa/issues/280) rather than left to be noticed.
+
+**`PlayIntentSurface` gains `DECK` and is now a closed five.** The Decision's event bullet
+above still spells the closed four, and is left standing: this record is immutable once
+accepted, so the list is read through this section rather than corrected in place.
+
+The alternative argued was a **rename**: `SEARCH_SWITCH` becomes `PLAY_SWITCH`, one value
+honestly true of both Play surfaces rather than two that each name one. It is the better name and it lost anyway, on a
+cost this record's own design imposes. The code is stored **verbatim** on `PlayIntentDeclared`
+and read back through `PlayIntentSurface(event.surface)` at replay, so renaming it is an event
+migration — a codec mapping that must outlive the rename, carried for ever — bought on a field
+that by this record's own Consequences *nothing load-bearing reads*. A widening costs one enum
+member and leaves every code already in a stream meaning exactly what it meant when it was
+written. Where the price of honesty is a migration on a field nothing branches on, the additive
+answer wins.
+
+Nothing else moves, and **nothing beyond this case is decided.** `surface` stays
+client-asserted and stays safe to be, for the reason given above: the client is the only party
+that knows which screen it was, and nothing branches on the answer. What carries forward is the
+**cost, not a rule**: a member already written into a stream is expensive to respell and cheap
+to sit beside, so the additive answer starts ahead. A future rename is not forbidden here — it
+is the option that has to show what it buys against that cost, which is exactly what this one
+was asked to do and could not.
+
+**The cost is that the set is no longer a partition anybody can hold in their head as *the
+screens that matter analytically*.** Five is still small, but the argument that four buckets
+were enough — *a sport switch on a Play screen is one bucket* — was real and is being traded
+away for a field that reports what actually happened. If the set reaches a size where nobody
+reads it, that is the falsifier: this field is analytics, and analytics nobody consults is a
+write with no reader.
+
+**What would reverse it.** A reader of `surface` who genuinely wants the two Play surfaces
+totalled and never split. That would be an argument for one value across both — and it would be
+answered with a `GROUP BY` over two codes, not by narrowing the vocabulary back.
