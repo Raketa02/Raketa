@@ -75,7 +75,7 @@ import type { SeatPlace } from '../domain/lineup';
 import type { ForecastAssumption, UnfilledReason } from '../domain/vocabulary';
 
 import { balanceLabel } from './balancePresentation';
-import { unfilledSeatLine } from './courtPresentation';
+import { WITHHELD_SEAT_LINE, unfilledSeatLine } from './courtPresentation';
 import {
   levelRow,
   metaLine,
@@ -244,6 +244,17 @@ const SIDE: Readonly<Record<SeatPlace, string>> = {
 export type SeatOccupant =
   | { readonly kind: 'you' }
   | { readonly kind: 'player'; readonly name: string; readonly level: number }
+  /**
+   * A seat that still holds somebody the **record no longer describes** — the withheld mark
+   * ([#271](https://github.com/Raketa02/Raketa/issues/271)).
+   *
+   * It is a fourth kind rather than a `player` with optional facts, because there is nothing
+   * to read out: a withheld row carries **one field** and no card, so the name and the level
+   * that a seat's spoken form is made of are both gone. What is left is the same shape the
+   * empty seat already uses — a place, and a sentence — and it says the fact and never the
+   * cause, exactly as `WITHHELD_SEAT_LINE` does everywhere else.
+   */
+  | { readonly kind: 'withheld' }
   | { readonly kind: 'empty'; readonly unfilled: UnfilledReason | null };
 
 /**
@@ -269,6 +280,8 @@ export function seatLabel(place: SeatPlace, occupant: SeatOccupant): string {
       return `${where}, you`;
     case 'player':
       return `${where}, ${occupant.name}, level ${formatLevel(occupant.level)}`;
+    case 'withheld':
+      return `${where}. ${WITHHELD_SEAT_LINE}`;
     case 'empty':
       return occupant.unfilled === null
         ? `${where}, empty`
@@ -276,9 +289,20 @@ export function seatLabel(place: SeatPlace, occupant: SeatOccupant): string {
   }
 }
 
-/** `Remove Marek from your side` — the side, never the index, and never the role. */
-export function clearSeatLabel(seat: { readonly name: string; readonly place: SeatPlace }): string {
-  return `Remove ${seat.name} from ${SIDE[seat.place]}`;
+/**
+ * `Remove Marek from your side` — the side, never the index, and never the role.
+ *
+ * **`name` is absent on a withheld seat**, where the record no longer holds the row the name
+ * came off. The badge is still drawn, because the seat is still clearable and a control a
+ * player needs most is not one to withdraw — so it names the place and the act, which is the
+ * whole of what 6.9's rule asks for: a remove control says *which* thing it removes, and on a
+ * court the place is what disambiguates two seats on one side.
+ */
+export function clearSeatLabel(seat: {
+  readonly name?: string;
+  readonly place: SeatPlace;
+}): string {
+  return `Remove ${seat.name ?? 'this player'} from ${SIDE[seat.place]}`;
 }
 
 /**
@@ -420,11 +444,23 @@ export type PlayLiveRegion = 'toast' | 'searching' | 'provisionalForecast';
  */
 export function provisionalForecastAnnouncement(forecast: {
   readonly pct: number;
+  /**
+   * Whether the figure assumes anybody — **the engine's boolean, never re-derived here.**
+   *
+   * It decides whether there is a caveat at all, which is what keeps `assumption: null`
+   * unambiguous: on a provisional figure it is *a code this build cannot read* and takes §3's
+   * gap, and on a settled one it is *nothing was assumed* and takes nothing. Collapsing the
+   * two would announce **too old to read this one** over every complete court.
+   */
+  readonly provisional: boolean;
   /** `null` where the wire's open string is a code this build cannot read (§3). */
   readonly assumption: ForecastAssumption | null;
 }): string {
+  const reading = balanceLabel(forecast.pct);
+  if (!forecast.provisional) return `${reading}.`;
+
   const caveat = forecast.assumption === null ? undefined : forecastAssumption(forecast.assumption);
-  return `${balanceLabel(forecast.pct)}. ${orOutOfDate(caveat)}`;
+  return `${reading}. ${orOutOfDate(caveat)}`;
 }
 
 /**

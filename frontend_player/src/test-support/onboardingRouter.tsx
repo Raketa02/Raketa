@@ -21,7 +21,9 @@ import TabsLayout from '@/app/(app)/(tabs)/_layout';
 import AroundRoute from '@/app/(app)/(tabs)/around';
 import ChatsRoute from '@/app/(app)/(tabs)/chats';
 import NowRoute from '@/app/(app)/(tabs)/index';
+import BuilderRoute from '@/app/(app)/(tabs)/play/builder';
 import DeckRoute from '@/app/(app)/(tabs)/play/deck';
+import PoolRoute from '@/app/(app)/(tabs)/play/pool';
 import FindAGameRoute from '@/app/(app)/(tabs)/play/index';
 import YouRoute from '@/app/(app)/(tabs)/you';
 import AuthLayout from '@/app/(auth)/_layout';
@@ -74,6 +76,8 @@ export const ONBOARDING_ROUTES = {
   '(app)/(tabs)/around': AroundRoute,
   '(app)/(tabs)/play/index': FindAGameRoute,
   '(app)/(tabs)/play/deck': DeckRoute,
+  '(app)/(tabs)/play/builder': BuilderRoute,
+  '(app)/(tabs)/play/pool': PoolRoute,
   '(app)/(tabs)/chats': ChatsRoute,
   '(app)/(tabs)/you': YouRoute,
   '(auth)/_layout': AuthLayout,

@@ -274,6 +274,85 @@ export { DeckScreen } from './components/DeckScreen';
 export { WhyFitSheet, type WhyFitSheetProps } from './components/whyfit/WhyFitSheet';
 
 /**
+ * **The builder** — the court, and the three ways to fill it.
+ *
+ * Named by `src/app/(app)/(tabs)/play/builder.tsx` and by nothing else. The route validates its
+ * one param before this screen reads it, because an origin `search_id` becomes a request body
+ * and a Query key ([#271](https://github.com/Raketa02/Raketa/issues/271)).
+ */
+export { BuilderScreen, type BuilderScreenProps } from './components/BuilderScreen';
+export { parseBuilderRouteParams, type BuilderRouteParams } from './schemas/routeParams';
+
+/**
+ * **The pool** — an honest placeholder until
+ * [#272](https://github.com/Raketa02/Raketa/issues/272) fills it in.
+ *
+ * Named by `src/app/(app)/(tabs)/play/pool.tsx`. It exists now because the builder routes
+ * every remedy here, and a court naming a remedy with nowhere to go is worse than one that
+ * said nothing.
+ */
+export { PoolScreen } from './components/PoolScreen';
+
+/**
+ * The forecast, as the builder holds it — **every way round, each with its own number**, and
+ * the rule that turns a swap into a selection rather than a request.
+ *
+ * Exported for the suites that drive the court, and for the pool
+ * ([#272](https://github.com/Raketa02/Raketa/issues/272)), whose *Evenest* sort reads a
+ * forecast and whose header draws one. Nothing here computes a forecast number; a check on
+ * that is a check for arithmetic, and there is none.
+ */
+export {
+  arrangementFor,
+  courtSeating,
+  currentArrangement,
+  evenestArrangement,
+  partnerOf,
+  seatedIds,
+  seatingOf,
+  seatsFilled,
+  shortfallBySeat,
+  swapSeats,
+  type Arrangement,
+  type ArrangementSeat,
+  type Forecast,
+  type Seating,
+  type SeatedCourt,
+  type SeatOccupancy,
+  type SeatedSeat,
+} from './domain/forecast';
+
+export {
+  lineupStanding,
+  withheldSeats,
+  type Lineup,
+  type LineupStanding,
+  type OriginSearch,
+  type PlayOrigin,
+  type SearchRecord,
+} from './domain/lineup';
+
+export { optimisedForLine } from './components/courtPresentation';
+
+/**
+ * The builder's own words, exported for its suite for `findAGamePresentation`'s reason: an
+ * assertion spelling *Even it out* as a string literal is a red build for the ticket that
+ * rewords it. Nothing in `src/` outside this feature reads any of them.
+ */
+export {
+  ALREADY_EVENEST,
+  EVEN_IT_OUT_LABEL,
+  PICK_PLAYERS_LABEL,
+  PROVISIONAL_WORD,
+  START_OVER_LABEL,
+  TWO_WAYS_TITLE,
+  builderTitle,
+  fillSeatsLabel,
+  forecastHeading,
+  seatsOpenLine,
+} from './components/builderPresentation';
+
+/**
  * Play's two ways through the tab, as one control.
  *
  * Both screens draw it, and it is **not** the shell's: the count on it is filtered by the

@@ -34,6 +34,7 @@ import {
 import { usePlayPreferences } from '../store/playPreferences.store';
 import { endPlaySession } from '../store/playSession.store';
 
+import { courtSummaryLabel } from './accessibilityPresentation';
 import { playErrorMessage } from './playErrorMessage';
 import { poolRankingStatus } from './searchingPresentation';
 import { searchingFloorMs } from './searchingWait';
@@ -340,6 +341,10 @@ describe('the search', () => {
     fireEvent.press(searchButton());
     await latchLifted();
 
+    // The wait lifted onto the court, so coming back to the search screen is an **arrival** —
+    // which is what the segment's *Find a game* half and ⚡ both are (#261).
+    fireEvent.press(screen.getByLabelText('Play'));
+
     await waitFor(() =>
       expect(screen.getByLabelText('How far to look').props.accessibilityValue.now).toBe(9),
     );
@@ -522,15 +527,27 @@ describe('the searching latch', () => {
     await latchLifted();
   });
 
-  /** And it lifts on its own, without anybody asking it to. */
-  it('lifts when the wait is over', async () => {
+  /**
+   * And it lifts on its own, without anybody asking it to — **onto the court**.
+   *
+   * The two halves are one assertion. A latch is *over the screen that launched it* rather than
+   * a route, so the beat that holds the count is spent here and the builder is what is
+   * underneath when it goes ([#271](https://github.com/Raketa02/Raketa/issues/271)). Pushed on
+   * the response instead, the number would be printed over a screen already left behind.
+   */
+  it('lifts onto the builder, which is where a finished search goes', async () => {
     await openPlay();
 
     fireEvent.press(searchButton());
     await screen.findByText(SEARCHING);
     await latchLifted();
 
-    expect(screen.getByText(RADIUS_IS_YOUR_PROFILE)).toBeTruthy();
+    await waitFor(() => expect(screen).toHavePathname('/play/builder'));
+    // And it arrived carrying the id the search minted, which is the only thing that could
+    // have found the record this court is drawn from — an empty padel court, seating you.
+    expect(
+      await screen.findByLabelText(courtSummaryLabel({ sportName: 'Padel', filled: 1, seats: 4 })),
+    ).toBeTruthy();
   });
 });
 

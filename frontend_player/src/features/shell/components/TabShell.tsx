@@ -52,6 +52,13 @@ export function TabShell() {
             that reads as *going deeper* is the true one — the same exception, for the same
             reason ([#270](https://github.com/Raketa02/Raketa/issues/270)). */}
         <Stack.Screen name="play/deck" options={{ animation: 'default' }} />
+        {/* And so are the builder and the pool: a finished search is pushed onto the court and
+            a seat is pushed onto the pool, and both come back out
+            ([#271](https://github.com/Raketa02/Raketa/issues/271)). The exception is named per
+            screen rather than per prefix because a Play route that is genuinely a **replace**
+            — there is not one yet — must take the shell's own `none` back. */}
+        <Stack.Screen name="play/builder" options={{ animation: 'default' }} />
+        <Stack.Screen name="play/pool" options={{ animation: 'default' }} />
       </Stack>
       <TabBar active={tabForPathname(pathname)} onPress={openTab} />
     </View>

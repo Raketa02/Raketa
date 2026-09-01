@@ -95,6 +95,20 @@ interface PlaySessionState {
    * one would only postpone the refusal to the moment it costs the most.
    */
   readonly seat: (originSearchId: string, playerId: SeatedPlayerId) => void;
+  /**
+   * **⚡, which fills every empty seat at once** — one act, and therefore one write.
+   *
+   * Not `seat` in a loop. The fill is a single answer off a single search, and seating four
+   * people one at a time would put the store through three intermediate line-ups that never
+   * existed — each of them a state the origin guard and the forecast key could be read in. It
+   * also mints its **own** `search_id`, so the line-up rebinds wholesale: the four came off
+   * that search's rows, and `POST /forecasts` refuses anybody the cited search did not show.
+   *
+   * An empty list clears the line-up rather than writing an empty one, which is `unseat`'s own
+   * rule read from the other end: the engine seating nobody is a court with no line-up on it,
+   * not a line-up with nobody in it.
+   */
+  readonly seatAll: (originSearchId: string, playerIds: readonly SeatedPlayerId[]) => void;
   /** Take somebody off the court. The last one out leaves no empty line-up behind. */
   readonly unseat: (playerId: SeatedPlayerId) => void;
   /**
@@ -130,6 +144,10 @@ export const usePlaySession = create<PlaySessionState>((set) => ({
       const held = state.lineup?.originSearchId === originSearchId ? state.lineup : undefined;
       if (held?.seats.includes(playerId)) return state;
       return { lineup: { originSearchId, seats: [...(held?.seats ?? []), playerId] } };
+    }),
+  seatAll: (originSearchId, playerIds) =>
+    set({
+      lineup: playerIds.length === 0 ? undefined : { originSearchId, seats: [...playerIds] },
     }),
   unseat: (playerId) =>
     set((state) => {

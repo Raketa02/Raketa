@@ -61,6 +61,7 @@ import {
   LEVEL_DIRECTIONS,
   LIVENESS_REASONS,
   MODIFIER_CODES,
+  OPTIMISED_FOR,
   PLAY_INTENTS,
   SEARCH_MODES,
   TERMS,
@@ -70,6 +71,7 @@ import {
   type LevelDirection,
   type LivenessReason,
   type ModifierCode,
+  type OptimisedFor,
   type PlayIntent,
   type SearchMode,
   type Term,
@@ -129,6 +131,7 @@ export function toSearchEnvelope(response: ShortlistResponse): SearchEnvelope {
       window: toWindow(pool.window) ?? null,
     },
     radiusClamp: response.search.radius_clamp,
+    optimisedFor: toOptimisedFor(response.search.optimised_for) ?? null,
     rulesetVersion: response.search.ruleset_version,
     engineVersion: response.search.engine_version,
   };
@@ -320,6 +323,7 @@ const KNOWN_MODIFIERS = new Set<string>(MODIFIER_CODES);
 const KNOWN_TAGS = new Set<string>(SOCIAL_TAG_IDS);
 const KNOWN_DIRECTIONS = new Set<string>(LEVEL_DIRECTIONS);
 const KNOWN_WINDOWS = new Set<string>(WINDOWS);
+const KNOWN_OPTIMISED_FOR = new Set<string>(OPTIMISED_FOR);
 
 function toTerm(term: string): Term | undefined {
   return KNOWN_TERMS.has(term) ? (term as Term) : undefined;
@@ -327,6 +331,10 @@ function toTerm(term: string): Term | undefined {
 
 function toLivenessReason(reason: string): LivenessReason | undefined {
   return KNOWN_LIVENESS.has(reason) ? (reason as LivenessReason) : undefined;
+}
+
+function toOptimisedFor(optimised: string): OptimisedFor | undefined {
+  return KNOWN_OPTIMISED_FOR.has(optimised) ? (optimised as OptimisedFor) : undefined;
 }
 
 function toWindow(window: string): Window | undefined {

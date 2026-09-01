@@ -37,6 +37,7 @@ import type {
   InclusionReason,
   LivenessReason,
   ModifierCode,
+  OptimisedFor,
   SearchMode,
   Term,
   Window,
@@ -206,6 +207,22 @@ export interface SearchEnvelope {
    * ([`the-words.md`](../../../../../docs/specs/matchmaking/the-words.md) §17).
    */
   readonly radiusClamp: boolean;
+  /**
+   * Whom this answer was optimised for — and the one field on the envelope the **builder**
+   * reads rather than a card.
+   *
+   * `GROUP` arrives the moment the searcher hand-seats somebody: the engine then fills the
+   * seats around them, and the four it finds may be a worse individual match than an empty
+   * court would have given. That is a thing the screen has to **say**, so it is rendered in
+   * the same voice a provisional figure is
+   * ([`the-play-screens.md`](../../../../../docs/specs/matchmaking/the-play-screens.md) §11.2).
+   *
+   * `null` is a code this build has never seen. It draws the same as `SEARCHER` — nothing —
+   * and that is §3's **drop** rather than a gap: the sentence is an extra caveat over an
+   * answer, not a row in a total, so an absent one leaves nothing unaccounted for. The
+   * alternative would be claiming *optimised for you* about an answer this build cannot read.
+   */
+  readonly optimisedFor: OptimisedFor | null;
 }
 
 /**

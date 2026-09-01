@@ -92,6 +92,18 @@ const BY_CODE: Readonly<Record<string, string>> = {
   /** Unreachable by design — the Play tab is behind a committed profile. */
   player_profile_not_committed: 'Finish setting up your profile before you search for a game.',
   /**
+   * ⚡ with somebody hand-seated, refused — **and naming nobody, deliberately.**
+   *
+   * *"Everybody named must be somebody this search can still seat, and they must be able to
+   * share a court with each other; every gate binds all six pairs. Either refusal is
+   * `locked_seat_not_available`, naming nobody, rather than a quiet replacement."* So the
+   * sentence is held to the same ceiling the court's withheld mark is: it states that the
+   * line-up went out of date and never whose standing changed, and it names the act that is
+   * still available — the seats are still there to be edited, and nothing was taken away.
+   */
+  locked_seat_not_available:
+    "Something's changed — this four can't be seated together now. Try swapping somebody out.",
+  /**
    * A `403` about the account, and the reason there is **no client hold state anywhere**: the
    * gate fires at the request, and this sentence is the whole of what the client knows.
    */

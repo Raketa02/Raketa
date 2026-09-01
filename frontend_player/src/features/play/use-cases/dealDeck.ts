@@ -33,12 +33,12 @@
 import type { Sport } from '@/shared/vocabulary/sport';
 import type { WeekCell } from '@/shared/vocabulary/week';
 import { toWireSport } from '@/features/onboarding/types';
-import { toWireSlots } from '@/features/player_profile/types';
 
 import { dealDeck as deal } from '../api/deckApi';
 import type { DeckDeal } from '../domain/deckHand';
 import type { SearchEnvelope } from '../domain/candidate';
 import { toRankedList } from '../mappers/candidateMappers';
+import { availabilityOverride } from '../mappers/searchMappers';
 
 export interface DeckAsk {
   readonly sport: Sport;
@@ -54,7 +54,9 @@ export interface DeckOutcome extends DeckDeal {
 export async function dealDeck(ask: DeckAsk): Promise<DeckOutcome> {
   const response = await deal({
     sport: toWireSport(ask.sport),
-    ...(ask.sentWeek === undefined ? {} : { availability_override: toWireSlots(ask.sentWeek) }),
+    // The omit-never-null rule is `searchMappers`'; three routes carry the week and #247's
+    // distinction has to be drawn identically on all three.
+    ...availabilityOverride(ask.sentWeek),
   });
 
   const { envelope, candidates } = toRankedList(response);

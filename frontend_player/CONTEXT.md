@@ -254,8 +254,8 @@ profile editor that later edits the same values.
 
 ### The Play tab
 
-Seven client-only concepts, one kit of parts, and one gate that is **not** client-only. The
-seven do not exist on the backend, and the first four are the shape
+Nine client-only concepts, one kit of parts, and one gate that is **not** client-only. The
+nine do not exist on the backend, and the first four are the shape
 [#228](https://github.com/Raketa02/Raketa/issues/228) settled: what Play remembers, for how
 long, and what it must never remember. The stores are `features/play/store/`; the rules are
 `features/play/domain/`. The **Declaration interstitial** is the exception on both counts — it
@@ -297,8 +297,27 @@ listed here because it is a Play surface rather than a profile one.
   the sport, changing the mode, and leaving Find a game on an edited week — which share **one
   guard with three callers**, so a fourth origin field inherits the confirmation for free.
   _Avoid_: "the court" — that is the drawn object the line-up is shown on; "team", "group".
+- **Arrangement** — **one way round a four, with its own forecast**, and there are exactly
+  three of them for any four people. **All of them cross**: `LineupResponse` and
+  `ForecastResponse` each return every arrangement, which is what makes _Even it out_ a
+  **selection** rather than a calculation and what makes a swap cost no round trip. Which one
+  is drawn is decided by **who is beside you** — a pairing _is_ that fact — so trading the two
+  opponents keeps the same arrangement and the same number, and only crossing the net changes
+  either. Which seat is **yours** is `Relationship.SELF`'s answer and never an index's, because
+  no route serves a searcher their own player id. _Avoid_: "the pairing" for the object — that
+  is the fact it is keyed on; "the forecast" for all three, since each carries its own.
+- **Seating** — **where each of them is standing right now**: one entry per seat, in seat
+  order, and the one thing that is neither the Line-up's membership nor Query's rows. It is
+  **route-local and derived** — absent means _whatever the current arrangement says_ — so an
+  answer landing seats people with nothing written down, and a **membership** change resets it
+  while a re-arrangement does not. It may put you in the far half, because swap mode is _change
+  sides, never seats_ and **a side follows you**. _Avoid_: "seat order" for the value — that is
+  the order the wire uses; "the arrangement", which is what a seating selects rather than what
+  it is.
 - **Ranked list** — the pool, a line-up's shortlist and a deck deal: **one record shape, minted
-  by a mutation and read by id** from `searchKeys.detail(search_id)`. **Nothing in Play
+  by a mutation and read by id** from `searchKeys.detail(search_id)`. The entry holds the
+  Origin search **and the rows**, which is what lets a Line-up's seats be ids and nothing else:
+  every name, level and photograph on a court is read back off them. **Nothing in Play
   background-refetches** — `staleTime: Infinity`, no refetch on focus — because foregrounding
   the app would otherwise reorder the pool under the player's finger. What _does_ refetch on the
   ordinary defaults: the profile and its week, the ratings behind the sport chips, and the Match

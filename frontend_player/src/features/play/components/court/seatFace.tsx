@@ -14,6 +14,15 @@
  * nothing in a line-up carries yours, and `GET /photos/{id}` signs your own by an id this
  * component was never handed. A poster is a fact about an id, so your seat is the one face on
  * a court drawn from an id alone.
+ *
+ * **And on a court nobody has answered for yet, it does not have even that.** No route serves
+ * a searcher their **own player id** — the same gap `SearchEnvelope.myAreaCode` records as
+ * [#279](https://github.com/Raketa02/Raketa/issues/279) — and the only thing that ever names
+ * it is `Relationship.SELF` on a seat the engine returned. So a builder arriving on a fresh
+ * search draws your seat before anything has told it who you are, and the honest answer is a
+ * **seated ring with no face**: a poster invented from a placeholder id would be a picture of
+ * somebody else, and a plus would say the seat is open. It fills itself in the moment any
+ * answer arrives, which is why the field is optional rather than a second occupant kind.
  */
 
 import type { ReactNode } from 'react';
@@ -32,7 +41,7 @@ import { seatRing, type SeatRing } from './seatRing';
  * the same array to both courts.
  */
 export type CourtFaceOccupant =
-  | { readonly kind: 'you'; readonly playerId: string }
+  | { readonly kind: 'you'; readonly playerId?: string }
   | { readonly kind: 'player'; readonly playerId: string; readonly photoUrl?: string }
   | { readonly kind: 'empty' };
 
@@ -54,22 +63,25 @@ export interface SeatFaceProps {
    */
   readonly ring: SeatRing;
   /** What stands in an **empty** seat. The interactive court puts a plus here; the other
-   *  court puts nothing, because there is nothing on it to press. */
+   *  court puts nothing, because there is nothing on it to press. It is drawn only for a seat
+   *  that is genuinely empty — a faceless *you* is not one, and a plus there would say so. */
   readonly children?: ReactNode;
 }
 
 export function SeatFace({ size, occupant, ring, children }: SeatFaceProps) {
   const box = seatBox(size);
-  const empty = occupant.kind === 'empty';
+  // Two seats draw no face and only one of them is empty — see the module note. `children` is
+  // the empty seat's own plus, so it is drawn where there is a seat to fill and nowhere else.
+  const face = occupant.kind === 'empty' ? undefined : occupant.playerId;
 
   return (
-    <View style={[box, empty ? s.empty : undefined]}>
-      {empty ? (
+    <View style={[box, face === undefined ? s.empty : undefined]}>
+      {face === undefined ? (
         children
       ) : (
         <CandidatePhoto
-          playerId={occupant.playerId}
-          photoUrl={occupant.kind === 'you' ? undefined : occupant.photoUrl}
+          playerId={face}
+          photoUrl={occupant.kind === 'player' ? occupant.photoUrl : undefined}
           box={{ kind: 'face', size }}
         />
       )}

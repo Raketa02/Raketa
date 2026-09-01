@@ -35,8 +35,10 @@ import type {
   LevelDirection,
   LivenessReason,
   ModifierCode,
+  OptimisedFor,
   PlayIntent,
   Prompt,
+  Relationship,
   RelaxationAsk,
   Rung,
   SearchMode,
@@ -69,6 +71,8 @@ export const WIRE_VOCABULARY_AGREES: {
   readonly sortOption: Exact<SortOption, components['schemas']['SortOption']>;
   readonly relaxationAsk: Exact<RelaxationAsk, components['schemas']['RelaxationAsk']>;
   readonly rung: Exact<Rung, components['schemas']['Rung']>;
+  readonly optimisedFor: Exact<OptimisedFor, components['schemas']['OptimisedFor']>;
+  readonly relationship: Exact<Relationship, components['schemas']['Relationship']>;
 } = {
   term: true,
   levelDirection: true,
@@ -85,6 +89,8 @@ export const WIRE_VOCABULARY_AGREES: {
   sortOption: true,
   relaxationAsk: true,
   rung: true,
+  optimisedFor: true,
+  relationship: true,
 };
 
 /**

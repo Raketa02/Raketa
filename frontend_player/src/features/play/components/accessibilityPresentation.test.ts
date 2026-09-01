@@ -129,11 +129,40 @@ describe('the court', () => {
     );
   });
 
+  /**
+   * **A withheld seat is a fourth kind and not a player with missing facts.** A withheld row
+   * carries one field and no card, so the name and the level a seat is spoken with are both
+   * gone — and what is left is the shape the empty seat already uses: a place, and a sentence
+   * that states the fact and never the cause.
+   */
+  it('says what changed on a seat the record no longer describes, and names nobody', () => {
+    const label = seatLabel('THEIR_SIDE', { kind: 'withheld' });
+
+    expect(label).toBe("Their side. Something's changed — they can't be invited now");
+    // Four gates reach one sentence, and naming which fired would tell a searcher that a
+    // particular person blocked them, was suspended, or changed a safety setting.
+    for (const cause of [/block/i, /hold/i, /suspend/i, /preference/i]) {
+      expect(label).not.toMatch(cause);
+    }
+    // And it is not read as an empty seat: the player is still in it, and still in the
+    // forecast.
+    expect(label).not.toMatch(/empty/i);
+  });
+
   it('names the person the clear badge removes, and the side it removes them from', () => {
     expect(clearSeatLabel({ name: 'Marek', place: 'YOUR_PARTNER' })).toBe(
       'Remove Marek from your side',
     );
     expect(clearSeatLabel({ name: 'Ana', place: 'THEIR_SIDE' })).toBe('Remove Ana from their side');
+  });
+
+  /**
+   * The badge is still drawn on a withheld seat — a control the player needs most is not one to
+   * withdraw — so it names the place and the act rather than a name it no longer has. *Remove ?
+   * from their side* is a sentence about a punctuation mark.
+   */
+  it('names the act rather than a question mark when the seat has no name left', () => {
+    expect(clearSeatLabel({ place: 'THEIR_SIDE' })).toBe('Remove this player from their side');
   });
 
   it('gives every place a phrase, so a place added here cannot ship without words', () => {
@@ -195,6 +224,7 @@ describe('the live regions', () => {
   it('carry the provisional forecast, which changes where the listener is not', () => {
     const announcement = provisionalForecastAnnouncement({
       pct: 74,
+      provisional: true,
       assumption: 'EMPTY_SEAT_MATCHES_ITS_PARTNER',
     });
 
@@ -204,8 +234,24 @@ describe('the live regions', () => {
   });
 
   it('names the gap rather than announcing a total with an unexplained assumption', () => {
-    expect(provisionalForecastAnnouncement({ pct: 74, assumption: null })).toContain(
-      OUT_OF_DATE_GAP,
-    );
+    expect(
+      provisionalForecastAnnouncement({ pct: 74, provisional: true, assumption: null }),
+    ).toContain(OUT_OF_DATE_GAP);
+  });
+
+  /**
+   * The region announces the **figure**, and a complete court's figure assumes nobody. Reading
+   * `assumption: null` as a gap there would say *this app is too old* over every full four —
+   * which is why the engine's own boolean decides whether there is a caveat.
+   */
+  it('says a settled figure without a caveat it does not have', () => {
+    const announcement = provisionalForecastAnnouncement({
+      pct: 91,
+      provisional: false,
+      assumption: null,
+    });
+
+    expect(announcement).toBe('Very even, 91%.');
+    expect(announcement).not.toContain(OUT_OF_DATE_GAP);
   });
 });

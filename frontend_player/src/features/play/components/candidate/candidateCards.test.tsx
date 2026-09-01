@@ -45,6 +45,8 @@ const ENVELOPE: SearchEnvelope = {
   radiusClamp: false,
   rulesetVersion: 'ruleset-v1',
   engineVersion: 'matchfit-v1',
+  // A shortlist is always the searcher's. The builder is the only surface that reads it.
+  optimisedFor: 'SEARCHER',
 };
 
 /** One term that fired, with the arithmetic that put it where it is. */

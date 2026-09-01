@@ -8,12 +8,13 @@
  */
 
 import { seatLock, type BuildSeat, type SeatGuard } from '../domain/lineup';
-import { GROUP_REASONS, UNFILLED_REASONS } from '../domain/vocabulary';
+import { GROUP_REASONS, OPTIMISED_FOR, UNFILLED_REASONS } from '../domain/vocabulary';
 
 import { SWAP_TOGGLE_LABEL } from './accessibilityPresentation';
 import {
   WITHHELD_SEAT_LINE,
   groupReasonLine,
+  optimisedForLine,
   seatGuardLine,
   unfilledSeatLine,
 } from './courtPresentation';
@@ -119,5 +120,41 @@ describe('a refused tap on a seat', () => {
     // It is refused permanently — there is no toggle for this one — so the sentence states
     // the consequence instead: they keep their place, and you can still move them.
     expect(seatGuardLine('ALREADY_ACCEPTED', 'ana')).not.toContain(SWAP_TOGGLE_LABEL);
+  });
+});
+
+/**
+ * **Whom the answer was optimised for**, and the one value that says nothing.
+ *
+ * `GROUP` is the consequence of an act the player took — hand-seating somebody — said before
+ * they discover it. `SEARCHER` is the ordinary case, and a sentence under every court is what
+ * would make the exception unreadable.
+ */
+describe('whom the answer was optimised for', () => {
+  it('says nothing about an answer optimised for the searcher', () => {
+    expect(optimisedForLine('SEARCHER')).toBeUndefined();
+  });
+
+  it('says nothing about a code this build has never seen', () => {
+    // §3's drop: the sentence is an extra caveat over an answer rather than a row in a total,
+    // so an absent one leaves nothing on screen unaccounted for. Claiming *optimised for you*
+    // about an answer this build cannot read would be the alternative.
+    expect(optimisedForLine(null)).toBeUndefined();
+  });
+
+  it('says what a hand-seated court cost, in the voice a provisional figure uses', () => {
+    const line = optimisedForLine('GROUP');
+
+    expect(line).toBeDefined();
+    // It states the trade rather than apologising for it, and it names no number: the group
+    // objective is recorded and never returned.
+    expect(line).toMatch(/four of you/);
+    expect(line).not.toMatch(/\d/);
+  });
+
+  it('gives every value a decision, so a third cannot ship without one', () => {
+    for (const optimised of OPTIMISED_FOR) {
+      expect(() => optimisedForLine(optimised)).not.toThrow();
+    }
   });
 });

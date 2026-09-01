@@ -57,10 +57,25 @@ describe('the refusals a player can do something about', () => {
       'play_intent_not_declared',
       'player_profile_not_committed',
       'account_held',
+      'locked_seat_not_available',
     ].map((code) => playErrorMessage(refusal(code)));
 
     expect(said.every((sentence) => sentence.length > 0)).toBe(true);
     expect(new Set(said).size).toBe(said.length);
+  });
+
+  /**
+   * ⚡'s own refusal, held to the court's ceiling: *"either refusal is
+   * `locked_seat_not_available`, **naming nobody**, rather than a quiet replacement."* It says
+   * the line-up went out of date and offers the edit that is still available.
+   */
+  it('names nobody when a hand-seated four cannot be seated together', () => {
+    const said = playErrorMessage(refusal('locked_seat_not_available'));
+
+    for (const cause of [/block/i, /hold/i, /suspend/i, /preference/i, /they/i]) {
+      expect(said).not.toMatch(cause);
+    }
+    expect(said).toMatch(/swap/i);
   });
 });
 

@@ -96,10 +96,23 @@ describe('what comes back', () => {
   it('folds the ask onto the id, because the envelope carries neither the sport nor the week', async () => {
     const outcome = await findAGame(ASK, { saveRadius });
 
-    expect(outcome.origin).toEqual({
-      searchId: 'e0f1a2b3-c4d5-4e6f-8a9b-0c1d2e3f4a5b',
-      origin: ASK.origin,
-    });
+    expect(outcome.record.searchId).toBe('e0f1a2b3-c4d5-4e6f-8a9b-0c1d2e3f4a5b');
+    expect(outcome.record.origin).toEqual(ASK.origin);
+  });
+
+  /**
+   * The rows travel with the record, because the builder draws people out of them: a line-up's
+   * seats are ids and nothing else, and every fact about a seated player is read back off here
+   * ([#271](https://github.com/Raketa02/Raketa/issues/271)).
+   */
+  it('carries the rows the search ranked, which the builder seats people out of', async () => {
+    const outcome = await findAGame(ASK, { saveRadius });
+
+    expect(outcome.record.candidates.map((row) => row.playerId)).toEqual(
+      SHORTLIST.candidates.flatMap((row) => ('player_id' in row ? [row.player_id] : [])),
+    );
+    // A shortlist seats nobody, so there is no court — absent rather than empty.
+    expect(outcome.record.court).toBeUndefined();
   });
 
   /**

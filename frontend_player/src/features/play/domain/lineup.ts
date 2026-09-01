@@ -84,6 +84,8 @@
 
 import type { Sport } from '@/shared/vocabulary/sport';
 
+import type { Candidate, SearchEnvelope } from './candidate';
+import type { SeatedCourt } from './forecast';
 import type { SearchMode } from './vocabulary';
 import { sameWeek, type WorkingWeek } from './workingWeek';
 
@@ -112,6 +114,29 @@ export interface PlayOrigin {
 export interface OriginSearch {
   readonly searchId: string;
   readonly origin: PlayOrigin;
+}
+
+/**
+ * **What `searchKeys.detail(id)` actually holds** — the origin, and the answer under it.
+ *
+ * [#228](https://github.com/Raketa02/Raketa/issues/228) §1: *"every ranked list in Play is a
+ * mutation-minted record held under `searchKeys.detail(id)`"*, and §7 gives that entry the
+ * whole of `RANKED_LIST_QUERY_OPTIONS`. Until the builder there was no surface drawing a
+ * seated player, so the entry held only the origin and the docblock above said the rows
+ * *"join it when a surface draws one"*. The builder is that surface: every fact about
+ * somebody in a seat — the name, the level, the photograph — is read back off these rows by
+ * id, which is the whole reason `Lineup.seats` may be ids and nothing else.
+ *
+ * `court` is present on a **line-up answer** and absent everywhere else, which is the honest
+ * shape: `POST /searches` ranks people and seats nobody, and only `POST /lineups` has a court
+ * with a shortfall to state.
+ */
+export interface SearchRecord extends OriginSearch {
+  readonly envelope: SearchEnvelope;
+  /** Ranked, and withheld rows already dropped — see `withheldSeats` for what that costs. */
+  readonly candidates: readonly Candidate[];
+  /** Only `POST /lineups` seats a court. */
+  readonly court?: SeatedCourt;
 }
 
 /**

@@ -16,6 +16,10 @@
  * **The empty seat's word is a question mark**, which `playerName` already owns as its unknown
  * and which is deliberately not a word: the court states an empty seat with a dashed ring and
  * a plus, and a label reading *open* underneath would be the same fact printed twice at 9,5pt.
+ *
+ * **A withheld seat answers the same character and is not the same seat**, which is why
+ * `named` travels beside the word: it holds a player the record can no longer describe, so it
+ * has a face drawn from an id, a sentence of its own, and no name to put in one.
  */
 
 import { playerName } from '@/shared/formatting/playerName';
@@ -29,20 +33,40 @@ export interface SeatWho {
   readonly spoken: SeatOccupant;
   /** The name alone: drawn under the face, quoted in the badge's sentence and in a toast. */
   readonly name: string;
+  /**
+   * Whether that name is **somebody's** rather than the unknown's question mark.
+   *
+   * Two seats answer `?` and they are not the same seat: an empty one, which names nobody
+   * because nobody is in it, and a **withheld** one, which holds a player whose row the record
+   * no longer carries. Both draw the same character under the face and neither may be quoted
+   * into a sentence — *Remove ? from their side* is a sentence about a punctuation mark — so
+   * the two registers separate here rather than at each of the three call sites.
+   */
+  readonly named: boolean;
 }
 
 export function seatWho(occupant: CourtSeatOccupant): SeatWho {
   switch (occupant.kind) {
     case 'you':
-      return { spoken: { kind: 'you' }, name: playerName({ kind: 'you' }) };
+      return { spoken: { kind: 'you' }, name: playerName({ kind: 'you' }), named: true };
     case 'player': {
+      // The two facts a seat says about a person travel together and go together: a withheld
+      // row carries no card, so there is neither a handle to draw nor a level to speak.
+      if (occupant.nickname === undefined || occupant.level === undefined) {
+        return {
+          spoken: { kind: 'withheld' },
+          name: playerName({ kind: 'unknown' }),
+          named: false,
+        };
+      }
       const name = playerName({ kind: 'player', nickname: occupant.nickname });
-      return { spoken: { kind: 'player', name, level: occupant.level }, name };
+      return { spoken: { kind: 'player', name, level: occupant.level }, name, named: true };
     }
     case 'empty':
       return {
         spoken: { kind: 'empty', unfilled: occupant.unfilled },
         name: playerName({ kind: 'unknown' }),
+        named: false,
       };
   }
 }

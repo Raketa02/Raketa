@@ -68,14 +68,23 @@ import { seatWho } from './seatWho';
  * seat that eventually will be.
  */
 export type CourtSeatOccupant =
-  | { readonly kind: 'you'; readonly playerId: string }
+  /** **The id is optional**, because no route serves a searcher their own — `seatFace.tsx`. */
+  | { readonly kind: 'you'; readonly playerId?: string }
   | {
       readonly kind: 'player';
       /** The poster's whole input when there is no photograph. */
       readonly playerId: string;
-      /** The handle, whole. This component is the box that truncates it. */
-      readonly nickname: string;
-      readonly level: number;
+      /**
+       * The handle, whole. This component is the box that truncates it.
+       *
+       * **Absent, with the level and the photograph, when the search's record no longer holds
+       * their row** — the withheld mark. The seat keeps its player and the forecast keeps its
+       * number; what is gone is everything the card said about them, because a withheld row
+       * carries one field and no card
+       * ([`lineup.ts`](../../domain/lineup.ts)'s `withheldSeats`).
+       */
+      readonly nickname?: string;
+      readonly level?: number;
       readonly photoUrl?: string;
       /** They already accepted: their seat is locked, and it draws no clear badge. */
       readonly accepted: boolean;
@@ -169,8 +178,11 @@ export function CourtSeat({ size, place, occupant, selected, onPress, onClear }:
         >
           {/* 6.9's add glyph, which is `Tick.tsx`'s crossed pair — the same drawing rather than
               a second copy of it, which is what that file exists to prevent. Volt as a stroke,
-              on the one kind of bed it may be one, and this is the court's. */}
-          <Plus />
+              on the one kind of bed it may be one, and this is the court's.
+
+              Drawn only for a seat that is **empty**: a face-less *you* is a seat nobody may
+              fill, and a plus over it would be an invitation the truth table refuses. */}
+          {occupant.kind === 'empty' ? <Plus /> : null}
         </SeatFace>
       </Pressable>
 
@@ -193,7 +205,7 @@ export function CourtSeat({ size, place, occupant, selected, onPress, onClear }:
           // The drawn word and the spoken name are one `playerName()` — §15's whole handle.
           // The box truncates it and the formatter never does, which is the whole of why a
           // seat label may be cut short and a sentence may not.
-          accessibilityLabel={clearSeatLabel({ name: who.name, place })}
+          accessibilityLabel={clearSeatLabel({ ...(who.named ? { name: who.name } : {}), place })}
           onPress={onClear}
           hitSlop={clearSlop(size)}
           style={({ pressed }) => [

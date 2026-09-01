@@ -211,3 +211,30 @@ export type Rung = (typeof RUNGS)[number];
 export const FORECAST_ASSUMPTIONS = ['EMPTY_SEAT_MATCHES_ITS_PARTNER'] as const;
 
 export type ForecastAssumption = (typeof FORECAST_ASSUMPTIONS)[number];
+
+/**
+ * Whom an answer was optimised for — and the reason the builder has to be able to say it.
+ *
+ * `SEARCHER` is every shortlist and every deal. `GROUP` arrives the moment the searcher
+ * hand-seats somebody: from there the engine fills the seats **around** them, and the four it
+ * finds may be a worse individual match than an empty court would have given — *"and the
+ * screen has to say so rather than leave it to be discovered."*
+ *
+ * It is on the envelope rather than implied by the request, which is what lets a read-back a
+ * month later still say what it was.
+ */
+export const OPTIMISED_FOR = ['SEARCHER', 'GROUP'] as const;
+
+export type OptimisedFor = (typeof OPTIMISED_FOR)[number];
+
+/**
+ * What a seat is **to the searcher** — stated by the engine and never inferred from the side.
+ *
+ * *"The whole partner/opponent asymmetry hangs on it… and a client deriving it from which half
+ * of the court somebody sits on would be a second implementation of a domain rule."* It is
+ * also how a court knows which seat is yours without the client holding its own player id:
+ * `SELF` is the answer, and no route serves a searcher their own id.
+ */
+export const RELATIONSHIPS = ['SELF', 'PARTNER', 'OPPONENT'] as const;
+
+export type Relationship = (typeof RELATIONSHIPS)[number];

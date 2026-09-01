@@ -30,6 +30,7 @@
 import type { components } from '@/generated/schema';
 import { toWireSport } from '@/features/onboarding/types';
 import { toWireSlots } from '@/features/player_profile/types';
+import type { WeekCell } from '@/shared/vocabulary/week';
 
 import type { OriginSearch, PlayOrigin } from '../domain/lineup';
 import type { RaisedPrompt } from '../domain/raisedPrompt';
@@ -38,6 +39,7 @@ import { SEARCH_MODES, type SearchMode } from '../domain/vocabulary';
 type RunSearchRequest = components['schemas']['RunSearchRequest'];
 type ShortlistResponse = components['schemas']['ShortlistResponse'];
 type PromptSchema = components['schemas']['PromptSchema'];
+type AvailabilitySlotResource = components['schemas']['AvailabilitySlotResource'];
 
 /**
  * What Find a game asks for: the origin, and whether the week is the profile's.
@@ -56,8 +58,26 @@ export function toRunSearchRequest(ask: SearchAsk): RunSearchRequest {
   return {
     sport: toWireSport(ask.origin.sport),
     mode: ask.origin.mode,
-    ...(ask.sentWeek === undefined ? {} : { availability_override: toWireSlots(ask.sentWeek) }),
+    ...availabilityOverride(ask.sentWeek),
   };
+}
+
+/**
+ * **The week, or the field's absence** — written once, because three routes carry it.
+ *
+ * `POST /searches`, `POST /lineups` and `POST /deck` all say *"omit it, never send `null`"*,
+ * and all three draw #247's distinction: an **omitted** override is *use the grid on my
+ * profile*, and an **empty list** is *I unticked every cell*, which is a legal edit and a legal
+ * thing to search on. Three copies of that conditional is three places for one of them to start
+ * collapsing the two — and the collapse is silent, because it searches on a real week rather
+ * than failing.
+ *
+ * The caller states which it is sending; nothing here infers it from an empty array.
+ */
+export function availabilityOverride(sentWeek: readonly WeekCell[] | undefined): {
+  readonly availability_override?: AvailabilitySlotResource[];
+} {
+  return sentWeek === undefined ? {} : { availability_override: toWireSlots(sentWeek) };
 }
 
 /**

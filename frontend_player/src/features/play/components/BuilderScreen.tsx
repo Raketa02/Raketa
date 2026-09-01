@@ -1,0 +1,729 @@
+/**
+ * **The builder** — the court, and the three ways to fill it.
+ *
+ * Where a finished search goes, and the screen the last three tickets deliberately declined to
+ * point at ([#271](https://github.com/Raketa02/Raketa/issues/271)). ⚡ fills every empty seat
+ * at once, *Pick players myself* opens the pool, and hand-seating somebody and then pressing ⚡
+ * is the third — which is the *same request* as the first, because `locked_seats` is *"a
+ * property of what you send rather than of where you send it"*.
+ *
+ * ## What this screen holds, and what it refuses to
+ *
+ * The **membership** is `playSession`'s — `{ originSearchId, seats }`, ids and nothing else —
+ * and the **facts** about those ids are Query's, read back off the record under
+ * `searchKeys.detail(originSearchId)`. Between them sits the one thing that is neither: the
+ * **seating**, which is where each of them is standing right now.
+ *
+ * It is route-local, and it has to be. A seating is meaningless off this court, it is not a
+ * fact about the line-up — `ForecastResponse` answers with *every* arrangement whatever order
+ * the request was sent in — and the court **pops** back from the pool, so a route-local value
+ * survives exactly as long as the court a player is looking at. It is also *derived* rather
+ * than initialised: absent means *whatever the current arrangement says*, so an answer landing
+ * seats people without this screen writing anything down.
+ *
+ * **The origin can change under it, and that is ⚡.** `POST /lineups` mints a search of its
+ * own, so a fill re-binds the line-up to the record it just wrote: the four it seated came off
+ * *that* search's rows, and `POST /forecasts` refuses anybody the cited search never showed.
+ * Everything else here reads the origin off the line-up, so nothing else has to know.
+ *
+ * ## A swap is a selection, and only membership costs a round trip
+ *
+ * `ForecastResponse` returns **all three** arrangements, so trading two seats picks a different
+ * one out of a response already held: instant, with no request. What is asked for is a
+ * *membership* — add, replace, remove — and `searchKeys.forecast` sorts the ids into its key so
+ * seat order cannot mint a second entry for one question
+ * ([#228](https://github.com/Raketa02/Raketa/issues/228) §11).
+ *
+ * **No forecast arithmetic runs here**, and the check for that is looking for arithmetic. The
+ * only numbers this file computes are seat counts. The percentage, its word, its tone, whether
+ * it is provisional and which arrangement is the evenest are all read.
+ *
+ * ## Two things it deliberately does not draw
+ *
+ * **The balance bar.** [7.11](../../../../docs/design-system.md#711-the-balance-bar) takes an
+ * *advantage* — your side's strength minus theirs — and nothing on a line-up serves one: the
+ * two side strengths are the engine's working, and deriving them from the seated players'
+ * levels would be the client computing the shape of a forecast it was handed. The figure, the
+ * word and the tone are the served figure read through `balancePresentation`, which is the
+ * whole of what §11.3 permits. The bar belongs where a served advantage exists — the candidate
+ * card's `LEVEL_FIT` evidence, where it already is.
+ *
+ * **The send.** ⚡ becomes a challenge on [#274](https://github.com/Raketa02/Raketa/issues/274),
+ * with the pre-send sheet and the whole-send refusal that belong to it. A full court here is a
+ * court with a forecast on it and nothing outbound: *"searching, browsing, seating, swapping
+ * and replacing produce nothing outbound."*
+ */
+
+import { useState } from 'react';
+import { ActivityIndicator, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { router } from 'expo-router';
+
+import { sportLabel } from '@/features/onboarding/types';
+import { useProfileSurface } from '@/features/player_profile/types';
+import { ShellScreen } from '@/features/shell/types';
+import { offlineMessage } from '@/shared/errors';
+import { formatPercent } from '@/shared/formatting/ratingFormat';
+import { sideNames, type NamedPlayer } from '@/shared/formatting/playerName';
+import {
+  Button,
+  Card,
+  Hairline,
+  Note,
+  Row,
+  Switch,
+  behindOverlay,
+  courtSeatCount,
+  theme,
+  useCollapsedPresentation,
+  useLiveRegion,
+} from '@/shared/ui';
+
+import type { Candidate } from '../domain/candidate';
+import {
+  arrangementFor,
+  courtSeating,
+  evenestArrangement,
+  firstEmptySeat,
+  seatedIds,
+  seatingOf,
+  seatingToDraw,
+  seatsFilled,
+  shortfallBySeat,
+  swapSeats,
+  toBuildSeat,
+  type Seating,
+} from '../domain/forecast';
+import { seatPlaces, withheldSeats, type SeatPlace } from '../domain/lineup';
+import type { UnfilledReason } from '../domain/vocabulary';
+import { differsFromProfile } from '../domain/workingWeek';
+import { useFillSeats, useForecast, useSearchRecord } from '../hooks/useBuilder';
+import { usePlaySession } from '../store/playSession.store';
+
+import {
+  PLAY_LIVE_REGIONS,
+  SWAP_TOGGLE_LABEL,
+  courtSummaryLabel,
+  provisionalForecastAnnouncement,
+} from './accessibilityPresentation';
+import { balanceTone, balanceWord } from './balancePresentation';
+import {
+  ALREADY_EVENEST,
+  EVEN_IT_OUT_LABEL,
+  FILLING_LABEL,
+  FORECASTING_LABEL,
+  NO_RECORD_BODY,
+  NO_RECORD_TITLE,
+  PICK_PLAYERS_LABEL,
+  PROVISIONAL_WORD,
+  RETRY_FORECAST_LABEL,
+  SIDE_HEADINGS,
+  START_OVER_LABEL,
+  SWAP_TOGGLE_DESCRIPTION,
+  TWO_WAYS_BODY,
+  TWO_WAYS_TITLE,
+  builderEyebrow,
+  builderTitle,
+  fillSeatsLabel,
+  forecastHeading,
+  seatsOpenLine,
+} from './builderPresentation';
+import { CourtBuild } from './court/CourtBuild';
+import type { CourtSeatOccupant } from './court/CourtSeat';
+import {
+  WITHHELD_SEAT_LINE,
+  groupReasonLine,
+  optimisedForLine,
+  unfilledSeatLine,
+} from './courtPresentation';
+import { useHeldWait } from './heldWait';
+import { playErrorMessage } from './playErrorMessage';
+import { SearchingLatch } from './SearchingLatch';
+import { forecastAssumption } from './searchPresentation';
+import { engineFillStatus } from './searchingPresentation';
+import { searchingFloorMs } from './searchingWait';
+
+/**
+ * The pool — the ranked list, and **the one screen the ladder is on**
+ * ([#272](https://github.com/Raketa02/Raketa/issues/272)).
+ *
+ * Every remedy this court states routes here and nowhere else, which is what makes the
+ * shortfall statements actionable rather than informative: a seat's own tap and the control
+ * beneath the court are the same act against the same seat.
+ */
+export const POOL_ROUTE = '/play/pool';
+
+/**
+ * The builder's own path, named here so the screen that pushes it and the screen that is
+ * pushed are one edit apart.
+ *
+ * Play owns its inner paths — the shell's table holds each tab's **start**, and everything
+ * under `/play/…` is this feature's own depth (`PlaySegment`'s `DECK_ROUTE`, same rule).
+ */
+export const BUILDER_ROUTE = '/play/builder';
+
+export interface BuilderScreenProps {
+  /**
+   * The search this builder was opened on — validated by the route (`schemas/routeParams.ts`).
+   *
+   * It is the origin **until a line-up exists**, after which the line-up's own is
+   * authoritative: ⚡ mints a search and re-binds to it, and a screen still reading its arrival
+   * param would ask for a forecast under a search that never showed the people now seated.
+   */
+  readonly arrivalSearchId: string;
+}
+
+export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
+  const lineup = usePlaySession((state) => state.lineup);
+  const seatAll = usePlaySession((state) => state.seatAll);
+  const unseat = usePlaySession((state) => state.unseat);
+  const discardLineup = usePlaySession((state) => state.discardLineup);
+  const profileSurface = useProfileSurface();
+
+  /**
+   * The search the court's **answer** came off, when there is no line-up to read it from.
+   *
+   * ⚡ can seat nobody — *three of four is an honest answer, and so is nobody* — and that
+   * answer still has a court with a reason on every seat. Without this, a fill that seated no
+   * one would leave the screen reading the record it arrived on, and the reasons the engine
+   * gave would be dropped on the floor.
+   */
+  const [answeredSearchId, setAnsweredSearchId] = useState(arrivalSearchId);
+  const originSearchId = lineup?.originSearchId ?? answeredSearchId;
+  const record = useSearchRecord(originSearchId);
+
+  const fill = useFillSeats();
+  const { width } = useWindowDimensions();
+  const collapsed = useCollapsedPresentation();
+
+  /**
+   * Where each of them is standing. **Absent is not empty** — it is *whatever the arrangement
+   * says*, which is what lets an answer land without this screen writing a seating down.
+   */
+  const [seating, setSeating] = useState<Seating | undefined>(undefined);
+  const [swapping, setSwapping] = useState(false);
+
+  const origin = record?.origin;
+  const sport = origin?.sport;
+  const seats = sport === undefined ? 0 : courtSeatCount(sport);
+  const members = lineup?.seats ?? [];
+
+  /**
+   * The ask, or the absence of one — **the one place *is there a forecast to fetch* is
+   * decided.**
+   *
+   * `undefined` on an empty court, because `ForecastRequest.players` is *"one, two or three"*
+   * and a request with nobody in it is a question about nothing. Built as a value rather than
+   * spelled once in a guard and once in an `enabled`, which is the shape both other Play
+   * screens' asks already take.
+   */
+  const forecast = useForecast(
+    origin === undefined || members.length === 0
+      ? undefined
+      : { sport: origin.sport, mode: origin.mode, searchId: originSearchId, players: members },
+  );
+
+  const arrangements = forecast.data ?? [];
+
+  /**
+   * The seating is reset by a **membership** change and by nothing else.
+   *
+   * Adjusted during render rather than in an effect, which is `CourtBuild`'s own answer to the
+   * same question: an effect would draw one frame of the old seating over the new four. The
+   * key is the origin and the *set* of members, for `searchKeys.forecast`'s reason — a
+   * re-arrangement is not a change of who is playing, and resetting on one would undo the swap
+   * that caused it.
+   */
+  const membership = `${originSearchId}|${[...members].sort().join(',')}`;
+  const [heldMembership, setHeldMembership] = useState(membership);
+  if (heldMembership !== membership) {
+    setHeldMembership(membership);
+    setSeating(undefined);
+  }
+
+  const seated = seating ?? seatingToDraw(arrangements, { seats, members });
+  const chosen = arrangementFor(arrangements, seated);
+
+  const filled = seatsFilled(seated);
+  const open = seats - filled;
+  const places = seatPlaces(seated.map(toBuildSeat));
+
+  /**
+   * A seated player the live gates no longer admit — a **set difference**, derived here and
+   * stored nowhere. `undefined` rows mark nobody: with no record held, reading *no live rows*
+   * as *everybody is gone* would mark a whole court on a cold cache.
+   *
+   * **The rows are whatever the record's latest answer holds**, which is the mint's today and
+   * a read-back's once the pool re-reads one. Today the difference is therefore empty by
+   * construction — a line-up is seated out of the rows it is bound to, so nobody in it can be
+   * missing from them — and that is the same *marks nobody* the docblock's `undefined` gives.
+   * It becomes a real mark at the moment `GET /searches/{id}` replaces the entry and drops the
+   * rows the product has since agreed not to show
+   * ([#272](https://github.com/Raketa02/Raketa/issues/272)), which is why the derivation reads
+   * the entry rather than a read-back it would have to keep separately.
+   */
+  const withheld = new Set(
+    withheldSeats(
+      lineup,
+      record?.candidates.map((row) => row.playerId),
+    ),
+  );
+  const shortfall = record?.court === undefined ? undefined : shortfallBySeat(record.court);
+
+  const rows = new Map((record?.candidates ?? []).map((row) => [row.playerId, row]));
+  // Who *you* are, which no route serves and every answer states — `Relationship.SELF`.
+  const self = arrangements
+    .flatMap((one) => one.seats)
+    .find((seat) => seat.relationship === 'SELF')?.playerId;
+
+  const occupants: readonly CourtSeatOccupant[] = seated.map((seat, at) =>
+    toOccupant(seat, { self, rows, unfilled: shortfall?.get(at) ?? null }),
+  );
+
+  const sportName = sport === undefined ? undefined : sportLabel(sport);
+  const profile = profileSurface.data;
+  const optimised = optimisedForLine(record?.envelope.optimisedFor ?? null);
+
+  /**
+   * ⚡'s own week. The fill is a **new search for the same origin**, so it runs on the week the
+   * origin was asked under — sent unless it can be shown to be the profile's own grid, which is
+   * the one case an omitted override already means. Unprovable is *sent*: a fill that quietly
+   * ran on a different week from the search above it would be the two disagreeing silently.
+   */
+  const sentWeek =
+    origin === undefined ||
+    (profile !== undefined && !differsFromProfile(origin.week, profile.week))
+      ? undefined
+      : origin.week;
+
+  /**
+   * The fill's wait — the second of Play's two, and the one with a **stagger over its floor**.
+   *
+   * The floor is `650 plus 550 a seat`, and it collapses to the bare floor for a listener or a
+   * player who asked for reduced motion: *"a listener gets none of the craft and all of the
+   * latency"*, in front of an answer already in memory (§20.11, `searchingWait`). Nothing here
+   * delays a request either way.
+   *
+   * A **paused** write is not in flight at all and a refusal has nothing to hold for, which are
+   * the same two subtractions Find a game makes for the same two reasons.
+   */
+  const held = useHeldWait(
+    fill.isPending && !fill.isPaused,
+    searchingFloorMs({ kind: 'fill', seats, collapsed }),
+  );
+  const latched = held && !fill.isPaused && fill.error === null;
+  const playersInRange = fill.isSuccess ? fill.data.playersInRange : undefined;
+
+  /**
+   * **The third live region**, and the one nobody else could have claimed (§20.9).
+   *
+   * Moving a player across the net changes the forecast **while focus stays on the seat that
+   * moved**, so the figure is the only one in the tab that changes where the listener is not —
+   * and it announces itself. It carries §17's caveat rather than a bare number, which is
+   * ADR-0108's rule that the figure and its caveat are one thing, and §B9's word rather than a
+   * bare percentage, which is the Part 13 rule the tint is already held to.
+   *
+   * `null` while there is no forecast: a region with nothing in it is silence rather than an
+   * empty sentence.
+   */
+  useLiveRegion(
+    chosen === undefined ? null : provisionalForecastAnnouncement(chosen.forecast),
+    PLAY_LIVE_REGIONS.provisionalForecast,
+  );
+
+  /** Fill this seat, or replace who is in it — one act, against one seat, on the pool. */
+  const openPool = (seat: number) =>
+    router.push({ pathname: POOL_ROUTE, params: { search: originSearchId, seat: String(seat) } });
+
+  function fillTheSeats() {
+    if (origin === undefined) return;
+    fill.mutate(
+      { origin, lockedSeats: members, sentWeek },
+      {
+        onSuccess: ({ record: answer }) => {
+          // Both halves of one act: the answer's own search becomes the origin, and the people
+          // it seated become the line-up. `seatAll` is one write for one answer.
+          setAnsweredSearchId(answer.searchId);
+          setSeating(undefined);
+          seatAll(answer.searchId, seatedIds(courtSeating(answer.court)));
+        },
+      },
+    );
+  }
+
+  return (
+    <>
+      {/* The latch is a **sibling** of the screen it covers, never a child: `behindOverlay`
+          hides everything inside the element carrying it, and an overlay rendered in there
+          would hide itself along with the screen. */}
+      <View style={s.root} {...behindOverlay(latched)}>
+        <ShellScreen
+          title={builderTitle({ seats, filled })}
+          eyebrow={
+            sportName === undefined || origin === undefined
+              ? undefined
+              : builderEyebrow({ sportName, seats, mode: origin.mode })
+          }
+          action={
+            origin === undefined || open === 0 ? undefined : (
+              <View style={s.action}>
+                {fill.error !== null ? (
+                  <Note variant="coral" accessibilityRole="alert">
+                    {playErrorMessage(fill.error)}
+                  </Note>
+                ) : null}
+                {fill.isPaused ? <Note variant="amber">{offlineMessage('resumes')}</Note> : null}
+
+                {/* The failed act's own control is the retry — ⚡ is what failed, and pressing
+                    it again is that act rather than the screen it failed on (`retryTarget`). */}
+                <Button
+                  label={fillSeatsLabel({ seats, filled })}
+                  size="lg"
+                  busy={fill.isPending}
+                  busyLabel={FILLING_LABEL}
+                  onPress={fillTheSeats}
+                />
+                <Button
+                  label={PICK_PLAYERS_LABEL}
+                  variant="secondary"
+                  onPress={() => openPool(firstEmptySeat(seated))}
+                />
+              </View>
+            )
+          }
+        >
+          {record === undefined || sport === undefined || sportName === undefined ? (
+            <Note title={NO_RECORD_TITLE}>
+              <Text style={s.body}>{NO_RECORD_BODY}</Text>
+            </Note>
+          ) : (
+            <>
+              {/* The engine filled the seats **around** somebody, so it stopped optimising for
+                  you — said before it is discovered, and read off the envelope rather than
+                  derived from having sent a `locked_seats` list. */}
+              {optimised === undefined ? null : (
+                <Note variant="info">
+                  <Text style={s.body}>{optimised}</Text>
+                </Note>
+              )}
+
+              {filled > 1 ? (
+                <Card>
+                  <Switch
+                    label={SWAP_TOGGLE_LABEL}
+                    description={SWAP_TOGGLE_DESCRIPTION[swapping ? 'on' : 'off']}
+                    checked={swapping}
+                    onChange={setSwapping}
+                  />
+                </Card>
+              ) : null}
+
+              <CourtBuild
+                sport={sport}
+                width={width - theme.size.gutter * 2}
+                summary={courtSummaryLabel({ sportName, filled, seats })}
+                seats={occupants}
+                swapping={swapping}
+                onOpenPool={openPool}
+                onSwap={(from, to) => setSeating(swapSeats(seated, from, to))}
+                onClear={(at) => {
+                  const seat = seated[at];
+                  if (seat?.kind === 'player') unseat(seat.playerId);
+                }}
+              />
+
+              {open > 0 ? <Text style={s.centred}>{seatsOpenLine(open)}</Text> : null}
+
+              {/* The court's own statement of its shortfall. The remedy is the pool, one tap
+                  away on the seat itself and on the control beneath it — and the block is
+                  hidden from a listener, because every seat already announces its own (§20.1's
+                  merge rule; see `courtStatements`). */}
+              {courtStatements({ seated, shortfall, withheld }).map((line) => (
+                <Text
+                  key={line}
+                  style={s.body}
+                  accessibilityElementsHidden
+                  importantForAccessibility="no-hide-descendants"
+                >
+                  {line}
+                </Text>
+              ))}
+
+              {/* A dock, never a refusal: the availability term zeroes, nobody is removed from
+                  the court for it, and the honest line is that you would all have to bend. */}
+              {record.court?.dock == null ? null : (
+                <Note variant="amber">
+                  <Text style={s.body}>{unfilledSeatLine(record.court.dock)}</Text>
+                </Note>
+              )}
+
+              {open > 0 ? (
+                <Note title={TWO_WAYS_TITLE}>
+                  <Text style={s.body}>{TWO_WAYS_BODY}</Text>
+                </Note>
+              ) : null}
+
+              {/* Paused, not loading. `networkMode: 'online'` holds the forecast rather than
+                  failing it, and `isFetching` is **false** while it waits — so a screen that
+                  drew only the spinner would answer a swap made offline with nothing at all:
+                  no number, no sentence and no reason why (Part 11's amendment names this
+                  request by name). */}
+              {forecast.isPaused ? <Note variant="amber">{offlineMessage('resumes')}</Note> : null}
+
+              {forecast.isFetching ? (
+                <ActivityIndicator
+                  accessibilityLabel={FORECASTING_LABEL}
+                  color={theme.color.muted}
+                />
+              ) : null}
+
+              {forecast.error === null ? null : (
+                <View style={s.failure}>
+                  <Note variant="coral" accessibilityRole="alert">
+                    {playErrorMessage(forecast.error)}
+                  </Note>
+                  {/* The one wait in this tab that gains a control of its own: a player who has
+                      stopped changing seats would otherwise sit with no number and no way to
+                      ask again (`domain/retryTarget`). */}
+                  <Button
+                    label={RETRY_FORECAST_LABEL}
+                    variant="secondary"
+                    onPress={() => void forecast.refetch()}
+                  />
+                </View>
+              )}
+
+              {chosen === undefined ? null : (
+                <Card>
+                  <Text style={s.eyebrow}>{forecastHeading(seats)}</Text>
+
+                  {/* The figure, then the words **beneath** it. Part 13's *never colour alone*
+                      is what puts §B9's word there, and the ticket puts *Provisional* under the
+                      tinted number in one word — so both read down from the figure rather than
+                      standing beside it. */}
+                  <Text style={[s.figure, { color: FIGURE_INK[balanceTone(chosen.forecast.pct)] }]}>
+                    {formatPercent(chosen.forecast.pct)}
+                  </Text>
+                  <Text style={s.word}>{balanceWord(chosen.forecast.pct)}</Text>
+                  {chosen.forecast.provisional ? (
+                    <Text style={s.provisional}>{PROVISIONAL_WORD}</Text>
+                  ) : null}
+
+                  {/* ADR-0108's rule that the figure and its caveat are one thing. A caveat this
+                      build cannot read draws nothing, and `provisional` above still says the
+                      figure has one. */}
+                  {chosen.forecast.assumption === null ? null : (
+                    <Text style={s.body}>{forecastAssumption(chosen.forecast.assumption)}</Text>
+                  )}
+
+                  {/* **Where the handles are printed whole**, and the reason a 46pt seat is
+                      allowed to cut one to four characters: `the-play-components.md` §5 makes
+                      the truncation legal because *"both screens the court appears on already
+                      print the handles in full and unavoidably"*, and this is the builder's
+                      half of that. One name per line, each in its own box — `sideNames`
+                      returns a list rather than a joined phrase precisely so the layout is the
+                      caller's and 64 characters cannot be assumed short. */}
+                  <Hairline>
+                    <Row
+                      label={SIDE_HEADINGS.yours}
+                      value={<Names names={handlesOn('yours', seated, places, rows)} />}
+                    />
+                    <Row
+                      label={SIDE_HEADINGS.theirs}
+                      value={<Names names={handlesOn('theirs', seated, places, rows)} />}
+                      divided
+                    />
+                  </Hairline>
+
+                  {record.court?.groupReason == null ? null : (
+                    <Hairline>
+                      <Text style={s.body}>{groupReasonLine(record.court.groupReason)}</Text>
+                    </Hairline>
+                  )}
+
+                  {arrangements.length < 2 ? null : (
+                    <Hairline>
+                      {chosen.isEvenest ? (
+                        <Text style={s.body}>{ALREADY_EVENEST}</Text>
+                      ) : (
+                        <Button
+                          label={EVEN_IT_OUT_LABEL}
+                          variant="secondary"
+                          onPress={() => {
+                            const evenest = evenestArrangement(arrangements);
+                            if (evenest !== undefined) setSeating(seatingOf(evenest));
+                          }}
+                        />
+                      )}
+                    </Hairline>
+                  )}
+                </Card>
+              )}
+
+              {lineup === undefined ? null : (
+                <Button
+                  label={START_OVER_LABEL}
+                  variant="secondary"
+                  onPress={() => {
+                    discardLineup();
+                    setSeating(undefined);
+                  }}
+                />
+              )}
+            </>
+          )}
+        </ShellScreen>
+      </View>
+
+      <SearchingLatch visible={latched} status={engineFillStatus({ playersInRange })} />
+    </>
+  );
+}
+
+/**
+ * One seat, as the court draws it.
+ *
+ * **A seated player whose row the record no longer holds keeps their seat and loses their
+ * facts** — the withheld mark, derived rather than stored. Nothing is emptied: emptying is the
+ * silent destruction the origin guard exists to prevent, and the marked player stays in the
+ * forecast because dropping them would force a second cause for *provisional*.
+ */
+function toOccupant(
+  seat: Seating[number],
+  court: {
+    /** Your own player id, once an answer has named it. No route serves it — `seatFace.tsx`. */
+    readonly self: string | undefined;
+    readonly rows: ReadonlyMap<string, Candidate>;
+    readonly unfilled: UnfilledReason | null;
+  },
+): CourtSeatOccupant {
+  if (seat.kind === 'you') {
+    return { kind: 'you', ...(court.self === undefined ? {} : { playerId: court.self }) };
+  }
+  if (seat.kind === 'empty') return { kind: 'empty', unfilled: court.unfilled };
+
+  const row = court.rows.get(seat.playerId);
+  return {
+    kind: 'player',
+    playerId: seat.playerId,
+    // A hand-seated player has accepted nothing, and nothing else can seat one today: opening
+    // the builder from an accepted challenge is out of scope, so the lock that would fire here
+    // has no producer and the truth table keeps its arm for the day it does.
+    accepted: false,
+    ...(row === undefined
+      ? {}
+      : {
+          nickname: row.card.nickname,
+          level: row.card.level,
+          ...(row.card.photoUrl === undefined ? {} : { photoUrl: row.card.photoUrl }),
+        }),
+  };
+}
+
+/**
+ * The handles on one half of the court, **whole**.
+ *
+ * `sideNames` is §15's formatter and it returns a **list**: *"a formatter that returns one
+ * string has decided the layout, and this one must not"* — at 64 characters a join produces a
+ * phrase no row can hold. A seat the record can no longer describe answers the unknown's
+ * question mark, which is the same word the seat itself draws.
+ */
+function handlesOn(
+  half: 'yours' | 'theirs',
+  seated: Seating,
+  places: readonly SeatPlace[],
+  rows: ReadonlyMap<string, Candidate>,
+): readonly string[] {
+  const mine = half === 'yours';
+
+  return sideNames(
+    seated.flatMap<NamedPlayer>((seat, at) => {
+      const place = places[at];
+      if (place === undefined || mine !== (place !== 'THEIR_SIDE')) return [];
+      if (seat.kind === 'you') return [{ kind: 'you' }];
+      if (seat.kind === 'empty') return [];
+
+      const nickname = rows.get(seat.playerId)?.card.nickname;
+      return [nickname === undefined ? { kind: 'unknown' } : { kind: 'player', nickname }];
+    }),
+  );
+}
+
+/** One name per line, each truncating in its own box and none of them joined. */
+function Names({ names }: { readonly names: readonly string[] }) {
+  return (
+    <View>
+      {names.map((name) => (
+        <Text key={name} style={s.handle}>
+          {name}
+        </Text>
+      ))}
+    </View>
+  );
+}
+
+/**
+ * What the court says about itself, **in the visible register** — §11's sentences and the
+ * withheld mark, drawn beneath the seats they belong to.
+ *
+ * ## It is not the seats' spoken names printed, and that was the first draft's mistake
+ *
+ * §20.4's `{side}, empty. {UnfilledReason}` is a **name** — what one seat announces to a
+ * listener navigating by seat — and §11's `Nobody in range was a good enough fit for this
+ * seat` is the **sentence**. Printing the first as body copy puts *Their side, empty* on the
+ * screen, and hands a listener the same shortfall twice: once on the seat's own button, and
+ * again on a line beneath it. So this block is `unfilledSeatLine`'s and
+ * `WITHHELD_SEAT_LINE`'s, and it is **hidden from accessibility** — §20.1's rule that
+ * everything with no action of its own merges into the nearest action above it, which here is
+ * the seat that already says it.
+ *
+ * ## Distinct sentences, because the seats are where *per seat* lives
+ *
+ * The shortfall is a fact about the pool and the mask rather than about a position, so *"the
+ * reason is the line-up's own and the same one on every open seat in one answer"* — three
+ * holes would otherwise print one sentence three times. Where two seats genuinely differ, both
+ * lines are drawn. Which seat each belongs to is on the court: a hole is visibly a hole, and
+ * its own name carries its own code.
+ */
+function courtStatements(court: {
+  readonly seated: Seating;
+  readonly shortfall: ReadonlyMap<number, UnfilledReason> | undefined;
+  readonly withheld: ReadonlySet<string>;
+}): readonly string[] {
+  const said = court.seated.flatMap((seat, at) => {
+    if (seat.kind === 'empty') {
+      const reason = court.shortfall?.get(at);
+      return reason === undefined ? [] : [unfilledSeatLine(reason)];
+    }
+
+    return seat.kind === 'player' && court.withheld.has(seat.playerId) ? [WITHHELD_SEAT_LINE] : [];
+  });
+
+  return [...new Set(said)];
+}
+
+/**
+ * The figure's tint, read off `balanceTone` rather than off a second set of breaks.
+ *
+ * 7.11's whole finding is *one formula, three clamps* — a value landing in a different place on
+ * two screens — so the thresholds are asked for rather than restated, and what is here is only
+ * which colour each of the three tones is. They are `BalanceBar`'s own three.
+ */
+const FIGURE_INK: Readonly<Record<ReturnType<typeof balanceTone>, string>> = {
+  ok: theme.color.mintInk,
+  warn: theme.color.amber,
+  bad: theme.color.red,
+};
+
+const s = StyleSheet.create({
+  root: { flex: 1 },
+  action: { gap: theme.space.sm },
+  failure: { gap: theme.space.sm },
+  body: { ...theme.type.tiny, color: theme.color.ink },
+  centred: { ...theme.type.tiny, color: theme.color.muted, textAlign: 'center' },
+  eyebrow: { ...theme.type.eyebrow, color: theme.color.muted },
+  figure: { ...theme.num.xl, ...theme.tabular },
+  word: { ...theme.type.cardTitle, color: theme.color.ink },
+  provisional: { ...theme.type.tiny, color: theme.color.muted },
+  // The whole handle, and the one place on this screen it is not cut short.
+  handle: { ...theme.type.rlValue, color: theme.color.ink, textAlign: 'right' },
+});

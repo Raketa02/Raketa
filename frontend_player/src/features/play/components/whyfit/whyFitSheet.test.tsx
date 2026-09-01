@@ -35,6 +35,7 @@ const DECK_ENVELOPE: SearchEnvelope = {
   radiusClamp: false,
   rulesetVersion: 'ruleset-v1',
   engineVersion: 'matchfit-v1',
+  optimisedFor: 'SEARCHER',
 };
 
 function scored(term: Term, contribution: number, evidence: Evidence, weight = 30): ScoredTerm {

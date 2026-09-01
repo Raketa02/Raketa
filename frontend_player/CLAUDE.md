@@ -43,8 +43,8 @@ the Proposals opt-in, never pre-ticked and with a finish that stays closed until
 answers either way, and the **profile commit**: every answer in one idempotent
 `POST /players/me/profile` — plus the **Profile surface**, the one read of the week, the
 radius and the per-sport declaration that Play's search screen is drawn from, with an unkeyed
-`PUT` behind each of the three). `play` has its first two screens and the sheet over them,
-below; `challenges` holds **only words** so far.
+`PUT` behind each of the three). `play` has its first three screens, the sheet over them and
+an honest placeholder for the fourth, below; `challenges` holds **only words** so far.
 
 **The shell is five tabs over one stack, and it remembers nothing.** `TabShell` mounts the
 `TabBar` once, below the navigator, and reads the active column off the current path —
@@ -66,7 +66,8 @@ holds that refusal. The **You** tab still carries the account panel, because sig
 the only way back to the beginning and the shell arriving is what gave it a home. The bar's
 **transitions** follow the two moves: `none` by default, because a replace that slid in from
 the right would read as going deeper on the gesture whose meaning is that nothing was kept,
-and the push kept for `play/index`, which genuinely is one.
+and the push kept for the four Play screens, which genuinely are ones — Find a game is entered,
+and the deck, the builder and the pool are each pushed over what stays underneath them.
 
 **Sign-up asks whether the player is an adult, and it is an attestation.** The platform is
 adults only, and that is a precondition of _holding an account_ rather than a rule about who
@@ -410,6 +411,47 @@ number was people who had waved at _you_, and that number **cannot exist**: an i
 never crosses the wire in either direction. It is the one read in Play that background-
 refetches, because the rule against that is about orderings and a count has none — and it is
 why the tab bar carries no badge.
+
+**⚡Play's third screen is the builder, and a swap on it is a selection rather than a
+request.** A finished search is pushed onto it — _"where a completed search goes"_, which #268
+and #269 both declined to decide — and the push happens **when the latch lifts** rather than
+when the response lands, because the wait is over the screen that launched it and the court is
+what it lifts onto. Three branches fill the court and **two of them are one request**: ⚡ is
+`POST /lineups`, and hand-seating somebody and then pressing ⚡ is the same request with
+`locked_seats` on it, _"a property of what you send rather than of where you send it"_. The
+third is the pool. **⚡ mints a search of its own**, so the line-up re-binds to the record it
+just wrote — the four it seated came off _that_ search's rows, and `POST /forecasts` refuses
+anybody the cited search never showed. From the first locked seat the engine optimises **for
+the group** and `optimised_for` says so, which the court renders in the voice a provisional
+figure uses: it is a consequence of an act the player took, said before they discover it.
+
+**Every arrangement crosses, so re-arranging costs nothing and only membership round-trips.**
+`ForecastResponse` returns all three pairings of a four, each with its own forecast, and
+`domain/forecast.ts` holds the one rule that turns a swap into a selection: **a pairing is who
+is beside you**, so trading the two opponents keeps the same arrangement and the same number
+and only crossing the net changes either. Which seat is **yours** is `Relationship.SELF`'s
+answer rather than an index's — no route serves a searcher their own player id, which is also
+why your own seat draws a ring and no face until an answer names you. The **seating** is
+route-local and derived: absent means _whatever the current arrangement says_, so an answer
+landing seats people with nothing written down, and it is reset by a membership change and by
+nothing else. The forecast is read as a **query** even though it is a `POST`, because what
+decides that is whether the route records; ⚡'s own answer is written straight into that key,
+so a fill costs one request and not two. **No forecast arithmetic runs on the client** and the
+check for it is looking for arithmetic: the builder draws no balance bar, because
+[7.11](docs/design-system.md#711-the-balance-bar) takes an _advantage_ between two side
+strengths and nothing on a line-up serves one.
+
+**The court states its shortfall per seat and routes every remedy to the pool.** The four
+`UnfilledReason` codes replace AC-69's _"Only found N"_ with the obstacle for the actual seat,
+and the statements are the seats' **own spoken names printed**, so the sentence a listener
+hears and the sentence a reader sees cannot drift apart. The ladder is not here and never will
+be — it is the pool's, which is why the pool ships now as an honest placeholder
+([#272](https://github.com/Raketa02/Raketa/issues/272)) rather than as a remedy pointing
+nowhere. **A withheld seat is marked rather than emptied**, derived as a set difference against
+the rows the record still holds, and the marked player **stays in the forecast**: dropping them
+would force a second cause for _provisional_. Such a seat is a **fourth spoken kind** rather
+than a player with missing facts — a withheld row carries one field and no card, so there is no
+name and no level to read out — and it says the fact and never the cause.
 
 **`SH.whyfit` is the one surface allowed to draw a term row, and the row count is derived.**
 One component taking `(candidate, envelope)` and reading no global state, which is what lets

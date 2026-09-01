@@ -80,6 +80,9 @@ describe('the envelope', () => {
     expect(toSearchEnvelope(response())).toEqual({
       searchId: '11111111-0000-4000-8000-000000000001',
       mode: null,
+      // The builder's own field: a shortlist and a deal are always the searcher's, and only a
+      // hand-seated line-up says otherwise.
+      optimisedFor: 'SEARCHER',
       pool: { radiusKmUsed: 12, playersInRange: 7, window: 'THIS_WEEK' },
       radiusClamp: false,
       rulesetVersion: 'ruleset-v1',

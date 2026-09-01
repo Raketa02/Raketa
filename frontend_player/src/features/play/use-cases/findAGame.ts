@@ -41,8 +41,9 @@
  */
 
 import { runSearch } from '../api/playSearchApi';
-import type { OriginSearch, PlayOrigin } from '../domain/lineup';
+import type { PlayOrigin, SearchRecord } from '../domain/lineup';
 import type { RaisedPrompt } from '../domain/raisedPrompt';
+import { toRankedList } from '../mappers/candidateMappers';
 import {
   toOriginSearch,
   toPlayersInRange,
@@ -65,13 +66,18 @@ export interface FindAGameAsk {
 /**
  * The minted record, and the questions it raised.
  *
+ * **The rows travel with it now**, where #268 left them on the wire: the builder is the first
+ * surface that draws somebody who is seated, and *"every fact drawn about a seated player is
+ * read back off that search's own rows"* — held under `searchKeys.detail(id)`, which is what
+ * makes `Lineup.seats` ids and nothing else ([#271](https://github.com/Raketa02/Raketa/issues/271)).
+ *
  * **The prompts ride on the response**, which is what makes *"it never blocks"* true by
  * construction rather than by a screen remembering to sequence a sheet after a request: by the
  * time there is anything to ask, the search has already run
  * ([#226](https://github.com/Raketa02/Raketa/issues/226) §6).
  */
 export interface SearchOutcome {
-  readonly origin: OriginSearch;
+  readonly record: SearchRecord;
   /**
    * The pool's post-gate count, which the searching latch prints and nothing else does yet.
    *
@@ -99,8 +105,13 @@ export async function findAGame(
     toRunSearchRequest({ origin: ask.origin, sentWeek: ask.sentWeek }),
   );
 
+  const { envelope, candidates } = toRankedList(response);
+
   return {
-    origin: toOriginSearch(response, ask.origin),
+    // A shortlist seats nobody, so there is no `court` — the field is absent rather than an
+    // empty one, which is the difference between *this answer has no court* and *its court is
+    // empty* (`SearchRecord`).
+    record: { ...toOriginSearch(response, ask.origin), envelope, candidates },
     playersInRange: toPlayersInRange(response),
     prompts: toRaisedPrompts(response, ask.quotes),
   };

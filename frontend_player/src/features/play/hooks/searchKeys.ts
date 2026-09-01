@@ -131,6 +131,13 @@ export const searchKeys = {
    * `search_id` is in the key because it is the Origin key of the request: the same four off
    * two different searches are two different questions, and the route refuses the ones that
    * did not appear.
+   *
+   * **The sport and the mode ride on the request and are deliberately not in the key**, and
+   * that is safe rather than lucky: both are **functionally dependent on `search_id`**. A
+   * search is per sport and its envelope carries the mode it was priced under, so a forecast
+   * citing that id could not be asked under another of either without being refused — and
+   * changing either one on the screen orphans the line-up rather than re-keying it
+   * (`domain/lineup`'s origin guard). Adding them would mint a second entry for one question.
    */
   forecast: (searchId: string, players: readonly SeatedPlayerId[]) =>
     [...searchKeys.forecasts(), searchId, [...players].sort()] as const,

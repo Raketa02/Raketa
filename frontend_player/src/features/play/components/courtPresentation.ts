@@ -24,10 +24,16 @@
  *
  * **And none of these appears inside the why-fit sheet.** A court seat's sheet explains the
  * *pairing's* Fit, never the `G` that seated them (#233 §9).
+ *
+ * ## A third vocabulary joined them with the builder
+ *
+ * `OptimisedFor` is the court's statement about **the answer** rather than about a seat, and
+ * it is here for the same reason the other two are: a code the engine names and the client
+ * writes the sentence for.
  */
 
 import type { SeatGuard } from '../domain/lineup';
-import type { GroupReason, UnfilledReason } from '../domain/vocabulary';
+import type { GroupReason, OptimisedFor, UnfilledReason } from '../domain/vocabulary';
 
 import { SWAP_TOGGLE_LABEL } from './accessibilityPresentation';
 
@@ -114,4 +120,34 @@ const GROUP: Readonly<Record<GroupReason, string>> = {
 
 export function groupReasonLine(reason: GroupReason): string {
   return GROUP[reason];
+}
+
+/**
+ * Whom the answer was optimised for — **and the one value that says nothing.**
+ *
+ * `GROUP` is what a hand-seated court gets: *"send `locked_seats` to hand-seat people. From
+ * that moment the engine optimises for the group and says so in `search.optimised_for`,
+ * because you may end up with a worse individual match than an empty court would have given
+ * you."* That is a consequence of an act the player took, said before they discover it — which
+ * is the same job a provisional figure's caveat does, and
+ * [`the-play-screens.md`](../../../../../docs/specs/matchmaking/the-play-screens.md) §11.2 asks
+ * for it in the same voice.
+ *
+ * **`SEARCHER` has no sentence, and `null` is not an empty one.** A `Record` keyed by the
+ * union with `null` for *say nothing* is `availabilityDiffCellLabel`'s shape, and it draws the
+ * same line here: an answer optimised for you is the ordinary case and announcing it would
+ * make the exception unreadable by putting a sentence under every court.
+ */
+const OPTIMISED: Readonly<Record<OptimisedFor, string | null>> = {
+  SEARCHER: null,
+  GROUP:
+    'Seated around the people you picked, so this is the best game for the four of you rather than your own best match.',
+};
+
+/**
+ * What the court says about who the answer was for. `undefined` where there is nothing to say
+ * — which is `SEARCHER`, and a code this build has never seen (`SearchEnvelope.optimisedFor`).
+ */
+export function optimisedForLine(optimised: OptimisedFor | null): string | undefined {
+  return optimised === null ? undefined : (OPTIMISED[optimised] ?? undefined);
 }

@@ -44,12 +44,20 @@
  * `isPending` alone would cover the screen for as long as the player is offline, in front of
  * the amber sentence saying the search resumes.
  *
- * ## What is deliberately not here
+ * ## Where a completed search goes, and when
  *
- * **Where a completed search goes.** The builder behind the latch reads the record
- * ([#271](https://github.com/Raketa02/Raketa/issues/271)); until it exists the latch lifts
- * back onto this screen, and a destination invented before it is one this screen has to
- * un-decide twice.
+ * The **builder**, pushed with the id the search just minted
+ * ([#271](https://github.com/Raketa02/Raketa/issues/271)) — and pushed **when the latch
+ * lifts**, not when the mutation succeeds. The two are different moments and the difference is
+ * the whole of what the latch is: it is *over the screen that launched it*, so the beat that
+ * holds the count belongs to this screen and the court is what the wait lifts onto. Pushing on
+ * the response instead would put the court under the latch, and the number the wait exists to
+ * print would be drawn over a screen the player has already left.
+ *
+ * The push is the screen's rather than the hook's for the same reason: the navigation and the
+ * wait are one arrangement, and only the component holding both can keep them in step.
+ *
+ * ## What is deliberately not here
  *
  * **The prompt sheet.** `SH.saveav` is [#275](https://github.com/Raketa02/Raketa/issues/275)'s.
  * What this ticket owes it is the ordering, and the ordering is now **structural**: the
@@ -71,6 +79,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { router } from 'expo-router';
 
 import { sportLabel, useSkillRatings } from '@/features/onboarding/types';
 import {
@@ -102,6 +111,7 @@ import type { FindAGameAsk } from '../use-cases/findAGame';
 import { usePlayPreferences } from '../store/playPreferences.store';
 import { usePlaySession } from '../store/playSession.store';
 
+import { BUILDER_ROUTE } from './BuilderScreen';
 import { DeclarationInterstitial } from './DeclarationInterstitial';
 import { SportChips } from './SportChips';
 import { useHeldWait } from './heldWait';
@@ -244,6 +254,21 @@ export function FindAGameScreen() {
    * that fixed as a type rather than as a rule (#269).
    */
   const playersInRange = search.isSuccess ? search.data.playersInRange : undefined;
+
+  /**
+   * **The wait lifts onto the court.**
+   *
+   * The id is the effect's dependency rather than the success flag, so a second search pushes
+   * a second court and a re-render of a screen the player has come back to pushes nothing: a
+   * search that already sent somebody to the builder has the same id it had then. Leaving Play
+   * while the latch is up unmounts this screen and pushes nothing at all, which is correct —
+   * the reset has ended the session the court would have been built in.
+   */
+  const minted = search.isSuccess ? search.data.record.searchId : undefined;
+  useEffect(() => {
+    if (minted === undefined || latched) return;
+    router.push({ pathname: BUILDER_ROUTE, params: { search: minted } });
+  }, [minted, latched]);
 
   /**
    * The comparison, made **once** and read twice.
