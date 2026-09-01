@@ -214,10 +214,12 @@ class IndexFootprint:
     """Trigger 4's reading, recomputed at every index load.
 
     **It warns and never refuses.** An index that has outgrown half the container
-    is a capacity decision — ``array``-packed columns at 43 bytes a row, which
-    cost 23% on the scan (``scale-posture.md`` §5) — and a process that refused
-    to load its index over it would take the platform down to avoid using memory
-    it had been given.
+    is a capacity decision — ``scale-posture.md`` §5's memory ladder, whose first
+    rung is sharing the closed-vocabulary strings at decode (half the row, and
+    nothing on the search path) and whose second is ``array``-packed columns at
+    43 bytes a row for 23% on the scan — and a process that refused to load its
+    index over it would take the platform down to avoid using memory it had been
+    given.
     """
 
     rows: int

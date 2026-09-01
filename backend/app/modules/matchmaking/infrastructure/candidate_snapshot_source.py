@@ -25,8 +25,14 @@ ticks — **996 bytes a row**, of the measured 1 991, that routing the closed
 vocabularies through themselves would give back. It is left alone deliberately:
 #276 was a ticket about a figure nobody re-measured, and folding a projection
 change into the commit that records the measurement would mean the recorded
-number described code written in the same breath. It is worth its own ticket, and
-the bench already prints the number that ticket would be argued on.
+number described code written in the same breath.
+
+**It is rung 1 of ``scale-posture.md`` §5's memory ladder, and that is its home
+rather than a backlog.** Nothing today wants the bytes — one worker holds a
+launch city in 50 MB — so it is not work waiting to be done; it is the cheapest
+thing to do *when trigger 4 fires*, which is exactly when somebody reads that
+ladder. ``band`` is the one column to think about first: it is a published name
+off the Level band table rather than a vocabulary this projection owns.
 
 **``gc.freeze()`` after every load and refresh, and it is safe for a stated
 reason.** One automatic gen-2 collection over a live index cost **57.9 ms

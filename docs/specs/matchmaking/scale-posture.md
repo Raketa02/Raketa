@@ -175,9 +175,34 @@ below the last rung, not above the first.**
   rows pickle to 658 KB and **5.3 ms of `pickle.dumps` on the event loop** — more than the
   search it was meant to move. Only the resident-index shape in rung 4 survives.
 
-**The memory ladder is separate and has one rung:** `array`-packed columns, **43 bytes a row**,
-which genuinely share across forked workers (5 MB per worker instead of 108) and cost **23% on
-the scan**. They are the answer to **trigger 4** and never to trigger 1.
+**The memory ladder is separate, and it has two rungs.** Both are the answer to **trigger 4**
+and never to trigger 1.
+
+| Rung | Buys | Cost |
+| ---: | --- | --- |
+| 1 | **Share the closed-vocabulary strings** where `_decode` builds a row | **1 991 → ~995 bytes a row** — half the index, and trigger 4's bound doubles to ~50 000 players at four workers | **nothing on the search path**: one lookup per column, once, on the refresh that decodes the row |
+| 2 | `array`-packed columns | **43 bytes a row**, and they genuinely share across forked workers — 5 MB per worker instead of 108 | **23% on the scan** |
+
+**Rung 1 is nearly free and was not on this ladder until
+[#276](https://github.com/Raketa02/Raketa/issues/276) measured the row.** `_decode` copies
+whatever the driver returned, `social_tags` and `availability` are `JSON` columns decoded per
+row, and neither asyncpg nor SQLAlchemy interns — so every row holds its own `"PADEL"`, its own
+`"ANY"` and its own copy of each availability code. Half the index is a second copy of a
+vocabulary of about fifty strings.
+
+**It is a constant factor and rung 2 is a category change, which is why the order is this and
+not the reverse.** Sharing the strings halves the bytes; it does not alter what a fork does,
+because the row *objects* still exist and a scan still dirties the page of every one it
+touches — so a forked worker costs half of 108 MB, not 5. Rung 2 removes the per-row objects
+altogether, and that is what makes copy-on-write finally work. Take rung 1 first because it is
+free, and rung 2 when halving is no longer enough.
+
+**One column is not obviously vocabulary.** `sport`, `rating_status`, `calibration_priority`,
+`declared_intent`, `gender`, `gender_preference`, the tag ids and the twenty-one availability
+codes are closed sets this repository owns. `band` is a *published name* off the Level band
+table, and routing it through a vocabulary here would give this projection an opinion about a
+table `racketskill` owns — the second-source-of-truth argument that put `band_lower` /
+`band_upper` on the row as projected values in the first place.
 
 ## 6. `K = 24`, and why it is not "just a config change"
 

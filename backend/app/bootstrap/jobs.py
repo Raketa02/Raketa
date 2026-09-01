@@ -681,9 +681,10 @@ def build_candidate_index_refresh_job(
         # from the rows this worker actually holds, the workers this container
         # actually runs and the limit it actually has. It **warns and never
         # refuses**: an index that has outgrown half its container is a capacity
-        # decision — `array`-packed columns at 43 bytes a row — and a process
-        # that refused to load its index over it would take the platform down to
-        # avoid using memory it had been given.
+        # decision — `scale-posture.md` §5's memory ladder, sharing the
+        # closed-vocabulary strings first and `array`-packed columns at 43 bytes
+        # a row second — and a process that refused to load its index over it
+        # would take the platform down to avoid using memory it had been given.
         footprint = footprint_of(
             rows=report.rows_held,
             workers=settings.GUNICORN_WORKERS,

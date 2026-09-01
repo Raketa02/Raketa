@@ -134,9 +134,11 @@ cycle crossed* send the reader to different rungs of `scale-posture.md` §5 — 
 bucketing and cheaper distance, the second to a process pool with a resident index.
 
 **Trigger 4 warns and never refuses.** An index that has outgrown half its container is a
-capacity decision — `array`-packed columns at 43 bytes a row, at 23% on the scan — and a
-process that refused to load its index over it would take the platform down to avoid using
-memory it had been given. Where there is no cgroup limit to read, the record says the limit is
+capacity decision — [`scale-posture.md`](scale-posture.md) §5's memory ladder: share the
+closed-vocabulary strings at decode for half the row and nothing on the search path, then
+`array`-packed columns at 43 bytes a row for 23% on the scan — and a process that refused to
+load its index over it would take the platform down to avoid using memory it had been
+given. Where there is no cgroup limit to read, the record says the limit is
 **unknown**: unknown is not unlimited, and reporting a comfortable fraction of a made-up limit
 would be the invented measurement this map refuses everywhere else.
 
