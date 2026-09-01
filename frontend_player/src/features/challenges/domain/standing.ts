@@ -33,3 +33,18 @@ export type Standing = (typeof STANDINGS)[number];
  * carries a side and nothing here asks for one.
  */
 export type ChallengeSide = 'organiser' | 'invitee';
+
+/**
+ * What the person in a seat did about being asked — **three values, and *awaiting* is not one
+ * of them.**
+ *
+ * The absence of an answer *is* awaiting, and giving it a name would make *nothing yet* and
+ * `AWAITING` two spellings of one state with nothing to choose between them.
+ *
+ * **`LAPSED` is never a decline.** They do the same thing to the line-up and they are
+ * different facts — the `answers challenges` strand counts challenges that got an answer
+ * inside their window, and it is unmeasurable if silence is filed as judgement.
+ */
+export const SEAT_ANSWERS = ['ACCEPTED', 'DECLINED', 'LAPSED'] as const;
+
+export type SeatAnswer = (typeof SEAT_ANSWERS)[number];

@@ -1027,6 +1027,18 @@ holds one.
 | `line_up_no_longer_sendable` | `Something's changed — one of these players can't be invited now.` | Read the origin search back; the withheld rows mark their seats. |
 | the open-challenge refusal (#221) | `You've already got a game waiting with {name}.` | `{name}` comes from the player's **own** challenges, not from the refusal. |
 | neither seat marked after the re-read | `Something's changed, and one of these players can't be invited right now.` | The dead end §5.1 names, stated rather than left silent. |
+| the open-challenge refusal, **with no name to be had** | `Two people on this court already have a game between them.` | The row this table was missing — see below. |
+
+**The named sentence assumed a name is always found, and it is not.** The pair rule binds
+**every** pair on the court, so the open challenge in the way can be between two *invitees* — a
+game that is theirs, on a list the organiser has no right to read. And the name arrives a round
+trip after the refusal does, so there is a moment where the refusal is true and the list has not
+answered. Both reach the fourth sentence, and they are **deliberately not told apart**: the
+player can act on neither, and explaining *why* there is no name would publish who is missing
+from whose list. The named sentence **replaces** it when the list names somebody — a general
+statement becoming a specific one, which is the same shape the row above already has, where
+`line_up_no_longer_sendable` stands while the read-back is in flight and the seats gain their
+marks when it lands. Added by [#274](https://github.com/Raketa02/Raketa/issues/274).
 
 **The court's own mark is the same sentence, per seat.** A refused send is not the only way a
 seated player goes out of date: reading the origin search back marks the seats its withheld rows

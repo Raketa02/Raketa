@@ -13,6 +13,7 @@ import { seatPlaces } from './lineup';
 import {
   arrangementFor,
   courtSeating,
+  courtWithYou,
   currentArrangement,
   evenestArrangement,
   firstEmptySeat,
@@ -264,6 +265,32 @@ describe('the seating a court opens on', () => {
    */
   it('draws the arrangement the members it holds imply', () => {
     expect(seatingToDraw(THREE, { seats: 4, members: [D, B, C] })).toEqual(seatingOf(WITH_D));
+  });
+});
+
+describe('the court a send carries', () => {
+  /**
+   * The two rules that look like formatting and are not: **the organiser holds a seat like
+   * anybody else** — a court without them is refused with `organiser_holds_a_seat` — and **an
+   * empty seat is a seat**, because dropping it would renumber every seat behind it and the
+   * side each one is on is read off the position.
+   */
+  it('puts you in your own seat and keeps every hole in its place', () => {
+    const half: Seating = [
+      { kind: 'you' },
+      { kind: 'player', playerId: B },
+      { kind: 'empty' },
+      { kind: 'player', playerId: D },
+    ];
+
+    expect(courtWithYou(half, ME)).toEqual([ME, B, undefined, D]);
+  });
+
+  /** Swap mode is *change sides, never seats*, so your own seat is wherever you are standing. */
+  it('follows you across the net rather than assuming seat 0', () => {
+    const crossed: Seating = [{ kind: 'player', playerId: B }, { kind: 'you' }];
+
+    expect(courtWithYou(crossed, ME)).toEqual([B, ME]);
   });
 });
 

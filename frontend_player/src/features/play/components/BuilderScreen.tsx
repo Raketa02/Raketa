@@ -48,22 +48,56 @@
  * whole of what §11.3 permits. The bar belongs where a served advantage exists — the candidate
  * card's `LEVEL_FIT` evidence, where it already is.
  *
- * **The send.** ⚡ becomes a challenge on [#274](https://github.com/Raketa02/Raketa/issues/274),
- * with the pre-send sheet and the whole-send refusal that belong to it. A full court here is a
- * court with a forecast on it and nothing outbound: *"searching, browsing, seating, swapping
- * and replacing produce nothing outbound."*
+ * ## The one thing on this screen that reaches another person
+ *
+ * *"Searching, browsing, seating, swapping and replacing produce nothing outbound"* — and then
+ * the court fills, and the pinned slot becomes **the send**. It is drawn here and owned
+ * elsewhere: the CTA is *"the screen's own 10.1 slot, **calling** a challenges use-case"*, and
+ * `SH.propose`, the send itself and every sentence either says are `features/challenges/`'
+ * ([`the-play-components.md`](../../../../docs/specs/matchmaking/the-play-components.md) §8).
+ *
+ * **Pending, never optimistic, and the *or* dissolves.** Success replaces the whole stack, so a
+ * rolled-back send has nowhere to return *to*; nothing is rolled forward, so nothing needs
+ * rolling back. The control is busy, the stack is replaced on success only, and the toast fires
+ * after the reply ([#239](https://github.com/Raketa02/Raketa/issues/239) §5).
+ *
+ * **And a refusal is followed by a re-read, never by a payload.** Both sources are already this
+ * screen's: `line_up_no_longer_sendable` re-reads the **origin search**, whose withheld rows the
+ * court already turns into marked seats, and the open-challenge refusal re-reads the player's
+ * own challenges for a name. **Neither re-runs the search** — that mints an id the whole line-up
+ * must adopt and can drop a seat nobody touched, which is H-18's harm arriving through the
+ * remedy. When the re-read marks nobody, the court says so **at court level** rather than
+ * leaving the player refused in front of four seats that all look fine.
  */
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { router } from 'expo-router';
 
 import { sportLabel } from '@/features/onboarding/types';
+import {
+  A_PAIR_HERE_IS_ALREADY_PLAYING,
+  CHALLENGE_SENT,
+  LINE_UP_CHANGED,
+  NOTHING_MARKED_AFTER_THE_REFRESH,
+  ProposeSheet,
+  SENDING_LABEL,
+  SEND_CHALLENGE_LABEL,
+  challengeErrorMessage,
+  openChallengeLine,
+  sendRefusal,
+  useOpenPair,
+  useSendChallenge,
+  type ProposedCourt,
+  type SendRefusal,
+} from '@/features/challenges/types';
 import { useProfileSurface } from '@/features/player_profile/types';
-import { ShellScreen } from '@/features/shell/types';
+import { ShellScreen, landOnNow } from '@/features/shell/types';
 import { offlineMessage } from '@/shared/errors';
+import { useIsOnline } from '@/shared/lib/platform';
+import { showToast } from '@/shared/store/toast.store';
 import { formatPercent } from '@/shared/formatting/ratingFormat';
-import { sideNames, type NamedPlayer } from '@/shared/formatting/playerName';
+import { playerName, sideNames, type NamedPlayer } from '@/shared/formatting/playerName';
 import {
   BALANCE_INK,
   Button,
@@ -83,6 +117,7 @@ import type { Candidate } from '../domain/candidate';
 import {
   arrangementFor,
   courtSeating,
+  courtWithYou,
   evenestArrangement,
   firstEmptySeat,
   seatedIds,
@@ -98,6 +133,7 @@ import { seatPlaces, withheldSeats, type SeatPlace } from '../domain/lineup';
 import type { UnfilledReason } from '../domain/vocabulary';
 import { sentWeekForOrigin } from '../domain/workingWeek';
 import { useFillSeats, useForecast, useSearchRecord } from '../hooks/useBuilder';
+import { useReadSearchBack } from '../hooks/usePool';
 import { usePlaySession } from '../store/playSession.store';
 
 import {
@@ -193,6 +229,19 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
   const record = useSearchRecord(originSearchId);
 
   const fill = useFillSeats();
+  const send = useSendChallenge();
+  /**
+   * The remedy for `line_up_no_longer_sendable`, and **the pool's own act borrowed rather than
+   * copied**: it writes the whole record back under the key this screen is already subscribed
+   * to, so a marked seat appears from one cache write and nothing here holds a second answer.
+   */
+  const reread = useReadSearchBack();
+  /**
+   * The send is the one act in the app that **fails** offline rather than pausing, so it is the
+   * one control with nothing to read its own paused state off. Part 11: the closed button is
+   * the courtesy and `networkMode: 'always'` is the mechanism.
+   */
+  const online = useIsOnline();
   const { width } = useWindowDimensions();
   const collapsed = useCollapsedPresentation();
 
@@ -202,6 +251,26 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
    */
   const [seating, setSeating] = useState<Seating | undefined>(undefined);
   const [swapping, setSwapping] = useState(false);
+
+  /**
+   * Whether `SH.propose` is up, and **what the last send was refused with**.
+   *
+   * Route-local for the seating's reason: neither is a fact about the line-up, and the court
+   * pops, so both are gone the moment the player is anywhere else. The refusal is held rather
+   * than read off `send.error` because it is what decides *which source is being re-read* — a
+   * screen that re-derived it every render would start the read again on each one.
+   */
+  const [proposing, setProposing] = useState(false);
+  const [refusal, setRefusal] = useState<SendRefusal | undefined>(undefined);
+
+  /**
+   * Where accessibility focus goes when `SH.propose` closes — **the control that opened it**.
+   *
+   * Part 13's rule for every overlay in this app: without it a listener is returned to the top
+   * of the screen and has to find their place again, which after the app's one irreversible act
+   * is the worst place to lose somebody.
+   */
+  const sendControl = useRef<View>(null);
 
   const origin = record?.origin;
   const sport = origin?.sport;
@@ -280,6 +349,20 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
     toOccupant(seat, { self, rows, unfilled: shortfall?.get(at) ?? null }),
   );
 
+  /** Everybody about to be asked: the court minus you, in seat order. Nobody invites themselves. */
+  const invitees = seatedIds(seated);
+
+  /**
+   * The second of the two re-reads, asked **only** once the pair rule has fired.
+   *
+   * A court is built, looked at and sent from without anybody needing to know what else the
+   * organiser has open, so this costs nothing until the one press that needs it.
+   */
+  const pair = useOpenPair(invitees, refusal?.kind === 'READ_YOUR_CHALLENGES');
+  // The handle is the **record's**, because that is where a name lives: `challenges` answers a
+  // player id and has never seen a nickname.
+  const pairName = pair === undefined ? undefined : rows.get(pair)?.card.nickname;
+
   const sportName = sport === undefined ? undefined : sportLabel(sport);
   const profile = profileSurface.data;
   const optimised = optimisedForLine(record?.envelope.optimisedFor ?? null);
@@ -347,12 +430,119 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
     );
   }
 
+  /**
+   * **The send** — and the whole of what a refusal costs, in one place.
+   *
+   * The court goes out **exactly as it is drawn**: seat order, your own seat in it, holes kept,
+   * and the sides derived from position by the mapper. *"The arrangement you built is what is
+   * recorded, and it is what they answer — never a better one worked out afterwards."*
+   *
+   * Nothing is re-checked here. Five facts are re-verified server-side in the send's own
+   * transaction, because the line-up may be an hour old and nothing in Play background-refetches
+   * — a client-side pre-check would be a fifth reading of the one class of rule that must not be
+   * stale, taken from the one source that is.
+   *
+   * **A duplicate press is explicitly-valid repetition.** No `Idempotency-Key`: one open
+   * challenge per pair across sports is a rule that does not expire and a key does, so the
+   * second send is made, read and refused by the same check that would refuse a stranger's.
+   */
+  function sendTheChallenge() {
+    if (self === undefined) return;
+
+    // The previous refusal, and the read it started, both belong to the press that caused them.
+    setRefusal(undefined);
+    reread.reset();
+
+    send.mutate(
+      { searchId: originSearchId, court: courtWithYou(seated, self) satisfies ProposedCourt },
+      {
+        onSuccess: () => {
+          // The stack goes first and the sentence second, in that order and not the other:
+          // `landOnNow` ends the Play session and mounts the destination, and the toast is
+          // spoken from the host's effect on the commit after it — so the platform's own
+          // screen-change notification does not clobber the one announcement that interrupts.
+          landOnNow();
+          showToast({ message: CHALLENGE_SENT, tone: 'ok', politeness: 'interrupting' });
+        },
+        onError: (error) => {
+          const next = sendRefusal(error);
+          setRefusal(next);
+          startTheReRead(next);
+        },
+      },
+    );
+  }
+
+  /**
+   * The half of a refusal that is a **request**, and the reason it is a `switch`.
+   *
+   * Every arm is named, so a third source added to `SendRefusal` fails `pnpm typecheck` here
+   * rather than quietly starting no read — which is the failure mode an `if` on one code has,
+   * and it is invisible: the sentence still renders and the seats simply never get marked.
+   *
+   * `READ_YOUR_CHALLENGES` starts nothing imperatively because its read is **declarative** —
+   * `useOpenPair`'s `enabled` is the held refusal, so setting it is the request.
+   */
+  function startTheReRead(next: SendRefusal): void {
+    switch (next.kind) {
+      // The origin search, **never a fresh one**: a re-run mints an id the whole line-up must
+      // adopt, and its untouched seats are only *probably* in the new answer.
+      case 'READ_THE_ORIGIN_BACK':
+        if (record !== undefined) reread.mutate(record);
+        return;
+      case 'READ_YOUR_CHALLENGES':
+      case 'SAY_SO':
+        return;
+    }
+  }
+
+  /**
+   * What the court says about a refused send — **at court level**, in the shape the shortfall
+   * statements already use on this screen.
+   *
+   * The gate refusal says one sentence while the re-read is in flight and keeps it once the
+   * read-back has marked somebody; when the read-back marks **nobody** it becomes the dead end,
+   * which is the case the send and the index genuinely disagree about and the one that would
+   * otherwise leave a player refused in front of four seats that all look fine.
+   *
+   * **A re-read that failed keeps the first sentence rather than reaching the dead end**, and
+   * the gate is `isSuccess` for that reason: the dead end says the refusal and the refresh
+   * *disagree*, which is a claim only a refresh that happened can make. What the player is left
+   * with is still true — the line-up went out of date — and the way on is the control they
+   * pressed, which is the tab's rule about where a retry belongs.
+   */
+  function refusalLine(): string | undefined {
+    if (refusal === undefined) return undefined;
+
+    switch (refusal.kind) {
+      case 'READ_THE_ORIGIN_BACK':
+        return reread.isSuccess && withheld.size === 0
+          ? NOTHING_MARKED_AFTER_THE_REFRESH
+          : LINE_UP_CHANGED;
+      // The name is the **record's**, not the refusal's. A pair between two invitees is on a
+      // list this player cannot read, and so is a seated player the read-back has since
+      // withheld — both answer with the sentence that names nobody rather than with a `?`.
+      case 'READ_YOUR_CHALLENGES':
+        return pairName === undefined
+          ? A_PAIR_HERE_IS_ALREADY_PLAYING
+          : openChallengeLine(playerName(namedPlayer(pairName)));
+      case 'SAY_SO':
+        return challengeErrorMessage(refusal.error);
+    }
+  }
+
+  /** Read once per render: the sentence is the same wherever it is drawn, and it is drawn once. */
+  const refused = refusalLine();
+
   return (
     <>
-      {/* The latch is a **sibling** of the screen it covers, never a child: `behindOverlay`
-          hides everything inside the element carrying it, and an overlay rendered in there
-          would hide itself along with the screen. */}
-      <View style={s.root} {...behindOverlay(latched)}>
+      {/* Both overlays are **siblings** of the screen they cover, never children:
+          `behindOverlay` hides everything inside the element carrying it, and an overlay
+          rendered in there would hide itself along with the screen. `SH.propose` takes the
+          same hide as the latch — a modal sheet's Part 13 obligation is that the tree behind
+          it says so, and here that tree holds a second control spelled with the sheet's own
+          words. */}
+      <View style={s.root} {...behindOverlay(latched || proposing)}>
         <ShellScreen
           title={builderTitle({ seats, filled })}
           eyebrow={
@@ -361,7 +551,37 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
               : builderEyebrow({ sportName, seats, mode: origin.mode })
           }
           action={
-            origin === undefined || open === 0 ? undefined : (
+            origin === undefined ? undefined : open === 0 ? (
+              /* **The court, once full.** The two ways to fill it are gone, because there is
+                 nothing left to fill, and the slot becomes the one act that reaches another
+                 person. */
+              <View style={s.action}>
+                {refused === undefined ? null : (
+                  <Note variant="coral" accessibilityRole="alert">
+                    {refused}
+                  </Note>
+                )}
+                {online ? null : <Note variant="amber">{offlineMessage('does-not-resume')}</Note>}
+
+                {/* Pending on the pinned CTA, and disabled while the send is in flight or
+                    there is no connection to make it over. `self` is `Relationship.SELF`'s
+                    answer and arrives with the forecast: a court with nobody in it that the
+                    engine has named as you is not a court this client may describe. */}
+                {/* A `View` around the button, because focus has to land on a **host element**
+                    this component holds a ref to and `Button` is a component. The same shape
+                    `BottomSheet` uses for its own heading. */}
+                <View ref={sendControl}>
+                  <Button
+                    label={SEND_CHALLENGE_LABEL}
+                    size="lg"
+                    busy={send.isPending}
+                    busyLabel={SENDING_LABEL}
+                    disabled={!online || self === undefined}
+                    onPress={() => setProposing(true)}
+                  />
+                </View>
+              </View>
+            ) : (
               <View style={s.action}>
                 {fill.error !== null ? (
                   <Note variant="coral" accessibilityRole="alert">
@@ -574,8 +794,37 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
       </View>
 
       <SearchingLatch visible={latched} status={engineFillStatus({ playersInRange })} />
+
+      {/* `SH.propose` — the last thing between a built court and four people being asked.
+          Confirming dismisses it and runs the send, whose pending state and whose refusal both
+          belong to the pinned CTA rather than to a modal over the seats that have to change. */}
+      {sportName === undefined ? null : (
+        <ProposeSheet
+          visible={proposing}
+          onClose={() => setProposing(false)}
+          onSend={() => {
+            setProposing(false);
+            sendTheChallenge();
+          }}
+          returnFocusTo={sendControl}
+          invitees={invitees.map((playerId) => namedPlayer(rows.get(playerId)?.card.nickname))}
+          lineUp={
+            // *"Nothing opens until they accept"* is false for doubles: the first acceptance
+            // opens the chat, and the number the sentence quotes is the answers still owed —
+            // which is the invitees, because the organiser's own seat is accepted from birth.
+            seats > 2
+              ? { kind: 'doubles', sportName, stillNeeded: invitees.length }
+              : { kind: 'singles' }
+          }
+        />
+      )}
     </>
   );
+}
+
+/** A handle, or the unknown player's question mark for a seat the record can no longer describe. */
+function namedPlayer(nickname: string | undefined): NamedPlayer {
+  return nickname === undefined ? { kind: 'unknown' } : { kind: 'player', nickname };
 }
 
 /**

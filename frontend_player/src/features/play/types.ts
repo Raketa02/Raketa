@@ -310,6 +310,7 @@ export { PoolScreen, type PoolScreenProps } from './components/PoolScreen';
 export {
   arrangementFor,
   courtSeating,
+  courtWithYou,
   currentArrangement,
   evenestArrangement,
   partnerOf,

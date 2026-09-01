@@ -44,7 +44,8 @@ answers either way, and the **profile commit**: every answer in one idempotent
 `POST /players/me/profile` — plus the **Profile surface**, the one read of the week, the
 radius and the per-sport declaration that Play's search screen is drawn from, with an unkeyed
 `PUT` behind each of the three). `play` has its four screens and the sheet over them, below;
-`challenges` holds **only words** so far.
+and `challenges` is the send: `POST /challenges`, `SH.propose`, and the two re-reads a refusal
+is followed by, below.
 
 **The shell is five tabs over one stack, and it remembers nothing.** `TabShell` mounts the
 `TabBar` once, below the navigator, and reads the active column off the current path —
@@ -494,6 +495,45 @@ since agreed not to show leaves the list and a seat on the court behind it goes 
 writes the **whole** record back, origin and court included, because neither crosses on a
 read-back. Both card types draw here and **the pool draws one shape twice**; the pending seat
 replacement is route-local and needs no clearing rule, because the court pops.
+
+**⚡ becomes a challenge on the court once full, and that is `features/challenges/`.** The seam
+is drawn at _the one action in this tab that reaches another person_: the pinned CTA is the
+court's own slot **calling** a challenges use-case, and `SH.propose`, the send, the two
+re-reads and every sentence any of them writes are that feature's. The pre-send sheet states
+the **irreversibility and no duration** — each invited seat carries its own `answer_by` and a
+mutual-born challenge has none, so `{window}` was one constant standing in for three sentences
+and the pre-send one is discharged by **deletion**; the real deadline is per seat and arrives
+the moment after the act. Its closer is two sentences, because _nothing opens until they
+accept_ is false for doubles: the first acceptance opens the chat.
+
+**The send is pending, never optimistic, and that dissolves the question rather than answering
+it.** Success **replaces the whole stack** with `[Now]` and ends the Play session, so a
+rolled-back send would have nowhere to return to — nothing is rolled forward, so nothing needs
+rolling back. The control is busy, the stack moves on success only, and the confirmation is the
+**toast**, which is the entire report that the one irreversible act in the feature succeeded
+because the destination it lands on is a placeholder. That is why it is the single
+**interrupting** announcement in the app. **No `Idempotency-Key`:** one open challenge per pair
+across sports is a rule that does not expire and a key does, so a duplicate press is made,
+read, and refused by the same check that would refuse a stranger's — the rule is the mechanism
+and a key beside it would be the weaker of two.
+
+**A refused send is followed by a re-read, never by a payload.** The refusal states the class
+of problem and names nobody, because `AppError.details` is untyped, invisible to the backend's
+own response fence and ungeneratable against ADR-0006 — so `line_up_no_longer_sendable`
+re-reads the **origin search**, whose withheld rows the court already turns into marked seats,
+and the open-challenge refusal re-reads the player's **own** challenges for the name. **Neither
+re-runs the search:** a re-run mints an id the whole line-up must adopt and can drop a seat
+nobody touched, which is H-18's harm arriving through the remedy. The branch is the **code and
+never the status** — three refusals share `409` and one of them is about nobody's state.
+And when the re-read marks nobody, the court **says so at court level** rather than leaving
+somebody refused in front of four seats that all look fine; the pair rule gets the same
+treatment when the game in the way is between two invitees, on a list this player cannot read.
+
+**The send is the one act in the app that fails rather than pausing, and the screen says
+_wait_.** `networkMode: 'always'` is the mechanism — a challenge's answer window is derived at
+send, so a tap deferred to the next reconnect carries a deadline nobody chose — and the closed
+button beside `offlineMessage('does-not-resume')` is the courtesy over it, which is Part 11's
+own split. `useIsOnline` is what the court reads for that, and it is the one caller.
 
 **`SH.whyfit` is the one surface allowed to draw a term row, and the row count is derived.**
 One component taking `(candidate, envelope)` and reading no global state, which is what lets

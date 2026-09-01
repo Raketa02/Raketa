@@ -157,6 +157,27 @@ export function seatedIds(seating: Seating): readonly string[] {
   return seating.flatMap((seat) => (seat.kind === 'player' ? [seat.playerId] : []));
 }
 
+/**
+ * The whole court in seat order — **you included, and every hole kept** — which is what a send
+ * carries where a forecast carries the list above.
+ *
+ * Two rules that look like formatting and are not. **The organiser holds a seat like anybody
+ * else**: a court sent without them is refused with `organiser_holds_a_seat`, and it would be a
+ * different arrangement from the one on screen. And **an empty seat is a seat**: it keeps its
+ * place with nobody in it, because *which side is short* is part of what a court is, and
+ * dropping it would renumber every seat behind it — the side each one is on is read off the
+ * position.
+ *
+ * `you` is `Relationship.SELF`'s answer rather than an index, for the reason nothing in this
+ * file reads an index: no route serves a searcher their own player id, and swap mode moves you
+ * across the net.
+ */
+export function courtWithYou(seating: Seating, you: string): readonly (string | undefined)[] {
+  return seating.map((seat) =>
+    seat.kind === 'you' ? you : seat.kind === 'player' ? seat.playerId : undefined,
+  );
+}
+
 /** How many of the court's seats have somebody in them, yourself included. */
 export function seatsFilled(seating: Seating): number {
   return seating.filter((seat) => seat.kind !== 'empty').length;

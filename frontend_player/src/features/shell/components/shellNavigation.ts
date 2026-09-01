@@ -8,17 +8,15 @@
  * the only way to notice is to do it deliberately. So the shell is a plain `Stack` and every
  * tab press **replaces** what is on it.
  *
- * ## One function, two callers
+ * ## One function, and now all four of its callers
  *
- * `resetShellStack` is the whole mechanism, and the two things that call it are the two
- * halves of the rule: a flanking tab lays down one screen, and Play lays down two. A later
- * ticket adds the third — the *Find a game* segment re-enters the tab from inside it
- * ([#268](https://github.com/Raketa02/Raketa/issues/268)), and re-entering is arriving, not
- * going back — and a fourth, the send, which ends a Play session by landing the player on
- * `[Now]` with the line-up gone
- * ([#274](https://github.com/Raketa02/Raketa/issues/274)). **A Play session ends exactly
- * when this function runs**, which is the definition
- * [#264](https://github.com/Raketa02/Raketa/issues/264) is owed — and now the thing it does:
+ * `resetShellStack` is the whole mechanism, and what calls it are the four halves of the rule:
+ * a flanking tab lays down one screen, ⚡Play lays down two, the *Find a game* segment
+ * re-enters the tab from inside it ([#268](https://github.com/Raketa02/Raketa/issues/268)) —
+ * re-entering is arriving, not going back — and **the send lays down `[Now]`**, which is *a
+ * sent game is gone for good* ([#274](https://github.com/Raketa02/Raketa/issues/274)).
+ * **A Play session ends exactly when this function runs**, which is the definition
+ * [#264](https://github.com/Raketa02/Raketa/issues/264) is owed — and the thing it does:
  * every path through this function calls `endPlaySession`, so the working copy and the line-up
  * are cleared by *arriving somewhere*, never by a screen remembering to tidy up after itself.
  *
@@ -32,10 +30,9 @@
  *
  * ## Why the imperative `router` and not `useRouter()`
  *
- * The callers still to come are not all render paths. The send resets from a mutation's
- * `onSuccess`, and a rule that had to be reached through a hook would be a rule the one
- * caller that most needs it cannot reach. The singleton is `expo-router`'s own imperative
- * API, not a way around React.
+ * Not every caller is a render path. The send resets from a mutation's `onSuccess`, and a rule
+ * that had to be reached through a hook would be a rule the one caller that most needs it
+ * cannot reach. The singleton is `expo-router`'s own imperative API, not a way around React.
  */
 
 import { router } from 'expo-router';
@@ -95,4 +92,24 @@ export function openTab(tab: TabBarKey): void {
  */
 export function enterPlay(): void {
   resetShellStack(PLAY_STACK);
+}
+
+/**
+ * **Where a sent challenge lands: `[Now]`, and the Play session is over.**
+ *
+ * The fourth caller of the reset, and the one the module docblock has been naming since the
+ * shell was built. It is `[Now]` rather than `[Now, …]` because there is nothing left to be
+ * behind: the court the challenge was built on is gone, the line-up with it, and a stack that
+ * kept the builder underneath would let back walk into a court whose people have already been
+ * asked.
+ *
+ * **The confirmation is not here.** It is a toast the `challenges` feature owns, fired by the
+ * caller *after* this returns — so it is spoken once the destination has mounted and the
+ * platform's own screen-change notification does not clobber it
+ * ([`the-words.md`](../../../../docs/specs/matchmaking/the-words.md) §20.10). Now is a
+ * placeholder, which is exactly why that sentence is the whole confirmation and why it is the
+ * one announcement in the app that interrupts.
+ */
+export function landOnNow(): void {
+  resetShellStack([SHELL_TAB_ROOT.now]);
 }

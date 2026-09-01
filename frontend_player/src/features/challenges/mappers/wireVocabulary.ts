@@ -10,6 +10,15 @@
 import type { components } from '@/generated/schema';
 import type { Exact } from '@/shared/vocabulary/wireAgreement';
 
-import type { Standing } from '../domain/standing';
+import type { SeatAnswer, Standing } from '../domain/standing';
 
 export const STANDING_AGREES: Exact<Standing, components['schemas']['Standing']> = true;
+
+/**
+ * The three answers a seat can carry — and *awaiting* is the absence of one on both sides.
+ *
+ * It joined the file with the pair rule: `playersStillIn` drops the seat that declined or
+ * lapsed, so a fourth answer added to the contract would silently keep somebody in a game they
+ * had left.
+ */
+export const SEAT_ANSWER_AGREES: Exact<SeatAnswer, components['schemas']['SeatAnswer']> = true;

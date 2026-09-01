@@ -47,3 +47,13 @@ export { AroundScreen, ChatsScreen, NowScreen, YouScreen } from './components/ta
  * taps back to the search screen has arrived, and arriving is what clears a working copy.
  */
 export { enterPlay } from './components/shellNavigation';
+
+/**
+ * Where a sent challenge lands.
+ *
+ * Called by the court's send and by nothing else. It lays down `[Now]` and **ends the Play
+ * session on the way**, which is the fourth and last caller `resetShellStack`'s own docblock
+ * has been naming: *a sent game is gone for good*, so there is no court to go back to and no
+ * line-up left to hold ([#274](https://github.com/Raketa02/Raketa/issues/274)).
+ */
+export { landOnNow } from './components/shellNavigation';
