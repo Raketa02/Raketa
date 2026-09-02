@@ -61,7 +61,10 @@ from app.modules.player_profile.domain.availability import DAYS_IN_THE_GRID, Day
 from app.modules.player_profile.domain.gender import Gender, GenderPreference
 from app.modules.player_profile.domain.play_intent import PlayIntent
 from app.modules.player_profile.domain.search_radius import SEARCH_RADIUS_BOUNDS
-from app.modules.player_profile.domain.social_tags import SocialTag
+from app.modules.player_profile.domain.social_tags import (
+    SOCIAL_TAG_SELECTION_BOUNDS,
+    SocialTag,
+)
 from app.seeds.clock import NEWCOMER_WINDOW_DAYS
 from app.seeds.catalog import (
     BAND_ADVANCED,
@@ -333,6 +336,34 @@ EVERY_NTH_SHARES_NO_WEEK: Final = 7
 SHARES_NO_WEEK_AT: Final = 4
 SHARED_CELLS_FLOOR: Final = 2
 
+#: Every n-th member is a **close match**: the protagonist's whole vocabulary
+#: and most of her week, rather than the floor of two cells and the one lucky
+#: tag everybody else is drawn with.
+#:
+#: **The arm this fixture was missing, and the one that makes ⚡ a choice.**
+#: Every other rule here widens the population *away* from her; nothing drew
+#: anybody *towards* her, so the only rows clearing ``QUALITY_FLOOR`` against
+#: her were the named accounts of ``catalog.py`` and ``relationships.py`` —
+#: which are her **controls**, and therefore identical to each other and to her
+#: on level, week, tags and address. Nine of them in one pool is nine
+#: candidates at one μ: the evenest four is a tie between clones, so the engine
+#: returned one court and one forecast whatever the search asked for, and a
+#: developer reads that as a broken engine rather than as a fixture with no
+#: second answer in it.
+#:
+#: A close match is drawn on level like everybody else — the point is a rival
+#: to the clone block that is **not** a copy of it, so the four ⚡ fills differ
+#: in strength and the balance forecast has something to say. Half the
+#: population, because a court is four people and the arms above remove most of
+#: any given member: opted out, gender-gated, no shared week, too far.
+EVERY_NTH_IS_A_CLOSE_MATCH: Final = 2
+IS_A_CLOSE_MATCH_AT: Final = 1
+
+#: How much of her six-cell week a close match covers. **Five and not six**: a
+#: member matching her exactly would be a sixteenth clone, and the availability
+#: term would be back to having nothing to separate anybody by.
+CLOSE_MATCH_CELLS: Final = 5
+
 #: The Play intent split, as a cycle over position. Weighted toward competitive
 #: because the default protagonist searches competitively and an intent term with
 #: nothing to agree with is a term that only ever docks.
@@ -547,6 +578,12 @@ def _slots(handle: str, position: int, seed: int) -> tuple[str, ...]:
     The overlap is a **rule** and the rest of the week is a draw: a drawn overlap
     at this size is a fixture where the availability term sometimes has nothing
     to read, and *sometimes* is the one thing a workbench may not be.
+
+    **How much** overlap is a rule too, and the floor is not the ceiling: a close
+    match covers five of her six cells where everybody else is guaranteed two.
+    Two is enough for the term to *read*; it is not enough for it to ever score
+    well, and a fixture whose availability term only ever docks is a fixture
+    where nobody outranks the named accounts.
     """
 
     rng = _rng(handle, "slots", seed)
@@ -557,7 +594,10 @@ def _slots(handle: str, position: int, seed: int) -> tuple[str, ...]:
         return tuple(
             sorted(rng.sample(elsewhere, rng.randint(*MEMBER_CELLS_ELSEWHERE)))
         )
-    shared = rng.sample(PROTAGONIST_CELLS, SHARED_CELLS_FLOOR)
+    wanted = (
+        CLOSE_MATCH_CELLS if _is_a_close_match(position) else SHARED_CELLS_FLOOR
+    )
+    shared = rng.sample(PROTAGONIST_CELLS, wanted)
     rest = [cell for cell in CELLS if cell not in shared]
     extra = rng.sample(rest, rng.randint(*MEMBER_EXTRA_CELLS))
     return tuple(sorted(set(shared) | set(extra)))
@@ -573,14 +613,62 @@ def _is_lopsided(position: int) -> bool:
     return position % EVERY_NTH_IS_LOPSIDED == IS_LOPSIDED_AT
 
 
+def _is_a_close_match(position: int) -> bool:
+    """Whether this member was drawn **towards** the protagonist rather than away.
+
+    Read by both halves of the draw, because a close match is one member and not
+    two: a week that covers hers and a vocabulary that does not would clear no
+    floor, and the fixture would have paid for an arm that never fires.
+
+    **The rules above win where they disagree**, which is why this is asked last
+    in :func:`_slots`. A member who is *also* the one with no shared week keeps
+    the empty week and takes the tags — the two rules stay independent, and the
+    one witness the week rule owns is not quietly taken away from it.
+
+    **A lopsided member is never a close match**, and that one is a contradiction
+    rather than a precedence: lopsided *means* scoring the searcher far lower
+    than she scores them, and the two tag terms are read from both ends. Handing
+    that member her whole vocabulary raises the reverse Fit until the asymmetry
+    is gone, which is how the seed's own battery caught this — ``RECIPROCAL_
+    ASYMMETRY`` is drawn by exactly one member, and drawing them towards her
+    silently deleted the only witness a printable signal has.
+    """
+
+    if _is_lopsided(position):
+        return False
+    return position % EVERY_NTH_IS_A_CLOSE_MATCH == IS_A_CLOSE_MATCH_AT
+
+
 def _tags(handle: str, position: int, seed: int) -> tuple[str, ...]:
-    """Tags drawn from the served vocabulary, half of them sharing one.
+    """Tags drawn from the served vocabulary, and how many of hers come with them.
+
+    Three tiers rather than two: a **close match** takes her whole vocabulary,
+    every other member takes one of the three, and the rest share whatever the
+    draw happened to give them. Before the first tier existed the ceiling was
+    one shared tag, so the two tag terms — a quarter of the weight between them
+    — could only ever dock a cohort member against the named accounts, who take
+    all three by construction.
 
     Sorted, because the order of a tag list is not a fact about the player and an
     unsorted sample would put a draw order into the committed file.
     """
 
     rng = _rng(handle, "tags", seed)
+    if _is_a_close_match(position):
+        # Hers first and the rest of the draw into **what is left of the
+        # selection bound**, read off the profile's own value object. Taking
+        # three and then drawing the usual two-to-five on top reaches eight,
+        # which is not a number of tags a player may hold — and the commit
+        # refuses it half way through a run, with the questionnaire already
+        # written. The bound is asked rather than copied for the reason the tag
+        # ids are: one home, and a literal here drifts the day it moves.
+        room = SOCIAL_TAG_SELECTION_BOUNDS.maximum_tags - len(PROTAGONIST_TAGS)
+        low, high = MEMBER_TAG_COUNT
+        elsewhere = [tag for tag in TAGS if tag not in PROTAGONIST_TAGS]
+        drawn = set(PROTAGONIST_TAGS) | set(
+            rng.sample(elsewhere, rng.randint(min(low, room), min(high, room)))
+        )
+        return tuple(sorted(drawn))
     drawn = set(rng.sample(TAGS, rng.randint(*MEMBER_TAG_COUNT)))
     if position % 2 == 0:
         drawn.add(rng.choice(PROTAGONIST_TAGS))

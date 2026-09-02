@@ -81,7 +81,7 @@ rated, in-range, gender-satisfied candidate was excluded for that reason.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Final, Sequence, final
 
 from app.kernel import Sport, exhaustive
@@ -91,6 +91,7 @@ from app.modules.player_profile.domain.play_intent import PlayIntent
 from app.seeds.catalog import (
     BAND_ESTABLISHED,
     MIDDLING,
+    THE_BAND_FROM_WITHIN,
     PROTAGONIST_RADIUS_KM,
     PROTAGONIST_TAGS,
     PROTAGONIST_WEEK,
@@ -474,7 +475,8 @@ YOU_PASSED_THEM: Final = Relationship(
 #: been sent, and the pass is last because the deal that earns its origin key is
 #: also the deal the deck's own claims are read off — a second deal would find
 #: everybody it dealt already spent.
-RELATIONSHIPS: Final[tuple[Relationship, ...]] = (
+#: The eleven as written. ``_dealt`` below turns them into ``RELATIONSHIPS``.
+_AS_WRITTEN: tuple[Relationship, ...] = (
     SAID_YES_TO_YOU,
     YOUR_YES_MAKES_IT_MUTUAL,
     YOU_SAID_YES_TO_THEM,
@@ -487,6 +489,56 @@ RELATIONSHIPS: Final[tuple[Relationship, ...]] = (
     THEY_BLOCKED_YOU,
     YOU_PASSED_THEM,
 )
+
+def _dealt(relationships: tuple[Relationship, ...]) -> tuple[Relationship, ...]:
+    """The eleven, **dealt one answer set each out of the band they all claim.**
+
+    ``_account`` builds every one of them on ``MIDDLING`` because the eleven are
+    *controls*: the edge is the axis under test and everything else is held
+    equal. The rating was held equal with it and did not have to be — a block, a
+    pass, an interest and an open challenge are gates on a **pair**, and not one
+    of them reads μ. Held equal anyway, they arrived in the protagonist's own
+    pool as eleven rows at one level, outscoring the cohort and **tying with each
+    other**: the evenest four is then a tie between clones, so ⚡ returns the
+    same court and the same forecast whatever the search asked for.
+
+    So the level is dealt here rather than declared at each of the eleven. Dealt
+    **by position in a sorted list of slugs**, which is what makes this a deal
+    and not a draw: eight policies over eleven accounts, each used once before
+    any is used twice, and no two accounts landing on one level by chance the way
+    a keyed pick did. Sorted, so the deal is a function of *which slugs exist*
+    rather than of the order they happen to be written in above — a relationship
+    inserted in the middle of the tuple moves nobody it does not have to move.
+
+    Every policy dealt lands inside ``THE_PROTAGONISTS_BAND``, so each account is
+    still held to the claim it was always held to, and ``THE_BAND_FROM_WITHIN``
+    is where that is argued.
+    """
+
+    order = sorted(one.account.slug for one in relationships)
+    return tuple(
+        replace(
+            one,
+            account=replace(
+                one.account,
+                scenarios=tuple(
+                    replace(
+                        run,
+                        answers=THE_BAND_FROM_WITHIN[
+                            order.index(one.account.slug) % len(THE_BAND_FROM_WITHIN)
+                        ],
+                    )
+                    if isinstance(run, RatedRun)
+                    else run
+                    for run in one.account.scenarios
+                ),
+            ),
+        )
+        for one in relationships
+    )
+
+
+RELATIONSHIPS: Final[tuple[Relationship, ...]] = _dealt(_AS_WRITTEN)
 
 #: The accounts alone, for the registration walk. Written from the same tuple so
 #: an account cannot be seeded without its edge or an edge declared without an

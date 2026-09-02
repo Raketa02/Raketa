@@ -221,6 +221,42 @@ STRONG = AnswerPolicy(claims=3, demonstrations=3)
 #: The strongest answer to everything.
 STRONGEST = AnswerPolicy(claims=4, demonstrations=4)
 
+#: **Eight answer sets that all land inside one band, and differ everywhere
+#: else.** Every one of these finishes between 2,97 and 3,50 for padel — inside
+#: ``Established`` at a position of 0,25 to 0,75, which is
+#: ``THE_PROTAGONISTS_BAND`` — so an account may take any of them and still be
+#: held to the same claim it was held to before.
+#:
+#: **What they exist for.** The eleven relationship accounts are *controls*:
+#: everything that is not the edge under test is held equal, deliberately. The
+#: rating was held equal with it, and it did not have to be — a block, a pass, an
+#: interest and an open challenge are gates on a **pair**, and none of them reads
+#: μ. Holding it equal anyway put eleven accounts at one level in the
+#: protagonist's own pool, where they outscore everybody and tie with each other:
+#: the evenest four is then a tie between clones, ⚡ returns the same court every
+#: time, and the balance forecast reads the same number whatever was asked for.
+#: The edge stays the only axis under test; the level stops being a sixteenth
+#: copy of hers.
+#:
+#: They are **fixed policies and not a spread** — each account answers one way,
+#: deterministically, and ``_refuse_an_impossible_policy`` still refuses a drawn
+#: one. A claim is a band and a position, and a fixed policy can be held to it.
+#:
+#: The two axes move independently on purpose: ``(4, 0)`` and ``(1, 4)`` reach
+#: much the same μ as ``(2, 2)`` by disagreeing with themselves, which finishes
+#: with a **wider σ** — so the spread is a spread of confidence as well as of
+#: level, and the balance term has both to read.
+THE_BAND_FROM_WITHIN: tuple[AnswerPolicy, ...] = (
+    AnswerPolicy(claims=4, demonstrations=0),  # 3,10 — widest
+    AnswerPolicy(claims=3, demonstrations=0),  # 3,06 — wide
+    AnswerPolicy(claims=2, demonstrations=2),  # 3,15 — MIDDLING
+    AnswerPolicy(claims=1, demonstrations=3),  # 3,18 — wide
+    AnswerPolicy(claims=4, demonstrations=1),  # 3,29 — wide
+    AnswerPolicy(claims=2, demonstrations=3),  # 3,32
+    AnswerPolicy(claims=1, demonstrations=4),  # 3,41 — widest
+    AnswerPolicy(claims=2, demonstrations=4),  # 3,50
+)
+
 
 @dataclass(frozen=True)
 class RatingClaim:
@@ -575,6 +611,17 @@ SETTLED_DAYS_AGO = 40
 #: moves who is a newcomer rather than the arithmetic of one edge case.
 NEWCOMER_DAYS_AGO = 3
 
+#: **Only the default protagonist stays on ``MIDDLING``.** She is the reference
+#: every Play screen is developed against, so her level is the one the others are
+#: read relative to and it does not move. The other three take a level of their
+#: own out of the same band, for the reason ``THE_BAND_FROM_WITHIN`` gives: a
+#: pool holding four people at one μ has an **exactly** even four in it, the
+#: group objective prefers it over every other arrangement because a gap of zero
+#: cannot be beaten, and ⚡ returns that court and a forecast of 62% for ever.
+#: Their own claims are unchanged — each is still *Established, a quarter to
+#: three-quarters in* — because what each of these three exists to show is a
+#: window, a missing second sport and a cleared week, and not one of those reads
+#: a level.
 THE_POPULATED_PLAYER = SeedAccount(
     slug="the-populated-player",
     description=(
@@ -619,7 +666,7 @@ THE_NEWCOMER = SeedAccount(
     scenarios=(
         RatedRun(
             sport=Sport.PADEL,
-            answers=MIDDLING,
+            answers=THE_BAND_FROM_WITHIN[5],  # 3,32
             claim=RatingClaim(band=BAND_ESTABLISHED, position=(0.25, 0.75)),
         ),
     ),
@@ -645,7 +692,7 @@ THE_ONE_SPORT_PLAYER = SeedAccount(
     scenarios=(
         RatedRun(
             sport=Sport.PADEL,
-            answers=MIDDLING,
+            answers=THE_BAND_FROM_WITHIN[1],  # 3,06
             claim=RatingClaim(band=BAND_ESTABLISHED, position=(0.25, 0.75)),
         ),
     ),
@@ -671,7 +718,7 @@ THE_BLANK_WEEK_PLAYER = SeedAccount(
     scenarios=(
         RatedRun(
             sport=Sport.PADEL,
-            answers=MIDDLING,
+            answers=THE_BAND_FROM_WITHIN[7],  # 3,50
             claim=RatingClaim(band=BAND_ESTABLISHED, position=(0.25, 0.75)),
         ),
     ),

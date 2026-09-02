@@ -168,18 +168,20 @@
       "longitude": -0.13,
       "radius_km": 26,
       "slots": [
-        "1:EVENING",
-        "1:MORNING",
+        "2:EVENING",
         "3:EVENING",
-        "4:AFTERNOON",
-        "4:EVENING"
+        "4:EVENING",
+        "6:AFTERNOON",
+        "6:EVENING",
+        "6:MORNING"
       ],
       "tags": [
-        "HERE_TO_COMPETE",
+        "ENCOURAGES_A_PARTNER",
         "HERE_TO_IMPROVE",
-        "HERE_TO_MEET_PLAYERS",
-        "SHARES_A_LIFT",
-        "STRAIGHT_HOME_AFTER"
+        "LAUGHS_OFF_MISTAKES",
+        "PLAYS_TO_WIN",
+        "STRAIGHT_HOME_AFTER",
+        "WARMS_UP_PROPERLY"
       ],
       "intents": [
         [
@@ -245,13 +247,21 @@
       "radius_km": 9,
       "slots": [
         "2:EVENING",
+        "3:AFTERNOON",
+        "3:EVENING",
         "4:EVENING",
-        "6:AFTERNOON"
+        "4:MORNING",
+        "5:EVENING",
+        "5:MORNING",
+        "6:AFTERNOON",
+        "6:MORNING"
       ],
       "tags": [
-        "GENEROUS_ON_LINE_CALLS",
-        "HERE_FOR_THE_EXERCISE",
-        "SHARES_A_LIFT"
+        "ENCOURAGES_A_PARTNER",
+        "HERE_TO_IMPROVE",
+        "PLAYS_TO_WIN",
+        "QUIET_AND_FOCUSED",
+        "WARMS_UP_PROPERLY"
       ],
       "intents": [
         [
@@ -414,14 +424,19 @@
       "longitude": -0.13,
       "radius_km": 22,
       "slots": [
-        "1:AFTERNOON",
+        "2:EVENING",
+        "3:EVENING",
+        "5:EVENING",
+        "5:MORNING",
         "6:AFTERNOON",
         "6:MORNING"
       ],
       "tags": [
-        "GENEROUS_ON_LINE_CALLS",
+        "BOOKS_THE_NEXT_ONE",
         "HERE_TO_IMPROVE",
-        "STAYS_FOR_A_DRINK"
+        "HERE_TO_MEET_PLAYERS",
+        "PLAYS_TO_WIN",
+        "WARMS_UP_PROPERLY"
       ],
       "intents": [
         [
@@ -482,15 +497,20 @@
       "longitude": -0.13,
       "radius_km": 6,
       "slots": [
-        "2:AFTERNOON",
-        "2:MORNING",
+        "2:EVENING",
         "3:EVENING",
-        "6:AFTERNOON"
+        "4:EVENING",
+        "5:AFTERNOON",
+        "5:MORNING",
+        "6:AFTERNOON",
+        "6:MORNING"
       ],
       "tags": [
-        "QUIET_AND_FOCUSED",
+        "HERE_TO_IMPROVE",
+        "PLAYS_TO_WIN",
         "SETTLES_UP_ON_THE_SPOT",
-        "TALKS_THROUGH_THE_MATCH"
+        "SHARES_A_LIFT",
+        "WARMS_UP_PROPERLY"
       ],
       "intents": [
         [
@@ -567,11 +587,12 @@
         "7:EVENING"
       ],
       "tags": [
-        "GENEROUS_ON_LINE_CALLS",
-        "HERE_TO_COMPETE",
+        "ENCOURAGES_A_PARTNER",
         "HERE_TO_IMPROVE",
-        "HERE_TO_MEET_PLAYERS",
-        "SHARES_A_LIFT"
+        "OPEN_TO_MEET_SOMEONE",
+        "PLAYS_TO_WIN",
+        "QUIET_AND_FOCUSED",
+        "WARMS_UP_PROPERLY"
       ],
       "intents": [
         [
@@ -641,15 +662,20 @@
       "radius_km": 15,
       "slots": [
         "2:EVENING",
+        "3:EVENING",
+        "4:MORNING",
+        "5:EVENING",
+        "5:MORNING",
         "6:AFTERNOON",
         "6:MORNING"
       ],
       "tags": [
+        "BOOKS_THE_NEXT_ONE",
         "ENCOURAGES_A_PARTNER",
         "HERE_TO_IMPROVE",
-        "HERE_TO_MEET_PLAYERS",
         "LAUGHS_OFF_MISTAKES",
-        "OPEN_TO_MEET_SOMEONE"
+        "PLAYS_TO_WIN",
+        "WARMS_UP_PROPERLY"
       ],
       "intents": [
         [
@@ -729,14 +755,18 @@
       "radius_km": 14,
       "slots": [
         "1:EVENING",
-        "2:AFTERNOON",
-        "3:MORNING",
+        "2:EVENING",
         "4:EVENING",
-        "6:MORNING",
-        "7:AFTERNOON"
+        "5:EVENING",
+        "6:AFTERNOON",
+        "6:EVENING",
+        "6:MORNING"
       ],
       "tags": [
-        "HERE_TO_COMPETE",
+        "HERE_FOR_A_REGULAR_GAME",
+        "HERE_TO_IMPROVE",
+        "PLAYS_TO_WIN",
+        "SHARES_A_LIFT",
         "WARMS_UP_PROPERLY"
       ],
       "intents": [
@@ -807,19 +837,23 @@
       "longitude": -0.13,
       "radius_km": 50,
       "slots": [
-        "1:EVENING",
-        "1:MORNING",
+        "1:AFTERNOON",
+        "2:EVENING",
+        "2:MORNING",
         "4:EVENING",
         "5:AFTERNOON",
         "5:EVENING",
-        "6:AFTERNOON"
+        "6:AFTERNOON",
+        "6:EVENING",
+        "6:MORNING"
       ],
       "tags": [
-        "HERE_FOR_A_REGULAR_GAME",
-        "HERE_TO_MEET_PLAYERS",
+        "HERE_TO_IMPROVE",
+        "PLAYS_TO_WIN",
         "QUIET_AND_FOCUSED",
         "SETTLES_UP_ON_THE_SPOT",
-        "TALKS_THROUGH_THE_MATCH"
+        "SHARES_A_LIFT",
+        "WARMS_UP_PROPERLY"
       ],
       "intents": [
         [
@@ -931,15 +965,22 @@
       "longitude": -0.13,
       "radius_km": 13,
       "slots": [
-        "2:MORNING",
-        "3:MORNING",
+        "1:AFTERNOON",
+        "2:AFTERNOON",
+        "2:EVENING",
         "4:EVENING",
         "5:EVENING",
-        "6:AFTERNOON"
+        "6:AFTERNOON",
+        "6:MORNING",
+        "7:AFTERNOON",
+        "7:MORNING"
       ],
       "tags": [
-        "GENEROUS_ON_LINE_CALLS",
-        "STRAIGHT_HOME_AFTER"
+        "HERE_TO_IMPROVE",
+        "PLAYS_TO_WIN",
+        "QUIET_AND_FOCUSED",
+        "STRAIGHT_HOME_AFTER",
+        "WARMS_UP_PROPERLY"
       ],
       "intents": [
         [
@@ -1001,15 +1042,20 @@
       "longitude": -0.13,
       "radius_km": 23,
       "slots": [
-        "3:AFTERNOON",
+        "2:EVENING",
         "3:EVENING",
-        "3:MORNING",
-        "4:EVENING"
+        "4:EVENING",
+        "5:AFTERNOON",
+        "6:AFTERNOON",
+        "6:MORNING",
+        "7:AFTERNOON"
       ],
       "tags": [
-        "HERE_TO_GET_BACK_INTO_IT",
-        "QUIET_AND_FOCUSED",
-        "SHARES_A_LIFT"
+        "HERE_FOR_THE_EXERCISE",
+        "HERE_TO_IMPROVE",
+        "PLAYS_TO_WIN",
+        "SHARES_A_LIFT",
+        "WARMS_UP_PROPERLY"
       ],
       "intents": [
         [
@@ -1119,15 +1165,22 @@
       "longitude": -0.13,
       "radius_km": 17,
       "slots": [
-        "2:AFTERNOON",
+        "2:EVENING",
         "3:EVENING",
+        "4:AFTERNOON",
+        "4:EVENING",
+        "4:MORNING",
+        "5:AFTERNOON",
+        "6:AFTERNOON",
         "6:MORNING",
-        "7:AFTERNOON"
+        "7:MORNING"
       ],
       "tags": [
-        "HERE_TO_MEET_PLAYERS",
-        "LAUGHS_OFF_MISTAKES",
-        "SHARES_A_LIFT"
+        "HERE_TO_IMPROVE",
+        "PLAYS_TO_WIN",
+        "SETTLES_UP_ON_THE_SPOT",
+        "SHARES_A_LIFT",
+        "WARMS_UP_PROPERLY"
       ],
       "intents": [
         [
@@ -1189,16 +1242,23 @@
       "longitude": -0.13,
       "radius_km": 23,
       "slots": [
-        "2:AFTERNOON",
+        "1:MORNING",
+        "2:EVENING",
+        "2:MORNING",
         "3:EVENING",
-        "6:AFTERNOON"
+        "4:EVENING",
+        "5:EVENING",
+        "6:AFTERNOON",
+        "6:EVENING",
+        "7:MORNING"
       ],
       "tags": [
-        "GENEROUS_ON_LINE_CALLS",
         "HERE_FOR_THE_EXERCISE",
         "HERE_TO_COMPETE",
-        "QUIET_AND_FOCUSED",
-        "STAYS_FOR_A_DRINK"
+        "HERE_TO_IMPROVE",
+        "PLAYS_TO_WIN",
+        "STAYS_FOR_A_DRINK",
+        "WARMS_UP_PROPERLY"
       ],
       "intents": [
         [
@@ -1306,18 +1366,23 @@
       "longitude": -0.13,
       "radius_km": 43,
       "slots": [
-        "1:AFTERNOON",
+        "2:AFTERNOON",
         "2:EVENING",
-        "2:MORNING",
+        "4:EVENING",
+        "4:MORNING",
+        "5:AFTERNOON",
+        "5:EVENING",
         "6:AFTERNOON",
+        "6:EVENING",
         "6:MORNING"
       ],
       "tags": [
-        "ENCOURAGES_A_PARTNER",
+        "BOOKS_THE_NEXT_ONE",
         "HERE_TO_IMPROVE",
-        "OPEN_TO_MEET_SOMEONE",
+        "LAUGHS_OFF_MISTAKES",
         "PLAYS_TO_WIN",
-        "STAYS_FOR_A_DRINK"
+        "SETTLES_UP_ON_THE_SPOT",
+        "WARMS_UP_PROPERLY"
       ],
       "intents": [
         [
@@ -1379,14 +1444,20 @@
       "longitude": -0.13,
       "radius_km": 12,
       "slots": [
+        "1:MORNING",
         "2:EVENING",
         "3:EVENING",
-        "7:AFTERNOON"
+        "4:EVENING",
+        "4:MORNING",
+        "5:AFTERNOON",
+        "5:EVENING",
+        "6:AFTERNOON"
       ],
       "tags": [
-        "QUIET_AND_FOCUSED",
-        "SETTLES_UP_ON_THE_SPOT",
-        "SHARES_A_LIFT",
+        "HERE_FOR_A_REGULAR_GAME",
+        "HERE_TO_COMPETE",
+        "HERE_TO_IMPROVE",
+        "PLAYS_TO_WIN",
         "STRAIGHT_HOME_AFTER",
         "WARMS_UP_PROPERLY"
       ],
@@ -1461,12 +1532,19 @@
       "radius_km": 30,
       "slots": [
         "2:EVENING",
-        "5:AFTERNOON",
-        "6:AFTERNOON"
+        "3:EVENING",
+        "4:EVENING",
+        "6:AFTERNOON",
+        "6:MORNING",
+        "7:AFTERNOON",
+        "7:MORNING"
       ],
       "tags": [
-        "GENEROUS_ON_LINE_CALLS",
-        "HERE_TO_MEET_PLAYERS"
+        "BOOKS_THE_NEXT_ONE",
+        "HERE_TO_IMPROVE",
+        "OPEN_TO_MEET_SOMEONE",
+        "PLAYS_TO_WIN",
+        "WARMS_UP_PROPERLY"
       ],
       "intents": [
         [
