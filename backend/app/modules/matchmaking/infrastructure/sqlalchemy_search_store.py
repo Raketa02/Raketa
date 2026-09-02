@@ -63,13 +63,29 @@ class SqlAlchemySearchStore:
         self._session = session
 
     async def record(self, search: SearchRecord) -> None:
-        """Add the search row and every candidate row, in one flush.
+        """Add the search row, then every candidate row. **Two flushes, ordered.**
 
         Added rather than committed: the caller commits, and it does so before
         returning the answer whose identity this row *is*.
+
+        **The parent goes down alone, first, and that is not a style choice.**
+        There is no ``relationship()`` between ``SearchORM`` and
+        ``SearchCandidateORM`` — the read side never needs one, because
+        :meth:`find` joins by hand to keep the band predicate unavoidable — so
+        the unit of work has no dependency edge between the two mappers and
+        falls back to ordering them by mapper sort key. That key is the dotted
+        class path, and ``SearchCandidateORM`` sorts before ``SearchORM``, so a
+        single flush inserts the children first and Postgres rejects
+        ``search_candidate_search_id_fkey``. The search is then never recorded,
+        and ``docs/adr/0104``'s rule that the answer is not returned without its
+        row turns that into a 503 on every search this platform runs.
+
+        It was invisible because the suite runs on SQLite, which does not
+        enforce foreign keys unless asked.
         """
 
         self._session.add(_search_row(search))
+        await self._session.flush()
         for candidate in search.candidates:
             self._session.add(_candidate_row(search.id, candidate))
         await self._session.flush()
