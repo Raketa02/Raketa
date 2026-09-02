@@ -29,8 +29,16 @@ import { counted } from '@/shared/formatting/counted';
 import { modeWord } from './searchPresentation';
 import type { SearchMode } from '../domain/vocabulary';
 
-/** Whether the sport puts four people on the court, or two. The one branch in this file. */
-const isDoubles = (seats: number) => seats > 2;
+/**
+ * Whether the sport puts four people on the court, or two — **the one branch behind every
+ * sentence in this feature that could otherwise have said *four* out loud.**
+ *
+ * Exported because *Find a game*'s way onto the court says the same two things about the same
+ * two shapes (`findAGamePresentation`'s court-entry words), and a second `seats > 2` written
+ * one screen away is the drift this file's own note warns about: a squash court told to build
+ * a four.
+ */
+export const isDoubles = (seats: number) => seats > 2;
 
 /**
  * The screen's title.
@@ -140,7 +148,31 @@ export const EVEN_IT_OUT_LABEL = 'Even it out';
 /** What the control says when it would select what is already drawn. */
 export const ALREADY_EVENEST = 'This is the evenest these four can be arranged.';
 
-/** Empty the court and start again. It writes nothing outbound; nobody has been asked. */
+/**
+ * The other half of that sentence — **what the arrangement on screen costs against the
+ * evenest one**, quoted rather than computed.
+ *
+ * The card said `ALREADY_EVENEST` or nothing, which left the one state a player can actually
+ * act on unexplained: a court arranged by hand, with *Even it out* beside it and no account of
+ * what pressing it would buy. The figure is the **evenest arrangement's own `pct`**, read out
+ * of a response the screen is already holding — every arrangement crosses, so this is a
+ * selection like the button beneath it and not a second forecast (`domain/forecast`).
+ *
+ * It is a percentage read through `formatPercent` at the call site, for §B16's reason: how a
+ * figure is spelled is one table, and this file writes sentences rather than numbers.
+ */
+export function arrangedYourWayLine(evenest: string): string {
+  return `Arranged your way. The evenest split of these four would read ${evenest}.`;
+}
+
+/**
+ * Empty the court and start again. It writes nothing outbound; nobody has been asked.
+ *
+ * **It sits inside the forecast card, beside *Even it out***, because the two are the same
+ * kind of act on the same object: one re-arranges the four and the other discards them, and a
+ * *Start over* stranded under the card read as a way off the screen rather than a way to empty
+ * the court. Neither is the screen's pinned slot, which belongs to the send.
+ */
 export const START_OVER_LABEL = 'Start over';
 
 /**

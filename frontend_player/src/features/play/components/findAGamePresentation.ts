@@ -33,6 +33,8 @@
 import type { FindAGameStanding } from '../domain/findAGame';
 import type { PlayIntent, SearchMode } from '../domain/vocabulary';
 
+import { builderTitle, isDoubles } from './builderPresentation';
+
 /** The screen's own title, and the one ⚡ opens on. */
 export const FIND_A_GAME_TITLE = 'Find a game';
 
@@ -156,25 +158,120 @@ export const NO_RATED_SPORT_LINE =
   'A search runs in a sport you have been rated in, and there is not one yet.';
 
 /**
+ * **The way onto the court** — the card this screen ends on, and the whole of what it says.
+ *
+ * The search control is not a word on a button. It is a picture of the court the search is
+ * about to open, because *Search* names the machinery and this screen's own act is *build a
+ * line-up*: a player pressing it lands on an empty court seating nobody but themselves, and a
+ * control that said only *Search* would leave the court a surprise. It is the one way through
+ * for a competitive game — the deck is the other half of `PlaySegment`, and never a second
+ * copy of this one.
+ *
+ * Every sentence below branches on the **seat count** and none of them counts for itself:
+ * `isDoubles` is `builderPresentation`'s, for the reason recorded there — *four* is a word
+ * about a Sport, and a squash court must never be told to build one. The title is
+ * `builderTitle`'s outright, at the one filling the card draws: **you, and nobody else.**
+ */
+const COURT_ENTRY_SEATED = 1;
+
+export function courtEntryTitle(seats: number): string {
+  return builderTitle({ seats, filled: COURT_ENTRY_SEATED });
+}
+
+/**
+ * The pill beside the title, and the two different jobs it does.
+ *
+ * On a doubles court it names the **fact a player did not choose** — *padel is doubles* — so
+ * four seats where two were expected are explained before they are counted. On a singles court
+ * there is nothing to explain, so it says what the screen is handing over instead: the sides
+ * are yours to pick. The sport is lower-cased because it is read inside a sentence rather than
+ * on a control (§2's split, the same one `modeWord` is on).
+ */
+export function courtEntryTag(court: {
+  readonly seats: number;
+  readonly sportName: string;
+}): string {
+  return isDoubles(court.seats)
+    ? `${court.sportName.toLowerCase()} is doubles`
+    : 'you pick the sides';
+}
+
+/** What the court is for, in the order the builder offers it: the engine first, then the pool. */
+export function courtEntryBody(seats: number): string {
+  return (
+    `Start from an empty court. Let the engine find the evenest ${isDoubles(seats) ? 'four' : 'opponent'}, ` +
+    'or read the ranked cards and pick yourself — then swap anybody and watch the forecast move.'
+  );
+}
+
+/**
+ * The line beside the picture: **what the court is, and what pressing it does not do.**
+ *
+ * The second half is the whole reason a court can be drawn here at all. Nothing about this
+ * screen reaches another player — `NOBODY_IS_CONTACTED_BY_SEARCHING` says it of the search and
+ * this says it of the court — and a picture of four seats with no such sentence beside it
+ * would read as four people about to be messaged.
+ */
+export function courtEntrySeatLine(seats: number): string {
+  const shape = isDoubles(seats) ? 'Four seats · two a side' : 'Two seats · one a side';
+  return `${shape} · nobody is contacted until you send it`;
+}
+
+/**
+ * The card's **spoken name**, and one element for one action (`the-words.md` §20.1).
+ *
+ * The interpuncts and the picture are the sighted half; a listener gets the same three facts
+ * as sentences. The sport is not in it — the chip row above has already said which sport this
+ * screen is on, and the court inside the card is hidden from the tree for exactly that reason.
+ */
+export function courtEntryLabel(seats: number): string {
+  const shape = isDoubles(seats) ? 'Four seats, two a side.' : 'Two seats, one a side.';
+  return `${courtEntryTitle(seats)}. ${shape} Nobody is contacted until you send it.`;
+}
+
+/** Under the card, and true of both halves of Play. The last word the screen says. */
+export const NOBODY_IS_CONTACTED_BY_SEARCHING =
+  'Nobody is contacted by searching. You choose whom to challenge.';
+
+/** What stands in front of the card while the sport has no declaration. */
+export const SAY_WHAT_KIND_FIRST = 'Say what kind of game first';
+
+/**
  * The search control: the act, or what is standing in front of it.
  *
  * `no-rated-sport` has no label because it has no control — a screen with nothing to search
  * for draws the sentence above instead, which is 6.1's rule that this app never draws a
  * pressable-looking control that refuses.
+ *
+ * The searchable case is the **card's** name rather than a verb, because the card *is* the
+ * control: there is no *Search* button on this screen and there is nothing else the press
+ * could be. The seat count comes in rather than being looked up, so this file keeps saying
+ * nothing about a Sport it cannot see.
  */
-export function searchControlLabel(standing: FindAGameStanding): string | undefined {
+export function searchControlLabel(
+  standing: FindAGameStanding,
+  court: { readonly seats: number },
+): string | undefined {
   switch (standing.kind) {
     case 'searchable':
-      return 'Search';
+      return courtEntryLabel(court.seats);
     case 'undeclared':
-      return 'Say what kind of game first';
+      return SAY_WHAT_KIND_FIRST;
     case 'no-rated-sport':
       return undefined;
   }
 }
 
-/** A busy control is not a disabled one, so it keeps a label of its own. */
-export const SEARCHING_LABEL = 'Searching…';
+/**
+ * **There is no busy label**, and its absence is the decision rather than an omission.
+ *
+ * A busy control keeps a label of its own — which is why every other act in this app has one.
+ * This one has no busy state to label: `SearchingLatch` covers the screen for as long as the
+ * search is in flight, so nothing a *searching…* would be written on is on screen to read it.
+ * The one moment the card is pressed and no latch goes up is a **paused** write, and that is
+ * not a search running: the amber sentence beside it says the request resumes, and a card
+ * reading *searching…* over it would contradict the only true thing on screen.
+ */
 
 /**
  * The chrome's two words, here rather than in the component.

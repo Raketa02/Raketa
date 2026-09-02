@@ -1,8 +1,13 @@
 import {
   DECLARATION_BODY,
+  NOBODY_IS_CONTACTED_BY_SEARCHING,
   WEEK_ADDED_FOR_THIS_SEARCH,
   WEEK_CHANGED_AND_ADDED,
   WEEK_CHANGED_FROM_PROFILE,
+  courtEntryBody,
+  courtEntrySeatLine,
+  courtEntryTag,
+  courtEntryTitle,
   declarationOptionLabel,
   declarationTitle,
   intentLabel,
@@ -33,20 +38,60 @@ describe('telling the two rows of answers apart', () => {
 });
 
 describe('the closed control', () => {
-  it('says the act when there is one', () => {
-    expect(searchControlLabel({ kind: 'searchable', sport: 'padel' })).toBe('Search');
+  // The control is the card, so the name it carries is the court it opens rather than the
+  // verb for the machinery underneath it — and the seat count is what decides which court.
+  it('names the court it opens when there is one', () => {
+    expect(searchControlLabel({ kind: 'searchable', sport: 'padel' }, { seats: 4 })).toBe(
+      'Build the four. Four seats, two a side. Nobody is contacted until you send it.',
+    );
+    expect(searchControlLabel({ kind: 'searchable', sport: 'tennis' }, { seats: 2 })).toBe(
+      'Set up the match. Two seats, one a side. Nobody is contacted until you send it.',
+    );
   });
 
   // The availability step's settled shape: a dead control carries the sentence that explains it.
   it('says what is missing rather than going merely grey', () => {
-    expect(searchControlLabel({ kind: 'undeclared', sport: 'padel' })).toBe(
+    expect(searchControlLabel({ kind: 'undeclared', sport: 'padel' }, { seats: 4 })).toBe(
       'Say what kind of game first',
     );
   });
 
   // 6.1: this app never draws a pressable-looking control that refuses.
   it('is not drawn at all where there is nothing to search for', () => {
-    expect(searchControlLabel({ kind: 'no-rated-sport' })).toBeUndefined();
+    expect(searchControlLabel({ kind: 'no-rated-sport' }, { seats: 4 })).toBeUndefined();
+  });
+});
+
+describe('the way onto the court', () => {
+  /**
+   * *The four* is a word about a Sport. Every sentence on the card branches on the seat
+   * count, so a squash court is never told to build one — the same rule `builderTitle` is
+   * written against, read here off the same helper rather than off a second `seats > 2`.
+   */
+  it('says four things about a doubles court and two about a singles one', () => {
+    expect(courtEntryTitle(4)).toBe('Build the four');
+    expect(courtEntryTitle(2)).toBe('Set up the match');
+
+    expect(courtEntryBody(4)).toContain('the evenest four');
+    expect(courtEntryBody(2)).toContain('the evenest opponent');
+
+    expect(courtEntrySeatLine(4)).toContain('Four seats · two a side');
+    expect(courtEntrySeatLine(2)).toContain('Two seats · one a side');
+  });
+
+  /**
+   * The pill does two different jobs. On four seats it explains a fact the player did not
+   * choose; on two there is nothing to explain, so it says what is being handed over.
+   */
+  it('explains the seat count only where the count is a surprise', () => {
+    expect(courtEntryTag({ seats: 4, sportName: 'Padel' })).toBe('padel is doubles');
+    expect(courtEntryTag({ seats: 2, sportName: 'Tennis' })).toBe('you pick the sides');
+  });
+
+  /** The half a picture of four seats cannot say for itself, on the card and under it. */
+  it('says nobody is contacted, beside the court and beneath it', () => {
+    expect(courtEntrySeatLine(4)).toContain('nobody is contacted until you send it');
+    expect(NOBODY_IS_CONTACTED_BY_SEARCHING).toContain('You choose whom to challenge');
   });
 });
 

@@ -15,6 +15,7 @@ import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
 import { onlineManager } from '@tanstack/react-query';
 
 import { offlineMessage } from '@/shared/errors';
+import { courtSeatCount } from '@/shared/ui';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import {
@@ -40,8 +41,12 @@ import { poolRankingStatus } from './searchingPresentation';
 import { searchingFloorMs } from './searchingWait';
 import {
   DECLARATION_BODY,
+  NOBODY_IS_CONTACTED_BY_SEARCHING,
   RADIUS_IS_YOUR_PROFILE,
   WEEK_CHANGED_FROM_PROFILE,
+  courtEntrySeatLine,
+  courtEntryTag,
+  courtEntryTitle,
   declarationTitle,
   searchControlLabel,
 } from './findAGamePresentation';
@@ -128,12 +133,23 @@ async function openPlay(surface?: Wire['PlayerProfileReadResponse']) {
   await screen.findByLabelText('Tuesday evening');
 }
 
+/** Padel seats four, read off `Court`'s own coordinates rather than typed here. */
+const PADEL_SEATS = courtSeatCount('padel');
+const COURT_CARD = searchControlLabel(
+  { kind: 'searchable', sport: 'padel' },
+  {
+    seats: PADEL_SEATS,
+  },
+);
+
 const cell = (name: string) => screen.getByLabelText(name);
 const isTicked = (name: string) => cell(name).props.accessibilityState?.checked === true;
 const isSelected = (label: string) =>
   screen.getByLabelText(label).props.accessibilityState?.selected === true;
 const searchButton = () =>
-  screen.getByLabelText(searchControlLabel({ kind: 'searchable', sport: 'padel' }) ?? '');
+  screen.getByLabelText(
+    searchControlLabel({ kind: 'searchable', sport: 'padel' }, { seats: PADEL_SEATS }) ?? '',
+  );
 
 const SEARCHING = poolRankingStatus({ playersInRange: undefined, sportName: 'Padel' }).headline;
 
@@ -257,6 +273,50 @@ describe('changed from your profile', () => {
     fireEvent.press(cell('Monday morning'));
 
     await waitFor(() => expect(screen.queryByText(WEEK_CHANGED_FROM_PROFILE)).toBeNull());
+  });
+});
+
+describe('the way onto the court', () => {
+  /** Both sports declared, so switching the chip stays searchable rather than opening the
+   *  interstitial — the fact under test is the court's shape and not the declaration. */
+  const BOTH_DECLARED: Wire['PlayerProfileReadResponse'] = {
+    availability: [{ day: 2, part: 'EVENING' }],
+    search_radius_km: 12,
+    play_intents: { PADEL: 'FOR_FUN', TENNIS: 'FOR_FUN' },
+  };
+
+  /**
+   * *The four* is a word about a Sport, and the chip is what changes it.
+   *
+   * Padel seats four and tennis two, so the same control has to say two different things
+   * about two different courts — the bug this screen shipped with was that it said neither,
+   * and a player pressing *Search* found out what shape the court was one screen later.
+   */
+  it('draws the court the sport actually plays on, and swaps it with the chip', async () => {
+    await openPlay(BOTH_DECLARED);
+
+    expect(screen.getByText(courtEntryTitle(4))).toBeTruthy();
+    expect(screen.getByText(courtEntryTag({ seats: 4, sportName: 'Padel' }))).toBeTruthy();
+    expect(screen.getByText(courtEntrySeatLine(4))).toBeTruthy();
+
+    fireEvent.press(screen.getByLabelText('Tennis'));
+
+    expect(await screen.findByText(courtEntryTitle(2))).toBeTruthy();
+    expect(screen.getByText(courtEntryTag({ seats: 2, sportName: 'Tennis' }))).toBeTruthy();
+    expect(screen.queryByText(courtEntryTitle(4))).toBeNull();
+  });
+
+  /**
+   * One way through, and the sentence that makes a picture of four seats safe to draw.
+   *
+   * A card and a *Search* button beside it would be two controls for one act; the card is
+   * the control, so the verb is nowhere on the screen.
+   */
+  it('is the only control, and says nobody is contacted by pressing it', async () => {
+    await openPlay();
+
+    expect(screen.getByText(NOBODY_IS_CONTACTED_BY_SEARCHING)).toBeTruthy();
+    expect(screen.queryByLabelText('Search')).toBeNull();
   });
 });
 
@@ -568,9 +628,11 @@ describe('a sport nobody has declared in', () => {
 
     expect(screen.getByText(declarationTitle('Padel'))).toBeTruthy();
     expect(screen.getByText(DECLARATION_BODY)).toBeTruthy();
-    expect(screen.queryByLabelText('Search')).toBeNull();
+    expect(screen.queryByLabelText(COURT_CARD ?? '')).toBeNull();
     expect(
-      screen.getByLabelText(searchControlLabel({ kind: 'undeclared', sport: 'padel' }) ?? ''),
+      screen.getByLabelText(
+        searchControlLabel({ kind: 'undeclared', sport: 'padel' }, { seats: PADEL_SEATS }) ?? '',
+      ),
     ).toBeTruthy();
   });
 
@@ -590,6 +652,6 @@ describe('a sport nobody has declared in', () => {
       intent: 'NO_PREFERENCE',
       surface: 'SEARCH_SWITCH',
     });
-    expect(await screen.findByLabelText('Search')).toBeTruthy();
+    expect(await screen.findByLabelText(COURT_CARD ?? '')).toBeTruthy();
   });
 });

@@ -311,9 +311,16 @@ nowhere else; and the radius is route-local over the profile's. The asymmetry is
 `RunSearchRequest` carries a sport, a mode and — only where the player improvised one — a week,
 and **there is deliberately no radius on it and never will be**, because _a radius supplied by
 a phone is a gate evaluated on a lie_. So the slider's only way to mean anything is for the
-profile to hold what it shows, which makes pressing _Search_ **one act over two requests** —
+profile to hold what it shows, which makes running the search **one act over two requests** —
 the `PUT` first, and only where the number moved, so a failure there is a search that has not
-happened and the retry is the control the player already pressed. **A cleared week runs a
+happened and the retry is the control the player already pressed. **That control is not a
+button saying _Search_.** It is `CourtEntryCard` — _Build the four_ on a doubles Sport and _Set
+up the match_ on a singles one, with the court drawn beside the sentence at
+`size.court.thumb` — because where a completed search goes is the **builder**, and a verb
+naming the machinery left the shape of the court a surprise one screen later. Every word on it
+branches on the seat count read off `Court`'s own coordinates, so a squash court is never told
+to build a four; the card is in the page rather than in `ShellScreen`'s pinned slot, and the
+prototype's 2pt coral outline is **not drawn**, because coral on a card is the pressed state. **A cleared week runs a
 search**: an omitted override means _use my profile grid_ and an **empty list** means _I
 unticked every cell_, and #247 is what stopped the wire conflating them. _Changed from your
 profile_ is a **client comparison made on every tap** — a slot ticked and unticked is not a
@@ -420,8 +427,16 @@ when the response lands, because the wait is over the screen that launched it an
 what it lifts onto. Three branches fill the court and **two of them are one request**: ⚡ is
 `POST /lineups`, and hand-seating somebody and then pressing ⚡ is the same request with
 `locked_seats` on it, _"a property of what you send rather than of where you send it"_. The
-third is the pool. **⚡ mints a search of its own**, so the line-up re-binds to the record it
-just wrote — the four it seated came off _that_ search's rows, and `POST /forecasts` refuses
+third is the pool. **⚡'s wait is under the court rather than over it**, and the court **fills
+one seat at a time**: `motion.hold.fill`'s `650 plus 550 a seat` was booked to _"the animation
+it drives"_ and nothing drove it — the latch covered the screen for the sum and handed back a
+court that was already complete — so `SeatingWait` is a block in the page, `seatReveal` lands
+the seats in seat order behind it, and **the line-up is committed when the last seat lands
+rather than when the response does**. Nothing is delayed either way: the whole answer is in
+memory before the first seat appears. The court itself is `size.court.build`, the **fixed**
+width at which a seat is the 46pt every rule about a seat is written against, rather than the
+content width that made it 81. **⚡ mints a search of its own**, so the line-up re-binds to the
+record it just wrote — the four it seated came off _that_ search's rows, and `POST /forecasts` refuses
 anybody the cited search never showed. From the first locked seat the engine optimises **for
 the group** and `optimised_for` says so, which the court renders in the voice a provisional
 figure uses: it is a consequence of an act the player took, said before they discover it.
@@ -440,7 +455,14 @@ decides that is whether the route records; ⚡'s own answer is written straight 
 so a fill costs one request and not two. **No forecast arithmetic runs on the client** and the
 check for it is looking for arithmetic: the builder draws no balance bar, because
 [7.11](docs/design-system.md#711-the-balance-bar) takes an _advantage_ between two side
-strengths and nothing on a line-up serves one.
+strengths and nothing on a line-up serves one. That is also what the forecast card **does not**
+say: the prototype's `2,82 · gap 0,00 · 2,82` over a labelled bar is its own arithmetic over
+levels it held locally — `SidesSchema` carries seats and no strengths, and the group objective
+is never returned — and a _high · medium · low_ pill over `sigma_group` is a client
+thresholding an engine number, where `the-words.md` §16 puts `confidence` in exactly one place
+and says so. What the card says instead is **what _Even it out_ would buy**: the evenest
+arrangement's own percentage, quoted beside the figure. Every arrangement crosses, so that is a
+selection like the button under it and not a second forecast.
 
 **The court states its shortfall per seat and routes every remedy to the pool.** The four
 `UnfilledReason` codes replace AC-69's _"Only found N"_ with the obstacle for the actual seat,

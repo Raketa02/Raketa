@@ -29,6 +29,8 @@ import { counted } from '@/shared/formatting/counted';
 
 import type { SearchMode } from '../domain/vocabulary';
 
+import { isDoubles } from './builderPresentation';
+
 /**
  * A searching screen's two lines: what is happening, and how many people it is happening to.
  *
@@ -57,13 +59,22 @@ export function poolRankingStatus(pool: {
   };
 }
 
-/** The engine seating a court. The sport is already on the screen, so the count stands alone. */
+/**
+ * The engine seating a court. The sport is already on the screen, so the count stands alone.
+ *
+ * **The headline takes the seat count**, because *four* is a word about a Sport rather than
+ * about a number the copy invents — `builderPresentation`'s rule, read here off the same
+ * helper. Said flat, a squash player would have watched the engine look for the evenest four
+ * on a court with two seats on it.
+ */
 export function engineFillStatus(pool: {
   /** `undefined` while the fill is still running — see {@link SearchingStatus}. */
   readonly playersInRange: number | undefined;
+  /** The court's own, from `Court`'s coordinates. */
+  readonly seats: number;
 }): SearchingStatus {
   return {
-    headline: 'Looking for the evenest four…',
+    headline: `Looking for the evenest ${isDoubles(pool.seats) ? 'four' : 'match'}…`,
     count: pool.playersInRange === undefined ? undefined : `${pool.playersInRange} in range`,
   };
 }

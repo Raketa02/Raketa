@@ -41,7 +41,23 @@
 import { theme } from '@/shared/ui';
 
 /** The gap between two seats landing — the moving half of the fill, and the half that goes. */
-const SEAT_STAGGER_MS = 550;
+export const SEAT_STAGGER_MS = 550;
+
+/**
+ * When the seat at `at` lands, measured from the answer.
+ *
+ * The floor's own arithmetic read the other way round, which is the whole reason it is
+ * exported rather than re-derived beside the court: `searchingFloorMs` sums *how long the
+ * last seat takes*, and this says *when each one arrives*, so the two cannot disagree about a
+ * court that lifts halfway through filling itself. The last seat of a court lands exactly as
+ * the floor ends, which is `searchingFloorMs`'s stated contract.
+ *
+ * **Collapsed, every seat lands on the floor itself** — the stagger is motion and goes to
+ * zero, the floor is a hold and does not (see the module note).
+ */
+export function seatLandsAtMs(at: number, collapsed: boolean): number {
+  return theme.motion.hold.fill + (collapsed ? 0 : at * SEAT_STAGGER_MS);
+}
 
 /**
  * The wait a latch is over. **A code and not a duration**, so a third wait gains its floor

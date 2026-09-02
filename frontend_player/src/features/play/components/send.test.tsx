@@ -45,6 +45,7 @@ import {
 } from '@/features/challenges/types';
 import { offlineMessage, type AppError } from '@/shared/errors';
 import { queryClient } from '@/shared/lib/query-client';
+import { courtSeatCount } from '@/shared/ui';
 import { useToastQueue } from '@/shared/store/toast.store';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import {
@@ -65,6 +66,7 @@ import {
 import { usePlayPreferences } from '../store/playPreferences.store';
 import { endPlaySession, usePlaySession } from '../store/playSession.store';
 
+import { courtEntryLabel } from './findAGamePresentation';
 import { fillSeatsLabel } from './builderPresentation';
 import { WITHHELD_SEAT_LINE } from './courtPresentation';
 import { engineFillStatus, poolRankingStatus } from './searchingPresentation';
@@ -85,7 +87,7 @@ const D = 'dddddddd-0000-4000-8000-000000000003';
 const NAMES: Readonly<Record<string, string>> = { [B]: 'bea_k', [C]: 'cyryl', [D]: 'dorota_w' };
 
 const POOL_RANKING = poolRankingStatus({ playersInRange: undefined, sportName: 'Padel' }).headline;
-const ENGINE_FILL = engineFillStatus({ playersInRange: undefined }).headline;
+const ENGINE_FILL = engineFillStatus({ playersInRange: undefined, seats: 4 }).headline;
 
 function rating(sport: Wire['Sport']): Wire['RatingResponse'] {
   return {
@@ -279,7 +281,7 @@ async function openAFullCourt() {
   fireEvent.press(await screen.findByLabelText('Play'));
   await screen.findByLabelText('Tuesday evening');
 
-  fireEvent.press(screen.getByLabelText('Search'));
+  fireEvent.press(screen.getByLabelText(courtEntryLabel(courtSeatCount('padel'))));
   await screen.findByText(POOL_RANKING);
   act(() => jest.advanceTimersByTime(searchingFloorMs({ kind: 'pool' })));
   await waitFor(() => expect(screen).toHavePathname('/play/builder'));

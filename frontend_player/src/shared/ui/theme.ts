@@ -517,6 +517,25 @@ const size = {
     /** The seat face against the court's width, with a floor: below it a face is a dot. */
     seatRatio: 0.235,
     seatMin: 17,
+    /**
+     * The court a line-up is built on — **the width that makes a seat 46pt**, which is the
+     *  size every rule about a seat is already computed against: 7.12's *"sixty-four
+     *  characters of handle in a 46pt seat is about four"*, and the clear badge's recorded
+     *  conflict between a 44pt target and a 46pt face. 46 / `seatRatio` is 195,7.
+     *
+     *  It is a **fixed** width and not the content width, which is what it was: on a large
+     *  phone the content width put the seat at 81pt and every one of those arguments was
+     *  being made about a court nobody drew. A drawn object with a rule about its parts is
+     *  sized by the part, not by the page.
+     */
+    build: 196,
+    /** The court drawn as a **picture beside a sentence** rather than as a surface — the
+     *  way onto the court on *Find a game*. It is deliberately under the width at which
+     *  `seatRatio` clears `seatMin` (72), so every seat on it is the floor face: a thumbnail
+     *  states the SHAPE of the court and the one seat that is yours, and nothing smaller
+     *  than a dot is asked of it. Not derived from the content width — a court that grew
+     *  with the phone would stop being a thumbnail on a large one. */
+    thumb: 54,
     sideLabelOpacity: 0.6,
     line: {
       bound: 0.3,
@@ -553,6 +572,12 @@ const size = {
       ],
     },
   },
+  /** The seating ripple's box — `motion.ripple`'s ring at its widest, and the stroke it is
+   *  drawn at. A 92pt ring under a 196pt court: big enough to read as the court's own wait
+   *  rather than as a spinner beside it, and small enough that the two sentences under it
+   *  stay the thing being read. */
+  ripple: 92,
+  rippleStroke: 2,
   sportDot: 6,
   infoGlyph: 14,
   tabIcon: 16,
@@ -694,7 +719,8 @@ const shadow = {
 } as const;
 
 // ---------------------------------------------------------------------------
-// Motion — one entrance, one sheet, one popover, one fade. Nothing else moves.
+// Motion — one entrance, one sheet, one popover, one fade, and one ripple. Nothing else
+// moves.
 // Press feedback is immediate (Pressable's `pressed`), not animated: the prototype's
 // 120ms is a mouse-hover transition and has no touch equivalent.
 //
@@ -703,6 +729,20 @@ const shadow = {
 
 const motion = {
   fade: 200,
+  /**
+   * One ring, expanding out of nothing and fading as it goes — **the only looping animation
+   * in the app**, and the only motion token whose duration is a cycle rather than a
+   * transition.
+   *
+   * It is spent on the one thing in the product that is genuinely open-ended: the engine
+   * seating a court, drawn under the court it is seating rather than over the screen. A
+   * spinner would have done the same job and says *something is loading*; a ripple says
+   * *something is being looked for*, which is what is happening.
+   *
+   * Skipped under reduced motion like the four above it, and there the ring is simply drawn
+   * at rest — the sentence beneath it is what carries the state, so nothing is lost.
+   */
+  ripple: 1400,
   rise: 300,
   sheet: 260,
   popover: 130,

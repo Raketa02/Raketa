@@ -13,7 +13,7 @@ import { fireEvent, render, screen } from '@testing-library/react-native';
 import { StyleSheet, View, type TextStyle, type ViewStyle } from 'react-native';
 
 import { useToastQueue } from '@/shared/store/toast.store';
-import { theme } from '@/shared/ui';
+import { courtSeatSize, theme } from '@/shared/ui';
 
 import { seatPlaces } from '../../domain/lineup';
 
@@ -329,6 +329,26 @@ describe('the side a seat is on', () => {
     expect(screen.getByLabelText('Your side, you')).toBeTruthy();
     expect(screen.getByLabelText(`Their side, ${LONG_HANDLE}, level 2,92`)).toBeTruthy();
     expect(seatPlaces([OPPONENT, PARTNER, YOU, ACCEPTED])[3]).toBe('YOUR_PARTNER');
+  });
+});
+
+/**
+ * **The two widths a court is drawn at**, and the one arithmetic that ties them to the rules.
+ *
+ * Every argument in the specs about a seat is made about a **46pt** one — 7.12's *"sixty-four
+ * characters of handle in a 46pt seat is about four"*, and the clear badge's recorded conflict
+ * between a 44pt target and a 46pt face. Sized by the content width, as the builder was, that
+ * seat is 81pt on a large phone and every one of those arguments is about a court nobody
+ * draws.
+ */
+describe('the widths', () => {
+  it('sizes the interactive court so its seat is the 46pt every rule is written against', () => {
+    expect(courtSeatSize(theme.size.court.build)).toBe(46);
+  });
+
+  /** The thumbnail is under the width at which the share clears its floor, and says so. */
+  it('draws the thumbnail at the floor face, which is what makes it a picture', () => {
+    expect(courtSeatSize(theme.size.court.thumb)).toBe(theme.size.court.seatMin);
   });
 });
 

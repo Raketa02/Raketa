@@ -26,6 +26,31 @@
  * *that* search's rows, and `POST /forecasts` refuses anybody the cited search never showed.
  * Everything else here reads the origin off the line-up, so nothing else has to know.
  *
+ * ## The wait is under the court, and the court fills one seat at a time
+ *
+ * ⚡'s wait is **not** `SearchingLatch`, and the difference is what the answer is about. A
+ * search on *Find a game* has nothing on screen to show, so its wait covers the screen and
+ * lifts onto this one; a fill seats people on a court the player is **already looking at**, so
+ * a latch takes away the one thing the wait is about and hands it back complete a second and a
+ * half later. `SeatingWait` is a block in the page instead, and the seats land behind it in
+ * seat order (`seatReveal`).
+ *
+ * That is what `motion.hold.fill`'s `650 plus 550 a seat` had always been for — the 550 is
+ * booked in `theme.ts` to *"the animation it drives"*, and nothing drove it. **The line-up is
+ * therefore committed when the last seat lands rather than when the response does**: seating
+ * it on the response would put a full court and its forecast card on screen underneath a wait
+ * still drawing the seats.
+ *
+ * Nothing is delayed by any of it. The whole answer is in memory before the first seat
+ * appears, which is `the-play-screens.md` §3's *"presentation over a completed answer"*.
+ *
+ * ## The court is a fixed width, and the width is chosen by the seat
+ *
+ * `size.court.build` is `46 / seatRatio`, because **46pt is the seat every rule about a seat
+ * is written against** — 7.12's handle truncation, the clear badge's 44-inside-46 conflict.
+ * Drawn at the content width, as this screen drew it, that seat is 81pt on a large phone and
+ * every one of those arguments is about a court nobody draws.
+ *
  * ## A swap is a selection, and only membership costs a round trip
  *
  * `ForecastResponse` returns **all three** arrangements, so trading two seats picks a different
@@ -37,6 +62,25 @@
  * **No forecast arithmetic runs here**, and the check for that is looking for arithmetic. The
  * only numbers this file computes are seat counts. The percentage, its word, its tone, whether
  * it is provisional and which arrangement is the evenest are all read.
+ *
+ * ## What the forecast card deliberately does not draw
+ *
+ * **The two side strengths, the gap between them, and a labelled balance bar.** The prototype
+ * printed `2,82 · gap 0,00 · 2,82` over a two-segment bar, and all three numbers are its own
+ * arithmetic over the levels it held locally. **Nothing on the wire serves any of them**:
+ * `SidesSchema` carries seats and no strengths, and the group objective *"is never returned —
+ * a second score you would have to trust is worse than none"*. Deriving them from the seated
+ * players' levels is the client computing the shape of a forecast it was handed, which is the
+ * one thing §11.3 says the check is looking for.
+ *
+ * **A confidence tag.** `sigma_group` crosses, and a *high · medium · low* pill over it is a
+ * client thresholding an engine number. `the-words.md` §16 puts `confidence` in exactly one
+ * place — the candidate card's `PredictedBalanceEvidence`, where the engine serves the
+ * percentage — and *"this is the only place `confidence` is drawn at all"*.
+ *
+ * What the card says instead is **what the control beside the figure would buy**: the evenest
+ * arrangement's own percentage, read out of a response already held (`arrangedYourWayLine`).
+ * That is a selection like *Even it out* itself, not a calculation.
  *
  * ## Two things it deliberately does not draw
  *
@@ -83,15 +127,8 @@
  * leaving the player refused in front of four seats that all look fine.
  */
 
-import { useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-  useWindowDimensions,
-} from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 
 import { useCurrentUser } from '@/features/auth/types';
@@ -148,6 +185,7 @@ import {
   shortfallBySeat,
   swapSeats,
   toBuildSeat,
+  type SeatOccupancy,
   type Seating,
 } from '../domain/forecast';
 import { seatPlaces, withheldSeats, type SeatPlace } from '../domain/lineup';
@@ -168,6 +206,7 @@ import { balanceTone, balanceWord } from './balancePresentation';
 import {
   ALREADY_EVENEST,
   EVEN_IT_OUT_LABEL,
+  arrangedYourWayLine,
   FILLING_LABEL,
   FORECASTING_LABEL,
   NO_RECORD_BODY,
@@ -197,10 +236,11 @@ import {
 } from './courtPresentation';
 import { useHeldWait } from './heldWait';
 import { playErrorMessage } from './playErrorMessage';
-import { SearchingLatch } from './SearchingLatch';
+import { SeatingWait } from './SeatingWait';
 import { forecastAssumption } from './searchPresentation';
 import { engineFillStatus } from './searchingPresentation';
 import { searchingFloorMs } from './searchingWait';
+import { useSeatsRevealed } from './seatReveal';
 import { WhyFitSheet } from './whyfit/WhyFitSheet';
 
 /**
@@ -285,7 +325,6 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
    * the courtesy and `networkMode: 'always'` is the mechanism.
    */
   const online = useIsOnline();
-  const { width } = useWindowDimensions();
   const collapsed = useCollapsedPresentation();
 
   /**
@@ -294,6 +333,24 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
    */
   const [seating, setSeating] = useState<Seating | undefined>(undefined);
   const [swapping, setSwapping] = useState(false);
+
+  /**
+   * **The court ⚡ answered with, while it is still landing on screen.**
+   *
+   * The fill's answer is in memory the moment the response arrives, and the line-up is
+   * committed to `playSession` only once the last seat has been drawn — which is what lets the
+   * court fill **one seat at a time** rather than arriving complete behind a lifted latch
+   * (`seatReveal`). Nothing is delayed: the beat is presentation over an answer already held,
+   * and `motion.hold.fill`'s 550-a-seat has been booked to it since before it was drawn.
+   *
+   * Route-local with the seating, and for the same reason: it is meaningless off this court
+   * and it dies with the screen. The search id travels with it because it is the id the
+   * line-up will be bound to, and reading it back off state that changes in between would be
+   * two facts about one answer.
+   */
+  const [landing, setLanding] = useState<
+    { readonly searchId: string; readonly seating: Seating } | undefined
+  >(undefined);
 
   /**
    * Whether `SH.propose` is up, and **what the last send was refused with**.
@@ -378,6 +435,15 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
 
   const seated = seating ?? seatingToDraw(arrangements, { seats, members });
   const chosen = arrangementFor(arrangements, seated);
+  /**
+   * The flattest of the three, read **once** and used twice: the sentence beside the figure
+   * quotes its percentage, and *Even it out* selects it. Two readings of one response is two
+   * chances for the number a player is shown and the arrangement they get to disagree.
+   *
+   * `undefined` on a court with one arrangement — a singles line-up, and a four that could not
+   * be seated — where there is nothing to be evener than.
+   */
+  const evenest = arrangements.length < 2 ? undefined : evenestArrangement(arrangements);
 
   const filled = seatsFilled(seated);
   const open = seats - filled;
@@ -421,7 +487,27 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
       ? undefined
       : { candidate: explaining, envelope: record.envelope };
 
-  const occupants: readonly CourtSeatOccupant[] = seated.map((seat, at) =>
+  /**
+   * **The court as it is drawn**, which is the committed seating except while one is landing.
+   *
+   * A seat holds its answer once it has landed, and is empty until then — so the four arrive
+   * one after another rather than all at once. Two seats are exempt and both for the same
+   * reason, that they were already on screen: **yours**, and anybody you had seated by hand
+   * before pressing ⚡. A player who visibly disappeared and came back would be the fill
+   * un-seating somebody it is filling around.
+   */
+  const drawn: Seating =
+    landing === undefined
+      ? seated
+      : landing.seating.map((seat, at) =>
+          seat.kind === 'you' ||
+          at < revealed ||
+          (seat.kind === 'player' && members.includes(seat.playerId))
+            ? seat
+            : EMPTY_SEAT,
+        );
+
+  const occupants: readonly CourtSeatOccupant[] = drawn.map((seat, at) =>
     toOccupant(seat, { self, rows, unfilled: shortfall?.get(at) ?? null }),
   );
 
@@ -466,8 +552,36 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
     fill.isPending && !fill.isPaused,
     searchingFloorMs({ kind: 'fill', seats, collapsed }),
   );
-  const latched = held && !fill.isPaused && fill.error === null;
+  const filling = held && !fill.isPaused && fill.error === null;
   const playersInRange = fill.isSuccess ? fill.data.playersInRange : undefined;
+
+  /**
+   * How much of the answer is on screen — the stagger `motion.hold.fill` has always paid for,
+   * as a number the court can draw.
+   *
+   * It runs off `landing` rather than off `filling`, so the seats start arriving when there is
+   * something to arrive: for as long as the request is in flight the court is empty and the
+   * block underneath says what is being looked for.
+   */
+  const revealed = useSeatsRevealed(landing !== undefined, seats, collapsed);
+
+  /**
+   * **The line-up is committed when the last seat has landed**, and not when the response did.
+   *
+   * Both halves of one act, exactly as before — the answer's own search becomes the origin and
+   * the people it seated become the line-up — moved to the end of the beat that draws them.
+   * Committing on the response instead would put a full court and its forecast card on screen
+   * underneath a wait that is still drawing the seats, which is the state the reveal exists to
+   * replace.
+   *
+   * The origin id is set on the response and not here: it is what makes the fill's own
+   * candidates readable, and the seats being drawn are read out of them.
+   */
+  useEffect(() => {
+    if (landing === undefined || filling) return;
+    seatAll(landing.searchId, seatedIds(landing.seating));
+    setLanding(undefined);
+  }, [landing, filling, seatAll]);
 
   /**
    * **The question ⚡ raised, and the beat it is asked in.**
@@ -499,7 +613,7 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
     raised === undefined || filledSearch === undefined || sport === undefined
       ? undefined
       : { raised, sport, search: filledSearch };
-  const asking = question !== undefined && !latched && answeredFor !== question.search;
+  const asking = question !== undefined && !filling && answeredFor !== question.search;
 
   /**
    * **The third live region**, and the one nobody else could have claimed (§20.9).
@@ -536,11 +650,12 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
       },
       {
         onSuccess: ({ record: answer }) => {
-          // Both halves of one act: the answer's own search becomes the origin, and the people
-          // it seated become the line-up. `seatAll` is one write for one answer.
+          // The origin moves now, because the answer's own candidates are what the seats
+          // about to land are drawn from. The **line-up** is committed at the end of the beat
+          // that draws them — see `landing` and the effect that commits it.
           setAnsweredSearchId(answer.searchId);
           setSeating(undefined);
-          seatAll(answer.searchId, seatedIds(courtSeating(answer.court)));
+          setLanding({ searchId: answer.searchId, seating: courtSeating(answer.court) });
         },
       },
     );
@@ -658,10 +773,7 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
           same hide as the latch — a modal sheet's Part 13 obligation is that the tree behind
           it says so, and here that tree holds a second control spelled with the sheet's own
           words. */}
-      <View
-        style={s.root}
-        {...behindOverlay(latched || proposing || explained !== undefined || asking)}
-      >
+      <View style={s.root} {...behindOverlay(proposing || explained !== undefined || asking)}>
         <ShellScreen
           title={builderTitle({ seats, filled })}
           eyebrow={
@@ -670,7 +782,7 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
               : builderEyebrow({ sportName, seats, mode: origin.mode })
           }
           action={
-            origin === undefined ? undefined : open === 0 ? (
+            origin === undefined || filling ? undefined : open === 0 ? (
               /* **The court, once full.** The two ways to fill it are gone, because there is
                  nothing left to fill, and the slot becomes the one act that reaches another
                  person. */
@@ -742,13 +854,13 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
               {/* The engine filled the seats **around** somebody, so it stopped optimising for
                   you — said before it is discovered, and read off the envelope rather than
                   derived from having sent a `locked_seats` list. */}
-              {optimised === undefined ? null : (
+              {optimised === undefined || filling ? null : (
                 <Note variant="info">
                   <Text style={s.body}>{optimised}</Text>
                 </Note>
               )}
 
-              {filled > 1 ? (
+              {filled > 1 && !filling ? (
                 <Card>
                   <Switch
                     label={SWAP_TOGGLE_LABEL}
@@ -759,36 +871,54 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
                 </Card>
               ) : null}
 
-              <CourtBuild
-                sport={sport}
-                width={width - theme.size.gutter * 2}
-                summary={courtSummaryLabel({ sportName, filled, seats })}
-                seats={occupants}
-                swapping={swapping}
-                onOpenPool={openPool}
-                onSwap={(from, to) => setSeating(swapSeats(seated, from, to))}
-                onClear={(at) => {
-                  const seat = seated[at];
-                  if (seat?.kind === 'player') unseat(seat.playerId);
-                }}
-                // The shortcut. Which seats carry it, and that none does under a swap, are
-                // `CourtBuild`'s: the rule sits beside the truth table it is an exception to,
-                // and it is read off the occupants this lookup's rows built — so a seat that
-                // offered the gesture has a row here, and an absent one is *nothing to
-                // explain* rather than a case owed a sentence.
-                onHold={(at) => {
-                  const seat = seated[at];
-                  if (seat?.kind === 'player') setExplaining(rows.get(seat.playerId));
-                }}
-              />
+              {/* `pointerEvents` and not a prop on the court: while the engine is seating it
+                  there is nothing on it to operate, and a seat that opened the pool mid-fill
+                  would leave the answer landing on a screen the player is no longer on. It is
+                  a fact about this beat rather than a mode the court has. */}
+              <View
+                style={s.court}
+                pointerEvents={filling ? 'none' : 'auto'}
+                accessibilityElementsHidden={filling}
+                importantForAccessibility={filling ? 'no-hide-descendants' : 'auto'}
+              >
+                <CourtBuild
+                  sport={sport}
+                  width={theme.size.court.build}
+                  summary={courtSummaryLabel({ sportName, filled: seatsFilled(drawn), seats })}
+                  seats={occupants}
+                  swapping={swapping}
+                  onOpenPool={openPool}
+                  onSwap={(from, to) => setSeating(swapSeats(seated, from, to))}
+                  onClear={(at) => {
+                    const seat = seated[at];
+                    if (seat?.kind === 'player') unseat(seat.playerId);
+                  }}
+                  // The shortcut. Which seats carry it, and that none does under a swap, are
+                  // `CourtBuild`'s: the rule sits beside the truth table it is an exception
+                  // to, and it is read off the occupants this lookup's rows built — so a seat
+                  // that offered the gesture has a row here, and an absent one is *nothing to
+                  // explain* rather than a case owed a sentence.
+                  onHold={(at) => {
+                    const seat = seated[at];
+                    if (seat?.kind === 'player') setExplaining(rows.get(seat.playerId));
+                  }}
+                />
+              </View>
 
-              {open > 0 ? <Text style={s.centred}>{seatsOpenLine(open)}</Text> : null}
+              {/* **The wait, under the court it is seating** — never over it. See
+                  `SeatingWait`: a fill's answer has its own subject already on screen, and a
+                  latch would take away the one thing the wait is about. */}
+              {filling ? (
+                <SeatingWait status={engineFillStatus({ playersInRange, seats })} />
+              ) : null}
+
+              {open > 0 && !filling ? <Text style={s.centred}>{seatsOpenLine(open)}</Text> : null}
 
               {/* The court's own statement of its shortfall. The remedy is the pool, one tap
                   away on the seat itself and on the control beneath it — and the block is
                   hidden from a listener, because every seat already announces its own (§20.1's
                   merge rule; see `courtStatements`). */}
-              {courtStatements({ seated, shortfall, withheld }).map((line) => (
+              {(filling ? [] : courtStatements({ seated, shortfall, withheld })).map((line) => (
                 <Text
                   key={line}
                   style={s.body}
@@ -801,13 +931,13 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
 
               {/* A dock, never a refusal: the availability term zeroes, nobody is removed from
                   the court for it, and the honest line is that you would all have to bend. */}
-              {record.court?.dock == null ? null : (
+              {record.court?.dock == null || filling ? null : (
                 <Note variant="amber">
                   <Text style={s.body}>{unfilledSeatLine(record.court.dock)}</Text>
                 </Note>
               )}
 
-              {open > 0 ? (
+              {open > 0 && !filling ? (
                 <Note title={TWO_WAYS_TITLE}>
                   <Text style={s.body}>{TWO_WAYS_BODY}</Text>
                 </Note>
@@ -818,16 +948,18 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
                   drew only the spinner would answer a swap made offline with nothing at all:
                   no number, no sentence and no reason why (Part 11's amendment names this
                   request by name). */}
-              {forecast.isPaused ? <Note variant="amber">{offlineMessage('resumes')}</Note> : null}
+              {forecast.isPaused && !filling ? (
+                <Note variant="amber">{offlineMessage('resumes')}</Note>
+              ) : null}
 
-              {forecast.isFetching ? (
+              {forecast.isFetching && !filling ? (
                 <ActivityIndicator
                   accessibilityLabel={FORECASTING_LABEL}
                   color={theme.color.muted}
                 />
               ) : null}
 
-              {forecast.error === null ? null : (
+              {forecast.error === null || filling ? null : (
                 <View style={s.failure}>
                   <Note variant="coral" accessibilityRole="alert">
                     {playErrorMessage(forecast.error)}
@@ -843,30 +975,52 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
                 </View>
               )}
 
-              {chosen === undefined ? null : (
+              {chosen === undefined || filling ? null : (
                 <Card>
                   <Text style={s.eyebrow}>{forecastHeading(seats)}</Text>
 
-                  {/* The figure, then the words **beneath** it. Part 13's *never colour alone*
-                      is what puts §B9's word there, and the ticket puts *Provisional* under the
-                      tinted number in one word — so both read down from the figure rather than
-                      standing beside it. */}
-                  <Text
-                    style={[s.figure, { color: BALANCE_INK[balanceTone(chosen.forecast.pct)] }]}
-                  >
-                    {formatPercent(chosen.forecast.pct)}
-                  </Text>
-                  <Text style={s.word}>{balanceWord(chosen.forecast.pct)}</Text>
-                  {chosen.forecast.provisional ? (
-                    <Text style={s.provisional}>{PROVISIONAL_WORD}</Text>
-                  ) : null}
+                  {/* **The figure, and the words that read out of it.** Part 13's *never
+                      colour alone* is what puts §B9's word beside the tinted number, and it is
+                      beside rather than beneath it because the two are one claim read left to
+                      right: *90% — very even, and this is the evenest these four can be
+                      arranged.* Stacked, the figure was a number with three captions under it
+                      and the last of them was the only one that said anything actionable. */}
+                  <View style={s.reading}>
+                    <Text
+                      style={[s.figure, { color: BALANCE_INK[balanceTone(chosen.forecast.pct)] }]}
+                    >
+                      {formatPercent(chosen.forecast.pct)}
+                    </Text>
 
-                  {/* ADR-0108's rule that the figure and its caveat are one thing. A caveat this
-                      build cannot read draws nothing, and `provisional` above still says the
-                      figure has one. */}
-                  {chosen.forecast.assumption === null ? null : (
-                    <Text style={s.body}>{forecastAssumption(chosen.forecast.assumption)}</Text>
-                  )}
+                    <View style={s.readingWords}>
+                      <Text style={s.word}>{balanceWord(chosen.forecast.pct)}</Text>
+
+                      {/* **What this arrangement costs against the evenest one**, or that it
+                          is the evenest. Both are readings of a response already held — every
+                          arrangement crosses — so the sentence beside the figure is the same
+                          selection *Even it out* is, said before it is pressed rather than
+                          discovered by pressing it. Drawn only where there is a second
+                          arrangement to compare against: a singles court has one. */}
+                      {evenest === undefined ? null : (
+                        <Text style={s.body}>
+                          {chosen.isEvenest
+                            ? ALREADY_EVENEST
+                            : arrangedYourWayLine(formatPercent(evenest.forecast.pct))}
+                        </Text>
+                      )}
+
+                      {chosen.forecast.provisional ? (
+                        <Text style={s.provisional}>{PROVISIONAL_WORD}</Text>
+                      ) : null}
+
+                      {/* ADR-0108's rule that the figure and its caveat are one thing. A caveat
+                          this build cannot read draws nothing, and `provisional` above still
+                          says the figure has one. */}
+                      {chosen.forecast.assumption === null ? null : (
+                        <Text style={s.body}>{forecastAssumption(chosen.forecast.assumption)}</Text>
+                      )}
+                    </View>
+                  </View>
 
                   {/* **Where the handles are printed whole**, and the reason a 46pt seat is
                       allowed to cut one to four characters: `the-play-components.md` §5 makes
@@ -910,41 +1064,45 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
                     </Hairline>
                   )}
 
-                  {arrangements.length < 2 ? null : (
+                  {/* **The two acts on this four, side by side** — re-arrange them, or empty
+                      the court. *Even it out* is drawn shut rather than replaced by a sentence
+                      when it would select what is already on screen: the sentence is now beside
+                      the figure, where it says what the control would buy, and a row that lost
+                      a button on one state would move the other one under the player's thumb.
+                      *Start over* was beneath the card and read as a way off the screen. */}
+                  {arrangements.length < 2 && lineup === undefined ? null : (
                     <Hairline>
-                      {chosen.isEvenest ? (
-                        <Text style={s.body}>{ALREADY_EVENEST}</Text>
-                      ) : (
-                        <Button
-                          label={EVEN_IT_OUT_LABEL}
-                          variant="secondary"
-                          onPress={() => {
-                            const evenest = evenestArrangement(arrangements);
-                            if (evenest !== undefined) setSeating(seatingOf(evenest));
-                          }}
-                        />
-                      )}
+                      <View style={s.acts}>
+                        {arrangements.length < 2 ? null : (
+                          <Button
+                            label={EVEN_IT_OUT_LABEL}
+                            variant="secondary"
+                            disabled={chosen.isEvenest}
+                            onPress={() => {
+                              const flattest = evenestArrangement(arrangements);
+                              if (flattest !== undefined) setSeating(seatingOf(flattest));
+                            }}
+                          />
+                        )}
+                        {lineup === undefined ? null : (
+                          <Button
+                            label={START_OVER_LABEL}
+                            variant="secondary"
+                            onPress={() => {
+                              discardLineup();
+                              setSeating(undefined);
+                            }}
+                          />
+                        )}
+                      </View>
                     </Hairline>
                   )}
                 </Card>
-              )}
-
-              {lineup === undefined ? null : (
-                <Button
-                  label={START_OVER_LABEL}
-                  variant="secondary"
-                  onPress={() => {
-                    discardLineup();
-                    setSeating(undefined);
-                  }}
-                />
               )}
             </>
           )}
         </ShellScreen>
       </View>
-
-      <SearchingLatch visible={latched} status={engineFillStatus({ playersInRange })} />
 
       {/* `SH.saveav` — the questions ⚡'s own search raised, asked once the latch is off them.
           A **sibling** for the latch's reason: a `Modal` presents in its own window, and the
@@ -1013,6 +1171,9 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
     </>
   );
 }
+
+/** A seat nobody has landed in yet — the one value the drawn court substitutes while filling. */
+const EMPTY_SEAT: SeatOccupancy = { kind: 'empty' };
 
 /** A handle, or the unknown player's question mark for a seat the record can no longer describe. */
 function namedPlayer(nickname: string | undefined): NamedPlayer {
@@ -1204,6 +1365,12 @@ function courtStatements(court: {
 const s = StyleSheet.create({
   root: { flex: 1 },
   action: { gap: theme.space.sm },
+  /** The court is a fixed width (`size.court.build`), so it is centred rather than stretched. */
+  court: { alignSelf: 'center' },
+  /** The figure and its words, read left to right. */
+  reading: { flexDirection: 'row', alignItems: 'center', gap: theme.space.md },
+  readingWords: { flex: 1, gap: theme.space.xxs },
+  acts: { flexDirection: 'row', gap: theme.space.xs },
   failure: { gap: theme.space.sm },
   body: { ...theme.type.tiny, color: theme.color.ink },
   centred: { ...theme.type.tiny, color: theme.color.muted, textAlign: 'center' },

@@ -17,6 +17,7 @@ import { onlineManager } from '@tanstack/react-query';
 
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
+import { courtSeatCount } from '@/shared/ui';
 import {
   launchSignedIn,
   stubGate,
@@ -118,8 +119,13 @@ afterEach(async () => {
   await clearStoredTokens();
 });
 
+/** Padel seats four, read off `Court`'s own coordinates rather than typed here. */
+const PADEL_SEATS = courtSeatCount('padel');
+
 const searchControl = () =>
-  screen.getByLabelText(searchControlLabel({ kind: 'searchable', sport: 'padel' }) ?? '');
+  screen.getByLabelText(
+    searchControlLabel({ kind: 'searchable', sport: 'padel' }, { seats: PADEL_SEATS }) ?? '',
+  );
 
 /** Press *Search* and spend the floor, so the latch lifts onto whatever comes next. */
 async function pressSearch(ran: number) {

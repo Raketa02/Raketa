@@ -24,6 +24,7 @@ import { router } from 'expo-router';
 
 import { formatLevel, formatPercent } from '@/shared/formatting/ratingFormat';
 import { queryClient } from '@/shared/lib/query-client';
+import { courtSeatCount } from '@/shared/ui';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import {
   launchSignedIn,
@@ -56,7 +57,7 @@ import {
   terminalReachLine,
   zeroRungLine,
 } from './poolPresentation';
-import { WEEK_ADDED_FOR_THIS_SEARCH } from './findAGamePresentation';
+import { courtEntryLabel, WEEK_ADDED_FOR_THIS_SEARCH } from './findAGamePresentation';
 import { forecastAssumption, relaxationOffer, sortLabel } from './searchPresentation';
 import { promptControls, promptCopy } from './promptPresentation';
 import { poolRankingStatus } from './searchingPresentation';
@@ -226,7 +227,7 @@ async function openThePool() {
   fireEvent.press(await screen.findByLabelText('Play'));
   await screen.findByLabelText('Tuesday evening');
 
-  fireEvent.press(screen.getByLabelText('Search'));
+  fireEvent.press(screen.getByLabelText(courtEntryLabel(courtSeatCount('padel'))));
   await screen.findByText(
     poolRankingStatus({ playersInRange: undefined, sportName: 'Padel' }).headline,
   );
@@ -629,7 +630,7 @@ describe('the cell a times rung adds', () => {
     await takeTheTimesRung();
     await backToFindAGame();
 
-    fireEvent.press(screen.getByLabelText('Search'));
+    fireEvent.press(screen.getByLabelText(courtEntryLabel(courtSeatCount('padel'))));
 
     await waitFor(() => expect(transport.requestsTo('POST', SEARCHES)).toHaveLength(3));
     const [, , next] = transport.requestsTo('POST', SEARCHES);

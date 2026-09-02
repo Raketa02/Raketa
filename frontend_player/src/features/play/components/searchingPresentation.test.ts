@@ -17,7 +17,7 @@ describe('the searching states', () => {
     expect(poolRankingStatus({ playersInRange: undefined, sportName: 'Padel' })).toEqual({
       headline: 'Ranking everybody you could play…',
     });
-    expect(engineFillStatus({ playersInRange: undefined })).toEqual({
+    expect(engineFillStatus({ playersInRange: undefined, seats: 4 })).toEqual({
       headline: 'Looking for the evenest four…',
     });
   });
@@ -28,10 +28,24 @@ describe('the searching states', () => {
       count: '41 in range for Padel',
     });
 
-    expect(engineFillStatus({ playersInRange: 41 })).toEqual({
+    expect(engineFillStatus({ playersInRange: 41, seats: 4 })).toEqual({
       headline: 'Looking for the evenest four…',
       count: '41 in range',
     });
+  });
+
+  /**
+   * *The four* is a word about a Sport, and the fill's headline is the one place that rule
+   * was not being applied: a squash player watched the engine look for the evenest four on a
+   * court with two seats on it.
+   */
+  it('looks for a four or for a match, depending on the court', () => {
+    expect(engineFillStatus({ playersInRange: 41, seats: 4 }).headline).toBe(
+      'Looking for the evenest four…',
+    );
+    expect(engineFillStatus({ playersInRange: 41, seats: 2 }).headline).toBe(
+      'Looking for the evenest match…',
+    );
   });
 
   it('drops the inventory of terms', () => {
@@ -39,7 +53,7 @@ describe('the searching states', () => {
     // term at all — a list that wrong is not repaired by rewriting it.
     const lines = [
       ...Object.values(poolRankingStatus({ playersInRange: 41, sportName: 'Padel' })),
-      ...Object.values(engineFillStatus({ playersInRange: 41 })),
+      ...Object.values(engineFillStatus({ playersInRange: 41, seats: 4 })),
     ];
 
     for (const line of lines) {

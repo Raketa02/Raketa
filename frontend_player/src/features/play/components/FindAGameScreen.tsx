@@ -36,7 +36,7 @@
  * ([#269](https://github.com/Raketa02/Raketa/issues/269)). It is not a destination, so this
  * screen keeps its place underneath it and there is nothing to go back to — which is what
  * dissolved the prototype's *no back button and no escape*: the wait ends on the response, and
- * a refusal ends it over the *Search* control that failed.
+ * a refusal ends it over the court card that failed.
  *
  * **Two states are not a wait, and both would otherwise strand a player under it.** A refusal
  * has nothing to hold for, and a **paused** mutation is not in flight at all —
@@ -79,6 +79,13 @@
  * **A back control.** *Back from Find a game leaves Play entirely* is a fact about the
  * **stack** — Now is underneath, put there by the reset — so the platform's own gesture already
  * lands where it should and 10.3 makes the chevron opt-in for exactly this case.
+ *
+ * **A pinned CTA.** `ShellScreen`'s action slot is empty here, and the search runs off
+ * `CourtEntryCard` at the foot of the page instead. The control *is* a picture of the court
+ * the search opens onto — which is what a player is actually asking for, and what a button
+ * saying *Search* left as a surprise — and a card-sized control pinned above the tab bar would
+ * take a third of the screen off the week it is drawn from. It is the one way through for a
+ * competitive game; *Match me* is the other half of `PlaySegment` and reaches the deck.
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -102,7 +109,15 @@ import {
 } from '@/features/player_profile/types';
 import { ShellScreen } from '@/features/shell/types';
 import { offlineMessage, recoveryMessage } from '@/shared/errors';
-import { AvailabilityGrid, Button, Note, RadiusSlider, behindOverlay, theme } from '@/shared/ui';
+import {
+  AvailabilityGrid,
+  Button,
+  Note,
+  RadiusSlider,
+  behindOverlay,
+  courtSeatCount,
+  theme,
+} from '@/shared/ui';
 import { dayLabel, dayPartHead } from '@/shared/vocabulary/availabilityPresentation';
 import { DAY_PARTS, WEEKDAYS } from '@/shared/vocabulary/week';
 
@@ -116,6 +131,7 @@ import { usePlayPreferences } from '../store/playPreferences.store';
 import { usePlaySession } from '../store/playSession.store';
 
 import { BUILDER_ROUTE } from './BuilderScreen';
+import { CourtEntryCard } from './CourtEntryCard';
 import { DeclarationInterstitial } from './DeclarationInterstitial';
 import { searchWeekCellLabel } from './accessibilityPresentation';
 import { PromptSheet, type AfterThePrompt } from './PromptSheet';
@@ -131,9 +147,9 @@ import {
   LOADING_PROFILE_LABEL,
   MODE_HEADING,
   NO_RATED_SPORT_LINE,
+  NOBODY_IS_CONTACTED_BY_SEARCHING,
   RADIUS_IS_YOUR_PROFILE,
   RETRY_READ_LABEL,
-  SEARCHING_LABEL,
   WEEK_HEADING,
   modeControlLabel,
   modeLabel,
@@ -165,7 +181,7 @@ export function FindAGameScreen() {
    *
    * Route-local because nothing has been written yet: leaving without searching discards it,
    * which is the truthful behaviour for a control whose value only reaches the server as the
-   * first half of pressing *Search*. It is deliberately **not** a third Play store — a value
+   * first half of pressing the card. It is deliberately **not** a third Play store — a value
    * that outlived the screen would be a distance the profile does not hold and the next search
    * would silently save.
    *
@@ -245,7 +261,15 @@ export function FindAGameScreen() {
   const readError = profileSurface.error ?? ratings.error ?? options.error;
   const ready = profile !== undefined && bounds !== undefined && radiusKm !== undefined;
 
-  const searchLabel = searchControlLabel(standing);
+  /**
+   * The Sport's own seat count, and `undefined` where there is no Sport to count.
+   *
+   * Read off `Court`'s coordinates rather than stated here — *"the seat count is the Sport"* —
+   * because every sentence on the card below branches on it and a four written down beside a
+   * court would be the one place a squash court gets told to build one.
+   */
+  const seats = standing.kind === 'no-rated-sport' ? undefined : courtSeatCount(standing.sport);
+  const searchLabel = seats === undefined ? undefined : searchControlLabel(standing, { seats });
 
   /**
    * The wait — up because a request is in flight, then holding the answer long enough to read.
@@ -257,7 +281,7 @@ export function FindAGameScreen() {
    * skip and no question to put to the OS (`searchingWait`).
    *
    * The two subtractions are the two states that are not a wait. A **refusal** has nothing to
-   * hold for — the sentence and the retry are already over the *Search* control below — and a
+   * hold for — the sentence and the retry are already over the court card below — and a
    * **paused** write is not in flight at all: `networkMode: 'online'` holds it until the
    * connection returns, and a latch over that would bury the amber sentence that says so under
    * a screen with no way off it.
@@ -362,42 +386,7 @@ export function FindAGameScreen() {
           carry those two props, because `ShellScreen` takes none — `ResultScreen` spreads them
           on its own `SafeAreaView` and needs no wrapper at all. */}
       <View style={s.root} {...behindOverlay(latched || asking !== undefined)}>
-        <ShellScreen
-          title={FIND_A_GAME_TITLE}
-          action={
-            searchLabel === undefined ? undefined : (
-              <View style={s.action}>
-                {/* The failed act's own control is the retry — `retryTarget`'s *the-search*, since
-                    nothing was minted and there is no record to re-read. So the sentence goes
-                    above the button that already exists rather than beside a second one. */}
-                {search.error !== null ? (
-                  <Note variant="coral" accessibilityRole="alert">
-                    {playErrorMessage(search.error)}
-                  </Note>
-                ) : null}
-                {writesPaused ? <Note variant="amber">{offlineMessage('resumes')}</Note> : null}
-
-                <Button
-                  label={searchLabel}
-                  size="lg"
-                  disabled={ask === undefined}
-                  busy={search.isPending}
-                  busyLabel={SEARCHING_LABEL}
-                  onPress={() => {
-                    if (ask === undefined) return;
-                    // This search cites no offer, so it runs on the week below and nothing
-                    // else: the cell a rung added belonged to the list it widened, and from
-                    // here on the mark would be about a search nobody is holding (#283).
-                    clearAddedForThisSearch();
-                    // The chosen radius has done its job: the profile now holds whatever the
-                    // server made of it, and the slider reads that from here on.
-                    search.mutate(ask, { onSuccess: () => setChosenRadiusKm(undefined) });
-                  }}
-                />
-              </View>
-            )
-          }
-        >
+        <ShellScreen title={FIND_A_GAME_TITLE}>
           {/* Paused, not loading: `networkMode: 'online'` holds a query rather than failing it,
               so an offline player would otherwise watch a spinner forever. */}
           {readsPaused ? <Note variant="amber">{offlineMessage('resumes')}</Note> : null}
@@ -525,6 +514,48 @@ export function FindAGameScreen() {
               />
             </View>
           )}
+
+          {/* **The way onto the court**, and the whole of the act this screen offers.
+              It is in the page rather than in `ShellScreen`'s pinned slot: the control is a
+              picture of the court a search opens, and a court pinned above the tab bar would
+              be a CTA the height of a card standing over the week it is drawn from. */}
+          {standing.kind === 'no-rated-sport' ||
+          searchLabel === undefined ||
+          seats === undefined ||
+          sportName === undefined ? null : (
+            <View style={s.section}>
+              {/* The failed act's own control is the retry — `retryTarget`'s *the-search*, since
+                  nothing was minted and there is no record to re-read. So the sentence goes
+                  above the control that already exists rather than beside a second one. */}
+              {search.error !== null ? (
+                <Note variant="coral" accessibilityRole="alert">
+                  {playErrorMessage(search.error)}
+                </Note>
+              ) : null}
+              {writesPaused ? <Note variant="amber">{offlineMessage('resumes')}</Note> : null}
+
+              <CourtEntryCard
+                sport={standing.sport}
+                sportName={sportName}
+                seats={seats}
+                label={searchLabel}
+                disabled={ask === undefined}
+                onPress={() => {
+                  if (ask === undefined) return;
+                  // This search cites no offer, so it runs on the week above and nothing
+                  // else: the cell a rung added belonged to the list it widened, and from
+                  // here on the mark would be about a search nobody is holding (#283).
+                  clearAddedForThisSearch();
+                  // The chosen radius has done its job: the profile now holds whatever the
+                  // server made of it, and the slider reads that from here on.
+                  search.mutate(ask, { onSuccess: () => setChosenRadiusKm(undefined) });
+                }}
+              />
+
+              {/* True of both halves of Play, and the last word the screen says. */}
+              <Text style={s.footnote}>{NOBODY_IS_CONTACTED_BY_SEARCHING}</Text>
+            </View>
+          )}
         </ShellScreen>
       </View>
 
@@ -564,11 +595,11 @@ export function FindAGameScreen() {
 
 const s = StyleSheet.create({
   root: { flex: 1 },
-  action: { gap: theme.space.sm },
   failure: { gap: theme.space.sm },
   failureLine: { ...theme.type.tiny, color: theme.color.coralInk },
   section: { gap: theme.space.xs, paddingTop: theme.space.xs },
   heading: { ...theme.type.flab, color: theme.color.ink, textTransform: 'uppercase' },
   body: { ...theme.type.tiny, color: theme.color.ink },
   answers: { flexDirection: 'row', flexWrap: 'wrap', gap: theme.space.xs },
+  footnote: { ...theme.type.tiny, color: theme.color.muted, textAlign: 'center' },
 });

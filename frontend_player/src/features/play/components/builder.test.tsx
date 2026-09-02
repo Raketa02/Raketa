@@ -26,6 +26,7 @@ import { onlineManager } from '@tanstack/react-query';
 
 import { offlineMessage, type AppError } from '@/shared/errors';
 import { queryClient } from '@/shared/lib/query-client';
+import { courtSeatCount } from '@/shared/ui';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import {
   launchSignedIn,
@@ -54,13 +55,18 @@ import {
   whyFitSheetLabel,
   SWAP_TOGGLE_LABEL,
 } from './accessibilityPresentation';
+import { courtEntryLabel } from './findAGamePresentation';
 import { balanceWord } from './balancePresentation';
 import { CANDIDATE_POSTER_LABEL } from './playerCardPresentation';
 import {
+  ALREADY_EVENEST,
+  EVEN_IT_OUT_LABEL,
   PICK_PLAYERS_LABEL,
   PROVISIONAL_WORD,
   RETRY_FORECAST_LABEL,
   SIDE_HEADINGS,
+  START_OVER_LABEL,
+  arrangedYourWayLine,
   fillSeatsLabel,
   seatsOpenLine,
 } from './builderPresentation';
@@ -72,7 +78,9 @@ import { searchingFloorMs } from './searchingWait';
 
 /** The two waits' headlines, taken from their own copy rather than spelled here. */
 const POOL_RANKING = poolRankingStatus({ playersInRange: undefined, sportName: 'Padel' }).headline;
-const ENGINE_FILL = engineFillStatus({ playersInRange: undefined }).headline;
+const ENGINE_FILL = engineFillStatus({ playersInRange: undefined, seats: 4 }).headline;
+/** The count off ⚡'s own response — and therefore the one thing on screen that says it landed. */
+const ENGINE_FILL_COUNT = engineFillStatus({ playersInRange: 7, seats: 4 }).count ?? '';
 
 const SEARCHES = '/api/v1/searches';
 const LINEUPS = '/api/v1/lineups';
@@ -315,7 +323,7 @@ async function openTheBuilder() {
   fireEvent.press(await screen.findByLabelText('Play'));
   await screen.findByLabelText('Tuesday evening');
 
-  fireEvent.press(screen.getByLabelText('Search'));
+  fireEvent.press(screen.getByLabelText(courtEntryLabel(courtSeatCount('padel'))));
   // The floor runs from the **answer**, so the latch has to be up before the clock is driven —
   // advancing it first would spend the hold on a request that has not come back.
   await screen.findByText(POOL_RANKING);
@@ -853,6 +861,123 @@ describe('when it fails', () => {
 
     expect(await screen.findByText(offlineMessage('resumes'))).toBeTruthy();
     expect(screen.queryByText(ENGINE_FILL)).toBeNull();
+  });
+});
+
+/**
+ * **The court fills, and the wait is under it rather than over it.**
+ *
+ * `motion.hold.fill` has been `650 plus 550 a seat` since before anything drew a seat landing:
+ * the latch covered the whole screen for the sum and handed back a court that was already
+ * complete, so the stagger was paid for and never seen. What it is for is the arrival — people
+ * sitting down at a game, one after another, which is what `POST /lineups` has just done.
+ *
+ * Nothing is delayed by any of it. The whole line-up is in memory before the first seat
+ * appears; this is presentation over a completed answer, which `the-play-screens.md` §3
+ * licenses by name.
+ */
+describe('the fill', () => {
+  /** The court's own summary, which is the one element that counts the seats out loud. */
+  const drawn = (filled: number) =>
+    screen.getAllByLabelText(summary(filled), { includeHiddenElements: true });
+
+  /**
+   * Press ⚡ and wait for the **answer**, which is the moment the seats start arriving.
+   *
+   * The count is what says so: it is `players_in_range` off the response, absent while the
+   * request is in flight, so its appearance is the one observable edge between *looking* and
+   * *landing* — and driving the clock before it would spend the stagger on a request that has
+   * not come back.
+   */
+  async function fillLands() {
+    fireEvent.press(screen.getByLabelText(fillSeatsLabel({ seats: 4, filled: 1 })));
+    await screen.findByText(ENGINE_FILL);
+    await screen.findByText(ENGINE_FILL_COUNT);
+  }
+
+  /**
+   * The end of the beat, from the screen's side. **Where** each seat lands in time is
+   * `seatReveal`'s own suite — a boundary no snapshot can tell apart from the millisecond
+   * either side of it — and what is asserted here is the half only the screen knows: the
+   * line-up is committed when the last seat has landed, and not when the response did.
+   */
+  it('commits the line-up at the end of the beat rather than on the response', async () => {
+    await openTheBuilder();
+    await fillLands();
+
+    // The answer is in memory and the court is still yours alone.
+    expect(drawn(1)).toBeTruthy();
+
+    act(() =>
+      jest.advanceTimersByTime(searchingFloorMs({ kind: 'fill', seats: 4, collapsed: false })),
+    );
+
+    await waitFor(() => expect(screen.queryByText(ENGINE_FILL)).toBeNull());
+    expect(drawn(4)).toBeTruthy();
+  });
+
+  /**
+   * The court is never taken away, and nothing that describes a finished line-up appears over
+   * a court that has not finished landing.
+   */
+  it('leaves the court on screen and holds back everything that reads it', async () => {
+    await openTheBuilder();
+
+    await fillLands();
+
+    // The court is there, under the wait rather than behind it.
+    expect(drawn(1)).toBeTruthy();
+    // And nothing about a four that is still arriving: no forecast, no swap toggle, and
+    // neither of the two ways of filling a court that is being filled.
+    expect(screen.queryByText('78%')).toBeNull();
+    expect(screen.queryByLabelText(SWAP_TOGGLE_LABEL)).toBeNull();
+    expect(screen.queryByLabelText(fillSeatsLabel({ seats: 4, filled: 1 }))).toBeNull();
+    expect(screen.queryByLabelText(PICK_PLAYERS_LABEL)).toBeNull();
+
+    act(() =>
+      jest.advanceTimersByTime(searchingFloorMs({ kind: 'fill', seats: 4, collapsed: false })),
+    );
+
+    expect(await screen.findByText('78%')).toBeTruthy();
+  });
+});
+
+/**
+ * **The forecast card, and the one sentence that says what *Even it out* would buy.**
+ *
+ * Every arrangement crosses, so the evenest one's own percentage is a **read** rather than a
+ * calculation — which is what makes it sayable at all. The card used to draw the control and
+ * no account of it: a player looking at a court arranged their way was offered a button and
+ * told nothing about what pressing it changes.
+ */
+describe('the forecast card', () => {
+  it('quotes the evenest split beside the figure, and shuts the control on it', async () => {
+    await openTheBuilder();
+    await pressFill();
+
+    // The fixture's current arrangement reads 78 and its evenest reads 91.
+    expect(await screen.findByText(arrangedYourWayLine('91%'))).toBeTruthy();
+    expect(screen.queryByText(ALREADY_EVENEST)).toBeNull();
+
+    fireEvent.press(screen.getByLabelText(EVEN_IT_OUT_LABEL));
+
+    expect(await screen.findByText('91%')).toBeTruthy();
+    expect(screen.getByText(ALREADY_EVENEST)).toBeTruthy();
+    // Drawn shut rather than taken away: a row that lost a button would move the other one
+    // under the thumb that had just pressed this one.
+    expect(screen.getByLabelText(EVEN_IT_OUT_LABEL).props.accessibilityState?.disabled).toBe(true);
+  });
+
+  /** Both acts on the four are in the card, because both are acts on the four. */
+  it('empties the court from inside the card', async () => {
+    await openTheBuilder();
+    await pressFill();
+    await screen.findByText('78%');
+
+    fireEvent.press(screen.getByLabelText(START_OVER_LABEL));
+
+    expect(await screen.findByLabelText(summary(1))).toBeTruthy();
+    expect(screen.queryByText('78%')).toBeNull();
   });
 });
 
