@@ -23,11 +23,22 @@
 
 const DECIMALS = 2;
 
+/**
+ * **U+2212, never the hyphen** — `the-words.md` §6.2's *"two decimals, decimal comma, U+2212
+ * minus"*, which is §B16 read at the one place a figure on this scale can be negative.
+ *
+ * Nothing printed a negative level until the forecast card's **gap**, which is `your_side −
+ * their_side` and signed by construction
+ * ([#290](https://github.com/Raketa02/Raketa/issues/290)) — so this is inert on every other
+ * caller by construction: a Level is 1,00–5,00 and a range is two of them.
+ */
+const MINUS = '\u2212';
+
 /** The en dash is the range dash, and it is spaced so two 4-character numbers stay apart. */
 const RANGE_DASH = ' – ';
 
 function decimal(value: number): string {
-  return value.toFixed(DECIMALS).replace('.', ',');
+  return value.toFixed(DECIMALS).replace('.', ',').replace('-', MINUS);
 }
 
 /** A Level, an Uncertainty, a band edge — anything on the 1,00–5,00 scale. */

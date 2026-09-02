@@ -18,6 +18,19 @@ describe('levels', () => {
   it('rounds rather than truncating', () => {
     expect(formatLevel(2.716)).toBe('2,72');
   });
+
+  /**
+   * **U+2212 and never the hyphen** — `the-words.md` §6.2's *"two decimals, decimal comma,
+   * U+2212 minus"*.
+   *
+   * A Level is 1,00–5,00, so nothing was negative until the forecast card's **gap**, which is
+   * one side's strength minus the other's and signed by construction
+   * ([#290](https://github.com/Raketa02/Raketa/issues/290)).
+   */
+  it('writes a negative one with the typographic minus', () => {
+    expect(formatLevel(-0.09)).toBe('\u22120,09');
+    expect(formatLevel(-1.5)).toBe('\u22121,50');
+  });
 });
 
 describe('ranges', () => {

@@ -14,14 +14,24 @@
  * read off `Court`'s own coordinates. So every sentence here that could say *four* takes the
  * count and asks for it, which is what stops a squash court being told to build one.
  *
- * ## The forecast's heading is not the mode's
+ * ## The forecast's heading is not the mode's, and it names what the card draws
  *
  * The prototype split it four ways on doubles × competitive-or-fun — *Pairing forecast*,
- * *Balance forecast*, *How the four sits*, *How it would go*. Two of those name the engine
- * (`the-words.md` §20.3 already refused *Match score* on the card for the same reason: *Match
- * Fit* is the engine's name and a screen must not borrow it), and the remaining split is one
- * word of tone for a doubling of the table. **One heading per court shape**, and the mode is
+ * *Balance forecast*, *How the four sits*, *How it would go*. **One heading per court shape**
+ * still: the remaining split is one word of tone for a doubling of the table, and the mode is
  * already said in the eyebrow.
+ *
+ * **Which pair survives is a reversal, and the argument that replaced it is this.** This note
+ * refused the first two — *"two of those name the engine"*, on `the-words.md` §20.3's rule that
+ * *Match Fit* is the engine's name and a screen must not borrow it — and kept *How the four
+ * sits* / *How it would go*. That was right for the card those headings were chosen for, which
+ * said one number and nothing about where it came from: a heading over a bare percentage that
+ * reached for *pairing* or *balance* would have been borrowing a word for the thing that
+ * computed it. The card now prints **two side strengths, the gap between them and a bar**
+ * ([#290](https://github.com/Raketa02/Raketa/issues/290)), so the heading stands over a
+ * **split** rather than over a figure — a *pairing* is who is beside you and a *balance* is
+ * which way the two halves lean, and both are what is drawn on the card. §20.3 is untouched:
+ * its rule is about *Match Fit* and *Match score*, and neither word is here.
  */
 
 import { counted } from '@/shared/formatting/counted';
@@ -129,8 +139,40 @@ export const SIDE_HEADINGS = { yours: 'Your side', theirs: 'Their side' } as con
 
 /** The forecast card's region label. One per court shape — see the module note. */
 export function forecastHeading(seats: number): string {
-  return isDoubles(seats) ? 'How the four sits' : 'How it would go';
+  return isDoubles(seats) ? 'Pairing forecast' : 'Balance forecast';
 }
+
+/**
+ * `You + Piotr` — **one half of the court, named by who is standing on it**.
+ *
+ * §15's `sideNames` was deleted for a rule that still holds — *"a formatter that returns one
+ * string has decided the layout, and this one must not"* — and the row it was deleted for is
+ * still a **list**: the names beneath the split are one control per person, because each opens
+ * `SH.whyfit` for the player it names. This is the other row, and it is not a list of people:
+ * it is the **label of a strength**, one box over one number, and the bar's own segment label
+ * beneath it takes exactly one string per side. So the join is the layout here rather than a
+ * formatter deciding one, and it truncates in its own box per side — which is what stops
+ * two 64-character handles reflowing a three-column row.
+ *
+ * The handles themselves are `playerName()`'s, whole (ADR-0107); this only joins them.
+ *
+ * **A side with nobody on it is named by which side it is.** An empty half is a real state on
+ * a provisional court, and an empty label over a strength the engine did serve would read as a
+ * missing number rather than as a missing player.
+ */
+export function sideName(names: readonly string[], whenEmpty: string): string {
+  return names.length === 0 ? whenEmpty : names.join(SIDE_JOIN);
+}
+
+const SIDE_JOIN = ' + ';
+
+/**
+ * The word between the two strengths, and the whole of what the middle column says.
+ *
+ * Lower case, because it is a unit rather than a heading: the two figures either side of it
+ * are the sentence, and the row's spoken form reads *… gap 0,00* for the same reason.
+ */
+export const GAP_WORD = 'gap';
 
 /**
  * **The one word beneath the tinted number**, and the whole of the mark.

@@ -71,10 +71,12 @@ import { cellLabel } from '@/shared/vocabulary/availabilityPresentation';
 import { orOutOfDate } from '@/shared/vocabulary/outOfDate';
 import type { WeekCell } from '@/shared/vocabulary/week';
 
+import type { Split } from '../domain/forecast';
 import type { SeatPlace } from '../domain/lineup';
 import type { ForecastAssumption, UnfilledReason } from '../domain/vocabulary';
 
 import { balanceLabel } from './balancePresentation';
+import { GAP_WORD } from './builderPresentation';
 import { WITHHELD_SEAT_LINE, unfilledSeatLine } from './courtPresentation';
 import {
   levelRow,
@@ -359,6 +361,36 @@ export function seatedNameLabel(
   seated: { readonly name: string; readonly fit: number },
 ): string {
   return `${PLACE[place]}, ${seated.name}, why fit ${Math.round(seated.fit)}`;
+}
+
+/**
+ * The forecast card's split row — `You + Piotr 2,82, Bartek + Inés 2,82, gap 0,00`.
+ *
+ * **One element and not six**, which is §20.1 applied to a row with no action in it: the three
+ * numbers and the two side names are one claim — *what the percentage above is a percentage
+ * of* — and six stops is a listener navigating a table that is drawn as a row.
+ *
+ * The two names are the same strings the row prints (`sideName`), because the row's whole job
+ * is to say **whose** strength each figure is; and the figures take §B16's one level shape,
+ * `gap` included, since all three are on the Skill scale. The gap is spoken **signed, as it was
+ * served** — a reader sees which side is bigger from the two figures either side of it, and a
+ * listener hearing them in sequence has the same evidence.
+ *
+ * The bar beneath this row announces nothing at all, and this is why: it would be the fourth
+ * reading of one fact (§20.1's merge rule, 6.8's double announcement).
+ *
+ * It takes the **`Split` itself** rather than three loose numbers, so the three figures a
+ * listener hears cannot be assembled in a different order from the three a reader sees. The
+ * two names are the screen's, because who is standing where is a seating rather than a fact
+ * about a split.
+ */
+export function splitRowLabel(
+  sides: { readonly yours: string; readonly theirs: string },
+  split: Split,
+): string {
+  const yours = `${sides.yours} ${formatLevel(split.yourSide)}`;
+  const theirs = `${sides.theirs} ${formatLevel(split.theirSide)}`;
+  return `${yours}, ${theirs}, ${GAP_WORD} ${formatLevel(split.gap)}`;
 }
 
 /**

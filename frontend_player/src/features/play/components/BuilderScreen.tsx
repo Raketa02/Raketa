@@ -60,37 +60,57 @@
  * ([#228](https://github.com/Raketa02/Raketa/issues/228) §11).
  *
  * **No forecast arithmetic runs here**, and the check for that is looking for arithmetic. The
- * only numbers this file computes are seat counts. The percentage, its word, its tone, whether
- * it is provisional and which arrangement is the evenest are all read.
+ * only numbers this file computes are seat counts. The percentage, its word, its tone, the two
+ * side strengths, the gap between them, whether it is provisional and which arrangement is the
+ * evenest are all read.
  *
- * ## What the forecast card deliberately does not draw
+ * ## The court opens on the evenest arrangement, and it opens that way for free
  *
- * **The two side strengths, the gap between them, and a labelled balance bar.** The prototype
- * printed `2,82 · gap 0,00 · 2,82` over a two-segment bar, and all three numbers are its own
- * arithmetic over the levels it held locally. **Nothing on the wire serves any of them**:
- * `SidesSchema` carries seats and no strengths, and the group objective *"is never returned —
- * a second score you would have to trust is worse than none"*. Deriving them from the seated
- * players' levels is the client computing the shape of a forecast it was handed, which is the
- * one thing §11.3 says the check is looking for.
+ * `is_current` on a **line-up** is the evenest arrangement, and `lineup.seats` is that
+ * arrangement's seating ([#289](https://github.com/Raketa02/Raketa/issues/289)) — so the four
+ * a fill lands are already sitting the closest game they can play, *Even it out* is drawn
+ * **shut**, and the sentence beside the figure says why. Nothing on this side selects it: the
+ * client drew `is_current` before and draws it now, which is the whole of what that ticket cost
+ * here. A swap lights the control, moves the figure and turns the sentence into what pressing
+ * it would buy; pressing it puts them back.
  *
- * **A confidence tag.** `sigma_group` crosses, and a *high · medium · low* pill over it is a
- * client thresholding an engine number. `the-words.md` §16 puts `confidence` in exactly one
- * place — the candidate card's `PredictedBalanceEvidence`, where the engine serves the
- * percentage — and *"this is the only place `confidence` is drawn at all"*.
+ * **Trading the two opponents is silently allowed and the figure does not move.** A pairing is
+ * who is beside you, so the seats move and it is the same game — nothing is said, and nothing
+ * needs to be (`domain/forecast`'s selection rule).
  *
- * What the card says instead is **what the control beside the figure would buy**: the evenest
+ * ## What the forecast card draws, and the one thing it still refuses
+ *
+ * **The two side strengths, the gap between them, and a two-segment bar.** Every one of those
+ * is a number only the engine has — a side's strength is not the mean of the two people
+ * standing on it — and the card went without them for exactly as long as that stayed true:
+ * `SidesSchema` carried seats and no strengths, so drawing them meant averaging the seated
+ * players' levels, which is the one thing §11.3 says the check is looking for.
+ * `ArrangementSchema.split` is what changed it
+ * ([#289](https://github.com/Raketa02/Raketa/issues/289), ADR-0136): `your_side`, `their_side`
+ * and a **signed** `gap`, three views of the computation `pct` is the fourth view of. The bar
+ * takes the gap as its `advantage` and maps it itself
+ * ([7.11](../../../../docs/design-system.md#711-the-balance-bar)); this screen does no
+ * arithmetic over any of the three.
+ *
+ * > The note this replaces said *"the builder draws no balance bar, because 7.11 takes an
+ * > advantage and nothing on a line-up serves one."* It is rewritten rather than deleted,
+ * > because the reason it was true is the reason the bar is honest now: what makes a bar
+ * > drawable is a **served** advantage, and there is one.
+ *
+ * **A confidence tag is still refused.** `sigma_group` crosses, and a *high · medium · low*
+ * pill over it is a client thresholding an engine number. `the-words.md` §16 puts `confidence`
+ * in exactly one place — the candidate card's `PredictedBalanceEvidence`, where the engine
+ * serves the percentage — and *"this is the only place `confidence` is drawn at all"*.
+ *
+ * What the card says beside the figure is **what the control beside it would buy**: the evenest
  * arrangement's own percentage, read out of a response already held (`arrangedYourWayLine`).
  * That is a selection like *Even it out* itself, not a calculation.
  *
- * ## Two things it deliberately does not draw
- *
- * **The balance bar.** [7.11](../../../../docs/design-system.md#711-the-balance-bar) takes an
- * *advantage* — your side's strength minus theirs — and nothing on a line-up serves one: the
- * two side strengths are the engine's working, and deriving them from the seated players'
- * levels would be the client computing the shape of a forecast it was handed. The figure, the
- * word and the tone are the served figure read through `balancePresentation`, which is the
- * whole of what §11.3 permits. The bar belongs where a served advantage exists — the candidate
- * card's `LEVEL_FIT` evidence, where it already is.
+ * **The card names the same four people twice, and the two rows are different things.** The
+ * split row labels a **strength** — one box, one number, whose half of the court it belongs to
+ * — and the names beneath it are one **control** per person, each opening `SH.whyfit` for the
+ * player it names (§20.4.1). To a listener they are one element and four, which is §20.1
+ * deciding it: the split row has no action in it and the names each have one.
  *
  * ## ⚡ raises questions, and the sheet has nowhere to stand in front of
  *
@@ -154,10 +174,11 @@ import { ShellScreen, landOnNow } from '@/features/shell/types';
 import { offlineMessage } from '@/shared/errors';
 import { useIsOnline } from '@/shared/lib/platform';
 import { showToast } from '@/shared/store/toast.store';
-import { formatPercent } from '@/shared/formatting/ratingFormat';
+import { formatLevel, formatPercent } from '@/shared/formatting/ratingFormat';
 import { playerName, type NamedPlayer } from '@/shared/formatting/playerName';
 import {
   BALANCE_INK,
+  BalanceBar,
   Button,
   Card,
   Hairline,
@@ -201,11 +222,13 @@ import {
   courtSummaryLabel,
   provisionalForecastAnnouncement,
   seatedNameLabel,
+  splitRowLabel,
 } from './accessibilityPresentation';
-import { balanceTone, balanceWord } from './balancePresentation';
+import { balanceLabel, balanceTone, balanceWord } from './balancePresentation';
 import {
   ALREADY_EVENEST,
   EVEN_IT_OUT_LABEL,
+  GAP_WORD,
   arrangedYourWayLine,
   FILLING_LABEL,
   FORECASTING_LABEL,
@@ -224,6 +247,7 @@ import {
   fillSeatsLabel,
   forecastHeading,
   seatsOpenLine,
+  sideName,
 } from './builderPresentation';
 import { CourtBuild } from './court/CourtBuild';
 import { PromptSheet } from './PromptSheet';
@@ -472,6 +496,26 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
   const shortfall = record?.court === undefined ? undefined : shortfallBySeat(record.court);
 
   const rows = new Map((record?.candidates ?? []).map((row) => [row.playerId, row]));
+
+  /**
+   * The handles on each half, **read once and drawn twice** — as the label over a side's
+   * strength, and as one control per person underneath it.
+   *
+   * Two readings of one seating would be two chances for the row saying *You + Marek is worth
+   * 2,82* and the row offering *why is Marek here* to disagree about who is standing where.
+   */
+  const halfOf = (side: 'yours' | 'theirs') => {
+    const handles = handlesOn(side, seated, places, rows);
+    return {
+      handles,
+      name: sideName(
+        handles.map((one) => one.name),
+        SIDE_HEADINGS[side],
+      ),
+    };
+  };
+  const yours = halfOf('yours');
+  const theirs = halfOf('theirs');
 
   /**
    * `SH.whyfit`'s two inputs, or nothing — **one value, so the sheet and the hide behind it
@@ -979,48 +1023,118 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
                 <Card>
                   <Text style={s.eyebrow}>{forecastHeading(seats)}</Text>
 
-                  {/* **The figure, and the words that read out of it.** Part 13's *never
+                  {/* **What the percentage is a percentage of** — the two side strengths and
+                      the gap between them, each labelled by who is standing on that half.
+                      All three are read off `split` and none is computed: a side's strength is
+                      not the mean of the two people on it, so the one honest way to draw this
+                      row was for the engine to serve it (#289, §11.3).
+
+                      **One accessibility element, not six.** The five things in it are one
+                      claim, and a listener navigating a row drawn as a table stops five times
+                      to assemble it (§20.1, `splitRowLabel`). */}
+                  <View
+                    style={s.split}
+                    accessible
+                    accessibilityLabel={splitRowLabel(
+                      { yours: yours.name, theirs: theirs.name },
+                      chosen.split,
+                    )}
+                  >
+                    <View style={s.splitSide}>
+                      <Text style={s.sideLevel}>{formatLevel(chosen.split.yourSide)}</Text>
+                      {/* One line per side, truncating in its own box: a 64-character handle
+                          cuts rather than reflowing a three-column row (§15, ADR-0107). */}
+                      <Text style={s.sideName} numberOfLines={1}>
+                        {yours.name}
+                      </Text>
+                    </View>
+
+                    {/* **Signed, as it was served.** The sign is which way the game leans,
+                        and taking it off would be this screen doing arithmetic over a number
+                        it was handed — the same rule that stopped it deriving the two
+                        strengths either side of it. */}
+                    <View>
+                      <Text style={s.gapWord}>{GAP_WORD}</Text>
+                      <Text style={s.gapLevel}>{formatLevel(chosen.split.gap)}</Text>
+                    </View>
+
+                    <View style={[s.splitSide, s.splitTheirs]}>
+                      <Text style={s.sideLevel}>{formatLevel(chosen.split.theirSide)}</Text>
+                      <Text style={s.sideName} numberOfLines={1}>
+                        {theirs.name}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* 7.11's two-segment form, which has always drawn exactly this and was
+                      unused here only because nothing served an advantage. The **signed** gap
+                      is that advantage; the bar maps it to a fold and this screen does no
+                      arithmetic over it, and the tone is the served figure's.
+
+                      **Hidden**, because the row two lines above prints all three of its
+                      numbers: the bar's own name would be the fourth reading of one fact
+                      (§20.1's merge rule, 6.8's double announcement). Drawn and hidden, exactly
+                      as the court's shortfall statements are. */}
+                  <View
+                    style={s.bar}
+                    accessibilityElementsHidden
+                    importantForAccessibility="no-hide-descendants"
+                  >
+                    <BalanceBar
+                      advantage={chosen.split.gap}
+                      tone={balanceTone(chosen.forecast.pct)}
+                      size="md"
+                      labels={[yours.name, theirs.name]}
+                      accessibilityLabel={balanceLabel(chosen.forecast.pct)}
+                    />
+                  </View>
+
+                  <Hairline>
+                    {/* **The figure, and the words that read out of it.** Part 13's *never
                       colour alone* is what puts §B9's word beside the tinted number, and it is
                       beside rather than beneath it because the two are one claim read left to
                       right: *90% — very even, and this is the evenest these four can be
                       arranged.* Stacked, the figure was a number with three captions under it
                       and the last of them was the only one that said anything actionable. */}
-                  <View style={s.reading}>
-                    <Text
-                      style={[s.figure, { color: BALANCE_INK[balanceTone(chosen.forecast.pct)] }]}
-                    >
-                      {formatPercent(chosen.forecast.pct)}
-                    </Text>
+                    <View style={s.reading}>
+                      <Text
+                        style={[s.figure, { color: BALANCE_INK[balanceTone(chosen.forecast.pct)] }]}
+                      >
+                        {formatPercent(chosen.forecast.pct)}
+                      </Text>
 
-                    <View style={s.readingWords}>
-                      <Text style={s.word}>{balanceWord(chosen.forecast.pct)}</Text>
+                      <View style={s.readingWords}>
+                        <Text style={s.word}>{balanceWord(chosen.forecast.pct)}</Text>
 
-                      {/* **What this arrangement costs against the evenest one**, or that it
+                        {/* **What this arrangement costs against the evenest one**, or that it
                           is the evenest. Both are readings of a response already held — every
                           arrangement crosses — so the sentence beside the figure is the same
                           selection *Even it out* is, said before it is pressed rather than
                           discovered by pressing it. Drawn only where there is a second
                           arrangement to compare against: a singles court has one. */}
-                      {evenest === undefined ? null : (
-                        <Text style={s.body}>
-                          {chosen.isEvenest
-                            ? ALREADY_EVENEST
-                            : arrangedYourWayLine(formatPercent(evenest.forecast.pct))}
-                        </Text>
-                      )}
+                        {evenest === undefined ? null : (
+                          <Text style={s.body}>
+                            {chosen.isEvenest
+                              ? ALREADY_EVENEST
+                              : arrangedYourWayLine(formatPercent(evenest.forecast.pct))}
+                          </Text>
+                        )}
 
-                      {chosen.forecast.provisional ? (
-                        <Text style={s.provisional}>{PROVISIONAL_WORD}</Text>
-                      ) : null}
+                        {chosen.forecast.provisional ? (
+                          <Text style={s.provisional}>{PROVISIONAL_WORD}</Text>
+                        ) : null}
 
-                      {/* ADR-0108's rule that the figure and its caveat are one thing. A caveat
+                        {/* ADR-0108's rule that the figure and its caveat are one thing. A caveat
                           this build cannot read draws nothing, and `provisional` above still
                           says the figure has one. */}
-                      {chosen.forecast.assumption === null ? null : (
-                        <Text style={s.body}>{forecastAssumption(chosen.forecast.assumption)}</Text>
-                      )}
+                        {chosen.forecast.assumption === null ? null : (
+                          <Text style={s.body}>
+                            {forecastAssumption(chosen.forecast.assumption)}
+                          </Text>
+                        )}
+                      </View>
                     </View>
-                  </View>
+                  </Hairline>
 
                   {/* **Where the handles are printed whole**, and the reason a 46pt seat is
                       allowed to cut one to four characters: `the-play-components.md` §5 makes
@@ -1038,22 +1152,12 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
                     <Row
                       label={SIDE_HEADINGS.yours}
                       labelHidden
-                      value={
-                        <Names
-                          seated={handlesOn('yours', seated, places, rows)}
-                          onExplain={setExplaining}
-                        />
-                      }
+                      value={<Names seated={yours.handles} onExplain={setExplaining} />}
                     />
                     <Row
                       label={SIDE_HEADINGS.theirs}
                       labelHidden
-                      value={
-                        <Names
-                          seated={handlesOn('theirs', seated, places, rows)}
-                          onExplain={setExplaining}
-                        />
-                      }
+                      value={<Names seated={theirs.handles} onExplain={setExplaining} />}
                       divided
                     />
                   </Hairline>
@@ -1367,6 +1471,25 @@ const s = StyleSheet.create({
   action: { gap: theme.space.sm },
   /** The court is a fixed width (`size.court.build`), so it is centred rather than stretched. */
   court: { alignSelf: 'center' },
+  /**
+   * The split: a strength on each edge and the gap between them, three columns on one line.
+   *
+   * The two sides `flex` and the gap does not, so a long handle is spent on the box it is in
+   * rather than on pushing the middle figure off centre.
+   */
+  split: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: theme.space.sm,
+    marginTop: theme.space.sm,
+  },
+  splitSide: { flex: 1 },
+  splitTheirs: { alignItems: 'flex-end' },
+  sideLevel: { ...theme.num.m, ...theme.tabular, color: theme.color.ink },
+  sideName: { ...theme.type.tiny, color: theme.color.muted },
+  gapWord: { ...theme.type.tag, color: theme.color.muted, textAlign: 'center' },
+  gapLevel: { ...theme.num.xs, ...theme.tabular, color: theme.color.muted, textAlign: 'center' },
+  bar: { marginTop: theme.space.xs },
   /** The figure and its words, read left to right. */
   reading: { flexDirection: 'row', alignItems: 'center', gap: theme.space.md },
   readingWords: { flex: 1, gap: theme.space.xxs },

@@ -56,6 +56,13 @@ function arrangement(
       { seatIndex: 3, relationship: 'OPPONENT', playerId: opponents[1] },
     ],
     forecast: { pct: facts.pct, sigmaGroup: 0.4, provisional: false, assumption: null },
+    // The evidence behind the figure, served rather than derived — and derived here from the
+    // fixture's own `pct` so the four numbers stay one computation the way the engine's are.
+    split: {
+      yourSide: 3.2,
+      theirSide: 3.2 - (100 - facts.pct) / 100,
+      gap: (100 - facts.pct) / 100,
+    },
   };
 }
 
@@ -174,6 +181,8 @@ describe('the courts that decide nothing', () => {
         { seatIndex: 1, relationship: 'OPPONENT', playerId: B },
       ],
       forecast: { pct: 80, sigmaGroup: 0.3, provisional: false, assumption: null },
+      // Singles: two player strengths and the difference between them.
+      split: { yourSide: 3.2, theirSide: 3.0, gap: 0.2 },
     };
 
     const seating = seatingOf(singles);

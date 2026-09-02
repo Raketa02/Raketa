@@ -69,6 +69,31 @@ export interface Forecast {
   readonly assumption: ForecastAssumption | null;
 }
 
+/**
+ * **What the percentage is a percentage of** — the two side strengths and the distance
+ * between them, on the Skill scale a level is already read on.
+ *
+ * All three are the engine's own working, served rather than derived, and that is the whole
+ * reason the card can draw them: a side's strength is not the mean of the two people standing
+ * on it, so a client computing one would be inventing the shape of a forecast it was handed
+ * ([#289](https://github.com/Raketa02/Raketa/issues/289), ADR-0136). §11.3's check is
+ * *looking for arithmetic*, and there is none over these.
+ */
+export interface Split {
+  /** Your half's combined strength. */
+  readonly yourSide: number;
+  readonly theirSide: number;
+  /**
+   * `yourSide − theirSide`, **signed** — and served rather than left to a subtraction here,
+   * because a client subtracting two rounded figures and an engine subtracting two unrounded
+   * ones disagree at the boundary, and the card prints all three.
+   *
+   * The sign is what the bar reads: 7.11 takes an *advantage*, and an unsigned gap would
+   * leave this side deciding which half of it is bigger.
+   */
+  readonly gap: number;
+}
+
 /** One seat inside one arrangement: where it is, what it is to you, and who is in it. */
 export interface ArrangementSeat {
   /** Stable across all three arrangements. The court draws seats in this order. */
@@ -94,6 +119,8 @@ export interface Arrangement {
   /** Both sides, flattened into seat order: A first, you at its head. */
   readonly seats: readonly ArrangementSeat[];
   readonly forecast: Forecast;
+  /** The evidence behind `forecast.pct` — what the figure is a percentage *of*. */
+  readonly split: Split;
 }
 
 /**

@@ -27,9 +27,15 @@
  *
  * ## No arithmetic crosses here
  *
- * Every number is renamed and none is computed: `pct`, `sigma_group` and the seat indices
- * arrive as they were served. That is `the-play-screens.md` §11.3 read at the one layer where
- * a client would be tempted, and the check is *looking for arithmetic*.
+ * Every number is renamed and none is computed: `pct`, `sigma_group`, the two side strengths,
+ * the gap between them and the seat indices all arrive as they were served. That is
+ * `the-play-screens.md` §11.3 read at the one layer where a client would be tempted, and the
+ * check is *looking for arithmetic*.
+ *
+ * **The split is the case that makes the rule visible.** `gap` is `your_side − their_side` and
+ * the engine sends all three, so this file is one subtraction away from being the place the
+ * card's numbers stop agreeing with each other — and it does not make it
+ * ([#289](https://github.com/Raketa02/Raketa/issues/289)).
  */
 
 import type { components } from '@/generated/schema';
@@ -44,6 +50,7 @@ import type {
   Forecast,
   SeatedCourt,
   SeatedSeat,
+  Split,
 } from '../domain/forecast';
 import type { SeatedPlayerId } from '../domain/lineup';
 import {
@@ -69,6 +76,7 @@ type WireArrangement = components['schemas']['ArrangementSchema'];
 type WireArrangementSeat = components['schemas']['ArrangementSeatSchema'];
 type WireLineupSeat = components['schemas']['LineupSeatSchema'];
 type WireForecast = components['schemas']['ForecastSchema'];
+type WireSplit = components['schemas']['SplitSchema'];
 
 /**
  * ⚡ *Fill the seats* — **the line-up and fill-seats are one request.**
@@ -170,6 +178,7 @@ export function toArrangements(arrangements: readonly WireArrangement[]): readon
     isEvenest: one.is_evenest,
     seats: [...one.sides.A, ...one.sides.B].flatMap((seat) => toArrangementSeat(seat) ?? []),
     forecast: toForecast(one.forecast),
+    split: toSplit(one.split),
   }));
 }
 
@@ -208,6 +217,11 @@ function toForecast(forecast: WireForecast): Forecast {
     provisional: forecast.provisional,
     assumption: forecast.assumption === null ? null : (toAssumption(forecast.assumption) ?? null),
   };
+}
+
+/** Three renames, and **not a subtraction**: the engine's `gap` is the one the card prints. */
+function toSplit(split: WireSplit): Split {
+  return { yourSide: split.your_side, theirSide: split.their_side, gap: split.gap };
 }
 
 const KNOWN_RELATIONSHIPS = new Set<string>(RELATIONSHIPS);

@@ -29,6 +29,7 @@ import { queryClient } from '@/shared/lib/query-client';
 import { courtSeatCount } from '@/shared/ui';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import {
+  PROFILE_SURFACE_SERVED,
   launchSignedIn,
   stubGate,
   stubInterest,
@@ -52,11 +53,12 @@ import {
   provisionalForecastAnnouncement,
   seatLabel,
   seatedNameLabel,
+  splitRowLabel,
   whyFitSheetLabel,
   SWAP_TOGGLE_LABEL,
 } from './accessibilityPresentation';
 import { courtEntryLabel } from './findAGamePresentation';
-import { balanceWord } from './balancePresentation';
+import { balanceLabel, balanceWord } from './balancePresentation';
 import { CANDIDATE_POSTER_LABEL } from './playerCardPresentation';
 import {
   ALREADY_EVENEST,
@@ -69,6 +71,7 @@ import {
   arrangedYourWayLine,
   fillSeatsLabel,
   seatsOpenLine,
+  sideName,
 } from './builderPresentation';
 import { WITHHELD_SEAT_LINE, optimisedForLine, unfilledSeatLine } from './courtPresentation';
 import { playErrorMessage } from './playErrorMessage';
@@ -201,11 +204,28 @@ function arrangement(
   };
 }
 
+/**
+ * The three ways round one four, with the evenest at 91 — and **`is_current` on none of them**,
+ * because the two routes that return arrangements mean different things by it
+ * ([#289](https://github.com/Raketa02/Raketa/issues/289)): a line-up marks the **evenest**, and
+ * a forecast marks **the seat order the request sent**. Marking it once here would make one of
+ * those two fixtures a lie, and it is the fixture the swap tests are read against.
+ */
 const THREE_WAYS = [
-  arrangement(B, [C, D], { id: 1, pct: 78, current: true }),
+  arrangement(B, [C, D], { id: 1, pct: 78 }),
   arrangement(C, [B, D], { id: 2, pct: 91, evenest: true }),
   arrangement(D, [B, C], { id: 3, pct: 64 }),
 ];
+
+/** A line-up opens on the closest game these four can play, so `is_current` is `is_evenest`. */
+const LINEUP_WAYS = THREE_WAYS.map((one) => ({ ...one, is_current: one.is_evenest }));
+
+/** Who the engine seated beside you in one way round — the thing a pairing *is*. */
+const partnerIn = (one: Wire['ArrangementSchema']) =>
+  one.sides.A.find((seat) => seat.relationship === 'PARTNER')?.player_id;
+
+/** The seat order one forecast request asked about, which is what its `is_current` names. */
+const seatOrderOf = (body: unknown): readonly string[] => (body as Wire['ForecastRequest']).players;
 
 interface FullCourt {
   readonly optimisedFor?: Wire['OptimisedFor'];
@@ -223,14 +243,16 @@ function seatedFour(over: FullCourt = {}): Wire['LineupResponse'] {
       ...(over.prompts === undefined ? {} : { prompts: [...over.prompts] }),
     }),
     candidates: over.candidates ?? [card(B), card(C), card(D)],
+    // `LineupSchema.seats` is *the court in the arrangement marked `is_current`*, and that is
+    // now the evenest one — so the seating here is the C pairing's, not the B one's.
     lineup: {
       seats: [
         { side: 'A', seat_index: 0, relationship: 'SELF', player_id: ME },
-        { side: 'A', seat_index: 1, relationship: 'PARTNER', player_id: B },
-        { side: 'B', seat_index: 2, relationship: 'OPPONENT', player_id: C },
+        { side: 'A', seat_index: 1, relationship: 'PARTNER', player_id: C },
+        { side: 'B', seat_index: 2, relationship: 'OPPONENT', player_id: B },
         { side: 'B', seat_index: 3, relationship: 'OPPONENT', player_id: D },
       ],
-      arrangements: THREE_WAYS,
+      arrangements: LINEUP_WAYS,
       group_reason: 'EVENEST_ARRANGEMENT',
     },
   };
@@ -267,8 +289,13 @@ function threeOfFour(reason: Wire['UnfilledReason']): Wire['LineupResponse'] {
   };
 }
 
-const forecastResponse = (): Wire['ForecastResponse'] => ({
-  arrangements: THREE_WAYS,
+/**
+ * `POST /forecasts` answers with every way round and marks **the one the request asked about**,
+ * which is the opposite of what a line-up's `is_current` names and the reason a client that
+ * sends an arrangement can draw a swap at all.
+ */
+const forecastFor = (players: readonly string[]): Wire['ForecastResponse'] => ({
+  arrangements: THREE_WAYS.map((one) => ({ ...one, is_current: partnerIn(one) === players[0] })),
   engine_version: 'matchfit-v1',
   ruleset_version: 'ruleset-v1',
 });
@@ -290,7 +317,7 @@ beforeEach(() => {
   stubInterest(transport);
   transport.on('POST', SEARCHES, () => json(shortlist()));
   transport.on('POST', LINEUPS, () => json(seatedFour()));
-  transport.on('POST', FORECASTS, () => json(forecastResponse()));
+  transport.on('POST', FORECASTS, ({ body }) => json(forecastFor(seatOrderOf(body))));
   transport.on('POST', DECLINES, () => noContent());
   transport.on('PUT', RADIUS, () => json<Wire['SearchRadiusResponse']>({ search_radius_km: 22 }));
 });
@@ -401,8 +428,10 @@ describe('⚡ — the engine fills the seats', () => {
       sport: 'PADEL',
       mode: 'FOR_FUN',
     });
-    expect(seat('YOUR_PARTNER', B)).toBeTruthy();
-    expect(seat('THEIR_SIDE', C)).toBeTruthy();
+    // The evenest pairing's seating, which is what `is_current` names on a line-up: C beside
+    // you, B across the net.
+    expect(seat('YOUR_PARTNER', C)).toBeTruthy();
+    expect(seat('THEIR_SIDE', B)).toBeTruthy();
   });
 
   /**
@@ -461,11 +490,11 @@ describe('the forecast', () => {
     await openTheBuilder();
     await pressFill();
 
-    // 78 is on no path any arithmetic over these levels would reach — it is read, or it is
+    // 91 is on no path any arithmetic over these levels would reach — it is read, or it is
     // not on screen at all.
-    expect(await screen.findByText('78%')).toBeTruthy();
+    expect(await screen.findByText('91%')).toBeTruthy();
     // Part 13: the tint is never the only carrier, so the word is drawn beside the figure.
-    expect(screen.getByText(balanceWord(78))).toBeTruthy();
+    expect(screen.getByText(balanceWord(91))).toBeTruthy();
   });
 
   /**
@@ -475,13 +504,13 @@ describe('the forecast', () => {
   it('moves the figure on a swap without asking the server anything', async () => {
     await openTheBuilder();
     await pressFill();
-    await screen.findByText('78%');
+    await screen.findByText('91%');
 
     fireEvent.press(screen.getByLabelText(SWAP_TOGGLE_LABEL));
-    fireEvent.press(seat('YOUR_PARTNER', B));
-    fireEvent.press(seat('THEIR_SIDE', C));
+    fireEvent.press(seat('YOUR_PARTNER', C));
+    fireEvent.press(seat('THEIR_SIDE', B));
 
-    expect(await screen.findByText('91%')).toBeTruthy();
+    expect(await screen.findByText('78%')).toBeTruthy();
     expect(transport.requestsTo('POST', FORECASTS)).toHaveLength(0);
   });
 
@@ -489,13 +518,13 @@ describe('the forecast', () => {
   it('keeps everybody on the court through a swap', async () => {
     await openTheBuilder();
     await pressFill();
-    await screen.findByText('78%');
+    await screen.findByText('91%');
 
     fireEvent.press(screen.getByLabelText(SWAP_TOGGLE_LABEL));
-    fireEvent.press(seat('YOUR_PARTNER', B));
-    fireEvent.press(seat('THEIR_SIDE', C));
+    fireEvent.press(seat('YOUR_PARTNER', C));
+    fireEvent.press(seat('THEIR_SIDE', B));
 
-    await screen.findByText('91%');
+    await screen.findByText('78%');
     expect(screen.getByLabelText(summary(4))).toBeTruthy();
     expect(usePlaySession.getState().lineup?.seats).toHaveLength(3);
   });
@@ -504,9 +533,9 @@ describe('the forecast', () => {
   it('asks again when somebody leaves the court', async () => {
     await openTheBuilder();
     await pressFill();
-    await screen.findByText('78%');
+    await screen.findByText('91%');
 
-    fireEvent.press(screen.getByLabelText(`Remove ${NAMES[B]} from your side`));
+    fireEvent.press(screen.getByLabelText(`Remove ${NAMES[B]} from their side`));
 
     await waitFor(() => expect(transport.requestsTo('POST', FORECASTS)).toHaveLength(1));
     expect(transport.requestsTo('POST', FORECASTS)[0]?.body).toEqual({
@@ -525,15 +554,15 @@ describe('the forecast', () => {
   it('announces the figure it changed, with the word and not a bare percentage', async () => {
     await openTheBuilder();
     await pressFill();
-    await screen.findByText('78%');
+    await screen.findByText('91%');
 
     fireEvent.press(screen.getByLabelText(SWAP_TOGGLE_LABEL));
-    fireEvent.press(seat('YOUR_PARTNER', B));
-    fireEvent.press(seat('THEIR_SIDE', C));
+    fireEvent.press(seat('YOUR_PARTNER', C));
+    fireEvent.press(seat('THEIR_SIDE', B));
 
-    await screen.findByText('91%');
+    await screen.findByText('78%');
     expect(spoken()).toContain(
-      provisionalForecastAnnouncement({ pct: 91, provisional: false, assumption: null }),
+      provisionalForecastAnnouncement({ pct: 78, provisional: false, assumption: null }),
     );
   });
 
@@ -657,8 +686,8 @@ describe('what the court says about itself', () => {
     expect(screen.getByText(WITHHELD_SEAT_LINE, { includeHiddenElements: true })).toBeTruthy();
     // And they are still in the line-up, so they are still in the forecast: dropping them
     // would force a second cause for *provisional*.
-    expect(usePlaySession.getState().lineup?.seats).toEqual([B, C, D]);
-    expect(screen.getByText('78%')).toBeTruthy();
+    expect(usePlaySession.getState().lineup?.seats).toEqual([C, B, D]);
+    expect(screen.getByText('91%')).toBeTruthy();
   });
 
   /** The court never says **why**: four gates reach one sentence, and naming one names a person. */
@@ -705,9 +734,9 @@ describe('why this person is on my court', () => {
   it('opens SH.whyfit from a seated name, which is the route a listener can reach', async () => {
     await openTheBuilder();
     await pressFill();
-    await screen.findByText('78%');
+    await screen.findByText('91%');
 
-    fireEvent.press(named('YOUR_PARTNER', B));
+    fireEvent.press(named('YOUR_PARTNER', C));
 
     expect(await screen.findByLabelText(WHY_FIT)).toBeTruthy();
   });
@@ -716,9 +745,9 @@ describe('why this person is on my court', () => {
   it('opens the same sheet from a hold on the seat', async () => {
     await openTheBuilder();
     await pressFill();
-    await screen.findByText('78%');
+    await screen.findByText('91%');
 
-    fireEvent(seat('YOUR_PARTNER', B), 'longPress');
+    fireEvent(seat('YOUR_PARTNER', C), 'longPress');
 
     expect(await screen.findByLabelText(WHY_FIT)).toBeTruthy();
   });
@@ -731,7 +760,7 @@ describe('why this person is on my court', () => {
   it('hides the two side headings, because each name says its own side', async () => {
     await openTheBuilder();
     await pressFill();
-    await screen.findByText('78%');
+    await screen.findByText('91%');
 
     for (const heading of [SIDE_HEADINGS.yours, SIDE_HEADINGS.theirs]) {
       expect(screen.queryByText(heading)).toBeNull();
@@ -753,8 +782,8 @@ describe('why this person is on my court', () => {
     await screen.findByLabelText(summary(4));
 
     // The two the record still holds a row for.
-    expect(named('YOUR_PARTNER', B)).toBeTruthy();
-    expect(named('THEIR_SIDE', C)).toBeTruthy();
+    expect(named('YOUR_PARTNER', C)).toBeTruthy();
+    expect(named('THEIR_SIDE', B)).toBeTruthy();
     // And nobody else on the row: four seats, two ways in.
     expect(screen.queryAllByLabelText(/why fit/)).toHaveLength(2);
     // The other two lines are still **drawn** — plain text is not a line that vanished, and a
@@ -787,11 +816,11 @@ describe('why this person is on my court', () => {
   it('is inert while the swap toggle is on, and owes no sentence for it', async () => {
     await openTheBuilder();
     await pressFill();
-    await screen.findByText('78%');
+    await screen.findByText('91%');
 
     fireEvent.press(screen.getByLabelText(SWAP_TOGGLE_LABEL));
     const saidBefore = spoken().length;
-    fireEvent(seat('YOUR_PARTNER', B), 'longPress');
+    fireEvent(seat('YOUR_PARTNER', C), 'longPress');
 
     expect(screen.queryByLabelText(WHY_FIT)).toBeNull();
     expect(spoken()).toHaveLength(saidBefore);
@@ -801,10 +830,10 @@ describe('why this person is on my court', () => {
   it('keeps the names row a way in while the toggle is on', async () => {
     await openTheBuilder();
     await pressFill();
-    await screen.findByText('78%');
+    await screen.findByText('91%');
 
     fireEvent.press(screen.getByLabelText(SWAP_TOGGLE_LABEL));
-    fireEvent.press(named('YOUR_PARTNER', B));
+    fireEvent.press(named('YOUR_PARTNER', C));
 
     expect(await screen.findByLabelText(WHY_FIT)).toBeTruthy();
   });
@@ -936,7 +965,7 @@ describe('the fill', () => {
     expect(drawn(1)).toBeTruthy();
     // And nothing about a four that is still arriving: no forecast, no swap toggle, and
     // neither of the two ways of filling a court that is being filled.
-    expect(screen.queryByText('78%')).toBeNull();
+    expect(screen.queryByText('91%')).toBeNull();
     expect(screen.queryByLabelText(SWAP_TOGGLE_LABEL)).toBeNull();
     expect(screen.queryByLabelText(fillSeatsLabel({ seats: 4, filled: 1 }))).toBeNull();
     expect(screen.queryByLabelText(PICK_PLAYERS_LABEL)).toBeNull();
@@ -945,7 +974,7 @@ describe('the fill', () => {
       jest.advanceTimersByTime(searchingFloorMs({ kind: 'fill', seats: 4, collapsed: false })),
     );
 
-    expect(await screen.findByText('78%')).toBeTruthy();
+    expect(await screen.findByText('91%')).toBeTruthy();
   });
 });
 
@@ -958,33 +987,257 @@ describe('the fill', () => {
  * told nothing about what pressing it changes.
  */
 describe('the forecast card', () => {
-  it('quotes the evenest split beside the figure, and shuts the control on it', async () => {
+  /** The two halves as the card labels them, once the evenest pairing has seated C beside you. */
+  const YOURS = sideName(['You', NAMES[C] ?? ''], SIDE_HEADINGS.yours);
+  const THEIRS = sideName([NAMES[B] ?? '', NAMES[D] ?? ''], SIDE_HEADINGS.theirs);
+
+  /**
+   * **The evidence behind the percentage**, and none of it computed here.
+   *
+   * The three figures are `split`'s, on the Skill scale: the fixture's evenest reads `3,20`
+   * against `3,11` with a gap of `0,09`, and a card that averaged the seated players' levels —
+   * 2,80 · 2,71 · 2,90 — could not produce any of them.
+   */
+  it('prints both side strengths and the gap, named by who is on each side', async () => {
+    await openTheBuilder();
+    await pressFill();
+    await screen.findByText('91%');
+
+    expect(screen.getByText('Pairing forecast')).toBeTruthy();
+    expect(screen.getByText('3,20')).toBeTruthy();
+    expect(screen.getByText('3,11')).toBeTruthy();
+    expect(screen.getByText('0,09')).toBeTruthy();
+    expect(screen.getByText(YOURS)).toBeTruthy();
+    expect(screen.getByText(THEIRS)).toBeTruthy();
+  });
+
+  /**
+   * **One element and not six** (§20.1): the two names, the two strengths and the gap are one
+   * claim, and six stops is a listener navigating a table that is drawn as a row.
+   */
+  it('speaks the split row as one element', async () => {
+    await openTheBuilder();
+    await pressFill();
+    await screen.findByText('91%');
+
+    expect(
+      screen.getByLabelText(
+        splitRowLabel(
+          { yours: YOURS, theirs: THEIRS },
+          { yourSide: 3.2, theirSide: 3.11, gap: 0.09 },
+        ),
+      ),
+    ).toBeTruthy();
+  });
+
+  /**
+   * **The bar draws the split and announces nothing.** 7.11's two-segment form has always
+   * drawn exactly this and was unused here only because nothing served an advantage; what
+   * keeps it silent is that the row two lines above prints all three of its numbers, so its
+   * own name would be the fourth reading of one fact (§20.1's merge rule, 6.8).
+   */
+  it('labels both segments of the bar and keeps it out of the accessibility tree', async () => {
+    await openTheBuilder();
+    await pressFill();
+    await screen.findByText('91%');
+
+    // Twice in the tree and once to a listener: the split row's copy, and the bar's own.
+    expect(screen.getAllByText(YOURS, { includeHiddenElements: true })).toHaveLength(2);
+    expect(screen.getAllByText(THEIRS, { includeHiddenElements: true })).toHaveLength(2);
+    expect(screen.getAllByText(YOURS)).toHaveLength(1);
+    expect(screen.queryByLabelText(balanceLabel(91))).toBeNull();
+  });
+
+  /**
+   * **The whole behaviour this card is judged on, in one walk** — asserted rather than assumed
+   * because it rests on a backend field: `is_current` on a line-up is the **evenest**
+   * arrangement ([#289](https://github.com/Raketa02/Raketa/issues/289)), so a full doubles
+   * court opens with nothing left to press.
+   */
+  it('opens shut on the evenest, lights on a swap, and shuts again when pressed', async () => {
     await openTheBuilder();
     await pressFill();
 
-    // The fixture's current arrangement reads 78 and its evenest reads 91.
-    expect(await screen.findByText(arrangedYourWayLine('91%'))).toBeTruthy();
+    // Open: the closest game these four can play, and the control says so rather than offering
+    // to do what has been done.
+    expect(await screen.findByText('91%')).toBeTruthy();
+    expect(screen.getByText(ALREADY_EVENEST)).toBeTruthy();
+    expect(screen.getByLabelText(EVEN_IT_OUT_LABEL).props.accessibilityState?.disabled).toBe(true);
+
+    fireEvent.press(screen.getByLabelText(SWAP_TOGGLE_LABEL));
+    fireEvent.press(seat('YOUR_PARTNER', C));
+    fireEvent.press(seat('THEIR_SIDE', B));
+
+    // Arranged by hand: the figure moved, the control is live, and the sentence quotes what
+    // pressing it would buy.
+    expect(await screen.findByText('78%')).toBeTruthy();
+    expect(screen.getByText(arrangedYourWayLine('91%'))).toBeTruthy();
     expect(screen.queryByText(ALREADY_EVENEST)).toBeNull();
+    expect(screen.getByLabelText(EVEN_IT_OUT_LABEL).props.accessibilityState?.disabled).toBe(false);
 
     fireEvent.press(screen.getByLabelText(EVEN_IT_OUT_LABEL));
 
     expect(await screen.findByText('91%')).toBeTruthy();
     expect(screen.getByText(ALREADY_EVENEST)).toBeTruthy();
-    // Drawn shut rather than taken away: a row that lost a button would move the other one
-    // under the thumb that had just pressed this one.
     expect(screen.getByLabelText(EVEN_IT_OUT_LABEL).props.accessibilityState?.disabled).toBe(true);
+    // Three arrangements crossed with the fill, so all of that was a selection.
+    expect(transport.requestsTo('POST', FORECASTS)).toHaveLength(0);
+  });
+
+  /**
+   * **Trading the two opponents is the same game.** A pairing is who is beside you, so the
+   * seats move, the figure holds, and no sentence is owed for it — decided, not overlooked.
+   */
+  it('moves the seats and holds the figure when the two opponents trade', async () => {
+    await openTheBuilder();
+    await pressFill();
+    await screen.findByText('91%');
+    const saidBefore = spoken().length;
+
+    fireEvent.press(screen.getByLabelText(SWAP_TOGGLE_LABEL));
+    fireEvent.press(seat('THEIR_SIDE', B));
+    fireEvent.press(seat('THEIR_SIDE', D));
+
+    // The court changed — their half reads the other way round — and nothing else did.
+    expect(
+      await screen.findByText(sideName([NAMES[D] ?? '', NAMES[B] ?? ''], SIDE_HEADINGS.theirs)),
+    ).toBeTruthy();
+    expect(screen.getByText('91%')).toBeTruthy();
+    expect(screen.getByText(ALREADY_EVENEST)).toBeTruthy();
+    expect(spoken()).toHaveLength(saidBefore);
+    expect(transport.requestsTo('POST', FORECASTS)).toHaveLength(0);
   });
 
   /** Both acts on the four are in the card, because both are acts on the four. */
   it('empties the court from inside the card', async () => {
     await openTheBuilder();
     await pressFill();
-    await screen.findByText('78%');
+    await screen.findByText('91%');
 
     fireEvent.press(screen.getByLabelText(START_OVER_LABEL));
 
     expect(await screen.findByLabelText(summary(1))).toBeTruthy();
-    expect(screen.queryByText('78%')).toBeNull();
+    expect(screen.queryByText('91%')).toBeNull();
+  });
+});
+
+/**
+ * **The same card with two people on it** — one arrangement, nothing to rearrange, and a
+ * heading that says which of the two things it is drawing.
+ *
+ * Singles is where the split stops being two pairs and becomes two players: `your_side` is you
+ * and `their_side` is your opponent, so the row prints two levels and the difference between
+ * them. *Even it out* is not drawn at all, because a court with one way round has nothing the
+ * control could select.
+ */
+describe('singles', () => {
+  const TENNIS_POOL: Wire['SearchEnvelope']['pool'] = {
+    sport: 'TENNIS',
+    radius_km_used: 12,
+    players_in_range: 7,
+    window: 'THIS_WEEK',
+    post_gate: true,
+  };
+
+  const TENNIS_SEATS = courtSeatCount('tennis');
+  const TENNIS_RANKING = poolRankingStatus({
+    playersInRange: undefined,
+    sportName: 'Tennis',
+  }).headline;
+  const TENNIS_FILL = engineFillStatus({
+    playersInRange: undefined,
+    seats: TENNIS_SEATS,
+  }).headline;
+
+  const tennisCourt = (filled: number) =>
+    courtSummaryLabel({ sportName: 'Tennis', filled, seats: TENNIS_SEATS });
+
+  const tennisShortlist = (): Wire['ShortlistResponse'] => ({
+    search: envelope(SEARCH_ID, { pool: TENNIS_POOL }),
+    candidates: [card(B)],
+  });
+
+  /** One way round, because there is one. The split is two player strengths and their gap. */
+  const tennisLineup = (): Wire['LineupResponse'] => ({
+    search: envelope(LINEUP_ID, { surface: 'LINEUP', pool: TENNIS_POOL }),
+    candidates: [card(B)],
+    lineup: {
+      seats: [
+        { side: 'A', seat_index: 0, relationship: 'SELF', player_id: ME },
+        { side: 'B', seat_index: 1, relationship: 'OPPONENT', player_id: B },
+      ],
+      arrangements: [
+        {
+          pairing_id: 1,
+          is_current: true,
+          is_evenest: true,
+          sides: {
+            A: [{ seat_index: 0, relationship: 'SELF', player_id: ME }],
+            B: [{ seat_index: 1, relationship: 'OPPONENT', player_id: B }],
+          },
+          forecast: { pct: 84, sigma_group: 0.4, provisional: false, assumption: null },
+          split: { your_side: 2.71, their_side: 2.8, gap: -0.09 },
+        },
+      ],
+    },
+  });
+
+  beforeEach(() => {
+    stubGate(transport, { id: ME, ratings: [rating('TENNIS')], hasPlayerProfile: true });
+    stubProfileSurface(transport, {
+      ...PROFILE_SURFACE_SERVED,
+      play_intents: { TENNIS: 'FOR_FUN' },
+    });
+    transport.on('POST', SEARCHES, () => json(tennisShortlist()));
+    transport.on('POST', LINEUPS, () => json(tennisLineup()));
+  });
+
+  /** Search, spend the latch, and let the engine seat the one empty seat a match has. */
+  async function openTheMatch() {
+    await launchSignedIn();
+    fireEvent.press(await screen.findByLabelText('Play'));
+    await screen.findByLabelText('Tuesday evening');
+
+    fireEvent.press(screen.getByLabelText(courtEntryLabel(TENNIS_SEATS)));
+    await screen.findByText(TENNIS_RANKING);
+    act(() => jest.advanceTimersByTime(searchingFloorMs({ kind: 'pool' })));
+
+    await waitFor(() => expect(screen).toHavePathname('/play/builder'));
+    await screen.findByLabelText(tennisCourt(1));
+
+    fireEvent.press(screen.getByLabelText(fillSeatsLabel({ seats: TENNIS_SEATS, filled: 1 })));
+    await screen.findByText(TENNIS_FILL);
+    act(() =>
+      jest.advanceTimersByTime(
+        searchingFloorMs({ kind: 'fill', seats: TENNIS_SEATS, collapsed: false }),
+      ),
+    );
+    await waitFor(() => expect(screen.queryByText(TENNIS_FILL)).toBeNull());
+  }
+
+  it('draws the same card with two players, and no way to rearrange them', async () => {
+    await openTheMatch();
+
+    expect(await screen.findByText('84%')).toBeTruthy();
+    // The other heading — one per court shape, and the mode is already in the eyebrow.
+    expect(screen.getByText('Balance forecast')).toBeTruthy();
+    expect(screen.getByText('2,71')).toBeTruthy();
+    expect(screen.getByText('2,80')).toBeTruthy();
+    // Signed, as it was served: the sign is which way the match leans, and stripping it here
+    // would be this screen doing arithmetic over a number it was handed.
+    expect(screen.getByText('\u22120,09')).toBeTruthy();
+    expect(
+      screen.getByLabelText(
+        splitRowLabel(
+          { yours: 'You', theirs: NAMES[B] ?? '' },
+          { yourSide: 2.71, theirSide: 2.8, gap: -0.09 },
+        ),
+      ),
+    ).toBeTruthy();
+
+    // One arrangement, so nothing to select — and *Start over* alone in the row.
+    expect(screen.queryByLabelText(EVEN_IT_OUT_LABEL)).toBeNull();
+    expect(screen.getByLabelText(START_OVER_LABEL)).toBeTruthy();
   });
 });
 

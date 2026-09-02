@@ -204,6 +204,21 @@ describe('the answer', () => {
   });
 
   /**
+   * **Three renames and not a subtraction.**
+   *
+   * `gap` is served, and the fixture's is one no subtraction of the two rounded strengths
+   * beside it produces — so a mapper that recomputed it would be visible here rather than only
+   * at the boundary the served number exists to keep the two sides agreeing at.
+   */
+  it('renames the split and derives none of it', () => {
+    const [only] = toArrangements([
+      arrangement({ split: { your_side: 3.2, their_side: 3.42, gap: -0.219 } }),
+    ]);
+
+    expect(only?.split).toEqual({ yourSide: 3.2, theirSide: 3.42, gap: -0.219 });
+  });
+
+  /**
    * An assumption this build has no words for **still leaves the figure provisional**. The
    * boolean is the engine's and is never re-derived from the code beside it, so a screen that
    * cannot state the caveat can still say there is one.
