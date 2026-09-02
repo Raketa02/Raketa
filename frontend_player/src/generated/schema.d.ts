@@ -869,7 +869,9 @@ export interface components {
             pairing_id: number;
             /**
              * Is Current
-             * @description The one being drawn: the best on a line-up, and the seat order you sent on a forecast.
+             * @description The one being drawn: **the evenest on a line-up**, and the seat order you sent on a forecast.
+             *
+             *     A line-up opens on the closest game of the three, in both modes — the same re-seating *Even it out* performs by hand. **Who is on the court is still the group objective's choice** and `group_reason` still says why; what this decides is only which way round they sit. `lineup.seats` follows it.
              */
             is_current: boolean;
             /**
@@ -886,6 +888,12 @@ export interface components {
             is_evenest: boolean;
             sides: components["schemas"]["SidesSchema"];
             forecast: components["schemas"]["ForecastSchema"];
+            /**
+             * @description The two side strengths the forecast was computed from, and the signed difference between them. **The same computation `pct` is** — an arrangement whose sides are equal reads `gap` 0 and the evenest `pct` of the three.
+             *
+             *     **A provisional arrangement carries one like any other**, under the same assumption `pct` is carried under: the empty seat is read as if the missing player matched the one already there, and `provisional` carries that caveat for all four numbers at once.
+             */
+            split: components["schemas"]["SplitSchema"];
         };
         /**
          * ArrangementSeatSchema
@@ -2137,18 +2145,19 @@ export interface components {
          *     was, and nothing load-bearing reads it — which is exactly the condition
          *     under which a self-reported field is safe to keep.
          *
-         *     **It widens; it never renames** (#280). The deck earned the fifth member:
-         *     ``POST /deck`` has no mode to read, so it reads the declaration, is refused
-         *     with ``play_intent_not_declared`` exactly as a search is, and draws the same
-         *     interstitial. Reporting that as ``SEARCH_SWITCH`` was a small untruth in the
-         *     one field whose whole job is to say which screen it was. The alternative
-         *     argued was to rename ``SEARCH_SWITCH`` to ``PLAY_SWITCH`` — one value true
-         *     of both Play surfaces rather than two that each name one — and it lost on
-         *     cost, not on taste: the code is stored verbatim in ``PlayIntentDeclared``
-         *     and read back through ``PlayIntentSurface(event.surface)``, so a rename is
-         *     an event migration bought on a field nothing branches on, while a widening
-         *     is one member and leaves every code already in a stream meaning what it
-         *     meant when it was written.
+         *     **It widened rather than renaming, and the reason was cost** (#280). The
+         *     deck earned the fifth member: ``POST /deck`` has no mode to read, so it
+         *     reads the declaration, is refused with ``play_intent_not_declared`` exactly
+         *     as a search is, and draws the same interstitial. Reporting that as
+         *     ``SEARCH_SWITCH`` was a small untruth in the one field whose whole job is to
+         *     say which screen it was. The alternative argued was to rename
+         *     ``SEARCH_SWITCH`` to ``PLAY_SWITCH`` — one value true of both Play surfaces
+         *     rather than two that each name one — and it lost on cost, not on taste: the
+         *     code is stored verbatim in ``PlayIntentDeclared`` and read back through
+         *     ``PlayIntentSurface(event.surface)``, so a rename is an event migration
+         *     bought on a field nothing branches on, while a widening is one member and
+         *     leaves every code already in a stream meaning what it meant when it was
+         *     written.
          * @enum {string}
          */
         PlayIntentSurface: "RATING_TAIL" | "SEARCH_SWITCH" | "DECK" | "DRIFT_PROMPT" | "PROFILE_SCREEN";
@@ -3296,6 +3305,47 @@ export interface components {
          * @enum {string}
          */
         SortOption: "BEST_FIT" | "CLOSEST" | "EVENEST" | "MOST_RELIABLE";
+        /**
+         * SplitSchema
+         * @description The two side strengths this arrangement's forecast was read from.
+         *
+         *     **The evidence behind the percentage**, and never a second score
+         *     (``docs/adr/0136``). ``pct`` says *how even*; this says *between what and
+         *     what*, on the Skill scale a player already reads levels on — which is
+         *     ``matchmaking-engine.md`` §12 rule 1 applied to the figure that was already
+         *     crossing, exactly as it put ``sigma_group`` beside ``pct``. The group
+         *     objective stays where ADR-0117 left it: recorded, and never returned.
+         *
+         *     **On the arrangement rather than on the forecast.** ``ForecastSchema`` is
+         *     *one type, everywhere it appears* and rides on every shortlist row's
+         *     ``would_be_forecast``; a response carries at most three arrangements and tens
+         *     of candidate rows, and this is a fact about an arrangement.
+         *
+         *     **These are numbers only the engine has.** A side's strength is not the mean
+         *     of the two people on it, so a client averaging seated levels would print a
+         *     different pair — which is the arithmetic ``the-play-screens.md`` §11.3
+         *     refuses, in the one check that looks for arithmetic rather than reading
+         *     intent.
+         */
+        SplitSchema: {
+            /**
+             * Your Side
+             * @description Your half's combined strength, on the Skill scale. **You are always side `A`** — there is no arrangement in which you cross the net.
+             */
+            your_side: number;
+            /**
+             * Their Side
+             * @description Theirs, on the same scale
+             */
+            their_side: number;
+            /**
+             * Gap
+             * @description `your_side` − `their_side`, **signed**. Served rather than left to a subtraction: a client subtracting two rounded figures and an engine subtracting two unrounded ones disagree at the boundary, and the card prints all three.
+             *
+             *     Signed because the bar takes an *advantage* — an unsigned gap would leave the client deciding which half of it is bigger, which is the same arithmetic in a smaller disguise.
+             */
+            gap: number;
+        };
         /**
          * Sport
          * @description The four sports Raketa rates, as a closed enum.

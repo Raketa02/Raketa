@@ -172,6 +172,7 @@ const ONE_WAY: Wire['ArrangementSchema'] = {
     ],
   },
   forecast: { pct: 78, sigma_group: 0.41, provisional: false, assumption: null },
+  split: { your_side: 3.2, their_side: 3.42, gap: -0.22 },
 };
 
 /** ⚡'s answer with every seat taken — the court a send goes out from. */

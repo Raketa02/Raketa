@@ -111,6 +111,55 @@ class PersonalFacts:
 
 @final
 @dataclass(frozen=True, slots=True)
+class Split:
+    """The two side strengths a forecast was read from, and their difference.
+
+    **The evidence behind the percentage.** ``pct`` says *how even*; this says
+    *between what and what*, on the scale players already read levels on — which
+    is ``docs/adr/0136``'s whole boundary: what crosses is an **input** to a
+    figure already served, and never a second score. ``G`` stays where it is.
+
+    A side's strength is not the mean of the two people on it
+    (``the-group-objective.md`` §3.1 — the weaker partner sets more of it), so
+    these are numbers only the engine has: a client averaging seated levels would
+    print a different pair, which is the arithmetic
+    ``the-play-screens.md`` §11.3 refuses.
+
+    **``gap`` is a property and signed.** A property, so there is no constructor
+    that could take a difference its own two strengths do not make, and the card
+    cannot print three numbers two of which subtract to the third. Signed,
+    because the client's bar takes an *advantage* — your side's strength minus
+    theirs — and an unsigned gap would leave it deciding which half is bigger,
+    which is the same arithmetic in a smaller disguise.
+    """
+
+    #: The searcher's own side. They never cross the net, so this is always ours.
+    your_side: float
+    their_side: float
+
+    @property
+    def gap(self) -> float:
+        """``your_side − their_side``. **Signed, and never re-derived.**"""
+
+        return self.your_side - self.their_side
+
+    @property
+    def side_gap(self) -> float:
+        """How far apart the sides are, however round. **What balance reads.**
+
+        The forecast's own input and the number *Even it out* selects on, taken
+        off the same two strengths the card prints — so the arrangement a player
+        is offered and the split beside it cannot come from two subtractions.
+
+        The codebase's own word, rather than a fresh one: *distance* already
+        means kilometres here.
+        """
+
+        return abs(self.gap)
+
+
+@final
+@dataclass(frozen=True, slots=True)
 class Forecast:
     """How even a game is forecast to be. **One type, everywhere it appears.**
 
@@ -368,10 +417,22 @@ class Arranged:
 
     arrangement: Arrangement
     forecast: Forecast
-    #: How far apart the two sides' strengths are. **The min-gap arrangement is
-    #: what *Even it out* selects**, and it is a different question from
-    #: ``argmax G`` — the new fact the builder can state is that the two differ.
-    side_gap: float
+    #: The two side strengths this forecast was read from. **The gap is theirs**,
+    #: rather than a field beside them.
+    split: Split
+
+    @property
+    def side_gap(self) -> float:
+        """How far apart the two sides are. **The min-gap arrangement is what
+        *Even it out* selects**, and it is a different question from ``argmax
+        G`` — the new fact the builder can state is that the two differ.
+
+        Read off the split rather than stored beside it, so the number the
+        arrangement is selected by and the numbers the card prints are one
+        computation.
+        """
+
+        return self.split.side_gap
 
 
 @final
@@ -418,10 +479,18 @@ class GroupScore:
     degraded_terms: tuple[GroupTerm, ...]
     #: The arranged forecast for these four, this way round.
     forecast: Forecast
-    #: How far apart the two sides' strengths are. **The min-gap arrangement is
-    #: what *Even it out* selects**, and it is a different question from
-    #: ``argmax G`` — the new fact the builder can state is that the two differ.
-    side_gap: float
+    #: The two side strengths that forecast was read from.
+    split: Split
+
+    @property
+    def side_gap(self) -> float:
+        """How far apart the two sides are — **what *Even it out* selects on.**
+
+        Off the split, for the reason :class:`Arranged`'s is: the objective, the
+        percent, the two strengths and this are one computation.
+        """
+
+        return self.split.side_gap
 
     @property
     def objective(self) -> float:
@@ -441,7 +510,7 @@ class GroupScore:
         return Arranged(
             arrangement=self.arrangement,
             forecast=self.forecast,
-            side_gap=self.side_gap,
+            split=self.split,
         )
 
     def contribution_of(self, term: GroupTerm) -> float:
@@ -556,4 +625,5 @@ __all__ = [
     "Seated",
     "Seating",
     "SigmaCombiner",
+    "Split",
 ]

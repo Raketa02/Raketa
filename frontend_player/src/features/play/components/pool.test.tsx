@@ -191,6 +191,9 @@ const forecastResponse = (): Wire['ForecastResponse'] => ({
         provisional: true,
         assumption: 'EMPTY_SEAT_MATCHES_ITS_PARTNER',
       },
+      // A provisional arrangement carries a split like any other, under the
+      // assumption the forecast is carried under.
+      split: { your_side: 3.2, their_side: 3.53, gap: -0.33 },
     },
   ],
   engine_version: 'matchfit-v1',

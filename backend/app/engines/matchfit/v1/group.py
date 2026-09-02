@@ -71,6 +71,7 @@ from app.engines.matchfit.grouping import (
     PersonalFacts,
     Seated,
     SigmaCombiner,
+    Split,
 )
 from app.engines.matchfit.ruleset import (
     WEIGHT_TOTAL,
@@ -364,22 +365,28 @@ def _predicted(
     rules: BalanceRules,
     combine: SigmaCombiner,
     seats_per_side: int = 2,
-) -> tuple[float, float, float]:
-    """The unrounded forecast, the group σ behind it, and the gap it read.
+) -> tuple[float, float, Split]:
+    """The unrounded forecast, the group σ behind it, and the split it read.
 
     Unrounded because the objective weighs this and the card prints it, and
     rounding a value about to be multiplied by 34 would move ``G`` for nothing —
-    the same split ``predicted_balance`` makes between its reading and its
-    evidence. The gap comes back beside them rather than being re-derived by the
-    caller that wants it, because *Even it out* selects on exactly the number
-    this forecast was computed from.
+    the same division ``predicted_balance`` makes between its reading and its
+    evidence. **The split comes back beside them rather than being re-derived by
+    whoever wants it**, because *Even it out* selects on exactly the distance
+    this forecast was computed from and the card prints exactly the two
+    strengths that distance is between: four numbers, one computation, and no
+    second subtraction anywhere for them to disagree in.
+
+    ``side_a`` is the searcher's own side wherever an arrangement is being read,
+    and that is what fixes the split's orientation — there is no arrangement in
+    which the searcher crosses the net.
     """
 
     a = _seated_to_fill(side_a, seats_per_side)
     b = _seated_to_fill(side_b, seats_per_side)
     sigma = combine([level.sigma for level in a + b])
-    gap = abs(_strength(a, rules) - _strength(b, rules))
-    return forecast_pct(gap, sigma, rules), sigma, gap
+    split = Split(your_side=_strength(a, rules), their_side=_strength(b, rules))
+    return forecast_pct(split.side_gap, sigma, rules), sigma, split
 
 
 def _seated_to_fill(
@@ -477,7 +484,7 @@ def objective(
         )
         is not None
     )
-    pct, sigma, gap = _predicted(
+    pct, sigma, split = _predicted(
         *_sides(searcher, arrangement), ruleset.balance, combine
     )
     delta = seat_delta(searcher, partner, ruleset)
@@ -537,7 +544,7 @@ def objective(
         # Never provisional: an arrangement has four seats in it by
         # construction, and a line-up with an empty one has no ``G`` to compute.
         forecast=_forecast(pct, sigma, partial=False),
-        side_gap=gap,
+        split=split,
     )
 
 
@@ -580,7 +587,7 @@ def arranged(
     """
 
     ours, theirs = _sides(searcher, arrangement)
-    pct, sigma, gap = _predicted(
+    pct, sigma, split = _predicted(
         ours, theirs, ruleset.balance, combine, seats_per_side
     )
     return Arranged(
@@ -590,7 +597,7 @@ def arranged(
             sigma,
             partial=len(ours) < seats_per_side or len(theirs) < seats_per_side,
         ),
-        side_gap=gap,
+        split=split,
     )
 
 

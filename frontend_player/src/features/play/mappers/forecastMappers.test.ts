@@ -49,6 +49,7 @@ function arrangement(
       ],
     },
     forecast: forecast(),
+    split: { your_side: 3.2, their_side: 3.42, gap: -0.22 },
     ...overrides,
   };
 }

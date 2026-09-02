@@ -2065,7 +2065,7 @@
           "is_current": {
             "type": "boolean",
             "title": "Is Current",
-            "description": "The one being drawn: the best on a line-up, and the seat order you sent on a forecast."
+            "description": "The one being drawn: **the evenest on a line-up**, and the seat order you sent on a forecast.\n\nA line-up opens on the closest game of the three, in both modes \u2014 the same re-seating *Even it out* performs by hand. **Who is on the court is still the group objective's choice** and `group_reason` still says why; what this decides is only which way round they sit. `lineup.seats` follows it."
           },
           "is_best": {
             "type": "boolean",
@@ -2082,6 +2082,10 @@
           },
           "forecast": {
             "$ref": "#/components/schemas/ForecastSchema"
+          },
+          "split": {
+            "$ref": "#/components/schemas/SplitSchema",
+            "description": "The two side strengths the forecast was computed from, and the signed difference between them. **The same computation `pct` is** \u2014 an arrangement whose sides are equal reads `gap` 0 and the evenest `pct` of the three.\n\n**A provisional arrangement carries one like any other**, under the same assumption `pct` is carried under: the empty seat is read as if the missing player matched the one already there, and `provisional` carries that caveat for all four numbers at once."
           }
         },
         "type": "object",
@@ -2090,7 +2094,8 @@
           "is_current",
           "is_evenest",
           "sides",
-          "forecast"
+          "forecast",
+          "split"
         ],
         "title": "ArrangementSchema",
         "description": "One way round, with its own forecast. **All of them cross.**\n\nThere are exactly three pairings of four people and the engine walks all\nthree to choose. Returning what it already knows costs nothing and makes\n*Even it out* a **selection** rather than a calculation \u2014 every swap the\nbuilder permits is one of these, so there is no arithmetic left for a client\nto be tempted by."
@@ -3575,7 +3580,7 @@
           "PROFILE_SCREEN"
         ],
         "title": "PlayIntentSurface",
-        "description": "Which screen a declaration was made on.\n\n``ConsentSurface``'s precedent in this same context, and it obeys the same\nrule about what it is *for*: it is context recorded beside a fact, never a\nthing any decision branches on.\n\n**It is client-asserted and a client could lie about it** (ADR-0094). That\nis accepted because the client is the only party that knows which screen it\nwas, and nothing load-bearing reads it \u2014 which is exactly the condition\nunder which a self-reported field is safe to keep.\n\n**It widens; it never renames** (#280). The deck earned the fifth member:\n``POST /deck`` has no mode to read, so it reads the declaration, is refused\nwith ``play_intent_not_declared`` exactly as a search is, and draws the same\ninterstitial. Reporting that as ``SEARCH_SWITCH`` was a small untruth in the\none field whose whole job is to say which screen it was. The alternative\nargued was to rename ``SEARCH_SWITCH`` to ``PLAY_SWITCH`` \u2014 one value true\nof both Play surfaces rather than two that each name one \u2014 and it lost on\ncost, not on taste: the code is stored verbatim in ``PlayIntentDeclared``\nand read back through ``PlayIntentSurface(event.surface)``, so a rename is\nan event migration bought on a field nothing branches on, while a widening\nis one member and leaves every code already in a stream meaning what it\nmeant when it was written."
+        "description": "Which screen a declaration was made on.\n\n``ConsentSurface``'s precedent in this same context, and it obeys the same\nrule about what it is *for*: it is context recorded beside a fact, never a\nthing any decision branches on.\n\n**It is client-asserted and a client could lie about it** (ADR-0094). That\nis accepted because the client is the only party that knows which screen it\nwas, and nothing load-bearing reads it \u2014 which is exactly the condition\nunder which a self-reported field is safe to keep.\n\n**It widened rather than renaming, and the reason was cost** (#280). The\ndeck earned the fifth member: ``POST /deck`` has no mode to read, so it\nreads the declaration, is refused with ``play_intent_not_declared`` exactly\nas a search is, and draws the same interstitial. Reporting that as\n``SEARCH_SWITCH`` was a small untruth in the one field whose whole job is to\nsay which screen it was. The alternative argued was to rename\n``SEARCH_SWITCH`` to ``PLAY_SWITCH`` \u2014 one value true of both Play surfaces\nrather than two that each name one \u2014 and it lost on cost, not on taste: the\ncode is stored verbatim in ``PlayIntentDeclared`` and read back through\n``PlayIntentSurface(event.surface)``, so a rename is an event migration\nbought on a field nothing branches on, while a widening is one member and\nleaves every code already in a stream meaning what it meant when it was\nwritten."
       },
       "PlayerCardSchema": {
         "properties": {
@@ -5098,6 +5103,33 @@
         ],
         "title": "SortOption",
         "description": "The re-sorts a client may offer over rows it already holds.\n\n**Server-driven, and a sort that would reorder nothing is not drawn.** A\nclient deriving offerability from ``degraded_terms`` would be encoding a\nsort-to-term mapping, which is the objection that promoted ``distance_km``\nout of the distance evidence in the first place.\n\n``MOST_RELIABLE`` is in the vocabulary and is never offered today: the\nreliability term stands down for everybody, so the control **is not drawn**\nrather than drawn and inert."
+      },
+      "SplitSchema": {
+        "properties": {
+          "your_side": {
+            "type": "number",
+            "title": "Your Side",
+            "description": "Your half's combined strength, on the Skill scale. **You are always side `A`** \u2014 there is no arrangement in which you cross the net."
+          },
+          "their_side": {
+            "type": "number",
+            "title": "Their Side",
+            "description": "Theirs, on the same scale"
+          },
+          "gap": {
+            "type": "number",
+            "title": "Gap",
+            "description": "`your_side` \u2212 `their_side`, **signed**. Served rather than left to a subtraction: a client subtracting two rounded figures and an engine subtracting two unrounded ones disagree at the boundary, and the card prints all three.\n\nSigned because the bar takes an *advantage* \u2014 an unsigned gap would leave the client deciding which half of it is bigger, which is the same arithmetic in a smaller disguise."
+          }
+        },
+        "type": "object",
+        "required": [
+          "your_side",
+          "their_side",
+          "gap"
+        ],
+        "title": "SplitSchema",
+        "description": "The two side strengths this arrangement's forecast was read from.\n\n**The evidence behind the percentage**, and never a second score\n(``docs/adr/0136``). ``pct`` says *how even*; this says *between what and\nwhat*, on the Skill scale a player already reads levels on \u2014 which is\n``matchmaking-engine.md`` \u00a712 rule 1 applied to the figure that was already\ncrossing, exactly as it put ``sigma_group`` beside ``pct``. The group\nobjective stays where ADR-0117 left it: recorded, and never returned.\n\n**On the arrangement rather than on the forecast.** ``ForecastSchema`` is\n*one type, everywhere it appears* and rides on every shortlist row's\n``would_be_forecast``; a response carries at most three arrangements and tens\nof candidate rows, and this is a fact about an arrangement.\n\n**These are numbers only the engine has.** A side's strength is not the mean\nof the two people on it, so a client averaging seated levels would print a\ndifferent pair \u2014 which is the arithmetic ``the-play-screens.md`` \u00a711.3\nrefuses, in the one check that looks for arithmetic rather than reading\nintent."
       },
       "Sport": {
         "type": "string",

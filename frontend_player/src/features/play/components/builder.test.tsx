@@ -191,6 +191,13 @@ function arrangement(
       provisional: facts.provisional ?? false,
       assumption: facts.provisional === true ? 'EMPTY_SEAT_MATCHES_ITS_PARTNER' : null,
     },
+    // Derived from this fixture's own pct, so the three ways round stay one
+    // computation the way the server's are: the evenest reads the smallest gap.
+    split: {
+      your_side: 3.2,
+      their_side: 3.2 - (100 - facts.pct) / 100,
+      gap: (100 - facts.pct) / 100,
+    },
   };
 }
 

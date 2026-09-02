@@ -41,6 +41,7 @@ from app.engines.matchfit.v1.fit import score
 from app.engines.matchfit.v1.group import (
     CROSS_TERMS,
     arrange,
+    arranged,
     arrangements,
     best,
     cross_reading,
@@ -770,6 +771,159 @@ def test_the_group_sigma_is_combined_outside_the_engine() -> None:
     assert combine_group_sigma(sigmas) == pytest.approx(
         math.sqrt(sum(sigma * sigma for sigma in sigmas))
     )
+
+
+# ---------------------------------------------------------------------------
+# The split
+# ---------------------------------------------------------------------------
+
+
+def test_the_split_is_the_two_strengths_the_forecast_was_read_from() -> None:
+    """**Four views of one computation**, and never four numbers.
+
+    ``pct`` says *how even*, and the split says *between what and what*. The one
+    failure this exists to prevent is a card reading ``gap 0,00`` beside
+    ``74% - fairly even``, which is what a client averaging seated levels for
+    itself would print — so the two strengths are asserted to be the ones the
+    percent was computed from, on the arrangement rather than on the forecast.
+    """
+
+    viewer = searcher(mu=3.00)
+    three = (
+        seated(player_id="a", mu=3.20),
+        seated(player_id="b", mu=3.50),
+        seated(player_id="c", mu=3.80),
+    )
+    ways = arrangements(viewer, three, LIVE_RULESET, COMBINE)
+    for one in ways:
+        split = one.split
+        assert split.gap == pytest.approx(split.your_side - split.their_side)
+        # The unsigned reading *Even it out* selects on is the same number, so
+        # there is no second gap for the two to disagree about.
+        assert one.side_gap == pytest.approx(abs(split.gap))
+
+    # **The sign is not a constant of the four**, it is a fact about the way
+    # round: seating the strongest of the three beside the searcher puts their
+    # side ahead, and the other two put it behind. An unsigned gap would leave
+    # the client deciding which half of the bar is bigger, which is the same
+    # arithmetic in a smaller disguise.
+    gaps = sorted(round(one.split.gap, 3) for one in ways)
+    assert gaps == [-0.545, -0.245, 0.025]
+
+
+def test_the_evenest_split_is_the_one_that_reads_zero() -> None:
+    """The acceptance criterion, stated as one assertion.
+
+    Four equal levels put every arrangement at parity, so the gap is nought and
+    the percent is the highest the three can reach. A set where the two
+    disagreed would be the bug.
+    """
+
+    flat = arrangements(searcher(mu=3.10), _levelled(), LIVE_RULESET, COMBINE)
+    for one in flat:
+        assert one.split.your_side == pytest.approx(one.split.their_side)
+        assert one.split.gap == pytest.approx(0.0)
+    assert evenest(flat).forecast.pct == max(one.forecast.pct for one in flat)
+
+
+def _levelled() -> tuple[Seated, Seated, Seated]:
+    return (
+        seated(player_id="a", mu=3.10),
+        seated(player_id="b", mu=3.10),
+        seated(player_id="c", mu=3.10),
+    )
+
+
+def test_the_side_the_searcher_is_not_on_is_the_one_called_theirs() -> None:
+    """``your_side`` is the searcher's own, always and by construction.
+
+    There is no arrangement in which the searcher crosses the net, so the
+    orientation the client's bar takes is fixed here rather than negotiated.
+    """
+
+    strong = arranged(
+        searcher(mu=4.00),
+        Arrangement(
+            partner=seated(player_id="a", mu=4.00),
+            opponents=(
+                seated(player_id="b", mu=2.00),
+                seated(player_id="c", mu=2.00),
+            ),
+        ),
+        LIVE_RULESET,
+        COMBINE,
+    )
+    assert strong.split.your_side == pytest.approx(4.00)
+    assert strong.split.their_side == pytest.approx(2.00)
+    assert strong.split.gap == pytest.approx(2.00)
+
+
+def test_a_singles_split_is_two_players_and_their_difference() -> None:
+    """One seat a side, so a side's strength is the player sitting in it."""
+
+    only = arranged(
+        searcher(mu=3.40),
+        Arrangement(partner=None, opponents=(seated(player_id="a", mu=3.00),)),
+        LIVE_RULESET,
+        COMBINE,
+        seats_per_side=1,
+    )
+    assert only.split.your_side == pytest.approx(3.40)
+    assert only.split.their_side == pytest.approx(3.00)
+    assert only.split.gap == pytest.approx(0.40)
+    assert only.forecast.provisional is False
+
+
+def test_a_provisional_split_reads_the_empty_seat_the_way_pct_does() -> None:
+    """All four numbers are carried under **one** assumption, or none of them.
+
+    The empty seat is read as if the missing player matched the one already
+    there, so seating that player's twin fills the seat without any of the four
+    moving — and ``provisional`` goes on carrying the caveat for all of them at
+    once.
+    """
+
+    viewer = searcher()
+    partner = seated(player_id="a", mu=2.80)
+    lone = seated(player_id="b", mu=2.95)
+    twin = seated(player_id="c", mu=2.95)
+
+    half = arranged(
+        viewer, Arrangement(partner=partner, opponents=(lone,)), LIVE_RULESET, COMBINE
+    )
+    full = arranged(
+        viewer,
+        Arrangement(partner=partner, opponents=(lone, twin)),
+        LIVE_RULESET,
+        COMBINE,
+    )
+
+    assert half.forecast.provisional is True
+    assert full.forecast.provisional is False
+    assert half.split == full.split
+
+
+def test_the_objective_and_the_arrangement_publish_the_same_split() -> None:
+    """A projection and never a second value.
+
+    ``GroupScore.arranged`` builds what a screen may see; a split constructed
+    apart from the score's own is a fourth number nobody wrote.
+    """
+
+    scored = objective(
+        searcher(mu=3.00),
+        Arrangement(
+            partner=seated(player_id="a", mu=3.20),
+            opponents=(
+                seated(player_id="b", mu=3.50),
+                seated(player_id="c", mu=3.80),
+            ),
+        ),
+        LIVE_RULESET,
+        COMBINE,
+    )
+    assert scored.arranged.split == scored.split
+    assert scored.arranged.side_gap == pytest.approx(scored.side_gap)
 
 
 # ---------------------------------------------------------------------------

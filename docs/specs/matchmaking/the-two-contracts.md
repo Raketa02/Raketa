@@ -317,7 +317,7 @@ is given ([`ranking-weights.md`](ranking-weights.md) §13).
 lineup: {
   arrangements: [ { pairing_id, is_current, is_best, is_evenest,
                     sides: { A: [seat], B: [seat] },
-                    forecast: <Forecast> } ],
+                    forecast: <Forecast>, split: <Split> } ],
   seats: [ { side, seat_index, relationship: SELF | PARTNER | OPPONENT,
              candidate? , unfilled_reason?: code } ],
   group_reason: EVENEST_ARRANGEMENT | STRONGEST_WEAKEST_SEAT | BEST_AVERAGE_FIT
@@ -333,6 +333,16 @@ that they **differ** — which happens precisely when a four's levels are near-e
 nothing left to say. **`G` itself is never returned**: a second score the player must trust is
 worse than none, so the evidence half is paid by one closed code naming the term with the largest
 margin between the winning combination and the runner-up.
+
+**`is_current` on a line-up is the *evenest* arrangement**, in both modes
+([#289](https://github.com/Raketa02/Raketa/issues/289)). Who is on the court does not change:
+the group objective still chose the four and `group_reason` still says why. What changes is
+which way round they sit — the same re-seating *Even it out* performs by hand, so a builder
+that opened on `is_best` would be showing a court the player's first tap undoes. `is_best`
+keeps its meaning and keeps crossing, and `lineup.seats` follows `is_current`, so the seating
+in the response is the evenest seating. **`ForecastResponse.is_current` is untouched** — there
+it means *the seat order you sent*, and a client that sends an arrangement must get that one
+back marked current or a swap cannot be drawn.
 
 **All three arrangements cross, each with its own forecast.** There are exactly three pairings
 of four people and `arrange()` already walks all of them to pick the min-gap one. Returning
@@ -370,6 +380,7 @@ One type, everywhere it appears:
 
 ```
 Forecast: { pct, sigma_group, provisional: bool, assumption?: code }
+Split:    { your_side, their_side, gap }        // on the arrangement, not the forecast
 ```
 
 **`provisional` travels inside the forecast, not beside it.** The failure §9.9 is guarding
@@ -381,6 +392,42 @@ words.
 
 §9.9's equality test stands: the moment the last seat is taken, the provisional figure and the
 arranged figure agree exactly.
+
+**The split is the evidence behind the percentage** ([#289](https://github.com/Raketa02/Raketa/issues/289),
+[ADR-0136](../../adr/0136-the-split-is-evidence-for-the-forecast-not-a-second-score.md)). The card
+the builder is built against prints two side strengths, the gap between them and a two-segment
+bar, and every one of those is a number **only the engine has**: a side's strength is not the
+mean of the two people on it (§3.1's `TEAM_STRENGTH_SHARE`), so a client drawing them would be
+averaging seated levels — which is §11.3's *"no forecast arithmetic on the client"*, the one rule
+whose check is looking for arithmetic rather than reading intent. §12 rule 1 is the argument:
+**name the evidence, not a category** — the same rule that put `sigma_group` beside `pct`. `pct`
+says *how even*; the split says *between what and what*, on the scale players already read levels
+on.
+
+**It is not the group objective and must not become one.** `is_best`'s own refusal — *a second
+score you would have to trust is worse than none* — stands unchanged, and `G` still never
+crosses in any shape. What crosses here is an **input** to a figure already served.
+
+Four rules, each a way the four numbers could come apart:
+
+- **On the arrangement, not on the `Forecast`.** `Forecast` is *one type, everywhere it appears*
+  and rides on every shortlist row's `would_be_forecast`; a response carries at most three
+  arrangements and tens of candidate rows, and this is a fact about an arrangement.
+- **`gap` is served rather than left to a subtraction.** A client subtracting two rounded figures
+  and an engine subtracting two unrounded ones disagree at the boundary, and the card prints all
+  three.
+- **`gap` is signed** — `your_side − their_side` — because the client's bar takes an *advantage*
+  ([`design-system.md`](../../../frontend_player/docs/design-system.md) 7.11: `BalanceBar.advantage`
+  is *your side's strength minus theirs*). An unsigned gap would leave the client deciding which
+  half of the bar is bigger, which is the same arithmetic in a smaller disguise.
+- **The four numbers are one computation.** `pct`, `your_side`, `their_side` and `gap` come off
+  one reading of the two sides — a card showing `gap 0,00` beside `74% · fairly even` is the
+  failure this exists to prevent.
+
+**Singles** carries one arrangement and no swap, so the split is two player strengths and their
+difference. **A provisional arrangement carries a split like any other**, under the same
+assumption `pct` is carried under — the empty seat is read *as if the missing player matched the
+one already there* — and `provisional` carries that caveat for all four numbers at once.
 
 **`would_be_forecast`** is §8.2's one exception to client-side sorting: *Evenest* with a single
 seat left needs an arranged forecast per candidate, so the engine precomputes one per shortlist

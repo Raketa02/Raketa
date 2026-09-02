@@ -37,7 +37,7 @@ from uuid import UUID
 
 from app.kernel import InvariantViolated
 
-from app.engines.matchfit.grouping import Arranged, Forecast
+from app.engines.matchfit.grouping import Arranged, Forecast, Split
 from app.modules.matchmaking.application.forecast_lineup import ForecastAnswer
 from app.modules.matchmaking.application.read_back_search import ReadBackAnswer
 from app.modules.matchmaking.application.run_lineup_search import LineupAnswer
@@ -71,6 +71,7 @@ from app.modules.matchmaking.presentation.schemas import (
     SearchEnvelope,
     ShortlistResponse,
     SidesSchema,
+    SplitSchema,
     WireInclusionReason,
     WithheldRowSchema,
 )
@@ -183,7 +184,7 @@ def render_lineup(answer: LineupAnswer, photos: PhotoLinks) -> LineupResponse:
             seats=[_seat(seat) for seat in answer.seats],
             arrangements=_arrangements(
                 answer.arrangements,
-                current=answer.drawn,
+                current=answer.evenest,
                 best=answer.best,
                 evenest=answer.evenest,
             ),
@@ -276,11 +277,27 @@ def _arrangements(
                     ],
                 ),
                 "forecast": _forecast(one.forecast),
+                "split": _split(one.split),
                 **({} if best is None else {"is_best": one is best}),
             }
         )
         for position, (one, seats) in enumerate(ways, start=1)
     ]
+
+
+def _split(split: Split) -> SplitSchema:
+    """The two strengths and the gap between them, **passed through.**
+
+    ``gap`` is read off the engine's own value rather than subtracted here: the
+    whole point of serving it is that there is one subtraction in the system, and
+    a renderer doing its own would be the second one.
+    """
+
+    return SplitSchema(
+        your_side=split.your_side,
+        their_side=split.their_side,
+        gap=split.gap,
+    )
 
 
 def _arranged_seat(seat: LineupSeat) -> ArrangementSeatSchema:

@@ -83,6 +83,123 @@ async def test_a_lineup_seats_a_four_with_every_arrangement_and_a_reason(
     assert body["search"]["optimised_for"] == "SEARCHER"
 
 
+async def test_the_split_is_the_evidence_behind_the_percentage(
+    client, session_factory, candidate_source, searcher
+):
+    """*90% - very even* says how even; the split says **between what and what.**
+
+    Four views of one computation, on the scale players already read levels on.
+    A card reading ``gap 0,00`` beside ``74%`` is the failure this exists to
+    prevent, so the three numbers are asserted against each other and against
+    the percent they were read from — and the gap is **served** rather than left
+    to a subtraction, because a client subtracting two rounded figures and an
+    engine subtracting two unrounded ones disagree at the boundary.
+    """
+
+    await _a_city(client, session_factory, candidate_source, searcher["mu"])
+
+    lineup = (await world.lineup(client, searcher["token"])).json()["lineup"]
+
+    for arrangement in lineup["arrangements"]:
+        split = arrangement["split"]
+        assert split["gap"] == pytest.approx(
+            split["your_side"] - split["their_side"]
+        )
+    # The evenest of the three is the one closest to nought, and it carries the
+    # highest percent: `pct` and the split cannot point at different arrangements.
+    evenest = next(
+        one for one in lineup["arrangements"] if one["is_evenest"]
+    )
+    assert abs(evenest["split"]["gap"]) == min(
+        abs(one["split"]["gap"]) for one in lineup["arrangements"]
+    )
+    assert evenest["forecast"]["pct"] == max(
+        one["forecast"]["pct"] for one in lineup["arrangements"]
+    )
+
+
+async def test_a_line_up_opens_on_the_evenest_arrangement(
+    client, session_factory, candidate_source, searcher
+):
+    """**Who is on the court does not change; which way round they sit does.**
+
+    The group objective still chose the four and ``group_reason`` still says
+    why. What the builder opens on is the closest game of the three — the same
+    re-seating *Even it out* already performs by hand — and ``lineup.seats``
+    follows ``is_current``, so the seating in the response is that seating.
+    """
+
+    await _a_city(client, session_factory, candidate_source, searcher["mu"])
+
+    body = (await world.lineup(client, searcher["token"])).json()
+    lineup = body["lineup"]
+
+    current = next(one for one in lineup["arrangements"] if one["is_current"])
+    assert current["is_evenest"] is True
+    assert sum(one["is_current"] for one in lineup["arrangements"]) == 1
+    # `is_best` is untouched and still crosses, and the two may differ.
+    assert sum(one["is_best"] for one in lineup["arrangements"]) == 1
+    assert lineup["group_reason"]
+
+    # `lineup.seats` follows `is_current`, seat for seat.
+    def _who(seats):
+        return {seat["seat_index"]: seat.get("player_id") for seat in seats}
+
+    assert _who(lineup["seats"]) == _who(
+        current["sides"]["A"] + current["sides"]["B"]
+    )
+
+
+async def test_a_line_up_opens_on_the_evenest_arrangement_when_filling_seats(
+    client, session_factory, candidate_source, searcher
+):
+    """The same in both modes. Hand-seating somebody changes who, never which
+    way round the four is drawn."""
+
+    await _a_city(client, session_factory, candidate_source, searcher["mu"])
+    shortlist = (await world.search(client, searcher["token"])).json()
+
+    body = (
+        await world.lineup(
+            client,
+            searcher["token"],
+            locked_seats=[shortlist["candidates"][0]["player_id"]],
+        )
+    ).json()
+
+    assert body["search"]["optimised_for"] == "GROUP"
+    current = next(
+        one for one in body["lineup"]["arrangements"] if one["is_current"]
+    )
+    assert current["is_evenest"] is True
+
+
+async def test_a_provisional_arrangement_carries_a_split_like_any_other(
+    client, session_factory, candidate_source, searcher
+):
+    """One caveat over all four numbers, or over none of them.
+
+    The empty seat is read as if the missing player matched the one already
+    there — exactly as ``pct`` already is — and ``provisional`` goes on carrying
+    that for the whole arrangement rather than for the percent alone.
+    """
+
+    for name, delta in (("ana", 0.0), ("bo", 0.05)):
+        await world.a_candidate(
+            client, session_factory, name, mu=searcher["mu"] + delta
+        )
+    await world.fold_the_log(session_factory, candidate_source)
+
+    lineup = (await world.lineup(client, searcher["token"])).json()["lineup"]
+
+    for arrangement in lineup["arrangements"]:
+        assert arrangement["forecast"]["provisional"] is True
+        split = arrangement["split"]
+        assert split["gap"] == pytest.approx(
+            split["your_side"] - split["their_side"]
+        )
+
+
 async def test_a_line_up_asks_about_the_week_it_was_given(
     client, session_factory, candidate_source, searcher
 ):

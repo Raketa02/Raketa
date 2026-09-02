@@ -145,6 +145,81 @@ async def test_the_provisional_figure_becomes_exactly_the_final_figure(
     assert settled["forecast"]["pct"] == provisional["forecast"]["pct"]
 
 
+async def test_a_forecast_carries_the_split_and_still_opens_on_what_was_sent(
+    client, session_factory, candidate_source, searcher
+):
+    """The split rides here in the same shape, and ``is_current`` does not move.
+
+    On a forecast ``is_current`` means *the seat order you sent* — a client that
+    sends an arrangement must get that one back marked current or a swap cannot
+    be drawn — so making a **line-up** open on the evenest leaves this route
+    exactly where it was.
+    """
+
+    await _a_city(client, session_factory, candidate_source, searcher["mu"])
+    shortlist = (await world.search(client, searcher["token"])).json()
+    players = [row["player_id"] for row in shortlist["candidates"]]
+
+    body = (
+        await world.forecast(
+            client,
+            searcher["token"],
+            search_id=shortlist["search"]["search_id"],
+            players=players,
+        )
+    ).json()
+
+    assert body["arrangements"][0]["is_current"] is True
+    for arrangement in body["arrangements"]:
+        split = arrangement["split"]
+        assert split["gap"] == pytest.approx(
+            split["your_side"] - split["their_side"]
+        )
+    # The one the searcher sent need not be the evenest, and when it is not the
+    # response says so with two booleans rather than by re-ordering the list.
+    evenest = next(one for one in body["arrangements"] if one["is_evenest"])
+    assert abs(evenest["split"]["gap"]) == min(
+        abs(one["split"]["gap"]) for one in body["arrangements"]
+    )
+
+
+async def test_a_provisional_forecast_carries_the_split_it_assumed(
+    client, session_factory, candidate_source, searcher
+):
+    """Filling the seat with the twin the figure assumed moves none of the four."""
+
+    for name, mu in (
+        ("ana", searcher["mu"]),
+        ("bo", searcher["mu"] + 0.05),
+        ("twin", searcher["mu"] + 0.05),
+    ):
+        await world.a_candidate(client, session_factory, name, mu=mu)
+    await world.fold_the_log(session_factory, candidate_source)
+    shortlist = (await world.search(client, searcher["token"])).json()
+    by_name = {
+        row["player_card"]["nickname"]: row["player_id"]
+        for row in shortlist["candidates"]
+    }
+    partner, lone, twin = by_name["ana"], by_name["bo"], by_name["twin"]
+
+    async def sent(players):
+        return (
+            await world.forecast(
+                client,
+                searcher["token"],
+                search_id=shortlist["search"]["search_id"],
+                players=players,
+            )
+        ).json()["arrangements"][0]
+
+    half = await sent([partner, lone])
+    full = await sent([partner, lone, twin])
+
+    assert half["forecast"]["provisional"] is True
+    assert full["forecast"]["provisional"] is False
+    assert half["split"] == full["split"]
+
+
 async def test_the_same_person_may_not_take_two_seats(
     client, session_factory, candidate_source, searcher
 ):

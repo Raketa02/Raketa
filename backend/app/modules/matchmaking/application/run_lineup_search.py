@@ -114,7 +114,7 @@ class LineupAnswer:
 
     record: SearchRecord
     sorts_available: tuple[SortOption, ...]
-    #: The current court: the best arrangement, seat by seat.
+    #: The current court, seat by seat: **the evenest arrangement's seating.**
     seats: tuple[LineupSeat, ...]
     #: Every way round, each with its own forecast and its own seating.
     arrangements: tuple[tuple[Arranged, tuple[LineupSeat, ...]], ...]
@@ -123,9 +123,13 @@ class LineupAnswer:
     #: argument. Naming the min-gap arrangement *best* there would give one field
     #: two meanings on exactly the responses where a builder needs the first.
     best: Arranged | None
-    #: The one the court is drawn as: the best where there is one, the evenest
-    #: where there is not.
-    drawn: Arranged | None
+    #: The min-gap arrangement, and **what the court is drawn as** — the two
+    #: are one field rather than two, because ``docs/adr/0136`` made them the
+    #: same arrangement in both modes and a second field that cannot differ is
+    #: only somewhere for them to drift apart. The objective chose the four and
+    #: ``group_reason`` says why; which way round they sit is the one question
+    #: balance still answers, and opening on any other arrangement would show a
+    #: court the player's first tap re-seats.
     evenest: Arranged | None
     group_reason: str | None
     #: ``NO_SHARED_SLOTS`` when the four-way week is empty. **A dock, never a
@@ -294,11 +298,6 @@ class RunLineupSearch:
         await self._work.record(record)
         await self._work.note_exposure(command.sport, now, returned, for_a_newcomer)
         searcher_id = str(searcher.player_id)
-        # **What the court is drawn as.** The best by ``G`` where there is one,
-        # and the evenest where there is not — an incomplete four has no
-        # objective, so *which way round is this being shown* falls to the only
-        # question balance can still answer.
-        drawn = seating.best or seating.evenest
         week = improvised_week(asked=asked.grid, profile=declared.grid)
         return LineupAnswer(
             record=record,
@@ -308,8 +307,14 @@ class RunLineupSearch:
             # left for an answer — or a dismissal — to block.
             prompts=() if week is None else (week,),
             sorts_available=sorts_available((), surface=surface),
+            # **The court is drawn as the evenest, always** (``docs/adr/0136``).
+            # ``G`` chose who is on the court and ``group_reason`` says why;
+            # which way round they sit is the question balance answers, and it
+            # is the same re-seating *Even it out* would perform by hand a
+            # moment later. ``is_best`` keeps its own meaning beside it rather
+            # than deciding the drawing.
             seats=roster(
-                None if drawn is None else drawn.arrangement,
+                None if seating.evenest is None else seating.evenest.arrangement,
                 searcher_id=searcher_id,
                 guests=guests,
                 reason=reason,
@@ -327,7 +332,6 @@ class RunLineupSearch:
                 for one in seating.arrangements
             ),
             best=seating.best,
-            drawn=drawn,
             evenest=seating.evenest,
             group_reason=None if seating.reason is None else seating.reason.value,
             dock=(

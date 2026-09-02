@@ -710,6 +710,14 @@ appears here.
   words because the best-of-three forecast answers *are these the right people* while the
   arranged forecast answers *is this the right way round*, and conflating them is how a screen
   stops changing when somebody is moved across the net.
+- **Split** — the two **side** strengths a **forecast** was read from, and the signed gap
+  between them: *your side*, *their side*, and *your side minus theirs*. The evidence behind the
+  percentage — the forecast says *how even*, the split says *between what and what*, on the same
+  scale a **Skill** rating is read on. A side's strength is **not the mean of the two people on
+  it** (the weaker partner sets more of it), which is why it is a number only the engine has and
+  why a client may never compute one. It is **not the group objective** and must not become one:
+  what crosses is an input to a figure already served, never a second score
+  ([ADR-0136](docs/adr/0136-the-split-is-evidence-for-the-forecast-not-a-second-score.md)).
 - **Group objective** — what the engine maximises when it seats four people, as against **Fit**,
   which is about one pairing. A four holds **six pairs and the searcher is in three**, so a term
   earns its place in the objective only by reading something no seat's Fit read: the **cross
