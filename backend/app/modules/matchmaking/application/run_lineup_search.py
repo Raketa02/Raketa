@@ -36,7 +36,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 from itertools import combinations
-from typing import final
+from typing import Sequence, final
 from uuid import UUID
 
 from app.engines.matchfit.grouping import (
@@ -75,6 +75,7 @@ from app.modules.matchmaking.domain.lineups import (
     seated_from,
     single_seat,
     unfilled_reason,
+    who_turned_up,
 )
 from app.modules.matchmaking.domain.relaxation import radius_ladder
 from app.modules.matchmaking.domain.searches import (
@@ -214,21 +215,19 @@ class RunLineupSearch:
         locked = self._locked(pool, command.locked_seats)
         guests = guests_for(command.sport)
         fenced = searcher_of(context)
+        # **Minted here rather than at the record**, because it is what turnout
+        # is keyed off: one search, one draw, and the same search re-read draws
+        # the same people.
+        search_id = new_uuid()
+        held = seated_from(locked, locked=True)
         with self._work.timed(stages, "seat"):
             try:
-                if guests == 1:
+                admissible: PairAdmissibility | None = None
+                if guests > 1:
                     # **A singles line-up asks no pairwise question**, so it
                     # makes no bulk block query and builds no mask. There is one
                     # pair in a two and it was gated at generation; a mask here
                     # would be ``O(K²)`` work over pairs no court will ever hold.
-                    seating = single_seat(
-                        fenced,
-                        seated_from(pool.rows),
-                        self._ruleset,
-                        combine_group_sigma,
-                        locked=seated_from(locked, locked=True),
-                    )
-                else:
                     with self._work.timed(stages, "mask"):
                         admissible = mask_over(
                             pool.rows,
@@ -239,14 +238,46 @@ class RunLineupSearch:
                             ),
                         )
                     self._refuse_locked_seats_that_clash(locked, admissible)
-                    seating = seat(
+
+                def seat_them(rows: Sequence[Scored]) -> Seating:
+                    """The one seating call, over whichever pool it is given.
+
+                    The mask is built over ``pool.rows`` and asked about pairs,
+                    so it serves any subsequence of it — there is no second mask
+                    for the smaller pool and no chance of two disagreeing.
+                    """
+
+                    if admissible is None:
+                        return single_seat(
+                            fenced,
+                            seated_from(rows),
+                            self._ruleset,
+                            combine_group_sigma,
+                            locked=held,
+                        )
+                    return seat(
                         fenced,
-                        seated_from(pool.rows),
+                        seated_from(rows),
                         self._ruleset,
                         combine_group_sigma,
                         admissible,
-                        locked=seated_from(locked, locked=True),
+                        locked=held,
                     )
+
+                # **Who turned up tonight** (``lineups.py``'s ``TURNOUT``): the
+                # engine still returns the best four, of a pool that is not the
+                # same twenty people every night.
+                present = who_turned_up(
+                    pool.rows, key=str(search_id), guests=guests
+                )
+                seating = seat_them(present)
+                # **Turnout may cost evenness; it may never cost a seat.** A
+                # draw that cannot fill a court the whole pool could have filled
+                # would be reported as ``POOL_EXHAUSTED``, which is a lie about
+                # the pool — and ``unfilled_reason`` reads the whole pool, so it
+                # would be answering about people the engine never saw.
+                if len(seating.seated) < guests and len(present) != len(pool.rows):
+                    seating = seat_them(pool.rows)
             except InvariantViolated as broken:
                 raise MatchmakingUnavailable(
                     f"the matcher refused to seat a four: {broken}"
@@ -259,7 +290,7 @@ class RunLineupSearch:
 
         returned = tuple(row.scored for row in rows)
         record = SearchRecord(
-            id=new_uuid(),
+            id=search_id,
             searcher_id=searcher.player_id,
             sport=command.sport,
             mode=command.mode,

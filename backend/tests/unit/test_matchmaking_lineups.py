@@ -31,6 +31,8 @@ from app.modules.matchmaking.domain.gates import (
     level_close_enough,
 )
 from app.modules.matchmaking.domain.lineups import (
+    TURNOUT_NEEDS,
+    who_turned_up,
     UnfilledReason,
     guests_for,
     mask_over,
@@ -344,3 +346,91 @@ def test_no_gated_player_appears_in_a_four_in_any_of_the_six_pairs(mode):
             ruleset=context.ruleset,
             now=context.now,
         ), f"{pair} share a court and their Levels are too far apart"
+
+
+# ---------------------------------------------------------------------------
+# Turnout — who is in the pool the engine seats from, on one automatic fill
+# ---------------------------------------------------------------------------
+
+
+def _turnout_pool(size: int):
+    """``size`` candidates, spread far enough apart to be told apart."""
+
+    return tuple(
+        build.row(number, mu=2.80 + number * 0.01) for number in range(1, size + 1)
+    )
+
+
+def test_turnout_varies_the_pool_between_searches():
+    """**The whole point.** Two searches over one unchanged pool see two lobbies.
+
+    The engine is an argmax and was answering the same question with the same
+    four every night, so a pool of twenty offered the same three people for ever
+    and the other seventeen were never offered at all.
+    """
+
+    rows = _turnout_pool(20)
+    lobbies = {
+        tuple(one.player_id for one in who_turned_up(rows, key=key, guests=3))
+        for key in (f"search-{index}" for index in range(12))
+    }
+
+    assert len(lobbies) > 1, "every search drew the same lobby"
+    assert all(len(lobby) >= 3 for lobby in lobbies)
+
+
+def test_turnout_is_the_same_lobby_for_one_search_however_it_is_read():
+    """A recorded search replays to the same people. ``docs/adr/0105``.
+
+    Keyed off *who* each candidate is rather than where they sit, so a pool
+    handed over in a different order draws the identical lobby — the property
+    that keeps this out of the reach of set iteration order.
+    """
+
+    rows = _turnout_pool(20)
+    once = who_turned_up(rows, key="one-search", guests=3)
+    again = who_turned_up(rows, key="one-search", guests=3)
+    shuffled = who_turned_up(tuple(reversed(rows)), key="one-search", guests=3)
+
+    assert [one.player_id for one in once] == [one.player_id for one in again]
+    assert {one.player_id for one in once} == {one.player_id for one in shuffled}
+
+
+def test_turnout_never_reorders_or_rescores():
+    """What comes back is a **subsequence**: same rows, same order, same Fit.
+
+    Everything downstream reads the pool as ordered by Fit, so a turnout that
+    reordered would be a second opinion about who is best dressed up as a draw.
+    """
+
+    rows = _turnout_pool(20)
+    present = who_turned_up(rows, key="one-search", guests=3)
+
+    assert list(present) == [row for row in rows if row in present]
+
+
+def test_a_pool_with_barely_enough_people_all_turn_up():
+    """Nobody is dropped from a pool that has no variety to spare.
+
+    A court is four people. Turnout may cost evenness — that is the trade — but
+    a draw that strands a seat turns a real answer into ``POOL_EXHAUSTED``,
+    which would be a lie about the pool.
+    """
+
+    for size in range(3, TURNOUT_NEEDS):
+        rows = _turnout_pool(size)
+        assert who_turned_up(rows, key="whichever", guests=3) == rows
+
+
+def test_a_draw_that_came_up_short_is_refused_and_everybody_plays():
+    """Even above the floor, a thin draw hands the whole pool back.
+
+    Asserted over many keys rather than a contrived one, because the guard is
+    about the *draw* and not about a pool size: with turnout at three in five,
+    a pool of eight comes up short of a full four often enough to matter.
+    """
+
+    rows = _turnout_pool(TURNOUT_NEEDS)
+    for index in range(60):
+        present = who_turned_up(rows, key=f"search-{index}", guests=3)
+        assert len(present) >= 3, "a draw stranded a seat"

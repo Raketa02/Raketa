@@ -33,6 +33,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
+import random
 from itertools import combinations
 from typing import Mapping, Sequence, final
 from uuid import UUID
@@ -477,6 +478,80 @@ def seated_from(rows: Sequence[Scored], *, locked: bool = False) -> tuple[Seated
         Seated(candidate=row.fenced, fit=row.modified.points, locked=locked)
         for row in rows
     )
+
+
+#: The chance any one eligible candidate is in the pool the engine seats from,
+#: on any one automatic fill.
+#:
+#: **Why a court needs one at all.** The engine is an argmax: one pool, one
+#: objective, one best four, and it returns that four every time it is asked.
+#: That is right — a searcher asking twice with nothing changed should not be
+#: told the second answer is better — but *the same request run again tomorrow*
+#: is a different question, and the engine was answering it identically. With
+#: twenty-odd people in range, three of them were being offered every game and
+#: the other twenty were never offered at all, which is both a worse product for
+#: the searcher and a dead platform for everybody else.
+#:
+#: **Turnout is the honest place to put it, and the ranking is not.** The
+#: alternative is to make the engine deliberately pick a four it judged worse,
+#: which breaks the one thing it promises and makes ``group_reason`` a sentence
+#: about a comparison that did not decide anything. This changes *who was
+#: there*, and the engine goes on returning the best four of whoever was — so
+#: *"the engine looks for the combination that plays out evenest"* stays true as
+#: written, and no seat is ever filled below ``QUALITY_FLOOR``.
+#:
+#: **Not the exposure floor's job.** §14.2 already spreads who gets shown across
+#: a week, and it is doing it — but it is a ±6 point lift on one Fit, bounded on
+#: purpose so that being under-shown never outranks being a good match. It
+#: cannot reorder combinations a wider margin apart and should not be widened
+#: until it can: that would be paying for variety in the one currency the
+#: product promises not to spend.
+#:
+#: Three in five, so the three best are all present about one search in five and
+#: the four on offer is usually *a* good four rather than *the* good four. Not
+#: lower: a court is four people, and turnout thin enough to strand a seat turns
+#: a real answer into ``POOL_EXHAUSTED``.
+TURNOUT = 0.6
+
+#: Below this many candidates, everybody turns up. A pool with barely enough
+#: people to fill the court has no variety to offer and everything to lose: the
+#: guard below already refuses a draw that strands a seat, and this stops the
+#: engine spending draws on a pool where every draw would be refused.
+TURNOUT_NEEDS = 8
+
+
+def who_turned_up(
+    rows: Sequence[Scored], *, key: str, guests: int
+) -> tuple[Scored, ...]:
+    """The pool for **one** automatic fill: a lobby, not a ranking.
+
+    Each candidate is drawn independently and **keyed off who they are and which
+    search this is**, never off their position: a pool in a different order has
+    to produce the same turnout, or the answer would depend on how the index
+    happened to sort (``docs/adr/0105``). The same search re-read gives the same
+    people, which is what lets a recorded search be replayed and what keeps this
+    out of the ruleset corpus's way — that harness seats from ``pool.rows``
+    itself and never runs this.
+
+    **Everybody, whenever a draw would cost more than it buys**: a pool too
+    small to have alternatives, or a draw that came up short of a full court.
+    The second is the important one — turnout may make the offered four less
+    even, which is the trade, but it may never turn a court that could have been
+    filled into an empty seat. That would be reported as ``POOL_EXHAUSTED``,
+    which would be a lie about the pool.
+
+    It never reorders and never re-scores: what comes back is a subsequence, so
+    everything downstream still reads the same Fit in the same order.
+    """
+
+    if len(rows) < max(TURNOUT_NEEDS, guests):
+        return tuple(rows)
+    present = tuple(
+        row
+        for row in rows
+        if random.Random(f"{key}|{row.player_id}").random() < TURNOUT
+    )
+    return present if len(present) >= guests else tuple(rows)
 
 
 def single_seat(
