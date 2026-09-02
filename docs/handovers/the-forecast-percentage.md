@@ -1,6 +1,7 @@
 # Handover — the forecast percentage is charging a four twice for the same doubt
 
-**Status:** open question, no code changed. Written 2026-09-02 for a grilling session.
+**Status:** open question, no code changed. Written 2026-09-02 for a grilling session —
+the prompt to start it with is [`the-forecast-percentage-prompt.md`](the-forecast-percentage-prompt.md).
 **Scope:** `pct` on `ForecastSchema` — the number the builder's card prints and the number
 `balance_norm` feeds into the group objective `G`. Nothing else.
 
