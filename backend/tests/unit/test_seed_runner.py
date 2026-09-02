@@ -56,6 +56,7 @@ from app.seeds import catalog
 from app.seeds.catalog import (
     ACCOUNTS,
     BAND_ESTABLISHED,
+    NAMES,
     RESERVED_TLD,
     SEED_EMAIL_DOMAIN,
     SEED_PASSWORD,
@@ -325,13 +326,24 @@ def test_every_address_is_on_a_reserved_tld():
         assert account.email.endswith(RESERVED_TLD)
 
 
-def test_every_account_is_named_for_its_state():
-    """The address is derived from the name, so an account cannot be called one
-    thing and reachable at another."""
+def test_every_account_is_addressed_by_its_state_and_shown_under_a_name():
+    """**The slug addresses the account; it is never what a person sees.**
+
+    The two were one string, and a screen draws `nickname` — so the builder was
+    printing *said-yes-to-you* where a name goes, and a developer could not tell
+    a court full of people from a list of test conditions. Splitting them keeps
+    the address derived from the state, so an account still cannot be called one
+    thing and reachable at another.
+
+    The name is asserted to be a **dealt** one rather than merely different,
+    because `nickname` falls back to the slug for accounts a guard builds to
+    refuse: this is the test that the fallback never reaches a real one.
+    """
 
     for account in ACCOUNTS:
         assert account.email == f"{account.slug}@{SEED_EMAIL_DOMAIN}"
-        assert account.nickname == account.slug
+        assert account.nickname == NAMES[account.slug]
+        assert account.nickname != account.slug
         assert account.description
 
 

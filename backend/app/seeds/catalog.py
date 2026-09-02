@@ -37,6 +37,7 @@ from __future__ import annotations
 
 import random
 from dataclasses import dataclass
+from functools import lru_cache
 from typing import Sequence
 from uuid import UUID
 
@@ -416,6 +417,98 @@ class SeedProfile:
 Scenario = OpenRun | AbandonedRun | RatedRun
 
 
+#: **The names every seeded player is shown under.**
+#:
+#: A slug says what an account *is for* — ``said-yes-to-you`` names a state, and
+#: naming states is what makes the catalog readable from the report. It is a
+#: terrible thing to meet on a card. Every screen in this product draws
+#: ``nickname``, so a developer testing the builder was reading a sentence about
+#: a fixture where a person's name goes, and could not tell a crowded court from
+#: a list of test conditions.
+#:
+#: So the slug stays the identifier — the address is still ``{slug}@…``, the
+#: report still prints it, and every assertion still names it — and the
+#: **nickname becomes a name**. The two were the same string and did not have to
+#: be.
+#:
+#: **``First.Last`` and not ``First Last``**, because ``Nickname`` is
+#: ``^[A-Za-z0-9_.-]+$``: this platform's nickname is a handle and a space is not
+#: in it. That is a decision the users context already made, and a fixture is not
+#: where it gets reopened — so the dot is the most name-shaped thing a legal
+#: nickname can be.
+#:
+#: **Two surname pools, and that is what keeps them apart.** The catalog and the
+#: cohort are dealt by two different modules and neither can see the other's
+#: list, so a shared pool would collide on a name eventually and the collision
+#: would surface as a unique-constraint violation half way through a run. Given
+#: separate surnames, a catalog name and a cohort name cannot be equal whatever
+#: either list grows to.
+FIRST_NAMES: tuple[str, ...] = (
+    "Marta", "Ines", "Carla", "Nuria", "Alba", "Rocio", "Lucia", "Elena",
+    "Sofia", "Paula", "Irene", "Clara", "Laia", "Nerea", "Ainhoa", "Julia",
+    "Diego", "Hugo", "Pablo", "Mateo", "Bruno", "Alvaro", "Nacho", "Rafa",
+    "Javier", "Sergio", "Tomas", "Adrian", "Ivan", "Marcos", "Gonzalo", "Unai",
+    "Aitor", "Ruben", "Oscar", "Dani", "Pau", "Guillem", "Arnau", "Nil",
+)
+
+#: The catalog's own surnames — see ``FIRST_NAMES`` on why there are two pools.
+CATALOG_SURNAMES: tuple[str, ...] = (
+    "Ferrer", "Solano", "Vidal", "Rojas", "Miralles", "Andrade",
+)
+
+#: The eleven relationship accounts', dealt by their own module.
+RELATIONSHIP_SURNAMES: tuple[str, ...] = (
+    "Nogueira", "Peralta", "Quintana", "Sabater",
+)
+
+#: The cohort's, and disjoint from the other two by construction.
+COHORT_SURNAMES: tuple[str, ...] = (
+    "Bertran", "Casals", "Duarte", "Esteve", "Fabregat", "Gallego",
+    "Herrero", "Iglesias",
+)
+
+
+@lru_cache(maxsize=None)
+def _roster(surnames: tuple[str, ...]) -> tuple[str, ...]:
+    """Every ``First.Last`` this pool can make, **in one shuffled order.**
+
+    Shuffled rather than enumerated, and that is the whole point of the
+    indirection. Read in the obvious nested order, the first forty names dealt
+    all share a surname and a seeded population reads as one family; read with
+    the surname cycling fastest, one first name repeats six times running. A
+    shuffle makes both halves vary at every step while the list stays a
+    permutation of distinct pairs — so uniqueness is still by construction and
+    not by a stride argument nobody re-checks when a surname is added.
+
+    ``random.Random`` seeded with a *string* hashes it with SHA-512 first, so the
+    order is stable across processes and unaffected by ``PYTHONHASHSEED``
+    (``docs/adr/0105``). Keyed off the pool itself, so adding a surname reshuffles
+    that pool and leaves the others alone.
+    """
+
+    pairs = [f"{first}.{last}" for last in surnames for first in FIRST_NAMES]
+    random.Random(f"names|{'|'.join(surnames)}").shuffle(pairs)
+    return tuple(pairs)
+
+
+def dealt_name(index: int, surnames: tuple[str, ...]) -> str:
+    """The ``index``-th name out of one pool, and **no two indices share one.**
+
+    The caller is refused rather than wrapped past the end, since a wrapped name
+    is a duplicate and a duplicate is a unique-constraint violation discovered
+    half way through a seed run.
+    """
+
+    roster = _roster(surnames)
+    if not 0 <= index < len(roster):
+        raise RuntimeError(
+            f"name {index} was asked of a pool that holds {len(roster)}: "
+            f"{len(FIRST_NAMES)} first name(s) over {len(surnames)} surname(s). "
+            f"Add surnames — the pools must stay disjoint from each other."
+        )
+    return roster[index]
+
+
 @dataclass(frozen=True)
 class SeedAccount:
     """One deterministic account: what it is called, and what state it is in.
@@ -446,7 +539,23 @@ class SeedAccount:
 
     @property
     def nickname(self) -> str:
-        return self.slug
+        """The name this account is shown under — **never its slug.**
+
+        Read out of the register rather than stored on the account, because the
+        constants above are referenced by name from ``screens.py`` and from the
+        tests: a name written into a field would have to be written at every one
+        of those definitions, and the one somebody forgot would be the account
+        that seeded under a slug again.
+
+        **The slug is the fallback and it is proven unreachable**, by
+        ``refuse_an_account_nobody_named`` over each real list at import. The
+        alternative — raising here — makes ``nickname`` partial, and every guard
+        in this module reads it: an account built to be *refused* for a bad
+        address would explode on its name before the guard could say so, and the
+        refusal a developer got would name the wrong thing.
+        """
+
+        return NAMES.get(self.slug, self.slug)
 
 
 BRAND_NEW_PLAYER = SeedAccount(
@@ -758,6 +867,65 @@ ACCOUNTS: tuple[SeedAccount, ...] = (
 ) + PROTAGONISTS
 
 
+#: slug -> the name it is shown under, written by ``name_them`` at import.
+#:
+#: A register rather than a field for the reason ``SeedAccount.nickname`` gives,
+#: and **module-level rather than per-list** so that a name dealt twice is a
+#: collision this process can see. Two lists dealt out of two disjoint surname
+#: pools cannot collide, and this is where that would show up if they ever did.
+NAMES: dict[str, str] = {}
+
+#: The inverse, lower-cased — **only** so a second deal onto a taken name is
+#: refused. Separate from ``NAMES`` because a register keyed by two different
+#: kinds of string is a register whose lookups cannot be read.
+_TAKEN: dict[str, str] = {}
+
+
+def name_them(accounts: Sequence[SeedAccount], surnames: tuple[str, ...]) -> None:
+    """Deal one name to each account in a list, **by sorted slug.**
+
+    Sorted, so the deal is a function of *which accounts exist* rather than of
+    the order somebody wrote them in: a state inserted in the middle of a list
+    moves nobody it does not have to move, and a diff of the seed report stays
+    readable.
+
+    Refuses a name already dealt, which is the check that keeps the surname
+    pools honest: two pools that stopped being disjoint would otherwise seat two
+    people under one nickname and fail on the unique constraint half way through
+    a run, with some accounts written and some not.
+    """
+
+    for index, slug in enumerate(sorted(one.slug for one in accounts)):
+        name = dealt_name(index, surnames)
+        if (taken := _TAKEN.get(name.lower())) is not None:
+            raise RuntimeError(
+                f"'{slug}' was dealt the name '{name}', which '{taken}' already "
+                f"holds. The surname pools have stopped being disjoint."
+            )
+        NAMES[slug] = name
+        _TAKEN[name.lower()] = slug
+
+
+name_them(ACCOUNTS, CATALOG_SURNAMES)
+
+
+def refuse_an_account_nobody_named(accounts: Sequence[SeedAccount]) -> None:
+    """Every account in a real list was dealt a name. **Asked at import.**
+
+    ``SeedAccount.nickname`` falls back to the slug so that the guards can run
+    against accounts built to be refused, and this is what stops that fallback
+    ever reaching a database: a list somebody forgot to hand to ``name_them``
+    fails the import rather than seeding people under ``said-yes-to-you`` again.
+    """
+
+    forgotten = sorted(one.slug for one in accounts if one.slug not in NAMES)
+    if forgotten:
+        raise RuntimeError(
+            f"{forgotten} would seed under their slug: no list holding them was "
+            f"handed to `name_them`. See `FIRST_NAMES`."
+        )
+
+
 def _refuse_an_impossible_catalog() -> None:
     """Fail at import rather than part-way through a run.
 
@@ -898,4 +1066,5 @@ def _refuse_an_impossible_profile(
             )
 
 
+refuse_an_account_nobody_named(ACCOUNTS)
 _refuse_an_impossible_catalog()

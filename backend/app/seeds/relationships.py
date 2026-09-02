@@ -91,7 +91,9 @@ from app.modules.player_profile.domain.play_intent import PlayIntent
 from app.seeds.catalog import (
     BAND_ESTABLISHED,
     MIDDLING,
+    RELATIONSHIP_SURNAMES,
     THE_BAND_FROM_WITHIN,
+    name_them,
     PROTAGONIST_RADIUS_KM,
     PROTAGONIST_TAGS,
     PROTAGONIST_WEEK,
@@ -102,6 +104,7 @@ from app.seeds.catalog import (
     RatingClaim,
     SeedAccount,
     SeedProfile,
+    refuse_an_account_nobody_named,
     refuse_an_impossible_account,
     refuse_two_accounts_at_one_name,
 )
@@ -546,6 +549,13 @@ RELATIONSHIPS: Final[tuple[Relationship, ...]] = _dealt(_AS_WRITTEN)
 RELATIONSHIP_ACCOUNTS: Final[tuple[SeedAccount, ...]] = tuple(
     relationship.account for relationship in RELATIONSHIPS
 )
+
+# **Dealt here and out of this module's own surnames**, because ``catalog.py``
+# cannot see this list and a shared pool would eventually seat two people under
+# one nickname. `name_them` refuses that rather than leaving it to the unique
+# constraint half way through a run.
+name_them(RELATIONSHIP_ACCOUNTS, RELATIONSHIP_SURNAMES)
+refuse_an_account_nobody_named(RELATIONSHIP_ACCOUNTS)
 
 #: Which accounts are gated out of the protagonist's surfaces, and by which
 #: gate. **The claim is the histogram**, so the codes are named here and the

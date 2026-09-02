@@ -50,9 +50,9 @@ from __future__ import annotations
 
 import json
 import random
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from pathlib import Path
-from typing import Final, Mapping, final
+from typing import Final, Mapping, Sequence, final
 from uuid import NAMESPACE_URL, UUID, uuid5
 
 from app.kernel import Sport
@@ -67,6 +67,8 @@ from app.modules.player_profile.domain.social_tags import (
 )
 from app.seeds.clock import NEWCOMER_WINDOW_DAYS
 from app.seeds.catalog import (
+    COHORT_SURNAMES,
+    dealt_name,
     BAND_ADVANCED,
     BAND_DEVELOPING,
     BAND_ESTABLISHED,
@@ -446,6 +448,11 @@ class CohortMember:
     demonstrations: int
     claim_spread: int
     demonstration_spread: int
+    #: What every screen draws for this member. ``handle`` stays the identifier
+    #: — the address, the answer key and the ring's own numbering are all it —
+    #: and this is the only thing a person ever sees. Committed with the rest of
+    #: the row, because a name is an input like the week and the tags are.
+    name: str = ""
 
     @property
     def sports(self) -> tuple[Sport, ...]:
@@ -457,7 +464,10 @@ class CohortMember:
 
     @property
     def nickname(self) -> str:
-        return self.handle
+        """The name this member is shown under. **The handle is the id, not the
+        name** — see ``catalog.FIRST_NAMES``."""
+
+        return self.name
 
     @property
     def answers(self) -> AnswerPolicy:
@@ -520,7 +530,35 @@ def generate(*, seed: int = COHORT_SEED) -> Cohort:
             for _ in range(ring.members.get(archetype.name, 0)):
                 members.append(_draw(ring, archetype, position, seed=seed))
                 position += 1
-    return Cohort(seed=seed, members=tuple(members))
+    return Cohort(seed=seed, members=_named(members))
+
+
+def _named(members: Sequence[CohortMember]) -> tuple[CohortMember, ...]:
+    """One name each, dealt **by sorted handle** out of the cohort's own pool.
+
+    Sorted rather than drawn, and dealt over the whole population rather than
+    per ring, because a name has to be unique across all of them and a keyed
+    draw collides: two members under one nickname is a unique-constraint
+    violation found half way through a seed run.
+
+    Sorted by handle, so the deal is a function of *which members exist*. A
+    member added to a ring renames the members after them **within that ring's
+    block of the sorted order** and nobody in an earlier ring — the same
+    trade the module note already makes for the draws, and the reason the
+    handles are zero-padded.
+
+    The pool is disjoint from the catalog's and the relationships' by surname
+    (``catalog.FIRST_NAMES``), so no cohort member can ever collide with a named
+    account however either list grows.
+    """
+
+    order = sorted(one.handle for one in members)
+    return tuple(
+        replace(
+            one, name=dealt_name(order.index(one.handle), COHORT_SURNAMES)
+        )
+        for one in members
+    )
 
 
 def _draw(
