@@ -11,6 +11,11 @@ Grill me on a decision I have to make about this repo's forecast engine. Read
 evidenced, so do not spend the session re-deriving it. Verify it if you want, but
 briefly.
 
+**Already fixed, so do not propose it:** the units defect is shipped.
+`combine_group_sigma` returns `√(2·Σσᵢ²/n)` — the two-player basis, which at n = 2 *is*
+`combine_sigma` exactly — so a four is no longer charged √2× a pair for the same doubt. A
+level four of unsettled players moved 46 % → 62 %. Candidate A below is **done**.
+
 **The established facts, which are not what I want grilled:**
 
 `backend/app/engines/matchfit/v1/terms.py::forecast_pct` computes
@@ -35,10 +40,9 @@ beside `pct`, so the same doubt is arguably priced twice and no document notices
 
 Three candidates, each with a real cost:
 
-- **A — re-base the group σ to the pair's scale.** Narrowest reading; a bug fix,
-  not a recalibration; every pairwise number stays byte-identical. But it fixes
-  the units without asking whether `√(Σσ²)` is even the right aggregate for a
-  group's uncertainty.
+- ~~**A — re-base the group σ to the pair's scale.**~~ **Shipped.** It fixed the
+  units without asking whether `√(Σσ²)` is the right aggregate for a group's
+  uncertainty at all — which is now question 2.
 - **B — take σ out of `pct` entirely.** Kills the double channel and makes `pct`
   mean what the card's word table claims. But it contradicts §9.3.2 head-on, and
   `the-words.md` §16 puts `confidence` in exactly one place in the product — so
@@ -56,8 +60,11 @@ Specifically:
    four independent error sources in quadrature, or is it closer to the
    worse-known **side**, or the worst single player? I have not thought about this
    properly and I will try to skate past it.
-3. Do not let me choose A because it is the smallest diff. Smallest-diff is not an
-   argument; make me defend it as *correct*.
+3. A is shipped, so the live question is whether it was **enough**. A level four
+   of players nobody has a settled rating for still reads 62 % — *One side
+   favoured* — with a gap of exactly zero. Make me say whether that is the product
+   telling the truth or the product being unhelpful, and do not accept *it is what
+   the spec says* as the answer.
 4. Force a falsifier. `BalanceRules`' own docstring calls these *"the most
    directly falsifiable numbers in the engine"*. Whatever I pick, I have to say
    what data would prove it wrong and when we would look.

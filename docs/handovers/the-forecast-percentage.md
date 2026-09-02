@@ -1,7 +1,18 @@
 # Handover — the forecast percentage is charging a four twice for the same doubt
 
-**Status:** open question, no code changed. Written 2026-09-02 for a grilling session —
-the prompt to start it with is [`the-forecast-percentage-prompt.md`](the-forecast-percentage-prompt.md).
+**Status:** **candidate A shipped 2026-09-02** — the units defect is fixed and the arithmetic
+below is history. What is still open is the question underneath it, and the prompt to grill it
+with is [`the-forecast-percentage-prompt.md`](the-forecast-percentage-prompt.md).
+
+> **What changed.** `combine_group_sigma` now returns `√(2·Σσᵢ²/n)` — the two-player basis the
+> coefficient was always calibrated against, which at n = 2 *is* `combine_sigma` exactly, so
+> every pairwise reading is byte-identical. A level four of unsettled players moved 46 % → 62 %.
+> The ruleset diff moved 13 group objectives by a uniform +3.552363 and flipped no seating;
+> the judged pairings and the walkthroughs did not move at all.
+>
+> **What did not change.** `pct` still discounts for doubt, so a level four of players nobody
+> has a settled rating for still does not read *very even*. Whether it should is §B/§C below,
+> and it is a product decision rather than a defect.
 **Scope:** `pct` on `ForecastSchema` — the number the builder's card prints and the number
 `balance_norm` feeds into the group objective `G`. Nothing else.
 
@@ -116,16 +127,17 @@ real four produces, which is why this survived to production data.
 
 Nothing below is a recommendation. Each is a starting position to attack.
 
-### A — Re-base the group σ to the pair's scale
+### A — Re-base the group σ to the pair's scale — **SHIPPED**
 
-Present σ_group to `forecast_pct` divided by `√(n/2)`, so n=2 is unchanged and n=4 lands
-where the coefficient was calibrated.
+Present σ_group on the two-player basis, so n=2 is unchanged and n=4 lands where the
+coefficient was calibrated.
 
 - *For:* the narrowest possible reading — it is a **bug fix**, not a recalibration. One
   coefficient goes back to meaning one thing. Every pairwise number stays byte-identical.
 - *Against:* is `√(Σσ²)` even the right aggregate for a **group**? A four's outcome
   uncertainty is not obviously the quadrature sum of four independent player σs. This fixes
-  the units without answering that.
+  the units without answering that — **and it still does not**, so the question survives A
+  and is question 2 below.
 
 ### B — Take σ out of `pct` entirely
 

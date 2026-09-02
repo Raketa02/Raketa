@@ -53,6 +53,8 @@ from app.engines.matchfit.v1.group import (
     seat_delta,
 )
 from app.kernel import InvariantViolated
+from app.engines.matchfit.v1.terms import forecast_pct
+from app.engines.racketskill.core import combine_sigma
 from app.modules.matchmaking.domain.fence import combine_group_sigma
 from app.modules.matchmaking.infrastructure.rulesets import LIVE_RULESET
 from app.modules.player_profile.domain.availability import DayPart
@@ -769,8 +771,49 @@ def test_the_group_sigma_is_combined_outside_the_engine() -> None:
 
     sigmas = [0.30, 0.28, 0.41, 0.35]
     assert combine_group_sigma(sigmas) == pytest.approx(
-        math.sqrt(sum(sigma * sigma for sigma in sigmas))
+        math.sqrt(2 * sum(sigma * sigma for sigma in sigmas) / len(sigmas))
     )
+
+
+def test_two_players_combine_exactly_as_a_pair_does() -> None:
+    """The basis, stated as an identity: at n = 2 this *is* ``combine_sigma``.
+
+    Which is what makes it a re-basing rather than a retune — singles and every
+    pairwise reading are untouched, so no released constant has moved under them.
+    """
+
+    assert combine_group_sigma([0.30, 0.41]) == pytest.approx(combine_sigma(0.30, 0.41))
+
+
+def test_a_four_pays_what_the_pair_it_stands_for_pays() -> None:
+    """The defect this exists to prevent, as arithmetic.
+
+    ``√(Σσ²)`` grows with ``√n``, so four players at one σ handed the pairwise
+    coefficient a number ``√2`` too large and were charged 1.41× for the identical
+    per-player doubt. On the two-player basis a four of equals costs exactly what
+    the pair of equals it stands for costs.
+    """
+
+    assert combine_group_sigma([0.35] * 4) == pytest.approx(combine_sigma(0.35, 0.35))
+    # And the raw fold is the thing that was wrong: √2 larger, every time.
+    assert math.sqrt(sum(0.35**2 for _ in range(4))) == pytest.approx(
+        combine_group_sigma([0.35] * 4) * math.sqrt(2)
+    )
+
+
+def test_a_level_four_of_unsettled_players_is_no_longer_near_the_floor() -> None:
+    """The symptom, pinned: gap 0,00 over 46 % was what the re-basing removed.
+
+    The figure is still discounted for doubt — that is §9.3.2's deliberate design
+    and a separate question (``docs/handovers/the-forecast-percentage.md``) — but it
+    is discounted once rather than 1.41 times, and the clamp no longer swallows it.
+    """
+
+    sigma = combine_group_sigma([0.846] * 4)
+    pct = forecast_pct(0.0, sigma, LIVE_RULESET.balance)
+
+    assert pct == pytest.approx(61.7, abs=0.2)
+    assert pct > LIVE_RULESET.balance.pct_min
 
 
 # ---------------------------------------------------------------------------

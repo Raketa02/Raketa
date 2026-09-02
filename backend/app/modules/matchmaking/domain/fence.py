@@ -37,6 +37,7 @@ somebody would try.
 
 from __future__ import annotations
 
+import math
 from datetime import datetime
 from functools import reduce
 from typing import Sequence
@@ -282,17 +283,40 @@ def reliability_record_of(
 
 
 def combine_group_sigma(sigmas: Sequence[float]) -> float:
-    """A four's spread, combined **on RacketSkill's side of the fence**.
+    """A group's spread, **on the two-player basis its coefficient is calibrated
+    against** — ``√2 · rms(σ)``, which at two players *is* ``combine_sigma``.
 
-    The group objective needs one Uncertainty over four Levels and may not
-    derive it: ``combine_sigma`` is *the single place any engine is allowed to
-    combine two standard deviations*, ``.importlinter`` forbids one engine to
-    import the other, and ``√(Σσ²)`` written inside Match Fit would be a second
-    definition of an identity that already has an owner.
+    The group objective needs one Uncertainty over four Levels and may not derive
+    it: ``combine_sigma`` is *the single place any engine is allowed to combine
+    two standard deviations*, ``.importlinter`` forbids one engine to import the
+    other, and ``√(Σσ²)`` written inside Match Fit would be a second definition of
+    an identity that already has an owner. The quadrature fold is legitimate here
+    because quadrature is associative: combining four is combining two, twice.
 
-    A fold rather than a new rule, and the fold is legitimate because quadrature
-    is associative: combining four is combining two, twice. That is why this can
-    be a handful of lines here instead of a second formula anywhere.
+    ## The basis, which is the whole of what this function adds
+
+    ``forecast_pct`` is **one function read by two populations** — a pairing of two
+    and a four — and its ``sigma_coefficient`` is a released constant calibrated
+    against *"a typical σ_pair of 0.495"* (``ranking-weights.md``, ``the-engine.md``,
+    ADR-0103). A pairing's ``gap`` is between two players and a four's between two
+    side strengths, and the four's gap **was** re-based for that. Its σ was not:
+    ``√(Σσᵢ²)`` grows with ``√n``, so a four was handed a number ``√2`` larger than
+    the pair the constant was priced for, and paid 1.41× for the identical
+    per-player doubt. A level four of unsettled players read 46 % — the floor's own
+    neighbourhood — with a gap of exactly zero, and above σ 2.03 the clamp swallowed
+    the gap entirely and the forecast stopped answering the question it is about.
+
+    So the fold is normalised to the basis: ``√(2·Σσᵢ²/n)``. At ``n = 2`` it is
+    ``√(σ₁²+σ₂²)`` exactly — the pair's own combination, unchanged, so singles and
+    every pairwise reading are untouched by construction — and at ``n = 4`` it is
+    the spread of a **representative pair drawn from the group**, which is the
+    thing a match is actually played between.
+
+    **This is a units correction, not a retune.** No released constant moves; the
+    caller stops handing one a quantity on a scale it was never priced for. What is
+    *not* settled by it is whether an outcome's uncertainty should discount the
+    evenness figure at all, given ``sigma_group`` crosses beside it —
+    ``docs/handovers/the-forecast-percentage.md`` holds that question.
 
     It is a **function** where a pair's combination is a value, because the
     enumeration that decides *which* four is inside the engine — nothing out here
@@ -300,7 +324,7 @@ def combine_group_sigma(sigmas: Sequence[float]) -> float:
     """
 
     invariant(bool(sigmas), "a spread over nobody at all")
-    return reduce(combine_sigma, sigmas)
+    return reduce(combine_sigma, sigmas) * math.sqrt(2 / len(sigmas))
 
 
 def area_of(row: CandidateRow) -> Point:
