@@ -129,6 +129,35 @@ export function useEntryDecision(): EntryDecision {
   // run are both real answers, and both are falsy.
   if (!ratings.isSuccess || !run.isSuccess || !user.isSuccess) return { kind: 'pending' };
 
+  // **A read this mount is in the middle of replacing is not an answer.**
+  //
+  // The gate's three queries are unobserved for the whole of onboarding, and an
+  // invalidated query with no observers does not refetch — it is marked stale and waits
+  // for a mount. So the mount that ends onboarding finds all three still holding the
+  // launch's answers, and Query hands those back as `success` while the replacement is in
+  // flight. The launch's answer is *"no ratings"*, and acting on it redirects into
+  // `(onboarding)` — which unmounts this layout, and unmounting cancels the refetch
+  // through the `signal` every one of these queries passes to `fetch`. The stale copy is
+  // then never replaced, so the next attempt reads it again: a player who has finished
+  // onboarding is sent back to welcome every time, for as long as the entry lives — which
+  // is what was happening on a device while every suite here stayed green, because
+  // `expo-router/testing-library` installs fake timers and Query's five-minute `gcTime`
+  // therefore expires the entry between the two mounts. The test below seeds it instead.
+  //
+  // The bound is `isFetchedAfterMount`, and it is what keeps this from being the opposite
+  // bug. Waiting on *any* fetch would blank the authenticated tree every time a foreground
+  // refetch ran; waiting only until each read has answered **once since this gate mounted**
+  // costs the round trip the gate was already making and nothing after it.
+  //
+  // A paused query is deliberately not covered: it is not fetching, so a launch with a
+  // cached answer and no connection still routes from what it holds rather than rendering
+  // nothing until the connection returns.
+  const beingReplaced =
+    (ratings.isFetching && !ratings.isFetchedAfterMount) ||
+    (run.isFetching && !run.isFetchedAfterMount) ||
+    (user.isFetching && !user.isFetchedAfterMount);
+  if (beingReplaced) return { kind: 'pending' };
+
   return entryDestination({
     ratings: ratings.data,
     runInProgress: run.data ?? undefined,

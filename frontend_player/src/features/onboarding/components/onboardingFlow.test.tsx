@@ -240,6 +240,53 @@ describe('where a launch lands', () => {
     expect(screen).toHavePathname('/');
   });
 
+  it('waits for the re-read a device still holds the old answer for', async () => {
+    // The same defect as above, at the state a **phone** is actually in — and the reason
+    // the test above could not see it. `expo-router/testing-library` installs jest's fake
+    // timers, so Query's five-minute `gcTime` expires while `waitFor` advances the clock
+    // and the gate's entries are simply *gone* by the time onboarding ends. On a device
+    // they are not: onboarding takes a minute or two, the entries are merely stale, and
+    // Query hands the launch's "no ratings" straight back while the replacement is in
+    // flight. Every suite here stayed green while a real player was sent to welcome on
+    // finishing, three walks in a row.
+    //
+    // So the entry is put back the way a device holds it: the launch's own answer, marked
+    // stale by the completion that follows it.
+    stubGate({ hasPlayerProfile: true });
+
+    await launchSignedIn();
+    await waitFor(() => expect(screen).toHavePathname('/welcome'));
+
+    let answerRatings = () => {};
+    const held = new Promise<void>((resolve) => {
+      answerRatings = resolve;
+    });
+    transport.on('GET', '/api/v1/ratings', async () => {
+      await held;
+      return json<Wire['RatingsResponse']>({ ratings: [RATING] });
+    });
+    stubRunsInProgress(transport, []);
+
+    queryClient.setQueryData(onboardingKeys.ratings(), []);
+    queryClient.invalidateQueries({ queryKey: onboardingKeys.ratings() });
+
+    // "Start playing".
+    router.replace('/');
+
+    await waitFor(() => expect(transport.requestsTo('GET', '/api/v1/ratings')).toHaveLength(2));
+    // Answering from the cached copy is the whole defect, and it does not correct itself:
+    // the redirect unmounts this layout, unmounting cancels the re-read through the
+    // `signal`, and the stale copy stands — so the next attempt reads it again, and the
+    // one after that.
+    expect(screen).not.toHavePathname('/welcome');
+    expect(screen.queryByText("Let's find your level")).toBeNull();
+
+    answerRatings();
+
+    expect(await screen.findByText(NOW_TAB_LINE)).toBeTruthy();
+    expect(screen).toHavePathname('/');
+  });
+
   it('resumes an assessment that was left unfinished', async () => {
     stubGate({ runs: [runInProgress('TENNIS', ASSESSMENT_ID)] });
     transport.on('GET', `/api/v1/assessments/${ASSESSMENT_ID}`, () => json(OPENING_STEP));
