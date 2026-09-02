@@ -34,6 +34,14 @@ export interface SeatWho {
   /** The name alone: drawn under the face, quoted in the badge's sentence and in a toast. */
   readonly name: string;
   /**
+   * The Skill level drawn **under** the name, where the record still holds one.
+   *
+   * It travels beside the word rather than being read off the occupant a second time, for the
+   * reason `name` does: a withheld row carries no card, so the handle and the figure are
+   * absent together and one switch decides both.
+   */
+  readonly level?: number;
+  /**
    * Whether that name is **somebody's** rather than the unknown's question mark.
    *
    * Two seats answer `?` and they are not the same seat: an empty one, which names nobody
@@ -60,7 +68,12 @@ export function seatWho(occupant: CourtSeatOccupant): SeatWho {
         };
       }
       const name = playerName({ kind: 'player', nickname: occupant.nickname });
-      return { spoken: { kind: 'player', name, level: occupant.level }, name, named: true };
+      return {
+        spoken: { kind: 'player', name, level: occupant.level },
+        name,
+        level: occupant.level,
+        named: true,
+      };
     }
     case 'empty':
       return {
@@ -69,25 +82,4 @@ export function seatWho(occupant: CourtSeatOccupant): SeatWho {
         named: false,
       };
   }
-}
-
-/**
- * Whether a seat has a Fit anybody may ask about — **another player, whose row the record
- * still holds.**
- *
- * The rule
- * ([`the-words.md`](../../../../../../docs/specs/matchmaking/the-words.md) §20.4.1) is three
- * refusals and one admission. **You** are refused because no route serves a searcher their own
- * candidate row, so *why fit* about yourself is not a thing. An **empty** seat has no Fit and
- * is already explained twice — §11's sentence beneath the seats, and its own spoken name. A
- * **withheld** seat carries one field and no card, so there is no breakdown left to draw.
- *
- * It reads `named` rather than testing the nickname a second time, because *the record no
- * longer describes them* and *there is no handle to print* are one fact: `toOccupant` drops
- * the card's fields together, and `seatWho` is already where the two registers of it separate.
- * A name is a button where there is something behind it and plain text where there is not —
- * never a button that opens an apology.
- */
-export function seatIsExplainable(occupant: CourtSeatOccupant): boolean {
-  return occupant.kind === 'player' && seatWho(occupant).named;
 }

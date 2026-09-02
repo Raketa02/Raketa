@@ -49,7 +49,7 @@ const SUMMARY = 'Padel, 3 of 4 seats filled.';
 const flatten = (style: unknown) => StyleSheet.flatten(style as TextStyle);
 
 function build(seats: readonly CourtSeatOccupant[], swapping = false) {
-  const acts = { openPool: jest.fn(), swap: jest.fn(), clear: jest.fn(), hold: jest.fn() };
+  const acts = { openPool: jest.fn(), swap: jest.fn(), clear: jest.fn() };
 
   const view = render(
     <CourtBuild
@@ -61,7 +61,6 @@ function build(seats: readonly CourtSeatOccupant[], swapping = false) {
       onOpenPool={acts.openPool}
       onSwap={acts.swap}
       onClear={acts.clear}
-      onHold={acts.hold}
     />,
   );
 
@@ -92,10 +91,12 @@ describe('the seat label', () => {
     expect(label.props.numberOfLines).toBe(1);
     expect(label.props.ellipsizeMode).toBe('tail');
     expect(flatten(label.props.style)?.fontSize).toBe(theme.type.tag.fontSize);
-    // Hidden on both platforms: the seat's own name already carries this word whole, and a
-    // reader that walked into the drawn one would hear four characters of a handle.
-    expect(label.props.accessibilityElementsHidden).toBe(true);
-    expect(label.props.importantForAccessibility).toBe('no-hide-descendants');
+    // Hidden: the seat's spoken name already carries this word whole and the figure under it,
+    // and a reader that walked into the drawn caption would hear four characters of a handle.
+    // Asserted as **reachability** rather than as the attribute, because the hide moved onto
+    // the caption box when the level joined the handle in it — where it is, is not the claim.
+    expect(screen.queryByText(LONG_HANDLE)).toBeNull();
+    expect(screen.queryByText('2,92')).toBeNull();
   });
 
   it('scales with Dynamic Type, because §20.4 refused the escape the level bar has', () => {
@@ -134,7 +135,20 @@ describe('the seat label', () => {
     expect(screen.getByLabelText(`Remove ${LONG_HANDLE} from your side`)).toBeTruthy();
   });
 
-  it('does not restate the level, which the card and the sheet already draw', () => {
+  /**
+   * **The level is drawn under the handle**, which reverses `the-play-components.md` §5.
+   *
+   * §5 took it off on §10's rule — a surface does not restate what it already renders — and the
+   * card it was written against printed one percentage. The card now prints two **side
+   * strengths**, which is what a half is worth and not what anybody on it is
+   * ([#290](https://github.com/Raketa02/Raketa/issues/290)): looking at `3,15` against `3,15`
+   * says nothing about which of the four is carrying it, and the seat is the only place that
+   * question has an answer.
+   *
+   * Mono and tabular, because 1.4 is categorical and four of these are read down one court
+   * against each other.
+   */
+  it('draws the level under the handle, mono and tabular', () => {
     render(
       <CourtSeat
         size={46}
@@ -145,7 +159,25 @@ describe('the seat label', () => {
       />,
     );
 
-    expect(screen.queryByText(/3,10/, { includeHiddenElements: true })).toBeNull();
+    const level = screen.getByText('3,10', { includeHiddenElements: true });
+
+    expect(flatten(level.props.style)?.fontFamily).toBe(theme.num.xs.fontFamily);
+    expect(flatten(level.props.style)?.fontVariant).toEqual(['tabular-nums']);
+  });
+
+  /** Two seats have no figure to draw, and they are the two with no card behind them. */
+  it('draws no level on an empty seat or on one the record no longer describes', () => {
+    render(
+      <CourtSeat
+        size={46}
+        place="THEIR_SIDE"
+        occupant={WITHHELD}
+        selected={false}
+        onPress={noop}
+      />,
+    );
+
+    expect(screen.queryByText(/,\d\d$/, { includeHiddenElements: true })).toBeNull();
   });
 });
 
@@ -243,7 +275,6 @@ describe('a tap on a seat', () => {
         onOpenPool={noop}
         onSwap={noop}
         onClear={noop}
-        onHold={noop}
       />,
     );
 
@@ -254,70 +285,30 @@ describe('a tap on a seat', () => {
 });
 
 /**
- * **The hold, and the three seats that do not have one.**
+ * **There is no hold on a seat.**
  *
- * It opens `SH.whyfit` for the player in the seat — a *shortcut* to the route the forecast
- * card's names row carries, never the only way in, because there is no long-press gesture in
- * the accessibility API. So what matters here is the negative half: a seat with nothing behind
- * it carries no gesture at all rather than one that opens an apology, and the toggle takes the
- * gesture away from every seat at once.
+ * [#285](https://github.com/Raketa02/Raketa/issues/285) put a shortcut to `SH.whyfit` on a long
+ * press, beside the forecast card's names row. That row now draws each player as their own face
+ * and handle — a 44pt control with a picture of the person on it — and a second way in that
+ * nothing advertises, nothing announces and the accessibility API cannot perform was carrying
+ * nobody the row was not.
+ *
+ * Asserted rather than assumed, because a deleted gesture leaves no symptom: a `longPress` on a
+ * `Pressable` with no `onLongPress` is silently a no-op, so nothing else in this suite would go
+ * red if the wiring came back.
  */
 describe('a hold on a seat', () => {
-  it('explains the player in it', () => {
-    const { hold } = build([YOU, PARTNER, OPPONENT, EMPTY]);
+  it('does nothing, on a seat with a Fit behind it or on any other', () => {
+    const { openPool, swap, clear } = build([YOU, PARTNER, OPPONENT, EMPTY]);
 
-    fireEvent(screen.getByLabelText('Their side, ana, level 3,10'), 'longPress');
+    for (const seat of ['Their side, ana, level 3,10', 'Your side, you', 'Their side, empty']) {
+      fireEvent(screen.getByLabelText(seat), 'longPress');
+    }
 
-    expect(hold).toHaveBeenCalledWith(2);
-  });
-
-  /** An accepted seat is somebody you may not replace, and still somebody you may read about. */
-  it('explains a player whose seat is locked, because a lock is not a silence', () => {
-    const { hold } = build([YOU, PARTNER, ACCEPTED, EMPTY]);
-
-    fireEvent(screen.getByLabelText('Their side, ana, level 3,10'), 'longPress');
-
-    expect(hold).toHaveBeenCalledWith(2);
-  });
-
-  it('does nothing on your own seat, which no route serves you a row for', () => {
-    const { hold } = build([YOU, PARTNER, OPPONENT, EMPTY]);
-
-    fireEvent(screen.getByLabelText('Your side, you'), 'longPress');
-
-    expect(hold).not.toHaveBeenCalled();
-  });
-
-  it('does nothing on an empty seat, which has no Fit and is explained twice already', () => {
-    const { hold } = build([YOU, PARTNER, OPPONENT, EMPTY]);
-
-    fireEvent(screen.getByLabelText('Their side, empty'), 'longPress');
-
-    expect(hold).not.toHaveBeenCalled();
-  });
-
-  /** A withheld row carries one field and no card, so there is no breakdown left to draw. */
-  it('does nothing on a seat whose player the record no longer describes', () => {
-    const { hold } = build([YOU, PARTNER, WITHHELD, EMPTY]);
-
-    fireEvent(
-      screen.getByLabelText("Their side. Something's changed — they can't be invited now"),
-      'longPress',
-    );
-
-    expect(hold).not.toHaveBeenCalled();
-  });
-
-  /**
-   * **A hold mid-trade is most likely a slow tap**, and no sentence is owed for it: nothing
-   * advertises the gesture, which is the clear badge's own precedent.
-   */
-  it('is inert on every seat while the toggle is on, and raises no toast', () => {
-    const { hold } = build([YOU, PARTNER, OPPONENT, EMPTY], true);
-
-    fireEvent(screen.getByLabelText('Their side, ana, level 3,10'), 'longPress');
-
-    expect(hold).not.toHaveBeenCalled();
+    // Not merely unexplained: a hold must not fall through to the tap's own act either.
+    expect(openPool).not.toHaveBeenCalled();
+    expect(swap).not.toHaveBeenCalled();
+    expect(clear).not.toHaveBeenCalled();
     expect(useToastQueue.getState().queue).toHaveLength(0);
   });
 });

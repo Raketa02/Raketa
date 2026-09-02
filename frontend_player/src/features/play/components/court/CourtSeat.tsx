@@ -14,49 +14,51 @@
  * the **whole handle**, 2 to 64 characters — and #219 B4 raised the floor to 9,5pt. Sixty-four
  * characters in a 46pt seat is about four, so the visible label is not the name and cannot be.
  *
- * > **It truncates to the seat's own width, one line, tail ellipsis, and the level comes off
- * > it. The whole handle is read off the lines already on screen.**
+ * > **It truncates to the seat's own width, one line, tail ellipsis. The whole handle is read
+ * > off the lines already on screen.**
  *
  * Both screens the court appears on print the handles in full and unavoidably — the forecast
- * card's figures row and the pool header's seated-names line — so there is no legend to add
- * and no element to invent. **The spoken name is whole**: `seatLabel` composes the accessible
- * one, and a truncation of a *drawing* invents nothing, which is the only thing ADR-0107
- * forbids. **No `allowFontScaling={false}`** either — Part 13 permits that escape only inside
- * the level bar's drawn geometry, and `the-words.md` §20.4 already refused it here.
+ * card's side rows and the pool header's seated-names line — so there is no legend to add and
+ * no element to invent. **The spoken name is whole**: `seatLabel` composes the accessible one,
+ * and a truncation of a *drawing* invents nothing, which is the only thing ADR-0107 forbids.
+ * **No `allowFontScaling={false}`** either — Part 13 permits that escape only inside the level
+ * bar's drawn geometry, and `the-words.md` §20.4 already refused it here.
  *
- * The level comes off the visible label on §10's rule — a surface does not restate what it
- * already renders — and it is still in the seat's spoken name, where nothing else says it.
+ * ## The level is drawn under the name, and that reverses §5
  *
- * ## It is `tag` and not mono, now that the level has gone
+ * §5 took it off on §10's rule — *a surface does not restate what it already renders* — and
+ * that was right for a court under a card whose only figure was one percentage. The card now
+ * prints **side strengths**, which is what a side is worth and not what anybody on it is
+ * ([#290](https://github.com/Raketa02/Raketa/issues/290)): a player looking at `3,15` against
+ * `3,15` cannot see which of the four is carrying it, and *who is strong here* is the question
+ * a seat is the only place to answer. So there is nothing being restated — the two figures are
+ * about different subjects — and the seat draws its own.
  *
- * The prototype drew this 9pt mono, and 1.4's *numbers are monospaced, always* is what mono is
- * for: a figure compared vertically against another figure. What is left after §5 takes the
- * level off is a **handle** — a word — and `tag` is the design system's 9,5pt word.
+ * It is **mono and tabular** because 1.4 is categorical about it: four levels are read down a
+ * court against each other, which is exactly the comparison mono exists for. The name above it
+ * stays `tag`, the design system's 9,5pt word, because a handle is a word.
  *
- * ## The hold opens `SH.whyfit`, and it is a shortcut to a route that already exists
+ * ## There is no hold on a seat, and the route it duplicated is now a face
  *
- * A seated player's Fit had no explanation anywhere in the product, because the pool is the
- * one surface that explains a person and it removes everybody already on the court —
- * unreachable, and ⚡ *Let the engine fill the seats* is what makes that matter, since that
- * court is four people the searcher never chose and never saw a card for. **The forecast
- * card's names row is the route** — the same row this file's truncation is licensed by — and
- * `onHold` is a shortcut to the identical sheet
- * ([#285](https://github.com/Raketa02/Raketa/issues/285), §20.4.1).
+ * [#285](https://github.com/Raketa02/Raketa/issues/285) gave a seated player's Fit two ways
+ * in: the forecast card's names row, and a **long press** on the seat as a shortcut to the
+ * identical sheet. The shortcut is **gone**. The card's side rows now draw each player as
+ * their own face and handle, which is a target nobody has to discover — where a hold is a
+ * gesture with no affordance, no announcement, and no equivalent in the accessibility API at
+ * all, so it was never reachable by the people who most needed the route.
  *
- * **It is a fallback and never the only way in.** There is no long-press gesture in the
- * accessibility API, so a hold *duplicates* a route and carries none (Part 16, 2026-09-01).
- * A seat this component was handed no `onHold` for is a seat with no gesture at all, and
- * `CourtBuild` is where the three seats that get none are decided.
+ * What replaced it is strictly larger: a 44pt control with a picture of the person on it.
+ * Deleting the gesture rather than keeping it beside the face is the point — two ways to open
+ * one sheet, one of them invisible, is a gesture nobody can be told about being kept because
+ * it already exists.
  *
- * Three things about it are decided rather than open. **No holding ring**: §20.4's sentence
- * was struck, because the seat already dims to `.7` on press-in and a ring would be 6.6's
- * second channel on one state. **No `delayLongPress`** — the platform's default, as the deck
- * card's hold already takes, and `motion.hold` is *how long a state is shown* and must not
- * gain a gesture threshold. And **the hold says nothing when it does nothing**, on the clear
- * badge's own precedent one docblock down: a gesture nothing advertises owes no refusal.
+ * A tap on a seat is therefore **one act**: the pool, or a swap. Which of the two is
+ * `tapSeat`'s, and it is unchanged.
  */
 
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+
+import { formatLevel } from '@/shared/formatting/ratingFormat';
 
 import { Plus, theme } from '@/shared/ui';
 
@@ -170,18 +172,9 @@ export interface CourtSeatProps {
    * for the same reason: a hold that opened an apology would be worse than a hold that does
    * nothing, and a gesture nothing advertises owes no sentence either way.
    */
-  readonly onHold?: () => void;
 }
 
-export function CourtSeat({
-  size,
-  place,
-  occupant,
-  selected,
-  onPress,
-  onClear,
-  onHold,
-}: CourtSeatProps) {
+export function CourtSeat({ size, place, occupant, selected, onPress, onClear }: CourtSeatProps) {
   const who = seatWho(occupant);
   const box = seatBox(size);
 
@@ -192,10 +185,6 @@ export function CourtSeat({
         accessibilityLabel={seatLabel(place, who.spoken)}
         accessibilityState={{ selected }}
         onPress={onPress}
-        // The platform's own threshold, and no announcement: a hold is a fallback for a route
-        // the forecast card's names row already carries, and it is absent where there is
-        // nothing behind it.
-        onLongPress={onHold}
         // 6.6: touch has no hover, so the press is declared. The photo tile's `.7`, because
         // what dims is a photograph and this is the same rectangle at a quarter of the size.
         style={({ pressed }) => [box, pressed ? s.pressed : undefined]}
@@ -216,17 +205,24 @@ export function CourtSeat({
       </Pressable>
 
       {/* Under the face and outside the court's own box for this seat, which is the face and
-          nothing more. Hidden, because the seat's spoken name already carries the whole
-          handle and this is the same word cut short. */}
-      <Text
-        style={[s.label, { top: size + theme.space.xxs }]}
-        numberOfLines={1}
-        ellipsizeMode="tail"
+          nothing more. Hidden, because the seat's spoken name already carries both the whole
+          handle and the level — this is the same word cut short and the same figure. */}
+      <View
+        style={[s.caption, { top: size + theme.space.xxs }]}
         accessibilityElementsHidden
         importantForAccessibility="no-hide-descendants"
       >
-        {who.name}
-      </Text>
+        <Text style={s.label} numberOfLines={1} ellipsizeMode="tail">
+          {who.name}
+        </Text>
+        {/* The Skill level, where the record still holds one. Absent on an empty seat, which
+            has nobody to have one, and on a withheld one, whose card is gone with its handle. */}
+        {who.level === undefined ? null : (
+          <Text style={s.level} numberOfLines={1}>
+            {formatLevel(who.level)}
+          </Text>
+        )}
+      </View>
 
       {onClear === undefined ? null : (
         <Pressable
@@ -256,12 +252,19 @@ export function CourtSeat({
 const s = StyleSheet.create({
   // 6.6's photo-tile value, for both of this file's pressables.
   pressed: { opacity: 0.7 },
+  caption: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
   label: {
     ...theme.type.tag,
     ...theme.shadow.textOnMedia,
-    position: 'absolute',
-    left: 0,
-    right: 0,
+    color: theme.color.surface,
+    textAlign: 'center',
+  },
+  // Mono and tabular, because four of these are read down a court against each other — 1.4's
+  // whole reason for mono, and the comparison the side strengths above cannot answer.
+  level: {
+    ...theme.num.xs,
+    ...theme.tabular,
+    ...theme.shadow.textOnMedia,
     color: theme.color.surface,
     textAlign: 'center',
   },

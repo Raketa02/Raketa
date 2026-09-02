@@ -35,20 +35,20 @@
  * The clear badge draws no third refusal: `seatIsClearable` decides whether it exists at all,
  * so the × a player cannot use is never on screen to press.
  *
- * ## And the hold is a fourth thing a tap does not do, decided in the same two places
+ * ## There is no hold, and a seat does two things rather than three
  *
- * A hold opens `SH.whyfit` for the player in the seat
- * ([#285](https://github.com/Raketa02/Raketa/issues/285)) — a **shortcut** to the route the
- * forecast card's names row carries, never the only way in, because there is no long-press
- * gesture in the accessibility API. Which seats get one is `seatIsExplainable`'s, and it is
- * read here for the same reason the clear badge's rule is: a gesture a player cannot use is
- * never wired, so there is no refusal to write.
+ * [#285](https://github.com/Raketa02/Raketa/issues/285) put a **shortcut** to `SH.whyfit` on a
+ * long press, beside the forecast card's names row. The gesture is gone: the card's side rows
+ * draw each player as their own face and handle now, so the route is a 44pt control with a
+ * picture of the person on it, and a second way in that nothing advertises, nothing announces
+ * and no accessibility API can perform was never carrying anybody the row was not.
  *
- * **While the toggle is on it is wired nowhere, and says nothing.** A tap is *select* then
- * *trade*, so a hold mid-trade is most likely a slow tap, and answering hesitation with a
- * modal punishes the one two-step interaction on the screen. No sentence is owed, on the clear
- * badge's own precedent: nothing advertises the gesture. The names row is unaffected in both
- * modes, which is what keeps the route reachable while the shortcut is not.
+ * `seatIsExplainable` went with it. *Is there a breakdown behind this person* is still asked,
+ * but it is asked where the control is — the row tests the candidate row it is about to hand
+ * the sheet, which is the question itself rather than a proxy for it, and a second spelling
+ * living on here would be a rule with no reader.
+ *
+ * A tap on a seat is therefore the whole of what a seat does: the pool, or a swap.
  */
 
 import { useState } from 'react';
@@ -60,7 +60,7 @@ import { seatIsClearable, seatPlaces, tapSeat } from '../../domain/lineup';
 import { seatGuardLine } from '../courtPresentation';
 
 import { CourtSeat, type CourtSeatOccupant } from './CourtSeat';
-import { seatIsExplainable, seatWho } from './seatWho';
+import { seatWho } from './seatWho';
 
 export interface CourtBuildProps {
   readonly sport: SportKey;
@@ -82,15 +82,6 @@ export interface CourtBuildProps {
   /** Trade two seats. A re-arrangement of a response the builder already holds. */
   readonly onSwap: (from: number, to: number) => void;
   readonly onClear: (seat: number) => void;
-  /**
-   * Explain the Fit of the player in this seat — `SH.whyfit`, opened from the shortcut rather
-   * than from the names row.
-   *
-   * Required, as the other three acts are: **which seats carry the gesture is this component's
-   * decision and not the caller's**, so a screen that could withhold it would be a second
-   * place the rule is written.
-   */
-  readonly onHold: (seat: number) => void;
 }
 
 export function CourtBuild({
@@ -104,7 +95,6 @@ export function CourtBuild({
   onOpenPool,
   onSwap,
   onClear,
-  onHold,
 }: CourtBuildProps) {
   const [selected, setSelected] = useState<number>();
   // React's own answer to *adjust state when a prop changes*: read during render, not in an
@@ -150,7 +140,6 @@ export function CourtBuild({
           selected={selected === at}
           onPress={() => press(at, occupant)}
           onClear={seatIsClearable(occupant) ? () => onClear(at) : undefined}
-          onHold={!swapping && seatIsExplainable(occupant) ? () => onHold(at) : undefined}
         />
       ))}
     </Court>

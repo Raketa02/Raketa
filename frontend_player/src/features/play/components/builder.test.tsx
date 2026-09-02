@@ -741,15 +741,22 @@ describe('why this person is on my court', () => {
     expect(await screen.findByLabelText(WHY_FIT)).toBeTruthy();
   });
 
-  /** The shortcut, and it lands on the identical sheet rather than on a second surface. */
-  it('opens the same sheet from a hold on the seat', async () => {
+  /**
+   * **The shortcut is gone, and its removal is asserted rather than assumed.**
+   *
+   * A `longPress` on a `Pressable` with no `onLongPress` is silently a no-op, so a hold that
+   * quietly came back — or one that never left — would show no symptom anywhere else.
+   */
+  it('opens nothing from a hold on the seat, because the row is the route', async () => {
     await openTheBuilder();
     await pressFill();
     await screen.findByText('91%');
 
     fireEvent(seat('YOUR_PARTNER', C), 'longPress');
 
-    expect(await screen.findByLabelText(WHY_FIT)).toBeTruthy();
+    expect(screen.queryByLabelText(WHY_FIT)).toBeNull();
+    // And the tap's own act did not fire underneath it either.
+    expect(screen).toHavePathname('/play/builder');
   });
 
   /**
@@ -757,6 +764,23 @@ describe('why this person is on my court', () => {
    * row's key says, which is 7.12's rule for the court's own caption and side labels: a caption
    * is hidden where every element under it names itself. They are still drawn.
    */
+  /**
+   * **The face is what made the hold deletable** — the route is a control with a picture of
+   * the person on it rather than a gesture nothing advertises.
+   *
+   * Counted through the poster's own name, because every seeded card here has no `photo_url`:
+   * four seats and four row entries is eight posters, where before the row drew none.
+   */
+  it('draws a face beside every handle, which is what the row is a control over', async () => {
+    await openTheBuilder();
+    await pressFill();
+    await screen.findByText('91%');
+
+    expect(
+      screen.getAllByLabelText(CANDIDATE_POSTER_LABEL, { includeHiddenElements: true }),
+    ).toHaveLength(8);
+  });
+
   it('hides the two side headings, because each name says its own side', async () => {
     await openTheBuilder();
     await pressFill();
@@ -807,23 +831,6 @@ describe('why this person is on my court', () => {
     fireEvent(screen.getByLabelText(seatLabel('THEIR_SIDE', { kind: 'withheld' })), 'longPress');
 
     expect(screen.queryByLabelText(WHY_FIT)).toBeNull();
-  });
-
-  /**
-   * **A hold mid-trade is most likely a slow tap**, so it does nothing — and it says nothing,
-   * because nothing advertises the gesture, which is the clear badge's own precedent.
-   */
-  it('is inert while the swap toggle is on, and owes no sentence for it', async () => {
-    await openTheBuilder();
-    await pressFill();
-    await screen.findByText('91%');
-
-    fireEvent.press(screen.getByLabelText(SWAP_TOGGLE_LABEL));
-    const saidBefore = spoken().length;
-    fireEvent(seat('YOUR_PARTNER', C), 'longPress');
-
-    expect(screen.queryByLabelText(WHY_FIT)).toBeNull();
-    expect(spoken()).toHaveLength(saidBefore);
   });
 
   /** The names row is unaffected in both modes: the route stays open while the shortcut shuts. */

@@ -249,6 +249,7 @@ import {
   seatsOpenLine,
   sideName,
 } from './builderPresentation';
+import { CandidatePhoto } from './candidate/CandidatePhoto';
 import { CourtBuild } from './court/CourtBuild';
 import { PromptSheet } from './PromptSheet';
 import type { CourtSeatOccupant } from './court/CourtSeat';
@@ -505,7 +506,7 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
    * 2,82* and the row offering *why is Marek here* to disagree about who is standing where.
    */
   const halfOf = (side: 'yours' | 'theirs') => {
-    const handles = handlesOn(side, seated, places, rows);
+    const handles = handlesOn(side, seated, places, { rows, self });
     return {
       handles,
       name: sideName(
@@ -937,15 +938,6 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
                     const seat = seated[at];
                     if (seat?.kind === 'player') unseat(seat.playerId);
                   }}
-                  // The shortcut. Which seats carry it, and that none does under a swap, are
-                  // `CourtBuild`'s: the rule sits beside the truth table it is an exception
-                  // to, and it is read off the occupants this lookup's rows built — so a seat
-                  // that offered the gesture has a row here, and an absent one is *nothing to
-                  // explain* rather than a case owed a sentence.
-                  onHold={(at) => {
-                    const seat = seated[at];
-                    if (seat?.kind === 'player') setExplaining(rows.get(seat.playerId));
-                  }}
                 />
               </View>
 
@@ -1338,10 +1330,19 @@ interface SeatedHandle {
   /** §15's whole handle, or the unknown's question mark. Never cut short here. */
   readonly name: string;
   /**
+   * Whose face to draw beside the handle — **the same photo-or-poster switch the seat takes**.
+   *
+   * `undefined` for exactly one seat: yours, for the frame the launch read is still in flight
+   * (`self` is the account's id and arrives with it). A withheld player keeps a face, because a
+   * poster is a fact about an **id** and the id is the one field a withheld row still carries.
+   */
+  readonly face?: { readonly playerId: string; readonly photoUrl?: string };
+  /**
    * The row the record still holds for them. **Absent is plain text**: you have no candidate
    * row because no route serves a searcher their own, and a withheld player has one field and
-   * no card — so there is nothing behind the name and it is not a button (`seatIsExplainable`,
-   * the same rule the seat's hold reads).
+   * no card — so there is nothing behind the name and it is not a button. A name is a control
+   * where there is something behind it and plain text where there is not, never a button that
+   * opens an apology.
    */
   readonly candidate?: Candidate;
 }
@@ -1358,38 +1359,62 @@ function handlesOn(
   half: 'yours' | 'theirs',
   seated: Seating,
   places: readonly SeatPlace[],
-  rows: ReadonlyMap<string, Candidate>,
+  court: { readonly rows: ReadonlyMap<string, Candidate>; readonly self: string | undefined },
 ): readonly SeatedHandle[] {
   const mine = half === 'yours';
 
   return seated.flatMap<SeatedHandle>((seat, at) => {
     const place = places[at];
     if (place === undefined || mine !== (place !== 'THEIR_SIDE')) return [];
-    if (seat.kind === 'you') return [{ place, name: playerName({ kind: 'you' }) }];
+    if (seat.kind === 'you') {
+      // No `photoUrl`: no route serves a searcher their own card, so your own face here is the
+      // poster your seat already draws — one id, one poster, on both surfaces.
+      const face = court.self === undefined ? {} : { face: { playerId: court.self } };
+      return [{ place, name: playerName({ kind: 'you' }), ...face }];
+    }
     if (seat.kind === 'empty') return [];
 
-    const row = rows.get(seat.playerId);
+    const row = court.rows.get(seat.playerId);
     const who: NamedPlayer =
       row === undefined ? { kind: 'unknown' } : { kind: 'player', nickname: row.card.nickname };
+    const photo = row?.card.photoUrl;
 
-    return [{ place, name: playerName(who), ...(row === undefined ? {} : { candidate: row }) }];
+    return [
+      {
+        place,
+        name: playerName(who),
+        face: { playerId: seat.playerId, ...(photo === undefined ? {} : { photoUrl: photo }) },
+        ...(row === undefined ? {} : { candidate: row }),
+      },
+    ];
   });
 }
 
 /**
- * One name per line, each truncating in its own box and none of them joined — **and each a
- * button where there is a breakdown behind it.**
+ * One **face and handle** per person on this half — and each a button where there is a
+ * breakdown behind it.
  *
- * The target is the **line**, built to 6.5's minimum rather than granted a `hitSlop`: the names
- * are stacked with no gap, so vertical slop is bounded by a neighbour 0pt away and there is
- * none to take. That is the tick-box row's answer to the same arithmetic — *the row is the
- * surface* — and here the surface is one name.
+ * ## The face is what made the hold deletable
  *
- * **Every line takes that box, including the ones that are not controls.** A 44pt button
- * beside a 15pt line is one column at two rhythms, and which rhythm a line gets would then be
- * decided by whether the record still describes the person standing in that seat — a layout
- * that moves when a row is withheld. The box is the column's, and the target is a consequence
- * of it rather than the reason for it.
+ * This row was a column of words, and a seated player's Fit had a second way in: a long press
+ * on the seat ([#285](https://github.com/Raketa02/Raketa/issues/285)). A gesture nothing
+ * advertises, nothing announces and the accessibility API cannot perform was carrying nobody
+ * this row was not — so what it needed was not a second route but a **better first one**. A
+ * picture of the person is a target you can see, at the size the design system already asks
+ * of a control, and `CourtSeat` and `CourtBuild` drop the gesture on the strength of it.
+ *
+ * The photograph is `CandidatePhoto`'s photo-or-poster switch, so the face here and the face
+ * in the seat are **one drawing of one id** — a second implementation of the poster hash is
+ * two faces for one person the day either one changes.
+ *
+ * ## The target is the line, and every line takes it
+ *
+ * Built to 6.5's minimum as geometry rather than granted a `hitSlop`: the entries are stacked
+ * with no gap, so vertical slop is bounded by a neighbour 0pt away and there is none to take.
+ * **Every line takes that box, including the ones that are not controls** — a 44pt button
+ * beside a shorter line is one column at two rhythms, and which rhythm a line got would then
+ * be decided by whether the record still describes the person in that seat: a layout that
+ * moves when a row is withheld.
  *
  * The key is the **position**, not the word: two withheld seats on one side both answer `?`,
  * and a key of the name would collapse them into one line.
@@ -1402,11 +1427,28 @@ function Names({
   readonly onExplain: (candidate: Candidate) => void;
 }) {
   return (
-    <View>
-      {seated.map(({ place, name, candidate }, at) =>
-        candidate === undefined ? (
+    <View style={s.handles}>
+      {seated.map(({ place, name, face, candidate }, at) => {
+        // The face and the word, in the order they are read. `CandidatePhoto` hides itself, so
+        // the name is the whole of what either line says — spoken or printed.
+        const drawn = (
+          <>
+            {face === undefined ? null : (
+              <CandidatePhoto
+                playerId={face.playerId}
+                {...(face.photoUrl === undefined ? {} : { photoUrl: face.photoUrl })}
+                box={{ kind: 'face', size: theme.size.avatar }}
+              />
+            )}
+            <Text style={s.handle} numberOfLines={1}>
+              {name}
+            </Text>
+          </>
+        );
+
+        return candidate === undefined ? (
           <View key={at} style={s.handleTarget}>
-            <Text style={s.handle}>{name}</Text>
+            {drawn}
           </View>
         ) : (
           <Pressable
@@ -1418,10 +1460,10 @@ function Names({
             // control, so a word that dimmed alone would say the two are separate things.
             style={({ pressed }) => [s.handleTarget, pressed ? s.pressed : undefined]}
           >
-            <Text style={s.handle}>{name}</Text>
+            {drawn}
           </Pressable>
-        ),
-      )}
+        );
+      })}
     </View>
   );
 }
@@ -1501,13 +1543,17 @@ const s = StyleSheet.create({
   figure: { ...theme.num.xl, ...theme.tabular },
   word: { ...theme.type.cardTitle, color: theme.color.ink },
   provisional: { ...theme.type.tiny, color: theme.color.muted },
-  // The whole handle, and the one place on this screen it is not cut short.
-  handle: { ...theme.type.rlValue, color: theme.color.ink, textAlign: 'right' },
+  handles: { alignItems: 'flex-end' },
+  // The handle beside its face. It shrinks rather than wrapping: the face is a fixed box and
+  // the row is one line, so a long handle is spent on the word rather than on the layout.
+  handle: { ...theme.type.rlValue, color: theme.color.ink, flexShrink: 1 },
   // 6.5's floor, as geometry rather than as slop, and the column's one rhythm — see `Names`.
   handleTarget: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.space.xs,
     minHeight: theme.size.minTouch,
     minWidth: theme.size.minTouch,
-    justifyContent: 'center',
   },
   pressed: { opacity: 0.7 },
 });
