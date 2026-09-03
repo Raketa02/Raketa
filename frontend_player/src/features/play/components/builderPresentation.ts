@@ -167,6 +167,15 @@ export function sideName(names: readonly string[], whenEmpty: string): string {
 const SIDE_JOIN = ' + ';
 
 /**
+ * The word between the two **sides**, and the whole of what the column between them says.
+ *
+ * Lower case for `GAP_WORD`'s reason — it is a joint rather than a heading — and it is drawn
+ * and hidden, because the two panels either side of it are already named *Your side* and
+ * *Their side*: a listener hearing *your side, vs, their side* is being read the punctuation.
+ */
+export const VS_WORD = 'vs';
+
+/**
  * The word between the two strengths, and the whole of what the middle column says.
  *
  * Lower case, because it is a unit rather than a heading: the two figures either side of it

@@ -13,7 +13,7 @@
  */
 
 import { fireEvent, render, screen } from '@testing-library/react-native';
-import { Pressable, StyleSheet, type ViewStyle } from 'react-native';
+import { Pressable, StyleSheet, View, type ViewStyle } from 'react-native';
 
 import { Chip } from './Chip';
 import { theme } from './theme';
@@ -107,5 +107,52 @@ describe('what a finger meets', () => {
 
     expect(drawn(false).backgroundColor).toBe(theme.color.ink);
     expect(drawn(false).backgroundColor).not.toBe(theme.color.coral);
+  });
+});
+
+/**
+ * The sport dot — 6.4's square, on 6.2's pill.
+ *
+ * Asserted against the drawing for the reason the fill is: a decorative square has no role,
+ * no name and no text, and *it is hidden from assistive technology* is a claim only its
+ * props can carry. That half is the condition [2.3](../../../docs/design-system.md) attaches
+ * to drawing a sport hue at all — the label beside it always says which sport — so a dot
+ * that announced itself would be the same fact spoken twice.
+ */
+describe('the sport dot', () => {
+  const dots = () =>
+    screen
+      .UNSAFE_queryAllByType(View)
+      .filter((node) => StyleSheet.flatten(node.props.style)?.width === theme.size.sportDot);
+
+  it('is not drawn at all unless a colour is given', () => {
+    render(<Chip label="Padel" onPress={jest.fn()} />);
+
+    expect(dots()).toHaveLength(0);
+  });
+
+  it('draws one square in the colour it was handed, and hides it from a reader', () => {
+    render(<Chip label="Padel" dot={theme.sport.padel} onPress={jest.fn()} />);
+
+    const [dot] = dots();
+    expect(dots()).toHaveLength(1);
+    expect(StyleSheet.flatten(dot?.props.style)).toEqual(
+      expect.objectContaining({
+        width: theme.size.sportDot,
+        height: theme.size.sportDot,
+        backgroundColor: theme.sport.padel,
+      }),
+    );
+    expect(dot?.props.accessibilityElementsHidden).toBe(true);
+
+    // And the name is still the label alone: the dot adds nothing to what is announced.
+    expect(screen.getByRole('button', { name: 'Padel' })).toBeTruthy();
+  });
+
+  it('keeps its hue when the pill inverts — a sport is an identity, not a state', () => {
+    render(<Chip label="Padel" dot={theme.sport.padel} selected onPress={jest.fn()} />);
+
+    expect(StyleSheet.flatten(dots()[0]?.props.style)?.backgroundColor).toBe(theme.sport.padel);
+    expect(drawn(false).backgroundColor).toBe(theme.color.ink);
   });
 });

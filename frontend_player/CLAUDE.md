@@ -272,9 +272,11 @@ squash has no net, so both players stand on the same half and _seat 3_ is not wh
 in padel. That reaches the rules as well as the drawing: a seat's **side is read off seat
 order, never off the picture**, and it **follows you across the net**, because the swap toggle
 is _change sides, never seats_. **The seat label is an identifier under a face** — sixty-four
-characters of handle in a 46pt seat is about four, so it truncates to one line with a tail
-ellipsis, the level comes off it, and the **sentence and the spoken name stay whole**, which is
-what keeps ADR-0107 intact: a truncation invents nothing. Under both, `domain/lineup.ts` holds
+characters of handle in a 46pt seat is about four, so it draws the **first three, hard, with no
+ellipsis**, and the level sits beside them on the same line: a caption that told four faces
+apart had four characters and spent one of them apologising for a word nobody can go and read
+from there. The **sentence and the spoken name stay whole**, which is what keeps ADR-0107
+intact: a truncation invents nothing. Under both, `domain/lineup.ts` holds
 what somebody could be wrong about — `seatPlaces`, `seatIsLocked` / `seatIsClearable`, and the
 **swap truth table**, which is a decision and never a write. `seatLock` is the one spelling of
 _why_ a seat is locked, so the **two guard toasts** are its two codes: they are the

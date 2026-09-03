@@ -19,14 +19,14 @@
  *   the accessibility API.
  */
 
-import { AccessibilityInfo } from 'react-native';
+import { AccessibilityInfo, StyleSheet, type ViewStyle } from 'react-native';
 import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
 
 import { onlineManager } from '@tanstack/react-query';
 
 import { offlineMessage, type AppError } from '@/shared/errors';
 import { queryClient } from '@/shared/lib/query-client';
-import { courtSeatCount } from '@/shared/ui';
+import { BALANCE_SOFT, courtSeatCount, theme } from '@/shared/ui';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import {
   PROFILE_SURFACE_SERVED,
@@ -163,8 +163,8 @@ function envelope(
   };
 }
 
-const shortlist = (): Wire['ShortlistResponse'] => ({
-  search: envelope(SEARCH_ID),
+const shortlist = (prompts?: readonly Wire['PromptSchema'][]): Wire['ShortlistResponse'] => ({
+  search: envelope(SEARCH_ID, prompts === undefined ? {} : { prompts: [...prompts] }),
   candidates: [card(B), card(C), card(D)],
 });
 
@@ -339,7 +339,18 @@ const seat = (place: Parameters<typeof seatLabel>[0], playerId: string) =>
     seatLabel(place, { kind: 'player', name: NAMES[playerId] ?? '', level: LEVELS[playerId] ?? 0 }),
   );
 
-/** The names row's own button — `{side}, {name}, why fit {n}`, and every fixture's Fit is 78. */
+const flatten = (style: unknown) => StyleSheet.flatten(style as ViewStyle);
+
+/** The nearest ancestor that paints a bed — the panel a face is standing in. */
+const bedOf = (node: ReturnType<typeof screen.getByLabelText> | null): string | undefined => {
+  for (let up = node; up !== null; up = up.parent) {
+    const painted = flatten(up.props.style)?.backgroundColor;
+    if (typeof painted === 'string') return painted;
+  }
+  return undefined;
+};
+
+/** The side panel's own button — `{side}, {name}, why fit {n}`, and every fixture's Fit is 78. */
 const named = (place: Parameters<typeof seatedNameLabel>[0], playerId: string) =>
   screen.getByLabelText(seatedNameLabel(place, { name: NAMES[playerId] ?? '', fit: 78 }));
 
@@ -810,13 +821,18 @@ describe('why this person is on my court', () => {
     expect(named('THEIR_SIDE', B)).toBeTruthy();
     // And nobody else on the row: four seats, two ways in.
     expect(screen.queryAllByLabelText(/why fit/)).toHaveLength(2);
-    // The other two lines are still **drawn** — plain text is not a line that vanished, and a
-    // row is one entry per seat rather than a phrase the seats it can explain were joined
-    // into. The withheld handle's `?` is the names row's: the seat draws the same character
-    // under its face and hides it.
-    expect(screen.getByText('?')).toBeTruthy();
-    // Twice: the You tab underneath, and your own line on the card.
-    expect(screen.getAllByText('You')).toHaveLength(2);
+    // The other two are still **drawn** — a face that opens nothing is not a face that
+    // vanished, and a panel holds one box per seat rather than only the seats it can explain.
+    // The withheld handle's `?` is `playerName`'s unknown, and it reaches the panel's own line
+    // the way every handle does: joined into the side's name.
+    // Two of them, and both are drawings: the bar's segment and the panel's own line.
+    expect(
+      screen.getAllByText(sideName([NAMES[B] ?? '', '?'], SIDE_HEADINGS.theirs), {
+        includeHiddenElements: true,
+      }),
+    ).toHaveLength(2);
+    // Once, and it is the You tab underneath: the card's own `You` is inside the joined name.
+    expect(screen.getAllByText('You')).toHaveLength(1);
   });
 
   /** The same rule on the shortcut: a seat with nothing behind it carries no gesture. */
@@ -1005,7 +1021,7 @@ describe('the forecast card', () => {
    * against `3,11` with a gap of `0,09`, and a card that averaged the seated players' levels —
    * 2,80 · 2,71 · 2,90 — could not produce any of them.
    */
-  it('prints both side strengths and the gap, named by who is on each side', async () => {
+  it('prints both side strengths and the gap, and names neither half twice', async () => {
     await openTheBuilder();
     await pressFill();
     await screen.findByText('91%');
@@ -1014,8 +1030,45 @@ describe('the forecast card', () => {
     expect(screen.getByText('3,20')).toBeTruthy();
     expect(screen.getByText('3,11')).toBeTruthy();
     expect(screen.getByText('0,09')).toBeTruthy();
-    expect(screen.getByText(YOURS)).toBeTruthy();
-    expect(screen.getByText(THEIRS)).toBeTruthy();
+    // **The row is three figures.** Who each half is, is said by the panel under it and by
+    // this row's own spoken name — printing the two joined phrases here as well named these
+    // four people three times on one card.
+    expect(screen.queryByText(YOURS)).toBeNull();
+    expect(screen.queryByText(THEIRS)).toBeNull();
+    expect(
+      screen.getByLabelText(
+        splitRowLabel(
+          { yours: YOURS, theirs: THEIRS },
+          { yourSide: 3.2, theirSide: 3.11, gap: 0.09 },
+        ),
+      ),
+    ).toBeTruthy();
+  });
+
+  /**
+   * **The two things a panel is**: a 44pt box per person, and a bed that is the bar's own.
+   *
+   * [6.5](../../../../docs/design-system.md#65-touch-targets) bounds horizontal hit-slop by
+   * the neighbour, so two faces in a row cannot each grow into the gap they share — each is
+   * centred in its own 44 × 44 box instead, which is geometry nothing can spend. The bed is
+   * `BALANCE_SOFT`'s rather than a colour chosen here, for the reason `BALANCE_INK` exists:
+   * one place decides which amber, so the panel and the bar four lines above it cannot pick
+   * two.
+   */
+  it('gives every face a 44pt box, and paints their side in the bar’s own tone', async () => {
+    await openTheBuilder();
+    await pressFill();
+    await screen.findByText('91%');
+
+    const face = flatten(named('THEIR_SIDE', B).props.style);
+
+    expect(face?.width).toBe(theme.size.minTouch);
+    expect(face?.height).toBe(theme.size.minTouch);
+
+    // 91% is `ok`, and the panel's bed is that tone's soft. Yours is the neutral half — the
+    // bar paints it `night` and never a tone — so the two beds are deliberately not a pair.
+    expect(bedOf(named('THEIR_SIDE', B))).toBe(BALANCE_SOFT.ok);
+    expect(bedOf(named('YOUR_PARTNER', C))).toBe(theme.color.line2);
   });
 
   /**
@@ -1048,10 +1101,14 @@ describe('the forecast card', () => {
     await pressFill();
     await screen.findByText('91%');
 
-    // Twice in the tree and once to a listener: the split row's copy, and the bar's own.
+    // Twice in the tree and **never** to a listener: the bar's segment label and the panel's
+    // own line, both drawings of what the split row above states as one element. The fixtures'
+    // handles carry no word break, so the drawn form and the whole one are the same string
+    // here — `playerName.test.ts` is where the cut itself is pinned.
     expect(screen.getAllByText(YOURS, { includeHiddenElements: true })).toHaveLength(2);
     expect(screen.getAllByText(THEIRS, { includeHiddenElements: true })).toHaveLength(2);
-    expect(screen.getAllByText(YOURS)).toHaveLength(1);
+    expect(screen.queryByText(YOURS)).toBeNull();
+    expect(screen.queryByText(THEIRS)).toBeNull();
     expect(screen.queryByLabelText(balanceLabel(91))).toBeNull();
   });
 
@@ -1105,10 +1162,14 @@ describe('the forecast card', () => {
     fireEvent.press(seat('THEIR_SIDE', B));
     fireEvent.press(seat('THEIR_SIDE', D));
 
-    // The court changed — their half reads the other way round — and nothing else did.
+    // The court changed — their half reads the other way round — and nothing else did. Drawn
+    // rather than spoken: the panel and the bar say who is on a half, and the split row above
+    // them says it once as part of one element.
     expect(
-      await screen.findByText(sideName([NAMES[D] ?? '', NAMES[B] ?? ''], SIDE_HEADINGS.theirs)),
-    ).toBeTruthy();
+      await screen.findAllByText(sideName([NAMES[D] ?? '', NAMES[B] ?? ''], SIDE_HEADINGS.theirs), {
+        includeHiddenElements: true,
+      }),
+    ).toHaveLength(2);
     expect(screen.getByText('91%')).toBeTruthy();
     expect(screen.getByText(ALREADY_EVENEST)).toBeTruthy();
     expect(spoken()).toHaveLength(saidBefore);
@@ -1340,5 +1401,54 @@ describe('the question ⚡ raised', () => {
     // No sheet at all — the filled court is reachable, which it would not be behind one.
     expect(await screen.findByLabelText(summary(4))).toBeTruthy();
     expect(screen.queryByText(REFRESH_YOUR_TIMES)).toBeNull();
+  });
+
+  /**
+   * **A question already answered on Find a game is not asked again by ⚡**
+   * ([#287](https://github.com/Raketa02/Raketa/issues/287)).
+   *
+   * The flow is two taps: search on an improvised week, dismiss *Keep these times?*, press ⚡.
+   * ⚡ mints a search of its own, so a memory keyed by the minted id could not see that the
+   * question had been put — and `KEEP_THESE_TIMES` is precisely the prompt whose decline
+   * writes **no durable row** (`promptSuppresses`), so nothing on the server declines to raise
+   * it a second time either. The visit's own list in `playSession` is the whole of what stands
+   * between *not now* and the identical sheet two taps later.
+   */
+  it('does not ask again what Find a game already asked over the same week', async () => {
+    const keepTheseTimes: Wire['PromptSchema'] = {
+      prompt: 'KEEP_THESE_TIMES',
+      slots: [{ day: 1, part: 'MORNING' }],
+    };
+    const KEEP_THESE_TIMES = promptCopy({
+      prompt: 'KEEP_THESE_TIMES',
+      week: [],
+      profileWeek: [],
+    }).title;
+
+    // One improvised week, and both searches over it raise the same question about it.
+    transport.on('POST', SEARCHES, () => json(shortlist([keepTheseTimes])));
+    raising([keepTheseTimes]);
+
+    await launchSignedIn();
+    fireEvent.press(await screen.findByLabelText('Play'));
+    fireEvent.press(await screen.findByLabelText('Monday morning'));
+
+    fireEvent.press(screen.getByLabelText(courtEntryLabel(courtSeatCount('padel'))));
+    await screen.findByText(POOL_RANKING);
+    act(() => jest.advanceTimersByTime(searchingFloorMs({ kind: 'pool' })));
+
+    // Asked once, on the screen the week is edited on, and dismissed — which is *not now*.
+    await screen.findByText(KEEP_THESE_TIMES);
+    fireEvent.press(screen.getByLabelText(promptControls('KEEP_THESE_TIMES').close));
+    await waitFor(() => expect(screen).toHavePathname('/play/builder'));
+    await screen.findByLabelText(summary(1));
+
+    await pressFill();
+
+    // The court ⚡ filled is reachable, which it would not be behind a second sheet.
+    expect(await screen.findByLabelText(summary(4))).toBeTruthy();
+    expect(screen.queryByText(KEEP_THESE_TIMES)).toBeNull();
+    // And *not now* was written once, about the question, by the one screen that asked it.
+    expect(transport.requestsTo('POST', DECLINES)).toEqual([]);
   });
 });

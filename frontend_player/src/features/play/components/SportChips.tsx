@@ -19,7 +19,7 @@
 
 import { StyleSheet, Text, View } from 'react-native';
 
-import { sportLabel } from '@/features/onboarding/types';
+import { sportColour, sportLabel } from '@/features/onboarding/types';
 import { Chip, theme } from '@/shared/ui';
 import type { Sport } from '@/shared/vocabulary/sport';
 
@@ -42,6 +42,11 @@ export function SportChips({ rated, selected, onChoose }: SportChipsProps) {
           <Chip
             key={offered}
             label={sportLabel(offered)}
+            // 6.4's square dot on 6.2's pill. Decoration, and the name beside it is what
+            // actually says which sport — the condition 2.3 attaches to drawing a sport hue
+            // at all. What it buys is a row of four names that is picked out by shape and
+            // colour together rather than read word by word.
+            dot={sportColour(offered)}
             selected={offered === selected}
             onPress={() => onChoose(offered)}
           />

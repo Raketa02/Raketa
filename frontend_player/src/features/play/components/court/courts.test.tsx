@@ -19,7 +19,7 @@ import { seatPlaces } from '../../domain/lineup';
 
 import { CourtBuild } from './CourtBuild';
 import { CourtMini } from './CourtMini';
-import { CourtSeat, type CourtSeatOccupant } from './CourtSeat';
+import { CourtSeat, seatCaptionName, SEAT_NAME_LETTERS, type CourtSeatOccupant } from './CourtSeat';
 
 /** 2 to 64 characters, and the seat is 46pt. The arithmetic §5 ran, as a fixture. */
 const LONG_HANDLE = 'marekwiśniewski-plays-every-tuesday-and-most-saturdays-in-warsaw';
@@ -71,8 +71,10 @@ beforeEach(() => {
   useToastQueue.getState().clear();
 });
 
+const CAPTION = seatCaptionName(LONG_HANDLE);
+
 describe('the seat label', () => {
-  it('truncates visually, on one line, to the seat it is under', () => {
+  it('draws three characters of the handle, on one line, and marks nothing for the rest', () => {
     render(
       <CourtSeat
         size={46}
@@ -86,17 +88,45 @@ describe('the seat label', () => {
     // Hidden by design — the seat's spoken name already carries the whole handle — so the
     // query has to ask for it. That it is hidden is the assertion two lines down in the
     // accessibility suite.
-    const label = screen.getByText(LONG_HANDLE, { includeHiddenElements: true });
+    const label = screen.getByText(CAPTION, { includeHiddenElements: true });
 
+    expect(CAPTION).toHaveLength(SEAT_NAME_LETTERS);
     expect(label.props.numberOfLines).toBe(1);
-    expect(label.props.ellipsizeMode).toBe('tail');
+    // Never `tail`. The cut is already made, so an ellipsis could only be an apology for a
+    // word the player cannot go and read from here — a character of the four spent saying so.
+    expect(label.props.ellipsizeMode).toBe('clip');
     expect(flatten(label.props.style)?.fontSize).toBe(theme.type.tag.fontSize);
-    // Hidden: the seat's spoken name already carries this word whole and the figure under it,
-    // and a reader that walked into the drawn caption would hear four characters of a handle.
+    expect(screen.queryByText(LONG_HANDLE, { includeHiddenElements: true })).toBeNull();
+    // Hidden: the seat's spoken name already carries this word whole and the figure beside it,
+    // and a reader that walked into the drawn caption would hear three characters of a handle.
     // Asserted as **reachability** rather than as the attribute, because the hide moved onto
     // the caption box when the level joined the handle in it — where it is, is not the claim.
-    expect(screen.queryByText(LONG_HANDLE)).toBeNull();
+    expect(screen.queryByText(CAPTION)).toBeNull();
     expect(screen.queryByText('2,92')).toBeNull();
+  });
+
+  it('draws the name and the level on one line, in a box wider than the seat', () => {
+    // The pair reads as one identifier — `Pau 3,23` — which is what a court is scanned by.
+    // The row is inset past the face on both sides because the two together do not fit in 46pt,
+    // and it is absolutely positioned, so the room it takes comes from nothing.
+    render(
+      <CourtSeat
+        size={46}
+        place="THEIR_SIDE"
+        occupant={OPPONENT}
+        selected={false}
+        onPress={noop}
+      />,
+    );
+
+    // The drawn word, then the composite `Text`, then the caption box itself.
+    const caption = screen.getByText(seatCaptionName('ana'), { includeHiddenElements: true }).parent
+      ?.parent;
+    const box = flatten(caption?.props.style);
+
+    expect(box?.flexDirection).toBe('row');
+    expect(box?.left).toBeLessThan(0);
+    expect(box?.left).toBe(box?.right);
   });
 
   it('scales with Dynamic Type, because §20.4 refused the escape the level bar has', () => {
@@ -110,7 +140,7 @@ describe('the seat label', () => {
       />,
     );
 
-    const label = screen.getByText(LONG_HANDLE, { includeHiddenElements: true });
+    const label = screen.getByText(CAPTION, { includeHiddenElements: true });
 
     expect(label.props.allowFontScaling).not.toBe(false);
   });

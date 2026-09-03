@@ -13,12 +13,13 @@
  * ## Days are rows, and that is a touch decision
  *
  * Seven cells at the 44pt minimum want 308pt against the 290pt of content the narrowest
- * phone has, and no `hitSlop` closes a 2,6pt-per-cell deficit against neighbours 6pt apart.
- * Turned the other way a cell is 44 tall by its own geometry and, with the label column at
- * its cap, 65,5pt wide on that same phone — the first control in the app that reaches the
- * touch minimum without being granted anything. `profileControlGeometry.test.ts` pins that
- * arithmetic, because it is the kind that holds on the phone an agent tests on and fails on
- * the one a player owns.
+ * phone has, and no `hitSlop` closes a per-cell deficit against neighbours 6pt apart — nor
+ * does the widest phone in the population close it, so it is a property of seven columns
+ * rather than of one device. Turned this way a cell is 44 tall by its own geometry and, with
+ * the card taken off and the label column at its cap, 59,5pt wide on that same phone — the
+ * first control in the app that reaches the touch minimum in **both** axes without being
+ * granted anything. `profileControlGeometry.test.ts` pins that arithmetic, because it is the
+ * kind that holds on the phone an agent tests on and fails on the one a player owns.
  *
  * **The two columns are bottom-aligned**, which is what keeps each day label beside its own
  * row without anybody measuring anything: below the column heads both columns are the same
@@ -32,13 +33,19 @@
  * be a claim about what players want, and describing an irregular week is the whole reason
  * the grid is twenty-one independent answers rather than three.
  *
- * ## Selection is a fill inversion **and** a tick
+ * ## Selection is a fill **and** a tick
  *
- * Inverting to `ink` is a 17,50:1 luminance change rather than a change of hue, so it
- * survives colour blindness on its own — but a cell is a bare rectangle, and twenty-one of
- * them differing only in lightness is a texture. The tick is the shape Part 13 asks for,
- * and it is what makes a ticked week read as a pattern rather than as a stain. Round cap and
- * join: at 2pt, butt caps make a tick read as two bars meeting at a corner.
+ * The fill goes `paper2` → `mint`: 3,39:1 between the two and a relative luminance of 0,824
+ * against 0,208, so a reader who sees no hue at all sees a dark square in a field of pale
+ * ones, which is what [Part 13](../../../docs/design-system.md#part-13--accessibility) asks
+ * of a non-text graphical object. But a cell is a bare rectangle, and twenty-one of them
+ * differing only in lightness is a texture: the tick is the shape Part 13 asks for, and it is
+ * what makes a ticked week read as a pattern rather than as a stain. Round cap and join — at
+ * 2pt, butt caps make a tick read as two bars meeting at a corner — in `surface` over the
+ * fill, 4,07:1, which a 2pt graphical object clears and which is not the white **type** on
+ * `mint` that Rule C refuses.
+ *
+ * `accessibilityState.checked` carries the same fact for whoever sees neither.
  *
  * ## One cell can also carry a mark it did not earn
  *
@@ -47,15 +54,31 @@
  * ([#283](https://github.com/Raketa02/Raketa/issues/283)). So an editor cell takes an optional
  * `addedForThisSearch`, drawn as a plus on the **unfilled** square.
  *
- * **It is a third fact and not a third state**, which is the distinction that keeps the two
- * paragraphs above true: the cell is unselected, reports itself unchecked, and toggles like
- * every other, because pressing it is how a player makes that widening their own ask. The bed
- * is what forces a second plus in `Tick` — the diff's is volt on `ink`, and this square is not
- * filled.
+ * **It is a third fact and not a third state**: the cell is unselected, reports itself
+ * unchecked, and toggles like every other, because pressing it is how a player makes that
+ * widening their own ask. The bed is what forces a second plus in `Tick` — the diff's is volt
+ * on `mint`, and this square is not filled.
+ *
+ * ## The card is the grid's own, and so is the footnote inside it
+ *
+ * 6.8 draws the week on a `surface` card with the footnote beneath a hairline **inside** it,
+ * because the sentence is about the grid rather than about the screen: a count of slots
+ * floating under a bare block of squares belonged to whatever came next on the page. The
+ * hairline is drawn only when there are words to separate, and on the editor the slot's
+ * height is reserved either way — the moment a player is most likely to tick a second cell is
+ * immediately after ticking the first, and a grid that jumped upward under a finger mid-tap
+ * would select the wrong one.
+ *
+ * **The diff grid reserves nothing**, and that is the same rule read rather than an exception
+ * to it. What the reservation protects is a cell moving under a finger between two taps, and
+ * nothing on the diff is pressable: it cannot gain a footnote, cannot lose one, and takes 44pt
+ * of empty card for a message it has no way of being handed. Those 44 are worth having —
+ * `SH.saveav` draws this grid above its two buttons inside a sheet that stops at 88% of the
+ * screen.
  *
  * ## Every word is the caller's
  *
- * This file holds no copy. The heads, the day labels, each cell's accessible name and the
+ * This file holds no copy. The heads, the row labels, each cell's accessible name and the
  * footnote all arrive as props, because the onboarding step that collects a week and the
  * profile editor that will change one do not say the same things.
  *
@@ -88,7 +111,7 @@ const grid = theme.size.availability;
 
 export interface AvailabilityGridCell {
   readonly key: string;
-  /** Drawn ink-filled with a tick, and announced as checked. Owned by the caller. */
+  /** Drawn `mint`-filled, and announced as checked. Owned by the caller. */
   readonly selected: boolean;
   /**
    * A slot **this one search** added, which the player never ticked — drawn as a plus on the
@@ -145,13 +168,18 @@ export interface AvailabilityDiffRow {
 }
 
 interface GridChrome {
-  /** One per column, in the order the cells run. Decoration to assistive technology. */
+  /** One per column, in the order the cells run — the three parts of the day. Decoration to
+   *  assistive technology. */
   readonly columnHeads: readonly string[];
   /**
-   * At most two lines under the grid, and **its height is reserved whether or not it has
-   * anything in it**: the moment a player is most likely to tick a second cell is
-   * immediately after ticking the first, and a grid that jumped upward under a finger
-   * mid-tap would select the wrong one.
+   * At most two lines under the grid, inside the card and beneath a hairline.
+   *
+   * On the **editor** its height is reserved whether or not it has anything in it: the moment
+   * a player is most likely to tick a second cell is immediately after ticking the first, and
+   * a grid that jumped upward under a finger mid-tap would select the wrong one. The hairline
+   * is drawn only when there is something to separate.
+   *
+   * On the **diff** there is no slot at all — see the module note.
    */
   readonly footnote?: string;
 }
@@ -172,7 +200,7 @@ export type AvailabilityGridProps = AvailabilityGridEditorProps | AvailabilityGr
 export function AvailabilityGrid(props: AvailabilityGridProps) {
   const { columnHeads, footnote } = props;
   return (
-    <View>
+    <View style={s.card}>
       <View style={s.grid}>
         {/* Content-sized so Dynamic Type grows it, capped by `labelMaxRatio` so it cannot
             grow into the cells' 44pt. */}
@@ -213,15 +241,22 @@ export function AvailabilityGrid(props: AvailabilityGridProps) {
         </View>
       </View>
 
-      <View style={s.footnote}>
-        {/* Two lines is a ceiling as well as a floor (6.8): a third line would push the
-            grid, which is the movement the reserved slot exists to prevent. */}
-        {footnote === undefined ? null : (
-          <Text style={s.footnoteText} numberOfLines={2}>
-            {footnote}
-          </Text>
-        )}
-      </View>
+      {/* No slot at all on the diff: nothing there is pressable, so there is no tap for a
+          reserved height to protect, and the sheet it is drawn in has no room to spare. */}
+      {props.variant === 'diff' && footnote === undefined ? null : (
+        <View style={s.footnote}>
+          {/* Two lines is a ceiling as well as a floor (6.8): a third line would push the
+              grid, which is the movement the reserved slot exists to prevent. */}
+          {footnote === undefined ? null : (
+            <>
+              <View style={s.footnoteRule} />
+              <Text style={s.footnoteText} numberOfLines={2}>
+                {footnote}
+              </Text>
+            </>
+          )}
+        </View>
+      )}
     </View>
   );
 }
@@ -248,7 +283,7 @@ function cellRows(
 }
 
 /**
- * One cell — 44 tall by its own geometry, with no `hitSlop` to grant.
+ * One cell — 44 tall and 44 wide by its own geometry, with no `hitSlop` to grant.
  *
  * `checkbox` rather than `button` because the state is the point and the role is what
  * carries it: twenty-one buttons announce twenty-one identical actions, where twenty-one
@@ -290,7 +325,7 @@ function Cell({ cell }: { readonly cell: AvailabilityGridCell }) {
  * Not a `Pressable` and not a `checkbox`: §20.7 records the diff grid as *"not interactive"*,
  * and a role that carried `checked` here would offer a state a reader could try to change.
  * The three drawn facts are three marks in one 12 × 12 box, so a reader who cannot separate
- * volt from white still separates a tick from a plus from a dash.
+ * the fills still separates a tick from a plus from a dash.
  */
 function DiffCell({ cell }: { readonly cell: AvailabilityDiffCell }) {
   const hidden = cell.accessibilityLabel === undefined;
@@ -307,7 +342,7 @@ function DiffCell({ cell }: { readonly cell: AvailabilityDiffCell }) {
   );
 }
 
-/** The two states drawn on the inverted fill — this week as the search leaves it. */
+/** The two states drawn on the filled cell — this week as the search leaves it. */
 const FILLED = new Set<AvailabilityDiffState>(['on', 'added']);
 
 const MARKS: Readonly<Record<AvailabilityDiffState, ReactNode>> = {
@@ -318,6 +353,15 @@ const MARKS: Readonly<Record<AvailabilityDiffState, ReactNode>> = {
 };
 
 const s = StyleSheet.create({
+  // The week's own card — 6.8. The footnote lives inside it because the sentence is about
+  // the grid rather than about whatever comes next on the page.
+  card: {
+    backgroundColor: theme.color.surface,
+    borderRadius: theme.radius.card,
+    borderWidth: 1,
+    borderColor: theme.color.line,
+    padding: grid.cardPadding,
+  },
   // Bottom-aligned, so the labels line up with their rows however tall the heads grow.
   grid: { flexDirection: 'row', alignItems: 'flex-end', gap: grid.labelGutter },
   labels: { maxWidth: `${grid.labelMaxRatio * 100}%`, gap: grid.gap },
@@ -327,10 +371,11 @@ const s = StyleSheet.create({
   label: { ...theme.type.flab, color: theme.color.ink, textTransform: 'uppercase' },
   cells: { flex: 1, gap: grid.gap },
   heads: { flexDirection: 'row', gap: grid.gap },
-  // The eyebrow role: these label a region being READ, and nothing here is pressable.
+  // `flab` as well, and for the same reason the day labels take it: a head sits directly
+  // above cells a finger is going to land on, which is not a region being READ.
   head: {
-    ...theme.type.eyebrow,
-    color: theme.color.muted,
+    ...theme.type.flab,
+    color: theme.color.ink,
     flex: 1,
     textAlign: 'center',
     textTransform: 'uppercase',
@@ -340,15 +385,20 @@ const s = StyleSheet.create({
     flex: 1,
     height: grid.cellHeight,
     borderRadius: theme.radius.availabilityCell,
-    borderWidth: 1,
-    borderColor: theme.color.line,
-    backgroundColor: theme.color.surface,
+    // No border. The card bounds the grid; a line around each of twenty-one adjacent
+    // squares is a fold drawn twenty-one times inside one thing.
+    backgroundColor: theme.color.paper2,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  cellSelected: { backgroundColor: theme.color.ink, borderColor: theme.color.ink },
+  cellSelected: { backgroundColor: theme.color.mint },
   cellPressed: { opacity: 0.7 },
-  // Two lines of `tiny`, laid out whether or not anything is in them.
-  footnote: { minHeight: grid.footnoteMinHeight, marginTop: theme.space.xs },
-  footnoteText: { ...theme.type.tiny, color: theme.color.muted },
+  // Two lines of `rlLabel`, laid out whether or not anything is in them.
+  footnote: { minHeight: grid.footnoteMinHeight, marginTop: theme.space.md },
+  footnoteRule: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: theme.color.line,
+    marginBottom: theme.space.sm,
+  },
+  footnoteText: { ...theme.type.rlLabel, color: theme.color.muted },
 });

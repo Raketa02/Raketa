@@ -97,12 +97,7 @@ import type { Sport } from '@/shared/vocabulary/sport';
 import type { Candidate } from '../domain/candidate';
 import { deckStanding } from '../domain/deckHand';
 import { findAGameStanding } from '../domain/findAGame';
-import {
-  NOTHING_ASKED,
-  alsoAsked,
-  firstUnasked,
-  type AskedQuestions,
-} from '../domain/raisedPrompt';
+import { firstUnasked } from '../domain/raisedPrompt';
 import { differsFromProfile } from '../domain/workingWeek';
 import { useDealDeck, useOutstandingInterest, useSayNo, useSayYes } from '../hooks/useDeck';
 import { usePlayPreferences } from '../store/playPreferences.store';
@@ -173,7 +168,10 @@ export function DeckScreen() {
    * behind it, and a second sheet opening onto the first one closing is the stack the response
    * ordering exists to prevent. One deal asks at most one question.
    */
-  const [asked, setAsked] = useState<AskedQuestions>(NOTHING_ASKED);
+  // The visit's own, and now every surface's: what this screen needed a wider key for turned
+  // out to be true of ⚡, the climb and Find a game as well (#287).
+  const asked = usePlaySession((state) => state.askedQuestions);
+  const recordAsked = usePlaySession((state) => state.recordAsked);
   const [answeredOnThisDeal, setAnsweredOnThisDeal] = useState<string | undefined>(undefined);
 
   /** The body of the card on screen — where focus goes when the next one arrives (§20.5). */
@@ -484,7 +482,7 @@ export function DeckScreen() {
           sport={question.sport}
           returnFocusTo={body}
           onAnswered={() => {
-            setAsked((held) => alsoAsked(held, question.sport, question.raised.prompt));
+            recordAsked(question.sport, question.raised.prompt);
             setAnsweredOnThisDeal(question.deal);
           }}
         />

@@ -16,8 +16,8 @@
  *
  * **A seat label may truncate visually; a sentence may not, and a spoken name never does.**
  * ADR-0107's rule is against *inventing* a familiar form — a visual truncation invents
- * nothing, and it belongs to the component whose box is doing the truncating rather than
- * here.
+ * nothing. *Whether* a box truncates is that box's business; **where a handle can be cut** is
+ * a property of handles, and that is `handleStem` below.
  *
  * **`sideNames` is gone, and the rule it carried is not.** §B16's `"You + Marek"` was redrawn
  * as a *list* — *"a formatter that returns one string has decided the layout, and this one
@@ -57,3 +57,33 @@ export function playerName(player: NamedPlayer): string {
       return UNKNOWN;
   }
 }
+
+/**
+ * The handle **up to its first word break** — `Sergio.Sabater` drawn as `Sergio`.
+ *
+ * **This is not a first name, and the distinction is the whole of why it is allowed.**
+ * ADR-0107 forbids *inventing* a familiar form: the prototype's `split(' ')[0]` over a real
+ * name produced a word the person never gave the platform. This produces no word at all — it
+ * takes a **prefix of the handle they chose**, cut at a character they typed, and it is used
+ * only where a box is drawing rather than where a sentence is naming. Every sentence, every
+ * accessible name and every toast still carries all sixty-four characters, and the two rows
+ * that draw this stem sit directly under one that speaks the whole thing.
+ *
+ * **A dot or a space, and deliberately not a dash or an underscore.** Those two are the
+ * characters a handle puts *between words* — `Sergio.Sabater`, `Hugo Ferrer` — where `-` and
+ * `_` are as often inside one: `bea_k` and `dorota_w` are single words with punctuation in
+ * them, and cutting at the underscore would draw `bea` for a handle whose owner wrote four
+ * characters. Cutting at a separator rather than at a character count is what keeps the
+ * result a word: it is the same rule the seat's three-character caption breaks on purpose,
+ * because a 46pt face has no room to respect it.
+ *
+ * **A handle that opens with a break keeps all of itself.** An empty stem is not a shorter
+ * name, it is no name, and there is nothing to draw in its place.
+ */
+export function handleStem(name: string): string {
+  const [stem] = name.split(WORD_BREAK);
+  return stem === undefined || stem === '' ? name : stem;
+}
+
+/** The two characters a handle separates words with. See `handleStem`. */
+const WORD_BREAK = /[.\s]/;

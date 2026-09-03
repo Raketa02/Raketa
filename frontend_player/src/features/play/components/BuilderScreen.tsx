@@ -175,21 +175,22 @@ import { offlineMessage } from '@/shared/errors';
 import { useIsOnline } from '@/shared/lib/platform';
 import { showToast } from '@/shared/store/toast.store';
 import { formatLevel, formatPercent } from '@/shared/formatting/ratingFormat';
-import { playerName, type NamedPlayer } from '@/shared/formatting/playerName';
+import { handleStem, playerName, type NamedPlayer } from '@/shared/formatting/playerName';
 import {
   BALANCE_INK,
+  BALANCE_SOFT,
   BalanceBar,
   Button,
   Card,
   Hairline,
   Note,
-  Row,
   Switch,
   behindOverlay,
   courtSeatCount,
   theme,
   useCollapsedPresentation,
   useLiveRegion,
+  type BalanceBarTone,
 } from '@/shared/ui';
 
 import type { Candidate } from '../domain/candidate';
@@ -210,6 +211,7 @@ import {
   type Seating,
 } from '../domain/forecast';
 import { seatPlaces, withheldSeats, type SeatPlace } from '../domain/lineup';
+import { alreadyAsked } from '../domain/raisedPrompt';
 import type { UnfilledReason } from '../domain/vocabulary';
 import { sentWeekForOrigin } from '../domain/workingWeek';
 import { useFillSeats, useForecast, useSearchRecord } from '../hooks/useBuilder';
@@ -242,6 +244,7 @@ import {
   SWAP_TOGGLE_DESCRIPTION,
   TWO_WAYS_BODY,
   TWO_WAYS_TITLE,
+  VS_WORD,
   builderEyebrow,
   builderTitle,
   fillSeatsLabel,
@@ -496,6 +499,17 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
   );
   const shortfall = record?.court === undefined ? undefined : shortfallBySeat(record.court);
 
+  /**
+   * Why the engine seated these four — **and `undefined` covers two different silences.**
+   *
+   * A hand-seated court has no `groupReason` at all, and one of the five codes has no sentence
+   * (`courtPresentation`'s `GROUP`). Both draw nothing, and neither is a case this screen
+   * decides: the first is the response's own absence, the second is a copy decision held where
+   * the other four sentences are.
+   */
+  const whyThisFour =
+    record?.court?.groupReason == null ? undefined : groupReasonLine(record.court.groupReason);
+
   const rows = new Map((record?.candidates ?? []).map((row) => [row.playerId, row]));
 
   /**
@@ -509,8 +523,22 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
     const handles = handlesOn(side, seated, places, { rows, self });
     return {
       handles,
+      /** Whole handles — the register a **sentence** is in, and the split row's spoken name. */
       name: sideName(
         handles.map((one) => one.name),
+        SIDE_HEADINGS[side],
+      ),
+      /**
+       * The same half as a **drawing**: each handle cut at its first word break, so two names
+       * and a `+` fit on one line of a panel half the card wide.
+       *
+       * Two strings rather than one, because they are two registers and not two lengths.
+       * `handleStem` is a prefix of what somebody typed and a sentence still carries all
+       * sixty-four characters of it — which is the whole of why ADR-0107 permits this at all,
+       * and it only holds while the two stay apart.
+       */
+      drawn: sideName(
+        handles.map((one) => handleStem(one.name)),
         SIDE_HEADINGS[side],
       ),
     };
@@ -642,11 +670,16 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
    * already landed and closing it is the whole of where anybody goes
    * ([#287](https://github.com/Raketa02/Raketa/issues/287)).
    *
-   * Keyed by the **search the fill minted**, exactly as Find a game keys by the one its search
-   * minted — and unlike the deck, which needs a wider key because a deal is not a press. ⚡ is,
-   * so a second press is a second question worth asking.
+   * **Remembered for the visit, not for the search ⚡ minted.** It was the minted id, on the
+   * argument that ⚡ is a press and a second press is a second question worth asking — true of
+   * the press and false of the question. `KEEP_THESE_TIMES` is about the **working week**, and
+   * arriving here at all means a search has already run on it and already asked: ⚡ minting a
+   * second search over an unchanged week put the identical question up two taps after *not
+   * now* ([#287](https://github.com/Raketa02/Raketa/issues/287)). The list is `playSession`'s,
+   * because the week it is about is.
    */
-  const [answeredFor, setAnsweredFor] = useState<string | undefined>(undefined);
+  const asked = usePlaySession((state) => state.askedQuestions);
+  const recordAsked = usePlaySession((state) => state.recordAsked);
   const filledSearch = fill.isSuccess ? fill.data.record.searchId : undefined;
   const raised = fill.isSuccess ? fill.data.prompts[0] : undefined;
   /**
@@ -658,7 +691,10 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
     raised === undefined || filledSearch === undefined || sport === undefined
       ? undefined
       : { raised, sport, search: filledSearch };
-  const asking = question !== undefined && !filling && answeredFor !== question.search;
+  const asking =
+    question !== undefined &&
+    !filling &&
+    !alreadyAsked(asked, question.sport, question.raised.prompt);
 
   /**
    * **The third live region**, and the one nobody else could have claimed (§20.9).
@@ -1032,13 +1068,14 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
                       chosen.split,
                     )}
                   >
+                    {/* **The three figures and nothing else.** The two panels beneath say who
+                        each half is, in the register a panel can hold, and the row that used
+                        to print the same two joined phrases under its own numbers was the
+                        card naming these four people three times over. The spoken name is
+                        unchanged and still carries both halves whole — it is one element, and
+                        a strength with nobody attached to it is not a claim. */}
                     <View style={s.splitSide}>
                       <Text style={s.sideLevel}>{formatLevel(chosen.split.yourSide)}</Text>
-                      {/* One line per side, truncating in its own box: a 64-character handle
-                          cuts rather than reflowing a three-column row (§15, ADR-0107). */}
-                      <Text style={s.sideName} numberOfLines={1}>
-                        {yours.name}
-                      </Text>
                     </View>
 
                     {/* **Signed, as it was served.** The sign is which way the game leans,
@@ -1052,9 +1089,6 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
 
                     <View style={[s.splitSide, s.splitTheirs]}>
                       <Text style={s.sideLevel}>{formatLevel(chosen.split.theirSide)}</Text>
-                      <Text style={s.sideName} numberOfLines={1}>
-                        {theirs.name}
-                      </Text>
                     </View>
                   </View>
 
@@ -1076,7 +1110,7 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
                       advantage={chosen.split.gap}
                       tone={balanceTone(chosen.forecast.pct)}
                       size="md"
-                      labels={[yours.name, theirs.name]}
+                      labels={[yours.drawn, theirs.drawn]}
                       accessibilityLabel={balanceLabel(chosen.forecast.pct)}
                     />
                   </View>
@@ -1141,22 +1175,31 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
                       button now opens with the side this row's key says — 7.12's own rule for
                       the court's caption and side labels, one card down. */}
                   <Hairline>
-                    <Row
-                      label={SIDE_HEADINGS.yours}
-                      labelHidden
-                      value={<Names seated={yours.handles} onExplain={setExplaining} />}
-                    />
-                    <Row
-                      label={SIDE_HEADINGS.theirs}
-                      labelHidden
-                      value={<Names seated={theirs.handles} onExplain={setExplaining} />}
-                      divided
-                    />
+                    <View style={s.sides}>
+                      <Side
+                        heading={SIDE_HEADINGS.yours}
+                        name={yours.drawn}
+                        strength={chosen.split.yourSide}
+                        seated={yours.handles}
+                        onExplain={setExplaining}
+                      />
+                      <Text style={s.vs} accessibilityElementsHidden importantForAccessibility="no">
+                        {VS_WORD}
+                      </Text>
+                      <Side
+                        heading={SIDE_HEADINGS.theirs}
+                        name={theirs.drawn}
+                        strength={chosen.split.theirSide}
+                        tone={balanceTone(chosen.forecast.pct)}
+                        seated={theirs.handles}
+                        onExplain={setExplaining}
+                      />
+                    </View>
                   </Hairline>
 
-                  {record.court?.groupReason == null ? null : (
+                  {whyThisFour === undefined ? null : (
                     <Hairline>
-                      <Text style={s.body}>{groupReasonLine(record.court.groupReason)}</Text>
+                      <Text style={s.body}>{whyThisFour}</Text>
                     </Hairline>
                   )}
 
@@ -1219,7 +1262,7 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
           raised={question.raised}
           sport={question.sport}
           returnFocusTo={fillControl}
-          onAnswered={() => setAnsweredFor(question.search)}
+          onAnswered={() => recordAsked(question.sport, question.raised.prompt)}
         />
       )}
 
@@ -1391,79 +1434,141 @@ function handlesOn(
 }
 
 /**
- * One **face and handle** per person on this half — and each a button where there is a
- * breakdown behind it.
+ * One half of the court as a **panel** — who is standing on it, and what it is worth.
  *
  * ## The face is what made the hold deletable
  *
- * This row was a column of words, and a seated player's Fit had a second way in: a long press
- * on the seat ([#285](https://github.com/Raketa02/Raketa/issues/285)). A gesture nothing
+ * This was a column of words, and a seated player's Fit had a second way in: a long press on
+ * the seat ([#285](https://github.com/Raketa02/Raketa/issues/285)). A gesture nothing
  * advertises, nothing announces and the accessibility API cannot perform was carrying nobody
- * this row was not — so what it needed was not a second route but a **better first one**. A
- * picture of the person is a target you can see, at the size the design system already asks
- * of a control, and `CourtSeat` and `CourtBuild` drop the gesture on the strength of it.
+ * it was not — so what it needed was not a second route but a **better first one**. A picture
+ * of the person is a target you can see, at the size the design system already asks of a
+ * control, and `CourtSeat` and `CourtBuild` drop the gesture on the strength of it.
  *
  * The photograph is `CandidatePhoto`'s photo-or-poster switch, so the face here and the face
  * in the seat are **one drawing of one id** — a second implementation of the poster hash is
  * two faces for one person the day either one changes.
  *
- * ## The target is the line, and every line takes it
+ * ## The face **is** the target, which is the only arrangement that reaches 44
  *
- * Built to 6.5's minimum as geometry rather than granted a `hitSlop`: the entries are stacked
- * with no gap, so vertical slop is bounded by a neighbour 0pt away and there is none to take.
- * **Every line takes that box, including the ones that are not controls** — a 44pt button
- * beside a shorter line is one column at two rhythms, and which rhythm a line got would then
- * be decided by whether the record still describes the person in that seat: a layout that
- * moves when a row is withheld.
+ * The faces sit in a row, and [6.5](../../../../docs/design-system.md#65-touch-targets) bounds
+ * horizontal slop by the neighbour: two 27pt faces cannot each grow to 44 into a gap they
+ * share, whatever the gap is, because slop that overlaps is delivered to one sibling. Centring
+ * a small face inside a 44pt box solves the touch and leaves a picture of a person drawn at
+ * the size of a dot, with most of its own control blank around it.
+ *
+ * So the face is drawn at **`minTouch` itself**. The visual and the reachable area are the
+ * same square, there is no slop to bound and nothing to spend — the availability cell's own
+ * answer one screen over, and the shape [7.12](../../../../docs/design-system.md#712-the-court)
+ * says the clear badge is the single control in this app that cannot have. Two of them plus
+ * the gap is 91pt against the 103pt a panel has inside its padding on the narrowest phone,
+ * which is the arithmetic `builder.test.tsx` pins.
+ *
+ * **Every face takes that box, including the ones that are not controls** — a 44pt button
+ * beside a smaller one is one row at two rhythms, and which rhythm a face got would then be
+ * decided by whether the record still describes the person in that seat.
  *
  * The key is the **position**, not the word: two withheld seats on one side both answer `?`,
- * and a key of the name would collapse them into one line.
+ * and a key of the name would collapse them into one.
+ *
+ * ## The two halves are one height, and their contents are centred
+ *
+ * A panel is as tall as its own words, so a name that wrapped made one half taller than the
+ * other and the pair stopped reading as two things being compared. Both are fixed: the row
+ * **stretches** them to one height, and the name is `handleStem`'s — one line, because the
+ * comparison is what the panel is for and a second line of it is what broke the comparison.
+ *
+ * ## Everything that is not a face is drawn and hidden
+ *
+ * The heading, the joined name and the strength are all said again above — the split row
+ * states all three as one accessible element (`splitRowLabel`), and each face's own button
+ * opens with the side it is on. §20.1's merge rule: what has no action of its own belongs to
+ * the action beside it, and a listener stepping through *your side · you + Sergio · 3,15* on
+ * the way to two buttons is being read the card twice.
+ *
+ * ## The bed is the bar's own colour, and only one side has one
+ *
+ * [7.11](../../../../docs/design-system.md#711-the-balance-bar) already paints these two
+ * halves and it paints them unevenly: **yours** is the neutral one and **theirs** carries the
+ * tone. That is not a decoration being invented here — it is the same statement the bar four
+ * lines above makes, at the size a panel is, which is why the tone comes through
+ * `BALANCE_SOFT` / `BALANCE_INK` rather than being chosen again. Yours takes `line2`, the
+ * palette's own neutral fill inside a surface, and its heading stays `muted` — 4,62 there,
+ * where `paper2` would have put it at 4,49 and under AA.
  */
-function Names({
+function Side({
+  heading,
+  name,
+  strength,
+  tone,
   seated,
   onExplain,
 }: {
+  readonly heading: string;
+  readonly name: string;
+  readonly strength: number;
+  /** Absent on your own half, which is the neutral one — see the bed paragraph above. */
+  readonly tone?: BalanceBarTone;
   readonly seated: readonly SeatedHandle[];
   readonly onExplain: (candidate: Candidate) => void;
 }) {
+  const bed = tone === undefined ? undefined : { backgroundColor: BALANCE_SOFT[tone] };
+  const toned = tone === undefined ? undefined : { color: BALANCE_INK[tone] };
+
   return (
-    <View style={s.handles}>
-      {seated.map(({ place, name, face, candidate }, at) => {
-        // The face and the word, in the order they are read. `CandidatePhoto` hides itself, so
-        // the name is the whole of what either line says — spoken or printed.
-        const drawn = (
-          <>
-            {face === undefined ? null : (
+    <View style={[s.side, bed]}>
+      <Text
+        style={[s.sideHeading, toned]}
+        accessibilityElementsHidden
+        importantForAccessibility="no"
+      >
+        {heading}
+      </Text>
+
+      <View style={s.faces}>
+        {seated.map(({ place, name: who, face, candidate }, at) => {
+          // `CandidatePhoto` hides itself, so a face carries no name of its own and the
+          // button's label is the whole of what this control says.
+          const drawn =
+            face === undefined ? null : (
               <CandidatePhoto
                 playerId={face.playerId}
                 {...(face.photoUrl === undefined ? {} : { photoUrl: face.photoUrl })}
-                box={{ kind: 'face', size: theme.size.avatar }}
+                box={{ kind: 'face', size: theme.size.minTouch }}
               />
-            )}
-            <Text style={s.handle} numberOfLines={1}>
-              {name}
-            </Text>
-          </>
-        );
+            );
 
-        return candidate === undefined ? (
-          <View key={at} style={s.handleTarget}>
-            {drawn}
-          </View>
-        ) : (
-          <Pressable
-            key={at}
-            accessibilityRole="button"
-            accessibilityLabel={seatedNameLabel(place, { name, fit: candidate.fit })}
-            onPress={() => onExplain(candidate)}
-            // 6.6: the chip's `.7`, on the target rather than on the word — the line is the
-            // control, so a word that dimmed alone would say the two are separate things.
-            style={({ pressed }) => [s.handleTarget, pressed ? s.pressed : undefined]}
-          >
-            {drawn}
-          </Pressable>
-        );
-      })}
+          return candidate === undefined ? (
+            <View key={at} style={s.faceTarget}>
+              {drawn}
+            </View>
+          ) : (
+            <Pressable
+              key={at}
+              accessibilityRole="button"
+              accessibilityLabel={seatedNameLabel(place, { name: who, fit: candidate.fit })}
+              onPress={() => onExplain(candidate)}
+              // 6.6: the photo tile's `.7`, on the box rather than on the picture — the box is
+              // the control, and a face that dimmed inside a target that did not would say the
+              // two are separate things.
+              style={({ pressed }) => [s.faceTarget, pressed ? s.pressed : undefined]}
+            >
+              {drawn}
+            </Pressable>
+          );
+        })}
+      </View>
+
+      <View
+        style={s.sideSays}
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+      >
+        <Text style={s.sideWho} numberOfLines={1}>
+          {name}
+        </Text>
+        <Text style={[s.sideStrength, toned]}>{formatLevel(strength)}</Text>
+      </View>
     </View>
   );
 }
@@ -1528,7 +1633,6 @@ const s = StyleSheet.create({
   splitSide: { flex: 1 },
   splitTheirs: { alignItems: 'flex-end' },
   sideLevel: { ...theme.num.m, ...theme.tabular, color: theme.color.ink },
-  sideName: { ...theme.type.tiny, color: theme.color.muted },
   gapWord: { ...theme.type.tag, color: theme.color.muted, textAlign: 'center' },
   gapLevel: { ...theme.num.xs, ...theme.tabular, color: theme.color.muted, textAlign: 'center' },
   bar: { marginTop: theme.space.xs },
@@ -1543,17 +1647,42 @@ const s = StyleSheet.create({
   figure: { ...theme.num.xl, ...theme.tabular },
   word: { ...theme.type.cardTitle, color: theme.color.ink },
   provisional: { ...theme.type.tiny, color: theme.color.muted },
-  handles: { alignItems: 'flex-end' },
-  // The handle beside its face. It shrinks rather than wrapping: the face is a fixed box and
-  // the row is one line, so a long handle is spent on the word rather than on the layout.
-  handle: { ...theme.type.rlValue, color: theme.color.ink, flexShrink: 1 },
-  // 6.5's floor, as geometry rather than as slop, and the column's one rhythm — see `Names`.
-  handleTarget: {
-    flexDirection: 'row',
+  /**
+   * The two panels and the joint between them. They share the row equally and it does not.
+   *
+   * **Stretched, not centred**: two halves being compared are one height whatever is written
+   * in them, which is `alignItems`'s default and is stated here because it was the bug. The
+   * word between them centres itself instead.
+   */
+  sides: { flexDirection: 'row', gap: theme.space.xs },
+  vs: { ...theme.type.tag, color: theme.color.muted, alignSelf: 'center' },
+  /**
+   * A half of the court, as a block. `radius.note` rather than `radius.card`: 4.2's rule is
+   * that the bigger surface is the rounder one, and this is a bed inside a card.
+   *
+   * `line2` is the neutral one — the palette's fill inside a surface — and the other half
+   * paints over it with the bar's tone. See `Side`.
+   */
+  side: {
+    flex: 1,
+    backgroundColor: theme.color.line2,
+    borderRadius: theme.radius.note,
+    padding: theme.space.sm,
+    gap: theme.space.xxs,
     alignItems: 'center',
-    gap: theme.space.xs,
-    minHeight: theme.size.minTouch,
-    minWidth: theme.size.minTouch,
+  },
+  sideHeading: { ...theme.type.eyebrow, color: theme.color.muted },
+  faces: { flexDirection: 'row', gap: theme.space.xxs },
+  // 6.5's floor as the drawing itself: the face is `minTouch`, so the visual and the
+  // reachable area are one square and there is no slop to bound. See `Side`.
+  faceTarget: { width: theme.size.minTouch, height: theme.size.minTouch },
+  sideSays: { alignItems: 'center', alignSelf: 'stretch' },
+  sideWho: { ...theme.type.tiny, color: theme.color.ink, textAlign: 'center' },
+  sideStrength: {
+    ...theme.num.m,
+    ...theme.tabular,
+    color: theme.color.ink,
+    textAlign: 'center',
   },
   pressed: { opacity: 0.7 },
 });

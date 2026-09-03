@@ -139,18 +139,34 @@ export function answerableWithoutAWeekGrid(
 }
 
 /**
- * The questions a screen has **already put to this player**, where asking is not a press.
+ * The questions a player has **already been put** this visit — one list, for every surface.
  *
- * Find a game and ⚡ need none of this: both are pressed, and a second press is a second
- * question worth asking, so each keys its sheet by the search it minted. A **deal** is neither
- * — the entry deal is an effect and a spent hand deals again on its own — so a question keyed
- * by the deal would be put in front of the player again every ten cards, which on
- * `KEEP_THESE_TIMES` is every deal of the visit
- * ([#287](https://github.com/Raketa02/Raketa/issues/287)).
+ * It began as the deck's alone, on the argument that Find a game, ⚡ and a rung are all
+ * **presses** and *"a second press is a second question worth asking"*, so each of those could
+ * key its sheet by the search it minted. That is true of the press and false of the question,
+ * and the difference is what a prompt is **about**:
+ *
+ * `KEEP_THESE_TIMES` is about the **working week** — the one improvised on Find a game and
+ * carried, unchanged, by everything downstream of it. Searching, then pressing *Let the engine
+ * fill the seats*, mints two searches over one week, so a memory keyed by the minted id asked
+ * the identical question twice, two taps apart, with *not now* already said. And
+ * `KEEP_THESE_TIMES` is precisely the prompt with **no durable answer** to fall back on: its
+ * decline writes no row (`promptSuppresses`), by design, so the visit is the only memory there
+ * has ever been for it.
+ *
+ * So the list lives in `playSession` and every surface reads it. It ends when the visit does,
+ * which is what keeps the ADR's argument intact — *a grid is a different grid next Tuesday*
+ * is about the next visit, not about the next two taps. For the three prompts that **do**
+ * suppress, this changes nothing they were not already getting from the server.
  *
  * **The sport is half the identity**, because `UPDATE_PLAY_INTENT` is the one prompt declared
  * per sport: a drift answered on padel is not the same question on tennis, and a key that was
  * the code alone would swallow the second one for the rest of the visit.
+ *
+ * **What it deliberately does not key on is the week itself.** A player who edits the grid
+ * again and searches again is not asked again, and that is the same trade the deck has always
+ * made: *not now* is an answer about saving an improvised week at all, and a question that
+ * came back on every edit would be the sheet arguing with them.
  */
 export type AskedQuestions = readonly string[];
 
@@ -162,6 +178,18 @@ const identity = (sport: Sport, prompt: Prompt) => `${sport}:${prompt}`;
 export function alsoAsked(asked: AskedQuestions, sport: Sport, prompt: Prompt): AskedQuestions {
   const one = identity(sport, prompt);
   return asked.includes(one) ? asked : [...asked, one];
+}
+
+/**
+ * Whether this exact question has been put already — **the one-prompt reading of
+ * `firstUnasked`**, for the three surfaces that draw `prompts[0]` rather than choosing.
+ *
+ * Written here rather than as an `includes` at three call sites for `identity`'s own reason:
+ * the sport is half the key, and a caller composing the string itself is a caller that can
+ * compose it without the sport.
+ */
+export function alreadyAsked(asked: AskedQuestions, sport: Sport, prompt: Prompt): boolean {
+  return asked.includes(identity(sport, prompt));
 }
 
 /**
@@ -179,5 +207,5 @@ export function firstUnasked(
   sport: Sport,
   asked: AskedQuestions,
 ): RaisedPrompt | undefined {
-  return raised.find((one) => !asked.includes(identity(sport, one.prompt)));
+  return raised.find((one) => !alreadyAsked(asked, sport, one.prompt));
 }

@@ -110,16 +110,36 @@ export function seatGuardLine(guard: SeatGuard, name: string): string {
   return GUARD[guard](name);
 }
 
-const GROUP: Readonly<Record<GroupReason, string>> = {
+/**
+ * Why these four — **three sentences and two silences**, and the silences are typed.
+ *
+ * Two of the five say nothing, on `OPTIMISED`'s own shape one function down: a `Record` keyed
+ * by the union with `null` for *say nothing* is how this file states an absence, and it is not
+ * the same thing as a code no build has ever seen.
+ *
+ * **The line is whether the sentence names a choice or grades the answer.** *The evenest way
+ * to split these four*, *the four of you share the most slots* and *these four read each other
+ * well* each name what the engine went looking for — a fact about the search, which no figure
+ * on the card carries. *Nobody here is out of their depth* and *the best all-round fit across
+ * the four seats* are the other kind: both are claims about **how good this four is**, printed
+ * directly under two side strengths, a gap and an evenness percentage that say exactly that,
+ * in the register a player reads it in. A card that prints four figures and then tells you
+ * what to conclude from them is arguing for its own answer rather than reporting it.
+ */
+const GROUP: Readonly<Record<GroupReason, string | null>> = {
   EVENEST_ARRANGEMENT: 'The evenest way to split these four',
-  STRONGEST_WEAKEST_SEAT: 'Nobody here is out of their depth',
-  BEST_AVERAGE_FIT: 'The best all-round fit across the four seats',
+  STRONGEST_WEAKEST_SEAT: null,
+  BEST_AVERAGE_FIT: null,
   MOST_SHARED_SLOTS: 'The four of you share the most slots',
   GROUP_RAPPORT: 'These four read each other well',
 };
 
-export function groupReasonLine(reason: GroupReason): string {
-  return GROUP[reason];
+/**
+ * What the court says about why these four. `undefined` where there is nothing to say —
+ * which is two of the five, and a code this build has never seen.
+ */
+export function groupReasonLine(reason: GroupReason): string | undefined {
+  return GROUP[reason] ?? undefined;
 }
 
 /**

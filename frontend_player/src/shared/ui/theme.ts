@@ -418,21 +418,26 @@ const size = {
   /** The availability grid — 6.8. Seven rows of three, days DOWN and parts of the day
    *  ACROSS, which is a touch decision and not a taste one: seven columns want
    *  7 x 44 = 308pt against the 290pt of content the narrowest phone has, and no
-   *  hit-slop closes that. Laid out the other way the cell reaches the minimum by its own
-   *  geometry — the first control in the app that does — so there is no `hit` entry here.
+   *  hit-slop closes that on any phone in the population. Laid out this way the cell reaches
+   *  the minimum by its own geometry — the first control in the app that does — so there is
+   *  no `hit` entry here, and `cardPadding` is subtracted before the division because the
+   *  grid now sits inside a card.
    *
    *  `labelMaxRatio` caps the day-label column so Dynamic Type grows the labels without
-   *  starving the cells: at the cap the three still share 65,5pt each on that phone.
-   *  `footnoteMinHeight` is two lines of `type.tiny`, always laid out, so ticking the
-   *  first cell never moves the grid out from under the finger. */
+   *  starving the cells: at the cap the three still share 59,5pt each on that phone.
+   *  `footnoteMinHeight` is two lines of `type.rlLabel`, always laid out, so ticking the
+   *  first cell never moves the grid out from under the finger; the hairline above it is
+   *  drawn only when there are words to separate. */
   availability: {
     cellHeight: 44, // = minTouch, by geometry rather than by slop
+    columns: 3, // the three parts of the day, across
     gap: 6,
     labelGutter: 9,
     labelMaxRatio: 0.25,
+    cardPadding: space.md,
     tick: 12,
     tickStroke: 2,
-    footnoteMinHeight: 2 * type.tiny.lineHeight,
+    footnoteMinHeight: 2 * type.rlLabel.lineHeight,
   },
   /** The photo tile — 6.9. Three across the content width, 3:4 portrait, at the card
    *  radius because a 90 x 121 tile is a card-sized surface.

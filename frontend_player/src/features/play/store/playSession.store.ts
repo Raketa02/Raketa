@@ -53,9 +53,12 @@
 
 import { create } from 'zustand';
 
+import type { Sport } from '@/shared/vocabulary/sport';
 import type { WeekCell } from '@/shared/vocabulary/week';
 
 import type { Lineup, SeatedPlayerId } from '../domain/lineup';
+import { alsoAsked, NOTHING_ASKED, type AskedQuestions } from '../domain/raisedPrompt';
+import type { Prompt } from '../domain/vocabulary';
 import { sameCell, seedWorkingWeek, toggleCell, type WorkingWeek } from '../domain/workingWeek';
 
 interface PlaySessionState {
@@ -81,6 +84,24 @@ interface PlaySessionState {
    * ([#283](https://github.com/Raketa02/Raketa/issues/283)).
    */
   readonly addedForThisSearch: WeekCell | undefined;
+  /**
+   * **The questions this visit has already put to the player**, by sport and code.
+   *
+   * Here rather than on the four screens that draw a sheet, because the questions are about
+   * things this store holds. `KEEP_THESE_TIMES` is about the **working week** above it: two
+   * presses over one week — *Search*, then *Let the engine fill the seats* — mint two searches
+   * and raised it twice, two taps apart, with *not now* already said
+   * ([#287](https://github.com/Raketa02/Raketa/issues/287)). A memory keyed by the minted
+   * search id cannot see that, because what did not change between the two presses is exactly
+   * what the question was about.
+   *
+   * It is the **only** memory that prompt has: its decline writes no durable row on purpose
+   * (`promptSuppresses`), so nothing on the server will decline to raise it again. That is
+   * what makes this the session's rather than a screen's, and ending with the session is what
+   * keeps ADR-0099's argument whole — *a grid is a different grid next Tuesday* is about the
+   * next visit and not about the next two taps.
+   */
+  readonly askedQuestions: AskedQuestions;
   /**
    * Enter Play: fill the grid in from the profile.
    *
@@ -118,6 +139,14 @@ interface PlaySessionState {
    * so, because it is the one that knows.
    */
   readonly clearAddedForThisSearch: () => void;
+  /**
+   * Remember that this question has been put — **called on the answer, whichever answer.**
+   *
+   * A dismissal is a decline and a decline is an answer, so every path out of the sheet
+   * arrives here: `PromptSheet` reports once and only once, and the sheet is what decides
+   * which of its exits count.
+   */
+  readonly recordAsked: (sport: Sport, prompt: Prompt) => void;
   /**
    * Add somebody to the court, under the search they came off.
    *
@@ -171,11 +200,13 @@ export const usePlaySession = create<PlaySessionState>((set) => ({
   week: undefined,
   lineup: undefined,
   addedForThisSearch: undefined,
+  askedQuestions: NOTHING_ASKED,
   enter: (profileWeek) =>
     set({
       week: seedWorkingWeek(profileWeek),
       lineup: undefined,
       addedForThisSearch: undefined,
+      askedQuestions: NOTHING_ASKED,
     }),
   // Dropped rather than beginning a session, for the reason the pass drops a rating recorded
   // with no pass running: the grid is only reachable from a screen the entry seeded, so this
@@ -197,6 +228,8 @@ export const usePlaySession = create<PlaySessionState>((set) => ({
   addForThisSearch: (cell) =>
     set((state) => (state.week === undefined ? state : { addedForThisSearch: cell })),
   clearAddedForThisSearch: () => set({ addedForThisSearch: undefined }),
+  recordAsked: (sport, prompt) =>
+    set((state) => ({ askedQuestions: alsoAsked(state.askedQuestions, sport, prompt) })),
   seat: (originSearchId, playerId) =>
     set((state) => {
       const held = state.lineup?.originSearchId === originSearchId ? state.lineup : undefined;
@@ -214,7 +247,13 @@ export const usePlaySession = create<PlaySessionState>((set) => ({
       return { lineup: seats.length === 0 ? undefined : { ...state.lineup, seats } };
     }),
   discardLineup: () => set({ lineup: undefined }),
-  end: () => set({ week: undefined, lineup: undefined, addedForThisSearch: undefined }),
+  end: () =>
+    set({
+      week: undefined,
+      lineup: undefined,
+      addedForThisSearch: undefined,
+      askedQuestions: NOTHING_ASKED,
+    }),
 }));
 
 /**

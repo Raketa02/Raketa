@@ -20,6 +20,7 @@ export {
 export {
   BALANCE_INK,
   BALANCE_SCALE,
+  BALANCE_SOFT,
   BalanceBar,
   balanceShare,
   type BalanceBarProps,

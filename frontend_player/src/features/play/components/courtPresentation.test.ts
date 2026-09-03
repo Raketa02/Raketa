@@ -42,14 +42,24 @@ describe('an unfilled seat', () => {
 });
 
 describe('why this four', () => {
-  it('gives each of the five its own sentence', () => {
-    const lines = GROUP_REASONS.map(groupReasonLine);
+  it('gives each reason that has a sentence its own', () => {
+    const lines = GROUP_REASONS.map(groupReasonLine).filter((line) => line !== undefined);
 
-    expect(new Set(lines).size).toBe(GROUP_REASONS.length);
+    expect(new Set(lines).size).toBe(lines.length);
+  });
+
+  it('says nothing at all for the two that grade the answer', () => {
+    // The card above them prints two side strengths, the gap and the evenness percentage.
+    // *Nobody is out of their depth* and *the best all-round fit* are both claims about how
+    // good this four is, under four figures saying exactly that — the card arguing for its
+    // answer rather than reporting it. The three that remain name a choice the engine made,
+    // which no figure carries.
+    expect(groupReasonLine('STRONGEST_WEAKEST_SEAT')).toBeUndefined();
+    expect(groupReasonLine('BEST_AVERAGE_FIT')).toBeUndefined();
   });
 
   it('quotes no figure, because the objective is recorded and never returned', () => {
-    for (const line of GROUP_REASONS.map(groupReasonLine)) expect(line).not.toMatch(/\d/);
+    for (const line of GROUP_REASONS.map(groupReasonLine)) expect(line ?? '').not.toMatch(/\d/);
   });
 
   it('gives the two group rapport terms one sentence', () => {

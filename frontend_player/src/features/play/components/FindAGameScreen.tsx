@@ -114,6 +114,7 @@ import {
   Button,
   Note,
   RadiusSlider,
+  Segment,
   behindOverlay,
   courtSeatCount,
   theme,
@@ -122,6 +123,7 @@ import { dayLabel, dayPartHead } from '@/shared/vocabulary/availabilityPresentat
 import { DAY_PARTS, WEEKDAYS } from '@/shared/vocabulary/week';
 
 import { findAGameStanding } from '../domain/findAGame';
+import { alreadyAsked } from '../domain/raisedPrompt';
 import { SEARCH_MODES } from '../domain/vocabulary';
 import { differsFromProfile, isTicked, sameCell } from '../domain/workingWeek';
 import { useOutstandingInterest } from '../hooks/useDeck';
@@ -175,6 +177,11 @@ export function FindAGameScreen() {
   const clearAddedForThisSearch = usePlaySession((state) => state.clearAddedForThisSearch);
   const enter = usePlaySession((state) => state.enter);
   const toggleWeekCell = usePlaySession((state) => state.toggleWeekCell);
+  // The visit's own memory of what has been asked, shared with the builder, the deck and the
+  // pool: `KEEP_THESE_TIMES` is about the working week, and ⚡ two screens on mints a second
+  // search over the same one (#287).
+  const asked = usePlaySession((state) => state.askedQuestions);
+  const recordAsked = usePlaySession((state) => state.recordAsked);
 
   /**
    * The radius the player is looking at, **before it is the profile's** — and only until then.
@@ -315,8 +322,12 @@ export function FindAGameScreen() {
    * are all edited here, and a sheet asking about them over the builder would be a question
    * about a screen the player had already left.
    *
-   * Keyed by the **search id**, so a second search asks again and a re-render of a screen the
-   * player has come back to asks nothing.
+   * **Two memories, because there are two questions.** *Has this been asked at all* is the
+   * visit's and lives in `playSession`: `KEEP_THESE_TIMES` is about the working week, and ⚡ on
+   * the builder mints a second search over the same week — a per-search memory asked it twice,
+   * two taps apart, with *not now* already said
+   * ([#287](https://github.com/Raketa02/Raketa/issues/287)). *Where does the player go when
+   * they answer* is this screen's and is keyed by the search id, because it gates one push.
    */
   const [answer, setAnswer] = useState<{
     readonly searchId: string;
@@ -324,7 +335,13 @@ export function FindAGameScreen() {
   }>();
   const answeredThis = answer?.searchId === minted ? answer : undefined;
   const raised = search.isSuccess ? search.data.prompts[0] : undefined;
-  const asking = !latched && answeredThis === undefined ? raised : undefined;
+  // Not `raised === undefined`: a question this visit has already put is one there is nothing
+  // left to ask, which is what the push below has to wait for and what the sheet must not draw.
+  const toAsk =
+    raised !== undefined && standing.kind !== 'no-rated-sport'
+      ? !alreadyAsked(asked, standing.sport, raised.prompt)
+      : false;
+  const asking = !latched && toAsk && answeredThis === undefined ? raised : undefined;
 
   /**
    * **The wait lifts onto the court** — once there is nothing left to ask, and unless the
@@ -336,7 +353,26 @@ export function FindAGameScreen() {
    * while the latch is up unmounts this screen and pushes nothing at all, which is correct —
    * the reset has ended the session the court would have been built in.
    */
-  const mayGoOn = raised === undefined || answeredThis?.next === 'carry-on';
+  // Answered on this search: obey where they asked to go. Nothing left to ask: go on.
+  const mayGoOn = answeredThis !== undefined ? answeredThis.next === 'carry-on' : !toAsk;
+
+  /**
+   * Tell the visit this question has been put — **from the answer, not from the handler.**
+   *
+   * The two facts are read together one line up, and a handler writing both would land them in
+   * two renders under React's batching rules rather than one. In the render between them the
+   * question looks unasked-but-not-owed, which is exactly the shape `mayGoOn` reads as *go on*
+   * — and a `back-to-the-week` answer would be on the court before the state saying so
+   * arrived. Derived from the answer instead, both are true in the same render and the order
+   * stops being something to get right.
+   */
+  const askedSport = standing.kind === 'no-rated-sport' ? undefined : standing.sport;
+  const answeredPrompt = answeredThis === undefined ? undefined : raised?.prompt;
+  useEffect(() => {
+    if (askedSport === undefined || answeredPrompt === undefined) return;
+    recordAsked(askedSport, answeredPrompt);
+  }, [askedSport, answeredPrompt, recordAsked]);
+
   useEffect(() => {
     if (minted === undefined || latched || !mayGoOn) return;
     router.push({ pathname: BUILDER_ROUTE, params: { search: minted } });
@@ -431,18 +467,19 @@ export function FindAGameScreen() {
           {standing.kind === 'no-rated-sport' ? null : (
             <View style={s.section}>
               <Text style={s.heading}>{MODE_HEADING}</Text>
-              <View style={s.answers}>
-                {SEARCH_MODES.map((offered) => (
-                  <Button
-                    key={offered}
-                    label={modeLabel(offered)}
-                    accessibilityLabel={modeControlLabel(offered)}
-                    variant={offered === mode ? 'dark' : 'secondary'}
-                    selected={offered === mode}
-                    onPress={() => chooseMode(offered)}
-                  />
-                ))}
-              </View>
+              {/* Design-system 6.3, and the second `Segment` on this screen. The mode picks one
+                  of two *views of the same search* rather than firing an act, which is what
+                  two `Button`s side by side said it did — and the raised half against the
+                  inset track carries the choice as a surface step rather than as a fill. */}
+              <Segment
+                selected={mode}
+                options={SEARCH_MODES.map((offered) => ({
+                  key: offered,
+                  label: modeLabel(offered),
+                  accessibilityLabel: modeControlLabel(offered),
+                }))}
+                onSelect={chooseMode}
+              />
             </View>
           )}
 
@@ -600,6 +637,5 @@ const s = StyleSheet.create({
   section: { gap: theme.space.xs, paddingTop: theme.space.xs },
   heading: { ...theme.type.flab, color: theme.color.ink, textTransform: 'uppercase' },
   body: { ...theme.type.tiny, color: theme.color.ink },
-  answers: { flexDirection: 'row', flexWrap: 'wrap', gap: theme.space.xs },
   footnote: { ...theme.type.tiny, color: theme.color.muted, textAlign: 'center' },
 });

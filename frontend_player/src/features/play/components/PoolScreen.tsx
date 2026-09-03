@@ -132,6 +132,7 @@ import type { Candidate, RelaxedAsk, RungOffer } from '../domain/candidate';
 import { arrangementFor, seatOccupant, seatingToDraw } from '../domain/forecast';
 import { poolLadder } from '../domain/poolLadder';
 import { orderPool, pickable, poolSortRow } from '../domain/poolOrder';
+import { alreadyAsked } from '../domain/raisedPrompt';
 import type { SortOption } from '../domain/vocabulary';
 import { sentWeekForOrigin } from '../domain/workingWeek';
 import { useForecast, useSearchRecord } from '../hooks/useBuilder';
@@ -329,22 +330,29 @@ export function PoolScreen({ arrivalSearchId, arrivalSeat }: PoolScreenProps) {
    * the builder's arrangement rather than Find a game's
    * ([#287](https://github.com/Raketa02/Raketa/issues/287)).
    *
-   * Keyed by the **search the climb minted**, because taking a rung is a press: a second climb
-   * is a second question worth asking, where the deck needs a wider memory precisely because a
-   * deal is not one. One climb per search screen means there is rarely a second — which is a
-   * fact about the ladder rather than a reason to key this differently.
+   * **Remembered for the visit rather than for the search the climb minted.** It was the
+   * minted id, on the argument that taking a rung is a press and a second climb is a second
+   * question worth asking — which is true of the press and false of the question. Every prompt
+   * that reaches here is about something that outlives the climb, and `KEEP_THESE_TIMES` is
+   * about the **working week** a search two screens back has already asked over
+   * ([#287](https://github.com/Raketa02/Raketa/issues/287)). The list is `playSession`'s,
+   * because what these questions are about is.
    *
    * One value rather than three, so the overlay behind the sheet and the sheet itself cannot
    * disagree about whether one is up.
    */
-  const [answeredFor, setAnsweredFor] = useState<string | undefined>(undefined);
+  const asked = usePlaySession((state) => state.askedQuestions);
+  const recordAsked = usePlaySession((state) => state.recordAsked);
   const climbed = climb.isSuccess ? climb.data.record.searchId : undefined;
   const raised = climb.isSuccess ? climb.data.prompts[0] : undefined;
   const question =
     raised === undefined || climbed === undefined || sport === undefined
       ? undefined
       : { raised, sport, search: climbed };
-  const asking = question !== undefined && !latched && answeredFor !== question.search;
+  const asking =
+    question !== undefined &&
+    !latched &&
+    !alreadyAsked(asked, question.sport, question.raised.prompt);
 
   /**
    * Add somebody, discharging the replacement if this visit was against an occupied seat.
@@ -643,7 +651,7 @@ export function PoolScreen({ arrivalSearchId, arrivalSeat }: PoolScreenProps) {
           raised={question.raised}
           sport={question.sport}
           returnFocusTo={standingStatement}
-          onAnswered={() => setAnsweredFor(question.search)}
+          onAnswered={() => recordAsked(question.sport, question.raised.prompt)}
         />
       )}
     </>

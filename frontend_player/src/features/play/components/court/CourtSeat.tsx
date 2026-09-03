@@ -7,15 +7,31 @@
  * everything inside that box is here. The face and the ring are
  * [`seatFace.tsx`](./seatFace.tsx)'s, because the read-only court draws the same ones.
  *
- * ## The label is an identifier under a face, and it truncates
+ * ## The label is an identifier under a face, and it is three letters
  *
  * [`the-play-components.md`](../../../../../../docs/specs/matchmaking/the-play-components.md)
  * §5 settled the arithmetic that decides this. §15 killed first names — every sentence uses
  * the **whole handle**, 2 to 64 characters — and #219 B4 raised the floor to 9,5pt. Sixty-four
  * characters in a 46pt seat is about four, so the visible label is not the name and cannot be.
  *
- * > **It truncates to the seat's own width, one line, tail ellipsis. The whole handle is read
- * > off the lines already on screen.**
+ * > **It is the handle's first three characters, hard, with no ellipsis — and the level beside
+ * > it on the same line. The whole handle is read off the lines already on screen.**
+ *
+ * **A cut that is announced is worse than a cut that is not**, which is what changed. A tail
+ * ellipsis spends one of four characters saying *there was more*, on a caption whose whole job
+ * is to tell four faces apart: `Pau…` and `Pav…` are two characters of signal and one of
+ * apology, and the thing the apology points at — the rest of the handle — is not somewhere the
+ * player can go from here. Three letters and no mark is the same identifier with the
+ * punctuation spent on a letter. **A fixed count rather than the seat's own width**, for the
+ * reason the court itself is a fixed 196: a caption that measured itself would say three
+ * letters on one phone and five on another, and *how much of a handle is a seat* is a rule
+ * rather than a layout accident.
+ *
+ * **The level joins it on that line rather than sitting under it.** Two stacked lines under a
+ * 46pt face is a paragraph beneath a dot, and the pair reads as one identifier — *Pau 3,23* —
+ * which is how four seats are actually scanned against each other. That makes the caption
+ * **wider than the seat**, so its box is inset negatively past the face on both sides: it is
+ * absolutely positioned and bounded by nothing, exactly as it already was below it.
  *
  * Both screens the court appears on print the handles in full and unavoidably — the forecast
  * card's side rows and the pool header's seated-names line — so there is no legend to add and
@@ -24,7 +40,7 @@
  * **No `allowFontScaling={false}`** either — Part 13 permits that escape only inside the level
  * bar's drawn geometry, and `the-words.md` §20.4 already refused it here.
  *
- * ## The level is drawn under the name, and that reverses §5
+ * ## The level is drawn beside the name, and that reverses §5
  *
  * §5 took it off on §10's rule — *a surface does not restate what it already renders* — and
  * that was right for a court under a card whose only figure was one percentage. The card now
@@ -35,8 +51,8 @@
  * about different subjects — and the seat draws its own.
  *
  * It is **mono and tabular** because 1.4 is categorical about it: four levels are read down a
- * court against each other, which is exactly the comparison mono exists for. The name above it
- * stays `tag`, the design system's 9,5pt word, because a handle is a word.
+ * court against each other, which is exactly the comparison mono exists for. The name beside
+ * it stays `tag`, the design system's 9,5pt word, because a handle is a word.
  *
  * ## There is no hold on a seat, and the route it duplicated is now a face
  *
@@ -174,6 +190,18 @@ export interface CourtSeatProps {
    */
 }
 
+/**
+ * How much of a handle a seat draws — **three characters, and the whole of the rule.**
+ *
+ * Exported so the test that pins it is testing the rule rather than a slice written twice.
+ */
+export const SEAT_NAME_LETTERS = 3;
+
+/** The drawn identifier: the handle's first three characters, and never a mark for the rest. */
+export function seatCaptionName(name: string): string {
+  return name.slice(0, SEAT_NAME_LETTERS);
+}
+
 export function CourtSeat({ size, place, occupant, selected, onPress, onClear }: CourtSeatProps) {
   const who = seatWho(occupant);
   const box = seatBox(size);
@@ -212,8 +240,11 @@ export function CourtSeat({ size, place, occupant, selected, onPress, onClear }:
         accessibilityElementsHidden
         importantForAccessibility="no-hide-descendants"
       >
-        <Text style={s.label} numberOfLines={1} ellipsizeMode="tail">
-          {who.name}
+        {/* `clip` rather than `tail`: the cut is already made, so an ellipsis here could only
+            appear where a three-character word somehow overran, and it would be a mark nobody
+            could act on. `numberOfLines` stays, because Dynamic Type can still overrun. */}
+        <Text style={s.label} numberOfLines={1} ellipsizeMode="clip">
+          {seatCaptionName(who.name)}
         </Text>
         {/* The Skill level, where the record still holds one. Absent on an empty seat, which
             has nobody to have one, and on a withheld one, whose card is gone with its handle. */}
@@ -252,7 +283,17 @@ export function CourtSeat({ size, place, occupant, selected, onPress, onClear }:
 const s = StyleSheet.create({
   // 6.6's photo-tile value, for both of this file's pressables.
   pressed: { opacity: 0.7 },
-  caption: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
+  // Wider than the face it sits under, because the name and the level share its one line —
+  // absolutely positioned, so the negative insets take room from nothing.
+  caption: {
+    position: 'absolute',
+    left: -theme.space.sm,
+    right: -theme.space.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: theme.space.xxs,
+  },
   label: {
     ...theme.type.tag,
     ...theme.shadow.textOnMedia,

@@ -99,6 +99,21 @@ export const BALANCE_INK: Readonly<Record<BalanceBarTone, string>> = {
   bad: theme.color.red,
 };
 
+/**
+ * The same three as a **bed**, for a surface that tints a box rather than drawing the bar.
+ *
+ * `BALANCE_INK`'s argument, one register over: which colour each tone is belongs in one place,
+ * so a second surface tinting a panel cannot pick a different amber from the bar sitting four
+ * lines above it. The softs are the palette's own beds
+ * ([2.2](../../../docs/design-system.md#22-accent-and-semantics)), and each carries its
+ * `BALANCE_INK` partner at 5:1 or better — which is what makes the pair usable together.
+ */
+export const BALANCE_SOFT: Readonly<Record<BalanceBarTone, string>> = {
+  ok: theme.color.mintSoft,
+  warn: theme.color.amberSoft,
+  bad: theme.color.redSoft,
+};
+
 export type BalanceBarVariant = 'base' | 'onDark';
 
 export interface BalanceBarProps {
